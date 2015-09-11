@@ -47,6 +47,10 @@ Returns a list of queryable datasources.
 
 Returns the dimensions and metrics of the datasource. Optionally, you can provide request parameter "full" to get list of served intervals with dimensions and metrics being served for those intervals. You can also provide request param "interval" explicitly to refer to a particular interval.
 
+If no interval is specified, a default interval spanning a configurable period before the current time will be used. The duration of this interval is specified in ISO8601 format via:
+
+druid.query.segmentMetadata.defaultHistory
+
 * `/druid/v2/datasources/{dataSourceName}/dimensions`
 
 Returns the dimensions of the datasource.

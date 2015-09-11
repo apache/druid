@@ -75,6 +75,12 @@ The broker uses processing configs for nested groupBy queries. And, optionally, 
 |--------|-----------|-------|
 |`druid.query.search.maxSearchLimit`|Maximum number of search results to return.|1000|
 
+##### Segment Metadata Query Config
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.query.segmentMetadata.defaultHistory`|When no interval is specified in the query, use a default interval of defaultHistory before the end time of the most recent segment, specified in ISO8601 format. This property also controls the duration of the default interval used by GET /druid/v2/datasources/{dataSourceName} interactions for retrieving datasource dimensions/metrics.|P1W|
+
 ### Caching
 
 You can optionally only configure caching to be enabled on the broker by setting caching configs here.
