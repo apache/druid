@@ -82,11 +82,11 @@ Note that the bitmap is different from the first two data structures:
 whereas the first two grow linearly in the size of the data (in the
 worst case), the size of the bitmap section is the product of data
 size * column cardinality. Compression will help us here though
-because we know that each row will have only non-zero entry in a only
-a single bitmap. This means that high cardinality columns will have
-extremely sparse, and therefore highly compressible, bitmaps. Druid
-exploits this using compression algorithms that are specially suited
-for bitmaps, such as roaring bitmap compression.
+because we know that for each row in 'column data', there will only be a
+single bitmap that has non-zero entry. This means that high cardinality
+columns will have extremely sparse, and therefore highly compressible,
+bitmaps. Druid exploits this using compression algorithms that are
+specially suited for bitmaps, such as roaring bitmap compression.
 
 ### Multi-value columns
 
@@ -121,8 +121,8 @@ data structures would now look as follows:
 Note the changes to the second row in the column data and the Ke$ha
 bitmap. If a row has more than one value for a column, its entry in
 the 'column data' is an array of values. Additionally, a row with *n*
-values in a column columns will have *n* non-zero valued entries in
-that column's bitmaps.
+values in 'column data' will have *n* non-zero valued entries in
+bitmaps.
 
 Naming Convention
 -----------------
@@ -176,4 +176,4 @@ representing the same time interval for the same datasource may be
 created. These segments will contain some partition number as part of
 their identifier. Sharding by dimension reduces some of the the costs
 associated with operations over high cardinality dimensions. For more
-information on sharding, see the ingestion documentat
+information on sharding, see the ingestion documentation.
