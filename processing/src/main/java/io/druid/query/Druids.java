@@ -876,7 +876,8 @@ public class Druids
           querySegmentSpec,
           toInclude,
           merge,
-          context
+          context,
+          false
       );
     }
 
