@@ -64,14 +64,15 @@ You can check `<BROKER_IP>:<PORT>/druid/v2/datasources/<YOUR_DATASOURCE>?interva
 
 You can use IngestSegmentFirehose with index task to ingest existing druid segments using a new schema and change the name, dimensions, metrics, rollup, etc. of the segment.
 See [Firehose](../ingestion/firehose.html) for more details on IngestSegmentFirehose.
+Or, if you use hadoop based ingestion, then you can use "dataSource" input spec to do reindexing. See [batch-ingestion](../ingestion/batch-ingestion.html) for more details.
 
 ## How can I change the granularity of existing data in Druid?
 
-In a lot of situations you may want to lower the granularity of older data. Example, any data older than 1 month has only hour level granularity but newer data has minute level granularity. 
+In a lot of situations you may want to lower the granularity of older data. Example, any data older than 1 month has only hour level granularity but newer data has minute level granularity. This use case is same as re-indexing.
 
 To do this use the IngestSegmentFirehose and run an indexer task. The IngestSegment firehose will allow you to take in existing segments from Druid and aggregate them and feed them back into druid. It will also allow you to filter the data in those segments while feeding it back in. This means if there are rows you want to delete, you can just filter them away during re-ingestion.
-
 Typically the above will be run as a batch job to say everyday feed in a chunk of data and aggregate it.
+Or, if you use hadoop based ingestion, then you can use "dataSource" input spec to do reindexing. See [batch-ingestion](../ingestion/batch-ingestion.html) for more details.
 
 ## Real-time ingestion seems to be stuck
 
