@@ -66,7 +66,7 @@ public class GenericIndexedWriter<T> implements Closeable
 
   public void write(T objectToWrite) throws IOException
   {
-    if (prevObject != null && strategy.compare(prevObject, objectToWrite) >= 0) {
+    if (objectsSorted && prevObject != null && strategy.compare(prevObject, objectToWrite) >= 0) {
       objectsSorted = false;
     }
 
