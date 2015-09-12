@@ -539,6 +539,9 @@ public class OverlordResource
       }
       if (status.isPresent()) {
         data.put("statusCode", status.get().getStatusCode().toString());
+        if(status.get().isComplete()) {
+          data.put("duration", status.get().getDuration());
+        }
       }
       return data;
     }
