@@ -19,6 +19,7 @@ package io.druid.storage.hdfs;
 
 import com.fasterxml.jackson.core.Version;
 import com.fasterxml.jackson.databind.Module;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
@@ -31,7 +32,9 @@ import io.druid.initialization.DruidModule;
 import io.druid.storage.hdfs.tasklog.HdfsTaskLogs;
 import io.druid.storage.hdfs.tasklog.HdfsTaskLogsConfig;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Properties;
 
@@ -91,6 +94,18 @@ public class HdfsStorageDruidModule implements DruidModule
 
     // Set explicit CL. Otherwise it'll try to use thread context CL, which may not have all of our dependencies.
     conf.setClassLoader(getClass().getClassLoader());
+
+    // Ensure that FileSystem class level initialization happens with correct CL
+    // See https://github.com/druid-io/druid/issues/1714
+    ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
+    try {
+      Thread.currentThread().setContextClassLoader(getClass().getClassLoader());
+      FileSystem.get(conf);
+    } catch(IOException ex) {
+      throw Throwables.propagate(ex);
+    } finally {
+      Thread.currentThread().setContextClassLoader(currCtxCl);
+    }
 
     if (props != null) {
       for (String propName : System.getProperties().stringPropertyNames()) {
