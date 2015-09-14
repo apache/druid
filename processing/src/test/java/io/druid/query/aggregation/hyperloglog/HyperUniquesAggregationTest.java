@@ -27,16 +27,21 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.jackson.AggregatorsModule;
 import io.druid.query.aggregation.AggregationTestHelper;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 
 public class HyperUniquesAggregationTest
 {
+  @Rule
+  public final TemporaryFolder tempFolder = new TemporaryFolder();
+
   @Test
   public void testIngestAndQuery() throws Exception
   {
-    AggregationTestHelper helper = new AggregationTestHelper(Lists.newArrayList(new AggregatorsModule()));
+    AggregationTestHelper helper = new AggregationTestHelper(Lists.newArrayList(new AggregatorsModule()), tempFolder);
 
     String metricSpec = "[{"
                         + "\"type\": \"hyperUnique\","
