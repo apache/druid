@@ -26,7 +26,9 @@ import io.druid.data.input.MapBasedRow;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregationTestHelper;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 
@@ -36,11 +38,14 @@ public class ApproximateHistogramAggregationTest
 {
   private AggregationTestHelper helper;
 
+  @Rule
+  public final TemporaryFolder tempFolder = new TemporaryFolder();
+
   public ApproximateHistogramAggregationTest()
   {
     ApproximateHistogramDruidModule module = new ApproximateHistogramDruidModule();
     module.configure(null);
-    helper = new AggregationTestHelper(Lists.newArrayList(module.getJacksonModules()));
+    helper = new AggregationTestHelper(Lists.newArrayList(module.getJacksonModules()), tempFolder);
   }
 
   @Test
