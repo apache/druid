@@ -18,7 +18,7 @@
 package io.druid.query;
 
 import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 
@@ -26,35 +26,34 @@ import java.util.Map;
 
 public class UnionQueryRunner<T> implements QueryRunner<T>
 {
-  private final Iterable<QueryRunner> baseRunners;
+  private final QueryRunner<T> baseRunner;
   private final QueryToolChest<T, Query<T>> toolChest;
 
   public UnionQueryRunner(
-      Iterable<QueryRunner> baseRunners,
+      QueryRunner<T> baseRunner,
       QueryToolChest<T, Query<T>> toolChest
   )
   {
-    this.baseRunners = baseRunners;
+    this.baseRunner = baseRunner;
     this.toolChest = toolChest;
   }
 
   @Override
   public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
   {
-    if (Iterables.size(baseRunners) == 1) {
-      return Iterables.getOnlyElement(baseRunners).run(query, responseContext);
-    } else {
+    DataSource dataSource = query.getDataSource();
+    if (dataSource instanceof UnionDataSource) {
       return toolChest.mergeSequencesUnordered(
           Sequences.simple(
-              Iterables.transform(
-                  baseRunners,
-                  new Function<QueryRunner, Sequence<T>>()
+              Lists.transform(
+                  ((UnionDataSource) dataSource).getDataSources(),
+                  new Function<DataSource, Sequence<T>>()
                   {
                     @Override
-                    public Sequence<T> apply(QueryRunner singleRunner)
+                    public Sequence<T> apply(DataSource singleSource)
                     {
-                      return singleRunner.run(
-                          query,
+                      return baseRunner.run(
+                          query.withDataSource(singleSource),
                           responseContext
                       );
                     }
@@ -62,6 +61,8 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
               )
           )
       );
+    } else {
+      return baseRunner.run(query, responseContext);
     }
   }
 

@@ -39,7 +39,6 @@ import io.druid.query.QueryWatcher;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
-import io.druid.timeline.UnionTimeLineLookup;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
 
@@ -260,27 +259,11 @@ public class BrokerServerView implements TimelineServerView
 
 
   @Override
-  public TimelineLookup<String, ServerSelector> getTimeline(DataSource dataSource)
+  public VersionedIntervalTimeline<String, ServerSelector> getTimeline(DataSource dataSource)
   {
-    final List<String> tables = dataSource.getNames();
+    String table = Iterables.getOnlyElement(dataSource.getNames());
     synchronized (lock) {
-      if (tables.size() == 1) {
-        return timelines.get(tables.get(0));
-      } else {
-        return new UnionTimeLineLookup<>(
-            Iterables.transform(
-                tables, new Function<String, TimelineLookup<String, ServerSelector>>()
-                {
-
-                  @Override
-                  public TimelineLookup<String, ServerSelector> apply(String input)
-                  {
-                    return timelines.get(input);
-                  }
-                }
-            )
-        );
-      }
+      return timelines.get(table);
     }
   }
 
