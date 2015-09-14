@@ -27,6 +27,7 @@ import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Query;
 import io.druid.query.Result;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.search.SearchResultValue;
 import io.druid.query.spec.QuerySegmentSpec;
@@ -42,7 +43,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   private final DimFilter dimFilter;
   private final SearchSortSpec sortSpec;
   private final QueryGranularity granularity;
-  private final List<String> dimensions;
+  private final List<DimensionSpec> dimensions;
   private final SearchQuerySpec querySpec;
   private final int limit;
 
@@ -53,7 +54,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
       @JsonProperty("granularity") QueryGranularity granularity,
       @JsonProperty("limit") int limit,
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
-      @JsonProperty("searchDimensions") List<String> dimensions,
+      @JsonProperty("searchDimensions") List<DimensionSpec> dimensions,
       @JsonProperty("query") SearchQuerySpec querySpec,
       @JsonProperty("sort") SearchSortSpec sortSpec,
       @JsonProperty("context") Map<String, Object> context
@@ -64,17 +65,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
     this.sortSpec = sortSpec == null ? new LexicographicSearchSortSpec() : sortSpec;
     this.granularity = granularity == null ? QueryGranularity.ALL : granularity;
     this.limit = (limit == 0) ? 1000 : limit;
-    this.dimensions = (dimensions == null) ? null : Lists.transform(
-        dimensions,
-        new Function<String, String>()
-        {
-          @Override
-          public String apply(@Nullable String input)
-          {
-            return input;
-          }
-        }
-    );
+    this.dimensions = dimensions;
     this.querySpec = querySpec;
 
     Preconditions.checkNotNull(querySegmentSpec, "Must specify an interval");
@@ -160,7 +151,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   }
 
   @JsonProperty("searchDimensions")
-  public List<String> getDimensions()
+  public List<DimensionSpec> getDimensions()
   {
     return dimensions;
   }

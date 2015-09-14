@@ -22,6 +22,8 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Druids;
 import io.druid.query.Query;
 import io.druid.query.QueryRunnerTestHelper;
+import io.druid.query.dimension.DefaultDimensionSpec;
+import io.druid.query.dimension.LegacyDimensionSpec;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -35,11 +37,11 @@ public class SearchQueryTest
   public void testQuerySerialization() throws IOException
   {
     Query query = Druids.newSearchQueryBuilder()
-        .dataSource(QueryRunnerTestHelper.dataSource)
-        .granularity(QueryRunnerTestHelper.allGran)
-        .intervals(QueryRunnerTestHelper.fullOnInterval)
-        .query("a")
-        .build();
+                        .dataSource(QueryRunnerTestHelper.dataSource)
+                        .granularity(QueryRunnerTestHelper.allGran)
+                        .intervals(QueryRunnerTestHelper.fullOnInterval)
+                        .query("a")
+                        .build();
 
     String json = jsonMapper.writeValueAsString(query);
     Query serdeQuery = jsonMapper.readValue(json, Query.class);
@@ -47,4 +49,60 @@ public class SearchQueryTest
     Assert.assertEquals(query, serdeQuery);
   }
 
+  @Test
+  public void testEquals()
+  {
+    Query query1 = Druids.newSearchQueryBuilder()
+                         .dataSource(QueryRunnerTestHelper.dataSource)
+                         .granularity(QueryRunnerTestHelper.allGran)
+                         .intervals(QueryRunnerTestHelper.fullOnInterval)
+                         .dimensions(
+                             new DefaultDimensionSpec(
+                                 QueryRunnerTestHelper.qualityDimension,
+                                 QueryRunnerTestHelper.qualityDimension
+                             )
+                         )
+                         .query("a")
+                         .build();
+    Query query2 = Druids.newSearchQueryBuilder()
+                         .dataSource(QueryRunnerTestHelper.dataSource)
+                         .granularity(QueryRunnerTestHelper.allGran)
+                         .intervals(QueryRunnerTestHelper.fullOnInterval)
+                         .dimensions(
+                             new DefaultDimensionSpec(
+                                 QueryRunnerTestHelper.qualityDimension,
+                                 QueryRunnerTestHelper.qualityDimension
+                             )
+                         )
+                         .query("a")
+                         .build();
+
+    Assert.assertEquals(query1, query2);
+  }
+
+  @Test
+  public void testSerDe() throws IOException
+  {
+    Query query = Druids.newSearchQueryBuilder()
+                        .dataSource(QueryRunnerTestHelper.dataSource)
+                        .granularity(QueryRunnerTestHelper.allGran)
+                        .intervals(QueryRunnerTestHelper.fullOnInterval)
+                        .dimensions(new LegacyDimensionSpec(QueryRunnerTestHelper.qualityDimension))
+                        .query("a")
+                        .build();
+    final String json =
+        "{\"queryType\":\"search\",\"dataSource\":{\"type\":\"table\",\"name\":\"testing\"},\"filter\":null,\"granularity\":{\"type\":\"all\"},\"limit\":1000,\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z\"]},\"searchDimensions\":[\""
+        + QueryRunnerTestHelper.qualityDimension
+        + "\"],\"query\":{\"type\":\"insensitive_contains\",\"value\":\"a\"},\"sort\":{\"type\":\"lexicographic\"},\"context\":null}";
+    final Query serdeQuery = jsonMapper.readValue(json, Query.class);
+    Assert.assertEquals(query.toString(), serdeQuery.toString());
+    Assert.assertEquals(query, serdeQuery);
+
+    final String json2 =
+        "{\"queryType\":\"search\",\"dataSource\":{\"type\":\"table\",\"name\":\"testing\"},\"filter\":null,\"granularity\":{\"type\":\"all\"},\"limit\":1000,\"intervals\":{\"type\":\"intervals\",\"intervals\":[\"1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z\"]},\"searchDimensions\":[\"quality\"],\"query\":{\"type\":\"insensitive_contains\",\"value\":\"a\"},\"sort\":{\"type\":\"lexicographic\"},\"context\":null}";
+    final Query serdeQuery2 = jsonMapper.readValue(json2, Query.class);
+
+    Assert.assertEquals(query.toString(), serdeQuery2.toString());
+    Assert.assertEquals(query, serdeQuery2);
+  }
 }
