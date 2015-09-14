@@ -102,6 +102,20 @@ public class RegexDimExtractionFnTest
     Assert.assertTrue(extracted.contains("c"));
   }
 
+
+  @Test
+  public void testNullAndEmpty()
+  {
+    String regex = "(.*)/.*/.*";
+    ExtractionFn extractionFn = new RegexDimExtractionFn(regex);
+    // no match, map empty input value to null
+    Assert.assertEquals(null, extractionFn.apply(""));
+    // null value, returns null
+    Assert.assertEquals(null, extractionFn.apply(null));
+    // empty match, map empty result to null
+    Assert.assertEquals(null, extractionFn.apply("/a/b"));
+  }
+
   @Test
   public void testSerde() throws Exception
   {
