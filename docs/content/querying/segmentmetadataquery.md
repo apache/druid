@@ -25,7 +25,7 @@ There are several main parts to a segment metadata query:
 |--------|-----------|---------|
 |queryType|This String should always be "segmentMetadata"; this is the first thing Druid looks at to figure out how to interpret the query|yes|
 |dataSource|A String or Object defining the data source to query, very similar to a table in a relational database. See [DataSource](../querying/datasource.html) for more information.|yes|
-|intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
+|intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|no|
 |toInclude|A JSON Object representing what columns should be included in the result. Defaults to "all".|no|
 |merge|Merge all individual segment metadata results into a single result|no|
 |context|See [Context](../querying/query-context.html)|no|
@@ -51,6 +51,13 @@ Metric columns will have type `FLOAT` or `LONG` or name of the underlying comple
 Timestamp column will have type `LONG`.
 
 Only columns which are dimensions (ie, have type `STRING`) will have any cardinality. Rest of the columns (timestamp and metric columns) will show cardinality as `null`.
+
+### intervals
+
+If an interval is not specified, the query will use a default interval that spans a configurable period before the end time of the most recent segment.
+
+The length of this default time period is set in the broker configuration via:
+  druid.query.segmentMetadata.defaultHistory
 
 ### toInclude
 
