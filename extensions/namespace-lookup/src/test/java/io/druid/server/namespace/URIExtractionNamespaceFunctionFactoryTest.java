@@ -43,12 +43,15 @@ import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -61,6 +64,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -235,11 +239,15 @@ public class URIExtractionNamespaceFunctionFactoryTest
     );
   }
 
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
   private final String suffix;
   private final Function<File, OutputStream> outStreamSupplier;
   private Lifecycle lifecycle;
   private NamespaceExtractionCacheManager manager;
   private File tmpFile;
+  private File tmpFileParent;
   private URIExtractionNamespaceFunctionFactory factory;
   private URIExtractionNamespace namespace;
   private ConcurrentHashMap<String, Function<String, String>> fnCache;
@@ -249,8 +257,8 @@ public class URIExtractionNamespaceFunctionFactoryTest
   {
     lifecycle.start();
     fnCache.clear();
-    tmpFile = Files.createTempFile("druidTestURIExtractionNS", suffix).toFile();
-    tmpFile.deleteOnExit();
+    tmpFileParent = temporaryFolder.newFolder();
+    tmpFile = Files.createTempFile(tmpFileParent.toPath(), "druidTestURIExtractionNS", suffix).toFile();
     final ObjectMapper mapper = new DefaultObjectMapper();
     try (OutputStream ostream = outStreamSupplier.apply(tmpFile)) {
       try (OutputStreamWriter out = new OutputStreamWriter(ostream)) {
@@ -275,7 +283,6 @@ public class URIExtractionNamespaceFunctionFactoryTest
   public void tearDown()
   {
     lifecycle.stop();
-    tmpFile.delete();
   }
 
   @Test
@@ -346,5 +353,28 @@ public class URIExtractionNamespaceFunctionFactoryTest
     Assert.assertEquals(v, v2);
     Assert.assertEquals("bar", map.get("foo"));
     Assert.assertEquals(null, map.get("baz"));
+  }
+
+  @Test
+  public void testMissing() throws Exception
+  {
+    URIExtractionNamespace badNamespace = new URIExtractionNamespace(
+        namespace.getNamespace(),
+        namespace.getUri(),
+        namespace.getNamespaceParseSpec(),
+        Period.millis((int) namespace.getPollMs()),
+        "\\QNEVER GONNA FIND ME" + UUID
+            .randomUUID().toString() + "\\E"
+    );
+    ConcurrentMap<String, String> map = new ConcurrentHashMap<>();
+    try {
+      factory.getCachePopulator(badNamespace, null, map).call();
+    }
+    catch (RuntimeException e) {
+      Assert.assertNotNull(e.getCause());
+      Assert.assertEquals(FileNotFoundException.class, e.getCause().getClass());
+      return;
+    }
+    Assert.fail("Did not have exception");
   }
 }

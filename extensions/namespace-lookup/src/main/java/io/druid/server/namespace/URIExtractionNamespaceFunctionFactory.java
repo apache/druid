@@ -38,6 +38,7 @@ import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 
 import javax.annotation.Nullable;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -114,6 +115,18 @@ public class URIExtractionNamespaceFunctionFactory implements ExtractionNamespac
             originalUri,
             versionRegex == null ? null : Pattern.compile(versionRegex)
         );
+        if (uri == null) {
+          throw new RuntimeException(
+              new FileNotFoundException(
+                  String.format(
+                      "Could not find match for pattern `%s` in [%s] for %s",
+                      versionRegex,
+                      originalUri,
+                      extractionNamespace
+                  )
+              )
+          );
+        }
         final String uriPath = uri.getPath();
 
         try {
