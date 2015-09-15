@@ -20,6 +20,7 @@
 package io.druid.segment.realtime.plumber;
 
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseV2;
@@ -43,22 +44,21 @@ public class Committers
 
   public static Supplier<Committer> supplierFromRunnable(final Runnable runnable)
   {
-    return supplierOf(
-        new Committer()
-        {
-          @Override
-          public Object getMetadata()
-          {
-            return null;
-          }
+    final Committer committer = new Committer()
+    {
+      @Override
+      public Object getMetadata()
+      {
+        return null;
+      }
 
-          @Override
-          public void run()
-          {
-            runnable.run();
-          }
-        }
-    );
+      @Override
+      public void run()
+      {
+        runnable.run();
+      }
+    };
+    return Suppliers.ofInstance(committer);
   }
 
   public static Supplier<Committer> supplierFromFirehose(final Firehose firehose)
@@ -102,17 +102,5 @@ public class Committers
   public static Committer nil()
   {
     return NIL;
-  }
-
-  public static Supplier<Committer> supplierOf(final Committer committer)
-  {
-    return new Supplier<Committer>()
-    {
-      @Override
-      public Committer get()
-      {
-        return committer;
-      }
-    };
   }
 }
