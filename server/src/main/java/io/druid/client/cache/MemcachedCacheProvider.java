@@ -17,11 +17,22 @@
 
 package io.druid.client.cache;
 
+import com.google.inject.Inject;
+import com.metamx.metrics.MonitorScheduler;
+
 public class MemcachedCacheProvider extends MemcachedCacheConfig implements CacheProvider
 {
+  private final MonitorScheduler emitter;
+
+  @Inject
+  public MemcachedCacheProvider(MonitorScheduler emitter)
+  {
+    this.emitter = emitter;
+  }
+
   @Override
   public Cache get()
   {
-    return MemcachedCache.create(this);
+    return MemcachedCache.create(this, emitter);
   }
 }
