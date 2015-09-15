@@ -137,6 +137,7 @@ public class EventReceiverFirehoseTestClient
       // Test sending events using both jsonMapper and smileMapper.
       // sends events one by one using both jsonMapper and smileMapper.
       int totalEventsPosted = 0;
+      int expectedEventsPosted = 0;
       while ((s = reader.readLine()) != null) {
         events.add(
             (Map<String, Object>) this.jsonMapper.readValue(
@@ -151,10 +152,11 @@ public class EventReceiverFirehoseTestClient
                            : SmileMediaTypes.APPLICATION_JACKSON_SMILE;
         totalEventsPosted += postEvents(events, mapper, mediaType);
         ;
+        expectedEventsPosted += events.size();
         events = new ArrayList<>();
       }
 
-      if (totalEventsPosted != events.size()) {
+      if (totalEventsPosted != expectedEventsPosted) {
         throw new ISE("All events not posted, expected : %d actual : %d", events.size(), totalEventsPosted);
       }
       return totalEventsPosted;
