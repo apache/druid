@@ -29,7 +29,7 @@ The spec\_file is a path to a file that contains JSON and an example looks like:
   "dataSchema" : {
     "dataSource" : "wikipedia",
     "parser" : {
-      "type" : "string",
+      "type" : "hadoopyString",
       "parseSpec" : {
         "format" : "json",
         "timestampSpec" : {
@@ -336,7 +336,7 @@ The schema of the Hadoop Index Task contains a task "type" and a Hadoop Index Co
     "dataSchema" : {
       "dataSource" : "wikipedia",
       "parser" : {
-        "type" : "string",
+        "type" : "hadoopyString",
         "parseSpec" : {
           "format" : "json",
           "timestampSpec" : {
