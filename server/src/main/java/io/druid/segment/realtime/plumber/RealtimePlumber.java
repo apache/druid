@@ -744,6 +744,14 @@ public class RealtimePlumber implements Plumber
               )
           );
         }
+        if (hydrants.isEmpty()) {
+          // Probably encountered a corrupt sink directory
+          log.warn(
+              "Found persisted segment directory with no intermediate segments present at %s, skipping sink creation.",
+              sinkDir.getAbsolutePath()
+          );
+          continue;
+        }
         Sink currSink = new Sink(sinkInterval, schema, config, versioningPolicy.getVersion(sinkInterval), hydrants);
         sinks.put(sinkInterval.getStartMillis(), currSink);
         sinkTimeline.add(

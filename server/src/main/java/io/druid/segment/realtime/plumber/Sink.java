@@ -85,11 +85,13 @@ public class Sink implements Iterable<FireHydrant>
     this.interval = interval;
     this.version = version;
 
+    int maxCount = -1;
     for (int i = 0; i < hydrants.size(); ++i) {
       final FireHydrant hydrant = hydrants.get(i);
-      if (hydrant.getCount() != i) {
+      if (hydrant.getCount() <= maxCount) {
         throw new ISE("hydrant[%s] not the right count[%s]", hydrant, i);
       }
+      maxCount = hydrant.getCount();
     }
     this.hydrants.addAll(hydrants);
 
@@ -167,13 +169,13 @@ public class Sink implements Iterable<FireHydrant>
         Lists.<String>newArrayList(),
         Lists.transform(
             Arrays.asList(schema.getAggregators()), new Function<AggregatorFactory, String>()
-        {
-          @Override
-          public String apply(@Nullable AggregatorFactory input)
-          {
-            return input.getName();
-          }
-        }
+            {
+              @Override
+              public String apply(@Nullable AggregatorFactory input)
+              {
+                return input.getName();
+              }
+            }
         ),
         config.getShardSpec(),
         null,
@@ -208,7 +210,13 @@ public class Sink implements Iterable<FireHydrant>
     final FireHydrant old;
     synchronized (hydrantLock) {
       old = currHydrant;
-      currHydrant = new FireHydrant(newIndex, hydrants.size(), getSegment().getIdentifier());
+      int newCount = 0;
+      int numHydrants = hydrants.size();
+      if (numHydrants > 0) {
+        FireHydrant lastHydrant = hydrants.get(numHydrants - 1);
+        newCount = lastHydrant.getCount() + 1;
+      }
+      currHydrant = new FireHydrant(newIndex, newCount, getSegment().getIdentifier());
       hydrants.add(currHydrant);
     }
 
