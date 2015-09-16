@@ -24,6 +24,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.metamx.common.guava.Sequences;
+import io.druid.common.utils.JodaUtils;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.BySegmentResultValue;
 import io.druid.query.BySegmentResultValueClass;
@@ -43,6 +44,7 @@ import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.TestIndex;
 import io.druid.segment.column.ValueType;
+import io.druid.timeline.LogicalSegment;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -55,7 +57,7 @@ import java.util.concurrent.Executors;
 public class SegmentMetadataQueryTest
 {
   private final SegmentMetadataQueryRunnerFactory factory = new SegmentMetadataQueryRunnerFactory(
-      new SegmentMetadataQueryQueryToolChest(),
+      new SegmentMetadataQueryQueryToolChest(new SegmentMetadataQueryConfig()),
       QueryRunnerTestHelper.NOOP_QUERYWATCHER
   );
 
@@ -103,6 +105,7 @@ public class SegmentMetadataQueryTest
         ), 71982
     );
   }
+
   @Test
   @SuppressWarnings("unchecked")
   public void testSegmentMetadataQuery()
@@ -138,7 +141,9 @@ public class SegmentMetadataQueryTest
                 //Note: It is essential to have atleast 2 query runners merged to reproduce the regression bug described in
                 //https://github.com/druid-io/druid/pull/1172
                 //the bug surfaces only when ordering is used which happens only when you have 2 things to compare
-                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(singleSegmentQueryRunner, singleSegmentQueryRunner))),
+                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(singleSegmentQueryRunner, singleSegmentQueryRunner)
+            )
+        ),
         toolChest
     );
 
@@ -148,7 +153,8 @@ public class SegmentMetadataQueryTest
             testQuery.withOverriddenContext(ImmutableMap.<String, Object>of("bySegment", true)),
             Maps.newHashMap()
         ),
-        "failed SegmentMetadata bySegment query");
+        "failed SegmentMetadata bySegment query"
+    );
     exec.shutdownNow();
   }
 
@@ -167,5 +173,197 @@ public class SegmentMetadataQueryTest
 
     // test serialize and deserialize
     Assert.assertEquals(query, mapper.readValue(mapper.writeValueAsString(query), Query.class));
+  }
+
+  @Test
+  public void testSerdeWithDefaultInterval() throws Exception
+  {
+    String queryStr = "{\n"
+                      + "  \"queryType\":\"segmentMetadata\",\n"
+                      + "  \"dataSource\":\"test_ds\"\n"
+                      + "}";
+    Query query = mapper.readValue(queryStr, Query.class);
+    Assert.assertTrue(query instanceof SegmentMetadataQuery);
+    Assert.assertEquals("test_ds", Iterables.getOnlyElement(query.getDataSource().getNames()));
+    Assert.assertEquals(new Interval(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT), query.getIntervals().get(0));
+    Assert.assertTrue(((SegmentMetadataQuery) query).isUsingDefaultInterval());
+
+    // test serialize and deserialize
+    Assert.assertEquals(query, mapper.readValue(mapper.writeValueAsString(query), Query.class));
+  }
+
+  @Test
+  public void testDefaultIntervalAndFiltering() throws Exception
+  {
+    SegmentMetadataQuery testQuery = Druids.newSegmentMetadataQueryBuilder()
+                                           .dataSource("testing")
+                                           .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
+                                           .merge(true)
+                                           .build();
+
+    Interval expectedInterval = new Interval(
+        JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT
+    );
+
+    /* No interval specified, should use default interval */
+    Assert.assertTrue(testQuery.isUsingDefaultInterval());
+    Assert.assertEquals(testQuery.getIntervals().get(0), expectedInterval);
+    Assert.assertEquals(testQuery.getIntervals().size(), 1);
+
+    List<LogicalSegment> testSegments = Arrays.asList(
+        new LogicalSegment()
+        {
+          @Override
+          public Interval getInterval()
+          {
+            return new Interval("2012-01-01/P1D");
+          }
+        },
+        new LogicalSegment()
+        {
+          @Override
+          public Interval getInterval()
+          {
+            return new Interval("2012-01-01T01/PT1H");
+          }
+        },
+        new LogicalSegment()
+        {
+          @Override
+          public Interval getInterval()
+          {
+            return new Interval("2013-01-05/P1D");
+          }
+        },
+        new LogicalSegment()
+        {
+          @Override
+          public Interval getInterval()
+          {
+            return new Interval("2013-05-20/P1D");
+          }
+        },
+        new LogicalSegment()
+        {
+          @Override
+          public Interval getInterval()
+          {
+            return new Interval("2014-01-05/P1D");
+          }
+        },
+        new LogicalSegment()
+        {
+          @Override
+          public Interval getInterval()
+          {
+            return new Interval("2014-02-05/P1D");
+          }
+        },
+        new LogicalSegment()
+        {
+          @Override
+          public Interval getInterval()
+          {
+            return new Interval("2015-01-19T01/PT1H");
+          }
+        },
+        new LogicalSegment()
+        {
+          @Override
+          public Interval getInterval()
+          {
+            return new Interval("2015-01-20T02/PT1H");
+          }
+        }
+    );
+
+    /* Test default period filter */
+    List<LogicalSegment> filteredSegments = new SegmentMetadataQueryQueryToolChest(
+        new SegmentMetadataQueryConfig()
+    ).filterSegments(
+        testQuery,
+        testSegments
+    );
+
+    List<LogicalSegment> expectedSegments = Arrays.asList(
+        new LogicalSegment()
+        {
+          @Override
+          public Interval getInterval()
+          {
+            return new Interval("2015-01-19T01/PT1H");
+          }
+        },
+        new LogicalSegment()
+        {
+          @Override
+          public Interval getInterval()
+          {
+            return new Interval("2015-01-20T02/PT1H");
+          }
+        }
+    );
+
+    Assert.assertEquals(filteredSegments.size(), 2);
+    for (int i = 0; i < filteredSegments.size(); i++) {
+      Assert.assertEquals(expectedSegments.get(i).getInterval(), filteredSegments.get(i).getInterval());
+    }
+
+    /* Test 2 year period filtering */
+    SegmentMetadataQueryConfig twoYearPeriodCfg = new SegmentMetadataQueryConfig("P2Y");
+    List<LogicalSegment> filteredSegments2 = new SegmentMetadataQueryQueryToolChest(
+        twoYearPeriodCfg
+    ).filterSegments(
+        testQuery,
+        testSegments
+    );
+
+    List<LogicalSegment> expectedSegments2 = Arrays.asList(
+        new LogicalSegment()
+        {
+          @Override
+          public Interval getInterval()
+          {
+            return new Interval("2013-05-20/P1D");
+          }
+        },
+        new LogicalSegment()
+        {
+          @Override
+          public Interval getInterval()
+          {
+            return new Interval("2014-01-05/P1D");
+          }
+        },
+        new LogicalSegment()
+        {
+          @Override
+          public Interval getInterval()
+          {
+            return new Interval("2014-02-05/P1D");
+          }
+        },
+        new LogicalSegment()
+        {
+          @Override
+          public Interval getInterval()
+          {
+            return new Interval("2015-01-19T01/PT1H");
+          }
+        },
+        new LogicalSegment()
+        {
+          @Override
+          public Interval getInterval()
+          {
+            return new Interval("2015-01-20T02/PT1H");
+          }
+        }
+    );
+
+    Assert.assertEquals(filteredSegments2.size(), 5);
+    for (int i = 0; i < filteredSegments2.size(); i++) {
+      Assert.assertEquals(expectedSegments2.get(i).getInterval(), filteredSegments2.get(i).getInterval());
+    }
   }
 }
