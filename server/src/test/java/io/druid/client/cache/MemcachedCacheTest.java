@@ -19,6 +19,8 @@ package io.druid.client.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
@@ -110,7 +112,7 @@ public class MemcachedCacheTest
   @Before
   public void setUp() throws Exception
   {
-    MemcachedClientIF client = new MockMemcachedClient();
+    Supplier<MemcachedClientIF> client = Suppliers.<MemcachedClientIF>ofInstance(new MockMemcachedClient());
     cache = new MemcachedCache(client, memcachedCacheConfig);
   }
 
