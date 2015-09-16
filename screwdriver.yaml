@@ -37,7 +37,7 @@ shared:
   steps:
     druid_code_build:
       description: create druid code jars
-      command: mvn install
+      command: mvn -B install
     compute_druid_version:
       description: compute the hash for druid version
       command: >
@@ -45,7 +45,7 @@ shared:
         if [ ! -s druid.version ]; then echo 'Error: druid.version is empty!' && exit 1; else echo "druid.version is `cat druid.version`"; fi || exit $?
     set_druid_version:
       description: set druid jars version
-      command: mvn org.codehaus.mojo:versions-maven-plugin:2.1:set -DnewVersion="`cat druid.version`"
+      command: mvn -B org.codehaus.mojo:versions-maven-plugin:2.1:set -DnewVersion="`cat druid.version`"
     clone_druid_pkg:
       description: clone druid package
       command: git clone --branch 0_8_1 git@git.corp.yahoo.com:greyhawk/druid_package.git
@@ -58,7 +58,7 @@ shared:
         git commit -a -m "commit to make yinst_create happy" || exit $?
     druid_pkg_code_build:
       description: copy dependencies for druid_package
-      command: mvn -f druid_package/pom.xml -Ddruid.version="`cat druid.version`" install dependency:copy-dependencies
+      command: mvn -B -f druid_package/pom.xml -Ddruid.version="`cat druid.version`" install dependency:copy-dependencies
     show_tree:
       description: tree under root
       command: tree .
@@ -70,7 +70,7 @@ shared:
       command: git clone git@git.corp.yahoo.com:greyhawk/ci_tests.git
     ci_tests_code_build:
       description: build ci tests and copy its dependencies
-      command: mvn -f ci_tests/pom.xml package dependency:copy-dependencies
+      command: mvn -B -f ci_tests/pom.xml package dependency:copy-dependencies
     create_druid_yinst_pkg:
       description: create the yinst package from druid_packcage
       command: >
