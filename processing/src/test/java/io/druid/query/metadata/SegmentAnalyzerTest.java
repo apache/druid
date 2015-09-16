@@ -99,13 +99,13 @@ public class SegmentAnalyzerTest
   {
     final QueryRunner runner = QueryRunnerTestHelper.makeQueryRunner(
         (QueryRunnerFactory) new SegmentMetadataQueryRunnerFactory(
-            new SegmentMetadataQueryQueryToolChest(),
+            new SegmentMetadataQueryQueryToolChest(new SegmentMetadataQueryConfig()),
             QueryRunnerTestHelper.NOOP_QUERYWATCHER
         ), index
     );
 
     final SegmentMetadataQuery query = new SegmentMetadataQuery(
-        new LegacyDataSource("test"), QuerySegmentSpecs.create("2011/2012"), null, null, null
+        new LegacyDataSource("test"), QuerySegmentSpecs.create("2011/2012"), null, null, null, false
     );
     HashMap<String,Object> context = new HashMap<String, Object>();
     return Sequences.toList(query.run(runner, context), Lists.<SegmentAnalysis>newArrayList());

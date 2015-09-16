@@ -20,18 +20,27 @@ package io.druid.query.metadata.metadata;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import io.druid.common.utils.JodaUtils;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Query;
 import io.druid.query.TableDataSource;
+import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
+import org.joda.time.Interval;
 
+import java.util.Arrays;
 import java.util.Map;
 
 public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
 {
+  public static final Interval DEFAULT_INTERVAL = new Interval(
+      JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT
+  );
+
   private final ColumnIncluderator toInclude;
   private final boolean merge;
+  private final boolean usingDefaultInterval;
 
   @JsonCreator
   public SegmentMetadataQuery(
@@ -39,14 +48,29 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
       @JsonProperty("toInclude") ColumnIncluderator toInclude,
       @JsonProperty("merge") Boolean merge,
-      @JsonProperty("context") Map<String, Object> context
+      @JsonProperty("context") Map<String, Object> context,
+      @JsonProperty("usingDefaultInterval") Boolean useDefaultInterval
   )
   {
-    super(dataSource, querySegmentSpec, context);
+    super(
+        dataSource,
+        (querySegmentSpec == null) ? new MultipleIntervalSegmentSpec(Arrays.asList(DEFAULT_INTERVAL))
+                                   : querySegmentSpec,
+        context
+    );
+
+    if (querySegmentSpec == null) {
+      this.usingDefaultInterval = true;
+    } else {
+      this.usingDefaultInterval = useDefaultInterval == null ? false : useDefaultInterval;
+    }
 
     this.toInclude = toInclude == null ? new AllColumnIncluderator() : toInclude;
     this.merge = merge == null ? false : merge;
-    Preconditions.checkArgument(dataSource instanceof TableDataSource, "SegmentMetadataQuery only supports table datasource");
+    Preconditions.checkArgument(
+        dataSource instanceof TableDataSource,
+        "SegmentMetadataQuery only supports table datasource"
+    );
   }
 
   @JsonProperty
@@ -59,6 +83,12 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   public boolean isMerge()
   {
     return merge;
+  }
+
+  @JsonProperty
+  public boolean isUsingDefaultInterval()
+  {
+    return usingDefaultInterval;
   }
 
   @Override
@@ -78,7 +108,11 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   {
     return new SegmentMetadataQuery(
         getDataSource(),
-        getQuerySegmentSpec(), toInclude, merge, computeOverridenContext(contextOverride)
+        getQuerySegmentSpec(),
+        toInclude,
+        merge,
+        computeOverridenContext(contextOverride),
+        usingDefaultInterval
     );
   }
 
@@ -87,7 +121,12 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   {
     return new SegmentMetadataQuery(
         getDataSource(),
-        spec, toInclude, merge, getContext());
+        spec,
+        toInclude,
+        merge,
+        getContext(),
+        usingDefaultInterval
+    );
   }
 
   @Override
@@ -98,22 +137,34 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
         getQuerySegmentSpec(),
         toInclude,
         merge,
-        getContext());
+        getContext(),
+        usingDefaultInterval
+    );
   }
 
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
-    if (!super.equals(o)) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
 
     SegmentMetadataQuery that = (SegmentMetadataQuery) o;
 
-    if (merge != that.merge) return false;
-    if (toInclude != null ? !toInclude.equals(that.toInclude) : that.toInclude != null) return false;
+    if (merge != that.merge) {
+      return false;
+    }
+    if (usingDefaultInterval != that.usingDefaultInterval) {
+      return false;
+    }
+    return !(toInclude != null ? !toInclude.equals(that.toInclude) : that.toInclude != null);
 
-    return true;
   }
 
   @Override
@@ -122,6 +173,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     int result = super.hashCode();
     result = 31 * result + (toInclude != null ? toInclude.hashCode() : 0);
     result = 31 * result + (merge ? 1 : 0);
+    result = 31 * result + (usingDefaultInterval ? 1 : 0);
     return result;
   }
 }

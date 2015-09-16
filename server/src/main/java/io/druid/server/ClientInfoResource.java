@@ -23,6 +23,7 @@ import io.druid.client.InventoryView;
 import io.druid.client.TimelineServerView;
 import io.druid.client.selector.ServerSelector;
 import io.druid.query.TableDataSource;
+import io.druid.query.metadata.SegmentMetadataQueryConfig;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
 import io.druid.timeline.TimelineObjectHolder;
@@ -62,19 +63,21 @@ public class ClientInfoResource
   private static final String KEY_DIMENSIONS = "dimensions";
   private static final String KEY_METRICS = "metrics";
 
-  private static final int SEGMENT_HISTORY_MILLIS = 7 * 24 * 60 * 60 * 1000; // ONE WEEK
-
   private InventoryView serverInventoryView;
   private TimelineServerView timelineServerView;
+  private SegmentMetadataQueryConfig segmentMetadataQueryConfig;
 
   @Inject
   public ClientInfoResource(
       InventoryView serverInventoryView,
-      TimelineServerView timelineServerView
+      TimelineServerView timelineServerView,
+      SegmentMetadataQueryConfig segmentMetadataQueryConfig
   )
   {
     this.serverInventoryView = serverInventoryView;
     this.timelineServerView = timelineServerView;
+    this.segmentMetadataQueryConfig = (segmentMetadataQueryConfig == null) ?
+                                      new SegmentMetadataQueryConfig() : segmentMetadataQueryConfig;
   }
 
   private Map<String, List<DataSegment>> getSegmentsForDatasources()
@@ -108,77 +111,86 @@ public class ClientInfoResource
       @QueryParam("full") String full
   )
   {
-    if(full == null) {
-      return ImmutableMap.<String, Object> of(
+    if (full == null) {
+      return ImmutableMap.<String, Object>of(
           KEY_DIMENSIONS, getDatasourceDimensions(dataSourceName, interval),
           KEY_METRICS, getDatasourceMetrics(dataSourceName, interval)
-          );
+      );
     }
 
     Interval theInterval;
     if (interval == null || interval.isEmpty()) {
-      DateTime now = new DateTime();
-      theInterval = new Interval(now.minusMillis(SEGMENT_HISTORY_MILLIS), now);
+      DateTime now = getCurrentTime();
+      theInterval = new Interval(segmentMetadataQueryConfig.getDefaultHistory(), now);
     } else {
       theInterval = new Interval(interval);
     }
 
     TimelineLookup<String, ServerSelector> timeline = timelineServerView.getTimeline(new TableDataSource(dataSourceName));
-    Iterable<TimelineObjectHolder<String, ServerSelector>> serversLookup = timeline != null ? timeline.lookup(theInterval) : null;
-    if(serversLookup == null || Iterables.isEmpty(serversLookup)) {
+    Iterable<TimelineObjectHolder<String, ServerSelector>> serversLookup = timeline != null ? timeline.lookup(
+        theInterval
+    ) : null;
+    if (serversLookup == null || Iterables.isEmpty(serversLookup)) {
       return Collections.EMPTY_MAP;
     }
-    Map<Interval,Object> servedIntervals = new TreeMap<>(new Comparator<Interval>()
-    {
-      @Override
-      public int compare(Interval o1, Interval o2)
-      {
-        if(o1.equals(o2) || o1.overlaps(o2)) {
-          return 0;
-        } else {
-          return o1.isBefore(o2) ? -1 : 1;
+    Map<Interval, Object> servedIntervals = new TreeMap<>(
+        new Comparator<Interval>()
+        {
+          @Override
+          public int compare(Interval o1, Interval o2)
+          {
+            if (o1.equals(o2) || o1.overlaps(o2)) {
+              return 0;
+            } else {
+              return o1.isBefore(o2) ? -1 : 1;
+            }
+          }
         }
-      }
-    });
+    );
 
     for (TimelineObjectHolder<String, ServerSelector> holder : serversLookup) {
-      servedIntervals.put(holder.getInterval(), ImmutableMap.of(KEY_DIMENSIONS, Sets.newHashSet(), KEY_METRICS, Sets.newHashSet()));
+      servedIntervals.put(
+          holder.getInterval(),
+          ImmutableMap.of(KEY_DIMENSIONS, Sets.newHashSet(), KEY_METRICS, Sets.newHashSet())
+      );
     }
 
     List<DataSegment> segments = getSegmentsForDatasources().get(dataSourceName);
     if (segments == null || segments.isEmpty()) {
-      log.error("Found no DataSegments but TimelineServerView has served intervals. Datasource = %s , Interval = %s",
+      log.error(
+          "Found no DataSegments but TimelineServerView has served intervals. Datasource = %s , Interval = %s",
           dataSourceName,
-          theInterval);
+          theInterval
+      );
       throw new RuntimeException("Internal Error");
     }
 
     for (DataSegment segment : segments) {
-      if(servedIntervals.containsKey(segment.getInterval())) {
-        Map<String,Set<String>> columns = (Map<String,Set<String>>)servedIntervals.get(segment.getInterval());
+      if (servedIntervals.containsKey(segment.getInterval())) {
+        Map<String, Set<String>> columns = (Map<String, Set<String>>) servedIntervals.get(segment.getInterval());
         columns.get(KEY_DIMENSIONS).addAll(segment.getDimensions());
         columns.get(KEY_METRICS).addAll(segment.getMetrics());
       }
     }
 
     //collapse intervals if they abut and have same set of columns
-    Map<String,Object> result = Maps.newLinkedHashMap();
+    Map<String, Object> result = Maps.newLinkedHashMap();
     Interval curr = null;
-    Map<String,Set<String>> cols = null;
-    for(Map.Entry<Interval,Object> e : servedIntervals.entrySet()) {
+    Map<String, Set<String>> cols = null;
+    for (Map.Entry<Interval, Object> e : servedIntervals.entrySet()) {
       Interval ival = e.getKey();
-      if(curr != null && curr.abuts(ival) && cols.equals(e.getValue())) {
+      if (curr != null && curr.abuts(ival) && cols.equals(e.getValue())) {
         curr = curr.withEnd(ival.getEnd());
       } else {
-        if(curr != null) {
+        if (curr != null) {
           result.put(curr.toString(), cols);
         }
         curr = ival;
-        cols = (Map<String,Set<String>>)e.getValue();
+        cols = (Map<String, Set<String>>) e.getValue();
       }
     }
     //add the last one in
-    if(curr != null) {
+    if (curr != null) {
       result.put(curr.toString(), cols);
     }
     return result;
@@ -201,8 +213,8 @@ public class ClientInfoResource
 
     Interval theInterval;
     if (interval == null || interval.isEmpty()) {
-      DateTime now = new DateTime();
-      theInterval = new Interval(now.minusMillis(SEGMENT_HISTORY_MILLIS), now);
+      DateTime now = getCurrentTime();
+      theInterval = new Interval(segmentMetadataQueryConfig.getDefaultHistory(), now);
     } else {
       theInterval = new Interval(interval);
     }
@@ -230,11 +242,11 @@ public class ClientInfoResource
     if (segments == null || segments.isEmpty()) {
       return metrics;
     }
-    
+
     Interval theInterval;
     if (interval == null || interval.isEmpty()) {
-      DateTime now = new DateTime();
-      theInterval = new Interval(now.minusMillis(SEGMENT_HISTORY_MILLIS), now);
+      DateTime now = getCurrentTime();
+      theInterval = new Interval(segmentMetadataQueryConfig.getDefaultHistory(), now);
     } else {
       theInterval = new Interval(interval);
     }
@@ -247,4 +259,11 @@ public class ClientInfoResource
 
     return metrics;
   }
+
+  protected DateTime getCurrentTime()
+  {
+    return new DateTime();
+  }
+
+
 }
