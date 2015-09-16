@@ -110,3 +110,41 @@ The following matches dimension values in `[product_1, product_3, product_5]` fo
     }
 }
 ```
+### Search filter
+
+Search filters can be used to filter on partial string matches. 
+
+```json
+{
+    "filter": {
+        "type": "search",
+        "dimension": "product",
+        "query": {
+          "type": "insensitive_contains",
+          "value": "foo" 
+        }        
+    }
+}
+```
+
+|property|description|required?|
+|--------|-----------|---------|
+|type|This String should always be "search".|yes|
+|dimension|The dimension to perform the search over.|yes|
+|query|A JSON object for the type of search. See below for more information.|yes|
+
+#### Search Query Spec
+
+##### Insensitive Contains
+
+|property|description|required?|
+|--------|-----------|---------|
+|type|This String should always be "insensitive_contains".|yes|
+|value|A String value to run the search over.|yes|
+
+##### Fragment
+
+|property|description|required?|
+|--------|-----------|---------|
+|type|This String should always be "fragment".|yes|
+|values|A JSON array of String values to run the search over. Case insensitive.|yes|
