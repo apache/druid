@@ -110,4 +110,33 @@ public class ArbitraryGranularitySpec implements GranularitySpec
   {
     return queryGranularity;
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    ArbitraryGranularitySpec that = (ArbitraryGranularitySpec) o;
+
+    if (!intervals.equals(that.intervals)) {
+      return false;
+    }
+    return !(queryGranularity != null
+             ? !queryGranularity.equals(that.queryGranularity)
+             : that.queryGranularity != null);
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = intervals.hashCode();
+    result = 31 * result + (queryGranularity != null ? queryGranularity.hashCode() : 0);
+    return result;
+  }
 }

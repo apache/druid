@@ -17,6 +17,7 @@
 
 package io.druid.indexer;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -45,7 +46,11 @@ import java.util.List;
  */
 public class HadoopDruidIndexerConfigTest
 {
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private static final ObjectMapper jsonMapper;
+  static {
+    jsonMapper = new DefaultObjectMapper();
+    jsonMapper.setInjectableValues(new InjectableValues.Std().addValue(ObjectMapper.class, jsonMapper));
+  }
 
   public static <T> T jsonReadWriteRead(String s, Class<T> klass)
   {
@@ -175,12 +180,17 @@ public class HadoopDruidIndexerConfigTest
 
     HadoopIngestionSpec spec = new HadoopIngestionSpec(
         new DataSchema(
-            "foo", null, new AggregatorFactory[0], new UniformGranularitySpec(
-            Granularity.MINUTE,
-            QueryGranularity.MINUTE,
-            ImmutableList.of(new Interval("2010-01-01/P1D"))
-        )
-        ), new HadoopIOConfig(ImmutableMap.<String, Object>of("paths", "bar", "type", "static"), null, null),
+            "foo",
+            null,
+            new AggregatorFactory[0],
+            new UniformGranularitySpec(
+                Granularity.MINUTE,
+                QueryGranularity.MINUTE,
+                ImmutableList.of(new Interval("2010-01-01/P1D"))
+            ),
+            jsonMapper
+        ),
+        new HadoopIOConfig(ImmutableMap.<String, Object>of("paths", "bar", "type", "static"), null, null),
         new HadoopTuningConfig(
             null,
             null,

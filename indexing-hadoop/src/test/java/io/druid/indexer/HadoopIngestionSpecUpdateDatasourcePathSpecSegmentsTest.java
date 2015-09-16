@@ -19,6 +19,9 @@
 
 package io.druid.indexer;
 
+import com.fasterxml.jackson.databind.BeanProperty;
+import com.fasterxml.jackson.databind.DeserializationContext;
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -50,7 +53,15 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
   private final String testDatasource = "test";
   private final Interval testDatasourceInterval = new Interval("1970/3000");
   private final Interval testDatasourceIntervalPartial = new Interval("2050/3000");
-  private final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private final ObjectMapper jsonMapper;
+
+  public HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest()
+  {
+    jsonMapper = new DefaultObjectMapper();
+    jsonMapper.setInjectableValues(
+        new InjectableValues.Std().addValue(ObjectMapper.class, jsonMapper)
+    );
+  }
 
   private static final DataSegment SEGMENT = new DataSegment(
       "test1",
@@ -155,7 +166,8 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
                 ImmutableList.of(
                     new Interval("2010-01-01/P1D")
                 )
-            )
+            ),
+            jsonMapper
         ),
         new HadoopIOConfig(
             jsonMapper.convertValue(datasourcePathSpec, Map.class),

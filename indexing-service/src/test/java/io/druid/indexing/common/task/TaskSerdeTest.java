@@ -56,7 +56,11 @@ import java.io.IOException;
 
 public class TaskSerdeTest
 {
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private static final ObjectMapper jsonMapper;
+  static  {
+    jsonMapper = new DefaultObjectMapper();
+    jsonMapper.setInjectableValues(new InjectableValues.Std().addValue(ObjectMapper.class, jsonMapper));
+  }
 
   private final IndexSpec indexSpec = new IndexSpec();
 
@@ -75,7 +79,8 @@ public class TaskSerdeTest
                     Granularity.DAY,
                     null,
                     ImmutableList.of(new Interval("2010-01-01/P2D"))
-                )
+                ),
+                jsonMapper
             ),
             new IndexTask.IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null)),
             new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec)
@@ -120,7 +125,8 @@ public class TaskSerdeTest
                     Granularity.DAY,
                     null,
                     ImmutableList.of(new Interval("2010-01-01/P2D"))
-                )
+                ),
+                jsonMapper
             ),
             new IndexTask.IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null)),
             new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec)
@@ -277,7 +283,8 @@ public class TaskSerdeTest
                 "foo",
                 null,
                 new AggregatorFactory[0],
-                new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.NONE, null)
+                new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.NONE, null),
+                jsonMapper
             ),
             new RealtimeIOConfig(
                 new LocalFirehoseFactory(new File("lol"), "rofl", null), new PlumberSchool()
@@ -534,7 +541,8 @@ public class TaskSerdeTest
                 Granularity.DAY,
                 null,
                 ImmutableList.of(new Interval("2010-01-01/P1D"))
-            )
+            ),
+                jsonMapper
             ), new HadoopIOConfig(ImmutableMap.<String, Object>of("paths", "bar"), null, null), null
         ),
         null,

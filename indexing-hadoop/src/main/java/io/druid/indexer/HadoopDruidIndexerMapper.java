@@ -104,11 +104,9 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
   {
     if (parser instanceof StringInputRowParser && value instanceof Text) {
       //Note: This is to ensure backward compatibility with 0.7.0 and before
+      //HadoopyStringInputRowParser can handle this and this special case is not needed
+      //except for backward compatibility
       return ((StringInputRowParser) parser).parse(value.toString());
-    } else if (parser instanceof StringInputRowParser && value instanceof BytesWritable) {
-      BytesWritable valueBytes = (BytesWritable) value;
-      ByteBuffer valueBuffer = ByteBuffer.wrap(valueBytes.getBytes(), 0, valueBytes.getLength());
-      return ((StringInputRowParser) parser).parse(valueBuffer);
     } else if (value instanceof InputRow) {
       return (InputRow) value;
     } else {

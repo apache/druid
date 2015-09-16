@@ -66,18 +66,22 @@ public class JobHelperTest
         new HadoopIngestionSpec(
             new DataSchema(
                 "website",
-                new StringInputRowParser(
-                    new CSVParseSpec(
-                        new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                        new DimensionsSpec(ImmutableList.of("host"), null, null),
-                        null,
-                        ImmutableList.of("timestamp", "host", "visited_num")
-                    )
+                HadoopDruidIndexerConfig.jsonMapper.convertValue(
+                    new StringInputRowParser(
+                        new CSVParseSpec(
+                            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+                            new DimensionsSpec(ImmutableList.of("host"), null, null),
+                            null,
+                            ImmutableList.of("timestamp", "host", "visited_num")
+                        )
+                    ),
+                    Map.class
                 ),
                 new AggregatorFactory[]{new LongSumAggregatorFactory("visited_num", "visited_num")},
                 new UniformGranularitySpec(
                     Granularity.DAY, QueryGranularity.NONE, ImmutableList.of(this.interval)
-                )
+                ),
+                HadoopDruidIndexerConfig.jsonMapper
             ),
             new HadoopIOConfig(
                 ImmutableMap.<String, Object>of(

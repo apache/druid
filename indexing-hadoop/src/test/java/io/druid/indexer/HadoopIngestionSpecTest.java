@@ -17,15 +17,16 @@
 
 package io.druid.indexer;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import io.druid.indexer.partitions.HashedPartitionsSpec;
-import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import io.druid.indexer.updater.MetadataStorageUpdaterJobSpec;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -33,7 +34,11 @@ import org.junit.Test;
 
 public class HadoopIngestionSpecTest
 {
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private static final ObjectMapper jsonMapper;
+  static {
+    jsonMapper = new DefaultObjectMapper();
+    jsonMapper.setInjectableValues(new InjectableValues.Std().addValue(ObjectMapper.class, jsonMapper));
+  }
 
   @Test
   public void testGranularitySpec()

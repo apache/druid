@@ -103,7 +103,8 @@ public class HadoopDruidIndexerConfig
                     binder, Key.get(DruidNode.class, Self.class), new DruidNode("hadoop-indexer", null, null)
                 );
               }
-            }
+            },
+            new IndexingHadoopModule()
         )
     );
     jsonMapper = injector.getInstance(ObjectMapper.class);
