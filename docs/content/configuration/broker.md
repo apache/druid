@@ -109,3 +109,4 @@ You can optionally only configure caching to be enabled on the broker by setting
 |`druid.cache.hosts`|Command separated list of Memcached hosts `<host:port>`.|none|
 |`druid.cache.maxObjectSize`|Maximum object size in bytes for a Memcached object.|52428800 (50 MB)|
 |`druid.cache.memcachedPrefix`|Key prefix for all keys in Memcached.|druid|
+|`druid.cache.separateConnectionPerThread`|Whether to use a separate cache connection per processing thread.|false|

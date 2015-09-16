@@ -21,6 +21,8 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
@@ -33,6 +35,7 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.metrics.AbstractMonitor;
 import com.metamx.metrics.MonitorScheduler;
 import net.spy.memcached.AddrUtil;
+import net.spy.memcached.ConnectionFactory;
 import net.spy.memcached.ConnectionFactoryBuilder;
 import net.spy.memcached.FailureMode;
 import net.spy.memcached.HashAlgorithm;
@@ -40,16 +43,17 @@ import net.spy.memcached.MemcachedClient;
 import net.spy.memcached.MemcachedClientIF;
 import net.spy.memcached.internal.BulkFuture;
 import net.spy.memcached.metrics.MetricCollector;
-import net.spy.memcached.metrics.MetricType;
 import net.spy.memcached.ops.LinkedOperationQueueFactory;
 import net.spy.memcached.ops.OperationQueueFactory;
 import org.apache.commons.codec.digest.DigestUtils;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -154,184 +158,210 @@ public class MemcachedCache implements Cache
         }
       };
 
-      return new MemcachedCache(
-          new MemcachedClient(
-              new MemcachedCustomConnectionFactoryBuilder()
-                  // 1000 repetitions gives us good distribution with murmur3_128
-                  // (approx < 5% difference in counts across nodes, with 5 cache nodes)
-                  .setKetamaNodeRepetitions(1000)
-                  .setHashAlg(MURMUR3_128)
-                  .setProtocol(ConnectionFactoryBuilder.Protocol.BINARY)
-                  .setLocatorType(ConnectionFactoryBuilder.Locator.CONSISTENT)
-                  .setDaemon(true)
-                  .setFailureMode(FailureMode.Cancel)
-                  .setTranscoder(transcoder)
-                  .setShouldOptimize(true)
-                  .setOpQueueMaxBlockTime(config.getTimeout())
-                  .setOpTimeout(config.getTimeout())
-                  .setReadBufferSize(config.getReadBufferSize())
-                  .setOpQueueFactory(opQueueFactory)
-                  .setEnableMetrics(MetricType.DEBUG) // Not as scary as it sounds
-                  .setWriteOpQueueFactory(opQueueFactory)
-                  .setReadOpQueueFactory(opQueueFactory)
-                  .setMetricCollector(
-                      new MetricCollector()
-                      {
-                        @Override
-                        public void addCounter(String name)
-                        {
-                          if (!interesting.apply(name)) {
-                            return;
-                          }
-                          counters.put(name, new AtomicLong(0L));
+      final MetricCollector metricCollector = new MetricCollector()
+      {
+        @Override
+        public void addCounter(String name)
+        {
+          if (!interesting.apply(name)) {
+            return;
+          }
+          counters.put(name, new AtomicLong(0L));
 
-                          if (log.isDebugEnabled()) {
-                            log.debug("Add Counter [%s]", name);
-                          }
-                        }
+          if (log.isDebugEnabled()) {
+            log.debug("Add Counter [%s]", name);
+          }
+        }
 
-                        @Override
-                        public void removeCounter(String name)
-                        {
-                          if (!interesting.apply(name)) {
-                            return;
-                          }
-                          counters.remove(name);
+        @Override
+        public void removeCounter(String name)
+        {
+          if (!interesting.apply(name)) {
+            return;
+          }
+          counters.remove(name);
 
-                          if (log.isDebugEnabled()) {
-                            log.debug("Remove Counter [%s]", name);
-                          }
-                        }
+          if (log.isDebugEnabled()) {
+            log.debug("Remove Counter [%s]", name);
+          }
+        }
 
-                        @Override
-                        public void incrementCounter(String name)
-                        {
-                          if (!interesting.apply(name)) {
-                            return;
-                          }
-                          AtomicLong counter = counters.get(name);
-                          if (counter == null) {
-                            counters.putIfAbsent(name, new AtomicLong(0));
-                            counter = counters.get(name);
-                          }
-                          counter.incrementAndGet();
+        @Override
+        public void incrementCounter(String name)
+        {
+          if (!interesting.apply(name)) {
+            return;
+          }
+          AtomicLong counter = counters.get(name);
+          if (counter == null) {
+            counters.putIfAbsent(name, new AtomicLong(0));
+            counter = counters.get(name);
+          }
+          counter.incrementAndGet();
 
-                          if (log.isDebugEnabled()) {
-                            log.debug("Incrament [%s]", name);
-                          }
-                        }
+          if (log.isDebugEnabled()) {
+            log.debug("Incrament [%s]", name);
+          }
+        }
 
-                        @Override
-                        public void incrementCounter(String name, int amount)
-                        {
-                          if (!interesting.apply(name)) {
-                            return;
-                          }
-                          AtomicLong counter = counters.get(name);
-                          if (counter == null) {
-                            counters.putIfAbsent(name, new AtomicLong(0));
-                            counter = counters.get(name);
-                          }
-                          counter.addAndGet(amount);
+        @Override
+        public void incrementCounter(String name, int amount)
+        {
+          if (!interesting.apply(name)) {
+            return;
+          }
+          AtomicLong counter = counters.get(name);
+          if (counter == null) {
+            counters.putIfAbsent(name, new AtomicLong(0));
+            counter = counters.get(name);
+          }
+          counter.addAndGet(amount);
 
-                          if (log.isDebugEnabled()) {
-                            log.debug("Increment [%s] %d", name, amount);
-                          }
-                        }
+          if (log.isDebugEnabled()) {
+            log.debug("Increment [%s] %d", name, amount);
+          }
+        }
 
-                        @Override
-                        public void decrementCounter(String name)
-                        {
-                          if (!interesting.apply(name)) {
-                            return;
-                          }
-                          AtomicLong counter = counters.get(name);
-                          if (counter == null) {
-                            counters.putIfAbsent(name, new AtomicLong(0));
-                            counter = counters.get(name);
-                          }
-                          counter.decrementAndGet();
+        @Override
+        public void decrementCounter(String name)
+        {
+          if (!interesting.apply(name)) {
+            return;
+          }
+          AtomicLong counter = counters.get(name);
+          if (counter == null) {
+            counters.putIfAbsent(name, new AtomicLong(0));
+            counter = counters.get(name);
+          }
+          counter.decrementAndGet();
 
-                          if (log.isDebugEnabled()) {
-                            log.debug("Decrement [%s]", name);
-                          }
-                        }
+          if (log.isDebugEnabled()) {
+            log.debug("Decrement [%s]", name);
+          }
+        }
 
-                        @Override
-                        public void decrementCounter(String name, int amount)
-                        {
-                          if (!interesting.apply(name)) {
-                            return;
-                          }
-                          AtomicLong counter = counters.get(name);
-                          if (counter == null) {
-                            counters.putIfAbsent(name, new AtomicLong(0L));
-                            counter = counters.get(name);
-                          }
-                          counter.addAndGet(-amount);
+        @Override
+        public void decrementCounter(String name, int amount)
+        {
+          if (!interesting.apply(name)) {
+            return;
+          }
+          AtomicLong counter = counters.get(name);
+          if (counter == null) {
+            counters.putIfAbsent(name, new AtomicLong(0L));
+            counter = counters.get(name);
+          }
+          counter.addAndGet(-amount);
 
-                          if (log.isDebugEnabled()) {
-                            log.debug("Decrement [%s] %d", name, amount);
-                          }
-                        }
+          if (log.isDebugEnabled()) {
+            log.debug("Decrement [%s] %d", name, amount);
+          }
+        }
 
-                        @Override
-                        public void addMeter(String name)
-                        {
-                          meters.put(name, new AtomicLong(0L));
-                          if (log.isDebugEnabled()) {
-                            log.debug("Adding meter [%s]", name);
-                          }
-                        }
+        @Override
+        public void addMeter(String name)
+        {
+          meters.put(name, new AtomicLong(0L));
+          if (log.isDebugEnabled()) {
+            log.debug("Adding meter [%s]", name);
+          }
+        }
 
-                        @Override
-                        public void removeMeter(String name)
-                        {
-                          meters.remove(name);
-                          if (log.isDebugEnabled()) {
-                            log.debug("Removing meter [%s]", name);
-                          }
-                        }
+        @Override
+        public void removeMeter(String name)
+        {
+          meters.remove(name);
+          if (log.isDebugEnabled()) {
+            log.debug("Removing meter [%s]", name);
+          }
+        }
 
-                        @Override
-                        public void markMeter(String name)
-                        {
-                          AtomicLong meter = meters.get(name);
-                          if (meter == null) {
-                            meters.putIfAbsent(name, new AtomicLong(0L));
-                            meter = meters.get(name);
-                          }
-                          meter.incrementAndGet();
+        @Override
+        public void markMeter(String name)
+        {
+          AtomicLong meter = meters.get(name);
+          if (meter == null) {
+            meters.putIfAbsent(name, new AtomicLong(0L));
+            meter = meters.get(name);
+          }
+          meter.incrementAndGet();
 
-                          if (log.isDebugEnabled()) {
-                            log.debug("Increment counter [%s]", name);
-                          }
-                        }
+          if (log.isDebugEnabled()) {
+            log.debug("Increment counter [%s]", name);
+          }
+        }
 
-                        @Override
-                        public void addHistogram(String name)
-                        {
-                          log.debug("Ignoring add histogram [%s]", name);
-                        }
+        @Override
+        public void addHistogram(String name)
+        {
+          log.debug("Ignoring add histogram [%s]", name);
+        }
 
-                        @Override
-                        public void removeHistogram(String name)
-                        {
-                          log.debug("Ignoring remove histogram [%s]", name);
-                        }
+        @Override
+        public void removeHistogram(String name)
+        {
+          log.debug("Ignoring remove histogram [%s]", name);
+        }
 
-                        @Override
-                        public void updateHistogram(String name, int amount)
-                        {
-                          log.debug("Ignoring update histogram [%s]: %d", name, amount);
-                        }
-                      }
-                  )
-                  .build(),
-              AddrUtil.getAddresses(config.getHosts())
-          ),
-          config
-      );
+        @Override
+        public void updateHistogram(String name, int amount)
+        {
+          log.debug("Ignoring update histogram [%s]: %d", name, amount);
+        }
+      };
+
+      final ConnectionFactory connectionFactory = new MemcachedCustomConnectionFactoryBuilder()
+          // 1000 repetitions gives us good distribution with murmur3_128
+          // (approx < 5% difference in counts across nodes, with 5 cache nodes)
+          .setKetamaNodeRepetitions(1000)
+          .setHashAlg(MURMUR3_128)
+          .setProtocol(ConnectionFactoryBuilder.Protocol.BINARY)
+          .setLocatorType(ConnectionFactoryBuilder.Locator.CONSISTENT)
+          .setDaemon(true)
+          .setFailureMode(FailureMode.Cancel)
+          .setTranscoder(transcoder)
+          .setShouldOptimize(true)
+          .setOpQueueMaxBlockTime(config.getTimeout())
+          .setOpTimeout(config.getTimeout())
+          .setReadBufferSize(config.getReadBufferSize())
+          .setOpQueueFactory(opQueueFactory)
+          .setMetricCollector(metricCollector)
+          .build();
+
+      final List<InetSocketAddress> hosts = AddrUtil.getAddresses(config.getHosts());
+
+
+      final Supplier<MemcachedClientIF> clientSupplier;
+
+      if (config.isSeparateConnectionPerThread()) {
+        clientSupplier = new Supplier<MemcachedClientIF>()
+        {
+          final ThreadLocal<MemcachedClientIF> client = new ThreadLocal<MemcachedClientIF>()
+          {
+            @Override
+            public MemcachedClientIF initialValue()
+            {
+              try {
+                return new MemcachedClient(connectionFactory, hosts);
+              }
+              catch (IOException e) {
+                log.error(e, "Unable to create memcached client");
+                throw Throwables.propagate(e);
+              }
+            }
+          };
+
+          @Override
+          public MemcachedClientIF get()
+          {
+            return client.get();
+          }
+        };
+      } else {
+        clientSupplier = Suppliers.<MemcachedClientIF>ofInstance(new MemcachedClient(connectionFactory, hosts));
+      }
+
+      return new MemcachedCache(clientSupplier, config);
     }
     catch (IOException e) {
       throw Throwables.propagate(e);
@@ -342,7 +372,7 @@ public class MemcachedCache implements Cache
   private final int expiration;
   private final String memcachedPrefix;
 
-  private final MemcachedClientIF client;
+  private final Supplier<MemcachedClientIF> client;
 
   private final AtomicLong hitCount = new AtomicLong(0);
   private final AtomicLong missCount = new AtomicLong(0);
@@ -350,7 +380,7 @@ public class MemcachedCache implements Cache
   private final AtomicLong errorCount = new AtomicLong(0);
 
 
-  MemcachedCache(MemcachedClientIF client, MemcachedCacheConfig config)
+  MemcachedCache(Supplier<MemcachedClientIF> client, MemcachedCacheConfig config)
   {
     Preconditions.checkArgument(
         config.getMemcachedPrefix().length() <= MAX_PREFIX_LENGTH,
@@ -383,7 +413,7 @@ public class MemcachedCache implements Cache
   {
     Future<Object> future;
     try {
-      future = client.asyncGet(computeKeyHash(memcachedPrefix, key));
+      future = client.get().asyncGet(computeKeyHash(memcachedPrefix, key));
     }
     catch (IllegalStateException e) {
       // operation did not get queued in time (queue is full)
@@ -420,7 +450,7 @@ public class MemcachedCache implements Cache
   public void put(NamedKey key, byte[] value)
   {
     try {
-      client.set(computeKeyHash(memcachedPrefix, key), expiration, serializeValue(key, value));
+      client.get().set(computeKeyHash(memcachedPrefix, key), expiration, serializeValue(key, value));
     }
     catch (IllegalStateException e) {
       // operation did not get queued in time (queue is full)
@@ -477,7 +507,7 @@ public class MemcachedCache implements Cache
 
     BulkFuture<Map<String, Object>> future;
     try {
-      future = client.asyncGetBulk(keyLookup.keySet());
+      future = client.get().asyncGetBulk(keyLookup.keySet());
     }
     catch (IllegalStateException e) {
       // operation did not get queued in time (queue is full)

@@ -51,6 +51,10 @@ public class MemcachedCacheConfig
   @JsonProperty
   private long maxOperationQueueSize = 0;
 
+  // use a separate connection per processing thread to increase cache throughput
+  @JsonProperty
+  private boolean separateConnectionPerThread = false;
+
   public int getExpiration()
   {
     return expiration;
@@ -84,5 +88,10 @@ public class MemcachedCacheConfig
   public int getReadBufferSize()
   {
     return readBufferSize;
+  }
+
+  public boolean isSeparateConnectionPerThread()
+  {
+    return separateConnectionPerThread;
   }
 }
