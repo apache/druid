@@ -20,7 +20,10 @@ package io.druid.client.cache;
 import com.google.caliper.Param;
 import com.google.caliper.Runner;
 import com.google.caliper.SimpleBenchmark;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
+import io.druid.collections.ResourceHolder;
+import io.druid.collections.StupidResourceHolder;
 import net.spy.memcached.AddrUtil;
 import net.spy.memcached.ConnectionFactoryBuilder;
 import net.spy.memcached.DefaultHashAlgorithm;
@@ -77,7 +80,9 @@ public class MemcachedCacheBenchmark extends SimpleBenchmark
 
 
     cache = new MemcachedCache(
-        client,
+        Suppliers.<ResourceHolder<MemcachedClientIF>>ofInstance(
+            StupidResourceHolder.create(client)
+        ),
         new MemcachedCacheConfig()
         {
           @Override
