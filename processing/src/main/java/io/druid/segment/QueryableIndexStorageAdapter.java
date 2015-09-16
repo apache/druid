@@ -105,6 +105,12 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
+  public int getNumRows()
+  {
+    return index.getNumRows();
+  }
+
+  @Override
   public DateTime getMinTime()
   {
     GenericColumn column = null;
@@ -134,6 +140,12 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   public Capabilities getCapabilities()
   {
     return Capabilities.builder().dimensionValuesSorted(true).build();
+  }
+
+  @Override
+  public ColumnCapabilities getColumnCapabilities(String column)
+  {
+    return index.getColumn(column).getCapabilities();
   }
 
   @Override
@@ -275,7 +287,10 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     }
 
                     @Override
-                    public DimensionSelector makeDimensionSelector(final String dimension, @Nullable final ExtractionFn extractionFn)
+                    public DimensionSelector makeDimensionSelector(
+                        final String dimension,
+                        @Nullable final ExtractionFn extractionFn
+                    )
                     {
                       final Column columnDesc = index.getColumn(dimension);
                       if (columnDesc == null) {
@@ -296,8 +311,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
                       if (column == null) {
                         return NULL_DIMENSION_SELECTOR;
-                      }
-                      else if (columnDesc.getCapabilities().hasMultipleValues()) {
+                      } else if (columnDesc.getCapabilities().hasMultipleValues()) {
                         return new DimensionSelector()
                         {
                           @Override
@@ -325,7 +339,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                           public int lookupId(String name)
                           {
                             if (extractionFn != null) {
-                              throw new UnsupportedOperationException("cannot perform lookup when applying an extraction function");
+                              throw new UnsupportedOperationException(
+                                  "cannot perform lookup when applying an extraction function"
+                              );
                             }
                             return column.lookupId(name);
                           }
@@ -388,7 +404,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                           public int lookupId(String name)
                           {
                             if (extractionFn != null) {
-                              throw new UnsupportedOperationException("cannot perform lookup when applying an extraction function");
+                              throw new UnsupportedOperationException(
+                                  "cannot perform lookup when applying an extraction function"
+                              );
                             }
                             return column.lookupId(name);
                           }

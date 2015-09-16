@@ -44,13 +44,38 @@ import java.util.Map;
 public class SegmentAnalyzerTest
 {
   @Test
-  public void testIncrementalDoesNotWork() throws Exception
+  public void testIncrementalWorks() throws Exception
   {
     final List<SegmentAnalysis> results = getSegmentAnalysises(
         new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(false), null)
     );
 
-    Assert.assertEquals(0, results.size());
+    Assert.assertEquals(1, results.size());
+
+    final SegmentAnalysis analysis = results.get(0);
+    Assert.assertEquals(null, analysis.getId());
+
+    final Map<String, ColumnAnalysis> columns = analysis.getColumns();
+
+    Assert.assertEquals(
+        TestIndex.COLUMNS.length,
+        columns.size()
+    ); // All columns including time and empty/null column
+    
+    for (String dimension : TestIndex.DIMENSIONS) {
+      final ColumnAnalysis columnAnalysis = columns.get(dimension);
+
+      Assert.assertEquals(dimension, ValueType.STRING.name(), columnAnalysis.getType());
+      Assert.assertTrue(dimension, columnAnalysis.getCardinality() > 0);
+    }
+
+    for (String metric : TestIndex.METRICS) {
+      final ColumnAnalysis columnAnalysis = columns.get(metric);
+
+      Assert.assertEquals(metric, ValueType.FLOAT.name(), columnAnalysis.getType());
+      Assert.assertTrue(metric, columnAnalysis.getSize() > 0);
+      Assert.assertNull(metric, columnAnalysis.getCardinality());
+    }
   }
 
   @Test
@@ -66,7 +91,10 @@ public class SegmentAnalyzerTest
     Assert.assertEquals("test_1", analysis.getId());
 
     final Map<String, ColumnAnalysis> columns = analysis.getColumns();
-    Assert.assertEquals(TestIndex.COLUMNS.length -1, columns.size()); // All columns including time and excluding empty/null column
+    Assert.assertEquals(
+        TestIndex.COLUMNS.length - 1,
+        columns.size()
+    ); // All columns including time and excluding empty/null column
 
     for (String dimension : TestIndex.DIMENSIONS) {
       final ColumnAnalysis columnAnalysis = columns.get(dimension);
@@ -107,7 +135,7 @@ public class SegmentAnalyzerTest
     final SegmentMetadataQuery query = new SegmentMetadataQuery(
         new LegacyDataSource("test"), QuerySegmentSpecs.create("2011/2012"), null, null, null, false
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     return Sequences.toList(query.run(runner, context), Lists.<SegmentAnalysis>newArrayList());
   }
 }
