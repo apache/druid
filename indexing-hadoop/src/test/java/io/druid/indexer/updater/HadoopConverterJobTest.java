@@ -156,14 +156,17 @@ public class HadoopConverterJobTest
         new HadoopIngestionSpec(
             new DataSchema(
                 DATASOURCE,
-                new StringInputRowParser(
-                    new DelimitedParseSpec(
-                        new TimestampSpec("ts", "iso", null),
-                        new DimensionsSpec(Arrays.asList(TestIndex.DIMENSIONS), null, null),
-                        "\t",
-                        "\u0001",
-                        Arrays.asList(TestIndex.COLUMNS)
-                    )
+                HadoopDruidIndexerConfig.jsonMapper.convertValue(
+                    new StringInputRowParser(
+                        new DelimitedParseSpec(
+                            new TimestampSpec("ts", "iso", null),
+                            new DimensionsSpec(Arrays.asList(TestIndex.DIMENSIONS), null, null),
+                            "\t",
+                            "\u0001",
+                            Arrays.asList(TestIndex.COLUMNS)
+                        )
+                    ),
+                    Map.class
                 ),
                 new AggregatorFactory[]{
                     new DoubleSumAggregatorFactory(TestIndex.METRICS[0], TestIndex.METRICS[0]),
@@ -173,7 +176,8 @@ public class HadoopConverterJobTest
                     Granularity.MONTH,
                     QueryGranularity.DAY,
                     ImmutableList.<Interval>of(interval)
-                )
+                ),
+                HadoopDruidIndexerConfig.jsonMapper
             ),
             new HadoopIOConfig(
                 ImmutableMap.<String, Object>of(

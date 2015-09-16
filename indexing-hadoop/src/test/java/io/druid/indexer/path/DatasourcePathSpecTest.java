@@ -60,6 +60,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  */
@@ -176,20 +177,24 @@ public class DatasourcePathSpecTest
         new HadoopIngestionSpec(
             new DataSchema(
                 ingestionSpec.getDataSource(),
-                new StringInputRowParser(
-                    new CSVParseSpec(
-                        new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                        new DimensionsSpec(null, null, null),
-                        null,
-                        ImmutableList.of("timestamp", "host", "visited")
-                    )
+                HadoopDruidIndexerConfig.jsonMapper.convertValue(
+                    new StringInputRowParser(
+                        new CSVParseSpec(
+                            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+                            new DimensionsSpec(null, null, null),
+                            null,
+                            ImmutableList.of("timestamp", "host", "visited")
+                        )
+                    ),
+                    Map.class
                 ),
                 new AggregatorFactory[]{
                     new LongSumAggregatorFactory("visited_sum", "visited")
                 },
                 new UniformGranularitySpec(
                     Granularity.DAY, QueryGranularity.NONE, ImmutableList.of(Interval.parse("2000/3000"))
-                )
+                ),
+                HadoopDruidIndexerConfig.jsonMapper
             ),
             new HadoopIOConfig(
                 ImmutableMap.<String, Object>of(

@@ -47,6 +47,7 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  */
@@ -62,13 +63,16 @@ public class IndexGeneratorCombinerTest
         new HadoopIngestionSpec(
             new DataSchema(
                 "website",
-                new StringInputRowParser(
-                    new CSVParseSpec(
-                        new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                        new DimensionsSpec(ImmutableList.of("host"), null, null),
-                        null,
-                        ImmutableList.of("timestamp", "host", "visited")
-                    )
+                HadoopDruidIndexerConfig.jsonMapper.convertValue(
+                    new StringInputRowParser(
+                        new CSVParseSpec(
+                            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+                            new DimensionsSpec(ImmutableList.of("host"), null, null),
+                            null,
+                            ImmutableList.of("timestamp", "host", "visited")
+                        )
+                    ),
+                    Map.class
                 ),
                 new AggregatorFactory[]{
                     new LongSumAggregatorFactory("visited_sum", "visited"),
@@ -76,7 +80,8 @@ public class IndexGeneratorCombinerTest
                 },
                 new UniformGranularitySpec(
                     Granularity.DAY, QueryGranularity.NONE, ImmutableList.of(Interval.parse("2010/2011"))
-                )
+                ),
+                HadoopDruidIndexerConfig.jsonMapper
             ),
             new HadoopIOConfig(
                 ImmutableMap.<String, Object>of(

@@ -19,6 +19,7 @@
 
 package io.druid.segment.realtime;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
@@ -34,6 +35,7 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.granularity.QueryGranularity;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -81,17 +83,21 @@ public class RealtimeManagerTest
         makeRow(new DateTime().getMillis())
     );
 
+    ObjectMapper jsonMapper = new DefaultObjectMapper();
+
     schema = new DataSchema(
         "test",
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.NONE, null)
+        new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.NONE, null),
+        jsonMapper
     );
     schema2 = new DataSchema(
         "testV2",
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.NONE, null)
+        new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.NONE, null),
+        jsonMapper
     );
     RealtimeIOConfig ioConfig = new RealtimeIOConfig(
         new FirehoseFactory()
