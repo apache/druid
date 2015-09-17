@@ -49,6 +49,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -104,16 +105,16 @@ public class TestIndex
     return realtimeIndex = makeRealtimeIndex("druid.sample.tsv", useOffheap);
   }
 
-  public static QueryableIndex getMMappedTestIndex()
+  public static QueryableIndex getMMappedTestIndex(Map<String, Object> metadata, boolean reuse)
   {
     synchronized (log) {
-      if (mmappedIndex != null) {
+      if (mmappedIndex != null && reuse) {
         return mmappedIndex;
       }
     }
 
     IncrementalIndex incrementalIndex = getIncrementalTestIndex(false);
-    mmappedIndex = persistRealtimeAndLoadMMapped(incrementalIndex);
+    mmappedIndex = persistRealtimeAndLoadMMapped(incrementalIndex, metadata);
 
     return mmappedIndex;
   }
@@ -247,7 +248,7 @@ public class TestIndex
     return retVal;
   }
 
-  public static QueryableIndex persistRealtimeAndLoadMMapped(IncrementalIndex index)
+  public static QueryableIndex persistRealtimeAndLoadMMapped(IncrementalIndex index, Map<String, Object> metadata)
   {
     try {
       File someTmpFile = File.createTempFile("billy", "yay");
@@ -255,7 +256,7 @@ public class TestIndex
       someTmpFile.mkdirs();
       someTmpFile.deleteOnExit();
 
-      IndexMerger.persist(index, someTmpFile, null, indexSpec);
+      IndexMerger.persist(index, someTmpFile, metadata, indexSpec);
       return IndexIO.loadIndex(someTmpFile);
     }
     catch (IOException e) {

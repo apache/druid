@@ -86,6 +86,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
           return Sequences.empty();
         }
 
+        final Map<String, Object> metadata = index.getMetaData();
         final Map<String, ColumnAnalysis> analyzedColumns = analyzer.analyze(index);
 
         // Initialize with the size of the whitespace, 1 byte per
@@ -111,7 +112,8 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                     segment.getIdentifier(),
                     Arrays.asList(segment.getDataInterval()),
                     columns,
-                    totalSize
+                    totalSize,
+                    metadata
                 )
             )
         );

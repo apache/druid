@@ -30,20 +30,22 @@ public class SegmentAnalysis
   private final List<Interval> interval;
   private final Map<String, ColumnAnalysis> columns;
   private final long size;
+  private final Map<String, Object> metadata;
 
   @JsonCreator
   public SegmentAnalysis(
       @JsonProperty("id") String id,
       @JsonProperty("intervals") List<Interval> interval,
       @JsonProperty("columns") Map<String, ColumnAnalysis> columns,
-      @JsonProperty("size") long size
-
+      @JsonProperty("size") long size,
+      @JsonProperty("metadata") Map<String, Object> metadata
   )
   {
     this.id = id;
     this.interval = interval;
     this.columns = columns;
     this.size = size;
+    this.metadata = metadata;
   }
 
   @JsonProperty
@@ -70,6 +72,12 @@ public class SegmentAnalysis
     return size;
   }
 
+  @JsonProperty
+  public Map<String, Object> getMetadata()
+  {
+    return metadata;
+  }
+
   public String toDetailedString()
   {
     return "SegmentAnalysis{" +
@@ -77,6 +85,7 @@ public class SegmentAnalysis
            ", interval=" + interval +
            ", columns=" + columns +
            ", size=" + size +
+           ", metadata=" + metadata +
            '}';
   }
 
@@ -111,7 +120,10 @@ public class SegmentAnalysis
     if (interval != null ? !interval.equals(that.interval) : that.interval != null) {
       return false;
     }
-    return !(columns != null ? !columns.equals(that.columns) : that.columns != null);
+    if (columns != null ? !columns.equals(that.columns) : that.columns != null) {
+      return false;
+    }
+    return !(metadata != null ? !metadata.equals(that.metadata) : that.metadata != null);
 
   }
 
@@ -122,6 +134,7 @@ public class SegmentAnalysis
     result = 31 * result + (interval != null ? interval.hashCode() : 0);
     result = 31 * result + (columns != null ? columns.hashCode() : 0);
     result = 31 * result + (int) (size ^ (size >>> 32));
+    result = 31 * result + (metadata != null ? metadata.hashCode() : 0);
     return result;
   }
 }
