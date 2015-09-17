@@ -237,7 +237,12 @@ public class IngestSegmentFirehoseFactoryTimelineTest
             "2000/2000T02", 3, 7,
             DS("2000/2000T02", "v1", 0, IR("2000", 1), IR("2000T00:01", 2), IR("2000T01", 8)),
             DS("2000T01/2000T02", "v2", 0, IR("2000T01:01", 4))
-        ) /* 1H segment overlayed on top of 2H segment */,
+        ) /* 1H segment overlaid on top of 2H segment */,
+        TC(
+            "2000/2000-01-02", 4, 23,
+            DS("2000/2000-01-02", "v1", 0, IR("2000", 1), IR("2000T00:01", 2), IR("2000T01", 8), IR("2000T02", 16)),
+            DS("2000T01/2000T02", "v2", 0, IR("2000T01:01", 4))
+        ) /* 1H segment overlaid on top of 1D segment */,
         TC(
             "2000/2000T02", 4, 15,
             DS("2000/2000T02", "v1", 0, IR("2000", 1), IR("2000T00:01", 2), IR("2000T01", 8)),
