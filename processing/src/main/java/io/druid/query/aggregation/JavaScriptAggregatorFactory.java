@@ -138,6 +138,18 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
+  {
+    if (other.getName().equals(this.getName()) && other.getClass() == this.getClass()) {
+      JavaScriptAggregatorFactory castedOther = (JavaScriptAggregatorFactory) other;
+      if (this.fnCombine.equals(castedOther.fnCombine) && this.fnReset.equals(castedOther.fnReset)) {
+        return getCombiningFactory();
+      }
+    }
+    throw new AggregatorFactoryNotMergeableException(this, other);
+  }
+
+  @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
     return Lists.transform(
