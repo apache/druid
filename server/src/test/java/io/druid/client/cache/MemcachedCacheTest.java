@@ -18,6 +18,7 @@
 package io.druid.client.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -34,6 +35,8 @@ import com.metamx.emitter.core.Event;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.Monitor;
 import com.metamx.metrics.MonitorScheduler;
+import io.druid.collections.ResourceHolder;
+import io.druid.collections.StupidResourceHolder;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.ManageLifecycle;
 import io.druid.initialization.Initialization;
@@ -110,8 +113,12 @@ public class MemcachedCacheTest
   @Before
   public void setUp() throws Exception
   {
-    MemcachedClientIF client = new MockMemcachedClient();
-    cache = new MemcachedCache(client, memcachedCacheConfig);
+    cache = new MemcachedCache(
+        Suppliers.<ResourceHolder<MemcachedClientIF>>ofInstance(
+            StupidResourceHolder.<MemcachedClientIF>create(new MockMemcachedClient())
+        ),
+        memcachedCacheConfig
+    );
   }
 
   @Test
