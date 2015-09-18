@@ -905,6 +905,7 @@ public class Druids
           toInclude,
           merge,
           context,
+          null,
           false
       );
     }
