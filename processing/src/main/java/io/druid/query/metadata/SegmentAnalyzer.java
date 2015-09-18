@@ -19,20 +19,26 @@ package io.druid.query.metadata;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Longs;
 import com.metamx.common.logger.Logger;
 import com.metamx.common.StringUtils;
 import io.druid.query.metadata.metadata.ColumnAnalysis;
 import io.druid.segment.QueryableIndex;
+import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ComplexColumn;
 import io.druid.segment.column.ValueType;
+import io.druid.segment.data.Indexed;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 
 public class SegmentAnalyzer
@@ -61,7 +67,7 @@ public class SegmentAnalyzer
 
       final ColumnAnalysis analysis;
       final ValueType type = capabilities.getType();
-      switch(type) {
+      switch (type) {
         case LONG:
           analysis = analyzeLongColumn(column);
           break;
@@ -82,7 +88,55 @@ public class SegmentAnalyzer
       columns.put(columnName, analysis);
     }
 
-    columns.put(Column.TIME_COLUMN_NAME, lengthBasedAnalysis(index.getColumn(Column.TIME_COLUMN_NAME), NUM_BYTES_IN_TIMESTAMP));
+    columns.put(
+        Column.TIME_COLUMN_NAME,
+        lengthBasedAnalysis(index.getColumn(Column.TIME_COLUMN_NAME), NUM_BYTES_IN_TIMESTAMP)
+    );
+
+    return columns;
+  }
+
+  public Map<String, ColumnAnalysis> analyze(StorageAdapter adapter)
+  {
+    Preconditions.checkNotNull(adapter, "Adapter cannot be null");
+    Map<String, ColumnAnalysis> columns = Maps.newTreeMap();
+    List<String> columnNames = getStorageAdapterColumnNames(adapter);
+
+    int numRows = adapter.getNumRows();
+    for (String columnName : columnNames) {
+      final ColumnCapabilities capabilities = adapter.getColumnCapabilities(columnName);
+      final ColumnAnalysis analysis;
+
+      /**
+       * StorageAdapter doesn't provide a way to get column values, so size is
+       * not calculated for STRING and COMPLEX columns.
+       */
+      ValueType capType = capabilities.getType();
+      switch (capType) {
+        case LONG:
+          analysis = lengthBasedAnalysisForAdapter(capType.name(), capabilities, numRows, Longs.BYTES);
+          break;
+        case FLOAT:
+          analysis = lengthBasedAnalysisForAdapter(capType.name(), capabilities, numRows, NUM_BYTES_IN_TEXT_FLOAT);
+          break;
+        case STRING:
+          analysis = new ColumnAnalysis(capType.name(), 0, adapter.getDimensionCardinality(columnName), null);
+          break;
+        case COMPLEX:
+          analysis = new ColumnAnalysis(capType.name(), 0, null, null);
+          break;
+        default:
+          log.warn("Unknown column type[%s].", capType);
+          analysis = ColumnAnalysis.error(String.format("unknown_type_%s", capType));
+      }
+
+      columns.put(columnName, analysis);
+    }
+
+    columns.put(
+        Column.TIME_COLUMN_NAME,
+        lengthBasedAnalysisForAdapter(ValueType.LONG.name(), null, numRows, NUM_BYTES_IN_TIMESTAMP)
+    );
 
     return columns;
   }
@@ -154,4 +208,26 @@ public class SegmentAnalyzer
 
     return new ColumnAnalysis(typeName, size, null, null);
   }
+
+  private List<String> getStorageAdapterColumnNames(StorageAdapter adapter)
+  {
+    Indexed<String> dims = adapter.getAvailableDimensions();
+    Iterable<String> metrics = adapter.getAvailableMetrics();
+    Iterable<String> columnNames = Iterables.concat(dims, metrics);
+    List<String> sortedColumnNames = Lists.newArrayList(columnNames);
+    Collections.sort(sortedColumnNames);
+    return sortedColumnNames;
+  }
+
+  private ColumnAnalysis lengthBasedAnalysisForAdapter(
+      String type, ColumnCapabilities capabilities,
+      int numRows, final int numBytes
+  )
+  {
+    if (capabilities != null && capabilities.hasMultipleValues()) {
+      return ColumnAnalysis.error("multi_value");
+    }
+    return new ColumnAnalysis(type, numRows * numBytes, null, null);
+  }
+
 }

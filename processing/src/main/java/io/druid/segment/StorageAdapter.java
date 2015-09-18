@@ -17,6 +17,7 @@
 
 package io.druid.segment;
 
+import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.data.Indexed;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -42,5 +43,7 @@ public interface StorageAdapter extends CursorFactory
   public DateTime getMinTime();
   public DateTime getMaxTime();
   public Capabilities getCapabilities();
+  public ColumnCapabilities getColumnCapabilities(String column);
+  public int getNumRows();
   public DateTime getMaxIngestedEventTime();
 }
