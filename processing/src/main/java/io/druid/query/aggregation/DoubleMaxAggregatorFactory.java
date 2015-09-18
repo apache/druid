@@ -33,7 +33,7 @@ import java.util.List;
 
 /**
  */
-public class DoubleMaxAggregatorFactory implements AggregatorFactory
+public class DoubleMaxAggregatorFactory extends AggregatorFactory
 {
   private static final byte CACHE_TYPE_ID = 0x3;
 

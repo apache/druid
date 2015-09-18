@@ -42,7 +42,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Comparator;
 import java.util.List;
 
-public class JavaScriptAggregatorFactory implements AggregatorFactory
+public class JavaScriptAggregatorFactory extends AggregatorFactory
 {
   private static final byte CACHE_TYPE_ID = 0x6;
 

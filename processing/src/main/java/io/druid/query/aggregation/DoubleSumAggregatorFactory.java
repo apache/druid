@@ -33,7 +33,7 @@ import java.util.List;
 
 /**
  */
-public class DoubleSumAggregatorFactory implements AggregatorFactory
+public class DoubleSumAggregatorFactory extends AggregatorFactory
 {
   private static final byte CACHE_TYPE_ID = 0x2;
 

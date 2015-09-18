@@ -43,7 +43,7 @@ import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.List;
 
-public class CardinalityAggregatorFactory implements AggregatorFactory
+public class CardinalityAggregatorFactory extends AggregatorFactory
 {
   public static Object estimateCardinality(Object object)
   {
