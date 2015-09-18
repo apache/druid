@@ -23,5 +23,5 @@ import java.io.Closeable;
  */
 public interface ResourceHolder<T> extends Closeable
 {
-  public T get();
+  T get();
 }

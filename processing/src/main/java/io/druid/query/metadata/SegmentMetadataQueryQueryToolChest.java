@@ -114,10 +114,6 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
               return arg1;
             }
 
-            if (!query.isMerge()) {
-              throw new ISE("Merging when a merge isn't supposed to happen[%s], [%s]", arg1, arg2);
-            }
-
             List<Interval> newIntervals = JodaUtils.condenseIntervals(
                 Iterables.concat(arg1.getIntervals(), arg2.getIntervals())
             );
