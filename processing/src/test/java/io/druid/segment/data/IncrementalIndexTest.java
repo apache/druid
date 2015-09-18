@@ -376,13 +376,13 @@ public class IncrementalIndexTest
                             }
                         )
                         ) {
-                      final Integer ranCount = someoneRan.get();
-                      if (ranCount > 0) {
+                      final Integer maxValueExpected = someoneRan.get() + concurrentThreads;
+                      if (maxValueExpected > 0) {
                         // Eventually consistent, but should be somewhere in that range
                         // Actual result is validated after all writes are guaranteed done.
                         Assert.assertTrue(
-                            String.format("%d >= %g >= 0 violated", ranCount, result),
-                            result >= 0 && result <= ranCount
+                            String.format("%d >= %g >= 0 violated", maxValueExpected, result),
+                            result >= 0 && result <= maxValueExpected
                         );
                       }
                     }
