@@ -51,6 +51,10 @@ public class MemcachedCacheConfig
   @JsonProperty
   private long maxOperationQueueSize = 0;
 
+  // size of memcached connection pool
+  @JsonProperty
+  private int numConnections = 1;
+
   public int getExpiration()
   {
     return expiration;
@@ -84,5 +88,10 @@ public class MemcachedCacheConfig
   public int getReadBufferSize()
   {
     return readBufferSize;
+  }
+
+  public int getNumConnections()
+  {
+    return numConnections;
   }
 }
