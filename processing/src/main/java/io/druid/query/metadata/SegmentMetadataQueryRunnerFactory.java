@@ -84,16 +84,18 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
         final QueryableIndex index = segment.asQueryableIndex();
         final Map<String, ColumnAnalysis> analyzedColumns;
         long totalSize = 0;
+        final Map<String, Object> metadata;
+
         if (index == null) {
           // IncrementalIndexSegments (used by in-memory hydrants in the realtime service) do not have a QueryableIndex
           analyzedColumns = analyzer.analyze(segment.asStorageAdapter());
+          metadata = null;
         } else {
           analyzedColumns = analyzer.analyze(index);
           // Initialize with the size of the whitespace, 1 byte per
           totalSize = analyzedColumns.size() * index.getNumRows();
+          metadata = index.getMetaData();
         }
-
-        final Map<String, Object> metadata = index.getMetaData();
 
         Map<String, ColumnAnalysis> columns = Maps.newTreeMap();
         ColumnIncluderator includerator = query.getToInclude();
