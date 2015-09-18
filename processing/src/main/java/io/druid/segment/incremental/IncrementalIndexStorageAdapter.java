@@ -42,6 +42,7 @@ import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.SingleScanTimeDimSelector;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.ListIndexed;
@@ -102,7 +103,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   @Override
   public int getDimensionCardinality(String dimension)
   {
-    if(dimension.equals(Column.TIME_COLUMN_NAME)) {
+    if (dimension.equals(Column.TIME_COLUMN_NAME)) {
       return Integer.MAX_VALUE;
     }
     IncrementalIndex.DimDim dimDim = index.getDimension(dimension);
@@ -110,6 +111,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       return 0;
     }
     return dimDim.size();
+  }
+
+  @Override
+  public int getNumRows()
+  {
+    return index.size();
   }
 
   @Override
@@ -128,6 +135,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   public Capabilities getCapabilities()
   {
     return Capabilities.builder().dimensionValuesSorted(false).build();
+  }
+
+  @Override
+  public ColumnCapabilities getColumnCapabilities(String column)
+  {
+    return index.getCapabilities(column);
   }
 
   @Override
@@ -278,7 +291,10 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
               }
 
               @Override
-              public DimensionSelector makeDimensionSelector(final String dimension, @Nullable final ExtractionFn extractionFn)
+              public DimensionSelector makeDimensionSelector(
+                  final String dimension,
+                  @Nullable final ExtractionFn extractionFn
+              )
               {
                 if (dimension.equals(Column.TIME_COLUMN_NAME)) {
                   return new SingleScanTimeDimSelector(makeLongColumnSelector(dimension), extractionFn);
@@ -310,7 +326,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                       }
                     }
                     // check for null entry
-                    if(vals.isEmpty() && dimValLookup.contains(null)){
+                    if (vals.isEmpty() && dimValLookup.contains(null)) {
                       int id = dimValLookup.getId(null);
                       if (id < maxId) {
                         vals.add(id);
@@ -369,7 +385,9 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   public int lookupId(String name)
                   {
                     if (extractionFn != null) {
-                      throw new UnsupportedOperationException("cannot perform lookup when applying an extraction function");
+                      throw new UnsupportedOperationException(
+                          "cannot perform lookup when applying an extraction function"
+                      );
                     }
                     return dimValLookup.getId(name);
                   }
