@@ -33,7 +33,7 @@ import java.util.List;
 
 /**
  */
-public class LongMinAggregatorFactory implements AggregatorFactory
+public class LongMinAggregatorFactory extends AggregatorFactory
 {
   private static final byte CACHE_TYPE_ID = 0xB;
 

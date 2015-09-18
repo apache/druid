@@ -38,7 +38,7 @@ import java.util.List;
 
 /**
  */
-public class HyperUniquesAggregatorFactory implements AggregatorFactory
+public class HyperUniquesAggregatorFactory extends AggregatorFactory
 {
   public static Object estimateCardinality(Object object)
   {

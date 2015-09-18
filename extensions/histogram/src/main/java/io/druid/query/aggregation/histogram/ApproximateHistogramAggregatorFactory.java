@@ -39,7 +39,7 @@ import java.util.Comparator;
 import java.util.List;
 
 @JsonTypeName("approxHistogram")
-public class ApproximateHistogramAggregatorFactory implements AggregatorFactory
+public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
 {
   private static final byte CACHE_TYPE_ID = 0x8;
 
