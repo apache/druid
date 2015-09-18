@@ -65,6 +65,22 @@ public abstract class AggregatorFactory
   public abstract AggregatorFactory getCombiningFactory();
 
   /**
+   * Returns an AggregatorFactory that can be used to merge the output of aggregators from this factory and
+   * other factory.
+   * This method is relevant only for AggregatorFactory which can be used at ingestion time.
+   *
+   * @return a new Factory that can be used for merging the output of aggregators from this factory and other.
+   */
+  public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
+  {
+    if (other.getName().equals(this.getName()) && this.getClass() == other.getClass()) {
+      return getCombiningFactory();
+    } else {
+      throw new AggregatorFactoryNotMergeableException(this, other);
+    }
+  }
+
+  /**
    * Gets a list of all columns that this AggregatorFactory will scan
    *
    * @return AggregatorFactories for the columns to scan of the parent AggregatorFactory
