@@ -21,6 +21,7 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
 import io.druid.server.coordinator.DruidCoordinatorConfig;
+import io.druid.server.http.BrokerProxyServlet;
 import io.druid.server.http.OverlordProxyServlet;
 import io.druid.server.http.RedirectFilter;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
@@ -82,6 +83,7 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
     root.addFilter(GuiceFilter.class, "/coordinator/*", null);
 
     root.addServlet(new ServletHolder(injector.getInstance(OverlordProxyServlet.class)), "/druid/indexer/*");
+    root.addServlet(new ServletHolder(injector.getInstance(BrokerProxyServlet.class)), "/broker/*");
 
     HandlerList handlerList = new HandlerList();
     handlerList.setHandlers(new Handler[]{JettyServerInitUtils.getJettyRequestLogHandler(), root});
