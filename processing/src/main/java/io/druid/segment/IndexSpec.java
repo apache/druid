@@ -27,6 +27,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.CompressedObjectStrategy;
+import io.druid.segment.data.ConciseBitmapSerdeFactory;
 
 import javax.annotation.Nullable;
 import java.util.Arrays;
@@ -98,7 +99,7 @@ public class IndexSpec
     Preconditions.checkArgument(metricCompression == null || COMPRESSION_NAMES.contains(metricCompression),
                                 "Unknown compression type[%s]", metricCompression);
 
-    this.bitmapSerdeFactory = bitmapSerdeFactory != null ? bitmapSerdeFactory : IndexIO.CONFIGURED_BITMAP_SERDE_FACTORY;
+    this.bitmapSerdeFactory = bitmapSerdeFactory != null ? bitmapSerdeFactory : new ConciseBitmapSerdeFactory();
     this.metricCompression = metricCompression;
     this.dimensionCompression = dimensionCompression;
   }

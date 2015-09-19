@@ -19,6 +19,7 @@ package io.druid.indexing.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multimap;
@@ -32,6 +33,9 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
 import io.druid.query.QueryRunnerFactoryConglomerate;
+import io.druid.segment.IndexIO;
+import io.druid.segment.IndexMaker;
+import io.druid.segment.IndexMerger;
 import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.DataSegmentMover;
@@ -70,6 +74,9 @@ public class TaskToolbox
   private final SegmentLoader segmentLoader;
   private final ObjectMapper objectMapper;
   private final File taskWorkDir;
+  private final IndexMerger indexMerger;
+  private final IndexMaker indexMaker;
+  private final IndexIO indexIO;
 
   public TaskToolbox(
       TaskConfig config,
@@ -87,7 +94,10 @@ public class TaskToolbox
       MonitorScheduler monitorScheduler,
       SegmentLoader segmentLoader,
       ObjectMapper objectMapper,
-      final File taskWorkDir
+      File taskWorkDir,
+      IndexMerger indexMerger,
+      IndexMaker indexMaker,
+      IndexIO indexIO
   )
   {
     this.config = config;
@@ -106,6 +116,9 @@ public class TaskToolbox
     this.segmentLoader = segmentLoader;
     this.objectMapper = objectMapper;
     this.taskWorkDir = taskWorkDir;
+    this.indexMerger = Preconditions.checkNotNull(indexMerger, "Null IndexMerger");
+    this.indexMaker = Preconditions.checkNotNull(indexMaker, "Null IndexMaker");
+    this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
   }
 
   public TaskConfig getConfig()
@@ -207,5 +220,20 @@ public class TaskToolbox
   public File getTaskWorkDir()
   {
     return taskWorkDir;
+  }
+
+  public IndexIO getIndexIO()
+  {
+    return indexIO;
+  }
+
+  public IndexMerger getIndexMerger()
+  {
+    return indexMerger;
+  }
+
+  public IndexMaker getIndexMaker()
+  {
+    return indexMaker;
   }
 }

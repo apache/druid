@@ -34,7 +34,9 @@ import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.overlord.TestRemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.ThreadPoolTaskRunner;
 import io.druid.indexing.worker.config.WorkerConfig;
-import io.druid.jackson.DefaultObjectMapper;
+import io.druid.segment.IndexIO;
+import io.druid.segment.IndexMaker;
+import io.druid.segment.IndexMerger;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.StorageLocationConfig;
@@ -56,8 +58,6 @@ import java.util.List;
  */
 public class WorkerTaskMonitorTest
 {
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
-
   private static final Joiner joiner = Joiner.on("/");
   private static final String basePath = "/test/druid";
   private static final String tasksPath = String.format("%s/indexer/tasks/worker", basePath);
@@ -71,6 +71,19 @@ public class WorkerTaskMonitorTest
   private TestMergeTask task;
 
   private Worker worker;
+  private ObjectMapper jsonMapper;
+  private IndexMerger indexMerger;
+  private IndexMaker indexMaker;
+  private IndexIO indexIO;
+
+  public WorkerTaskMonitorTest()
+  {
+    TestUtils testUtils = new TestUtils();
+    jsonMapper = testUtils.getTestObjectMapper();
+    indexMerger = testUtils.getTestIndexMerger();
+    indexMaker = testUtils.getTestIndexMaker();
+    indexIO = testUtils.getTestIndexIO();
+  }
 
   @Before
   public void setUp() throws Exception
@@ -143,7 +156,11 @@ public class WorkerTaskMonitorTest
                     }
                     , jsonMapper
                 )
-            ), jsonMapper
+            ),
+                jsonMapper,
+                indexMerger,
+                indexMaker,
+                indexIO
             ),
             null
         ),

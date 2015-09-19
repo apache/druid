@@ -28,13 +28,16 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
 import io.druid.query.QueryRunnerFactoryConglomerate;
+import io.druid.segment.IndexIO;
+import io.druid.segment.IndexMaker;
+import io.druid.segment.IndexMerger;
+import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.DataSegmentMover;
 import io.druid.segment.loading.DataSegmentPusher;
-import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
-import io.druid.segment.loading.DataSegmentArchiver;
-import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.loading.SegmentLoaderConfig;
+import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
+import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
@@ -70,6 +73,9 @@ public class TaskToolboxTest
   private ObjectMapper ObjectMapper = new ObjectMapper();
   private SegmentLoaderLocalCacheManager mockSegmentLoaderLocalCacheManager = EasyMock.createMock(SegmentLoaderLocalCacheManager.class);
   private Task task = EasyMock.createMock(Task.class);
+  private IndexMerger mockIndexMerger = EasyMock.createMock(IndexMerger.class);
+  private IndexMaker mockIndexMaker = EasyMock.createMock(IndexMaker.class);
+  private IndexIO mockIndexIO = EasyMock.createMock(IndexIO.class);
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -94,7 +100,10 @@ public class TaskToolboxTest
         mockQueryExecutorService,
         mockMonitorScheduler,
         new SegmentLoaderFactory(mockSegmentLoaderLocalCacheManager),
-        ObjectMapper
+        ObjectMapper,
+        mockIndexMerger,
+        mockIndexMaker,
+        mockIndexIO
     );
   }
 

@@ -61,7 +61,6 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.ShardSpec;
-import java.util.Map;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -69,6 +68,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -359,7 +359,9 @@ public class IndexTask extends AbstractFixedIntervalTask
         interval,
         version,
         wrappedDataSegmentPusher,
-        tmpDir
+        tmpDir,
+        toolbox.getIndexMerger(),
+        toolbox.getIndexIO()
     ).findPlumber(
         schema,
         convertTuningConfig(shardSpec, myRowFlushBoundary, ingestionSchema.getTuningConfig().getIndexSpec()),

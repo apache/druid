@@ -17,6 +17,8 @@
 
 package io.druid.segment.loading;
 
+import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import io.druid.segment.IndexIO;
 import io.druid.segment.QueryableIndex;
@@ -30,11 +32,19 @@ public class MMappedQueryableIndexFactory implements QueryableIndexFactory
 {
   private static final Logger log = new Logger(MMappedQueryableIndexFactory.class);
 
+  private final IndexIO indexIO;
+
+  @Inject
+  public MMappedQueryableIndexFactory(IndexIO indexIO)
+  {
+    this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
+  }
+
   @Override
   public QueryableIndex factorize(File parentDir) throws SegmentLoadingException
   {
     try {
-      return IndexIO.loadIndex(parentDir);
+      return indexIO.loadIndex(parentDir);
     }
     catch (IOException e) {
       throw new SegmentLoadingException(e, "%s", e.getMessage());

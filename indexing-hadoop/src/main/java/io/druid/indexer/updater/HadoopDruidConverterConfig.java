@@ -34,6 +34,8 @@ import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.annotations.Self;
 import io.druid.initialization.Initialization;
+import io.druid.segment.IndexIO;
+import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
 import io.druid.server.DruidNode;
 import io.druid.timeline.DataSegment;
@@ -49,6 +51,9 @@ public class HadoopDruidConverterConfig
 {
   public static final String CONFIG_PROPERTY = "io.druid.indexer.updater.converter";
   public static final ObjectMapper jsonMapper;
+  public static final IndexIO INDEX_IO;
+  public static final IndexMerger INDEX_MERGER;
+
   private static final Injector injector = Initialization.makeInjectorWithModules(
       GuiceInjectors.makeStartupInjector(),
       ImmutableList.<Module>of(
@@ -68,6 +73,8 @@ public class HadoopDruidConverterConfig
   static {
     jsonMapper = injector.getInstance(ObjectMapper.class);
     jsonMapper.registerSubtypes(HadoopDruidConverterConfig.class);
+    INDEX_IO = injector.getInstance(IndexIO.class);
+    INDEX_MERGER = injector.getInstance(IndexMerger.class);
   }
 
   private static final TypeReference<Map<String, Object>> mapTypeReference = new TypeReference<Map<String, Object>>()

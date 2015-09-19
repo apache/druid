@@ -22,6 +22,7 @@ package io.druid.segment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -34,9 +35,7 @@ import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
-import com.google.inject.Binder;
-import com.google.inject.Injector;
-import com.google.inject.Module;
+import com.google.inject.Inject;
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.bitmap.MutableBitmap;
@@ -55,8 +54,6 @@ import io.druid.common.guava.FileOutputSupplier;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.common.utils.JodaUtils;
 import io.druid.common.utils.SerializerUtils;
-import io.druid.guice.GuiceInjectors;
-import io.druid.guice.JsonConfigProvider;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
@@ -109,26 +106,21 @@ public class IndexMerger
   private static final int INVALID_ROW = -1;
   private static final Splitter SPLITTER = Splitter.on(",");
 
-  private static final ObjectMapper mapper;
+  private final ObjectMapper mapper;
+  private final IndexIO indexIO;
 
-  static {
-    final Injector injector = GuiceInjectors.makeStartupInjectorWithModules(
-        ImmutableList.<Module>of(
-            new Module()
-            {
-              @Override
-              public void configure(Binder binder)
-              {
-                JsonConfigProvider.bind(binder, "druid.processing.bitmap", BitmapSerdeFactory.class);
-              }
-            }
-        )
-    );
-    mapper = injector.getInstance(ObjectMapper.class);
+  @Inject
+  public IndexMerger(
+      ObjectMapper mapper,
+      IndexIO indexIO
+  )
+  {
+    this.mapper = Preconditions.checkNotNull(mapper, "null ObjectMapper");
+    this.indexIO = Preconditions.checkNotNull(indexIO, "null IndexIO");
+
   }
 
-
-  public static File persist(
+  public File persist(
       final IncrementalIndex index,
       File outDir,
       Map<String, Object> segmentMetadata,
@@ -150,7 +142,7 @@ public class IndexMerger
    *
    * @throws java.io.IOException if an IO error occurs persisting the index
    */
-  public static File persist(
+  public File persist(
       final IncrementalIndex index,
       final Interval dataInterval,
       File outDir,
@@ -161,7 +153,7 @@ public class IndexMerger
     return persist(index, dataInterval, outDir, segmentMetadata, indexSpec, new BaseProgressIndicator());
   }
 
-  public static File persist(
+  public File persist(
       final IncrementalIndex index,
       final Interval dataInterval,
       File outDir,
@@ -209,14 +201,14 @@ public class IndexMerger
     );
   }
 
-  public static File mergeQueryableIndex(
+  public File mergeQueryableIndex(
       List<QueryableIndex> indexes, final AggregatorFactory[] metricAggs, File outDir, IndexSpec indexSpec
   ) throws IOException
   {
     return mergeQueryableIndex(indexes, metricAggs, outDir, indexSpec, new BaseProgressIndicator());
   }
 
-  public static File mergeQueryableIndex(
+  public File mergeQueryableIndex(
       List<QueryableIndex> indexes,
       final AggregatorFactory[] metricAggs,
       File outDir,
@@ -244,7 +236,7 @@ public class IndexMerger
     );
   }
 
-  public static File merge(
+  public File merge(
       List<IndexableAdapter> indexes,
       final AggregatorFactory[] metricAggs,
       File outDir,
@@ -255,7 +247,7 @@ public class IndexMerger
     return merge(indexes, metricAggs, outDir, segmentMetadata, indexSpec, new BaseProgressIndicator());
   }
 
-  public static File merge(
+  public File merge(
       List<IndexableAdapter> indexes,
       final AggregatorFactory[] metricAggs,
       File outDir,
@@ -361,16 +353,16 @@ public class IndexMerger
   }
 
   // Faster than IndexMaker
-  public static File convert(final File inDir, final File outDir, final IndexSpec indexSpec) throws IOException
+  public File convert(final File inDir, final File outDir, final IndexSpec indexSpec) throws IOException
   {
     return convert(inDir, outDir, indexSpec, new BaseProgressIndicator());
   }
 
-  public static File convert(
+  public File convert(
       final File inDir, final File outDir, final IndexSpec indexSpec, final ProgressIndicator progress
   ) throws IOException
   {
-    try (QueryableIndex index = IndexIO.loadIndex(inDir)) {
+    try (QueryableIndex index = indexIO.loadIndex(inDir)) {
       final IndexableAdapter adapter = new QueryableIndexIndexableAdapter(index);
       return makeIndexFiles(
           ImmutableList.of(adapter),
@@ -393,14 +385,14 @@ public class IndexMerger
     }
   }
 
-  public static File append(
+  public File append(
       List<IndexableAdapter> indexes, File outDir, IndexSpec indexSpec
   ) throws IOException
   {
     return append(indexes, outDir, indexSpec, new BaseProgressIndicator());
   }
 
-  public static File append(
+  public File append(
       List<IndexableAdapter> indexes, File outDir, IndexSpec indexSpec, ProgressIndicator progress
   ) throws IOException
   {
@@ -473,7 +465,7 @@ public class IndexMerger
     return makeIndexFiles(indexes, outDir, progress, mergedDimensions, mergedMetrics, null, rowMergerFn, indexSpec);
   }
 
-  private static File makeIndexFiles(
+  private File makeIndexFiles(
       final List<IndexableAdapter> indexes,
       final File outDir,
       final ProgressIndicator progress,
@@ -954,13 +946,13 @@ public class IndexMerger
         indexSpec.getBitmapSerdeFactory()
     );
 
-    IndexIO.DefaultIndexIOHandler.convertV8toV9(v8OutDir, outDir, indexSpec);
+    indexIO.getDefaultIndexIOHandler().convertV8toV9(v8OutDir, outDir, indexSpec);
     FileUtils.deleteDirectory(v8OutDir);
 
     return outDir;
   }
 
-  private static <T extends Comparable> ArrayList<T> mergeIndexed(final List<Iterable<T>> indexedLists)
+  private <T extends Comparable> ArrayList<T> mergeIndexed(final List<Iterable<T>> indexedLists)
   {
     Set<T> retVal = Sets.newTreeSet(Ordering.<T>natural().nullsFirst());
 
@@ -973,7 +965,7 @@ public class IndexMerger
     return Lists.newArrayList(retVal);
   }
 
-  public static void createIndexDrdFile(
+  public void createIndexDrdFile(
       byte versionId,
       File inDir,
       GenericIndexed<String> availableDimensions,
@@ -1292,7 +1284,7 @@ public class IndexMerger
     return true;
   }
 
-  private static void writeMetadataToFile(File metadataFile, Map<String, Object> metadata) throws IOException
+  private void writeMetadataToFile(File metadataFile, Map<String, Object> metadata) throws IOException
   {
     try (FileOutputStream metadataFileOutputStream = new FileOutputStream(metadataFile);
          FileChannel metadataFilechannel = metadataFileOutputStream.getChannel()

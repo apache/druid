@@ -22,6 +22,7 @@ package io.druid.segment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Objects;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Splitter;
 import com.google.common.collect.FluentIterable;
@@ -35,8 +36,7 @@ import com.google.common.collect.Sets;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
-import com.google.inject.Injector;
-import com.google.inject.Module;
+import com.google.inject.Inject;
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.bitmap.MutableBitmap;
@@ -54,7 +54,6 @@ import com.metamx.common.logger.Logger;
 import io.druid.collections.CombiningIterable;
 import io.druid.common.utils.JodaUtils;
 import io.druid.common.utils.SerializerUtils;
-import io.druid.guice.GuiceInjectors;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
@@ -110,14 +109,20 @@ public class IndexMaker
   private static final SerializerUtils serializerUtils = new SerializerUtils();
   private static final int INVALID_ROW = -1;
   private static final Splitter SPLITTER = Splitter.on(",");
-  private static final ObjectMapper mapper;
+  private final ObjectMapper mapper;
+  private final IndexIO indexIO;
 
-  static {
-    final Injector injector = GuiceInjectors.makeStartupInjectorWithModules(ImmutableList.<Module>of());
-    mapper = injector.getInstance(ObjectMapper.class);
+  @Inject
+  public IndexMaker(
+      ObjectMapper mapper,
+      IndexIO indexIO
+  )
+  {
+    this.mapper = Preconditions.checkNotNull(mapper, "null ObjectMapper");
+    this.indexIO = Preconditions.checkNotNull(indexIO, "null IndexIO");
   }
 
-  public static File persist(
+  public File persist(
       final IncrementalIndex index,
       File outDir,
       final Map<String, Object> segmentMetadata,
@@ -137,7 +142,7 @@ public class IndexMaker
    *
    * @throws java.io.IOException
    */
-  public static File persist(
+  public File persist(
       final IncrementalIndex index,
       final Interval dataInterval,
       File outDir,
@@ -150,7 +155,7 @@ public class IndexMaker
     );
   }
 
-  public static File persist(
+  public File persist(
       final IncrementalIndex index,
       final Interval dataInterval,
       File outDir,
@@ -198,14 +203,14 @@ public class IndexMaker
     );
   }
 
-  public static File mergeQueryableIndex(
+  public File mergeQueryableIndex(
       List<QueryableIndex> indexes, final AggregatorFactory[] metricAggs, File outDir, final IndexSpec indexSpec
   ) throws IOException
   {
     return mergeQueryableIndex(indexes, metricAggs, outDir, indexSpec, new LoggingProgressIndicator(outDir.toString()));
   }
 
-  public static File mergeQueryableIndex(
+  public File mergeQueryableIndex(
       List<QueryableIndex> indexes,
       final AggregatorFactory[] metricAggs,
       File outDir,
@@ -233,7 +238,7 @@ public class IndexMaker
     );
   }
 
-  public static File merge(
+  public File merge(
       List<IndexableAdapter> adapters, final AggregatorFactory[] metricAggs, File outDir, final IndexSpec indexSpec
   ) throws IOException
   {
@@ -242,7 +247,7 @@ public class IndexMaker
     );
   }
 
-  public static File merge(
+  public File merge(
       List<IndexableAdapter> adapters,
       final AggregatorFactory[] metricAggs,
       File outDir,
@@ -342,16 +347,16 @@ public class IndexMaker
   }
 
 
-  public static File convert(final File inDir, final File outDir, final IndexSpec indexSpec) throws IOException
+  public File convert(final File inDir, final File outDir, final IndexSpec indexSpec) throws IOException
   {
     return convert(inDir, outDir, indexSpec, new BaseProgressIndicator());
   }
 
-  public static File convert(
+  public File convert(
       final File inDir, final File outDir, final IndexSpec indexSpec, final ProgressIndicator progress
   ) throws IOException
   {
-    try (QueryableIndex index = IndexIO.loadIndex(inDir)) {
+    try (QueryableIndex index = indexIO.loadIndex(inDir)) {
       final IndexableAdapter adapter = new QueryableIndexIndexableAdapter(index);
       return makeIndexFiles(
           ImmutableList.of(adapter),
@@ -374,7 +379,7 @@ public class IndexMaker
     }
   }
 
-  public static File append(
+  public File append(
       final List<IndexableAdapter> adapters,
       final File outDir,
       final IndexSpec indexSpec
@@ -383,7 +388,7 @@ public class IndexMaker
     return append(adapters, outDir, new LoggingProgressIndicator(outDir.toString()), indexSpec);
   }
 
-  public static File append(
+  public File append(
       final List<IndexableAdapter> adapters,
       final File outDir,
       final ProgressIndicator progress,
@@ -459,7 +464,7 @@ public class IndexMaker
     return makeIndexFiles(adapters, outDir, progress, mergedDimensions, mergedMetrics, null, rowMergerFn, indexSpec);
   }
 
-  private static File makeIndexFiles(
+  private File makeIndexFiles(
       final List<IndexableAdapter> adapters,
       final File outDir,
       final ProgressIndicator progress,
@@ -570,7 +575,7 @@ public class IndexMaker
     return outDir;
   }
 
-  private static void setupDimConversion(
+  private void setupDimConversion(
       final List<IndexableAdapter> adapters,
       final ProgressIndicator progress,
       final List<String> mergedDimensions,
@@ -663,7 +668,7 @@ public class IndexMaker
     progress.stopSection(section);
   }
 
-  private static Iterable<Rowboat> makeRowIterable(
+  private Iterable<Rowboat> makeRowIterable(
       final List<IndexableAdapter> adapters,
       final List<String> mergedDimensions,
       final List<String> mergedMetrics,
@@ -732,7 +737,7 @@ public class IndexMaker
     return rowMergerFn.apply(boats);
   }
 
-  private static int convertDims(
+  private int convertDims(
       final List<IndexableAdapter> adapters,
       final ProgressIndicator progress,
       final Iterable<Rowboat> theRows,
@@ -775,7 +780,7 @@ public class IndexMaker
     return rowCount;
   }
 
-  private static void makeTimeColumn(
+  private void makeTimeColumn(
       final FileSmoosher v9Smoosher,
       final ProgressIndicator progress,
       final Iterable<Rowboat> theRows,
@@ -812,7 +817,7 @@ public class IndexMaker
     progress.stopSection(section);
   }
 
-  private static void makeDimColumns(
+  private void makeDimColumns(
       final FileSmoosher v9Smoosher,
       final List<IndexableAdapter> adapters,
       final ProgressIndicator progress,
@@ -881,7 +886,7 @@ public class IndexMaker
     }
   }
 
-  private static void makeDimColumn(
+  private void makeDimColumn(
       final FileSmoosher v9Smoosher,
       final List<IndexableAdapter> adapters,
       final ProgressIndicator progress,
@@ -1231,7 +1236,7 @@ public class IndexMaker
     progress.stopSection(section);
   }
 
-  private static void makeMetricColumns(
+  private void makeMetricColumns(
       final FileSmoosher v9Smoosher,
       final ProgressIndicator progress,
       final Iterable<Rowboat> theRows,
@@ -1263,7 +1268,7 @@ public class IndexMaker
     progress.stopSection(metSection);
   }
 
-  private static void makeMetricColumn(
+  private void makeMetricColumn(
       final FileSmoosher v9Smoosher,
       final ProgressIndicator progress,
       final Iterable<Rowboat> theRows,
@@ -1369,7 +1374,7 @@ public class IndexMaker
     progress.stopSection(section);
   }
 
-  private static void makeIndexBinary(
+  private void makeIndexBinary(
       final FileSmoosher v9Smoosher,
       final List<IndexableAdapter> adapters,
       final File outDir,
@@ -1435,7 +1440,7 @@ public class IndexMaker
     progress.stopSection(section);
   }
 
-  private static void makeMetadataBinary(
+  private void makeMetadataBinary(
       final FileSmoosher v9Smoosher,
       final ProgressIndicator progress,
       final Map<String, Object> segmentMetadata
@@ -1448,7 +1453,7 @@ public class IndexMaker
     }
   }
 
-  private static void writeColumn(
+  private void writeColumn(
       FileSmoosher v9Smoosher,
       ColumnPartSerde serde,
       ColumnDescriptor.Builder builder,
@@ -1471,7 +1476,7 @@ public class IndexMaker
     channel.close();
   }
 
-  private static <T extends Comparable> ArrayList<T> mergeIndexed(final List<Iterable<T>> indexedLists)
+  private <T extends Comparable> ArrayList<T> mergeIndexed(final List<Iterable<T>> indexedLists)
   {
     Set<T> retVal = Sets.newTreeSet(Ordering.<T>natural().nullsFirst());
 

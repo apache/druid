@@ -57,7 +57,7 @@ public class EmptyIndexTest
         emptyIndex,
         new ConciseBitmapFactory()
     );
-    IndexMerger.merge(
+    TestHelper.getTestIndexMerger().merge(
         Lists.<IndexableAdapter>newArrayList(emptyIndexAdapter),
         new AggregatorFactory[0],
         tmpDir,
@@ -65,7 +65,7 @@ public class EmptyIndexTest
         new IndexSpec()
     );
 
-    QueryableIndex emptyQueryableIndex = IndexIO.loadIndex(tmpDir);
+    QueryableIndex emptyQueryableIndex = TestHelper.getTestIndexIO().loadIndex(tmpDir);
 
     Assert.assertEquals("getDimensionNames", 0, Iterables.size(emptyQueryableIndex.getAvailableDimensions()));
     Assert.assertEquals("getMetricNames", 0, Iterables.size(emptyQueryableIndex.getColumnNames()));

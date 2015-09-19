@@ -47,6 +47,9 @@ import io.druid.guice.annotations.Self;
 import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.path.PathSpec;
 import io.druid.initialization.Initialization;
+import io.druid.segment.IndexIO;
+import io.druid.segment.IndexMaker;
+import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.server.DruidNode;
@@ -68,7 +71,6 @@ import java.io.Reader;
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
 import java.util.SortedSet;
 
@@ -84,9 +86,9 @@ public class HadoopDruidIndexerConfig
   public static final Splitter tabSplitter = Splitter.on("\t");
   public static final Joiner tabJoiner = Joiner.on("\t");
   public static final ObjectMapper jsonMapper;
-
-  // workaround to pass down druid.processing.bitmap.type, see IndexGeneratorJob.run()
-  protected static final Properties properties;
+  public static final IndexIO INDEX_IO;
+  public static final IndexMerger INDEX_MERGER;
+  public static final IndexMaker INDEX_MAKER;
 
   private static final String DEFAULT_WORKING_PATH = "/tmp/druid-indexing";
 
@@ -107,8 +109,11 @@ public class HadoopDruidIndexerConfig
             new IndexingHadoopModule()
         )
     );
+
     jsonMapper = injector.getInstance(ObjectMapper.class);
-    properties = injector.getInstance(Properties.class);
+    INDEX_IO = injector.getInstance(IndexIO.class);
+    INDEX_MERGER = injector.getInstance(IndexMerger.class);
+    INDEX_MAKER = injector.getInstance(IndexMaker.class);
   }
 
   public static enum IndexJobCounters

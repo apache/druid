@@ -65,6 +65,8 @@ public class YeOldePlumberSchool implements PlumberSchool
   private final String version;
   private final DataSegmentPusher dataSegmentPusher;
   private final File tmpSegmentDir;
+  private final IndexMerger indexMerger;
+  private final IndexIO indexIO;
 
   private static final Logger log = new Logger(YeOldePlumberSchool.class);
 
@@ -73,13 +75,17 @@ public class YeOldePlumberSchool implements PlumberSchool
       @JsonProperty("interval") Interval interval,
       @JsonProperty("version") String version,
       @JacksonInject("segmentPusher") DataSegmentPusher dataSegmentPusher,
-      @JacksonInject("tmpSegmentDir") File tmpSegmentDir
+      @JacksonInject("tmpSegmentDir") File tmpSegmentDir,
+      @JacksonInject IndexMerger indexMerger,
+      @JacksonInject IndexIO indexIO
   )
   {
     this.interval = interval;
     this.version = version;
     this.dataSegmentPusher = dataSegmentPusher;
     this.tmpSegmentDir = tmpSegmentDir;
+    this.indexMerger = Preconditions.checkNotNull(indexMerger, "Null IndexMerger");
+    this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
   }
 
   @Override
@@ -162,15 +168,15 @@ public class YeOldePlumberSchool implements PlumberSchool
           } else {
             List<QueryableIndex> indexes = Lists.newArrayList();
             for (final File oneSpill : spilled) {
-              indexes.add(IndexIO.loadIndex(oneSpill));
+              indexes.add(indexIO.loadIndex(oneSpill));
             }
 
             fileToUpload = new File(tmpSegmentDir, "merged");
-            IndexMerger.mergeQueryableIndex(indexes, schema.getAggregators(), fileToUpload, config.getIndexSpec());
+            indexMerger.mergeQueryableIndex(indexes, schema.getAggregators(), fileToUpload, config.getIndexSpec());
           }
 
           // Map merged segment so we can extract dimensions
-          final QueryableIndex mappedSegment = IndexIO.loadIndex(fileToUpload);
+          final QueryableIndex mappedSegment = indexIO.loadIndex(fileToUpload);
 
           final DataSegment segmentToUpload = theSink.getSegment()
                                                      .withDimensions(ImmutableList.copyOf(mappedSegment.getAvailableDimensions()))
@@ -211,7 +217,7 @@ public class YeOldePlumberSchool implements PlumberSchool
           log.info("Spilling index[%d] with rows[%d] to: %s", indexToPersist.getCount(), rowsToPersist, dirToPersist);
 
           try {
-            IndexMerger.persist(
+            indexMerger.persist(
                 indexToPersist.getIndex(),
                 dirToPersist,
                 null,

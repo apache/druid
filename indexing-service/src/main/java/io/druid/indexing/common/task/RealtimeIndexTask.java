@@ -275,7 +275,10 @@ public class RealtimeIndexTask extends AbstractTask
         lockingSegmentAnnouncer,
         segmentPublisher,
         toolbox.getNewSegmentServerView(),
-        toolbox.getQueryExecutorService()
+        toolbox.getQueryExecutorService(),
+        toolbox.getIndexMerger(),
+        toolbox.getIndexMaker(),
+        toolbox.getIndexIO()
     );
 
     this.plumber = plumberSchool.findPlumber(dataSchema, tuningConfig, fireDepartment.getMetrics());

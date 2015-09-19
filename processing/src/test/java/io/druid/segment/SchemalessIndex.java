@@ -86,6 +86,9 @@ public class SchemalessIndex
   private static final Map<Integer, Map<Integer, QueryableIndex>> mergedIndexes = Maps.newHashMap();
   private static final List<QueryableIndex> rowPersistedIndexes = Lists.newArrayList();
 
+  private static final IndexMerger INDEX_MERGER = TestHelper.getTestIndexMerger();
+  private static final IndexIO INDEX_IO = TestHelper.getTestIndexIO();
+
   private static IncrementalIndex index = null;
   private static QueryableIndex mergedIndex = null;
 
@@ -188,12 +191,12 @@ public class SchemalessIndex
         mergedFile.mkdirs();
         mergedFile.deleteOnExit();
 
-        IndexMerger.persist(top, topFile, null, indexSpec);
-        IndexMerger.persist(bottom, bottomFile, null, indexSpec);
+        INDEX_MERGER.persist(top, topFile, null, indexSpec);
+        INDEX_MERGER.persist(bottom, bottomFile, null, indexSpec);
 
-        mergedIndex = io.druid.segment.IndexIO.loadIndex(
-            IndexMerger.mergeQueryableIndex(
-                Arrays.asList(IndexIO.loadIndex(topFile), IndexIO.loadIndex(bottomFile)),
+        mergedIndex = INDEX_IO.loadIndex(
+            INDEX_MERGER.mergeQueryableIndex(
+                Arrays.asList(INDEX_IO.loadIndex(topFile), INDEX_IO.loadIndex(bottomFile)),
                 METRIC_AGGS,
                 mergedFile,
                 indexSpec
@@ -236,8 +239,8 @@ public class SchemalessIndex
         mergedFile.mkdirs();
         mergedFile.deleteOnExit();
 
-        QueryableIndex index = IndexIO.loadIndex(
-            IndexMerger.mergeQueryableIndex(
+        QueryableIndex index = INDEX_IO.loadIndex(
+            INDEX_MERGER.mergeQueryableIndex(
                 Arrays.asList(rowPersistedIndexes.get(index1), rowPersistedIndexes.get(index2)),
                 METRIC_AGGS,
                 mergedFile,
@@ -276,8 +279,8 @@ public class SchemalessIndex
           indexesToMerge.add(rowPersistedIndexes.get(indexes[i]));
         }
 
-        QueryableIndex index = IndexIO.loadIndex(
-            IndexMerger.mergeQueryableIndex(indexesToMerge, METRIC_AGGS, mergedFile, indexSpec)
+        QueryableIndex index = INDEX_IO.loadIndex(
+            INDEX_MERGER.mergeQueryableIndex(indexesToMerge, METRIC_AGGS, mergedFile, indexSpec)
         );
 
         return index;
@@ -358,8 +361,8 @@ public class SchemalessIndex
           tmpFile.mkdirs();
           tmpFile.deleteOnExit();
 
-          IndexMerger.persist(rowIndex, tmpFile, null, indexSpec);
-          rowPersistedIndexes.add(IndexIO.loadIndex(tmpFile));
+          INDEX_MERGER.persist(rowIndex, tmpFile, null, indexSpec);
+          rowPersistedIndexes.add(INDEX_IO.loadIndex(tmpFile));
         }
       }
       catch (IOException e) {
@@ -418,7 +421,7 @@ public class SchemalessIndex
       theFile.mkdirs();
       theFile.deleteOnExit();
       filesToMap.add(theFile);
-      IndexMerger.persist(index, theFile, null, indexSpec);
+      INDEX_MERGER.persist(index, theFile, null, indexSpec);
     }
 
     return filesToMap;
@@ -469,7 +472,7 @@ public class SchemalessIndex
                             {
                               try {
                                 return new RowboatFilteringIndexAdapter(
-                                    new QueryableIndexIndexableAdapter(IndexIO.loadIndex(chunk.getObject())),
+                                    new QueryableIndexIndexableAdapter(INDEX_IO.loadIndex(chunk.getObject())),
                                     new Predicate<Rowboat>()
                                     {
                                       @Override
@@ -492,7 +495,7 @@ public class SchemalessIndex
           )
       );
 
-      return IndexIO.loadIndex(IndexMerger.append(adapters, mergedFile, indexSpec));
+      return INDEX_IO.loadIndex(INDEX_MERGER.append(adapters, mergedFile, indexSpec));
     }
     catch (IOException e) {
       throw Throwables.propagate(e);
@@ -510,8 +513,8 @@ public class SchemalessIndex
 
       List<File> filesToMap = makeFilesToMap(tmpFile, files);
 
-      return IndexIO.loadIndex(
-          IndexMerger.mergeQueryableIndex(
+      return INDEX_IO.loadIndex(
+          INDEX_MERGER.mergeQueryableIndex(
               Lists.newArrayList(
                   Iterables.transform(
                       filesToMap,
@@ -521,7 +524,7 @@ public class SchemalessIndex
                         public QueryableIndex apply(@Nullable File input)
                         {
                           try {
-                            return IndexIO.loadIndex(input);
+                            return INDEX_IO.loadIndex(input);
                           }
                           catch (IOException e) {
                             throw Throwables.propagate(e);

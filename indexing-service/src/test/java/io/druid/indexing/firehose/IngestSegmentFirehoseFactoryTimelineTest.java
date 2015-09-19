@@ -43,6 +43,7 @@ import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularity;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskToolboxFactory;
+import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.actions.TaskActionClient;
@@ -52,6 +53,8 @@ import io.druid.indexing.common.task.Task;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.filter.NoopDimFilter;
+import io.druid.segment.IndexIO;
+import io.druid.segment.IndexMaker;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.incremental.IncrementalIndexSchema;
@@ -103,6 +106,19 @@ public class IngestSegmentFirehoseFactoryTimelineTest
   private final File tmpDir;
   private final int expectedCount;
   private final long expectedSum;
+
+  private static final ObjectMapper MAPPER;
+  private static final IndexMerger INDEX_MERGER;
+  private static final IndexMaker INDEX_MAKER;
+  private static final IndexIO INDEX_IO;
+
+  static {
+    TestUtils testUtils = new TestUtils();
+    MAPPER = IngestSegmentFirehoseFactoryTest.setupInjectablesInObjectMapper(testUtils.getTestObjectMapper());
+    INDEX_MERGER = testUtils.getTestIndexMerger();
+    INDEX_MAKER = testUtils.getTestIndexMaker();
+    INDEX_IO = testUtils.getTestIndexIO();
+  }
 
   public IngestSegmentFirehoseFactoryTimelineTest(
       String name,
@@ -212,7 +228,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
     }
 
     try {
-      IndexMerger.persist(index, persistDir, null, new IndexSpec());
+      INDEX_MERGER.persist(index, persistDir, null, new IndexSpec());
     }
     catch (IOException e) {
       throw Throwables.propagate(e);
@@ -262,7 +278,6 @@ public class IngestSegmentFirehoseFactoryTimelineTest
     final List<Object[]> constructors = Lists.newArrayList();
 
     for (final TestCase testCase : testCases) {
-      final ObjectMapper objectMapper = IngestSegmentFirehoseFactoryTest.newObjectMapper();
       final TaskActionClient taskActionClient = new TaskActionClient()
       {
         @Override
@@ -311,10 +326,13 @@ public class IngestSegmentFirehoseFactoryTimelineTest
                     {
                       return Lists.newArrayList();
                     }
-                  }, objectMapper
+                  }, MAPPER
               )
           ),
-          objectMapper
+          MAPPER,
+          INDEX_MERGER,
+          INDEX_MAKER,
+          INDEX_IO
       );
       final Injector injector = Guice.createInjector(
           new Module()
@@ -332,7 +350,8 @@ public class IngestSegmentFirehoseFactoryTimelineTest
           new NoopDimFilter(),
           Arrays.asList(DIMENSIONS),
           Arrays.asList(METRICS),
-          injector
+          injector,
+          INDEX_IO
       );
 
       constructors.add(
