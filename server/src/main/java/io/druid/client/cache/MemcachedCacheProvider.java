@@ -17,15 +17,19 @@
 
 package io.druid.client.cache;
 
-import com.google.inject.Inject;
+import com.fasterxml.jackson.annotation.JacksonInject;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.metamx.metrics.MonitorScheduler;
 
 public class MemcachedCacheProvider extends MemcachedCacheConfig implements CacheProvider
 {
   private final MonitorScheduler emitter;
 
-  @Inject
-  public MemcachedCacheProvider(MonitorScheduler emitter)
+  @JsonCreator
+  public MemcachedCacheProvider(
+      @JacksonInject
+      MonitorScheduler emitter
+  )
   {
     this.emitter = emitter;
   }
