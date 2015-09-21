@@ -38,6 +38,7 @@ import com.metamx.metrics.MonitorScheduler;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
 import io.druid.guice.GuiceInjectors;
+import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.ManageLifecycle;
 import io.druid.initialization.Initialization;
 import io.druid.jackson.DefaultObjectMapper;
@@ -67,6 +68,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
@@ -157,6 +159,33 @@ public class MemcachedCacheTest
     finally {
       lifecycle.stop();
     }
+  }
+
+  @Test
+  public void testSimpleInjection()
+  {
+    final String uuid = UUID.randomUUID().toString();
+    System.setProperty(uuid + ".type", "memcached");
+    System.setProperty(uuid + ".hosts", "localhost");
+    final MonitorScheduler monitorScheduler = EasyMock.createNiceMock(MonitorScheduler.class);
+    EasyMock.replay(monitorScheduler);
+    final Injector injector = Initialization.makeInjectorWithModules(
+        GuiceInjectors.makeStartupInjector(), ImmutableList.<Module>of(
+            new Module()
+            {
+              @Override
+              public void configure(Binder binder)
+              {
+                binder.bind(MonitorScheduler.class).toInstance(monitorScheduler);
+                binder.bind(Cache.class).toProvider(CacheProvider.class);
+                JsonConfigProvider.bind(binder, uuid, CacheProvider.class);
+              }
+            }
+        )
+    );
+    final CacheProvider memcachedCacheProvider = injector.getInstance(CacheProvider.class);
+    Assert.assertNotNull(memcachedCacheProvider);
+    Assert.assertEquals(MemcachedCacheProvider.class, memcachedCacheProvider.getClass());
   }
 
   @Test

@@ -50,7 +50,7 @@ public class OverlordProxyServlet extends ProxyServlet
     try {
       final Server indexer = selector.pick();
       if (indexer == null) {
-        throw new ISE("Cannot find instance of indexingService");
+        throw new ISE("Can't find indexingService, did you configure druid.selectors.indexing.serviceName same as druid.service at overlord?");
       }
       return new URI(
           request.getScheme(),
