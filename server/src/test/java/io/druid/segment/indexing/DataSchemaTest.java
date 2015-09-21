@@ -17,6 +17,7 @@
 
 package io.druid.segment.indexing;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
@@ -56,7 +57,7 @@ public class DataSchemaTest
                 new TimestampSpec("time", "auto", null),
                 new DimensionsSpec(ImmutableList.of("dimB", "dimA"), null, null)
             )
-        ), Map.class
+        ), new TypeReference<Map<String, Object>>() {}
     );
 
     DataSchema schema = new DataSchema(
@@ -85,7 +86,7 @@ public class DataSchemaTest
                 new TimestampSpec("time", "auto", null),
                 new DimensionsSpec(ImmutableList.of("time", "dimA", "dimB", "col2"), ImmutableList.of("dimC"), null)
             )
-        ), Map.class
+        ), new TypeReference<Map<String, Object>>() {}
     );
 
     DataSchema schema = new DataSchema(
@@ -114,7 +115,7 @@ public class DataSchemaTest
                 new TimestampSpec("time", "auto", null),
                 new DimensionsSpec(ImmutableList.of("time", "dimA", "dimB", "metric1"), ImmutableList.of("dimC"), null)
             )
-        ), Map.class
+        ), new TypeReference<Map<String, Object>>() {}
     );
 
     DataSchema schema = new DataSchema(
@@ -189,13 +190,13 @@ public class DataSchemaTest
     Assert.assertEquals(
         new DataSchema(
             "test",
-            jsonMapper.convertValue(
+            jsonMapper.<Map<String, Object>>convertValue(
                 new StringInputRowParser(
                     new JSONParseSpec(
                         new TimestampSpec("xXx", null, null),
                         new DimensionsSpec(null, null, null)
                     )
-                ), Map.class
+                ), new TypeReference<Map<String, Object>>() {}
             ),
             new AggregatorFactory[]{
                 new DoubleSumAggregatorFactory("metric1", "col1")
