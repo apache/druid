@@ -134,6 +134,9 @@ public class MemcachedCache implements Cache
             for (Map.Entry<String, AtomicLong> entry : counters.entrySet()) {
               builder.put(entry.getKey(), entry.getValue().get());
             }
+            for (Map.Entry<String, AtomicLong> entry : meters.entrySet()) {
+              builder.put(entry.getKey(), entry.getValue().get());
+            }
             return builder.build();
           }
         };
