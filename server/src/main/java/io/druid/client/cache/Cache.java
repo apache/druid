@@ -20,6 +20,7 @@ package io.druid.client.cache;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Ints;
 import com.metamx.common.StringUtils;
+import com.metamx.emitter.service.ServiceEmitter;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -38,6 +39,12 @@ public interface Cache
   public CacheStats getStats();
 
   public boolean isLocal();
+
+  /**
+   * Custom metrics not covered by CacheStats may be emitted by this method.
+   * @param emitter The service emitter to emit on.
+   */
+  public void doMonitor(ServiceEmitter emitter);
 
   public class NamedKey
   {

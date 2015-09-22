@@ -102,7 +102,7 @@ public class MemcachedCacheBenchmark extends SimpleBenchmark
           {
             return 3600;
           }
-        }
+        }, MemcachedCacheTest.NOOP_MONITOR
     );
 
     randBytes = new byte[objectSize * 1024];

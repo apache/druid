@@ -45,15 +45,17 @@ public class LocalDataSegmentPusherTest
   @Before
   public void setUp() throws IOException
   {
-    dataSegment = new DataSegment("",
-                                  new Interval(0, 1),
-                                  "",
-                                  null,
-                                  null,
-                                  null,
-                                  new NoneShardSpec(),
-                                  null,
-                                  -1);
+    dataSegment = new DataSegment(
+        "",
+        new Interval(0, 1),
+        "",
+        null,
+        null,
+        null,
+        new NoneShardSpec(),
+        null,
+        -1
+    );
     localDataSegmentPusher = new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig(), new ObjectMapper());
     dataSegmentFiles = Files.createTempDir();
     ByteStreams.write(
@@ -72,16 +74,47 @@ public class LocalDataSegmentPusherTest
     DataSegment returnSegment = localDataSegmentPusher.push(dataSegmentFiles, dataSegment);
     Assert.assertNotNull(returnSegment);
     Assert.assertEquals(dataSegment, returnSegment);
-    outDir = new File(new LocalDataSegmentPusherConfig().getStorageDirectory(), DataSegmentPusherUtil.getStorageDir(returnSegment));
+    outDir = new File(
+        new LocalDataSegmentPusherConfig().getStorageDirectory(),
+        DataSegmentPusherUtil.getStorageDir(returnSegment)
+    );
     File versionFile = new File(outDir, "index.zip");
     File descriptorJson = new File(outDir, "descriptor.json");
     Assert.assertTrue(versionFile.exists());
     Assert.assertTrue(descriptorJson.exists());
   }
 
+  @Test
+  public void testPathForHadoopAbsolute()
+  {
+    LocalDataSegmentPusherConfig config = new LocalDataSegmentPusherConfig();
+    config.storageDirectory = new File("/druid");
+
+    Assert.assertEquals(
+        "file:/druid/foo",
+        new LocalDataSegmentPusher(config, new ObjectMapper()).getPathForHadoop("foo")
+    );
+  }
+
+  @Test
+  public void testPathForHadoopRelative()
+  {
+    LocalDataSegmentPusherConfig config = new LocalDataSegmentPusherConfig();
+    config.storageDirectory = new File("druid");
+
+    Assert.assertEquals(
+        String.format("file:%s/druid/foo", System.getProperty("user.dir")),
+        new LocalDataSegmentPusher(config, new ObjectMapper()).getPathForHadoop("foo")
+    );
+  }
+
   @After
-  public void tearDown() throws IOException{
+  public void tearDown() throws IOException
+  {
     FileUtils.deleteDirectory(dataSegmentFiles);
-    FileUtils.deleteDirectory(outDir);
+
+    if (outDir != null) {
+      FileUtils.deleteDirectory(outDir);
+    }
   }
 }

@@ -33,11 +33,12 @@ import com.metamx.common.logger.Logger;
 import com.metamx.emitter.core.Emitter;
 import com.metamx.emitter.core.Event;
 import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.metrics.Monitor;
+import com.metamx.metrics.AbstractMonitor;
 import com.metamx.metrics.MonitorScheduler;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
 import io.druid.guice.GuiceInjectors;
+import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.ManageLifecycle;
 import io.druid.initialization.Initialization;
 import io.druid.jackson.DefaultObjectMapper;
@@ -55,7 +56,6 @@ import net.spy.memcached.internal.OperationFuture;
 import net.spy.memcached.ops.OperationStatus;
 import net.spy.memcached.transcoders.SerializingTranscoder;
 import net.spy.memcached.transcoders.Transcoder;
-import org.easymock.Capture;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
@@ -67,6 +67,7 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
@@ -82,6 +83,14 @@ public class MemcachedCacheTest
   private static final Logger log = new Logger(MemcachedCacheTest.class);
   private static final byte[] HI = "hiiiiiiiiiiiiiiiiiii".getBytes();
   private static final byte[] HO = "hooooooooooooooooooo".getBytes();
+  protected static final AbstractMonitor NOOP_MONITOR = new AbstractMonitor()
+  {
+    @Override
+    public boolean doMonitor(ServiceEmitter emitter)
+    {
+      return false;
+    }
+  };
   private MemcachedCache cache;
   private final MemcachedCacheConfig memcachedCacheConfig = new MemcachedCacheConfig()
   {
@@ -117,7 +126,8 @@ public class MemcachedCacheTest
         Suppliers.<ResourceHolder<MemcachedClientIF>>ofInstance(
             StupidResourceHolder.<MemcachedClientIF>create(new MockMemcachedClient())
         ),
-        memcachedCacheConfig
+        memcachedCacheConfig,
+        NOOP_MONITOR
     );
   }
 
@@ -160,22 +170,37 @@ public class MemcachedCacheTest
   }
 
   @Test
+  public void testSimpleInjection()
+  {
+    final String uuid = UUID.randomUUID().toString();
+    System.setProperty(uuid + ".type", "memcached");
+    System.setProperty(uuid + ".hosts", "localhost");
+    final MonitorScheduler monitorScheduler = EasyMock.createNiceMock(MonitorScheduler.class);
+    EasyMock.replay(monitorScheduler);
+    final Injector injector = Initialization.makeInjectorWithModules(
+        GuiceInjectors.makeStartupInjector(), ImmutableList.<Module>of(
+            new Module()
+            {
+              @Override
+              public void configure(Binder binder)
+              {
+                binder.bind(MonitorScheduler.class).toInstance(monitorScheduler);
+                binder.bind(Cache.class).toProvider(CacheProvider.class);
+                JsonConfigProvider.bind(binder, uuid, CacheProvider.class);
+              }
+            }
+        )
+    );
+    final CacheProvider memcachedCacheProvider = injector.getInstance(CacheProvider.class);
+    Assert.assertNotNull(memcachedCacheProvider);
+    Assert.assertEquals(MemcachedCacheProvider.class, memcachedCacheProvider.getClass());
+  }
+
+  @Test
   public void testMonitor() throws Exception
   {
-    MonitorScheduler monitorScheduler = EasyMock.createNiceMock(MonitorScheduler.class);
-    Capture<? extends Monitor> monitorCapture = Capture.newInstance();
-    monitorScheduler.addMonitor(EasyMock.capture(monitorCapture));
-    EasyMock.expectLastCall().once();
-    EasyMock.replay(monitorScheduler);
-    MemcachedCache cache = MemcachedCache.create(memcachedCacheConfig, monitorScheduler);
-    EasyMock.verify(monitorScheduler);
-
-    Assert.assertTrue(monitorCapture.hasCaptured());
-    final Monitor monitor = monitorCapture.getValue();
-    monitor.start();
-    Assert.assertNotNull(monitor);
-
-    Emitter emitter = EasyMock.createNiceMock(Emitter.class);
+    final MemcachedCache cache = MemcachedCache.create(memcachedCacheConfig);
+    final Emitter emitter = EasyMock.createNiceMock(Emitter.class);
     final Collection<Event> events = new ArrayList<>();
     final ServiceEmitter serviceEmitter = new ServiceEmitter("service", "host", emitter)
     {
@@ -188,7 +213,7 @@ public class MemcachedCacheTest
 
     while (events.isEmpty()) {
       Thread.sleep(memcachedCacheConfig.getTimeout());
-      Assert.assertTrue(monitor.monitor(serviceEmitter));
+      cache.doMonitor(serviceEmitter);
     }
 
     Assert.assertFalse(events.isEmpty());
@@ -259,20 +284,17 @@ public class MemcachedCacheTest
 class MemcachedProviderWithConfig extends MemcachedCacheProvider
 {
   private final MemcachedCacheConfig config;
-  private final MonitorScheduler emitter;
 
   @Inject
-  public MemcachedProviderWithConfig(MonitorScheduler emitter, MemcachedCacheConfig config)
+  public MemcachedProviderWithConfig(MemcachedCacheConfig config)
   {
-    super(emitter);
-    this.emitter = emitter;
     this.config = config;
   }
 
   @Override
   public Cache get()
   {
-    return MemcachedCache.create(config, emitter);
+    return MemcachedCache.create(config);
   }
 }
 
