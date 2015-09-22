@@ -85,12 +85,6 @@ public class LongSumAggregatorFactory implements AggregatorFactory
   }
 
   @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Arrays.<AggregatorFactory>asList(new LongSumAggregatorFactory(fieldName, fieldName));
-  }
-
-  @Override
   public Object deserialize(Object object)
   {
     return object;
