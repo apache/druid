@@ -142,7 +142,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>server-metrics</artifactId>
-                <version>0.2.2</version>
+                <version>0.2.4</version>
             </dependency>
             <dependency>
                 <groupId>commons-codec</groupId>
