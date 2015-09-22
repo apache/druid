@@ -25,6 +25,7 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
@@ -33,7 +34,6 @@ import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.metrics.AbstractMonitor;
-import com.metamx.metrics.MonitorScheduler;
 import io.druid.collections.LoadBalancingPool;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
@@ -58,6 +58,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
@@ -88,11 +89,11 @@ public class MemcachedCache implements Cache
     }
   };
 
-  public static MemcachedCache create(final MemcachedCacheConfig config, MonitorScheduler emitter)
+  public static MemcachedCache create(final MemcachedCacheConfig config)
   {
     final ConcurrentMap<String, AtomicLong> counters = new ConcurrentHashMap<>();
     final ConcurrentMap<String, AtomicLong> meters = new ConcurrentHashMap<>();
-    emitter.addMonitor(
+    final AbstractMonitor monitor =
         new AbstractMonitor()
         {
           final AtomicReference<Map<String, Long>> priorValues = new AtomicReference<Map<String, Long>>(new HashMap<String, Long>());
@@ -134,8 +135,7 @@ public class MemcachedCache implements Cache
             }
             return builder.build();
           }
-        }
-    );
+        };
     try {
       LZ4Transcoder transcoder = new LZ4Transcoder(config.getMaxObjectSize());
 
@@ -152,12 +152,24 @@ public class MemcachedCache implements Cache
 
       final Predicate<String> interesting = new Predicate<String>()
       {
+        // See net.spy.memcached.MemcachedConnection.registerMetrics()
+        private final Set<String> interestingMetrics = ImmutableSet.of(
+            "[MEM] Reconnecting Nodes (ReconnectQueue)",
+            //"[MEM] Shutting Down Nodes (NodesToShutdown)", // Busted
+            "[MEM] Request Rate: All",
+            "[MEM] Average Bytes written to OS per write",
+            "[MEM] Average Bytes read from OS per read",
+            "[MEM] Average Time on wire for operations (µs)",
+            "[MEM] Response Rate: All (Failure + Success + Retry)",
+            "[MEM] Response Rate: Retry",
+            "[MEM] Response Rate: Failure",
+            "[MEM] Response Rate: Success"
+        );
+
         @Override
         public boolean apply(@Nullable String input)
         {
-          // See net.spy.memcached.MemcachedConnection.registerMetrics()
-          // in current version shutdown queue metric is borked
-          return input != null && !input.contains("Down");
+          return input != null && interestingMetrics.contains(input);
         }
       };
 
@@ -169,7 +181,7 @@ public class MemcachedCache implements Cache
           if (!interesting.apply(name)) {
             return;
           }
-          counters.put(name, new AtomicLong(0L));
+          counters.putIfAbsent(name, new AtomicLong(0L));
 
           if (log.isDebugEnabled()) {
             log.debug("Add Counter [%s]", name);
@@ -179,13 +191,8 @@ public class MemcachedCache implements Cache
         @Override
         public void removeCounter(String name)
         {
-          if (!interesting.apply(name)) {
-            return;
-          }
-          counters.remove(name);
-
           if (log.isDebugEnabled()) {
-            log.debug("Remove Counter [%s]", name);
+            log.debug("Ignoring request to remove [%s]", name);
           }
         }
 
@@ -264,7 +271,10 @@ public class MemcachedCache implements Cache
         @Override
         public void addMeter(String name)
         {
-          meters.put(name, new AtomicLong(0L));
+          if (!interesting.apply(name)) {
+            return;
+          }
+          meters.putIfAbsent(name, new AtomicLong(0L));
           if (log.isDebugEnabled()) {
             log.debug("Adding meter [%s]", name);
           }
@@ -273,15 +283,20 @@ public class MemcachedCache implements Cache
         @Override
         public void removeMeter(String name)
         {
-          meters.remove(name);
+          if (!interesting.apply(name)) {
+            return;
+          }
           if (log.isDebugEnabled()) {
-            log.debug("Removing meter [%s]", name);
+            log.debug("Ignoring request to remove meter [%s]", name);
           }
         }
 
         @Override
         public void markMeter(String name)
         {
+          if (!interesting.apply(name)) {
+            return;
+          }
           AtomicLong meter = meters.get(name);
           if (meter == null) {
             meters.putIfAbsent(name, new AtomicLong(0L));
@@ -360,7 +375,7 @@ public class MemcachedCache implements Cache
         );
       }
 
-      return new MemcachedCache(clientSupplier, config);
+      return new MemcachedCache(clientSupplier, config, monitor);
     }
     catch (IOException e) {
       throw Throwables.propagate(e);
@@ -377,9 +392,14 @@ public class MemcachedCache implements Cache
   private final AtomicLong missCount = new AtomicLong(0);
   private final AtomicLong timeoutCount = new AtomicLong(0);
   private final AtomicLong errorCount = new AtomicLong(0);
+  private final AbstractMonitor monitor;
 
 
-  MemcachedCache(Supplier<ResourceHolder<MemcachedClientIF>> client, MemcachedCacheConfig config)
+  MemcachedCache(
+      Supplier<ResourceHolder<MemcachedClientIF>> client,
+      MemcachedCacheConfig config,
+      AbstractMonitor monitor
+  )
   {
     Preconditions.checkArgument(
         config.getMemcachedPrefix().length() <= MAX_PREFIX_LENGTH,
@@ -387,6 +407,7 @@ public class MemcachedCache implements Cache
         config.getMemcachedPrefix().length(),
         MAX_PREFIX_LENGTH
     );
+    this.monitor = monitor;
     this.timeout = config.getTimeout();
     this.expiration = config.getExpiration();
     this.client = client;
@@ -586,5 +607,11 @@ public class MemcachedCache implements Cache
   public boolean isLocal()
   {
     return false;
+  }
+
+  @Override
+  public void doMonitor(ServiceEmitter emitter)
+  {
+    monitor.doMonitor(emitter);
   }
 }

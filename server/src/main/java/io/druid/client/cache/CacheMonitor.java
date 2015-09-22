@@ -49,6 +49,9 @@ public class CacheMonitor extends AbstractMonitor
     emitStats(emitter, "query/cache/total", currCacheStats, builder);
 
     prevCacheStats = currCacheStats;
+
+    // Any custom cache statistics that need monitoring
+    cache.doMonitor(emitter);
     return true;
   }
 
