@@ -42,6 +42,7 @@ import io.druid.query.metadata.metadata.SegmentAnalysis;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.Segment;
+import io.druid.segment.StorageAdapter;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -82,15 +83,23 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
         SegmentMetadataQuery query = (SegmentMetadataQuery) inQ;
 
         final QueryableIndex index = segment.asQueryableIndex();
+
         final Map<String, ColumnAnalysis> analyzedColumns;
+        final int numRows;
         long totalSize = 0;
         if (index == null) {
           // IncrementalIndexSegments (used by in-memory hydrants in the realtime service) do not have a QueryableIndex
-          analyzedColumns = analyzer.analyze(segment.asStorageAdapter());
+          StorageAdapter segmentAdapter = segment.asStorageAdapter();
+          analyzedColumns = analyzer.analyze(segmentAdapter, query.getAnalysisTypes());
+          numRows = segmentAdapter.getNumRows();
         } else {
-          analyzedColumns = analyzer.analyze(index);
+          analyzedColumns = analyzer.analyze(index, query.getAnalysisTypes());
+          numRows = index.getNumRows();
+        }
+
+        if (query.hasSize()) {
           // Initialize with the size of the whitespace, 1 byte per
-          totalSize = analyzedColumns.size() * index.getNumRows();
+          totalSize = analyzedColumns.size() * numRows;
         }
 
         Map<String, ColumnAnalysis> columns = Maps.newTreeMap();
