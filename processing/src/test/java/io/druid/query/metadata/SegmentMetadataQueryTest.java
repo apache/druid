@@ -50,6 +50,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -164,12 +165,20 @@ public class SegmentMetadataQueryTest
     String queryStr = "{\n"
                       + "  \"queryType\":\"segmentMetadata\",\n"
                       + "  \"dataSource\":\"test_ds\",\n"
-                      + "  \"intervals\":[\"2013-12-04T00:00:00.000Z/2013-12-05T00:00:00.000Z\"]\n"
+                      + "  \"intervals\":[\"2013-12-04T00:00:00.000Z/2013-12-05T00:00:00.000Z\"],\n"
+                      + "  \"analysisTypes\":[\"cardinality\",\"size\"]\n"
                       + "}";
+
+    EnumSet<SegmentMetadataQuery.AnalysisType> expectedAnalysisTypes = EnumSet.of(
+        SegmentMetadataQuery.AnalysisType.CARDINALITY,
+        SegmentMetadataQuery.AnalysisType.SIZE
+    );
+
     Query query = mapper.readValue(queryStr, Query.class);
     Assert.assertTrue(query instanceof SegmentMetadataQuery);
     Assert.assertEquals("test_ds", Iterables.getOnlyElement(query.getDataSource().getNames()));
     Assert.assertEquals(new Interval("2013-12-04T00:00:00.000Z/2013-12-05T00:00:00.000Z"), query.getIntervals().get(0));
+    Assert.assertEquals(expectedAnalysisTypes, ((SegmentMetadataQuery) query).getAnalysisTypes());
 
     // test serialize and deserialize
     Assert.assertEquals(query, mapper.readValue(mapper.writeValueAsString(query), Query.class));
