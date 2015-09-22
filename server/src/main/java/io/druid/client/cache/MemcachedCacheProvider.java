@@ -17,26 +17,11 @@
 
 package io.druid.client.cache;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.metamx.metrics.MonitorScheduler;
-
 public class MemcachedCacheProvider extends MemcachedCacheConfig implements CacheProvider
 {
-  private final MonitorScheduler emitter;
-
-  @JsonCreator
-  public MemcachedCacheProvider(
-      @JacksonInject
-      MonitorScheduler emitter
-  )
-  {
-    this.emitter = emitter;
-  }
-
   @Override
   public Cache get()
   {
-    return MemcachedCache.create(this, emitter);
+    return MemcachedCache.create(this);
   }
 }
