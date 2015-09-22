@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -55,6 +56,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -69,8 +71,6 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
 {
   private static final EmittingLogger log = new EmittingLogger(ForkingTaskRunner.class);
   private static final String CHILD_PROPERTY_PREFIX = "druid.indexer.fork.property.";
-  private static final Splitter whiteSpaceSplitter = Splitter.on(CharMatcher.WHITESPACE).omitEmptyStrings();
-
   private final ForkingTaskRunnerConfig config;
   private final TaskConfig taskConfig;
   private final Properties props;
@@ -172,18 +172,16 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               command.add("-cp");
                               command.add(taskClasspath);
 
-                              Iterables.addAll(command, whiteSpaceSplitter.split(config.getJavaOpts()));
+                              Iterables.addAll(command, new QuotableWhiteSpaceSplitter(config.getJavaOpts()));
 
                               // Override task specific javaOpts
                               Object taskJavaOpts = task.getContextValue(
                                   "druid.indexer.runner.javaOpts"
                               );
-                              if(taskJavaOpts != null) {
+                              if (taskJavaOpts != null) {
                                 Iterables.addAll(
                                     command,
-                                    whiteSpaceSplitter.split(
-                                        (String) taskJavaOpts
-                                    )
+                                    new QuotableWhiteSpaceSplitter((String) taskJavaOpts)
                                 );
                               }
 
@@ -280,9 +278,11 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               // Process exited unsuccessfully
                               return TaskStatus.failure(task.getId());
                             }
-                          } catch (Throwable t) {
+                          }
+                          catch (Throwable t) {
                             throw closer.rethrow(t);
-                          } finally {
+                          }
+                          finally {
                             closer.close();
                           }
                         }
@@ -455,5 +455,41 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
       closer.register(process.getInputStream());
       closer.register(process.getOutputStream());
     }
+  }
+}
+
+/**
+ * Make an iterable of space delimited strings... unless there are quotes, which it preserves
+ */
+class QuotableWhiteSpaceSplitter implements Iterable<String>
+{
+  private final String string;
+
+  public QuotableWhiteSpaceSplitter(String string)
+  {
+    this.string = Preconditions.checkNotNull(string);
+  }
+
+  @Override
+  public Iterator<String> iterator()
+  {
+    return Splitter.on(
+        new CharMatcher()
+        {
+          private boolean inQuotes = false;
+
+          @Override
+          public boolean matches(char c)
+          {
+            if ('"' == c) {
+              inQuotes = !inQuotes;
+            }
+            if (inQuotes) {
+              return false;
+            }
+            return CharMatcher.BREAKING_WHITESPACE.matches(c);
+          }
+        }
+    ).omitEmptyStrings().split(string).iterator();
   }
 }
