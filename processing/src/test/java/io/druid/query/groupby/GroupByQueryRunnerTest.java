@@ -51,6 +51,7 @@ import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.aggregation.JavaScriptAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
@@ -2436,6 +2437,46 @@ public class GroupByQueryRunnerTest
     TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
 
+  @Test
+  public void testDifferentGroupingSubqueryMultipleAggregatorsOnSameField()
+  {
+    GroupByQuery subquery = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(subquery)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setAggregatorSpecs(
+            Arrays.<AggregatorFactory>asList(
+                new LongSumAggregatorFactory("longsum_name", "idx"),
+                new DoubleMaxAggregatorFactory("doublemax_name", "idx"),
+                new CardinalityAggregatorFactory("cardinality_name", Lists.newArrayList("idx"), true),
+                new JavaScriptAggregatorFactory(
+                    "js_name",
+                    Lists.newArrayList("idx"),
+                    "function(current, v) { return current + v * v; }",
+                    "function() { return 0; }",
+                    "function(partialA, partialB) { return partialA + partialB; }"
+                )
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+  }
 
   @Test
   public void testDifferentGroupingSubqueryWithFilter()
