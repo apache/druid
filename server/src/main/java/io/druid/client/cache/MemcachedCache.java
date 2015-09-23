@@ -46,6 +46,7 @@ import net.spy.memcached.MemcachedClient;
 import net.spy.memcached.MemcachedClientIF;
 import net.spy.memcached.internal.BulkFuture;
 import net.spy.memcached.metrics.MetricCollector;
+import net.spy.memcached.metrics.MetricType;
 import net.spy.memcached.ops.LinkedOperationQueueFactory;
 import net.spy.memcached.ops.OperationQueueFactory;
 import org.apache.commons.codec.digest.DigestUtils;
@@ -131,6 +132,9 @@ public class MemcachedCache implements Cache
           {
             final ImmutableMap.Builder<String, Long> builder = ImmutableMap.builder();
             for (Map.Entry<String, AtomicLong> entry : counters.entrySet()) {
+              builder.put(entry.getKey(), entry.getValue().get());
+            }
+            for (Map.Entry<String, AtomicLong> entry : meters.entrySet()) {
               builder.put(entry.getKey(), entry.getValue().get());
             }
             return builder.build();
@@ -344,6 +348,7 @@ public class MemcachedCache implements Cache
           .setReadBufferSize(config.getReadBufferSize())
           .setOpQueueFactory(opQueueFactory)
           .setMetricCollector(metricCollector)
+          .setEnableMetrics(MetricType.DEBUG) // Not as scary as it sounds
           .build();
 
       final List<InetSocketAddress> hosts = AddrUtil.getAddresses(config.getHosts());
