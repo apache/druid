@@ -52,11 +52,14 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 public class SegmentMetadataQueryTest
 {
+  private static final Map<String, Object> testMetadata = ImmutableMap.of("plant", (Object) "lotus");
+
   private final SegmentMetadataQueryRunnerFactory factory = new SegmentMetadataQueryRunnerFactory(
       new SegmentMetadataQueryQueryToolChest(new SegmentMetadataQueryConfig()),
       QueryRunnerTestHelper.NOOP_QUERYWATCHER
@@ -74,7 +77,7 @@ public class SegmentMetadataQueryTest
   {
     return QueryRunnerTestHelper.makeQueryRunner(
         factory,
-        new QueryableIndexSegment(QueryRunnerTestHelper.segmentId, TestIndex.getMMappedTestIndex())
+        new QueryableIndexSegment(QueryRunnerTestHelper.segmentId, TestIndex.getMMappedTestIndex(testMetadata, false))
     );
   }
 
@@ -103,7 +106,8 @@ public class SegmentMetadataQueryTest
                 1,
                 null
             )
-        ), 71982
+        ), 71982,
+        testMetadata
     );
   }
 

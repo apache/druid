@@ -17,6 +17,7 @@
 
 package io.druid.query.metadata;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequences;
@@ -110,8 +111,13 @@ public class SegmentAnalyzerTest
 
   private void testMappedWorksHelper(EnumSet<SegmentMetadataQuery.AnalysisType> analyses) throws Exception
   {
+    final Map<String, Object> testMetadata = ImmutableMap.of(
+        "plant",
+        (Object) "lotus"
+    );
+
     final List<SegmentAnalysis> results = getSegmentAnalysises(
-        new QueryableIndexSegment("test_1", TestIndex.getMMappedTestIndex()),
+        new QueryableIndexSegment("test_1", TestIndex.getMMappedTestIndex(testMetadata, false)),
         analyses
     );
 
@@ -153,6 +159,8 @@ public class SegmentAnalyzerTest
       }
       Assert.assertNull(metric, columnAnalysis.getCardinality());
     }
+
+    Assert.assertEquals(testMetadata, analysis.getMetadata());
   }
 
   /**

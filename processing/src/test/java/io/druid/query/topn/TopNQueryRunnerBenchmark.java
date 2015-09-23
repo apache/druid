@@ -111,7 +111,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
         TestCases.mMappedTestIndex,
         QueryRunnerTestHelper.makeQueryRunner(
             factory,
-            new QueryableIndexSegment(segmentId, TestIndex.getMMappedTestIndex())
+            new QueryableIndexSegment(segmentId, TestIndex.getMMappedTestIndex(null, true))
         )
     );
     testCaseMap.put(

@@ -157,7 +157,7 @@ public class SchemalessIndex
 
         count++;
       }
-      QueryableIndex retVal = TestIndex.persistRealtimeAndLoadMMapped(theIndex);
+      QueryableIndex retVal = TestIndex.persistRealtimeAndLoadMMapped(theIndex, null);
       entry.put(index2, retVal);
       return retVal;
     }

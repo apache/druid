@@ -70,7 +70,7 @@ public class SchemalessTestSimple
   public static Collection<?> constructorFeeder() throws IOException
   {
     final IncrementalIndex incrementalIndex = SchemalessIndex.getIncrementalIndex();
-    final QueryableIndex persistedIncrementalIndex = TestIndex.persistRealtimeAndLoadMMapped(incrementalIndex);
+    final QueryableIndex persistedIncrementalIndex = TestIndex.persistRealtimeAndLoadMMapped(incrementalIndex, null);
     final QueryableIndex mergedIncrementalIndex = SchemalessIndex.getMergedIncrementalIndex();
 
     return Arrays.asList(
