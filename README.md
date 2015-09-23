@@ -2,6 +2,8 @@
 
 ## Druid
 
+[![Join the chat at https://gitter.im/druid-io/druid](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/druid-io/druid?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 Druid is a distributed, column-oriented, real-time analytics data store
 that is commonly used to power exploratory dashboards in multi-tenant
 environments.
