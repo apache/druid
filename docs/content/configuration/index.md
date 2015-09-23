@@ -118,6 +118,7 @@ The following monitors are available:
 |`io.druid.server.metrics.HistoricalMetricsMonitor`|Reports statistics on Historical nodes.|
 |`com.metamx.metrics.JvmMonitor`|Reports JVM-related statistics.|
 |`io.druid.segment.realtime.RealtimeMetricsMonitor`|Reports statistics on Realtime nodes.|
+|`io.druid.server.metrics.EventReceiverFirehoseMonitor`|Reports how many events have been queued in the EventReceiverFirehose.|
 
 ### Emitting Metrics
 

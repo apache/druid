@@ -156,6 +156,14 @@ These metrics are only available if the JVMMonitor module is included.
 |`jvm/gc/count`|Garbage collection count.|gcName.|< 100|
 |`jvm/gc/time`|Garbage collection time.|gcName.|< 1s|	
 
+### EventReceiverFirehose
+
+The following metric is only available if the EventReceiverFirehoseMonitor module is included.
+
+|Metric|Description|Dimensions|Normal Value|
+|------|-----------|----------|------------|
+|`ingest/events/buffered`|Number of events queued in the EventReceiverFirehose's buffer|serviceName, bufferCapacity.|Equal to current # of events in the buffer queue.|
+
 ## Sys
 
 These metrics are only available if the SysMonitor module is included.
