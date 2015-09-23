@@ -89,6 +89,7 @@ import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.firehose.EventReceiverFirehoseFactory;
 import io.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.metrics.EventReceiverFirehoseRegister;
 import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
@@ -415,7 +416,8 @@ public class RealtimeIndexTaskTest
             100,
             new NoopChatHandlerProvider(),
             objectMapper,
-            null
+            null,
+            new EventReceiverFirehoseRegister()
         ),
         null,
         null
