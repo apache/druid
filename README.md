@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/druid-io/druid.svg?branch=master)](https://travis-ci.org/druid-io/druid) [![Coverage Status](https://coveralls.io/repos/druid-io/druid/badge.svg?branch=master)](https://coveralls.io/r/druid-io/druid?branch=master)
+[![Build Status](https://travis-ci.org/druid-io/druid.svg?branch=master)](https://travis-ci.org/druid-io/druid) [![Coverage Status](https://coveralls.io/repos/druid-io/druid/badge.svg?branch=master)](https://coveralls.io/r/druid-io/druid?branch=master) [![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/druid-io/druid?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
 ## Druid
 
