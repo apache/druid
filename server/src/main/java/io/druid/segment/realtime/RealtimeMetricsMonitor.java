@@ -72,6 +72,7 @@ public class RealtimeMetricsMonitor extends AbstractMonitor
       emitter.emit(builder.build("ingest/rows/output", metrics.rowOutput() - previous.rowOutput()));
       emitter.emit(builder.build("ingest/persists/count", metrics.numPersists() - previous.numPersists()));
       emitter.emit(builder.build("ingest/persists/time", metrics.persistTimeMillis() - previous.persistTimeMillis()));
+      emitter.emit(builder.build("ingest/persists/cpu", metrics.persistCpuTime() - previous.persistCpuTime()));
       emitter.emit(
           builder.build(
               "ingest/persists/backPressure",
@@ -80,7 +81,8 @@ public class RealtimeMetricsMonitor extends AbstractMonitor
       );
       emitter.emit(builder.build("ingest/persists/failed", metrics.failedPersists() - previous.failedPersists()));
       emitter.emit(builder.build("ingest/handoff/failed", metrics.failedHandoffs() - previous.failedHandoffs()));
-
+      emitter.emit(builder.build("ingest/merge/time", metrics.mergeTimeMillis() - previous.mergeTimeMillis()));
+      emitter.emit(builder.build("ingest/merge/cpu", metrics.mergeCpuTime() - previous.mergeCpuTime()));
       previousValues.put(fireDepartment, metrics);
     }
 
