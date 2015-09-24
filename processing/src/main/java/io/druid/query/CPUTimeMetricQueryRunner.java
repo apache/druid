@@ -32,6 +32,7 @@ import com.metamx.common.guava.YieldingAccumulator;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 
+import io.druid.common.utils.VMUtils;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.ThreadMXBean;
@@ -40,7 +41,6 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
 {
-  private static final ThreadMXBean THREAD_MX_BEAN = ManagementFactory.getThreadMXBean();
   private final QueryRunner<T> delegate;
   private final Function<Query<T>, ServiceMetricEvent.Builder> builderFn;
   private final ServiceEmitter emitter;
@@ -55,7 +55,7 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
       boolean report
   )
   {
-    if (!THREAD_MX_BEAN.isThreadCpuTimeEnabled()) {
+    if (!VMUtils.isThreadCpuTimeEnabled()) {
       throw new ISE("Cpu time must enabled");
     }
     this.delegate = delegate;
@@ -78,12 +78,12 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
           @Override
           public <OutType> OutType accumulate(OutType initValue, Accumulator<OutType, T> accumulator)
           {
-            final long start = THREAD_MX_BEAN.getCurrentThreadCpuTime();
+            final long start = VMUtils.getCurrentThreadCpuTime();
             try {
               return baseSequence.accumulate(initValue, accumulator);
             }
             finally {
-              cpuTimeAccumulator.addAndGet(THREAD_MX_BEAN.getCurrentThreadCpuTime() - start);
+              cpuTimeAccumulator.addAndGet(VMUtils.getCurrentThreadCpuTime() - start);
             }
           }
 
@@ -98,13 +98,13 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
               @Override
               public OutType get()
               {
-                final long start = THREAD_MX_BEAN.getCurrentThreadCpuTime();
+                final long start = VMUtils.getCurrentThreadCpuTime();
                 try {
                   return delegateYielder.get();
                 }
                 finally {
                   cpuTimeAccumulator.addAndGet(
-                      THREAD_MX_BEAN.getCurrentThreadCpuTime() - start
+                      VMUtils.getCurrentThreadCpuTime() - start
                   );
                 }
               }
@@ -112,13 +112,13 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
               @Override
               public Yielder<OutType> next(OutType initValue)
               {
-                final long start = THREAD_MX_BEAN.getCurrentThreadCpuTime();
+                final long start = VMUtils.getCurrentThreadCpuTime();
                 try {
                   return delegateYielder.next(initValue);
                 }
                 finally {
                   cpuTimeAccumulator.addAndGet(
-                      THREAD_MX_BEAN.getCurrentThreadCpuTime() - start
+                      VMUtils.getCurrentThreadCpuTime() - start
                   );
                 }
               }
@@ -164,7 +164,7 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
       boolean report
   )
   {
-    if (!THREAD_MX_BEAN.isThreadCpuTimeSupported() || !THREAD_MX_BEAN.isThreadCpuTimeEnabled()) {
+    if (!VMUtils.isThreadCpuTimeEnabled()) {
       return delegate;
     } else {
       return new CPUTimeMetricQueryRunner<>(delegate, builderFn, emitter, accumulator, report);
