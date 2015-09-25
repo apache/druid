@@ -40,6 +40,7 @@ import io.druid.server.initialization.IndexerZkConfig;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.leader.LeaderSelector;
 import org.apache.curator.framework.recipes.leader.LeaderSelectorListener;
+import org.apache.curator.framework.recipes.leader.Participant;
 import org.apache.curator.framework.state.ConnectionState;
 
 import java.util.concurrent.atomic.AtomicReference;
@@ -243,7 +244,12 @@ public class TaskMaster
   public String getLeader()
   {
     try {
-      return leaderSelector.getLeader().getId();
+      final Participant leader = leaderSelector.getLeader();
+      if (leader != null && leader.isLeader()) {
+        return leader.getId();
+      } else {
+        return null;
+      }
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

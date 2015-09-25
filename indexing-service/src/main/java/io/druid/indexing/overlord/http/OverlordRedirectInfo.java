@@ -19,13 +19,15 @@ package io.druid.indexing.overlord.http;
 
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
+import com.metamx.common.IAE;
 import io.druid.indexing.overlord.TaskMaster;
 import io.druid.server.http.RedirectInfo;
 
+import java.net.URI;
 import java.net.URL;
 
 /**
-*/
+ */
 public class OverlordRedirectInfo implements RedirectInfo
 {
   private final TaskMaster taskMaster;
@@ -46,7 +48,12 @@ public class OverlordRedirectInfo implements RedirectInfo
   public URL getRedirectURL(String queryString, String requestURI)
   {
     try {
-      return new URL(String.format("http://%s%s", taskMaster.getLeader(), requestURI));
+      final String leader = taskMaster.getLeader();
+      if (leader == null || leader.isEmpty()) {
+        return null;
+      } else {
+        return new URI("http", leader, requestURI, queryString, null).toURL();
+      }
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

@@ -53,18 +53,21 @@ public class CoordinatorRedirectInfoTest
   {
     EasyMock.expect(druidCoordinator.getCurrentLeader()).andReturn(null).anyTimes();
     EasyMock.replay(druidCoordinator);
-    URL url = coordinatorRedirectInfo.getRedirectURL("query", "request");
+    URL url = coordinatorRedirectInfo.getRedirectURL("query", "/request");
     Assert.assertNull(url);
+    EasyMock.verify(druidCoordinator);
   }
+
   @Test
   public void testGetRedirectURL()
   {
     String host = "localhost";
-    String query = "query";
-    String request = "request";
+    String query = "foo=bar&x=y";
+    String request = "/request";
     EasyMock.expect(druidCoordinator.getCurrentLeader()).andReturn(host).anyTimes();
     EasyMock.replay(druidCoordinator);
-    URL url = coordinatorRedirectInfo.getRedirectURL(query,request);
-    Assert.assertTrue(url.toString().contains(host+request+"?"+query));
+    URL url = coordinatorRedirectInfo.getRedirectURL(query, request);
+    Assert.assertEquals("http://localhost/request?foo=bar&x=y", url.toString());
+    EasyMock.verify(druidCoordinator);
   }
 }
