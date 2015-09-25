@@ -159,8 +159,18 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
 
       final Sequence<Row> subqueryResult = mergeGroupByResults(subquery, runner, context);
       final List<AggregatorFactory> aggs = Lists.newArrayList();
+
       for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {
-        aggs.addAll(aggregatorFactory.getRequiredColumns());
+        for (final AggregatorFactory column : aggregatorFactory.getRequiredColumns()) {
+          if (!Iterables.any(aggs, new Predicate<AggregatorFactory>() {
+            @Override
+            public boolean apply(AggregatorFactory existingAgg) {
+              return existingAgg.getName().equals(column.getName());
+            }
+          })) {
+            aggs.add(column);
+          }
+        }
       }
 
       // We need the inner incremental index to have all the columns required by the outer query
