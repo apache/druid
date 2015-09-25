@@ -151,10 +151,10 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     return false;
   }
 
-  public void createTable(final IDBI dbi, final String tableName, final Iterable<String> sql)
+  public void createTable(final String tableName, final Iterable<String> sql)
   {
     try {
-      dbi.withHandle(
+      retryWithHandle(
           new HandleCallback<Void>()
           {
             @Override
@@ -180,10 +180,9 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     }
   }
 
-  public void createSegmentTable(final IDBI dbi, final String tableName)
+  public void createSegmentTable(final String tableName)
   {
     createTable(
-        dbi,
         tableName,
         ImmutableList.of(
             String.format(
@@ -207,10 +206,9 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     );
   }
 
-  public void createRulesTable(final IDBI dbi, final String tableName)
+  public void createRulesTable(final String tableName)
   {
     createTable(
-        dbi,
         tableName,
         ImmutableList.of(
             String.format(
@@ -228,10 +226,9 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     );
   }
 
-  public void createConfigTable(final IDBI dbi, final String tableName)
+  public void createConfigTable(final String tableName)
   {
     createTable(
-        dbi,
         tableName,
         ImmutableList.of(
             String.format(
@@ -246,10 +243,9 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     );
   }
 
-  public void createEntryTable(final IDBI dbi, final String tableName)
+  public void createEntryTable(final String tableName)
   {
     createTable(
-        dbi,
         tableName,
         ImmutableList.of(
             String.format(
@@ -269,10 +265,9 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     );
   }
 
-  public void createLogTable(final IDBI dbi, final String tableName, final String entryTypeName)
+  public void createLogTable(final String tableName, final String entryTypeName)
   {
     createTable(
-        dbi,
         tableName,
         ImmutableList.of(
             String.format(
@@ -289,10 +284,9 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     );
   }
 
-  public void createLockTable(final IDBI dbi, final String tableName, final String entryTypeName)
+  public void createLockTable(final String tableName, final String entryTypeName)
   {
     createTable(
-        dbi,
         tableName,
         ImmutableList.of(
             String.format(
@@ -363,21 +357,21 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   @Override
   public void createSegmentTable() {
     if (config.get().isCreateTables()) {
-      createSegmentTable(getDBI(), tablesConfigSupplier.get().getSegmentsTable());
+      createSegmentTable(tablesConfigSupplier.get().getSegmentsTable());
     }
   }
 
   @Override
   public void createRulesTable() {
     if (config.get().isCreateTables()) {
-      createRulesTable(getDBI(), tablesConfigSupplier.get().getRulesTable());
+      createRulesTable(tablesConfigSupplier.get().getRulesTable());
     }
   }
 
   @Override
   public void createConfigTable() {
     if (config.get().isCreateTables()) {
-      createConfigTable(getDBI(), tablesConfigSupplier.get().getConfigTable());
+      createConfigTable(tablesConfigSupplier.get().getConfigTable());
     }
   }
 
@@ -386,9 +380,9 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     if (config.get().isCreateTables()) {
       final MetadataStorageTablesConfig tablesConfig = tablesConfigSupplier.get();
       final String entryType = tablesConfig.getTaskEntryType();
-      createEntryTable(getDBI(), tablesConfig.getEntryTable(entryType));
-      createLogTable(getDBI(), tablesConfig.getLogTable(entryType), entryType);
-      createLockTable(getDBI(), tablesConfig.getLockTable(entryType), entryType);
+      createEntryTable(tablesConfig.getEntryTable(entryType));
+      createLogTable(tablesConfig.getLogTable(entryType), entryType);
+      createLockTable(tablesConfig.getLockTable(entryType), entryType);
     }
   }
 
@@ -446,10 +440,9 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     return dataSource;
   }
 
-  private void createAuditTable(final IDBI dbi, final String tableName)
+  private void createAuditTable(final String tableName)
   {
     createTable(
-        dbi,
         tableName,
         ImmutableList.of(
             String.format(
@@ -474,7 +467,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   @Override
   public void createAuditTable() {
     if (config.get().isCreateTables()) {
-      createAuditTable(getDBI(), tablesConfigSupplier.get().getAuditTable());
+      createAuditTable(tablesConfigSupplier.get().getAuditTable());
     }
   }
 
