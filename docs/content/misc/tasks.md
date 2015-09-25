@@ -294,6 +294,7 @@ Merge tasks merge a list of segments together. Any common timestamps are merged.
     "type": "merge",
     "id": <task_id>,
     "dataSource": <task_datasource>,
+    "aggregations": <list of aggregators>,
     "segments": <JSON list of DataSegment objects to merge>
 }
 ```
