@@ -16,13 +16,22 @@
               "contributors",
               "lat",
               "lon",
+              "source",
+              "retweet",
               "retweet_count",
+              "originator_screen_name",
+              "originator_follower_count",
+              "originator_friends_count",
+              "originator_verified",
               "follower_count",
-              "friendscount",
+              "friends_count",
               "lang",
               "utc_offset",
               "statuses_count",
               "user_id",
+              "screen_name",
+              "location",
+              "verified",
               "ts"
             ],
             "dimensionExclusions": [
@@ -63,6 +72,16 @@
         {
           "fieldName": "statuses_count",
           "name": "total_statuses_count",
+          "type": "doubleSum"
+        },
+        {
+          "fieldName": "originator_follower_count",
+          "name": "total_originator_follower_count",
+          "type": "doubleSum"
+        },
+        {
+          "fieldName": "originator_friends_count",
+          "name": "total_originator_friends_count",
           "type": "doubleSum"
         },
         {
@@ -123,6 +142,26 @@
         {
           "fieldName": "retweet_count",
           "name": "max_retweet_count",
+          "type": "max"
+        },
+        {
+          "fieldName": "originator_follower_count",
+          "name": "min_originator_follower_count",
+          "type": "min"
+        },
+        {
+          "fieldName": "originator_follower_count",
+          "name": "max_originator_follower_count",
+          "type": "max"
+        },
+        {
+          "fieldName": "originator_friends_count",
+          "name": "min_originator_friends_count",
+          "type": "min"
+        },
+        {
+          "fieldName": "originator_friends_count",
+          "name": "max_originator_friends_count",
           "type": "max"
         }
       ],
