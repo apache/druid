@@ -53,9 +53,9 @@ public class SQLMetadataStorageActionHandlerTest
     final String lockTable = "locks";
 
 
-    connector.createEntryTable(connector.getDBI(), entryTable);
-    connector.createLockTable(connector.getDBI(), lockTable, entryType);
-    connector.createLogTable(connector.getDBI(), logTable, entryType);
+    connector.createEntryTable(entryTable);
+    connector.createLockTable(lockTable, entryType);
+    connector.createLogTable(logTable, entryType);
 
 
     handler = new SQLMetadataStorageActionHandler<>(
