@@ -55,12 +55,12 @@ import io.druid.segment.realtime.plumber.RealtimePlumberSchool;
 import io.druid.segment.realtime.plumber.VersioningPolicy;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
-import java.util.Map;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Map;
 import java.util.Random;
 
 public class RealtimeIndexTask extends AbstractTask
@@ -337,6 +337,7 @@ public class RealtimeIndexTask extends AbstractTask
         }
         catch (Exception e) {
           log.makeAlert(e, "Failed to finish realtime task").emit();
+          throw e;
         }
         finally {
           // firehose will be non-null since normalExit is true
