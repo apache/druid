@@ -87,7 +87,7 @@ public class SQLMetadataConnectorTest
   public void testInsertOrUpdate() throws Exception
   {
     final String tableName = "test";
-    connector.createConfigTable(connector.getDBI(), tableName);
+    connector.createConfigTable(tableName);
 
     Assert.assertNull(connector.lookup(tableName, "name", "payload", "emperor"));
 

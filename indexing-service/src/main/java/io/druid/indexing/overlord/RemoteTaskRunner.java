@@ -249,7 +249,14 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
         }
       }
       // Schedule cleanup for task status of the workers that might have disconnected while overlord was not running
-      for (String worker : cf.getChildren().forPath(indexerZkConfig.getStatusPath())) {
+      List<String> workers;
+      try {
+        workers = cf.getChildren().forPath(indexerZkConfig.getStatusPath());
+      } catch (KeeperException.NoNodeException e) {
+        // statusPath doesn't exist yet; can occur if no middleManagers have started.
+        workers = ImmutableList.of();
+      }
+      for (String worker : workers) {
         if (!zkWorkers.containsKey(worker)
             && cf.checkExists().forPath(JOINER.join(indexerZkConfig.getAnnouncementsPath(), worker)) == null) {
           scheduleTasksCleanupForWorker(

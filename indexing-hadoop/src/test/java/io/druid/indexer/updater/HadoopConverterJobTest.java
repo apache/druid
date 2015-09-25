@@ -232,7 +232,7 @@ public class HadoopConverterJobTest
           @Override
           public boolean run()
           {
-            connector.createSegmentTable(connector.getDBI(), metadataStorageUpdaterJobSpec.getSegmentTable());
+            connector.createSegmentTable(metadataStorageUpdaterJobSpec.getSegmentTable());
             return true;
           }
         },
