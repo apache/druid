@@ -72,12 +72,12 @@ public class RedirectFilter implements Filter
       log.debug("Forwarding request to [%s]", url);
 
       if (url == null) {
-        // We apparently have no coordinator, so let's do a Service Unavailable
+        // We apparently have nothing to redirect to, so let's do a Service Unavailable
         response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
         return;
       }
 
-      response.setStatus(HttpServletResponse.SC_MOVED_TEMPORARILY);
+      response.setStatus(HttpServletResponse.SC_TEMPORARY_REDIRECT);
       response.setHeader("Location", url.toString());
     }
   }
