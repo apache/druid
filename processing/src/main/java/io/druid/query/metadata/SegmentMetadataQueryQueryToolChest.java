@@ -181,9 +181,11 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       public byte[] computeCacheKey(SegmentMetadataQuery query)
       {
         byte[] includerBytes = query.getToInclude().getCacheKey();
-        return ByteBuffer.allocate(1 + includerBytes.length)
+        byte[] analysisTypesBytes = query.getAnalysisTypesCacheKey();
+        return ByteBuffer.allocate(1 + includerBytes.length + analysisTypesBytes.length)
                          .put(SEGMENT_METADATA_CACHE_PREFIX)
                          .put(includerBytes)
+                         .put(analysisTypesBytes)
                          .array();
       }
 
