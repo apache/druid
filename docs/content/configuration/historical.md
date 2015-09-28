@@ -101,3 +101,4 @@ You can optionally only configure caching to be enabled on the historical by set
 |`druid.cache.hosts`|Command separated list of Memcached hosts `<host:port>`.|none|
 |`druid.cache.maxObjectSize`|Maximum object size in bytes for a Memcached object.|52428800 (50 MB)|
 |`druid.cache.memcachedPrefix`|Key prefix for all keys in Memcached.|druid|
+|`druid.cache.failureMode`|Failure mode when there is a problem communicating with memcached(`cancel` or `retry`)|`cancel`|
