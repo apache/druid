@@ -19,6 +19,7 @@ package io.druid.indexing.overlord;
 
 import com.google.common.collect.Sets;
 import com.metamx.common.ISE;
+import com.metamx.common.Pair;
 
 import java.io.IOException;
 import java.net.BindException;
@@ -72,6 +73,17 @@ public class PortFinder
     }
     usedPorts.add(port);
     return port;
+  }
+
+  public synchronized Pair<Integer, Integer> findTwoConsecutiveUnusedPorts()
+  {
+    int firstPort = chooseNext(startPort);
+    while (!canBind(firstPort) || !canBind(firstPort + 1)) {
+      firstPort = chooseNext(firstPort + 1);
+    }
+    usedPorts.add(firstPort);
+    usedPorts.add(firstPort + 1);
+    return new Pair<>(firstPort, firstPort + 1);
   }
 
   public synchronized void markPortUnused(int port)

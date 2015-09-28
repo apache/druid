@@ -35,7 +35,6 @@ import io.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import io.druid.segment.realtime.firehose.ServiceAnnouncingChatHandlerProvider;
 import io.druid.server.QueryResource;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
-
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
@@ -44,6 +43,7 @@ import java.util.List;
  */
 public class RealtimeModule implements Module
 {
+
   @Override
   public void configure(Binder binder)
   {
