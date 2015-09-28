@@ -65,6 +65,13 @@ public class ForkingTaskRunnerConfig
       "hadoop"
   );
 
+  @JsonProperty
+  private boolean separateIngestionEndpoint = false;
+
+  public boolean isSeparateIngestionEndpoint() {
+    return separateIngestionEndpoint;
+  }
+
   public String getJavaCommand()
   {
     return javaCommand;

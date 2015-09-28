@@ -109,38 +109,8 @@ public class JettyServerModule extends JerseyServletModule
   @LazySingleton
   public Server getServer(Injector injector, Lifecycle lifecycle, @Self DruidNode node, ServerConfig config)
   {
-    JettyServerInitializer initializer = injector.getInstance(JettyServerInitializer.class);
-
     final Server server = makeJettyServer(node, config);
-    try {
-      initializer.initialize(server, injector);
-    }
-    catch (ConfigurationException e) {
-      throw new ProvisionException(Iterables.getFirst(e.getErrorMessages(), null).getMessage());
-    }
-
-
-    lifecycle.addHandler(
-        new Lifecycle.Handler()
-        {
-          @Override
-          public void start() throws Exception
-          {
-            server.start();
-          }
-
-          @Override
-          public void stop()
-          {
-            try {
-              server.stop();
-            }
-            catch (Exception e) {
-              log.warn(e, "Unable to stop Jetty server.");
-            }
-          }
-        }
-    );
+    initializeServer(injector, lifecycle, server);
     return server;
   }
 
@@ -153,7 +123,7 @@ public class JettyServerModule extends JerseyServletModule
     return provider;
   }
 
-  private static Server makeJettyServer(@Self DruidNode node, ServerConfig config)
+  static Server makeJettyServer(DruidNode node, ServerConfig config)
   {
     final QueuedThreadPool threadPool = new QueuedThreadPool();
     threadPool.setMinThreads(config.getNumThreads());
@@ -177,4 +147,38 @@ public class JettyServerModule extends JerseyServletModule
 
     return server;
   }
+
+  static void initializeServer(Injector injector, Lifecycle lifecycle, final Server server)
+  {
+    JettyServerInitializer initializer = injector.getInstance(JettyServerInitializer.class);
+    try {
+      initializer.initialize(server, injector);
+    }
+    catch (ConfigurationException e) {
+      throw new ProvisionException(Iterables.getFirst(e.getErrorMessages(), null).getMessage());
+    }
+
+    lifecycle.addHandler(
+        new Lifecycle.Handler()
+        {
+          @Override
+          public void start() throws Exception
+          {
+            server.start();
+          }
+
+          @Override
+          public void stop()
+          {
+            try {
+              server.stop();
+            }
+            catch (Exception e) {
+              log.warn(e, "Unable to stop Jetty server.");
+            }
+          }
+        }
+    );
+  }
+
 }
