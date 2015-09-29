@@ -29,6 +29,7 @@ import io.druid.query.RetryQueryRunner;
 import io.druid.query.RetryQueryRunnerConfig;
 import io.druid.query.SegmentDescriptor;
 
+import io.druid.query.UnionQueryRunner;
 import java.util.Map;
 
 import org.joda.time.Interval;
@@ -82,18 +83,21 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     final FinalizeResultsQueryRunner<T> baseRunner = new FinalizeResultsQueryRunner<T>(
         toolChest.postMergeQueryDecoration(
             toolChest.mergeResults(
-                toolChest.preMergeQueryDecoration(
-                    new RetryQueryRunner<T>(
+                new UnionQueryRunner<T>(
+                    toolChest.preMergeQueryDecoration(
+                        new RetryQueryRunner<T>(
                             baseClient,
                             toolChest,
                             retryConfig,
-                            objectMapper)
+                            objectMapper
+                        )
+                    ),
+                    toolChest
                 )
             )
         ),
         toolChest
     );
-
 
     final Map<String, Object> context = query.getContext();
     PostProcessingOperator<T> postProcessing = null;

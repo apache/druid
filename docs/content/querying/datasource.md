@@ -28,6 +28,7 @@ This data source unions two or more table data sources.
 ```
 
 Note that the data sources being unioned should have the same schema.
+Union Queries should be always sent to the broker/router node and are *NOT* supported directly by the historical nodes. 
 
 ### Query Data Source
 
