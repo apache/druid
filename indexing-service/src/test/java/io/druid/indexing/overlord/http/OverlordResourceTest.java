@@ -118,8 +118,17 @@ public class OverlordResourceTest
     taskLockbox = EasyMock.createStrictMock(TaskLockbox.class);
     taskLockbox.syncFromStorage();
     EasyMock.expectLastCall().atLeastOnce();
-    taskLockbox.unlock(EasyMock.<Task>anyObject());
+    taskLockbox.add(EasyMock.<Task>anyObject());
     EasyMock.expectLastCall().atLeastOnce();
+    taskLockbox.remove(EasyMock.<Task>anyObject());
+    EasyMock.expectLastCall().atLeastOnce();
+
+    // for second Noop Task directly added to deep storage.
+    taskLockbox.add(EasyMock.<Task>anyObject());
+    EasyMock.expectLastCall().atLeastOnce();
+    taskLockbox.remove(EasyMock.<Task>anyObject());
+    EasyMock.expectLastCall().atLeastOnce();
+
     taskActionClientFactory = EasyMock.createStrictMock(TaskActionClientFactory.class);
     EasyMock.expect(taskActionClientFactory.create(EasyMock.<Task>anyObject()))
             .andReturn(null).anyTimes();
@@ -226,6 +235,7 @@ public class OverlordResourceTest
     waitForTaskStatus(taskId_0, TaskStatus.Status.SUCCESS);
 
     // Manually insert task in taskStorage
+    // Verifies sync from storage
     final String taskId_1 = "1";
     NoopTask task_1 = new NoopTask(taskId_1, 0, 0, null, null, null);
     taskStorage.insert(task_1, TaskStatus.running(taskId_1));

@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.collect.MapDifference;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FutureCallback;
@@ -44,6 +45,8 @@ import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.metadata.EntryExistsException;
 import io.druid.query.DruidMetrics;
 
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -53,6 +56,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
+import javax.annotation.Nullable;
 
 /**
  * Interface between task producers and the task runner.
@@ -308,13 +312,25 @@ public class TaskQueue
       // If this throws with any sort of exception, including TaskExistsException, we don't want to
       // insert the task into our queue. So don't catch it.
       taskStorage.insert(task, TaskStatus.running(task.getId()));
-      tasks.add(task);
+      addTaskInternal(task);
       managementMayBeNecessary.signalAll();
       return true;
     }
     finally {
       giant.unlock();
     }
+  }
+
+  // Should always be called after taking giantLock
+  private void addTaskInternal(final Task task){
+    tasks.add(task);
+    taskLockbox.add(task);
+  }
+
+  // Should always be called after taking giantLock
+  private void removeTaskInternal(final Task task){
+    taskLockbox.remove(task);
+    tasks.remove(task);
   }
 
   /**
@@ -378,7 +394,7 @@ public class TaskQueue
       for (int i = tasks.size() - 1; i >= 0; i--) {
         if (tasks.get(i).getId().equals(task.getId())) {
           removed++;
-          tasks.remove(i);
+          removeTaskInternal(tasks.get(i));
           break;
         }
       }
@@ -397,7 +413,6 @@ public class TaskQueue
             log.makeAlert("Ignoring notification for already-complete task").addData("task", task.getId()).emit();
           } else {
             taskStorage.setStatus(taskStatus);
-            taskLockbox.unlock(task);
             log.info("Task done: %s", task);
             managementMayBeNecessary.signalAll();
           }
@@ -498,15 +513,35 @@ public class TaskQueue
 
     try {
       if (active) {
-        final List<Task> newTasks = taskStorage.getActiveTasks();
+        final Map<String,Task> newTasks = toTaskIDMap(taskStorage.getActiveTasks());
+        final int tasksSynced = newTasks.size();
+        final Map<String,Task> oldTasks = toTaskIDMap(tasks);
+
+        // Calculate differences on IDs instead of Task Objects.
+        Set<String> commonIds = Sets.newHashSet(Sets.intersection(newTasks.keySet(), oldTasks.keySet()));
+        for(String taskID : commonIds){
+          newTasks.remove(taskID);
+          oldTasks.remove(taskID);
+        }
+        Collection<Task> addedTasks = newTasks.values();
+        Collection<Task> removedTasks = oldTasks.values();
+
+        // Clean up removed Tasks
+        for(Task task : removedTasks){
+          removeTaskInternal(task);
+        }
+
+        // Add newly Added tasks to the queue
+        for(Task task : addedTasks){
+          addTaskInternal(task);
+        }
+
         log.info(
-            "Synced %,d tasks from storage (%,d tasks added, %,d tasks removed).",
-            newTasks.size(),
-            Sets.difference(Sets.newHashSet(newTasks), Sets.newHashSet(tasks)).size(),
-            Sets.difference(Sets.newHashSet(tasks), Sets.newHashSet(newTasks)).size()
+            "Synced %d tasks from storage (%d tasks added, %d tasks removed).",
+            tasksSynced,
+            addedTasks.size(),
+            removedTasks.size()
         );
-        tasks.clear();
-        tasks.addAll(newTasks);
         managementMayBeNecessary.signalAll();
       } else {
         log.info("Not active. Skipping storage sync.");
@@ -520,4 +555,13 @@ public class TaskQueue
       giant.unlock();
     }
   }
+
+  private static Map<String,Task> toTaskIDMap(List<Task> taskList){
+    Map<String,Task> rv = Maps.newHashMap();
+    for(Task task : taskList){
+      rv.put(task.getId(), task);
+    }
+    return rv;
+  }
+
 }
