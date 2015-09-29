@@ -64,12 +64,13 @@ public class ListColumnIncluderator implements ColumnIncluderator
     for (String column : this.columns) {
       final byte[] bytes = StringUtils.toUtf8(column);
       columns.add(bytes);
-      size += bytes.length;
+      size += bytes.length + 1;
     }
 
     final ByteBuffer bytes = ByteBuffer.allocate(size).put(LIST_CACHE_PREFIX);
     for (byte[] column : columns) {
       bytes.put(column);
+      bytes.put((byte) 0xff);
     }
 
     return bytes.array();
