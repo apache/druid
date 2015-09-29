@@ -84,6 +84,26 @@
                     </excludes>
                 </configuration>
             </plugin>
+            <plugin>
+              <groupId>org.apache.maven.plugins</groupId>
+              <artifactId>maven-jar-plugin</artifactId>
+              <configuration>
+		<archive>
+                  <manifest>
+                    <mainClass>org.testng.TestNG</mainClass>
+                  </manifest>
+		</archive>
+              </configuration>
+              <executions> 
+		<execution> 
+                  <id>test-jar</id>
+                  <phase>package</phase> 
+                  <goals> 
+                    <goal>test-jar</goal> 
+                  </goals>
+		</execution> 
+              </executions>
+	    </plugin>
         </plugins>
     </build>
 

@@ -42,7 +42,7 @@ import java.util.concurrent.TimeUnit;
 public class ITUnionQueryTest extends AbstractIndexerTest
 {
   private static final Logger LOG = new Logger(ITUnionQueryTest.class);
-  private static final String REALTIME_TASK_RESOURCE = "/indexer/wikipedia_realtime_index_task.json";
+  private static final String UNION_TASK_RESOURCE = "/indexer/wikipedia_union_index_task.json";
   private static final String EVENT_RECEIVER_SERVICE_PREFIX = "eventReceiverServiceName";
   private static final String UNION_DATA_FILE = "/indexer/wikipedia_index_data.json";
   private static final String UNION_QUERIES_RESOURCE = "/indexer/union_queries.json";
@@ -66,7 +66,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
     try {
       // Load 4 datasources with same dimensions
       String task = setShutOffTime(
-          getTaskAsString(REALTIME_TASK_RESOURCE),
+          getTaskAsString(UNION_TASK_RESOURCE),
           new DateTime(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(3))
       );
       List<String> taskIDs = Lists.newArrayList();

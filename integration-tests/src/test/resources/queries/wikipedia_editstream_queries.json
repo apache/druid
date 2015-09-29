@@ -373,7 +373,7 @@
             "context": {
                 "useCache": "true",
                 "populateCache": "true",
-                "timeout": 60000
+                "timeout": 180000
             }
         },
         "expectedResults": [
@@ -488,7 +488,7 @@
             "context": {
                 "useCache": "true",
                 "populateCache": "true",
-                "timeout": 60000
+                "timeout": 120000
             }
         },
         "expectedResults": [
@@ -609,7 +609,7 @@
             "context": {
                 "useCache": "true",
                 "populateCache": "true",
-                "timeout": 60000
+                "timeout": 120000
             }
         },
         "expectedResults": [
