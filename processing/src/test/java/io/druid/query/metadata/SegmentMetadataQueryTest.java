@@ -375,4 +375,26 @@ public class SegmentMetadataQueryTest
       Assert.assertEquals(expectedSegments2.get(i).getInterval(), filteredSegments2.get(i).getInterval());
     }
   }
+
+  @Test
+  public void testCacheKeyWithListColumnIncluderator()
+  {
+    SegmentMetadataQuery oneColumnQuery = Druids.newSegmentMetadataQueryBuilder()
+                                                .dataSource("testing")
+                                                .toInclude(new ListColumnIncluderator(Arrays.asList("foo")))
+                                                .build();
+
+    SegmentMetadataQuery twoColumnQuery = Druids.newSegmentMetadataQueryBuilder()
+                                                .dataSource("testing")
+                                                .toInclude(new ListColumnIncluderator(Arrays.asList("fo", "o")))
+                                                .build();
+
+    final byte[] oneColumnQueryCacheKey = new SegmentMetadataQueryQueryToolChest(null).getCacheStrategy(oneColumnQuery)
+                                                                                      .computeCacheKey(oneColumnQuery);
+
+    final byte[] twoColumnQueryCacheKey = new SegmentMetadataQueryQueryToolChest(null).getCacheStrategy(twoColumnQuery)
+                                                                                      .computeCacheKey(twoColumnQuery);
+
+    Assert.assertFalse(Arrays.equals(oneColumnQueryCacheKey, twoColumnQueryCacheKey));
+  }
 }
