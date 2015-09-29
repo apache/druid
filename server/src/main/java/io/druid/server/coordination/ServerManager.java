@@ -51,6 +51,7 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.ReferenceCountingSegmentQueryRunner;
 import io.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import io.druid.query.SegmentDescriptor;
+import io.druid.query.TableDataSource;
 import io.druid.query.spec.SpecificSegmentQueryRunner;
 import io.druid.query.spec.SpecificSegmentSpec;
 import io.druid.segment.ReferenceCountingSegment;
@@ -60,7 +61,6 @@ import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
 import io.druid.timeline.TimelineObjectHolder;
-import io.druid.timeline.UnionTimeLineLookup;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
 import io.druid.timeline.partition.PartitionHolder;
@@ -260,11 +260,12 @@ public class ServerManager implements QuerySegmentWalker
     final AtomicLong cpuTimeAccumulator = new AtomicLong(0L);
 
     DataSource dataSource = query.getDataSource();
-    if (dataSource instanceof QueryDataSource) {
+    if (!(dataSource instanceof TableDataSource)) {
       throw new UnsupportedOperationException("data source type '" + dataSource.getClass().getName() + "' unsupported");
     }
+    String dataSourceName = getDataSourceName(dataSource);
 
-    final TimelineLookup<String, ReferenceCountingSegment> timeline = getTimelineLookup(query.getDataSource());
+    final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = dataSources.get(dataSourceName);
 
     if (timeline == null) {
       return new NoopQueryRunner<T>();
@@ -334,26 +335,9 @@ public class ServerManager implements QuerySegmentWalker
     );
   }
 
-  private TimelineLookup<String, ReferenceCountingSegment> getTimelineLookup(DataSource dataSource)
+  private String getDataSourceName(DataSource dataSource)
   {
-    final List<String> names = dataSource.getNames();
-    if (names.size() == 1) {
-      return dataSources.get(names.get(0));
-    } else {
-      return new UnionTimeLineLookup<>(
-          Iterables.transform(
-              names, new Function<String, TimelineLookup<String, ReferenceCountingSegment>>()
-              {
-
-                @Override
-                public TimelineLookup<String, ReferenceCountingSegment> apply(String input)
-                {
-                  return dataSources.get(input);
-                }
-              }
-          )
-      );
-    }
+    return Iterables.getOnlyElement(dataSource.getNames());
   }
 
   @Override
@@ -369,7 +353,11 @@ public class ServerManager implements QuerySegmentWalker
 
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
 
-    final TimelineLookup<String, ReferenceCountingSegment> timeline = getTimelineLookup(query.getDataSource());
+    String dataSourceName = getDataSourceName(query.getDataSource());
+
+    final VersionedIntervalTimeline<String, ReferenceCountingSegment> timeline = dataSources.get(
+        dataSourceName
+    );
 
     if (timeline == null) {
       return new NoopQueryRunner<T>();

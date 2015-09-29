@@ -148,34 +148,23 @@ public class RealtimeManager implements QuerySegmentWalker
   public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, Iterable<SegmentDescriptor> specs)
   {
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
-    final List<String> names = query.getDataSource().getNames();
-    return new UnionQueryRunner<>(
-        Iterables.transform(
-            names, new Function<String, QueryRunner>()
-            {
-              @Override
-              public QueryRunner<T> apply(String input)
-              {
-                Iterable<FireChief> chiefsOfDataSource = chiefs.get(input);
-                return chiefsOfDataSource == null ? new NoopQueryRunner() : factory.getToolchest().mergeResults(
-                    factory.mergeRunners(
-                        MoreExecutors.sameThreadExecutor(),
-                        // Chaining query runners which wait on submitted chain query runners can make executor pools deadlock
-                        Iterables.transform(
-                            chiefsOfDataSource, new Function<FireChief, QueryRunner<T>>()
-                            {
-                              @Override
-                              public QueryRunner<T> apply(FireChief input)
-                              {
-                                return input.getQueryRunner(query);
-                              }
-                            }
-                        )
-                    )
-                );
-              }
-            }
-        ), conglomerate.findFactory(query).getToolchest()
+
+    Iterable<FireChief> chiefsOfDataSource = chiefs.get(Iterables.getOnlyElement(query.getDataSource().getNames()));
+    return chiefsOfDataSource == null ? new NoopQueryRunner() : factory.getToolchest().mergeResults(
+        factory.mergeRunners(
+            MoreExecutors.sameThreadExecutor(),
+            // Chaining query runners which wait on submitted chain query runners can make executor pools deadlock
+            Iterables.transform(
+                chiefsOfDataSource, new Function<FireChief, QueryRunner<T>>()
+                {
+                  @Override
+                  public QueryRunner<T> apply(FireChief input)
+                  {
+                    return input.getQueryRunner(query);
+                  }
+                }
+            )
+        )
     );
   }
 

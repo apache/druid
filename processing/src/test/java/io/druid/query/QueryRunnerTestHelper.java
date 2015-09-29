@@ -253,20 +253,19 @@ public class QueryRunnerTestHelper
     return Arrays.asList(
         new Object[][]{
             {
-                makeUnionQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId), unionDataSource)
+                makeUnionQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId))
             },
             {
-                makeUnionQueryRunner(factory, new QueryableIndexSegment(segmentId, mMappedTestIndex), unionDataSource)
+                makeUnionQueryRunner(factory, new QueryableIndexSegment(segmentId, mMappedTestIndex))
             },
             {
                 makeUnionQueryRunner(
                     factory,
-                    new QueryableIndexSegment(segmentId, mergedRealtimeIndex),
-                    unionDataSource
+                    new QueryableIndexSegment(segmentId, mergedRealtimeIndex)
                 )
             },
             {
-                makeUnionQueryRunner(factory, new IncrementalIndexSegment(rtIndexOffheap, segmentId), unionDataSource)
+                makeUnionQueryRunner(factory, new IncrementalIndexSegment(rtIndexOffheap, segmentId))
             }
         }
     );
@@ -341,28 +340,17 @@ public class QueryRunnerTestHelper
   }
 
   public static <T> QueryRunner<T> makeUnionQueryRunner(
-      final QueryRunnerFactory<T, Query<T>> factory,
-      final Segment adapter,
-      final DataSource unionDataSource
+      QueryRunnerFactory<T, Query<T>> factory,
+      Segment adapter
   )
   {
     return new FinalizeResultsQueryRunner<T>(
         factory.getToolchest().postMergeQueryDecoration(
             factory.getToolchest().mergeResults(
                 new UnionQueryRunner<T>(
-                    Iterables.transform(
-                        unionDataSource.getNames(), new Function<String, QueryRunner>()
-                        {
-                          @Nullable
-                          @Override
-                          public QueryRunner apply(@Nullable String input)
-                          {
-                            return new BySegmentQueryRunner<T>(
-                                segmentId, adapter.getDataInterval().getStart(),
-                                factory.createRunner(adapter)
-                            );
-                          }
-                        }
+                    new BySegmentQueryRunner<T>(
+                        segmentId, adapter.getDataInterval().getStart(),
+                        factory.createRunner(adapter)
                     ),
                     factory.getToolchest()
                 )
