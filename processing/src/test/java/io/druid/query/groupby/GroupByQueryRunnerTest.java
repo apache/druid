@@ -2460,6 +2460,14 @@ public class GroupByQueryRunnerTest
                         new FieldAccessPostAggregator("idx", "idx"),
                         new FieldAccessPostAggregator("idx", "idx")
                     )
+                ),
+                new ArithmeticPostAggregator(
+                    "post_agg2",
+                    "quotient",
+                    Lists.<PostAggregator>newArrayList(
+                        new FieldAccessPostAggregator("idx", "idx"),
+                        new ConstantPostAggregator("constant", 1.23)
+                    )
                 )
             )
         )
@@ -2474,15 +2482,18 @@ public class GroupByQueryRunnerTest
             Arrays.<AggregatorFactory>asList(
                 new DoubleMaxAggregatorFactory("idx1", "idx"),
                 new DoubleMaxAggregatorFactory("idx2", "idx"),
-                new DoubleMaxAggregatorFactory("idx3", "post_agg")
+                new DoubleMaxAggregatorFactory("idx3", "post_agg"),
+                new DoubleMaxAggregatorFactory("idx4", "post_agg2")
             )
         )
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
     List<Row> expectedResults = Arrays.asList(
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "idx1", 2900.0, "idx2", 2900.0, "idx3", 5800.0),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "idx1", 2505.0, "idx2", 2505.0, "idx3", 5010.0)
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "idx1", 2900.0, "idx2", 2900.0,
+            "idx3", 5800.0, "idx4", 2357.7236328125),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "idx1", 2505.0, "idx2", 2505.0,
+            "idx3", 5010.0, "idx4", 2036.5853271484375)
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);

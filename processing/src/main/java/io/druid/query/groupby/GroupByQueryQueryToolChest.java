@@ -57,7 +57,7 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SubqueryQueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.CountAggregatorFactory;
+import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DefaultDimensionSpec;
@@ -184,7 +184,10 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       // We need the inner incremental index to have all the columns required by the outer query
       final List<AggregatorFactory> aggs = Lists.newArrayList(subquery.getAggregatorSpecs());
       for (PostAggregator postAgg : subquery.getPostAggregatorSpecs()) {
-        aggs.add(new CountAggregatorFactory(postAgg.getName())); // aggregator type doesn't matter here
+        // This causes the post aggregators from the inner query to be copied to the incremental index so that they are
+        // available as columns for the outer query. The data isn't modified by the aggregator since it has already
+        // been fully grouped by the inner query. Somewhat of a hack to get this working with an incremental index.
+        aggs.add(new DoubleSumAggregatorFactory(postAgg.getName(), postAgg.getName()));
       }
 
       final GroupByQuery innerQuery = new GroupByQuery.Builder(subquery)
