@@ -42,6 +42,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
+import io.druid.timeline.partition.PartitionHolder;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -149,28 +150,21 @@ public class ClientInfoResource
     );
 
     for (TimelineObjectHolder<String, ServerSelector> holder : serversLookup) {
+      final Set<Object> dimensions = Sets.newHashSet();
+      final Set<Object> metrics = Sets.newHashSet();
+      final PartitionHolder<ServerSelector> partitionHolder = holder.getObject();
+      if (partitionHolder.isComplete()) {
+        for (ServerSelector server : partitionHolder.payloads()) {
+          final DataSegment segment = server.getSegment();
+          dimensions.addAll(segment.getDimensions());
+          metrics.addAll(segment.getMetrics());
+        }
+      }
+
       servedIntervals.put(
           holder.getInterval(),
-          ImmutableMap.of(KEY_DIMENSIONS, Sets.newHashSet(), KEY_METRICS, Sets.newHashSet())
+          ImmutableMap.of(KEY_DIMENSIONS, dimensions, KEY_METRICS, metrics)
       );
-    }
-
-    List<DataSegment> segments = getSegmentsForDatasources().get(dataSourceName);
-    if (segments == null || segments.isEmpty()) {
-      log.error(
-          "Found no DataSegments but TimelineServerView has served intervals. Datasource = %s , Interval = %s",
-          dataSourceName,
-          theInterval
-      );
-      throw new RuntimeException("Internal Error");
-    }
-
-    for (DataSegment segment : segments) {
-      if (servedIntervals.containsKey(segment.getInterval())) {
-        Map<String, Set<String>> columns = (Map<String, Set<String>>) servedIntervals.get(segment.getInterval());
-        columns.get(KEY_DIMENSIONS).addAll(segment.getDimensions());
-        columns.get(KEY_METRICS).addAll(segment.getMetrics());
-      }
     }
 
     //collapse intervals if they abut and have same set of columns
