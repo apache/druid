@@ -115,6 +115,21 @@ public class ApproximateHistogramAggregatorFactory implements AggregatorFactory
   }
 
   @Override
+  public List<AggregatorFactory> getRequiredColumns()
+  {
+    return Arrays.<AggregatorFactory>asList(
+        new ApproximateHistogramAggregatorFactory(
+            fieldName,
+            fieldName,
+            resolution,
+            numBuckets,
+            lowerLimit,
+            upperLimit
+        )
+    );
+  }
+
+  @Override
   public Object deserialize(Object object)
   {
     if (object instanceof byte[]) {
