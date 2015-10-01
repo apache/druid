@@ -30,6 +30,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.Pair;
@@ -56,6 +57,7 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SubqueryQueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DefaultDimensionSpec;
@@ -158,12 +160,36 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       }
 
       final Sequence<Row> subqueryResult = mergeGroupByResults(subquery, runner, context);
-      final List<AggregatorFactory> aggs = Lists.newArrayList();
-      for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {
-        aggs.addAll(aggregatorFactory.getRequiredColumns());
+
+      // check that all fieldName parameters in the outer query match up with a name parameter in the inner query
+      // for an aggregator or a post aggregator
+      Set<String> innerFieldNames = Sets.newHashSet();
+      for (AggregatorFactory innerAggregator : subquery.getAggregatorSpecs()) {
+        innerFieldNames.add(innerAggregator.getName());
+      }
+      for (PostAggregator innerPostAggregator : subquery.getPostAggregatorSpecs()) {
+        innerFieldNames.add(innerPostAggregator.getName());
+      }
+
+      for (AggregatorFactory outerAggregator : query.getAggregatorSpecs()) {
+        for (final String fieldName : outerAggregator.requiredFields()) {
+          if (!innerFieldNames.contains(fieldName)) {
+            throw new IllegalArgumentException(
+                String.format("Subquery must have an aggregator or post aggregator with name '%s'", fieldName)
+            );
+          }
+        }
       }
 
       // We need the inner incremental index to have all the columns required by the outer query
+      final List<AggregatorFactory> aggs = Lists.newArrayList(subquery.getAggregatorSpecs());
+      for (PostAggregator postAgg : subquery.getPostAggregatorSpecs()) {
+        // This causes the post aggregators from the inner query to be copied to the incremental index so that they are
+        // available as columns for the outer query. The data isn't modified by the aggregator since it has already
+        // been fully grouped by the inner query. Somewhat of a hack to get this working with an incremental index.
+        aggs.add(new DoubleSumAggregatorFactory(postAgg.getName(), postAgg.getName()));
+      }
+
       final GroupByQuery innerQuery = new GroupByQuery.Builder(subquery)
           .setAggregatorSpecs(aggs)
           .setInterval(subquery.getIntervals())
