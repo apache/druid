@@ -49,5 +49,24 @@ public class CacheModule implements Module
   {
     binder.bind(Cache.class).toProvider(Key.get(CacheProvider.class, Global.class)).in(ManageLifecycle.class);
     JsonConfigProvider.bind(binder, prefix, CacheProvider.class, Global.class);
+
+    binder.install(new HybridCacheModule(prefix));
+  }
+
+  public static class HybridCacheModule implements Module {
+
+    private final String prefix;
+
+    public HybridCacheModule(String prefix)
+    {
+      this.prefix = prefix;
+    }
+
+    @Override
+    public void configure(Binder binder)
+    {
+      JsonConfigProvider.bind(binder, prefix + ".l1", CacheProvider.class, Names.named("l1"));
+      JsonConfigProvider.bind(binder, prefix + ".l2", CacheProvider.class, Names.named("l2"));
+    }
   }
 }

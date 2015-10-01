@@ -103,7 +103,10 @@ public class MapCache implements Cache
   {
     Map<NamedKey, byte[]> retVal = Maps.newHashMap();
     for (NamedKey key : keys) {
-      retVal.put(key, get(key));
+      final byte[] value = get(key);
+      if (value != null) {
+        retVal.put(key, value);
+      }
     }
     return retVal;
   }

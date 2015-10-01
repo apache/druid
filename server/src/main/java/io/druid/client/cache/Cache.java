@@ -32,6 +32,13 @@ public interface Cache
 {
   public byte[] get(NamedKey key);
   public void put(NamedKey key, byte[] value);
+
+  /**
+   * Resulting map should not contain any null values (i.e. cache misses should not be included)
+   *
+   * @param keys
+   * @return
+   */
   public Map<NamedKey, byte[]> getBulk(Iterable<NamedKey> keys);
 
   public void close(String namespace);

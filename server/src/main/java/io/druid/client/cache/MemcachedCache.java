@@ -567,10 +567,12 @@ public class MemcachedCache implements Cache
         for (Map.Entry<String, Object> entry : some.entrySet()) {
           final NamedKey key = keyLookup.get(entry.getKey());
           final byte[] value = (byte[]) entry.getValue();
-          results.put(
-              key,
-              value == null ? null : deserializeValue(key, value)
-          );
+          if (value != null) {
+            results.put(
+                key,
+                deserializeValue(key, value)
+            );
+          }
         }
 
         return results;
