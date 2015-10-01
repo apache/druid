@@ -145,6 +145,22 @@ public class CardinalityAggregatorFactory implements AggregatorFactory
   }
 
   @Override
+  public List<AggregatorFactory> getRequiredColumns()
+  {
+    return Lists.transform(
+        fieldNames,
+        new Function<String, AggregatorFactory>()
+        {
+          @Override
+          public AggregatorFactory apply(String input)
+          {
+            return new CardinalityAggregatorFactory(input, fieldNames, byRow);
+          }
+        }
+    );
+  }
+
+  @Override
   public Object deserialize(Object object)
   {
     if (object instanceof byte[]) {

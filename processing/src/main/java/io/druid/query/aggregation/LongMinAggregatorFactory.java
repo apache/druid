@@ -84,6 +84,12 @@ public class LongMinAggregatorFactory implements AggregatorFactory
   }
 
   @Override
+  public List<AggregatorFactory> getRequiredColumns()
+  {
+    return Arrays.<AggregatorFactory>asList(new LongMinAggregatorFactory(fieldName, fieldName));
+  }
+
+  @Override
   public Object deserialize(Object object)
   {
     return object;
