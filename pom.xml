@@ -172,7 +172,7 @@
             <dependency>
                 <groupId>com.amazonaws</groupId>
                 <artifactId>aws-java-sdk</artifactId>
-                <version>1.10.12</version>
+                <version>1.10.11</version>
                 <exclusions>
                     <exclusion>
                         <groupId>javax.mail</groupId>
