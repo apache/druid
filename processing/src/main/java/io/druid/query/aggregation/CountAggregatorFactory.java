@@ -76,12 +76,6 @@ public class CountAggregatorFactory implements AggregatorFactory
   }
 
   @Override
-  public List<AggregatorFactory> getRequiredColumns()
-  {
-    return Arrays.<AggregatorFactory>asList(new CountAggregatorFactory(name));
-  }
-
-  @Override
   public Object deserialize(Object object)
   {
     return object;

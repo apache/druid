@@ -51,6 +51,7 @@ import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.aggregation.JavaScriptAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
@@ -2436,6 +2437,68 @@ public class GroupByQueryRunnerTest
     TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
 
+  @Test
+  public void testDifferentGroupingSubqueryMultipleAggregatorsOnSameField()
+  {
+    GroupByQuery subquery = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .setPostAggregatorSpecs(
+            Lists.<PostAggregator>newArrayList(
+                new ArithmeticPostAggregator(
+                    "post_agg",
+                    "+",
+                    Lists.<PostAggregator>newArrayList(
+                        new FieldAccessPostAggregator("idx", "idx"),
+                        new FieldAccessPostAggregator("idx", "idx")
+                    )
+                ),
+                new ArithmeticPostAggregator(
+                    "post_agg2",
+                    "quotient",
+                    Lists.<PostAggregator>newArrayList(
+                        new FieldAccessPostAggregator("idx", "idx"),
+                        new ConstantPostAggregator("constant", 1.23)
+                    )
+                )
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(subquery)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setAggregatorSpecs(
+            Arrays.<AggregatorFactory>asList(
+                new DoubleMaxAggregatorFactory("idx1", "idx"),
+                new DoubleMaxAggregatorFactory("idx2", "idx"),
+                new DoubleMaxAggregatorFactory("idx3", "post_agg"),
+                new DoubleMaxAggregatorFactory("idx4", "post_agg2")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "idx1", 2900.0, "idx2", 2900.0,
+            "idx3", 5800.0, "idx4", 2357.7236328125),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "idx1", 2505.0, "idx2", 2505.0,
+            "idx3", 5010.0, "idx4", 2036.5853271484375)
+    );
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
 
   @Test
   public void testDifferentGroupingSubqueryWithFilter()
