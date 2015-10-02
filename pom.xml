@@ -172,7 +172,7 @@
             <dependency>
                 <groupId>com.amazonaws</groupId>
                 <artifactId>aws-java-sdk</artifactId>
-                <version>1.10.12</version>
+                <version>1.10.21</version>
                 <exclusions>
                     <exclusion>
                         <groupId>javax.mail</groupId>
@@ -482,15 +482,16 @@
                 <artifactId>jets3t</artifactId>
                 <version>0.9.4</version>
             </dependency>
+            <!-- The htttpcomponents artifacts have non-matching release cadence -->
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpclient</artifactId>
-                <version>4.2</version>
+                <version>4.5.1</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.httpcomponents</groupId>
                 <artifactId>httpcore</artifactId>
-                <version>4.2</version>
+                <version>4.4.3</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.hadoop</groupId>
