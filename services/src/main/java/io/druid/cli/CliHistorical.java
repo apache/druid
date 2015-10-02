@@ -27,6 +27,7 @@ import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.CacheMonitor;
 import io.druid.client.cache.CacheProvider;
+import io.druid.guice.CacheModule;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
@@ -83,11 +84,10 @@ public class CliHistorical extends ServerRunnable
             Jerseys.addResource(binder, HistoricalResource.class);
             LifecycleModule.register(binder, QueryResource.class);
 
-            LifecycleModule.register(binder, ZkCoordinator.class);            
+            LifecycleModule.register(binder, ZkCoordinator.class);
 
-            binder.bind(Cache.class).toProvider(CacheProvider.class).in(ManageLifecycle.class);
-            JsonConfigProvider.bind(binder, "druid.cache", CacheProvider.class);
             JsonConfigProvider.bind(binder, "druid.historical.cache", CacheConfig.class);
+            binder.install(new CacheModule());
             MetricsModule.register(binder, CacheMonitor.class);
           }
         }
