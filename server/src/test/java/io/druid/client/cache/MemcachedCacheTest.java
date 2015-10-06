@@ -37,6 +37,7 @@ import com.metamx.metrics.AbstractMonitor;
 import com.metamx.metrics.MonitorScheduler;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
+import io.druid.guice.CacheModule;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.ManageLifecycle;
@@ -175,8 +176,6 @@ public class MemcachedCacheTest
     final String uuid = UUID.randomUUID().toString();
     System.setProperty(uuid + ".type", "memcached");
     System.setProperty(uuid + ".hosts", "localhost");
-    final MonitorScheduler monitorScheduler = EasyMock.createNiceMock(MonitorScheduler.class);
-    EasyMock.replay(monitorScheduler);
     final Injector injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(), ImmutableList.<Module>of(
             new Module()
@@ -184,7 +183,9 @@ public class MemcachedCacheTest
               @Override
               public void configure(Binder binder)
               {
-                binder.bind(MonitorScheduler.class).toInstance(monitorScheduler);
+                binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test/memcached");
+                binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+
                 binder.bind(Cache.class).toProvider(CacheProvider.class);
                 JsonConfigProvider.bind(binder, uuid, CacheProvider.class);
               }
