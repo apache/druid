@@ -151,7 +151,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 
       // Last ditch sanity checks
       if (numEntries.get() >= maxRowCount && !facts.containsKey(key)) {
-        throw new IndexSizeExceededException("Maximum number of rows reached");
+        throw new IndexSizeExceededException("Maximum number of rows [%d] reached", maxRowCount);
       }
       final Integer prev = facts.putIfAbsent(key, rowIndex);
       if (null == prev) {
