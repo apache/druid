@@ -25,14 +25,14 @@ public class IndexSizeExceededException extends IOException
   {
   }
 
-  public IndexSizeExceededException(String message)
+  public IndexSizeExceededException(String formatText, Object... arguments)
   {
-    super(message);
+    super(String.format(formatText, arguments));
   }
 
-  public IndexSizeExceededException(String message, Throwable cause)
+  public IndexSizeExceededException(Throwable cause, String formatText, Object... arguments)
   {
-    super(message, cause);
+    super(String.format(formatText, arguments), cause);
   }
 
   public IndexSizeExceededException(Throwable cause)
