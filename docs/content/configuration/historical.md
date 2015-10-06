@@ -81,23 +81,7 @@ You can optionally only configure caching to be enabled on the historical by set
 |--------|---------------|-----------|-------|
 |`druid.historical.cache.useCache`|true, false|Enable the cache on the historical.|false|
 |`druid.historical.cache.populateCache`|true, false|Populate the cache on the historical.|false|
-|`druid.cache.type`|`local`, `memcached`|The type of cache to use for queries.|`local`|
 |`druid.historical.cache.unCacheable`|All druid query types|All query types to not cache.|["groupBy", "select"]|
 
-#### Local Cache
 
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.cache.sizeInBytes`|Maximum cache size in bytes. Zero disables caching.|0|
-|`druid.cache.initialSize`|Initial size of the hashtable backing the cache.|500000|
-|`druid.cache.logEvictionCount`|If non-zero, log cache eviction every `logEvictionCount` items.|0|
-
-#### Memcache
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.cache.expiration`|Memcached [expiration time](https://code.google.com/p/memcached/wiki/NewCommands#Standard_Protocol).|2592000 (30 days)|
-|`druid.cache.timeout`|Maximum time in milliseconds to wait for a response from Memcached.|500|
-|`druid.cache.hosts`|Command separated list of Memcached hosts `<host:port>`.|none|
-|`druid.cache.maxObjectSize`|Maximum object size in bytes for a Memcached object.|52428800 (50 MB)|
-|`druid.cache.memcachedPrefix`|Key prefix for all keys in Memcached.|druid|
+See [cache configuration](caching.html) for how to configure cache settings.
