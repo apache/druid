@@ -187,7 +187,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
     synchronized (this) {
       if (!facts.containsKey(key)) {
         if (!canAppendRow(false)) {
-          throw new IndexSizeExceededException(getOutOfRowsReason());
+          throw new IndexSizeExceededException("%s", getOutOfRowsReason());
         }
       }
       rowOffset = totalAggSize * numEntries.get();
