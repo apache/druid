@@ -82,7 +82,7 @@ public class DruidProcessingModule implements Module
   @Processing
   @ManageLifecycle
   public ExecutorService getProcessingExecutorService(
-      ExecutorServiceConfig config,
+      DruidProcessingConfig config,
       ServiceEmitter emitter,
       Lifecycle lifecycle
   )
