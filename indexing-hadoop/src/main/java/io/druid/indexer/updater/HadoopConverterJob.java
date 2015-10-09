@@ -140,11 +140,17 @@ public class HadoopConverterJob
     return new Path(getJobPath(jobID, workingDirectory), taskAttemptID.toString());
   }
 
+  public static Path getJobClassPathDir(String jobName, Path workingDirectory) throws IOException
+  {
+    return new Path(workingDirectory, jobName.replace(":", ""));
+  }
+
   public static void cleanup(Job job) throws IOException
   {
     final Path jobDir = getJobPath(job.getJobID(), job.getWorkingDirectory());
     final FileSystem fs = jobDir.getFileSystem(job.getConfiguration());
     fs.delete(jobDir, true);
+    fs.delete(getJobClassPathDir(job.getJobName(), job.getWorkingDirectory()), true);
   }
 
 
@@ -231,7 +237,11 @@ public class HadoopConverterJob
     job.setMapSpeculativeExecution(false);
     job.setOutputFormatClass(ConvertingOutputFormat.class);
 
-    JobHelper.setupClasspath(JobHelper.distributedClassPath(jobConf.getWorkingDirectory()), job);
+    JobHelper.setupClasspath(
+        JobHelper.distributedClassPath(jobConf.getWorkingDirectory()),
+        JobHelper.distributedClassPath(getJobClassPathDir(job.getJobName(), jobConf.getWorkingDirectory())),
+        job
+    );
 
     Throwable throwable = null;
     try {
