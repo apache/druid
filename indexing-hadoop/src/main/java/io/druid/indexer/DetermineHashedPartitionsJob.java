@@ -102,7 +102,11 @@ public class DetermineHashedPartitionsJob implements Jobby
       } else {
         groupByJob.setNumReduceTasks(config.getSegmentGranularIntervals().get().size());
       }
-      JobHelper.setupClasspath(JobHelper.distributedClassPath(config.getWorkingPath()), groupByJob);
+      JobHelper.setupClasspath(
+          JobHelper.distributedClassPath(config.getWorkingPath()),
+          JobHelper.distributedClassPath(config.makeIntermediatePath()),
+          groupByJob
+      );
 
       config.addInputPaths(groupByJob);
       config.intoConfiguration(groupByJob);
