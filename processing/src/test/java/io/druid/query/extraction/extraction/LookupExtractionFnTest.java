@@ -81,6 +81,39 @@ public class LookupExtractionFnTest
   }
 
   @Test
+  public void testEqualsAndHash(){
+    if (retainMissing && !Strings.isNullOrEmpty(replaceMissing)) {
+      // skip
+      return;
+    }
+    final LookupExtractionFn lookupExtractionFn1 = new LookupExtractionFn(
+        new MapLookupExtractor(ImmutableMap.of("foo", "bar")),
+        retainMissing,
+        replaceMissing,
+        injective
+    );
+    final LookupExtractionFn lookupExtractionFn2 = new LookupExtractionFn(
+        new MapLookupExtractor(ImmutableMap.of("foo", "bar")),
+        retainMissing,
+        replaceMissing,
+        injective
+    );
+
+
+    final LookupExtractionFn lookupExtractionFn3 = new LookupExtractionFn(
+        new MapLookupExtractor(ImmutableMap.of("foo", "bar2")),
+        retainMissing,
+        replaceMissing,
+        injective
+    );
+
+    Assert.assertEquals(lookupExtractionFn1, lookupExtractionFn2);
+    Assert.assertEquals(lookupExtractionFn1.hashCode(), lookupExtractionFn2.hashCode());
+    Assert.assertNotEquals(lookupExtractionFn1, lookupExtractionFn3);
+    Assert.assertNotEquals(lookupExtractionFn1.hashCode(), lookupExtractionFn3.hashCode());
+  }
+
+  @Test
   public void testSimpleSerDe() throws IOException
   {
     if (retainMissing && !Strings.isNullOrEmpty(replaceMissing)) {
