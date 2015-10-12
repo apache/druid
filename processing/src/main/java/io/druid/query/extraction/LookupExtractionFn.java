@@ -108,4 +108,26 @@ public class LookupExtractionFn extends FunctionalExtraction
       throw Throwables.propagate(ex);
     }
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    LookupExtractionFn that = (LookupExtractionFn) o;
+
+    return lookup.equals(that.lookup);
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return lookup.hashCode();
+  }
 }

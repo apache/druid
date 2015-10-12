@@ -18,6 +18,7 @@
 package io.druid.query.topn;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.jackson.DefaultObjectMapper;
@@ -26,7 +27,10 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.dimension.LegacyDimensionSpec;
+import io.druid.query.extraction.LookupExtractionFn;
+import io.druid.query.extraction.MapLookupExtractor;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -76,8 +80,43 @@ public class TopNQueryTest
     Assert.assertEquals(query, serdeQuery);
   }
 
+
   @Test
-  public void testQuerySerdeWithAlphaNumericTopNMetricSpec() throws IOException{
+  public void testQuerySerdeWithLookupExtractionFn() throws IOException
+  {
+    final TopNQuery expectedQuery = new TopNQueryBuilder()
+        .dataSource(dataSource)
+        .granularity(allGran)
+        .dimension(
+            new ExtractionDimensionSpec(
+                marketDimension,
+                marketDimension,
+                new LookupExtractionFn(new MapLookupExtractor(ImmutableMap.of("foo", "bar")), true, null, false),
+                null
+            )
+        )
+        .metric(new NumericTopNMetricSpec(indexMetric))
+        .threshold(2)
+        .intervals(fullOnInterval.getIntervals())
+        .aggregators(
+            Lists.<AggregatorFactory>newArrayList(
+                Iterables.concat(
+                    commonAggregators,
+                    Lists.newArrayList(
+                        new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                        new DoubleMinAggregatorFactory("minIndex", "index")
+                    )
+                )
+            )
+        )
+        .build();
+    final String str = jsonMapper.writeValueAsString(expectedQuery);
+    Assert.assertEquals(expectedQuery, jsonMapper.readValue(str, TopNQuery.class));
+  }
+
+  @Test
+  public void testQuerySerdeWithAlphaNumericTopNMetricSpec() throws IOException
+  {
     TopNQuery expectedQuery = new TopNQueryBuilder()
         .dataSource(dataSource)
         .granularity(allGran)
@@ -106,7 +145,14 @@ public class TopNQueryTest
                        + "    \"1970-01-01T00:00:00.000Z/2020-01-01T00:00:00.000Z\"\n"
                        + "  ]\n"
                        + "}";
-    TopNQuery actualQuery = jsonMapper.readValue(jsonMapper.writeValueAsString(jsonMapper.readValue(jsonQuery, TopNQuery.class)), TopNQuery.class);
+    TopNQuery actualQuery = jsonMapper.readValue(
+        jsonMapper.writeValueAsString(
+            jsonMapper.readValue(
+                jsonQuery,
+                TopNQuery.class
+            )
+        ), TopNQuery.class
+    );
     Assert.assertEquals(expectedQuery, actualQuery);
   }
 

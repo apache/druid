@@ -84,4 +84,25 @@ public class MapLookupExtractor implements LookupExtractor
       throw Throwables.propagate(ex);
     }
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    MapLookupExtractor that = (MapLookupExtractor) o;
+
+    return map.equals(that.map);
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return map.hashCode();
+  }
 }
