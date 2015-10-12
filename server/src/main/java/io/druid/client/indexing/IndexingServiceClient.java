@@ -34,6 +34,7 @@ import org.joda.time.Interval;
 
 import javax.ws.rs.core.MediaType;
 import java.io.InputStream;
+import java.net.URI;
 import java.net.URL;
 import java.util.Iterator;
 import java.util.List;
@@ -115,7 +116,15 @@ public class IndexingServiceClient
         throw new ISE("Cannot find instance of indexingService");
       }
 
-      return String.format("http://%s/druid/indexer/v1", instance.getHost());
+      return new URI(
+          instance.getScheme(),
+          null,
+          instance.getAddress(),
+          instance.getPort(),
+          "/druid/indexer/v1",
+          null,
+          null
+      ).toString();
     }
     catch (Exception e) {
       throw Throwables.propagate(e);

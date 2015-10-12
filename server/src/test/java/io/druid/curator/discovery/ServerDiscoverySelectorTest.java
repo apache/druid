@@ -34,7 +34,7 @@ public class ServerDiscoverySelectorTest
 {
 
   private ServiceProvider serviceProvider;
-  private  ServerDiscoverySelector serverDiscoverySelector;
+  private ServerDiscoverySelector serverDiscoverySelector;
   private ServiceInstance instance;
   private static final int PORT = 8080;
   private static final String ADDRESS = "localhost";
@@ -57,11 +57,19 @@ public class ServerDiscoverySelectorTest
     Server server = serverDiscoverySelector.pick();
     Assert.assertEquals(PORT, server.getPort());
     Assert.assertEquals(ADDRESS, server.getAddress());
-    Assert.assertTrue(server.getHost().contains(new Integer(PORT).toString()));
+    Assert.assertTrue(server.getHost().contains(Integer.toString(PORT)));
     Assert.assertTrue(server.getHost().contains(ADDRESS));
-    Assert.assertEquals(new String("http"), server.getScheme());
+    Assert.assertEquals("http", server.getScheme());
     EasyMock.verify(instance, serviceProvider);
-    final URI uri = new URI(String.format("%s://%s%s", server.getScheme(), server.getHost(), "/druid/indexer/v1/action"));
+    final URI uri = new URI(
+        server.getScheme(),
+        null,
+        server.getAddress(),
+        server.getPort(),
+        "/druid/indexer/v1/action",
+        null,
+        null
+    );
     Assert.assertEquals(PORT, uri.getPort());
     Assert.assertEquals(ADDRESS, uri.getHost());
     Assert.assertEquals("http", uri.getScheme());
@@ -79,11 +87,19 @@ public class ServerDiscoverySelectorTest
     Server server = serverDiscoverySelector.pick();
     Assert.assertEquals(PORT, server.getPort());
     Assert.assertEquals(ADDRESS, server.getAddress());
-    Assert.assertTrue(server.getHost().contains(new Integer(PORT).toString()));
+    Assert.assertTrue(server.getHost().contains(Integer.toString(PORT)));
     Assert.assertTrue(server.getHost().contains(ADDRESS));
-    Assert.assertEquals(new String("http"), server.getScheme());
+    Assert.assertEquals("http", server.getScheme());
     EasyMock.verify(instance, serviceProvider);
-    final URI uri = new URI(String.format("%s://%s%s", server.getScheme(), server.getHost(), "/druid/indexer/v1/action"));
+    final URI uri = new URI(
+        server.getScheme(),
+        null,
+        server.getAddress(),
+        server.getPort(),
+        "/druid/indexer/v1/action",
+        null,
+        null
+    );
     Assert.assertEquals(PORT, uri.getPort());
     Assert.assertEquals(String.format("[%s]", ADDRESS), uri.getHost());
     Assert.assertEquals("http", uri.getScheme());
@@ -101,11 +117,19 @@ public class ServerDiscoverySelectorTest
     Server server = serverDiscoverySelector.pick();
     Assert.assertEquals(PORT, server.getPort());
     Assert.assertEquals(ADDRESS, server.getAddress());
-    Assert.assertTrue(server.getHost().contains(new Integer(PORT).toString()));
+    Assert.assertTrue(server.getHost().contains(Integer.toString(PORT)));
     Assert.assertTrue(server.getHost().contains(ADDRESS));
-    Assert.assertEquals(new String("http"), server.getScheme());
+    Assert.assertEquals("http", server.getScheme());
     EasyMock.verify(instance, serviceProvider);
-    final URI uri = new URI(String.format("%s://%s%s", server.getScheme(), server.getHost(), "/druid/indexer/v1/action"));
+    final URI uri = new URI(
+        server.getScheme(),
+        null,
+        server.getAddress(),
+        server.getPort(),
+        "/druid/indexer/v1/action",
+        null,
+        null
+    );
     Assert.assertEquals(PORT, uri.getPort());
     Assert.assertEquals(ADDRESS, uri.getHost());
     Assert.assertEquals("http", uri.getScheme());
