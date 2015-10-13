@@ -160,9 +160,11 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   {
     Interval actualInterval = interval;
 
+    long minDataTimestamp = getMinTime().getMillis();
+    long maxDataTimestamp = getMaxTime().getMillis();
     final Interval dataInterval = new Interval(
-        getMinTime().getMillis(),
-        gran.next(gran.truncate(getMaxTime().getMillis()))
+        minDataTimestamp,
+        gran.next(gran.truncate(maxDataTimestamp))
     );
 
     if (!actualInterval.overlaps(dataInterval)) {
@@ -189,7 +191,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
 
     return Sequences.filter(
-        new CursorSequenceBuilder(index, actualInterval, gran, offset).build(),
+        new CursorSequenceBuilder(index, actualInterval, gran, offset, maxDataTimestamp).build(),
         Predicates.<Cursor>notNull()
     );
   }
@@ -200,18 +202,21 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     private final Interval interval;
     private final QueryGranularity gran;
     private final Offset offset;
+    private final long maxDataTimestamp;
 
     public CursorSequenceBuilder(
         ColumnSelector index,
         Interval interval,
         QueryGranularity gran,
-        Offset offset
+        Offset offset,
+        long maxDataTimestamp
     )
     {
       this.index = index;
       this.interval = interval;
       this.gran = gran;
       this.offset = offset;
+      this.maxDataTimestamp = maxDataTimestamp;
     }
 
     public Sequence<Cursor> build()
@@ -239,8 +244,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     baseOffset.increment();
                   }
 
+                  long threshold = Math.min(interval.getEndMillis(), gran.next(input));
                   final Offset offset = new TimestampCheckingOffset(
-                      baseOffset, timestamps, Math.min(interval.getEndMillis(), gran.next(input))
+                      baseOffset, timestamps, threshold, maxDataTimestamp < threshold
                   );
 
                   return new Cursor()
@@ -677,14 +683,15 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     public TimestampCheckingOffset(
         Offset baseOffset,
         GenericColumn timestamps,
-        long threshold
+        long threshold,
+        boolean allWithinThreshold
     )
     {
       this.baseOffset = baseOffset;
       this.timestamps = timestamps;
       this.threshold = threshold;
       // checks if all the values are within the Threshold specified, skips timestamp lookups and checks if all values are within threshold.
-      this.allWithinThreshold = timestamps.getLongSingleValueRow(timestamps.length() - 1) < threshold;
+      this.allWithinThreshold = allWithinThreshold;
     }
 
     @Override
@@ -696,7 +703,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     @Override
     public Offset clone()
     {
-      return new TimestampCheckingOffset(baseOffset.clone(), timestamps, threshold);
+      return new TimestampCheckingOffset(baseOffset.clone(), timestamps, threshold, allWithinThreshold);
     }
 
     @Override
