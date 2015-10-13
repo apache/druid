@@ -102,6 +102,11 @@ public class DatasourceIngestionSpec
     return new DatasourceIngestionSpec(dataSource, interval, filter, granularity, dimensions, metrics);
   }
 
+  public DatasourceIngestionSpec withQueryGranularity(QueryGranularity granularity)
+  {
+    return new DatasourceIngestionSpec(dataSource, interval, filter, granularity, dimensions, metrics);
+  }
+
   @Override
   public boolean equals(Object o)
   {
