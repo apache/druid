@@ -28,12 +28,13 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.net.URI;
 
 public class ServerDiscoverySelectorTest
 {
 
   private ServiceProvider serviceProvider;
-  private  ServerDiscoverySelector serverDiscoverySelector;
+  private ServerDiscoverySelector serverDiscoverySelector;
   private ServiceInstance instance;
   private static final int PORT = 8080;
   private static final String ADDRESS = "localhost";
@@ -52,14 +53,86 @@ public class ServerDiscoverySelectorTest
     EasyMock.expect(serviceProvider.getInstance()).andReturn(instance).anyTimes();
     EasyMock.expect(instance.getAddress()).andReturn(ADDRESS).anyTimes();
     EasyMock.expect(instance.getPort()).andReturn(PORT).anyTimes();
-    EasyMock.replay(instance,serviceProvider);
+    EasyMock.replay(instance, serviceProvider);
     Server server = serverDiscoverySelector.pick();
-    Assert.assertEquals(PORT,server.getPort());
-    Assert.assertEquals(ADDRESS,server.getAddress());
-    Assert.assertTrue(server.getHost().contains(new Integer(PORT).toString()));
+    Assert.assertEquals(PORT, server.getPort());
+    Assert.assertEquals(ADDRESS, server.getAddress());
+    Assert.assertTrue(server.getHost().contains(Integer.toString(PORT)));
     Assert.assertTrue(server.getHost().contains(ADDRESS));
-    Assert.assertEquals(new String("http"), server.getScheme());
-    EasyMock.verify(instance,serviceProvider);
+    Assert.assertEquals("http", server.getScheme());
+    EasyMock.verify(instance, serviceProvider);
+    final URI uri = new URI(
+        server.getScheme(),
+        null,
+        server.getAddress(),
+        server.getPort(),
+        "/druid/indexer/v1/action",
+        null,
+        null
+    );
+    Assert.assertEquals(PORT, uri.getPort());
+    Assert.assertEquals(ADDRESS, uri.getHost());
+    Assert.assertEquals("http", uri.getScheme());
+  }
+
+
+  @Test
+  public void testPickIPv6() throws Exception
+  {
+    final String ADDRESS = "2001:0db8:0000:0000:0000:ff00:0042:8329";
+    EasyMock.expect(serviceProvider.getInstance()).andReturn(instance).anyTimes();
+    EasyMock.expect(instance.getAddress()).andReturn(ADDRESS).anyTimes();
+    EasyMock.expect(instance.getPort()).andReturn(PORT).anyTimes();
+    EasyMock.replay(instance, serviceProvider);
+    Server server = serverDiscoverySelector.pick();
+    Assert.assertEquals(PORT, server.getPort());
+    Assert.assertEquals(ADDRESS, server.getAddress());
+    Assert.assertTrue(server.getHost().contains(Integer.toString(PORT)));
+    Assert.assertTrue(server.getHost().contains(ADDRESS));
+    Assert.assertEquals("http", server.getScheme());
+    EasyMock.verify(instance, serviceProvider);
+    final URI uri = new URI(
+        server.getScheme(),
+        null,
+        server.getAddress(),
+        server.getPort(),
+        "/druid/indexer/v1/action",
+        null,
+        null
+    );
+    Assert.assertEquals(PORT, uri.getPort());
+    Assert.assertEquals(String.format("[%s]", ADDRESS), uri.getHost());
+    Assert.assertEquals("http", uri.getScheme());
+  }
+
+
+  @Test
+  public void testPickIPv6Bracket() throws Exception
+  {
+    final String ADDRESS = "[2001:0db8:0000:0000:0000:ff00:0042:8329]";
+    EasyMock.expect(serviceProvider.getInstance()).andReturn(instance).anyTimes();
+    EasyMock.expect(instance.getAddress()).andReturn(ADDRESS).anyTimes();
+    EasyMock.expect(instance.getPort()).andReturn(PORT).anyTimes();
+    EasyMock.replay(instance, serviceProvider);
+    Server server = serverDiscoverySelector.pick();
+    Assert.assertEquals(PORT, server.getPort());
+    Assert.assertEquals(ADDRESS, server.getAddress());
+    Assert.assertTrue(server.getHost().contains(Integer.toString(PORT)));
+    Assert.assertTrue(server.getHost().contains(ADDRESS));
+    Assert.assertEquals("http", server.getScheme());
+    EasyMock.verify(instance, serviceProvider);
+    final URI uri = new URI(
+        server.getScheme(),
+        null,
+        server.getAddress(),
+        server.getPort(),
+        "/druid/indexer/v1/action",
+        null,
+        null
+    );
+    Assert.assertEquals(PORT, uri.getPort());
+    Assert.assertEquals(ADDRESS, uri.getHost());
+    Assert.assertEquals("http", uri.getScheme());
   }
 
   @Test

@@ -42,6 +42,8 @@ import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Duration;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
@@ -197,7 +199,7 @@ public class CoordinatorRuleManager
     return retVal;
   }
 
-  private String getRuleURL()
+  private String getRuleURL() throws URISyntaxException
   {
     Server server = selector.pick();
 
@@ -206,6 +208,14 @@ public class CoordinatorRuleManager
       return null;
     }
 
-    return String.format("http://%s%s", server.getHost(), config.get().getRulesEndpoint());
+    return new URI(
+        server.getScheme(),
+        null,
+        server.getAddress(),
+        server.getPort(),
+        config.get().getRulesEndpoint(),
+        null,
+        null
+    ).toString();
   }
 }
