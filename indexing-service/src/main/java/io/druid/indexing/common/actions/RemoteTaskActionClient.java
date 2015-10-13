@@ -155,7 +155,7 @@ public class RemoteTaskActionClient implements TaskActionClient
 
   private URI makeServiceUri(final Server instance) throws URISyntaxException
   {
-    return new URI(String.format("%s://%s%s", instance.getScheme(), instance.getHost(), "/druid/indexer/v1/action"));
+    return new URI(instance.getScheme(), null, instance.getAddress(), instance.getPort(), "/druid/indexer/v1/action", null, null);
   }
 
   private Server getServiceInstance()

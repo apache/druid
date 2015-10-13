@@ -17,6 +17,7 @@
 
 package io.druid.curator.discovery;
 
+import com.google.common.net.HostAndPort;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
@@ -62,7 +63,7 @@ public class ServerDiscoverySelector implements DiscoverySelector<Server>
       @Override
       public String getHost()
       {
-        return String.format("%s:%d", getAddress(), getPort());
+        return HostAndPort.fromParts(getAddress(), getPort()).toString();
       }
 
       @Override

@@ -95,16 +95,18 @@ public class BridgeQuerySegmentWalker implements QuerySegmentWalker
           if (instance == null) {
             return Sequences.empty();
           }
-
-          final String url = String.format(
-              "http://%s/druid/v2/",
-              brokerSelector.pick().getHost()
+          final Server brokerServer = brokerSelector.pick();
+          final URL url = new URL(
+              brokerServer.getScheme(),
+              brokerServer.getAddress(),
+              brokerServer.getPort(),
+              "/druid/v2/"
           );
 
           StatusResponseHolder response = httpClient.go(
               new Request(
                   HttpMethod.POST,
-                  new URL(url)
+                  url
               ).setContent(
                   MediaType.APPLICATION_JSON,
                   jsonMapper.writeValueAsBytes(query)
