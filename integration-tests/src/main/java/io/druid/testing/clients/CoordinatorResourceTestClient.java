@@ -23,7 +23,6 @@ import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
-import com.metamx.common.logger.Logger;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.response.StatusResponseHandler;
@@ -40,7 +39,6 @@ import java.util.Map;
 
 public class CoordinatorResourceTestClient
 {
-  private final static Logger LOG = new Logger(CoordinatorResourceTestClient.class);
   private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
   private final String coordinator;
@@ -66,11 +64,16 @@ public class CoordinatorResourceTestClient
     );
   }
 
+  private String getLoadStatusURL()
+  {
+      return String.format("%s%s", getCoordinatorURL(), "loadstatus");
+  }
+
   private Map<String, Integer> getLoadStatus()
   {
     Map<String, Integer> status = null;
     try {
-      StatusResponseHolder response = makeRequest(HttpMethod.GET, getCoordinatorURL() + "loadstatus?simple");
+      StatusResponseHolder response = makeRequest(HttpMethod.GET, getLoadStatusURL());
 
       status = jsonMapper.readValue(
           response.getContent(), new TypeReference<Map<String, Integer>>()
@@ -87,7 +90,7 @@ public class CoordinatorResourceTestClient
   public boolean areSegmentsLoaded(String dataSource)
   {
     final Map<String, Integer> status = getLoadStatus();
-    return (status.containsKey(dataSource) && status.get(dataSource) == 0);
+    return (status.containsKey(dataSource) && status.get(dataSource) == 100.0);
   }
 
   public void unloadSegmentsForDataSource(String dataSource, Interval interval)
@@ -135,7 +138,6 @@ public class CoordinatorResourceTestClient
       return response;
     }
     catch (Exception e) {
-      LOG.error(e, "Exception while sending request");
       throw Throwables.propagate(e);
     }
   }

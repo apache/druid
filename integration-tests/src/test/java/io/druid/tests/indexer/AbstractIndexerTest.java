@@ -23,7 +23,7 @@ import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.testing.clients.CoordinatorResourceTestClient;
 import io.druid.testing.clients.OverlordResourceTestClient;
-import io.druid.testing.utils.FromFileTestQueryHelper;
+import io.druid.testing.utils.TestQueryHelper;
 import io.druid.testing.utils.RetryUtil;
 import org.apache.commons.io.IOUtils;
 import org.joda.time.Interval;
@@ -46,11 +46,16 @@ public abstract class AbstractIndexerTest
   @Smile
   protected ObjectMapper smileMapper;
   @Inject
-  protected FromFileTestQueryHelper queryHelper;
+  protected TestQueryHelper queryHelper;
 
   protected void unloadAndKillData(final String dataSource) throws Exception
   {
-    Interval interval = new Interval("2013-01-01T00:00:00.000Z/2013-12-01T00:00:00.000Z");
+      unloadAndKillData (dataSource, "2013-01-01T00:00:00.000Z", "2013-12-01T00:00:00.000Z");
+  }
+
+  protected void unloadAndKillData(final String dataSource, String start, String end) throws Exception
+  {
+    Interval interval = new Interval(start + "/" + end);
     coordinator.unloadSegmentsForDataSource(dataSource, interval);
     RetryUtil.retryUntilFalse(
         new Callable<Boolean>()

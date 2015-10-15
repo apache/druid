@@ -20,7 +20,7 @@ package io.druid.tests.query;
 import com.google.inject.Inject;
 import io.druid.testing.clients.CoordinatorResourceTestClient;
 import io.druid.testing.guice.DruidTestModuleFactory;
-import io.druid.testing.utils.FromFileTestQueryHelper;
+import io.druid.testing.utils.TestQueryHelper;
 import io.druid.testing.utils.RetryUtil;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Guice;
@@ -36,12 +36,12 @@ public class ITWikipediaQueryTest
   @Inject
   private CoordinatorResourceTestClient coordinatorClient;
   @Inject
-  private FromFileTestQueryHelper queryHelper;
+  private TestQueryHelper queryHelper;
 
   @BeforeMethod
   public void before()
   {
-    // ensure that twitter segments are loaded completely
+    // ensure that wikipedia segments are loaded completely
     RetryUtil.retryUntilTrue(
         new Callable<Boolean>()
         {

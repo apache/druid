@@ -29,7 +29,11 @@ public interface IntegrationTestingConfig
 
   public String getBrokerHost();
 
+  public String getHistoricalHost();
+
   public String getMiddleManagerHost();
 
   public String getZookeeperHosts();
+
+  public String getProperty(String prop);
 }

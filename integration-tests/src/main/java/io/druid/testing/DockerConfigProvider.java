@@ -59,6 +59,12 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       }
 
       @Override
+      public String getHistoricalHost()
+      {
+        return dockerIp + ":8083";
+      }
+
+      @Override
       public String getMiddleManagerHost()
       {
         return dockerIp;
@@ -68,6 +74,12 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       public String getZookeeperHosts()
       {
         return dockerIp + ":2181";
+      }
+
+      @Override
+      public String getProperty(String prop)
+      {
+        throw new UnsupportedOperationException("DockerConfigProvider does not support getProperty()");
       }
     };
   }
