@@ -30,15 +30,18 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.util.Map;
+import com.metamx.common.logger.Logger;
 
 public class ConfigFileConfigProvider implements IntegrationTestingConfigProvider
 {
+  private final static Logger LOG = new Logger(ConfigFileConfigProvider.class);
   private String routerHost = "";
   private String brokerHost = "";
+  private String historicalHost = "";
   private String coordinatorHost = "";
   private String indexerHost = "";
   private String middleManagerHost = "";
-  private String zookeeperHosts = "";
+  private String zookeeperHosts = "";        // comma-separated list of host:port
   private Map<String, String> props = null;
 
   @JsonCreator
@@ -61,10 +64,18 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
     }
     routerHost = props.get("router_host") + ":" + props.get("router_port");
     brokerHost = props.get("broker_host") + ":" + props.get("broker_port");
+    historicalHost = props.get("historical_host") + ":" + props.get("historical_port");
     coordinatorHost = props.get("coordinator_host") + ":" + props.get("coordinator_port");
     indexerHost = props.get("indexer_host") + ":" + props.get("indexer_port");
-    middleManagerHost = props.get("middle_manager_host");
+    middleManagerHost = props.get("middlemanager_host");
     zookeeperHosts = props.get("zookeeper_hosts");
+
+    LOG.info ("router: [%s]", routerHost);
+    LOG.info ("broker [%s]: ", brokerHost);
+    LOG.info ("coordinator: [%s]", coordinatorHost);
+    LOG.info ("overlord: [%s]", indexerHost);
+    LOG.info ("middle manager: [%s]", middleManagerHost);
+    LOG.info ("zookeepers: [%s]", zookeeperHosts);
   }
 
   @Override
@@ -97,6 +108,12 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
       }
 
       @Override
+      public String getHistoricalHost()
+      {
+        return historicalHost;
+      }
+
+      @Override
       public String getMiddleManagerHost()
       {
         return middleManagerHost;
@@ -106,6 +123,12 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
       public String getZookeeperHosts()
       {
         return zookeeperHosts;
+      }
+
+      @Override
+      public String getProperty(String keyword)
+      {
+        return props.get(keyword);
       }
     };
   }
