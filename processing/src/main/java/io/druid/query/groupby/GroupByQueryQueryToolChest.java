@@ -164,6 +164,13 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       final Sequence<Row> subqueryResult = mergeGroupByResults(subquery, runner, context);
       final Set<AggregatorFactory> aggs = Sets.newHashSet();
 
+      // Nested group-bys work by first running the inner query and then materializing the results in an incremental
+      // index which the outer query is then run against. To build the incremental index, we use the fieldNames from
+      // the aggregators for the outer query to define the column names so that the index will match the query. If
+      // there are multiple types of aggregators in the outer query referencing the same fieldName, we will try to build
+      // multiple columns of the same name using different aggregator types and will fail. Here, we permit multiple
+      // aggregators of the same type referencing the same fieldName (and skip creating identical columns for the
+      // subsequent ones) and return an error if the aggregator types are different.
       for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {
         for (final AggregatorFactory transferAgg : aggregatorFactory.getRequiredColumns()) {
           if (Iterables.any(aggs, new Predicate<AggregatorFactory>() {
