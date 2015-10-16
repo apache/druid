@@ -237,7 +237,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
       final QueryableDruidServer queryableDruidServer = segment.lhs.pick();
 
       if (queryableDruidServer == null) {
-        log.makeAlert("No servers found for %s?! How can this be?!", segment.rhs).emit();
+        log.makeAlert("No servers found for SegmentDescriptor[%s] for DataSource[%s]?! How can this be?!", segment.rhs, query.getDataSource()).emit();
       } else {
         final DruidServer server = queryableDruidServer.getServer();
         List<SegmentDescriptor> descriptors = serverSegments.get(server);
