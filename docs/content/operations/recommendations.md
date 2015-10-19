@@ -30,6 +30,6 @@ too many large segments impacts query performance, most notably with TopN querie
 
 You should read common problems people have here:
 
-1) [Ingestion-FAQ](../ingestion/ingestion-faq.html)
+1) [Ingestion-FAQ](../ingestion/faq.html)
 
 2) [Performance-FAQ](../operations/performance-faq.html)
