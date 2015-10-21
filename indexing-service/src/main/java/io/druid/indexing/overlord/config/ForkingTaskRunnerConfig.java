@@ -19,6 +19,7 @@ package io.druid.indexing.overlord.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
+import io.druid.guice.IndexingServiceModuleHelper;
 
 import javax.validation.constraints.Max;
 import javax.validation.constraints.Min;
@@ -27,6 +28,9 @@ import java.util.List;
 
 public class ForkingTaskRunnerConfig
 {
+  public static final String JAVA_OPTS_PROPERTY = IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX
+                                                  + ".javaOpts";
+
   @JsonProperty
   @NotNull
   private String javaCommand = "java";
