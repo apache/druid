@@ -80,8 +80,8 @@ public class HybridCacheTest
   @Test
   public void testSanity() throws Exception
   {
-    final MapCache l1 = new MapCache(new ByteCountingLRUMap(1024 * 1024));
-    final MapCache l2 = new MapCache(new ByteCountingLRUMap(1024 * 1024));
+    final MapCache l1 = MapCache.create(1024 * 1024);
+    final MapCache l2 = MapCache.create(1024 * 1024);
     HybridCache cache = new HybridCache(l1, l2);
 
     final Cache.NamedKey key1 = new Cache.NamedKey("a", HI);
