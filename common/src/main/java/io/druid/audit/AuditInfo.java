@@ -89,4 +89,14 @@ public class AuditInfo
     result = 31 * result + ip.hashCode();
     return result;
   }
+
+  @Override
+  public String toString()
+  {
+    return "AuditInfo{" +
+           "author='" + author + '\'' +
+           ", comment='" + comment + '\'' +
+           ", ip='" + ip + '\'' +
+           '}';
+  }
 }
