@@ -176,7 +176,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
 
                               // Override task specific javaOpts
                               Object taskJavaOpts = task.getContextValue(
-                                  "druid.indexer.runner.javaOpts"
+                                  ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY
                               );
                               if (taskJavaOpts != null) {
                                 Iterables.addAll(
@@ -187,7 +187,9 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
 
                               for (String propName : props.stringPropertyNames()) {
                                 for (String allowedPrefix : config.getAllowedPrefixes()) {
-                                  if (propName.startsWith(allowedPrefix)) {
+                                  // See https://github.com/druid-io/druid/issues/1841
+                                  if (propName.startsWith(allowedPrefix)
+                                      && !ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY.equals(propName)) {
                                     command.add(
                                         String.format(
                                             "-D%s=%s",
