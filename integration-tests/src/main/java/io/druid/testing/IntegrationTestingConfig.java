@@ -35,5 +35,7 @@ public interface IntegrationTestingConfig
 
   public String getZookeeperHosts();
 
+  public String getKafkaHost();
+
   public String getProperty(String prop);
 }

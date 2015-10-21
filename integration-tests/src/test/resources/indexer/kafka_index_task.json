@@ -1,0 +1,77 @@
+{
+  "type" : "index_realtime",
+  "spec" : {
+    "dataSchema": {
+      "dataSource": "kafka_test",
+      "parser" : {
+        "type" : "string",
+        "parseSpec" : {
+          "format" : "json",
+          "timestampSpec" : {
+            "column" : "timestamp",
+            "format" : "auto"
+          },
+          "dimensionsSpec" : {
+            "dimensions": ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"],
+            "dimensionExclusions" : [],
+            "spatialDimensions" : []
+          }
+        }
+      },
+      "metricsSpec": [
+        {
+          "type": "count",
+          "name": "count"
+        },
+        {
+          "type": "doubleSum",
+          "name": "added",
+          "fieldName": "added"
+        },
+        {
+          "type": "doubleSum",
+          "name": "deleted",
+          "fieldName": "deleted"
+        },
+        {
+          "type": "doubleSum",
+          "name": "delta",
+          "fieldName": "delta"
+        }
+      ],
+      "granularitySpec": {
+        "type" : "uniform",
+	"segmentGranularity": "MINUTE",
+        "queryGranularity": "NONE"
+      }
+    },
+    "ioConfig" : {
+      "type" : "realtime",
+      "firehose": {
+        "type": "timed",
+        "shutoffTime": "%%SHUTOFFTIME%%",
+        "delegate": {
+          "type": "kafka-0.8",
+	    "consumerProps": {
+            "zookeeper.connect": "%%ZOOKEEPER_SERVER%%",
+            "zookeeper.connection.timeout.ms" : "15000",
+            "zookeeper.session.timeout.ms" : "15000",
+            "zookeeper.sync.time.ms" : "5000",
+            "group.id": "%%GROUP_ID%%",
+            "fetch.message.max.bytes" : "1048586",
+            "auto.offset.reset": "smallest",
+            "auto.commit.enable": "false"
+          },
+          "feed": "%%TOPIC%%"
+        }
+      }
+    },
+    "tuningConfig": {
+      "type" : "realtime",
+      "maxRowsInMemory": 500000,
+      "intermediatePersistPeriod": "PT3M",
+      "windowPeriod": "PT1M",
+      "basePersistDirectory": "/home/y/var/druid_state/kafka_test/realtime/basePersist"
+    }
+  }
+}
