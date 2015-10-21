@@ -156,7 +156,7 @@ public class HadoopConverterJobTest
         new HadoopIngestionSpec(
             new DataSchema(
                 DATASOURCE,
-                HadoopDruidIndexerConfig.jsonMapper.convertValue(
+                HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
                     new StringInputRowParser(
                         new DelimitedParseSpec(
                             new TimestampSpec("ts", "iso", null),
@@ -177,7 +177,7 @@ public class HadoopConverterJobTest
                     QueryGranularity.DAY,
                     ImmutableList.<Interval>of(interval)
                 ),
-                HadoopDruidIndexerConfig.jsonMapper
+                HadoopDruidIndexerConfig.JSON_MAPPER
             ),
             new HadoopIOConfig(
                 ImmutableMap.<String, Object>of(

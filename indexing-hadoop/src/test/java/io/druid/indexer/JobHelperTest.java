@@ -66,7 +66,7 @@ public class JobHelperTest
         new HadoopIngestionSpec(
             new DataSchema(
                 "website",
-                HadoopDruidIndexerConfig.jsonMapper.convertValue(
+                HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
                     new StringInputRowParser(
                         new CSVParseSpec(
                             new TimestampSpec("timestamp", "yyyyMMddHH", null),
@@ -81,7 +81,7 @@ public class JobHelperTest
                 new UniformGranularitySpec(
                     Granularity.DAY, QueryGranularity.NONE, ImmutableList.of(this.interval)
                 ),
-                HadoopDruidIndexerConfig.jsonMapper
+                HadoopDruidIndexerConfig.JSON_MAPPER
             ),
             new HadoopIOConfig(
                 ImmutableMap.<String, Object>of(

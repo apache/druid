@@ -42,7 +42,7 @@ public class MetadataStorageUpdaterJob implements Jobby
   {
     final List<DataSegment> segments = IndexGeneratorJob.getPublishedSegments(config);
     final String segmentTable = config.getSchema().getIOConfig().getMetadataUpdateSpec().getSegmentTable();
-    handler.publishSegments(segmentTable, segments, HadoopDruidIndexerConfig.jsonMapper);
+    handler.publishSegments(segmentTable, segments, HadoopDruidIndexerConfig.JSON_MAPPER);
 
     return true;
   }

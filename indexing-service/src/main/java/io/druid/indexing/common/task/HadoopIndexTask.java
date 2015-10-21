@@ -234,7 +234,7 @@ public class HadoopIndexTask extends HadoopTask
       final String schema = args[0];
       String version = args[1];
 
-      final HadoopIngestionSpec theSchema = HadoopDruidIndexerConfig.jsonMapper
+      final HadoopIngestionSpec theSchema = HadoopDruidIndexerConfig.JSON_MAPPER
           .readValue(
               schema,
               HadoopIngestionSpec.class
@@ -257,7 +257,7 @@ public class HadoopIndexTask extends HadoopTask
 
       log.info("Starting a hadoop index generator job...");
       if (job.run()) {
-        return HadoopDruidIndexerConfig.jsonMapper.writeValueAsString(job.getPublishedSegments());
+        return HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsString(job.getPublishedSegments());
       }
 
       return null;
@@ -272,7 +272,7 @@ public class HadoopIndexTask extends HadoopTask
       final String workingPath = args[1];
       final String segmentOutputPath = args[2];
 
-      final HadoopIngestionSpec theSchema = HadoopDruidIndexerConfig.jsonMapper
+      final HadoopIngestionSpec theSchema = HadoopDruidIndexerConfig.JSON_MAPPER
           .readValue(
               schema,
               HadoopIngestionSpec.class
@@ -287,7 +287,7 @@ public class HadoopIndexTask extends HadoopTask
 
       log.info("Starting a hadoop determine configuration job...");
       if (job.run()) {
-        return HadoopDruidIndexerConfig.jsonMapper.writeValueAsString(config.getSchema());
+        return HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsString(config.getSchema());
       }
 
       return null;

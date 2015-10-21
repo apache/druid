@@ -82,10 +82,10 @@ public class HadoopDruidIndexerConfig
   private static final Injector injector;
 
   public static final String CONFIG_PROPERTY = "druid.indexer.config";
-  public static final Charset javaNativeCharset = Charset.forName("Unicode");
-  public static final Splitter tabSplitter = Splitter.on("\t");
-  public static final Joiner tabJoiner = Joiner.on("\t");
-  public static final ObjectMapper jsonMapper;
+  public static final Charset JAVA_NATIVE_CHARSET = Charset.forName("Unicode");
+  public static final Splitter TAB_SPLITTER = Splitter.on("\t");
+  public static final Joiner TAB_JOINER = Joiner.on("\t");
+  public static final ObjectMapper JSON_MAPPER;
   public static final IndexIO INDEX_IO;
   public static final IndexMerger INDEX_MERGER;
   public static final IndexMaker INDEX_MAKER;
@@ -109,8 +109,7 @@ public class HadoopDruidIndexerConfig
             new IndexingHadoopModule()
         )
     );
-
-    jsonMapper = injector.getInstance(ObjectMapper.class);
+    JSON_MAPPER = injector.getInstance(ObjectMapper.class);
     INDEX_IO = injector.getInstance(IndexIO.class);
     INDEX_MERGER = injector.getInstance(IndexMerger.class);
     INDEX_MAKER = injector.getInstance(IndexMaker.class);
@@ -132,13 +131,13 @@ public class HadoopDruidIndexerConfig
     // the Map<> intermediary
 
     if (argSpec.containsKey("spec")) {
-      return HadoopDruidIndexerConfig.jsonMapper.convertValue(
+      return HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
           argSpec,
           HadoopDruidIndexerConfig.class
       );
     }
     return new HadoopDruidIndexerConfig(
-        HadoopDruidIndexerConfig.jsonMapper.convertValue(
+        HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
             argSpec,
             HadoopIngestionSpec.class
         )
@@ -150,7 +149,7 @@ public class HadoopDruidIndexerConfig
   {
     try {
       return fromMap(
-          (Map<String, Object>) HadoopDruidIndexerConfig.jsonMapper.readValue(
+          (Map<String, Object>) HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
               file, new TypeReference<Map<String, Object>>()
               {
               }
@@ -168,7 +167,7 @@ public class HadoopDruidIndexerConfig
     // This is a map to try and prevent dependency screwbally-ness
     try {
       return fromMap(
-          (Map<String, Object>) HadoopDruidIndexerConfig.jsonMapper.readValue(
+          (Map<String, Object>) HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
               str, new TypeReference<Map<String, Object>>()
               {
               }
@@ -190,12 +189,12 @@ public class HadoopDruidIndexerConfig
       Reader reader = new InputStreamReader(fs.open(pt));
 
       return fromMap(
-        (Map<String, Object>) HadoopDruidIndexerConfig.jsonMapper.readValue(
-            reader, new TypeReference<Map<String, Object>>()
-            {
-            }
-            )
-        );
+          (Map<String, Object>) HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
+              reader, new TypeReference<Map<String, Object>>()
+              {
+              }
+          )
+      );
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
@@ -221,7 +220,7 @@ public class HadoopDruidIndexerConfig
   )
   {
     this.schema = spec;
-    this.pathSpec = jsonMapper.convertValue(spec.getIOConfig().getPathSpec(), PathSpec.class);
+    this.pathSpec = JSON_MAPPER.convertValue(spec.getIOConfig().getPathSpec(), PathSpec.class);
     for (Map.Entry<DateTime, List<HadoopyShardSpec>> entry : spec.getTuningConfig().getShardSpecs().entrySet()) {
       if (entry.getValue() == null || entry.getValue().isEmpty()) {
         continue;
@@ -273,7 +272,7 @@ public class HadoopDruidIndexerConfig
   public void setGranularitySpec(GranularitySpec granularitySpec)
   {
     this.schema = schema.withDataSchema(schema.getDataSchema().withGranularitySpec(granularitySpec));
-    this.pathSpec = jsonMapper.convertValue(schema.getIOConfig().getPathSpec(), PathSpec.class);
+    this.pathSpec = JSON_MAPPER.convertValue(schema.getIOConfig().getPathSpec(), PathSpec.class);
   }
 
   public PartitionsSpec getPartitionsSpec()
@@ -299,13 +298,13 @@ public class HadoopDruidIndexerConfig
   public void setVersion(String version)
   {
     this.schema = schema.withTuningConfig(schema.getTuningConfig().withVersion(version));
-    this.pathSpec = jsonMapper.convertValue(schema.getIOConfig().getPathSpec(), PathSpec.class);
+    this.pathSpec = JSON_MAPPER.convertValue(schema.getIOConfig().getPathSpec(), PathSpec.class);
   }
 
   public void setShardSpecs(Map<DateTime, List<HadoopyShardSpec>> shardSpecs)
   {
     this.schema = schema.withTuningConfig(schema.getTuningConfig().withShardSpecs(shardSpecs));
-    this.pathSpec = jsonMapper.convertValue(schema.getIOConfig().getPathSpec(), PathSpec.class);
+    this.pathSpec = JSON_MAPPER.convertValue(schema.getIOConfig().getPathSpec(), PathSpec.class);
   }
 
   public Optional<List<Interval>> getIntervals()
@@ -541,7 +540,7 @@ public class HadoopDruidIndexerConfig
     Configuration conf = job.getConfiguration();
 
     try {
-      conf.set(HadoopDruidIndexerConfig.CONFIG_PROPERTY, HadoopDruidIndexerConfig.jsonMapper.writeValueAsString(this));
+      conf.set(HadoopDruidIndexerConfig.CONFIG_PROPERTY, HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsString(this));
     }
     catch (IOException e) {
       throw Throwables.propagate(e);
@@ -551,7 +550,7 @@ public class HadoopDruidIndexerConfig
   public void verify()
   {
     try {
-      log.info("Running with config:%n%s", jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(this));
+      log.info("Running with config:%n%s", JSON_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(this));
     }
     catch (IOException e) {
       throw Throwables.propagate(e);

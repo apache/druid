@@ -65,7 +65,7 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
           for (int i = 0; i < shardsPerInterval; i++) {
             specs.add(
                 new HadoopyShardSpec(
-                    new HashBasedNumberedShardSpec(i, shardsPerInterval, HadoopDruidIndexerConfig.jsonMapper),
+                    new HashBasedNumberedShardSpec(i, shardsPerInterval, HadoopDruidIndexerConfig.JSON_MAPPER),
                     shardCount++
                 )
             );

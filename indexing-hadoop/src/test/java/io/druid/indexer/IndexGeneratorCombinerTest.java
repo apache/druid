@@ -63,7 +63,7 @@ public class IndexGeneratorCombinerTest
         new HadoopIngestionSpec(
             new DataSchema(
                 "website",
-                HadoopDruidIndexerConfig.jsonMapper.convertValue(
+                HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
                     new StringInputRowParser(
                         new CSVParseSpec(
                             new TimestampSpec("timestamp", "yyyyMMddHH", null),
@@ -81,7 +81,7 @@ public class IndexGeneratorCombinerTest
                 new UniformGranularitySpec(
                     Granularity.DAY, QueryGranularity.NONE, ImmutableList.of(Interval.parse("2010/2011"))
                 ),
-                HadoopDruidIndexerConfig.jsonMapper
+                HadoopDruidIndexerConfig.JSON_MAPPER
             ),
             new HadoopIOConfig(
                 ImmutableMap.<String, Object>of(
@@ -99,7 +99,7 @@ public class IndexGeneratorCombinerTest
     Configuration hadoopConfig = new Configuration();
     hadoopConfig.set(
         HadoopDruidIndexerConfig.CONFIG_PROPERTY,
-        HadoopDruidIndexerConfig.jsonMapper.writeValueAsString(config)
+        HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsString(config)
     );
 
     Reducer.Context context = EasyMock.createMock(Reducer.Context.class);

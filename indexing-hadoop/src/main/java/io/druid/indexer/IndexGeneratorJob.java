@@ -82,7 +82,7 @@ public class IndexGeneratorJob implements Jobby
   public static List<DataSegment> getPublishedSegments(HadoopDruidIndexerConfig config)
   {
     final Configuration conf = JobHelper.injectSystemProperties(new Configuration());
-    final ObjectMapper jsonMapper = HadoopDruidIndexerConfig.jsonMapper;
+    final ObjectMapper jsonMapper = HadoopDruidIndexerConfig.JSON_MAPPER;
 
     ImmutableList.Builder<DataSegment> publishedSegmentsBuilder = ImmutableList.builder();
 
@@ -262,7 +262,7 @@ public class IndexGeneratorJob implements Jobby
 
       final long truncatedTimestamp = granularitySpec.getQueryGranularity().truncate(inputRow.getTimestampFromEpoch());
       final byte[] hashedDimensions = hashFunction.hashBytes(
-          HadoopDruidIndexerConfig.jsonMapper.writeValueAsBytes(
+          HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsBytes(
               Rows.toGroupKey(
                   truncatedTimestamp,
                   inputRow

@@ -37,7 +37,7 @@ public class HadoopyStringInputRowParserTest
                      + "\"parseSpec\":{\"format\":\"json\",\"timestampSpec\":{\"column\":\"xXx\"},\"dimensionsSpec\":{}}"
                      + "}";
 
-    ObjectMapper jsonMapper = HadoopDruidIndexerConfig.jsonMapper;
+    ObjectMapper jsonMapper = HadoopDruidIndexerConfig.JSON_MAPPER;
     InputRowParser parser = jsonMapper.readValue(
         jsonMapper.writeValueAsString(
             jsonMapper.readValue(jsonStr, InputRowParser.class)

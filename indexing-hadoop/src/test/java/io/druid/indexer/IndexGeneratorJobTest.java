@@ -339,7 +339,7 @@ public class IndexGeneratorJobTest
   @Before
   public void setUp() throws Exception
   {
-    mapper = HadoopDruidIndexerConfig.jsonMapper;
+    mapper = HadoopDruidIndexerConfig.JSON_MAPPER;
     mapper.registerSubtypes(new NamedType(HashBasedNumberedShardSpec.class, "hashed"));
     mapper.registerSubtypes(new NamedType(SingleDimensionShardSpec.class, "single"));
 
@@ -412,7 +412,7 @@ public class IndexGeneratorJobTest
     List<ShardSpec> specs = Lists.newArrayList();
     if (partitionType.equals("hashed")) {
       for (Integer[] shardInfo : (Integer[][]) shardInfoForEachShard) {
-        specs.add(new HashBasedNumberedShardSpec(shardInfo[0], shardInfo[1], HadoopDruidIndexerConfig.jsonMapper));
+        specs.add(new HashBasedNumberedShardSpec(shardInfo[0], shardInfo[1], HadoopDruidIndexerConfig.JSON_MAPPER));
       }
     } else if (partitionType.equals("single")) {
       int partitionNum = 0;

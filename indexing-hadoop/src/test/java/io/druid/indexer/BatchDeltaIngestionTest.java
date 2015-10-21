@@ -394,7 +394,7 @@ public class BatchDeltaIngestionTest
             INTERVAL_FULL.getStart(),
             ImmutableList.of(
                 new HadoopyShardSpec(
-                    new HashBasedNumberedShardSpec(0, 1, HadoopDruidIndexerConfig.jsonMapper),
+                    new HashBasedNumberedShardSpec(0, 1, HadoopDruidIndexerConfig.JSON_MAPPER),
                     0
                 )
             )

@@ -66,7 +66,7 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
   @Override
   public void initialize(InputSplit split, final TaskAttemptContext context) throws IOException, InterruptedException
   {
-    spec = readAndVerifyDatasourceIngestionSpec(context.getConfiguration(), HadoopDruidIndexerConfig.jsonMapper);
+    spec = readAndVerifyDatasourceIngestionSpec(context.getConfiguration(), HadoopDruidIndexerConfig.JSON_MAPPER);
 
     List<WindowedDataSegment> segments = ((DatasourceInputSplit) split).getSegments();
 
