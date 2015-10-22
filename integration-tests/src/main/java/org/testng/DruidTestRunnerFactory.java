@@ -90,7 +90,11 @@ public class DruidTestRunnerFactory implements ITestRunnerFactory
       ;
       waitUntilInstanceReady(client, config.getCoordinatorHost());
       waitUntilInstanceReady(client, config.getIndexerHost());
-      waitUntilInstanceReady(client, config.getRouterHost());
+      waitUntilInstanceReady(client, config.getBrokerHost());
+      String routerHost = config.getRouterHost();
+      if (null != routerHost) {
+	  waitUntilInstanceReady(client, config.getRouterHost());
+      }
       Lifecycle lifecycle = injector.getInstance(Lifecycle.class);
       try {
         lifecycle.start();

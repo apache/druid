@@ -77,6 +77,12 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       }
 
       @Override
+      public String getKafkaHost()
+      {
+        return dockerIp + ":9092";
+      }
+
+      @Override
       public String getProperty(String prop)
       {
         throw new UnsupportedOperationException("DockerConfigProvider does not support getProperty()");

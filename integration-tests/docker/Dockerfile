@@ -22,6 +22,13 @@ RUN wget -q -O - http://www.us.apache.org/dist/zookeeper/zookeeper-3.4.6/zookeep
 RUN cp /usr/local/zookeeper-3.4.6/conf/zoo_sample.cfg /usr/local/zookeeper-3.4.6/conf/zoo.cfg
 RUN ln -s /usr/local/zookeeper-3.4.6 /usr/local/zookeeper
 
+# Kafka
+RUN wget -q -O - http://www.us.apache.org/dist/kafka/0.8.2.0/kafka_2.10-0.8.2.0.tgz | tar -xzf - -C /usr/local
+RUN ln -s /usr/local/kafka_2.10-0.8.2.0 /usr/local/kafka
+# unless advertised.host.name is set to docker ip, publishing data fails
+ADD docker_ip docker_ip
+RUN perl -pi -e "s/#advertised.port=.*/advertised.port=9092/; s/#advertised.host.*/advertised.host.name=$(cat docker_ip)/" /usr/local/kafka/config/server.properties
+
 # git
 RUN apt-get install -y git
 
