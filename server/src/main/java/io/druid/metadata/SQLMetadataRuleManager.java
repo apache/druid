@@ -18,6 +18,7 @@
 
 package io.druid.metadata;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
@@ -334,6 +335,15 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
 
   public boolean overrideRule(final String dataSource, final List<Rule> newRules, final AuditInfo auditInfo)
   {
+    final String ruleString;
+    try {
+      ruleString = jsonMapper.writeValueAsString(newRules);
+      log.info("Updating [%s] with rules [%s] as per [%s]", dataSource, ruleString, auditInfo);
+    }
+    catch (JsonProcessingException e) {
+      log.error(e, "Unable to write rules as string for [%s]", dataSource);
+      return false;
+    }
     synchronized (lock) {
       try {
         dbi.inTransaction(
@@ -348,7 +358,7 @@ public class SQLMetadataRuleManager implements MetadataRuleManager
                               .key(dataSource)
                               .type("rules")
                               .auditInfo(auditInfo)
-                              .payload(jsonMapper.writeValueAsString(newRules))
+                              .payload(ruleString)
                               .auditTime(auditTime)
                               .build(),
                     handle
