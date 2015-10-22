@@ -425,6 +425,8 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
 
       ConcurrentHashMap<String, DruidDataSource> newDataSources = new ConcurrentHashMap<String, DruidDataSource>();
 
+      log.debug("Starting polling of segment table");
+
       List<DataSegment> segments = dbi.withHandle(
           new HandleCallback<List<DataSegment>>()
           {
