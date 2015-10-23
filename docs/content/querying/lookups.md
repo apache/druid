@@ -16,7 +16,7 @@ Very small lookups (count of keys on the order of a few dozen to a few hundred) 
 Namespaced lookups are appropriate for lookups which are not possible to pass at query time due to their size, or are not desired to be passed at query time because the data is to reside in and be handled by the Druid servers. Namespaced lookups can be specified as part of the runtime properties file. The property is a list of the namespaces described as per the sections on this page.
 
  ```json
- druid.query.extraction.namespaceList=\
+ druid.query.extraction.namespace.lookups=\
    [{ "type":"uri", "namespace":"some_uri_lookup","uri": "file:/tmp/prefix/",\
    "namespaceParseSpec":\
      {"format":"csv","columns":["key","value"]},\
@@ -27,7 +27,7 @@ Namespaced lookups are appropriate for lookups which are not possible to pass at
  ```
 
 Proper funcitonality of Namespaced lookups requires the following extension to be loaded on the broker, peon, and historical nodes:
-`io.druid.extensions:namespace-lookup`
+`io.druid.extensions:druid-namespace-lookup`
 
 ## Cache Settings
 The following are settings used by the nodes which service queries when setting namespaces (broker, peon, historical)
