@@ -40,6 +40,10 @@ public class CacheConfig
   private int numBackgroundThreads = 0;
 
   @JsonProperty
+  @Min(0)
+  private int cacheBulkMergeLimit = Integer.MAX_VALUE;
+
+  @JsonProperty
   private List<String> unCacheable = Arrays.asList(Query.GROUP_BY, Query.SELECT);
 
   public boolean isPopulateCache()
@@ -54,6 +58,11 @@ public class CacheConfig
 
   public int getNumBackgroundThreads(){
     return numBackgroundThreads;
+  }
+
+  public int getCacheBulkMergeLimit()
+  {
+    return cacheBulkMergeLimit;
   }
 
   public boolean isQueryCacheable(Query query)
