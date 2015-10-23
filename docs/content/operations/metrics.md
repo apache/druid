@@ -89,10 +89,15 @@ Memcached client metrics are reported as per the following. These metrics come d
 |`ingest/events/processed`|Number of events successfully processed.|dataSource.|Equal to your # of events.|
 |`ingest/rows/output`|Number of Druid rows persisted.|dataSource.|Your # of events with rollup.|
 |`ingest/persists/count`|Number of times persist occurred.|dataSource.|Depends on configuration.|
-|`ingest/persists/time`|Milliseconds spent doing intermediate persist.|dataSource.|Depends on configuration.|Generally a few minutes at most.|
+|`ingest/persists/time`|Milliseconds spent doing intermediate persist.|dataSource.|Depends on configuration. Generally a few minutes at most.|
+|`ingest/persists/cpu`|Cpu time in Nanoseconds spent on doing intermediate persist.|dataSource.|Depends on configuration. Generally a few minutes at most.|
 |`ingest/persists/backPressure`|Number of persists pending.|dataSource.|0|
 |`ingest/persists/failed`|Number of persists that failed.|dataSource.|0|
 |`ingest/handoff/failed`|Number of handoffs that failed.|dataSource.|0|
+|`ingest/merge/time`|Milliseconds spent merging intermediate segments|dataSource.|Depends on configuration. Generally a few minutes at most.|
+|`ingest/merge/cpu`|Cpu time in Nanoseconds spent on merging intermediate segments.|dataSource.|Depends on configuration. Generally a few minutes at most.|
+
+Note: If the JVM does not support CPU time measurement for the current thread, ingest/merge/cpu and ingest/persists/cpu will be 0. 
 
 ### Indexing Service
 
