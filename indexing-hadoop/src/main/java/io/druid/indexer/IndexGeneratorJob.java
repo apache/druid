@@ -190,7 +190,11 @@ public class IndexGeneratorJob implements Jobby
 
       config.intoConfiguration(job);
 
-      JobHelper.setupClasspath(JobHelper.distributedClassPath(config.getWorkingPath()), job);
+      JobHelper.setupClasspath(
+          JobHelper.distributedClassPath(config.getWorkingPath()),
+          JobHelper.distributedClassPath(config.makeIntermediatePath()),
+          job
+      );
 
       job.submit();
       log.info("Job %s submitted, status available at %s", job.getJobName(), job.getTrackingURL());
