@@ -34,6 +34,9 @@ public class FireDepartmentMetrics
   private final AtomicLong persistBackPressureMillis = new AtomicLong(0);
   private final AtomicLong failedPersists = new AtomicLong(0);
   private final AtomicLong failedHandoffs = new AtomicLong(0);
+  private final AtomicLong mergeTimeMillis = new AtomicLong(0);
+  private final AtomicLong mergeCpuTime = new AtomicLong(0);
+  private final AtomicLong persistCpuTime = new AtomicLong(0);
 
   public void incrementProcessed()
   {
@@ -71,14 +74,27 @@ public class FireDepartmentMetrics
   }
 
   public void incrementFailedPersists()
-    {
-      failedPersists.incrementAndGet();
-    }
+  {
+    failedPersists.incrementAndGet();
+  }
 
   public void incrementFailedHandoffs()
-    {
-      failedHandoffs.incrementAndGet();
-    }
+  {
+    failedHandoffs.incrementAndGet();
+  }
+
+  public void incrementMergeTimeMillis(long millis)
+  {
+    mergeTimeMillis.addAndGet(millis);
+  }
+
+  public void incrementMergeCpuTime(long mergeTime){
+    mergeCpuTime.addAndGet(mergeTime);
+  }
+
+  public void incrementPersistCpuTime(long persistTime){
+    persistCpuTime.addAndGet(persistTime);
+  }
 
   public long processed()
   {
@@ -125,6 +141,22 @@ public class FireDepartmentMetrics
     return failedHandoffs.get();
   }
 
+  public long mergeTimeMillis()
+  {
+    return mergeTimeMillis.get();
+  }
+
+  public long mergeCpuTime()
+  {
+    return mergeCpuTime.get();
+  }
+
+  public long persistCpuTime()
+  {
+    return persistCpuTime.get();
+  }
+
+
   public FireDepartmentMetrics snapshot()
   {
     final FireDepartmentMetrics retVal = new FireDepartmentMetrics();
@@ -137,6 +169,9 @@ public class FireDepartmentMetrics
     retVal.persistBackPressureMillis.set(persistBackPressureMillis.get());
     retVal.failedPersists.set(failedPersists.get());
     retVal.failedHandoffs.set(failedHandoffs.get());
+    retVal.mergeTimeMillis.set(mergeTimeMillis.get());
+    retVal.mergeCpuTime.set(mergeCpuTime.get());
+    retVal.persistCpuTime.set(persistCpuTime.get());
     return retVal;
   }
 
@@ -158,6 +193,10 @@ public class FireDepartmentMetrics
     persistBackPressureMillis.addAndGet(otherSnapshot.persistBackPressureMillis());
     failedPersists.addAndGet(otherSnapshot.failedPersists());
     failedHandoffs.addAndGet(otherSnapshot.failedHandoffs());
+    mergeTimeMillis.addAndGet(otherSnapshot.mergeTimeMillis());
+    mergeCpuTime.addAndGet(otherSnapshot.mergeCpuTime());
+    persistCpuTime.addAndGet(otherSnapshot.persistCpuTime());
     return this;
   }
+
 }

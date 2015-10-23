@@ -17,10 +17,43 @@
 
 package io.druid.common.utils;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadMXBean;
 import java.lang.reflect.InvocationTargetException;
 
 public class VMUtils
 {
+  private static final ThreadMXBean THREAD_MX_BEAN = ManagementFactory.getThreadMXBean();
+
+  public static boolean isThreadCpuTimeEnabled()
+  {
+    return THREAD_MX_BEAN.isThreadCpuTimeSupported() && THREAD_MX_BEAN.isThreadCpuTimeEnabled();
+  }
+
+  public static long safeGetThreadCpuTime()
+  {
+    if (!isThreadCpuTimeEnabled()) {
+      return 0L;
+    } else {
+      return getCurrentThreadCpuTime();
+    }
+  }
+
+  /**
+   * Returns the total CPU time for current thread.
+   * This method should be called after verifying that cpu time measurement for current thread is supported by JVM
+   *
+   * @return total CPU time for the current thread in nanoseconds.
+   *
+   * @throws java.lang.UnsupportedOperationException if the Java
+   *                                                 virtual machine does not support CPU time measurement for
+   *                                                 the current thread.
+   */
+  public static long getCurrentThreadCpuTime()
+  {
+    return THREAD_MX_BEAN.getCurrentThreadCpuTime();
+  }
+
   public static long getMaxDirectMemory() throws UnsupportedOperationException
   {
     try {
@@ -28,7 +61,12 @@ public class VMUtils
       Object maxDirectMemoryObj = vmClass.getMethod("maxDirectMemory").invoke(null);
 
       if (maxDirectMemoryObj == null || !(maxDirectMemoryObj instanceof Number)) {
-        throw new UnsupportedOperationException(String.format("Cannot determine maxDirectMemory from [%s]", maxDirectMemoryObj));
+        throw new UnsupportedOperationException(
+            String.format(
+                "Cannot determine maxDirectMemory from [%s]",
+                maxDirectMemoryObj
+            )
+        );
       } else {
         return ((Number) maxDirectMemoryObj).longValue();
       }
