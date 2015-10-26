@@ -115,7 +115,7 @@ public class OverlordResourceTestClient
   public TaskStatus.Status getTaskStatus(String taskID)
   {
     try {
-      StatusResponseHolder response = makeRequest(
+      StatusResponseHolder response = makeRequest( HttpMethod.GET,
           String.format(
               "%stask/%s/status",
               getIndexerURL(),
@@ -156,12 +156,32 @@ public class OverlordResourceTestClient
   private List<TaskResponseObject> getTasks(String identifier)
   {
     try {
-      StatusResponseHolder response = makeRequest(
+      StatusResponseHolder response = makeRequest( HttpMethod.GET,
           String.format("%s%s", getIndexerURL(), identifier)
       );
       LOG.info("Tasks %s response %s", identifier, response.getContent());
       return jsonMapper.readValue(
           response.getContent(), new TypeReference<List<TaskResponseObject>>()
+          {
+          }
+      );
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  public Map<String, String> shutDownTask(String taskID)
+  {
+    try {
+      StatusResponseHolder response = makeRequest( HttpMethod.POST,
+         String.format("%stask/%s/shutdown", getIndexerURL(),
+		       URLEncoder.encode(taskID, "UTF-8")
+         )
+      );
+      LOG.info("Shutdown Task %s response %s", taskID, response.getContent());
+      return jsonMapper.readValue(
+          response.getContent(), new TypeReference<Map<String, String>>()
           {
           }
       );
@@ -193,11 +213,11 @@ public class OverlordResourceTestClient
     );
   }
 
-  private StatusResponseHolder makeRequest(String url)
+  private StatusResponseHolder makeRequest(HttpMethod method, String url)
   {
     try {
       StatusResponseHolder response = this.httpClient
-          .go(new Request(HttpMethod.GET, new URL(url)), responseHandler).get();
+          .go(new Request(method, new URL(url)), responseHandler).get();
       if (!response.getStatus().equals(HttpResponseStatus.OK)) {
         throw new ISE("Error while making request to indexer [%s %s]", response.getStatus(), response.getContent());
       }

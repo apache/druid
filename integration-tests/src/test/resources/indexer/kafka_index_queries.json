@@ -1,0 +1,40 @@
+[
+  {
+   "description": "timeBoundary",
+   "query": {
+      "queryType":"timeBoundary",
+      "dataSource":"kafka_test"
+   },
+   "expectedResults":[
+      {
+         "timestamp":"%%TIMEBOUNDARY_RESPONSE_TIMESTAMP%%",
+         "result": {
+             "maxTime" : "%%TIMEBOUNDARY_RESPONSE_MAXTIME%%",
+             "minTime":"%%TIMEBOUNDARY_RESPONSE_MINTIME%%"
+          }
+       }
+     ]
+   },
+   {
+   "description": "timeseries",
+   "query": {
+      "queryType": "timeseries",
+      "dataSource": "kafka_test",
+      "intervals": [ "%%TIMESERIES_QUERY_START%%/%%TIMESERIES_QUERY_END%%" ],
+      "granularity": "all",
+      "aggregations": [
+        {"type": "longSum", "fieldName": "count", "name": "edit_count"},
+        {"type": "longSum", "fieldName": "added", "name": "chars_added"}
+       ]
+   },
+   "expectedResults": [
+      {
+         "timestamp" : "%%TIMESERIES_RESPONSE_TIMESTAMP%%",
+         "result" : {
+             "chars_added" : %%TIMESERIES_ADDED%%,
+             "edit_count" : %%TIMESERIES_NUMEVENTS%%
+         }
+       }
+     ]
+   }
+]
