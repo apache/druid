@@ -30,6 +30,8 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.ManageLifecycle;
 import io.druid.testing.IntegrationTestingConfig;
 import io.druid.testing.IntegrationTestingConfigProvider;
+import io.druid.curator.CuratorConfig;
+import io.druid.testing.IntegrationTestingCuratorConfig;
 
 /**
  */
@@ -40,6 +42,8 @@ public class DruidTestModule implements Module
   {
     binder.bind(IntegrationTestingConfig.class).toProvider(IntegrationTestingConfigProvider.class).in(ManageLifecycle.class);
     JsonConfigProvider.bind(binder, "druid.test.config", IntegrationTestingConfigProvider.class);
+
+    binder.bind(CuratorConfig.class).to(IntegrationTestingCuratorConfig.class);
   }
 
   @Provides

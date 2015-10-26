@@ -42,6 +42,7 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
   private String indexerHost = "";
   private String middleManagerHost = "";
   private String zookeeperHosts = "";        // comma-separated list of host:port
+  private String kafkaHost = "";
   private Map<String, String> props = null;
 
   @JsonCreator
@@ -62,20 +63,26 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
     catch (IOException ex) {
       throw new RuntimeException(ex);
     }
-    routerHost = props.get("router_host") + ":" + props.get("router_port");
+    // there might not be a router; we want routerHost to be null in that case
+    routerHost = props.get("router_host");
+    if (null != routerHost) {
+	routerHost += ":" + props.get("router_port");
+    }
     brokerHost = props.get("broker_host") + ":" + props.get("broker_port");
     historicalHost = props.get("historical_host") + ":" + props.get("historical_port");
     coordinatorHost = props.get("coordinator_host") + ":" + props.get("coordinator_port");
     indexerHost = props.get("indexer_host") + ":" + props.get("indexer_port");
     middleManagerHost = props.get("middlemanager_host");
     zookeeperHosts = props.get("zookeeper_hosts");
+    kafkaHost = props.get("kafka_host") + ":" + props.get ("kafka_port");
 
     LOG.info ("router: [%s]", routerHost);
-    LOG.info ("broker [%s]: ", brokerHost);
+    LOG.info ("broker: [%s]", brokerHost);
     LOG.info ("coordinator: [%s]", coordinatorHost);
     LOG.info ("overlord: [%s]", indexerHost);
     LOG.info ("middle manager: [%s]", middleManagerHost);
     LOG.info ("zookeepers: [%s]", zookeeperHosts);
+    LOG.info ("kafka: [%s]", kafkaHost);
   }
 
   @Override
@@ -123,6 +130,12 @@ public class ConfigFileConfigProvider implements IntegrationTestingConfigProvide
       public String getZookeeperHosts()
       {
         return zookeeperHosts;
+      }
+
+      @Override
+      public String getKafkaHost()
+      {
+        return kafkaHost;
       }
 
       @Override
