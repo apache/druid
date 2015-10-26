@@ -15,8 +15,13 @@ The following metadata storage engines are supported:
 * MySQL (io.druid.extensions:mysql-metadata-storage)
 * PostgreSQL (io.druid.extensions:postgresql-metadata-storage)
 
-To choose a metadata storage, set the `druid.extensions` configuration to
-include the extension for the metadata storage you plan to use.
+To choose a metadata storage,
+
+1. Make sure Druid can pick up the extension files from either classpath or
+extensions directory, see [Including Extensions](../operations/including-extensions.html) for more information.
+
+2. set the `druid.extensions` configuration to include the extension for the
+metadata storage you plan to use. See below.
 
 
 ## Setting up MySQL
@@ -55,12 +60,17 @@ include the extension for the metadata storage you plan to use.
   with the hostname of the database.
 
   ```properties
-  druid.extensions.coordinates=[\"io.druid.extensions:mysql-metadata-storage"]
+  druid.extensions.loadList=["mysql-metadata-storage"]
   druid.metadata.storage.type=mysql
   druid.metadata.storage.connector.connectURI=jdbc:mysql://<host>/druid_test
   druid.metadata.storage.connector.user=druid
   druid.metadata.storage.connector.password=diurd
   ```
+
+  Note: metadata storage extension is not packaged within the main Druid tarball, it is
+  packaged in a separate tarball that can be downloaded from [here](http://druid.io/downloads.html).
+  However, you can always get it using [pull-deps](../pull-deps.html), or you can even build
+  it from source code, see [Build from Source](../development/build.html)
 
 ## Setting up PostgreSQL
 
@@ -97,7 +107,7 @@ include the extension for the metadata storage you plan to use.
   with the hostname of the database.
 
   ```properties
-  druid.extensions.coordinates=[\"io.druid.extensions:postgresql-metadata-storage"]
+  druid.extensions.loadList=["postgresql-metadata-storage"]
   druid.metadata.storage.type=postgresql
   druid.metadata.storage.connector.connectURI=jdbc:postgresql://<host>/druid_test
   druid.metadata.storage.connector.user=druid

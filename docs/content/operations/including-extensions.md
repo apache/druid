@@ -13,22 +13,58 @@ Druid extensions can be specified in the `common.runtime.properties`. There are 
 
 If you add your extension jar to the classpath at runtime, Druid will load it into the system.  This mechanism is relatively easy to reason about, but it also means that you have to ensure that all dependency jars on the classpath are compatible.  That is, Druid makes no provisions while using this method to maintain class loader isolation so you must make sure that the jars on your classpath are mutually compatible.
 
-### Specify maven coordinates
+### Add to the extension directory
 
-Druid has the ability to automatically load extension jars from maven at runtime.  With this mechanism, Druid also loads up the dependencies of the extension jar into an isolated class loader.  That means that your extension can depend on a different version of a library that Druid also uses and both can co-exist.
+If you don't want to fiddle with classpath, you can create an extension directory and tell Druid to load extensions from there.
 
-### I want classloader isolation, but I don't want my production machines downloading their own dependencies.  What should I do?
+To let Druid load your extensions, follow the steps below
 
-If you want to take advantage of the maven-based classloader isolation but you are also rightly frightened by the prospect of each of your production machines downloading their own dependencies on deploy, this section is for you.
+1) Specify `druid.extensions.directory` (root directory for normal Druid extensions). If you don' specify it, Druid will use their default value, see [Configuration](../configuration/index.html).
 
-The trick to doing this is
+2) Prepare normal extension directories under root extension directory.  Under the root extension directory, you should create sub-directories for each extension you might want to load.  Inside each sub-directory, you can put extension related files in it.  (If you don't want to manually setup the extension directory, Druid also provides a [pull-deps](../pull-deps.html) tool that can help you genereate these directories automatically)
 
-1) Specify a local directory for `druid.extensions.localRepository`
+Example:
 
-2) Run the `tools pull-deps` command to pull all the specified dependencies down into your local repository
+Suppose you specify `druid.extensions.directory=/usr/local/druid/druid_extensions`, and want Druid to load normal extensions ```druid-examples```, ```druid-kafka-eight``` and ```mysql-metadata-storage```.
 
-3) Bundle up the local repository along with your other Druid stuff into whatever you use for a deployable artifact
+Then under ```druid_extensions```, it should look like this,
 
-4) Run Your druid processes with `druid.extensions.remoteRepositories=[]` and a local repository set to wherever your bundled "local" repository is located
+```
+druid_extensions/
+├── druid-examples
+│   ├── commons-beanutils-1.8.3.jar
+│   ├── commons-digester-1.8.jar
+│   ├── commons-logging-1.1.1.jar
+│   ├── commons-validator-1.4.0.jar
+│   ├── druid-examples-0.8.0-rc1.jar
+│   ├── twitter4j-async-3.0.3.jar
+│   ├── twitter4j-core-3.0.3.jar
+│   └── twitter4j-stream-3.0.3.jar
+├── druid-kafka-eight
+│   ├── druid-kafka-eight-0.7.3.jar
+│   ├── jline-0.9.94.jar
+│   ├── jopt-simple-3.2.jar
+│   ├── kafka-clients-0.8.2.1.jar
+│   ├── kafka_2.10-0.8.2.1.jar
+│   ├── log4j-1.2.16.jar
+│   ├── lz4-1.3.0.jar
+│   ├── metrics-core-2.2.0.jar
+│   ├── netty-3.7.0.Final.jar
+│   ├── scala-library-2.10.4.jar
+│   ├── slf4j-log4j12-1.6.1.jar
+│   ├── snappy-java-1.1.1.6.jar
+│   ├── zkclient-0.3.jar
+│   └── zookeeper-3.4.6.jar
+└── mysql-metadata-storage
+    ├── jdbi-2.32.jar
+    ├── mysql-connector-java-5.1.34.jar
+    └── mysql-metadata-storage-0.8.0-rc1.jar
+```
 
-The Druid processes will then only load up jars from the local repository and will not try to go out onto the internet to find the maven dependencies.
+As you can see, under ```druid_extensions``` there are three sub-directories ```druid-examples```, ```druid-kafka-eight``` and ```mysql-metadata-storage```, each sub-directory denotes an extension that Druid might load.
+
+3) Tell Druid which extensions to load.  Now you have prepared your extension directories, if you want Druid to load a specific list of extensions under root extension directory, you need to specify `druid.extensions.loadList`. Using the example above, if you want Druid to load ```druid-kafka-eight``` and ```mysql-metadata-storage```, you can specify `druid.extensions.loadList=["druid-kafka-eight", "mysql-metadata-storage"]`.
+
+If you specify `druid.extensions.loadList=[]`, Druid won't load any extension from file system.
+
+If you don't specify `druid.extensions.loadList`, Druid will load all the extensions under root extension directory.

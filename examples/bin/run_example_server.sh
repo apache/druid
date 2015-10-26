@@ -37,8 +37,6 @@ fi
 #  start process
 JAVA_ARGS="-Xmx512m -Duser.timezone=UTC -Dfile.encoding=UTF-8"
 JAVA_ARGS="${JAVA_ARGS} -Ddruid.realtime.specFile=${SPEC_FILE}"
-JAVA_ARGS="${JAVA_ARGS} -Ddruid.extensions.localRepository=${MAVEN_DIR}"
-JAVA_ARGS="${JAVA_ARGS} -Ddruid.extensions.remoteRepositories=[]"
 JAVA_ARGS="${JAVA_ARGS} -Ddruid.publish.type=noop"
 
 DRUID_CP=${EXAMPLE_LOC}

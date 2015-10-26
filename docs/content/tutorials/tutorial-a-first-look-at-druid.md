@@ -74,6 +74,8 @@ You should see a bunch of files:
 * run_example_server.sh
 * run_example_client.sh
 * LICENSE, config, examples, lib directories
+* druid_extensions (This folder contains all the extensions that could be loaded by Druid. Note that extension `mysql-metadata-storage` is packaged in a separate tarball that can be downloaded from [here](http://druid.io/downloads.html). See [Including Extensions](../operations/including-extensions.html) for more information about loading extensions.
+* hadoop_druid_dependencies (This folder contains hadoop-client:2.3.0, see [Different Hadoop Versions](../operations/other-hadoop.html) for more information about how Druid picks up Hadoop dependencies)
 
 ## External Dependencies
 

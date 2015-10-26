@@ -28,7 +28,6 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.util.Modules;
 import com.metamx.common.ISE;
-import com.metamx.common.StringUtils;
 import com.metamx.common.logger.Logger;
 import io.druid.curator.CuratorModule;
 import io.druid.curator.discovery.DiscoveryModule;
@@ -57,27 +56,11 @@ import io.druid.metadata.storage.derby.DerbyMetadataStorageDruidModule;
 import io.druid.server.initialization.EmitterModule;
 import io.druid.server.initialization.jetty.JettyServerModule;
 import io.druid.server.metrics.MetricsModule;
-import io.tesla.aether.Repository;
-import io.tesla.aether.TeslaAether;
-import io.tesla.aether.internal.DefaultTeslaAether;
-import org.eclipse.aether.artifact.Artifact;
+import org.apache.commons.io.FileUtils;
 import org.eclipse.aether.artifact.DefaultArtifact;
-import org.eclipse.aether.collection.CollectRequest;
-import org.eclipse.aether.graph.Dependency;
-import org.eclipse.aether.graph.DependencyFilter;
-import org.eclipse.aether.graph.DependencyNode;
-import org.eclipse.aether.resolution.DependencyRequest;
-import org.eclipse.aether.resolution.DependencyResolutionException;
-import org.eclipse.aether.util.artifact.JavaScopes;
-import org.eclipse.aether.util.filter.DependencyFilterUtils;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.io.PrintStream;
-import java.io.UnsupportedEncodingException;
+import java.io.File;
 import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.util.Collection;
@@ -94,10 +77,6 @@ public class Initialization
   private static final Logger log = new Logger(Initialization.class);
   private static final Map<String, URLClassLoader> loadersMap = Maps.newHashMap();
 
-  private static final Set<String> exclusions = Sets.newHashSet(
-      "io.druid",
-      "com.metamx.druid"
-  );
   private final static Map<Class, Set> extensionsMap = Maps.<Class, Set>newHashMap();
 
   /**
@@ -132,9 +111,9 @@ public class Initialization
   }
 
   /**
-   * Look for extension modules for the given class from both classpath and druid.extensions.coordinates.
-   * Extensions explicitly specified in druid.extensions.coordinates will be loaded first, if there is a duplicate
-   * extension from classpath, it will be ignored.
+   * Look for extension modules for the given class from both classpath and extensions directory. A user should never
+   * put the same two extensions in classpath and extensions directory, if he/she does that, the one that is in the
+   * classpath will be loaded, the other will be ignored.
    *
    * @param config Extensions configuration
    * @param clazz  The class of extension module (e.g., DruidModule)
@@ -143,25 +122,39 @@ public class Initialization
    */
   public synchronized static <T> Collection<T> getFromExtensions(ExtensionsConfig config, Class<T> clazz)
   {
-    final TeslaAether aether = getAetherClient(config);
     final Set<T> retVal = Sets.newHashSet();
-    final Set<String> extensionNames = Sets.newHashSet();
+    final Set<String> loadedExtensionNames = Sets.newHashSet();
 
-    for (String coordinate : config.getCoordinates()) {
-      log.info("Loading extension[%s] for class[%s]", coordinate, clazz.getName());
+    if (config.searchCurrentClassloader()) {
+      for (T module : ServiceLoader.load(clazz, Thread.currentThread().getContextClassLoader())) {
+        final String moduleName = module.getClass().getCanonicalName();
+        if (moduleName == null) {
+          log.warn(
+              "Extension module [%s] was ignored because it doesn't have a canonical name, is it a local or anonymous class?",
+              module.getClass().getName()
+          );
+        } else if (!loadedExtensionNames.contains(moduleName)) {
+          log.info("Adding classpath extension module [%s] for class [%s]", moduleName, clazz.getName());
+          loadedExtensionNames.add(moduleName);
+          retVal.add(module);
+        }
+      }
+    }
+
+    for (File extension : getExtensionFilesToLoad(config)) {
+      log.info("Loading extension [%s] for class [%s]", extension.getName(), clazz.getName());
       try {
-        URLClassLoader loader = getClassLoaderForCoordinates(aether, coordinate, config.getDefaultVersion());
-
+        final URLClassLoader loader = getClassLoaderForExtension(extension);
         for (T module : ServiceLoader.load(clazz, loader)) {
-          String moduleName = module.getClass().getCanonicalName();
+          final String moduleName = module.getClass().getCanonicalName();
           if (moduleName == null) {
             log.warn(
                 "Extension module [%s] was ignored because it doesn't have a canonical name, is it a local or anonymous class?",
                 module.getClass().getName()
             );
-          } else if (!extensionNames.contains(moduleName)) {
-            log.info("Adding remote extension module[%s] for class[%s]", moduleName, clazz.getName());
-            extensionNames.add(moduleName);
+          } else if (!loadedExtensionNames.contains(moduleName)) {
+            log.info("Adding local file system extension module [%s] for class [%s]", moduleName, clazz.getName());
+            loadedExtensionNames.add(moduleName);
             retVal.add(module);
           }
         }
@@ -171,199 +164,111 @@ public class Initialization
       }
     }
 
-    if (config.searchCurrentClassloader()) {
-      for (T module : ServiceLoader.load(clazz, Initialization.class.getClassLoader())) {
-        String moduleName = module.getClass().getCanonicalName();
-        if (moduleName == null) {
-          log.warn(
-              "Extension module [%s] was ignored because it doesn't have a canonical name, is it a local or anonymous class?",
-              module.getClass().getName()
-          );
-        } else if (!extensionNames.contains(moduleName)) {
-          log.info("Adding local extension module[%s] for class[%s]", moduleName, clazz.getName());
-          extensionNames.add(moduleName);
-          retVal.add(module);
-        }
-      }
-    }
-
     // update the map with currently loaded modules
     extensionsMap.put(clazz, retVal);
 
     return retVal;
   }
 
-  public static URLClassLoader getClassLoaderForCoordinates(
-      TeslaAether aether,
-      String coordinate,
-      String defaultVersion
-  )
-      throws DependencyResolutionException, MalformedURLException
+  /**
+   * Find all the extension files that should be loaded by druid.
+   * <p/>
+   * If user explicitly specifies druid.extensions.loadList, then it will look for those extensions under root
+   * extensions directory. If one of them is not found, druid will fail loudly.
+   * <p/>
+   * If user doesn't specify druid.extension.toLoad (or its value is empty), druid will load all the extensions
+   * under the root extensions directory.
+   *
+   * @param config ExtensionsConfig configured by druid.extensions.xxx
+   *
+   * @return an array of druid extension files that will be loaded by druid process
+   */
+  public static File[] getExtensionFilesToLoad(ExtensionsConfig config)
   {
-    URLClassLoader loader = loadersMap.get(coordinate);
-    if (loader == null) {
-      final CollectRequest collectRequest = new CollectRequest();
-
-      DefaultArtifact versionedArtifact;
-      try {
-        // this will throw an exception if no version is specified
-        versionedArtifact = new DefaultArtifact(coordinate);
-      }
-      catch (IllegalArgumentException e) {
-        // try appending the default version so we can specify artifacts without versions
-        if (defaultVersion != null) {
-          versionedArtifact = new DefaultArtifact(coordinate + ":" + defaultVersion);
-        } else {
-          throw e;
+    final File rootExtensionsDir = new File(config.getDirectory());
+    if (rootExtensionsDir.exists() && !rootExtensionsDir.isDirectory()) {
+      throw new ISE("Root extensions directory [%s] is not a directory!?", rootExtensionsDir);
+    }
+    File[] extensionsToLoad;
+    final List<String> toLoad = config.getLoadList();
+    if (toLoad == null) {
+      extensionsToLoad = rootExtensionsDir.listFiles();
+    } else {
+      int i = 0;
+      extensionsToLoad = new File[toLoad.size()];
+      for (final String extensionName : toLoad) {
+        final File extensionDir = new File(rootExtensionsDir, extensionName);
+        if (!extensionDir.isDirectory()) {
+          throw new ISE(
+              String.format(
+                  "Extension [%s] specified in \"druid.extensions.loadList\" didn't exist!?",
+                  extensionDir.getAbsolutePath()
+              )
+          );
         }
-      }
-
-      collectRequest.setRoot(new Dependency(versionedArtifact, JavaScopes.RUNTIME));
-      DependencyRequest dependencyRequest = new DependencyRequest(
-          collectRequest,
-          DependencyFilterUtils.andFilter(
-              DependencyFilterUtils.classpathFilter(JavaScopes.RUNTIME),
-              new DependencyFilter()
-              {
-                @Override
-                public boolean accept(DependencyNode node, List<DependencyNode> parents)
-                {
-                  if (accept(node.getArtifact())) {
-                    return false;
-                  }
-
-                  for (DependencyNode parent : parents) {
-                    if (accept(parent.getArtifact())) {
-                      return false;
-                    }
-                  }
-
-                  return true;
-                }
-
-                private boolean accept(final Artifact artifact)
-                {
-                  return exclusions.contains(artifact.getGroupId());
-                }
-              }
-          )
-      );
-
-      try {
-        final List<Artifact> artifacts = aether.resolveArtifacts(dependencyRequest);
-
-        List<URL> urls = Lists.newArrayListWithExpectedSize(artifacts.size());
-        for (Artifact artifact : artifacts) {
-          if (!exclusions.contains(artifact.getGroupId())) {
-            urls.add(artifact.getFile().toURI().toURL());
-          } else {
-            log.debug("Skipped Artifact[%s]", artifact);
-          }
-        }
-
-        for (URL url : urls) {
-          log.info("Added URL[%s]", url);
-        }
-
-        loader = new URLClassLoader(urls.toArray(new URL[urls.size()]), Initialization.class.getClassLoader());
-        loadersMap.put(coordinate, loader);
-      }
-      catch (Exception e) {
-        log.error(e, "Unable to resolve artifacts for [%s].", dependencyRequest);
-        throw Throwables.propagate(e);
+        extensionsToLoad[i++] = extensionDir;
       }
     }
-    return loader;
+    return extensionsToLoad == null ? new File[]{} : extensionsToLoad;
   }
 
-  public static DefaultTeslaAether getAetherClient(ExtensionsConfig config)
+  /**
+   * Find all the hadoop dependencies that should be loaded by druid
+   *
+   * @param hadoopDependencyCoordinates e.g.["org.apache.hadoop:hadoop-client:2.3.0"]
+   * @param extensionsConfig            ExtensionsConfig configured by druid.extensions.xxx
+   *
+   * @return an array of hadoop dependency files that will be loaded by druid process
+   */
+  public static File[] getHadoopDependencyFilesToLoad(
+      List<String> hadoopDependencyCoordinates,
+      ExtensionsConfig extensionsConfig
+  )
   {
-    /*
-    DefaultTeslaAether logs a bunch of stuff to System.out, which is annoying.  We choose to disable that
-    unless debug logging is turned on.  "Disabling" it, however, is kinda bass-ackwards.  We copy out a reference
-    to the current System.out, and set System.out to a noop output stream.  Then after DefaultTeslaAether has pulled
-    The reference we swap things back.
-
-    This has implications for other things that are running in parallel to this.  Namely, if anything else also grabs
-    a reference to System.out or tries to log to it while we have things adjusted like this, then they will also log
-    to nothingness.  Fortunately, the code that calls this is single-threaded and shouldn't hopefully be running
-    alongside anything else that's grabbing System.out.  But who knows.
-    */
-
-    List<String> remoteUriList = config.getRemoteRepositories();
-
-    List<Repository> remoteRepositories = Lists.newArrayList();
-    for (String uri : remoteUriList) {
-      try {
-        URI u = new URI(uri);
-        Repository r = new Repository(uri);
-
-        if (u.getUserInfo() != null) {
-          String[] auth = u.getUserInfo().split(":", 2);
-          if (auth.length == 2) {
-            r.setUsername(auth[0]);
-            r.setPassword(auth[1]);
-          } else {
-            log.warn(
-                "Invalid credentials in repository URI, expecting [<user>:<password>], got [%s] for [%s]",
-                u.getUserInfo(),
-                uri
-            );
-          }
-        }
-        remoteRepositories.add(r);
+    final File rootHadoopDependenciesDir = new File(extensionsConfig.getHadoopDependenciesDir());
+    if (rootHadoopDependenciesDir.exists() && !rootHadoopDependenciesDir.isDirectory()) {
+      throw new ISE("Root Hadoop dependencies directory [%s] is not a directory!?", rootHadoopDependenciesDir);
+    }
+    final File[] hadoopDependenciesToLoad = new File[hadoopDependencyCoordinates.size()];
+    int i = 0;
+    for (final String coordinate : hadoopDependencyCoordinates) {
+      final DefaultArtifact artifact = new DefaultArtifact(coordinate);
+      final File hadoopDependencyDir = new File(rootHadoopDependenciesDir, artifact.getArtifactId());
+      final File versionDir = new File(hadoopDependencyDir, artifact.getVersion());
+      // find the hadoop dependency with the version specified in coordinate
+      if (!hadoopDependencyDir.isDirectory() || !versionDir.isDirectory()) {
+        throw new ISE(
+            String.format("Hadoop dependency [%s] didn't exist!?", versionDir.getAbsolutePath())
+        );
       }
-      catch (URISyntaxException e) {
-        throw Throwables.propagate(e);
+      hadoopDependenciesToLoad[i++] = versionDir;
+    }
+    return hadoopDependenciesToLoad;
+  }
+
+  /**
+   * @param extension The File instance of the extension we want to load
+   *
+   * @return a URLClassLoader that loads all the jars on which the extension is dependent
+   *
+   * @throws MalformedURLException
+   */
+  public static URLClassLoader getClassLoaderForExtension(File extension) throws MalformedURLException
+  {
+    URLClassLoader loader = loadersMap.get(extension.getName());
+    if (loader == null) {
+      final Collection<File> jars = FileUtils.listFiles(extension, new String[]{"jar"}, false);
+      final URL[] urls = new URL[jars.size()];
+      int i = 0;
+      for (File jar : jars) {
+        final URL url = jar.toURI().toURL();
+        log.info("added URL[%s]", url);
+        urls[i++] = url;
       }
+      loader = new URLClassLoader(urls, Initialization.class.getClassLoader());
+      loadersMap.put(extension.getName(), loader);
     }
-
-    if (log.isTraceEnabled() || log.isDebugEnabled()) {
-      return new DefaultTeslaAether(
-          config.getLocalRepository(),
-          remoteRepositories.toArray(new Repository[remoteRepositories.size()])
-      );
-    }
-
-    PrintStream oldOut = System.out;
-    try {
-      System.setOut(
-          new PrintStream(
-              new OutputStream()
-              {
-                @Override
-                public void write(int b) throws IOException
-                {
-
-                }
-
-                @Override
-                public void write(byte[] b) throws IOException
-                {
-
-                }
-
-                @Override
-                public void write(byte[] b, int off, int len) throws IOException
-                {
-
-                }
-              }
-              , false, StringUtils.UTF8_STRING
-          )
-      );
-      return new DefaultTeslaAether(
-          config.getLocalRepository(),
-          remoteRepositories.toArray(new Repository[remoteRepositories.size()])
-      );
-    }
-    catch (UnsupportedEncodingException e) {
-      // should never happen
-      throw new IllegalStateException(e);
-    }
-    finally {
-      System.setOut(oldOut);
-    }
+    return loader;
   }
 
   public static Injector makeInjectorWithModules(final Injector baseInjector, Iterable<? extends Module> modules)
