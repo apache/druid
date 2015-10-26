@@ -4,23 +4,7 @@ layout: doc_page
 
 What to Do When You Have a Firewall
 -----------------------------------
-When you are behind a firewall, the Maven Druid dependencies will not be accessible, as well as the IRC wikipedia channels that feed realtime data into Druid. To workaround those two challenges, you will need to:
-
-1. Make the Maven Druid dependencies available offline
-2. Make the Wikipedia example GeoLite DB dependency available offline
-
-## Making Maven Druid Dependencies Available Offline
-1. Extract Druid to a machine that has internet access; e.g. `/Users/foo/druid-<version>`
-2. Create a repository directory to download the dependencies to; e.g. `/Users/foo/druid-<version>\repo`
-3. Create property `druid.extensions.localRepository=`*`path to repo directory`* in the *`Druid Directory`*`\config\_common/common.runtime.properties` file; e.g. `druid.extensions.localRepository=/Users/foo/druid-<version>/repo`
-4. From within Druid directory, run the `pull-deps` command to download all Druid dependencies to the repository specified in the `common.runtime.properties` file:
-
-    ```
-    java -classpath "config\_common;lib\*" io.druid.cli.Main tools pull-deps
-    ```
-
-5. Once all dependencies have been downloaded successfully, replicate the `repo` directory to the machine behind the firewall; e.g. `/opt/druid-<version>/repo`
-6. Create property `druid.extensions.localRepository=`*`path to repo directory`* in the *`Druid Directory`*`/config/_common/common.runtime.properties` file; e.g. `druid.extensions.localRepository=/opt/druid-<version>/repo`
+When you are behind a firewall, if the IRC wikipedia channels that feed realtime data into Druid are not accessible, then there is nothing you can do. If IRC channels are accessible, but downloading Geolite DB from maxmind is firewalled, you can workaround this challenge by making GeoLite DB dependency available offline, see below.
 
 ## Making the Wikipedia Example GeoLite DB Dependency Available Offline
 1. Download GeoLite2 City DB from http://dev.maxmind.com/geoip/geoip2/geolite2/

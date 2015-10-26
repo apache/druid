@@ -100,4 +100,39 @@ public class UniformGranularitySpec implements GranularitySpec
   {
     return Optional.fromNullable(inputIntervals);
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    UniformGranularitySpec that = (UniformGranularitySpec) o;
+
+    if (segmentGranularity != that.segmentGranularity) {
+      return false;
+    }
+    if (!queryGranularity.equals(that.queryGranularity)) {
+      return false;
+    }
+    if (inputIntervals != null ? !inputIntervals.equals(that.inputIntervals) : that.inputIntervals != null) {
+      return false;
+    }
+    return !(wrappedSpec != null ? !wrappedSpec.equals(that.wrappedSpec) : that.wrappedSpec != null);
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = segmentGranularity.hashCode();
+    result = 31 * result + queryGranularity.hashCode();
+    result = 31 * result + (inputIntervals != null ? inputIntervals.hashCode() : 0);
+    result = 31 * result + (wrappedSpec != null ? wrappedSpec.hashCode() : 0);
+    return result;
+  }
 }

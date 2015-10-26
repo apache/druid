@@ -25,6 +25,23 @@
     </formats>
     <fileSets>
         <fileSet>
+            <directory>druid_extensions</directory>
+            <includes>
+                <include>*/*</include>
+            </includes>
+            <excludes>
+                <exclude>mysql-metadata-storage/**</exclude>
+            </excludes>
+            <outputDirectory>druid_extensions</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>hadoop_druid_dependencies</directory>
+            <includes>
+                <include>*/*/*</include>
+            </includes>
+            <outputDirectory>hadoop_druid_dependencies</outputDirectory>
+        </fileSet>
+        <fileSet>
             <directory>../examples/config</directory>
             <includes>
                 <include>*</include>

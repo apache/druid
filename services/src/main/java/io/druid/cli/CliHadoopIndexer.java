@@ -26,7 +26,6 @@ import io.airlift.airline.Command;
 import io.airlift.airline.Option;
 import io.druid.guice.ExtensionsConfig;
 import io.druid.initialization.Initialization;
-import io.tesla.aether.internal.DefaultTeslaAether;
 
 import java.io.File;
 import java.lang.reflect.Method;
@@ -76,14 +75,10 @@ public class CliHadoopIndexer implements Runnable
         allCoordinates.add(DEFAULT_HADOOP_COORDINATES);
       }
 
-      final DefaultTeslaAether aetherClient = Initialization.getAetherClient(extensionsConfig);
-
       final List<URL> extensionURLs = Lists.newArrayList();
-      for (String coordinate : extensionsConfig.getCoordinates()) {
-        final ClassLoader coordinateLoader = Initialization.getClassLoaderForCoordinates(
-            aetherClient, coordinate, extensionsConfig.getDefaultVersion()
-        );
-        extensionURLs.addAll(Arrays.asList(((URLClassLoader) coordinateLoader).getURLs()));
+      for (final File extension : Initialization.getExtensionFilesToLoad(extensionsConfig)) {
+        final ClassLoader extensionLoader = Initialization.getClassLoaderForExtension(extension);
+        extensionURLs.addAll(Arrays.asList(((URLClassLoader) extensionLoader).getURLs()));
       }
 
       final List<URL> nonHadoopURLs = Lists.newArrayList();
@@ -92,10 +87,8 @@ public class CliHadoopIndexer implements Runnable
       final List<URL> driverURLs = Lists.newArrayList();
       driverURLs.addAll(nonHadoopURLs);
       // put hadoop dependencies last to avoid jets3t & apache.httpcore version conflicts
-      for (String coordinate : allCoordinates) {
-        final ClassLoader hadoopLoader = Initialization.getClassLoaderForCoordinates(
-            aetherClient, coordinate, extensionsConfig.getDefaultVersion()
-        );
+      for (File hadoopDependency : Initialization.getHadoopDependencyFilesToLoad(allCoordinates, extensionsConfig)) {
+        final ClassLoader hadoopLoader = Initialization.getClassLoaderForExtension(hadoopDependency);
         driverURLs.addAll(Arrays.asList(((URLClassLoader) hadoopLoader).getURLs()));
       }
 

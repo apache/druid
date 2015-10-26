@@ -38,24 +38,69 @@
             <artifactId>druid-services</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
-        <dependency>
-            <groupId>io.druid</groupId>
-            <artifactId>extensions-distribution</artifactId>
-            <version>${project.parent.version}</version>
-            <classifier>extensions-repo</classifier>
-            <type>zip</type>
-        </dependency>
     </dependencies>
 
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <phase>install</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>java</executable>
+                            <arguments>
+                                <argument>-classpath</argument>
+                                <classpath/>
+                                <argument>-Ddruid.extensions.loadList=[]</argument>
+                                <argument>io.druid.cli.Main</argument>
+                                <argument>tools</argument>
+                                <argument>pull-deps</argument>
+                                <argument>--clean</argument>
+                                <argument>--defaultVersion</argument>
+                                <argument>${project.parent.version}</argument>
+                                <argument>-c</argument>
+                                <argument>io.druid.extensions:druid-examples</argument>
+                                <argument>-c</argument>
+                                <argument>io.druid.extensions:druid-azure-extensions</argument>
+                                <argument>-c</argument>
+                                <argument>io.druid.extensions:druid-cassandra-storage</argument>
+                                <argument>-c</argument>
+                                <argument>io.druid.extensions:druid-hdfs-storage</argument>
+                                <argument>-c</argument>
+                                <argument>io.druid.extensions:druid-histogram</argument>
+                                <argument>-c</argument>
+                                <argument>io.druid.extensions:druid-kafka-eight</argument>
+                                <argument>-c</argument>
+                                <argument>io.druid.extensions:druid-kafka-eight-simple-consumer</argument>
+                                <argument>-c</argument>
+                                <argument>io.druid.extensions:druid-kafka-extraction-namespace</argument>
+                                <argument>-c</argument>
+                                <argument>io.druid.extensions:mysql-metadata-storage</argument>
+                                <argument>-c</argument>
+                                <argument>io.druid.extensions:druid-namespace-lookup</argument>
+                                <argument>-c</argument>
+                                <argument>io.druid.extensions:postgresql-metadata-storage</argument>
+                                <argument>-c</argument>
+                                <argument>io.druid.extensions:druid-rabbitmq</argument>
+                                <argument>-c</argument>
+                                <argument>io.druid.extensions:druid-s3-extensions</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-assembly-plugin</artifactId>
                 <executions>
                     <execution>
                         <id>distro-assembly</id>
-                        <phase>package</phase>
+                        <phase>install</phase>
                         <goals>
                             <goal>single</goal>
                         </goals>
@@ -64,6 +109,20 @@
                             <tarLongFileMode>posix</tarLongFileMode>
                             <descriptors>
                                 <descriptor>src/assembly/assembly.xml</descriptor>
+                            </descriptors>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>mysql-distro-assembly</id>
+                        <phase>install</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <finalName>mysql-metdata-storage</finalName>
+                            <tarLongFileMode>posix</tarLongFileMode>
+                            <descriptors>
+                                <descriptor>src/assembly/mysql_assembly.xml</descriptor>
                             </descriptors>
                         </configuration>
                     </execution>
@@ -80,6 +139,20 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-clean-plugin</artifactId>
+                <configuration>
+                    <filesets>
+                        <fileset>
+                            <directory>${project.basedir}/druid_extensions</directory>
+                        </fileset>
+                        <fileset>
+                            <directory>${project.basedir}/hadoop_druid_dependencies</directory>
+                        </fileset>
+                    </filesets>
+                </configuration>
             </plugin>
         </plugins>
     </build>
