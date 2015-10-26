@@ -42,6 +42,9 @@ public class RemoteTaskRunnerConfig
   @Min(10 * 1024)
   private long maxZnodeBytes = 512 * 1024;
 
+  @JsonProperty
+  private Period taskShutdownLinkTimeout = new Period("PT1M");
+
   public Period getTaskAssignmentTimeout()
   {
     return taskAssignmentTimeout;
@@ -60,5 +63,10 @@ public class RemoteTaskRunnerConfig
   public long getMaxZnodeBytes()
   {
     return maxZnodeBytes;
+  }
+
+  public Period getTaskShutdownLinkTimeout()
+  {
+    return taskShutdownLinkTimeout;
   }
 }
