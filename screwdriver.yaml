@@ -62,6 +62,9 @@ shared:
     show_tree:
       description: tree under root
       command: tree .
+    print_hosts_file:
+      description: print hosts file
+      command: cat /etc/hosts && hostname
     check_druid_jars_version:
       description: check whether downloaded druid jars have correct version (check_version.sh comes from druid_package repo)
       command: sh druid_package/screwdriver/check_version.sh "`cat druid.version`" druid_package/ydruid_package/target/dependency
@@ -99,6 +102,7 @@ jobs:
         enabled: false
     order:
       - init
+      - print_hosts_file
       - compute_druid_version
       - set_druid_version
       - druid_code_build
