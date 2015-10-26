@@ -69,7 +69,13 @@ public class Main
     builder.withGroup("tools")
            .withDescription("Various tools for working with Druid")
            .withDefaultCommand(Help.class)
-           .withCommands(ConvertProperties.class, DruidJsonValidator.class, PullDependencies.class, CreateTables.class);
+           .withCommands(
+               ConvertProperties.class,
+               DruidJsonValidator.class,
+               PullDependencies.class,
+               CreateTables.class,
+               InsertSegment.class
+           );
 
     builder.withGroup("index")
            .withDescription("Run indexing for druid")
