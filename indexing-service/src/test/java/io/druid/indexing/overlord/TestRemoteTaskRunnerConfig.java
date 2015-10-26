@@ -51,6 +51,12 @@ public class TestRemoteTaskRunnerConfig extends RemoteTaskRunnerConfig
   }
 
   @Override
+  public Period getTaskShutdownLinkTimeout()
+  {
+    return timeout;
+  }
+
+  @Override
   public String getMinWorkerVersion()
   {
     return "";
