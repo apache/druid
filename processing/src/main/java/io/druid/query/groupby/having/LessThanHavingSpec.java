@@ -60,9 +60,7 @@ public class LessThanHavingSpec implements HavingSpec
   @Override
   public boolean eval(Row row)
   {
-    float metricValue = row.getFloatMetric(aggregationName);
-
-    return Float.compare(metricValue, value.floatValue()) < 0;
+    return HavingSpecMetricComparator.compare(row, aggregationName, value) < 0;
   }
 
   @Override
