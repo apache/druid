@@ -103,7 +103,7 @@ public class WorkerCuratorCoordinator
           ImmutableMap.of("created", new DateTime().toString())
       );
       announcer.start();
-      announcer.announce(getAnnouncementsPathForWorker(), jsonMapper.writeValueAsBytes(worker));
+      announcer.announce(getAnnouncementsPathForWorker(), jsonMapper.writeValueAsBytes(worker), false);
 
       started = true;
     }
@@ -117,8 +117,6 @@ public class WorkerCuratorCoordinator
       if (!started) {
         return;
       }
-
-      announcer.unannounce(getAnnouncementsPathForWorker());
       announcer.stop();
 
       started = false;

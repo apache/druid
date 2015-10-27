@@ -19,5 +19,5 @@ package io.druid.query;
 
 public interface PrioritizedRunnable extends Runnable
 {
-  public int getPriority();
+  int getPriority();
 }

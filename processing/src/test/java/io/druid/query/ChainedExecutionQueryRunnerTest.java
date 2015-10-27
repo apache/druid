@@ -62,7 +62,7 @@ public class ChainedExecutionQueryRunnerTest
   public void testQueryCancellation() throws Exception
   {
     ExecutorService exec = PrioritizedExecutorService.create(
-        new Lifecycle(), new ExecutorServiceConfig()
+        new Lifecycle(), new DruidProcessingConfig()
         {
           @Override
           public String getFormatString()
@@ -189,7 +189,7 @@ public class ChainedExecutionQueryRunnerTest
   public void testQueryTimeout() throws Exception
   {
     ExecutorService exec = PrioritizedExecutorService.create(
-        new Lifecycle(), new ExecutorServiceConfig()
+        new Lifecycle(), new DruidProcessingConfig()
         {
           @Override
           public String getFormatString()

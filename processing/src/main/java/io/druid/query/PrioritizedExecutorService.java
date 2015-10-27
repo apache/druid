@@ -18,16 +18,16 @@
 package io.druid.query;
 
 import com.google.common.base.Preconditions;
-import com.google.common.primitives.Ints;
+import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListenableFutureTask;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.metamx.common.concurrent.ExecutorServiceConfig;
 import com.metamx.common.lifecycle.Lifecycle;
 
 import javax.annotation.Nullable;
+import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.AbstractExecutorService;
 import java.util.concurrent.BlockingQueue;
@@ -39,10 +39,11 @@ import java.util.concurrent.RunnableFuture;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class PrioritizedExecutorService extends AbstractExecutorService implements ListeningExecutorService
 {
-  public static PrioritizedExecutorService create(Lifecycle lifecycle, ExecutorServiceConfig config)
+  public static PrioritizedExecutorService create(Lifecycle lifecycle, DruidProcessingConfig config)
   {
     final PrioritizedExecutorService service = new PrioritizedExecutorService(
         new ThreadPoolExecutor(
@@ -52,7 +53,8 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
             TimeUnit.MILLISECONDS,
             new PriorityBlockingQueue<Runnable>(),
             new ThreadFactoryBuilder().setDaemon(true).setNameFormat(config.getFormatString()).build()
-        )
+        ),
+        config
     );
 
     lifecycle.addHandler(
@@ -74,28 +76,35 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
     return service;
   }
 
+  private final AtomicLong queuePosition = new AtomicLong(Long.MAX_VALUE);
   private final ListeningExecutorService delegate;
   private final BlockingQueue<Runnable> delegateQueue;
   private final boolean allowRegularTasks;
   private final int defaultPriority;
+  private final DruidProcessingConfig config;
+  final ThreadPoolExecutor threadPoolExecutor; // Used in unit tests
 
   public PrioritizedExecutorService(
-      ThreadPoolExecutor threadPoolExecutor
+      ThreadPoolExecutor threadPoolExecutor,
+      DruidProcessingConfig config
   )
   {
-    this(threadPoolExecutor, false, 0);
+    this(threadPoolExecutor, false, 0, config);
   }
 
   public PrioritizedExecutorService(
       ThreadPoolExecutor threadPoolExecutor,
       boolean allowRegularTasks,
-      int defaultPriority
+      int defaultPriority,
+      DruidProcessingConfig config
   )
   {
+    this.threadPoolExecutor = threadPoolExecutor;
     this.delegate = MoreExecutors.listeningDecorator(Preconditions.checkNotNull(threadPoolExecutor));
     this.delegateQueue = threadPoolExecutor.getQueue();
     this.allowRegularTasks = allowRegularTasks;
     this.defaultPriority = defaultPriority;
+    this.config = config;
   }
 
   @Override
@@ -109,7 +118,8 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
         ListenableFutureTask.create(runnable, value),
         runnable instanceof PrioritizedRunnable
         ? ((PrioritizedRunnable) runnable).getPriority()
-        : defaultPriority
+        : defaultPriority,
+        config.isFifo() ? queuePosition.decrementAndGet() : 0
     );
   }
 
@@ -121,9 +131,11 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
         "task does not implement PrioritizedCallable"
     );
     return PrioritizedListenableFutureTask.create(
-        ListenableFutureTask.create(callable), callable instanceof PrioritizedCallable
-                                               ? ((PrioritizedCallable) callable).getPriority()
-                                               : defaultPriority
+        ListenableFutureTask.create(callable),
+        callable instanceof PrioritizedCallable
+        ? ((PrioritizedCallable) callable).getPriority()
+        : defaultPriority,
+        config.isFifo() ? queuePosition.decrementAndGet() : 0
     );
   }
 
@@ -185,89 +197,128 @@ public class PrioritizedExecutorService extends AbstractExecutorService implemen
   {
     return delegateQueue.size();
   }
+}
 
-
-  public static class PrioritizedListenableFutureTask<V> implements RunnableFuture<V>,
-      ListenableFuture<V>,
-      PrioritizedRunnable,
-      Comparable<PrioritizedListenableFutureTask>
+class PrioritizedListenableFutureTask<V> implements RunnableFuture<V>,
+    ListenableFuture<V>,
+    PrioritizedRunnable,
+    Comparable<PrioritizedListenableFutureTask>
+{
+  // NOTE: For priority HIGHER numeric value means more priority. As such we swap left and right in the compares
+  private static final Comparator<PrioritizedListenableFutureTask> PRIORITY_COMPARATOR = new Ordering<PrioritizedListenableFutureTask>()
   {
-    public static <V> PrioritizedListenableFutureTask<V> create(PrioritizedRunnable task, @Nullable V result)
-    {
-      return new PrioritizedListenableFutureTask<>(ListenableFutureTask.create(task, result), task.getPriority());
-    }
-
-    public static <V> PrioritizedListenableFutureTask<?> create(PrioritizedCallable<V> callable)
-    {
-      return new PrioritizedListenableFutureTask<>(ListenableFutureTask.create(callable), callable.getPriority());
-    }
-
-    public static <V> PrioritizedListenableFutureTask<V> create(ListenableFutureTask<V> task, int priority)
-    {
-      return new PrioritizedListenableFutureTask<>(task, priority);
-    }
-
-    private final ListenableFutureTask<V> delegate;
-    private final int priority;
-
-    PrioritizedListenableFutureTask(ListenableFutureTask<V> delegate, int priority)
-    {
-      this.delegate = delegate;
-      this.priority = priority;
-    }
-
     @Override
-    public void run()
+    public int compare(
+        PrioritizedListenableFutureTask left, PrioritizedListenableFutureTask right
+    )
     {
-      delegate.run();
+      return Integer.compare(right.getPriority(), left.getPriority());
     }
+  }.compound(
+      new Ordering<PrioritizedListenableFutureTask>()
+      {
+        @Override
+        public int compare(PrioritizedListenableFutureTask left, PrioritizedListenableFutureTask right)
+        {
+          return Long.compare(right.getInsertionPlace(), left.getInsertionPlace());
+        }
+      }
+  );
 
-    @Override
-    public boolean cancel(boolean mayInterruptIfRunning)
-    {
-      return delegate.cancel(mayInterruptIfRunning);
-    }
+  public static <V> PrioritizedListenableFutureTask<V> create(
+      PrioritizedRunnable task,
+      @Nullable V result,
+      long position
+  )
+  {
+    return new PrioritizedListenableFutureTask<>(
+        ListenableFutureTask.create(task, result),
+        task.getPriority(),
+        position
+    );
+  }
 
-    @Override
-    public boolean isCancelled()
-    {
-      return delegate.isCancelled();
-    }
+  public static <V> PrioritizedListenableFutureTask<?> create(PrioritizedCallable<V> callable, long position)
+  {
+    return new PrioritizedListenableFutureTask<>(
+        ListenableFutureTask.create(callable),
+        callable.getPriority(),
+        position
+    );
+  }
 
-    @Override
-    public boolean isDone()
-    {
-      return delegate.isDone();
-    }
+  public static <V> PrioritizedListenableFutureTask<V> create(ListenableFutureTask<V> task, int priority, long position)
+  {
+    return new PrioritizedListenableFutureTask<>(task, priority, position);
+  }
 
-    @Override
-    public V get() throws InterruptedException, ExecutionException
-    {
-      return delegate.get();
-    }
+  private final ListenableFutureTask<V> delegate;
+  private final int priority;
+  private final long insertionPlace;
 
-    @Override
-    public V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException
-    {
-      return delegate.get(timeout, unit);
-    }
+  PrioritizedListenableFutureTask(ListenableFutureTask<V> delegate, int priority, long position)
+  {
+    this.delegate = delegate;
+    this.priority = priority;
+    this.insertionPlace = position; // Long.MAX_VALUE will always be "highest"
+  }
 
-    @Override
-    public void addListener(Runnable listener, Executor executor)
-    {
-      delegate.addListener(listener, executor);
-    }
+  @Override
+  public void run()
+  {
+    delegate.run();
+  }
 
-    @Override
-    public int getPriority()
-    {
-      return priority;
-    }
+  @Override
+  public boolean cancel(boolean mayInterruptIfRunning)
+  {
+    return delegate.cancel(mayInterruptIfRunning);
+  }
 
-    @Override
-    public int compareTo(PrioritizedListenableFutureTask otherTask)
-    {
-      return Ints.compare(otherTask.getPriority(), getPriority());
-    }
+  @Override
+  public boolean isCancelled()
+  {
+    return delegate.isCancelled();
+  }
+
+  @Override
+  public boolean isDone()
+  {
+    return delegate.isDone();
+  }
+
+  @Override
+  public V get() throws InterruptedException, ExecutionException
+  {
+    return delegate.get();
+  }
+
+  @Override
+  public V get(long timeout, TimeUnit unit) throws InterruptedException, ExecutionException, TimeoutException
+  {
+    return delegate.get(timeout, unit);
+  }
+
+  @Override
+  public void addListener(Runnable listener, Executor executor)
+  {
+    delegate.addListener(listener, executor);
+  }
+
+  @Override
+  public int getPriority()
+  {
+    return priority;
+  }
+
+  protected long getInsertionPlace()
+  {
+    return insertionPlace;
+  }
+
+  @Override
+  public int compareTo(PrioritizedListenableFutureTask otherTask)
+  {
+    return PRIORITY_COMPARATOR.compare(this, otherTask);
   }
 }
