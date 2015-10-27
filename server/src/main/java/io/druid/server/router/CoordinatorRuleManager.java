@@ -158,7 +158,7 @@ public class CoordinatorRuleManager
       ).get();
 
       if (response.getStatus().equals(HttpResponseStatus.FOUND)) {
-        url = response.getResponse().getHeader("Location");
+        url = response.getResponse().headers().get("Location");
         log.info("Redirecting rule request to [%s]", url);
         response = httpClient.go(
             new Request(
