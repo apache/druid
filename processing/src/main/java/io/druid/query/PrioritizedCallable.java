@@ -21,5 +21,5 @@ import java.util.concurrent.Callable;
 
 public interface PrioritizedCallable<V> extends Callable<V>
 {
-  public int getPriority();
+  int getPriority();
 }
