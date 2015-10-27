@@ -66,7 +66,7 @@ public abstract class AbstractDataSegmentAnnouncer implements DataSegmentAnnounc
       try {
         final String path = makeAnnouncementPath();
         log.info("Announcing self[%s] at [%s]", server, path);
-        announcer.announce(path, jsonMapper.writeValueAsBytes(server));
+        announcer.announce(path, jsonMapper.writeValueAsBytes(server), false);
       }
       catch (JsonProcessingException e) {
         throw Throwables.propagate(e);
