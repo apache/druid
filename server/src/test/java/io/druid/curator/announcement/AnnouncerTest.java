@@ -192,7 +192,7 @@ public class AnnouncerTest extends CuratorTestBase
     try {
       Assert.assertNull(curator.checkExists().forPath(parent));
 
-      announcer.announce(testPath, billy);
+      awaitAnnounce(announcer, testPath, billy, true);
 
       Assert.assertNotNull(curator.checkExists().forPath(parent));
     }
@@ -220,7 +220,7 @@ public class AnnouncerTest extends CuratorTestBase
     try {
       Assert.assertEquals(initialStat.getMzxid(), curator.checkExists().forPath(parent).getMzxid());
 
-      announcer.announce(testPath, billy);
+      awaitAnnounce(announcer, testPath, billy, true);
 
       Assert.assertEquals(initialStat.getMzxid(), curator.checkExists().forPath(parent).getMzxid());
     }
@@ -231,4 +231,52 @@ public class AnnouncerTest extends CuratorTestBase
     Assert.assertEquals(initialStat.getMzxid(), curator.checkExists().forPath(parent).getMzxid());
   }
 
+  @Test
+  public void testLeavesBehindTurdlingsWhenToldTo() throws Exception
+  {
+    curator.start();
+    Announcer announcer = new Announcer(curator, exec);
+
+    final byte[] billy = "billy".getBytes();
+    final String testPath = "/somewhere/test2";
+    final String parent = ZKPaths.getPathAndNode(testPath).getPath();
+
+    announcer.start();
+    try {
+      Assert.assertNull(curator.checkExists().forPath(parent));
+
+      awaitAnnounce(announcer, testPath, billy, false);
+
+      Assert.assertNotNull(curator.checkExists().forPath(parent));
+    }
+    finally {
+      announcer.stop();
+    }
+
+    Assert.assertNotNull(curator.checkExists().forPath(parent));
+  }
+
+  private void awaitAnnounce(
+      final Announcer announcer,
+      final String path,
+      final byte[] bytes,
+      boolean removeParentsIfCreated
+  ) throws InterruptedException
+  {
+    final CountDownLatch latch = new CountDownLatch(1);
+    curator.getCuratorListenable().addListener(
+        new CuratorListener()
+        {
+          @Override
+          public void eventReceived(CuratorFramework client, CuratorEvent event) throws Exception
+          {
+            if (event.getType() == CuratorEventType.CREATE && event.getPath().equals(path)) {
+              latch.countDown();
+            }
+          }
+        }
+    );
+    announcer.announce(path, bytes, removeParentsIfCreated);
+    latch.await();
+  }
 }
