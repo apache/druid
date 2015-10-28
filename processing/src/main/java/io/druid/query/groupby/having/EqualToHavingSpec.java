@@ -62,9 +62,7 @@ public class EqualToHavingSpec implements HavingSpec
   @Override
   public boolean eval(Row row)
   {
-    float metricValue = row.getFloatMetric(aggregationName);
-
-    return Float.compare(value.floatValue(), metricValue) == 0;
+    return HavingSpecMetricComparator.compare(row, aggregationName, value) == 0;
   }
 
   @Override
