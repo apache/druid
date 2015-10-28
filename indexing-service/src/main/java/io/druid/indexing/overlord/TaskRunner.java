@@ -18,16 +18,24 @@
 package io.druid.indexing.overlord;
 
 import com.google.common.util.concurrent.ListenableFuture;
+import com.metamx.common.Pair;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
 
 import java.util.Collection;
+import java.util.List;
 
 /**
  * Interface for handing off tasks. Managed by a {@link io.druid.indexing.overlord.TaskQueue}.
  */
 public interface TaskRunner
 {
+  /**
+   * Some task runners can restart previously-running tasks after being bounced. This method does that, and returns
+   * the list of tasks (and status futures).
+   */
+  public List<Pair<Task, ListenableFuture<TaskStatus>>> restore();
+
   /**
    * Run a task. The returned status should be some kind of completed status.
    *
@@ -44,6 +52,12 @@ public interface TaskRunner
    * @param taskid task ID to clean up resources for
    */
   public void shutdown(String taskid);
+
+  /**
+   * Stop this task runner. This may block until currently-running tasks can be gracefully stopped. After calling
+   * stopping, "run" will not accept further tasks.
+   */
+  public void stop();
 
   public Collection<? extends TaskRunnerWorkItem> getRunningTasks();
 
