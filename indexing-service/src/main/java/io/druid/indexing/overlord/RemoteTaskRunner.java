@@ -242,21 +242,28 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
                   List<String> workers;
                   try {
                     workers = cf.getChildren().forPath(indexerZkConfig.getStatusPath());
-                  } catch (KeeperException.NoNodeException e) {
+                  }
+                  catch (KeeperException.NoNodeException e) {
                     // statusPath doesn't exist yet; can occur if no middleManagers have started.
                     workers = ImmutableList.of();
                   }
                   for (String workerId : workers) {
-                    if (!zkWorkers.containsKey(workerId)
-                        && cf.checkExists().forPath(JOINER.join(indexerZkConfig.getAnnouncementsPath(), workerId)) == null) {
-                      scheduleTasksCleanupForWorker(
-                          workerId,
-                          cf.getChildren()
-                            .forPath(JOINER.join(indexerZkConfig.getStatusPath(), workerId))
-                      );
+                    final String workerAnnouncePath = JOINER.join(indexerZkConfig.getAnnouncementsPath(), workerId);
+                    final String workerStatusPath = JOINER.join(indexerZkConfig.getStatusPath(), workerId);
+                    if (!zkWorkers.containsKey(workerId) && cf.checkExists().forPath(workerAnnouncePath) == null) {
+                      try {
+                        scheduleTasksCleanupForWorker(workerId, cf.getChildren().forPath(workerStatusPath));
+                      }
+                      catch (Exception e) {
+                        log.warn(
+                            e,
+                            "Could not schedule cleanup for worker[%s] during startup (maybe someone removed the status znode[%s]?). Skipping.",
+                            workerId,
+                            workerStatusPath
+                        );
+                      }
                     }
                   }
-
                   synchronized (waitingForMonitor) {
                     waitingFor.decrement();
                     waitingForMonitor.notifyAll();
