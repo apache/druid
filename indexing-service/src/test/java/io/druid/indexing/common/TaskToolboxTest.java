@@ -81,7 +81,7 @@ public class TaskToolboxTest
     EasyMock.replay(task);
 
     taskToolbox = new TaskToolboxFactory(
-        new TaskConfig(temporaryFolder.newFile().toString(), null, null, 50000, null),
+        new TaskConfig(temporaryFolder.newFile().toString(), null, null, 50000, null, null, null),
         mockTaskActionClientFactory,
         mockEmitter,
         mockSegmentPusher,

@@ -31,12 +31,17 @@ import com.metamx.emitter.EmittingLogger;
 import io.druid.concurrent.Execs;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
+import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.TaskRunner;
+import org.joda.time.DateTime;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.file.StandardOpenOption;
 import java.util.concurrent.ExecutorService;
 
 /**
@@ -47,37 +52,41 @@ public class ExecutorLifecycle
 {
   private static final EmittingLogger log = new EmittingLogger(ExecutorLifecycle.class);
 
-  private final ExecutorLifecycleConfig config;
+  private final ExecutorLifecycleConfig taskExecutorConfig;
+  private final TaskConfig taskConfig;
   private final TaskActionClientFactory taskActionClientFactory;
   private final TaskRunner taskRunner;
   private final ObjectMapper jsonMapper;
 
   private final ExecutorService parentMonitorExec = Execs.singleThreaded("parent-monitor-%d");
 
+  private volatile Task task = null;
   private volatile ListenableFuture<TaskStatus> statusFuture = null;
+  private volatile FileChannel taskLockChannel;
+  private volatile FileLock taskLockFileLock;
 
   @Inject
   public ExecutorLifecycle(
-      ExecutorLifecycleConfig config,
+      ExecutorLifecycleConfig taskExecutorConfig,
+      TaskConfig taskConfig,
       TaskActionClientFactory taskActionClientFactory,
       TaskRunner taskRunner,
       ObjectMapper jsonMapper
   )
   {
-    this.config = config;
+    this.taskExecutorConfig = taskExecutorConfig;
+    this.taskConfig = taskConfig;
     this.taskActionClientFactory = taskActionClientFactory;
     this.taskRunner = taskRunner;
     this.jsonMapper = jsonMapper;
   }
 
   @LifecycleStart
-  public void start()
+  public void start() throws InterruptedException
   {
-    final File taskFile = Preconditions.checkNotNull(config.getTaskFile(), "taskFile");
-    final File statusFile = Preconditions.checkNotNull(config.getStatusFile(), "statusFile");
-    final InputStream parentStream = Preconditions.checkNotNull(config.getParentStream(), "parentStream");
-
-    final Task task;
+    final File taskFile = Preconditions.checkNotNull(taskExecutorConfig.getTaskFile(), "taskFile");
+    final File statusFile = Preconditions.checkNotNull(taskExecutorConfig.getStatusFile(), "statusFile");
+    final InputStream parentStream = Preconditions.checkNotNull(taskExecutorConfig.getParentStream(), "parentStream");
 
     try {
       task = jsonMapper.readValue(taskFile, Task.class);
@@ -86,6 +95,43 @@ public class ExecutorLifecycle
           "Running with task: %s",
           jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsString(task)
       );
+    }
+    catch (IOException e) {
+      throw Throwables.propagate(e);
+    }
+
+    // Avoid running the same task twice on the same machine by locking the task base directory.
+
+    final File taskLockFile = taskConfig.getTaskLockFile(task.getId());
+
+    try {
+      synchronized (this) {
+        if (taskLockChannel == null && taskLockFileLock == null) {
+          taskLockChannel = FileChannel.open(
+              taskLockFile.toPath(),
+              StandardOpenOption.CREATE,
+              StandardOpenOption.WRITE
+          );
+
+          log.info("Attempting to lock file[%s].", taskLockFile);
+          final long startLocking = System.currentTimeMillis();
+          final long timeout = new DateTime(startLocking).plus(taskConfig.getDirectoryLockTimeout()).getMillis();
+          while (taskLockFileLock == null && System.currentTimeMillis() < timeout) {
+            taskLockFileLock = taskLockChannel.tryLock();
+            if (taskLockFileLock == null) {
+              Thread.sleep(100);
+            }
+          }
+
+          if (taskLockFileLock == null) {
+            throw new ISE("Could not acquire lock file[%s] within %,dms.", taskLockFile, timeout - startLocking);
+          } else {
+            log.info("Acquired lock file[%s] in %,dms.", taskLockFile, System.currentTimeMillis() - startLocking);
+          }
+        } else {
+          throw new ISE("Already started!");
+        }
+      }
     }
     catch (IOException e) {
       throw Throwables.propagate(e);
@@ -120,7 +166,8 @@ public class ExecutorLifecycle
       if (!task.isReady(taskActionClientFactory.create(task))) {
         throw new ISE("Task is not ready to run yet!", task.getId());
       }
-    } catch (Exception e) {
+    }
+    catch (Exception e) {
       throw new ISE(e, "Failed to run isReady", task.getId());
     }
 
@@ -164,8 +211,18 @@ public class ExecutorLifecycle
   }
 
   @LifecycleStop
-  public void stop()
+  public void stop() throws Exception
   {
     parentMonitorExec.shutdown();
+
+    synchronized (this) {
+      if (taskLockFileLock != null) {
+        taskLockFileLock.release();
+      }
+
+      if (taskLockChannel != null) {
+        taskLockChannel.close();
+      }
+    }
   }
 }

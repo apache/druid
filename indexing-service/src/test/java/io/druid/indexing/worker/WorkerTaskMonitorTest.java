@@ -40,6 +40,7 @@ import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.server.initialization.IndexerZkConfig;
 import io.druid.server.initialization.ZkPathsConfig;
+import io.druid.server.metrics.NoopServiceEmitter;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
@@ -123,13 +124,14 @@ public class WorkerTaskMonitorTest
 
   private WorkerTaskMonitor createTaskMonitor()
   {
+    final TaskConfig taskConfig = new TaskConfig(Files.createTempDir().toString(), null, null, 0, null, null, null);
     return new WorkerTaskMonitor(
         jsonMapper,
         cf,
         workerCuratorCoordinator,
         new ThreadPoolTaskRunner(
             new TaskToolboxFactory(
-                new TaskConfig(Files.createTempDir().toString(), null, null, 0, null),
+                taskConfig,
                 null, null, null, null, null, null, null, null, null, null, null, new SegmentLoaderFactory(
                 new SegmentLoaderLocalCacheManager(
                     null,
@@ -145,7 +147,8 @@ public class WorkerTaskMonitorTest
                 )
             ), jsonMapper
             ),
-            null
+            taskConfig,
+            new NoopServiceEmitter()
         ),
         new WorkerConfig().setCapacity(1)
     );

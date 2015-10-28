@@ -92,7 +92,7 @@ public class TaskToolboxFactory
 
   public TaskToolbox build(Task task)
   {
-    final File taskWorkDir = new File(new File(config.getBaseTaskDir(), task.getId()), "work");
+    final File taskWorkDir = config.getTaskWorkDir(task.getId());
 
     return new TaskToolbox(
         config,
