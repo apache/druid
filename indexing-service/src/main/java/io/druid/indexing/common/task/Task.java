@@ -62,6 +62,7 @@ public interface Task
 {
   /**
    * Returns ID of this task. Must be unique across all tasks ever created.
+   *
    * @return task ID
    */
   public String getId();
@@ -69,6 +70,7 @@ public interface Task
   /**
    * Returns group ID of this task. Tasks with the same group ID can share locks. If tasks do not need to share locks,
    * a common convention is to set group ID equal to task ID.
+   *
    * @return task group ID
    */
   public String getGroupId();
@@ -76,12 +78,14 @@ public interface Task
   /**
    * Returns a {@link io.druid.indexing.common.task.TaskResource} for this task. Task resources define specific
    * worker requirements a task may require.
+   *
    * @return {@link io.druid.indexing.common.task.TaskResource} for this task
    */
   public TaskResource getTaskResource();
 
   /**
    * Returns a descriptive label for this task type. Used for metrics emission and logging.
+   *
    * @return task type label
    */
   public String getType();
@@ -90,7 +94,7 @@ public interface Task
    * Get the nodeType for if/when this task publishes on zookeeper.
    *
    * @return the nodeType to use when publishing the server to zookeeper. null if the task doesn't expect to
-   *         publish to zookeeper.
+   * publish to zookeeper.
    */
   public String getNodeType();
 
@@ -102,7 +106,9 @@ public interface Task
   /**
    * Returns query runners for this task. If this task is not meant to answer queries over its datasource, this method
    * should return null.
+   *
    * @param <T> query result type
+   *
    * @return query runners for this task
    */
   public <T> QueryRunner<T> getQueryRunner(Query<T> query);
@@ -117,7 +123,7 @@ public interface Task
    * Execute preflight actions for a task. This can be used to acquire locks, check preconditions, and so on. The
    * actions must be idempotent, since this method may be executed multiple times. This typically runs on the
    * coordinator. If this method throws an exception, the task should be considered a failure.
-   *
+   * <p/>
    * This method must be idempotent, as it may be run multiple times per task.
    *
    * @param taskActionClient action client for this task (not the full toolbox)
@@ -127,6 +133,20 @@ public interface Task
    * @throws Exception if the task should be considered a failure
    */
   public boolean isReady(TaskActionClient taskActionClient) throws Exception;
+
+  /**
+   * Returns whether or not this task can restore its progress from its on-disk working directory. Restorable tasks
+   * may be started with a non-empty working directory. Tasks that exit uncleanly may still have a chance to attempt
+   * restores, meaning that restorable tasks should be able to deal with potentially partially written on-disk state.
+   */
+  public boolean canRestore();
+
+  /**
+   * Asks a task to arrange for its "run" method to exit promptly. This method will only be called if
+   * {@link #canRestore()} returns true. Tasks that take too long to stop gracefully will be terminated with
+   * extreme prejudice.
+   */
+  public void stopGracefully();
 
   /**
    * Execute a task. This typically runs on a worker as determined by a TaskRunner, and will be run while
