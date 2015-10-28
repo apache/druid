@@ -202,8 +202,11 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
     {
       synchronized (readLock) {
         try {
-          while (!closed && nextRow == null) {
+          while (nextRow == null) {
             nextRow = buffer.poll(500, TimeUnit.MILLISECONDS);
+            if (closed) {
+              break;
+            }
           }
         }
         catch (InterruptedException e) {
