@@ -227,7 +227,7 @@ public class QueryRunnerTestHelper
       throws IOException
   {
     final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex(false);
-    final QueryableIndex mMappedTestIndex = TestIndex.getMMappedTestIndex();
+    final QueryableIndex mMappedTestIndex = TestIndex.getMMappedTestIndex(null, true);
     final QueryableIndex mergedRealtimeIndex = TestIndex.mergedRealtimeIndex();
     final IncrementalIndex rtIndexOffheap = TestIndex.getIncrementalTestIndex(true);
     return ImmutableList.of(
@@ -246,7 +246,7 @@ public class QueryRunnerTestHelper
       throws IOException
   {
     final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex(false);
-    final QueryableIndex mMappedTestIndex = TestIndex.getMMappedTestIndex();
+    final QueryableIndex mMappedTestIndex = TestIndex.getMMappedTestIndex(null, true);
     final QueryableIndex mergedRealtimeIndex = TestIndex.mergedRealtimeIndex();
     final IncrementalIndex rtIndexOffheap = TestIndex.getIncrementalTestIndex(true);
 

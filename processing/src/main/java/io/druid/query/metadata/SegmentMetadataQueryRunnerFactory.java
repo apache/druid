@@ -87,14 +87,17 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
         final Map<String, ColumnAnalysis> analyzedColumns;
         final int numRows;
         long totalSize = 0;
+        final Map<String, Object> metadata;
         if (index == null) {
           // IncrementalIndexSegments (used by in-memory hydrants in the realtime service) do not have a QueryableIndex
           StorageAdapter segmentAdapter = segment.asStorageAdapter();
           analyzedColumns = analyzer.analyze(segmentAdapter, query.getAnalysisTypes());
           numRows = segmentAdapter.getNumRows();
+          metadata = null;
         } else {
           analyzedColumns = analyzer.analyze(index, query.getAnalysisTypes());
           numRows = index.getNumRows();
+          metadata = index.getMetaData();
         }
 
         if (query.hasSize()) {
@@ -122,7 +125,8 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                     segment.getIdentifier(),
                     Arrays.asList(segment.getDataInterval()),
                     columns,
-                    totalSize
+                    totalSize,
+                    metadata
                 )
             )
         );
