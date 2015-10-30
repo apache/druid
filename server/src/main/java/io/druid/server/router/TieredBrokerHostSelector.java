@@ -34,6 +34,7 @@ import io.druid.server.coordinator.rules.Rule;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -200,5 +201,10 @@ public class TieredBrokerHostSelector<T> implements HostSelector<T>
     final String brokerServiceName = tierConfig.getDefaultBrokerServiceName();
     final ServerDiscoverySelector retVal = selectorMap.get(brokerServiceName);
     return new Pair<>(brokerServiceName, retVal);
+  }
+
+  public Map<String, ServerDiscoverySelector> getAllBrokers()
+  {
+    return Collections.unmodifiableMap(selectorMap);
   }
 }
