@@ -89,6 +89,7 @@ h2. Development
 ** "Geographic Queries":../development/geo.html
 ** "Select Query":../development/select-query.html
 ** "Approximate Histograms and Quantiles":../development/approximate-histograms.html
+** "Datasketches based Aggregators":../development/datasketches-aggregators.html
 ** "Router node":../development/router.html
 ** "New Kafka Firehose":../development/kafka-simple-consumer-firehose.html
 
