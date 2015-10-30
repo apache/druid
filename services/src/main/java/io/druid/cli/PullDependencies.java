@@ -106,11 +106,11 @@ public class PullDependencies implements Runnable
   public String localRepository = String.format("%s/%s", System.getProperty("user.home"), ".m2/repository");
 
   @Option(
-      name = {"-r", "--remoteRepositories"},
-      title = "A JSON Array list of remote repositories to load dependencies from.",
+      name = {"-r", "--remoteRepository"},
+      title = "Add a remote repository to the default remote repository list, which includes https://repo1.maven.org/maven2/ and https://metamx.artifactoryonline.com/metamx/pub-libs-releases-local",
       required = false
   )
-  List<String> remoteRepositories = ImmutableList.of(
+  List<String> remoteRepositories = Lists.newArrayList(
       "https://repo1.maven.org/maven2/",
       "https://metamx.artifactoryonline.com/metamx/pub-libs-releases-local"
   );
@@ -156,6 +156,12 @@ public class PullDependencies implements Runnable
 
     createRootExtensionsDirectory(extensionsDir);
     createRootExtensionsDirectory(hadoopDependenciesDir);
+
+    log.info(
+        "Start pull-deps with local repository [%s] and remote repositories [%s]",
+        localRepository,
+        remoteRepositories
+    );
 
     try {
       log.info("Start downloading dependencies for extension coordinates: [%s]", coordinates);
