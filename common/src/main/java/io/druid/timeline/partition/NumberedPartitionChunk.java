@@ -43,7 +43,7 @@ public class NumberedPartitionChunk<T> implements PartitionChunk<T>
   )
   {
     Preconditions.checkArgument(chunkNumber >= 0, "chunkNumber >= 0");
-    Preconditions.checkArgument(chunkNumber < chunks, "chunkNumber < chunks");
+    Preconditions.checkArgument(chunks >= 0, "chunks >= 0");
     this.chunkNumber = chunkNumber;
     this.chunks = chunks;
     this.object = object;
@@ -58,19 +58,28 @@ public class NumberedPartitionChunk<T> implements PartitionChunk<T>
   @Override
   public boolean abuts(final PartitionChunk<T> other)
   {
-    return other instanceof NumberedPartitionChunk && other.getChunkNumber() == chunkNumber + 1;
+    if (other instanceof NumberedPartitionChunk) {
+      NumberedPartitionChunk<T> castedOther = (NumberedPartitionChunk<T>) other;
+      if (castedOther.getChunkNumber() < castedOther.chunks) {
+        return other.getChunkNumber() == chunkNumber + 1;
+      } else {
+        return other.getChunkNumber() > chunkNumber;
+      }
+    } else {
+      return false;
+    }
   }
 
   @Override
   public boolean isStart()
   {
-    return chunkNumber == 0;
+    return chunks > 0 ? chunkNumber == 0 : true;
   }
 
   @Override
   public boolean isEnd()
   {
-    return chunkNumber == chunks - 1;
+    return chunks > 0 ? chunkNumber == chunks - 1 : true;
   }
 
   @Override

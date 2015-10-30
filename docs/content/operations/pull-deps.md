@@ -27,9 +27,9 @@ layout: doc_page
 
     A local repostiry that Maven will use to put downloaded files. Then pull-deps will lay these files out into the extensions directory as needed.
 
-`-r` or `--remoteRepositories`
+`-r` or `--remoteRepository`
 
-    A JSON Array list of remote repositories to load dependencies from.
+    Add a remote repository to the default remote repository list, which includes https://repo1.maven.org/maven2/ and https://metamx.artifactoryonline.com/metamx/pub-libs-releases-local
 
 `-d` or `--defaultVersion`
 
