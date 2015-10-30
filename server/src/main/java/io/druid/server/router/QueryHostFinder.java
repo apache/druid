@@ -17,6 +17,8 @@
 
 package io.druid.server.router;
 
+import com.google.common.base.Function;
+import com.google.common.collect.FluentIterable;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.Pair;
@@ -25,17 +27,18 @@ import io.druid.client.selector.Server;
 import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.query.Query;
 
+import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  */
-public class QueryHostFinder<T>
+public class QueryHostFinder
 {
   private static EmittingLogger log = new EmittingLogger(QueryHostFinder.class);
 
   private final TieredBrokerHostSelector hostSelector;
 
-  private final ConcurrentHashMap<String, Server> serverBackup = new ConcurrentHashMap<String, Server>();
+  private final ConcurrentHashMap<String, Server> serverBackup = new ConcurrentHashMap<>();
 
   @Inject
   public QueryHostFinder(
@@ -45,7 +48,7 @@ public class QueryHostFinder<T>
     this.hostSelector = hostSelector;
   }
 
-  public Server findServer(Query<T> query)
+  public <T> Server findServer(Query<T> query)
   {
     final Pair<String, ServerDiscoverySelector> selected = hostSelector.select(query);
     return findServerInner(selected);
@@ -57,7 +60,30 @@ public class QueryHostFinder<T>
     return findServerInner(selected);
   }
 
-  public String getHost(Query<T> query)
+  public Collection<String> getAllHosts()
+  {
+    return FluentIterable
+        .from((Collection<ServerDiscoverySelector>) hostSelector.getAllBrokers().values())
+        .transformAndConcat(
+            new Function<ServerDiscoverySelector, Iterable<Server>>()
+            {
+              @Override
+              public Iterable<Server> apply(ServerDiscoverySelector input)
+              {
+                return input.getAll();
+              }
+            }
+        ).transform(new Function<Server, String>()
+        {
+          @Override
+          public String apply(Server input)
+          {
+            return input.getHost();
+          }
+        }).toList();
+  }
+
+  public <T> String getHost(Query<T> query)
   {
     Server server = findServer(query);
 
@@ -69,9 +95,10 @@ public class QueryHostFinder<T>
       throw new ISE("No server found for query[%s]", query);
     }
 
-    log.debug("Selected [%s]", server.getHost());
+    final String host = server.getHost();
+    log.debug("Selected [%s]", host);
 
-    return server.getHost();
+    return host;
   }
 
   public String getDefaultHost()
