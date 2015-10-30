@@ -332,7 +332,7 @@ public class QueryRunnerTestHelper
   {
     return new FinalizeResultsQueryRunner<T>(
         new BySegmentQueryRunner<T>(
-            segmentId, adapter.getDataInterval().getStart(),
+            adapter.getIdentifier(), adapter.getDataInterval().getStart(),
             factory.createRunner(adapter)
         ),
         (QueryToolChest<T, Query<T>>)factory.getToolchest()

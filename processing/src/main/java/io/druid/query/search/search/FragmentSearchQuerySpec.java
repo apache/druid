@@ -22,7 +22,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.metamx.common.StringUtils;
 
 import java.nio.ByteBuffer;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  */
@@ -31,13 +33,32 @@ public class FragmentSearchQuerySpec implements SearchQuerySpec
   private static final byte CACHE_TYPE_ID = 0x2;
 
   private final List<String> values;
+  private final boolean caseSensitive;
+
+  private final String[] target;
 
   @JsonCreator
   public FragmentSearchQuerySpec(
       @JsonProperty("values") List<String> values
+  ) {
+    this(values, false);
+  }
+
+  @JsonCreator
+  public FragmentSearchQuerySpec(
+      @JsonProperty("values") List<String> values,
+      @JsonProperty("caseSensitive") boolean caseSensitive
   )
   {
     this.values = values;
+    this.caseSensitive = caseSensitive;
+    Set<String> set = new HashSet();
+    if (values != null) {
+      for (String value : values) {
+        set.add(caseSensitive ? value : value.toLowerCase());
+      }
+    }
+    target = set.toArray(new String[set.size()]);
   }
 
   @JsonProperty
@@ -46,11 +67,21 @@ public class FragmentSearchQuerySpec implements SearchQuerySpec
     return values;
   }
 
+  @JsonProperty
+  public boolean isCaseSensitive()
+  {
+    return caseSensitive;
+  }
+
   @Override
   public boolean accept(String dimVal)
   {
-    for (String value : values) {
-      if (dimVal == null || !dimVal.toLowerCase().contains(value.toLowerCase())) {
+    if (dimVal == null) {
+      return false;
+    }
+    final String input = caseSensitive ? dimVal : dimVal.toLowerCase();
+    for (String value : target) {
+      if (!input.contains(value)) {
         return false;
       }
     }
@@ -69,8 +100,9 @@ public class FragmentSearchQuerySpec implements SearchQuerySpec
       ++index;
     }
 
-    final ByteBuffer queryCacheKey = ByteBuffer.allocate(1 + valuesBytesSize)
-                                               .put(CACHE_TYPE_ID);
+    final ByteBuffer queryCacheKey = ByteBuffer.allocate(2 + valuesBytesSize)
+        .put(caseSensitive ? (byte) 1 : 0)
+        .put(CACHE_TYPE_ID);
 
     for (byte[] bytes : valuesBytes) {
       queryCacheKey.put(bytes);
@@ -83,7 +115,7 @@ public class FragmentSearchQuerySpec implements SearchQuerySpec
   public String toString()
   {
     return "FragmentSearchQuerySpec{" +
-           "values=" + values +
+           "values=" + values + ", caseSensitive=" + caseSensitive +
            "}";
   }
 
@@ -98,6 +130,10 @@ public class FragmentSearchQuerySpec implements SearchQuerySpec
     }
 
     FragmentSearchQuerySpec that = (FragmentSearchQuerySpec) o;
+
+    if (caseSensitive ^ that.caseSensitive) {
+      return false;
+    }
 
     if (values != null ? !values.equals(that.values) : that.values != null) {
       return false;

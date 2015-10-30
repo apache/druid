@@ -36,6 +36,8 @@ import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.metadata.metadata.ColumnIncluderator;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.query.search.SearchResultValue;
+import io.druid.query.search.search.ContainsSearchQuerySpec;
+import io.druid.query.search.search.FragmentSearchQuerySpec;
 import io.druid.query.search.search.InsensitiveContainsSearchQuerySpec;
 import io.druid.query.search.search.SearchQuery;
 import io.druid.query.search.search.SearchQuerySpec;
@@ -688,6 +690,29 @@ public class Druids
     public SearchQueryBuilder query(Map<String, Object> q)
     {
       querySpec = new InsensitiveContainsSearchQuerySpec((String) q.get("value"));
+      return this;
+    }
+
+    public SearchQueryBuilder query(String q, boolean caseSensitive)
+    {
+      querySpec = new ContainsSearchQuerySpec(q, caseSensitive);
+      return this;
+    }
+
+    public SearchQueryBuilder query(Map<String, Object> q, boolean caseSensitive)
+    {
+      querySpec = new ContainsSearchQuerySpec((String) q.get("value"), caseSensitive);
+      return this;
+    }
+
+    public SearchQueryBuilder fragments(List<String> q)
+    {
+      return fragments(q, false);
+    }
+
+    public SearchQueryBuilder fragments(List<String> q, boolean caseSensitive)
+    {
+      querySpec = new FragmentSearchQuerySpec(q, caseSensitive);
       return this;
     }
 

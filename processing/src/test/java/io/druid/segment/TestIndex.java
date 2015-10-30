@@ -22,9 +22,9 @@ package io.druid.segment;
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.hash.Hashing;
-import com.google.common.io.CharStreams;
-import com.google.common.io.InputSupplier;
+import com.google.common.io.CharSource;
 import com.google.common.io.LineProcessor;
+import com.google.common.io.Resources;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.impl.DelimitedParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -46,7 +46,6 @@ import org.joda.time.Interval;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicLong;
@@ -163,10 +162,18 @@ public class TestIndex
     }
   }
 
-  private static IncrementalIndex makeRealtimeIndex(final String resourceFilename, final boolean useOffheap)
-  {
+  private static IncrementalIndex makeRealtimeIndex(final String resourceFilename, final boolean useOffheap) {
     final URL resource = TestIndex.class.getClassLoader().getResource(resourceFilename);
+    if (resource == null) {
+      throw new IllegalArgumentException("cannot find resource " + resourceFilename);
+    }
     log.info("Realtime loading index file[%s]", resource);
+    CharSource stream = Resources.asByteSource(resource).asCharSource(Charsets.UTF_8);
+    return makeRealtimeIndex(stream, useOffheap);
+  }
+
+  public static IncrementalIndex makeRealtimeIndex(final CharSource source, final boolean useOffheap)
+  {
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis())
         .withQueryGranularity(QueryGranularity.NONE)
@@ -190,20 +197,8 @@ public class TestIndex
     final AtomicLong startTime = new AtomicLong();
     int lineCount;
     try {
-      lineCount = CharStreams.readLines(
-          CharStreams.newReaderSupplier(
-              new InputSupplier<InputStream>()
-              {
-                @Override
-                public InputStream getInput() throws IOException
-                {
-                  return resource.openStream();
-                }
-              },
-              Charsets.UTF_8
-          ),
-          new LineProcessor<Integer>()
-          {
+      lineCount = source.readLines(
+          new LineProcessor<Integer>() {
             StringInputRowParser parser = new StringInputRowParser(
                 new DelimitedParseSpec(
                     new TimestampSpec("ts", "iso", null),
