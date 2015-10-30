@@ -26,12 +26,15 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
+import java.util.Objects;
+
 public class SegmentIdentifier
 {
   private final String dataSource;
   private final Interval interval;
   private final String version;
   private final ShardSpec shardSpec;
+  private final String asString;
 
   @JsonCreator
   public SegmentIdentifier(
@@ -45,6 +48,13 @@ public class SegmentIdentifier
     this.interval = Preconditions.checkNotNull(interval, "interval");
     this.version = Preconditions.checkNotNull(version, "version");
     this.shardSpec = Preconditions.checkNotNull(shardSpec, "shardSpec");
+    this.asString = DataSegment.makeDataSegmentIdentifier(
+        dataSource,
+        interval.getStart(),
+        interval.getEnd(),
+        version,
+        shardSpec
+    );
   }
 
   @JsonProperty
@@ -73,13 +83,7 @@ public class SegmentIdentifier
 
   public String getIdentifierAsString()
   {
-    return DataSegment.makeDataSegmentIdentifier(
-        dataSource,
-        interval.getStart(),
-        interval.getEnd(),
-        version,
-        shardSpec
-    );
+    return asString;
   }
 
   @Override
@@ -92,19 +96,19 @@ public class SegmentIdentifier
       return false;
     }
     SegmentIdentifier that = (SegmentIdentifier) o;
-    return getIdentifierAsString().equals(that.getIdentifierAsString());
+    return Objects.equals(asString, that.asString);
   }
 
   @Override
   public int hashCode()
   {
-    return getIdentifierAsString().hashCode();
+    return asString.hashCode();
   }
 
   @Override
   public String toString()
   {
-    return getIdentifierAsString();
+    return asString;
   }
 
   public static SegmentIdentifier fromDataSegment(final DataSegment segment)

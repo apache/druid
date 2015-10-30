@@ -35,7 +35,7 @@ public class PostgreSQLConnectorTest
   {
     PostgreSQLConnector connector = new PostgreSQLConnector(
         Suppliers.ofInstance(new MetadataStorageConnectorConfig()),
-        Suppliers.ofInstance(new MetadataStorageTablesConfig(null, null, null, null, null, null, null, null))
+        Suppliers.ofInstance(new MetadataStorageTablesConfig(null, null, null, null, null, null, null, null, null))
     );
 
     Assert.assertTrue(connector.isTransientException(new SQLException("bummer, connection problem", "08DIE")));

@@ -198,7 +198,7 @@ public class SQLMetadataStorageDruidModule implements Module
     PolyBind.optionBinder(binder, Key.get(IndexerMetadataStorageCoordinator.class))
             .addBinding(type)
             .to(IndexerSQLMetadataStorageCoordinator.class)
-            .in(LazySingleton.class);
+            .in(ManageLifecycle.class);
 
     PolyBind.optionBinder(binder, Key.get(MetadataStorageUpdaterJobHandler.class))
             .addBinding(type)

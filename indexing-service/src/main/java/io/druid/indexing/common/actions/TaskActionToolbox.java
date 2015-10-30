@@ -65,24 +65,6 @@ public class TaskActionToolbox
     return emitter;
   }
 
-  public boolean segmentsAreFromSamePartitionSet(
-      final Set<DataSegment> segments
-  )
-  {
-    // Verify that these segments are all in the same partition set
-
-    Preconditions.checkArgument(!segments.isEmpty(), "segments nonempty");
-    final DataSegment firstSegment = segments.iterator().next();
-    for (final DataSegment segment : segments) {
-      if (!segment.getDataSource().equals(firstSegment.getDataSource())
-          || !segment.getInterval().equals(firstSegment.getInterval())
-          || !segment.getVersion().equals(firstSegment.getVersion())) {
-        return false;
-      }
-    }
-    return true;
-  }
-
   public void verifyTaskLocks(
       final Task task,
       final Set<DataSegment> segments
