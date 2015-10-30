@@ -13,5 +13,3 @@ target
 *.log
 *.DS_Store
 _site
-/distribution/druid_extensions
-/distribution/hadoop_druid_dependencies

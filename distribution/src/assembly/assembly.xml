@@ -25,7 +25,7 @@
     </formats>
     <fileSets>
         <fileSet>
-            <directory>druid_extensions</directory>
+            <directory>${project.build.directory}/druid_extensions</directory>
             <includes>
                 <include>*/*</include>
             </includes>
@@ -35,7 +35,7 @@
             <outputDirectory>druid_extensions</outputDirectory>
         </fileSet>
         <fileSet>
-            <directory>hadoop_druid_dependencies</directory>
+            <directory>${project.build.directory}/hadoop_druid_dependencies</directory>
             <includes>
                 <include>*/*/*</include>
             </includes>

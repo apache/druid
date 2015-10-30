@@ -57,6 +57,8 @@
                                 <argument>-classpath</argument>
                                 <classpath/>
                                 <argument>-Ddruid.extensions.loadList=[]</argument>
+                                <argument>-Ddruid.extensions.directory=${project.build.directory}/druid_extensions</argument>
+                                <argument>-Ddruid.extensions.hadoopDependenciesDir=${project.build.directory}/hadoop_druid_dependencies</argument>
                                 <argument>io.druid.cli.Main</argument>
                                 <argument>tools</argument>
                                 <argument>pull-deps</argument>
@@ -139,20 +141,6 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-clean-plugin</artifactId>
-                <configuration>
-                    <filesets>
-                        <fileset>
-                            <directory>${project.basedir}/druid_extensions</directory>
-                        </fileset>
-                        <fileset>
-                            <directory>${project.basedir}/hadoop_druid_dependencies</directory>
-                        </fileset>
-                    </filesets>
-                </configuration>
             </plugin>
         </plugins>
     </build>
