@@ -40,7 +40,7 @@ public class NumberedShardSpec implements ShardSpec
   )
   {
     Preconditions.checkArgument(partitionNum >= 0, "partitionNum >= 0");
-    Preconditions.checkArgument(partitionNum < partitions, "partitionNum < partitions");
+    Preconditions.checkArgument(partitions >= 0, "partitions >= 0");
     this.partitionNum = partitionNum;
     this.partitions = partitions;
   }
