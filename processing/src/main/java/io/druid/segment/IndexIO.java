@@ -19,7 +19,6 @@
 
 package io.druid.segment;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
@@ -1040,15 +1039,13 @@ public class IndexIO
         segmentBitmapSerdeFactory = new BitmapSerde.LegacyBitmapSerdeFactory();
       }
 
-      Map<String, Object> metadata = null;
+      Metadata metadata = null;
       ByteBuffer metadataBB = smooshedFiles.mapFile("metadata.drd");
       if (metadataBB != null) {
         try {
           metadata = mapper.readValue(
               serializerUtils.readBytes(metadataBB, metadataBB.remaining()),
-              new TypeReference<Map<String, Object>>()
-              {
-              }
+              Metadata.class
           );
         }
         catch (IOException ex) {

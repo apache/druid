@@ -44,6 +44,7 @@ import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
+import io.druid.segment.Metadata;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
@@ -262,6 +263,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   private final AggregatorFactory[] metrics;
   private final AggregatorType[] aggs;
   private final boolean deserializeComplexMetrics;
+  private final Metadata metadata;
 
   private final Map<String, MetricDesc> metricDescs;
   private final Map<String, DimensionDesc> dimensionDescs;
@@ -298,6 +300,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     this.metrics = incrementalIndexSchema.getMetrics();
     this.rowTransformers = new CopyOnWriteArrayList<>();
     this.deserializeComplexMetrics = deserializeComplexMetrics;
+    this.metadata = new Metadata();
 
     this.aggs = initAggs(metrics, rowSupplier, deserializeComplexMetrics);
     this.columnCapabilities = Maps.newHashMap();
@@ -619,6 +622,16 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   public ConcurrentNavigableMap<TimeAndDims, Integer> getSubMap(TimeAndDims start, TimeAndDims end)
   {
     return getFacts().subMap(start, end);
+  }
+
+  public Metadata getMetadata()
+  {
+    return metadata;
+  }
+
+  public void addAllToMetadata(Metadata toAdd)
+  {
+    metadata.addAll(toAdd);
   }
 
   @Override

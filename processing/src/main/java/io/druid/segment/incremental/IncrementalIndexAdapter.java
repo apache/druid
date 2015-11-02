@@ -29,6 +29,7 @@ import com.metamx.collections.bitmap.MutableBitmap;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import io.druid.segment.IndexableAdapter;
+import io.druid.segment.Metadata;
 import io.druid.segment.Rowboat;
 import io.druid.segment.column.BitmapIndexSeeker;
 import io.druid.segment.column.ColumnCapabilities;
@@ -58,6 +59,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   private final IncrementalIndex<?> index;
   private final Map<String, Map<String, MutableBitmap>> invertedIndexes;
   private final Set<String> hasNullValueDimensions;
+  private final Metadata metadata;
 
   public IncrementalIndexAdapter(
       Interval dataInterval, IncrementalIndex<?> index, BitmapFactory bitmapFactory
@@ -65,6 +67,8 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   {
     this.dataInterval = dataInterval;
     this.index = index;
+    this.metadata = index.getMetadata();
+
     this.invertedIndexes = Maps.newHashMap();
     /* Sometimes it's hard to tell whether one dimension contains a null value or not.
      * If one dimension had show a null or empty value explicitly, then yes, it contains
@@ -397,5 +401,11 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     {
 
     }
+  }
+
+  @Override
+  public Metadata getMetadata()
+  {
+    return metadata;
   }
 }

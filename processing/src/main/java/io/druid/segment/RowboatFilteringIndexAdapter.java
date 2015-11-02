@@ -99,4 +99,10 @@ public class RowboatFilteringIndexAdapter implements IndexableAdapter
   {
     return baseAdapter.getBitmapIndexSeeker(dimension);
   }
+
+  @Override
+  public Metadata getMetadata()
+  {
+    return baseAdapter.getMetadata();
+  }
 }

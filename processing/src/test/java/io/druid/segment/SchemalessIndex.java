@@ -191,8 +191,8 @@ public class SchemalessIndex
         mergedFile.mkdirs();
         mergedFile.deleteOnExit();
 
-        INDEX_MERGER.persist(top, topFile, null, indexSpec);
-        INDEX_MERGER.persist(bottom, bottomFile, null, indexSpec);
+        INDEX_MERGER.persist(top, topFile, indexSpec);
+        INDEX_MERGER.persist(bottom, bottomFile, indexSpec);
 
         mergedIndex = INDEX_IO.loadIndex(
             INDEX_MERGER.mergeQueryableIndex(
@@ -361,7 +361,7 @@ public class SchemalessIndex
           tmpFile.mkdirs();
           tmpFile.deleteOnExit();
 
-          INDEX_MERGER.persist(rowIndex, tmpFile, null, indexSpec);
+          INDEX_MERGER.persist(rowIndex, tmpFile, indexSpec);
           rowPersistedIndexes.add(INDEX_IO.loadIndex(tmpFile));
         }
       }
@@ -421,7 +421,7 @@ public class SchemalessIndex
       theFile.mkdirs();
       theFile.deleteOnExit();
       filesToMap.add(theFile);
-      INDEX_MERGER.persist(index, theFile, null, indexSpec);
+      INDEX_MERGER.persist(index, theFile, indexSpec);
     }
 
     return filesToMap;

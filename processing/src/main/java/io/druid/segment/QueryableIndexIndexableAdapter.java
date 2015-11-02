@@ -62,6 +62,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   private final int numRows;
   private final QueryableIndex input;
   private final List<String> availableDimensions;
+  private final Metadata metadata;
 
   public QueryableIndexIndexableAdapter(QueryableIndex input)
   {
@@ -83,6 +84,8 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
         log.info("No dictionary on dimension[%s]", dim);
       }
     }
+
+    this.metadata = input.getMetaData();
   }
 
   @Override
@@ -379,8 +382,10 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
         }
         if (lastVal != null) {
           if (GenericIndexed.STRING_STRATEGY.compare(value, lastVal) <= 0) {
-            throw new ISE("Value[%s] is less than the last value[%s] I have, cannot be.",
-                value, lastVal);
+            throw new ISE(
+                "Value[%s] is less than the last value[%s] I have, cannot be.",
+                value, lastVal
+            );
           }
           return new EmptyIndexedInts();
         }
@@ -398,12 +403,20 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
           }
           return ret;
         } else if (compareResult < 0) {
-          throw new ISE("Skipped currValue[%s], currIndex[%,d]; incoming value[%s]",
-              currVal, currIndex, value);
+          throw new ISE(
+              "Skipped currValue[%s], currIndex[%,d]; incoming value[%s]",
+              currVal, currIndex, value
+          );
         } else {
           return new EmptyIndexedInts();
         }
       }
     };
+  }
+
+  @Override
+  public Metadata getMetadata()
+  {
+    return metadata;
   }
 }
