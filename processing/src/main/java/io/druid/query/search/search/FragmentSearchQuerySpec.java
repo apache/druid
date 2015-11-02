@@ -22,9 +22,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.metamx.common.StringUtils;
 
 import java.nio.ByteBuffer;
-import java.util.HashSet;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 
 /**
  */
@@ -53,7 +54,7 @@ public class FragmentSearchQuerySpec implements SearchQuerySpec
   {
     this.values = values;
     this.caseSensitive = caseSensitive;
-    Set<String> set = new HashSet();
+    Set<String> set = new TreeSet();
     if (values != null) {
       for (String value : values) {
         set.add(value);
@@ -154,16 +155,16 @@ public class FragmentSearchQuerySpec implements SearchQuerySpec
       return false;
     }
 
-    if (values != null ? !values.equals(that.values) : that.values != null) {
-      return false;
+    if (values == null && that.values == null) {
+      return true;
     }
 
-    return true;
+    return values != null && Arrays.equals(target, that.target);
   }
 
   @Override
   public int hashCode()
   {
-    return values != null ? values.hashCode() : 0;
+    return Arrays.hashCode(target) + (caseSensitive ? (byte) 1 : 0);
   }
 }

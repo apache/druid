@@ -19,6 +19,7 @@ package io.druid.query.search.search;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Objects;
 import com.metamx.common.StringUtils;
 
 import java.nio.ByteBuffer;
@@ -109,16 +110,16 @@ public class ContainsSearchQuerySpec implements SearchQuerySpec
       return false;
     }
 
-    if (value != null ? !value.equals(that.value) : that.value != null) {
-      return false;
+    if (value == null && that.value == null) {
+      return true;
     }
 
-    return true;
+    return value != null && value.equals(that.value);
   }
 
   @Override
   public int hashCode()
   {
-    return value != null ? value.hashCode() : 0;
+    return Objects.hashCode(value) + (caseSensitive ? (byte) 1 : 0);
   }
 }
