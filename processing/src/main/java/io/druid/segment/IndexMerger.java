@@ -125,11 +125,10 @@ public class IndexMerger
   public File persist(
       final IncrementalIndex index,
       File outDir,
-      Map<String, Object> segmentMetadata,
       IndexSpec indexSpec
   ) throws IOException
   {
-    return persist(index, index.getInterval(), outDir, segmentMetadata, indexSpec);
+    return persist(index, index.getInterval(), outDir, indexSpec);
   }
 
   /**
@@ -148,18 +147,16 @@ public class IndexMerger
       final IncrementalIndex index,
       final Interval dataInterval,
       File outDir,
-      Map<String, Object> segmentMetadata,
       IndexSpec indexSpec
   ) throws IOException
   {
-    return persist(index, dataInterval, outDir, segmentMetadata, indexSpec, new BaseProgressIndicator());
+    return persist(index, dataInterval, outDir, indexSpec, new BaseProgressIndicator());
   }
 
   public File persist(
       final IncrementalIndex index,
       final Interval dataInterval,
       File outDir,
-      Map<String, Object> segmentMetadata,
       IndexSpec indexSpec,
       ProgressIndicator progress
   ) throws IOException
@@ -197,14 +194,16 @@ public class IndexMerger
         ),
         index.getMetricAggs(),
         outDir,
-        segmentMetadata,
         indexSpec,
         progress
     );
   }
 
   public File mergeQueryableIndex(
-      List<QueryableIndex> indexes, final AggregatorFactory[] metricAggs, File outDir, IndexSpec indexSpec
+      List<QueryableIndex> indexes,
+      final AggregatorFactory[] metricAggs,
+      File outDir,
+      IndexSpec indexSpec
   ) throws IOException
   {
     return mergeQueryableIndex(indexes, metricAggs, outDir, indexSpec, new BaseProgressIndicator());
@@ -238,7 +237,6 @@ public class IndexMerger
         indexAdapteres,
         metricAggs,
         outDir,
-        null,
         indexSpec,
         progress
     );
@@ -248,11 +246,10 @@ public class IndexMerger
       List<IndexableAdapter> indexes,
       final AggregatorFactory[] metricAggs,
       File outDir,
-      Map<String, Object> segmentMetadata,
       IndexSpec indexSpec
   ) throws IOException
   {
-    return merge(indexes, metricAggs, outDir, segmentMetadata, indexSpec, new BaseProgressIndicator());
+    return merge(indexes, metricAggs, outDir, indexSpec, new BaseProgressIndicator());
   }
 
   private static List<String> getLexicographicMergedDimensions(List<IndexableAdapter> indexes)
@@ -291,7 +288,6 @@ public class IndexMerger
       List<IndexableAdapter> indexes,
       final AggregatorFactory[] metricAggs,
       File outDir,
-      Map<String, Object> segmentMetadata,
       IndexSpec indexSpec,
       ProgressIndicator progress
   ) throws IOException
@@ -375,7 +371,6 @@ public class IndexMerger
         progress,
         mergedDimensions,
         mergedMetrics,
-        segmentMetadata,
         rowMergerFn,
         indexSpec
     );
@@ -399,7 +394,6 @@ public class IndexMerger
           progress,
           Lists.newArrayList(adapter.getDimensionNames()),
           Lists.newArrayList(adapter.getMetricNames()),
-          null,
           new Function<ArrayList<Iterable<Rowboat>>, Iterable<Rowboat>>()
           {
             @Nullable
@@ -414,6 +408,7 @@ public class IndexMerger
     }
   }
 
+
   public File append(
       List<IndexableAdapter> indexes, File outDir, IndexSpec indexSpec
   ) throws IOException
@@ -422,7 +417,10 @@ public class IndexMerger
   }
 
   public File append(
-      List<IndexableAdapter> indexes, File outDir, IndexSpec indexSpec, ProgressIndicator progress
+      List<IndexableAdapter> indexes,
+      File outDir,
+      IndexSpec indexSpec,
+      ProgressIndicator progress
   ) throws IOException
   {
     FileUtils.deleteDirectory(outDir);
@@ -470,7 +468,15 @@ public class IndexMerger
       }
     };
 
-    return makeIndexFiles(indexes, outDir, progress, mergedDimensions, mergedMetrics, null, rowMergerFn, indexSpec);
+    return makeIndexFiles(
+        indexes,
+        outDir,
+        progress,
+        mergedDimensions,
+        mergedMetrics,
+        rowMergerFn,
+        indexSpec
+    );
   }
 
   protected File makeIndexFiles(
@@ -479,11 +485,24 @@ public class IndexMerger
       final ProgressIndicator progress,
       final List<String> mergedDimensions,
       final List<String> mergedMetrics,
-      final Map<String, Object> segmentMetadata,
       final Function<ArrayList<Iterable<Rowboat>>, Iterable<Rowboat>> rowMergerFn,
       final IndexSpec indexSpec
   ) throws IOException
   {
+    List<Metadata> metadataList = Lists.transform(
+        indexes,
+        new Function<IndexableAdapter, Metadata>()
+        {
+          @Nullable
+          @Override
+          public Metadata apply(IndexableAdapter input)
+          {
+            return input.getMetaData();
+          }
+        }
+    );
+    Metadata segmentMetadata = Metadata.merge(metadataList);
+
     final Map<String, ValueType> valueTypes = Maps.newTreeMap(Ordering.<String>natural().nullsFirst());
     final Map<String, String> metricTypeNames = Maps.newTreeMap(Ordering.<String>natural().nullsFirst());
     final Map<String, ColumnCapabilitiesImpl> columnCapabilities = Maps.newHashMap();
@@ -1297,7 +1316,7 @@ public class IndexMerger
     return true;
   }
 
-  private void writeMetadataToFile(File metadataFile, Map<String, Object> metadata) throws IOException
+  private void writeMetadataToFile(File metadataFile, Metadata metadata) throws IOException
   {
     try (FileOutputStream metadataFileOutputStream = new FileOutputStream(metadataFile);
          FileChannel metadataFilechannel = metadataFileOutputStream.getChannel()

@@ -26,7 +26,6 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -63,6 +62,7 @@ import io.druid.query.spec.SpecificSegmentSpec;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
+import io.druid.segment.Metadata;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.ReferenceCountingSegment;
@@ -86,6 +86,7 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+import javax.ws.rs.HEAD;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FilenameFilter;
@@ -403,13 +404,16 @@ public class RealtimePlumber implements Plumber
     final Stopwatch runExecStopwatch = Stopwatch.createStarted();
     final Stopwatch persistStopwatch = Stopwatch.createStarted();
 
-    final Map<String, Object> metadata = committer.getMetadata() == null ? null :
-                                         ImmutableMap.of(
-                                             COMMIT_METADATA_KEY,
-                                             committer.getMetadata(),
-                                             COMMIT_METADATA_TIMESTAMP_KEY,
-                                             System.currentTimeMillis()
-                                         );
+    final Metadata metadata = committer.getMetadata() == null ? null :
+                              new Metadata()
+                                  .put(
+                                      COMMIT_METADATA_KEY,
+                                      committer.getMetadata()
+                                  )
+                                  .put(
+                                      COMMIT_METADATA_TIMESTAMP_KEY,
+                                      System.currentTimeMillis()
+                                  );
 
     persistExecutor.execute(
         new ThreadRenamingRunnable(String.format("%s-incremental-persist", schema.getDataSource()))
@@ -763,11 +767,12 @@ public class RealtimePlumber implements Plumber
           catch (Exception e1) {
             log.error(e1, "Failed to rename %s", segmentDir.getAbsolutePath());
           }
+
           //Note: skipping corrupted segment might lead to dropping some data. This strategy should be changed
           //at some point.
           continue;
         }
-        Map<String, Object> segmentMetadata = queryableIndex.getMetaData();
+        Metadata segmentMetadata = queryableIndex.getMetaData();
         if (segmentMetadata != null) {
           Object timestampObj = segmentMetadata.get(COMMIT_METADATA_TIMESTAMP_KEY);
           if (timestampObj != null) {
@@ -1000,7 +1005,7 @@ public class RealtimePlumber implements Plumber
       FireHydrant indexToPersist,
       DataSchema schema,
       Interval interval,
-      Map<String, Object> metaData
+      Metadata metadata
   )
   {
     synchronized (indexToPersist) {
@@ -1016,7 +1021,7 @@ public class RealtimePlumber implements Plumber
           "DataSource[%s], Interval[%s], Metadata [%s] persisting Hydrant[%s]",
           schema.getDataSource(),
           interval,
-          metaData,
+          metadata,
           indexToPersist
       );
       try {
@@ -1024,11 +1029,11 @@ public class RealtimePlumber implements Plumber
 
         final IndexSpec indexSpec = config.getIndexSpec();
 
+        indexToPersist.getIndex().addAllToMetadata(metadata);
         final File persistedFile = indexMerger.persist(
             indexToPersist.getIndex(),
             interval,
             new File(computePersistDir(schema, interval), String.valueOf(indexToPersist.getCount())),
-            metaData,
             indexSpec
         );
 
