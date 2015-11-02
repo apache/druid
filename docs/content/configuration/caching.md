@@ -24,7 +24,7 @@ for both broker and historical nodes, when defined in the common properties file
 
 #### Local Cache
 
-A simple in-memory LRU cache.
+A simple in-memory LRU cache. Local cache resides in JVM heap memory, so if you enable it, make sure you increase heap size accordingly.
 
 |Property|Description|Default|
 |--------|-----------|-------|
