@@ -25,7 +25,7 @@
     </formats>
     <fileSets>
         <fileSet>
-            <directory>${project.build.directory}/druid_extensions/mysql-metadata-storage</directory>
+            <directory>${project.build.directory}/extensions/mysql-metadata-storage</directory>
             <includes>
                 <include>*</include>
             </includes>

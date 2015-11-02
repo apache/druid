@@ -78,7 +78,7 @@ public class PullDependenciesTest
     extensionToJars.put(hadoop_client_2_3_0, ImmutableList.of("f.jar", "g.jar"));
     extensionToJars.put(hadoop_client_2_4_0, ImmutableList.of("h.jar", "i.jar"));
 
-    rootExtensionsDir = new File(temporaryFolder.getRoot(), "druid_extensions");
+    rootExtensionsDir = new File(temporaryFolder.getRoot(), "extensions");
     rootHadoopDependenciesDir = new File(temporaryFolder.getRoot(), "druid_hadoop_dependencies");
 
     pullDependencies = new PullDependencies(

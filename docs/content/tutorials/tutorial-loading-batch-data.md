@@ -247,7 +247,7 @@ Most common data ingestion problems are around timestamp formats and other malfo
 
 Druid is designed for large data volumes, and most real-world data sets require batch indexing be done through a Hadoop job.
 
-For this tutorial, we used [Hadoop 2.3.0](https://archive.apache.org/dist/hadoop/core/hadoop-2.3.0/), which is included under ```hadoop_druid_dependencies```. There are many pages on the Internet showing how to set up a single-node (standalone) Hadoop cluster, which is all that's needed for this example. For more information about how Druid picks up your Hadoop version, see [here](../operations/other-hadoop.html).
+For this tutorial, we used [Hadoop 2.3.0](https://archive.apache.org/dist/hadoop/core/hadoop-2.3.0/), which is included under ```hadoop_dependencies```. There are many pages on the Internet showing how to set up a single-node (standalone) Hadoop cluster, which is all that's needed for this example. For more information about how Druid picks up your Hadoop version, see [here](../operations/other-hadoop.html).
 
 Before indexing the data, make sure you have a valid Hadoop cluster running. To build our Druid segment, we are going to submit a [Hadoop index task](../misc/tasks.html) to the indexing service. The grammar for the Hadoop index task is very similar to the index task of the last tutorial. The tutorial Hadoop index task should be located at:
 

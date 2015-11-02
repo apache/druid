@@ -25,21 +25,21 @@
     </formats>
     <fileSets>
         <fileSet>
-            <directory>${project.build.directory}/druid_extensions</directory>
+            <directory>${project.build.directory}/extensions</directory>
             <includes>
                 <include>*/*</include>
             </includes>
             <excludes>
                 <exclude>mysql-metadata-storage/**</exclude>
             </excludes>
-            <outputDirectory>druid_extensions</outputDirectory>
+            <outputDirectory>extensions</outputDirectory>
         </fileSet>
         <fileSet>
-            <directory>${project.build.directory}/hadoop_druid_dependencies</directory>
+            <directory>${project.build.directory}/hadoop_dependencies</directory>
             <includes>
                 <include>*/*/*</include>
             </includes>
-            <outputDirectory>hadoop_druid_dependencies</outputDirectory>
+            <outputDirectory>hadoop_dependencies</outputDirectory>
         </fileSet>
         <fileSet>
             <directory>../examples/config</directory>

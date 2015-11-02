@@ -23,7 +23,7 @@ This will compile the project and create the Druid binary distribution tar under
 `distribution/target/druid-VERSION-bin.tar.gz`.
 
 This will also create a tarball that contains `mysql-metadata-storage` extension under
- `distribution/target/mysql-metdata-storage-bin.tar.gz`. If you want Druid to load `mysql-metadata-storage`, you can first untar `druid-VERSION-bin.tar.gz`, then go to ```druid-<version>/druid_extensions```, untar `mysql-metdata-storage-bin.tar.gz` there. Now just specifiy `mysql-metadata-storage` in `druid.extensions.loadList` so that Druid will pick it up. See [Including Extensions](../operations/including-extensions.html) for more infomation.
+ `distribution/target/mysql-metadata-storage-bin.tar.gz`. If you want Druid to load `mysql-metadata-storage`, you can first untar `druid-VERSION-bin.tar.gz`, then go to ```druid-<version>/extensions```, untar `mysql-metadata-storage-bin.tar.gz` there. Now just specifiy `mysql-metadata-storage` in `druid.extensions.loadList` so that Druid will pick it up. See [Including Extensions](../operations/including-extensions.html) for more infomation.
 
 You can find the example executables in the examples/bin directory:
 
