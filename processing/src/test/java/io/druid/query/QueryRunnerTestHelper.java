@@ -330,9 +330,18 @@ public class QueryRunnerTestHelper
       Segment adapter
   )
   {
+    return makeQueryRunner(factory, segmentId, adapter);
+  }
+
+  public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
+      QueryRunnerFactory<T, QueryType> factory,
+      String segmentId,
+      Segment adapter
+  )
+  {
     return new FinalizeResultsQueryRunner<T>(
         new BySegmentQueryRunner<T>(
-            adapter.getIdentifier(), adapter.getDataInterval().getStart(),
+            segmentId, adapter.getDataInterval().getStart(),
             factory.createRunner(adapter)
         ),
         (QueryToolChest<T, Query<T>>)factory.getToolchest()

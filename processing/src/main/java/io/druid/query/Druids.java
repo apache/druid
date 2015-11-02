@@ -18,6 +18,7 @@
 package io.druid.query;
 
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -683,25 +684,29 @@ public class Druids
 
     public SearchQueryBuilder query(String q)
     {
+      Preconditions.checkNotNull(q, "no value");
       querySpec = new InsensitiveContainsSearchQuerySpec(q);
       return this;
     }
 
     public SearchQueryBuilder query(Map<String, Object> q)
     {
-      querySpec = new InsensitiveContainsSearchQuerySpec((String) q.get("value"));
+      String value = Preconditions.checkNotNull(q.get("value"), "no value").toString();
+      querySpec = new InsensitiveContainsSearchQuerySpec(value);
       return this;
     }
 
     public SearchQueryBuilder query(String q, boolean caseSensitive)
     {
+      Preconditions.checkNotNull(q, "no value");
       querySpec = new ContainsSearchQuerySpec(q, caseSensitive);
       return this;
     }
 
     public SearchQueryBuilder query(Map<String, Object> q, boolean caseSensitive)
     {
-      querySpec = new ContainsSearchQuerySpec((String) q.get("value"), caseSensitive);
+      String value = Preconditions.checkNotNull(q.get("value"), "no value").toString();
+      querySpec = new ContainsSearchQuerySpec(value, caseSensitive);
       return this;
     }
 
@@ -712,6 +717,7 @@ public class Druids
 
     public SearchQueryBuilder fragments(List<String> q, boolean caseSensitive)
     {
+      Preconditions.checkNotNull(q, "no value");
       querySpec = new FragmentSearchQuerySpec(q, caseSensitive);
       return this;
     }

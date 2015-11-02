@@ -40,7 +40,8 @@ public class FragmentSearchQuerySpec implements SearchQuerySpec
   @JsonCreator
   public FragmentSearchQuerySpec(
       @JsonProperty("values") List<String> values
-  ) {
+  )
+  {
     this(values, false);
   }
 
@@ -55,7 +56,7 @@ public class FragmentSearchQuerySpec implements SearchQuerySpec
     Set<String> set = new HashSet();
     if (values != null) {
       for (String value : values) {
-        set.add(caseSensitive ? value : value.toLowerCase());
+        set.add(value);
       }
     }
     target = set.toArray(new String[set.size()]);
@@ -76,10 +77,22 @@ public class FragmentSearchQuerySpec implements SearchQuerySpec
   @Override
   public boolean accept(String dimVal)
   {
-    if (dimVal == null) {
+    if (dimVal == null || values == null) {
       return false;
     }
-    final String input = caseSensitive ? dimVal : dimVal.toLowerCase();
+    if (caseSensitive) {
+      return containsAny(target, dimVal);
+    }
+    for (String search : target) {
+      if (!org.apache.commons.lang.StringUtils.containsIgnoreCase(dimVal, search)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private boolean containsAny(String[] target, String input)
+  {
     for (String value : target) {
       if (!input.contains(value)) {
         return false;
@@ -91,6 +104,12 @@ public class FragmentSearchQuerySpec implements SearchQuerySpec
   @Override
   public byte[] getCacheKey()
   {
+    if (values == null) {
+      return ByteBuffer.allocate(2)
+                       .put(CACHE_TYPE_ID)
+                       .put(caseSensitive ? (byte) 1 : 0).array();
+    }
+
     final byte[][] valuesBytes = new byte[values.size()][];
     int valuesBytesSize = 0;
     int index = 0;
@@ -101,8 +120,8 @@ public class FragmentSearchQuerySpec implements SearchQuerySpec
     }
 
     final ByteBuffer queryCacheKey = ByteBuffer.allocate(2 + valuesBytesSize)
-        .put(caseSensitive ? (byte) 1 : 0)
-        .put(CACHE_TYPE_ID);
+                                               .put(CACHE_TYPE_ID)
+                                               .put(caseSensitive ? (byte) 1 : 0);
 
     for (byte[] bytes : valuesBytes) {
       queryCacheKey.put(bytes);

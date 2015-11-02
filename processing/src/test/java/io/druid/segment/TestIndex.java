@@ -162,7 +162,8 @@ public class TestIndex
     }
   }
 
-  private static IncrementalIndex makeRealtimeIndex(final String resourceFilename, final boolean useOffheap) {
+  private static IncrementalIndex makeRealtimeIndex(final String resourceFilename, final boolean useOffheap)
+  {
     final URL resource = TestIndex.class.getClassLoader().getResource(resourceFilename);
     if (resource == null) {
       throw new IllegalArgumentException("cannot find resource " + resourceFilename);
@@ -198,7 +199,8 @@ public class TestIndex
     int lineCount;
     try {
       lineCount = source.readLines(
-          new LineProcessor<Integer>() {
+          new LineProcessor<Integer>()
+          {
             StringInputRowParser parser = new StringInputRowParser(
                 new DelimitedParseSpec(
                     new TimestampSpec("ts", "iso", null),

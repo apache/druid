@@ -68,7 +68,8 @@ public class SearchQueryRunnerWithCaseTest
         "2011-01-12T00:00:00.000Z\tspot\tAutoMotive\tPREFERRED\ta\u0001preferred\t100.000000\n" +
         "2011-01-12T00:00:00.000Z\tSPot\tbusiness\tpreferred\tb\u0001Preferred\t100.000000\n" +
         "2011-01-12T00:00:00.000Z\tspot\tentertainment\tPREFERRed\te\u0001preferred\t100.000000\n" +
-        "2011-01-13T00:00:00.000Z\tspot\tautomotive\tpreferred\ta\u0001preferred\t94.874713");
+        "2011-01-13T00:00:00.000Z\tspot\tautomotive\tpreferred\ta\u0001preferred\t94.874713"
+    );
 
     IncrementalIndex index1 = TestIndex.makeRealtimeIndex(input, true);
     IncrementalIndex index2 = TestIndex.makeRealtimeIndex(input, false);
@@ -76,12 +77,14 @@ public class SearchQueryRunnerWithCaseTest
     QueryableIndex index3 = TestIndex.persistRealtimeAndLoadMMapped(index1);
     QueryableIndex index4 = TestIndex.persistRealtimeAndLoadMMapped(index2);
 
-    return transformToConstructionFeeder(Arrays.asList(
-        makeQueryRunner(factory, new IncrementalIndexSegment(index1, "index1")),
-        makeQueryRunner(factory, new IncrementalIndexSegment(index2, "index2")),
-        makeQueryRunner(factory, new QueryableIndexSegment("index3", index3)),
-        makeQueryRunner(factory, new QueryableIndexSegment("index4", index4))
-    ));
+    return transformToConstructionFeeder(
+        Arrays.asList(
+            makeQueryRunner(factory, "index1", new IncrementalIndexSegment(index1, "index1")),
+            makeQueryRunner(factory, "index2", new IncrementalIndexSegment(index2, "index2")),
+            makeQueryRunner(factory, "index3", new QueryableIndexSegment("index3", index3)),
+            makeQueryRunner(factory, "index4", new QueryableIndexSegment("index4", index4))
+        )
+    );
   }
 
   private final QueryRunner runner;
@@ -93,11 +96,12 @@ public class SearchQueryRunnerWithCaseTest
     this.runner = runner;
   }
 
-  private Druids.SearchQueryBuilder testBuilder() {
+  private Druids.SearchQueryBuilder testBuilder()
+  {
     return Druids.newSearchQueryBuilder()
-        .dataSource(dataSource)
-        .granularity(allGran)
-        .intervals(fullOnInterval);
+                 .dataSource(dataSource)
+                 .granularity(allGran)
+                 .intervals(fullOnInterval);
   }
 
   @Test
@@ -157,7 +161,7 @@ public class SearchQueryRunnerWithCaseTest
 
   private void checkSearchQuery(SearchQuery searchQuery, Map<String, Set<String>> expectedResults)
   {
-    HashMap<String,List> context = new HashMap<>();
+    HashMap<String, List> context = new HashMap<>();
     Iterable<Result<SearchResultValue>> results = Sequences.toList(
         runner.run(searchQuery, context),
         Lists.<Result<SearchResultValue>>newArrayList()
