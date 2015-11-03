@@ -39,7 +39,7 @@ We recommend just setting the base ZK path and the ZK service host, but all ZK p
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.zk.service.sessionTimeoutMs`|ZooKeeper session timeout, in milliseconds.|`30000`|
-|`druid.curator.compress`|Boolean flag for whether or not created Znodes should be compressed.|`true`|
+|`druid.zk.service.compress`|Boolean flag for whether or not created Znodes should be compressed.|`true`|
 
 #### Path Configuration
 Druid interacts with ZK through a set of standard path configurations. We recommend just setting the base ZK path, but all ZK paths that Druid uses can be overwritten to absolute paths.
