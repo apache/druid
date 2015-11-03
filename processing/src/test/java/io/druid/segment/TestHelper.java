@@ -17,11 +17,14 @@
 
 package io.druid.segment;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.data.input.Row;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Result;
+import io.druid.segment.column.ColumnConfig;
 import org.junit.Assert;
 
 import java.util.Iterator;
@@ -30,6 +33,42 @@ import java.util.Iterator;
  */
 public class TestHelper
 {
+  private static final IndexMerger INDEX_MERGER;
+  private static final IndexMaker INDEX_MAKER;
+  private static final IndexIO INDEX_IO;
+
+  static {
+    ObjectMapper jsonMapper = new DefaultObjectMapper();
+    INDEX_IO = new IndexIO(
+        jsonMapper,
+        new ColumnConfig()
+        {
+          @Override
+          public int columnCacheSizeBytes()
+          {
+            return 0;
+          }
+        }
+    );
+    INDEX_MERGER = new IndexMerger(jsonMapper, INDEX_IO);
+    INDEX_MAKER = new IndexMaker(jsonMapper, INDEX_IO);
+  }
+
+  public static IndexMerger getTestIndexMerger()
+  {
+    return INDEX_MERGER;
+  }
+
+  public static IndexMaker getTestIndexMaker()
+  {
+    return INDEX_MAKER;
+  }
+
+  public static IndexIO getTestIndexIO()
+  {
+    return INDEX_IO;
+  }
+
   public static <T> void assertExpectedResults(Iterable<Result<T>> expectedResults, Sequence<Result<T>> results)
   {
     assertResults(expectedResults, Sequences.toList(results, Lists.<Result<T>>newArrayList()), "");

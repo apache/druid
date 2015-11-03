@@ -19,7 +19,6 @@
 
 package io.druid.indexing.common.task;
 
-import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
@@ -29,7 +28,7 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.guice.FirehoseModule;
 import io.druid.indexer.HadoopIOConfig;
 import io.druid.indexer.HadoopIngestionSpec;
-import io.druid.jackson.DefaultObjectMapper;
+import io.druid.indexing.common.TestUtils;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -56,13 +55,18 @@ import java.io.IOException;
 
 public class TaskSerdeTest
 {
-  private static final ObjectMapper jsonMapper;
-  static  {
-    jsonMapper = new DefaultObjectMapper();
-    jsonMapper.setInjectableValues(new InjectableValues.Std().addValue(ObjectMapper.class, jsonMapper));
-  }
-
+  private final ObjectMapper jsonMapper;
   private final IndexSpec indexSpec = new IndexSpec();
+
+  public TaskSerdeTest()
+  {
+    TestUtils testUtils = new TestUtils();
+    jsonMapper = testUtils.getTestObjectMapper();
+
+    for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
+      jsonMapper.registerModule(jacksonModule);
+    }
+  }
 
   @Test
   public void testIndexTaskSerde() throws Exception
@@ -89,15 +93,10 @@ public class TaskSerdeTest
         null
     );
 
-    for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
-      jsonMapper.registerModule(jacksonModule);
-    }
-    InjectableValues inject = new InjectableValues.Std()
-        .addValue(ObjectMapper.class, jsonMapper);
     final String json = jsonMapper.writeValueAsString(task);
 
     Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
-    final IndexTask task2 = jsonMapper.reader(Task.class).with(inject).readValue(json);
+    final IndexTask task2 = (IndexTask) jsonMapper.readValue(json, Task.class);
 
     Assert.assertEquals("foo", task.getDataSource());
     Assert.assertEquals(new Interval("2010-01-01/P2D"), task.getInterval());
@@ -138,12 +137,11 @@ public class TaskSerdeTest
     for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
       jsonMapper.registerModule(jacksonModule);
     }
-    InjectableValues inject = new InjectableValues.Std()
-        .addValue(ObjectMapper.class, jsonMapper);
+
     final String json = jsonMapper.writeValueAsString(task);
 
     Thread.sleep(100); // Just want to run the clock a bit to make sure the task id doesn't change
-    final IndexTask task2 = jsonMapper.reader(Task.class).with(inject).readValue(json);
+    final IndexTask task2 = (IndexTask) jsonMapper.readValue(json, Task.class);
 
     Assert.assertEquals("foo", task.getDataSource());
     Assert.assertEquals(new Interval("2010-01-01/P2D"), task.getInterval());
@@ -554,9 +552,7 @@ public class TaskSerdeTest
 
     final String json = jsonMapper.writeValueAsString(task);
 
-    InjectableValues inject = new InjectableValues.Std()
-        .addValue(ObjectMapper.class, jsonMapper);
-    final HadoopIndexTask task2 = (HadoopIndexTask) jsonMapper.reader(Task.class).with(inject).readValue(json);
+    final HadoopIndexTask task2 = (HadoopIndexTask) jsonMapper.readValue(json, Task.class);
 
     Assert.assertEquals("foo", task.getDataSource());
 

@@ -70,13 +70,13 @@ public class DatasourceInputSplit extends InputSplit implements Writable
   @Override
   public void write(DataOutput out) throws IOException
   {
-    out.writeUTF(HadoopDruidIndexerConfig.jsonMapper.writeValueAsString(segments));
+    out.writeUTF(HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsString(segments));
   }
 
   @Override
   public void readFields(DataInput in) throws IOException
   {
-    segments = HadoopDruidIndexerConfig.jsonMapper.readValue(
+    segments = HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
         in.readUTF(),
         new TypeReference<List<WindowedDataSegment>>()
         {

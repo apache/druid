@@ -60,7 +60,7 @@ public class DatasourceRecordReaderTest
     Configuration config = new Configuration();
     config.set(
         DatasourceInputFormat.CONF_DRUID_SCHEMA,
-        HadoopDruidIndexerConfig.jsonMapper.writeValueAsString(
+        HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsString(
             new DatasourceIngestionSpec(
                 segment.getDataSource(),
                 segment.getInterval(),

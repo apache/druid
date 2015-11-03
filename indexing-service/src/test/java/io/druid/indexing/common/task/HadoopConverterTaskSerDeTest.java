@@ -22,7 +22,7 @@ package io.druid.indexing.common.task;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import io.druid.jackson.DefaultObjectMapper;
+import io.druid.indexing.common.TestUtils;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.timeline.DataSegment;
@@ -39,7 +39,7 @@ import java.util.Map;
 
 public class HadoopConverterTaskSerDeTest
 {
-  private static ObjectMapper objectMapper = new DefaultObjectMapper();
+
   private static final String TASK_ID = "task id";
   private static final String DATA_SOURCE = "datasource";
   private static final Interval INTERVAL = Interval.parse("2010/2011");
@@ -68,6 +68,14 @@ public class HadoopConverterTaskSerDeTest
   private static final String OUTPUT_PATH = "/dev/null";
   private static final String CLASSPATH_PREFIX = "something:where:I:need:stuff";
 
+  private final ObjectMapper jsonMapper;
+
+  public HadoopConverterTaskSerDeTest()
+  {
+    TestUtils testUtils = new TestUtils();
+    jsonMapper = testUtils.getTestObjectMapper();
+  }
+
   @Test
   public void testSimpleConverterTaskSerDe() throws IOException
   {
@@ -85,9 +93,9 @@ public class HadoopConverterTaskSerDeTest
         CLASSPATH_PREFIX,
         null
     );
-    final String strOrig = objectMapper.writeValueAsString(orig);
-    HadoopConverterTask other = objectMapper.readValue(strOrig, HadoopConverterTask.class);
-    Assert.assertEquals(strOrig, objectMapper.writeValueAsString(other));
+    final String strOrig = jsonMapper.writeValueAsString(orig);
+    HadoopConverterTask other = jsonMapper.readValue(strOrig, HadoopConverterTask.class);
+    Assert.assertEquals(strOrig, jsonMapper.writeValueAsString(other));
     Assert.assertFalse(orig == other);
     Assert.assertEquals(orig, other);
     assertExpectedTask(other);
@@ -117,13 +125,13 @@ public class HadoopConverterTaskSerDeTest
         parent,
         null
     );
-    final String origString = objectMapper.writeValueAsString(subTask);
-    final HadoopConverterTask.ConverterSubTask otherSub = objectMapper.readValue(
+    final String origString = jsonMapper.writeValueAsString(subTask);
+    final HadoopConverterTask.ConverterSubTask otherSub = jsonMapper.readValue(
         origString,
         HadoopConverterTask.ConverterSubTask.class
     );
     Assert.assertEquals(subTask, otherSub);
-    Assert.assertEquals(origString, objectMapper.writeValueAsString(otherSub));
+    Assert.assertEquals(origString, jsonMapper.writeValueAsString(otherSub));
     Assert.assertEquals(ImmutableList.of(DATA_SEGMENT), otherSub.getSegments());
     Assert.assertFalse(parent == otherSub.getParent());
     Assert.assertEquals(parent, otherSub.getParent());

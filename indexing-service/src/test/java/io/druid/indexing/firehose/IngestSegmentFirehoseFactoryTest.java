@@ -48,18 +48,20 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.guice.GuiceInjectors;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskToolboxFactory;
+import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.TaskLockbox;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.filter.SelectorDimFilter;
+import io.druid.segment.IndexIO;
+import io.druid.segment.IndexMaker;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.incremental.IncrementalIndexSchema;
@@ -102,6 +104,18 @@ import java.util.Set;
 @RunWith(Parameterized.class)
 public class IngestSegmentFirehoseFactoryTest
 {
+  private static final ObjectMapper MAPPER;
+  private static final IndexMerger INDEX_MERGER;
+  private static final IndexMaker INDEX_MAKER;
+  private static final IndexIO INDEX_IO;
+
+  static {
+    TestUtils testUtils = new TestUtils();
+    MAPPER = setupInjectablesInObjectMapper(testUtils.getTestObjectMapper());
+    INDEX_MERGER = testUtils.getTestIndexMerger();
+    INDEX_MAKER = testUtils.getTestIndexMaker();
+    INDEX_IO = testUtils.getTestIndexIO();
+  }
 
   @Parameterized.Parameters(name = "{1}")
   public static Collection<Object[]> constructorFeeder() throws IOException
@@ -136,7 +150,7 @@ public class IngestSegmentFirehoseFactoryTest
     if (!persistDir.mkdirs() && !persistDir.exists()) {
       throw new IOException(String.format("Could not create directory at [%s]", persistDir.getAbsolutePath()));
     }
-    IndexMerger.persist(index, persistDir, null, indexSpec);
+    INDEX_MERGER.persist(index, persistDir, null, indexSpec);
 
     final TaskLockbox tl = new TaskLockbox(ts);
     final IndexerSQLMetadataStorageCoordinator mdc = new IndexerSQLMetadataStorageCoordinator(null, null, null)
@@ -179,7 +193,7 @@ public class IngestSegmentFirehoseFactoryTest
         ts,
         new TaskActionToolbox(tl, mdc, newMockEmitter())
     );
-    final ObjectMapper objectMapper = newObjectMapper();
+
     final TaskToolboxFactory taskToolboxFactory = new TaskToolboxFactory(
         new TaskConfig(tmpDir.getAbsolutePath(), null, null, 50000, null),
         tac,
@@ -244,10 +258,13 @@ public class IngestSegmentFirehoseFactoryTest
                   {
                     return Lists.newArrayList();
                   }
-                }, objectMapper
+                }, MAPPER
             )
         ),
-        objectMapper
+        MAPPER,
+        INDEX_MERGER,
+        INDEX_MAKER,
+        INDEX_IO
     );
     Collection<Object[]> values = new LinkedList<>();
     for (InputRowParser parser : Arrays.<InputRowParser>asList(
@@ -285,7 +302,8 @@ public class IngestSegmentFirehoseFactoryTest
                               binder.bind(TaskToolboxFactory.class).toInstance(taskToolboxFactory);
                             }
                           }
-                      )
+                      ),
+                      INDEX_IO
                   ),
                   String.format(
                       "DimNames[%s]MetricNames[%s]ParserDimNames[%s]",
@@ -302,9 +320,8 @@ public class IngestSegmentFirehoseFactoryTest
     return values;
   }
 
-  public static ObjectMapper newObjectMapper()
+  public static ObjectMapper setupInjectablesInObjectMapper(ObjectMapper objectMapper)
   {
-    final ObjectMapper objectMapper = new DefaultObjectMapper();
     objectMapper.registerModule(
         new SimpleModule("testModule").registerSubtypes(LocalLoadSpec.class)
     );

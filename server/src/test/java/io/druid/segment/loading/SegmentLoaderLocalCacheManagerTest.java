@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.segment.TestHelper;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
@@ -72,7 +73,7 @@ public class SegmentLoaderLocalCacheManagerTest
     locations.add(locationConfig);
 
     manager = new SegmentLoaderLocalCacheManager(
-        new MMappedQueryableIndexFactory(),
+        new MMappedQueryableIndexFactory(TestHelper.getTestIndexIO()),
         new SegmentLoaderConfig().withLocations(locations),
         jsonMapper
     );

@@ -462,7 +462,7 @@ public class JobHelper
                   DEFAULT_FS_BUFFER_SIZE,
                   progressable
               )) {
-                HadoopDruidIndexerConfig.jsonMapper.writeValue(descriptorOut, segment);
+                HadoopDruidIndexerConfig.JSON_MAPPER.writeValue(descriptorOut, segment);
                 descriptorOut.flush();
               }
             }

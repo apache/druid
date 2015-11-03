@@ -25,8 +25,7 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
-import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMerger;
+import io.druid.indexing.common.TaskToolbox;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.IndexableAdapter;
 import io.druid.segment.QueryableIndexIndexableAdapter;
@@ -64,7 +63,7 @@ public class AppendTask extends MergeTaskBase
   }
 
   @Override
-  public File merge(final Map<DataSegment, File> segments, final File outDir)
+  public File merge(final TaskToolbox toolbox, final Map<DataSegment, File> segments, final File outDir)
       throws Exception
   {
     VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<String, DataSegment>(
@@ -113,7 +112,7 @@ public class AppendTask extends MergeTaskBase
       adapters.add(
           new RowboatFilteringIndexAdapter(
               new QueryableIndexIndexableAdapter(
-                  IndexIO.loadIndex(holder.getFile())
+                  toolbox.getIndexIO().loadIndex(holder.getFile())
               ),
               new Predicate<Rowboat>()
               {
@@ -127,7 +126,7 @@ public class AppendTask extends MergeTaskBase
       );
     }
 
-    return IndexMerger.append(adapters, outDir, indexSpec);
+    return toolbox.getIndexMerger().append(adapters, outDir, indexSpec);
   }
 
   @Override

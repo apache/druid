@@ -24,7 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -34,9 +33,7 @@ import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
-import com.google.inject.Binder;
-import com.google.inject.Injector;
-import com.google.inject.Module;
+import com.google.inject.Inject;
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ConciseBitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
@@ -51,10 +48,6 @@ import com.metamx.common.io.smoosh.SmooshedWriter;
 import com.metamx.common.logger.Logger;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.common.utils.SerializerUtils;
-import io.druid.guice.ConfigProvider;
-import io.druid.guice.GuiceInjectors;
-import io.druid.guice.JsonConfigProvider;
-import io.druid.query.DruidProcessingConfig;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnConfig;
@@ -113,64 +106,116 @@ public class IndexIO
 
   public static final ByteOrder BYTE_ORDER = ByteOrder.nativeOrder();
 
-  private static final Map<Integer, IndexLoader> indexLoaders =
-      ImmutableMap.<Integer, IndexLoader>builder()
-                  .put(0, new LegacyIndexLoader())
-                  .put(1, new LegacyIndexLoader())
-                  .put(2, new LegacyIndexLoader())
-                  .put(3, new LegacyIndexLoader())
-                  .put(4, new LegacyIndexLoader())
-                  .put(5, new LegacyIndexLoader())
-                  .put(6, new LegacyIndexLoader())
-                  .put(7, new LegacyIndexLoader())
-                  .put(8, new LegacyIndexLoader())
-                  .put(9, new V9IndexLoader())
-                  .build();
+  private final Map<Integer, IndexLoader> indexLoaders;
 
   private static final EmittingLogger log = new EmittingLogger(IndexIO.class);
   private static final SerializerUtils serializerUtils = new SerializerUtils();
 
-  private static final ObjectMapper mapper;
+  private final ObjectMapper mapper;
+  private final DefaultIndexIOHandler defaultIndexIOHandler;
+  private final ColumnConfig columnConfig;
 
-  protected static final ColumnConfig columnConfig;
+  @Inject
+  public IndexIO(ObjectMapper mapper, ColumnConfig columnConfig)
+  {
+    this.mapper = Preconditions.checkNotNull(mapper, "null ObjectMapper");
+    this.columnConfig = Preconditions.checkNotNull(columnConfig, "null ColumnConfig");
+    defaultIndexIOHandler = new DefaultIndexIOHandler(mapper);
+    indexLoaders = ImmutableMap.<Integer, IndexLoader>builder()
+                               .put(0, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
+                               .put(1, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
+                               .put(2, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
+                               .put(3, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
+                               .put(4, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
+                               .put(5, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
+                               .put(6, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
+                               .put(7, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
+                               .put(8, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
+                               .put(9, new V9IndexLoader(columnConfig))
+                               .build();
 
-  @Deprecated // specify bitmap type in IndexSpec instead
-  protected static final BitmapSerdeFactory CONFIGURED_BITMAP_SERDE_FACTORY;
 
-  static {
-    final Injector injector = GuiceInjectors.makeStartupInjectorWithModules(
-        ImmutableList.<Module>of(
-            new Module()
-            {
-              @Override
-              public void configure(Binder binder)
-              {
-                ConfigProvider.bind(
-                    binder,
-                    DruidProcessingConfig.class,
-                    ImmutableMap.of("base_path", "druid.processing")
-                );
-                binder.bind(ColumnConfig.class).to(DruidProcessingConfig.class);
-
-                // this property is deprecated, use IndexSpec instead
-                JsonConfigProvider.bind(binder, "druid.processing.bitmap", BitmapSerdeFactory.class);
-              }
-            }
-        )
-    );
-    mapper = injector.getInstance(ObjectMapper.class);
-    columnConfig = injector.getInstance(ColumnConfig.class);
-    CONFIGURED_BITMAP_SERDE_FACTORY = injector.getInstance(BitmapSerdeFactory.class);
   }
 
-  public static QueryableIndex loadIndex(File inDir) throws IOException
+  public void validateTwoSegments(File dir1, File dir2) throws IOException
+  {
+    try (QueryableIndex queryableIndex1 = loadIndex(dir1)) {
+      try (QueryableIndex queryableIndex2 = loadIndex(dir2)) {
+        validateTwoSegments(
+            new QueryableIndexIndexableAdapter(queryableIndex1),
+            new QueryableIndexIndexableAdapter(queryableIndex2)
+        );
+      }
+    }
+  }
+
+  public void validateTwoSegments(final IndexableAdapter adapter1, final IndexableAdapter adapter2)
+  {
+    if (adapter1.getNumRows() != adapter2.getNumRows()) {
+      throw new SegmentValidationException(
+          "Row count mismatch. Expected [%d] found [%d]",
+          adapter1.getNumRows(),
+          adapter2.getNumRows()
+      );
+    }
+    {
+      final Set<String> dimNames1 = Sets.newHashSet(adapter1.getDimensionNames());
+      final Set<String> dimNames2 = Sets.newHashSet(adapter2.getDimensionNames());
+      if (!dimNames1.equals(dimNames2)) {
+        throw new SegmentValidationException(
+            "Dimension names differ. Expected [%s] found [%s]",
+            dimNames1,
+            dimNames2
+        );
+      }
+      final Set<String> metNames1 = Sets.newHashSet(adapter1.getMetricNames());
+      final Set<String> metNames2 = Sets.newHashSet(adapter2.getMetricNames());
+      if (!metNames1.equals(metNames2)) {
+        throw new SegmentValidationException("Metric names differ. Expected [%s] found [%s]", metNames1, metNames2);
+      }
+    }
+    final Iterator<Rowboat> it1 = adapter1.getRows().iterator();
+    final Iterator<Rowboat> it2 = adapter2.getRows().iterator();
+    long row = 0L;
+    while (it1.hasNext()) {
+      if (!it2.hasNext()) {
+        throw new SegmentValidationException("Unexpected end of second adapter");
+      }
+      final Rowboat rb1 = it1.next();
+      final Rowboat rb2 = it2.next();
+      ++row;
+      if (rb1.getRowNum() != rb2.getRowNum()) {
+        throw new SegmentValidationException("Row number mismatch: [%d] vs [%d]", rb1.getRowNum(), rb2.getRowNum());
+      }
+      if (rb1.compareTo(rb2) != 0) {
+        try {
+          validateRowValues(rb1, adapter1, rb2, adapter2);
+        }
+        catch (SegmentValidationException ex) {
+          throw new SegmentValidationException(ex, "Validation failure on row %d: [%s] vs [%s]", row, rb1, rb2);
+        }
+      }
+    }
+    if (it2.hasNext()) {
+      throw new SegmentValidationException("Unexpected end of first adapter");
+    }
+    if (row != adapter1.getNumRows()) {
+      throw new SegmentValidationException(
+          "Actual Row count mismatch. Expected [%d] found [%d]",
+          row,
+          adapter1.getNumRows()
+      );
+    }
+  }
+
+  public QueryableIndex loadIndex(File inDir) throws IOException
   {
     final int version = SegmentUtils.getVersionFromDir(inDir);
 
     final IndexLoader loader = indexLoaders.get(version);
 
     if (loader != null) {
-      return loader.load(inDir);
+      return loader.load(inDir, mapper);
     } else {
       throw new ISE("Unknown index version[%s]", version);
     }
@@ -199,19 +244,19 @@ public class IndexIO
     }
   }
 
-  public static boolean convertSegment(File toConvert, File converted, IndexSpec indexSpec) throws IOException
+  public boolean convertSegment(File toConvert, File converted, IndexSpec indexSpec) throws IOException
   {
     return convertSegment(toConvert, converted, indexSpec, false, true);
   }
 
-  public static boolean convertSegment(
+  public boolean convertSegment(
       File toConvert,
       File converted,
       IndexSpec indexSpec,
       boolean forceIfCurrent,
       boolean validate
   )
-      throws IOException
+  throws IOException
   {
     final int version = SegmentUtils.getVersionFromDir(toConvert);
     switch (version) {
@@ -227,20 +272,20 @@ public class IndexIO
       case 6:
       case 7:
         log.info("Old version, re-persisting.");
-        IndexMerger.append(
+        new IndexMerger(mapper, this).append(
             Arrays.<IndexableAdapter>asList(new QueryableIndexIndexableAdapter(loadIndex(toConvert))),
             converted,
             indexSpec
         );
         return true;
       case 8:
-        DefaultIndexIOHandler.convertV8toV9(toConvert, converted, indexSpec);
+        defaultIndexIOHandler.convertV8toV9(toConvert, converted, indexSpec);
         return true;
       default:
         if (forceIfCurrent) {
-          IndexMerger.convert(toConvert, converted, indexSpec);
+          new IndexMerger(mapper, this).convert(toConvert, converted, indexSpec);
           if (validate) {
-            DefaultIndexIOHandler.validateTwoSegments(toConvert, converted);
+            validateTwoSegments(toConvert, converted);
           }
           return true;
         } else {
@@ -250,7 +295,12 @@ public class IndexIO
     }
   }
 
-  public static interface IndexIOHandler
+  public DefaultIndexIOHandler getDefaultIndexIOHandler()
+  {
+    return defaultIndexIOHandler;
+  }
+
+  static interface IndexIOHandler
   {
     public MMappedIndex mapDir(File inDir) throws IOException;
   }
@@ -370,6 +420,12 @@ public class IndexIO
   public static class DefaultIndexIOHandler implements IndexIOHandler
   {
     private static final Logger log = new Logger(DefaultIndexIOHandler.class);
+    private final ObjectMapper mapper;
+
+    public DefaultIndexIOHandler(ObjectMapper mapper)
+    {
+      this.mapper = mapper;
+    }
 
     @Override
     public MMappedIndex mapDir(File inDir) throws IOException
@@ -473,78 +529,8 @@ public class IndexIO
       return retVal;
     }
 
-    public static void validateTwoSegments(File dir1, File dir2) throws IOException
-    {
-      try (QueryableIndex queryableIndex1 = loadIndex(dir1)) {
-        try (QueryableIndex queryableIndex2 = loadIndex(dir2)) {
-          validateTwoSegments(
-              new QueryableIndexIndexableAdapter(queryableIndex1),
-              new QueryableIndexIndexableAdapter(queryableIndex2)
-          );
-        }
-      }
-    }
-
-    public static void validateTwoSegments(final IndexableAdapter adapter1, final IndexableAdapter adapter2)
-    {
-      if (adapter1.getNumRows() != adapter2.getNumRows()) {
-        throw new SegmentValidationException(
-            "Row count mismatch. Expected [%d] found [%d]",
-            adapter1.getNumRows(),
-            adapter2.getNumRows()
-        );
-      }
-      {
-        final Set<String> dimNames1 = Sets.newHashSet(adapter1.getDimensionNames());
-        final Set<String> dimNames2 = Sets.newHashSet(adapter2.getDimensionNames());
-        if (!dimNames1.equals(dimNames2)) {
-          throw new SegmentValidationException(
-              "Dimension names differ. Expected [%s] found [%s]",
-              dimNames1,
-              dimNames2
-          );
-        }
-        final Set<String> metNames1 = Sets.newHashSet(adapter1.getMetricNames());
-        final Set<String> metNames2 = Sets.newHashSet(adapter2.getMetricNames());
-        if (!metNames1.equals(metNames2)) {
-          throw new SegmentValidationException("Metric names differ. Expected [%s] found [%s]", metNames1, metNames2);
-        }
-      }
-      final Iterator<Rowboat> it1 = adapter1.getRows().iterator();
-      final Iterator<Rowboat> it2 = adapter2.getRows().iterator();
-      long row = 0L;
-      while (it1.hasNext()) {
-        if (!it2.hasNext()) {
-          throw new SegmentValidationException("Unexpected end of second adapter");
-        }
-        final Rowboat rb1 = it1.next();
-        final Rowboat rb2 = it2.next();
-        ++row;
-        if (rb1.getRowNum() != rb2.getRowNum()) {
-          throw new SegmentValidationException("Row number mismatch: [%d] vs [%d]", rb1.getRowNum(), rb2.getRowNum());
-        }
-        if (rb1.compareTo(rb2) != 0) {
-          try {
-            validateRowValues(rb1, adapter1, rb2, adapter2);
-          }
-          catch (SegmentValidationException ex) {
-            throw new SegmentValidationException(ex, "Validation failure on row %d: [%s] vs [%s]", row, rb1, rb2);
-          }
-        }
-      }
-      if (it2.hasNext()) {
-        throw new SegmentValidationException("Unexpected end of first adapter");
-      }
-      if (row != adapter1.getNumRows()) {
-        throw new SegmentValidationException(
-            "Actual Row count mismatch. Expected [%d] found [%d]",
-            row,
-            adapter1.getNumRows()
-        );
-      }
-    }
-
-    public static void convertV8toV9(File v8Dir, File v9Dir, IndexSpec indexSpec) throws IOException
+    public void convertV8toV9(File v8Dir, File v9Dir, IndexSpec indexSpec)
+        throws IOException
     {
       log.info("Converting v8[%s] to v9[%s]", v8Dir, v9Dir);
 
@@ -888,15 +874,22 @@ public class IndexIO
 
   static interface IndexLoader
   {
-    public QueryableIndex load(File inDir) throws IOException;
+    public QueryableIndex load(File inDir, ObjectMapper mapper) throws IOException;
   }
 
   static class LegacyIndexLoader implements IndexLoader
   {
-    private static final IndexIOHandler legacyHandler = new DefaultIndexIOHandler();
+    private final IndexIOHandler legacyHandler;
+    private final ColumnConfig columnConfig;
+
+    LegacyIndexLoader(IndexIOHandler legacyHandler, ColumnConfig columnConfig)
+    {
+      this.legacyHandler = legacyHandler;
+      this.columnConfig = columnConfig;
+    }
 
     @Override
-    public QueryableIndex load(File inDir) throws IOException
+    public QueryableIndex load(File inDir, ObjectMapper mapper) throws IOException
     {
       MMappedIndex index = legacyHandler.mapDir(inDir);
 
@@ -990,8 +983,15 @@ public class IndexIO
 
   static class V9IndexLoader implements IndexLoader
   {
+    private final ColumnConfig columnConfig;
+
+    V9IndexLoader(ColumnConfig columnConfig)
+    {
+      this.columnConfig = columnConfig;
+    }
+
     @Override
-    public QueryableIndex load(File inDir) throws IOException
+    public QueryableIndex load(File inDir, ObjectMapper mapper) throws IOException
     {
       log.debug("Mapping v9 index[%s]", inDir);
       long startTime = System.currentTimeMillis();

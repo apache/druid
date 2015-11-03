@@ -24,6 +24,9 @@ import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.FilteredServerView;
 import io.druid.guice.annotations.Processing;
 import io.druid.query.QueryRunnerFactoryConglomerate;
+import io.druid.segment.IndexIO;
+import io.druid.segment.IndexMaker;
+import io.druid.segment.IndexMerger;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.loading.DataSegmentPusher;
@@ -44,6 +47,9 @@ public class RealtimePlumberSchool implements PlumberSchool
   private final SegmentPublisher segmentPublisher;
   private final FilteredServerView serverView;
   private final ExecutorService queryExecutorService;
+  private final IndexMerger indexMerger;
+  private final IndexMaker indexMaker;
+  private final IndexIO indexIO;
 
   @JsonCreator
   public RealtimePlumberSchool(
@@ -53,7 +59,10 @@ public class RealtimePlumberSchool implements PlumberSchool
       @JacksonInject DataSegmentAnnouncer segmentAnnouncer,
       @JacksonInject SegmentPublisher segmentPublisher,
       @JacksonInject FilteredServerView serverView,
-      @JacksonInject @Processing ExecutorService executorService
+      @JacksonInject @Processing ExecutorService executorService,
+      @JacksonInject IndexMerger indexMerger,
+      @JacksonInject IndexMaker indexMaker,
+      @JacksonInject IndexIO indexIO
   )
   {
     this.emitter = emitter;
@@ -63,6 +72,9 @@ public class RealtimePlumberSchool implements PlumberSchool
     this.segmentPublisher = segmentPublisher;
     this.serverView = serverView;
     this.queryExecutorService = executorService;
+    this.indexMerger = Preconditions.checkNotNull(indexMerger, "Null IndexMerger");
+    this.indexMaker = Preconditions.checkNotNull(indexMaker, "Null IndexMaker");
+    this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
   }
 
   @Override
@@ -84,7 +96,10 @@ public class RealtimePlumberSchool implements PlumberSchool
         queryExecutorService,
         dataSegmentPusher,
         segmentPublisher,
-        serverView
+        serverView,
+        indexMerger,
+        indexMaker,
+        indexIO
     );
   }
 

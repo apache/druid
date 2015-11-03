@@ -25,9 +25,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import io.druid.indexing.common.TaskToolbox;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.QueryableIndex;
 import io.druid.timeline.DataSegment;
@@ -53,7 +52,6 @@ public class MergeTask extends MergeTaskBase
       @JsonProperty("aggregations") List<AggregatorFactory> aggregators,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
       @JsonProperty("context") Map<String, Object> context
-
   )
   {
     super(id, dataSource, segments, context);
@@ -62,10 +60,10 @@ public class MergeTask extends MergeTaskBase
   }
 
   @Override
-  public File merge(final Map<DataSegment, File> segments, final File outDir)
+  public File merge(final TaskToolbox toolbox, final Map<DataSegment, File> segments, final File outDir)
       throws Exception
   {
-    return IndexMerger.mergeQueryableIndex(
+    return toolbox.getIndexMerger().mergeQueryableIndex(
         Lists.transform(
             ImmutableList.copyOf(segments.values()),
             new Function<File, QueryableIndex>()
@@ -74,7 +72,7 @@ public class MergeTask extends MergeTaskBase
               public QueryableIndex apply(@Nullable File input)
               {
                 try {
-                  return IndexIO.loadIndex(input);
+                  return toolbox.getIndexIO().loadIndex(input);
                 }
                 catch (Exception e) {
                   throw Throwables.propagate(e);

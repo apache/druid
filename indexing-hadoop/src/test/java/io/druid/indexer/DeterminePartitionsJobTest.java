@@ -223,7 +223,7 @@ public class DeterminePartitionsJobTest
         new HadoopIngestionSpec(
             new DataSchema(
                 "website",
-                HadoopDruidIndexerConfig.jsonMapper.convertValue(
+                HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
                     new StringInputRowParser(
                         new CSVParseSpec(
                             new TimestampSpec("timestamp", "yyyyMMddHH", null),
@@ -238,7 +238,7 @@ public class DeterminePartitionsJobTest
                 new UniformGranularitySpec(
                     Granularity.DAY, QueryGranularity.NONE, ImmutableList.of(new Interval(interval))
                 ),
-                HadoopDruidIndexerConfig.jsonMapper
+                HadoopDruidIndexerConfig.JSON_MAPPER
             ),
             new HadoopIOConfig(
                 ImmutableMap.<String, Object>of(

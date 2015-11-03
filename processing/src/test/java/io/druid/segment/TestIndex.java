@@ -82,6 +82,9 @@ public class TestIndex
   };
   private static final IndexSpec indexSpec = new IndexSpec();
 
+  private static final IndexMerger INDEX_MERGER = TestHelper.getTestIndexMerger();
+  private static final IndexIO INDEX_IO = TestHelper.getTestIndexIO();
+
   static {
     if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
       ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(Hashing.murmur3_128()));
@@ -142,12 +145,12 @@ public class TestIndex
         mergedFile.mkdirs();
         mergedFile.deleteOnExit();
 
-        IndexMerger.persist(top, DATA_INTERVAL, topFile, null, indexSpec);
-        IndexMerger.persist(bottom, DATA_INTERVAL, bottomFile, null, indexSpec);
+        INDEX_MERGER.persist(top, DATA_INTERVAL, topFile, null, indexSpec);
+        INDEX_MERGER.persist(bottom, DATA_INTERVAL, bottomFile, null, indexSpec);
 
-        mergedRealtime = IndexIO.loadIndex(
-            IndexMerger.mergeQueryableIndex(
-                Arrays.asList(IndexIO.loadIndex(topFile), IndexIO.loadIndex(bottomFile)),
+        mergedRealtime = INDEX_IO.loadIndex(
+            INDEX_MERGER.mergeQueryableIndex(
+                Arrays.asList(INDEX_IO.loadIndex(topFile), INDEX_IO.loadIndex(bottomFile)),
                 METRIC_AGGS,
                 mergedFile,
                 indexSpec
@@ -252,8 +255,8 @@ public class TestIndex
       someTmpFile.mkdirs();
       someTmpFile.deleteOnExit();
 
-      IndexMerger.persist(index, someTmpFile, null, indexSpec);
-      return IndexIO.loadIndex(someTmpFile);
+      INDEX_MERGER.persist(index, someTmpFile, null, indexSpec);
+      return INDEX_IO.loadIndex(someTmpFile);
     }
     catch (IOException e) {
       throw Throwables.propagate(e);

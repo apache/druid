@@ -33,7 +33,6 @@ import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.JobHelper;
-import io.druid.segment.IndexIO;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexStorageAdapter;
 import io.druid.segment.realtime.firehose.IngestSegmentFirehose;
@@ -67,7 +66,7 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
   @Override
   public void initialize(InputSplit split, final TaskAttemptContext context) throws IOException, InterruptedException
   {
-    spec = readAndVerifyDatasourceIngestionSpec(context.getConfiguration(), HadoopDruidIndexerConfig.jsonMapper);
+    spec = readAndVerifyDatasourceIngestionSpec(context.getConfiguration(), HadoopDruidIndexerConfig.JSON_MAPPER);
 
     List<WindowedDataSegment> segments = ((DatasourceInputSplit) split).getSegments();
 
@@ -91,7 +90,7 @@ public class DatasourceRecordReader extends RecordReader<NullWritable, InputRow>
               JobHelper.unzipNoGuava(path, context.getConfiguration(), dir, context);
               logger.info("finished fetching segment files");
 
-              QueryableIndex index = IndexIO.loadIndex(dir);
+              QueryableIndex index = HadoopDruidIndexerConfig.INDEX_IO.loadIndex(dir);
               indexes.add(index);
               numRows += index.getNumRows();
 

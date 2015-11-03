@@ -337,7 +337,7 @@ public class IndexIOTest
   {
     Exception ex = null;
     try {
-      IndexIO.DefaultIndexIOHandler.validateTwoSegments(adapter1, adapter2);
+      TestHelper.getTestIndexIO().validateTwoSegments(adapter1, adapter2);
     }
     catch (Exception e) {
       ex = e;

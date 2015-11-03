@@ -19,6 +19,7 @@ package io.druid.indexing.worker;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.indexing.common.TaskStatus;
+import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.task.RealtimeIndexTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
@@ -39,6 +40,14 @@ import java.io.File;
 
 public class TaskAnnouncementTest
 {
+  private final ObjectMapper jsonMapper;
+
+  public TaskAnnouncementTest()
+  {
+    TestUtils testUtils = new TestUtils();
+    jsonMapper = testUtils.getTestObjectMapper();
+  }
+
   @Test
   public void testBackwardsCompatibleSerde() throws Exception
   {
@@ -68,7 +77,6 @@ public class TaskAnnouncementTest
     final TaskStatus status = TaskStatus.running(task.getId());
     final TaskAnnouncement announcement = TaskAnnouncement.create(task, status);
 
-    final ObjectMapper jsonMapper = new DefaultObjectMapper();
     final String statusJson = jsonMapper.writeValueAsString(status);
     final String announcementJson = jsonMapper.writeValueAsString(announcement);
 

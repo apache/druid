@@ -17,13 +17,12 @@
 
 package io.druid.indexing.common.task;
 
-import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import io.druid.jackson.DefaultObjectMapper;
+import io.druid.indexing.common.TestUtils;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
-import java.io.IOException;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -33,14 +32,19 @@ import org.junit.Test;
  */
 public class ConvertSegmentTaskTest
 {
-  private DefaultObjectMapper jsonMapper = new DefaultObjectMapper();
+  private final ObjectMapper jsonMapper;
+
+  public ConvertSegmentTaskTest()
+  {
+    TestUtils testUtils = new TestUtils();
+    jsonMapper = testUtils.getTestObjectMapper();
+  }
 
   @Test
   public void testSerializationSimple() throws Exception
   {
     final String dataSource = "billy";
     final Interval interval = new Interval(new DateTime().minus(1000), new DateTime());
-
 
     ConvertSegmentTask task = ConvertSegmentTask.create(dataSource, interval, null, false, true, null);
 

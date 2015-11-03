@@ -30,14 +30,11 @@ import com.metamx.common.Granularity;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.FilteredServerView;
 import io.druid.client.ServerView;
-import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.JSONParseSpec;
-import io.druid.data.input.impl.ParseSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularity;
@@ -47,6 +44,7 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
+import io.druid.segment.TestHelper;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -57,7 +55,6 @@ import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang.mutable.MutableBoolean;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -198,7 +195,10 @@ public class RealtimePlumberSchoolTest
         announcer,
         segmentPublisher,
         serverView,
-        MoreExecutors.sameThreadExecutor()
+        MoreExecutors.sameThreadExecutor(),
+        TestHelper.getTestIndexMerger(),
+        TestHelper.getTestIndexMaker(),
+        TestHelper.getTestIndexIO()
     );
 
     metrics = new FireDepartmentMetrics();

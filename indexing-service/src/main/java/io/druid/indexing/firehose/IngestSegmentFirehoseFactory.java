@@ -65,6 +65,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
   private final List<String> dimensions;
   private final List<String> metrics;
   private final Injector injector;
+  private final IndexIO indexIO;
 
   @JsonCreator
   public IngestSegmentFirehoseFactory(
@@ -73,7 +74,8 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
       @JsonProperty("filter") DimFilter dimFilter,
       @JsonProperty("dimensions") List<String> dimensions,
       @JsonProperty("metrics") List<String> metrics,
-      @JacksonInject Injector injector
+      @JacksonInject Injector injector,
+      @JacksonInject IndexIO indexIO
   )
   {
     Preconditions.checkNotNull(dataSource, "dataSource");
@@ -84,6 +86,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
     this.dimensions = dimensions;
     this.metrics = metrics;
     this.injector = injector;
+    this.indexIO = Preconditions.checkNotNull(indexIO, "null IndexIO");
   }
 
   @JsonProperty
@@ -247,7 +250,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
                                   try {
                                     return new WindowedStorageAdapter(
                                         new QueryableIndexStorageAdapter(
-                                            IndexIO.loadIndex(
+                                            indexIO.loadIndex(
                                                 Preconditions.checkNotNull(
                                                     segmentFileMap.get(segment),
                                                     "File for segment %s", segment.getIdentifier()

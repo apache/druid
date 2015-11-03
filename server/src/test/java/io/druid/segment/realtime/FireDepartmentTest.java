@@ -28,6 +28,7 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
+import io.druid.segment.TestHelper;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.RealtimeTuningConfig;
@@ -78,7 +79,16 @@ public class FireDepartmentTest
         new RealtimeIOConfig(
             null,
             new RealtimePlumberSchool(
-                null, null, null, null, null, null, null
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                TestHelper.getTestIndexMerger(),
+                TestHelper.getTestIndexMaker(),
+                TestHelper.getTestIndexIO()
             ),
             null
         ),

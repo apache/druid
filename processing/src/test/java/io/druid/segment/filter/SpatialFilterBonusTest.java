@@ -77,6 +77,9 @@ public class SpatialFilterBonusTest
       new LongSumAggregatorFactory("val", "val")
   };
   private static List<String> DIMS = Lists.newArrayList("dim", "dim.geo");
+  private static final IndexMerger INDEX_MERGER = TestHelper.getTestIndexMerger();
+  private static final IndexIO INDEX_IO = TestHelper.getTestIndexIO();
+
   private final Segment segment;
 
   public SpatialFilterBonusTest(Segment segment)
@@ -232,8 +235,8 @@ public class SpatialFilterBonusTest
     tmpFile.mkdirs();
     tmpFile.deleteOnExit();
 
-    IndexMerger.persist(theIndex, tmpFile, null, indexSpec);
-    return IndexIO.loadIndex(tmpFile);
+    INDEX_MERGER.persist(theIndex, tmpFile, null, indexSpec);
+    return INDEX_IO.loadIndex(tmpFile);
   }
 
   private static QueryableIndex makeMergedQueryableIndex(final IndexSpec indexSpec)
@@ -412,13 +415,17 @@ public class SpatialFilterBonusTest
       mergedFile.mkdirs();
       mergedFile.deleteOnExit();
 
-      IndexMerger.persist(first, DATA_INTERVAL, firstFile, null, indexSpec);
-      IndexMerger.persist(second, DATA_INTERVAL, secondFile, null, indexSpec);
-      IndexMerger.persist(third, DATA_INTERVAL, thirdFile, null, indexSpec);
+      INDEX_MERGER.persist(first, DATA_INTERVAL, firstFile, null, indexSpec);
+      INDEX_MERGER.persist(second, DATA_INTERVAL, secondFile, null, indexSpec);
+      INDEX_MERGER.persist(third, DATA_INTERVAL, thirdFile, null, indexSpec);
 
-      QueryableIndex mergedRealtime = IndexIO.loadIndex(
-          IndexMerger.mergeQueryableIndex(
-              Arrays.asList(IndexIO.loadIndex(firstFile), IndexIO.loadIndex(secondFile), IndexIO.loadIndex(thirdFile)),
+      QueryableIndex mergedRealtime = INDEX_IO.loadIndex(
+          INDEX_MERGER.mergeQueryableIndex(
+              Arrays.asList(
+                  INDEX_IO.loadIndex(firstFile),
+                  INDEX_IO.loadIndex(secondFile),
+                  INDEX_IO.loadIndex(thirdFile)
+              ),
               METRIC_AGGS,
               mergedFile,
               indexSpec

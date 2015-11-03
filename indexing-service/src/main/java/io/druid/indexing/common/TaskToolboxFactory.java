@@ -18,6 +18,7 @@
 package io.druid.indexing.common;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Preconditions;
 import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
@@ -27,6 +28,9 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
 import io.druid.query.QueryRunnerFactoryConglomerate;
+import io.druid.segment.IndexIO;
+import io.druid.segment.IndexMaker;
+import io.druid.segment.IndexMerger;
 import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.DataSegmentMover;
@@ -55,6 +59,9 @@ public class TaskToolboxFactory
   private final MonitorScheduler monitorScheduler;
   private final SegmentLoaderFactory segmentLoaderFactory;
   private final ObjectMapper objectMapper;
+  private final IndexMerger indexMerger;
+  private final IndexMaker indexMaker;
+  private final IndexIO indexIO;
 
   @Inject
   public TaskToolboxFactory(
@@ -71,7 +78,10 @@ public class TaskToolboxFactory
       @Processing ExecutorService queryExecutorService,
       MonitorScheduler monitorScheduler,
       SegmentLoaderFactory segmentLoaderFactory,
-      ObjectMapper objectMapper
+      ObjectMapper objectMapper,
+      IndexMerger indexMerger,
+      IndexMaker indexMaker,
+      IndexIO indexIO
   )
   {
     this.config = config;
@@ -88,6 +98,9 @@ public class TaskToolboxFactory
     this.monitorScheduler = monitorScheduler;
     this.segmentLoaderFactory = segmentLoaderFactory;
     this.objectMapper = objectMapper;
+    this.indexMerger = Preconditions.checkNotNull(indexMerger, "Null IndexMerger");
+    this.indexMaker = Preconditions.checkNotNull(indexMaker, "Null IndexMaker");
+    this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
   }
 
   public TaskToolbox build(Task task)
@@ -110,7 +123,10 @@ public class TaskToolboxFactory
         monitorScheduler,
         segmentLoaderFactory.manufacturate(taskWorkDir),
         objectMapper,
-        taskWorkDir
+        taskWorkDir,
+        indexMerger,
+        indexMaker,
+        indexIO
     );
   }
 }

@@ -177,7 +177,7 @@ public class DatasourcePathSpecTest
         new HadoopIngestionSpec(
             new DataSchema(
                 ingestionSpec.getDataSource(),
-                HadoopDruidIndexerConfig.jsonMapper.convertValue(
+                HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
                     new StringInputRowParser(
                         new CSVParseSpec(
                             new TimestampSpec("timestamp", "yyyyMMddHH", null),
@@ -194,7 +194,7 @@ public class DatasourcePathSpecTest
                 new UniformGranularitySpec(
                     Granularity.DAY, QueryGranularity.NONE, ImmutableList.of(Interval.parse("2000/3000"))
                 ),
-                HadoopDruidIndexerConfig.jsonMapper
+                HadoopDruidIndexerConfig.JSON_MAPPER
             ),
             new HadoopIOConfig(
                 ImmutableMap.<String, Object>of(

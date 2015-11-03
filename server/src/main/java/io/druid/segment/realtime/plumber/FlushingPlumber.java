@@ -25,6 +25,9 @@ import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.concurrent.Execs;
 import io.druid.query.QueryRunnerFactoryConglomerate;
+import io.druid.segment.IndexIO;
+import io.druid.segment.IndexMaker;
+import io.druid.segment.IndexMerger;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.FireDepartmentMetrics;
@@ -59,7 +62,10 @@ public class FlushingPlumber extends RealtimePlumber
       ServiceEmitter emitter,
       QueryRunnerFactoryConglomerate conglomerate,
       DataSegmentAnnouncer segmentAnnouncer,
-      ExecutorService queryExecutorService
+      ExecutorService queryExecutorService,
+      IndexMerger indexMerger,
+      IndexMaker indexMaker,
+      IndexIO indexIO
   )
   {
     super(
@@ -72,7 +78,10 @@ public class FlushingPlumber extends RealtimePlumber
         queryExecutorService,
         null,
         null,
-        null
+        null,
+        indexMerger,
+        indexMaker,
+        indexIO
     );
 
     this.flushDuration = flushDuration;

@@ -19,7 +19,6 @@ package io.druid.indexing.overlord;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.google.common.base.Function;
@@ -79,6 +78,9 @@ import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
+import io.druid.segment.IndexIO;
+import io.druid.segment.IndexMaker;
+import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
@@ -127,6 +129,18 @@ import java.util.concurrent.TimeUnit;
 @RunWith(Parameterized.class)
 public class TaskLifecycleTest
 {
+  private static final ObjectMapper MAPPER;
+  private static final IndexMerger INDEX_MERGER;
+  private static final IndexMaker INDEX_MAKER;
+  private static final IndexIO INDEX_IO;
+
+  static {
+    TestUtils testUtils = new TestUtils();
+    MAPPER = testUtils.getTestObjectMapper();
+    INDEX_MERGER = testUtils.getTestIndexMerger();
+    INDEX_IO = testUtils.getTestIndexIO();
+    INDEX_MAKER = testUtils.getTestIndexMaker();
+  }
 
   @Parameterized.Parameters(name = "taskStorageType={0}")
   public static Collection<String[]> constructFeed()
@@ -333,14 +347,15 @@ public class TaskLifecycleTest
     announcedSinks = 0;
     pushedSegments = 0;
     tmpDir = temporaryFolder.newFolder();
+    TestUtils testUtils = new TestUtils();
+    mapper = testUtils.getTestObjectMapper();
 
-    tqc = new DefaultObjectMapper().readValue(
+    tqc = mapper.readValue(
         "{\"startDelay\":\"PT0S\", \"restartDelay\":\"PT1S\", \"storageSyncRate\":\"PT0.5S\"}",
         TaskQueueConfig.class
     );
     indexSpec = new IndexSpec();
 
-    mapper = new DefaultObjectMapper();
     if (taskStorageType.equals("HeapMemoryTaskStorage")) {
       ts = new HeapMemoryTaskStorage(
           new TaskStorageConfig(null)
@@ -353,7 +368,6 @@ public class TaskLifecycleTest
           new NamedType(MockExceptionalFirehoseFactory.class, "mockExcepFirehoseFactory"),
           new NamedType(MockFirehoseFactory.class, "mockFirehoseFactory")
       );
-      mapper.setInjectableValues(new InjectableValues.Std().addValue(ObjectMapper.class, mapper));
       testDerbyConnector.createTaskTables();
       testDerbyConnector.createSegmentTable();
       ts = new MetadataTaskStorage(
@@ -471,7 +485,10 @@ public class TaskLifecycleTest
                 }, new DefaultObjectMapper()
             )
         ),
-        new DefaultObjectMapper()
+        MAPPER,
+        INDEX_MERGER,
+        INDEX_MAKER,
+        INDEX_IO
     );
     tr = new ThreadPoolTaskRunner(tb, null);
     tq = new TaskQueue(tqc, ts, tr, tac, tl, emitter);
@@ -505,7 +522,7 @@ public class TaskLifecycleTest
             new IndexTask.IndexIOConfig(new MockFirehoseFactory(false)),
             new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec)
         ),
-        TestUtils.MAPPER,
+        mapper,
         null
     );
 
@@ -563,7 +580,7 @@ public class TaskLifecycleTest
             new IndexTask.IndexIOConfig(new MockExceptionalFirehoseFactory()),
             new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec)
         ),
-        TestUtils.MAPPER,
+        mapper,
         null
     );
 
@@ -912,7 +929,7 @@ public class TaskLifecycleTest
             new IndexTask.IndexIOConfig(new MockFirehoseFactory(false)),
             new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec)
         ),
-        TestUtils.MAPPER,
+        mapper,
         null
     );
 

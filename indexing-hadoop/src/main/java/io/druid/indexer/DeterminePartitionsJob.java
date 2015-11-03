@@ -49,7 +49,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapred.InvalidJobConfException;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -92,8 +91,8 @@ public class DeterminePartitionsJob implements Jobby
 {
   private static final Logger log = new Logger(DeterminePartitionsJob.class);
 
-  private static final Joiner tabJoiner = HadoopDruidIndexerConfig.tabJoiner;
-  private static final Splitter tabSplitter = HadoopDruidIndexerConfig.tabSplitter;
+  private static final Joiner TAB_JOINER = HadoopDruidIndexerConfig.TAB_JOINER;
+  private static final Splitter TAB_SPLITTER = HadoopDruidIndexerConfig.TAB_SPLITTER;
 
   private final HadoopDruidIndexerConfig config;
 
@@ -225,7 +224,7 @@ public class DeterminePartitionsJob implements Jobby
           fileSystem = partitionInfoPath.getFileSystem(dimSelectionJob.getConfiguration());
         }
         if (Utils.exists(dimSelectionJob, fileSystem, partitionInfoPath)) {
-          List<ShardSpec> specs = config.jsonMapper.readValue(
+          List<ShardSpec> specs = config.JSON_MAPPER.readValue(
               Utils.openInputStream(dimSelectionJob, partitionInfoPath), new TypeReference<List<ShardSpec>>()
               {
               }
@@ -275,7 +274,7 @@ public class DeterminePartitionsJob implements Jobby
           inputRow
       );
       context.write(
-          new BytesWritable(HadoopDruidIndexerConfig.jsonMapper.writeValueAsBytes(groupKey)),
+          new BytesWritable(HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsBytes(groupKey)),
           NullWritable.get()
       );
     }
@@ -317,7 +316,7 @@ public class DeterminePartitionsJob implements Jobby
         BytesWritable key, NullWritable value, Context context
     ) throws IOException, InterruptedException
     {
-      final List<Object> timeAndDims = HadoopDruidIndexerConfig.jsonMapper.readValue(key.getBytes(), List.class);
+      final List<Object> timeAndDims = HadoopDruidIndexerConfig.JSON_MAPPER.readValue(key.getBytes(), List.class);
 
       final DateTime timestamp = new DateTime(timeAndDims.get(0));
       final Map<String, Iterable<String>> dims = (Map<String, Iterable<String>>) timeAndDims.get(1);
@@ -773,11 +772,11 @@ public class DeterminePartitionsJob implements Jobby
 
       log.info("Chosen partitions:");
       for (ShardSpec shardSpec : chosenShardSpecs) {
-        log.info("  %s", HadoopDruidIndexerConfig.jsonMapper.writeValueAsString(shardSpec));
+        log.info("  %s", HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsString(shardSpec));
       }
 
       try {
-        HadoopDruidIndexerConfig.jsonMapper
+        HadoopDruidIndexerConfig.JSON_MAPPER
             .writerWithType(
                 new TypeReference<List<ShardSpec>>()
                 {
@@ -883,12 +882,12 @@ public class DeterminePartitionsJob implements Jobby
 
     public Text toText()
     {
-      return new Text(tabJoiner.join(dim, String.valueOf(numRows), value));
+      return new Text(TAB_JOINER.join(dim, String.valueOf(numRows), value));
     }
 
     public static DimValueCount fromText(Text text)
     {
-      final Iterator<String> splits = tabSplitter.limit(3).split(text.toString()).iterator();
+      final Iterator<String> splits = TAB_SPLITTER.limit(3).split(text.toString()).iterator();
       final String dim = splits.next();
       final int numRows = Integer.parseInt(splits.next());
       final String value = splits.next();
@@ -906,8 +905,8 @@ public class DeterminePartitionsJob implements Jobby
   {
     context.write(
         new SortableBytes(
-            groupKey, tabJoiner.join(dimValueCount.dim, dimValueCount.value).getBytes(
-            HadoopDruidIndexerConfig.javaNativeCharset
+            groupKey, TAB_JOINER.join(dimValueCount.dim, dimValueCount.value).getBytes(
+            HadoopDruidIndexerConfig.JAVA_NATIVE_CHARSET
         )
         ).toBytesWritable(),
         dimValueCount.toText()

@@ -19,8 +19,6 @@ package io.druid.indexer;
 
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.BaseProgressIndicator;
-import io.druid.segment.IndexMerger;
-import io.druid.segment.IndexSpec;
 import io.druid.segment.ProgressIndicator;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -68,7 +66,7 @@ public class LegacyIndexGeneratorJob extends IndexGeneratorJob
         IncrementalIndex index, Interval interval, File file, ProgressIndicator progressIndicator
     ) throws IOException
     {
-      return IndexMerger.persist(index, interval, file, null, config.getIndexSpec(), progressIndicator);
+      return HadoopDruidIndexerConfig.INDEX_MERGER.persist(index, interval, file, null, config.getIndexSpec(), progressIndicator);
     }
 
     @Override
@@ -79,7 +77,7 @@ public class LegacyIndexGeneratorJob extends IndexGeneratorJob
         ProgressIndicator progressIndicator
     ) throws IOException
     {
-      return IndexMerger.mergeQueryableIndex(indexes, aggs, file, config.getIndexSpec(), progressIndicator);
+      return HadoopDruidIndexerConfig.INDEX_MERGER.mergeQueryableIndex(indexes, aggs, file, config.getIndexSpec(), progressIndicator);
     }
   }
 }

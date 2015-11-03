@@ -59,6 +59,7 @@ import io.druid.segment.IndexSpec;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
+import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
@@ -85,6 +86,8 @@ import java.util.Map;
 public class AggregationTestHelper
 {
   private final ObjectMapper mapper;
+  private final IndexMerger indexMerger;
+  private final IndexIO indexIO;
   private final GroupByQueryQueryToolChest toolChest;
   private final GroupByQueryRunnerFactory factory;
 
@@ -94,6 +97,8 @@ public class AggregationTestHelper
   {
     this.tempFolder = tempFoler;
     mapper = new DefaultObjectMapper();
+    indexIO = TestHelper.getTestIndexIO();
+    indexMerger = TestHelper.getTestIndexMerger();
 
     for(Module mod : jsonModulesToRegister) {
       mapper.registerModule(mod);
@@ -251,7 +256,7 @@ public class AggregationTestHelper
         catch (IndexSizeExceededException ex) {
           File tmp = tempFolder.newFolder();
           toMerge.add(tmp);
-          IndexMerger.persist(index, tmp, null, new IndexSpec());
+          indexMerger.persist(index, tmp, null, new IndexSpec());
           index.close();
           index = new OnheapIncrementalIndex(minTimestamp, gran, metrics, deserializeComplexMetrics, maxRowCount);
         }
@@ -260,19 +265,19 @@ public class AggregationTestHelper
       if (toMerge.size() > 0) {
         File tmp = tempFolder.newFolder();
         toMerge.add(tmp);
-        IndexMerger.persist(index, tmp, null, new IndexSpec());
+        indexMerger.persist(index, tmp, null, new IndexSpec());
 
         List<QueryableIndex> indexes = new ArrayList<>(toMerge.size());
         for (File file : toMerge) {
-          indexes.add(IndexIO.loadIndex(file));
+          indexes.add(indexIO.loadIndex(file));
         }
-        IndexMerger.mergeQueryableIndex(indexes, metrics, outDir, new IndexSpec());
+        indexMerger.mergeQueryableIndex(indexes, metrics, outDir, new IndexSpec());
 
         for (QueryableIndex qi : indexes) {
           qi.close();
         }
       } else {
-        IndexMerger.persist(index, outDir, null, new IndexSpec());
+        indexMerger.persist(index, outDir, null, new IndexSpec());
       }
     }
     finally {
@@ -299,7 +304,7 @@ public class AggregationTestHelper
           public QueryableIndexSegment apply(File segmentDir)
           {
             try {
-              return new QueryableIndexSegment("", IndexIO.loadIndex(segmentDir));
+              return new QueryableIndexSegment("", indexIO.loadIndex(segmentDir));
             }
             catch (IOException ex) {
               throw Throwables.propagate(ex);
