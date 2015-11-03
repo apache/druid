@@ -11,7 +11,7 @@ to compute approximate histograms, with the following modifications:
 - the sketch maintains the exact original data as long as the number of
   distinct data points is fewer than the resolutions (number of centroids),
   increasing accuracy when there are few data points, or when dealing with
-  discrete data points.
+  discrete data points. You can find some of the details in [this post](https://metamarkets.com/2013/histograms/).
 
 Approximate histogram sketches are still experimental for a reason, and you
 should understand the limitations of the current implementation before using
