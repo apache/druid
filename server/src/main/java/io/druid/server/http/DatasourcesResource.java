@@ -27,12 +27,14 @@ import com.google.inject.Inject;
 import com.metamx.common.MapUtils;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.Comparators;
+
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.InventoryView;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.metadata.MetadataSegmentManager;
 import io.druid.timeline.DataSegment;
+
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -47,11 +49,11 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 
 /**
  */
@@ -82,13 +84,14 @@ public class DatasourcesResource
   )
   {
     Response.ResponseBuilder builder = Response.ok();
+    final Set<DruidDataSource> datasources = InventoryViewUtils.getDataSources(serverInventoryView);
     if (full != null) {
-      return builder.entity(getDataSources()).build();
+      return builder.entity(datasources).build();
     } else if (simple != null) {
       return builder.entity(
           Lists.newArrayList(
               Iterables.transform(
-                  getDataSources(),
+                  datasources,
                   new Function<DruidDataSource, Map<String, Object>>()
                   {
                     @Override
@@ -105,7 +108,7 @@ public class DatasourcesResource
     return builder.entity(
         Lists.newArrayList(
             Iterables.transform(
-                getDataSources(),
+                datasources,
                 new Function<DruidDataSource, String>()
                 {
                   @Override
@@ -458,38 +461,6 @@ public class DatasourcesResource
         dataSourceName,
         ImmutableMap.<String, String>of()
     ).addSegments(segmentMap);
-  }
-
-  private Set<DruidDataSource> getDataSources()
-  {
-    TreeSet<DruidDataSource> dataSources = Sets.newTreeSet(
-        new Comparator<DruidDataSource>()
-        {
-          @Override
-          public int compare(DruidDataSource druidDataSource, DruidDataSource druidDataSource1)
-          {
-            return druidDataSource.getName().compareTo(druidDataSource1.getName());
-          }
-        }
-    );
-    dataSources.addAll(
-        Lists.newArrayList(
-            Iterables.concat(
-                Iterables.transform(
-                    serverInventoryView.getInventory(),
-                    new Function<DruidServer, Iterable<DruidDataSource>>()
-                    {
-                      @Override
-                      public Iterable<DruidDataSource> apply(DruidServer input)
-                      {
-                        return input.getDataSources();
-                      }
-                    }
-                )
-            )
-        )
-    );
-    return dataSources;
   }
 
   private Pair<DataSegment, Set<String>> getSegment(String segmentId)
