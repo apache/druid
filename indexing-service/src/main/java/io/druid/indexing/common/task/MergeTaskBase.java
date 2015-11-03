@@ -149,7 +149,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
       final Map<DataSegment, File> gettedSegments = toolbox.fetchSegments(segments);
 
       // merge files together
-      final File fileToUpload = merge(gettedSegments, new File(taskDir, "merged"));
+      final File fileToUpload = merge(toolbox, gettedSegments, new File(taskDir, "merged"));
 
       emitter.emit(builder.build("merger/numMerged", segments.size()));
       emitter.emit(builder.build("merger/mergeTime", System.currentTimeMillis() - startTime));
@@ -230,7 +230,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
     }
   }
 
-  protected abstract File merge(Map<DataSegment, File> segments, File outDir)
+  protected abstract File merge(TaskToolbox taskToolbox, Map<DataSegment, File> segments, File outDir)
       throws Exception;
 
   @JsonProperty

@@ -36,6 +36,7 @@ import io.druid.segment.IndexSpec;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexStorageAdapter;
 import io.druid.segment.StorageAdapter;
+import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.junit.Assert;
@@ -54,6 +55,9 @@ public class IngestSegmentFirehoseTest
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
+  private IndexIO indexIO = TestHelper.getTestIndexIO();
+  private IndexMerger indexMerger = TestHelper.getTestIndexMerger();
+
   @Test
   public void testSanity() throws Exception
   {
@@ -62,7 +66,7 @@ public class IngestSegmentFirehoseTest
 
     QueryableIndex qi = null;
     try {
-      qi = IndexIO.loadIndex(segmentDir);
+      qi = indexIO.loadIndex(segmentDir);
       StorageAdapter sa = new QueryableIndexStorageAdapter(qi);
       WindowedStorageAdapter wsa = new WindowedStorageAdapter(sa, sa.getInterval());
       IngestSegmentFirehose firehose = new IngestSegmentFirehose(
@@ -121,7 +125,7 @@ public class IngestSegmentFirehoseTest
       for (String line : rows) {
         index.add(parser.parse(line));
       }
-      IndexMerger.persist(index, segmentDir, null, new IndexSpec());
+      indexMerger.persist(index, segmentDir, null, new IndexSpec());
     }
     finally {
       if (index != null) {

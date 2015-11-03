@@ -19,7 +19,6 @@ package io.druid.indexer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
-import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -38,8 +37,6 @@ import io.druid.data.input.Rows;
 import io.druid.indexer.hadoop.SegmentInputRow;
 import io.druid.offheap.OffheapBufferPool;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMaker;
 import io.druid.segment.LoggingProgressIndicator;
 import io.druid.segment.ProgressIndicator;
 import io.druid.segment.QueryableIndex;
@@ -85,7 +82,7 @@ public class IndexGeneratorJob implements Jobby
   public static List<DataSegment> getPublishedSegments(HadoopDruidIndexerConfig config)
   {
     final Configuration conf = JobHelper.injectSystemProperties(new Configuration());
-    final ObjectMapper jsonMapper = HadoopDruidIndexerConfig.jsonMapper;
+    final ObjectMapper jsonMapper = HadoopDruidIndexerConfig.JSON_MAPPER;
 
     ImmutableList.Builder<DataSegment> publishedSegmentsBuilder = ImmutableList.builder();
 
@@ -176,18 +173,6 @@ public class IndexGeneratorJob implements Jobby
 
       config.addInputPaths(job);
 
-      // hack to get druid.processing.bitmap property passed down to hadoop job.
-      // once IndexIO doesn't rely on globally injected properties, we can move this into the HadoopTuningConfig.
-      final String bitmapProperty = "druid.processing.bitmap.type";
-      final String bitmapType = HadoopDruidIndexerConfig.properties.getProperty(bitmapProperty);
-      if (bitmapType != null) {
-        for (String property : new String[]{"mapreduce.reduce.java.opts", "mapreduce.map.java.opts"}) {
-          // prepend property to allow overriding using hadoop.xxx properties by JobHelper.injectSystemProperties above
-          String value = Strings.nullToEmpty(job.getConfiguration().get(property));
-          job.getConfiguration().set(property, String.format("-D%s=%s %s", bitmapProperty, bitmapType, value));
-        }
-      }
-
       config.intoConfiguration(job);
 
       JobHelper.setupClasspath(
@@ -277,7 +262,7 @@ public class IndexGeneratorJob implements Jobby
 
       final long truncatedTimestamp = granularitySpec.getQueryGranularity().truncate(inputRow.getTimestampFromEpoch());
       final byte[] hashedDimensions = hashFunction.hashBytes(
-          HadoopDruidIndexerConfig.jsonMapper.writeValueAsBytes(
+          HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsBytes(
               Rows.toGroupKey(
                   truncatedTimestamp,
                   inputRow
@@ -489,7 +474,7 @@ public class IndexGeneratorJob implements Jobby
         final ProgressIndicator progressIndicator
     ) throws IOException
     {
-      return IndexMaker.persist(
+      return HadoopDruidIndexerConfig.INDEX_MAKER.persist(
           index, interval, file, null, config.getIndexSpec(), progressIndicator
       );
     }
@@ -501,7 +486,7 @@ public class IndexGeneratorJob implements Jobby
         ProgressIndicator progressIndicator
     ) throws IOException
     {
-      return IndexMaker.mergeQueryableIndex(
+      return HadoopDruidIndexerConfig.INDEX_MAKER.mergeQueryableIndex(
           indexes, aggs, file, config.getIndexSpec(), progressIndicator
       );
     }
@@ -614,7 +599,7 @@ public class IndexGeneratorJob implements Jobby
           }
 
           for (File file : toMerge) {
-            indexes.add(IndexIO.loadIndex(file));
+            indexes.add(HadoopDruidIndexerConfig.INDEX_IO.loadIndex(file));
           }
           mergedBase = mergeQueryableIndex(
               indexes, aggregators, new File(baseFlushFile, "merged"), progressIndicator

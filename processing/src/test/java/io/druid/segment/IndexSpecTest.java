@@ -30,13 +30,6 @@ import org.junit.Test;
 public class IndexSpecTest
 {
   @Test
-  public void testConfiguredBitmap() throws Exception
-  {
-    // this is just to make sure testSerde correctly tests the bitmap type override
-    Assert.assertEquals(new ConciseBitmapSerdeFactory(), IndexIO.CONFIGURED_BITMAP_SERDE_FACTORY);
-  }
-
-  @Test
   public void testSerde() throws Exception
   {
     final ObjectMapper objectMapper = new DefaultObjectMapper();
@@ -67,7 +60,6 @@ public class IndexSpecTest
   public void testDefaults() throws Exception
   {
     final IndexSpec spec = new IndexSpec();
-    Assert.assertEquals(IndexIO.CONFIGURED_BITMAP_SERDE_FACTORY, spec.getBitmapSerdeFactory());
     Assert.assertEquals(CompressedObjectStrategy.CompressionStrategy.LZ4, spec.getDimensionCompressionStrategy());
     Assert.assertEquals(CompressedObjectStrategy.CompressionStrategy.LZ4, spec.getMetricCompressionStrategy());
   }

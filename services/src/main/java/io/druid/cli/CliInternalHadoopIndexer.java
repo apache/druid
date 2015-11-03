@@ -38,11 +38,7 @@ import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.indexer.JobHelper;
 import io.druid.indexer.Jobby;
 import io.druid.indexer.MetadataStorageUpdaterJobHandler;
-import io.druid.indexer.hadoop.DatasourceIngestionSpec;
-import io.druid.indexer.path.DatasourcePathSpec;
 import io.druid.indexer.path.MetadataStoreBasedUsedSegmentLister;
-import io.druid.indexer.path.MultiplePathSpec;
-import io.druid.indexer.path.PathSpec;
 import io.druid.indexer.updater.MetadataStorageUpdaterJobSpec;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
@@ -119,7 +115,7 @@ public class CliInternalHadoopIndexer extends GuiceRunnable
       config = HadoopDruidIndexerConfig.fromSpec(
           HadoopIngestionSpec.updateSegmentListIfDatasourcePathSpecIsUsed(
               config.getSchema(),
-              HadoopDruidIndexerConfig.jsonMapper,
+              HadoopDruidIndexerConfig.JSON_MAPPER,
               new MetadataStoreBasedUsedSegmentLister(
                   injector.getInstance(IndexerMetadataStorageCoordinator.class)
               )

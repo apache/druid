@@ -39,7 +39,6 @@ import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
@@ -99,7 +98,12 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
    *
    * @return A SegmentConverterTask for the segment with the indexSpec specified.
    */
-  public static ConvertSegmentTask create(DataSegment segment, IndexSpec indexSpec, boolean force, boolean validate, Map<String, Object> context
+  public static ConvertSegmentTask create(
+      DataSegment segment,
+      IndexSpec indexSpec,
+      boolean force,
+      boolean validate,
+      Map<String, Object> context
   )
   {
     final Interval interval = segment.getInterval();
@@ -377,7 +381,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
 
     final File location = localSegments.get(segment);
     final File outLocation = new File(location, "v9_out");
-    if (IndexIO.convertSegment(location, outLocation, indexSpec, force, validate)) {
+    if (toolbox.getIndexIO().convertSegment(location, outLocation, indexSpec, force, validate)) {
       final int outVersion = IndexIO.getVersionFromDir(outLocation);
 
       // Appending to the version makes a new version that inherits most comparability parameters of the original

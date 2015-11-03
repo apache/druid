@@ -17,8 +17,6 @@
 
 package io.druid.indexing.common;
 
-import com.fasterxml.jackson.databind.BeanProperty;
-import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -26,6 +24,10 @@ import com.google.common.base.Stopwatch;
 import com.metamx.common.ISE;
 import io.druid.guice.ServerModule;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.segment.IndexIO;
+import io.druid.segment.IndexMaker;
+import io.druid.segment.IndexMerger;
+import io.druid.segment.column.ColumnConfig;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -34,28 +36,60 @@ import java.util.concurrent.TimeUnit;
  */
 public class TestUtils
 {
-  public static final ObjectMapper MAPPER = new DefaultObjectMapper();
+  private final ObjectMapper jsonMapper;
+  private final IndexMerger indexMerger;
+  private final IndexMaker indexMaker;
+  private final IndexIO indexIO;
 
-  static {
-    final List<? extends Module> list = new ServerModule().getJacksonModules();
-    for (Module module : list) {
-      MAPPER.registerModule(module);
-    }
-    MAPPER.setInjectableValues(
-        new InjectableValues()
+  public TestUtils()
+  {
+    jsonMapper = new DefaultObjectMapper();
+    indexIO = new IndexIO(
+        jsonMapper,
+        new ColumnConfig()
         {
           @Override
-          public Object findInjectableValue(
-              Object valueId, DeserializationContext ctxt, BeanProperty forProperty, Object beanInstance
-          )
+          public int columnCacheSizeBytes()
           {
-            if (valueId.equals("com.fasterxml.jackson.databind.ObjectMapper")) {
-              return TestUtils.MAPPER;
-            }
-            throw new ISE("No Injectable value found");
+            return 0;
           }
         }
     );
+    indexMerger = new IndexMerger(jsonMapper, indexIO);
+    indexMaker = new IndexMaker(jsonMapper, indexIO);
+
+    final List<? extends Module> list = new ServerModule().getJacksonModules();
+    for (Module module : list) {
+      jsonMapper.registerModule(module);
+    }
+
+    jsonMapper.setInjectableValues(
+        new InjectableValues.Std()
+            .addValue(IndexIO.class, indexIO)
+            .addValue(IndexMerger.class, indexMerger)
+            .addValue(IndexMaker.class, indexMaker)
+            .addValue(ObjectMapper.class, jsonMapper)
+    );
+  }
+
+  public ObjectMapper getTestObjectMapper()
+  {
+    return jsonMapper;
+  }
+
+  public IndexMerger getTestIndexMerger()
+  {
+    return indexMerger;
+  }
+
+  public IndexMaker getTestIndexMaker()
+  {
+    return indexMaker;
+  }
+
+  public IndexIO getTestIndexIO()
+  {
+    return indexIO;
   }
 
   public static boolean conditionValid(IndexingServiceCondition condition)

@@ -34,8 +34,6 @@ import com.metamx.common.logger.Logger;
 import io.druid.indexer.JobHelper;
 import io.druid.indexer.hadoop.DatasourceInputSplit;
 import io.druid.indexer.hadoop.WindowedDataSegment;
-import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMerger;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -514,7 +512,7 @@ public class HadoopConverterJob
       if (!outDir.mkdir() && (!outDir.exists() || !outDir.isDirectory())) {
         throw new IOException(String.format("Could not create output directory [%s]", outDir));
       }
-      IndexMerger.convert(
+      HadoopDruidConverterConfig.INDEX_MERGER.convert(
           inDir,
           outDir,
           config.getIndexSpec(),
@@ -522,7 +520,7 @@ public class HadoopConverterJob
       );
       if (config.isValidate()) {
         context.setStatus("Validating");
-        IndexIO.DefaultIndexIOHandler.validateTwoSegments(inDir, outDir);
+        HadoopDruidConverterConfig.INDEX_IO.validateTwoSegments(inDir, outDir);
       }
       context.progress();
       context.setStatus("Starting PUSH");

@@ -21,6 +21,7 @@ package io.druid.segment.realtime.plumber;
 
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
@@ -129,6 +130,9 @@ public class RealtimePlumber implements Plumber
   private volatile ExecutorService persistExecutor = null;
   private volatile ExecutorService mergeExecutor = null;
   private volatile ScheduledExecutorService scheduledExecutor = null;
+  private volatile IndexMerger indexMerger;
+  private volatile IndexMaker indexMaker;
+  private volatile IndexIO indexIO;
 
   private static final String COMMIT_METADATA_KEY = "%commitMetadata%";
   private static final String COMMIT_METADATA_TIMESTAMP_KEY = "%commitMetadataTimestamp%";
@@ -143,7 +147,10 @@ public class RealtimePlumber implements Plumber
       ExecutorService queryExecutorService,
       DataSegmentPusher dataSegmentPusher,
       SegmentPublisher segmentPublisher,
-      FilteredServerView serverView
+      FilteredServerView serverView,
+      IndexMerger indexMerger,
+      IndexMaker indexMaker,
+      IndexIO indexIO
   )
   {
     this.schema = schema;
@@ -157,6 +164,9 @@ public class RealtimePlumber implements Plumber
     this.dataSegmentPusher = dataSegmentPusher;
     this.segmentPublisher = segmentPublisher;
     this.serverView = serverView;
+    this.indexMerger = Preconditions.checkNotNull(indexMerger, "Null IndexMerger");
+    this.indexMaker = Preconditions.checkNotNull(indexMaker, "Null IndexMaker");
+    this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
 
     log.info("Creating plumber using rejectionPolicy[%s]", getRejectionPolicy());
   }
@@ -500,14 +510,14 @@ public class RealtimePlumber implements Plumber
 
               final File mergedFile;
               if (config.isPersistInHeap()) {
-                mergedFile = IndexMaker.mergeQueryableIndex(
+                mergedFile = indexMaker.mergeQueryableIndex(
                     indexes,
                     schema.getAggregators(),
                     mergedTarget,
                     config.getIndexSpec()
                 );
               } else {
-                mergedFile = IndexMerger.mergeQueryableIndex(
+                mergedFile = indexMerger.mergeQueryableIndex(
                     indexes,
                     schema.getAggregators(),
                     mergedTarget,
@@ -518,7 +528,7 @@ public class RealtimePlumber implements Plumber
               metrics.incrementMergeCpuTime(VMUtils.safeGetThreadCpuTime() - mergeThreadCpuTime);
               metrics.incrementMergeTimeMillis(mergeStopwatch.elapsed(TimeUnit.MILLISECONDS));
 
-              QueryableIndex index = IndexIO.loadIndex(mergedFile);
+              QueryableIndex index = indexIO.loadIndex(mergedFile);
               log.info("Pushing [%s] to deep storage", sink.getSegment().getIdentifier());
 
               DataSegment segment = dataSegmentPusher.push(
@@ -705,7 +715,7 @@ public class RealtimePlumber implements Plumber
           }
           QueryableIndex queryableIndex = null;
           try {
-            queryableIndex = IndexIO.loadIndex(segmentDir);
+            queryableIndex = indexIO.loadIndex(segmentDir);
           }
           catch (IOException e) {
             log.error(e, "Problem loading segmentDir from disk.");
@@ -974,14 +984,14 @@ public class RealtimePlumber implements Plumber
         final IndexSpec indexSpec = config.getIndexSpec();
 
         if (config.isPersistInHeap()) {
-          persistedFile = IndexMaker.persist(
+          persistedFile = indexMaker.persist(
               indexToPersist.getIndex(),
               new File(computePersistDir(schema, interval), String.valueOf(indexToPersist.getCount())),
               metaData,
               indexSpec
           );
         } else {
-          persistedFile = IndexMerger.persist(
+          persistedFile = indexMerger.persist(
               indexToPersist.getIndex(),
               new File(computePersistDir(schema, interval), String.valueOf(indexToPersist.getCount())),
               metaData,
@@ -992,7 +1002,7 @@ public class RealtimePlumber implements Plumber
         indexToPersist.swapSegment(
             new QueryableIndexSegment(
                 indexToPersist.getSegment().getIdentifier(),
-                IndexIO.loadIndex(persistedFile)
+                indexIO.loadIndex(persistedFile)
             )
         );
         return numRows;

@@ -43,7 +43,6 @@ import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.server.initialization.IndexerZkConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
@@ -66,13 +65,14 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class RemoteTaskRunnerTest
 {
-  private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
   private static final Joiner joiner = Joiner.on("/");
   private static final String basePath = "/test/druid";
   private static final String announcementsPath = String.format("%s/indexer/announcements/worker", basePath);
   private static final String tasksPath = String.format("%s/indexer/tasks/worker", basePath);
   private static final String statusPath = String.format("%s/indexer/status/worker", basePath);
   private static final int TIMEOUT_SECONDS = 5;
+
+  private ObjectMapper jsonMapper;
 
   private TestingCluster testingCluster;
   private CuratorFramework cf;
@@ -85,6 +85,9 @@ public class RemoteTaskRunnerTest
   @Before
   public void setUp() throws Exception
   {
+    TestUtils testUtils = new TestUtils();
+    jsonMapper = testUtils.getTestObjectMapper();
+
     testingCluster = new TestingCluster(1);
     testingCluster.start();
 

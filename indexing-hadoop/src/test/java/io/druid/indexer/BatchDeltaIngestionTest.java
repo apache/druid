@@ -70,6 +70,7 @@ public class BatchDeltaIngestionTest
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
   private static final ObjectMapper MAPPER;
+  private static final IndexIO INDEX_IO;
   private static final Interval INTERVAL_FULL = new Interval("2014-10-22T00:00:00Z/P1D");
   private static final Interval INTERVAL_PARTIAL = new Interval("2014-10-22T00:00:00Z/PT2H");
   private static final DataSegment SEGMENT;
@@ -79,6 +80,7 @@ public class BatchDeltaIngestionTest
     MAPPER.registerSubtypes(new NamedType(HashBasedNumberedShardSpec.class, "hashed"));
     InjectableValues inject = new InjectableValues.Std().addValue(ObjectMapper.class, MAPPER);
     MAPPER.setInjectableValues(inject);
+    INDEX_IO = HadoopDruidIndexerConfig.INDEX_IO;
 
     try {
       SEGMENT = new DefaultObjectMapper()
@@ -314,7 +316,7 @@ public class BatchDeltaIngestionTest
     File tmpUnzippedSegmentDir = temporaryFolder.newFolder();
     new LocalDataSegmentPuller().getSegmentFiles(dataSegment, tmpUnzippedSegmentDir);
 
-    QueryableIndex index = IndexIO.loadIndex(tmpUnzippedSegmentDir);
+    QueryableIndex index = INDEX_IO.loadIndex(tmpUnzippedSegmentDir);
     StorageAdapter adapter = new QueryableIndexStorageAdapter(index);
 
     Firehose firehose = new IngestSegmentFirehose(
@@ -392,7 +394,7 @@ public class BatchDeltaIngestionTest
             INTERVAL_FULL.getStart(),
             ImmutableList.of(
                 new HadoopyShardSpec(
-                    new HashBasedNumberedShardSpec(0, 1, HadoopDruidIndexerConfig.jsonMapper),
+                    new HashBasedNumberedShardSpec(0, 1, HadoopDruidIndexerConfig.JSON_MAPPER),
                     0
                 )
             )

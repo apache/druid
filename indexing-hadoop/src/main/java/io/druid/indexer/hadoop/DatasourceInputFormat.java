@@ -26,7 +26,6 @@ import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
 import io.druid.indexer.HadoopDruidIndexerConfig;
-import io.druid.timeline.DataSegment;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.InputFormat;
@@ -55,7 +54,7 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
     Configuration conf = context.getConfiguration();
 
     String segmentsStr = Preconditions.checkNotNull(conf.get(CONF_INPUT_SEGMENTS), "No segments found to read");
-    List<WindowedDataSegment> segments = HadoopDruidIndexerConfig.jsonMapper.readValue(
+    List<WindowedDataSegment> segments = HadoopDruidIndexerConfig.JSON_MAPPER.readValue(
         segmentsStr,
         new TypeReference<List<WindowedDataSegment>>()
         {

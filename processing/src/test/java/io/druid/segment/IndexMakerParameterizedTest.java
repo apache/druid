@@ -63,6 +63,10 @@ public class IndexMakerParameterizedTest
   @Rule
   public final CloserRule closer = new CloserRule(false);
 
+  private final static IndexMaker INDEX_MAKER = TestHelper.getTestIndexMaker();
+  private final static IndexIO INDEX_IO = TestHelper.getTestIndexIO();
+
+
   @Parameterized.Parameters(name = "{index}: bitmap={0}, metric compression={1}, dimension compression={2}")
   public static Collection<Object[]> data()
   {
@@ -129,8 +133,8 @@ public class IndexMakerParameterizedTest
 
     final File tempDir = temporaryFolder.newFolder();
     QueryableIndex index = closer.closeLater(
-        IndexIO.loadIndex(
-            IndexMaker.persist(
+        INDEX_IO.loadIndex(
+            INDEX_MAKER.persist(
                 toPersist,
                 tempDir,
                 null,
@@ -181,8 +185,8 @@ public class IndexMakerParameterizedTest
     final File mergedDir = temporaryFolder.newFolder();
 
     QueryableIndex index1 = closer.closeLater(
-        IndexIO.loadIndex(
-            IndexMaker.persist(
+        INDEX_IO.loadIndex(
+            INDEX_MAKER.persist(
                 toPersist1,
                 tempDir1,
                 null,
@@ -196,8 +200,8 @@ public class IndexMakerParameterizedTest
     Assert.assertEquals(3, index1.getColumnNames().size());
 
     QueryableIndex index2 = closer.closeLater(
-        IndexIO.loadIndex(
-            IndexMaker.persist(
+        INDEX_IO.loadIndex(
+            INDEX_MAKER.persist(
                 toPersist2,
                 tempDir2,
                 null,
@@ -211,8 +215,8 @@ public class IndexMakerParameterizedTest
     Assert.assertEquals(3, index2.getColumnNames().size());
 
     QueryableIndex merged = closer.closeLater(
-        IndexIO.loadIndex(
-            IndexMaker.mergeQueryableIndex(
+        INDEX_IO.loadIndex(
+            INDEX_MAKER.mergeQueryableIndex(
                 Arrays.asList(index1, index2),
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 mergedDir,
@@ -265,8 +269,8 @@ public class IndexMakerParameterizedTest
     );
 
     final QueryableIndex index1 = closer.closeLater(
-        IndexIO.loadIndex(
-            IndexMaker.persist(
+        INDEX_IO.loadIndex(
+            INDEX_MAKER.persist(
                 toPersist1,
                 tmpDir1,
                 null,
@@ -275,8 +279,8 @@ public class IndexMakerParameterizedTest
         )
     );
     final QueryableIndex index2 = closer.closeLater(
-        IndexIO.loadIndex(
-            IndexMaker.persist(
+        INDEX_IO.loadIndex(
+            INDEX_MAKER.persist(
                 toPersist1,
                 tmpDir2,
                 null,
@@ -285,8 +289,8 @@ public class IndexMakerParameterizedTest
         )
     );
     final QueryableIndex merged = closer.closeLater(
-        IndexIO.loadIndex(
-            IndexMaker.mergeQueryableIndex(Arrays.asList(index1, index2), new AggregatorFactory[]{}, tmpDir3, indexSpec)
+        INDEX_IO.loadIndex(
+            INDEX_MAKER.mergeQueryableIndex(Arrays.asList(index1, index2), new AggregatorFactory[]{}, tmpDir3, indexSpec)
         )
     );
 
@@ -321,8 +325,8 @@ public class IndexMakerParameterizedTest
     );
 
     QueryableIndex index1 = closer.closeLater(
-        IndexIO.loadIndex(
-            IndexMaker.persist(
+        INDEX_IO.loadIndex(
+            INDEX_MAKER.persist(
                 toPersist1,
                 tempDir1,
                 null,
@@ -334,7 +338,7 @@ public class IndexMakerParameterizedTest
 
     final IndexableAdapter queryableAdapter = new QueryableIndexIndexableAdapter(index1);
 
-    IndexIO.DefaultIndexIOHandler.validateTwoSegments(incrementalAdapter, queryableAdapter);
+    INDEX_IO.validateTwoSegments(incrementalAdapter, queryableAdapter);
 
     Assert.assertEquals(2, index1.getColumn(Column.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
@@ -342,8 +346,8 @@ public class IndexMakerParameterizedTest
 
 
     QueryableIndex merged = closer.closeLater(
-        IndexIO.loadIndex(
-            IndexMaker.mergeQueryableIndex(
+        INDEX_IO.loadIndex(
+            INDEX_MAKER.mergeQueryableIndex(
                 ImmutableList.of(index1),
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 mergedDir,
@@ -356,7 +360,7 @@ public class IndexMakerParameterizedTest
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(merged.getAvailableDimensions()));
     Assert.assertEquals(3, merged.getColumnNames().size());
 
-    IndexIO.DefaultIndexIOHandler.validateTwoSegments(tempDir1, mergedDir);
+    INDEX_IO.validateTwoSegments(tempDir1, mergedDir);
 
     assertDimCompression(index1, indexSpec.getDimensionCompressionStrategy());
     assertDimCompression(merged, indexSpec.getDimensionCompressionStrategy());
@@ -380,15 +384,15 @@ public class IndexMakerParameterizedTest
     );
 
     QueryableIndex index1 = closer.closeLater(
-        IndexIO.loadIndex(
-            IndexMaker.append(
+        INDEX_IO.loadIndex(
+            INDEX_MAKER.append(
                 ImmutableList.<IndexableAdapter>of(incrementalAdapter), tempDir1, indexSpec
             )
         )
     );
     final IndexableAdapter queryableAdapter = new QueryableIndexIndexableAdapter(index1);
 
-    IndexIO.DefaultIndexIOHandler.validateTwoSegments(incrementalAdapter, queryableAdapter);
+    INDEX_IO.validateTwoSegments(incrementalAdapter, queryableAdapter);
 
     Assert.assertEquals(2, index1.getColumn(Column.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
@@ -396,8 +400,8 @@ public class IndexMakerParameterizedTest
 
 
     QueryableIndex merged = closer.closeLater(
-        IndexIO.loadIndex(
-            IndexMaker.mergeQueryableIndex(
+        INDEX_IO.loadIndex(
+            INDEX_MAKER.mergeQueryableIndex(
                 ImmutableList.of(index1),
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 mergedDir,
@@ -410,7 +414,7 @@ public class IndexMakerParameterizedTest
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(merged.getAvailableDimensions()));
     Assert.assertEquals(3, merged.getColumnNames().size());
 
-    IndexIO.DefaultIndexIOHandler.validateTwoSegments(tempDir1, mergedDir);
+    INDEX_IO.validateTwoSegments(tempDir1, mergedDir);
 
     assertDimCompression(index1, indexSpec.getDimensionCompressionStrategy());
     assertDimCompression(merged, indexSpec.getDimensionCompressionStrategy());
@@ -433,8 +437,8 @@ public class IndexMakerParameterizedTest
     );
 
     QueryableIndex index1 = closer.closeLater(
-        IndexIO.loadIndex(
-            IndexMaker.persist(
+        INDEX_IO.loadIndex(
+            INDEX_MAKER.persist(
                 toPersist1,
                 tempDir1,
                 null,
@@ -446,7 +450,7 @@ public class IndexMakerParameterizedTest
 
     final IndexableAdapter queryableAdapter = new QueryableIndexIndexableAdapter(index1);
 
-    IndexIO.DefaultIndexIOHandler.validateTwoSegments(incrementalAdapter, queryableAdapter);
+    INDEX_IO.validateTwoSegments(incrementalAdapter, queryableAdapter);
 
     Assert.assertEquals(2, index1.getColumn(Column.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
@@ -461,8 +465,8 @@ public class IndexMakerParameterizedTest
 
 
     QueryableIndex merged = closer.closeLater(
-        IndexIO.loadIndex(
-            IndexMaker.mergeQueryableIndex(
+        INDEX_IO.loadIndex(
+            INDEX_MAKER.mergeQueryableIndex(
                 ImmutableList.of(index1),
                 new AggregatorFactory[]{new CountAggregatorFactory("count")},
                 mergedDir,
@@ -475,7 +479,7 @@ public class IndexMakerParameterizedTest
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(merged.getAvailableDimensions()));
     Assert.assertEquals(3, merged.getColumnNames().size());
 
-    IndexIO.DefaultIndexIOHandler.validateTwoSegments(tempDir1, mergedDir);
+    INDEX_IO.validateTwoSegments(tempDir1, mergedDir);
 
     assertDimCompression(index1, indexSpec.getDimensionCompressionStrategy());
     assertDimCompression(merged, newSpec.getDimensionCompressionStrategy());
@@ -499,8 +503,8 @@ public class IndexMakerParameterizedTest
     );
 
     QueryableIndex index1 = closer.closeLater(
-        IndexIO.loadIndex(
-            IndexMaker.persist(
+        INDEX_IO.loadIndex(
+            INDEX_MAKER.persist(
                 toPersist1,
                 tempDir1,
                 null,
@@ -512,7 +516,7 @@ public class IndexMakerParameterizedTest
 
     final IndexableAdapter queryableAdapter = new QueryableIndexIndexableAdapter(index1);
 
-    IndexIO.DefaultIndexIOHandler.validateTwoSegments(incrementalAdapter, queryableAdapter);
+    INDEX_IO.validateTwoSegments(incrementalAdapter, queryableAdapter);
 
     Assert.assertEquals(2, index1.getColumn(Column.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
@@ -520,8 +524,8 @@ public class IndexMakerParameterizedTest
 
 
     QueryableIndex converted = closer.closeLater(
-        IndexIO.loadIndex(
-            IndexMaker.convert(
+        INDEX_IO.loadIndex(
+            INDEX_MAKER.convert(
                 tempDir1,
                 convertDir,
                 indexSpec
@@ -533,7 +537,7 @@ public class IndexMakerParameterizedTest
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(converted.getAvailableDimensions()));
     Assert.assertEquals(3, converted.getColumnNames().size());
 
-    IndexIO.DefaultIndexIOHandler.validateTwoSegments(tempDir1, convertDir);
+    INDEX_IO.validateTwoSegments(tempDir1, convertDir);
 
     assertDimCompression(index1, indexSpec.getDimensionCompressionStrategy());
     assertDimCompression(converted, indexSpec.getDimensionCompressionStrategy());
@@ -557,8 +561,8 @@ public class IndexMakerParameterizedTest
     );
 
     QueryableIndex index1 = closer.closeLater(
-        IndexIO.loadIndex(
-            IndexMaker.persist(
+        INDEX_IO.loadIndex(
+            INDEX_MAKER.persist(
                 toPersist1,
                 tempDir1,
                 null,
@@ -570,7 +574,7 @@ public class IndexMakerParameterizedTest
 
     final IndexableAdapter queryableAdapter = new QueryableIndexIndexableAdapter(index1);
 
-    IndexIO.DefaultIndexIOHandler.validateTwoSegments(incrementalAdapter, queryableAdapter);
+    INDEX_IO.validateTwoSegments(incrementalAdapter, queryableAdapter);
 
     Assert.assertEquals(2, index1.getColumn(Column.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
@@ -583,13 +587,13 @@ public class IndexMakerParameterizedTest
         "lz4".equals(indexSpec.getMetricCompression()) ? "lzf" : "lz4"
     );
 
-    QueryableIndex converted = closer.closeLater(IndexIO.loadIndex(IndexMaker.convert(tempDir1, convertDir, newSpec)));
+    QueryableIndex converted = closer.closeLater(INDEX_IO.loadIndex(INDEX_MAKER.convert(tempDir1, convertDir, newSpec)));
 
     Assert.assertEquals(2, converted.getColumn(Column.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(converted.getAvailableDimensions()));
     Assert.assertEquals(3, converted.getColumnNames().size());
 
-    IndexIO.DefaultIndexIOHandler.validateTwoSegments(tempDir1, convertDir);
+    INDEX_IO.validateTwoSegments(tempDir1, convertDir);
 
     assertDimCompression(index1, indexSpec.getDimensionCompressionStrategy());
     assertDimCompression(converted, newSpec.getDimensionCompressionStrategy());

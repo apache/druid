@@ -108,7 +108,7 @@ public class DetermineHashedPartitionsJobTest
     HadoopIngestionSpec ingestionSpec = new HadoopIngestionSpec(
         new DataSchema(
             "test_schema",
-            HadoopDruidIndexerConfig.jsonMapper.convertValue(
+            HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
                 new StringInputRowParser(
                     new DelimitedParseSpec(
                         new TimestampSpec("ts", null, null),
@@ -137,7 +137,7 @@ public class DetermineHashedPartitionsJobTest
                 QueryGranularity.NONE,
                 ImmutableList.of(new Interval(interval))
             ),
-            HadoopDruidIndexerConfig.jsonMapper
+            HadoopDruidIndexerConfig.JSON_MAPPER
         ),
         new HadoopIOConfig(
             ImmutableMap.<String, Object>of(

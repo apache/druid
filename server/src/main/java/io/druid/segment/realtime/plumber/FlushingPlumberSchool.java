@@ -24,6 +24,9 @@ import com.google.common.base.Preconditions;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.guice.annotations.Processing;
 import io.druid.query.QueryRunnerFactoryConglomerate;
+import io.druid.segment.IndexIO;
+import io.druid.segment.IndexMaker;
+import io.druid.segment.IndexMerger;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.FireDepartmentMetrics;
@@ -46,6 +49,9 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
   private final QueryRunnerFactoryConglomerate conglomerate;
   private final DataSegmentAnnouncer segmentAnnouncer;
   private final ExecutorService queryExecutorService;
+  private final IndexMerger indexMerger;
+  private final IndexMaker indexMaker;
+  private final IndexIO indexIO;
 
   @JsonCreator
   public FlushingPlumberSchool(
@@ -53,7 +59,10 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
       @JacksonInject ServiceEmitter emitter,
       @JacksonInject QueryRunnerFactoryConglomerate conglomerate,
       @JacksonInject DataSegmentAnnouncer segmentAnnouncer,
-      @JacksonInject @Processing ExecutorService queryExecutorService
+      @JacksonInject @Processing ExecutorService queryExecutorService,
+      @JacksonInject IndexMerger indexMerger,
+      @JacksonInject IndexMaker indexMaker,
+      @JacksonInject IndexIO indexIO
   )
   {
     super(
@@ -63,7 +72,10 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
         segmentAnnouncer,
         null,
         null,
-        queryExecutorService
+        queryExecutorService,
+        indexMerger,
+        indexMaker,
+        indexIO
     );
 
     this.flushDuration = flushDuration == null ? defaultFlushDuration : flushDuration;
@@ -71,6 +83,9 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
     this.conglomerate = conglomerate;
     this.segmentAnnouncer = segmentAnnouncer;
     this.queryExecutorService = queryExecutorService;
+    this.indexMerger = Preconditions.checkNotNull(indexMerger, "Null IndexMerger");
+    this.indexMaker = Preconditions.checkNotNull(indexMaker, "Null IndexMaker");
+    this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
   }
 
   @Override
@@ -90,7 +105,10 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
         emitter,
         conglomerate,
         segmentAnnouncer,
-        queryExecutorService
+        queryExecutorService,
+        indexMerger,
+        indexMaker,
+        indexIO
     );
   }
 
