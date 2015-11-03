@@ -31,10 +31,10 @@ public class ExtensionsConfig
   private boolean searchCurrentClassloader = true;
 
   @JsonProperty
-  private String directory = "druid_extensions";
+  private String directory = "extensions";
 
   @JsonProperty
-  private String hadoopDependenciesDir = "hadoop_druid_dependencies";
+  private String hadoopDependenciesDir = "hadoop_dependencies";
 
   @JsonProperty
   private List<String> loadList;

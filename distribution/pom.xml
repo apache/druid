@@ -57,8 +57,8 @@
                                 <argument>-classpath</argument>
                                 <classpath/>
                                 <argument>-Ddruid.extensions.loadList=[]</argument>
-                                <argument>-Ddruid.extensions.directory=${project.build.directory}/druid_extensions</argument>
-                                <argument>-Ddruid.extensions.hadoopDependenciesDir=${project.build.directory}/hadoop_druid_dependencies</argument>
+                                <argument>-Ddruid.extensions.directory=${project.build.directory}/extensions</argument>
+                                <argument>-Ddruid.extensions.hadoopDependenciesDir=${project.build.directory}/hadoop_dependencies</argument>
                                 <argument>io.druid.cli.Main</argument>
                                 <argument>tools</argument>
                                 <argument>pull-deps</argument>
@@ -121,7 +121,7 @@
                             <goal>single</goal>
                         </goals>
                         <configuration>
-                            <finalName>mysql-metdata-storage</finalName>
+                            <finalName>mysql-metadata-storage</finalName>
                             <tarLongFileMode>posix</tarLongFileMode>
                             <descriptors>
                                 <descriptor>src/assembly/mysql_assembly.xml</descriptor>

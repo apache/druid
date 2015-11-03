@@ -25,12 +25,12 @@ To let Druid load your extensions, follow the steps below
 
 Example:
 
-Suppose you specify `druid.extensions.directory=/usr/local/druid/druid_extensions`, and want Druid to load normal extensions ```druid-examples```, ```druid-kafka-eight``` and ```mysql-metadata-storage```.
+Suppose you specify `druid.extensions.directory=/usr/local/druid/extensions`, and want Druid to load normal extensions ```druid-examples```, ```druid-kafka-eight``` and ```mysql-metadata-storage```.
 
-Then under ```druid_extensions```, it should look like this,
+Then under ```extensions```, it should look like this,
 
 ```
-druid_extensions/
+extensions/
 ├── druid-examples
 │   ├── commons-beanutils-1.8.3.jar
 │   ├── commons-digester-1.8.jar
@@ -61,7 +61,7 @@ druid_extensions/
     └── mysql-metadata-storage-0.8.0-rc1.jar
 ```
 
-As you can see, under ```druid_extensions``` there are three sub-directories ```druid-examples```, ```druid-kafka-eight``` and ```mysql-metadata-storage```, each sub-directory denotes an extension that Druid might load.
+As you can see, under ```extensions``` there are three sub-directories ```druid-examples```, ```druid-kafka-eight``` and ```mysql-metadata-storage```, each sub-directory denotes an extension that Druid might load.
 
 3) Tell Druid which extensions to load.  Now you have prepared your extension directories, if you want Druid to load a specific list of extensions under root extension directory, you need to specify `druid.extensions.loadList`. Using the example above, if you want Druid to load ```druid-kafka-eight``` and ```mysql-metadata-storage```, you can specify `druid.extensions.loadList=["druid-kafka-eight", "mysql-metadata-storage"]`.
 

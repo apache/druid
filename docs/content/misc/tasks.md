@@ -144,7 +144,7 @@ The Hadoop Index Task is used to index larger data sets that require the paralle
 The Hadoop Index Config submitted as part of an Hadoop Index Task is identical to the Hadoop Index Config used by the `HadoopDruidIndexer` except that three fields must be omitted: `segmentOutputPath`, `workingPath`, `metadataUpdateSpec`. The Indexing Service takes care of setting these fields internally.
 
 Note: Before using Hadoop Index Task, please make sure to include Hadoop dependencies so that Druid knows where to pick them up during runtime, see [Include Hadoop Dependencies](../operations/other-hadoop.html).
-Druid uses hadoop-client 2.3.0 as the default Hadoop version, you can get it from the released Druid tarball(under folder ```hadoop_druid_dependencies```) or use [pull-deps](../pull-deps.html).
+Druid uses hadoop-client 2.3.0 as the default Hadoop version, you can get it from the released Druid tarball(under folder ```hadoop_dependencies```) or use [pull-deps](../pull-deps.html).
 
 #### Using your own Hadoop distribution
 
