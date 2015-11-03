@@ -18,6 +18,7 @@
 package io.druid.query;
 
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -36,6 +37,8 @@ import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.metadata.metadata.ColumnIncluderator;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.query.search.SearchResultValue;
+import io.druid.query.search.search.ContainsSearchQuerySpec;
+import io.druid.query.search.search.FragmentSearchQuerySpec;
 import io.druid.query.search.search.InsensitiveContainsSearchQuerySpec;
 import io.druid.query.search.search.SearchQuery;
 import io.druid.query.search.search.SearchQuerySpec;
@@ -681,13 +684,41 @@ public class Druids
 
     public SearchQueryBuilder query(String q)
     {
+      Preconditions.checkNotNull(q, "no value");
       querySpec = new InsensitiveContainsSearchQuerySpec(q);
       return this;
     }
 
     public SearchQueryBuilder query(Map<String, Object> q)
     {
-      querySpec = new InsensitiveContainsSearchQuerySpec((String) q.get("value"));
+      String value = Preconditions.checkNotNull(q.get("value"), "no value").toString();
+      querySpec = new InsensitiveContainsSearchQuerySpec(value);
+      return this;
+    }
+
+    public SearchQueryBuilder query(String q, boolean caseSensitive)
+    {
+      Preconditions.checkNotNull(q, "no value");
+      querySpec = new ContainsSearchQuerySpec(q, caseSensitive);
+      return this;
+    }
+
+    public SearchQueryBuilder query(Map<String, Object> q, boolean caseSensitive)
+    {
+      String value = Preconditions.checkNotNull(q.get("value"), "no value").toString();
+      querySpec = new ContainsSearchQuerySpec(value, caseSensitive);
+      return this;
+    }
+
+    public SearchQueryBuilder fragments(List<String> q)
+    {
+      return fragments(q, false);
+    }
+
+    public SearchQueryBuilder fragments(List<String> q, boolean caseSensitive)
+    {
+      Preconditions.checkNotNull(q, "no value");
+      querySpec = new FragmentSearchQuerySpec(q, caseSensitive);
       return this;
     }
 
