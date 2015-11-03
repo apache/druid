@@ -50,8 +50,8 @@ Suppose you want to download ```druid-examples```, ```mysql-metadata-storage``` 
 Because `--clean` is supplied, this command will first remove the directories specified at `druid.extensions.directory` and `druid.extensions.hadoopDependenciesDir`, then recreate them and start downloading the extensions there. After finishing downloading, if you go to the extension directories you specified, you will see
 
 ```
-tree druid_extensions
-druid_extensions
+tree extensions
+extensions
 ├── druid-examples
 │   ├── commons-beanutils-1.8.3.jar
 │   ├── commons-digester-1.8.jar
@@ -68,8 +68,8 @@ druid_extensions
 ```
 
 ```
-tree hadoop_druid_dependencies
-hadoop_druid_dependencies/
+tree hadoop_dependencies
+hadoop_dependencies/
 └── hadoop-client
     ├── 2.3.0
     │   ├── activation-1.1.jar

@@ -19,12 +19,12 @@ To make this work, follow the steps below
 
 Example:
 
-Suppose you specify `druid.extensions.hadoopDependenciesDir=/usr/local/druid/hadoop_druid_dependencies`, and you want to prepare both `hadoop-client` 2.3.0 and 2.4.0 for Druid,
+Suppose you specify `druid.extensions.hadoopDependenciesDir=/usr/local/druid/hadoop_dependencies`, and you want to prepare both `hadoop-client` 2.3.0 and 2.4.0 for Druid,
 
-Then you can either use [pull-deps](../pull-deps.html) or manually set up Hadoop dependencies directories such that under ```hadoop_druid_dependencies```, it looks like this,
+Then you can either use [pull-deps](../pull-deps.html) or manually set up Hadoop dependencies directories such that under ```hadoop_dependencies```, it looks like this,
 
 ```
-hadoop_druid_dependencies/
+hadoop_dependencies/
 └── hadoop-client
     ├── 2.3.0
     │   ├── activation-1.1.jar
