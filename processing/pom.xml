@@ -75,6 +75,10 @@
             <groupId>org.mapdb</groupId>
             <artifactId>mapdb</artifactId>
         </dependency>
+        <dependency>
+            <groupId>commons-lang</groupId>
+            <artifactId>commons-lang</artifactId>
+        </dependency>
 
         <!-- Tests -->
         <dependency>

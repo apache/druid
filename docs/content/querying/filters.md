@@ -147,4 +147,13 @@ Search filters can be used to filter on partial string matches.
 |property|description|required?|
 |--------|-----------|---------|
 |type|This String should always be "fragment".|yes|
-|values|A JSON array of String values to run the search over. Case insensitive.|yes|
+|values|A JSON array of String values to run the search over.|yes|
+|caseSensitive|Whether strings should be compared as case sensitive or not. Default: false(insensitive)|no|
+
+##### Contains
+
+|property|description|required?|
+|--------|-----------|---------|
+|type|This String should always be "contains".|yes|
+|value|A String value to run the search over.|yes|
+|caseSensitive|Whether two string should be compared as case sensitive or not|yes|

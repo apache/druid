@@ -19,11 +19,25 @@ If any part of a dimension value contains the value specified in this search que
 FragmentSearchQuerySpec
 -----------------------
 
-If any part of a dimension value contains any of the values specified in this search query spec, regardless of case, a "match" occurs. The grammar is:
+If any part of a dimension value contains all of the values specified in this search query spec, regardless of case by default, a "match" occurs. The grammar is:
 
 ```json
 { 
   "type" : "fragment",
+  "case_sensitive" : false,
   "values" : ["fragment1", "fragment2"]
+}
+```
+
+ContainsSearchQuerySpec
+----------------------------------
+
+If any part of a dimension value contains the value specified in this search query spec, a "match" occurs. The grammar is:
+
+```json
+{
+  "type"  : "contains",
+  "case_sensitive" : true,
+  "value" : "some_value"
 }
 ```

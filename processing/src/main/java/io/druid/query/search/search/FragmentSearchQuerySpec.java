@@ -22,7 +22,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.metamx.common.StringUtils;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
+import java.util.TreeSet;
 
 /**
  */
@@ -31,13 +34,33 @@ public class FragmentSearchQuerySpec implements SearchQuerySpec
   private static final byte CACHE_TYPE_ID = 0x2;
 
   private final List<String> values;
+  private final boolean caseSensitive;
+
+  private final String[] target;
 
   @JsonCreator
   public FragmentSearchQuerySpec(
       @JsonProperty("values") List<String> values
   )
   {
+    this(values, false);
+  }
+
+  @JsonCreator
+  public FragmentSearchQuerySpec(
+      @JsonProperty("values") List<String> values,
+      @JsonProperty("caseSensitive") boolean caseSensitive
+  )
+  {
     this.values = values;
+    this.caseSensitive = caseSensitive;
+    Set<String> set = new TreeSet();
+    if (values != null) {
+      for (String value : values) {
+        set.add(value);
+      }
+    }
+    target = set.toArray(new String[set.size()]);
   }
 
   @JsonProperty
@@ -46,11 +69,33 @@ public class FragmentSearchQuerySpec implements SearchQuerySpec
     return values;
   }
 
+  @JsonProperty
+  public boolean isCaseSensitive()
+  {
+    return caseSensitive;
+  }
+
   @Override
   public boolean accept(String dimVal)
   {
-    for (String value : values) {
-      if (dimVal == null || !dimVal.toLowerCase().contains(value.toLowerCase())) {
+    if (dimVal == null || values == null) {
+      return false;
+    }
+    if (caseSensitive) {
+      return containsAny(target, dimVal);
+    }
+    for (String search : target) {
+      if (!org.apache.commons.lang.StringUtils.containsIgnoreCase(dimVal, search)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private boolean containsAny(String[] target, String input)
+  {
+    for (String value : target) {
+      if (!input.contains(value)) {
         return false;
       }
     }
@@ -60,6 +105,12 @@ public class FragmentSearchQuerySpec implements SearchQuerySpec
   @Override
   public byte[] getCacheKey()
   {
+    if (values == null) {
+      return ByteBuffer.allocate(2)
+                       .put(CACHE_TYPE_ID)
+                       .put(caseSensitive ? (byte) 1 : 0).array();
+    }
+
     final byte[][] valuesBytes = new byte[values.size()][];
     int valuesBytesSize = 0;
     int index = 0;
@@ -69,8 +120,9 @@ public class FragmentSearchQuerySpec implements SearchQuerySpec
       ++index;
     }
 
-    final ByteBuffer queryCacheKey = ByteBuffer.allocate(1 + valuesBytesSize)
-                                               .put(CACHE_TYPE_ID);
+    final ByteBuffer queryCacheKey = ByteBuffer.allocate(2 + valuesBytesSize)
+                                               .put(CACHE_TYPE_ID)
+                                               .put(caseSensitive ? (byte) 1 : 0);
 
     for (byte[] bytes : valuesBytes) {
       queryCacheKey.put(bytes);
@@ -83,7 +135,7 @@ public class FragmentSearchQuerySpec implements SearchQuerySpec
   public String toString()
   {
     return "FragmentSearchQuerySpec{" +
-           "values=" + values +
+           "values=" + values + ", caseSensitive=" + caseSensitive +
            "}";
   }
 
@@ -99,16 +151,20 @@ public class FragmentSearchQuerySpec implements SearchQuerySpec
 
     FragmentSearchQuerySpec that = (FragmentSearchQuerySpec) o;
 
-    if (values != null ? !values.equals(that.values) : that.values != null) {
+    if (caseSensitive ^ that.caseSensitive) {
       return false;
     }
 
-    return true;
+    if (values == null && that.values == null) {
+      return true;
+    }
+
+    return values != null && Arrays.equals(target, that.target);
   }
 
   @Override
   public int hashCode()
   {
-    return values != null ? values.hashCode() : 0;
+    return Arrays.hashCode(target) + (caseSensitive ? (byte) 1 : 0);
   }
 }
