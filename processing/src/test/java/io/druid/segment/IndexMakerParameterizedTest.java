@@ -41,6 +41,7 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -53,6 +54,11 @@ import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+
+@Ignore
+/*
+* IndexMaker is not yet ready for production. Enable this test when IndexMaker is ready.
+*/
 
 @RunWith(Parameterized.class)
 public class IndexMakerParameterizedTest
@@ -128,7 +134,7 @@ public class IndexMakerParameterizedTest
   {
     final long timestamp = System.currentTimeMillis();
 
-    IncrementalIndex toPersist = IncrementalIndexTest.createIndex(true, null);
+    IncrementalIndex toPersist = IncrementalIndexTest.createIndex(null);
     IncrementalIndexTest.populateIndex(timestamp, toPersist);
 
     final File tempDir = temporaryFolder.newFolder();
@@ -154,7 +160,7 @@ public class IndexMakerParameterizedTest
   public void testPersistMerge() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
-    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(true, null);
+    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(null);
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
 
     IncrementalIndex toPersist2 = new OnheapIncrementalIndex(
@@ -312,7 +318,7 @@ public class IndexMakerParameterizedTest
   public void testMergeRetainsValues() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
-    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(true, null);
+    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(null);
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
 
     final File tempDir1 = temporaryFolder.newFolder();
@@ -371,7 +377,7 @@ public class IndexMakerParameterizedTest
   public void testAppendRetainsValues() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
-    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(true, null);
+    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(null);
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
 
     final File tempDir1 = temporaryFolder.newFolder();
@@ -424,7 +430,7 @@ public class IndexMakerParameterizedTest
   public void testMergeSpecChange() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
-    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(true, null);
+    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(null);
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
 
     final File tempDir1 = temporaryFolder.newFolder();
@@ -490,7 +496,7 @@ public class IndexMakerParameterizedTest
   public void testConvertSame() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
-    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(true, null);
+    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(null);
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
 
     final File tempDir1 = temporaryFolder.newFolder();
@@ -548,7 +554,7 @@ public class IndexMakerParameterizedTest
   public void testConvertDifferent() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
-    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(true, null);
+    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(null);
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
 
     final File tempDir1 = temporaryFolder.newFolder();

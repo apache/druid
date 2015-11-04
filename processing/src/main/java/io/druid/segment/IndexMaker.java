@@ -101,7 +101,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 
+@Deprecated
 /**
+ * This class is not yet ready for production use and requires more work. This class provides a demonstration of how
+ * to build v9 segments directly.
  */
 public class IndexMaker
 {

@@ -26,7 +26,6 @@ import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.concurrent.Execs;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMaker;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
@@ -64,7 +63,6 @@ public class FlushingPlumber extends RealtimePlumber
       DataSegmentAnnouncer segmentAnnouncer,
       ExecutorService queryExecutorService,
       IndexMerger indexMerger,
-      IndexMaker indexMaker,
       IndexIO indexIO
   )
   {
@@ -80,7 +78,6 @@ public class FlushingPlumber extends RealtimePlumber
         null,
         null,
         indexMerger,
-        indexMaker,
         indexIO
     );
 

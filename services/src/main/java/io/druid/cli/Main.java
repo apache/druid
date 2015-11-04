@@ -48,7 +48,7 @@ public class Main
            .withCommands(
                CliCoordinator.class, CliHistorical.class, CliBroker.class,
                CliRealtime.class, CliOverlord.class, CliMiddleManager.class,
-               CliBridge.class, CliRouter.class
+               CliRouter.class
            );
 
     builder.withGroup("example")

@@ -52,10 +52,6 @@ public class HadoopTuningConfigTest
         true,
         null,
         true,
-        true,
-        true,
-        200,
-        0.1f,
         true
     );
 
@@ -73,10 +69,6 @@ public class HadoopTuningConfigTest
     Assert.assertEquals(true, actual.isIgnoreInvalidRows());
     Assert.assertEquals(ImmutableMap.<String, String>of(), actual.getJobProperties());
     Assert.assertEquals(true, actual.isCombineText());
-    Assert.assertEquals(true, actual.isPersistInHeap());
-    Assert.assertEquals(true, actual.isIngestOffheap());
-    Assert.assertEquals(200, actual.getBufferSize());
-    Assert.assertEquals(0.1f, actual.getAggregationBufferRatio(), 0.0001);
     Assert.assertEquals(true, actual.getUseCombiner());
 
   }

@@ -59,7 +59,6 @@ import io.druid.query.SegmentDescriptor;
 import io.druid.query.spec.SpecificSegmentQueryRunner;
 import io.druid.query.spec.SpecificSegmentSpec;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMaker;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.QueryableIndex;
@@ -78,8 +77,6 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.SingleElementPartitionChunk;
-import java.lang.management.ManagementFactory;
-import java.lang.management.ThreadMXBean;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
@@ -131,7 +128,6 @@ public class RealtimePlumber implements Plumber
   private volatile ExecutorService mergeExecutor = null;
   private volatile ScheduledExecutorService scheduledExecutor = null;
   private volatile IndexMerger indexMerger;
-  private volatile IndexMaker indexMaker;
   private volatile IndexIO indexIO;
 
   private static final String COMMIT_METADATA_KEY = "%commitMetadata%";
@@ -149,7 +145,6 @@ public class RealtimePlumber implements Plumber
       SegmentPublisher segmentPublisher,
       FilteredServerView serverView,
       IndexMerger indexMerger,
-      IndexMaker indexMaker,
       IndexIO indexIO
   )
   {
@@ -165,7 +160,6 @@ public class RealtimePlumber implements Plumber
     this.segmentPublisher = segmentPublisher;
     this.serverView = serverView;
     this.indexMerger = Preconditions.checkNotNull(indexMerger, "Null IndexMerger");
-    this.indexMaker = Preconditions.checkNotNull(indexMaker, "Null IndexMaker");
     this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
 
     log.info("Creating plumber using rejectionPolicy[%s]", getRejectionPolicy());
@@ -508,22 +502,13 @@ public class RealtimePlumber implements Plumber
                 indexes.add(queryableIndex);
               }
 
-              final File mergedFile;
-              if (config.isPersistInHeap()) {
-                mergedFile = indexMaker.mergeQueryableIndex(
-                    indexes,
-                    schema.getAggregators(),
-                    mergedTarget,
-                    config.getIndexSpec()
-                );
-              } else {
-                mergedFile = indexMerger.mergeQueryableIndex(
-                    indexes,
-                    schema.getAggregators(),
-                    mergedTarget,
-                    config.getIndexSpec()
-                );
-              }
+              final File mergedFile = indexMerger.mergeQueryableIndex(
+                  indexes,
+                  schema.getAggregators(),
+                  mergedTarget,
+                  config.getIndexSpec()
+              );
+              
               // emit merge metrics before publishing segment
               metrics.incrementMergeCpuTime(VMUtils.safeGetThreadCpuTime() - mergeThreadCpuTime);
               metrics.incrementMergeTimeMillis(mergeStopwatch.elapsed(TimeUnit.MILLISECONDS));
@@ -980,24 +965,14 @@ public class RealtimePlumber implements Plumber
       try {
         int numRows = indexToPersist.getIndex().size();
 
-        final File persistedFile;
         final IndexSpec indexSpec = config.getIndexSpec();
 
-        if (config.isPersistInHeap()) {
-          persistedFile = indexMaker.persist(
-              indexToPersist.getIndex(),
-              new File(computePersistDir(schema, interval), String.valueOf(indexToPersist.getCount())),
-              metaData,
-              indexSpec
-          );
-        } else {
-          persistedFile = indexMerger.persist(
-              indexToPersist.getIndex(),
-              new File(computePersistDir(schema, interval), String.valueOf(indexToPersist.getCount())),
-              metaData,
-              indexSpec
-          );
-        }
+        final File persistedFile = indexMerger.persist(
+            indexToPersist.getIndex(),
+            new File(computePersistDir(schema, interval), String.valueOf(indexToPersist.getCount())),
+            metaData,
+            indexSpec
+        );
 
         indexToPersist.swapSegment(
             new QueryableIndexSegment(

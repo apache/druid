@@ -25,12 +25,10 @@ import com.google.common.collect.Lists;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import io.druid.data.input.InputRow;
-import io.druid.offheap.OffheapBufferPool;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
-import io.druid.segment.incremental.OffheapIncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
@@ -191,21 +189,10 @@ public class Sink implements Iterable<FireHydrant>
         .withDimensionsSpec(schema.getParser())
         .withMetrics(schema.getAggregators())
         .build();
-    final IncrementalIndex newIndex;
-    if (config.isIngestOffheap()) {
-      newIndex = new OffheapIncrementalIndex(
-          indexSchema,
-          // Assuming half space for aggregates
-          new OffheapBufferPool((int) ((double) config.getBufferSize() * config.getAggregationBufferRatio())),
-          true,
-          config.getBufferSize()
-      );
-    } else {
-      newIndex = new OnheapIncrementalIndex(
-          indexSchema,
-          config.getMaxRowsInMemory()
-      );
-    }
+    final IncrementalIndex newIndex = new OnheapIncrementalIndex(
+        indexSchema,
+        config.getMaxRowsInMemory()
+    );
 
     final FireHydrant old;
     synchronized (hydrantLock) {

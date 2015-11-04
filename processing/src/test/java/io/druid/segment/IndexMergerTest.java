@@ -128,7 +128,7 @@ public class IndexMergerTest
   {
     final long timestamp = System.currentTimeMillis();
 
-    IncrementalIndex toPersist = IncrementalIndexTest.createIndex(true, null);
+    IncrementalIndex toPersist = IncrementalIndexTest.createIndex(null);
     IncrementalIndexTest.populateIndex(timestamp, toPersist);
 
     final File tempDir = temporaryFolder.newFolder();
@@ -155,7 +155,7 @@ public class IndexMergerTest
   {
     final long timestamp = System.currentTimeMillis();
 
-    IncrementalIndex toPersist = IncrementalIndexTest.createIndex(true, null);
+    IncrementalIndex toPersist = IncrementalIndexTest.createIndex(null);
     IncrementalIndexTest.populateIndex(timestamp, toPersist);
 
     Map<String, Object> segmentMetadata = ImmutableMap.<String, Object>of("key", "value");
@@ -185,7 +185,7 @@ public class IndexMergerTest
   public void testPersistMerge() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
-    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(true, null);
+    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(null);
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
 
     IncrementalIndex toPersist2 = new OnheapIncrementalIndex(
@@ -348,7 +348,7 @@ public class IndexMergerTest
   public void testMergeRetainsValues() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
-    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(true, null);
+    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(null);
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
 
     final File tempDir1 = temporaryFolder.newFolder();
@@ -407,7 +407,7 @@ public class IndexMergerTest
   public void testAppendRetainsValues() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
-    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(true, null);
+    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(null);
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
 
     final File tempDir1 = temporaryFolder.newFolder();
@@ -460,7 +460,7 @@ public class IndexMergerTest
   public void testMergeSpecChange() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
-    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(true, null);
+    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(null);
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
 
     final File tempDir1 = temporaryFolder.newFolder();
@@ -527,7 +527,6 @@ public class IndexMergerTest
   {
     final long timestamp = System.currentTimeMillis();
     IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(
-        true,
         new AggregatorFactory[]{
             new LongSumAggregatorFactory(
                 "longSum1",
@@ -586,7 +585,7 @@ public class IndexMergerTest
   {
     final long timestamp = System.currentTimeMillis();
     IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(
-        true, new AggregatorFactory[]{
+        new AggregatorFactory[]{
             new LongSumAggregatorFactory(
                 "longSum1",
                 "dim1"

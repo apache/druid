@@ -132,11 +132,7 @@ public class IndexTask extends AbstractFixedIntervalTask
         null,
         null,
         shardSpec,
-        indexSpec,
-        null,
-        null,
-        null,
-        null
+        indexSpec
     );
   }
 

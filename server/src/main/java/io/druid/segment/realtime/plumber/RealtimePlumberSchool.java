@@ -25,7 +25,6 @@ import io.druid.client.FilteredServerView;
 import io.druid.guice.annotations.Processing;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMaker;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
@@ -48,7 +47,6 @@ public class RealtimePlumberSchool implements PlumberSchool
   private final FilteredServerView serverView;
   private final ExecutorService queryExecutorService;
   private final IndexMerger indexMerger;
-  private final IndexMaker indexMaker;
   private final IndexIO indexIO;
 
   @JsonCreator
@@ -61,7 +59,6 @@ public class RealtimePlumberSchool implements PlumberSchool
       @JacksonInject FilteredServerView serverView,
       @JacksonInject @Processing ExecutorService executorService,
       @JacksonInject IndexMerger indexMerger,
-      @JacksonInject IndexMaker indexMaker,
       @JacksonInject IndexIO indexIO
   )
   {
@@ -73,7 +70,6 @@ public class RealtimePlumberSchool implements PlumberSchool
     this.serverView = serverView;
     this.queryExecutorService = executorService;
     this.indexMerger = Preconditions.checkNotNull(indexMerger, "Null IndexMerger");
-    this.indexMaker = Preconditions.checkNotNull(indexMaker, "Null IndexMaker");
     this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
   }
 
@@ -98,7 +94,6 @@ public class RealtimePlumberSchool implements PlumberSchool
         segmentPublisher,
         serverView,
         indexMerger,
-        indexMaker,
         indexIO
     );
   }

@@ -112,10 +112,6 @@ public class JobHelperTest
                     "THISISMYACCESSKEY"
                 ),
                 false,
-                false,
-                false,
-                null,
-                null,
                 false
             )
         )

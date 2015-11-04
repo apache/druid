@@ -39,7 +39,6 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
-import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -55,7 +54,6 @@ import io.druid.segment.Segment;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
-import io.druid.segment.incremental.OffheapIncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -109,7 +107,7 @@ public class IncrementalIndexTest
                   @Override
                   public IncrementalIndex createIndex(AggregatorFactory[] factories)
                   {
-                    return IncrementalIndexTest.createIndex(true, factories);
+                    return IncrementalIndexTest.createIndex(factories);
                   }
                 }
             },
@@ -119,7 +117,7 @@ public class IncrementalIndexTest
                   @Override
                   public IncrementalIndex createIndex(AggregatorFactory[] factories)
                   {
-                    return IncrementalIndexTest.createIndex(false, factories);
+                    return IncrementalIndexTest.createIndex(factories);
                   }
                 }
             }
@@ -128,25 +126,15 @@ public class IncrementalIndexTest
     );
   }
 
-  public static IncrementalIndex createIndex(boolean offheap, AggregatorFactory[] aggregatorFactories)
+  public static IncrementalIndex createIndex(AggregatorFactory[] aggregatorFactories)
   {
     if (null == aggregatorFactories) {
       aggregatorFactories = defaultAggregatorFactories;
     }
-    if (offheap) {
-      return new OffheapIncrementalIndex(
-          0L,
-          QueryGranularity.NONE,
-          aggregatorFactories,
-          TestQueryRunners.pool,
-          true,
-          100 * 1024 * 1024
-      );
-    } else {
-      return new OnheapIncrementalIndex(
-          0L, QueryGranularity.NONE, aggregatorFactories, 1000000
-      );
-    }
+
+    return new OnheapIncrementalIndex(
+        0L, QueryGranularity.NONE, aggregatorFactories, 1000000
+    );
   }
 
   public static void populateIndex(long timestamp, IncrementalIndex index) throws IndexSizeExceededException
@@ -477,28 +465,6 @@ public class IncrementalIndexTest
       curr++;
     }
     Assert.assertEquals(elementsPerThread, curr);
-  }
-
-  @Test
-  public void testOffheapIndexIsFull() throws IndexSizeExceededException
-  {
-    OffheapIncrementalIndex index = new OffheapIncrementalIndex(
-        0L,
-        QueryGranularity.NONE,
-        new AggregatorFactory[]{new CountAggregatorFactory("count")},
-        TestQueryRunners.pool,
-        true,
-        (10 + 2) * 1024 * 1024
-    );
-    int rowCount = 0;
-    for (int i = 0; i < 500; i++) {
-      rowCount = index.add(getRow(System.currentTimeMillis(), i, 100));
-      if (!index.canAppendRow()) {
-        break;
-      }
-    }
-
-    Assert.assertTrue("rowCount : " + rowCount, rowCount > 200 && rowCount < 600);
   }
 
   @Test

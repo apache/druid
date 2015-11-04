@@ -30,19 +30,16 @@ import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
-import io.druid.collections.StupidPool;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.Rows;
 import io.druid.indexer.hadoop.SegmentInputRow;
-import io.druid.offheap.OffheapBufferPool;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.LoggingProgressIndicator;
 import io.druid.segment.ProgressIndicator;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.OffheapIncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
@@ -157,7 +154,7 @@ public class IndexGeneratorJob implements Jobby
         throw new RuntimeException("No buckets?? seems there is no data to index.");
       }
 
-      if(config.getSchema().getTuningConfig().getUseCombiner()) {
+      if (config.getSchema().getTuningConfig().getUseCombiner()) {
         job.setCombinerClass(IndexGeneratorCombiner.class);
         job.setCombinerKeyGroupingComparatorClass(BytesWritable.Comparator.class);
       }
@@ -200,9 +197,7 @@ public class IndexGeneratorJob implements Jobby
   private static IncrementalIndex makeIncrementalIndex(
       Bucket theBucket,
       AggregatorFactory[] aggs,
-      HadoopDruidIndexerConfig config,
-      boolean isOffHeap,
-      StupidPool bufferPool
+      HadoopDruidIndexerConfig config
   )
   {
     final HadoopTuningConfig tuningConfig = config.getSchema().getTuningConfig();
@@ -212,19 +207,11 @@ public class IndexGeneratorJob implements Jobby
         .withQueryGranularity(config.getSchema().getDataSchema().getGranularitySpec().getQueryGranularity())
         .withMetrics(aggs)
         .build();
-    if (isOffHeap) {
-      return new OffheapIncrementalIndex(
-          indexSchema,
-          bufferPool,
-          true,
-          tuningConfig.getBufferSize()
-      );
-    } else {
-      return new OnheapIncrementalIndex(
-          indexSchema,
-          tuningConfig.getRowFlushBoundary()
-      );
-    }
+
+    return new OnheapIncrementalIndex(
+        indexSchema,
+        tuningConfig.getRowFlushBoundary()
+    );
   }
 
   public static class IndexGeneratorMapper extends HadoopDruidIndexerMapper<BytesWritable, BytesWritable>
@@ -320,20 +307,20 @@ public class IndexGeneratorJob implements Jobby
       Iterator<BytesWritable> iter = values.iterator();
       BytesWritable first = iter.next();
 
-      if(iter.hasNext()) {
+      if (iter.hasNext()) {
         SortableBytes keyBytes = SortableBytes.fromBytesWritable(key);
         Bucket bucket = Bucket.fromGroupKey(keyBytes.getGroupKey()).lhs;
-        IncrementalIndex index = makeIncrementalIndex(bucket, combiningAggs, config, false, null);
+        IncrementalIndex index = makeIncrementalIndex(bucket, combiningAggs, config);
         index.add(InputRowSerde.fromBytes(first.getBytes(), aggregators));
 
-        while(iter.hasNext()) {
+        while (iter.hasNext()) {
           context.progress();
           InputRow value = InputRowSerde.fromBytes(iter.next().getBytes(), aggregators);
 
-          if(!index.canAppendRow()) {
+          if (!index.canAppendRow()) {
             log.info("current index full due to [%s]. creating new index.", index.getOutOfRowsReason());
             flushIndexToContextAndClose(key, index, context);
-            index = makeIncrementalIndex(bucket, combiningAggs, config, false, null);
+            index = makeIncrementalIndex(bucket, combiningAggs, config);
           }
 
           index.add(value);
@@ -345,10 +332,11 @@ public class IndexGeneratorJob implements Jobby
       }
     }
 
-    private void flushIndexToContextAndClose(BytesWritable key, IncrementalIndex index, Context context) throws IOException, InterruptedException
+    private void flushIndexToContextAndClose(BytesWritable key, IncrementalIndex index, Context context)
+        throws IOException, InterruptedException
     {
       Iterator<Row> rows = index.iterator();
-      while(rows.hasNext()) {
+      while (rows.hasNext()) {
         context.progress();
         Row row = rows.next();
         InputRow inputRow = getInputRowFromRow(row, index.getDimensions());
@@ -360,7 +348,8 @@ public class IndexGeneratorJob implements Jobby
       index.close();
     }
 
-    private InputRow getInputRowFromRow(final Row row, final List<String> dimensions) {
+    private InputRow getInputRowFromRow(final Row row, final List<String> dimensions)
+    {
       return new InputRow()
       {
         @Override
@@ -467,14 +456,14 @@ public class IndexGeneratorJob implements Jobby
       };
     }
 
-    protected File persist(
+    private File persist(
         final IncrementalIndex index,
         final Interval interval,
         final File file,
         final ProgressIndicator progressIndicator
     ) throws IOException
     {
-      return HadoopDruidIndexerConfig.INDEX_MAKER.persist(
+      return HadoopDruidIndexerConfig.INDEX_MERGER.persist(
           index, interval, file, null, config.getIndexSpec(), progressIndicator
       );
     }
@@ -514,17 +503,11 @@ public class IndexGeneratorJob implements Jobby
       Bucket bucket = Bucket.fromGroupKey(keyBytes.getGroupKey()).lhs;
 
       final Interval interval = config.getGranularitySpec().bucketInterval(bucket.time).get();
-      final int maxTotalBufferSize = config.getSchema().getTuningConfig().getBufferSize();
-      final int aggregationBufferSize = (int) ((double) maxTotalBufferSize
-                                               * config.getSchema().getTuningConfig().getAggregationBufferRatio());
 
-      final StupidPool<ByteBuffer> bufferPool = new OffheapBufferPool(aggregationBufferSize);
       IncrementalIndex index = makeIncrementalIndex(
           bucket,
           combiningAggs,
-          config,
-          config.getSchema().getTuningConfig().isIngestOffheap(),
-          bufferPool
+          config
       );
       try {
         File baseFlushFile = File.createTempFile("base", "flush");
@@ -570,9 +553,7 @@ public class IndexGeneratorJob implements Jobby
             index = makeIncrementalIndex(
                 bucket,
                 combiningAggs,
-                config,
-                config.getSchema().getTuningConfig().isIngestOffheap(),
-                bufferPool
+                config
             );
             startTime = System.currentTimeMillis();
             ++indexCount;
@@ -602,7 +583,7 @@ public class IndexGeneratorJob implements Jobby
             indexes.add(HadoopDruidIndexerConfig.INDEX_IO.loadIndex(file));
           }
           mergedBase = mergeQueryableIndex(
-              indexes, aggregators, new File(baseFlushFile, "merged"), progressIndicator
+                        indexes, aggregators, new File(baseFlushFile, "merged"), progressIndicator
           );
         }
         final FileSystem outputFS = new Path(config.getSchema().getIOConfig().getSegmentOutputPath())

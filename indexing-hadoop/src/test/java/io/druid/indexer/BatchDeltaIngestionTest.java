@@ -277,7 +277,7 @@ public class BatchDeltaIngestionTest
       WindowedDataSegment windowedDataSegment
   ) throws Exception
   {
-    IndexGeneratorJob job = new LegacyIndexGeneratorJob(config);
+    IndexGeneratorJob job = new IndexGeneratorJob(config);
     JobHelper.runJobs(ImmutableList.<Jobby>of(job), config);
 
     File segmentFolder = new File(
@@ -380,10 +380,6 @@ public class BatchDeltaIngestionTest
                 false,
                 null,
                 false,
-                false,
-                false,
-                null,
-                null,
                 false
             )
         )

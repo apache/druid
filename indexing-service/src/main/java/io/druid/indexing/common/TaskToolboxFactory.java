@@ -29,7 +29,6 @@ import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMaker;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentKiller;
@@ -60,7 +59,6 @@ public class TaskToolboxFactory
   private final SegmentLoaderFactory segmentLoaderFactory;
   private final ObjectMapper objectMapper;
   private final IndexMerger indexMerger;
-  private final IndexMaker indexMaker;
   private final IndexIO indexIO;
 
   @Inject
@@ -80,7 +78,6 @@ public class TaskToolboxFactory
       SegmentLoaderFactory segmentLoaderFactory,
       ObjectMapper objectMapper,
       IndexMerger indexMerger,
-      IndexMaker indexMaker,
       IndexIO indexIO
   )
   {
@@ -99,7 +96,6 @@ public class TaskToolboxFactory
     this.segmentLoaderFactory = segmentLoaderFactory;
     this.objectMapper = objectMapper;
     this.indexMerger = Preconditions.checkNotNull(indexMerger, "Null IndexMerger");
-    this.indexMaker = Preconditions.checkNotNull(indexMaker, "Null IndexMaker");
     this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
   }
 
@@ -125,7 +121,6 @@ public class TaskToolboxFactory
         objectMapper,
         taskWorkDir,
         indexMerger,
-        indexMaker,
         indexIO
     );
   }
