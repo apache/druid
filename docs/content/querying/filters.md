@@ -133,6 +133,24 @@ Search filters can be used to filter on partial string matches.
 |dimension|The dimension to perform the search over.|yes|
 |query|A JSON object for the type of search. See below for more information.|yes|
 
+### In filter
+
+In filter can be used to express the following SQL query:
+
+```sql
+ SELECT COUNT(*) AS 'Count' FROM `table` WHERE `outlaw` IN ('Good', 'Bad', 'Ugly')
+```
+
+The grammar for a IN filter is as follows:
+
+```json
+{
+    "type": "in",
+    "dimension": "outlaw",
+    "values": ["Good", "Bad", "Ugly"]
+}
+```
+
 #### Search Query Spec
 
 ##### Insensitive Contains

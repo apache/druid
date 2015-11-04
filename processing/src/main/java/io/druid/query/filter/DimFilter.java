@@ -32,7 +32,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
     @JsonSubTypes.Type(name="regex", value=RegexDimFilter.class),
     @JsonSubTypes.Type(name="search", value=SearchQueryDimFilter.class),
     @JsonSubTypes.Type(name="javascript", value=JavaScriptDimFilter.class),
-    @JsonSubTypes.Type(name="spatial", value=SpatialDimFilter.class)
+    @JsonSubTypes.Type(name="spatial", value=SpatialDimFilter.class),
+    @JsonSubTypes.Type(name="in", value=InDimFilter.class)
 })
 public interface DimFilter
 {
