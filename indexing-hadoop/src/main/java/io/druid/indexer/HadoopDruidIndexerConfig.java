@@ -456,11 +456,6 @@ public class HadoopDruidIndexerConfig
     }
   }
 
-  public boolean isPersistInHeap()
-  {
-    return schema.getTuningConfig().isPersistInHeap();
-  }
-
   public String getWorkingPath()
   {
     final String workingPath = schema.getTuningConfig().getWorkingPath();

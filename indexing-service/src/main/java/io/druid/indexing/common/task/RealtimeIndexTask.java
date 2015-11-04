@@ -277,7 +277,6 @@ public class RealtimeIndexTask extends AbstractTask
         toolbox.getNewSegmentServerView(),
         toolbox.getQueryExecutorService(),
         toolbox.getIndexMerger(),
-        toolbox.getIndexMaker(),
         toolbox.getIndexIO()
     );
 

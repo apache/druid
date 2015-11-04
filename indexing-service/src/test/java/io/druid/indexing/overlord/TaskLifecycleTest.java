@@ -79,7 +79,6 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMaker;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.DataSchema;
@@ -131,7 +130,6 @@ public class TaskLifecycleTest
 {
   private static final ObjectMapper MAPPER;
   private static final IndexMerger INDEX_MERGER;
-  private static final IndexMaker INDEX_MAKER;
   private static final IndexIO INDEX_IO;
 
   static {
@@ -139,7 +137,6 @@ public class TaskLifecycleTest
     MAPPER = testUtils.getTestObjectMapper();
     INDEX_MERGER = testUtils.getTestIndexMerger();
     INDEX_IO = testUtils.getTestIndexIO();
-    INDEX_MAKER = testUtils.getTestIndexMaker();
   }
 
   @Parameterized.Parameters(name = "taskStorageType={0}")
@@ -487,7 +484,6 @@ public class TaskLifecycleTest
         ),
         MAPPER,
         INDEX_MERGER,
-        INDEX_MAKER,
         INDEX_IO
     );
     tr = new ThreadPoolTaskRunner(tb, null);
@@ -1030,10 +1026,6 @@ public class TaskLifecycleTest
         new Period("P1Y"),
         null, //default window period of 10 minutes
         null, // base persist dir ignored by Realtime Index task
-        null,
-        null,
-        null,
-        null,
         null,
         null,
         null,

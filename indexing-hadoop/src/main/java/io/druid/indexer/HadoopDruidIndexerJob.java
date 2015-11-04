@@ -65,11 +65,7 @@ public class HadoopDruidIndexerJob implements Jobby
     List<Jobby> jobs = Lists.newArrayList();
     JobHelper.ensurePaths(config);
 
-    if (config.isPersistInHeap()) {
-      indexJob = new IndexGeneratorJob(config);
-    } else {
-      indexJob = new LegacyIndexGeneratorJob(config);
-    }
+    indexJob = new IndexGeneratorJob(config);
     jobs.add(indexJob);
 
     if (metadataStorageUpdaterJob != null) {

@@ -394,10 +394,6 @@ public class IndexGeneratorJobTest
                 false,
                 ImmutableMap.of(JobContext.NUM_REDUCES, "0"), //verifies that set num reducers is ignored
                 false,
-                false,
-                false,
-                null,
-                null,
                 useCombiner
             )
         )
@@ -451,12 +447,6 @@ public class IndexGeneratorJobTest
   public void testIndexGeneratorJob() throws IOException
   {
     verifyJob(new IndexGeneratorJob(config));
-  }
-
-  @Test
-  public void testLegacyIndexGeneratorJob() throws IOException
-  {
-    verifyJob(new LegacyIndexGeneratorJob(config));
   }
 
   private void verifyJob(IndexGeneratorJob job) throws IOException

@@ -40,6 +40,7 @@ import org.joda.time.DateTime;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -55,6 +56,11 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+
+@Ignore
+/*
+* IndexMaker is not yet ready for production. Enable this test when IndexMaker is ready.
+*/
 
 @RunWith(Parameterized.class)
 public class IndexMakerTest

@@ -150,10 +150,6 @@ public class RealtimeManagerTest
         null,
         null,
         null,
-        null,
-        null,
-        null,
-        null,
         null
     );
     plumber = new TestPlumber(new Sink(new Interval("0/P5000Y"), schema, tuningConfig, new DateTime().toString()));

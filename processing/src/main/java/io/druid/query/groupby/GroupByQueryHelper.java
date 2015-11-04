@@ -25,18 +25,14 @@ import com.metamx.common.guava.Accumulator;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.MapBasedRow;
-import io.druid.data.input.Row;
-import io.druid.data.input.Rows;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IndexSizeExceededException;
-import io.druid.segment.incremental.OffheapIncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 
 import java.nio.ByteBuffer;
-import java.util.Collections;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -79,29 +75,15 @@ public class GroupByQueryHelper
           }
         }
     );
-    final IncrementalIndex index;
-    if (query.getContextValue("useOffheap", false)) {
-      index = new OffheapIncrementalIndex(
-          // use granularity truncated min timestamp
-          // since incoming truncated timestamps may precede timeStart
-          granTimeStart,
-          gran,
-          aggs.toArray(new AggregatorFactory[aggs.size()]),
-          bufferPool,
-          false,
-          Integer.MAX_VALUE
-      );
-    } else {
-      index = new OnheapIncrementalIndex(
-          // use granularity truncated min timestamp
-          // since incoming truncated timestamps may precede timeStart
-          granTimeStart,
-          gran,
-          aggs.toArray(new AggregatorFactory[aggs.size()]),
-          false,
-          config.getMaxResults()
-      );
-    }
+    final IncrementalIndex index = new OnheapIncrementalIndex(
+        // use granularity truncated min timestamp
+        // since incoming truncated timestamps may precede timeStart
+        granTimeStart,
+        gran,
+        aggs.toArray(new AggregatorFactory[aggs.size()]),
+        false,
+        config.getMaxResults()
+    );
 
     Accumulator<IncrementalIndex, T> accumulator = new Accumulator<IncrementalIndex, T>()
     {
@@ -142,7 +124,7 @@ public class GroupByQueryHelper
       @Override
       public Queue accumulate(Queue accumulated, T in)
       {
-        if(in == null){
+        if (in == null) {
           throw new ISE("Cannot have null result");
         }
         accumulated.offer(in);
