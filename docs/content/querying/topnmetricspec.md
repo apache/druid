@@ -63,7 +63,7 @@ The algorithm is based on [https://github.com/amjjd/java-alphanum](https://githu
 
 ## Inverted TopNMetricSpec
 
-Sort dimension values in inverted order, i.e inverts the order of the delegate metric spec. It can be used to sort the values in descending order.
+Sort dimension values in inverted order, i.e inverts the order of the delegate metric spec. It can be used to sort the values in ascending order.
 
 ```json
 "metric": {
