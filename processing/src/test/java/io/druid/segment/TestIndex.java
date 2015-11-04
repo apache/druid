@@ -31,14 +31,12 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularity;
-import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
-import io.druid.segment.incremental.OffheapIncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
 import org.joda.time.DateTime;
@@ -183,20 +181,10 @@ public class TestIndex
         .withQueryGranularity(QueryGranularity.NONE)
         .withMetrics(METRIC_AGGS)
         .build();
-    final IncrementalIndex retVal;
-    if (useOffheap) {
-      retVal = new OffheapIncrementalIndex(
-          schema,
-          TestQueryRunners.pool,
-          true,
-          100 * 1024 * 1024
-      );
-    } else {
-      retVal = new OnheapIncrementalIndex(
-          schema,
-          10000
-      );
-    }
+    final IncrementalIndex retVal = new OnheapIncrementalIndex(
+        schema,
+        10000
+    );
 
     final AtomicLong startTime = new AtomicLong();
     int lineCount;

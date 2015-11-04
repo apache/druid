@@ -30,7 +30,6 @@ import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Result;
-import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.JavaScriptAggregatorFactory;
@@ -67,6 +66,7 @@ public class IncrementalIndexStorageAdapterTest
   {
     public IncrementalIndex createIndex();
   }
+
   private final IndexCreator indexCreator;
 
   public IncrementalIndexStorageAdapterTest(
@@ -81,36 +81,18 @@ public class IncrementalIndexStorageAdapterTest
   {
     return Arrays.asList(
         new Object[][]{
-            {   new IndexCreator()
-            {
-              @Override
-              public IncrementalIndex createIndex()
-              {
-                return new OnheapIncrementalIndex(
-                    0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}, 1000
-                );
-              }
-            }
-
-            },
             {
                 new IndexCreator()
                 {
                   @Override
                   public IncrementalIndex createIndex()
                   {
-                    return new OffheapIncrementalIndex(
-                        0,
-                        QueryGranularity.MINUTE,
-                        new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
-                        TestQueryRunners.pool,
-                        true,
-                        100 * 1024 * 1024
+                    return new OnheapIncrementalIndex(
+                        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}, 1000
                     );
                   }
                 }
             }
-
         }
     );
   }
@@ -220,31 +202,32 @@ public class IncrementalIndexStorageAdapterTest
   private static GroupByQueryEngine makeGroupByQueryEngine()
   {
     return new GroupByQueryEngine(
-          Suppliers.<GroupByQueryConfig>ofInstance(
-              new GroupByQueryConfig()
+        Suppliers.<GroupByQueryConfig>ofInstance(
+            new GroupByQueryConfig()
+            {
+              @Override
+              public int getMaxIntermediateRows()
               {
-                @Override
-                public int getMaxIntermediateRows()
-                {
-                  return 5;
-                }
+                return 5;
               }
-          ),
-          new StupidPool(
-              new Supplier<ByteBuffer>()
+            }
+        ),
+        new StupidPool(
+            new Supplier<ByteBuffer>()
+            {
+              @Override
+              public ByteBuffer get()
               {
-                @Override
-                public ByteBuffer get()
-                {
-                  return ByteBuffer.allocate(50000);
-                }
+                return ByteBuffer.allocate(50000);
               }
-          )
-      );
+            }
+        )
+    );
   }
 
   @Test
-  public void testResetSanity() throws IOException{
+  public void testResetSanity() throws IOException
+  {
 
     IncrementalIndex index = indexCreator.createIndex();
     DateTime t = DateTime.now();
@@ -266,9 +249,11 @@ public class IncrementalIndexStorageAdapterTest
     );
 
     IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(index);
-    Sequence<Cursor> cursorSequence = adapter.makeCursors(new SelectorFilter("sally", "bo"),
-                                                          interval,
-                                                          QueryGranularity.NONE);
+    Sequence<Cursor> cursorSequence = adapter.makeCursors(
+        new SelectorFilter("sally", "bo"),
+        interval,
+        QueryGranularity.NONE
+    );
 
     Cursor cursor = Sequences.toList(Sequences.limit(cursorSequence, 1), Lists.<Cursor>newArrayList()).get(0);
     DimensionSelector dimSelector;

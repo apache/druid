@@ -25,7 +25,6 @@ import com.google.inject.Provider;
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = BatchDataSegmentAnnouncerProvider.class)
 @JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "legacy", value = LegacyDataSegmentAnnouncerProvider.class),
     @JsonSubTypes.Type(name = "batch", value = BatchDataSegmentAnnouncerProvider.class)
 })
 public interface DataSegmentAnnouncerProvider extends Provider<DataSegmentAnnouncer>

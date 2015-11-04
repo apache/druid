@@ -87,13 +87,12 @@ public class FireDepartmentTest
                 null,
                 null,
                 TestHelper.getTestIndexMerger(),
-                TestHelper.getTestIndexMaker(),
                 TestHelper.getTestIndexIO()
             ),
             null
         ),
         new RealtimeTuningConfig(
-            null, null, null, null, null, null, null, null, null, false, false, null, null
+            null, null, null, null, null, null, null, null, null
         )
     );
 

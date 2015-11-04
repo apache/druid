@@ -103,11 +103,7 @@ The spec\_file is a path to a file that contains JSON and an example looks like:
     "overwriteFiles" : false,
     "ignoreInvalidRows" : false,
     "jobProperties" : { },
-    "combineText" : false,
-    "persistInHeap" : false,
-    "ingestOffheap" : false,
-    "bufferSize" : 134217728,
-    "aggregationBufferRatio" : 0.5,
+    "combineText" : false,        
     "rowFlushBoundary" : 300000
   }
 }

@@ -181,10 +181,6 @@ public class RealtimePlumberSchoolTest
         rejectionPolicy,
         null,
         null,
-        null,
-        null,
-        null,
-        null,
         null
     );
 
@@ -197,7 +193,6 @@ public class RealtimePlumberSchoolTest
         serverView,
         MoreExecutors.sameThreadExecutor(),
         TestHelper.getTestIndexMerger(),
-        TestHelper.getTestIndexMaker(),
         TestHelper.getTestIndexIO()
     );
 

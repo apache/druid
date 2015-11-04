@@ -48,7 +48,9 @@ import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
+@Deprecated
 /**
+ * This is not yet ready for production use and requires more work.
  */
 public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
 {

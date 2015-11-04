@@ -61,7 +61,6 @@ import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMaker;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.incremental.IncrementalIndexSchema;
@@ -106,14 +105,12 @@ public class IngestSegmentFirehoseFactoryTest
 {
   private static final ObjectMapper MAPPER;
   private static final IndexMerger INDEX_MERGER;
-  private static final IndexMaker INDEX_MAKER;
   private static final IndexIO INDEX_IO;
 
   static {
     TestUtils testUtils = new TestUtils();
     MAPPER = setupInjectablesInObjectMapper(testUtils.getTestObjectMapper());
     INDEX_MERGER = testUtils.getTestIndexMerger();
-    INDEX_MAKER = testUtils.getTestIndexMaker();
     INDEX_IO = testUtils.getTestIndexIO();
   }
 
@@ -263,7 +260,6 @@ public class IngestSegmentFirehoseFactoryTest
         ),
         MAPPER,
         INDEX_MERGER,
-        INDEX_MAKER,
         INDEX_IO
     );
     Collection<Object[]> values = new LinkedList<>();

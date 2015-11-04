@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import io.druid.indexer.partitions.HashedPartitionsSpec;
 import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.segment.IndexSpec;
-import io.druid.segment.data.BitmapSerde;
 import io.druid.segment.indexing.TuningConfig;
 import org.joda.time.DateTime;
 
@@ -37,11 +36,9 @@ import java.util.Map;
 public class HadoopTuningConfig implements TuningConfig
 {
   private static final PartitionsSpec DEFAULT_PARTITIONS_SPEC = HashedPartitionsSpec.makeDefaultHashedPartitionsSpec();
-  private static final Map<DateTime, List<HadoopyShardSpec>> DEFAULT_SHARD_SPECS = ImmutableMap.<DateTime, List<HadoopyShardSpec>>of();
+  private static final Map<DateTime, List<HadoopyShardSpec>> DEFAULT_SHARD_SPECS = ImmutableMap.of();
   private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
   private static final int DEFAULT_ROW_FLUSH_BOUNDARY = 80000;
-  private static final int DEFAULT_BUFFER_SIZE = 128 * 1024 * 1024;
-  private static final float DEFAULT_AGG_BUFFER_RATIO = 0.5f;
   private static final boolean DEFAULT_USE_COMBINER = false;
 
   public static HadoopTuningConfig makeDefaultTuningConfig()
@@ -59,11 +56,7 @@ public class HadoopTuningConfig implements TuningConfig
         false,
         null,
         false,
-        false,
-        false,
-        DEFAULT_BUFFER_SIZE,
-        DEFAULT_AGG_BUFFER_RATIO,
-        DEFAULT_USE_COMBINER
+        false
     );
   }
 
@@ -79,10 +72,6 @@ public class HadoopTuningConfig implements TuningConfig
   private final boolean ignoreInvalidRows;
   private final Map<String, String> jobProperties;
   private final boolean combineText;
-  private final boolean persistInHeap;
-  private final boolean ingestOffheap;
-  private final int bufferSize;
-  private final float aggregationBufferRatio;
   private final boolean useCombiner;
 
   @JsonCreator
@@ -99,10 +88,6 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("ignoreInvalidRows") boolean ignoreInvalidRows,
       final @JsonProperty("jobProperties") Map<String, String> jobProperties,
       final @JsonProperty("combineText") boolean combineText,
-      final @JsonProperty("persistInHeap") boolean persistInHeap,
-      final @JsonProperty("ingestOffheap") boolean ingestOffheap,
-      final @JsonProperty("bufferSize") Integer bufferSize,
-      final @JsonProperty("aggregationBufferRatio") Float aggregationBufferRatio,
       final @JsonProperty("useCombiner") Boolean useCombiner
   )
   {
@@ -120,10 +105,6 @@ public class HadoopTuningConfig implements TuningConfig
                           ? ImmutableMap.<String, String>of()
                           : ImmutableMap.copyOf(jobProperties));
     this.combineText = combineText;
-    this.persistInHeap = persistInHeap;
-    this.ingestOffheap = ingestOffheap;
-    this.bufferSize = bufferSize == null ? DEFAULT_BUFFER_SIZE : bufferSize;
-    this.aggregationBufferRatio = aggregationBufferRatio == null ? DEFAULT_AGG_BUFFER_RATIO : aggregationBufferRatio;
     this.useCombiner = useCombiner == null ? DEFAULT_USE_COMBINER : useCombiner.booleanValue();
   }
 
@@ -200,28 +181,6 @@ public class HadoopTuningConfig implements TuningConfig
   }
 
   @JsonProperty
-  public boolean isPersistInHeap()
-  {
-    return persistInHeap;
-  }
-
-  @JsonProperty
-  public boolean isIngestOffheap(){
-    return ingestOffheap;
-  }
-
-  @JsonProperty
-  public int getBufferSize(){
-    return bufferSize;
-  }
-
-  @JsonProperty
-  public float getAggregationBufferRatio()
-  {
-    return aggregationBufferRatio;
-  }
-
-  @JsonProperty
   public boolean getUseCombiner()
   {
     return useCombiner;
@@ -242,10 +201,6 @@ public class HadoopTuningConfig implements TuningConfig
         ignoreInvalidRows,
         jobProperties,
         combineText,
-        persistInHeap,
-        ingestOffheap,
-        bufferSize,
-        aggregationBufferRatio,
         useCombiner
     );
   }
@@ -265,10 +220,6 @@ public class HadoopTuningConfig implements TuningConfig
         ignoreInvalidRows,
         jobProperties,
         combineText,
-        persistInHeap,
-        ingestOffheap,
-        bufferSize,
-        aggregationBufferRatio,
         useCombiner
     );
   }
@@ -288,10 +239,6 @@ public class HadoopTuningConfig implements TuningConfig
         ignoreInvalidRows,
         jobProperties,
         combineText,
-        persistInHeap,
-        ingestOffheap,
-        bufferSize,
-        aggregationBufferRatio,
         useCombiner
     );
   }
