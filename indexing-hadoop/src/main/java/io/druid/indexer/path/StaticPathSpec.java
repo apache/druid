@@ -17,6 +17,7 @@
 
 package io.druid.indexer.path;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.metamx.common.logger.Logger;
 import io.druid.indexer.HadoopDruidIndexerConfig;
@@ -29,29 +30,18 @@ import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 
 import java.io.IOException;
 
-/**
- * Class uses public fields to work around http://jira.codehaus.org/browse/MSHADE-92
- *
- * Adjust to JsonCreator and final fields when resolved.
- */
+
 public class StaticPathSpec implements PathSpec
 {
   private static final Logger log = new Logger(StaticPathSpec.class);
 
-  @JsonProperty("paths")
-  public String paths;
-
-  @JsonProperty("inputFormat")
+  private final String paths;
   private final Class<? extends InputFormat> inputFormat;
 
-  public StaticPathSpec()
-  {
-    this(null, null);
-  }
-
+  @JsonCreator
   public StaticPathSpec(
-      String paths,
-      Class<? extends InputFormat> inputFormat
+      @JsonProperty("paths") String paths,
+      @JsonProperty("inputFormat") Class<? extends InputFormat> inputFormat
   )
   {
     this.paths = paths;
@@ -68,11 +58,13 @@ public class StaticPathSpec implements PathSpec
     return job;
   }
 
+  @JsonProperty
   public Class<? extends InputFormat> getInputFormat()
   {
     return inputFormat;
   }
 
+  @JsonProperty
   public String getPaths()
   {
     return paths;
