@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
 import com.google.common.util.concurrent.SettableFuture;
+import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.lifecycle.LifecycleStart;
@@ -76,6 +77,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
   private volatile PathChildrenCache loadQueueCache;
   private volatile boolean started = false;
 
+  @Inject
   public ZkCoordinator(
       ObjectMapper jsonMapper,
       SegmentLoaderConfig config,
