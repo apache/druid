@@ -108,7 +108,7 @@ public class RemoteTaskActionClient implements TaskActionClient
           throw Throwables.propagate(e);
         }
 
-        if (response.getStatus().getCode() / 200 == 1) {
+        if (response.getStatus().getCode() / 100 == 2) {
           final Map<String, Object> responseDict = jsonMapper.readValue(
               response.getContent(),
               new TypeReference<Map<String, Object>>()
