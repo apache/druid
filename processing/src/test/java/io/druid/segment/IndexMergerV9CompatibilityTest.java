@@ -170,12 +170,13 @@ public class IndexMergerV9CompatibilityTest
         DEFAULT_AGG_FACTORIES,
         1000000
     );
+    toPersist.getMetadata().put("key", "value");
     for (InputRow event : events) {
       toPersist.add(event);
     }
     tmpDir = Files.createTempDir();
     persistTmpDir = new File(tmpDir, "persistDir");
-    INDEX_MERGER.persist(toPersist, persistTmpDir, null, INDEX_SPEC);
+    INDEX_MERGER.persist(toPersist, persistTmpDir, INDEX_SPEC);
   }
 
   @After
@@ -191,10 +192,9 @@ public class IndexMergerV9CompatibilityTest
     QueryableIndex index = null;
     try {
       outDir = Files.createTempDir();
-      Map<String, Object> segmentMetadata = ImmutableMap.<String, Object>of("key", "value");
-      index = INDEX_IO.loadIndex(INDEX_MERGER_V9.persist(toPersist, outDir, segmentMetadata, INDEX_SPEC));
+      index = INDEX_IO.loadIndex(INDEX_MERGER_V9.persist(toPersist, outDir, INDEX_SPEC));
 
-      Assert.assertEquals(segmentMetadata, index.getMetaData());
+      Assert.assertEquals("value", index.getMetadata().get("key"));
     }
     finally {
       if (index != null) {
@@ -237,6 +237,7 @@ public class IndexMergerV9CompatibilityTest
   {
     final File outDir = INDEX_MERGER.append(
         ImmutableList.<IndexableAdapter>of(new QueryableIndexIndexableAdapter(closer.closeLater(INDEX_IO.loadIndex(inDir)))),
+        null,
         tmpDir,
         INDEX_SPEC
     );

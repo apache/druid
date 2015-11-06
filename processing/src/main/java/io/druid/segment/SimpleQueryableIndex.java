@@ -104,7 +104,7 @@ public class SimpleQueryableIndex implements QueryableIndex
   }
 
   @Override
-  public Metadata getMetaData()
+  public Metadata getMetadata()
   {
     return metadata;
   }

@@ -19,8 +19,7 @@
 
 package io.druid.segment;
 
-import java.io.File;
-
+import com.metamx.common.ISE;
 import io.druid.segment.column.BitmapIndexSeeker;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
@@ -28,13 +27,12 @@ import io.druid.segment.data.IncrementalIndexTest;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
-
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import com.metamx.common.ISE;
+import java.io.File;
 
 public class QueryableIndexIndexableAdapterTest {
   private final static IndexMerger INDEX_MERGER = TestHelper.getTestIndexMerger();
@@ -69,7 +67,6 @@ public class QueryableIndexIndexableAdapterTest {
             INDEX_MERGER.persist(
                 toPersist,
                 tempDir,
-                null,
                 INDEX_SPEC
             )
         )

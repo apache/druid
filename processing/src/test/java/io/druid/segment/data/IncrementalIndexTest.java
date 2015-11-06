@@ -128,6 +128,16 @@ public class IncrementalIndexTest
     );
   }
 
+  public static AggregatorFactory[] getDefaultAggregatorFactories()
+  {
+    return defaultAggregatorFactories;
+  }
+
+  public static AggregatorFactory[] getDefaultCombiningAggregatorFactories()
+  {
+    return defaultCombiningAggregatorFactories;
+  }
+
   public static IncrementalIndex createIndex(AggregatorFactory[] aggregatorFactories)
   {
     if (null == aggregatorFactories) {
@@ -186,6 +196,10 @@ public class IncrementalIndexTest
       new CountAggregatorFactory(
           "count"
       )
+  };
+
+  private static final AggregatorFactory[] defaultCombiningAggregatorFactories = new AggregatorFactory[]{
+      defaultAggregatorFactories[0].getCombiningFactory()
   };
 
   @Test

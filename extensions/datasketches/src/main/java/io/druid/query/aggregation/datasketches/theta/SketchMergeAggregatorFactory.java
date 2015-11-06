@@ -67,7 +67,7 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new SketchMergeAggregatorFactory(name, name, size, shouldFinalize, true);
+    return new SketchMergeAggregatorFactory(name, name, size, shouldFinalize, false);
   }
 
   @Override

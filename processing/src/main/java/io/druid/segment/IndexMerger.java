@@ -367,6 +367,7 @@ public class IndexMerger
 
     return makeIndexFiles(
         indexes,
+        sortedMetricAggs,
         outDir,
         progress,
         mergedDimensions,
@@ -390,6 +391,7 @@ public class IndexMerger
       final IndexableAdapter adapter = new QueryableIndexIndexableAdapter(index);
       return makeIndexFiles(
           ImmutableList.of(adapter),
+          null,
           outDir,
           progress,
           Lists.newArrayList(adapter.getDimensionNames()),
@@ -410,14 +412,15 @@ public class IndexMerger
 
 
   public File append(
-      List<IndexableAdapter> indexes, File outDir, IndexSpec indexSpec
+      List<IndexableAdapter> indexes, AggregatorFactory[] aggregators, File outDir, IndexSpec indexSpec
   ) throws IOException
   {
-    return append(indexes, outDir, indexSpec, new BaseProgressIndicator());
+    return append(indexes, aggregators, outDir, indexSpec, new BaseProgressIndicator());
   }
 
   public File append(
       List<IndexableAdapter> indexes,
+      AggregatorFactory[] aggregators,
       File outDir,
       IndexSpec indexSpec,
       ProgressIndicator progress
@@ -470,6 +473,7 @@ public class IndexMerger
 
     return makeIndexFiles(
         indexes,
+        aggregators,
         outDir,
         progress,
         mergedDimensions,
@@ -481,6 +485,7 @@ public class IndexMerger
 
   protected File makeIndexFiles(
       final List<IndexableAdapter> indexes,
+      final AggregatorFactory[] metricAggs,
       final File outDir,
       final ProgressIndicator progress,
       final List<String> mergedDimensions,
@@ -497,11 +502,27 @@ public class IndexMerger
           @Override
           public Metadata apply(IndexableAdapter input)
           {
-            return input.getMetaData();
+            return input.getMetadata();
           }
         }
     );
-    Metadata segmentMetadata = Metadata.merge(metadataList);
+
+    Metadata segmentMetadata = null;
+    if (metricAggs != null) {
+      AggregatorFactory[] combiningMetricAggs = new AggregatorFactory[metricAggs.length];
+      for (int i = 0; i < metricAggs.length; i++) {
+        combiningMetricAggs[i] = metricAggs[i].getCombiningFactory();
+      }
+      segmentMetadata = Metadata.merge(
+          metadataList,
+          combiningMetricAggs
+      );
+    } else {
+      segmentMetadata = Metadata.merge(
+          metadataList,
+          null
+      );
+    }
 
     final Map<String, ValueType> valueTypes = Maps.newTreeMap(Ordering.<String>natural().nullsFirst());
     final Map<String, String> metricTypeNames = Maps.newTreeMap(Ordering.<String>natural().nullsFirst());
@@ -940,7 +961,7 @@ public class IndexMerger
         )
     );
 
-    if (segmentMetadata != null && !segmentMetadata.isEmpty()) {
+    if (segmentMetadata != null) {
       writeMetadataToFile(new File(v8OutDir, "metadata.drd"), segmentMetadata);
       log.info("wrote metadata.drd in outDir[%s].", v8OutDir);
 

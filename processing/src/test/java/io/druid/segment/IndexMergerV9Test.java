@@ -57,7 +57,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 
 @RunWith(Parameterized.class)
 public class IndexMergerV9Test
@@ -142,7 +141,6 @@ public class IndexMergerV9Test
             INDEX_MERGER.persist(
                 toPersist,
                 tempDir,
-                null,
                 indexSpec
             )
         )
@@ -180,7 +178,6 @@ public class IndexMergerV9Test
             INDEX_MERGER.persist(
                 toPersist,
                 tempDir,
-                null,
                 indexSpec
             )
         )
@@ -217,8 +214,7 @@ public class IndexMergerV9Test
 
     IncrementalIndex toPersist = IncrementalIndexTest.createIndex(null);
     IncrementalIndexTest.populateIndex(timestamp, toPersist);
-
-    Map<String, Object> segmentMetadata = ImmutableMap.<String, Object>of("key", "value");
+    toPersist.getMetadata().put("key", "value");
 
     final File tempDir = temporaryFolder.newFolder();
     QueryableIndex index = closer.closeLater(
@@ -226,7 +222,6 @@ public class IndexMergerV9Test
             INDEX_MERGER.persist(
                 toPersist,
                 tempDir,
-                segmentMetadata,
                 indexSpec
             )
         )
@@ -238,7 +233,7 @@ public class IndexMergerV9Test
 
     assertDimCompression(index, indexSpec.getDimensionCompressionStrategy());
 
-    Assert.assertEquals(segmentMetadata, index.getMetaData());
+    Assert.assertEquals("value", index.getMetadata().get("key"));
   }
 
   @Test
@@ -280,7 +275,6 @@ public class IndexMergerV9Test
             INDEX_MERGER.persist(
                 toPersist1,
                 tempDir1,
-                null,
                 indexSpec
             )
         )
@@ -295,7 +289,6 @@ public class IndexMergerV9Test
             INDEX_MERGER.persist(
                 toPersist2,
                 tempDir2,
-                null,
                 indexSpec
             )
         )
@@ -364,7 +357,6 @@ public class IndexMergerV9Test
             INDEX_MERGER.persist(
                 toPersist1,
                 tmpDir1,
-                null,
                 indexSpec
             )
         )
@@ -374,7 +366,6 @@ public class IndexMergerV9Test
             INDEX_MERGER.persist(
                 toPersist1,
                 tmpDir2,
-                null,
                 indexSpec
             )
         )
@@ -425,7 +416,6 @@ public class IndexMergerV9Test
             INDEX_MERGER.persist(
                 toPersist1,
                 tempDir1,
-                null,
                 indexSpec
             )
         )
@@ -482,7 +472,7 @@ public class IndexMergerV9Test
     QueryableIndex index1 = closer.closeLater(
         INDEX_IO.loadIndex(
             INDEX_MERGER.append(
-                ImmutableList.<IndexableAdapter>of(incrementalAdapter), tempDir1, indexSpec
+                ImmutableList.<IndexableAdapter>of(incrementalAdapter), null, tempDir1, indexSpec
             )
         )
     );
@@ -537,7 +527,6 @@ public class IndexMergerV9Test
             INDEX_MERGER.persist(
                 toPersist1,
                 tempDir1,
-                null,
                 indexSpec
             )
         )
@@ -607,7 +596,7 @@ public class IndexMergerV9Test
     );
 
     QueryableIndex index1 = closer.closeLater(
-        INDEX_IO.loadIndex(INDEX_MERGER.persist(toPersist1, tempDir1, null, indexSpec))
+        INDEX_IO.loadIndex(INDEX_MERGER.persist(toPersist1, tempDir1, indexSpec))
     );
 
     final IndexableAdapter queryableAdapter = new QueryableIndexIndexableAdapter(index1);
@@ -669,7 +658,6 @@ public class IndexMergerV9Test
             INDEX_MERGER.persist(
                 toPersist1,
                 tempDir1,
-                null,
                 indexSpec
             )
         )
@@ -751,7 +739,6 @@ public class IndexMergerV9Test
             INDEX_MERGER.persist(
                 toPersistA,
                 tmpDirA,
-                null,
                 indexSpec
             )
         )
@@ -762,7 +749,6 @@ public class IndexMergerV9Test
             INDEX_MERGER.persist(
                 toPersistB,
                 tmpDirB,
-                null,
                 indexSpec
             )
         )
@@ -879,7 +865,6 @@ public class IndexMergerV9Test
             INDEX_MERGER.persist(
                 toPersistA,
                 tmpDirA,
-                null,
                 indexSpec
             )
         )
@@ -890,7 +875,6 @@ public class IndexMergerV9Test
             INDEX_MERGER.persist(
                 toPersistB,
                 tmpDirB,
-                null,
                 indexSpec
             )
         )
