@@ -62,6 +62,8 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.partition.PartitionChunk;
+import org.joda.time.Interval;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -72,7 +74,6 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ExecutorService;
-import org.joda.time.Interval;
 
 /**
  */
@@ -206,7 +207,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
       // Pull cached segments from cache and remove from set of segments to query
       final Map<Cache.NamedKey, byte[]> cachedValues;
       if (useCache) {
-        cachedValues = cache.getBulk(cacheKeys.values());
+        cachedValues = cache.getBulk(Iterables.limit(cacheKeys.values(), cacheConfig.getCacheBulkMergeLimit()));
       } else {
         cachedValues = ImmutableMap.of();
       }
@@ -237,7 +238,11 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
       final QueryableDruidServer queryableDruidServer = segment.lhs.pick();
 
       if (queryableDruidServer == null) {
-        log.makeAlert("No servers found for SegmentDescriptor[%s] for DataSource[%s]?! How can this be?!", segment.rhs, query.getDataSource()).emit();
+        log.makeAlert(
+            "No servers found for SegmentDescriptor[%s] for DataSource[%s]?! How can this be?!",
+            segment.rhs,
+            query.getDataSource()
+        ).emit();
       } else {
         final DruidServer server = queryableDruidServer.getServer();
         List<SegmentDescriptor> descriptors = serverSegments.get(server);
@@ -483,7 +488,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
 
     return toolChest.mergeSequencesUnordered(
         Sequences.simple(
-                sequencesByInterval
+            sequencesByInterval
         )
     );
   }
