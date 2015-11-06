@@ -37,6 +37,7 @@ import io.druid.guice.LifecycleModule;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.CuratorDiscoveryConfig;
 import org.apache.curator.framework.CuratorFramework;
+import org.apache.curator.utils.CloseableExecutorService;
 import org.apache.curator.x.discovery.DownInstancePolicy;
 import org.apache.curator.x.discovery.InstanceFilter;
 import org.apache.curator.x.discovery.ProviderStrategy;
@@ -55,6 +56,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ThreadFactory;
 
 /**
@@ -319,6 +321,18 @@ public class DiscoveryModule implements Module
 
     @Override
     public ServiceCacheBuilder<T> threadFactory(ThreadFactory threadFactory)
+    {
+      return this;
+    }
+
+    @Override
+    public ServiceCacheBuilder<T> executorService(ExecutorService executorService)
+    {
+      return this;
+    }
+
+    @Override
+    public ServiceCacheBuilder<T> executorService(CloseableExecutorService closeableExecutorService)
     {
       return this;
     }
