@@ -123,7 +123,7 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory<StringInputRowPa
     return config;
   }
 
-  @JsonProperty
+  @JsonProperty("connection")
   public JacksonifiedConnectionFactory getConnectionFactory()
   {
     return connectionFactory;

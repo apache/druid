@@ -138,7 +138,7 @@ public class HadoopTuningConfig implements TuningConfig
     return indexSpec;
   }
 
-  @JsonProperty
+  @JsonProperty("maxRowsInMemory")
   public int getRowFlushBoundary()
   {
     return rowFlushBoundary;
