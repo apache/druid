@@ -23,6 +23,7 @@ import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.ExtractionDimFilter;
 import io.druid.query.filter.Filter;
+import io.druid.query.filter.InDimFilter;
 import io.druid.query.filter.JavaScriptDimFilter;
 import io.druid.query.filter.NotDimFilter;
 import io.druid.query.filter.OrDimFilter;
@@ -93,6 +94,21 @@ public class Filters
       final SpatialDimFilter spatialDimFilter = (SpatialDimFilter) dimFilter;
 
       filter = new SpatialFilter(spatialDimFilter.getDimension(), spatialDimFilter.getBound());
+    } else if (dimFilter instanceof InDimFilter) {
+      final InDimFilter inDimFilter = (InDimFilter) dimFilter;
+      final List<Filter> listFilters = Lists.transform(
+          inDimFilter.getValues(), new Function<String, Filter>()
+          {
+            @Nullable
+            @Override
+            public Filter apply(@Nullable String input)
+            {
+              return new SelectorFilter(inDimFilter.getDimension(), input);
+            }
+          }
+      );
+
+      filter = new OrFilter(listFilters);
     }
 
     return filter;
