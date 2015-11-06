@@ -17,7 +17,7 @@
 * under the License.
 */
 
-package io.druid.query.aggregation.datasketches;
+package io.druid.query.aggregation.datasketches.theta;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;

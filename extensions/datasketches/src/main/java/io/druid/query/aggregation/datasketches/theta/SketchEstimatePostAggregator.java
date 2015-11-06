@@ -17,7 +17,7 @@
 * under the License.
 */
 
-package io.druid.query.aggregation.datasketches;
+package io.druid.query.aggregation.datasketches.theta;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;

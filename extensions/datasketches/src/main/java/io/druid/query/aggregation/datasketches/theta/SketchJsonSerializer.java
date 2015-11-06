@@ -17,48 +17,21 @@
 * under the License.
 */
 
-package io.druid.query.aggregation.datasketches;
+package io.druid.query.aggregation.datasketches.theta;
 
-import io.druid.query.aggregation.BufferAggregator;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.yahoo.sketches.theta.Sketch;
 
-import java.nio.ByteBuffer;
+import java.io.IOException;
 
-public class EmptySketchBufferAggregator implements BufferAggregator
+public class SketchJsonSerializer extends JsonSerializer<Sketch>
 {
-  public EmptySketchBufferAggregator()
-  {
-  }
-
   @Override
-  public void init(ByteBuffer buf, int position)
+  public void serialize(Sketch sketch, JsonGenerator jgen, SerializerProvider provider) throws IOException, JsonProcessingException
   {
-  }
-
-  @Override
-  public void aggregate(ByteBuffer buf, int position)
-  {
-  }
-
-  @Override
-  public Object get(ByteBuffer buf, int position)
-  {
-    return SketchOperations.EMPTY_SKETCH;
-  }
-
-  @Override
-  public float getFloat(ByteBuffer buf, int position)
-  {
-    throw new UnsupportedOperationException("Not implemented");
-  }
-
-  @Override
-  public long getLong(ByteBuffer buf, int position)
-  {
-    throw new UnsupportedOperationException("Not implemented");
-  }
-
-  @Override
-  public void close()
-  {
+    jgen.writeBinary(sketch.toByteArray());
   }
 }

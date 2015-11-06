@@ -17,7 +17,7 @@
 * under the License.
 */
 
-package io.druid.query.aggregation.datasketches;
+package io.druid.query.aggregation.datasketches.theta;
 
 import com.yahoo.sketches.memory.Memory;
 import com.yahoo.sketches.theta.Sketch;
@@ -40,7 +40,7 @@ public class SketchMergeComplexMetricSerde extends ComplexMetricSerde
   @Override
   public String getTypeName()
   {
-    return SketchModule.SET_SKETCH;
+    return SketchModule.THETA_SKETCH;
   }
 
   @Override
