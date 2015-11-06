@@ -102,7 +102,103 @@ If `format` is not included, the parseSpec defaults to `tsv`.
 | format | String | This should say `json`. | no |
 | timestampSpec | JSON Object | Specifies the column and format of the timestamp. | yes |
 | dimensionsSpec | JSON Object | Specifies the dimensions of the data. | yes |
+| flattenSpec | JSON Object | Specifies flattening configuration for nested JSON data. | no |
 
+##### JSON Flatten Spec
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| enabled | Boolean | Enable flattening if true. | no (default == false |
+| nestPrefix | String| Specifies the string prepended to column names to indicate nesting  | no (default == "$" |
+| metrics | JSON String array | Specifies the names of the metrics of the data. | no (default == [] |
+
+Defining the JSON Flatten Spec allows nested JSON fields to be flattened during ingestion time. Only the JSON ParseSpec supports flattening.
+
+Suppose the event JSON has the following form:
+
+```json
+{
+ "timestamp": "2015-09-12T12:10:53.155Z",
+ "dim": "qwerty",
+ "metrica": 9999,
+ "foo": {"bar": "abc"},
+ "foo.bar": "def",
+ "nestmet": {"val": 42},
+ "hello": [1.0, 2.0, 3.0, 4.0, 5.0],
+ "world": [{"hey": "there"}, {"fruit": "apple"}],
+ "thing": {"food": ["sandwich", "pizza"]}
+}
+```
+
+The column "metrica" is a Long metric column, "hello" is an array of Double metrics, and "nestmet.val" is a nested Long metric. All other columns are dimensions.
+
+To flatten this JSON, the parseSpec could be defined as follows:
+
+```json
+"parseSpec" : {
+  "format" : "json",
+   "flattenSpec" : {
+     "enabled" : true,
+     "nestPrefix" : "$",
+     "metrics" : [
+       "metrica",
+       "$nestmet.val",
+       "$hello[0]",
+       "$hello[1]",
+       "$hello[2]",
+       "$hello[3]",
+       "$hello[4]",
+     ]
+   },
+   "dimensionsSpec" : {
+     "dimensions" : [
+       "dim",
+       "$foo.bar",
+       "foo.bar",
+       "$world[0].hey",
+       "$world[1].fruit",
+       "$thing.food[0]",
+       "$thing.food[1]"
+     ]
+   },
+   "timestampSpec" : {
+     "format" : "auto",
+     "column" : "timestamp"
+   }
+}   
+```
+
+It is also necessary to prepend the nestPrefix to the fieldName of nested metrics within the metricsSpec of the dataSchema, e.g.:
+
+```json
+"metricsSpec" : [ 
+{
+  "type" : "longSum",
+  "name" : "Nested Metric Value",
+  "fieldName" : "$nestmet.val"
+}, 
+{
+  "type" : "doubleSum",
+  "name" : "Hello Index #0",
+  "fieldName" : "$hello[0]"
+},
+{
+  "type" : "longSum",
+  "name" : "metrica",
+  "fieldName" : "metrica"
+}
+]
+```
+
+Note that:
+
+* Sub-objects are hierarchically separated by the "." character, and array contents are accessed via square brackets and integer indices.
+* nestPrefix as defined in the Flatten Spec is used to specify that a column name should be interpreted as "nested". 
+* In the preceding example, "$foo.bar" refers to the 'bar' sub-object of 'foo', while "foo.bar" without the "$" nestPrefix is a root-level field. 
+* The nestPrefix is not stripped from the column name; the prefix must always be included when referring to a nested column, e.g. for queries.
+* Auto-discovery of dimension names is not currently supported when JSON flattening is enabled. The user must define all dimensions and metrics to be ingested.
+  
+  
 #### JSON Lowercase ParseSpec
 
 This is a special variation of the JSON ParseSpec that lower cases all the column names in the incoming JSON data. This parseSpec is required if you are updating to Druid 0.7.x from Druid 0.6.x, are directly ingesting JSON with mixed case column names, do not have any ETL in place to lower case those column names, and would like to make queries that include the data you created using 0.6.x and 0.7.x.
