@@ -19,10 +19,13 @@
 
 package io.druid.query.aggregation;
 
+import com.metamx.common.logger.Logger;
 import io.druid.segment.ColumnSelectorFactory;
 
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Processing related interface
@@ -36,6 +39,8 @@ import java.util.List;
  */
 public abstract class AggregatorFactory
 {
+  private static final Logger log = new Logger(AggregatorFactory.class);
+
   public abstract Aggregator factorize(ColumnSelectorFactory metricFactory);
 
   public abstract BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory);
@@ -73,11 +78,7 @@ public abstract class AggregatorFactory
    */
   public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
   {
-    if (other.getName().equals(this.getName()) && this.getClass() == other.getClass()) {
-      return getCombiningFactory();
-    } else {
-      throw new AggregatorFactoryNotMergeableException(this, other);
-    }
+    throw new UnsupportedOperationException(String.format("[%s] does not implement getMergingFactory(..)", this.getClass().getName()));
   }
 
   /**
@@ -128,4 +129,53 @@ public abstract class AggregatorFactory
    * @return the starting value for a corresponding aggregator.
    */
   public abstract Object getAggregatorStartValue();
+
+  /**
+   * Merges the list of AggregatorFactory[] (presumable from metadata of some segments being merged) and
+   * returns merged AggregatorFactory[] (for the metadata for merged segment).
+   * Null is returned if it is not possible to do the merging for any of the following reason.
+   * - one of the element in input list is null i.e. aggregators for one the segments being merged is unknown
+   * - AggregatorFactory of same name can not be merged if they are not compatible
+   *
+   * @param aggregatorsList
+   *
+   * @return merged AggregatorFactory[] or Null if merging is not possible.
+   */
+  public static AggregatorFactory[] mergeAggregators(List<AggregatorFactory[]> aggregatorsList)
+  {
+    if (aggregatorsList == null || aggregatorsList.isEmpty()) {
+      return null;
+    }
+
+    Map<String, AggregatorFactory> mergedAggregators = new LinkedHashMap<>();
+
+    for (AggregatorFactory[] aggregators : aggregatorsList) {
+
+      if (aggregators != null) {
+        for (AggregatorFactory aggregator : aggregators) {
+          String name = aggregator.getName();
+          if (mergedAggregators.containsKey(name)) {
+            AggregatorFactory other = mergedAggregators.get(name);
+            try {
+              mergedAggregators.put(name, other.getMergingFactory(aggregator));
+            }
+            catch (AggregatorFactoryNotMergeableException ex) {
+              log.warn(ex, "failed to merge aggregator factories");
+              mergedAggregators = null;
+              break;
+            }
+          } else {
+            mergedAggregators.put(name, aggregator);
+          }
+        }
+      } else {
+        mergedAggregators = null;
+        break;
+      }
+    }
+
+    return mergedAggregators == null
+           ? null
+           : mergedAggregators.values().toArray(new AggregatorFactory[mergedAggregators.size()]);
+  }
 }

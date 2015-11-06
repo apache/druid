@@ -300,7 +300,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     this.metrics = incrementalIndexSchema.getMetrics();
     this.rowTransformers = new CopyOnWriteArrayList<>();
     this.deserializeComplexMetrics = deserializeComplexMetrics;
-    this.metadata = new Metadata();
+
+    this.metadata = new Metadata().setAggregators(getCombiningAggregators(metrics));
 
     this.aggs = initAggs(metrics, rowSupplier, deserializeComplexMetrics);
     this.columnCapabilities = Maps.newHashMap();
@@ -629,9 +630,13 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     return metadata;
   }
 
-  public void addAllToMetadata(Metadata toAdd)
+  private static AggregatorFactory[] getCombiningAggregators(AggregatorFactory[] aggregators)
   {
-    metadata.addAll(toAdd);
+    AggregatorFactory[] combiningAggregators = new AggregatorFactory[aggregators.length];
+    for (int i = 0; i < aggregators.length; i++) {
+      combiningAggregators[i] = aggregators[i].getCombiningFactory();
+    }
+    return combiningAggregators;
   }
 
   @Override

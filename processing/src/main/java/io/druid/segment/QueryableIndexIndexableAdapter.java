@@ -85,7 +85,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
       }
     }
 
-    this.metadata = input.getMetaData();
+    this.metadata = input.getMetadata();
   }
 
   @Override

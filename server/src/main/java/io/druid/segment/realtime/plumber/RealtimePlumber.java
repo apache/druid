@@ -26,6 +26,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -404,16 +405,13 @@ public class RealtimePlumber implements Plumber
     final Stopwatch runExecStopwatch = Stopwatch.createStarted();
     final Stopwatch persistStopwatch = Stopwatch.createStarted();
 
-    final Metadata metadata = committer.getMetadata() == null ? null :
-                              new Metadata()
-                                  .put(
-                                      COMMIT_METADATA_KEY,
-                                      committer.getMetadata()
-                                  )
-                                  .put(
-                                      COMMIT_METADATA_TIMESTAMP_KEY,
-                                      System.currentTimeMillis()
-                                  );
+    final Map<String, Object> metadataElems = committer.getMetadata() == null ? null :
+                                         ImmutableMap.of(
+                                             COMMIT_METADATA_KEY,
+                                             committer.getMetadata(),
+                                             COMMIT_METADATA_TIMESTAMP_KEY,
+                                             System.currentTimeMillis()
+                                         );
 
     persistExecutor.execute(
         new ThreadRenamingRunnable(String.format("%s-incremental-persist", schema.getDataSource()))
@@ -451,7 +449,7 @@ public class RealtimePlumber implements Plumber
               for (Pair<FireHydrant, Interval> pair : indexesToPersist) {
                 metrics.incrementRowOutputCount(
                     persistHydrant(
-                        pair.lhs, schema, pair.rhs, metadata
+                        pair.lhs, schema, pair.rhs, metadataElems
                     )
                 );
               }
@@ -767,12 +765,11 @@ public class RealtimePlumber implements Plumber
           catch (Exception e1) {
             log.error(e1, "Failed to rename %s", segmentDir.getAbsolutePath());
           }
-
           //Note: skipping corrupted segment might lead to dropping some data. This strategy should be changed
           //at some point.
           continue;
         }
-        Metadata segmentMetadata = queryableIndex.getMetaData();
+        Metadata segmentMetadata = queryableIndex.getMetadata();
         if (segmentMetadata != null) {
           Object timestampObj = segmentMetadata.get(COMMIT_METADATA_TIMESTAMP_KEY);
           if (timestampObj != null) {
@@ -780,10 +777,10 @@ public class RealtimePlumber implements Plumber
             if (timestamp > latestCommitTime) {
               log.info(
                   "Found metaData [%s] with latestCommitTime [%s] greater than previous recorded [%s]",
-                  queryableIndex.getMetaData(), timestamp, latestCommitTime
+                  queryableIndex.getMetadata(), timestamp, latestCommitTime
               );
               latestCommitTime = timestamp;
-              metadata = queryableIndex.getMetaData().get(COMMIT_METADATA_KEY);
+              metadata = queryableIndex.getMetadata().get(COMMIT_METADATA_KEY);
             }
           }
         }
@@ -1005,7 +1002,7 @@ public class RealtimePlumber implements Plumber
       FireHydrant indexToPersist,
       DataSchema schema,
       Interval interval,
-      Metadata metadata
+      Map<String, Object> metadataElems
   )
   {
     synchronized (indexToPersist) {
@@ -1021,7 +1018,7 @@ public class RealtimePlumber implements Plumber
           "DataSource[%s], Interval[%s], Metadata [%s] persisting Hydrant[%s]",
           schema.getDataSource(),
           interval,
-          metadata,
+          metadataElems,
           indexToPersist
       );
       try {
@@ -1029,7 +1026,7 @@ public class RealtimePlumber implements Plumber
 
         final IndexSpec indexSpec = config.getIndexSpec();
 
-        indexToPersist.getIndex().addAllToMetadata(metadata);
+        indexToPersist.getIndex().getMetadata().putAll(metadataElems);
         final File persistedFile = indexMerger.persist(
             indexToPersist.getIndex(),
             interval,

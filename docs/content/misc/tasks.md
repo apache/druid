@@ -284,7 +284,8 @@ Append tasks append a list of segments together into a single segment (one after
     "type": "append",
     "id": <task_id>,
     "dataSource": <task_datasource>,
-    "segments": <JSON list of DataSegment objects to append>
+    "segments": <JSON list of DataSegment objects to append>,
+    "aggregations": <optional list of aggregators>
 }
 ```
 

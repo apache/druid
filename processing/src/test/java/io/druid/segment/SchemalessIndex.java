@@ -495,7 +495,7 @@ public class SchemalessIndex
           )
       );
 
-      return INDEX_IO.loadIndex(INDEX_MERGER.append(adapters, mergedFile, indexSpec));
+      return INDEX_IO.loadIndex(INDEX_MERGER.append(adapters, null, mergedFile, indexSpec));
     }
     catch (IOException e) {
       throw Throwables.propagate(e);

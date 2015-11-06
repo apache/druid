@@ -101,12 +101,6 @@ public class HistogramAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
-  {
-    throw new UnsupportedOperationException("can't merge HistogramAggregatorFactory");
-  }
-
-  @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
     return Arrays.<AggregatorFactory>asList(new HistogramAggregatorFactory(fieldName, fieldName, breaksList));
