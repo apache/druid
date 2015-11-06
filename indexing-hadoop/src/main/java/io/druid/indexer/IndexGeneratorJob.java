@@ -35,7 +35,7 @@ import io.druid.data.input.Row;
 import io.druid.data.input.Rows;
 import io.druid.indexer.hadoop.SegmentInputRow;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.segment.LoggingProgressIndicator;
+import io.druid.segment.BaseProgressIndicator;
 import io.druid.segment.ProgressIndicator;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -446,7 +446,7 @@ public class IndexGeneratorJob implements Jobby
 
     protected ProgressIndicator makeProgressIndicator(final Context context)
     {
-      return new LoggingProgressIndicator("IndexGeneratorJob")
+      return new BaseProgressIndicator()
       {
         @Override
         public void progress()
