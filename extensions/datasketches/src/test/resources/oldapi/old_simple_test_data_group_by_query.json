@@ -4,12 +4,12 @@
   "granularity": "ALL",
   "dimensions": [],
   "aggregations": [
-    { "type": "thetaSketchMerge", "name": "sketch_count", "fieldName": "pty_country", "size": 16384 },
-    { "type": "thetaSketchMerge", "name": "non_existing_col_validation", "fieldName": "non_existing_col", "size": 16384 }
+    { "type": "sketchMerge", "name": "sketch_count", "fieldName": "pty_country", "size": 16384 },
+    { "type": "sketchMerge", "name": "non_existing_col_validation", "fieldName": "non_existing_col", "size": 16384 }
   ],
   "postAggregations": [
     {
-      "type": "thetaSketchEstimate",
+      "type": "sketchEstimate",
       "name": "sketchEstimatePostAgg",
       "field": {
         "type": "fieldAccess",
@@ -17,11 +17,11 @@
       }
     },
     {
-      "type": "thetaSketchEstimate",
+      "type": "sketchEstimate",
       "name": "sketchIntersectionPostAggEstimate",
       "field":
       {
-        "type": "thetaSketchSetOp",
+        "type": "sketchSetOper",
         "name": "sketchIntersectionPostAgg",
         "func": "INTERSECT",
         "size": 16384,
@@ -38,11 +38,11 @@
       }
     },
     {
-      "type": "thetaSketchEstimate",
+      "type": "sketchEstimate",
       "name": "sketchAnotBPostAggEstimate",
       "field":
       {
-        "type": "thetaSketchSetOp",
+        "type": "sketchSetOper",
         "name": "sketchAnotBUnionPostAgg",
         "func": "NOT",
         "size": 16384,
@@ -59,11 +59,11 @@
       }
     },
     {
-      "type": "thetaSketchEstimate",
+      "type": "sketchEstimate",
       "name": "sketchUnionPostAggEstimate",
       "field":
       {
-        "type": "thetaSketchSetOp",
+        "type": "sketchSetOper",
         "name": "sketchUnionPostAgg",
         "func": "UNION",
         "size": 16384,

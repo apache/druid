@@ -17,7 +17,7 @@
 * under the License.
 */
 
-package io.druid.query.aggregation.datasketches;
+package io.druid.query.aggregation.datasketches.theta;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -84,7 +84,7 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
   @Override
   public String getTypeName()
   {
-    return SketchModule.SET_SKETCH;
+    return SketchModule.THETA_SKETCH_MERGE_AGG;
   }
 
   @Override

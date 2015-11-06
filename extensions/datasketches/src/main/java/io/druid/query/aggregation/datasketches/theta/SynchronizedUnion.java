@@ -17,7 +17,7 @@
 * under the License.
 */
 
-package io.druid.query.aggregation.datasketches;
+package io.druid.query.aggregation.datasketches.theta;
 
 import com.yahoo.sketches.memory.Memory;
 import com.yahoo.sketches.theta.CompactSketch;

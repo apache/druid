@@ -17,7 +17,7 @@
 * under the License.
 */
 
-package io.druid.query.aggregation.datasketches;
+package io.druid.query.aggregation.datasketches.theta.oldapi;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
@@ -26,28 +26,47 @@ import com.google.inject.Binder;
 
 import com.yahoo.sketches.theta.Sketch;
 import io.druid.initialization.DruidModule;
+import io.druid.query.aggregation.datasketches.theta.SketchBuildComplexMetricSerde;
+import io.druid.query.aggregation.datasketches.theta.SketchJsonSerializer;
+import io.druid.query.aggregation.datasketches.theta.SketchMergeComplexMetricSerde;
+import io.druid.query.aggregation.datasketches.theta.SketchModule;
 import io.druid.segment.serde.ComplexMetrics;
 
 import java.util.Arrays;
 import java.util.List;
 
-public class SketchModule implements DruidModule
+public class OldApiSketchModule implements DruidModule
 {
 
   public static final String SET_SKETCH = "setSketch";
   public static final String SKETCH_BUILD = "sketchBuild";
+  public static final String SKETCH_MERGE = "sketchMerge";
 
   @Override
   public void configure(Binder binder)
   {
-    //gives the extractor to ingest non-sketch input data
     if (ComplexMetrics.getSerdeForType(SKETCH_BUILD) == null) {
       ComplexMetrics.registerSerde(SKETCH_BUILD, new SketchBuildComplexMetricSerde());
     }
 
-    //gives the extractor to ingest sketch input data
     if (ComplexMetrics.getSerdeForType(SET_SKETCH) == null) {
       ComplexMetrics.registerSerde(SET_SKETCH, new SketchMergeComplexMetricSerde());
+    }
+
+    if (ComplexMetrics.getSerdeForType(SKETCH_MERGE) == null) {
+      ComplexMetrics.registerSerde(SKETCH_MERGE, new SketchMergeComplexMetricSerde());
+    }
+
+    if (ComplexMetrics.getSerdeForType(SketchModule.THETA_SKETCH) == null) {
+      ComplexMetrics.registerSerde(SketchModule.THETA_SKETCH, new SketchMergeComplexMetricSerde());
+    }
+
+    if (ComplexMetrics.getSerdeForType(SketchModule.THETA_SKETCH_MERGE_AGG) == null) {
+      ComplexMetrics.registerSerde(SketchModule.THETA_SKETCH_MERGE_AGG, new SketchMergeComplexMetricSerde());
+    }
+
+    if (ComplexMetrics.getSerdeForType(SketchModule.THETA_SKETCH_BUILD_AGG) == null) {
+      ComplexMetrics.registerSerde(SketchModule.THETA_SKETCH_BUILD_AGG, new SketchBuildComplexMetricSerde());
     }
   }
 
@@ -55,12 +74,12 @@ public class SketchModule implements DruidModule
   public List<? extends Module> getJacksonModules()
   {
     return Arrays.<Module>asList(
-        new SimpleModule("SketchModule")
+        new SimpleModule("OldThetaSketchModule")
             .registerSubtypes(
-                new NamedType(SketchBuildAggregatorFactory.class, "sketchBuild"),
-                new NamedType(SketchMergeAggregatorFactory.class, "sketchMerge"),
-                new NamedType(SketchEstimatePostAggregator.class, "sketchEstimate"),
-                new NamedType(SketchSetPostAggregator.class, "sketchSetOper")
+                new NamedType(OldSketchBuildAggregatorFactory.class, SKETCH_BUILD),
+                new NamedType(OldSketchMergeAggregatorFactory.class, SKETCH_MERGE),
+                new NamedType(OldSketchEstimatePostAggregator.class, "sketchEstimate"),
+                new NamedType(OldSketchSetPostAggregator.class, "sketchSetOper")
             )
             .addSerializer(Sketch.class, new SketchJsonSerializer())
     );

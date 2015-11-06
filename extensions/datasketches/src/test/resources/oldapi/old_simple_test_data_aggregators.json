@@ -1,11 +1,11 @@
 [
   {
-    "type": "thetaSketchBuild",
+    "type": "sketchBuild",
     "name": "pty_country",
     "fieldName": "pty_country"
   },
   {
-    "type": "thetaSketchBuild",
+    "type": "sketchBuild",
     "name": "non_existing_col_validation",
     "fieldName": "non_existing_col"
   }

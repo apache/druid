@@ -17,9 +17,7 @@
 * under the License.
 */
 
-package io.druid.query.aggregation.datasketches;
-
-import io.druid.query.aggregation.datasketches.SketchOperations.Func;
+package io.druid.query.aggregation.datasketches.theta;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -43,7 +41,7 @@ public class SketchSetPostAggregator implements PostAggregator
 
   private final String name;
   private final List<PostAggregator> fields;
-  private final Func func;
+  private final SketchOperations.Func func;
   private final int maxSketchSize;
 
   @JsonCreator
