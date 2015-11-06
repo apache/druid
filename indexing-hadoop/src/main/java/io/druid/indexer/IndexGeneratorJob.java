@@ -475,7 +475,7 @@ public class IndexGeneratorJob implements Jobby
         ProgressIndicator progressIndicator
     ) throws IOException
     {
-      return HadoopDruidIndexerConfig.INDEX_MAKER.mergeQueryableIndex(
+      return HadoopDruidIndexerConfig.INDEX_MERGER.mergeQueryableIndex(
           indexes, aggs, file, config.getIndexSpec(), progressIndicator
       );
     }
