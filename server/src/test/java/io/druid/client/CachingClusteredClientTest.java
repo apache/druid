@@ -69,6 +69,7 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.QueryToolChest;
+import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.Result;
 import io.druid.query.SegmentDescriptor;
 import io.druid.query.TestQueryRunners;
@@ -207,6 +208,59 @@ public class CachingClusteredClientTest
   private static final DateTimeZone TIMEZONE = DateTimeZone.forID("America/Los_Angeles");
   private static final QueryGranularity PT1H_TZ_GRANULARITY = new PeriodGranularity(new Period("PT1H"), null, TIMEZONE);
   private static final String TOP_DIM = "a_dim";
+  private static final Supplier<GroupByQueryConfig> GROUPBY_QUERY_CONFIG_SUPPLIER = Suppliers.ofInstance(new GroupByQueryConfig());
+  private static final QueryToolChestWarehouse WAREHOUSE = new MapQueryToolChestWarehouse(
+      ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
+                  .put(
+                      TimeseriesQuery.class,
+                      new TimeseriesQueryQueryToolChest(
+                          QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+                      )
+                  )
+                  .put(
+                      TopNQuery.class, new TopNQueryQueryToolChest(
+                          new TopNQueryConfig(),
+                          QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+                      )
+                  )
+                  .put(
+                      SearchQuery.class, new SearchQueryQueryToolChest(
+                          new SearchQueryConfig(),
+                          QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+                      )
+                  )
+                  .put(
+                      SelectQuery.class,
+                      new SelectQueryQueryToolChest(
+                          jsonMapper,
+                          QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+                      )
+                  )
+                  .put(
+                      GroupByQuery.class,
+                      new GroupByQueryQueryToolChest(
+                          GROUPBY_QUERY_CONFIG_SUPPLIER,
+                          jsonMapper,
+                          new GroupByQueryEngine(
+                              GROUPBY_QUERY_CONFIG_SUPPLIER,
+                              new StupidPool<>(
+                                  new Supplier<ByteBuffer>()
+                                  {
+                                    @Override
+                                    public ByteBuffer get()
+                                    {
+                                      return ByteBuffer.allocate(1024 * 1024);
+                                    }
+                                  }
+                              )
+                          ),
+                          TestQueryRunners.pool,
+                          QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+                      )
+                  )
+                  .put(TimeBoundaryQuery.class, new TimeBoundaryQueryQueryToolChest())
+                  .build()
+  );
   private final Random random;
   public CachingClusteredClient client;
   private Runnable queryCompletedCallback;
@@ -221,7 +275,7 @@ public class CachingClusteredClientTest
     this.random = new Random(randomSeed);
   }
 
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
     return Lists.transform(
@@ -241,7 +295,7 @@ public class CachingClusteredClientTest
   public void setUp() throws Exception
   {
     timeline = new VersionedIntervalTimeline<>(Ordering.<String>natural());
-    serverView = EasyMock.createStrictMock(TimelineServerView.class);
+    serverView = EasyMock.createNiceMock(TimelineServerView.class);
     cache = MapCache.create(100000);
     client = makeClient(MoreExecutors.sameThreadExecutor());
 
@@ -467,6 +521,63 @@ public class CachingClusteredClientTest
             context
         )
     );
+  }
+
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testCachingOverBulkLimitEnforcesLimit() throws Exception
+  {
+    final int limit = 10;
+    final Interval interval = new Interval("2011-01-01/2011-01-02");
+    final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                        .dataSource(DATA_SOURCE)
+                                        .intervals(new MultipleIntervalSegmentSpec(ImmutableList.of(interval)))
+                                        .filters(DIM_FILTER)
+                                        .granularity(GRANULARITY)
+                                        .aggregators(AGGS)
+                                        .postAggregators(POST_AGGS)
+                                        .context(CONTEXT)
+                                        .build();
+
+    final Map<String, Object> context = new HashMap<>();
+    final Cache cache = EasyMock.createStrictMock(Cache.class);
+    final Capture<Iterable<Cache.NamedKey>> cacheKeyCapture = EasyMock.newCapture();
+    EasyMock.expect(cache.getBulk(EasyMock.capture(cacheKeyCapture)))
+            .andReturn(ImmutableMap.<Cache.NamedKey, byte[]>of())
+            .once();
+    EasyMock.replay(cache);
+    client = makeClient(MoreExecutors.sameThreadExecutor(), cache, limit);
+    final DruidServer lastServer = servers[random.nextInt(servers.length)];
+    final DataSegment dataSegment = EasyMock.createNiceMock(DataSegment.class);
+    EasyMock.expect(dataSegment.getIdentifier()).andReturn(DATA_SOURCE).anyTimes();
+    EasyMock.replay(dataSegment);
+    final ServerSelector selector = new ServerSelector(
+        dataSegment,
+        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+    );
+    selector.addServer(new QueryableDruidServer(lastServer, null));
+    timeline.add(interval, "v", new SingleElementPartitionChunk<>(selector));
+
+    client.run(query, context);
+
+    Assert.assertTrue("Capture cache keys", cacheKeyCapture.hasCaptured());
+    Assert.assertTrue("Cache key below limit", ImmutableList.copyOf(cacheKeyCapture.getValue()).size() <= limit);
+
+    EasyMock.verify(cache);
+
+    EasyMock.reset(cache);
+    cacheKeyCapture.reset();
+    EasyMock.expect(cache.getBulk(EasyMock.capture(cacheKeyCapture)))
+            .andReturn(ImmutableMap.<Cache.NamedKey, byte[]>of())
+            .once();
+    EasyMock.replay(cache);
+    client = makeClient(MoreExecutors.sameThreadExecutor(), cache, 0);
+    client.run(query, context);
+    EasyMock.verify(cache);
+    EasyMock.verify(dataSegment);
+    Assert.assertTrue("Capture cache keys", cacheKeyCapture.hasCaptured());
+    Assert.assertTrue("Cache Keys empty", ImmutableList.copyOf(cacheKeyCapture.getValue()).isEmpty());
   }
 
   @Test
@@ -2055,61 +2166,17 @@ public class CachingClusteredClientTest
 
   protected CachingClusteredClient makeClient(final ListeningExecutorService backgroundExecutorService)
   {
-    final Supplier<GroupByQueryConfig> groupByQueryConfigSupplier = Suppliers.ofInstance(new GroupByQueryConfig());
+    return makeClient(backgroundExecutorService, cache, 10);
+  }
 
+  protected CachingClusteredClient makeClient(
+      final ListeningExecutorService backgroundExecutorService,
+      final Cache cache,
+      final int mergeLimit
+  )
+  {
     return new CachingClusteredClient(
-        new MapQueryToolChestWarehouse(
-            ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
-                        .put(
-                            TimeseriesQuery.class,
-                            new TimeseriesQueryQueryToolChest(
-                                QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-                            )
-                        )
-                        .put(
-                            TopNQuery.class, new TopNQueryQueryToolChest(
-                                new TopNQueryConfig(),
-                                QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-                            )
-                        )
-                        .put(
-                            SearchQuery.class, new SearchQueryQueryToolChest(
-                                new SearchQueryConfig(),
-                                QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-                            )
-                        )
-                        .put(
-                            SelectQuery.class,
-                            new SelectQueryQueryToolChest(
-                                jsonMapper,
-                                QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-                            )
-                        )
-                        .put(
-                            GroupByQuery.class,
-                            new GroupByQueryQueryToolChest(
-                                groupByQueryConfigSupplier,
-                                jsonMapper,
-                                new GroupByQueryEngine(
-                                    groupByQueryConfigSupplier,
-                                    new StupidPool<>(
-                                        new Supplier<ByteBuffer>()
-                                        {
-                                          @Override
-                                          public ByteBuffer get()
-                                          {
-                                            return ByteBuffer.allocate(1024 * 1024);
-                                          }
-                                        }
-                                    )
-                                ),
-                                TestQueryRunners.pool,
-                                QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-                            )
-                        )
-                        .put(TimeBoundaryQuery.class, new TimeBoundaryQueryQueryToolChest())
-                        .build()
-        ),
+        WAREHOUSE,
         new TimelineServerView()
         {
           @Override
@@ -2156,6 +2223,12 @@ public class CachingClusteredClientTest
           public boolean isQueryCacheable(Query query)
           {
             return true;
+          }
+
+          @Override
+          public int getCacheBulkMergeLimit()
+          {
+            return mergeLimit;
           }
         }
     );
