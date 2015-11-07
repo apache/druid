@@ -258,7 +258,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                             log.info("Logging task %s output to: %s", task.getId(), logFile);
                             boolean runFailed = true;
 
-                            try (final OutputStream toLogfile = Files.asByteSink(logFile).openBufferedStream()) {
+                            try (final OutputStream toLogfile = Files.asByteSink(logFile).openStream()) {
                               ByteStreams.copy(processHolder.process.getInputStream(), toLogfile);
                               final int statusCode = processHolder.process.waitFor();
                               log.info("Process exited with status[%d] for task: %s", statusCode, task.getId());
