@@ -101,6 +101,7 @@ public class DataSchema
     final Set<String> dimensionExclusions = Sets.newHashSet();
     for (AggregatorFactory aggregator : aggregators) {
       dimensionExclusions.addAll(aggregator.requiredFields());
+      dimensionExclusions.add(aggregator.getName());
     }
 
     if (inputRowParser.getParseSpec() != null) {
