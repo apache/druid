@@ -95,6 +95,8 @@
                                 <argument>io.druid.extensions:druid-s3-extensions</argument>
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-cloudfiles-extensions</argument>
+                                <argument>-c</argument>
+                                <argument>io.druid.extensions:druid-redis-cache</argument>
                             </arguments>
                         </configuration>
                     </execution>

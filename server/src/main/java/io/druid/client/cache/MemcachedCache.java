@@ -31,7 +31,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Maps;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import com.google.common.primitives.Ints;
 import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
@@ -51,13 +50,10 @@ import net.spy.memcached.metrics.MetricCollector;
 import net.spy.memcached.metrics.MetricType;
 import net.spy.memcached.ops.LinkedOperationQueueFactory;
 import net.spy.memcached.ops.OperationQueueFactory;
-import org.apache.commons.codec.digest.DigestUtils;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -441,7 +437,7 @@ public class MemcachedCache implements Cache
     try (ResourceHolder<MemcachedClientIF> clientHolder = client.get()) {
       Future<Object> future;
       try {
-        future = clientHolder.get().asyncGet(computeKeyHash(memcachedPrefix, key));
+        future = clientHolder.get().asyncGet(CacheImplUtils.computeKeyHash(memcachedPrefix, key));
       }
       catch (IllegalStateException e) {
         // operation did not get queued in time (queue is full)
@@ -456,7 +452,7 @@ public class MemcachedCache implements Cache
         } else {
           missCount.incrementAndGet();
         }
-        return bytes == null ? null : deserializeValue(key, bytes);
+        return bytes == null ? null : CacheImplUtils.deserializeValue(key, bytes);
       }
       catch (TimeoutException e) {
         timeoutCount.incrementAndGet();
@@ -483,9 +479,9 @@ public class MemcachedCache implements Cache
   {
     try (final ResourceHolder<MemcachedClientIF> clientHolder = client.get()) {
       clientHolder.get().set(
-          computeKeyHash(memcachedPrefix, key),
+          CacheImplUtils.computeKeyHash(memcachedPrefix, key),
           expiration,
-          serializeValue(key, value)
+          CacheImplUtils.serializeValue(key, value)
       );
     }
     catch (IllegalStateException e) {
@@ -496,33 +492,6 @@ public class MemcachedCache implements Cache
     catch (IOException e) {
       Throwables.propagate(e);
     }
-  }
-
-  private static byte[] serializeValue(NamedKey key, byte[] value)
-  {
-    byte[] keyBytes = key.toByteArray();
-    return ByteBuffer.allocate(Ints.BYTES + keyBytes.length + value.length)
-                     .putInt(keyBytes.length)
-                     .put(keyBytes)
-                     .put(value)
-                     .array();
-  }
-
-  private static byte[] deserializeValue(NamedKey key, byte[] bytes)
-  {
-    ByteBuffer buf = ByteBuffer.wrap(bytes);
-
-    final int keyLength = buf.getInt();
-    byte[] keyBytes = new byte[keyLength];
-    buf.get(keyBytes);
-    byte[] value = new byte[buf.remaining()];
-    buf.get(value);
-
-    Preconditions.checkState(
-        Arrays.equals(keyBytes, key.toByteArray()),
-        "Keys do not match, possible hash collision?"
-    );
-    return value;
   }
 
   @Override
@@ -538,7 +507,7 @@ public class MemcachedCache implements Cache
                 @Nullable NamedKey input
             )
             {
-              return computeKeyHash(memcachedPrefix, input);
+              return CacheImplUtils.computeKeyHash(memcachedPrefix, input);
             }
           }
       );
@@ -572,7 +541,7 @@ public class MemcachedCache implements Cache
           if (value != null) {
             results.put(
                 key,
-                deserializeValue(key, value)
+                CacheImplUtils.deserializeValue(key, value)
             );
           }
         }
@@ -606,12 +575,6 @@ public class MemcachedCache implements Cache
       - 40 // length of key hash
       - 2  // length of separators
       ;
-
-  private static String computeKeyHash(String memcachedPrefix, NamedKey key)
-  {
-    // hash keys to keep things under 250 characters for memcached
-    return memcachedPrefix + ":" + DigestUtils.sha1Hex(key.namespace) + ":" + DigestUtils.sha1Hex(key.key);
-  }
 
   public boolean isLocal()
   {
