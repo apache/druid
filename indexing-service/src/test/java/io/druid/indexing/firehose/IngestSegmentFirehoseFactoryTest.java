@@ -19,8 +19,8 @@ package io.druid.indexing.firehose;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.introspect.AnnotationIntrospectorPair;
-import com.fasterxml.jackson.databind.introspect.GuiceAnnotationIntrospector;
-import com.fasterxml.jackson.databind.introspect.GuiceInjectableValues;
+import io.druid.guice.GuiceAnnotationIntrospector;
+import io.druid.guice.GuiceInjectableValues;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
