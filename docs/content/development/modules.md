@@ -16,6 +16,7 @@ Druid's extensions leverage Guice in order to add things at runtime.  Basically,
 1. Add Complex metrics
 1. Add new Query types
 1. Add new Jersey resources
+1. Bundle your extension with all the other Druid extensions
 
 Extensions are added to the system via an implementation of `io.druid.initialization.DruidModule`.
 
@@ -227,3 +228,13 @@ Adding new Jersey resources to a module requires calling the following code to b
 ```java
 Jerseys.addResource(binder, NewResource.class);
 ```
+
+### Bundle your extension with all the other Druid extensions
+
+When you do `mvn install`, Druid extensions will be packaged within the Druid tarball and `extensions` directory, which are both underneath `distribution/target/`.
+
+If you want your extension to be included, you can add your extension's maven coordinate as an argument at
+[distribution/pom.xml](https://github.com/druid-io/druid/blob/master/distribution/pom.xml#L95)
+
+During `mvn install`, maven will install your extension to the local maven repository, and then call [pull-deps](../operations/pull-deps.html) to pull your extension from
+there. In the end, you should see your extension underneath `distribution/target/extensions` and within Druid tarball.
