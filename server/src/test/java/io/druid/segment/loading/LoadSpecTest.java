@@ -18,21 +18,15 @@
 package io.druid.segment.loading;
 
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.fasterxml.jackson.core.Version;
-import com.fasterxml.jackson.databind.BeanProperty;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.introspect.AnnotationIntrospectorPair;
-import com.fasterxml.jackson.databind.introspect.GuiceAnnotationIntrospector;
-import com.fasterxml.jackson.databind.introspect.GuiceInjectableValues;
+import io.druid.guice.GuiceAnnotationIntrospector;
+import io.druid.guice.GuiceInjectableValues;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
-import com.google.inject.Key;
 import com.google.inject.Module;
-import com.metamx.common.IAE;
 import io.druid.guice.GuiceInjectors;
 import io.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
