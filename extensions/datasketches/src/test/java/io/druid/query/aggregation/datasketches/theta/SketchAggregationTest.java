@@ -124,6 +124,43 @@ public class SketchAggregationTest
   }
 
   @Test
+  public void testThetaCardinalityOnSimpleColumn() throws Exception
+  {
+    Sequence seq = helper.createIndexAndRunQueryOnSegment(
+        new File(SketchAggregationTest.class.getClassLoader().getResource("simple_test_data.tsv").getFile()),
+        readFileFromClasspathAsString("simple_test_data_record_parser2.json"),
+        "["
+        + "  {"
+        + "    \"type\": \"count\","
+        + "    \"name\": \"count\""
+        + "  }"
+        + "]",
+        0,
+        QueryGranularity.NONE,
+        5,
+        readFileFromClasspathAsString("simple_test_data_group_by_query.json")
+    );
+
+    List results = Sequences.toList(seq, Lists.newArrayList());
+    Assert.assertEquals(1, results.size());
+    Assert.assertEquals(
+        new MapBasedRow(
+            DateTime.parse("2014-10-19T00:00:00.000Z"),
+            ImmutableMap
+                .<String, Object>builder()
+                .put("sketch_count", 50.0)
+                .put("sketchEstimatePostAgg", 50.0)
+                .put("sketchUnionPostAggEstimate", 50.0)
+                .put("sketchIntersectionPostAggEstimate", 50.0)
+                .put("sketchAnotBPostAggEstimate", 0.0)
+                .put("non_existing_col_validation", 0.0)
+                .build()
+        ),
+        results.get(0)
+    );
+  }
+
+  @Test
   public void testSketchMergeAggregatorFactorySerde() throws Exception
   {
     assertAggregatorFactorySerde(new SketchMergeAggregatorFactory("name", "fieldName", 16, null, null));
