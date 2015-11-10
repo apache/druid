@@ -19,17 +19,22 @@
 
 package io.druid.query.aggregation.datasketches.theta;
 
+import com.metamx.common.ISE;
+import com.metamx.common.logger.Logger;
 import com.yahoo.sketches.Family;
 import com.yahoo.sketches.memory.Memory;
-import com.yahoo.sketches.theta.SetOpReturnState;
 import com.yahoo.sketches.theta.SetOperation;
 import com.yahoo.sketches.theta.Sketch;
 import com.yahoo.sketches.theta.Union;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.segment.ObjectColumnSelector;
 
+import java.util.List;
+
 public class SketchAggregator implements Aggregator
 {
+  private static final Logger logger = new Logger(SketchAggregator.class);
+
   private final ObjectColumnSelector selector;
   private final String name;
   private final int size;
@@ -48,21 +53,11 @@ public class SketchAggregator implements Aggregator
   public void aggregate()
   {
     Object update = selector.get();
-
-    if(update == null) {
+    if (update == null) {
       return;
     }
 
-    SetOpReturnState success;
-    if (update instanceof Memory) {
-      success = union.update((Memory) update);
-    } else {
-      success = union.update((Sketch) update);
-    }
-
-    if(success != SetOpReturnState.Success) {
-      throw new IllegalStateException("Sketch Aggregation failed with state " + success);
-    }
+    updateUnion(union, update);
   }
 
   @Override
@@ -104,5 +99,32 @@ public class SketchAggregator implements Aggregator
   public void close()
   {
     union = null;
+  }
+
+  static void updateUnion(Union union, Object update)
+  {
+    if (update instanceof Memory) {
+      union.update((Memory) update);
+    } else if (update instanceof Sketch) {
+      union.update((Sketch) update);
+    } else if (update instanceof String) {
+      union.update((String) update);
+    } else if (update instanceof byte[]) {
+      union.update((byte[]) update);
+    } else if (update instanceof Double) {
+      union.update(((Double) update));
+    } else if (update instanceof Integer || update instanceof Long) {
+      union.update(((Number) update).longValue());
+    } else if (update instanceof int[]) {
+      union.update((int[]) update);
+    } else if (update instanceof long[]) {
+      union.update((long[]) update);
+    } else if (update instanceof List) {
+      for (Object entry : (List) update) {
+        union.update(entry.toString());
+      }
+    } else {
+      throw new ISE("Illegal type received while theta sketch merging [%s]", update.getClass());
+    }
   }
 }

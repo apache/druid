@@ -19,13 +19,12 @@
 
 package io.druid.query.aggregation.datasketches.theta;
 
+import com.metamx.common.logger.Logger;
 import com.yahoo.sketches.Family;
 import com.yahoo.sketches.memory.Memory;
 import com.yahoo.sketches.memory.MemoryRegion;
 import com.yahoo.sketches.memory.NativeMemory;
-import com.yahoo.sketches.theta.SetOpReturnState;
 import com.yahoo.sketches.theta.SetOperation;
-import com.yahoo.sketches.theta.Sketch;
 import com.yahoo.sketches.theta.Union;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.segment.ObjectColumnSelector;
@@ -36,6 +35,8 @@ import java.util.Map;
 
 public class SketchBufferAggregator implements BufferAggregator
 {
+  private static final Logger logger = new Logger(SketchAggregator.class);
+
   private final ObjectColumnSelector selector;
   private final int size;
   private final int maxIntermediateSize;
@@ -59,28 +60,19 @@ public class SketchBufferAggregator implements BufferAggregator
     }
 
     Memory mem = new MemoryRegion(nm, position, maxIntermediateSize);
-    unions.put(position, (Union) SetOperation.builder().setMemory(mem).build(size, Family.UNION));
+    unions.put(position, (Union) SetOperation.builder().initMemory(mem).build(size, Family.UNION));
   }
 
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
     Object update = selector.get();
-    if(update == null) {
+    if (update == null) {
       return;
     }
 
     Union union = getUnion(buf, position);
-    SetOpReturnState success;
-    if (update instanceof Memory) {
-      success = union.update((Memory) update);
-    } else {
-      success = union.update((Sketch) update);
-    }
-
-    if(success != SetOpReturnState.Success) {
-      throw new IllegalStateException("Sketch Buffer Aggregation failed with state " + update);
-    }
+    SketchAggregator.updateUnion(union, update);
   }
 
   @Override

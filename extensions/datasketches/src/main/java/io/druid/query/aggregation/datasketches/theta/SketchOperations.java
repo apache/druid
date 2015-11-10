@@ -25,7 +25,6 @@ import com.yahoo.sketches.Family;
 import com.yahoo.sketches.memory.NativeMemory;
 import com.yahoo.sketches.theta.AnotB;
 import com.yahoo.sketches.theta.Intersection;
-import com.yahoo.sketches.theta.SetOpReturnState;
 import com.yahoo.sketches.theta.SetOperation;
 import com.yahoo.sketches.theta.Sketch;
 import com.yahoo.sketches.theta.Sketches;
@@ -92,33 +91,28 @@ public class SketchOperations
       case UNION:
         Union union = (Union) SetOperation.builder().build(sketchSize, Family.UNION);
         for(Sketch sketch : sketches) {
-          SetOpReturnState success = union.update(sketch);
-          if(success != SetOpReturnState.Success) {
-            throw new IllegalStateException("Sketch operation failed " + func);
-          }
+          union.update(sketch);
         }
         return union.getResult(false, null);
       case INTERSECT:
         Intersection intersection = (Intersection) SetOperation.builder().build(sketchSize, Family.INTERSECTION);
         for(Sketch sketch : sketches) {
-          SetOpReturnState success = intersection.update(sketch);
-          if(success != SetOpReturnState.Success) {
-            throw new IllegalStateException("Sketch operation failed " + func);
-          }
+          intersection.update(sketch);
         }
         return intersection.getResult(false, null);
       case NOT:
-        if(sketches.length < 2) {
-          throw new IllegalArgumentException("A-Not-B requires atleast 2 sketches");
+        if(sketches.length < 1) {
+          throw new IllegalArgumentException("A-Not-B requires atleast 1 sketch");
+        }
+
+        if(sketches.length == 1) {
+          return sketches[0];
         }
 
         Sketch result = sketches[0];
         for (int i = 1; i < sketches.length; i++) {
           AnotB anotb = (AnotB) SetOperation.builder().build(sketchSize, Family.A_NOT_B);
-          SetOpReturnState success = anotb.update(result, sketches[i]);
-          if(success != SetOpReturnState.Success) {
-            throw new IllegalStateException("Sketch operation failed " + func);
-          }
+          anotb.update(result, sketches[i]);
           result = anotb.getResult(false, null);
         }
         return result;
