@@ -275,6 +275,7 @@ public class Initialization
   {
     final ModuleList defaultModules = new ModuleList(baseInjector);
     defaultModules.addModules(
+        new Log4jShutterDownerModule(),
         new LifecycleModule(),
         EmitterModule.class,
         HttpClientModule.global(),
