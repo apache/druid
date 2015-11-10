@@ -33,35 +33,52 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
   private static final byte CACHE_TYPE_ID = 15;
 
   private final boolean shouldFinalize;
+  private final boolean isInputThetaSketch;
 
   @JsonCreator
   public SketchMergeAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") String fieldName,
       @JsonProperty("size") Integer size,
-      @JsonProperty("shouldFinalize") Boolean shouldFinalize
+      @JsonProperty("shouldFinalize") Boolean shouldFinalize,
+      @JsonProperty("isInputThetaSketch") Boolean isInputThetaSketch
   )
   {
     super(name, fieldName, size, CACHE_TYPE_ID);
     this.shouldFinalize = (shouldFinalize == null) ? true : shouldFinalize.booleanValue();
+    this.isInputThetaSketch = (isInputThetaSketch == null) ? false : isInputThetaSketch.booleanValue();
   }
 
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Collections.<AggregatorFactory>singletonList(new SketchMergeAggregatorFactory(fieldName, fieldName, size, shouldFinalize));
+    return Collections.<AggregatorFactory>singletonList(
+        new SketchMergeAggregatorFactory(
+            fieldName,
+            fieldName,
+            size,
+            shouldFinalize,
+            isInputThetaSketch
+        )
+    );
   }
 
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new SketchMergeAggregatorFactory(name, name, size, shouldFinalize);
+    return new SketchMergeAggregatorFactory(name, name, size, shouldFinalize, isInputThetaSketch);
   }
 
   @JsonProperty
   public boolean getShouldFinalize()
   {
     return shouldFinalize;
+  }
+
+  @JsonProperty
+  public boolean getIsInputThetaSketch()
+  {
+    return isInputThetaSketch;
   }
 
   /**
@@ -84,7 +101,11 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
   @Override
   public String getTypeName()
   {
-    return SketchModule.THETA_SKETCH_MERGE_AGG;
+    if (isInputThetaSketch) {
+      return SketchModule.THETA_SKETCH_MERGE_AGG;
+    } else {
+      return SketchModule.THETA_SKETCH_BUILD_AGG;
+    }
   }
 
   @Override
@@ -102,7 +123,10 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
 
     SketchMergeAggregatorFactory that = (SketchMergeAggregatorFactory) o;
 
-    return shouldFinalize == that.shouldFinalize;
+    if (shouldFinalize != that.shouldFinalize) {
+      return false;
+    }
+    return isInputThetaSketch == that.isInputThetaSketch;
 
   }
 
@@ -111,17 +135,19 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
   {
     int result = super.hashCode();
     result = 31 * result + (shouldFinalize ? 1 : 0);
+    result = 31 * result + (isInputThetaSketch ? 1 : 0);
     return result;
   }
 
   @Override
   public String toString()
   {
-    return getClass().getSimpleName() + "{"
-           + "fieldName='" + fieldName + '\''
-           + ", name='" + name + '\''
-           + ", size=" + size + '\''
-           + ", shouldFinalize=" + shouldFinalize +
-           + '}';
+    return "SketchMergeAggregatorFactory{"
+           + "fieldName=" + fieldName
+           + ", name=" + name
+           + ", size=" + size
+           + ",shouldFinalize=" + shouldFinalize
+           + ", isInputThetaSketch=" + isInputThetaSketch
+           + "}";
   }
 }

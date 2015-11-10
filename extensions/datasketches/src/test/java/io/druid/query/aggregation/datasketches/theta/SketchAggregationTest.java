@@ -126,9 +126,9 @@ public class SketchAggregationTest
   @Test
   public void testSketchMergeAggregatorFactorySerde() throws Exception
   {
-    assertAggregatorFactorySerde(new SketchMergeAggregatorFactory("name", "fieldName", 16, null));
-    assertAggregatorFactorySerde(new SketchMergeAggregatorFactory("name", "fieldName", 16, false));
-    assertAggregatorFactorySerde(new SketchMergeAggregatorFactory("name", "fieldName", 16, true));
+    assertAggregatorFactorySerde(new SketchMergeAggregatorFactory("name", "fieldName", 16, null, null));
+    assertAggregatorFactorySerde(new SketchMergeAggregatorFactory("name", "fieldName", 16, false, true));
+    assertAggregatorFactorySerde(new SketchMergeAggregatorFactory("name", "fieldName", 16, true, false));
   }
 
   @Test
@@ -136,20 +136,14 @@ public class SketchAggregationTest
   {
     Sketch sketch = Sketches.updateSketchBuilder().build(128);
 
-    SketchMergeAggregatorFactory agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, null);
+    SketchMergeAggregatorFactory agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, null, null);
     Assert.assertEquals(0.0, ((Double) agg.finalizeComputation(sketch)).doubleValue(), 0.0001);
 
-    agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, true);
+    agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, true, null);
     Assert.assertEquals(0.0, ((Double) agg.finalizeComputation(sketch)).doubleValue(), 0.0001);
 
-    agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, false);
+    agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, false, null);
     Assert.assertEquals(sketch, agg.finalizeComputation(sketch));
-  }
-
-  @Test
-  public void testSketchBuildAggregatorFactorySerde() throws Exception
-  {
-    assertAggregatorFactorySerde(new SketchBuildAggregatorFactory("name", "fieldName", 16));
   }
 
   private void assertAggregatorFactorySerde(AggregatorFactory agg) throws Exception{
