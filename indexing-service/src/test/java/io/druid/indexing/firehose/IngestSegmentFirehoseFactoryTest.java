@@ -260,7 +260,9 @@ public class IngestSegmentFirehoseFactoryTest
         ),
         MAPPER,
         INDEX_MERGER,
-        INDEX_IO
+        INDEX_IO,
+        null,
+        null
     );
     Collection<Object[]> values = new LinkedList<>();
     for (InputRowParser parser : Arrays.<InputRowParser>asList(

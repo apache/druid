@@ -17,11 +17,14 @@
 
 package io.druid.segment.realtime.plumber;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.metamx.common.Granularity;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.client.cache.Cache;
+import io.druid.client.cache.CacheConfig;
 import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.concurrent.Execs;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -63,7 +66,11 @@ public class FlushingPlumber extends RealtimePlumber
       DataSegmentAnnouncer segmentAnnouncer,
       ExecutorService queryExecutorService,
       IndexMerger indexMerger,
-      IndexIO indexIO
+      IndexIO indexIO,
+      Cache cache,
+      CacheConfig cacheConfig,
+      ObjectMapper objectMapper
+
   )
   {
     super(
@@ -78,7 +85,10 @@ public class FlushingPlumber extends RealtimePlumber
         null,
         null,
         indexMerger,
-        indexIO
+        indexIO,
+        cache,
+        cacheConfig,
+        objectMapper
     );
 
     this.flushDuration = flushDuration;

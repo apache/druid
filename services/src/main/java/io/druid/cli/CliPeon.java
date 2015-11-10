@@ -30,7 +30,9 @@ import com.metamx.common.logger.Logger;
 import io.airlift.airline.Arguments;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
+import io.druid.client.cache.CacheConfig;
 import io.druid.guice.Binders;
+import io.druid.guice.CacheModule;
 import io.druid.guice.IndexingServiceFirehoseModule;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
@@ -155,6 +157,9 @@ public class CliPeon extends GuiceRunnable
             binder.bind(TaskRunner.class).to(ThreadPoolTaskRunner.class);
             binder.bind(QuerySegmentWalker.class).to(ThreadPoolTaskRunner.class);
             binder.bind(ThreadPoolTaskRunner.class).in(ManageLifecycle.class);
+
+            JsonConfigProvider.bind(binder, "druid.realtime.cache", CacheConfig.class);
+            binder.install(new CacheModule());
 
             // Override the default SegmentLoaderConfig because we don't actually care about the
             // configuration based locations.  This will override them anyway.  This is also stopping

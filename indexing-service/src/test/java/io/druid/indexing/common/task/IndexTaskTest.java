@@ -257,7 +257,7 @@ public class IndexTaskTest
             return segment;
           }
         }, null, null, null, null, null, null, null, null, null, null, temporaryFolder.newFolder(),
-            indexMerger, indexIO
+            indexMerger, indexIO, null, null
         )
     );
 

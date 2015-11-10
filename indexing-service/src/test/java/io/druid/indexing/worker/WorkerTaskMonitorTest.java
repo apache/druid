@@ -156,7 +156,9 @@ public class WorkerTaskMonitorTest
             ),
                 jsonMapper,
                 indexMerger,
-                indexIO
+                indexIO,
+                null,
+                null
             ),
             null
         ),

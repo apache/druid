@@ -277,7 +277,10 @@ public class RealtimeIndexTask extends AbstractTask
         toolbox.getNewSegmentServerView(),
         toolbox.getQueryExecutorService(),
         toolbox.getIndexMerger(),
-        toolbox.getIndexIO()
+        toolbox.getIndexIO(),
+        toolbox.getCache(),
+        toolbox.getCacheConfig(),
+        toolbox.getObjectMapper()
     );
 
     this.plumber = plumberSchool.findPlumber(dataSchema, tuningConfig, fireDepartment.getMetrics());

@@ -27,6 +27,8 @@ import com.google.common.collect.Multimaps;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
 import io.druid.client.FilteredServerView;
+import io.druid.client.cache.Cache;
+import io.druid.client.cache.CacheConfig;
 import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
@@ -75,6 +77,9 @@ public class TaskToolbox
   private final File taskWorkDir;
   private final IndexMerger indexMerger;
   private final IndexIO indexIO;
+  private final Cache cache;
+  private final CacheConfig cacheConfig;
+
 
   public TaskToolbox(
       TaskConfig config,
@@ -94,7 +99,9 @@ public class TaskToolbox
       ObjectMapper objectMapper,
       File taskWorkDir,
       IndexMerger indexMerger,
-      IndexIO indexIO
+      IndexIO indexIO,
+      Cache cache,
+      CacheConfig cacheConfig
   )
   {
     this.config = config;
@@ -115,6 +122,8 @@ public class TaskToolbox
     this.taskWorkDir = taskWorkDir;
     this.indexMerger = Preconditions.checkNotNull(indexMerger, "Null IndexMerger");
     this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
+    this.cache = cache;
+    this.cacheConfig = cacheConfig;
   }
 
   public TaskConfig getConfig()
@@ -226,5 +235,15 @@ public class TaskToolbox
   public IndexMerger getIndexMerger()
   {
     return indexMerger;
+  }
+
+  public Cache getCache()
+  {
+    return cache;
+  }
+
+  public CacheConfig getCacheConfig()
+  {
+    return cacheConfig;
   }
 }
