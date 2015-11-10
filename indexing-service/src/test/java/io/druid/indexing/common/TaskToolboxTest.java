@@ -24,6 +24,8 @@ import com.google.common.collect.ImmutableList;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
 import io.druid.client.FilteredServerView;
+import io.druid.client.cache.Cache;
+import io.druid.client.cache.CacheConfig;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
@@ -70,6 +72,8 @@ public class TaskToolboxTest
   private ObjectMapper ObjectMapper = new ObjectMapper();
   private SegmentLoaderLocalCacheManager mockSegmentLoaderLocalCacheManager = EasyMock.createMock(SegmentLoaderLocalCacheManager.class);
   private Task task = EasyMock.createMock(Task.class);
+  private Cache mockCache = EasyMock.createMock(Cache.class);
+  private CacheConfig mockCacheConfig = EasyMock.createMock(CacheConfig.class);
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -94,7 +98,9 @@ public class TaskToolboxTest
         mockQueryExecutorService,
         mockMonitorScheduler,
         new SegmentLoaderFactory(mockSegmentLoaderLocalCacheManager),
-        ObjectMapper
+        ObjectMapper,
+        mockCache,
+        mockCacheConfig
     );
   }
 
@@ -173,5 +179,17 @@ public class TaskToolboxTest
   public void testGetDataSegmentMover()
   {
     Assert.assertEquals(mockDataSegmentMover, taskToolbox.build(task).getDataSegmentMover());
+  }
+
+  @Test
+  public void testGetCache() throws Exception
+  {
+    Assert.assertEquals(mockCache, taskToolbox.build(task).getCache());
+  }
+
+  @Test
+  public void testGetCacheConfig() throws Exception
+  {
+    Assert.assertEquals(mockCacheConfig, taskToolbox.build(task).getCacheConfig());
   }
 }

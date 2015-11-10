@@ -22,6 +22,8 @@ import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
 import io.druid.client.FilteredServerView;
+import io.druid.client.cache.Cache;
+import io.druid.client.cache.CacheConfig;
 import io.druid.guice.annotations.Processing;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
@@ -55,6 +57,8 @@ public class TaskToolboxFactory
   private final MonitorScheduler monitorScheduler;
   private final SegmentLoaderFactory segmentLoaderFactory;
   private final ObjectMapper objectMapper;
+  private final Cache cache;
+  private final CacheConfig cacheConfig;
 
   @Inject
   public TaskToolboxFactory(
@@ -71,7 +75,9 @@ public class TaskToolboxFactory
       @Processing ExecutorService queryExecutorService,
       MonitorScheduler monitorScheduler,
       SegmentLoaderFactory segmentLoaderFactory,
-      ObjectMapper objectMapper
+      ObjectMapper objectMapper,
+      Cache cache,
+      CacheConfig cacheConfig
   )
   {
     this.config = config;
@@ -88,6 +94,8 @@ public class TaskToolboxFactory
     this.monitorScheduler = monitorScheduler;
     this.segmentLoaderFactory = segmentLoaderFactory;
     this.objectMapper = objectMapper;
+    this.cache = cache;
+    this.cacheConfig = cacheConfig;
   }
 
   public TaskToolbox build(Task task)
@@ -110,7 +118,9 @@ public class TaskToolboxFactory
         monitorScheduler,
         segmentLoaderFactory.manufacturate(taskWorkDir),
         objectMapper,
-        taskWorkDir
+        taskWorkDir,
+        cache,
+        cacheConfig
     );
   }
 }

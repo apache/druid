@@ -36,6 +36,8 @@ import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.LoggingEmitter;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
+import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.MapCache;
 import io.druid.concurrent.Execs;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
@@ -513,7 +515,9 @@ public class RealtimeIndexTaskTest
                 }, TestUtils.MAPPER
             )
         ),
-        TestUtils.MAPPER
+        TestUtils.MAPPER,
+        MapCache.create(1024),
+        new CacheConfig()
     );
 
     taskLockbox.add(task);

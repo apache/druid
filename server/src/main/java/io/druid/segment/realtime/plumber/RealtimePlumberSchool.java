@@ -19,9 +19,12 @@ package io.druid.segment.realtime.plumber;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.FilteredServerView;
+import io.druid.client.cache.Cache;
+import io.druid.client.cache.CacheConfig;
 import io.druid.guice.annotations.Processing;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.indexing.DataSchema;
@@ -44,6 +47,9 @@ public class RealtimePlumberSchool implements PlumberSchool
   private final SegmentPublisher segmentPublisher;
   private final FilteredServerView serverView;
   private final ExecutorService queryExecutorService;
+  private final Cache cache;
+  private final CacheConfig cacheConfig;
+  private final ObjectMapper objectMapper;
 
   @JsonCreator
   public RealtimePlumberSchool(
@@ -53,8 +59,11 @@ public class RealtimePlumberSchool implements PlumberSchool
       @JacksonInject DataSegmentAnnouncer segmentAnnouncer,
       @JacksonInject SegmentPublisher segmentPublisher,
       @JacksonInject FilteredServerView serverView,
-      @JacksonInject @Processing ExecutorService executorService
-  )
+      @JacksonInject @Processing ExecutorService executorService,
+      @JacksonInject Cache cache,
+      @JacksonInject CacheConfig cacheConfig,
+      @JacksonInject ObjectMapper objectMapper
+      )
   {
     this.emitter = emitter;
     this.conglomerate = conglomerate;
@@ -63,6 +72,10 @@ public class RealtimePlumberSchool implements PlumberSchool
     this.segmentPublisher = segmentPublisher;
     this.serverView = serverView;
     this.queryExecutorService = executorService;
+
+    this.cache = cache;
+    this.cacheConfig = cacheConfig;
+    this.objectMapper = objectMapper;
   }
 
   @Override
@@ -84,7 +97,10 @@ public class RealtimePlumberSchool implements PlumberSchool
         queryExecutorService,
         dataSegmentPusher,
         segmentPublisher,
-        serverView
+        serverView,
+        cache,
+        cacheConfig,
+        objectMapper
     );
   }
 

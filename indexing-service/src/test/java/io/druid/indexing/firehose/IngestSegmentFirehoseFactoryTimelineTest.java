@@ -314,7 +314,9 @@ public class IngestSegmentFirehoseFactoryTimelineTest
                   }, objectMapper
               )
           ),
-          objectMapper
+          objectMapper,
+          null,
+          null
       );
       final Injector injector = Guice.createInjector(
           new Module()

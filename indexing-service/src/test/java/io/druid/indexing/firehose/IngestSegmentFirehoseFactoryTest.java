@@ -247,7 +247,9 @@ public class IngestSegmentFirehoseFactoryTest
                 }, objectMapper
             )
         ),
-        objectMapper
+        objectMapper,
+        null,
+        null
     );
     Collection<Object[]> values = new LinkedList<>();
     for (InputRowParser parser : Arrays.<InputRowParser>asList(

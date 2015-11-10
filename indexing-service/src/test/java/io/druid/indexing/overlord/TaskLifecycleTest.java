@@ -44,6 +44,7 @@ import com.metamx.metrics.Monitor;
 import com.metamx.metrics.MonitorScheduler;
 import io.druid.client.FilteredServerView;
 import io.druid.client.ServerView;
+import io.druid.client.cache.MapCache;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
@@ -67,6 +68,7 @@ import io.druid.indexing.common.task.AbstractFixedIntervalTask;
 import io.druid.indexing.common.task.IndexTask;
 import io.druid.indexing.common.task.KillTask;
 import io.druid.indexing.common.task.RealtimeIndexTask;
+import io.druid.indexing.common.task.RealtimeIndexTaskTest;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
 import io.druid.indexing.overlord.config.TaskQueueConfig;
@@ -92,6 +94,7 @@ import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.segment.realtime.FireDepartment;
+import io.druid.segment.realtime.FireDepartmentTest;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
@@ -486,7 +489,9 @@ public class TaskLifecycleTest
                 }, new DefaultObjectMapper()
             )
         ),
-        new DefaultObjectMapper()
+        new DefaultObjectMapper(),
+        MapCache.create(0),
+        FireDepartmentTest.NO_CACHE_CONFIG
     );
     tr = new ThreadPoolTaskRunner(tb, taskConfig, emitter);
     tq = new TaskQueue(tqc, ts, tr, tac, tl, emitter);

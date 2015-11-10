@@ -26,6 +26,8 @@ import com.google.common.collect.Multimaps;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
 import io.druid.client.FilteredServerView;
+import io.druid.client.cache.Cache;
+import io.druid.client.cache.CacheConfig;
 import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
@@ -70,6 +72,8 @@ public class TaskToolbox
   private final SegmentLoader segmentLoader;
   private final ObjectMapper objectMapper;
   private final File taskWorkDir;
+  private final Cache cache;
+  private final CacheConfig cacheConfig;
 
   public TaskToolbox(
       TaskConfig config,
@@ -87,7 +91,9 @@ public class TaskToolbox
       MonitorScheduler monitorScheduler,
       SegmentLoader segmentLoader,
       ObjectMapper objectMapper,
-      final File taskWorkDir
+      final File taskWorkDir,
+      Cache cache,
+      CacheConfig cacheConfig
   )
   {
     this.config = config;
@@ -106,6 +112,8 @@ public class TaskToolbox
     this.segmentLoader = segmentLoader;
     this.objectMapper = objectMapper;
     this.taskWorkDir = taskWorkDir;
+    this.cache = cache;
+    this.cacheConfig = cacheConfig;
   }
 
   public TaskConfig getConfig()
@@ -207,5 +215,15 @@ public class TaskToolbox
   public File getTaskWorkDir()
   {
     return taskWorkDir;
+  }
+
+  public Cache getCache()
+  {
+    return cache;
+  }
+
+  public CacheConfig getCacheConfig()
+  {
+    return cacheConfig;
   }
 }
