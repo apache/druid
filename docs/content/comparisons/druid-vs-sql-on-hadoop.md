@@ -2,7 +2,7 @@
 layout: doc_page
 ---
 
-Druid vs SQL-on-Hadoop (Hive/Impala/Drill/Spark SQL/Presto)
+Druid vs SQL-on-Hadoop (Impala/Drill/Spark SQL/Presto)
 ===========================================================
 
 Druid is much more complementary to SQL-on-Hadoop engines than it is competitive. SQL-on-Hadoop engines provide an 
@@ -27,7 +27,7 @@ What does this mean?  We can talk about it in terms of three general areas
 1. Data Ingestion
 1. Query Flexibility
 
-## Queries
+### Queries
 
 Druid segments stores data in a custom column format. Segments are scanned directly as part of queries and each Druid server 
 calculates a set of results that are eventually merged at the Broker level. This means the data that is transferred between servers 
@@ -40,7 +40,7 @@ Many SQL-on-Hadoop engines have daemon processes that can be run where the data 
 some latency overhead (e.g. serde time) associated with pulling data from the underlying storage layer into the computation layer. We are unaware of exactly 
 how much of a performance impact this makes.
 
-## Data Ingestion
+### Data Ingestion
 
 Druid is built to allow for real-time ingestion of data.  You can ingest data and query it immediately upon ingestion, 
 the latency between how quickly the event is reflected in the data is dominated by how long it takes to deliver the event to Druid.
@@ -49,10 +49,18 @@ SQL-on-Hadoop, being based on data in HDFS or some other backing store, are limi
 rate at which that backing store can make data available.  Generally, the backing store is the biggest bottleneck for 
 how quickly data can become available.
 
-## Query Flexibility
+### Query Flexibility
 
 Druid's query language is fairly low level and maps to how Druid operates internally. Although Druid can be combined with a high level query 
 planner such as [Plywood](https://github.com/implydata/plywood) to support most SQL queries and analytic SQL queries (minus joins among large tables), 
 base Druid is less flexible than SQL-on-Hadoop solutions for generic processing.
 
 SQL-on-Hadoop support SQL style queries with full joins.
+
+## Druid vs Parquet
+
+Parquet is a column storage format that is designed to work with SQL-on-Hadoop engines. Parquet doesn't have a query execution engine, and instead 
+relies on external sources to pull data out of it.
+
+Druid's storage format is highly optimized for linear scans. Although Druid has support for nested data, Parquet's storage format is much 
+more hierachical, and is more designed for binary chunking. In theory, this should lead to faster scans in Druid.
