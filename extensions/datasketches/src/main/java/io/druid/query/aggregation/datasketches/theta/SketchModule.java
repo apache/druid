@@ -62,8 +62,7 @@ public class SketchModule implements DruidModule
     return Arrays.<Module>asList(
         new SimpleModule("ThetaSketchModule")
             .registerSubtypes(
-                new NamedType(SketchBuildAggregatorFactory.class, THETA_SKETCH_BUILD_AGG),
-                new NamedType(SketchMergeAggregatorFactory.class, THETA_SKETCH_MERGE_AGG),
+                new NamedType(SketchMergeAggregatorFactory.class, THETA_SKETCH),
                 new NamedType(SketchEstimatePostAggregator.class, THETA_SKETCH_ESTIMATE_POST_AGG),
                 new NamedType(SketchSetPostAggregator.class, THETA_SKETCH_SET_OP_POST_AGG)
             )

@@ -21,11 +21,11 @@ package io.druid.query.aggregation.datasketches.theta.oldapi;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.query.aggregation.datasketches.theta.SketchBuildAggregatorFactory;
+import io.druid.query.aggregation.datasketches.theta.SketchMergeAggregatorFactory;
 
 /**
  */
-public class OldSketchBuildAggregatorFactory extends SketchBuildAggregatorFactory
+public class OldSketchBuildAggregatorFactory extends SketchMergeAggregatorFactory
 {
   @JsonCreator
   public OldSketchBuildAggregatorFactory(
@@ -34,6 +34,6 @@ public class OldSketchBuildAggregatorFactory extends SketchBuildAggregatorFactor
       @JsonProperty("size") Integer size
   )
   {
-    super(name, fieldName, size);
+    super(name, fieldName, size, true, false);
   }
 }

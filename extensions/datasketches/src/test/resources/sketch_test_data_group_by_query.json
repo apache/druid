@@ -4,8 +4,8 @@
   "granularity": "ALL",
   "dimensions": [],
   "aggregations": [
-    { "type": "thetaSketchMerge", "name": "sids_sketch_count", "fieldName": "sids_sketch", "size": 16384 },
-    { "type": "thetaSketchMerge", "name": "non_existing_col_validation", "fieldName": "non_existing_col", "size": 16384 }
+    { "type": "thetaSketch", "name": "sids_sketch_count", "fieldName": "sids_sketch", "size": 16384 },
+    { "type": "thetaSketch", "name": "non_existing_col_validation", "fieldName": "non_existing_col", "size": 16384 }
   ],
   "postAggregations": [
     {
