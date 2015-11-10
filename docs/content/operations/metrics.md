@@ -73,7 +73,9 @@ Available Metrics
 |`*/errors`|Number of cache errors.||0|
 
 #### Memcached only metrics
+
 Memcached client metrics are reported as per the following. These metrics come directly from the client as opposed to from the cache retrieval layer.
+
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
 |`query/cache/memcached/total`|Cache metrics unique to memcached (only if `druid.cache.type=memcached`) as their actual values|Variable|N/A|
