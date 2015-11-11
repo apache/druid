@@ -56,7 +56,8 @@ public class HadoopTuningConfig implements TuningConfig
         false,
         null,
         false,
-        false
+        false,
+        null
     );
   }
 
@@ -88,7 +89,9 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("ignoreInvalidRows") boolean ignoreInvalidRows,
       final @JsonProperty("jobProperties") Map<String, String> jobProperties,
       final @JsonProperty("combineText") boolean combineText,
-      final @JsonProperty("useCombiner") Boolean useCombiner
+      final @JsonProperty("useCombiner") Boolean useCombiner,
+      // See https://github.com/druid-io/druid/pull/1922
+      final @JsonProperty("rowFlushBoundary") Integer maxRowsInMemoryCOMPAT
   )
   {
     this.workingPath = workingPath;
@@ -96,7 +99,7 @@ public class HadoopTuningConfig implements TuningConfig
     this.partitionsSpec = partitionsSpec == null ? DEFAULT_PARTITIONS_SPEC : partitionsSpec;
     this.shardSpecs = shardSpecs == null ? DEFAULT_SHARD_SPECS : shardSpecs;
     this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
-    this.rowFlushBoundary = maxRowsInMemory == null ? DEFAULT_ROW_FLUSH_BOUNDARY : maxRowsInMemory;
+    this.rowFlushBoundary = maxRowsInMemory == null ? maxRowsInMemoryCOMPAT == null ?  DEFAULT_ROW_FLUSH_BOUNDARY : maxRowsInMemoryCOMPAT : maxRowsInMemory;
     this.leaveIntermediate = leaveIntermediate;
     this.cleanupOnFailure = cleanupOnFailure == null ? true : cleanupOnFailure;
     this.overwriteFiles = overwriteFiles;
@@ -201,7 +204,8 @@ public class HadoopTuningConfig implements TuningConfig
         ignoreInvalidRows,
         jobProperties,
         combineText,
-        useCombiner
+        useCombiner,
+        null
     );
   }
 
@@ -220,7 +224,8 @@ public class HadoopTuningConfig implements TuningConfig
         ignoreInvalidRows,
         jobProperties,
         combineText,
-        useCombiner
+        useCombiner,
+        null
     );
   }
 
@@ -239,7 +244,8 @@ public class HadoopTuningConfig implements TuningConfig
         ignoreInvalidRows,
         jobProperties,
         combineText,
-        useCombiner
+        useCombiner,
+        null
     );
   }
 }

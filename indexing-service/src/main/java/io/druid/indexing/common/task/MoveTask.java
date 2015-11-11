@@ -46,7 +46,9 @@ public class MoveTask extends AbstractFixedIntervalTask
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
       @JsonProperty("target") Map<String, Object> targetLoadSpec,
-      @JsonProperty("context") Map<String, Object> context
+      @JsonProperty("context") Map<String, Object> context,
+      // See https://github.com/druid-io/druid/pull/1922
+      @JsonProperty("targetLoadSpec") Map<String, Object> targetLoadSpecCOMPAT
   )
   {
     super(
@@ -55,7 +57,7 @@ public class MoveTask extends AbstractFixedIntervalTask
         interval,
         context
     );
-    this.targetLoadSpec = targetLoadSpec;
+    this.targetLoadSpec = targetLoadSpec == null ? targetLoadSpecCOMPAT : targetLoadSpec;
   }
 
   @Override

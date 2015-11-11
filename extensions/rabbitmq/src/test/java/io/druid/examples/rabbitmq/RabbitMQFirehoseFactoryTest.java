@@ -64,7 +64,8 @@ public class RabbitMQFirehoseFactoryTest
 
     RabbitMQFirehoseFactory factory = new RabbitMQFirehoseFactory(
         connectionFactory,
-        config
+        config,
+        null
     );
 
     byte[] bytes = mapper.writeValueAsBytes(factory);
@@ -86,7 +87,8 @@ public class RabbitMQFirehoseFactoryTest
 
     RabbitMQFirehoseFactory factory = new RabbitMQFirehoseFactory(
         connectionFactory,
-        config
+        config,
+        null
     );
 
     byte[] bytes = mapper.writeValueAsBytes(factory);
