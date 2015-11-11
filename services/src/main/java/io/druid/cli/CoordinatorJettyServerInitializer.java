@@ -51,6 +51,7 @@ class CoordinatorJettyServerInitializer implements JettyServerInitializer
   public void initialize(Server server, Injector injector)
   {
     final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
+    root.setInitParameter("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
 
     ServletHolder holderPwd = new ServletHolder("default", DefaultServlet.class);
 
