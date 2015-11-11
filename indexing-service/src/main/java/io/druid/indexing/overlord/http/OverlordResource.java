@@ -39,12 +39,13 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionHolder;
 import io.druid.indexing.common.task.Task;
+import io.druid.indexing.overlord.RemoteTaskRunner;
 import io.druid.indexing.overlord.TaskMaster;
 import io.druid.indexing.overlord.TaskQueue;
 import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.TaskRunnerWorkItem;
 import io.druid.indexing.overlord.TaskStorageQueryAdapter;
-import io.druid.indexing.overlord.autoscaling.ResourceManagementScheduler;
+import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.metadata.EntryExistsException;
 import io.druid.tasklogs.TaskLogStreamer;
@@ -409,7 +410,18 @@ public class OverlordResource
           @Override
           public Response apply(TaskRunner taskRunner)
           {
-            return Response.ok(taskRunner.getWorkers()).build();
+            if (taskRunner instanceof RemoteTaskRunner) {
+              return Response.ok(((RemoteTaskRunner) taskRunner).getWorkers()).build();
+            } else {
+              log.debug(
+                  "Task runner [%s] of type [%s] does not support listing workers",
+                  taskRunner,
+                  taskRunner.getClass().getCanonicalName()
+              );
+              return Response.serverError()
+                             .entity(ImmutableMap.of("error", "Task Runner does not support worker listing"))
+                             .build();
+            }
           }
         }
     );
@@ -421,9 +433,9 @@ public class OverlordResource
   public Response getScalingState()
   {
     // Don't use asLeaderWith, since we want to return 200 instead of 503 when missing an autoscaler.
-    final Optional<ResourceManagementScheduler> rms = taskMaster.getResourceManagementScheduler();
+    final Optional<ScalingStats> rms = taskMaster.getScalingStats();
     if (rms.isPresent()) {
-      return Response.ok(rms.get().getStats()).build();
+      return Response.ok(rms.get()).build();
     } else {
       return Response.ok().build();
     }
@@ -563,7 +575,7 @@ public class OverlordResource
       }
       if (status.isPresent()) {
         data.put("statusCode", status.get().getStatusCode().toString());
-        if(status.get().isComplete()) {
+        if (status.get().isComplete()) {
           data.put("duration", status.get().getDuration());
         }
       }

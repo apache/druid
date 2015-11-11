@@ -52,9 +52,12 @@ import com.metamx.http.client.Request;
 import com.metamx.http.client.response.InputStreamResponseHandler;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
+import io.druid.concurrent.Execs;
 import io.druid.curator.cache.PathChildrenCacheFactory;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
+import io.druid.indexing.overlord.autoscaling.ResourceManagementStrategy;
+import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.overlord.setup.WorkerSelectStrategy;
@@ -102,7 +105,6 @@ import java.util.concurrent.TimeUnit;
  * <p/>
  * The RemoteTaskRunner will assign tasks to a node until the node hits capacity. At that point, task assignment will
  * fail. The RemoteTaskRunner depends on another component to create additional worker resources.
- * For example, {@link io.druid.indexing.overlord.autoscaling.ResourceManagementScheduler} can take care of these duties.
  * <p/>
  * If a worker node becomes inexplicably disconnected from Zk, the RemoteTaskRunner will fail any tasks associated with the
  * worker after waiting for RemoteTaskRunnerConfig.taskCleanupTimeout for the worker to show up.
@@ -149,6 +151,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
   private final ListeningScheduledExecutorService cleanupExec;
 
   private final ConcurrentMap<String, ScheduledFuture> removedWorkerCleanups = new ConcurrentHashMap<>();
+  private final ResourceManagementStrategy<RemoteTaskRunner> resourceManagement;
 
   public RemoteTaskRunner(
       ObjectMapper jsonMapper,
@@ -158,7 +161,8 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
       PathChildrenCacheFactory pathChildrenCacheFactory,
       HttpClient httpClient,
       Supplier<WorkerBehaviorConfig> workerConfigRef,
-      ScheduledExecutorService cleanupExec
+      ScheduledExecutorService cleanupExec,
+      ResourceManagementStrategy<RemoteTaskRunner> resourceManagement
   )
   {
     this.jsonMapper = jsonMapper;
@@ -171,6 +175,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     this.httpClient = httpClient;
     this.workerConfigRef = workerConfigRef;
     this.cleanupExec = MoreExecutors.listeningDecorator(cleanupExec);
+    this.resourceManagement = resourceManagement;
   }
 
   @LifecycleStart
@@ -283,6 +288,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
           waitingForMonitor.wait();
         }
       }
+      resourceManagement.startManagement(this);
       started = true;
     }
     catch (Exception e) {
@@ -298,6 +304,9 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
         return;
       }
       started = false;
+
+      resourceManagement.stopManagement();
+
       for (ZkWorker zkWorker : zkWorkers.values()) {
         zkWorker.close();
       }
@@ -314,7 +323,6 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     return ImmutableList.of();
   }
 
-  @Override
   public Collection<ZkWorker> getWorkers()
   {
     return ImmutableList.copyOf(zkWorkers.values());
@@ -337,6 +345,12 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
   {
     // Racey, since there is a period of time during assignment when a task is neither pending nor running
     return ImmutableList.copyOf(Iterables.concat(pendingTasks.values(), runningTasks.values(), completeTasks.values()));
+  }
+
+  @Override
+  public Optional<ScalingStats> getScalingStats()
+  {
+    return Optional.of(resourceManagement.getStats());
   }
 
   public ZkWorker findWorkerRunningTask(String taskId)

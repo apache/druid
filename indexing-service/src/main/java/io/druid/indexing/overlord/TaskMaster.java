@@ -22,8 +22,6 @@ package io.druid.indexing.overlord;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import com.metamx.common.concurrent.ScheduledExecutorFactory;
-import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
@@ -34,8 +32,7 @@ import io.druid.guice.annotations.Self;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.task.Task;
-import io.druid.indexing.overlord.autoscaling.ResourceManagementScheduler;
-import io.druid.indexing.overlord.autoscaling.ResourceManagementSchedulerFactory;
+import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.IndexerZkConfig;
@@ -64,7 +61,6 @@ public class TaskMaster
   private volatile boolean leading = false;
   private volatile TaskRunner taskRunner;
   private volatile TaskQueue taskQueue;
-  private volatile ResourceManagementScheduler resourceManagementScheduler;
 
   private static final EmittingLogger log = new EmittingLogger(TaskMaster.class);
 
@@ -77,7 +73,6 @@ public class TaskMaster
       @Self final DruidNode node,
       final IndexerZkConfig zkPaths,
       final TaskRunnerFactory runnerFactory,
-      final ResourceManagementSchedulerFactory managementSchedulerFactory,
       final CuratorFramework curator,
       final ServiceAnnouncer serviceAnnouncer,
       final ServiceEmitter emitter
@@ -118,14 +113,6 @@ public class TaskMaster
                    .emit();
               }
               leaderLifecycle.addManagedInstance(taskRunner);
-              if (taskRunner instanceof RemoteTaskRunner) {
-                final ScheduledExecutorFactory executorFactory = ScheduledExecutors.createFactory(leaderLifecycle);
-                resourceManagementScheduler = managementSchedulerFactory.build(
-                    (RemoteTaskRunner) taskRunner,
-                    executorFactory
-                );
-                leaderLifecycle.addManagedInstance(resourceManagementScheduler);
-              }
               leaderLifecycle.addManagedInstance(taskQueue);
               leaderLifecycle.addHandler(
                   new Lifecycle.Handler()
@@ -285,10 +272,10 @@ public class TaskMaster
     }
   }
 
-  public Optional<ResourceManagementScheduler> getResourceManagementScheduler()
+  public Optional<ScalingStats> getScalingStats()
   {
     if (leading) {
-      return Optional.fromNullable(resourceManagementScheduler);
+      return taskRunner.getScalingStats();
     } else {
       return Optional.absent();
     }

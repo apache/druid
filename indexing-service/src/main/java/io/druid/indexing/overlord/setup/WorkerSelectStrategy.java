@@ -48,7 +48,7 @@ public interface WorkerSelectStrategy
    *
    * @return A {@link io.druid.indexing.overlord.ImmutableZkWorker} to run the task if one is available.
    */
-  public Optional<ImmutableZkWorker> findWorkerForTask(
+  Optional<ImmutableZkWorker> findWorkerForTask(
       final RemoteTaskRunnerConfig config,
       final ImmutableMap<String, ImmutableZkWorker> zkWorkers,
       final Task task
