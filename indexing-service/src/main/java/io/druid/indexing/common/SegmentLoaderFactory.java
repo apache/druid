@@ -18,9 +18,9 @@
 package io.druid.indexing.common;
 
 import com.google.inject.Inject;
-import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.SegmentLoader;
 import io.druid.segment.loading.SegmentLoaderConfig;
+import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.StorageLocationConfig;
 
 import java.io.File;

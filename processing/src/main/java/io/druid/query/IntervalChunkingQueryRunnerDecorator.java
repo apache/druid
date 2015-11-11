@@ -19,12 +19,11 @@
 
 package io.druid.query;
 
+import com.google.inject.Inject;
+import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.guice.annotations.Processing;
 
 import java.util.concurrent.ExecutorService;
-
-import com.google.inject.Inject;
-import com.metamx.emitter.service.ServiceEmitter;
 
 public class IntervalChunkingQueryRunnerDecorator
 {

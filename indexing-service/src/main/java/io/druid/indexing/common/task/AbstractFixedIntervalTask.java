@@ -22,8 +22,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.druid.indexing.common.actions.LockTryAcquireAction;
 import io.druid.indexing.common.actions.TaskActionClient;
-import java.util.Map;
 import org.joda.time.Interval;
+
+import java.util.Map;
 
 public abstract class AbstractFixedIntervalTask extends AbstractTask
 {

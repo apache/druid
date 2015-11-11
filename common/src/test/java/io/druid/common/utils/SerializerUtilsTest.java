@@ -19,6 +19,7 @@
 
 package io.druid.common.utils;
 
+import io.druid.collections.IntList;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -32,8 +33,6 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.Charset;
-
-import io.druid.collections.IntList;
 
 public class SerializerUtilsTest
 {

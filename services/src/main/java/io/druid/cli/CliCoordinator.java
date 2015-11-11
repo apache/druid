@@ -25,8 +25,8 @@ import com.google.inject.Provides;
 import com.google.inject.name.Names;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.logger.Logger;
-
 import io.airlift.airline.Command;
+import io.druid.audit.AuditManager;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.guice.ConfigProvider;
 import io.druid.guice.Jerseys;
@@ -42,7 +42,6 @@ import io.druid.metadata.MetadataSegmentManagerConfig;
 import io.druid.metadata.MetadataSegmentManagerProvider;
 import io.druid.metadata.MetadataStorage;
 import io.druid.metadata.MetadataStorageProvider;
-import io.druid.audit.AuditManager;
 import io.druid.server.audit.AuditManagerProvider;
 import io.druid.server.coordinator.DruidCoordinator;
 import io.druid.server.coordinator.DruidCoordinatorConfig;
@@ -60,7 +59,6 @@ import io.druid.server.http.ServersResource;
 import io.druid.server.http.TiersResource;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.router.TieredBrokerConfig;
-
 import org.apache.curator.framework.CuratorFramework;
 import org.eclipse.jetty.server.Server;
 

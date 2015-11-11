@@ -45,7 +45,6 @@ import java.net.URI;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.zip.GZIPInputStream;
 
 /**
  * Builds firehoses that read from a predefined list of S3 objects and then dry up.

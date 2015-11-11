@@ -19,14 +19,10 @@
 
 package io.druid.common.utils;
 
+import com.metamx.common.ISE;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.metamx.common.ISE;
-
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Properties;
 
 public class PropUtilsTest

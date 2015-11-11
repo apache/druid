@@ -28,11 +28,11 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockListAction;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
-import java.util.Map;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.io.IOException;
+import java.util.Map;
 
 public abstract class AbstractTask implements Task
 {

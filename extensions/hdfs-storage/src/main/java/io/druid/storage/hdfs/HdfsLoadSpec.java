@@ -22,14 +22,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
-import com.metamx.common.ISE;
-import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.LoadSpec;
 import io.druid.segment.loading.SegmentLoadingException;
 import org.apache.hadoop.fs.Path;
 
 import java.io.File;
-import java.util.Map;
 
 /**
  *

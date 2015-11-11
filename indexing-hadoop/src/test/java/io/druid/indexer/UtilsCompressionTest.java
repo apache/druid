@@ -29,7 +29,6 @@ import org.apache.hadoop.mapred.JobContext;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.easymock.EasyMock;
-
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;

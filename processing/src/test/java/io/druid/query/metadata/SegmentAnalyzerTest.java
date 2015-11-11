@@ -17,11 +17,9 @@
 
 package io.druid.query.metadata;
 
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequences;
 import io.druid.query.LegacyDataSource;
-import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
@@ -34,7 +32,6 @@ import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
 import io.druid.segment.TestIndex;
 import io.druid.segment.column.ValueType;
-import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 

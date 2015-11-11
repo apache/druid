@@ -17,10 +17,9 @@
 
 package io.druid.indexer.partitions;
 
-import io.druid.jackson.DefaultObjectMapper;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
+import io.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 

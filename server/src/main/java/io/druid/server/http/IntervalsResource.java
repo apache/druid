@@ -23,11 +23,9 @@ import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.metamx.common.MapUtils;
 import com.metamx.common.guava.Comparators;
-
 import io.druid.client.DruidDataSource;
 import io.druid.client.InventoryView;
 import io.druid.timeline.DataSegment;
-
 import org.joda.time.Interval;
 
 import javax.ws.rs.GET;
@@ -37,7 +35,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;

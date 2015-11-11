@@ -19,7 +19,6 @@ package io.druid.storage.s3;
 
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
-import com.metamx.common.FileUtils;
 import com.metamx.common.RetryUtils;
 import io.druid.segment.loading.DataSegmentPusherUtil;
 import io.druid.timeline.DataSegment;

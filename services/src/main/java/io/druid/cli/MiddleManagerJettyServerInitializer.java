@@ -17,11 +17,10 @@
 
 package io.druid.cli;
 
-import io.druid.server.initialization.jetty.JettyServerInitUtils;
-import io.druid.server.initialization.jetty.JettyServerInitializer;
-
 import com.google.inject.Injector;
 import com.google.inject.servlet.GuiceFilter;
+import io.druid.server.initialization.jetty.JettyServerInitUtils;
+import io.druid.server.initialization.jetty.JettyServerInitializer;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.DefaultHandler;

@@ -24,6 +24,7 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
+
 import java.util.Map;
 
 /**

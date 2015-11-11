@@ -20,8 +20,6 @@ package io.druid.query.extraction;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Sets;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.query.extraction.ExtractionFn;
-import io.druid.query.extraction.RegexDimExtractionFn;
 import org.junit.Assert;
 import org.junit.Test;
 

@@ -19,9 +19,7 @@ package io.druid.query.search.search;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
@@ -32,7 +30,6 @@ import io.druid.query.filter.DimFilter;
 import io.druid.query.search.SearchResultValue;
 import io.druid.query.spec.QuerySegmentSpec;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 

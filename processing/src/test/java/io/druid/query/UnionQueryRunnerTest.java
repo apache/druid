@@ -23,11 +23,12 @@ import com.google.common.collect.Maps;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import junit.framework.Assert;
+import org.junit.Test;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import junit.framework.Assert;
-import org.junit.Test;
 
 public class UnionQueryRunnerTest
 {

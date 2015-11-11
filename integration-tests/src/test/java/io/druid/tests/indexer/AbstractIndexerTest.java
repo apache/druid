@@ -23,8 +23,8 @@ import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.testing.clients.CoordinatorResourceTestClient;
 import io.druid.testing.clients.OverlordResourceTestClient;
-import io.druid.testing.utils.TestQueryHelper;
 import io.druid.testing.utils.RetryUtil;
+import io.druid.testing.utils.TestQueryHelper;
 import org.apache.commons.io.IOUtils;
 import org.joda.time.Interval;
 

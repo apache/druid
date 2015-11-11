@@ -34,9 +34,9 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.Map;
 
+import static org.easymock.EasyMock.expect;
+import static org.easymock.EasyMock.expectLastCall;
 import static org.junit.Assert.assertEquals;
-
-import static org.easymock.EasyMock.*;
 
 public class AzureDataSegmentPusherTest extends EasyMockSupport
 {

@@ -43,11 +43,11 @@ import io.druid.indexing.common.actions.LockTryAcquireAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.hadoop.OverlordActionBasedUsedSegmentLister;
 import io.druid.timeline.DataSegment;
-import java.util.Map;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.util.List;
+import java.util.Map;
 import java.util.SortedSet;
 
 public class HadoopIndexTask extends HadoopTask

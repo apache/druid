@@ -19,13 +19,11 @@
 
 package io.druid.indexing.common.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.druid.jackson.DefaultObjectMapper;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import io.druid.jackson.DefaultObjectMapper;
 
 public class TaskStorageConfigTest
 {

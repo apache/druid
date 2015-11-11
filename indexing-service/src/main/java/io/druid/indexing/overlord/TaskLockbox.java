@@ -38,6 +38,10 @@ import com.metamx.emitter.EmittingLogger;
 import io.druid.common.utils.JodaUtils;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.task.Task;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
+
+import javax.annotation.Nullable;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -47,9 +51,6 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
-import javax.annotation.Nullable;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
 
 /**
  * Remembers which activeTasks have locked which intervals. Tasks are permitted to lock an interval if no other task

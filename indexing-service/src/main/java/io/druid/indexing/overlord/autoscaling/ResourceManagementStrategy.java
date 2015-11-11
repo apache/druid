@@ -18,10 +18,6 @@
 package io.druid.indexing.overlord.autoscaling;
 
 import io.druid.indexing.overlord.RemoteTaskRunner;
-import io.druid.indexing.overlord.RemoteTaskRunnerWorkItem;
-import io.druid.indexing.overlord.ZkWorker;
-
-import java.util.Collection;
 
 /**
  * The ResourceManagementStrategy decides if worker nodes should be provisioned or determined

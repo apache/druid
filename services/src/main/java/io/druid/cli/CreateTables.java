@@ -25,11 +25,11 @@ import com.google.inject.Module;
 import com.metamx.common.logger.Logger;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
+import io.druid.guice.JsonConfigProvider;
+import io.druid.guice.annotations.Self;
 import io.druid.metadata.MetadataStorageConnector;
 import io.druid.metadata.MetadataStorageConnectorConfig;
 import io.druid.metadata.MetadataStorageTablesConfig;
-import io.druid.guice.JsonConfigProvider;
-import io.druid.guice.annotations.Self;
 import io.druid.server.DruidNode;
 
 import java.util.List;

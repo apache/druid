@@ -20,18 +20,14 @@
 package io.druid.indexer;
 
 import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
-
 import com.google.common.io.ByteStreams;
 import com.metamx.common.ISE;
-
+import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapred.JobContext;
-
 import org.easymock.EasyMock;
 import org.hamcrest.core.Is;
 import org.junit.After;
@@ -42,8 +38,8 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
