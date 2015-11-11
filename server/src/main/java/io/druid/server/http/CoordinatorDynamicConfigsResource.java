@@ -21,7 +21,10 @@ import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
 import io.druid.common.config.JacksonConfigManager;
 import io.druid.server.coordinator.CoordinatorDynamicConfig;
+
 import org.joda.time.Interval;
+
+import com.google.common.collect.ImmutableMap;
 
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
@@ -90,10 +93,28 @@ public class CoordinatorDynamicConfigsResource
   @Path("/history")
   @Produces(MediaType.APPLICATION_JSON)
   public Response getDatasourceRuleHistory(
-      @QueryParam("interval") final String interval
+      @QueryParam("interval") final String interval,
+      @QueryParam("count") final Integer count
   )
   {
     Interval theInterval = interval == null ? null : new Interval(interval);
+    if (theInterval == null && count != null) {
+      try {
+        return Response.ok(
+            auditManager.fetchAuditHistory(
+                CoordinatorDynamicConfig.CONFIG_KEY,
+                CoordinatorDynamicConfig.CONFIG_KEY,
+                count
+            )
+        )
+                       .build();
+      }
+      catch (IllegalArgumentException e) {
+        return Response.status(Response.Status.BAD_REQUEST)
+                       .entity(ImmutableMap.<String, Object>of("error", e.getMessage()))
+                       .build();
+      }
+    }
     return Response.ok(
         auditManager.fetchAuditHistory(
             CoordinatorDynamicConfig.CONFIG_KEY,

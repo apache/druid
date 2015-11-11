@@ -22,16 +22,19 @@ import com.google.common.base.Supplier;
 import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+
 import io.druid.audit.AuditEntry;
 import io.druid.audit.AuditManager;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Json;
 import io.druid.metadata.MetadataStorageTablesConfig;
 import io.druid.metadata.SQLMetadataConnector;
+
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
+import org.skife.jdbi.v2.Query;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.tweak.ResultSetMapper;
@@ -40,6 +43,7 @@ import java.io.IOException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 
 @ManageLifecycle
 public class SQLAuditManager implements AuditManager
@@ -166,6 +170,14 @@ public class SQLAuditManager implements AuditManager
     return theInterval;
   }
 
+  private int getLimit(int limit) throws IllegalArgumentException
+  {
+    if (limit < 1) {
+      throw new IllegalArgumentException("Limit must be greater than zero!");
+    }
+    return limit;
+  }
+
   @Override
   public List<AuditEntry> fetchAuditHistory(final String type, Interval interval)
   {
@@ -205,6 +217,65 @@ public class SQLAuditManager implements AuditManager
           }
         }
     );
+  }
+
+  @Override
+  public List<AuditEntry> fetchAuditHistory(final String key, final String type, int limit)
+      throws IllegalArgumentException
+  {
+    return fetchAuditHistoryLastEntries(key, type, limit);
+  }
+
+  @Override
+  public List<AuditEntry> fetchAuditHistory(final String type, int limit)
+      throws IllegalArgumentException
+  {
+    return fetchAuditHistoryLastEntries(null, type, limit);
+  }
+
+  private List<AuditEntry> fetchAuditHistoryLastEntries(final String key, final String type, int limit)
+      throws IllegalArgumentException
+  {
+    final int theLimit = getLimit(limit);
+    String queryString = String.format("SELECT payload FROM %s WHERE type = :type", getAuditTable());
+    if (key != null) {
+      queryString += " and audit_key = :audit_key";
+    }
+    queryString += " ORDER BY created_date DESC";
+    final String theQueryString = queryString;
+
+    return dbi.withHandle(
+        new HandleCallback<List<AuditEntry>>()
+        {
+          @Override
+          public List<AuditEntry> withHandle(Handle handle) throws Exception
+          {
+            Query<Map<String, Object>> query = handle.createQuery(theQueryString);
+            if (key != null) {
+              query.bind("audit_key", key);
+            }
+            return query.bind("type", type)
+                        .setMaxRows(theLimit)
+                        .map(
+                            new ResultSetMapper<AuditEntry>()
+                            {
+                              @Override
+                              public AuditEntry map(int index, ResultSet r, StatementContext ctx)
+                                  throws SQLException
+                              {
+                                try {
+                                  return jsonMapper.readValue(r.getBytes("payload"), AuditEntry.class);
+                                }
+                                catch (IOException e) {
+                                  throw new SQLException(e);
+                                }
+                              }
+                            }
+                          )
+                          .list();
+          }
+        }
+        );
   }
 
 }
