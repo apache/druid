@@ -26,7 +26,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.primitives.Floats;
 import com.metamx.common.ISE;
 import com.metamx.common.parsers.ParseException;
 import io.druid.data.input.InputRow;
@@ -201,7 +200,7 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
       return false;
     }
     for (String dimVal : dimVals) {
-      if (Floats.tryParse(dimVal) == null) {
+      if (tryParseFloat(dimVal) == null) {
         return false;
       }
     }
@@ -215,10 +214,18 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
     }
     Iterable<String> dimVals = SPLITTER.split(dimVal);
     for (String val : dimVals) {
-      if (Floats.tryParse(val) == null) {
+      if (tryParseFloat(val) == null) {
         return false;
       }
     }
     return true;
+  }
+
+  private static Float tryParseFloat(String val) {
+    try {
+      return Float.parseFloat(val);
+    } catch (NullPointerException | NumberFormatException e) {
+      return null;
+    }
   }
 }
