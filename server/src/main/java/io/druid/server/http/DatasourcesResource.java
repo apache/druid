@@ -51,6 +51,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -498,47 +499,59 @@ public class DatasourcesResource
         "tiers", tiers,
         "segments", segments
     );
+    Set<String> totalDistinctSegments = Sets.newHashSet();
+    Map<String, HashSet<Object>> tierDistinctSegments = Maps.newHashMap();
 
-    int totalSegmentCount = 0;
     long totalSegmentSize = 0;
     long minTime = Long.MAX_VALUE;
     long maxTime = Long.MIN_VALUE;
+    String tier;
     for (DruidServer druidServer : serverInventoryView.getInventory()) {
       DruidDataSource druidDataSource = druidServer.getDataSource(dataSourceName);
+      tier = druidServer.getTier();
 
       if (druidDataSource == null) {
         continue;
       }
 
+      if (!tierDistinctSegments.containsKey(tier)) {
+        tierDistinctSegments.put(tier, Sets.newHashSet());
+      }
+
       long dataSourceSegmentSize = 0;
       for (DataSegment dataSegment : druidDataSource.getSegments()) {
-        dataSourceSegmentSize += dataSegment.getSize();
-        if (dataSegment.getInterval().getStartMillis() < minTime) {
-          minTime = dataSegment.getInterval().getStartMillis();
+        // tier segments stats
+        if (!tierDistinctSegments.get(tier).contains(dataSegment.getIdentifier())) {
+          dataSourceSegmentSize += dataSegment.getSize();
+          tierDistinctSegments.get(tier).add(dataSegment.getIdentifier());
         }
-        if (dataSegment.getInterval().getEndMillis() > maxTime) {
-          maxTime = dataSegment.getInterval().getEndMillis();
+        // total segments stats
+        if (!totalDistinctSegments.contains(dataSegment.getIdentifier())) {
+          totalSegmentSize += dataSegment.getSize();
+          totalDistinctSegments.add(dataSegment.getIdentifier());
+
+          if (dataSegment.getInterval().getStartMillis() < minTime) {
+            minTime = dataSegment.getInterval().getStartMillis();
+          }
+          if (dataSegment.getInterval().getEndMillis() > maxTime) {
+            maxTime = dataSegment.getInterval().getEndMillis();
+          }
         }
       }
 
-      // segment stats
-      totalSegmentCount += druidDataSource.getSegments().size();
-      totalSegmentSize += dataSourceSegmentSize;
-
       // tier stats
-      Map<String, Object> tierStats = (Map) tiers.get(druidServer.getTier());
+      Map<String, Object> tierStats = (Map) tiers.get(tier);
       if (tierStats == null) {
         tierStats = Maps.newHashMap();
         tiers.put(druidServer.getTier(), tierStats);
       }
-      int segmentCount = MapUtils.getInt(tierStats, "segmentCount", 0);
-      tierStats.put("segmentCount", segmentCount + druidDataSource.getSegments().size());
+      tierStats.put("segmentCount", tierDistinctSegments.get(tier).size());
 
       long segmentSize = MapUtils.getLong(tierStats, "size", 0L);
       tierStats.put("size", segmentSize + dataSourceSegmentSize);
     }
 
-    segments.put("count", totalSegmentCount);
+    segments.put("count", totalDistinctSegments.size());
     segments.put("size", totalSegmentSize);
     segments.put("minTime", new DateTime(minTime));
     segments.put("maxTime", new DateTime(maxTime));
