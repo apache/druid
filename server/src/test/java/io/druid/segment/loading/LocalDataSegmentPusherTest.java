@@ -20,74 +20,103 @@
 package io.druid.segment.loading;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.io.ByteStreams;
+import com.google.common.collect.ImmutableList;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
-import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
 
 public class LocalDataSegmentPusherTest
 {
-  DataSegment dataSegment;
+  @Rule
+  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  @Rule
+  public ExpectedException exception = ExpectedException.none();
+
   LocalDataSegmentPusher localDataSegmentPusher;
+  LocalDataSegmentPusherConfig config;
   File dataSegmentFiles;
-  File outDir;
+  DataSegment dataSegment = new DataSegment(
+      "ds",
+      new Interval(0, 1),
+      "v1",
+      null,
+      null,
+      null,
+      new NoneShardSpec(),
+      null,
+      -1
+  );
 
   @Before
   public void setUp() throws IOException
   {
-    dataSegment = new DataSegment(
-        "",
-        new Interval(0, 1),
-        "",
-        null,
-        null,
-        null,
-        new NoneShardSpec(),
-        null,
-        -1
-    );
-    localDataSegmentPusher = new LocalDataSegmentPusher(new LocalDataSegmentPusherConfig(), new ObjectMapper());
-    dataSegmentFiles = Files.createTempDir();
-    ByteStreams.write(
-        Ints.toByteArray(0x9),
-        Files.newOutputStreamSupplier(new File(dataSegmentFiles, "version.bin"))
-    );
+    config = new LocalDataSegmentPusherConfig();
+    config.storageDirectory = temporaryFolder.newFolder();
+    localDataSegmentPusher = new LocalDataSegmentPusher(config, new ObjectMapper());
+    dataSegmentFiles = temporaryFolder.newFolder();
+    Files.asByteSink(new File(dataSegmentFiles, "version.bin")).write(Ints.toByteArray(0x9));
   }
-
 
   @Test
   public void testPush() throws IOException
   {
-    /* DataSegment segment - Used to create LoadSpec and Create outDir (Local Deep Storage location in this case)
+    /* DataSegment - Used to create LoadSpec and Create outDir (Local Deep Storage location in this case)
        File dataSegmentFile - Used to get location of segment files like version.bin, meta.smoosh and xxxxx.smoosh
       */
-    DataSegment returnSegment = localDataSegmentPusher.push(dataSegmentFiles, dataSegment);
-    Assert.assertNotNull(returnSegment);
-    Assert.assertEquals(dataSegment, returnSegment);
-    outDir = new File(
-        new LocalDataSegmentPusherConfig().getStorageDirectory(),
-        DataSegmentPusherUtil.getStorageDir(returnSegment)
+    final DataSegment dataSegment2 = dataSegment.withVersion("v2");
+
+    DataSegment returnSegment1 = localDataSegmentPusher.push(dataSegmentFiles, dataSegment);
+    DataSegment returnSegment2 = localDataSegmentPusher.push(dataSegmentFiles, dataSegment2);
+
+    Assert.assertNotNull(returnSegment1);
+    Assert.assertEquals(dataSegment, returnSegment1);
+
+    Assert.assertNotNull(returnSegment2);
+    Assert.assertEquals(dataSegment2, returnSegment2);
+
+    Assert.assertNotEquals(
+        DataSegmentPusherUtil.getStorageDir(dataSegment),
+        DataSegmentPusherUtil.getStorageDir(dataSegment2)
     );
-    File versionFile = new File(outDir, "index.zip");
-    File descriptorJson = new File(outDir, "descriptor.json");
-    Assert.assertTrue(versionFile.exists());
-    Assert.assertTrue(descriptorJson.exists());
+
+    for (DataSegment returnSegment : ImmutableList.of(returnSegment1, returnSegment2)) {
+      File outDir = new File(
+          config.getStorageDirectory(),
+          DataSegmentPusherUtil.getStorageDir(returnSegment)
+      );
+      File versionFile = new File(outDir, "index.zip");
+      File descriptorJson = new File(outDir, "descriptor.json");
+      Assert.assertTrue(versionFile.exists());
+      Assert.assertTrue(descriptorJson.exists());
+    }
+  }
+
+  @Test
+  public void testPushCannotCreateDirectory() throws IOException
+  {
+    exception.expect(IOException.class);
+    exception.expectMessage("Cannot create directory");
+    config.storageDirectory = new File(config.storageDirectory, "xxx");
+    Assert.assertTrue(config.storageDirectory.mkdir());
+    config.storageDirectory.setWritable(false);
+    localDataSegmentPusher.push(dataSegmentFiles, dataSegment);
   }
 
   @Test
   public void testPathForHadoopAbsolute()
   {
-    LocalDataSegmentPusherConfig config = new LocalDataSegmentPusherConfig();
     config.storageDirectory = new File("/druid");
 
     Assert.assertEquals(
@@ -99,22 +128,11 @@ public class LocalDataSegmentPusherTest
   @Test
   public void testPathForHadoopRelative()
   {
-    LocalDataSegmentPusherConfig config = new LocalDataSegmentPusherConfig();
     config.storageDirectory = new File("druid");
 
     Assert.assertEquals(
         String.format("file:%s/druid/foo", System.getProperty("user.dir")),
         new LocalDataSegmentPusher(config, new ObjectMapper()).getPathForHadoop("foo")
     );
-  }
-
-  @After
-  public void tearDown() throws IOException
-  {
-    FileUtils.deleteDirectory(dataSegmentFiles);
-
-    if (outDir != null) {
-      FileUtils.deleteDirectory(outDir);
-    }
   }
 }
