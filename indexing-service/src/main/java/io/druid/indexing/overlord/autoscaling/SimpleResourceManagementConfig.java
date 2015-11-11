@@ -99,6 +99,7 @@ public class SimpleResourceManagementConfig
     return this;
   }
 
+  // Do not use this if possible. Assuming all workers will have the same port is bad for containers.
   public int getWorkerPort()
   {
     return workerPort;

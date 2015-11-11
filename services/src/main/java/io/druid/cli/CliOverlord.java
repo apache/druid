@@ -61,8 +61,6 @@ import io.druid.indexing.overlord.TaskRunnerFactory;
 import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.TaskStorageQueryAdapter;
 import io.druid.indexing.overlord.autoscaling.ResourceManagementSchedulerConfig;
-import io.druid.indexing.overlord.autoscaling.ResourceManagementSchedulerFactory;
-import io.druid.indexing.overlord.autoscaling.ResourceManagementSchedulerFactoryImpl;
 import io.druid.indexing.overlord.autoscaling.ResourceManagementStrategy;
 import io.druid.indexing.overlord.autoscaling.SimpleResourceManagementConfig;
 import io.druid.indexing.overlord.autoscaling.SimpleResourceManagementStrategy;
@@ -141,9 +139,6 @@ public class CliOverlord extends ServerRunnable
             binder.bind(TaskActionToolbox.class).in(LazySingleton.class);
             binder.bind(TaskLockbox.class).in(LazySingleton.class);
             binder.bind(TaskStorageQueryAdapter.class).in(LazySingleton.class);
-            binder.bind(ResourceManagementSchedulerFactory.class)
-                  .to(ResourceManagementSchedulerFactoryImpl.class)
-                  .in(LazySingleton.class);
 
             binder.bind(ChatHandlerProvider.class).toProvider(Providers.<ChatHandlerProvider>of(null));
 
