@@ -78,7 +78,9 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
       );
     }
 
-    outDir.mkdirs();
+    if (!outDir.mkdirs() && !outDir.isDirectory()) {
+      throw new IOException(String.format("Cannot create directory[%s]", outDir));
+    }
     File outFile = new File(outDir, "index.zip");
     log.info("Compressing files from[%s] to [%s]", dataSegmentFile, outFile);
     long size = CompressionUtils.zip(dataSegmentFile, outFile);
