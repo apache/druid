@@ -19,9 +19,6 @@
 
 package io.druid.server.initialization;
 
-import java.util.Collections;
-import java.util.List;
-
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
@@ -34,10 +31,12 @@ import com.google.inject.name.Names;
 import com.metamx.common.logger.Logger;
 import com.metamx.emitter.core.ComposingEmitter;
 import com.metamx.emitter.core.Emitter;
-
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.ManageLifecycle;
 import io.druid.initialization.DruidModule;
+
+import java.util.Collections;
+import java.util.List;
 
 /**
  */

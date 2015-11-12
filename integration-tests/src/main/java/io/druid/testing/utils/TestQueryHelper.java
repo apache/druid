@@ -24,8 +24,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
-import io.druid.testing.clients.QueryResourceTestClient;
 import io.druid.testing.IntegrationTestingConfig;
+import io.druid.testing.clients.QueryResourceTestClient;
 
 import java.util.List;
 import java.util.Map;

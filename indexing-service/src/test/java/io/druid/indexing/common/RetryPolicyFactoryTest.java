@@ -19,11 +19,10 @@
 
 package io.druid.indexing.common;
 
+import org.joda.time.Duration;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
-
-import org.joda.time.Duration;
 
 public class RetryPolicyFactoryTest
 {

@@ -19,8 +19,17 @@
 
 package io.druid.query;
 
+import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.metamx.common.guava.Sequence;
+import com.metamx.common.guava.Sequences;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
+import org.easymock.EasyMock;
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.util.Collections;
 import java.util.Map;
@@ -28,17 +37,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeoutException;
-
-import org.easymock.EasyMock;
-import org.junit.Assert;
-import org.junit.Test;
-
-import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.ListenableFuture;
-import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
 
 public class AsyncQueryRunnerTest
 {

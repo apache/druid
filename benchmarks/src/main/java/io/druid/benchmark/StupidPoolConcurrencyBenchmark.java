@@ -20,7 +20,6 @@
 package io.druid.benchmark;
 
 import com.google.common.base.Supplier;
-import com.google.common.io.Closer;
 import com.metamx.common.logger.Logger;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidPool;
@@ -28,13 +27,11 @@ import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Level;
 import org.openjdk.jmh.annotations.Mode;
-import org.openjdk.jmh.annotations.OperationsPerInvocation;
 import org.openjdk.jmh.annotations.OutputTimeUnit;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
-import org.openjdk.jmh.annotations.Threads;
 import org.openjdk.jmh.infra.Blackhole;
 
 import java.io.IOException;

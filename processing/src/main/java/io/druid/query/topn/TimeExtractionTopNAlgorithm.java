@@ -21,12 +21,9 @@ package io.druid.query.topn;
 
 import com.google.common.collect.Maps;
 import io.druid.query.aggregation.Aggregator;
-import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.LongColumnSelector;
-import io.druid.segment.column.Column;
 
 import java.util.Map;
 

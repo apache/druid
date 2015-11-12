@@ -20,7 +20,6 @@
 package io.druid.server.initialization;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-
 import io.druid.query.extraction.namespace.ExtractionNamespace;
 
 import java.util.Arrays;

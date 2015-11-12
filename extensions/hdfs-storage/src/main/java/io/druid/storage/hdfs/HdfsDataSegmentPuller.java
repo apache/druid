@@ -32,12 +32,10 @@ import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.loading.URIDataPuller;
 import io.druid.timeline.DataSegment;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
 
 import javax.tools.FileObject;
@@ -50,7 +48,6 @@ import java.io.Writer;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.concurrent.Callable;
-import java.util.regex.Pattern;
 
 /**
  */

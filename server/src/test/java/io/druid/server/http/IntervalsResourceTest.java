@@ -20,11 +20,9 @@
 package io.druid.server.http;
 
 import com.google.common.collect.ImmutableList;
-
 import io.druid.client.DruidServer;
 import io.druid.client.InventoryView;
 import io.druid.timeline.DataSegment;
-
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -32,7 +30,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.ws.rs.core.Response;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;

@@ -23,7 +23,6 @@ import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import io.druid.granularity.PeriodGranularity;
 import io.druid.indexing.overlord.RemoteTaskRunner;
-import io.druid.indexing.overlord.TaskRunner;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Period;

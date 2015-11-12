@@ -17,43 +17,15 @@
 
 package io.druid.storage.s3;
 
-import com.amazonaws.AmazonClientException;
-import com.amazonaws.services.elasticbeanstalk.model.S3LocationNotInServiceRegionException;
-import com.amazonaws.services.s3.AmazonS3URI;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
-import com.metamx.common.CompressionUtils;
-import com.metamx.common.FileUtils;
-import com.metamx.common.IAE;
-import com.metamx.common.ISE;
-import com.metamx.common.RetryUtils;
-import com.metamx.common.StreamUtils;
-import com.metamx.common.logger.Logger;
-import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.LoadSpec;
 import io.druid.segment.loading.SegmentLoadingException;
-import org.jets3t.service.S3ServiceException;
-import org.jets3t.service.ServiceException;
 
-import javax.swing.text.Segment;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  *

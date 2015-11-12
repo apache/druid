@@ -21,16 +21,13 @@ package io.druid.testing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
-import java.io.FileNotFoundException;
-import java.io.File;
-import java.io.IOException;
-
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-
-import java.util.Map;
 import com.metamx.common.logger.Logger;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.Map;
 
 public class ConfigFileConfigProvider implements IntegrationTestingConfigProvider
 {

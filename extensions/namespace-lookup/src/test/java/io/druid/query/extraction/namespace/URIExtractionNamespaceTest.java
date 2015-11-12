@@ -21,13 +21,13 @@ package io.druid.query.extraction.namespace;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.introspect.AnnotationIntrospectorPair;
-import io.druid.guice.GuiceAnnotationIntrospector;
-import io.druid.guice.GuiceInjectableValues;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Module;
+import io.druid.guice.GuiceAnnotationIntrospector;
+import io.druid.guice.GuiceInjectableValues;
 import io.druid.guice.annotations.Json;
 import io.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;

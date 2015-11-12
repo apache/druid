@@ -19,13 +19,13 @@ package io.druid.storage.azure;
 
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
+import com.metamx.common.CompressionUtils;
 import com.metamx.common.ISE;
 import com.metamx.common.MapUtils;
 import com.metamx.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
-import com.metamx.common.CompressionUtils;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;

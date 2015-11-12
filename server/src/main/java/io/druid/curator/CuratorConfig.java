@@ -18,6 +18,7 @@
 package io.druid.curator;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+
 import javax.validation.constraints.Min;
 
 /**

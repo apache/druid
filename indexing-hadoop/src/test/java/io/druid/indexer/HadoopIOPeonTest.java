@@ -20,16 +20,15 @@
 package io.druid.indexer;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.mapred.JobContext;
 import org.apache.hadoop.fs.Path;
-
+import org.apache.hadoop.mapred.JobContext;
+import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Test;
 import org.junit.Rule;
+import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
-import org.easymock.EasyMock;
 
 import java.io.IOException;
 public class HadoopIOPeonTest

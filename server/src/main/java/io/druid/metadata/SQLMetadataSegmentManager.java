@@ -29,7 +29,6 @@ import com.google.inject.Inject;
 import com.metamx.common.MapUtils;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.common.logger.Logger;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.client.DruidDataSource;
 import io.druid.concurrent.Execs;

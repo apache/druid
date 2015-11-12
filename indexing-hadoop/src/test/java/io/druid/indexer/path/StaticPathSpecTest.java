@@ -19,13 +19,11 @@
 
 package io.druid.indexer.path;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.jackson.DefaultObjectMapper;
-
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.junit.Assert;
 import org.junit.Test;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class StaticPathSpecTest
 {

@@ -17,10 +17,10 @@
 
 package io.druid.collections;
 
-import java.nio.IntBuffer;
-
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.nio.IntBuffer;
 
 /**
  */

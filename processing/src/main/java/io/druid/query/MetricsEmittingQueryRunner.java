@@ -19,7 +19,6 @@ package io.druid.query;
 
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.Sequence;
@@ -29,7 +28,6 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 
 /**

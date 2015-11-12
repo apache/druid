@@ -46,7 +46,17 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import static io.druid.query.QueryRunnerTestHelper.*;
+import static io.druid.query.QueryRunnerTestHelper.NOOP_QUERYWATCHER;
+import static io.druid.query.QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator;
+import static io.druid.query.QueryRunnerTestHelper.allGran;
+import static io.druid.query.QueryRunnerTestHelper.dataSource;
+import static io.druid.query.QueryRunnerTestHelper.fullOnInterval;
+import static io.druid.query.QueryRunnerTestHelper.makeQueryRunner;
+import static io.druid.query.QueryRunnerTestHelper.marketDimension;
+import static io.druid.query.QueryRunnerTestHelper.placementDimension;
+import static io.druid.query.QueryRunnerTestHelper.placementishDimension;
+import static io.druid.query.QueryRunnerTestHelper.qualityDimension;
+import static io.druid.query.QueryRunnerTestHelper.transformToConstructionFeeder;
 
 /**
  */

@@ -20,7 +20,6 @@
 package io.druid.collections;
 
 import com.google.common.collect.ImmutableMap;
-
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;

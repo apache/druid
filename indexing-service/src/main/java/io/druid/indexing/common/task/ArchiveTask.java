@@ -28,10 +28,10 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentListUnusedAction;
 import io.druid.indexing.common.actions.SegmentMetadataUpdateAction;
 import io.druid.timeline.DataSegment;
-import java.util.Map;
 import org.joda.time.Interval;
 
 import java.util.List;
+import java.util.Map;
 
 public class ArchiveTask extends AbstractFixedIntervalTask
 {

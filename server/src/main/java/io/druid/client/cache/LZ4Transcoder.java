@@ -19,7 +19,6 @@ package io.druid.client.cache;
 
 import com.google.common.primitives.Ints;
 import net.jpountz.lz4.LZ4Compressor;
-import net.jpountz.lz4.LZ4Decompressor;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4FastDecompressor;
 import net.spy.memcached.transcoders.SerializingTranscoder;

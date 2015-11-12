@@ -19,7 +19,6 @@ package io.druid.indexing.overlord.http;
 
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import com.metamx.common.IAE;
 import io.druid.indexing.overlord.TaskMaster;
 import io.druid.server.http.RedirectInfo;
 

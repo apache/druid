@@ -19,11 +19,9 @@
 
 package io.druid.indexer.path;
 
-import io.druid.jackson.DefaultObjectMapper;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.metamx.common.Granularity;
-
+import io.druid.jackson.DefaultObjectMapper;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.junit.After;
 import org.junit.Assert;

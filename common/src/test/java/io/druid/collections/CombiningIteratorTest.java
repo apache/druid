@@ -20,13 +20,11 @@
 package io.druid.collections;
 
 import com.google.common.collect.PeekingIterator;
-
 import com.metamx.common.guava.nary.BinaryFn;
-
+import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
-import org.easymock.EasyMock;
 import org.junit.Test;
 
 import java.util.Comparator;

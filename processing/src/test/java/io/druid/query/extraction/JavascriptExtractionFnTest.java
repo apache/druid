@@ -21,8 +21,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.query.extraction.ExtractionFn;
-import io.druid.query.extraction.JavascriptExtractionFn;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
