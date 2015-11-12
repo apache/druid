@@ -90,3 +90,9 @@ http://<COORDINATOR_IP>:<PORT>/druid/coordinator/v1/config/history?interval=<int
 ```
 
 default value of interval can be specified by setting `druid.audit.manager.auditHistoryMillis` (1 week if not configured) in coordinator runtime.properties
+
+To view last <n> entries of the audit history of coordinator dynamic config issue a GET request to the URL -
+
+```
+http://<COORDINATOR_IP>:<PORT>/druid/coordinator/v1/config/history?count=<n>
+```

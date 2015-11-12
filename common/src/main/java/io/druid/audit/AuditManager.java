@@ -62,4 +62,21 @@ public interface AuditManager
    */
   public List<AuditEntry> fetchAuditHistory(String type, Interval interval);
 
+  /**
+   * Provides last N entries of audit history for given key, type
+   * @param key
+   * @param type
+   * @param limit
+   * @return list of AuditEntries satisfying the passed parameters
+   */
+  public List<AuditEntry> fetchAuditHistory(String key, String type, int limit);
+
+  /**
+   * Provides last N entries of audit history for given type
+   * @param type type of auditEntry
+   * @param limit
+   * @return list of AuditEntries satisfying the passed parameters
+   */
+  public List<AuditEntry> fetchAuditHistory(String type, int limit);
+
 }
