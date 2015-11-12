@@ -15,36 +15,18 @@
  * limitations under the License.
  */
 
-package io.druid.segment;
+package io.druid.segment.column;
 
-import io.druid.segment.column.BitmapIndexSeeker;
-import io.druid.segment.column.ColumnCapabilities;
-import io.druid.segment.data.Indexed;
+import io.druid.segment.data.EmptyIndexedInts;
 import io.druid.segment.data.IndexedInts;
-import org.joda.time.Interval;
 
-/**
- * An adapter to an index
- */
-public interface IndexableAdapter
+public class EmptyBitmapIndexSeeker implements BitmapIndexSeeker
 {
-  Interval getDataInterval();
 
-  int getNumRows();
+  @Override
+  public IndexedInts seek(String value)
+  {
+    return new EmptyIndexedInts();
+  }
 
-  Indexed<String> getDimensionNames();
-
-  Indexed<String> getMetricNames();
-
-  Indexed<String> getDimValueLookup(String dimension);
-
-  Iterable<Rowboat> getRows();
-
-  IndexedInts getBitmapIndex(String dimension, String value);
-
-  BitmapIndexSeeker getBitmapIndexSeeker(String dimension);
-
-  String getMetricType(String metric);
-
-  ColumnCapabilities getCapabilities(String column);
 }
