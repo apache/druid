@@ -20,6 +20,7 @@
 package io.druid.segment.incremental;
 
 import com.google.common.base.Function;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.MutableBitmap;
@@ -167,9 +168,13 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   @Override
   public Iterable<Rowboat> getRows()
   {
-    return FunctionalIterable
-        .create(index.getFacts().entrySet())
-        .transform(
+    return new Iterable<Rowboat>()
+    {
+      @Override
+      public Iterator<Rowboat> iterator()
+      {
+        return (Iterators.transform(
+            index.getFacts().entrySet().iterator(),
             new Function<Map.Entry<IncrementalIndex.TimeAndDims, Integer>, Rowboat>()
             {
               int count = 0;
@@ -217,7 +222,9 @@ public class IncrementalIndexAdapter implements IndexableAdapter
                 );
               }
             }
-        );
+        ));
+      }
+    };
   }
 
   @Override
