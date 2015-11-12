@@ -105,6 +105,8 @@
         <module>extensions/namespace-lookup</module>
         <module>extensions/kafka-extraction-namespace</module>
         <module>extensions/cloudfiles-extensions</module>
+        <module>extensions/datasketches</module>
+
         <!-- distribution packaging -->
         <module>distribution</module>
 
