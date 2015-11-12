@@ -17,7 +17,6 @@
 
 package io.druid.indexing.overlord;
 
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -42,7 +41,6 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.SegmentDescriptor;
-import io.druid.query.UnionQueryRunner;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.Interval;
 

@@ -19,20 +19,6 @@
 
 package io.druid.initialization;
 
-import io.druid.guice.DruidGuiceExtensions;
-import io.druid.guice.LifecycleModule;
-
-import java.util.Properties;
-
-import javax.validation.Validation;
-import javax.validation.Validator;
-
-import io.druid.server.initialization.ComposingEmitterConfig;
-import io.druid.server.initialization.ComposingEmitterModule;
-import org.easymock.EasyMock;
-import org.junit.Before;
-import org.junit.Test;
-
 import com.google.common.collect.Lists;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
@@ -41,6 +27,17 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
 import com.metamx.emitter.core.Emitter;
+import io.druid.guice.DruidGuiceExtensions;
+import io.druid.guice.LifecycleModule;
+import io.druid.server.initialization.ComposingEmitterConfig;
+import io.druid.server.initialization.ComposingEmitterModule;
+import org.easymock.EasyMock;
+import org.junit.Before;
+import org.junit.Test;
+
+import javax.validation.Validation;
+import javax.validation.Validator;
+import java.util.Properties;
 
 /**
  */

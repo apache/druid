@@ -21,10 +21,8 @@ package io.druid.collections;
 
 import com.google.common.base.Supplier;
 import com.metamx.common.ISE;
-
 import org.easymock.EasyMock;
 import org.hamcrest.core.IsInstanceOf;
-import org.hamcrest.core.IsNull;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;

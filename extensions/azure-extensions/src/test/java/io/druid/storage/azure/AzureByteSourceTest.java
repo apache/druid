@@ -25,7 +25,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URISyntaxException;
 
-import static org.easymock.EasyMock.*;
+import static org.easymock.EasyMock.expect;
 
 public class AzureByteSourceTest extends EasyMockSupport
 {

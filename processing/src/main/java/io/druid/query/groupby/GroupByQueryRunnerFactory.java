@@ -48,7 +48,6 @@ import io.druid.segment.StorageAdapter;
 import io.druid.segment.incremental.IncrementalIndex;
 
 import java.nio.ByteBuffer;
-import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.CancellationException;

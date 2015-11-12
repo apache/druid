@@ -30,8 +30,8 @@ import java.util.Map;
  */
 public interface Cache
 {
-  public byte[] get(NamedKey key);
-  public void put(NamedKey key, byte[] value);
+  byte[] get(NamedKey key);
+  void put(NamedKey key, byte[] value);
 
   /**
    * Resulting map should not contain any null values (i.e. cache misses should not be included)
@@ -39,21 +39,21 @@ public interface Cache
    * @param keys
    * @return
    */
-  public Map<NamedKey, byte[]> getBulk(Iterable<NamedKey> keys);
+  Map<NamedKey, byte[]> getBulk(Iterable<NamedKey> keys);
 
-  public void close(String namespace);
+  void close(String namespace);
 
-  public CacheStats getStats();
+  CacheStats getStats();
 
-  public boolean isLocal();
+  boolean isLocal();
 
   /**
    * Custom metrics not covered by CacheStats may be emitted by this method.
    * @param emitter The service emitter to emit on.
    */
-  public void doMonitor(ServiceEmitter emitter);
+  void doMonitor(ServiceEmitter emitter);
 
-  public class NamedKey
+  class NamedKey
   {
     final public String namespace;
     final public byte[] key;

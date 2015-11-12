@@ -16,7 +16,6 @@
  */
 package io.druid.metadata;
 
-import com.google.common.base.Suppliers;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;

@@ -23,14 +23,14 @@ import com.google.common.collect.Maps;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
-import java.util.Arrays;
-import java.util.PriorityQueue;
 import org.joda.time.DateTime;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.PriorityQueue;
 
 /**
  */

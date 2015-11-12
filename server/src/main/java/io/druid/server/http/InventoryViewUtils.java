@@ -19,6 +19,10 @@
 
 package io.druid.server.http;
 
+import com.google.common.base.Function;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.InventoryView;
@@ -26,11 +30,6 @@ import io.druid.client.InventoryView;
 import java.util.Comparator;
 import java.util.Set;
 import java.util.TreeSet;
-
-import com.google.common.base.Function;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 
 public class InventoryViewUtils {
 

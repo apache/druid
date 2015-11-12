@@ -22,7 +22,6 @@ package io.druid.segment;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.segment.data.CompressedObjectStrategy;
-import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.junit.Assert;
 import org.junit.Test;

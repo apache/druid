@@ -30,7 +30,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.metamx.common.Pair;
-import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.http.client.HttpClient;
 import io.druid.client.selector.HighestPriorityTierSelectorStrategy;
 import io.druid.client.selector.RandomServerSelectorStrategy;

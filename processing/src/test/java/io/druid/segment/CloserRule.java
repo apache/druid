@@ -24,7 +24,6 @@ import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
 
-import java.io.Closeable;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;

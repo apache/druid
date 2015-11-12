@@ -17,10 +17,11 @@
 
 package io.druid.tests.indexer;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
-import com.metamx.common.logger.Logger;
 import com.metamx.common.ISE;
+import com.metamx.common.logger.Logger;
 import com.metamx.http.client.HttpClient;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
@@ -30,6 +31,7 @@ import io.druid.testing.clients.EventReceiverFirehoseTestClient;
 import io.druid.testing.guice.DruidTestModuleFactory;
 import io.druid.testing.utils.RetryUtil;
 import io.druid.testing.utils.ServerDiscoveryUtil;
+import org.apache.commons.io.IOUtils;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
@@ -38,20 +40,12 @@ import org.testng.annotations.Guice;
 import org.testng.annotations.Test;
 
 import javax.ws.rs.core.MediaType;
-
-import org.apache.commons.io.IOUtils;
-
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-
-import com.fasterxml.jackson.core.type.TypeReference;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
-
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 

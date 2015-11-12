@@ -30,7 +30,6 @@ import io.druid.firehose.azure.StaticAzureBlobStoreFirehoseFactory;
 import io.druid.guice.Binders;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
-import io.druid.guice.annotations.Json;
 import io.druid.initialization.DruidModule;
 
 import java.net.URISyntaxException;

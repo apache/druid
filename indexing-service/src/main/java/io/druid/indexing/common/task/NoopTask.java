@@ -26,9 +26,9 @@ import io.druid.data.input.FirehoseFactory;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.TaskActionClient;
-import java.util.Map;
 import org.joda.time.DateTime;
 
+import java.util.Map;
 import java.util.UUID;
 
 /**

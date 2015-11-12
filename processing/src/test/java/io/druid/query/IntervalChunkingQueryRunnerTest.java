@@ -19,21 +19,19 @@
 
 package io.druid.query;
 
-import io.druid.query.Druids.TimeseriesQueryBuilder;
-import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.CountAggregatorFactory;
-
-import java.util.Collections;
-import java.util.concurrent.ExecutorService;
-
-import org.easymock.EasyMock;
-import org.junit.Before;
-import org.junit.Test;
-
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.query.Druids.TimeseriesQueryBuilder;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.CountAggregatorFactory;
+import org.easymock.EasyMock;
+import org.junit.Before;
+import org.junit.Test;
+
+import java.util.Collections;
+import java.util.concurrent.ExecutorService;
 
 public class IntervalChunkingQueryRunnerTest
 {

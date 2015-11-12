@@ -18,8 +18,6 @@
 package io.druid.query.extraction;
 
 import com.google.common.collect.Sets;
-import io.druid.query.extraction.ExtractionFn;
-import io.druid.query.extraction.SearchQuerySpecDimExtractionFn;
 import io.druid.query.search.search.FragmentSearchQuerySpec;
 import io.druid.query.search.search.SearchQuerySpec;
 import org.junit.Assert;

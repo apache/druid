@@ -20,7 +20,6 @@
 package io.druid.cli.validate;
 
 import io.airlift.airline.Cli;
-
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
