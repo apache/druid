@@ -169,6 +169,12 @@ http://<OVERLORD_IP>:<port>/druid/indexer/v1/worker/history?interval=<interval>
 
 default value of interval can be specified by setting `druid.audit.manager.auditHistoryMillis` (1 week if not configured) in overlord runtime.properties.
 
+To view last <n> entries of the audit history of worker config issue a GET request to the URL -
+
+```
+http://<OVERLORD_IP>:<port>/druid/indexer/v1/worker/history?count=<n>
+```
+
 #### Worker Select Strategy
 
 ##### Fill Capacity

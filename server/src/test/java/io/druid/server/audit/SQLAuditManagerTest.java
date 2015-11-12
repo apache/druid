@@ -47,7 +47,6 @@ public class SQLAuditManagerTest
 
   private final ObjectMapper mapper = new DefaultObjectMapper();
 
-
   @Before
   public void setUp() throws Exception
   {
@@ -135,6 +134,102 @@ public class SQLAuditManagerTest
     Assert.assertEquals(entry, auditEntries.get(1));
   }
 
+  @Test
+  public void testFetchAuditHistoryByKeyAndTypeWithLimit() throws IOException
+  {
+    AuditEntry entry1 = new AuditEntry(
+        "testKey1",
+        "testType",
+        new AuditInfo(
+            "testAuthor",
+            "testComment",
+            "127.0.0.1"
+        ),
+        "testPayload",
+        new DateTime("2013-01-01T00:00:00Z")
+    );
+    AuditEntry entry2 = new AuditEntry(
+        "testKey2",
+        "testType",
+        new AuditInfo(
+            "testAuthor",
+            "testComment",
+            "127.0.0.1"
+        ),
+        "testPayload",
+        new DateTime("2013-01-02T00:00:00Z")
+    );
+    auditManager.doAudit(entry1);
+    auditManager.doAudit(entry2);
+    List<AuditEntry> auditEntries = auditManager.fetchAuditHistory(
+        "testKey1",
+        "testType",
+        1
+    );
+    Assert.assertEquals(1, auditEntries.size());
+    Assert.assertEquals(entry1, auditEntries.get(0));
+  }
+
+  @Test
+  public void testFetchAuditHistoryByTypeWithLimit() throws IOException
+  {
+    AuditEntry entry1 = new AuditEntry(
+        "testKey",
+        "testType",
+        new AuditInfo(
+            "testAuthor",
+            "testComment",
+            "127.0.0.1"
+        ),
+        "testPayload",
+        new DateTime("2013-01-01T00:00:00Z")
+    );
+    AuditEntry entry2 = new AuditEntry(
+        "testKey",
+        "testType",
+        new AuditInfo(
+            "testAuthor",
+            "testComment",
+            "127.0.0.1"
+        ),
+        "testPayload",
+        new DateTime("2013-01-02T00:00:00Z")
+    );
+    AuditEntry entry3 = new AuditEntry(
+        "testKey",
+        "testType",
+        new AuditInfo(
+            "testAuthor",
+            "testComment",
+            "127.0.0.1"
+        ),
+        "testPayload",
+        new DateTime("2013-01-03T00:00:00Z")
+    );
+    auditManager.doAudit(entry1);
+    auditManager.doAudit(entry2);
+    auditManager.doAudit(entry3);
+    List<AuditEntry> auditEntries = auditManager.fetchAuditHistory(
+        "testType",
+        2
+    );
+    Assert.assertEquals(2, auditEntries.size());
+    Assert.assertEquals(entry3, auditEntries.get(0));
+    Assert.assertEquals(entry2, auditEntries.get(1));
+  }
+
+  @Test(expected=IllegalArgumentException.class)
+  public void testFetchAuditHistoryLimitBelowZero() throws IOException
+  {
+    auditManager.fetchAuditHistory("testType", -1);
+  }
+
+  @Test(expected=IllegalArgumentException.class)
+  public void testFetchAuditHistoryLimitZero() throws IOException
+  {
+    auditManager.fetchAuditHistory("testType", 0);
+  }
+
   @After
   public void cleanup()
   {
@@ -156,6 +251,4 @@ public class SQLAuditManagerTest
         }
     );
   }
-
-
 }
