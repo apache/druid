@@ -20,12 +20,11 @@
 package io.druid.segment.incremental;
 
 import com.google.common.base.Function;
+import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.metamx.collections.bitmap.BitmapFactory;
-import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.bitmap.MutableBitmap;
 import com.metamx.common.ISE;
-import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
 
 import io.druid.segment.IndexableAdapter;
@@ -175,9 +174,18 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   @Override
   public Iterable<Rowboat> getRows()
   {
-    return FunctionalIterable
-        .create(index.getFacts().entrySet())
-        .transform(
+    return new Iterable<Rowboat>()
+    {
+      @Override
+      public Iterator<Rowboat> iterator()
+      {
+        /*
+         * Note that the transform function increments a counter to determine the rowNum of
+         * the iterated Rowboats. We need to return a new iterator on each
+         * iterator() call to ensure the counter starts at 0.
+         */
+        return (Iterators.transform(
+            index.getFacts().entrySet().iterator(),
             new Function<Map.Entry<IncrementalIndex.TimeAndDims, Integer>, Rowboat>()
             {
               int count = 0;
@@ -225,7 +233,9 @@ public class IncrementalIndexAdapter implements IndexableAdapter
                 );
               }
             }
-        );
+        ));
+      }
+    };
   }
 
   @Override
