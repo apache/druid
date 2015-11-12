@@ -27,10 +27,12 @@ import com.metamx.common.ISE;
 import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.logger.Logger;
 import io.druid.segment.column.BitmapIndex;
+import io.druid.segment.column.BitmapIndexSeeker;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ComplexColumn;
 import io.druid.segment.column.DictionaryEncodedColumn;
+import io.druid.segment.column.EmptyBitmapIndexSeeker;
 import io.druid.segment.column.GenericColumn;
 import io.druid.segment.column.IndexedFloatsGenericColumn;
 import io.druid.segment.column.IndexedLongsGenericColumn;
@@ -38,6 +40,7 @@ import io.druid.segment.column.ValueType;
 import io.druid.segment.data.ArrayBasedIndexedInts;
 import io.druid.segment.data.BitmapCompressedIndexedInts;
 import io.druid.segment.data.EmptyIndexedInts;
+import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIterable;
@@ -330,5 +333,77 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   public ColumnCapabilities getCapabilities(String column)
   {
     return input.getColumn(column).getCapabilities();
+  }
+
+  @Override
+  public BitmapIndexSeeker getBitmapIndexSeeker(String dimension)
+  {
+    final Column column = input.getColumn(dimension);
+
+    if (column == null) {
+      return new EmptyBitmapIndexSeeker();
+    }
+
+    final BitmapIndex bitmaps = column.getBitmapIndex();
+    if (bitmaps == null) {
+      return new EmptyBitmapIndexSeeker();
+    }
+
+    final Indexed<String> dimSet = getDimValueLookup(dimension);
+
+    // BitmapIndexSeeker is the main performance boost comes from.
+    // In the previous version of index merge, during the creation of invert index, we do something like
+    // merge sort of multiply bitmap indexes. It simply iterator all the previous sorted values,
+    // and "binary find" the id in each bitmap indexes,  which involves disk IO and is really slow.
+    // Suppose we have N (which is 100 in our test) small segments,  each have M (which is 50000 in our case) rows.
+    // In high cardinality scenario, we will almost have N * M uniq values. So the complexity will be O(N * M * M * LOG(M)).
+
+    // There are 2 properties we did not use during the merging:
+    // 1. We always travel the dimension values sequentially
+    // 2. One single dimension value is valid only in one index when cardinality is high enough
+    // So we introduced the BitmapIndexSeeker, which can only seek value sequentially and can never seek back.
+    // By using this and the help of "getDimValueLookup", we only need to translate all dimension value to its ID once,
+    // and the translation is done by self-increase of the integer. We only need to change the CACHED value once after
+    // previous value is hit, renew the value and increase the ID. The complexity now is O(N * M * LOG(M)).
+    return new BitmapIndexSeeker()
+    {
+      private int currIndex = 0;
+      private String currVal = null;
+      private String lastVal = null;
+
+      @Override
+      public IndexedInts seek(String value)
+      {
+        if (dimSet == null || dimSet.size() == 0) {
+          return new EmptyIndexedInts();
+        }
+        if (lastVal != null) {
+          if (GenericIndexed.STRING_STRATEGY.compare(value, lastVal) <= 0) {
+            throw new ISE("Value[%s] is less than the last value[%s] I have, cannot be.",
+                value, lastVal);
+          }
+          return new EmptyIndexedInts();
+        }
+        if (currVal == null) {
+          currVal = dimSet.get(currIndex);
+        }
+        int compareResult = GenericIndexed.STRING_STRATEGY.compare(currVal, value);
+        if (compareResult == 0) {
+          IndexedInts ret = new BitmapCompressedIndexedInts(bitmaps.getBitmap(currIndex));
+          ++currIndex;
+          if (currIndex == dimSet.size()) {
+            lastVal = value;
+          } else {
+            currVal = dimSet.get(currIndex);
+          }
+          return ret;
+        } else if (compareResult < 0) {
+          throw new ISE("Skipped currValue[%s], currIndex[%,d]; incoming value[%s]",
+              currVal, currIndex, value);
+        } else {
+          return new EmptyIndexedInts();
+        }
+      }
+    };
   }
 }

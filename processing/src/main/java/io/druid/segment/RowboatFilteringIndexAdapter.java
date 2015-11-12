@@ -21,6 +21,7 @@ package io.druid.segment;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
+import io.druid.segment.column.BitmapIndexSeeker;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
@@ -91,5 +92,11 @@ public class RowboatFilteringIndexAdapter implements IndexableAdapter
   public ColumnCapabilities getCapabilities(String column)
   {
     return baseAdapter.getCapabilities(column);
+  }
+
+  @Override
+  public BitmapIndexSeeker getBitmapIndexSeeker(String dimension)
+  {
+    return baseAdapter.getBitmapIndexSeeker(dimension);
   }
 }
