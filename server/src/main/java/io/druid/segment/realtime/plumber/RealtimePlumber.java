@@ -47,6 +47,7 @@ import io.druid.concurrent.Execs;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.query.MetricsEmittingQueryRunner;
+import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
@@ -129,6 +130,8 @@ public class RealtimePlumber implements Plumber
 
   private static final String COMMIT_METADATA_KEY = "%commitMetadata%";
   private static final String COMMIT_METADATA_TIMESTAMP_KEY = "%commitMetadataTimestamp%";
+  private static final String SKIP_INCREMENTAL_SEGMENT = "skipIncrementalSegment";
+
 
   public RealtimePlumber(
       DataSchema schema,
@@ -248,6 +251,7 @@ public class RealtimePlumber implements Plumber
   @Override
   public <T> QueryRunner<T> getQueryRunner(final Query<T> query)
   {
+    final boolean skipIncrementalSegment = query.getContextValue(SKIP_INCREMENTAL_SEGMENT, false);
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
     final QueryToolChest<T, Query<T>> toolchest = factory.getToolchest();
 
@@ -284,6 +288,7 @@ public class RealtimePlumber implements Plumber
 
                         // The realtime plumber always uses SingleElementPartitionChunk
                         final Sink theSink = holder.getObject().getChunk(0).getObject();
+                        final boolean skipIncrementalSegment = query.getContextValue(SKIP_INCREMENTAL_SEGMENT, false);
 
                         if (theSink == null) {
                           throw new ISE("Missing sink for timeline entry[%s]!", holder);
@@ -313,6 +318,10 @@ public class RealtimePlumber implements Plumber
                                             // the query for the segment.
                                             if (input == null || input.getSegment() == null) {
                                               return new ReportTimelineMissingSegmentQueryRunner<T>(descriptor);
+                                            }
+
+                                            if (skipIncrementalSegment && !input.hasSwapped()) {
+                                              return new NoopQueryRunner<T>();
                                             }
 
                                             // Prevent the underlying segment from closing when its being iterated
