@@ -1,35 +1,29 @@
 Integration Testing
-=========================
+===================
 
-## Installing Docker and Running
+## Installing Docker
 
-Please refer to instructions at [https://github.com/druid-io/docker-druid/blob/master/docker-install.md](https://github.com/druid-io/docker-druid/blob/master/docker-install.md)
+Please refer to instructions at [https://github.com/druid-io/docker-druid/blob/master/docker-install.md]()
 
-Instead of running
-```
-boot2docker init
-```
+## Creating the Docker VM
 
-run instead
-```
-boot2docker init -m 6000
-```
-
-Make sure that you have at least 6GB of memory available before you run the tests.
-
-Set the docker ip via:
-```
-export DOCKER_IP=$(boot2docker ip 2>/dev/null)
-```
-
-Verify that docker is running by issuing the following command:
+Create a new VM for integration tests with at least 6GB of memory.
 
 ```
-docker info
+docker-machine create --driver virtualbox --virtualbox-memory 6000 integration
+```
+
+Set the docker environment:
+
+```
+eval "$(docker-machine env integration)"
+export DOCKER_IP=$(docker-machine ip integration)
 ```
 
 Running Integration tests
 =========================
+
+Make sure that you have at least 6GB of memory available before you run the tests.
 
 ## Starting docker tests
 
