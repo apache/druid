@@ -52,7 +52,9 @@ import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.tasklogs.LogUtils;
 import io.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
 import io.druid.indexing.worker.config.WorkerConfig;
+import io.druid.query.DruidMetrics;
 import io.druid.server.DruidNode;
+import io.druid.server.metrics.MonitorsConfig;
 import io.druid.tasklogs.TaskLogPusher;
 import io.druid.tasklogs.TaskLogStreamer;
 import org.apache.commons.io.FileUtils;
@@ -295,6 +297,24 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                   }
                                 }
                               }
+
+                              // Add dataSource and taskId for metrics
+                              command.add(
+                                  String.format(
+                                      "-D%s%s=%s",
+                                      MonitorsConfig.METRIC_DIMENSION_PREFIX,
+                                      DruidMetrics.DATASOURCE,
+                                      task.getDataSource()
+                                  )
+                              );
+                              command.add(
+                                  String.format(
+                                      "-D%s%s=%s",
+                                      MonitorsConfig.METRIC_DIMENSION_PREFIX,
+                                      DruidMetrics.TASK_ID,
+                                      task.getId()
+                                  )
+                              );
 
                               command.add(String.format("-Ddruid.host=%s", childHost));
                               command.add(String.format("-Ddruid.port=%d", childPort));
