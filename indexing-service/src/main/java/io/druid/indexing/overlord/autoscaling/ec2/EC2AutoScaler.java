@@ -32,6 +32,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
+import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Lists;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.indexing.overlord.autoscaling.AutoScaler;
@@ -45,6 +46,7 @@ import java.util.List;
 public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
 {
   private static final EmittingLogger log = new EmittingLogger(EC2AutoScaler.class);
+  public static final int MAX_AWS_FILTER_VALUES = 100;
 
   private final int minNumWorkers;
   private final int maxNumWorkers;
@@ -244,29 +246,35 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
   @Override
   public List<String> ipToIdLookup(List<String> ips)
   {
-    DescribeInstancesResult result = amazonEC2Client.describeInstances(
-        new DescribeInstancesRequest()
-            .withFilters(
-                new Filter("private-ip-address", ips)
-            )
-    );
-
-    List<Instance> instances = Lists.newArrayList();
-    for (Reservation reservation : result.getReservations()) {
-      instances.addAll(reservation.getInstances());
-    }
-
-    List<String> retVal = Lists.transform(
-        instances,
-        new Function<Instance, String>()
+    final List<String> retVal = FluentIterable
+        // chunk requests to avoid hitting default AWS limits on filters
+        .from(Lists.partition(ips, MAX_AWS_FILTER_VALUES))
+        .transformAndConcat(new Function<List<String>, Iterable<Reservation>>()
         {
           @Override
-          public String apply(Instance input)
+          public Iterable<Reservation> apply(List<String> input)
           {
-            return input.getInstanceId();
+            return amazonEC2Client.describeInstances(
+                new DescribeInstancesRequest().withFilters(new Filter("private-ip-address", input))
+            ).getReservations();
           }
-        }
-    );
+        })
+        .transformAndConcat(new Function<Reservation, Iterable<Instance>>()
+        {
+          @Override
+          public Iterable<Instance> apply(Reservation reservation)
+          {
+            return reservation.getInstances();
+          }
+        })
+        .transform(new Function<Instance, String>()
+        {
+          @Override
+          public String apply(Instance instance)
+          {
+            return instance.getInstanceId();
+          }
+        }).toList();
 
     log.debug("Performing lookup: %s --> %s", ips, retVal);
 
@@ -276,29 +284,35 @@ public class EC2AutoScaler implements AutoScaler<EC2EnvironmentConfig>
   @Override
   public List<String> idToIpLookup(List<String> nodeIds)
   {
-    DescribeInstancesResult result = amazonEC2Client.describeInstances(
-        new DescribeInstancesRequest()
-            .withFilters(
-                new Filter("instance-id", nodeIds)
-            )
-    );
-
-    List<Instance> instances = Lists.newArrayList();
-    for (Reservation reservation : result.getReservations()) {
-      instances.addAll(reservation.getInstances());
-    }
-
-    List<String> retVal = Lists.transform(
-        instances,
-        new Function<Instance, String>()
+    final List<String> retVal = FluentIterable
+        // chunk requests to avoid hitting default AWS limits on filters
+        .from(Lists.partition(nodeIds, MAX_AWS_FILTER_VALUES))
+        .transformAndConcat(new Function<List<String>, Iterable<Reservation>>()
         {
           @Override
-          public String apply(Instance input)
+          public Iterable<Reservation> apply(List<String> input)
           {
-            return input.getPrivateIpAddress();
+            return amazonEC2Client.describeInstances(
+                new DescribeInstancesRequest().withFilters(new Filter("instance-id", input))
+            ).getReservations();
           }
-        }
-    );
+        })
+        .transformAndConcat(new Function<Reservation, Iterable<Instance>>()
+        {
+          @Override
+          public Iterable<Instance> apply(Reservation reservation)
+          {
+            return reservation.getInstances();
+          }
+        })
+        .transform(new Function<Instance, String>()
+        {
+          @Override
+          public String apply(Instance instance)
+          {
+            return instance.getPrivateIpAddress();
+          }
+        }).toList();
 
     log.debug("Performing lookup: %s --> %s", nodeIds, retVal);
 
