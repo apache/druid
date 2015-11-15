@@ -26,7 +26,9 @@ import org.joda.time.DateTime;
 import org.joda.time.Period;
 import org.joda.time.ReadableDuration;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public abstract class QueryGranularity
 {
@@ -107,5 +109,23 @@ public abstract class QueryGranularity
       return ((Number)o).longValue();
     }
     throw new IAE("Cannot convert [%s] to QueryGranularity", o.getClass());
+  }
+
+  //simple merge strategy on query granularity that checks if all are equal or else
+  //returns null. this can be improved in future but is good enough for most use-cases.
+  public static QueryGranularity mergeQueryGranularities(List<QueryGranularity> toMerge)
+  {
+    if (toMerge == null || toMerge.size() == 0) {
+      return null;
+    }
+
+    QueryGranularity result = toMerge.get(0);
+    for (int i = 1; i < toMerge.size(); i++) {
+      if (!Objects.equals(result, toMerge.get(i))) {
+        return null;
+      }
+    }
+
+    return result;
   }
 }

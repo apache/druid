@@ -49,6 +49,9 @@ The format of the result is:
   "aggregators" : {
     "metric1" : { "type" : "longSum", "name" : "metric1", "fieldName" : "metric1" }
   },
+  "queryGranularity" : {
+    "type": "none"
+  },
   "size" : 300000,
   "numRows" : 5000000
 } ]
@@ -104,7 +107,7 @@ This is a list of properties that determines the amount of information returned 
 
 By default, the "cardinality", "size", "interval", and "minmax" types will be used. If a property is not needed, omitting it from this list will result in a more efficient query.
 
-There are five types of column analyses:
+Types of column analyses are described below:
 
 #### cardinality
 
@@ -122,6 +125,10 @@ dimension columns.
 #### interval
 
 * `intervals` in the result will contain the list of intervals associated with the queried segments.
+
+#### queryGranularity
+
+* `queryGranularity` in the result will contain query granularity of data stored in segments. this can be null if query granularity of segments was unknown or unmergeable (if merging is enabled).
 
 #### aggregators
 

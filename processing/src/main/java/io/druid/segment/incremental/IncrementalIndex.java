@@ -398,7 +398,9 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     this.reportParseExceptions = reportParseExceptions;
     this.sortFacts = sortFacts;
 
-    this.metadata = new Metadata().setAggregators(getCombiningAggregators(metrics));
+    this.metadata = new Metadata()
+        .setAggregators(getCombiningAggregators(metrics))
+        .setQueryGranularity(this.gran);
 
     this.aggs = initAggs(metrics, rowSupplier, deserializeComplexMetrics);
     this.columnCapabilities = Maps.newHashMap();
