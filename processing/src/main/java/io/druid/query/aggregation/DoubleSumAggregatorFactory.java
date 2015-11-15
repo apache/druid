@@ -37,11 +37,13 @@ public class DoubleSumAggregatorFactory implements AggregatorFactory
 
   private final String fieldName;
   private final String name;
+  private final int exponent;
 
   @JsonCreator
   public DoubleSumAggregatorFactory(
       @JsonProperty("name") String name,
-      @JsonProperty("fieldName") final String fieldName
+      @JsonProperty("fieldName") final String fieldName,
+      @JsonProperty("exponent") final Integer exponent
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
@@ -49,6 +51,8 @@ public class DoubleSumAggregatorFactory implements AggregatorFactory
 
     this.name = name;
     this.fieldName = fieldName;
+    this.exponent = exponent == null ? 1 : exponent.intValue();
+    Preconditions.checkArgument(this.exponent >= 1, "exponent must be greater or equal to 1");
   }
 
   @Override
@@ -56,14 +60,15 @@ public class DoubleSumAggregatorFactory implements AggregatorFactory
   {
     return new DoubleSumAggregator(
         name,
-        metricFactory.makeFloatColumnSelector(fieldName)
+        metricFactory.makeFloatColumnSelector(fieldName),
+        exponent
     );
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new DoubleSumBufferAggregator(metricFactory.makeFloatColumnSelector(fieldName));
+    return new DoubleSumBufferAggregator(metricFactory.makeFloatColumnSelector(fieldName), exponent);
   }
 
   @Override
@@ -81,13 +86,13 @@ public class DoubleSumAggregatorFactory implements AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new DoubleSumAggregatorFactory(name, name);
+    return new DoubleSumAggregatorFactory(name, name, 1);
   }
 
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.<AggregatorFactory>asList(new DoubleSumAggregatorFactory(fieldName, fieldName));
+    return Arrays.<AggregatorFactory>asList(new DoubleSumAggregatorFactory(fieldName, fieldName, exponent));
   }
 
   @Override

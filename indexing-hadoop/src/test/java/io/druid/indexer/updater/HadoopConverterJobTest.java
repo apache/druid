@@ -169,7 +169,7 @@ public class HadoopConverterJobTest
                     Map.class
                 ),
                 new AggregatorFactory[]{
-                    new DoubleSumAggregatorFactory(TestIndex.METRICS[0], TestIndex.METRICS[0]),
+                    new DoubleSumAggregatorFactory(TestIndex.METRICS[0], TestIndex.METRICS[0], 1),
                     new HyperUniquesAggregatorFactory("quality_uniques", "quality")
                 },
                 new UniformGranularitySpec(

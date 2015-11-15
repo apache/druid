@@ -507,7 +507,7 @@ public class TaskLifecycleTest
             new DataSchema(
                 "foo",
                 null,
-                new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
+                new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met", 1)},
                 new UniformGranularitySpec(
                     Granularity.DAY,
                     null,
@@ -565,7 +565,7 @@ public class TaskLifecycleTest
             new DataSchema(
                 "foo",
                 null,
-                new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
+                new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met", 1)},
                 new UniformGranularitySpec(
                     Granularity.DAY,
                     null,
@@ -914,7 +914,7 @@ public class TaskLifecycleTest
             new DataSchema(
                 "foo",
                 null,
-                new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
+                new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met", 1)},
                 new UniformGranularitySpec(
                     Granularity.DAY,
                     null,
@@ -1012,7 +1012,7 @@ public class TaskLifecycleTest
     DataSchema dataSchema = new DataSchema(
         "test_ds",
         null,
-        new AggregatorFactory[]{new LongSumAggregatorFactory("count", "rows")},
+        new AggregatorFactory[]{new LongSumAggregatorFactory("count", "rows", 1)},
         new UniformGranularitySpec(Granularity.DAY, QueryGranularity.NONE, null),
         mapper
     );

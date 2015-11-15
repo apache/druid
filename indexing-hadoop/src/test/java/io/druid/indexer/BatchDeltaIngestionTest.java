@@ -354,7 +354,7 @@ public class BatchDeltaIngestionTest
                     Map.class
                 ),
                 new AggregatorFactory[]{
-                    new LongSumAggregatorFactory("visited_sum", "visited_num"),
+                    new LongSumAggregatorFactory("visited_sum", "visited_num", 1),
                     new HyperUniquesAggregatorFactory("unique_hosts", "host2")
                 },
                 new UniformGranularitySpec(

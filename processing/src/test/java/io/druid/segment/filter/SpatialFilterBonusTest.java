@@ -74,7 +74,7 @@ public class SpatialFilterBonusTest
   private static Interval DATA_INTERVAL = new Interval("2013-01-01/2013-01-07");
   private static AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{
       new CountAggregatorFactory("rows"),
-      new LongSumAggregatorFactory("val", "val")
+      new LongSumAggregatorFactory("val", "val", 1)
   };
   private static List<String> DIMS = Lists.newArrayList("dim", "dim.geo");
   private static final IndexMerger INDEX_MERGER = TestHelper.getTestIndexMerger();
@@ -455,7 +455,7 @@ public class SpatialFilterBonusTest
                                   .aggregators(
                                       Arrays.<AggregatorFactory>asList(
                                           new CountAggregatorFactory("rows"),
-                                          new LongSumAggregatorFactory("val", "val")
+                                          new LongSumAggregatorFactory("val", "val", 1)
                                       )
                                   )
                                   .build();
@@ -507,7 +507,7 @@ public class SpatialFilterBonusTest
                                   .aggregators(
                                       Arrays.<AggregatorFactory>asList(
                                           new CountAggregatorFactory("rows"),
-                                          new LongSumAggregatorFactory("val", "val")
+                                          new LongSumAggregatorFactory("val", "val", 1)
                                       )
                                   )
                                   .build();

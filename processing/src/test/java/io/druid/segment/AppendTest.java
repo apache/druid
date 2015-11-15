@@ -66,12 +66,12 @@ import java.util.Map;
 public class AppendTest
 {
   private static final AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{
-      new DoubleSumAggregatorFactory("index", "index"),
+      new DoubleSumAggregatorFactory("index", "index", 1),
       new CountAggregatorFactory("count"),
       new HyperUniquesAggregatorFactory("quality_uniques", "quality")
   };
   private static final AggregatorFactory[] METRIC_AGGS_NO_UNIQ = new AggregatorFactory[]{
-      new DoubleSumAggregatorFactory("index", "index"),
+      new DoubleSumAggregatorFactory("index", "index", 1),
       new CountAggregatorFactory("count")
   };
 
@@ -85,7 +85,7 @@ public class AppendTest
   final String placementishDimension = "placementish";
   final String indexMetric = "index";
   final CountAggregatorFactory rowsCount = new CountAggregatorFactory("rows");
-  final DoubleSumAggregatorFactory indexDoubleSum = new DoubleSumAggregatorFactory("index", "index");
+  final DoubleSumAggregatorFactory indexDoubleSum = new DoubleSumAggregatorFactory("index", "index", 1);
   final HyperUniquesAggregatorFactory uniques = new HyperUniquesAggregatorFactory("uniques", "quality_uniques");
   final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L);
   final FieldAccessPostAggregator rowsPostAgg = new FieldAccessPostAggregator("rows", "rows");

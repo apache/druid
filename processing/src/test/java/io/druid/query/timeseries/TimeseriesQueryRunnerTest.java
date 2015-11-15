@@ -268,7 +268,8 @@ public class TimeseriesQueryRunnerTest
                                           QueryRunnerTestHelper.rowsCount,
                                           new LongSumAggregatorFactory(
                                               "idx",
-                                              "index"
+                                              "index",
+                                              1
                                           ),
                                           QueryRunnerTestHelper.qualityUniques
                                       )
@@ -309,7 +310,8 @@ public class TimeseriesQueryRunnerTest
                                           QueryRunnerTestHelper.rowsCount,
                                           new LongSumAggregatorFactory(
                                               "idx",
-                                              "index"
+                                              "index",
+                                              1
                                           )
                                       )
                                   )
@@ -363,7 +365,8 @@ public class TimeseriesQueryRunnerTest
                                            QueryRunnerTestHelper.rowsCount,
                                            new LongSumAggregatorFactory(
                                                "idx",
-                                               "index"
+                                               "index",
+                                               1
                                            ),
                                            QueryRunnerTestHelper.qualityUniques
                                        )
@@ -400,7 +403,8 @@ public class TimeseriesQueryRunnerTest
                                            QueryRunnerTestHelper.rowsCount,
                                            new LongSumAggregatorFactory(
                                                "idx",
-                                               "index"
+                                               "index",
+                                               1
                                            ),
                                            QueryRunnerTestHelper.qualityUniques
                                        )
@@ -448,7 +452,8 @@ public class TimeseriesQueryRunnerTest
                                            QueryRunnerTestHelper.rowsCount,
                                            new LongSumAggregatorFactory(
                                                "idx",
-                                               "index"
+                                               "index",
+                                               1
                                            )
                                        )
                                    )
@@ -495,7 +500,8 @@ public class TimeseriesQueryRunnerTest
                                            QueryRunnerTestHelper.rowsCount,
                                            new LongSumAggregatorFactory(
                                                "idx",
-                                               "index"
+                                               "index",
+                                               1
                                            )
                                        )
                                    )
@@ -569,7 +575,8 @@ public class TimeseriesQueryRunnerTest
                                            QueryRunnerTestHelper.rowsCount,
                                            new LongSumAggregatorFactory(
                                                "idx",
-                                               "index"
+                                               "index",
+                                               1
                                            )
                                        )
                                    )
@@ -610,7 +617,8 @@ public class TimeseriesQueryRunnerTest
                                            QueryRunnerTestHelper.rowsCount,
                                            new LongSumAggregatorFactory(
                                                "idx",
-                                               "index"
+                                               "index",
+                                               1
                                            ),
                                            QueryRunnerTestHelper.qualityUniques
                                        )
@@ -647,7 +655,8 @@ public class TimeseriesQueryRunnerTest
                                            QueryRunnerTestHelper.rowsCount,
                                            new LongSumAggregatorFactory(
                                                "idx",
-                                               "index"
+                                               "index",
+                                               1
                                            ),
                                            QueryRunnerTestHelper.qualityUniques
                                        )
@@ -690,7 +699,8 @@ public class TimeseriesQueryRunnerTest
                                           QueryRunnerTestHelper.rowsCount,
                                           new LongSumAggregatorFactory(
                                               "idx",
-                                              "index"
+                                              "index",
+                                              1
                                           )
                                       )
                                   )

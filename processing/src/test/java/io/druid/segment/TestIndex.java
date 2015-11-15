@@ -75,7 +75,7 @@ public class TestIndex
   private static final Logger log = new Logger(TestIndex.class);
   private static final Interval DATA_INTERVAL = new Interval("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z");
   private static final AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{
-      new DoubleSumAggregatorFactory(METRICS[0], METRICS[0]),
+      new DoubleSumAggregatorFactory(METRICS[0], METRICS[0], 1),
       new HyperUniquesAggregatorFactory("quality_uniques", "quality")
   };
   private static final IndexSpec indexSpec = new IndexSpec();

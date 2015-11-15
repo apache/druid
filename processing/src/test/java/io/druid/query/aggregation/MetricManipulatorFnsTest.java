@@ -79,7 +79,7 @@ public class MetricManipulatorFnsTest
     );
 
 
-    LongSumAggregatorFactory longSumAggregatorFactory = new LongSumAggregatorFactory(NAME, FIELD);
+    LongSumAggregatorFactory longSumAggregatorFactory = new LongSumAggregatorFactory(NAME, FIELD, 1);
     LongSumAggregator longSumAggregator = new LongSumAggregator(
         NAME, new LongColumnSelector()
     {
@@ -88,7 +88,8 @@ public class MetricManipulatorFnsTest
       {
         return longVal;
       }
-    }
+    },
+        1
     );
     constructorArrays.add(
         new Object[]{

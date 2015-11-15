@@ -217,13 +217,15 @@ public class IncrementalIndexTest
       ingestAggregatorFactories.add(
           new LongSumAggregatorFactory(
               String.format("sumResult%s", i),
-              String.format("Dim_%s", i)
+              String.format("Dim_%s", i),
+              1
           )
       );
       ingestAggregatorFactories.add(
           new DoubleSumAggregatorFactory(
               String.format("doubleSumResult%s", i),
-              String.format("Dim_%s", i)
+              String.format("Dim_%s", i),
+              1
           )
       );
     }
@@ -234,13 +236,15 @@ public class IncrementalIndexTest
       queryAggregatorFactories.add(
           new LongSumAggregatorFactory(
               String.format("sumResult%s", i),
-              String.format("sumResult%s", i)
+              String.format("sumResult%s", i),
+              1
           )
       );
       queryAggregatorFactories.add(
           new DoubleSumAggregatorFactory(
               String.format("doubleSumResult%s", i),
-              String.format("doubleSumResult%s", i)
+              String.format("doubleSumResult%s", i),
+              1
           )
       );
     }

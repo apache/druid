@@ -49,7 +49,7 @@ public class FilteredAggregatorTest
     final TestFloatColumnSelector selector = new TestFloatColumnSelector(values);
 
     FilteredAggregatorFactory factory = new FilteredAggregatorFactory(
-        new DoubleSumAggregatorFactory("billy", "value"),
+        new DoubleSumAggregatorFactory("billy", "value", 1),
         new SelectorDimFilter("dim", "a")
     );
 
@@ -166,7 +166,7 @@ public class FilteredAggregatorTest
     final TestFloatColumnSelector selector = new TestFloatColumnSelector(values);
 
     FilteredAggregatorFactory factory = new FilteredAggregatorFactory(
-        new DoubleSumAggregatorFactory("billy", "value"),
+        new DoubleSumAggregatorFactory("billy", "value", 1),
         new NotDimFilter(new SelectorDimFilter("dim", "b"))
     );
 
@@ -189,7 +189,7 @@ public class FilteredAggregatorTest
     final TestFloatColumnSelector selector = new TestFloatColumnSelector(values);
 
     FilteredAggregatorFactory factory = new FilteredAggregatorFactory(
-        new DoubleSumAggregatorFactory("billy", "value"),
+        new DoubleSumAggregatorFactory("billy", "value", 1),
         new OrDimFilter(Lists.<DimFilter>newArrayList(new SelectorDimFilter("dim", "a"), new SelectorDimFilter("dim", "b")))
     );
 
@@ -212,7 +212,7 @@ public class FilteredAggregatorTest
     final TestFloatColumnSelector selector = new TestFloatColumnSelector(values);
 
     FilteredAggregatorFactory factory = new FilteredAggregatorFactory(
-        new DoubleSumAggregatorFactory("billy", "value"),
+        new DoubleSumAggregatorFactory("billy", "value", 1),
         new AndDimFilter(Lists.<DimFilter>newArrayList(new NotDimFilter(new SelectorDimFilter("dim", "b")), new SelectorDimFilter("dim", "a"))));
 
     FilteredAggregator agg = (FilteredAggregator) factory.factorize(

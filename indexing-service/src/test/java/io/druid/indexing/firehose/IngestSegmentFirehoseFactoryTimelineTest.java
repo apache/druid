@@ -209,7 +209,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
         .withDimensionsSpec(ROW_PARSER)
         .withMetrics(
             new AggregatorFactory[]{
-                new LongSumAggregatorFactory(METRICS[0], METRICS[0])
+                new LongSumAggregatorFactory(METRICS[0], METRICS[0], 1)
             }
         )
         .build();

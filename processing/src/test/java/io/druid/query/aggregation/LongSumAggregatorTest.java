@@ -36,7 +36,7 @@ public class LongSumAggregatorTest
   public void testAggregate()
   {
     final TestLongColumnSelector selector = new TestLongColumnSelector(new long[]{24L, 20L});
-    LongSumAggregator agg = new LongSumAggregator("billy", selector);
+    LongSumAggregator agg = new LongSumAggregator("billy", selector, 1);
 
     Assert.assertEquals("billy", agg.getName());
 
@@ -57,14 +57,14 @@ public class LongSumAggregatorTest
   public void testComparator()
   {
     final TestLongColumnSelector selector = new TestLongColumnSelector(new long[]{18293L});
-    LongSumAggregator agg = new LongSumAggregator("billy", selector);
+    LongSumAggregator agg = new LongSumAggregator("billy", selector, 1);
 
     Assert.assertEquals("billy", agg.getName());
 
     Object first = agg.get();
     agg.aggregate();
 
-    Comparator comp = new LongSumAggregatorFactory("null", "null").getComparator();
+    Comparator comp = new LongSumAggregatorFactory("null", "null", 1).getComparator();
 
     Assert.assertEquals(-1, comp.compare(first, agg.get()));
     Assert.assertEquals(0, comp.compare(first, first));

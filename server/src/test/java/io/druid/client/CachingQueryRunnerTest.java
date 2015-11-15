@@ -67,8 +67,8 @@ public class CachingQueryRunnerTest
 
   private static final List<AggregatorFactory> AGGS = Arrays.asList(
       new CountAggregatorFactory("rows"),
-      new LongSumAggregatorFactory("imps", "imps"),
-      new LongSumAggregatorFactory("impers", "imps")
+      new LongSumAggregatorFactory("imps", "imps", 1),
+      new LongSumAggregatorFactory("impers", "imps", 1)
   );
 
   private static final Object[] objects = new Object[]{

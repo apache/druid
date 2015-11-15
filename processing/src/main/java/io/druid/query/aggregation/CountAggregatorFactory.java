@@ -72,7 +72,7 @@ public class CountAggregatorFactory implements AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new LongSumAggregatorFactory(name, name);
+    return new LongSumAggregatorFactory(name, name, 1);
   }
 
   @Override

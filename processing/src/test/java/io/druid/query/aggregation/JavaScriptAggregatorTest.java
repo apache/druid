@@ -249,7 +249,7 @@ public class JavaScriptAggregatorTest
                                                 script.get("fnCombine"))
     );
 
-    DoubleSumAggregator doubleAgg = new DoubleSumAggregator("billy", selector);
+    DoubleSumAggregator doubleAgg = new DoubleSumAggregator("billy", selector, 1);
 
     // warmup
     int i = 0;

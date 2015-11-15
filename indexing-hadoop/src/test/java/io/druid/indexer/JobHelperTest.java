@@ -77,7 +77,7 @@ public class JobHelperTest
                     ),
                     Map.class
                 ),
-                new AggregatorFactory[]{new LongSumAggregatorFactory("visited_num", "visited_num")},
+                new AggregatorFactory[]{new LongSumAggregatorFactory("visited_num", "visited_num", 1)},
                 new UniformGranularitySpec(
                     Granularity.DAY, QueryGranularity.NONE, ImmutableList.of(this.interval)
                 ),

@@ -130,8 +130,8 @@ public class IngestSegmentFirehoseFactoryTest
         .withDimensionsSpec(ROW_PARSER)
         .withMetrics(
             new AggregatorFactory[]{
-                new LongSumAggregatorFactory(METRIC_LONG_NAME, DIM_LONG_NAME),
-                new DoubleSumAggregatorFactory(METRIC_FLOAT_NAME, DIM_FLOAT_NAME)
+                new LongSumAggregatorFactory(METRIC_LONG_NAME, DIM_LONG_NAME, 1),
+                new DoubleSumAggregatorFactory(METRIC_FLOAT_NAME, DIM_FLOAT_NAME, 1)
             }
         )
         .build();

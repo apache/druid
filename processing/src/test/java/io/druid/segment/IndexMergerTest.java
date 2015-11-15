@@ -530,9 +530,10 @@ public class IndexMergerTest
         new AggregatorFactory[]{
             new LongSumAggregatorFactory(
                 "longSum1",
-                "dim1"
+                "dim1",
+                1
             ),
-            new LongSumAggregatorFactory("longSum2", "dim2")
+            new LongSumAggregatorFactory("longSum2", "dim2", 1)
         }
     );
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
@@ -588,9 +589,10 @@ public class IndexMergerTest
         new AggregatorFactory[]{
             new LongSumAggregatorFactory(
                 "longSum1",
-                "dim1"
+                "dim1",
+                1
             ),
-            new LongSumAggregatorFactory("longSum2", "dim2")
+            new LongSumAggregatorFactory("longSum2", "dim2", 1)
         }
     );
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);

@@ -130,7 +130,7 @@ public class DetermineHashedPartitionsJobTest
                 ),
                 Map.class
             ),
-            new AggregatorFactory[]{new DoubleSumAggregatorFactory("index", "index")},
+            new AggregatorFactory[]{new DoubleSumAggregatorFactory("index", "index", 1)},
             new UniformGranularitySpec(
                 Granularity.DAY,
                 QueryGranularity.NONE,

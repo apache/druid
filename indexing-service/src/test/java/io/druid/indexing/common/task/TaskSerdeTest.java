@@ -78,7 +78,7 @@ public class TaskSerdeTest
             new DataSchema(
                 "foo",
                 null,
-                new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
+                new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met", 1)},
                 new UniformGranularitySpec(
                     Granularity.DAY,
                     null,
@@ -119,7 +119,7 @@ public class TaskSerdeTest
             new DataSchema(
                 "foo",
                 null,
-                new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
+                new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met", 1)},
                 new UniformGranularitySpec(
                     Granularity.DAY,
                     null,
