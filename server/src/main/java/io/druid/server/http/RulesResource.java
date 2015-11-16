@@ -20,6 +20,7 @@ package io.druid.server.http;
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
 
+import io.druid.audit.AuditEntry;
 import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
 import io.druid.metadata.MetadataRuleManager;
@@ -40,7 +41,6 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.Status;
 
 import java.util.List;
 
@@ -116,37 +116,52 @@ public class RulesResource
       @QueryParam("count") final Integer count
   )
   {
-    Interval theInterval = interval == null ? null : new Interval(interval);
-    if (theInterval == null && count != null) {
-      try {
-        return Response.ok(auditManager.fetchAuditHistory(dataSourceName, "rules", count))
-                       .build();
-      }
-      catch (IllegalArgumentException e) {
-        return Response.status(Response.Status.BAD_REQUEST)
-                       .entity(ImmutableMap.<String, Object>of("error", e.getMessage()))
-                       .build();
-      }
+    try {
+      return Response.ok(getRuleHistory(dataSourceName, interval, count))
+                     .build();
+    } catch (IllegalArgumentException e) {
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity(ImmutableMap.<String, Object>of("error", e.getMessage()))
+                     .build();
     }
-    return Response.ok(auditManager.fetchAuditHistory(dataSourceName, "rules", theInterval))
-                   .build();
   }
 
   @GET
   @Path("/history")
   @Produces(MediaType.APPLICATION_JSON)
   public Response getDatasourceRuleHistory(
-      @QueryParam("interval") final String interval
+      @QueryParam("interval") final String interval,
+      @QueryParam("count") final Integer count
   )
   {
     try {
-      Interval theInterval = interval == null ? null : new Interval(interval);
-      return Response.ok(auditManager.fetchAuditHistory("rules", theInterval))
+      return Response.ok(getRuleHistory(null, interval, count))
+                     .build();
+    } catch (IllegalArgumentException e) {
+      return Response.status(Response.Status.BAD_REQUEST)
+                     .entity(ImmutableMap.<String, Object>of("error", e.getMessage()))
                      .build();
     }
-    catch (IllegalArgumentException e) {
-      return Response.serverError().entity(ImmutableMap.<String, Object>of("error", e.getMessage())).build();
-    }
+  }
+
+  private List<AuditEntry> getRuleHistory(
+      final String dataSourceName,
+      final String interval,
+      final Integer count
+  ) throws IllegalArgumentException
+  {
+      if (interval == null && count != null) {
+        if (dataSourceName != null) {
+          return auditManager.fetchAuditHistory(dataSourceName, "rules", count);
+        }
+        return auditManager.fetchAuditHistory("rules", count);
+      }
+
+      Interval theInterval = interval == null ? null : new Interval(interval);
+      if (dataSourceName != null) {
+        return auditManager.fetchAuditHistory(dataSourceName, "rules", theInterval);
+      }
+      return auditManager.fetchAuditHistory("rules", theInterval);
   }
 
 }
