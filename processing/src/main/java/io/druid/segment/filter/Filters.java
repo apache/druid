@@ -20,6 +20,7 @@ package io.druid.segment.filter;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import io.druid.query.filter.AndDimFilter;
+import io.druid.query.filter.BetweenDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.ExtractionDimFilter;
 import io.druid.query.filter.Filter;
@@ -39,7 +40,8 @@ import java.util.List;
  */
 public class Filters
 {
-  public static List<Filter> convertDimensionFilters(List<DimFilter> filters){
+  public static List<Filter> convertDimensionFilters(List<DimFilter> filters)
+  {
     return Lists.transform(
         filters,
         new Function<DimFilter, Filter>()
@@ -109,6 +111,14 @@ public class Filters
       );
 
       filter = new OrFilter(listFilters);
+    } else if (dimFilter instanceof BetweenDimFilter) {
+      final BetweenDimFilter between = (BetweenDimFilter) dimFilter;
+      filter = new BetweenFilter(
+          between.getDimension(),
+          between.getNumerically(),
+          between.getLower(),
+          between.getUpper()
+      );
     }
 
     return filter;
