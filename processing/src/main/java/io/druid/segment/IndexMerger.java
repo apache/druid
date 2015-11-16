@@ -254,6 +254,38 @@ public class IndexMerger
     return merge(indexes, metricAggs, outDir, segmentMetadata, indexSpec, new BaseProgressIndicator());
   }
 
+  private List<String> getLexicographicMergedDimensions(List<IndexableAdapter> indexes)
+  {
+    return mergeIndexed(
+        Lists.transform(
+            indexes,
+            new Function<IndexableAdapter, Iterable<String>>()
+            {
+              @Override
+              public Iterable<String> apply(@Nullable IndexableAdapter input)
+              {
+                return input.getDimensionNames();
+              }
+            }
+        )
+    );
+  }
+
+  private List<String> getMergedDimensions(List<IndexableAdapter> indexes)
+  {
+    if (indexes.size() == 0) {
+      return ImmutableList.of();
+    }
+    Indexed<String> dimOrder = indexes.get(0).getDimensionNames();
+    for (IndexableAdapter index : indexes) {
+      Indexed<String> dimOrder2 = index.getDimensionNames();
+      if(!Iterators.elementsEqual(dimOrder.iterator(), dimOrder2.iterator())) {
+        return getLexicographicMergedDimensions(indexes);
+      }
+    }
+    return ImmutableList.copyOf(dimOrder);
+  }
+
   public File merge(
       List<IndexableAdapter> indexes,
       final AggregatorFactory[] metricAggs,
@@ -268,19 +300,8 @@ public class IndexMerger
       throw new ISE("Couldn't make outdir[%s].", outDir);
     }
 
-    final List<String> mergedDimensions = mergeIndexed(
-        Lists.transform(
-            indexes,
-            new Function<IndexableAdapter, Iterable<String>>()
-            {
-              @Override
-              public Iterable<String> apply(@Nullable IndexableAdapter input)
-              {
-                return input.getDimensionNames();
-              }
-            }
-        )
-    );
+    final List<String> mergedDimensions = getMergedDimensions(indexes);
+
     final List<String> mergedMetrics = Lists.transform(
         mergeIndexed(
             Lists.newArrayList(
@@ -408,29 +429,8 @@ public class IndexMerger
       throw new ISE("Couldn't make outdir[%s].", outDir);
     }
 
-    final List<String> mergedDimensions = mergeIndexed(
-        Lists.transform(
-            indexes,
-            new Function<IndexableAdapter, Iterable<String>>()
-            {
-              @Override
-              public Iterable<String> apply(@Nullable IndexableAdapter input)
-              {
-                return Iterables.transform(
-                    input.getDimensionNames(),
-                    new Function<String, String>()
-                    {
-                      @Override
-                      public String apply(@Nullable String input)
-                      {
-                        return input;
-                      }
-                    }
-                );
-              }
-            }
-        )
-    );
+    final List<String> mergedDimensions = getMergedDimensions(indexes);
+
     final List<String> mergedMetrics = mergeIndexed(
         Lists.transform(
             indexes,
