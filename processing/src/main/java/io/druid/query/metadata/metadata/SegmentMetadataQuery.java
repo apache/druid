@@ -224,6 +224,19 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   }
 
   @Override
+  public String toString()
+  {
+    return "SegmentMetadataQuery{" +
+           "dataSource='" + getDataSource() + '\'' +
+           ", querySegmentSpec=" + getQuerySegmentSpec() +
+           ", toInclude=" + toInclude +
+           ", merge=" + merge +
+           ", usingDefaultInterval=" + usingDefaultInterval +
+           ", analysisTypes=" + analysisTypes +
+           '}';
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
