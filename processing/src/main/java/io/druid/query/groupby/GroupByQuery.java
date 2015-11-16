@@ -564,13 +564,15 @@ public class GroupByQuery extends BaseQuery<Row>
   public String toString()
   {
     return "GroupByQuery{" +
-           "limitSpec=" + limitSpec +
+           "dataSource='" + getDataSource() + '\'' +
+           ", querySegmentSpec=" + getQuerySegmentSpec() +
+           ", limitSpec=" + limitSpec +
            ", dimFilter=" + dimFilter +
            ", granularity=" + granularity +
            ", dimensions=" + dimensions +
            ", aggregatorSpecs=" + aggregatorSpecs +
            ", postAggregatorSpecs=" + postAggregatorSpecs +
-           ", limitFn=" + limitFn +
+           ", havingSpec=" + havingSpec +
            '}';
   }
 
