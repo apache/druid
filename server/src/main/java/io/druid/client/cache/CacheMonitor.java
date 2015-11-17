@@ -22,15 +22,17 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.metrics.AbstractMonitor;
 
-/**
- */
 public class CacheMonitor extends AbstractMonitor
 {
-  private final Cache cache;
+  // package private for tests
+  volatile Cache cache;
 
   private volatile CacheStats prevCacheStats = null;
 
-  @Inject
+  public CacheMonitor()
+  {
+  }
+
   public CacheMonitor(
       Cache cache
   )
@@ -38,20 +40,30 @@ public class CacheMonitor extends AbstractMonitor
     this.cache = cache;
   }
 
+  // make it possible to enable CacheMonitor even if cache is not bound
+  // (e.g. some index tasks may have a cache, others may not)
+  @Inject(optional = true)
+  public void setCache(Cache cache)
+  {
+    this.cache = cache;
+  }
+
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
-    final CacheStats currCacheStats = cache.getStats();
-    final CacheStats deltaCacheStats = currCacheStats.delta(prevCacheStats);
+    if (cache != null) {
+      final CacheStats currCacheStats = cache.getStats();
+      final CacheStats deltaCacheStats = currCacheStats.delta(prevCacheStats);
 
-    final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
-    emitStats(emitter, "query/cache/delta", deltaCacheStats, builder);
-    emitStats(emitter, "query/cache/total", currCacheStats, builder);
+      final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
+      emitStats(emitter, "query/cache/delta", deltaCacheStats, builder);
+      emitStats(emitter, "query/cache/total", currCacheStats, builder);
 
-    prevCacheStats = currCacheStats;
+      prevCacheStats = currCacheStats;
 
-    // Any custom cache statistics that need monitoring
-    cache.doMonitor(emitter);
+      // Any custom cache statistics that need monitoring
+      cache.doMonitor(emitter);
+    }
     return true;
   }
 
@@ -62,14 +74,16 @@ public class CacheMonitor extends AbstractMonitor
       ServiceMetricEvent.Builder builder
   )
   {
-    emitter.emit(builder.build(String.format("%s/numEntries", metricPrefix), cacheStats.getNumEntries()));
-    emitter.emit(builder.build(String.format("%s/sizeBytes", metricPrefix), cacheStats.getSizeInBytes()));
-    emitter.emit(builder.build(String.format("%s/hits", metricPrefix), cacheStats.getNumHits()));
-    emitter.emit(builder.build(String.format("%s/misses", metricPrefix), cacheStats.getNumMisses()));
-    emitter.emit(builder.build(String.format("%s/evictions", metricPrefix), cacheStats.getNumEvictions()));
-    emitter.emit(builder.build(String.format("%s/hitRate", metricPrefix), cacheStats.hitRate()));
-    emitter.emit(builder.build(String.format("%s/averageBytes", metricPrefix), cacheStats.averageBytes()));
-    emitter.emit(builder.build(String.format("%s/timeouts", metricPrefix), cacheStats.getNumTimeouts()));
-    emitter.emit(builder.build(String.format("%s/errors", metricPrefix), cacheStats.getNumErrors()));
+    if (cache != null) {
+      emitter.emit(builder.build(String.format("%s/numEntries", metricPrefix), cacheStats.getNumEntries()));
+      emitter.emit(builder.build(String.format("%s/sizeBytes", metricPrefix), cacheStats.getSizeInBytes()));
+      emitter.emit(builder.build(String.format("%s/hits", metricPrefix), cacheStats.getNumHits()));
+      emitter.emit(builder.build(String.format("%s/misses", metricPrefix), cacheStats.getNumMisses()));
+      emitter.emit(builder.build(String.format("%s/evictions", metricPrefix), cacheStats.getNumEvictions()));
+      emitter.emit(builder.build(String.format("%s/hitRate", metricPrefix), cacheStats.hitRate()));
+      emitter.emit(builder.build(String.format("%s/averageBytes", metricPrefix), cacheStats.averageBytes()));
+      emitter.emit(builder.build(String.format("%s/timeouts", metricPrefix), cacheStats.getNumTimeouts()));
+      emitter.emit(builder.build(String.format("%s/errors", metricPrefix), cacheStats.getNumErrors()));
+    }
   }
 }
