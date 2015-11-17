@@ -43,6 +43,7 @@ import java.util.List;
  */
 public class RealtimeModule implements Module
 {
+
   @Override
   public void configure(Binder binder)
   {
