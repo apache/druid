@@ -62,7 +62,7 @@ public final class AllGranularity extends BaseQueryGranularity
   @Override
   public int hashCode()
   {
-    return 0;
+    return 1;
   }
 
   @Override
