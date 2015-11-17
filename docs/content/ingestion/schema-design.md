@@ -10,6 +10,7 @@ known in Druid). This follows the [standard naming convention](https://en.wikipe
 of OLAP data.
 
 For more detailed information:
+
 * Every row in Druid must have a timestamp. Data is always partitioned by time, and every query has a time filter. Query results can also be broken down by time buckets like minutes, hours, days, and so on.
 * Dimensions are fields that can be filtered on or grouped by. They are always either single Strings or arrays of Strings.
 * Metrics are fields that can be aggregated. They are often stored as numbers (integers or floats) but can also be stored as complex objects like HyperLogLog sketches or approximate histogram sketches.
