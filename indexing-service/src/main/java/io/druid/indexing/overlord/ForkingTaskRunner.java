@@ -37,6 +37,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
+import com.metamx.common.Pair;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.guice.annotations.Self;
@@ -124,7 +125,18 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                         final File attemptDir = new File(taskDir, attemptUUID);
 
                         final ProcessHolder processHolder;
-                        final int childPort = portFinder.findUnusedPort();
+                        final int childPort;
+                        final int childChatHandlerPort;
+
+                        if (config.isSeparateIngestionEndpoint()) {
+                          Pair<Integer, Integer> portPair = portFinder.findTwoConsecutiveUnusedPorts();
+                          childPort = portPair.lhs;
+                          childChatHandlerPort = portPair.rhs;
+                        } else {
+                          childPort = portFinder.findUnusedPort();
+                          childChatHandlerPort = -1;
+                        }
+
                         try {
                           final Closer closer = Closer.create();
                           try {
@@ -233,6 +245,14 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               command.add(String.format("-Ddruid.host=%s", childHost));
                               command.add(String.format("-Ddruid.port=%d", childPort));
 
+                              if(config.isSeparateIngestionEndpoint()) {
+                                command.add(String.format("-Ddruid.indexer.task.chathandler.service=%s", "placeholder/serviceName"));
+                                // Actual serviceName will be passed by the EventReceiverFirehose when it registers itself with ChatHandlerProvider
+                                // Thus, "placeholder/serviceName" will be ignored
+                                command.add(String.format("-Ddruid.indexer.task.chathandler.host=%s", childHost));
+                                command.add(String.format("-Ddruid.indexer.task.chathandler.port=%d", childChatHandlerPort));
+                              }
+
                               command.add("io.druid.cli.Main");
                               command.add("internal");
                               command.add("peon");
@@ -301,6 +321,9 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               }
                             }
                             portFinder.markPortUnused(childPort);
+                            if(childChatHandlerPort > 0) {
+                              portFinder.markPortUnused(childChatHandlerPort);
+                            }
                             log.info("Removing temporary directory: %s", attemptDir);
                             FileUtils.deleteDirectory(attemptDir);
                           }
