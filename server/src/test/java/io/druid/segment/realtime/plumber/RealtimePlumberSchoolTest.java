@@ -30,6 +30,7 @@ import com.metamx.common.Granularity;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.FilteredServerView;
 import io.druid.client.ServerView;
+import io.druid.client.cache.MapCache;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
@@ -50,6 +51,7 @@ import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.realtime.FireDepartmentMetrics;
+import io.druid.segment.realtime.FireDepartmentTest;
 import io.druid.segment.realtime.FireHydrant;
 import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.server.coordination.DataSegmentAnnouncer;
@@ -193,7 +195,10 @@ public class RealtimePlumberSchoolTest
         serverView,
         MoreExecutors.sameThreadExecutor(),
         TestHelper.getTestIndexMerger(),
-        TestHelper.getTestIndexIO()
+        TestHelper.getTestIndexIO(),
+        MapCache.create(0),
+        FireDepartmentTest.NO_CACHE_CONFIG,
+        TestHelper.getObjectMapper()
     );
 
     metrics = new FireDepartmentMetrics();

@@ -23,6 +23,8 @@ import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
 import io.druid.client.FilteredServerView;
+import io.druid.client.cache.Cache;
+import io.druid.client.cache.CacheConfig;
 import io.druid.guice.annotations.Processing;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
@@ -60,6 +62,8 @@ public class TaskToolboxFactory
   private final ObjectMapper objectMapper;
   private final IndexMerger indexMerger;
   private final IndexIO indexIO;
+  private final Cache cache;
+  private final CacheConfig cacheConfig;
 
   @Inject
   public TaskToolboxFactory(
@@ -78,7 +82,9 @@ public class TaskToolboxFactory
       SegmentLoaderFactory segmentLoaderFactory,
       ObjectMapper objectMapper,
       IndexMerger indexMerger,
-      IndexIO indexIO
+      IndexIO indexIO,
+      Cache cache,
+      CacheConfig cacheConfig
   )
   {
     this.config = config;
@@ -97,6 +103,8 @@ public class TaskToolboxFactory
     this.objectMapper = objectMapper;
     this.indexMerger = Preconditions.checkNotNull(indexMerger, "Null IndexMerger");
     this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
+    this.cache = cache;
+    this.cacheConfig = cacheConfig;
   }
 
   public TaskToolbox build(Task task)
@@ -121,7 +129,9 @@ public class TaskToolboxFactory
         objectMapper,
         taskWorkDir,
         indexMerger,
-        indexIO
+        indexIO,
+        cache,
+        cacheConfig
     );
   }
 }

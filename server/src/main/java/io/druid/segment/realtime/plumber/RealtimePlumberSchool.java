@@ -19,9 +19,12 @@ package io.druid.segment.realtime.plumber;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.FilteredServerView;
+import io.druid.client.cache.Cache;
+import io.druid.client.cache.CacheConfig;
 import io.druid.guice.annotations.Processing;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.IndexIO;
@@ -48,6 +51,9 @@ public class RealtimePlumberSchool implements PlumberSchool
   private final ExecutorService queryExecutorService;
   private final IndexMerger indexMerger;
   private final IndexIO indexIO;
+  private final Cache cache;
+  private final CacheConfig cacheConfig;
+  private final ObjectMapper objectMapper;
 
   @JsonCreator
   public RealtimePlumberSchool(
@@ -59,8 +65,11 @@ public class RealtimePlumberSchool implements PlumberSchool
       @JacksonInject FilteredServerView serverView,
       @JacksonInject @Processing ExecutorService executorService,
       @JacksonInject IndexMerger indexMerger,
-      @JacksonInject IndexIO indexIO
-  )
+      @JacksonInject IndexIO indexIO,
+      @JacksonInject Cache cache,
+      @JacksonInject CacheConfig cacheConfig,
+      @JacksonInject ObjectMapper objectMapper
+      )
   {
     this.emitter = emitter;
     this.conglomerate = conglomerate;
@@ -71,6 +80,10 @@ public class RealtimePlumberSchool implements PlumberSchool
     this.queryExecutorService = executorService;
     this.indexMerger = Preconditions.checkNotNull(indexMerger, "Null IndexMerger");
     this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
+
+    this.cache = cache;
+    this.cacheConfig = cacheConfig;
+    this.objectMapper = objectMapper;
   }
 
   @Override
@@ -94,7 +107,10 @@ public class RealtimePlumberSchool implements PlumberSchool
         segmentPublisher,
         serverView,
         indexMerger,
-        indexIO
+        indexIO,
+        cache,
+        cacheConfig,
+        objectMapper
     );
   }
 

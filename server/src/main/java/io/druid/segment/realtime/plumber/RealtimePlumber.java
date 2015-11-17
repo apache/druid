@@ -19,6 +19,7 @@
 
 package io.druid.segment.realtime.plumber;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -40,8 +41,11 @@ import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.client.CachingQueryRunner;
 import io.druid.client.FilteredServerView;
 import io.druid.client.ServerView;
+import io.druid.client.cache.Cache;
+import io.druid.client.cache.CacheConfig;
 import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.common.guava.ThreadRenamingRunnable;
 import io.druid.common.utils.VMUtils;
@@ -63,6 +67,7 @@ import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
+import io.druid.segment.ReferenceCountingSegment;
 import io.druid.segment.Segment;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.indexing.DataSchema;
@@ -120,6 +125,10 @@ public class RealtimePlumber implements Plumber
       String.CASE_INSENSITIVE_ORDER
   );
 
+  private final Cache cache;
+  private final CacheConfig cacheConfig;
+  private final ObjectMapper objectMapper;
+
   private volatile long nextFlush = 0;
   private volatile boolean shuttingDown = false;
   private volatile boolean stopped = false;
@@ -145,7 +154,10 @@ public class RealtimePlumber implements Plumber
       SegmentPublisher segmentPublisher,
       FilteredServerView serverView,
       IndexMerger indexMerger,
-      IndexIO indexIO
+      IndexIO indexIO,
+      Cache cache,
+      CacheConfig cacheConfig,
+      ObjectMapper objectMapper
   )
   {
     this.schema = schema;
@@ -161,6 +173,13 @@ public class RealtimePlumber implements Plumber
     this.serverView = serverView;
     this.indexMerger = Preconditions.checkNotNull(indexMerger, "Null IndexMerger");
     this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
+    this.cache = cache;
+    this.cacheConfig = cacheConfig;
+    this.objectMapper = objectMapper;
+
+    if(!cache.isLocal()) {
+      log.error("Configured cache is not local, caching will not be enabled");
+    }
 
     log.info("Creating plumber using rejectionPolicy[%s]", getRejectionPolicy());
   }
@@ -323,9 +342,25 @@ public class RealtimePlumber implements Plumber
                                             }
 
                                             // Prevent the underlying segment from closing when its being iterated
-                                            final Closeable closeable = input.getSegment().increment();
+                                            final ReferenceCountingSegment segment = input.getSegment();
+                                            final Closeable closeable = segment.increment();
                                             try {
-                                              return factory.createRunner(input.getSegment());
+                                              if (input.hasSwapped() // only use caching if data is immutable
+                                                  && cache.isLocal() // hydrants may not be in sync between replicas, make sure cache is local
+                                                  ) {
+                                                return new CachingQueryRunner<>(
+                                                    makeHydrantIdentifier(input, segment),
+                                                    descriptor,
+                                                    objectMapper,
+                                                    cache,
+                                                    toolchest,
+                                                    factory.createRunner(segment),
+                                                    MoreExecutors.sameThreadExecutor(),
+                                                    cacheConfig
+                                                );
+                                              } else {
+                                                return factory.createRunner(input.getSegment());
+                                              }
                                             }
                                             finally {
                                               try {
@@ -351,6 +386,11 @@ public class RealtimePlumber implements Plumber
                 )
         )
     );
+  }
+
+  protected static String makeHydrantIdentifier(FireHydrant input, ReferenceCountingSegment segment)
+  {
+    return segment.getIdentifier() + "_" + input.getCount();
   }
 
   @Override
@@ -901,6 +941,9 @@ public class RealtimePlumber implements Plumber
           sink.getVersion(),
           new SingleElementPartitionChunk<>(sink)
       );
+      for (FireHydrant hydrant : sink) {
+        cache.close(makeHydrantIdentifier(hydrant, hydrant.getSegment()));
+      }
       synchronized (handoffCondition) {
         handoffCondition.notifyAll();
       }
