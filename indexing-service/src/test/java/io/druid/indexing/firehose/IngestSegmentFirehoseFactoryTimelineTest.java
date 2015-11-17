@@ -328,7 +328,9 @@ public class IngestSegmentFirehoseFactoryTimelineTest
           ),
           MAPPER,
           INDEX_MERGER,
-          INDEX_IO
+          INDEX_IO,
+          null,
+          null
       );
       final Injector injector = Guice.createInjector(
           new Module()

@@ -222,14 +222,14 @@ This deep storage is used to interface with Cassandra.
 
 ### Caching
 
-You can enable caching of results at the broker/historical using following configurations.
+You can enable caching of results at the broker, historical, or realtime level using following configurations.
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.cache.type`|`local`, `memcached`|The type of cache to use for queries.|`local`|
-|`druid.(broker/historical).cache.unCacheable`|All druid query types|All query types to not cache.|["groupBy", "select"]|
-|`druid.(broker/historical).cache.useCache`|Whether to use cache for getting query results.|false|
-|`druid.(broker/historical).cache.populateCache`|Whether to populate cache.|false|
+|`druid.(broker|historical|realtime).cache.unCacheable`|All druid query types|All query types to not cache.|["groupBy", "select"]|
+|`druid.(broker|historical|realtime).cache.useCache`|Whether to use cache for getting query results.|false|
+|`druid.(broker|historical|realtime).cache.populateCache`|Whether to populate cache.|false|
 
 #### Local Cache
 

@@ -23,6 +23,7 @@ import com.google.inject.Module;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import io.druid.cli.QueryJettyServerInitializer;
+import io.druid.client.cache.CacheConfig;
 import io.druid.metadata.MetadataSegmentPublisher;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.segment.realtime.FireDepartment;
@@ -79,6 +80,9 @@ public class RealtimeModule implements Module
     binder.bind(new TypeLiteral<List<FireDepartment>>(){})
           .toProvider(FireDepartmentsProvider.class)
           .in(LazySingleton.class);
+
+    JsonConfigProvider.bind(binder, "druid.realtime.cache", CacheConfig.class);
+    binder.install(new CacheModule());
 
     binder.bind(QuerySegmentWalker.class).to(RealtimeManager.class).in(ManageLifecycle.class);
     binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig("realtime"));

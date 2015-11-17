@@ -4,8 +4,9 @@ layout: doc_page
 
 # Caching
 
-Caching can optionally be enabled on the broker and / or historical nodes.
-See the [broker](broker.html#caching) and [historical](historical.html#caching)
+Caching can optionally be enabled on the broker, historical, and realtime
+nodes, as well as realtime index tasks.  See [broker](broker.html#caching),
+[historical](historical.html#caching), and [realtime](realtime.html#caching)
 configuration options for how to enable it for individual node types.
 
 Druid uses a local in-memory cache by default, unless a diffrent type of cache is specified.
