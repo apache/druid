@@ -50,6 +50,14 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   }
 
   @Override
+  public List<DataSegment> getUsedSegmentsForIntervals(
+      String dataSource, List<Interval> intervals
+  ) throws IOException
+  {
+    return ImmutableList.of();
+  }
+
+  @Override
   public List<DataSegment> getUnusedSegmentsForInterval(String dataSource, Interval interval)
   {
     synchronized (unusedSegments) {
