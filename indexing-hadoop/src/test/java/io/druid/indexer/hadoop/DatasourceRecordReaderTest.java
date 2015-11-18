@@ -66,6 +66,7 @@ public class DatasourceRecordReaderTest
                 segment.getInterval(),
                 null,
                 null,
+                null,
                 segment.getDimensions(),
                 segment.getMetrics()
             )

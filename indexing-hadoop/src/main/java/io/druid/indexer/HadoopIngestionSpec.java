@@ -31,6 +31,7 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
+import org.joda.time.Interval;
 
 import java.io.IOException;
 import java.util.List;
@@ -140,22 +141,26 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
           ingestionSpecMap,
           DatasourceIngestionSpec.class
       );
-      List<DataSegment> segmentsList = segmentLister.getUsedSegmentsForInterval(
+      List<DataSegment> segmentsList = segmentLister.getUsedSegmentsForIntervals(
           ingestionSpecObj.getDataSource(),
-          ingestionSpecObj.getInterval()
+          ingestionSpecObj.getIntervals()
       );
       VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(Ordering.natural());
       for (DataSegment segment : segmentsList) {
         timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
       }
-      final List<TimelineObjectHolder<String, DataSegment>> timeLineSegments = timeline.lookup(ingestionSpecObj.getInterval());
+
       final List<WindowedDataSegment> windowedSegments = Lists.newArrayList();
-      for (TimelineObjectHolder<String, DataSegment> holder : timeLineSegments) {
-        for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
-          windowedSegments.add(new WindowedDataSegment(chunk.getObject(), holder.getInterval()));
+      for (Interval interval : ingestionSpecObj.getIntervals()) {
+        final List<TimelineObjectHolder<String, DataSegment>> timeLineSegments = timeline.lookup(interval);
+
+        for (TimelineObjectHolder<String, DataSegment> holder : timeLineSegments) {
+          for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
+            windowedSegments.add(new WindowedDataSegment(chunk.getObject(), holder.getInterval()));
+          }
         }
+        datasourcePathSpec.put(segments, windowedSegments);
       }
-      datasourcePathSpec.put(segments, windowedSegments);
     }
 
     return spec;
