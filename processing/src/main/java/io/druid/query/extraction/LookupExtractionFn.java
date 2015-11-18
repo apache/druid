@@ -33,7 +33,7 @@ import java.io.IOException;
 
 public class LookupExtractionFn extends FunctionalExtraction
 {
-  private static final byte CACHE_TYPE_ID = 0x5;
+  private static final byte CACHE_TYPE_ID = 0x7;
 
   private final LookupExtractor lookup;
 
