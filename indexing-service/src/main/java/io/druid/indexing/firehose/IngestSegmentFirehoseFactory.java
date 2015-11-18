@@ -132,7 +132,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
     try {
       final List<DataSegment> usedSegments = toolbox
           .getTaskActionClient()
-          .submit(new SegmentListUsedAction(dataSource, interval));
+          .submit(new SegmentListUsedAction(dataSource, interval, null));
       final Map<DataSegment, File> segmentFileMap = toolbox.fetchSegments(usedSegments);
       VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(
           Ordering.<String>natural().nullsFirst()

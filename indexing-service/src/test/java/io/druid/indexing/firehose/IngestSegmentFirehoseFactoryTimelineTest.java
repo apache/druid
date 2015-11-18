@@ -283,7 +283,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
           if (taskAction instanceof SegmentListUsedAction) {
             // Expect the interval we asked for
             final SegmentListUsedAction action = (SegmentListUsedAction) taskAction;
-            if (action.getInterval().equals(testCase.interval)) {
+            if (action.getIntervals().equals(ImmutableList.of(testCase.interval))) {
               return (RetType) ImmutableList.copyOf(testCase.segments);
             } else {
               throw new IllegalArgumentException("WTF");
