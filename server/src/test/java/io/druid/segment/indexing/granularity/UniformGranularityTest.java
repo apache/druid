@@ -22,6 +22,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.metamx.common.Granularity;
+import io.druid.granularity.QueryGranularity;
 import io.druid.jackson.DefaultObjectMapper;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -120,5 +121,96 @@ public class UniformGranularityTest
     catch (Exception e) {
       throw Throwables.propagate(e);
     }
+  }
+
+  @Test
+  public void testEquals()
+  {
+
+    final GranularitySpec spec = new UniformGranularitySpec(
+        Granularity.DAY,
+        null,
+        Lists.newArrayList(
+            new Interval("2012-01-08T00Z/2012-01-11T00Z"),
+            new Interval("2012-01-07T00Z/2012-01-08T00Z"),
+            new Interval("2012-01-03T00Z/2012-01-04T00Z"),
+            new Interval("2012-01-01T00Z/2012-01-03T00Z")
+        )
+    );
+
+    equalsCheck(
+        spec, new UniformGranularitySpec(
+            Granularity.DAY,
+            null,
+            Lists.newArrayList(
+                new Interval("2012-01-08T00Z/2012-01-11T00Z"),
+                new Interval("2012-01-07T00Z/2012-01-08T00Z"),
+                new Interval("2012-01-03T00Z/2012-01-04T00Z"),
+                new Interval("2012-01-01T00Z/2012-01-03T00Z")
+            )
+        )
+    );
+  }
+
+  public void equalsCheck(GranularitySpec spec1, GranularitySpec spec2) {
+    Assert.assertEquals(spec1, spec2);
+    Assert.assertEquals(spec1.hashCode(), spec2.hashCode());
+  }
+
+  @Test
+  public void testNotEquals()
+  {
+    final GranularitySpec spec = new UniformGranularitySpec(
+        Granularity.DAY,
+        null,
+        Lists.newArrayList(
+            new Interval("2012-01-08T00Z/2012-01-11T00Z"),
+            new Interval("2012-01-07T00Z/2012-01-08T00Z"),
+            new Interval("2012-01-03T00Z/2012-01-04T00Z"),
+            new Interval("2012-01-01T00Z/2012-01-03T00Z")
+        )
+    );
+
+    notEqualsCheck(
+        spec, new UniformGranularitySpec(
+            Granularity.YEAR,
+            null,
+            Lists.newArrayList(
+                new Interval("2012-01-08T00Z/2012-01-11T00Z"),
+                new Interval("2012-01-07T00Z/2012-01-08T00Z"),
+                new Interval("2012-01-03T00Z/2012-01-04T00Z"),
+                new Interval("2012-01-01T00Z/2012-01-03T00Z")
+            )
+        )
+    );
+    notEqualsCheck(
+        spec, new UniformGranularitySpec(
+            Granularity.DAY,
+            null,
+            Lists.newArrayList(
+                new Interval("2012-01-08T00Z/2012-01-12T00Z"),
+                new Interval("2012-01-07T00Z/2012-01-08T00Z"),
+                new Interval("2012-01-03T00Z/2012-01-04T00Z"),
+                new Interval("2012-01-01T00Z/2012-01-03T00Z")
+            )
+        )
+    );
+    notEqualsCheck(
+        spec, new UniformGranularitySpec(
+            Granularity.DAY,
+            QueryGranularity.ALL,
+            Lists.newArrayList(
+                new Interval("2012-01-08T00Z/2012-01-11T00Z"),
+                new Interval("2012-01-07T00Z/2012-01-08T00Z"),
+                new Interval("2012-01-03T00Z/2012-01-04T00Z"),
+                new Interval("2012-01-01T00Z/2012-01-03T00Z")
+            )
+        )
+    );
+  }
+
+  private void notEqualsCheck(GranularitySpec spec1, GranularitySpec spec2) {
+    Assert.assertNotEquals(spec1, spec2);
+    Assert.assertNotEquals(spec1.hashCode(), spec2.hashCode());
   }
 }
