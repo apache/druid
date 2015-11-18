@@ -77,6 +77,7 @@ public class DatasourcePathSpecTest
         null,
         null,
         null,
+        null,
         null
     );
 
