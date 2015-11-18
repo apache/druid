@@ -72,6 +72,24 @@ matches, otherwise returns null.
 { "type" : "searchQuery", "query" : <search_query_spec> }
 ```
 
+### Substring Extraction Function
+
+Returns a substring of the dimension value starting from the supplied index and of the desired length. If the desired
+length exceeds the length of the dimension value, the remainder of the string starting at index will be returned. 
+If index is greater than the length of the dimension value, null will be returned.
+
+```json
+{ "type" : "substring", "index" : 1, "length" : 4 }
+```
+
+The length may be omitted for substring to return the remainder of the dimension value starting from index, 
+or null if index greater than the length of the dimension value.
+
+```json
+{ "type" : "substring", "index" : 3 }
+```
+
+
 ### Time Format Extraction Function
 
 Returns the dimension value formatted according to the given format string, time zone, and locale.
