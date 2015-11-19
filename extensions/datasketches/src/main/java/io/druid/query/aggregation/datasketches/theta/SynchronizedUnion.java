@@ -21,7 +21,6 @@ package io.druid.query.aggregation.datasketches.theta;
 
 import com.yahoo.sketches.memory.Memory;
 import com.yahoo.sketches.theta.CompactSketch;
-import com.yahoo.sketches.theta.SetOpReturnState;
 import com.yahoo.sketches.theta.Sketch;
 import com.yahoo.sketches.theta.Union;
 
@@ -37,21 +36,63 @@ public class SynchronizedUnion implements Union
   }
 
   @Override
-  public synchronized SetOpReturnState update(Sketch sketch)
+  public synchronized void update(Sketch sketchIn)
   {
-    return delegate.update(sketch);
+    delegate.update(sketchIn);
   }
 
   @Override
-  public synchronized SetOpReturnState update(Memory memory)
+  public synchronized void update(Memory mem)
   {
-    return delegate.update(memory);
+    delegate.update(mem);
+  }
+
+  @Override
+  public synchronized void update(long datum)
+  {
+    delegate.update(datum);
+  }
+
+  @Override
+  public synchronized void update(double datum)
+  {
+    delegate.update(datum);
+  }
+
+  @Override
+  public synchronized void update(String datum)
+  {
+    delegate.update(datum);
+  }
+
+  @Override
+  public synchronized void update(byte[] data)
+  {
+    delegate.update(data);
+  }
+
+  @Override
+  public synchronized void update(int[] data)
+  {
+    delegate.update(data);
+  }
+
+  @Override
+  public synchronized void update(long[] data)
+  {
+    delegate.update(data);
   }
 
   @Override
   public synchronized CompactSketch getResult(boolean b, Memory memory)
   {
     return delegate.getResult(b, memory);
+  }
+
+  @Override
+  public synchronized CompactSketch getResult()
+  {
+    return delegate.getResult();
   }
 
   @Override

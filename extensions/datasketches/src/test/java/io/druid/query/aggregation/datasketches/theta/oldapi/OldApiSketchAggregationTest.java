@@ -139,7 +139,8 @@ public class OldApiSketchAggregationTest
     assertAggregatorFactorySerde(new OldSketchBuildAggregatorFactory("name", "fieldName", 16));
   }
 
-  private void assertAggregatorFactorySerde(AggregatorFactory agg) throws Exception{
+  private void assertAggregatorFactorySerde(AggregatorFactory agg) throws Exception
+  {
     Assert.assertEquals(
         agg,
         helper.getObjectMapper().readValue(
@@ -176,7 +177,8 @@ public class OldApiSketchAggregationTest
     );
   }
 
-  private void assertPostAggregatorSerde(PostAggregator agg) throws Exception{
+  private void assertPostAggregatorSerde(PostAggregator agg) throws Exception
+  {
     Assert.assertEquals(
         agg,
         helper.getObjectMapper().readValue(

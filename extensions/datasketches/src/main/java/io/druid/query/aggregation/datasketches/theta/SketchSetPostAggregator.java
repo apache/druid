@@ -24,7 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Sets;
 import com.metamx.common.IAE;
 import com.metamx.common.logger.Logger;
-
 import com.yahoo.sketches.Util;
 import com.yahoo.sketches.theta.Sketch;
 import io.druid.query.aggregation.PostAggregator;
@@ -118,7 +117,17 @@ public class SketchSetPostAggregator implements PostAggregator
   @Override
   public String toString()
   {
-    return "SketchSetPostAggregator{" + "name='" + name + '\'' + ", fields=" + fields + ", func=" + func + ", size=" + maxSketchSize +"}";
+    return "SketchSetPostAggregator{"
+           + "name='"
+           + name
+           + '\''
+           + ", fields="
+           + fields
+           + ", func="
+           + func
+           + ", size="
+           + maxSketchSize
+           + "}";
   }
 
   @Override

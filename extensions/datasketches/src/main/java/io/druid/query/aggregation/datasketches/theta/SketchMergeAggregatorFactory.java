@@ -86,6 +86,7 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
    * sketch.
    *
    * @param object the sketch object
+   *
    * @return sketch object
    */
   @Override

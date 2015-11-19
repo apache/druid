@@ -30,7 +30,8 @@ import java.io.IOException;
 public class SketchJsonSerializer extends JsonSerializer<Sketch>
 {
   @Override
-  public void serialize(Sketch sketch, JsonGenerator jgen, SerializerProvider provider) throws IOException, JsonProcessingException
+  public void serialize(Sketch sketch, JsonGenerator jgen, SerializerProvider provider)
+      throws IOException, JsonProcessingException
   {
     jgen.writeBinary(sketch.toByteArray());
   }
