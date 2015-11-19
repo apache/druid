@@ -90,7 +90,7 @@ public class SketchBufferAggregator implements BufferAggregator
   private Union getUnion(ByteBuffer buf, int position)
   {
     Union union = unions.get(position);
-    if(union == null) {
+    if (union == null) {
       Memory mem = new MemoryRegion(nm, position, maxIntermediateSize);
       union = (Union) SetOperation.wrap(mem);
       unions.put(position, union);
@@ -111,7 +111,8 @@ public class SketchBufferAggregator implements BufferAggregator
   }
 
   @Override
-  public void close() {
+  public void close()
+  {
     unions.clear();
   }
 

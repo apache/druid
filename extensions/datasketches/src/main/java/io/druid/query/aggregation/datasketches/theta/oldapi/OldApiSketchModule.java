@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
-
 import com.yahoo.sketches.theta.Sketch;
 import io.druid.initialization.DruidModule;
 import io.druid.query.aggregation.datasketches.theta.SketchBuildComplexMetricSerde;

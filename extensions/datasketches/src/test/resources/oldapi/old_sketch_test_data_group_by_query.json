@@ -4,8 +4,18 @@
   "granularity": "ALL",
   "dimensions": [],
   "aggregations": [
-    { "type": "sketchMerge", "name": "sids_sketch_count", "fieldName": "sids_sketch", "size": 16384 },
-    { "type": "sketchMerge", "name": "non_existing_col_validation", "fieldName": "non_existing_col", "size": 16384 }
+    {
+      "type": "sketchMerge",
+      "name": "sids_sketch_count",
+      "fieldName": "sids_sketch",
+      "size": 16384
+    },
+    {
+      "type": "sketchMerge",
+      "name": "non_existing_col_validation",
+      "fieldName": "non_existing_col",
+      "size": 16384
+    }
   ],
   "postAggregations": [
     {
@@ -19,8 +29,7 @@
     {
       "type": "sketchEstimate",
       "name": "sketchIntersectionPostAggEstimate",
-      "field":
-      {
+      "field": {
         "type": "sketchSetOper",
         "name": "sketchIntersectionPostAgg",
         "func": "INTERSECT",
@@ -40,8 +49,7 @@
     {
       "type": "sketchEstimate",
       "name": "sketchAnotBPostAggEstimate",
-      "field":
-      {
+      "field": {
         "type": "sketchSetOper",
         "name": "sketchAnotBUnionPostAgg",
         "func": "NOT",
@@ -60,8 +68,7 @@
     {
       "type": "sketchEstimate",
       "name": "sketchUnionPostAggEstimate",
-      "field":
-      {
+      "field": {
         "type": "sketchSetOper",
         "name": "sketchUnionPostAgg",
         "func": "UNION",
@@ -79,5 +86,7 @@
       }
     }
   ],
-  "intervals": [ "2014-10-19T00:00:00.000Z/2014-10-22T00:00:00.000Z" ]
+  "intervals": [
+    "2014-10-19T00:00:00.000Z/2014-10-22T00:00:00.000Z"
+  ]
 }

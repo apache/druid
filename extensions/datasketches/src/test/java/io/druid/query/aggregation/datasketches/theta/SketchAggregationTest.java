@@ -183,7 +183,8 @@ public class SketchAggregationTest
     Assert.assertEquals(sketch, agg.finalizeComputation(sketch));
   }
 
-  private void assertAggregatorFactorySerde(AggregatorFactory agg) throws Exception{
+  private void assertAggregatorFactorySerde(AggregatorFactory agg) throws Exception
+  {
     Assert.assertEquals(
         agg,
         helper.getObjectMapper().readValue(
@@ -220,7 +221,8 @@ public class SketchAggregationTest
     );
   }
 
-  private void assertPostAggregatorSerde(PostAggregator agg) throws Exception{
+  private void assertPostAggregatorSerde(PostAggregator agg) throws Exception
+  {
     Assert.assertEquals(
         agg,
         helper.getObjectMapper().readValue(

@@ -73,13 +73,13 @@ public class SketchOperations
   public static Sketch deserializeFromByteArray(byte[] data)
   {
     NativeMemory mem = new NativeMemory(data);
-    if(Sketch.getSerializationVersion(mem) < 3) {
+    if (Sketch.getSerializationVersion(mem) < 3) {
       return Sketches.heapifySketch(mem);
     } else {
       return Sketches.wrapSketch(mem);
     }
   }
-  
+
   public static Sketch sketchSetOperation(Func func, int sketchSize, Sketch... sketches)
   {
     //in the code below, I am returning SetOp.getResult(false, null)
@@ -90,22 +90,22 @@ public class SketchOperations
     switch (func) {
       case UNION:
         Union union = (Union) SetOperation.builder().build(sketchSize, Family.UNION);
-        for(Sketch sketch : sketches) {
+        for (Sketch sketch : sketches) {
           union.update(sketch);
         }
         return union.getResult(false, null);
       case INTERSECT:
         Intersection intersection = (Intersection) SetOperation.builder().build(sketchSize, Family.INTERSECTION);
-        for(Sketch sketch : sketches) {
+        for (Sketch sketch : sketches) {
           intersection.update(sketch);
         }
         return intersection.getResult(false, null);
       case NOT:
-        if(sketches.length < 1) {
+        if (sketches.length < 1) {
           throw new IllegalArgumentException("A-Not-B requires atleast 1 sketch");
         }
 
-        if(sketches.length == 1) {
+        if (sketches.length == 1) {
           return sketches[0];
         }
 
