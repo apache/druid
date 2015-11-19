@@ -31,6 +31,7 @@ import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.TransactionStatus;
 import org.skife.jdbi.v2.exceptions.DBIException;
+import org.skife.jdbi.v2.exceptions.UnableToExecuteStatementException;
 import org.skife.jdbi.v2.exceptions.UnableToObtainConnectionException;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.util.ByteArrayMapper;
@@ -140,6 +141,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     return e != null && (e instanceof SQLTransientException
                          || e instanceof SQLRecoverableException
                          || e instanceof UnableToObtainConnectionException
+                         || e instanceof UnableToExecuteStatementException
                          || connectorIsTransientException(e)
                          || (e instanceof SQLException && isTransientException(e.getCause()))
                          || (e instanceof DBIException && isTransientException(e.getCause())));
@@ -177,6 +179,30 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     catch (Exception e) {
       log.warn(e, "Exception creating table");
     }
+  }
+
+  public void createPendingSegmentsTable(final String tableName)
+  {
+    createTable(
+        tableName,
+        ImmutableList.of(
+            String.format(
+                "CREATE TABLE %1$s (\n"
+                + "  id VARCHAR(255) NOT NULL,\n"
+                + "  dataSource VARCHAR(255) NOT NULL,\n"
+                + "  created_date VARCHAR(255) NOT NULL,\n"
+                + "  start VARCHAR(255) NOT NULL,\n"
+                + "  \"end\" VARCHAR(255) NOT NULL,\n"
+                + "  sequence_name VARCHAR(255) NOT NULL,\n"
+                + "  sequence_prev_id VARCHAR(255) NOT NULL,\n"
+                + "  payload %2$s NOT NULL,\n"
+                + "  PRIMARY KEY (id),\n"
+                + "  UNIQUE (sequence_name, sequence_prev_id)\n"
+                + ")",
+                tableName, getPayloadType()
+            )
+        )
+    );
   }
 
   public void createSegmentTable(final String tableName)
@@ -354,7 +380,16 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   public abstract DBI getDBI();
 
   @Override
-  public void createSegmentTable() {
+  public void createPendingSegmentsTable()
+  {
+    if (config.get().isCreateTables()) {
+      createPendingSegmentsTable(tablesConfigSupplier.get().getPendingSegmentsTable());
+    }
+  }
+
+  @Override
+  public void createSegmentTable()
+  {
     if (config.get().isCreateTables()) {
       createSegmentTable(tablesConfigSupplier.get().getSegmentsTable());
     }

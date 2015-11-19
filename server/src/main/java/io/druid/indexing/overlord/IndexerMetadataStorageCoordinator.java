@@ -17,6 +17,7 @@
 
 package io.druid.indexing.overlord;
 
+import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -51,6 +52,31 @@ public interface IndexerMetadataStorageCoordinator
    */
   public Set<DataSegment> announceHistoricalSegments(final Set<DataSegment> segments) throws IOException;
 
+  /**
+   * Allocate a new pending segment in the pending segments table. This segment identifier will never be given out
+   * again, <em>unless</em> another call is made with the same dataSource, sequenceName, and previousSegmentId.
+   * <p/>
+   * The sequenceName and previousSegmentId parameters are meant to make it easy for two independent ingestion tasks
+   * to produce the same series of segments.
+   * <p/>
+   * Note that a segment sequence may include segments with a variety of different intervals and versions.
+   *
+   * @param dataSource        dataSource for which to allocate a segment
+   * @param sequenceName      name of the group of ingestion tasks producing a segment series
+   * @param previousSegmentId previous segment in the series; may be null or empty, meaning this is the first segment
+   * @param interval          interval for which to allocate a segment
+   * @param maxVersion        use this version if we have no better version to use. The returned segment identifier may
+   *                          have a version lower than this one, but will not have one higher.
+   *
+   * @return the pending segment identifier, or null if it was impossible to allocate a new segment
+   */
+  SegmentIdentifier allocatePendingSegment(
+      String dataSource,
+      String sequenceName,
+      String previousSegmentId,
+      Interval interval,
+      String maxVersion
+  ) throws IOException;
 
   public void updateSegmentMetadata(final Set<DataSegment> segments) throws IOException;
 
