@@ -79,7 +79,6 @@ public class HadoopIndexTask extends HadoopTask
    *             IndexGeneratorJob.getPublishedSegments() to simply return a list of the published
    *             segments, and let the indexing service report these segments to the database.
    */
-
   @JsonCreator
   public HadoopIndexTask(
       @JsonProperty("id") String id,

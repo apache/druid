@@ -42,7 +42,6 @@ public class DruidCoordinatorConfigTest
     Assert.assertEquals(new Duration("PT300s"), config.getCoordinatorStartDelay());
     Assert.assertEquals(new Duration("PT60s"), config.getCoordinatorPeriod());
     Assert.assertEquals(new Duration("PT1800s"), config.getCoordinatorIndexingPeriod());
-    Assert.assertFalse(config.isMergeSegments());
     Assert.assertFalse(config.isConvertSegments());
     Assert.assertFalse(config.isKillSegments());
     Assert.assertEquals(86400000, config.getCoordinatorKillPeriod().getMillis());
@@ -71,7 +70,6 @@ public class DruidCoordinatorConfigTest
     Assert.assertEquals(new Duration("PT1s"), config.getCoordinatorStartDelay());
     Assert.assertEquals(new Duration("PT1s"), config.getCoordinatorPeriod());
     Assert.assertEquals(new Duration("PT1s"), config.getCoordinatorIndexingPeriod());
-    Assert.assertTrue(config.isMergeSegments());
     Assert.assertTrue(config.isConvertSegments());
     Assert.assertTrue(config.isKillSegments());
     Assert.assertEquals(new Duration("PT1s"), config.getCoordinatorKillPeriod());

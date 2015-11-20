@@ -75,20 +75,18 @@ public class CoordinatorDynamicConfigsResource
   // default value is used for backwards compatibility
   @POST
   @Consumes(MediaType.APPLICATION_JSON)
+  @Produces(MediaType.APPLICATION_JSON)
   public Response setDynamicConfigs(final CoordinatorDynamicConfig dynamicConfig,
                                     @HeaderParam(AuditManager.X_DRUID_AUTHOR) @DefaultValue("") final String author,
                                     @HeaderParam(AuditManager.X_DRUID_COMMENT) @DefaultValue("") final String comment,
                                     @Context HttpServletRequest req
   )
   {
-    if (!manager.set(
+    return manager.set(
         CoordinatorDynamicConfig.CONFIG_KEY,
         dynamicConfig,
         new AuditInfo(author, comment, req.getRemoteAddr())
-    )) {
-      return Response.status(Response.Status.BAD_REQUEST).build();
-    }
-    return Response.ok().build();
+    ) ? Response.ok().build() : Response.status(Response.Status.BAD_REQUEST).build();
   }
 
   @GET
@@ -108,8 +106,7 @@ public class CoordinatorDynamicConfigsResource
                 CoordinatorDynamicConfig.CONFIG_KEY,
                 count
             )
-        )
-                       .build();
+        ).build();
       }
       catch (IllegalArgumentException e) {
         return Response.status(Response.Status.BAD_REQUEST)
@@ -122,9 +119,7 @@ public class CoordinatorDynamicConfigsResource
             CoordinatorDynamicConfig.CONFIG_KEY,
             CoordinatorDynamicConfig.CONFIG_KEY,
             theInterval
-        )
-    )
-                   .build();
+        )).build();
   }
 
 }

@@ -70,4 +70,39 @@ public class HadoopIOConfig implements IOConfig
   {
     return new HadoopIOConfig(pathSpec, metadataUpdateSpec, path);
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    HadoopIOConfig ioConfig = (HadoopIOConfig) o;
+
+    if (pathSpec != null ? !pathSpec.equals(ioConfig.pathSpec) : ioConfig.pathSpec != null) {
+      return false;
+    }
+    if (metadataUpdateSpec != null
+        ? !metadataUpdateSpec.equals(ioConfig.metadataUpdateSpec)
+        : ioConfig.metadataUpdateSpec != null) {
+      return false;
+    }
+    return segmentOutputPath != null
+           ? segmentOutputPath.equals(ioConfig.segmentOutputPath)
+           : ioConfig.segmentOutputPath == null;
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = pathSpec != null ? pathSpec.hashCode() : 0;
+    result = 31 * result + (metadataUpdateSpec != null ? metadataUpdateSpec.hashCode() : 0);
+    result = 31 * result + (segmentOutputPath != null ? segmentOutputPath.hashCode() : 0);
+    return result;
+  }
 }

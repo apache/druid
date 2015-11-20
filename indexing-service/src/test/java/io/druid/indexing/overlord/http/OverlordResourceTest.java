@@ -223,10 +223,16 @@ public class OverlordResourceTest
         ((TaskStatus) ((Map) response.getEntity()).get("status")).getStatusCode()
     );
 
+    response = overlordResource.getIncompleteTasks();
+    Assert.assertEquals(1, ((List) response.getEntity()).size());
+
     // Simulate completion of task_0
     taskCompletionCountDownLatches[Integer.parseInt(taskId_0)].countDown();
     // Wait for taskQueue to handle success status of task_0
     waitForTaskStatus(taskId_0, TaskStatus.Status.SUCCESS);
+
+    response = overlordResource.getIncompleteTasks();
+    Assert.assertEquals(0, ((List) response.getEntity()).size());
 
     // Manually insert task in taskStorage
     // Verifies sync from storage
@@ -244,6 +250,9 @@ public class OverlordResourceTest
     Assert.assertEquals(taskId_1, taskResponseObject.toJson().get("id"));
     Assert.assertEquals(TASK_LOCATION, taskResponseObject.toJson().get("location"));
 
+    response = overlordResource.getIncompleteTasks();
+    Assert.assertEquals(1, ((List) response.getEntity()).size());
+
     // Simulate completion of task_1
     taskCompletionCountDownLatches[Integer.parseInt(taskId_1)].countDown();
     // Wait for taskQueue to handle success status of task_1
@@ -252,6 +261,10 @@ public class OverlordResourceTest
     // should return number of tasks which are not in running state
     response = overlordResource.getCompleteTasks();
     Assert.assertEquals(2, (((List) response.getEntity()).size()));
+
+    response = overlordResource.getIncompleteTasks();
+    Assert.assertEquals(0, ((List) response.getEntity()).size());
+
     taskMaster.stop();
     Assert.assertFalse(taskMaster.isLeading());
     EasyMock.verify(taskLockbox, taskActionClientFactory);

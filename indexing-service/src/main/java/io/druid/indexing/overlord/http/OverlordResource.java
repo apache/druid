@@ -53,6 +53,7 @@ import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DefaultValue;
@@ -375,6 +376,33 @@ public class OverlordResource
           }
         }
     );
+  }
+
+  @GET
+  @Path("/incompleteTasks")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getIncompleteTasks()
+  {
+    final List<TaskResponseObject> incompleteTasks = Lists.transform(
+        taskStorageQueryAdapter.getActiveTasks(),
+        new Function<Task, TaskResponseObject>()
+        {
+          @Nullable
+          @Override
+          public TaskResponseObject apply(Task task)
+          {
+            return new TaskResponseObject(
+                task.getId(),
+                new DateTime(0),
+                new DateTime(0),
+                Optional.<TaskStatus>absent(),
+                TaskLocation.unknown()
+            );
+          }
+        }
+    );
+
+    return Response.ok(incompleteTasks).build();
   }
 
   @GET

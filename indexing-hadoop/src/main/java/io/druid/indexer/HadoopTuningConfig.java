@@ -279,4 +279,75 @@ public class HadoopTuningConfig implements TuningConfig
         numBackgroundPersistThreads
     );
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    HadoopTuningConfig that = (HadoopTuningConfig) o;
+
+    if (rowFlushBoundary != that.rowFlushBoundary) {
+      return false;
+    }
+    if (leaveIntermediate != that.leaveIntermediate) {
+      return false;
+    }
+    if (overwriteFiles != that.overwriteFiles) {
+      return false;
+    }
+    if (ignoreInvalidRows != that.ignoreInvalidRows) {
+      return false;
+    }
+    if (combineText != that.combineText) {
+      return false;
+    }
+    if (useCombiner != that.useCombiner) {
+      return false;
+    }
+    if (workingPath != null ? !workingPath.equals(that.workingPath) : that.workingPath != null) {
+      return false;
+    }
+    if (version != null ? !version.equals(that.version) : that.version != null) {
+      return false;
+    }
+    if (partitionsSpec != null ? !partitionsSpec.equals(that.partitionsSpec) : that.partitionsSpec != null) {
+      return false;
+    }
+    if (shardSpecs != null ? !shardSpecs.equals(that.shardSpecs) : that.shardSpecs != null) {
+      return false;
+    }
+    if (indexSpec != null ? !indexSpec.equals(that.indexSpec) : that.indexSpec != null) {
+      return false;
+    }
+    if (cleanupOnFailure != null ? !cleanupOnFailure.equals(that.cleanupOnFailure) : that.cleanupOnFailure != null) {
+      return false;
+    }
+    return !(jobProperties != null ? !jobProperties.equals(that.jobProperties) : that.jobProperties != null);
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = workingPath != null ? workingPath.hashCode() : 0;
+    result = 31 * result + (version != null ? version.hashCode() : 0);
+    result = 31 * result + (partitionsSpec != null ? partitionsSpec.hashCode() : 0);
+    result = 31 * result + (shardSpecs != null ? shardSpecs.hashCode() : 0);
+    result = 31 * result + (indexSpec != null ? indexSpec.hashCode() : 0);
+    result = 31 * result + rowFlushBoundary;
+    result = 31 * result + (leaveIntermediate ? 1 : 0);
+    result = 31 * result + (cleanupOnFailure != null ? cleanupOnFailure.hashCode() : 0);
+    result = 31 * result + (overwriteFiles ? 1 : 0);
+    result = 31 * result + (ignoreInvalidRows ? 1 : 0);
+    result = 31 * result + (jobProperties != null ? jobProperties.hashCode() : 0);
+    result = 31 * result + (combineText ? 1 : 0);
+    result = 31 * result + (useCombiner ? 1 : 0);
+    return result;
+  }
 }

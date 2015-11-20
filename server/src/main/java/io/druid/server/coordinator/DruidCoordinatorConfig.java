@@ -23,6 +23,9 @@ import org.joda.time.Duration;
 import org.skife.config.Config;
 import org.skife.config.Default;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /**
  */
 public abstract class DruidCoordinatorConfig
@@ -39,10 +42,10 @@ public abstract class DruidCoordinatorConfig
   @Default("PT1800s")
   public abstract Duration getCoordinatorIndexingPeriod();
 
-  @Config("druid.coordinator.merge.on")
-  public boolean isMergeSegments()
+  @Config("druid.coordinator.merge.strategy")
+  public String getMergeStrategy()
   {
-    return false;
+    return null;
   }
 
   @Config("druid.coordinator.conversion.on")

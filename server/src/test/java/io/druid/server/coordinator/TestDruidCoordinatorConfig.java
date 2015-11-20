@@ -33,9 +33,13 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   private final int coordinatorKillMaxSegments;
 
   private final String consoleStatic;
-
   private final boolean mergeSegments;
   private final boolean convertSegments;
+
+  public TestDruidCoordinatorConfig()
+  {
+    this(null, null, null, null, null, null, 0, null, false, false);
+  }
 
   public TestDruidCoordinatorConfig(
       Duration coordinatorStartDelay,
@@ -78,12 +82,6 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   public Duration getCoordinatorIndexingPeriod()
   {
     return coordinatorIndexingPeriod;
-  }
-
-  @Override
-  public boolean isMergeSegments()
-  {
-    return mergeSegments;
   }
 
   @Override

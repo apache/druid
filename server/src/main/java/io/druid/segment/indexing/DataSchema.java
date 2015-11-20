@@ -61,14 +61,14 @@ public class DataSchema
       @JacksonInject ObjectMapper jsonMapper
   )
   {
-    this.jsonMapper = Preconditions.checkNotNull(jsonMapper, "null ObjectMapper.");
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource cannot be null. Please provide a dataSource.");
+    this.jsonMapper = jsonMapper;
     this.parser = parser;
 
-    if (aggregators.length == 0) {
+    this.aggregators = aggregators == null ? new AggregatorFactory[]{} : aggregators;
+    if (this.aggregators.length == 0) {
       log.warn("No metricsSpec has been specified. Are you sure this is what you want?");
     }
-    this.aggregators = aggregators;
 
     if (granularitySpec == null) {
       log.warn("No granularitySpec has been specified. Using UniformGranularitySpec as default.");
@@ -93,7 +93,7 @@ public class DataSchema
   @JsonIgnore
   public InputRowParser getParser()
   {
-    if(parser == null) {
+    if (parser == null) {
       log.warn("No parser has been specified");
       return null;
     }

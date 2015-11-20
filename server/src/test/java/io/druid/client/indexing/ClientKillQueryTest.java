@@ -30,7 +30,7 @@ public class ClientKillQueryTest
 {
   private static final String DATA_SOURCE = "data_source";
   private static final Interval INTERVAL = new Interval(new DateTime(), new DateTime().plus(1));
-  ClientKillQuery clientKillQuery;
+  private ClientKillQuery clientKillQuery;
 
   @Before
   public void setUp()

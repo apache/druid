@@ -21,16 +21,21 @@ package io.druid.indexing.common.task;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.metamx.common.Granularity;
 import io.druid.client.indexing.ClientAppendQuery;
+import io.druid.client.indexing.ClientHadoopIndexQuery;
 import io.druid.client.indexing.ClientKillQuery;
 import io.druid.client.indexing.ClientMergeQuery;
 import io.druid.granularity.QueryGranularity;
 import io.druid.guice.FirehoseModule;
 import io.druid.indexer.HadoopIOConfig;
 import io.druid.indexer.HadoopIngestionSpec;
+import io.druid.indexer.HadoopTuningConfig;
 import io.druid.indexing.common.TestUtils;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -40,6 +45,7 @@ import io.druid.segment.data.RoaringBitmapSerdeFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.RealtimeTuningConfig;
+import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentMetrics;
@@ -53,6 +59,7 @@ import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Test;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -612,5 +619,123 @@ public class TaskSerdeTest
     );
     Assert.assertEquals("blah", task.getClasspathPrefix());
     Assert.assertEquals("blah", task2.getClasspathPrefix());
+  }
+
+  @Test
+  public void testHadoopIndexTaskSerdeWithClientHadoopQuery() throws Exception
+  {
+    final String expectedTaskId = "coordinator_index_task_1234";
+    final String expectedDataSource = "wikipedia";
+
+    final List<Interval> expectedIntervalList = ImmutableList.of(
+        new Interval("2012-01-01/2012-01-03"),
+        new Interval("2012-01-05/2012-01-08"),
+        new Interval("2012-01-10/2012-01-14")
+    );
+
+    final List<String> expectedDimensions = ImmutableList.of("a", "b", "c");
+
+    final AggregatorFactory[] expectedAggregators = new AggregatorFactory[]{
+        new CountAggregatorFactory("name"),
+        new DoubleSumAggregatorFactory(
+            "added",
+            "added"
+        ),
+        new DoubleSumAggregatorFactory(
+            "deleted",
+            "deleted"
+        ),
+        new DoubleSumAggregatorFactory(
+            "delta",
+            "delta"
+        )
+    };
+
+    final HadoopTuningConfig expectedTuningConfig = jsonMapper.convertValue(ImmutableMap.<String, Object>builder()
+                                                                                .put("version", "v1")
+                                                                                .put("type", "hadoop")
+                                                                                .put(
+                                                                                    "partitionSpec",
+                                                                                    ImmutableMap.of(
+                                                                                        "assumeGrouped",
+                                                                                        true,
+                                                                                        "targetPartitionSize",
+                                                                                        1000,
+                                                                                        "type",
+                                                                                        "hashed"
+                                                                                    )
+                                                                                )
+                                                                                .put("rowFlushBoundary", 10000)
+                                                                                .build(), HadoopTuningConfig.class);
+
+    final ClientHadoopIndexQuery clientHadoopIndexQuery = new ClientHadoopIndexQuery(
+        expectedTaskId,
+        expectedDataSource,
+        expectedIntervalList,
+        expectedAggregators,
+        expectedDimensions,
+        QueryGranularity.DAY,
+        ImmutableMap.<String, Object>builder()
+            .put("version", "v1")
+            .put("type", "hadoop")
+            .put(
+                "partitionSpec",
+                ImmutableMap.of(
+                    "assumeGrouped",
+                    true,
+                    "targetPartitionSize",
+                    1000,
+                    "type",
+                    "hashed"
+                )
+            )
+            .put("rowFlushBoundary", 10000)
+            .build(),
+        null,
+        jsonMapper
+    );
+
+    final HadoopIOConfig expectedIOConfig = new HadoopIOConfig(ImmutableMap.<String, Object>of(
+        "type",
+        "dataSource",
+        "ingestionSpec",
+        // Due to that HadoopIOConfig takes a Map instead of a PathSpec in its JsonCreate constructor,
+        // the list of intervals has to be in string format here.
+        ImmutableMap.of(
+            "dataSource", expectedDataSource,
+            "intervals", Lists.transform(
+            expectedIntervalList,
+            new Function<Interval, String>()
+            {
+              @Nullable
+              @Override
+              public String apply(@Nullable Interval input)
+              {
+                return input.toString();
+              }
+            }),
+            "dimensions", expectedDimensions
+        )
+    ), null, null);
+
+    final HadoopIndexTask hadoopIndexTask = jsonMapper.readValue(
+        jsonMapper.writeValueAsString(clientHadoopIndexQuery),
+        HadoopIndexTask.class
+    );
+
+    final HadoopIngestionSpec actualIngestionSpec = hadoopIndexTask.getSpec();
+    final DataSchema actualDataSchema = actualIngestionSpec.getDataSchema();
+    final GranularitySpec actualGranularitySpec = actualIngestionSpec.getDataSchema().getGranularitySpec();
+    final HadoopTuningConfig actualTuningConfig = hadoopIndexTask.getSpec().getTuningConfig();
+    final HadoopIOConfig actualIOConfig = hadoopIndexTask.getSpec().getIOConfig();
+
+    Assert.assertEquals(expectedDataSource, hadoopIndexTask.getDataSource());
+    Assert.assertEquals(expectedDataSource, actualDataSchema.getDataSource());
+    Assert.assertEquals(expectedTaskId, hadoopIndexTask.getId());
+    Assert.assertEquals(QueryGranularity.DAY, actualGranularitySpec.getQueryGranularity());
+    Assert.assertEquals(Sets.newHashSet(expectedIntervalList), actualGranularitySpec.bucketIntervals().get());
+    Assert.assertArrayEquals(expectedAggregators, actualDataSchema.getAggregators());
+    Assert.assertEquals(expectedTuningConfig, actualTuningConfig);
+    Assert.assertEquals(expectedIOConfig, actualIOConfig);
   }
 }

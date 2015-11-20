@@ -67,7 +67,7 @@ public class DatasourcePathSpec implements PathSpec
     if (maxSplitSize == null) {
       this.maxSplitSize = 0;
     } else {
-      this.maxSplitSize = maxSplitSize.longValue();
+      this.maxSplitSize = maxSplitSize;
     }
   }
 

@@ -36,6 +36,7 @@ public class CoordinatorDynamicConfig
   private final int balancerComputeThreads;
   private final boolean emitBalancingStats;
   private final Set<String> killDataSourceWhitelist;
+  private final DruidCoordinatorHadoopMergeConfig hadoopMergeConfig;
 
   @JsonCreator
   public CoordinatorDynamicConfig(
@@ -47,7 +48,8 @@ public class CoordinatorDynamicConfig
       @JsonProperty("replicationThrottleLimit") int replicationThrottleLimit,
       @JsonProperty("balancerComputeThreads") int balancerComputeThreads,
       @JsonProperty("emitBalancingStats") boolean emitBalancingStats,
-      @JsonProperty("killDataSourceWhitelist") Set<String> killDataSourceWhitelist
+      @JsonProperty("killDataSourceWhitelist") Set<String> killDataSourceWhitelist,
+      @JsonProperty("hadoopMergeConfig") DruidCoordinatorHadoopMergeConfig hadoopMergeConfig
   )
   {
     this.maxSegmentsToMove = maxSegmentsToMove;
@@ -57,6 +59,7 @@ public class CoordinatorDynamicConfig
     this.replicantLifetime = replicantLifetime;
     this.replicationThrottleLimit = replicationThrottleLimit;
     this.emitBalancingStats = emitBalancingStats;
+    this.hadoopMergeConfig = hadoopMergeConfig;
     this.balancerComputeThreads = Math.min(
         Math.max(balancerComputeThreads, 1),
         Math.max(Runtime.getRuntime().availableProcessors() - 1, 1)
@@ -118,6 +121,12 @@ public class CoordinatorDynamicConfig
     return killDataSourceWhitelist;
   }
 
+  @JsonProperty
+  public DruidCoordinatorHadoopMergeConfig getHadoopMergeConfig()
+  {
+    return hadoopMergeConfig;
+  }
+
   @Override
   public String toString()
   {
@@ -131,6 +140,7 @@ public class CoordinatorDynamicConfig
            ", balancerComputeThreads=" + balancerComputeThreads +
            ", emitBalancingStats=" + emitBalancingStats +
            ", killDataSourceWhitelist=" + killDataSourceWhitelist +
+           ", hadoopMergeConfig=" + hadoopMergeConfig +
            '}';
   }
 
@@ -170,9 +180,14 @@ public class CoordinatorDynamicConfig
     if (emitBalancingStats != that.emitBalancingStats) {
       return false;
     }
-    return !(killDataSourceWhitelist != null
-             ? !killDataSourceWhitelist.equals(that.killDataSourceWhitelist)
-             : that.killDataSourceWhitelist != null);
+    if (killDataSourceWhitelist != null
+        ? !killDataSourceWhitelist.equals(that.killDataSourceWhitelist)
+        : that.killDataSourceWhitelist != null) {
+      return false;
+    }
+    return hadoopMergeConfig != null
+           ? hadoopMergeConfig.equals(that.hadoopMergeConfig)
+           : that.hadoopMergeConfig == null;
 
   }
 
@@ -188,6 +203,7 @@ public class CoordinatorDynamicConfig
     result = 31 * result + balancerComputeThreads;
     result = 31 * result + (emitBalancingStats ? 1 : 0);
     result = 31 * result + (killDataSourceWhitelist != null ? killDataSourceWhitelist.hashCode() : 0);
+    result = 31 * result + (hadoopMergeConfig != null ? hadoopMergeConfig.hashCode() : 0);
     return result;
   }
 
@@ -202,10 +218,11 @@ public class CoordinatorDynamicConfig
     private boolean emitBalancingStats;
     private int balancerComputeThreads;
     private Set<String> killDataSourceWhitelist;
+    private DruidCoordinatorHadoopMergeConfig hadoopMergeConfig;
 
     public Builder()
     {
-      this(15 * 60 * 1000L, 524288000L, 100, 5, 15, 10, 1, false, null);
+      this(15 * 60 * 1000L, 524288000L, 100, 5, 15, 10, 1, false, null, null);
     }
 
     private Builder(
@@ -217,7 +234,8 @@ public class CoordinatorDynamicConfig
         int replicationThrottleLimit,
         int balancerComputeThreads,
         boolean emitBalancingStats,
-        Set<String> killDataSourceWhitelist
+        Set<String> killDataSourceWhitelist,
+        DruidCoordinatorHadoopMergeConfig hadoopMergeConfig
     )
     {
       this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
@@ -229,6 +247,7 @@ public class CoordinatorDynamicConfig
       this.emitBalancingStats = emitBalancingStats;
       this.balancerComputeThreads = balancerComputeThreads;
       this.killDataSourceWhitelist = killDataSourceWhitelist;
+      this.hadoopMergeConfig = hadoopMergeConfig;
     }
 
     public Builder withMillisToWaitBeforeDeleting(long millisToWaitBeforeDeleting)
@@ -279,6 +298,12 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
+    public Builder withhadoopMergeConfig(DruidCoordinatorHadoopMergeConfig hadoopMergeConfig)
+    {
+      this.hadoopMergeConfig = hadoopMergeConfig;
+      return this;
+    }
+
     public CoordinatorDynamicConfig build()
     {
       return new CoordinatorDynamicConfig(
@@ -290,7 +315,8 @@ public class CoordinatorDynamicConfig
           replicationThrottleLimit,
           balancerComputeThreads,
           emitBalancingStats,
-          killDataSourceWhitelist
+          killDataSourceWhitelist,
+          hadoopMergeConfig
       );
     }
   }

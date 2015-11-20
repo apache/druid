@@ -19,31 +19,41 @@
 
 package io.druid.client.indexing;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
+import com.metamx.common.logger.Logger;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.response.InputStreamResponseHandler;
 import io.druid.client.selector.Server;
 import io.druid.curator.discovery.ServerDiscoverySelector;
+import io.druid.granularity.QueryGranularity;
 import io.druid.guice.annotations.Global;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.server.coordinator.helper.DruidCoordinatorHadoopSegmentMerger;
 import io.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.ws.rs.core.MediaType;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.URL;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 public class IndexingServiceClient
 {
+  private static final Logger log = new Logger(IndexingServiceClient.class);
   private static final InputStreamResponseHandler RESPONSE_HANDLER = new InputStreamResponseHandler();
+  private final static String INCOMPLETE_TASKS = "incompleteTasks";
 
   private final HttpClient client;
   private final ObjectMapper jsonMapper;
@@ -79,6 +89,50 @@ public class IndexingServiceClient
     runQuery(new ClientAppendQuery(dataSource, segments));
   }
 
+  public String hadoopMergeSegments(
+      String dataSource,
+      List<Interval> intervalsToReindex,
+      AggregatorFactory[] aggregators,
+      QueryGranularity queryGranularity,
+      List<String> dimensions,
+      Map<String, Object> tuningConfig,
+      List<String> hadoopCoordinates
+  )
+  {
+    final InputStream queryResponse = runQuery(
+        new ClientHadoopIndexQuery(
+            String.format(
+                "%s_%s_%s",
+                DruidCoordinatorHadoopSegmentMerger.HADOOP_REINDEX_TASK_ID_PREFIX, dataSource, new DateTime()
+            ),
+            dataSource,
+            intervalsToReindex,
+            aggregators,
+            dimensions,
+            queryGranularity,
+            tuningConfig,
+            hadoopCoordinates,
+            jsonMapper
+        )
+    );
+
+    try {
+      return jsonMapper.<Map<String, String>>readValue(
+          queryResponse, new TypeReference<Map<String, String>>()
+          {
+          }
+      ).get("task");
+    }
+    catch (IOException e) {
+      log.warn(
+          "Error pasring HadoopReindexTask ID for dataSource [%s] and Interval [%s]",
+          dataSource,
+          intervalsToReindex
+      );
+      return null;
+    }
+  }
+
   public void killSegments(String dataSource, Interval interval)
   {
     runQuery(new ClientKillQuery(dataSource, interval));
@@ -94,9 +148,47 @@ public class IndexingServiceClient
     runQuery(new ClientConversionQuery(dataSource, interval));
   }
 
+  public Map<String, Object> getSegmentMetadata(String dataSource, List<Interval> intervals)
+  {
+    runQuery(new ClientSegmentMetadataQuery(dataSource, intervals));
+    return null;
+  }
+
+  public List<Map<String, Object>> getIncompleteTasks()
+  {
+    final InputStream queryResponse = runGetQuery(INCOMPLETE_TASKS);
+    try {
+      return jsonMapper.readValue(
+          queryResponse, new TypeReference<List<Map<String, Object>>>()
+          {
+          }
+      );
+    }
+    catch (IOException e) {
+      log.warn("Error parsing response for incompleteTasks query from Overlord [%s]", baseUrl());
+      return null;
+    }
+  }
+
+  private InputStream runGetQuery(String path)
+  {
+    try {
+      return client.go(
+          new Request(
+              HttpMethod.GET,
+              new URL(String.format("%s/%s", baseUrl(), path))
+          ), RESPONSE_HANDLER
+      ).get();
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
   private InputStream runQuery(Object queryObject)
   {
     try {
+      System.out.println("query json : " + jsonMapper.writeValueAsString(queryObject));
       return client.go(
           new Request(
               HttpMethod.POST,
@@ -132,4 +224,5 @@ public class IndexingServiceClient
       throw Throwables.propagate(e);
     }
   }
+
 }
