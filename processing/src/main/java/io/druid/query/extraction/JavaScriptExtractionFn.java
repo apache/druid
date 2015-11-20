@@ -61,8 +61,6 @@ public class JavaScriptExtractionFn implements ExtractionFn
     };
   }
 
-  private static final byte CACHE_TYPE_ID = 0x4;
-
   private final String function;
   private final Function<Object, String> fn;
   private final boolean injective;
@@ -97,7 +95,7 @@ public class JavaScriptExtractionFn implements ExtractionFn
   {
     byte[] bytes = StringUtils.toUtf8(function);
     return ByteBuffer.allocate(1 + bytes.length)
-                     .put(CACHE_TYPE_ID)
+                     .put(ExtractionCacheHelper.CACHE_TYPE_ID_JAVASCRIPT)
                      .put(bytes)
                      .array();
   }

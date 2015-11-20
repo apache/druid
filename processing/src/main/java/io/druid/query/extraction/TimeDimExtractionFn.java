@@ -33,8 +33,6 @@ import java.util.Date;
  */
 public class TimeDimExtractionFn extends DimExtractionFn
 {
-  private static final byte CACHE_TYPE_ID = 0x0;
-
   private final String timeFormat;
   private final SimpleDateFormat timeFormatter;
   private final String resultFormat;
@@ -62,7 +60,7 @@ public class TimeDimExtractionFn extends DimExtractionFn
   {
     byte[] timeFormatBytes = StringUtils.toUtf8(timeFormat);
     return ByteBuffer.allocate(1 + timeFormatBytes.length)
-                     .put(CACHE_TYPE_ID)
+                     .put(ExtractionCacheHelper.CACHE_TYPE_ID_TIME_DIM)
                      .put(timeFormatBytes)
                      .array();
   }
