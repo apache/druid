@@ -32,8 +32,6 @@ import java.util.Locale;
 
 public class TimeFormatExtractionFn implements ExtractionFn
 {
-  private static final byte CACHE_TYPE_ID = 0x5;
-
   private final DateTimeZone tz;
   private final String pattern;
   private final Locale locale;
@@ -82,7 +80,7 @@ public class TimeFormatExtractionFn implements ExtractionFn
   {
     byte[] exprBytes = StringUtils.toUtf8(pattern + "\u0001" + tz.getID() + "\u0001" + locale.toLanguageTag());
     return ByteBuffer.allocate(1 + exprBytes.length)
-                     .put(CACHE_TYPE_ID)
+                     .put(ExtractionCacheHelper.CACHE_TYPE_ID_TIME_FORMAT)
                      .put(exprBytes)
                      .array();
   }
@@ -102,7 +100,7 @@ public class TimeFormatExtractionFn implements ExtractionFn
   @Override
   public String apply(String value)
   {
-    return apply((Object)value);
+    return apply((Object) value);
   }
 
   @Override

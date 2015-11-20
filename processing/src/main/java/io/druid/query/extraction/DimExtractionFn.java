@@ -24,7 +24,7 @@ public abstract class DimExtractionFn implements ExtractionFn
   @Override
   public String apply(Object value)
   {
-    return apply(value.toString());
+    return apply(value == null ? null : value.toString());
   }
 
   @Override

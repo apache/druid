@@ -33,8 +33,6 @@ import java.io.IOException;
 
 public class LookupExtractionFn extends FunctionalExtraction
 {
-  private static final byte CACHE_TYPE_ID = 0x7;
-
   private final LookupExtractor lookup;
 
   @JsonCreator
@@ -94,7 +92,7 @@ public class LookupExtractionFn extends FunctionalExtraction
   {
     try {
       final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-      outputStream.write(CACHE_TYPE_ID);
+      outputStream.write(ExtractionCacheHelper.CACHE_TYPE_ID_LOOKUP);
       outputStream.write(lookup.getCacheKey());
       if (getReplaceMissingValueWith() != null) {
         outputStream.write(StringUtils.toUtf8(getReplaceMissingValueWith()));
