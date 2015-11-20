@@ -23,11 +23,10 @@ import com.google.common.base.Strings;
 
 public class IdentityExtractionFn implements ExtractionFn
 {
-  private static final byte CACHE_TYPE_ID = 0x6;
   @Override
   public byte[] getCacheKey()
   {
-    return new byte[]{CACHE_TYPE_ID};
+    return new byte[]{ExtractionCacheHelper.CACHE_TYPE_ID_IDENTITY};
   }
 
   @Override
