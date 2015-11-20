@@ -71,7 +71,8 @@ public class SegmentMetadataQueryQueryToolChestTest
                 1,
                 null
             )
-        ), 71982
+        ), 71982,
+        100
     );
 
     Object preparedValue = strategy.prepareForCache().apply(result);

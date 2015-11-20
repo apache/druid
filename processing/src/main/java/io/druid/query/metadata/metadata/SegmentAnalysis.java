@@ -30,13 +30,15 @@ public class SegmentAnalysis
   private final List<Interval> interval;
   private final Map<String, ColumnAnalysis> columns;
   private final long size;
+  private final int numRows;
 
   @JsonCreator
   public SegmentAnalysis(
       @JsonProperty("id") String id,
       @JsonProperty("intervals") List<Interval> interval,
       @JsonProperty("columns") Map<String, ColumnAnalysis> columns,
-      @JsonProperty("size") long size
+      @JsonProperty("size") long size,
+      @JsonProperty("numRows") int numRows
 
   )
   {
@@ -44,6 +46,7 @@ public class SegmentAnalysis
     this.interval = interval;
     this.columns = columns;
     this.size = size;
+    this.numRows = numRows;
   }
 
   @JsonProperty
@@ -70,6 +73,12 @@ public class SegmentAnalysis
     return size;
   }
 
+  @JsonProperty
+  public int getNumRows()
+  {
+    return numRows;
+  }
+
   public String toDetailedString()
   {
     return "SegmentAnalysis{" +
@@ -77,6 +86,7 @@ public class SegmentAnalysis
            ", interval=" + interval +
            ", columns=" + columns +
            ", size=" + size +
+           ", numRows=" + numRows +
            '}';
   }
 
@@ -87,6 +97,7 @@ public class SegmentAnalysis
            "id='" + id + '\'' +
            ", interval=" + interval +
            ", size=" + size +
+           ", numRows=" + numRows +
            '}';
   }
 
@@ -105,6 +116,11 @@ public class SegmentAnalysis
     if (size != that.size) {
       return false;
     }
+
+    if (numRows != that.numRows) {
+      return false;
+    }
+
     if (id != null ? !id.equals(that.id) : that.id != null) {
       return false;
     }
@@ -122,6 +138,7 @@ public class SegmentAnalysis
     result = 31 * result + (interval != null ? interval.hashCode() : 0);
     result = 31 * result + (columns != null ? columns.hashCode() : 0);
     result = 31 * result + (int) (size ^ (size >>> 32));
+    result = 31 * result + (int) (numRows ^ (numRows >>> 32));
     return result;
   }
 }

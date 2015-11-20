@@ -103,7 +103,8 @@ public class SegmentMetadataQueryTest
                 1,
                 null
             )
-        ), 71982
+        ), 71982,
+        1209
     );
   }
 

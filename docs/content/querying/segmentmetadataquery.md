@@ -6,6 +6,7 @@ Segment metadata queries return per segment information about:
 
 * Cardinality of all columns in the segment
 * Estimated byte size for the segment columns if they were stored in a flat format
+* Number of rows stored inside the segment
 * Interval the segment covers
 * Column type of all the columns in the segment
 * Estimated total segment byte size in if it was stored in a flat format
@@ -43,7 +44,8 @@ The format of the result is:
     "dim2" : { "type" : "STRING", "size" : 100000, "cardinality" : 1504 },
     "metric1" : { "type" : "FLOAT", "size" : 100000, "cardinality" : null }
   },
-  "size" : 300000
+  "size" : 300000,
+  "numRows" : 5000000
 } ]
 ```
 
