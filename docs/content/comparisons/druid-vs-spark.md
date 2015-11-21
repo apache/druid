@@ -5,7 +5,7 @@ layout: doc_page
 Druid vs Spark
 ==============
 
-We are not experts on Spark, if anything is incorrect about our portrayal, please let us know on the mailing list or via some other means.
+Druid and Spark are complementary solutions as Druid can be used to accelerate OLAP queries in Spark.
 
 Spark is a cluster computing framework built around the concept of Resilient Distributed Datasets (RDDs) and
 can be viewed as a back-office analytics platform.  RDDs enable data reuse by persisting intermediate results
@@ -17,5 +17,5 @@ the ability to run queries and analyze large amounts of data with a
 wide array of different algorithms.
 
 Druid is designed to power analytic applications and focuses on the latencies to ingest data and serve queries
-over that data. If you were to build a web UI where users could
-arbitrarily explore data, the latencies seen by using Spark may be too slow for interactive use cases.
+over that data. If you were to build an application where users could
+arbitrarily explore data, the latencies seen by using Spark will likely be too slow for an interactive experience.
