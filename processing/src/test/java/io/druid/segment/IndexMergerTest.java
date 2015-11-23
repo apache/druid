@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -40,6 +41,7 @@ import io.druid.segment.data.IncrementalIndexTest;
 import io.druid.segment.data.RoaringBitmapSerdeFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
+import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -71,6 +73,7 @@ public class IndexMergerTest
   {
     return Collections2.transform(
         Sets.cartesianProduct(
+            /*
             ImmutableList.of(
                 ImmutableSet.of(new RoaringBitmapSerdeFactory(), new ConciseBitmapSerdeFactory()),
                 ImmutableSet.of(
@@ -80,6 +83,16 @@ public class IndexMergerTest
                 ImmutableSet.of(
                     CompressedObjectStrategy.CompressionStrategy.LZ4,
                     CompressedObjectStrategy.CompressionStrategy.LZF
+                )
+            )
+            */
+            ImmutableList.of(
+                ImmutableSet.of(new RoaringBitmapSerdeFactory()),
+                ImmutableSet.of(
+                    CompressedObjectStrategy.CompressionStrategy.LZ4
+                ),
+                ImmutableSet.of(
+                    CompressedObjectStrategy.CompressionStrategy.LZ4
                 )
             )
         ), new Function<List<?>, Object[]>()
@@ -313,7 +326,7 @@ public class IndexMergerTest
     final QueryableIndex index2 = closer.closeLater(
         INDEX_IO.loadIndex(
             INDEX_MERGER.persist(
-                toPersist1,
+                toPersist2,
                 tmpDir2,
                 null,
                 indexSpec
@@ -337,7 +350,7 @@ public class IndexMergerTest
     Assert.assertEquals(1, index2.getColumn(Column.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(ImmutableList.of("dim2"), ImmutableList.copyOf(index2.getAvailableDimensions()));
 
-    Assert.assertEquals(1, merged.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(2, merged.getColumn(Column.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(ImmutableList.of("dim2"), ImmutableList.copyOf(merged.getAvailableDimensions()));
 
     assertDimCompression(index1, indexSpec.getDimensionCompressionStrategy());
@@ -793,11 +806,7 @@ public class IndexMergerTest
     );
 
     final IndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
-    Iterable<Rowboat> boats = adapter.getRows();
-    List<Rowboat> boatList = new ArrayList<>();
-    for (Rowboat boat : boats) {
-      boatList.add(boat);
-    }
+    List<Rowboat> boatList = ImmutableList.copyOf(adapter.getRows());
 
     Assert.assertEquals(ImmutableList.of("dimA", "dimB"), ImmutableList.copyOf(adapter.getDimensionNames()));
     Assert.assertEquals(5, boatList.size());
@@ -811,6 +820,133 @@ public class IndexMergerTest
     Assert.assertArrayEquals(new Object[]{1L}, boatList.get(3).getMetrics());
     Assert.assertArrayEquals(new int[][]{{2}, {0}}, boatList.get(4).getDims());
     Assert.assertArrayEquals(new Object[]{1L}, boatList.get(4).getMetrics());
+  }
+
+  @Test
+  public void testMergeWithSupersetOrdering() throws Exception
+  {
+    IncrementalIndex toPersistA = getSingleDimIndex("dimA", Arrays.asList("1", "2"));
+
+    //IncrementalIndex toPersistB = getSingleDimIndex("dimB", Arrays.asList("1", "2", "3"));
+    IncrementalIndex toPersistB = getIndexWithDims(Arrays.asList("dimB", "dimA"));
+    //IncrementalIndex toPersistB = getIndexWithDims(Arrays.asList("dimB"));
+    addDimValuesToIndex(toPersistB, "dimB", Arrays.asList("1", "2", "3"));
+    /*
+    toPersistB.add(
+        new MapBasedInputRow(
+            1,
+            Arrays.asList("dimB", "dimA"),
+            ImmutableMap.<String, Object>of("dimA", "7", "dimB", "7")
+        )
+    );
+    */
+
+    IncrementalIndex toPersistBA = getIndexWithDims(Arrays.asList("dimB", "dimA"));
+    addDimValuesToIndex(toPersistBA, "dimA", Arrays.asList("1", "2"));
+    addDimValuesToIndex(toPersistBA, "dimB", Arrays.asList("1", "2", "3"));
+    //addDimValuesToIndex(toPersistBA, "dimC", Arrays.asList("1", "2", "3"));
+    //addDimValuesToIndex(toPersistBA, "dimC", Arrays.asList(""));
+
+    IncrementalIndex toPersistC = getSingleDimIndex("dimA", Arrays.asList("1", "2"));
+    addDimValuesToIndex(toPersistC, "dimC", Arrays.asList("1", "2", "3"));
+
+    final File tmpDirA = temporaryFolder.newFolder();
+    final File tmpDirB = temporaryFolder.newFolder();
+    final File tmpDirBA = temporaryFolder.newFolder();
+    final File tmpDirC = temporaryFolder.newFolder();
+    final File tmpDirMerged = temporaryFolder.newFolder();
+    final File tmpDirMerged2 = temporaryFolder.newFolder();
+
+    QueryableIndex indexA = closer.closeLater(
+        INDEX_IO.loadIndex(
+            INDEX_MERGER.persist(
+                toPersistA,
+                tmpDirA,
+                null,
+                indexSpec
+            )
+        )
+    );
+
+    QueryableIndex indexB = closer.closeLater(
+        INDEX_IO.loadIndex(
+            INDEX_MERGER.persist(
+                toPersistB,
+                tmpDirB,
+                null,
+                indexSpec
+            )
+        )
+    );
+
+    QueryableIndex indexBA = closer.closeLater(
+        INDEX_IO.loadIndex(
+            INDEX_MERGER.persist(
+                toPersistBA,
+                tmpDirBA,
+                null,
+                indexSpec
+            )
+        )
+    );
+
+    QueryableIndex indexC = closer.closeLater(
+        INDEX_IO.loadIndex(
+            INDEX_MERGER.persist(
+                toPersistC,
+                tmpDirC,
+                null,
+                indexSpec
+            )
+        )
+    );
+
+    System.out.println("/n/n/n/nMERGING INDEXES");
+
+    final QueryableIndex merged = closer.closeLater(
+        INDEX_IO.loadIndex(
+            INDEX_MERGER.mergeQueryableIndex(
+                Arrays.asList(indexA, indexB, indexBA),
+                new AggregatorFactory[]{new CountAggregatorFactory("count")},
+                tmpDirMerged,
+                indexSpec
+            )
+        )
+    );
+
+    final QueryableIndex merged2 = closer.closeLater(
+        INDEX_IO.loadIndex(
+            INDEX_MERGER.mergeQueryableIndex(
+                Arrays.asList(indexA, indexB, indexBA, indexC),
+                new AggregatorFactory[]{new CountAggregatorFactory("count")},
+                tmpDirMerged2,
+                indexSpec
+            )
+        )
+    );
+
+    final IndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
+    Iterable<Rowboat> boats = adapter.getRows();
+    List<Rowboat> boatList = ImmutableList.copyOf(boats);
+
+    final IndexableAdapter adapter2 = new QueryableIndexIndexableAdapter(merged2);
+    Iterable<Rowboat> boats2 = adapter2.getRows();
+    List<Rowboat> boatList2 = ImmutableList.copyOf(boats2);
+
+    Assert.assertEquals(ImmutableList.of("dimB", "dimA"), ImmutableList.copyOf(adapter.getDimensionNames()));
+    Assert.assertEquals(5, boatList.size());
+    Assert.assertArrayEquals(new int[][]{{0}, {1}}, boatList.get(0).getDims());
+    Assert.assertArrayEquals(new Object[]{2L}, boatList.get(0).getMetrics());
+    Assert.assertArrayEquals(new int[][]{{0}, {2}}, boatList.get(1).getDims());
+    Assert.assertArrayEquals(new Object[]{2L}, boatList.get(1).getMetrics());
+    Assert.assertArrayEquals(new int[][]{{1}, {0}}, boatList.get(2).getDims());
+    Assert.assertArrayEquals(new Object[]{2L}, boatList.get(2).getMetrics());
+    Assert.assertArrayEquals(new int[][]{{2}, {0}}, boatList.get(3).getDims());
+    Assert.assertArrayEquals(new Object[]{2L}, boatList.get(3).getMetrics());
+    Assert.assertArrayEquals(new int[][]{{3}, {0}}, boatList.get(4).getDims());
+    Assert.assertArrayEquals(new Object[]{2L}, boatList.get(4).getMetrics());
+
+    Assert.assertEquals(ImmutableList.of("dimA", "dimB", "dimC"), ImmutableList.copyOf(adapter2.getDimensionNames()));
   }
 
   private IncrementalIndex getIndexD3() throws Exception
@@ -858,8 +994,14 @@ public class IndexMergerTest
         1000
     );
 
+    addDimValuesToIndex(toPersist1, dimName, values);
+    return toPersist1;
+  }
+
+  private void addDimValuesToIndex(IncrementalIndex index, String dimName, List<String> values) throws Exception
+  {
     for (String val : values) {
-      toPersist1.add(
+      index.add(
           new MapBasedInputRow(
               1,
               Arrays.asList(dimName),
@@ -867,7 +1009,20 @@ public class IndexMergerTest
           )
       );
     }
+  }
 
-    return toPersist1;
+  private IncrementalIndex getIndexWithDims(List<String> dims)
+  {
+    IncrementalIndexSchema schema = new IncrementalIndexSchema(
+        0L,
+        QueryGranularity.NONE,
+        new DimensionsSpec(dims, null, null),
+        new AggregatorFactory[]{new CountAggregatorFactory("count")}
+    );
+
+    return new OnheapIncrementalIndex(
+        schema,
+        1000
+    );
   }
 }

@@ -26,6 +26,8 @@ import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import io.druid.data.input.InputRow;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.QueryableIndex;
+import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
@@ -39,6 +41,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -202,6 +205,15 @@ public class Sink implements Iterable<FireHydrant>
       if (numHydrants > 0) {
         FireHydrant lastHydrant = hydrants.get(numHydrants - 1);
         newCount = lastHydrant.getCount() + 1;
+        if(!indexSchema.getDimensionsSpec().hasCustomDimensions()) {
+          if (lastHydrant.hasSwapped()) {
+            QueryableIndex oldIndex = lastHydrant.getSegment().asQueryableIndex();
+            newIndex.loadDimensionIterable(oldIndex.getAvailableDimensions());
+          } else {
+            IncrementalIndex oldIndex = lastHydrant.getIndex();
+            newIndex.loadDimensionOrder(oldIndex.getDimensionOrder());
+          }
+        }
       }
       currHydrant = new FireHydrant(newIndex, newCount, getSegment().getIdentifier());
       hydrants.add(currHydrant);
