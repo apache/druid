@@ -22,6 +22,7 @@ package io.druid.segment.realtime.plumber;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
@@ -334,16 +335,18 @@ public class RealtimePlumberSchoolTest
     Interval testInterval = new Interval(new DateTime("1970-01-01"), new DateTime("1971-01-01"));
 
     RealtimePlumber plumber2 = (RealtimePlumber) realtimePlumberSchool.findPlumber(schema2, tuningConfig, metrics);
+
     plumber2.getSinks()
-           .put(
-               0L,
-               new Sink(
-                   testInterval,
-                   schema2,
-                   tuningConfig,
-                   new DateTime("2014-12-01T12:34:56.789").toString()
-               )
-           );
+            .put(
+                0L,
+                new Sink(
+                    testInterval,
+                    schema2,
+                    tuningConfig,
+                    new DateTime("2014-12-01T12:34:56.789").toString()
+                )
+            );
+
     Assert.assertNull(plumber2.startJob());
 
     final Committer committer = new Committer()
@@ -377,14 +380,18 @@ public class RealtimePlumberSchoolTest
     File persistDir = plumber2.computePersistDir(schema2, testInterval);
 
     /* Check that all hydrants were persisted */
-    for (int i = 0; i < 5; i ++) {
+    for (int i = 0; i < 5; i++) {
       Assert.assertTrue(new File(persistDir, String.valueOf(i)).exists());
     }
 
     /* Create some gaps in the persisted hydrants and reload */
     FileUtils.deleteDirectory(new File(persistDir, "1"));
     FileUtils.deleteDirectory(new File(persistDir, "3"));
-    RealtimePlumber restoredPlumber = (RealtimePlumber) realtimePlumberSchool.findPlumber(schema2, tuningConfig, metrics);
+    RealtimePlumber restoredPlumber = (RealtimePlumber) realtimePlumberSchool.findPlumber(
+        schema2,
+        tuningConfig,
+        metrics
+    );
     restoredPlumber.bootstrapSinksFromDisk();
 
     Map<Long, Sink> sinks = restoredPlumber.getSinks();
@@ -393,26 +400,160 @@ public class RealtimePlumberSchoolTest
     List<FireHydrant> hydrants = Lists.newArrayList(sinks.get(new Long(0)));
     DateTime startTime = new DateTime("1970-01-01T00:00:00.000Z");
     Assert.assertEquals(0, hydrants.get(0).getCount());
-    Assert.assertEquals(new Interval(startTime, new DateTime("1970-01-01T00:00:00.001Z")),
-                        hydrants.get(0).getSegment().getDataInterval());
+    Assert.assertEquals(
+        new Interval(startTime, new DateTime("1970-01-01T00:00:00.001Z")),
+        hydrants.get(0).getSegment().getDataInterval()
+    );
     Assert.assertEquals(2, hydrants.get(1).getCount());
-    Assert.assertEquals(new Interval(startTime, new DateTime("1970-03-01T00:00:00.001Z")),
-                        hydrants.get(1).getSegment().getDataInterval());
+    Assert.assertEquals(
+        new Interval(startTime, new DateTime("1970-03-01T00:00:00.001Z")),
+        hydrants.get(1).getSegment().getDataInterval()
+    );
     Assert.assertEquals(4, hydrants.get(2).getCount());
-    Assert.assertEquals(new Interval(startTime, new DateTime("1970-05-01T00:00:00.001Z")),
-                        hydrants.get(2).getSegment().getDataInterval());
+    Assert.assertEquals(
+        new Interval(startTime, new DateTime("1970-05-01T00:00:00.001Z")),
+        hydrants.get(2).getSegment().getDataInterval()
+    );
 
     /* Delete all the hydrants and reload, no sink should be created */
     FileUtils.deleteDirectory(new File(persistDir, "0"));
     FileUtils.deleteDirectory(new File(persistDir, "2"));
     FileUtils.deleteDirectory(new File(persistDir, "4"));
-    RealtimePlumber restoredPlumber2 = (RealtimePlumber) realtimePlumberSchool.findPlumber(schema2, tuningConfig, metrics);
+    RealtimePlumber restoredPlumber2 = (RealtimePlumber) realtimePlumberSchool.findPlumber(
+        schema2,
+        tuningConfig,
+        metrics
+    );
     restoredPlumber2.bootstrapSinksFromDisk();
 
     Assert.assertEquals(0, restoredPlumber2.getSinks().size());
   }
 
-  private InputRow getTestInputRow(final String timeStr) {
+  @Test(timeout = 60000)
+  public void testDimOrderInheritance() throws Exception
+  {
+    final Object commitMetadata = "dummyCommitMetadata";
+    testDimOrderInheritanceHelper(commitMetadata);
+  }
+
+  private void testDimOrderInheritanceHelper(final Object commitMetadata) throws Exception
+  {
+    final AtomicBoolean committed = new AtomicBoolean(false);
+    Interval testInterval = new Interval(new DateTime("1970-01-01"), new DateTime("1971-01-01"));
+
+    RealtimePlumber plumber = (RealtimePlumber) realtimePlumberSchool.findPlumber(schema2, tuningConfig, metrics);
+    Assert.assertNull(plumber.startJob());
+
+    final Committer committer = new Committer()
+    {
+      @Override
+      public Object getMetadata()
+      {
+        return commitMetadata;
+      }
+
+      @Override
+      public void run()
+      {
+        committed.set(true);
+      }
+    };
+
+    plumber.add(
+        getTestInputRowFull(
+            "1970-01-01",
+            ImmutableList.of("dimD"),
+            ImmutableList.of("1")
+        ),
+        Suppliers.ofInstance(committer)
+    );
+    plumber.add(
+        getTestInputRowFull(
+            "1970-02-01",
+            ImmutableList.of("dimC"),
+            ImmutableList.of("1")
+        ),
+        Suppliers.ofInstance(committer)
+    );
+    plumber.add(
+        getTestInputRowFull(
+            "1973-01-01",
+            ImmutableList.of("dimA"),
+            ImmutableList.of("1")
+        ),
+        Suppliers.ofInstance(committer)
+    );
+    plumber.add(
+        getTestInputRowFull(
+            "1980-01-01",
+            ImmutableList.of("dimB"),
+            ImmutableList.of("1")
+        ),
+        Suppliers.ofInstance(committer)
+    );
+    plumber.add(
+        getTestInputRowFull(
+            "1970-02-01",
+            ImmutableList.of("dimE"),
+            ImmutableList.of("1")
+        ),
+        Suppliers.ofInstance(committer)
+    );
+    plumber.add(
+        getTestInputRowFull(
+            "1970-03-01",
+            ImmutableList.of("dimA"),
+            ImmutableList.of("1")
+        ),
+        Suppliers.ofInstance(committer)
+    );
+
+    plumber.persist(committer);
+
+    while (!committed.get()) {
+      Thread.sleep(100);
+    }
+    plumber.getSinks().clear();
+    plumber.finishJob();
+
+    File persistDir = plumber.computePersistDir(schema2, testInterval);
+    RealtimePlumber restoredPlumber = (RealtimePlumber) realtimePlumberSchool.findPlumber(
+        schema2,
+        tuningConfig,
+        metrics
+    );
+    restoredPlumber.bootstrapSinksFromDisk();
+
+    Map<Long, Sink> sinks = restoredPlumber.getSinks();
+    Assert.assertEquals(3, sinks.size());
+
+    List<FireHydrant> hydrants;
+    DateTime startTime = new DateTime("1970-01-01T00:00:00.000Z");
+
+    hydrants = Lists.newArrayList(sinks.get(0L));
+    Assert.assertEquals(0, hydrants.get(0).getCount());
+    Assert.assertEquals(
+        new Interval(startTime, new DateTime("1970-01-01T00:00:00.001Z")),
+        hydrants.get(0).getSegment().getDataInterval()
+    );
+
+    hydrants = Lists.newArrayList(sinks.get(94694400000L));
+    Assert.assertEquals(0, hydrants.get(0).getCount());
+    Assert.assertEquals(
+        new Interval(new DateTime("1973-01-01T00:00:00.000Z"), new DateTime("1973-01-01T00:00:00.001Z")),
+        hydrants.get(0).getSegment().getDataInterval()
+    );
+
+    hydrants = Lists.newArrayList(sinks.get(315532800000L));
+    Assert.assertEquals(0, hydrants.get(0).getCount());
+    Assert.assertEquals(
+        new Interval(new DateTime("1980-01-01T00:00:00.000Z"), new DateTime("1980-01-01T00:00:00.001Z")),
+        hydrants.get(0).getSegment().getDataInterval()
+    );
+  }
+
+  private InputRow getTestInputRow(final String timeStr)
+  {
     return new InputRow()
     {
       @Override
@@ -437,6 +578,60 @@ public class RealtimePlumberSchoolTest
       public List<String> getDimension(String dimension)
       {
         return Lists.newArrayList();
+      }
+
+      @Override
+      public float getFloatMetric(String metric)
+      {
+        return 0;
+      }
+
+      @Override
+      public long getLongMetric(String metric)
+      {
+        return 0L;
+      }
+
+      @Override
+      public Object getRaw(String dimension)
+      {
+        return null;
+      }
+
+      @Override
+      public int compareTo(Row o)
+      {
+        return 0;
+      }
+    };
+  }
+
+  private InputRow getTestInputRowFull(final String timeStr, final List<String> dims, final List<String> dimVals)
+  {
+    return new InputRow()
+    {
+      @Override
+      public List<String> getDimensions()
+      {
+        return dims;
+      }
+
+      @Override
+      public long getTimestampFromEpoch()
+      {
+        return new DateTime(timeStr).getMillis();
+      }
+
+      @Override
+      public DateTime getTimestamp()
+      {
+        return new DateTime(timeStr);
+      }
+
+      @Override
+      public List<String> getDimension(String dimension)
+      {
+        return dimVals;
       }
 
       @Override

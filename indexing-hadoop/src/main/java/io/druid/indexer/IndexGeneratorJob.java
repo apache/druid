@@ -197,7 +197,8 @@ public class IndexGeneratorJob implements Jobby
   private static IncrementalIndex makeIncrementalIndex(
       Bucket theBucket,
       AggregatorFactory[] aggs,
-      HadoopDruidIndexerConfig config
+      HadoopDruidIndexerConfig config,
+      IncrementalIndex oldIndex
   )
   {
     final HadoopTuningConfig tuningConfig = config.getSchema().getTuningConfig();
@@ -208,10 +209,18 @@ public class IndexGeneratorJob implements Jobby
         .withMetrics(aggs)
         .build();
 
-    return new OnheapIncrementalIndex(
+    OnheapIncrementalIndex newIndex = new OnheapIncrementalIndex(
         indexSchema,
         tuningConfig.getRowFlushBoundary()
     );
+
+    if(oldIndex != null) {
+      if (!indexSchema.getDimensionsSpec().hasCustomDimensions()) {
+        newIndex.loadDimensionOrder(oldIndex.getDimensionOrder());
+      }
+    }
+
+    return newIndex;
   }
 
   public static class IndexGeneratorMapper extends HadoopDruidIndexerMapper<BytesWritable, BytesWritable>
@@ -310,7 +319,7 @@ public class IndexGeneratorJob implements Jobby
       if (iter.hasNext()) {
         SortableBytes keyBytes = SortableBytes.fromBytesWritable(key);
         Bucket bucket = Bucket.fromGroupKey(keyBytes.getGroupKey()).lhs;
-        IncrementalIndex index = makeIncrementalIndex(bucket, combiningAggs, config);
+        IncrementalIndex index = makeIncrementalIndex(bucket, combiningAggs, config, null);
         index.add(InputRowSerde.fromBytes(first.getBytes(), aggregators));
 
         while (iter.hasNext()) {
@@ -320,7 +329,7 @@ public class IndexGeneratorJob implements Jobby
           if (!index.canAppendRow()) {
             log.info("current index full due to [%s]. creating new index.", index.getOutOfRowsReason());
             flushIndexToContextAndClose(key, index, context);
-            index = makeIncrementalIndex(bucket, combiningAggs, config);
+            index = makeIncrementalIndex(bucket, combiningAggs, config, index);
           }
 
           index.add(value);
@@ -507,7 +516,8 @@ public class IndexGeneratorJob implements Jobby
       IncrementalIndex index = makeIncrementalIndex(
           bucket,
           combiningAggs,
-          config
+          config,
+          null
       );
       try {
         File baseFlushFile = File.createTempFile("base", "flush");
@@ -553,7 +563,8 @@ public class IndexGeneratorJob implements Jobby
             index = makeIncrementalIndex(
                 bucket,
                 combiningAggs,
-                config
+                config,
+                index
             );
             startTime = System.currentTimeMillis();
             ++indexCount;

@@ -548,7 +548,7 @@ public class RealtimePlumber implements Plumber
                   mergedTarget,
                   config.getIndexSpec()
               );
-              
+
               // emit merge metrics before publishing segment
               metrics.incrementMergeCpuTime(VMUtils.safeGetThreadCpuTime() - mergeThreadCpuTime);
               metrics.incrementMergeTimeMillis(mergeStopwatch.elapsed(TimeUnit.MILLISECONDS));
@@ -799,7 +799,14 @@ public class RealtimePlumber implements Plumber
           );
           continue;
         }
-        Sink currSink = new Sink(sinkInterval, schema, config, versioningPolicy.getVersion(sinkInterval), hydrants);
+
+        Sink currSink = new Sink(
+            sinkInterval,
+            schema,
+            config,
+            versioningPolicy.getVersion(sinkInterval),
+            hydrants
+        );
         sinks.put(sinkInterval.getStartMillis(), currSink);
         sinkTimeline.add(
             currSink.getInterval(),

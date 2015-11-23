@@ -30,10 +30,12 @@ import com.metamx.common.Granularity;
 import io.druid.data.input.impl.CSVParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
+import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
@@ -76,6 +78,15 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class IndexGeneratorJobTest
 {
+
+  final private static AggregatorFactory[] aggs1 = {
+      new LongSumAggregatorFactory("visited_num", "visited_num"),
+      new HyperUniquesAggregatorFactory("unique_hosts", "host")
+  };
+
+  final private static AggregatorFactory[] aggs2 = {
+      new CountAggregatorFactory("count")
+  };
 
   @Parameterized.Parameters(name = "partitionType={0}, interval={1}, shardInfoForEachSegment={2}, data={3}, " +
                                    "inputFormatName={4}")
@@ -133,7 +144,9 @@ public class IndexGeneratorJobTest
                         null,
                         ImmutableList.of("timestamp", "host", "visited_num")
                     )
-                )
+                ),
+                null,
+                aggs1
             },
             {
                 false,
@@ -175,7 +188,9 @@ public class IndexGeneratorJobTest
                         null,
                         ImmutableList.of("timestamp", "host", "visited_num")
                     )
-                )
+                ),
+                null,
+                aggs1
             },
             {
                 true,
@@ -217,7 +232,9 @@ public class IndexGeneratorJobTest
                         null,
                         ImmutableList.of("timestamp", "host", "visited_num")
                     )
-                )
+                ),
+                null,
+                aggs1
             },
             {
                 false,
@@ -269,7 +286,36 @@ public class IndexGeneratorJobTest
                         null,
                         ImmutableList.of("timestamp", "host", "visited_num")
                     )
-                )
+                ),
+                null,
+                aggs1
+            },
+            {
+                false,
+                "hashed",
+                "2014-10-22T00:00:00Z/P1D",
+                new Integer[][][]{
+                    {
+                        {0, 1}
+                    }
+                },
+                ImmutableList.of(
+                    "{\"ts\":\"2014102200\", \"A\":\"a.example.com\", \"B\":\"100\"}",
+                    "{\"ts\":\"2014102201\", \"A\":\"b.example.com\", \"B\":\"50\"}",
+                    "{\"ts\":\"2014102202\", \"A\":\"c.example.com\", \"B\":\"200\"}",
+                    "{\"ts\":\"2014102203\", \"A\":\"d.example.com\", \"B\":\"250\"}",
+                    "{\"ts\":\"2014102204\", \"A\":\"e.example.com\", \"B\":\"123\"}",
+                    "{\"ts\":\"2014102205\", \"A\":\"f.example.com\", \"B\":\"567\"}"
+                ),
+                null,
+                new HadoopyStringInputRowParser(
+                    new JSONParseSpec(
+                        new TimestampSpec("ts", "yyyyMMddHH", null),
+                        new DimensionsSpec(ImmutableList.of("ts", "A", "B"), null, null)
+                    )
+                ),
+                1,
+                aggs2
             }
         }
     );
@@ -289,6 +335,8 @@ public class IndexGeneratorJobTest
   private boolean useCombiner;
   private String inputFormatName;
   private InputRowParser inputRowParser;
+  private Integer maxRowsInMemory;
+  private AggregatorFactory[] aggs;
 
   public IndexGeneratorJobTest(
       boolean useCombiner,
@@ -297,7 +345,9 @@ public class IndexGeneratorJobTest
       Object[][][] shardInfoForEachSegment,
       List<String> data,
       String inputFormatName,
-      InputRowParser inputRowParser
+      InputRowParser inputRowParser,
+      Integer maxRowsInMemory,
+      AggregatorFactory[] aggs
   ) throws IOException
   {
     this.useCombiner = useCombiner;
@@ -307,6 +357,8 @@ public class IndexGeneratorJobTest
     this.data = data;
     this.inputFormatName = inputFormatName;
     this.inputRowParser = inputRowParser;
+    this.maxRowsInMemory = maxRowsInMemory;
+    this.aggs = aggs;
   }
 
   private void writeDataToLocalSequenceFile(File outputFile, List<String> data) throws IOException
@@ -367,10 +419,7 @@ public class IndexGeneratorJobTest
                     inputRowParser,
                     Map.class
                 ),
-                new AggregatorFactory[]{
-                    new LongSumAggregatorFactory("visited_num", "visited_num"),
-                    new HyperUniquesAggregatorFactory("unique_hosts", "host")
-                },
+                aggs,
                 new UniformGranularitySpec(
                     Granularity.DAY, QueryGranularity.NONE, ImmutableList.of(this.interval)
                 ),
@@ -387,7 +436,7 @@ public class IndexGeneratorJobTest
                 null,
                 null,
                 null,
-                null,
+                maxRowsInMemory,
                 false,
                 false,
                 false,

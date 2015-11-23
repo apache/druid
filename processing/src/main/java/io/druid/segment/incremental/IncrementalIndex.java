@@ -304,7 +304,6 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     metricIndexes = metricIndexesBuilder.build();
     metricTypes = metricTypesBuilder.build();
 
-    this.dimensionOrder = Maps.newLinkedHashMap();
     this.dimensions = new CopyOnWriteArrayList<>(incrementalIndexSchema.getDimensionsSpec().getDimensions());
     // This should really be more generic
     List<SpatialDimensionSchema> spatialDimensions = incrementalIndexSchema.getDimensionsSpec().getSpatialDimensions();
@@ -326,7 +325,9 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       capabilities.setType(type);
       columnCapabilities.put(entry.getKey(), capabilities);
     }
+
     this.dimValues = new DimensionHolder();
+    this.dimensionOrder = Maps.newLinkedHashMap();
     for (String dimension : dimensions) {
       ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
       capabilities.setType(ValueType.STRING);
@@ -397,10 +398,10 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   /**
    * Adds a new row.  The row might correspond with another row that already exists, in which case this will
    * update that row instead of inserting a new one.
-   * <p/>
-   * <p/>
+   * <p>
+   * <p>
    * Calls to add() are thread safe.
-   * <p/>
+   * <p>
    *
    * @param row the row of data to add
    *
@@ -565,6 +566,32 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     return dimensionOrder.get(dimension);
   }
 
+  public LinkedHashMap<String, Integer> getDimensionOrder()
+  {
+    return dimensionOrder;
+  }
+
+  public void loadDimensionOrder(LinkedHashMap<String, Integer> oldDimensionOrder)
+  {
+    dimensionOrder.putAll(oldDimensionOrder);
+    for (String dim : oldDimensionOrder.keySet()) {
+      if (dimValues.get(dim) == null) {
+        dimensions.add(dim);
+        dimValues.add(dim);
+      }
+    }
+  }
+
+  public void loadDimensionIterable(Iterable<String> oldDimensionOrder)
+  {
+    int i = 0;
+    for (String dim : oldDimensionOrder) {
+      dimensionOrder.put(dim, i);
+      dimensions.add(dim);
+      dimValues.add(dim);
+    }
+  }
+
   public List<String> getMetricNames()
   {
     return metricNames;
@@ -615,8 +642,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
                   String[] dim = theDims[i];
                   if (dim != null && dim.length != 0) {
                     theVals.put(dimensions.get(i), dim.length == 1 ? dim[0] : Arrays.asList(dim));
-                  }
-                  else {
+                  } else {
                     theVals.put(dimensions.get(i), null);
                   }
                 }
@@ -796,13 +822,10 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     public int compareTo(TimeAndDims rhs)
     {
       int retVal = Longs.compare(timestamp, rhs.timestamp);
-
-      if (retVal == 0) {
-        retVal = Ints.compare(dims.length, rhs.dims.length);
-      }
+      int numComparisons = Math.min(dims.length, rhs.dims.length);
 
       int index = 0;
-      while (retVal == 0 && index < dims.length) {
+      while (retVal == 0 && index < numComparisons) {
         String[] lhsVals = dims[index];
         String[] rhsVals = rhs.dims[index];
 
@@ -826,6 +849,10 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
           ++valsIndex;
         }
         ++index;
+      }
+
+      if (retVal == 0) {
+        return Ints.compare(dims.length, rhs.dims.length);
       }
 
       return retVal;

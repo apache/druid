@@ -385,6 +385,9 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
           return new EmptyIndexedInts();
         }
         if (currVal == null) {
+          if(currIndex == dimSet.size()) {
+            return new EmptyIndexedInts();
+          }
           currVal = dimSet.get(currIndex);
         }
         int compareResult = GenericIndexed.STRING_STRATEGY.compare(currVal, value);
