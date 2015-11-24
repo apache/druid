@@ -29,6 +29,7 @@ import io.druid.indexer.hadoop.FSSpideringIterator;
 import io.druid.jackson.DefaultObjectMapper;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.input.CombineTextInputFormat;
@@ -48,7 +49,6 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.core.classloader.annotations.SuppressStaticInitializationFor;
 import org.powermock.modules.junit4.PowerMockRunner;
 
-import java.io.FileNotFoundException;
 import java.util.Iterator;
 import java.util.Set;
 
@@ -123,7 +123,7 @@ public class GranularityPathSpecTest
       @Override
       public Iterator<FileStatus> iterator() {
         if (++j % 2 == 0) {
-          throw new RuntimeException("Exception!", new FileNotFoundException());
+          return new FSSpideringIterator(new LocalFileSystem(), new FileStatus[]{});
         }
 
         return new Iterator<FileStatus>() {

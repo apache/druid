@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
@@ -31,11 +32,14 @@ import java.util.NoSuchElementException;
  */
 public class FSSpideringIterator implements Iterator<FileStatus>
 {
-  public static FSSpideringIterator spiderPathPropogateExceptions(FileSystem fs, Path path)
+  public static FSSpideringIterator spiderPathPropagateExceptions(FileSystem fs, Path path)
   {
     try {
       final FileStatus[] statii = fs.listStatus(path);
       return new FSSpideringIterator(fs, statii == null ? new FileStatus[]{} : statii);
+    }
+    catch (FileNotFoundException e) {
+      return new FSSpideringIterator(fs, new FileStatus[]{});
     }
     catch (IOException e) {
       throw new RuntimeException(e);
@@ -48,7 +52,7 @@ public class FSSpideringIterator implements Iterator<FileStatus>
     {
       public Iterator<FileStatus> iterator()
       {
-        return spiderPathPropogateExceptions(fs, path);
+        return spiderPathPropagateExceptions(fs, path);
       }
     };
   }
@@ -82,7 +86,7 @@ public class FSSpideringIterator implements Iterator<FileStatus>
     while (hasNext()) {
       if (statii[index].isDir()) {
         if (statuses == null) {
-          statuses = spiderPathPropogateExceptions(fs, statii[index].getPath());
+          statuses = spiderPathPropagateExceptions(fs, statii[index].getPath());
         } else if (statuses.hasNext()) {
           return statuses.next();
         }
