@@ -35,7 +35,9 @@ import org.joda.time.Interval;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Iterator;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -141,8 +143,21 @@ public class GranularityPathSpec implements PathSpec
 
       Path granularPath = new Path(betaInput, intervalPath);
       log.info("Checking path[%s]", granularPath);
-      for (FileStatus status : FSSpideringIterator.spiderIterable(fs, granularPath)) {
-        final Path filePath = status.getPath();
+
+      Iterator<FileStatus> spiderIterator;
+      try {
+        spiderIterator = FSSpideringIterator.spiderIterable(fs, granularPath).iterator();
+      } catch (RuntimeException e) {
+        if (e.getCause() instanceof FileNotFoundException) {
+          log.warn(e.getMessage());
+          continue;
+        }
+
+        throw e;
+      }
+
+      while (spiderIterator.hasNext()) {
+        final Path filePath = spiderIterator.next().getPath();
         if (fileMatcher.matcher(filePath.toString()).matches()) {
           paths.add(filePath.toString());
         }
