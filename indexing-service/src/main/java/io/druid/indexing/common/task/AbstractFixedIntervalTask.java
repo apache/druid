@@ -87,7 +87,7 @@ public abstract class AbstractFixedIntervalTask extends AbstractTask
   @Override
   public boolean isReady(TaskActionClient taskActionClient) throws Exception
   {
-    return taskActionClient.submit(new LockTryAcquireAction(interval)).isPresent();
+    return taskActionClient.submit(new LockTryAcquireAction(interval)) != null;
   }
 
   @JsonProperty
