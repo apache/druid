@@ -24,7 +24,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.api.client.repackaged.com.google.common.base.Preconditions;
 import com.google.api.client.repackaged.com.google.common.base.Throwables;
 import com.google.api.client.util.Lists;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Longs;
 import com.metamx.common.Granularity;
@@ -53,10 +52,9 @@ import java.util.Set;
  * This action implicitly acquires locks when it allocates segments. You do not have to acquire them beforehand,
  * although you *do* have to release them yourself.
  * <p/>
- * If this action cannot acquire an appropriate lock, or if it cannot expand an existing segment set, it will return
- * a missing Optional.
+ * If this action cannot acquire an appropriate lock, or if it cannot expand an existing segment set, it returns null.
  */
-public class SegmentAllocateAction implements TaskAction<Optional<SegmentIdentifier>>
+public class SegmentAllocateAction implements TaskAction<SegmentIdentifier>
 {
   private static final Logger log = new Logger(SegmentAllocateAction.class);
 
@@ -150,15 +148,15 @@ public class SegmentAllocateAction implements TaskAction<Optional<SegmentIdentif
   }
 
   @Override
-  public TypeReference<Optional<SegmentIdentifier>> getReturnTypeReference()
+  public TypeReference<SegmentIdentifier> getReturnTypeReference()
   {
-    return new TypeReference<Optional<SegmentIdentifier>>()
+    return new TypeReference<SegmentIdentifier>()
     {
     };
   }
 
   @Override
-  public Optional<SegmentIdentifier> perform(
+  public SegmentIdentifier perform(
       final Task task,
       final TaskActionToolbox toolbox
   ) throws IOException
@@ -215,7 +213,7 @@ public class SegmentAllocateAction implements TaskAction<Optional<SegmentIdentif
                 tryLock.getVersion()
             );
             if (identifier != null) {
-              return Optional.of(identifier);
+              return identifier;
             } else {
               log.debug(
                   "Could not allocate pending segment for rowInterval[%s], segmentInterval[%s].",
@@ -255,10 +253,10 @@ public class SegmentAllocateAction implements TaskAction<Optional<SegmentIdentif
               rowInterval,
               attempt
           );
-          return Optional.absent();
+          return null;
         }
       } else {
-        return Optional.absent();
+        return null;
       }
     }
   }

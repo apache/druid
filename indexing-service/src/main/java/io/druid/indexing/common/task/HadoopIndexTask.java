@@ -132,7 +132,7 @@ public class HadoopIndexTask extends HadoopTask
               intervals.get()
           )
       );
-      return taskActionClient.submit(new LockTryAcquireAction(interval)).isPresent();
+      return taskActionClient.submit(new LockTryAcquireAction(interval)) != null;
     } else {
       return true;
     }

@@ -21,12 +21,11 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.google.common.base.Optional;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.task.Task;
 import org.joda.time.Interval;
 
-public class LockTryAcquireAction implements TaskAction<Optional<TaskLock>>
+public class LockTryAcquireAction implements TaskAction<TaskLock>
 {
   @JsonIgnore
   private final Interval interval;
@@ -45,17 +44,17 @@ public class LockTryAcquireAction implements TaskAction<Optional<TaskLock>>
     return interval;
   }
 
-  public TypeReference<Optional<TaskLock>> getReturnTypeReference()
+  public TypeReference<TaskLock> getReturnTypeReference()
   {
-    return new TypeReference<Optional<TaskLock>>()
+    return new TypeReference<TaskLock>()
     {
     };
   }
 
   @Override
-  public Optional<TaskLock> perform(Task task, TaskActionToolbox toolbox)
+  public TaskLock perform(Task task, TaskActionToolbox toolbox)
   {
-    return toolbox.getTaskLockbox().tryLock(task, interval);
+    return toolbox.getTaskLockbox().tryLock(task, interval).orNull();
   }
 
   @Override
