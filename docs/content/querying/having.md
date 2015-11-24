@@ -68,6 +68,24 @@ The grammar for a `greaterThan` filter is as follows:
 
 This is the equivalent of `HAVING <aggregate> < <value>`.
 
+
+
+### Dimension Selector Filter
+
+#### dimSelector
+
+The dimSelector filter will match rows with dimension values equal to the specified value.
+The grammar for a `dimSelector` filter is as follows:
+
+```json
+{
+    "type": "dimSelector",
+    "dimension": "<dimension>",
+    "value": <dimension_value>
+}
+```
+
+
 ### Logical expression filters
 
 #### AND

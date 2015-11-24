@@ -22,7 +22,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.data.input.Row;
 
 /**
- * A "having" clause that filters aggregated value. This is similar to SQL's "having"
+ * A "having" clause that filters aggregated/dimension value. This is similar to SQL's "having"
  * clause.
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = AlwaysHavingSpec.class)
@@ -32,7 +32,8 @@ import io.druid.data.input.Row;
     @JsonSubTypes.Type(name = "not", value = NotHavingSpec.class),
     @JsonSubTypes.Type(name = "greaterThan", value = GreaterThanHavingSpec.class),
     @JsonSubTypes.Type(name = "lessThan", value = LessThanHavingSpec.class),
-    @JsonSubTypes.Type(name = "equalTo", value = EqualToHavingSpec.class)
+    @JsonSubTypes.Type(name = "equalTo", value = EqualToHavingSpec.class),
+    @JsonSubTypes.Type(name = "dimSelector", value = DimensionSelectorHavingSpec.class)
 })
 public interface HavingSpec
 {
