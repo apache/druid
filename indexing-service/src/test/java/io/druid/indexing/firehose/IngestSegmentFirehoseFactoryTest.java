@@ -54,6 +54,7 @@ import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
+import io.druid.indexing.overlord.TaskActionBasedHandoffNotifierConfig;
 import io.druid.indexing.overlord.TaskLockbox;
 import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -188,7 +189,7 @@ public class IngestSegmentFirehoseFactoryTest
     };
     final LocalTaskActionClientFactory tac = new LocalTaskActionClientFactory(
         ts,
-        new TaskActionToolbox(tl, mdc, newMockEmitter())
+        new TaskActionToolbox(tl, mdc, newMockEmitter(), null)
     );
 
     final TaskToolboxFactory taskToolboxFactory = new TaskToolboxFactory(
@@ -241,7 +242,6 @@ public class IngestSegmentFirehoseFactoryTest
           }
         },
         null, // segment announcer
-        null, // new segment server view
         null, // query runner factory conglomerate corporation unionized collective
         null, // query executor service
         null, // monitor scheduler
@@ -262,7 +262,8 @@ public class IngestSegmentFirehoseFactoryTest
         INDEX_MERGER,
         INDEX_IO,
         null,
-        null
+        null,
+        new TaskActionBasedHandoffNotifierConfig()
     );
     Collection<Object[]> values = new LinkedList<>();
     for (InputRowParser parser : Arrays.<InputRowParser>asList(

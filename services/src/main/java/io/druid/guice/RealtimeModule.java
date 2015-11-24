@@ -34,6 +34,8 @@ import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.segment.realtime.firehose.ChatHandlerResource;
 import io.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import io.druid.segment.realtime.firehose.ServiceAnnouncingChatHandlerProvider;
+import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
+import io.druid.segment.realtime.plumber.ServerViewSegmentHandoffNotifierFactory;
 import io.druid.server.QueryResource;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import org.eclipse.jetty.server.Server;
@@ -77,10 +79,17 @@ public class RealtimeModule implements Module
                          .to(NoopChatHandlerProvider.class).in(LazySingleton.class);
 
     JsonConfigProvider.bind(binder, "druid.realtime", RealtimeManagerConfig.class);
-    binder.bind(new TypeLiteral<List<FireDepartment>>(){})
+    binder.bind(
+        new TypeLiteral<List<FireDepartment>>()
+        {
+        }
+    )
           .toProvider(FireDepartmentsProvider.class)
           .in(LazySingleton.class);
 
+    binder.bind(SegmentHandoffNotifierFactory.class)
+          .to(ServerViewSegmentHandoffNotifierFactory.class)
+          .in(LazySingleton.class);
     JsonConfigProvider.bind(binder, "druid.realtime.cache", CacheConfig.class);
     binder.install(new CacheModule());
 

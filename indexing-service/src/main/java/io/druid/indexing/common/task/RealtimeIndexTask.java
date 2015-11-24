@@ -37,6 +37,7 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockReleaseAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.overlord.TaskActionBasedHandoffNotifier;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -55,6 +56,7 @@ import io.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 import io.druid.segment.realtime.plumber.Committers;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.PlumberSchool;
+import io.druid.segment.realtime.plumber.RealtimePlumber;
 import io.druid.segment.realtime.plumber.RealtimePlumberSchool;
 import io.druid.segment.realtime.plumber.VersioningPolicy;
 import io.druid.server.coordination.DataSegmentAnnouncer;
@@ -285,7 +287,7 @@ public class RealtimeIndexTask extends AbstractTask
         toolbox.getSegmentPusher(),
         lockingSegmentAnnouncer,
         segmentPublisher,
-        toolbox.getNewSegmentServerView(),
+        toolbox.getHandoffNotifierFactory(),
         toolbox.getQueryExecutorService(),
         toolbox.getIndexMerger(),
         toolbox.getIndexIO(),

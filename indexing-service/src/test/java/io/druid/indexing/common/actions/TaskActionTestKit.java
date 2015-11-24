@@ -91,7 +91,8 @@ public class TaskActionTestKit extends ExternalResource
     taskActionToolbox = new TaskActionToolbox(
         taskLockbox,
         metadataStorageCoordinator,
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        null
     );
     testDerbyConnector.createPendingSegmentsTable();
     testDerbyConnector.createSegmentTable();

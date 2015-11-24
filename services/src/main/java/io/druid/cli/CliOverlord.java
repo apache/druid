@@ -52,6 +52,7 @@ import io.druid.indexing.common.tasklogs.TaskRunnerTaskLogStreamer;
 import io.druid.indexing.overlord.ForkingTaskRunnerFactory;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.MetadataTaskStorage;
+import io.druid.indexing.overlord.OverlordServerView;
 import io.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import io.druid.indexing.overlord.TaskLockbox;
 import io.druid.indexing.overlord.TaskMaster;
@@ -148,6 +149,7 @@ public class CliOverlord extends ServerRunnable
             configureTaskStorage(binder);
             configureRunners(binder);
             configureAutoscale(binder);
+            binder.bind(OverlordServerView.class).in(LazySingleton.class);
 
             binder.bind(AuditManager.class)
                   .toProvider(AuditManagerProvider.class)
