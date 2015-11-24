@@ -192,7 +192,7 @@ public class IngestSegmentFirehoseFactoryTest
     );
 
     final TaskToolboxFactory taskToolboxFactory = new TaskToolboxFactory(
-        new TaskConfig(tmpDir.getAbsolutePath(), null, null, 50000, null),
+        new TaskConfig(tmpDir.getAbsolutePath(), null, null, 50000, null, null, null),
         tac,
         newMockEmitter(),
         new DataSegmentPusher()

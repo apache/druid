@@ -129,6 +129,19 @@ public abstract class AbstractTask implements Task
   }
 
   @Override
+  public boolean canRestore()
+  {
+    return false;
+  }
+
+  @Override
+  public void stopGracefully()
+  {
+    // Should not be called when canRestore = false.
+    throw new UnsupportedOperationException("Cannot stop gracefully");
+  }
+
+  @Override
   public String toString()
   {
     return Objects.toStringHelper(this)

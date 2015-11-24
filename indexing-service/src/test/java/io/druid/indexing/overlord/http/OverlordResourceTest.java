@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.metamx.common.Pair;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.guava.CloseQuietly;
 import com.metamx.emitter.EmittingLogger;
@@ -292,6 +293,18 @@ public class OverlordResourceTest
       this.completionLatches = completionLatches;
       this.taskRunnerWorkItems = new ConcurrentHashMap<>();
       this.runningTasks = new ArrayList<>();
+    }
+
+    @Override
+    public List<Pair<Task, ListenableFuture<TaskStatus>>> restore()
+    {
+      return ImmutableList.of();
+    }
+
+    @Override
+    public void stop()
+    {
+      // Do nothing
     }
 
     @Override

@@ -177,17 +177,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
       }
 
       try {
-        for (final InputRow row : rows) {
-          boolean added = false;
-          while (!closed && !added) {
-            added = buffer.offer(row, 500, TimeUnit.MILLISECONDS);
-          }
-
-          if (!added) {
-            throw new IllegalStateException("Cannot add events to closed firehose!");
-          }
-        }
-
+        addRows(rows);
         return Response.ok(
             objectMapper.writeValueAsString(ImmutableMap.of("eventCount", events.size())),
             contentType
@@ -207,8 +197,11 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
     {
       synchronized (readLock) {
         try {
-          while (!closed && nextRow == null) {
+          while (nextRow == null) {
             nextRow = buffer.poll(500, TimeUnit.MILLISECONDS);
+            if (closed) {
+              break;
+            }
           }
         }
         catch (InterruptedException e) {
@@ -264,11 +257,29 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
     @Override
     public void close() throws IOException
     {
-      log.info("Firehose closing.");
-      closed = true;
-      eventReceiverFirehoseRegister.unregister(serviceName);
-      if (chatHandlerProvider.isPresent()) {
-        chatHandlerProvider.get().unregister(serviceName);
+      if (!closed) {
+        log.info("Firehose closing.");
+        closed = true;
+
+        eventReceiverFirehoseRegister.unregister(serviceName);
+        if (chatHandlerProvider.isPresent()) {
+          chatHandlerProvider.get().unregister(serviceName);
+        }
+      }
+    }
+
+    // public for tests
+    public void addRows(Iterable<InputRow> rows) throws InterruptedException
+    {
+      for (final InputRow row : rows) {
+        boolean added = false;
+        while (!closed && !added) {
+          added = buffer.offer(row, 500, TimeUnit.MILLISECONDS);
+        }
+
+        if (!added) {
+          throw new IllegalStateException("Cannot add events to closed firehose!");
+        }
       }
     }
   }
