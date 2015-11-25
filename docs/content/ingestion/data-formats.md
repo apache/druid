@@ -94,3 +94,5 @@ Be sure to change the `delimiter` to the appropriate delimiter for your data. Li
 
 ### Multi-value dimensions
 Dimensions can have multiple values for TSV and CSV data. To specify the delimiter for a multi-value dimension, set the `listDelimiter` in the `parseSpec`.
+
+JSON data can contain multi-value dimensions as well. The multiple values for a dimension must be formatted as a JSON array in the ingested data. No additional `parseSpec` configuration is needed.
