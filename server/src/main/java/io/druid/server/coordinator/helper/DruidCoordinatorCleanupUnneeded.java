@@ -18,6 +18,7 @@
 package io.druid.server.coordinator.helper;
 
 import com.google.common.collect.MinMaxPriorityQueue;
+import com.metamx.common.logger.Logger;
 import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.ImmutableDruidServer;
 import io.druid.server.coordinator.CoordinatorStats;
@@ -35,6 +36,8 @@ import java.util.Set;
  */
 public class DruidCoordinatorCleanupUnneeded implements DruidCoordinatorHelper
 {
+  private static final Logger log = new Logger(DruidCoordinatorCleanupUnneeded.class);
+
   private final DruidCoordinator coordinator;
 
   public DruidCoordinatorCleanupUnneeded(
@@ -51,9 +54,12 @@ public class DruidCoordinatorCleanupUnneeded implements DruidCoordinatorHelper
     Set<DataSegment> availableSegments = params.getAvailableSegments();
     DruidCluster cluster = params.getDruidCluster();
 
-    // Drop segments that no longer exist in the available segments configuration, if it has been populated. (It might
+    // Drop segments that no longer exist in the available segments configuration, *if* it has been populated. (It might
     // not have been loaded yet since it's filled asynchronously. But it's also filled atomically, so if there are any
     // segments at all, we should have all of them.)
+    // Note that if metadata store has no segments, then availableSegments will stay empty and nothing will be dropped.
+    // This is done to prevent a race condition in which the coordinator would drop all segments if it started running
+    // cleanup before it finished polling the metadata storage for available segments for the first time.
     if (!availableSegments.isEmpty()) {
       for (MinMaxPriorityQueue<ServerHolder> serverHolders : cluster.getSortedServersByTier()) {
         for (ServerHolder serverHolder : serverHolders) {
@@ -81,6 +87,10 @@ public class DruidCoordinatorCleanupUnneeded implements DruidCoordinatorHelper
           }
         }
       }
+    } else {
+      log.info(
+          "Found 0 availableSegments, skipping the cleanup of segments from historicals. This is done to prevent a race condition in which the coordinator would drop all segments if it started running cleanup before it finished polling the metadata storage for available segments for the first time."
+      );
     }
 
     return params.buildFromExisting()
