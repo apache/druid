@@ -50,6 +50,7 @@ import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
+import io.druid.indexing.overlord.TaskActionBasedHandoffNotifierConfig;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.filter.NoopDimFilter;
@@ -309,7 +310,6 @@ public class IngestSegmentFirehoseFactoryTimelineTest
           null, // segment mover
           null, // segment archiver
           null, // segment announcer
-          null, // new segment server view
           null, // query runner factory conglomerate corporation unionized collective
           null, // query executor service
           null, // monitor scheduler
@@ -330,7 +330,8 @@ public class IngestSegmentFirehoseFactoryTimelineTest
           INDEX_MERGER,
           INDEX_IO,
           null,
-          null
+          null,
+          new TaskActionBasedHandoffNotifierConfig()
       );
       final Injector injector = Guice.createInjector(
           new Module()

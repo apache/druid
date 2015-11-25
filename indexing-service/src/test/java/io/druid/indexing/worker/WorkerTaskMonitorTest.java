@@ -30,7 +30,11 @@ import io.druid.indexing.common.TaskToolboxFactory;
 import io.druid.indexing.common.TestMergeTask;
 import io.druid.indexing.common.TestRealtimeTask;
 import io.druid.indexing.common.TestUtils;
+import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
+import io.druid.indexing.common.task.Task;
+import io.druid.indexing.overlord.TaskActionBasedHandoffNotifierConfig;
 import io.druid.indexing.overlord.TestRemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.ThreadPoolTaskRunner;
 import io.druid.indexing.worker.config.WorkerConfig;
@@ -46,6 +50,7 @@ import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingCluster;
+import org.easymock.EasyMock;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -135,6 +140,10 @@ public class WorkerTaskMonitorTest
   private WorkerTaskMonitor createTaskMonitor()
   {
     final TaskConfig taskConfig = new TaskConfig(Files.createTempDir().toString(), null, null, 0, null, null, null);
+    TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);
+    TaskActionClient taskActionClient = EasyMock.createNiceMock(TaskActionClient.class);
+    EasyMock.expect(taskActionClientFactory.create(EasyMock.<Task>anyObject())).andReturn(taskActionClient).anyTimes();
+    EasyMock.replay(taskActionClientFactory, taskActionClient);
     return new WorkerTaskMonitor(
         jsonMapper,
         cf,
@@ -142,7 +151,8 @@ public class WorkerTaskMonitorTest
         new ThreadPoolTaskRunner(
             new TaskToolboxFactory(
                 taskConfig,
-                null, null, null, null, null, null, null, null, null, null, null, new SegmentLoaderFactory(
+                taskActionClientFactory,
+                null, null, null, null, null, null, null, null, null, new SegmentLoaderFactory(
                 new SegmentLoaderLocalCacheManager(
                     null,
                     new SegmentLoaderConfig()
@@ -160,7 +170,8 @@ public class WorkerTaskMonitorTest
                 indexMerger,
                 indexIO,
                 null,
-                null
+                null,
+                new TaskActionBasedHandoffNotifierConfig()
             ),
             taskConfig,
             new NoopServiceEmitter()

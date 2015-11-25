@@ -17,7 +17,6 @@
 
 package io.druid.indexing.common.actions;
 
-import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
@@ -26,6 +25,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import io.druid.indexing.overlord.OverlordServerView;
 import io.druid.indexing.overlord.TaskLockbox;
 import io.druid.timeline.DataSegment;
 
@@ -37,17 +37,20 @@ public class TaskActionToolbox
   private final TaskLockbox taskLockbox;
   private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
   private final ServiceEmitter emitter;
+  private final OverlordServerView serverView;
 
   @Inject
   public TaskActionToolbox(
       TaskLockbox taskLockbox,
       IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
-      ServiceEmitter emitter
+      ServiceEmitter emitter,
+      OverlordServerView serverView
   )
   {
     this.taskLockbox = taskLockbox;
     this.indexerMetadataStorageCoordinator = indexerMetadataStorageCoordinator;
     this.emitter = emitter;
+    this.serverView = serverView;
   }
 
   public TaskLockbox getTaskLockbox()
@@ -107,5 +110,10 @@ public class TaskActionToolbox
     }
 
     return true;
+  }
+
+  public OverlordServerView getServerView()
+  {
+    return serverView;
   }
 }

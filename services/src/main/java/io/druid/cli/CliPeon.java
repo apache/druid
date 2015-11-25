@@ -52,6 +52,7 @@ import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import io.druid.indexing.overlord.TaskActionBasedHandoffNotifierConfig;
 import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.ThreadPoolTaskRunner;
@@ -161,6 +162,12 @@ public class CliPeon extends GuiceRunnable
 
             JsonConfigProvider.bind(binder, "druid.realtime.cache", CacheConfig.class);
             binder.install(new CacheModule());
+
+            JsonConfigProvider.bind(
+                binder,
+                "druid.indexer.task.handoff",
+                TaskActionBasedHandoffNotifierConfig.class
+            );
 
             // Override the default SegmentLoaderConfig because we don't actually care about the
             // configuration based locations.  This will override them anyway.  This is also stopping

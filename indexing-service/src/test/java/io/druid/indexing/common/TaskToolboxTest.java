@@ -29,6 +29,7 @@ import io.druid.client.cache.CacheConfig;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
+import io.druid.indexing.overlord.TaskActionBasedHandoffNotifierConfig;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
@@ -39,6 +40,7 @@ import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.SegmentLoadingException;
+import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
@@ -66,7 +68,7 @@ public class TaskToolboxTest
   private DataSegmentMover mockDataSegmentMover = EasyMock.createMock(DataSegmentMover.class);
   private DataSegmentArchiver mockDataSegmentArchiver = EasyMock.createMock(DataSegmentArchiver.class);
   private DataSegmentAnnouncer mockSegmentAnnouncer = EasyMock.createMock(DataSegmentAnnouncer.class);
-  private FilteredServerView mockNewSegmentServerView = EasyMock.createMock(FilteredServerView.class);
+  private SegmentHandoffNotifierFactory mockHandoffNotifierFactory = EasyMock.createMock(SegmentHandoffNotifierFactory.class);
   private QueryRunnerFactoryConglomerate mockQueryRunnerFactoryConglomerate
       = EasyMock.createMock(QueryRunnerFactoryConglomerate.class);
   private MonitorScheduler mockMonitorScheduler = EasyMock.createMock(MonitorScheduler.class);
@@ -97,7 +99,6 @@ public class TaskToolboxTest
         mockDataSegmentMover,
         mockDataSegmentArchiver,
         mockSegmentAnnouncer,
-        mockNewSegmentServerView,
         mockQueryRunnerFactoryConglomerate,
         mockQueryExecutorService,
         mockMonitorScheduler,
@@ -106,7 +107,8 @@ public class TaskToolboxTest
         mockIndexMerger,
         mockIndexIO,
         mockCache,
-        mockCacheConfig
+        mockCacheConfig,
+        new TaskActionBasedHandoffNotifierConfig()
     );
   }
 
@@ -120,12 +122,6 @@ public class TaskToolboxTest
   public void testGetSegmentAnnouncer()
   {
     Assert.assertEquals(mockSegmentAnnouncer,taskToolbox.build(task).getSegmentAnnouncer());
-  }
-
-  @Test
-  public void testGetNewSegmentServerView()
-  {
-    Assert.assertEquals(mockNewSegmentServerView,taskToolbox.build(task).getNewSegmentServerView());
   }
 
   @Test
