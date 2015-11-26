@@ -138,6 +138,9 @@ public class GranularityPathSpecTest
           public FileStatus next() {
             return new FileStatus(0L, false, 0, 0L, 0L, new Path(String.format("file:///test/path/%d/%d.gz", j, i)));
           }
+
+          @Override
+          public void remove() { }
         };
       }
     };
