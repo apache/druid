@@ -63,6 +63,8 @@ druid.cache.readBufferSize=10485760
 # Indexing Service Service Discovery
 druid.selectors.indexing.serviceName=druid:prod:overlord
 
+# Coordinator Service Discovery
+druid.selectors.coordinator.serviceName=druid:prod:coordinator
 ```
 
 ### Overlord Node

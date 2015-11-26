@@ -27,12 +27,20 @@ import com.google.inject.Inject;
 import com.metamx.common.MapUtils;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.Comparators;
+import com.metamx.common.guava.FunctionalIterable;
+import com.metamx.common.logger.Logger;
+import io.druid.client.CoordinatorServerView;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
-import io.druid.client.InventoryView;
+import io.druid.client.ImmutableSegmentLoadInfo;
+import io.druid.client.SegmentLoadInfo;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.metadata.MetadataSegmentManager;
+import io.druid.query.TableDataSource;
 import io.druid.timeline.DataSegment;
+import io.druid.timeline.TimelineLookup;
+import io.druid.timeline.TimelineObjectHolder;
+import io.druid.timeline.partition.PartitionChunk;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -58,13 +66,15 @@ import java.util.TreeSet;
 @Path("/druid/coordinator/v1/datasources")
 public class DatasourcesResource
 {
-  private final InventoryView serverInventoryView;
+  private static final Logger log = new Logger(DatasourcesResource.class);
+
+  private final CoordinatorServerView serverInventoryView;
   private final MetadataSegmentManager databaseSegmentManager;
   private final IndexingServiceClient indexingServiceClient;
 
   @Inject
   public DatasourcesResource(
-      InventoryView serverInventoryView,
+      CoordinatorServerView serverInventoryView,
       MetadataSegmentManager databaseSegmentManager,
       @Nullable IndexingServiceClient indexingServiceClient
   )
@@ -572,5 +582,56 @@ public class DatasourcesResource
     segments.put("minTime", new DateTime(minTime));
     segments.put("maxTime", new DateTime(maxTime));
     return retVal;
+  }
+
+  /**
+   * Provides serverView for a datasource and Interval which gives details about servers hosting segments for an interval
+   * Used by the realtime tasks to fetch a view of the interval they are interested in.
+   */
+  @GET
+  @Path("/{dataSourceName}/intervals/{interval}/serverview")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getSegmentDataSourceSpecificInterval(
+      @PathParam("dataSourceName") String dataSourceName,
+      @PathParam("interval") String interval,
+      @QueryParam("partial") final boolean partial
+  )
+  {
+    TimelineLookup<String, SegmentLoadInfo> timeline = serverInventoryView.getTimeline(
+        new TableDataSource(dataSourceName)
+    );
+    final Interval theInterval = new Interval(interval.replace("_", "/"));
+    if (timeline == null) {
+      log.debug("No timeline found for datasource[%s]", dataSourceName);
+      return Response.ok(Lists.<ImmutableSegmentLoadInfo>newArrayList()).build();
+    }
+
+    Iterable<TimelineObjectHolder<String, SegmentLoadInfo>> lookup = timeline.lookupWithIncompletePartitions(theInterval);
+    FunctionalIterable<ImmutableSegmentLoadInfo> retval = FunctionalIterable
+        .create(lookup).transformCat(
+            new Function<TimelineObjectHolder<String, SegmentLoadInfo>, Iterable<ImmutableSegmentLoadInfo>>()
+            {
+              @Override
+              public Iterable<ImmutableSegmentLoadInfo> apply(
+                  TimelineObjectHolder<String, SegmentLoadInfo> input
+              )
+              {
+                return Iterables.transform(
+                    input.getObject(),
+                    new Function<PartitionChunk<SegmentLoadInfo>, ImmutableSegmentLoadInfo>()
+                    {
+                      @Override
+                      public ImmutableSegmentLoadInfo apply(
+                          PartitionChunk<SegmentLoadInfo> chunk
+                      )
+                      {
+                        return chunk.getObject().toImmutableSegmentLoadInfo();
+                      }
+                    }
+                );
+              }
+            }
+        );
+    return Response.ok(retval).build();
   }
 }

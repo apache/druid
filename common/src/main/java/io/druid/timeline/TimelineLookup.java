@@ -35,6 +35,17 @@ public interface TimelineLookup<VersionType, ObjectType>
    */
   public Iterable<TimelineObjectHolder<VersionType, ObjectType>> lookup(Interval interval);
 
+  /**
+   * Does a lookup for the objects representing the given time interval.  Will also return
+   * incomplete PartitionHolders.
+   *
+   * @param interval interval to find objects for
+   *
+   * @return Holders representing the interval that the objects exist for, PartitionHolders
+   *         can be incomplete. Holders returned sorted by the interval.
+   */
+  public Iterable<TimelineObjectHolder<VersionType, ObjectType>> lookupWithIncompletePartitions(Interval interval);
+
   public PartitionHolder<ObjectType> findEntry(Interval interval, VersionType version);
 
 }

@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
-import io.druid.client.FilteredServerView;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
@@ -37,6 +36,7 @@ import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.loading.SegmentLoaderConfig;
+import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
@@ -64,7 +64,9 @@ public class TaskToolboxTest
   private DataSegmentMover mockDataSegmentMover = EasyMock.createMock(DataSegmentMover.class);
   private DataSegmentArchiver mockDataSegmentArchiver = EasyMock.createMock(DataSegmentArchiver.class);
   private DataSegmentAnnouncer mockSegmentAnnouncer = EasyMock.createMock(DataSegmentAnnouncer.class);
-  private FilteredServerView mockNewSegmentServerView = EasyMock.createMock(FilteredServerView.class);
+  private SegmentHandoffNotifierFactory mockHandoffNotifierFactory = EasyMock.createNiceMock(
+      SegmentHandoffNotifierFactory.class
+  );
   private QueryRunnerFactoryConglomerate mockQueryRunnerFactoryConglomerate
       = EasyMock.createMock(QueryRunnerFactoryConglomerate.class);
   private MonitorScheduler mockMonitorScheduler = EasyMock.createMock(MonitorScheduler.class);
@@ -82,7 +84,8 @@ public class TaskToolboxTest
   public void setUp() throws IOException
   {
     EasyMock.expect(task.getId()).andReturn("task_id").anyTimes();
-    EasyMock.replay(task);
+    EasyMock.expect(task.getDataSource()).andReturn("task_ds").anyTimes();
+    EasyMock.replay(task, mockHandoffNotifierFactory);
 
     taskToolbox = new TaskToolboxFactory(
         new TaskConfig(temporaryFolder.newFile().toString(), null, null, 50000, null, null, null),
@@ -93,7 +96,7 @@ public class TaskToolboxTest
         mockDataSegmentMover,
         mockDataSegmentArchiver,
         mockSegmentAnnouncer,
-        mockNewSegmentServerView,
+        mockHandoffNotifierFactory,
         mockQueryRunnerFactoryConglomerate,
         mockQueryExecutorService,
         mockMonitorScheduler,
@@ -114,12 +117,6 @@ public class TaskToolboxTest
   public void testGetSegmentAnnouncer()
   {
     Assert.assertEquals(mockSegmentAnnouncer,taskToolbox.build(task).getSegmentAnnouncer());
-  }
-
-  @Test
-  public void testGetNewSegmentServerView()
-  {
-    Assert.assertEquals(mockNewSegmentServerView,taskToolbox.build(task).getNewSegmentServerView());
   }
 
   @Test

@@ -75,8 +75,10 @@ import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.segment.realtime.firehose.IngestSegmentFirehose;
+import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NumberedShardSpec;
+import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -180,6 +182,9 @@ public class IngestSegmentFirehoseFactoryTest
         new TaskActionToolbox(tl, mdc, newMockEmitter())
     );
     final ObjectMapper objectMapper = newObjectMapper();
+    SegmentHandoffNotifierFactory notifierFactory = EasyMock.createNiceMock(SegmentHandoffNotifierFactory.class);
+    EasyMock.replay(notifierFactory);
+
     final TaskToolboxFactory taskToolboxFactory = new TaskToolboxFactory(
         new TaskConfig(tmpDir.getAbsolutePath(), null, null, 50000, null, null, null),
         tac,
@@ -230,7 +235,7 @@ public class IngestSegmentFirehoseFactoryTest
           }
         },
         null, // segment announcer
-        null, // new segment server view
+        notifierFactory,
         null, // query runner factory conglomerate corporation unionized collective
         null, // query executor service
         null, // monitor scheduler
@@ -500,5 +505,7 @@ public class IngestSegmentFirehoseFactoryTest
 
       }
     };
+
+
   }
 }

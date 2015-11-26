@@ -43,6 +43,7 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.Query;
 import io.druid.query.QueryRunnerFactory;
+import io.druid.query.SegmentDescriptor;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
@@ -88,7 +89,8 @@ public class RealtimePlumberSchoolTest
   private DataSegmentAnnouncer announcer;
   private SegmentPublisher segmentPublisher;
   private DataSegmentPusher dataSegmentPusher;
-  private FilteredServerView serverView;
+  private SegmentHandoffNotifier handoffNotifier;
+  private SegmentHandoffNotifierFactory handoffNotifierFactory;
   private ServiceEmitter emitter;
   private RealtimeTuningConfig tuningConfig;
   private DataSchema schema;
@@ -161,17 +163,20 @@ public class RealtimePlumberSchoolTest
 
     segmentPublisher = EasyMock.createNiceMock(SegmentPublisher.class);
     dataSegmentPusher = EasyMock.createNiceMock(DataSegmentPusher.class);
-    serverView = EasyMock.createMock(FilteredServerView.class);
-    serverView.registerSegmentCallback(
-        EasyMock.<Executor>anyObject(),
-        EasyMock.<ServerView.SegmentCallback>anyObject(),
-        EasyMock.<Predicate<DataSegment>>anyObject()
-    );
-    EasyMock.expectLastCall().anyTimes();
+    handoffNotifierFactory = EasyMock.createNiceMock(SegmentHandoffNotifierFactory.class);
+    handoffNotifier = EasyMock.createNiceMock(SegmentHandoffNotifier.class);
+    EasyMock.expect(handoffNotifierFactory.createSegmentHandoffNotifier(EasyMock.anyString())).andReturn(handoffNotifier).anyTimes();
+    EasyMock.expect(
+        handoffNotifier.registerSegmentHandoffCallback(
+            EasyMock.<SegmentDescriptor>anyObject(),
+            EasyMock.<Executor>anyObject(),
+            EasyMock.<Runnable>anyObject()
+        )
+    ).andReturn(true).anyTimes();
 
     emitter = EasyMock.createMock(ServiceEmitter.class);
 
-    EasyMock.replay(announcer, segmentPublisher, dataSegmentPusher, serverView, emitter);
+    EasyMock.replay(announcer, segmentPublisher, dataSegmentPusher, handoffNotifierFactory, handoffNotifier, emitter);
 
     tuningConfig = new RealtimeTuningConfig(
         1,
@@ -195,7 +200,7 @@ public class RealtimePlumberSchoolTest
         dataSegmentPusher,
         announcer,
         segmentPublisher,
-        serverView,
+        handoffNotifierFactory,
         MoreExecutors.sameThreadExecutor(),
         MapCache.create(0),
         FireDepartmentTest.NO_CACHE_CONFIG,
@@ -209,7 +214,7 @@ public class RealtimePlumberSchoolTest
   @After
   public void tearDown() throws Exception
   {
-    EasyMock.verify(announcer, segmentPublisher, dataSegmentPusher, serverView, emitter);
+    EasyMock.verify(announcer, segmentPublisher, dataSegmentPusher,handoffNotifierFactory, handoffNotifier, emitter);
     FileUtils.deleteDirectory(
         new File(
             tuningConfig.getBasePersistDirectory(),
@@ -336,15 +341,15 @@ public class RealtimePlumberSchoolTest
 
     RealtimePlumber plumber2 = (RealtimePlumber) realtimePlumberSchool.findPlumber(schema2, tuningConfig, metrics);
     plumber2.getSinks()
-           .put(
-               0L,
-               new Sink(
-                   testInterval,
-                   schema2,
-                   tuningConfig,
-                   new DateTime("2014-12-01T12:34:56.789").toString()
-               )
-           );
+            .put(
+                0L,
+                new Sink(
+                    testInterval,
+                    schema2,
+                    tuningConfig,
+                    new DateTime("2014-12-01T12:34:56.789").toString()
+                )
+            );
     Assert.assertNull(plumber2.startJob());
 
     final Committer committer = new Committer()
@@ -378,14 +383,18 @@ public class RealtimePlumberSchoolTest
     File persistDir = plumber2.computePersistDir(schema2, testInterval);
 
     /* Check that all hydrants were persisted */
-    for (int i = 0; i < 5; i ++) {
+    for (int i = 0; i < 5; i++) {
       Assert.assertTrue(new File(persistDir, String.valueOf(i)).exists());
     }
 
     /* Create some gaps in the persisted hydrants and reload */
     FileUtils.deleteDirectory(new File(persistDir, "1"));
     FileUtils.deleteDirectory(new File(persistDir, "3"));
-    RealtimePlumber restoredPlumber = (RealtimePlumber) realtimePlumberSchool.findPlumber(schema2, tuningConfig, metrics);
+    RealtimePlumber restoredPlumber = (RealtimePlumber) realtimePlumberSchool.findPlumber(
+        schema2,
+        tuningConfig,
+        metrics
+    );
     restoredPlumber.bootstrapSinksFromDisk();
 
     Map<Long, Sink> sinks = restoredPlumber.getSinks();
@@ -394,26 +403,37 @@ public class RealtimePlumberSchoolTest
     List<FireHydrant> hydrants = Lists.newArrayList(sinks.get(new Long(0)));
     DateTime startTime = new DateTime("1970-01-01T00:00:00.000Z");
     Assert.assertEquals(0, hydrants.get(0).getCount());
-    Assert.assertEquals(new Interval(startTime, new DateTime("1970-01-01T00:00:00.001Z")),
-                        hydrants.get(0).getSegment().getDataInterval());
+    Assert.assertEquals(
+        new Interval(startTime, new DateTime("1970-01-01T00:00:00.001Z")),
+        hydrants.get(0).getSegment().getDataInterval()
+    );
     Assert.assertEquals(2, hydrants.get(1).getCount());
-    Assert.assertEquals(new Interval(startTime, new DateTime("1970-03-01T00:00:00.001Z")),
-                        hydrants.get(1).getSegment().getDataInterval());
+    Assert.assertEquals(
+        new Interval(startTime, new DateTime("1970-03-01T00:00:00.001Z")),
+        hydrants.get(1).getSegment().getDataInterval()
+    );
     Assert.assertEquals(4, hydrants.get(2).getCount());
-    Assert.assertEquals(new Interval(startTime, new DateTime("1970-05-01T00:00:00.001Z")),
-                        hydrants.get(2).getSegment().getDataInterval());
+    Assert.assertEquals(
+        new Interval(startTime, new DateTime("1970-05-01T00:00:00.001Z")),
+        hydrants.get(2).getSegment().getDataInterval()
+    );
 
     /* Delete all the hydrants and reload, no sink should be created */
     FileUtils.deleteDirectory(new File(persistDir, "0"));
     FileUtils.deleteDirectory(new File(persistDir, "2"));
     FileUtils.deleteDirectory(new File(persistDir, "4"));
-    RealtimePlumber restoredPlumber2 = (RealtimePlumber) realtimePlumberSchool.findPlumber(schema2, tuningConfig, metrics);
+    RealtimePlumber restoredPlumber2 = (RealtimePlumber) realtimePlumberSchool.findPlumber(
+        schema2,
+        tuningConfig,
+        metrics
+    );
     restoredPlumber2.bootstrapSinksFromDisk();
 
     Assert.assertEquals(0, restoredPlumber2.getSinks().size());
   }
 
-  private InputRow getTestInputRow(final String timeStr) {
+  private InputRow getTestInputRow(final String timeStr)
+  {
     return new InputRow()
     {
       @Override
