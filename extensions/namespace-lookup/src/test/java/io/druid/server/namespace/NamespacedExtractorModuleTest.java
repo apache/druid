@@ -49,6 +49,7 @@ import java.io.OutputStreamWriter;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -84,6 +85,7 @@ public class NamespacedExtractorModuleTest
     cacheManager = new OnHeapNamespaceExtractionCacheManager(
         lifecycle,
         new ConcurrentHashMap<String, Function<String, String>>(),
+        new ConcurrentHashMap<String, Function<String, List<String>>>(),
         new NoopServiceEmitter(), factoryMap
     );
     fnCache.clear();

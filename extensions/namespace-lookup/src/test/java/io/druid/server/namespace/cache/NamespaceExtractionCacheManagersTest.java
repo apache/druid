@@ -62,11 +62,13 @@ public class NamespaceExtractionCacheManagersTest
     ArrayList<Object[]> params = new ArrayList<>();
 
     ConcurrentMap<String, Function<String, String>> fnMap = new ConcurrentHashMap<String, Function<String, String>>();
+    ConcurrentMap<String, Function<String, List<String>>> reverserFnMap = new ConcurrentHashMap<String, Function<String, List<String>>>();
     params.add(
         new Object[]{
                    new OffHeapNamespaceExtractionCacheManager(
                    lifecycle,
                    fnMap,
+                   reverserFnMap,
                    new NoopServiceEmitter(),
                    ImmutableMap.<Class<? extends ExtractionNamespace>, ExtractionNamespaceFunctionFactory<?>>of()
                ), fnMap
@@ -77,6 +79,7 @@ public class NamespaceExtractionCacheManagersTest
             new OnHeapNamespaceExtractionCacheManager(
                 lifecycle,
                 fnMap,
+                reverserFnMap,
                 new NoopServiceEmitter(),
                 ImmutableMap.<Class<? extends ExtractionNamespace>, ExtractionNamespaceFunctionFactory<?>>of()
             ), fnMap

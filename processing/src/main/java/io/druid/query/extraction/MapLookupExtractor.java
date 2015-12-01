@@ -23,15 +23,19 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.metamx.common.StringUtils;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 @JsonTypeName("map")
@@ -58,6 +62,19 @@ public class MapLookupExtractor implements LookupExtractor
   public String apply(@NotNull String val)
   {
     return map.get(val);
+  }
+
+  @Override
+  public List<String> unApply(final String value)
+  {
+    return Lists.newArrayList(Maps.filterKeys(map, new Predicate<String>()
+    {
+      @Override public boolean apply(@Nullable String key)
+      {
+        return map.get(key).equals(Strings.nullToEmpty(value));
+      }
+    }).keySet());
+
   }
 
   @Override

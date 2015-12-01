@@ -35,6 +35,7 @@ import org.mapdb.DBMaker;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -57,11 +58,13 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
       Lifecycle lifecycle,
       @Named("namespaceExtractionFunctionCache")
       ConcurrentMap<String, Function<String, String>> fnCache,
+      @Named("namespaceReverseExtractionFunctionCache")
+      ConcurrentMap<String, Function<String, List<String>>> reverseFnCache,
       ServiceEmitter emitter,
       final Map<Class<? extends ExtractionNamespace>, ExtractionNamespaceFunctionFactory<?>> namespaceFunctionFactoryMap
   )
   {
-    super(lifecycle, fnCache, emitter, namespaceFunctionFactoryMap);
+    super(lifecycle, fnCache, reverseFnCache, emitter, namespaceFunctionFactoryMap);
     try {
       tmpFile = File.createTempFile("druidMapDB", getClass().getCanonicalName());
       log.info("Using file [%s] for mapDB off heap namespace cache", tmpFile.getAbsolutePath());
