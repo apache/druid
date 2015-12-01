@@ -17,7 +17,12 @@
 
 package io.druid.query.extraction;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import io.druid.jackson.DefaultObjectMapper;
+import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.search.search.FragmentSearchQuerySpec;
 import io.druid.query.search.search.SearchQuerySpec;
 import org.junit.Assert;
@@ -46,11 +51,11 @@ public class SearchQuerySpecDimExtractionFnTest
   public void testExtraction()
   {
     SearchQuerySpec spec = new FragmentSearchQuerySpec(
-        Arrays.asList("to", "yo")
+        Arrays.asList("tO", "yO")
     );
     ExtractionFn extractionFn = new SearchQuerySpecDimExtractionFn(spec);
-    List<String> expected = Arrays.asList("Kyoto", "Tokyo", "Toyokawa", "Yorktown");
-    Set<String> extracted = Sets.newHashSet();
+    List<String> expected = ImmutableList.of("Kyoto", "Tokyo", "Toyokawa", "Yorktown");
+    List<String> extracted = Lists.newArrayList();
 
     for (String str : testStrings) {
       String res = extractionFn.apply(str);
@@ -59,10 +64,68 @@ public class SearchQuerySpecDimExtractionFnTest
       }
     }
 
-    Assert.assertEquals(4, extracted.size());
+    Assert.assertEquals(expected, extracted);
+  }
 
-    for (String str : extracted) {
-      Assert.assertTrue(expected.contains(str));
+  @Test
+  public void testCaseSensitiveExtraction()
+  {
+    SearchQuerySpec spec = new FragmentSearchQuerySpec(
+        Arrays.asList("to", "yo"),
+        true
+    );
+    ExtractionFn extractionFn = new SearchQuerySpecDimExtractionFn(spec);
+    List<String> expected = ImmutableList.of("Kyoto");
+    List<String> extracted = Lists.newArrayList();
+
+    for (String str : testStrings) {
+      String res = extractionFn.apply(str);
+      if (res != null) {
+        extracted.add(res);
+      }
     }
+
+    Assert.assertEquals(expected, extracted);
+  }
+
+  @Test
+  public void testCaseSensitiveExtraction2()
+  {
+    SearchQuerySpec spec = new FragmentSearchQuerySpec(
+        Arrays.asList("To", "yo"),
+        true
+    );
+    ExtractionFn extractionFn = new SearchQuerySpecDimExtractionFn(spec);
+    List<String> expected = ImmutableList.of("Tokyo", "Toyokawa");
+    List<String> extracted = Lists.newArrayList();
+
+    for (String str : testStrings) {
+      String res = extractionFn.apply(str);
+      if (res != null) {
+        extracted.add(res);
+      }
+    }
+
+    Assert.assertEquals(expected, extracted);
+  }
+
+  @Test
+  public void testSerde() throws Exception
+  {
+    ObjectMapper objectMapper = new DefaultObjectMapper();
+    SearchQuerySpec spec = new FragmentSearchQuerySpec(
+        Arrays.asList("to", "yo"),
+        true
+    );
+    ExtractionFn extractionFn = new SearchQuerySpecDimExtractionFn(spec);
+
+    ExtractionFn extractionFn2 = objectMapper.readValue(
+        objectMapper.writeValueAsBytes(extractionFn),
+        ExtractionFn.class
+    );
+    FragmentSearchQuerySpec spec2 = (FragmentSearchQuerySpec) ((SearchQuerySpecDimExtractionFn) extractionFn2).getSearchQuerySpec();
+    Assert.assertEquals(extractionFn, extractionFn2);
+    Assert.assertEquals(true, spec2.isCaseSensitive());
+    Assert.assertEquals(ImmutableList.of("to", "yo"), spec2.getValues());
   }
 }

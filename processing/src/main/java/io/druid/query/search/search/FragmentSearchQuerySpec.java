@@ -38,9 +38,8 @@ public class FragmentSearchQuerySpec implements SearchQuerySpec
 
   private final String[] target;
 
-  @JsonCreator
   public FragmentSearchQuerySpec(
-      @JsonProperty("values") List<String> values
+      List<String> values
   )
   {
     this(values, false);
@@ -54,7 +53,7 @@ public class FragmentSearchQuerySpec implements SearchQuerySpec
   {
     this.values = values;
     this.caseSensitive = caseSensitive;
-    Set<String> set = new TreeSet();
+    Set<String> set = new TreeSet<>();
     if (values != null) {
       for (String value : values) {
         set.add(value);
