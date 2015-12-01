@@ -21,6 +21,7 @@ package io.druid.query.extraction.namespace;
 
 import com.google.common.base.Function;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
@@ -39,7 +40,16 @@ public interface ExtractionNamespaceFunctionFactory<T extends ExtractionNamespac
    *
    * @return A function which will perform an extraction in accordance with the desires of the ExtractionNamespace
    */
-  Function<String, String> build(T extractionNamespace, Map<String, String> cache);
+  Function<String, String> buildFn(T extractionNamespace, Map<String, String> cache);
+
+
+  /**
+   * @param extractionNamespace The ExtractionNamespace for which a manipulating reverse function is needed.
+   * @param cache view of the cache containing the function mapping.
+   *
+   * @return A function that will perform reverse lookup.
+   */
+  Function<String, List<String>> buildReverseFn(T extractionNamespace, final Map<String, String> cache);
 
   /**
    * This function is called once if `ExtractionNamespace.getUpdateMs() == 0`, or every update if
@@ -54,7 +64,7 @@ public interface ExtractionNamespaceFunctionFactory<T extends ExtractionNamespac
    * @param lastVersion         The version which was last cached
    * @param swap                The temporary Map into which data may be placed and will be "swapped" with the proper
    *                            namespace Map in NamespaceExtractionCacheManager. Implementations which cannot offer
-   *                            a swappable cache of the data may ignore this but must make sure `build(...)` returns
+   *                            a swappable cache of the data may ignore this but must make sure `buildFn(...)` returns
    *                            a proper Function.
    *
    * @return A callable that will be used to refresh resources of the namespace and return the version string used in

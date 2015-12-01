@@ -64,8 +64,10 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
 /**
@@ -81,7 +83,6 @@ public class TestKafkaExtractionCluster
   private static final String namespace = "testNamespace";
   private static TestingServer zkTestServer;
   private static KafkaExtractionManager renameManager;
-  private static final ConcurrentMap<String, Function<String, String>> fnCache = new ConcurrentHashMap<>();
 
   private static final Lifecycle lifecycle = new Lifecycle();
   private static NamespaceExtractionCacheManager extractionCacheManager;
@@ -90,16 +91,18 @@ public class TestKafkaExtractionCluster
   private static Injector injector;
 
 
-
   public static class KafkaFactoryProvider implements Provider<ExtractionNamespaceFunctionFactory<?>>
   {
     private final KafkaExtractionManager kafkaExtractionManager;
+
     @Inject
     public KafkaFactoryProvider(
         KafkaExtractionManager kafkaExtractionManager
-    ){
+    )
+    {
       this.kafkaExtractionManager = kafkaExtractionManager;
     }
+
     @Override
     public ExtractionNamespaceFunctionFactory<?> get()
     {
@@ -195,7 +198,6 @@ public class TestKafkaExtractionCluster
     finally {
       zkClient.close();
     }
-    fnCache.clear();
     final Properties kafkaProducerProperties = makeProducerProperties();
     Producer<byte[], byte[]> producer = new Producer<byte[], byte[]>(new ProducerConfig(kafkaProducerProperties));
     try {
@@ -280,7 +282,8 @@ public class TestKafkaExtractionCluster
       if (zkClient.exists("/kafka")) {
         try {
           zkClient.deleteRecursive("/kafka");
-        }catch(org.I0Itec.zkclient.exception.ZkException ex){
+        }
+        catch (org.I0Itec.zkclient.exception.ZkException ex) {
           log.warn(ex, "error deleting /kafka zk node");
         }
       }
@@ -289,12 +292,13 @@ public class TestKafkaExtractionCluster
     if (null != zkTestServer) {
       zkTestServer.stop();
     }
-    if(tmpDir.exists()){
+    if (tmpDir.exists()) {
       FileUtils.deleteDirectory(tmpDir);
     }
   }
 
-  private static final Properties makeProducerProperties(){
+  private static final Properties makeProducerProperties()
+  {
     final Properties kafkaProducerProperties = new Properties();
     kafkaProducerProperties.putAll(kafkaProperties);
     kafkaProducerProperties.put(
@@ -320,10 +324,16 @@ public class TestKafkaExtractionCluster
     final Producer<byte[], byte[]> producer = new Producer<byte[], byte[]>(new ProducerConfig(kafkaProducerProperties));
     try {
       checkServer();
-      final ConcurrentMap<String, Function<String, String>> fnFn = injector.getInstance(Key.get(new TypeLiteral<ConcurrentMap<String, Function<String, String>>>(){}, Names.named("namespaceExtractionFunctionCache")));
+      final ConcurrentMap<String, Function<String, String>> fnFn = injector.getInstance(Key.get(new TypeLiteral<ConcurrentMap<String, Function<String, String>>>()
+      {
+      }, Names.named("namespaceExtractionFunctionCache")));
+      final ConcurrentMap<String, Function<String, List<String>>> reverseFn = injector.getInstance(Key.get(new TypeLiteral<ConcurrentMap<String, Function<String, List<String>>>>()
+      {
+      }, Names.named("namespaceReverseExtractionFunctionCache")));
       KafkaExtractionNamespace extractionNamespace = new KafkaExtractionNamespace(topicName, namespace);
 
       Assert.assertEquals(null, fnFn.get(extractionNamespace.getNamespace()).apply("foo"));
+      Assert.assertEquals(Collections.EMPTY_LIST, reverseFn.get(extractionNamespace.getNamespace()).apply("foo"));
 
       long events = renameManager.getNumEvents(namespace);
 
@@ -340,6 +350,7 @@ public class TestKafkaExtractionCluster
 
       log.info("-------------------------     Checking foo bar     -------------------------------");
       Assert.assertEquals("bar", fnFn.get(extractionNamespace.getNamespace()).apply("foo"));
+      Assert.assertEquals(Arrays.asList("foo"), reverseFn.get(extractionNamespace.getNamespace()).apply("bar"));
       Assert.assertEquals(null, fnFn.get(extractionNamespace.getNamespace()).apply("baz"));
 
       checkServer();
@@ -356,6 +367,7 @@ public class TestKafkaExtractionCluster
 
       log.info("-------------------------     Checking baz bat     -------------------------------");
       Assert.assertEquals("bat", fnFn.get(extractionNamespace.getNamespace()).apply("baz"));
+      Assert.assertEquals(Arrays.asList("baz"), reverseFn.get(extractionNamespace.getNamespace()).apply("bat"));
     }
     finally {
       producer.close();

@@ -20,12 +20,16 @@
 package io.druid.server.namespace;
 
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import io.druid.query.extraction.namespace.ExtractionNamespaceFunctionFactory;
 import io.druid.query.extraction.namespace.KafkaExtractionNamespace;
 
 import javax.annotation.Nullable;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 
@@ -47,7 +51,7 @@ public class KafkaExtractionNamespaceFactory implements ExtractionNamespaceFunct
 
 
   @Override
-  public Function<String, String> build(KafkaExtractionNamespace extractionNamespace, final Map<String, String> cache)
+  public Function<String, String> buildFn(KafkaExtractionNamespace extractionNamespace, final Map<String, String> cache)
   {
     return new Function<String, String>()
     {
@@ -59,6 +63,28 @@ public class KafkaExtractionNamespaceFactory implements ExtractionNamespaceFunct
           return null;
         }
         return Strings.emptyToNull(cache.get(input));
+      }
+    };
+  }
+
+  @Override
+  public Function<String, List<String>> buildReverseFn(
+      KafkaExtractionNamespace extractionNamespace, final Map<String, String> cache
+  )
+  {
+    return new Function<String, List<String>>()
+    {
+      @Nullable
+      @Override
+      public List<String> apply(@Nullable final String value)
+      {
+        return Lists.newArrayList(Maps.filterKeys(cache, new Predicate<String>()
+        {
+          @Override public boolean apply(@Nullable String key)
+          {
+            return cache.get(key).equals(Strings.nullToEmpty(value));
+          }
+        }).keySet());
       }
     };
   }

@@ -43,6 +43,7 @@ import io.druid.query.extraction.namespace.ExtractionNamespaceFunctionFactory;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -85,11 +86,13 @@ public abstract class NamespaceExtractionCacheManager
     final String name;
     final AtomicBoolean enabled = new AtomicBoolean(false);
     final AtomicReference<Function<String, String>> fn = new AtomicReference<>(null);
+    final AtomicReference<Function<String, List<String>>> reverseFn = new AtomicReference<>(null);
   }
 
   private static final Logger log = new Logger(NamespaceExtractionCacheManager.class);
   private final ListeningScheduledExecutorService listeningScheduledExecutorService;
   protected final ConcurrentMap<String, Function<String, String>> fnCache;
+  protected final ConcurrentMap<String, Function<String, List<String>>> reverseFnCache;
   protected final ConcurrentMap<String, NamespaceImplData> implData = new ConcurrentHashMap<>();
   protected final AtomicLong tasksStarted = new AtomicLong(0);
   protected final AtomicLong dataSize = new AtomicLong(0);
@@ -100,6 +103,7 @@ public abstract class NamespaceExtractionCacheManager
   public NamespaceExtractionCacheManager(
       Lifecycle lifecycle,
       final ConcurrentMap<String, Function<String, String>> fnCache,
+      final ConcurrentMap<String, Function<String, List<String>>> reverseFnCache,
       final ServiceEmitter serviceEmitter,
       final Map<Class<? extends ExtractionNamespace>, ExtractionNamespaceFunctionFactory<?>> namespaceFunctionFactoryMap
   )
@@ -117,6 +121,7 @@ public abstract class NamespaceExtractionCacheManager
     ExecutorServices.manageLifecycle(lifecycle, listeningScheduledExecutorService);
     this.serviceEmitter = serviceEmitter;
     this.fnCache = fnCache;
+    this.reverseFnCache = reverseFnCache;
     this.namespaceFunctionFactoryMap = namespaceFunctionFactoryMap;
     listeningScheduledExecutorService.scheduleAtFixedRate(
         new Runnable()
@@ -177,12 +182,18 @@ public abstract class NamespaceExtractionCacheManager
             return;
           }
           swapAndClearCache(nsName, cacheId);
-          final Function<String, String> fn = factory.build(namespace, getCacheMap(nsName));
+          final Function<String, String> fn = factory.buildFn(namespace, getCacheMap(nsName));
+          final Function<String, List<String>> reverseFn = factory.buildReverseFn(namespace, getCacheMap(nsName));
           final Function<String, String> priorFn = fnCache.put(nsName, fn);
+          final Function<String, List<String>> priorReverseFn = reverseFnCache.put(nsName, reverseFn);
           if (priorFn != null && priorFn != namespaceDatum.fn.get()) {
             log.warn("Replaced prior function for namespace [%s]", nsName);
           }
+          if (priorReverseFn != null && priorReverseFn != namespaceDatum.reverseFn.get()) {
+            log.warn("Replaced prior reverse function for namespace [%s]", nsName);
+          }
           namespaceDatum.fn.set(fn);
+          namespaceDatum.reverseFn.set(reverseFn);
         }
       }
     };

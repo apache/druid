@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
+import java.util.List;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
@@ -38,6 +39,18 @@ public interface LookupExtractor
    * @return The lookup, or null key cannot have the lookup applied to it and should be treated as missing.
    */
   @Nullable String apply(@NotNull String key);
+
+  /**
+   * Provide the reverse mapping from a given value to a list of keys
+   * @param value the value to apply the reverse lookup
+   *              Null and empty are considered to be the same value = nullToEmpty(value)
+   *
+   * @return the list of keys that maps to value or empty list.
+   * Note that for the case of a none existing value in the lookup we have to cases either return an empty list OR list with null element.
+   * returning an empty list implies that user want to ignore such a lookup value.
+   * In the other hand returning a list with the null element implies user want to map the none existing value to the key null.
+   */
+  List<String> unApply(String value);
 
   /**
    * Create a cache key for use in results caching

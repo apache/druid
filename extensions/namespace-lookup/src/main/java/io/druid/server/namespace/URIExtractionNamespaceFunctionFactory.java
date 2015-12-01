@@ -20,8 +20,11 @@
 package io.druid.server.namespace;
 
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import com.metamx.common.CompressionUtils;
@@ -42,6 +45,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.regex.Pattern;
@@ -64,7 +68,7 @@ public class URIExtractionNamespaceFunctionFactory implements ExtractionNamespac
   }
 
   @Override
-  public Function<String, String> build(URIExtractionNamespace extractionNamespace, final Map<String, String> cache)
+  public Function<String, String> buildFn(URIExtractionNamespace extractionNamespace, final Map<String, String> cache)
   {
     return new Function<String, String>()
     {
@@ -76,6 +80,29 @@ public class URIExtractionNamespaceFunctionFactory implements ExtractionNamespac
           return null;
         }
         return Strings.emptyToNull(cache.get(input));
+      }
+    };
+  }
+
+  @Override
+  public Function<String, List<String>> buildReverseFn(
+      URIExtractionNamespace extractionNamespace, final Map<String, String> cache
+  )
+  {
+    return new Function<String, List<String>>()
+    {
+      @Nullable
+      @Override
+      public List<String> apply(@Nullable final String value)
+      {
+        return Lists.newArrayList(Maps.filterKeys(cache, new Predicate<String>()
+        {
+          @Override
+          public boolean apply(@Nullable String key)
+          {
+            return cache.get(key).equals(Strings.nullToEmpty(value));
+          }
+        }).keySet());
       }
     };
   }

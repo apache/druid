@@ -56,6 +56,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
@@ -80,6 +81,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
   private NamespaceExtractionCacheManager manager;
   private File tmpFile;
   private final ConcurrentMap<String, Function<String, String>> fnCache = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, Function<String, List<String>>> reverseFnCache = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, Object> cacheUpdateAlerts = new ConcurrentHashMap<>();
 
   private final AtomicLong numRuns = new AtomicLong(0L);
@@ -114,7 +116,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
       }
     };
     manager = new OnHeapNamespaceExtractionCacheManager(
-        lifecycle, fnCache, new NoopServiceEmitter(),
+        lifecycle, fnCache, reverseFnCache, new NoopServiceEmitter(),
         ImmutableMap.<Class<? extends ExtractionNamespace>, ExtractionNamespaceFunctionFactory<?>>of(
             URIExtractionNamespace.class,
             factory

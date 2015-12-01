@@ -20,8 +20,10 @@
 package io.druid.server.namespace.cache;
 
 import com.google.common.base.Function;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Sets;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import io.druid.metadata.TestDerbyConnector;
@@ -41,6 +43,8 @@ import org.junit.runners.Parameterized;
 import org.skife.jdbi.v2.Handle;
 
 import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -66,7 +70,8 @@ public class JDBCExtractionNamespaceTest
   private static final Map<String, String> renames = ImmutableMap.of(
       "foo", "bar",
       "bad", "bar",
-      "how about that", "foo"
+      "how about that", "foo",
+      "empty string", ""
   );
 
   @Parameterized.Parameters(name = "{0}")
@@ -86,6 +91,7 @@ public class JDBCExtractionNamespaceTest
   }
 
   private final ConcurrentMap<String, Function<String, String>> fnCache = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, Function<String, List<String>>> reverseFnCache = new ConcurrentHashMap<>();
   private final String tsColumn;
   private OnHeapNamespaceExtractionCacheManager extractionCacheManager;
   private final Lifecycle lifecycle = new Lifecycle();
@@ -120,6 +126,7 @@ public class JDBCExtractionNamespaceTest
     extractionCacheManager = new OnHeapNamespaceExtractionCacheManager(
         lifecycle,
         fnCache,
+        reverseFnCache,
         new NoopServiceEmitter(),
         ImmutableMap.<Class<? extends ExtractionNamespace>, ExtractionNamespaceFunctionFactory<?>>of(
             JDBCExtractionNamespace.class,
@@ -219,19 +226,33 @@ public class JDBCExtractionNamespaceTest
     for (Map.Entry<String, String> entry : renames.entrySet()) {
       String key = entry.getKey();
       String val = entry.getValue();
-      Assert.assertEquals(
-          "non-null check",
-          val,
-          extractionFn.apply(key)
-      );
+      Assert.assertEquals("non-null check", Strings.emptyToNull(val), extractionFn.apply(key));
     }
-    Assert.assertEquals(
-        "null check",
-        null,
-        extractionFn.apply("baz")
-    );
+    Assert.assertEquals("null check", null, extractionFn.apply("baz"));
   }
 
+  @Test(timeout = 60_000L)
+  public void testReverseLookup() throws InterruptedException
+  {
+    final JDBCExtractionNamespace extractionNamespace = new JDBCExtractionNamespace(
+        namespace,
+        derbyConnectorRule.getMetadataConnectorConfig(),
+        tableName,
+        keyName,
+        valName,
+        tsColumn,
+        new Period(0)
+    );
+    NamespaceExtractionCacheManagersTest.waitFor(extractionCacheManager.schedule(extractionNamespace));
+    Function<String, List<String>> reverseExtractionFn = reverseFnCache.get(extractionNamespace.getNamespace());
+    Assert.assertEquals("reverse lookup should match", Sets.newHashSet("foo", "bad"), Sets.newHashSet(reverseExtractionFn.apply("bar")));
+    Assert.assertEquals("reverse lookup should match", Sets.newHashSet("how about that"), Sets.newHashSet(reverseExtractionFn.apply("foo")));
+    Assert.assertEquals("reverse lookup should match", Sets.newHashSet("empty string"), Sets.newHashSet(reverseExtractionFn.apply("")));
+    Assert.assertEquals("null is same as empty string", Sets.newHashSet("empty string"), Sets.newHashSet(reverseExtractionFn.apply(null)));
+    Assert.assertEquals("reverse lookup of none existing value should be empty list",
+                        Collections.EMPTY_LIST,
+                        reverseExtractionFn.apply("does't exist"));
+  }
 
   @Test(timeout = 60_000L)
   public void testSkipOld()
