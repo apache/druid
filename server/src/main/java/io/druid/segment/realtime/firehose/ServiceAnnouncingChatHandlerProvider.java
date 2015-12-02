@@ -23,8 +23,8 @@ import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import io.druid.curator.discovery.ServiceAnnouncer;
-import io.druid.guice.annotations.Self;
 import io.druid.server.DruidNode;
+import io.druid.guice.annotations.RemoteChatHandler;
 
 import java.util.concurrent.ConcurrentMap;
 
@@ -43,7 +43,7 @@ public class ServiceAnnouncingChatHandlerProvider implements ChatHandlerProvider
 
   @Inject
   public ServiceAnnouncingChatHandlerProvider(
-      @Self DruidNode node,
+      @RemoteChatHandler DruidNode node,
       ServiceAnnouncer serviceAnnouncer
   )
   {

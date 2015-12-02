@@ -21,6 +21,7 @@ package io.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import com.google.common.net.HostAndPort;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
@@ -49,16 +50,22 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
+import java.util.Collection;
+import java.util.concurrent.CountDownLatch;
 
 public class AsyncQueryForwardingServletTest extends BaseJettyTest
 {
@@ -122,6 +129,40 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     Assert.assertNotEquals("gzip", postNoGzip.getContentEncoding());
   }
 
+  @Test(timeout = 60_000)
+  public void testDeleteBroadcast() throws Exception
+  {
+    CountDownLatch latch = new CountDownLatch(2);
+    makeTestDeleteServer(port + 1, latch).start();
+    makeTestDeleteServer(port + 2, latch).start();
+
+    final URL url = new URL("http://localhost:" + port + "/druid/v2/abc123");
+    final HttpURLConnection post = (HttpURLConnection) url.openConnection();
+    post.setRequestMethod("DELETE");
+    int code = post.getResponseCode();
+    Assert.assertEquals(200, code);
+
+    latch.await();
+  }
+
+  private static Server makeTestDeleteServer(int port, final CountDownLatch latch)
+  {
+    Server server = new Server(port);
+    ServletHandler handler = new ServletHandler();
+    handler.addServletWithMapping(new ServletHolder(new HttpServlet()
+    {
+      @Override
+      protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException
+      {
+        latch.countDown();
+        resp.setStatus(200);
+      }
+    }), "/default/*");
+
+    server.setHandler(handler);
+    return server;
+  }
+
   public static class ProxyJettyServerInit implements JettyServerInitializer
   {
 
@@ -152,6 +193,16 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         {
           return "localhost:" + node.getPort();
         }
+
+        @Override
+        public Collection<String> getAllHosts()
+        {
+          return ImmutableList.of(
+              "localhost:" + node.getPort(),
+              "localhost:" + (node.getPort() + 1),
+              "localhost:" + (node.getPort() + 2)
+          );
+        }
       };
 
       ServletHolder holder = new ServletHolder(
@@ -173,15 +224,19 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
           )
           {
             @Override
-            protected URI rewriteURI(HttpServletRequest request)
+            protected URI rewriteURI(HttpServletRequest request, String host)
             {
-              URI uri = super.rewriteURI(request);
-              return URI.create(uri.toString().replace("/proxy", ""));
+              String uri = super.rewriteURI(request, host).toString();
+              if (uri.contains("/druid/v2")) {
+                return URI.create(uri.replace("/druid/v2", "/default"));
+              }
+              return URI.create(uri.replace("/proxy", ""));
             }
           });
       //NOTE: explicit maxThreads to workaround https://tickets.puppetlabs.com/browse/TK-152
       holder.setInitParameter("maxThreads", "256");
       root.addServlet(holder, "/proxy/*");
+      root.addServlet(holder, "/druid/v2/*");
       JettyServerInitUtils.addExtensionFilters(root, injector);
       root.addFilter(JettyServerInitUtils.defaultAsyncGzipFilterHolder(), "/*", null);
       root.addFilter(GuiceFilter.class, "/slow/*", null);
@@ -192,5 +247,33 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
       handlerList.setHandlers(new Handler[]{root});
       server.setHandler(handlerList);
     }
+  }
+
+  @Test
+  public void testRewriteURI() throws Exception
+  {
+
+    // test params
+    Assert.assertEquals(
+        new URI("http://localhost:1234/some/path?param=1"),
+        AsyncQueryForwardingServlet.makeURI("localhost:1234", "/some/path", "param=1")
+    );
+
+    // HttpServletRequest.getQueryString returns encoded form
+    // use ascii representation in case URI is using non-ascii characters
+    Assert.assertEquals(
+        "http://[2a00:1450:4007:805::1007]:1234/some/path?param=1&param2=%E2%82%AC",
+        AsyncQueryForwardingServlet.makeURI(
+            HostAndPort.fromParts("2a00:1450:4007:805::1007", 1234).toString(),
+            "/some/path",
+            "param=1&param2=%E2%82%AC"
+        ).toASCIIString()
+    );
+
+    // test null query
+    Assert.assertEquals(
+        new URI("http://localhost/"),
+        AsyncQueryForwardingServlet.makeURI("localhost", "/", null)
+    );
   }
 }

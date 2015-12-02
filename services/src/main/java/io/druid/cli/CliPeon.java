@@ -30,7 +30,9 @@ import com.metamx.common.logger.Logger;
 import io.airlift.airline.Arguments;
 import io.airlift.airline.Command;
 import io.airlift.airline.Option;
+import io.druid.client.cache.CacheConfig;
 import io.druid.guice.Binders;
+import io.druid.guice.CacheModule;
 import io.druid.guice.IndexingServiceFirehoseModule;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
@@ -70,6 +72,7 @@ import io.druid.segment.realtime.firehose.ChatHandlerResource;
 import io.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import io.druid.segment.realtime.firehose.ServiceAnnouncingChatHandlerProvider;
 import io.druid.server.QueryResource;
+import io.druid.server.initialization.jetty.ChatHandlerServerModule;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import org.eclipse.jetty.server.Server;
 
@@ -156,6 +159,9 @@ public class CliPeon extends GuiceRunnable
             binder.bind(QuerySegmentWalker.class).to(ThreadPoolTaskRunner.class);
             binder.bind(ThreadPoolTaskRunner.class).in(ManageLifecycle.class);
 
+            JsonConfigProvider.bind(binder, "druid.realtime.cache", CacheConfig.class);
+            binder.install(new CacheModule());
+
             // Override the default SegmentLoaderConfig because we don't actually care about the
             // configuration based locations.  This will override them anyway.  This is also stopping
             // configuration of other parameters, but I don't think that's actually a problem.
@@ -198,7 +204,8 @@ public class CliPeon extends GuiceRunnable
 
           }
         },
-        new IndexingServiceFirehoseModule()
+        new IndexingServiceFirehoseModule(),
+        new ChatHandlerServerModule()
     );
   }
 

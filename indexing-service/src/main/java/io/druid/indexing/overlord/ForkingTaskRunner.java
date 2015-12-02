@@ -17,6 +17,8 @@
 
 package io.druid.indexing.overlord;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Joiner;
@@ -28,17 +30,21 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.io.ByteSink;
 import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closer;
+import com.google.common.io.FileWriteMode;
 import com.google.common.io.Files;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
+import com.metamx.common.Pair;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.concurrent.Execs;
 import io.druid.guice.annotations.Self;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.config.TaskConfig;
@@ -50,6 +56,8 @@ import io.druid.server.DruidNode;
 import io.druid.tasklogs.TaskLogPusher;
 import io.druid.tasklogs.TaskLogStreamer;
 import org.apache.commons.io.FileUtils;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
 import java.io.File;
 import java.io.IOException;
@@ -62,7 +70,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.Callable;
-import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Runs tasks in separate processes using the "internal peon" verb.
@@ -71,6 +79,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
 {
   private static final EmittingLogger log = new EmittingLogger(ForkingTaskRunner.class);
   private static final String CHILD_PROPERTY_PREFIX = "druid.indexer.fork.property.";
+  private static final String TASK_RESTORE_FILENAME = "restore.json";
   private final ForkingTaskRunnerConfig config;
   private final TaskConfig taskConfig;
   private final Properties props;
@@ -81,6 +90,8 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   private final PortFinder portFinder;
 
   private final Map<String, ForkingTaskRunnerWorkItem> tasks = Maps.newHashMap();
+
+  private volatile boolean stopping = false;
 
   @Inject
   public ForkingTaskRunner(
@@ -101,7 +112,51 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
     this.node = node;
     this.portFinder = new PortFinder(config.getStartPort());
 
-    this.exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(workerConfig.getCapacity()));
+    this.exec = MoreExecutors.listeningDecorator(
+        Execs.multiThreaded(workerConfig.getCapacity(), "forking-task-runner-%d")
+    );
+  }
+
+  @Override
+  public List<Pair<Task, ListenableFuture<TaskStatus>>> restore()
+  {
+    final File restoreFile = getRestoreFile();
+    final TaskRestoreInfo taskRestoreInfo;
+    if (restoreFile.exists()) {
+      try {
+        taskRestoreInfo = jsonMapper.readValue(restoreFile, TaskRestoreInfo.class);
+      }
+      catch (Exception e) {
+        log.error(e, "Failed to read restorable tasks from file[%s]. Skipping restore.", restoreFile);
+        return ImmutableList.of();
+      }
+    } else {
+      return ImmutableList.of();
+    }
+
+    final List<Pair<Task, ListenableFuture<TaskStatus>>> retVal = Lists.newArrayList();
+    for (final String taskId : taskRestoreInfo.getRunningTasks()) {
+      try {
+        final File taskFile = new File(taskConfig.getTaskDir(taskId), "task.json");
+        final Task task = jsonMapper.readValue(taskFile, Task.class);
+
+        if (!task.getId().equals(taskId)) {
+          throw new ISE("WTF?! Task[%s] restore file had wrong id[%s].", taskId, task.getId());
+        }
+
+        if (task.canRestore()) {
+          log.info("Restoring task[%s].", task.getId());
+          retVal.add(Pair.of(task, run(task)));
+        }
+      }
+      catch (Exception e) {
+        log.warn(e, "Failed to restore task[%s]. Trying to restore other tasks.", taskId);
+      }
+    }
+
+    log.info("Restored %,d tasks.", retVal.size());
+
+    return retVal;
   }
 
   @Override
@@ -112,7 +167,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
         tasks.put(
             task.getId(),
             new ForkingTaskRunnerWorkItem(
-                task.getId(),
+                task,
                 exec.submit(
                     new Callable<TaskStatus>()
                     {
@@ -120,11 +175,22 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                       public TaskStatus call()
                       {
                         final String attemptUUID = UUID.randomUUID().toString();
-                        final File taskDir = new File(taskConfig.getBaseTaskDir(), task.getId());
+                        final File taskDir = taskConfig.getTaskDir(task.getId());
                         final File attemptDir = new File(taskDir, attemptUUID);
 
                         final ProcessHolder processHolder;
-                        final int childPort = portFinder.findUnusedPort();
+                        final int childPort;
+                        final int childChatHandlerPort;
+
+                        if (config.isSeparateIngestionEndpoint()) {
+                          Pair<Integer, Integer> portPair = portFinder.findTwoConsecutiveUnusedPorts();
+                          childPort = portPair.lhs;
+                          childChatHandlerPort = portPair.rhs;
+                        } else {
+                          childPort = portFinder.findUnusedPort();
+                          childChatHandlerPort = -1;
+                        }
+
                         try {
                           final Closer closer = Closer.create();
                           try {
@@ -132,9 +198,9 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               throw new IOException(String.format("Could not create directories: %s", attemptDir));
                             }
 
-                            final File taskFile = new File(attemptDir, "task.json");
+                            final File taskFile = new File(taskDir, "task.json");
                             final File statusFile = new File(attemptDir, "status.json");
-                            final File logFile = new File(attemptDir, "log");
+                            final File logFile = new File(taskDir, "log");
 
                             // time to adjust process holders
                             synchronized (tasks) {
@@ -231,6 +297,14 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               command.add(String.format("-Ddruid.host=%s", childHost));
                               command.add(String.format("-Ddruid.port=%d", childPort));
 
+                              if(config.isSeparateIngestionEndpoint()) {
+                                command.add(String.format("-Ddruid.indexer.task.chathandler.service=%s", "placeholder/serviceName"));
+                                // Actual serviceName will be passed by the EventReceiverFirehose when it registers itself with ChatHandlerProvider
+                                // Thus, "placeholder/serviceName" will be ignored
+                                command.add(String.format("-Ddruid.indexer.task.chathandler.host=%s", childHost));
+                                command.add(String.format("-Ddruid.indexer.task.chathandler.port=%d", childChatHandlerPort));
+                              }
+
                               command.add("io.druid.cli.Main");
                               command.add("internal");
                               command.add("peon");
@@ -242,7 +316,9 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                 command.add(nodeType);
                               }
 
-                              jsonMapper.writeValue(taskFile, task);
+                              if (!taskFile.exists()) {
+                                jsonMapper.writeValue(taskFile, task);
+                              }
 
                               log.info("Running command: %s", Joiner.on(" ").join(command));
                               taskWorkItem.processHolder = new ProcessHolder(
@@ -258,7 +334,8 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                             log.info("Logging task %s output to: %s", task.getId(), logFile);
                             boolean runFailed = true;
 
-                            try (final OutputStream toLogfile = Files.asByteSink(logFile).openBufferedStream()) {
+                            final ByteSink logSink = Files.asByteSink(logFile, FileWriteMode.APPEND);
+                            try (final OutputStream toLogfile = logSink.openStream()) {
                               ByteStreams.copy(processHolder.process.getInputStream(), toLogfile);
                               final int statusCode = processHolder.process.waitFor();
                               log.info("Process exited with status[%d] for task: %s", statusCode, task.getId());
@@ -297,10 +374,26 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               if (taskWorkItem != null && taskWorkItem.processHolder != null) {
                                 taskWorkItem.processHolder.process.destroy();
                               }
+                              if (!stopping) {
+                                saveRunningTasks();
+                              }
                             }
-                            portFinder.markPortUnused(childPort);
-                            log.info("Removing temporary directory: %s", attemptDir);
-                            FileUtils.deleteDirectory(attemptDir);
+                            if(childChatHandlerPort > 0) {
+                              portFinder.markPortUnused(childChatHandlerPort);
+                            }
+
+                            try {
+                              if (!stopping && taskDir.exists()) {
+                                log.info("Removing task directory: %s", taskDir);
+                                FileUtils.deleteDirectory(taskDir);
+                              }
+                            }
+                            catch (Exception e) {
+                              log.makeAlert(e, "Failed to delete task directory")
+                                 .addData("taskDir", taskDir.toString())
+                                 .addData("task", task.getId())
+                                 .emit();
+                            }
                           }
                           catch (Exception e) {
                             log.error(e, "Suppressing exception caught while cleaning up task");
@@ -312,7 +405,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
             )
         );
       }
-
+      saveRunningTasks();
       return tasks.get(task.getId()).getResult();
     }
   }
@@ -320,15 +413,40 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   @LifecycleStop
   public void stop()
   {
-    synchronized (tasks) {
-      exec.shutdown();
+    stopping = true;
+    exec.shutdown();
 
+    synchronized (tasks) {
       for (ForkingTaskRunnerWorkItem taskWorkItem : tasks.values()) {
         if (taskWorkItem.processHolder != null) {
-          log.info("Destroying process: %s", taskWorkItem.processHolder.process);
-          taskWorkItem.processHolder.process.destroy();
+          log.info("Closing output stream to task[%s].", taskWorkItem.getTask().getId());
+          try {
+            taskWorkItem.processHolder.process.getOutputStream().close();
+          }
+          catch (Exception e) {
+            log.warn(e, "Failed to close stdout to task[%s]. Destroying task.", taskWorkItem.getTask().getId());
+            taskWorkItem.processHolder.process.destroy();
+          }
         }
       }
+    }
+
+    final DateTime start = new DateTime();
+    final long timeout = new Interval(start, taskConfig.getGracefulShutdownTimeout()).toDurationMillis();
+
+    // Things should be terminating now. Wait for it to happen so logs can be uploaded and all that good stuff.
+    log.info("Waiting %,dms for shutdown.", timeout);
+    if (timeout > 0) {
+      try {
+        exec.awaitTermination(timeout, TimeUnit.MILLISECONDS);
+        log.info("Finished stopping in %,dms.", System.currentTimeMillis() - start.getMillis());
+      }
+      catch (InterruptedException e) {
+        log.warn(e, "Interrupted while waiting for executor to finish.");
+        Thread.currentThread().interrupt();
+      }
+    } else {
+      log.warn("Ran out of time, not waiting for executor to finish!");
     }
   }
 
@@ -423,17 +541,68 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
     );
   }
 
+  // Save running tasks to a file, so they can potentially be restored on next startup. Suppresses exceptions that
+  // occur while saving.
+  private void saveRunningTasks()
+  {
+    final File restoreFile = getRestoreFile();
+    final List<String> theTasks = Lists.newArrayList();
+    for (ForkingTaskRunnerWorkItem forkingTaskRunnerWorkItem : tasks.values()) {
+      theTasks.add(forkingTaskRunnerWorkItem.getTaskId());
+    }
+
+    try {
+      Files.createParentDirs(restoreFile);
+      jsonMapper.writeValue(restoreFile, new TaskRestoreInfo(theTasks));
+    }
+    catch (Exception e) {
+      log.warn(e, "Failed to save tasks to restore file[%s]. Skipping this save.", restoreFile);
+    }
+  }
+
+  private File getRestoreFile()
+  {
+    return new File(taskConfig.getBaseTaskDir(), TASK_RESTORE_FILENAME);
+  }
+
+  private static class TaskRestoreInfo
+  {
+    @JsonProperty
+    private final List<String> runningTasks;
+
+    @JsonCreator
+    public TaskRestoreInfo(
+        @JsonProperty("runningTasks") List<String> runningTasks
+    )
+    {
+      this.runningTasks = runningTasks;
+    }
+
+    public List<String> getRunningTasks()
+    {
+      return runningTasks;
+    }
+  }
+
   private static class ForkingTaskRunnerWorkItem extends TaskRunnerWorkItem
   {
+    private final Task task;
+
     private volatile boolean shutdown = false;
     private volatile ProcessHolder processHolder = null;
 
     private ForkingTaskRunnerWorkItem(
-        String taskId,
+        Task task,
         ListenableFuture<TaskStatus> statusFuture
     )
     {
-      super(taskId, statusFuture);
+      super(task.getId(), statusFuture);
+      this.task = task;
+    }
+
+    public Task getTask()
+    {
+      return task;
     }
   }
 

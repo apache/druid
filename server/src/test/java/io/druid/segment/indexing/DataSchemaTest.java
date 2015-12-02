@@ -72,7 +72,7 @@ public class DataSchemaTest
     );
 
     Assert.assertEquals(
-        ImmutableSet.of("time", "col1", "col2"),
+        ImmutableSet.of("time", "col1", "col2", "metric1", "metric2"),
         schema.getParser().getParseSpec().getDimensionsSpec().getDimensionExclusions()
     );
   }
@@ -101,7 +101,7 @@ public class DataSchemaTest
     );
 
     Assert.assertEquals(
-        ImmutableSet.of("dimC", "col1"),
+        ImmutableSet.of("dimC", "col1", "metric1", "metric2"),
         schema.getParser().getParseSpec().getDimensionsSpec().getDimensionExclusions()
     );
   }

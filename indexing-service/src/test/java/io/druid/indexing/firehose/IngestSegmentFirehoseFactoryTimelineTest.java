@@ -282,7 +282,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
         }
       };
       final TaskToolboxFactory taskToolboxFactory = new TaskToolboxFactory(
-          new TaskConfig(testCase.tmpDir.getAbsolutePath(), null, null, 50000, null),
+          new TaskConfig(testCase.tmpDir.getAbsolutePath(), null, null, 50000, null, null, null),
           new TaskActionClientFactory()
           {
             @Override
@@ -314,7 +314,9 @@ public class IngestSegmentFirehoseFactoryTimelineTest
                   }, objectMapper
               )
           ),
-          objectMapper
+          objectMapper,
+          null,
+          null
       );
       final Injector injector = Guice.createInjector(
           new Module()

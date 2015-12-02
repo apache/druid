@@ -20,6 +20,7 @@ package io.druid.indexing.common.config;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
+import org.joda.time.Period;
 
 import java.io.File;
 import java.util.List;
@@ -29,6 +30,10 @@ public class TaskConfig
   public static final List<String> DEFAULT_DEFAULT_HADOOP_COORDINATES = ImmutableList.of(
       "org.apache.hadoop:hadoop-client:2.3.0"
   );
+
+  private static final Period DEFAULT_DIRECTORY_LOCK_TIMEOUT = new Period("PT10M");
+
+  private static final Period DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT = new Period("PT5M");
 
   @JsonProperty
   private final String baseDir;
@@ -45,13 +50,21 @@ public class TaskConfig
   @JsonProperty
   private final List<String> defaultHadoopCoordinates;
 
+  @JsonProperty
+  private final Period gracefulShutdownTimeout;
+
+  @JsonProperty
+  private final Period directoryLockTimeout;
+
   @JsonCreator
   public TaskConfig(
       @JsonProperty("baseDir") String baseDir,
       @JsonProperty("baseTaskDir") String baseTaskDir,
       @JsonProperty("hadoopWorkingPath") String hadoopWorkingPath,
       @JsonProperty("defaultRowFlushBoundary") Integer defaultRowFlushBoundary,
-      @JsonProperty("defaultHadoopCoordinates") List<String> defaultHadoopCoordinates
+      @JsonProperty("defaultHadoopCoordinates") List<String> defaultHadoopCoordinates,
+      @JsonProperty("gracefulShutdownTimeout") Period gracefulShutdownTimeout,
+      @JsonProperty("directoryLockTimeout") Period directoryLockTimeout
   )
   {
     this.baseDir = baseDir == null ? "/tmp" : baseDir;
@@ -61,6 +74,12 @@ public class TaskConfig
     this.defaultHadoopCoordinates = defaultHadoopCoordinates == null
                                     ? DEFAULT_DEFAULT_HADOOP_COORDINATES
                                     : defaultHadoopCoordinates;
+    this.gracefulShutdownTimeout = gracefulShutdownTimeout == null
+                                   ? DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT
+                                   : gracefulShutdownTimeout;
+    this.directoryLockTimeout = directoryLockTimeout == null
+                                   ? DEFAULT_DIRECTORY_LOCK_TIMEOUT
+                                   : directoryLockTimeout;
   }
 
   @JsonProperty
@@ -73,6 +92,21 @@ public class TaskConfig
   public File getBaseTaskDir()
   {
     return baseTaskDir;
+  }
+
+  public File getTaskDir(String taskId)
+  {
+    return new File(baseTaskDir, taskId);
+  }
+
+  public File getTaskWorkDir(String taskId)
+  {
+    return new File(getTaskDir(taskId), "work");
+  }
+
+  public File getTaskLockFile(String taskId)
+  {
+    return new File(getTaskDir(taskId), "lock");
   }
 
   @JsonProperty
@@ -91,6 +125,18 @@ public class TaskConfig
   public List<String> getDefaultHadoopCoordinates()
   {
     return defaultHadoopCoordinates;
+  }
+
+  @JsonProperty
+  public Period getGracefulShutdownTimeout()
+  {
+    return gracefulShutdownTimeout;
+  }
+
+  @JsonProperty
+  public Period getDirectoryLockTimeout()
+  {
+    return directoryLockTimeout;
   }
 
   private String defaultDir(String configParameter, final String defaultVal)

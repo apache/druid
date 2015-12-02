@@ -33,6 +33,7 @@ import com.metamx.metrics.MonitorScheduler;
 import io.druid.concurrent.Execs;
 import io.druid.guice.DruidBinders;
 import io.druid.guice.JsonConfigProvider;
+import io.druid.guice.LazySingleton;
 import io.druid.guice.ManageLifecycle;
 
 import java.util.List;
@@ -58,6 +59,8 @@ public class MetricsModule implements Module
     JsonConfigProvider.bind(binder, "druid.monitoring", MonitorsConfig.class);
 
     DruidBinders.metricMonitorBinder(binder); // get the binder so that it will inject the empty set at a minimum.
+
+    binder.bind(EventReceiverFirehoseRegister.class).in(LazySingleton.class);
 
     // Instantiate eagerly so that we get everything registered and put into the Lifecycle
     binder.bind(Key.get(MonitorScheduler.class, Names.named("ForTheEagerness")))

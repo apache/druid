@@ -64,6 +64,7 @@ import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -236,6 +237,14 @@ public class BaseJettyTest
   @Path("/default")
   public static class DefaultResource
   {
+    @DELETE
+    @Path("{resource}")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response delete()
+    {
+      return Response.ok("hello").build();
+    }
+
     @GET
     @Produces(MediaType.APPLICATION_JSON)
     public Response get()

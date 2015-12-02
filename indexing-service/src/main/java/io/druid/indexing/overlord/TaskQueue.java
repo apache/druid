@@ -216,6 +216,9 @@ public class TaskQueue
     log.info("Beginning management in %s.", config.getStartDelay());
     Thread.sleep(config.getStartDelay().getMillis());
 
+    // Ignore return value- we'll get the IDs and futures from getKnownTasks later.
+    taskRunner.restore();
+
     while (active) {
       giant.lock();
 

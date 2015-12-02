@@ -29,6 +29,7 @@ import com.metamx.common.parsers.ParseException;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
+import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
@@ -48,6 +49,9 @@ import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.RealtimeMetricsMonitor;
 import io.druid.segment.realtime.SegmentPublisher;
+import io.druid.segment.realtime.firehose.ClippedFirehoseFactory;
+import io.druid.segment.realtime.firehose.EventReceiverFirehoseFactory;
+import io.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 import io.druid.segment.realtime.plumber.Committers;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.PlumberSchool;
@@ -62,6 +66,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
 
 public class RealtimeIndexTask extends AbstractTask
 {
@@ -103,6 +108,12 @@ public class RealtimeIndexTask extends AbstractTask
 
   @JsonIgnore
   private volatile Plumber plumber = null;
+
+  @JsonIgnore
+  private volatile Firehose firehose = null;
+
+  @JsonIgnore
+  private volatile boolean stopped = false;
 
   @JsonIgnore
   private volatile QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate = null;
@@ -275,13 +286,14 @@ public class RealtimeIndexTask extends AbstractTask
         lockingSegmentAnnouncer,
         segmentPublisher,
         toolbox.getNewSegmentServerView(),
-        toolbox.getQueryExecutorService()
+        toolbox.getQueryExecutorService(),
+        toolbox.getCache(),
+        toolbox.getCacheConfig(),
+        toolbox.getObjectMapper()
     );
 
     this.plumber = plumberSchool.findPlumber(dataSchema, tuningConfig, fireDepartment.getMetrics());
 
-    // Delay firehose connection to avoid claiming input resources while the plumber is starting up.
-    Firehose firehose = null;
     Supplier<Committer> committerSupplier = null;
 
     try {
@@ -290,12 +302,14 @@ public class RealtimeIndexTask extends AbstractTask
       // Set up metrics emission
       toolbox.getMonitorScheduler().addMonitor(metricsMonitor);
 
-      // Set up firehose
-      firehose = spec.getIOConfig().getFirehoseFactory().connect(spec.getDataSchema().getParser());
+      // Delay firehose connection to avoid claiming input resources while the plumber is starting up.
+      final FirehoseFactory firehoseFactory = spec.getIOConfig().getFirehoseFactory();
+      final boolean firehoseDrainableByClosing = isFirehoseDrainableByClosing(firehoseFactory);
+      firehose = firehoseFactory.connect(spec.getDataSchema().getParser());
       committerSupplier = Committers.supplierFromFirehose(firehose);
 
       // Time to read data!
-      while (firehose.hasMore()) {
+      while ((!stopped || firehoseDrainableByClosing) && firehose.hasMore()) {
         final InputRow inputRow;
 
         try {
@@ -332,8 +346,38 @@ public class RealtimeIndexTask extends AbstractTask
     finally {
       if (normalExit) {
         try {
-          plumber.persist(committerSupplier.get());
-          plumber.finishJob();
+          if (!stopped) {
+            // Hand off all pending data
+            log.info("Persisting and handing off pending data.");
+            plumber.persist(committerSupplier.get());
+            plumber.finishJob();
+          } else {
+            log.info("Persisting pending data without handoff, in preparation for restart.");
+            final Committer committer = committerSupplier.get();
+            final CountDownLatch persistLatch = new CountDownLatch(1);
+            plumber.persist(
+                new Committer()
+                {
+                  @Override
+                  public Object getMetadata()
+                  {
+                    return committer.getMetadata();
+                  }
+
+                  @Override
+                  public void run()
+                  {
+                    try {
+                      committer.run();
+                    }
+                    finally {
+                      persistLatch.countDown();
+                    }
+                  }
+                }
+            );
+            persistLatch.await();
+          }
         }
         catch (Exception e) {
           log.makeAlert(e, "Failed to finish realtime task").emit();
@@ -347,13 +391,65 @@ public class RealtimeIndexTask extends AbstractTask
       }
     }
 
+    log.info("Job done!");
     return TaskStatus.success(getId());
+  }
+
+  @Override
+  public boolean canRestore()
+  {
+    return true;
+  }
+
+  @Override
+  public void stopGracefully()
+  {
+    try {
+      synchronized (this) {
+        if (!stopped) {
+          stopped = true;
+          log.info("Gracefully stopping.");
+          if (isFirehoseDrainableByClosing(spec.getIOConfig().getFirehoseFactory())) {
+            firehose.close();
+          } else {
+            log.debug("Cannot drain firehose[%s] by closing, so skipping closing.", firehose);
+          }
+        }
+      }
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  /**
+   * Public for tests.
+   */
+  @JsonIgnore
+  public Firehose getFirehose()
+  {
+    return firehose;
   }
 
   @JsonProperty("spec")
   public FireDepartment getRealtimeIngestionSchema()
   {
     return spec;
+  }
+
+  /**
+   * Is a firehose from this factory drainable by closing it? If so, we should drain on stopGracefully rather than
+   * abruptly stopping.
+   * <p/>
+   * This is a hack to get around the fact that the Firehose and FirehoseFactory interfaces do not help us do this.
+   */
+  private static boolean isFirehoseDrainableByClosing(FirehoseFactory firehoseFactory)
+  {
+    return firehoseFactory instanceof EventReceiverFirehoseFactory
+           || (firehoseFactory instanceof TimedShutoffFirehoseFactory
+               && isFirehoseDrainableByClosing(((TimedShutoffFirehoseFactory) firehoseFactory).getDelegateFactory()))
+           || (firehoseFactory instanceof ClippedFirehoseFactory
+               && isFirehoseDrainableByClosing(((ClippedFirehoseFactory) firehoseFactory).getDelegate()));
   }
 
   public static class TaskActionSegmentPublisher implements SegmentPublisher

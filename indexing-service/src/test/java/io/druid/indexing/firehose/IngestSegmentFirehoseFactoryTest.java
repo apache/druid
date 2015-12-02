@@ -181,7 +181,7 @@ public class IngestSegmentFirehoseFactoryTest
     );
     final ObjectMapper objectMapper = newObjectMapper();
     final TaskToolboxFactory taskToolboxFactory = new TaskToolboxFactory(
-        new TaskConfig(tmpDir.getAbsolutePath(), null, null, 50000, null),
+        new TaskConfig(tmpDir.getAbsolutePath(), null, null, 50000, null, null, null),
         tac,
         newMockEmitter(),
         new DataSegmentPusher()
@@ -247,7 +247,9 @@ public class IngestSegmentFirehoseFactoryTest
                 }, objectMapper
             )
         ),
-        objectMapper
+        objectMapper,
+        null,
+        null
     );
     Collection<Object[]> values = new LinkedList<>();
     for (InputRowParser parser : Arrays.<InputRowParser>asList(

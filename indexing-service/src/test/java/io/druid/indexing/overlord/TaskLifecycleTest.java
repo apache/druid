@@ -33,7 +33,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
-import com.google.common.collect.Sets;
 import com.metamx.common.Granularity;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Comparators;
@@ -45,6 +44,7 @@ import com.metamx.metrics.Monitor;
 import com.metamx.metrics.MonitorScheduler;
 import io.druid.client.FilteredServerView;
 import io.druid.client.ServerView;
+import io.druid.client.cache.MapCache;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
@@ -68,11 +68,12 @@ import io.druid.indexing.common.task.AbstractFixedIntervalTask;
 import io.druid.indexing.common.task.IndexTask;
 import io.druid.indexing.common.task.KillTask;
 import io.druid.indexing.common.task.RealtimeIndexTask;
+import io.druid.indexing.common.task.RealtimeIndexTaskTest;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
 import io.druid.indexing.overlord.config.TaskQueueConfig;
+import io.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import io.druid.metadata.SQLMetadataStorageActionHandlerFactory;
 import io.druid.metadata.TestDerbyConnector;
 import io.druid.query.QueryRunnerFactoryConglomerate;
@@ -93,6 +94,7 @@ import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.segment.realtime.FireDepartment;
+import io.druid.segment.realtime.FireDepartmentTest;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
@@ -169,6 +171,7 @@ public class TaskLifecycleTest
 
   private final String taskStorageType;
 
+
   private ObjectMapper mapper;
   private TaskStorageQueryAdapter tsqa = null;
   private File tmpDir = null;
@@ -176,7 +179,7 @@ public class TaskLifecycleTest
   private TaskLockbox tl = null;
   private TaskQueue tq = null;
   private TaskRunner tr = null;
-  private MockIndexerMetadataStorageCoordinator mdc = null;
+  private TestIndexerMetadataStorageCoordinator mdc = null;
   private TaskActionClientFactory tac = null;
   private TaskToolboxFactory tb = null;
   private IndexSpec indexSpec;
@@ -191,9 +194,18 @@ public class TaskLifecycleTest
   private TestDerbyConnector testDerbyConnector;
   private List<ServerView.SegmentCallback> segmentCallbacks = new ArrayList<>();
 
-  private static MockIndexerMetadataStorageCoordinator newMockMDC()
+  private static TestIndexerMetadataStorageCoordinator newMockMDC()
   {
-    return new MockIndexerMetadataStorageCoordinator();
+    return new TestIndexerMetadataStorageCoordinator()
+    {
+      @Override
+      public Set<DataSegment> announceHistoricalSegments(Set<DataSegment> segments)
+      {
+        Set<DataSegment> retVal = super.announceHistoricalSegments(segments);
+        publishCountDown.countDown();
+        return retVal;
+      }
+    };
   }
 
   private static ServiceEmitter newMockEmitter()
@@ -359,7 +371,11 @@ public class TaskLifecycleTest
       ts = new MetadataTaskStorage(
           testDerbyConnector,
           new TaskStorageConfig(null),
-          new SQLMetadataStorageActionHandlerFactory(testDerbyConnector, derbyConnectorRule.metadataTablesConfigSupplier().get(), mapper)
+          new SQLMetadataStorageActionHandlerFactory(
+              testDerbyConnector,
+              derbyConnectorRule.metadataTablesConfigSupplier().get(),
+              mapper
+          )
       );
     } else {
       throw new RuntimeException(String.format("Unknown task storage type [%s]", taskStorageType));
@@ -394,13 +410,15 @@ public class TaskLifecycleTest
     );
   }
 
-  private void setUpAndStartTaskQueue(DataSegmentPusher dataSegmentPusher) {
+  private void setUpAndStartTaskQueue(DataSegmentPusher dataSegmentPusher)
+  {
+    final TaskConfig taskConfig = new TaskConfig(tmpDir.toString(), null, null, 50000, null, null, null);
     tsqa = new TaskStorageQueryAdapter(ts);
     tl = new TaskLockbox(ts);
     mdc = newMockMDC();
     tac = new LocalTaskActionClientFactory(ts, new TaskActionToolbox(tl, mdc, newMockEmitter()));
     tb = new TaskToolboxFactory(
-        new TaskConfig(tmpDir.toString(), null, null, 50000, null),
+        taskConfig,
         tac,
         newMockEmitter(),
         dataSegmentPusher,
@@ -471,9 +489,11 @@ public class TaskLifecycleTest
                 }, new DefaultObjectMapper()
             )
         ),
-        new DefaultObjectMapper()
+        new DefaultObjectMapper(),
+        MapCache.create(0),
+        FireDepartmentTest.NO_CACHE_CONFIG
     );
-    tr = new ThreadPoolTaskRunner(tb, null);
+    tr = new ThreadPoolTaskRunner(tb, taskConfig, emitter);
     tq = new TaskQueue(tqc, ts, tr, tac, tl, emitter);
     tq.start();
   }
@@ -803,7 +823,7 @@ public class TaskLifecycleTest
     Assert.assertEquals("segments nuked", 0, mdc.getNuked().size());
   }
 
-  @Test (timeout = 4000L)
+  @Test(timeout = 4000L)
   public void testRealtimeIndexTask() throws Exception
   {
     monitorScheduler.addMonitor(EasyMock.anyObject(Monitor.class));
@@ -852,7 +872,7 @@ public class TaskLifecycleTest
     EasyMock.verify(monitorScheduler, queryRunnerFactoryConglomerate);
   }
 
-  @Test (timeout = 4000L)
+  @Test(timeout = 4000L)
   public void testRealtimeIndexTaskFailure() throws Exception
   {
     setUpAndStartTaskQueue(
@@ -994,7 +1014,8 @@ public class TaskLifecycleTest
     return retVal;
   }
 
-  private RealtimeIndexTask giveMeARealtimeIndexTask() {
+  private RealtimeIndexTask giveMeARealtimeIndexTask()
+  {
     String taskId = String.format("rt_task_%s", System.currentTimeMillis());
     DataSchema dataSchema = new DataSchema(
         "test_ds",
@@ -1005,7 +1026,8 @@ public class TaskLifecycleTest
     );
     RealtimeIOConfig realtimeIOConfig = new RealtimeIOConfig(
         new MockFirehoseFactory(true),
-        null, // PlumberSchool - Realtime Index Task always uses RealtimePlumber which is hardcoded in RealtimeIndexTask class
+        null,
+        // PlumberSchool - Realtime Index Task always uses RealtimePlumber which is hardcoded in RealtimeIndexTask class
         null
     );
     RealtimeTuningConfig realtimeTuningConfig = new RealtimeTuningConfig(
@@ -1030,65 +1052,5 @@ public class TaskLifecycleTest
         fireDepartment,
         null
     );
-  }
-
-  private static class MockIndexerMetadataStorageCoordinator extends IndexerSQLMetadataStorageCoordinator
-  {
-    final private Set<DataSegment> published = Sets.newHashSet();
-    final private Set<DataSegment> nuked = Sets.newHashSet();
-
-    private List<DataSegment> unusedSegments;
-
-    private MockIndexerMetadataStorageCoordinator()
-    {
-      super(null, null, null);
-      unusedSegments = Lists.newArrayList();
-    }
-
-    @Override
-    public List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval) throws IOException
-    {
-      return ImmutableList.of();
-    }
-
-    @Override
-    public List<DataSegment> getUnusedSegmentsForInterval(String dataSource, Interval interval)
-    {
-      return unusedSegments;
-    }
-
-    @Override
-    public Set<DataSegment> announceHistoricalSegments(Set<DataSegment> segments)
-    {
-      Set<DataSegment> added = Sets.newHashSet();
-      for (final DataSegment segment : segments) {
-        if (published.add(segment)) {
-          added.add(segment);
-        }
-      }
-      TaskLifecycleTest.publishCountDown.countDown();
-      return ImmutableSet.copyOf(added);
-    }
-
-    @Override
-    public void deleteSegments(Set<DataSegment> segments)
-    {
-      nuked.addAll(segments);
-    }
-
-    public Set<DataSegment> getPublished()
-    {
-      return ImmutableSet.copyOf(published);
-    }
-
-    public Set<DataSegment> getNuked()
-    {
-      return ImmutableSet.copyOf(nuked);
-    }
-
-    public void setUnusedSegments(List<DataSegment> unusedSegments)
-    {
-      this.unusedSegments = unusedSegments;
-    }
   }
 }

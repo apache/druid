@@ -28,11 +28,19 @@ import io.druid.guice.GuiceInjectors;
 import io.druid.initialization.Initialization;
 
 import java.util.Collection;
+import java.util.ServiceLoader;
 
 /**
  */
 public class Main
 {
+  static {
+    ServiceLoader<PropertyChecker> serviceLoader = ServiceLoader.load(PropertyChecker.class);
+    for (PropertyChecker propertyChecker : serviceLoader) {
+      propertyChecker.checkProperties(System.getProperties());
+    }
+  }
+
   @SuppressWarnings("unchecked")
   public static void main(String[] args)
   {

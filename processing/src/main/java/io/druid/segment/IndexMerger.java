@@ -58,6 +58,7 @@ import io.druid.common.utils.SerializerUtils;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.column.BitmapIndexSeeker;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
@@ -224,8 +225,11 @@ public class IndexMerger
       ProgressIndicator progress
   ) throws IOException
   {
-    return merge(
-        Lists.transform(
+    // We are materializing the list for performance reasons. Lists.transform
+    // only creates a "view" of the original list, meaning the function gets
+    // applied every time you access an element.
+    List<IndexableAdapter> indexAdapteres = Lists.newArrayList(
+        Iterables.transform(
             indexes,
             new Function<QueryableIndex, IndexableAdapter>()
             {
@@ -235,7 +239,10 @@ public class IndexMerger
                 return new QueryableIndexIndexableAdapter(input);
               }
             }
-        ),
+        )
+    );
+    return merge(
+        indexAdapteres,
         metricAggs,
         outDir,
         null,
@@ -850,13 +857,17 @@ public class IndexMerger
         tree = new RTree(2, new LinearGutmanSplitStrategy(0, 50, bitmapFactory), bitmapFactory);
       }
 
+      BitmapIndexSeeker[] bitmapIndexSeeker = new BitmapIndexSeeker[indexes.size()];
+      for (int j = 0; j < indexes.size(); j++) {
+        bitmapIndexSeeker[j] = indexes.get(j).getBitmapIndexSeeker(dimension);
+      }
       for (String dimVal : IndexedIterable.create(dimVals)) {
         progress.progress();
         List<Iterable<Integer>> convertedInverteds = Lists.newArrayListWithCapacity(indexes.size());
         for (int j = 0; j < indexes.size(); ++j) {
           convertedInverteds.add(
               new ConvertingIndexedInts(
-                  indexes.get(j).getBitmapIndex(dimension, dimVal), rowNumConversions.get(j)
+                  bitmapIndexSeeker[j].seek(dimVal), rowNumConversions.get(j)
               )
           );
         }
@@ -1006,6 +1017,7 @@ public class IndexMerger
 
     private int currIndex;
     private String lastVal = null;
+    private String currValue;
 
     DimValueConverter(
         Indexed<String> dimSet
@@ -1015,6 +1027,7 @@ public class IndexMerger
       conversionBuf = ByteBuffer.allocateDirect(dimSet.size() * Ints.BYTES).asIntBuffer();
 
       currIndex = 0;
+      currValue = null;
     }
 
     public void convert(String value, int index)
@@ -1028,7 +1041,9 @@ public class IndexMerger
         }
         return;
       }
-      String currValue = dimSet.get(currIndex);
+      if (currValue == null) {
+        currValue = dimSet.get(currIndex);
+      }
 
       while (currValue == null) {
         conversionBuf.position(conversionBuf.position() + 1);
@@ -1045,6 +1060,8 @@ public class IndexMerger
         ++currIndex;
         if (currIndex == dimSet.size()) {
           lastVal = value;
+        } else {
+          currValue = dimSet.get(currIndex);
         }
       } else if (currValue.compareTo(value) < 0) {
         throw new ISE(

@@ -2502,6 +2502,61 @@ public class GroupByQueryRunnerTest
     TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
 
+  @Test
+  public void testDifferentGroupingSubqueryMultipleAggregatorsOnSameField()
+  {
+    GroupByQuery subquery = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .setPostAggregatorSpecs(
+            Lists.<PostAggregator>newArrayList(
+                new ArithmeticPostAggregator(
+                    "post_agg",
+                    "+",
+                    Lists.<PostAggregator>newArrayList(
+                        new FieldAccessPostAggregator("idx", "idx"),
+                        new FieldAccessPostAggregator("idx", "idx")
+                    )
+                )
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(subquery)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setAggregatorSpecs(
+            Arrays.<AggregatorFactory>asList(
+                new DoubleMaxAggregatorFactory("idx1", "idx"),
+                new DoubleMaxAggregatorFactory("idx2", "idx"),
+                new DoubleMaxAggregatorFactory("idx3", "post_agg"),
+                new DoubleMaxAggregatorFactory("idx4", "post_agg")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "idx1", 2900.0, "idx2", 2900.0,
+            "idx3", 5800.0, "idx4", 5800.0),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "idx1", 2505.0, "idx2", 2505.0,
+            "idx3", 5010.0, "idx4", 5010.0)
+    );
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
 
   @Test
   public void testDifferentGroupingSubqueryWithFilter()

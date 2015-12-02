@@ -18,6 +18,7 @@
 package io.druid.indexer;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
@@ -33,22 +34,6 @@ import io.druid.indexer.updater.HadoopDruidConverterConfig;
 import io.druid.segment.ProgressIndicator;
 import io.druid.segment.SegmentUtils;
 import io.druid.timeline.DataSegment;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.filecache.DistributedCache;
-import org.apache.hadoop.fs.FileStatus;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocalFileSystem;
-import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.io.retry.RetryPolicies;
-import org.apache.hadoop.io.retry.RetryProxy;
-import org.apache.hadoop.mapreduce.Job;
-import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.apache.hadoop.mapreduce.TaskAttemptID;
-import org.apache.hadoop.util.Progressable;
-import org.joda.time.DateTime;
-import org.joda.time.Interval;
-import org.joda.time.format.ISODateTimeFormat;
-
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -64,9 +49,24 @@ import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.io.retry.RetryPolicies;
+import org.apache.hadoop.io.retry.RetryProxy;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.util.Progressable;
+import org.joda.time.DateTime;
+import org.joda.time.Interval;
+import org.joda.time.format.ISODateTimeFormat;
 
 /**
  */
@@ -79,6 +79,7 @@ public class JobHelper
   private static final int NUM_RETRIES = 8;
   private static final int SECONDS_BETWEEN_RETRIES = 2;
   private static final int DEFAULT_FS_BUFFER_SIZE = 1 << 18; // 256KB
+  private static final Pattern SNAPSHOT_JAR = Pattern.compile(".*\\-SNAPSHOT(-selfcontained)?\\.jar$");
 
   public static Path distributedClassPath(String path)
   {
@@ -90,9 +91,21 @@ public class JobHelper
     return new Path(base, "classpath");
   }
 
+  /**
+   * Uploads jar files to hdfs and configures the classpath.
+   * Snapshot jar files are uploaded to intermediateClasspath and not shared across multiple jobs.
+   * Non-Snapshot jar files are uploaded to a distributedClasspath and shared across multiple jobs.
+   *
+   * @param distributedClassPath  classpath shared across multiple jobs
+   * @param intermediateClassPath classpath exclusive for this job. used to upload SNAPSHOT jar files.
+   * @param job                   job to run
+   *
+   * @throws IOException
+   */
   public static void setupClasspath(
-      Path distributedClassPath,
-      Job job
+      final Path distributedClassPath,
+      final Path intermediateClassPath,
+      final Job job
   )
       throws IOException
   {
@@ -111,32 +124,158 @@ public class JobHelper
     }
 
     for (String jarFilePath : jarFiles) {
-      File jarFile = new File(jarFilePath);
+
+      final File jarFile = new File(jarFilePath);
       if (jarFile.getName().endsWith(".jar")) {
-        final Path hdfsPath = new Path(distributedClassPath, jarFile.getName());
-
-        if (!existing.contains(hdfsPath)) {
-          if (jarFile.getName().matches(".*SNAPSHOT(-selfcontained)?\\.jar$") || !fs.exists(hdfsPath)) {
-            log.info("Uploading jar to path[%s]", hdfsPath);
-            ByteStreams.copy(
-                Files.newInputStreamSupplier(jarFile),
-                new OutputSupplier<OutputStream>()
+        try {
+          RetryUtils.retry(
+              new Callable<Boolean>()
+              {
+                @Override
+                public Boolean call() throws Exception
                 {
-                  @Override
-                  public OutputStream getOutput() throws IOException
-                  {
-                    return fs.create(hdfsPath);
+                  if (isSnapshot(jarFile)) {
+                    addSnapshotJarToClassPath(jarFile, intermediateClassPath, fs, job);
+                  } else {
+                    addJarToClassPath(jarFile, distributedClassPath, intermediateClassPath, fs, job);
                   }
+                  return true;
                 }
-            );
-          }
-
-          existing.add(hdfsPath);
+              },
+              shouldRetryPredicate(),
+              NUM_RETRIES
+          );
         }
-
-        DistributedCache.addFileToClassPath(hdfsPath, conf, fs);
+        catch (Exception e) {
+          throw Throwables.propagate(e);
+        }
       }
     }
+  }
+
+  public static final Predicate<Throwable> shouldRetryPredicate()
+  {
+    return new Predicate<Throwable>()
+    {
+      @Override
+      public boolean apply(Throwable input)
+      {
+        if (input == null) {
+          return false;
+        }
+        if (input instanceof IOException) {
+          return true;
+        }
+        return apply(input.getCause());
+      }
+    };
+  }
+
+  static void addJarToClassPath(
+      File jarFile,
+      Path distributedClassPath,
+      Path intermediateClassPath,
+      FileSystem fs,
+      Job job
+  )
+      throws IOException
+  {
+    // Create distributed directory if it does not exist.
+    // rename will always fail if destination does not exist.
+    fs.mkdirs(distributedClassPath);
+
+    // Non-snapshot jar files are uploaded to the shared classpath.
+    final Path hdfsPath = new Path(distributedClassPath, jarFile.getName());
+    if (!fs.exists(hdfsPath)) {
+      // Muliple jobs can try to upload the jar here,
+      // to avoid them from overwriting files, first upload to intermediateClassPath and then rename to the distributedClasspath.
+      final Path intermediateHdfsPath = new Path(intermediateClassPath, jarFile.getName());
+      uploadJar(jarFile, intermediateHdfsPath, fs);
+      IOException exception = null;
+      try {
+        log.info("Renaming jar to path[%s]", hdfsPath);
+        fs.rename(intermediateHdfsPath, hdfsPath);
+        if (!fs.exists(hdfsPath)) {
+          throw new IOException(
+              String.format(
+                  "File does not exist even after moving from[%s] to [%s]",
+                  intermediateHdfsPath,
+                  hdfsPath
+              )
+          );
+        }
+      }
+      catch (IOException e) {
+        // rename failed, possibly due to race condition. check if some other job has uploaded the jar file.
+        try {
+          if (!fs.exists(hdfsPath)) {
+            log.error(e, "IOException while Renaming jar file");
+            exception = e;
+          }
+        }
+        catch (IOException e1) {
+          e.addSuppressed(e1);
+          exception = e;
+        }
+      }
+      finally {
+        try {
+          if (fs.exists(intermediateHdfsPath)) {
+            fs.delete(intermediateHdfsPath, false);
+          }
+        }
+        catch (IOException e) {
+          if (exception == null) {
+            exception = e;
+          } else {
+            exception.addSuppressed(e);
+          }
+        }
+        if (exception != null) {
+          throw exception;
+        }
+      }
+    }
+    job.addFileToClassPath(hdfsPath);
+  }
+
+  static void addSnapshotJarToClassPath(
+      File jarFile,
+      Path intermediateClassPath,
+      FileSystem fs,
+      Job job
+  ) throws IOException
+  {
+    // Snapshot jars are uploaded to non shared intermediate directory.
+    final Path hdfsPath = new Path(intermediateClassPath, jarFile.getName());
+
+    // existing is used to prevent uploading file multiple times in same run.
+    if (!existing.contains(hdfsPath)) {
+      uploadJar(jarFile, hdfsPath, fs);
+      existing.add(hdfsPath);
+    }
+    job.addFileToClassPath(hdfsPath);
+  }
+
+  static void uploadJar(File jarFile, final Path path, final FileSystem fs) throws IOException
+  {
+    log.info("Uploading jar to path[%s]", path);
+    ByteStreams.copy(
+        Files.newInputStreamSupplier(jarFile),
+        new OutputSupplier<OutputStream>()
+        {
+          @Override
+          public OutputStream getOutput() throws IOException
+          {
+            return fs.create(path);
+          }
+        }
+    );
+  }
+
+  static boolean isSnapshot(File jarFile)
+  {
+    return SNAPSHOT_JAR.matcher(jarFile.getName()).matches();
   }
 
   public static void injectSystemProperties(Job job)

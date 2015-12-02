@@ -20,6 +20,8 @@ package io.druid.segment.realtime;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.metamx.common.Granularity;
+import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.MapCache;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.StringInputRowParser;
@@ -43,6 +45,22 @@ import java.util.Map;
  */
 public class FireDepartmentTest
 {
+
+  public static final CacheConfig NO_CACHE_CONFIG = new CacheConfig()
+  {
+    @Override
+    public boolean isPopulateCache()
+    {
+      return false;
+    }
+
+    @Override
+    public boolean isUseCache()
+    {
+      return false;
+    }
+  };
+
   @Test
   public void testSerde() throws Exception
   {
@@ -78,7 +96,16 @@ public class FireDepartmentTest
         new RealtimeIOConfig(
             null,
             new RealtimePlumberSchool(
-                null, null, null, null, null, null, null
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                MapCache.create(0),
+                NO_CACHE_CONFIG,
+                new DefaultObjectMapper()
             ),
             null
         ),
