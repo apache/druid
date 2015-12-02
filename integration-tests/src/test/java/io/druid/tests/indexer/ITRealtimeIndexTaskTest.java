@@ -140,7 +140,7 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
         this.queryHelper.testQueriesFromString(getRouterURL(), queryStr, 2);
       }
       catch (Exception e) {
-        Throwables.propagate(e);
+        throw Throwables.propagate(e);
       }
 
       // wait for the task to complete
@@ -166,12 +166,10 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
       this.queryHelper.testQueriesFromString(getRouterURL(), queryStr, 2);
     }
     catch (Exception e) {
-      Throwables.propagate(e);
+      throw Throwables.propagate(e);
     }
     finally {
-      String first = DateTimeFormat.forPattern("yyyy-MM-dd'T'00:00:00.000'Z'").print(dtFirst);
-      String last = DateTimeFormat.forPattern("yyyy-MM-dd'T'00:00:00.000'Z'").print(dtFirst.plusDays(1));
-      unloadAndKillData(INDEX_DATASOURCE, first, last);
+      unloadAndKillData(INDEX_DATASOURCE);
     }
   }
 
@@ -191,7 +189,7 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
       isr = new InputStreamReader(ITRealtimeIndexTaskTest.class.getResourceAsStream(EVENT_DATA_FILE));
     }
     catch (Exception e) {
-      Throwables.propagate(e);
+      throw Throwables.propagate(e);
     }
     try {
       reader = new BufferedReader(isr);
@@ -243,7 +241,7 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
       }
     }
     catch (Exception e) {
-      Throwables.propagate(e);
+      throw Throwables.propagate(e);
     }
     finally {
       reader.close();

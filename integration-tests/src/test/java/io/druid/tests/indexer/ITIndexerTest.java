@@ -64,7 +64,7 @@ public class ITIndexerTest extends AbstractIndexerTest
     }
     catch (Exception e) {
       e.printStackTrace();
-      Throwables.propagate(e);
+      throw Throwables.propagate(e);
     }
     finally {
       unloadAndKillData(INDEX_DATASOURCE);

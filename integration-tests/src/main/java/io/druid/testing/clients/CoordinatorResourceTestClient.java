@@ -36,6 +36,7 @@ import org.joda.time.Interval;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.Map;
+import java.util.ArrayList;
 
 public class CoordinatorResourceTestClient
 {
@@ -64,9 +65,33 @@ public class CoordinatorResourceTestClient
     );
   }
 
+  private String getIntervalsURL(String dataSource)
+  {
+    return String.format("%sdatasources/%s/intervals", getCoordinatorURL(), dataSource);
+  }
+
   private String getLoadStatusURL()
   {
       return String.format("%s%s", getCoordinatorURL(), "loadstatus");
+  }
+
+  // return a list of the segment dates for the specified datasource
+  public ArrayList<String> getSegmentIntervals(final String dataSource) throws Exception
+  {
+    ArrayList<String> segments = null;
+    try {
+      StatusResponseHolder response = makeRequest(HttpMethod.GET, getIntervalsURL(dataSource));
+
+      segments = jsonMapper.readValue(
+          response.getContent(), new TypeReference<ArrayList<String>>()
+          {
+          }
+      );
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+    return segments;
   }
 
   private Map<String, Integer> getLoadStatus()
@@ -82,7 +107,7 @@ public class CoordinatorResourceTestClient
       );
     }
     catch (Exception e) {
-      Throwables.propagate(e);
+      throw Throwables.propagate(e);
     }
     return status;
   }
