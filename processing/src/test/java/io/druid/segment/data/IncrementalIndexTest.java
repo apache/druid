@@ -610,7 +610,7 @@ public class IncrementalIndexTest
   @Test
   public void testgetDimensions()
   {
-    final IncrementalIndex<Aggregator> incrementalIndex = new OnheapIncrementalIndex(
+    final IncrementalIndex incrementalIndex = new OnheapIncrementalIndex(
         new IncrementalIndexSchema.Builder().withQueryGranularity(QueryGranularity.NONE)
                                             .withMetrics(
                                                 new AggregatorFactory[]{

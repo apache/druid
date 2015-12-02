@@ -22,38 +22,22 @@ package io.druid.segment.incremental;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.metamx.common.logger.Logger;
 import com.metamx.common.parsers.ParseException;
 import io.druid.data.input.InputRow;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.dimension.DimensionSpec;
-import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.DimensionSelector;
-import io.druid.segment.FloatColumnSelector;
-import io.druid.segment.LongColumnSelector;
-import io.druid.segment.ObjectColumnSelector;
-import io.druid.segment.column.ValueType;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentNavigableMap;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  */
-public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
+public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator[]>
 {
-  private final ConcurrentHashMap<Integer, Aggregator[]> aggregators = new ConcurrentHashMap<>();
-  private final ConcurrentNavigableMap<TimeAndDims, Integer> facts;
-  private final AtomicInteger indexIncrement = new AtomicInteger(0);
-  protected final int maxRowCount;
-  private volatile Map<String, ColumnSelectorFactory> selectors;
-
-  private String outOfRowsReason = null;
+  private static final Logger log = new Logger(OnheapIncrementalIndex.class);
 
   public OnheapIncrementalIndex(
       IncrementalIndexSchema incrementalIndexSchema,
@@ -62,9 +46,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       int maxRowCount
   )
   {
-    super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions);
-    this.maxRowCount = maxRowCount;
-    this.facts = new ConcurrentSkipListMap<>(dimsComparator());
+    super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions, maxRowCount);
   }
 
   public OnheapIncrementalIndex(
@@ -115,31 +97,9 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   }
 
   @Override
-  public ConcurrentNavigableMap<TimeAndDims, Integer> getFacts()
-  {
-    return facts;
-  }
-
-  @Override
   protected DimDim makeDimDim(String dimension, Object lock)
   {
     return new OnHeapDimDim(lock);
-  }
-
-  @Override
-  protected Aggregator[] initAggs(
-      AggregatorFactory[] metrics, Supplier<InputRow> rowSupplier, boolean deserializeComplexMetrics
-  )
-  {
-    selectors = Maps.newHashMap();
-    for (AggregatorFactory agg : metrics) {
-      selectors.put(
-          agg.getName(),
-          new ObjectCachingColumnSelectorFactory(makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics))
-      );
-    }
-
-    return new Aggregator[metrics.length];
   }
 
   @Override
@@ -154,47 +114,35 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       Supplier<InputRow> rowSupplier
   ) throws IndexSizeExceededException
   {
-    final Integer priorIndex = facts.get(key);
+    Aggregator[] aggs = facts.get(key);
 
-    Aggregator[] aggs;
-
-    if (null != priorIndex) {
-      aggs = concurrentGet(priorIndex);
-    } else {
+    if (aggs == null) {
       aggs = new Aggregator[metrics.length];
 
       rowContainer.set(row);
       for (int i = 0; i < metrics.length; i++) {
         final AggregatorFactory agg = metrics[i];
-        aggs[i] = agg.factorize(
-            selectors.get(agg.getName())
-        );
+        aggs[i] = agg.factorize(selectors.get(agg.getName()));
       }
       rowContainer.set(null);
-
-      final Integer rowIndex = indexIncrement.getAndIncrement();
-
-      concurrentSet(rowIndex, aggs);
 
       // Last ditch sanity checks
       if (numEntries.get() >= maxRowCount && !facts.containsKey(key)) {
         throw new IndexSizeExceededException("Maximum number of rows [%d] reached", maxRowCount);
       }
-      final Integer prev = facts.putIfAbsent(key, rowIndex);
-      if (null == prev) {
+      final Aggregator[] prev = facts.putIfAbsent(key, aggs);
+      if (prev == null) {
         numEntries.incrementAndGet();
       } else {
-        // We lost a race
-        aggs = concurrentGet(prev);
-        // Free up the misfire
-        concurrentRemove(rowIndex);
+        // We lost a race, free up the misfire
+        destroy(aggs);
+        aggs = prev;
         // This is expected to occur ~80% of the time in the worst scenarios
       }
     }
 
     rowContainer.set(row);
-
-    for (Aggregator agg : aggs) {
+    for (final Aggregator agg : aggs) {
       synchronized (agg) {
         try {
           agg.aggregate();
@@ -206,88 +154,40 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
         }
       }
     }
-
     rowContainer.set(null);
-
 
     return numEntries.get();
   }
 
-  protected Aggregator[] concurrentGet(int offset)
-  {
-    // All get operations should be fine
-    return aggregators.get(offset);
-  }
-
-  protected void concurrentSet(int offset, Aggregator[] value)
-  {
-    aggregators.put(offset, value);
-  }
-
-  protected void concurrentRemove(int offset)
-  {
-    aggregators.remove(offset);
-  }
-
   @Override
-  public boolean canAppendRow()
+  protected void destroy(Aggregator[] aggregators)
   {
-    final boolean canAdd = size() < maxRowCount;
-    if (!canAdd) {
-      outOfRowsReason = String.format("Maximum number of rows [%d] reached", maxRowCount);
+    for (Aggregator aggregator : aggregators) {
+      try {
+        aggregator.close();
+      }
+      catch (Throwable t) {
+        log.error(t, t.toString());
+      }
     }
-    return canAdd;
   }
 
   @Override
-  public String getOutOfRowsReason()
+  public float getMetricFloatValue(Aggregator[] agg, int aggOffset)
   {
-    return outOfRowsReason;
+    return agg[aggOffset].getFloat();
   }
 
   @Override
-  protected Aggregator[] getAggsForRow(int rowOffset)
+  public long getMetricLongValue(Aggregator[] agg, int aggOffset)
   {
-    return concurrentGet(rowOffset);
+    return agg[aggOffset].getLong();
   }
 
   @Override
-  protected Object getAggVal(Aggregator agg, int rowOffset, int aggPosition)
+  public Object getMetricObjectValue(Aggregator[] agg, int aggOffset)
   {
-    return agg.get();
-  }
-
-  @Override
-  public float getMetricFloatValue(int rowOffset, int aggOffset)
-  {
-    return concurrentGet(rowOffset)[aggOffset].getFloat();
-  }
-
-  @Override
-  public long getMetricLongValue(int rowOffset, int aggOffset)
-  {
-    return concurrentGet(rowOffset)[aggOffset].getLong();
-  }
-
-  @Override
-  public Object getMetricObjectValue(int rowOffset, int aggOffset)
-  {
-    return concurrentGet(rowOffset)[aggOffset].get();
-  }
-
-  /**
-   * Clear out maps to allow GC
-   * NOTE: This is NOT thread-safe with add... so make sure all the adding is DONE before closing
-   */
-  @Override
-  public void close()
-  {
-    super.close();
-    aggregators.clear();
-    facts.clear();
-    if (selectors != null) {
-      selectors.clear();
-    }
+    return agg[aggOffset].get();
   }
 
   static class OnHeapDimDim<T extends Comparable<? super T>> implements DimDim<T>
@@ -416,75 +316,4 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       return idToIndex[id];
     }
   }
-
-  // Caches references to selector objects for each column instead of creating a new object each time in order to save heap space.
-  // In general the selectorFactory need not to thread-safe.
-  // here its made thread safe to support the special case of groupBy where the multiple threads can add concurrently to the IncrementalIndex.
-  static class ObjectCachingColumnSelectorFactory implements ColumnSelectorFactory
-  {
-    private final ConcurrentMap<String, LongColumnSelector> longColumnSelectorMap = Maps.newConcurrentMap();
-    private final ConcurrentMap<String, FloatColumnSelector> floatColumnSelectorMap = Maps.newConcurrentMap();
-    private final ConcurrentMap<String, ObjectColumnSelector> objectColumnSelectorMap = Maps.newConcurrentMap();
-    private final ColumnSelectorFactory delegate;
-
-    public ObjectCachingColumnSelectorFactory(ColumnSelectorFactory delegate)
-    {
-      this.delegate = delegate;
-    }
-
-    @Override
-    public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
-    {
-      return delegate.makeDimensionSelector(dimensionSpec);
-    }
-
-    @Override
-    public FloatColumnSelector makeFloatColumnSelector(String columnName)
-    {
-      FloatColumnSelector existing = floatColumnSelectorMap.get(columnName);
-      if (existing != null) {
-        return existing;
-      } else {
-        FloatColumnSelector newSelector = delegate.makeFloatColumnSelector(columnName);
-        FloatColumnSelector prev = floatColumnSelectorMap.putIfAbsent(
-            columnName,
-            newSelector
-        );
-        return prev != null ? prev : newSelector;
-      }
-    }
-
-    @Override
-    public LongColumnSelector makeLongColumnSelector(String columnName)
-    {
-      LongColumnSelector existing = longColumnSelectorMap.get(columnName);
-      if (existing != null) {
-        return existing;
-      } else {
-        LongColumnSelector newSelector = delegate.makeLongColumnSelector(columnName);
-        LongColumnSelector prev = longColumnSelectorMap.putIfAbsent(
-            columnName,
-            newSelector
-        );
-        return prev != null ? prev : newSelector;
-      }
-    }
-
-    @Override
-    public ObjectColumnSelector makeObjectColumnSelector(String columnName)
-    {
-      ObjectColumnSelector existing = objectColumnSelectorMap.get(columnName);
-      if (existing != null) {
-        return existing;
-      } else {
-        ObjectColumnSelector newSelector = delegate.makeObjectColumnSelector(columnName);
-        ObjectColumnSelector prev = objectColumnSelectorMap.putIfAbsent(
-            columnName,
-            newSelector
-        );
-        return prev != null ? prev : newSelector;
-      }
-    }
-  }
-
 }

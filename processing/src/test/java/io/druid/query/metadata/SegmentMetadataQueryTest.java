@@ -95,7 +95,7 @@ public class SegmentMetadataQueryTest
     return QueryRunnerTestHelper.makeQueryRunner(
         factory,
         segmentId,
-        new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), segmentId)
+        new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(false), segmentId)
     );
   }
 

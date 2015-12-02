@@ -50,7 +50,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
 {
   private static final Logger log = new Logger(IncrementalIndexAdapter.class);
   private final Interval dataInterval;
-  private final IncrementalIndex<?> index;
+  private final IncrementalIndex index;
   private final Set<String> hasNullValueDimensions;
 
   private final Map<String, DimensionIndexer> indexers;
@@ -239,16 +239,18 @@ public class IncrementalIndexAdapter implements IndexableAdapter
          */
         return Iterators.transform(
             index.getFacts().entrySet().iterator(),
-            new Function<Map.Entry<IncrementalIndex.TimeAndDims, Integer>, Rowboat>()
+            new Function<Map.Entry<IncrementalIndex.TimeAndDims, Object>, Rowboat>()
             {
               int count = 0;
 
               @Override
-              public Rowboat apply(Map.Entry<IncrementalIndex.TimeAndDims, Integer> input)
+              public Rowboat apply(
+                  Map.Entry<IncrementalIndex.TimeAndDims, Object> input
+              )
               {
                 final IncrementalIndex.TimeAndDims timeAndDims = input.getKey();
                 final int[][] dimValues = timeAndDims.getDims();
-                final int rowOffset = input.getValue();
+                final Object aggrs = input.getValue();
 
                 int[][] dims = new int[dimValues.length][];
                 for (IncrementalIndex.DimensionDesc dimension : dimensions) {
@@ -273,7 +275,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
 
                 Object[] metrics = new Object[index.getMetricAggs().length];
                 for (int i = 0; i < metrics.length; i++) {
-                  metrics[i] = index.getMetricObjectValue(rowOffset, i);
+                  metrics[i] = index.getMetricObjectValue(aggrs, i);
                 }
 
                 return new Rowboat(
