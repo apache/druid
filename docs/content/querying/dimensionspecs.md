@@ -223,3 +223,14 @@ A null dimension value can be mapped to a specific value by specifying the empty
 This allows distinguishing between a null dimension and a lookup resulting in a null.
 For example, specifying `{"":"bar","bat":"baz"}` with dimension values `[null, "foo", "bat"]` and replacing missing values with `"oof"` will yield results of `["bar", "oof", "baz"]`.
 Omitting the empty string key will cause the missing value to take over. For example, specifying `{"bat":"baz"}` with dimension values `[null, "foo", "bat"]` and replacing missing values with `"oof"` will yield results of `["oof", "oof", "baz"]`.
+
+
+### Concat Extraction Function
+
+Returns the dimension value formatted according to the given format string.
+
+```json
+{ "type" : "concat", "format" : <sprintf_expression> }
+```
+
+For example if you want to concat "[" and "]" before and after the actual dimension value, you need to specify "[%s]" as format string.
