@@ -76,7 +76,7 @@ public class TaskQueue
   private final TaskLockbox taskLockbox;
   private final ServiceEmitter emitter;
 
-  private final ReentrantLock giant = new ReentrantLock();
+  private final ReentrantLock giant = new ReentrantLock(true);
   private final Condition managementMayBeNecessary = giant.newCondition();
   private final ExecutorService managerExec = Executors.newSingleThreadExecutor(
       new ThreadFactoryBuilder()
