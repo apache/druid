@@ -24,8 +24,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
@@ -33,6 +35,8 @@ import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.data.input.Row;
+import io.druid.granularity.QueryGranularities;
+import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
@@ -41,6 +45,8 @@ import io.druid.query.ordering.StringComparators.StringComparator;
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -54,16 +60,31 @@ public class DefaultLimitSpec implements LimitSpec
   private final List<OrderByColumnSpec> columns;
   private final int limit;
 
+  // regrouping granularity. should be bigger than query granularity
+  private final QueryGranularity regroupingGranularity;
+
+  // limit is applied to each group, possibly resulting up to <limit> * <number of groups> rows
+  private final boolean applyLimitPerGroup;
+
   @JsonCreator
   public DefaultLimitSpec(
       @JsonProperty("columns") List<OrderByColumnSpec> columns,
-      @JsonProperty("limit") Integer limit
+      @JsonProperty("limit") Integer limit,
+      @JsonProperty("regroupingGranularity") QueryGranularity regroupingGranularity,
+      @JsonProperty("applyLimitPerGroup") boolean applyLimitPerGroup
   )
   {
     this.columns = (columns == null) ? ImmutableList.<OrderByColumnSpec>of() : columns;
     this.limit = (limit == null) ? Integer.MAX_VALUE : limit;
+    this.regroupingGranularity = regroupingGranularity;
+    this.applyLimitPerGroup = applyLimitPerGroup;
 
     Preconditions.checkArgument(this.limit > 0, "limit[%s] must be >0", limit);
+  }
+
+  public DefaultLimitSpec(List<OrderByColumnSpec> columns, Integer limit)
+  {
+    this(columns, limit, null, false);
   }
 
   @JsonProperty
@@ -78,6 +99,18 @@ public class DefaultLimitSpec implements LimitSpec
     return limit;
   }
 
+  @JsonProperty
+  public QueryGranularity getRegroupingGranularity()
+  {
+    return regroupingGranularity;
+  }
+
+  @JsonProperty
+  public boolean isApplyLimitPerGroup()
+  {
+    return applyLimitPerGroup;
+  }
+
   @Override
   public Function<Sequence<Row>, Sequence<Row>> build(
       List<DimensionSpec> dimensions, List<AggregatorFactory> aggs, List<PostAggregator> postAggs
@@ -88,13 +121,13 @@ public class DefaultLimitSpec implements LimitSpec
     }
 
     // Materialize the Comparator first for fast-fail error checking.
-    final Ordering<Row> ordering = makeComparator(dimensions, aggs, postAggs);
+    Ordering<Row> ordering = makeComparator(dimensions, aggs, postAggs);
 
-    if (limit == Integer.MAX_VALUE) {
-      return new SortingFn(ordering);
-    } else {
-      return new TopNFunction(ordering, limit);
+    if (regroupingGranularity == null && !applyLimitPerGroup) {
+      ordering = makeTimeComparator().compound(ordering);
+      return limit == Integer.MAX_VALUE ? new SortingFn(ordering) : new TopNFunction(ordering, limit);
     }
+    return new GroupTopNFunction(ordering, regroupingGranularity, applyLimitPerGroup, limit);
   }
 
   @Override
@@ -103,11 +136,9 @@ public class DefaultLimitSpec implements LimitSpec
     return this;
   }
 
-  private Ordering<Row> makeComparator(
-      List<DimensionSpec> dimensions, List<AggregatorFactory> aggs, List<PostAggregator> postAggs
-  )
+  private Ordering<Row> makeTimeComparator()
   {
-    Ordering<Row> ordering = new Ordering<Row>()
+    return new Ordering<Row>()
     {
       @Override
       public int compare(Row left, Row right)
@@ -115,22 +146,28 @@ public class DefaultLimitSpec implements LimitSpec
         return Longs.compare(left.getTimestampFromEpoch(), right.getTimestampFromEpoch());
       }
     };
+  }
 
-    Map<String, DimensionSpec> dimensionsMap = Maps.newHashMap();
+  private Ordering<Row> makeComparator(
+      List<DimensionSpec> dimensions, List<AggregatorFactory> aggs, List<PostAggregator> postAggs
+  )
+  {
+    Map<String, DimensionSpec> dimensionsMap = Maps.newHashMapWithExpectedSize(dimensions.size());
     for (DimensionSpec spec : dimensions) {
       dimensionsMap.put(spec.getOutputName(), spec);
     }
 
-    Map<String, AggregatorFactory> aggregatorsMap = Maps.newHashMap();
-    for (final AggregatorFactory agg : aggs) {
+    Map<String, AggregatorFactory> aggregatorsMap = Maps.newHashMapWithExpectedSize(aggs.size());
+    for (AggregatorFactory agg : aggs) {
       aggregatorsMap.put(agg.getName(), agg);
     }
 
-    Map<String, PostAggregator> postAggregatorsMap = Maps.newHashMap();
+    Map<String, PostAggregator> postAggregatorsMap = Maps.newHashMapWithExpectedSize(postAggs.size());
     for (PostAggregator postAgg : postAggs) {
       postAggregatorsMap.put(postAgg.getName(), postAgg);
     }
 
+    Ordering<Row> ordering = null;
     for (OrderByColumnSpec columnSpec : columns) {
       String columnName = columnSpec.getDimension();
       Ordering<Row> nextOrdering = null;
@@ -152,7 +189,7 @@ public class DefaultLimitSpec implements LimitSpec
           nextOrdering = nextOrdering.reverse();
       }
 
-      ordering = ordering.compound(nextOrdering);
+      ordering = ordering == null ? nextOrdering : ordering.compound(nextOrdering);
     }
 
     return ordering;
@@ -194,7 +231,8 @@ public class DefaultLimitSpec implements LimitSpec
   {
     return "DefaultLimitSpec{" +
            "columns='" + columns + '\'' +
-           ", limit=" + limit +
+           ", limit=" + limit + (applyLimitPerGroup ? " per group" : "") +
+           (regroupingGranularity != null ? ", granularity=" + regroupingGranularity : "") +
            '}';
   }
 
@@ -331,6 +369,88 @@ public class DefaultLimitSpec implements LimitSpec
     }
   }
 
+  // regroup with <granularity> and select top <limit> results
+  public class GroupTopNFunction implements Function<Sequence<Row>, Sequence<Row>>
+  {
+    private final Ordering<Row> ordering;
+    private final int limit;
+    private final QueryGranularity granularity;
+    private final boolean limitPerGroup;
+
+    public GroupTopNFunction(Ordering<Row> ordering, QueryGranularity granularity, boolean limitPerGroup, int limit)
+    {
+      this.ordering = ordering;
+      this.granularity = granularity == null ? QueryGranularities.NONE : granularity;
+      this.limitPerGroup = limitPerGroup;
+      this.limit = limit;
+    }
+
+    @Override
+    public Sequence<Row> apply(
+        Sequence<Row> input
+    )
+    {
+      Map<Long, MinMaxPriorityQueue<Row>> grouped = Maps.<Long, MinMaxPriorityQueue<Row>>newTreeMap();
+      ArrayList<Row> rows = Sequences.toList(input, Lists.<Row>newArrayList());
+      for (Row row : rows) {
+        long time = granularity.truncate(row.getTimestampFromEpoch());
+        MinMaxPriorityQueue<Row> queue = grouped.get(time);
+        if (queue == null) {
+          grouped.put(time, queue = MinMaxPriorityQueue.orderedBy(ordering).maximumSize(limit).create());
+        }
+        queue.add(row);
+      }
+
+      Iterable<Row> iterable = Collections.emptyList();
+      for (Collection<Row> value : grouped.values()) {
+        Iterable<Row> ordered = new OrderedPriorityQueueItems<Row>((MinMaxPriorityQueue<Row>) value);
+        if (limitPerGroup) {
+          ordered = Iterables.limit(ordered, limit);
+        }
+        iterable = Iterables.concat(iterable, ordered);
+      }
+      return Sequences.simple(limitPerGroup || rows.size() < limit ? iterable : Iterables.limit(iterable, limit));
+    }
+
+      @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      GroupTopNFunction that = (GroupTopNFunction) o;
+
+      if (limit != that.limit || limitPerGroup != that.limitPerGroup) {
+        return false;
+      }
+      // todo: it's not comparable
+      if (granularity != that.granularity) {
+        return false;
+      }
+      if (!ordering.equals(that.ordering)) {
+        return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      int result = ordering.hashCode();
+      result = 31 * result + granularity.hashCode();
+      result = 31 * result + limit;
+      if (limitPerGroup) {
+        result = (result << 1) + 1;
+      }
+      return result;
+    }
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -343,10 +463,15 @@ public class DefaultLimitSpec implements LimitSpec
 
     DefaultLimitSpec that = (DefaultLimitSpec) o;
 
-    if (limit != that.limit) {
+    if (limit != that.limit || applyLimitPerGroup != that.applyLimitPerGroup) {
       return false;
     }
     if (columns != null ? !columns.equals(that.columns) : that.columns != null) {
+      return false;
+    }
+
+    if (regroupingGranularity != null ? regroupingGranularity != that.regroupingGranularity
+                                      : that.regroupingGranularity != null) {
       return false;
     }
 
@@ -357,7 +482,11 @@ public class DefaultLimitSpec implements LimitSpec
   public int hashCode()
   {
     int result = columns != null ? columns.hashCode() : 0;
+    result = 31 * result + (regroupingGranularity != null ? regroupingGranularity.hashCode() : 0);
     result = 31 * result + limit;
+    if (applyLimitPerGroup) {
+      result = (result << 1) + 1;
+    }
     return result;
   }
 
@@ -373,12 +502,16 @@ public class DefaultLimitSpec implements LimitSpec
       ++index;
     }
 
-    ByteBuffer buffer = ByteBuffer.allocate(1 + columnsBytesSize + 4)
+    byte[] granKey = regroupingGranularity == null ? new byte[0] : regroupingGranularity.cacheKey();
+
+    ByteBuffer buffer = ByteBuffer.allocate(1 + columnsBytesSize + granKey.length + 1 + 4)
                                   .put(CACHE_KEY);
     for (byte[] columnByte : columnBytes) {
       buffer.put(columnByte);
     }
     buffer.put(Ints.toByteArray(limit));
+    buffer.put(granKey);
+    buffer.put(isApplyLimitPerGroup() ? (byte)1 : 0);
     return buffer.array();
   }
 }
