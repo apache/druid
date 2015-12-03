@@ -28,6 +28,8 @@ import java.util.List;
  */
 public class MonitorsConfig
 {
+  public final static String METRIC_DIMENSION_PREFIX = "druid.metrics.emitter.dimension.";
+
   @JsonProperty("monitors")
   @NotNull
   private List<Class<? extends Monitor>> monitors = Lists.newArrayList();
