@@ -61,9 +61,10 @@ public class SearchQueryDimFilter implements DimFilter
     final byte[] dimensionBytes = StringUtils.toUtf8(dimension);
     final byte[] queryBytes = query.getCacheKey();
 
-    return ByteBuffer.allocate(1 + dimensionBytes.length + queryBytes.length)
+    return ByteBuffer.allocate(2 + dimensionBytes.length + queryBytes.length)
                      .put(DimFilterCacheHelper.SEARCH_QUERY_TYPE_ID)
                      .put(dimensionBytes)
+                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
                      .put(queryBytes)
                      .array();
   }
