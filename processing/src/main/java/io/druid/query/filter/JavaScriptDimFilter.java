@@ -59,11 +59,12 @@ public class JavaScriptDimFilter implements DimFilter
     final byte[] dimensionBytes = StringUtils.toUtf8(dimension);
     final byte[] functionBytes = StringUtils.toUtf8(function);
 
-    return ByteBuffer.allocate(1 + dimensionBytes.length + functionBytes.length)
-        .put(DimFilterCacheHelper.JAVASCRIPT_CACHE_ID)
-        .put(dimensionBytes)
-        .put(functionBytes)
-        .array();
+    return ByteBuffer.allocate(2 + dimensionBytes.length + functionBytes.length)
+                     .put(DimFilterCacheHelper.JAVASCRIPT_CACHE_ID)
+                     .put(dimensionBytes)
+                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                     .put(functionBytes)
+                     .array();
   }
 
   @Override

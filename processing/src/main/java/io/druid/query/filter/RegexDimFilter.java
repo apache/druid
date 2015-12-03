@@ -61,11 +61,12 @@ public class RegexDimFilter implements DimFilter
     final byte[] dimensionBytes = StringUtils.toUtf8(dimension);
     final byte[] patternBytes = StringUtils.toUtf8(pattern);
 
-    return ByteBuffer.allocate(1 + dimensionBytes.length + patternBytes.length)
-        .put(DimFilterCacheHelper.REGEX_CACHE_ID)
-        .put(dimensionBytes)
-        .put(patternBytes)
-        .array();
+    return ByteBuffer.allocate(2 + dimensionBytes.length + patternBytes.length)
+                     .put(DimFilterCacheHelper.REGEX_CACHE_ID)
+                     .put(dimensionBytes)
+                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                     .put(patternBytes)
+                     .array();
   }
 
   @Override

@@ -49,9 +49,10 @@ public class SelectorDimFilter implements DimFilter
     byte[] dimensionBytes = StringUtils.toUtf8(dimension);
     byte[] valueBytes = (value == null) ? new byte[]{} : StringUtils.toUtf8(value);
 
-    return ByteBuffer.allocate(1 + dimensionBytes.length + valueBytes.length)
+    return ByteBuffer.allocate(2 + dimensionBytes.length + valueBytes.length)
                      .put(DimFilterCacheHelper.SELECTOR_CACHE_ID)
                      .put(dimensionBytes)
+                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
                      .put(valueBytes)
                      .array();
   }
