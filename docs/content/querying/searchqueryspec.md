@@ -41,3 +41,15 @@ If any part of a dimension value contains the value specified in this search que
   "value" : "some_value"
 }
 ```
+
+RegexSearchQuerySpec
+----------------------------------
+
+If any part of a dimension value contains the pattern specified in this search query spec, a "match" occurs. The grammar is:
+
+```json
+{
+  "type"  : "regex",
+  "pattern" : "some_pattern"
+}
+```
