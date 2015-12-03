@@ -28,15 +28,21 @@ import com.google.inject.Provides;
 import com.google.inject.name.Names;
 import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
+import com.metamx.metrics.JvmCpuMonitor;
+import com.metamx.metrics.JvmMonitor;
 import com.metamx.metrics.Monitor;
 import com.metamx.metrics.MonitorScheduler;
+import com.metamx.metrics.SysMonitor;
 import io.druid.concurrent.Execs;
 import io.druid.guice.DruidBinders;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.ManageLifecycle;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 
 /**
@@ -95,4 +101,40 @@ public class MetricsModule implements Module
         monitors
     );
   }
+
+  @Provides
+  @ManageLifecycle
+  public JvmMonitor getJvmMonitor(Properties props)
+  {
+    return new JvmMonitor(getDimensions(props));
+  }
+
+  @Provides
+  @ManageLifecycle
+  public JvmCpuMonitor getJvmCpuMonitor(Properties props)
+  {
+    return new JvmCpuMonitor(getDimensions(props));
+  }
+
+  @Provides
+  @ManageLifecycle
+  public SysMonitor getSysMonitor(Properties props)
+  {
+    return new SysMonitor(getDimensions(props));
+  }
+
+  private Map<String, String[]> getDimensions(Properties props)
+  {
+    Map<String, String[]> dimensions = new HashMap<>();
+    for (String property : props.stringPropertyNames()) {
+      if (property.startsWith(MonitorsConfig.METRIC_DIMENSION_PREFIX)) {
+        dimensions.put(
+            property.substring(MonitorsConfig.METRIC_DIMENSION_PREFIX.length()),
+            new String[]{props.getProperty(property)}
+        );
+      }
+    }
+    return dimensions;
+  }
+
 }
