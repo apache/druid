@@ -199,7 +199,8 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
       final List<DataSegment> segments = toolbox.getTaskActionClient().submit(
           new SegmentListUsedAction(
               getDataSource(),
-              getInterval()
+              getInterval(),
+              null
           )
       );
       segmentsToUpdate = FunctionalIterable
@@ -364,7 +365,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
     log.info("Converting segment[%s]", segment);
     final TaskActionClient actionClient = toolbox.getTaskActionClient();
     final List<DataSegment> currentSegments = actionClient.submit(
-        new SegmentListUsedAction(segment.getDataSource(), segment.getInterval())
+        new SegmentListUsedAction(segment.getDataSource(), segment.getInterval(), null)
     );
 
     for (DataSegment currentSegment : currentSegments) {

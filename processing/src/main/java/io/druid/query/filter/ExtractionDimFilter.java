@@ -43,7 +43,10 @@ public class ExtractionDimFilter implements DimFilter
   )
   {
     Preconditions.checkArgument(dimension != null, "dimension must not be null");
-    Preconditions.checkArgument(extractionFn != null || dimExtractionFn != null, "extraction function must not be null");
+    Preconditions.checkArgument(
+        extractionFn != null || dimExtractionFn != null,
+        "extraction function must not be null"
+    );
 
     this.dimension = dimension;
     this.value = value;
@@ -74,9 +77,10 @@ public class ExtractionDimFilter implements DimFilter
     byte[] dimensionBytes = StringUtils.toUtf8(dimension);
     byte[] valueBytes = StringUtils.toUtf8(value);
 
-    return ByteBuffer.allocate(1 + dimensionBytes.length + valueBytes.length)
+    return ByteBuffer.allocate(2 + dimensionBytes.length + valueBytes.length)
                      .put(DimFilterCacheHelper.EXTRACTION_CACHE_ID)
                      .put(dimensionBytes)
+                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
                      .put(valueBytes)
                      .array();
   }

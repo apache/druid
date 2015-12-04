@@ -50,7 +50,7 @@ public class InDimFilter implements DimFilter
     ByteBuffer filterCacheKey = ByteBuffer.allocate(2 + dimensionBytes.length + valuesBytesSize)
                                           .put(DimFilterCacheHelper.IN_CACHE_ID)
                                           .put(dimensionBytes)
-                                          .put((byte) 0xFF);
+                                          .put(DimFilterCacheHelper.STRING_SEPARATOR);
     for (byte [] bytes: valuesBytes) {
       filterCacheKey.put(bytes)
                     .put((byte) 0xFF);

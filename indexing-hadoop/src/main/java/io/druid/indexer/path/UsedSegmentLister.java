@@ -33,12 +33,12 @@ public interface UsedSegmentLister
    * Get all segments which may include any data in the interval and are flagged as used.
    *
    * @param dataSource The datasource to query
-   * @param interval   The interval for which all applicable and used datasources are requested. Start is inclusive, end is exclusive
+   * @param intervals  The intervals for which used segments are to be returned
    *
-   * @return The DataSegments which include data in the requested interval. These segments may contain data outside the requested interval.
+   * @return The DataSegments which include data in the requested intervals. These segments may contain data outside the requested interval.
    *
    * @throws IOException
    */
-  public List<DataSegment> getUsedSegmentsForInterval(final String dataSource, final Interval interval)
+  public List<DataSegment> getUsedSegmentsForIntervals(final String dataSource, final List<Interval> intervals)
       throws IOException;
 }

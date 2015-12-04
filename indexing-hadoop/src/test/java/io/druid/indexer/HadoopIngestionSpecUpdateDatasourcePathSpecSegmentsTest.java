@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.metamx.common.Granularity;
 import io.druid.indexer.hadoop.DatasourceIngestionSpec;
 import io.druid.indexer.hadoop.WindowedDataSegment;
@@ -90,7 +91,7 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
     PathSpec pathSpec = new DatasourcePathSpec(
         jsonMapper,
         null,
-        new DatasourceIngestionSpec(testDatasource, testDatasourceInterval, null, null, null, null),
+        new DatasourceIngestionSpec(testDatasource, testDatasourceInterval, null, null, null, null, null),
         null
     );
     HadoopDruidIndexerConfig config = testRunUpdateSegmentListIfDatasourcePathSpecIsUsed(
@@ -110,7 +111,7 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
     PathSpec pathSpec = new DatasourcePathSpec(
         jsonMapper,
         null,
-        new DatasourceIngestionSpec(testDatasource, testDatasourceIntervalPartial, null, null, null, null),
+        new DatasourceIngestionSpec(testDatasource, testDatasourceIntervalPartial, null, null, null, null, null),
         null
     );
     HadoopDruidIndexerConfig config = testRunUpdateSegmentListIfDatasourcePathSpecIsUsed(
@@ -132,7 +133,7 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
             new DatasourcePathSpec(
                 jsonMapper,
                 null,
-                new DatasourceIngestionSpec(testDatasource, testDatasourceInterval, null, null, null, null),
+                new DatasourceIngestionSpec(testDatasource, testDatasourceInterval, null, null, null, null, null),
                 null
             )
         )
@@ -182,7 +183,7 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
 
     UsedSegmentLister segmentLister = EasyMock.createMock(UsedSegmentLister.class);
     EasyMock.expect(
-        segmentLister.getUsedSegmentsForInterval(testDatasource, jobInterval)
+        segmentLister.getUsedSegmentsForIntervals(testDatasource, Lists.newArrayList(jobInterval))
     ).andReturn(ImmutableList.of(SEGMENT));
     EasyMock.replay(segmentLister);
 

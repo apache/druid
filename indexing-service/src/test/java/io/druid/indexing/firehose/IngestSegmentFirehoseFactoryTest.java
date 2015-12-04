@@ -162,6 +162,12 @@ public class IngestSegmentFirehoseFactoryTest
       }
 
       @Override
+      public List<DataSegment> getUsedSegmentsForIntervals(String dataSource, List<Interval> interval) throws IOException
+      {
+        return ImmutableList.copyOf(segmentSet);
+      }
+
+      @Override
       public List<DataSegment> getUnusedSegmentsForInterval(String dataSource, Interval interval)
       {
         return ImmutableList.of();

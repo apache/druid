@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableSet;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
+import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -65,6 +66,19 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       9,
       100
   );
+
+  private final DataSegment defaultSegment3 = new DataSegment(
+      "dataSource",
+      Interval.parse("2015-01-03T00Z/2015-01-04T00Z"),
+      "version",
+      ImmutableMap.<String, Object>of(),
+      ImmutableList.of("dim1"),
+      ImmutableList.of("m1"),
+      new NoneShardSpec(),
+      9,
+      100
+  );
+
   private final Set<DataSegment> segments = ImmutableSet.of(defaultSegment, defaultSegment2);
   IndexerSQLMetadataStorageCoordinator coordinator;
   private TestDerbyConnector derbyConnector;
@@ -132,6 +146,52 @@ public class IndexerSQLMetadataStorageCoordinatorTest
                 defaultSegment.getDataSource(),
                 defaultSegment.getInterval()
             )
+        )
+    );
+  }
+
+  @Test
+  public void testMultiIntervalUsedList() throws IOException
+  {
+    coordinator.announceHistoricalSegments(segments);
+    coordinator.announceHistoricalSegments(ImmutableSet.of(defaultSegment3));
+
+    Assert.assertEquals(
+        segments,
+        ImmutableSet.copyOf(
+            coordinator.getUsedSegmentsForIntervals(
+                defaultSegment.getDataSource(),
+                ImmutableList.of(defaultSegment.getInterval())
+            )
+        )
+    );
+
+    Assert.assertEquals(
+        ImmutableSet.of(defaultSegment3),
+        ImmutableSet.copyOf(
+            coordinator.getUsedSegmentsForIntervals(
+                defaultSegment.getDataSource(),
+                ImmutableList.of(defaultSegment3.getInterval())
+            )
+        )
+    );
+
+    Assert.assertEquals(
+        ImmutableSet.of(defaultSegment, defaultSegment2, defaultSegment3),
+        ImmutableSet.copyOf(
+            coordinator.getUsedSegmentsForIntervals(
+                defaultSegment.getDataSource(),
+                ImmutableList.of(defaultSegment.getInterval(), defaultSegment3.getInterval())
+            )
+        )
+    );
+
+    //case to check no duplication if two intervals overlapped with the interval of same segment.
+    Assert.assertEquals(
+        ImmutableList.of(defaultSegment3),
+        coordinator.getUsedSegmentsForIntervals(
+            defaultSegment.getDataSource(),
+            ImmutableList.of(Interval.parse("2015-01-03T00Z/2015-01-03T05Z"), Interval.parse("2015-01-03T09Z/2015-01-04T00Z"))
         )
     );
   }
