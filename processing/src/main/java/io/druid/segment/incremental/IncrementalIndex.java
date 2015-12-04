@@ -442,6 +442,17 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
             overflow = Lists.newArrayList();
           }
           overflow.add(getDimVals(dimValues.add(dimension), dimensionValues));
+        } else if (index > dims.length || dims[index] != null)  {
+          /*
+           * index > dims.length requires that we saw this dimension and added it to the dimensionOrder map,
+           * otherwise index is null. Since dims is initialized based on the size of dimensionOrder on each call to add,
+           * it must have been added to dimensionOrder during this InputRow.
+           *
+           * if we found an index for this dimension it means we've seen it already. If !(index > dims.length) then
+           * we saw it on a previous input row (this its safe to index into dims). If we found a value in
+           * the dims array for this index, it means we have seen this dimension already on this input row.
+           */
+          throw new ISE("Dimension[%s] occurred more than once in InputRow", dimension);
         } else {
           dims[index] = getDimVals(dimValues.get(dimension), dimensionValues);
         }
