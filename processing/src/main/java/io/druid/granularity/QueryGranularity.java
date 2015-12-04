@@ -88,4 +88,23 @@ public abstract class QueryGranularity
     }
     throw new IAE("Cannot convert [%s] to QueryGranularity", o.getClass());
   }
+
+  // best effort comparing
+  public Integer compare(QueryGranularity other) {
+    return other instanceof NoneGranularity ? 1 : other instanceof AllGranularity ? -1 : null;
+  }
+
+  protected Integer compareMultiplicity(long d1, long d2)
+  {
+    if (d1 == d2) {
+      return 0;
+    }
+    if (d1 > d2 && (d1 % d2 == 0)) {
+      return 1;
+    }
+    if (d2 > d1 && (d2 % d1 == 0)) {
+      return -1;
+    }
+    return null;
+  }
 }

@@ -34,6 +34,7 @@ import org.joda.time.Weeks;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -588,5 +589,82 @@ public class QueryGranularityTest
     }
     Assert.assertFalse("actualIter not exhausted!?", actualIter.hasNext());
     Assert.assertFalse("expectedIter not exhausted!?", expectedIter.hasNext());
+  }
+
+  @Test
+  public void testComparing() throws Exception
+  {
+    Assert.assertTrue(QueryGranularity.ALL.compare(QueryGranularity.ALL) == 0);
+    Assert.assertTrue(QueryGranularity.NONE.compare(QueryGranularity.NONE) == 0);
+    Assert.assertTrue(QueryGranularity.ALL.compare(QueryGranularity.NONE) > 0);
+    Assert.assertTrue(QueryGranularity.NONE.compare(QueryGranularity.ALL) < 0);
+
+    DurationGranularity d1 = new DurationGranularity(10 * 60 * 1000, null);
+    DurationGranularity d2 = new DurationGranularity(15 * 60 * 1000, null);
+    DurationGranularity d3 = new DurationGranularity(20 * 60 * 1000, null);
+    DurationGranularity d4 = new DurationGranularity(30 * 60 * 1000, new DateTime("2010-01-01T01:00:00").getMillis());
+    DurationGranularity d5 = new DurationGranularity(30 * 60 * 1000, new DateTime("2010-01-01T01:00:01").getMillis());
+
+    for (DurationGranularity d : Arrays.asList(d1, d2, d3, d4, d5)) {
+      Assert.assertTrue(QueryGranularity.ALL.compare(d) > 0);
+      Assert.assertTrue(QueryGranularity.NONE.compare(d) < 0);
+      Assert.assertTrue(d.compare(QueryGranularity.ALL) < 0);
+      Assert.assertTrue(d.compare(QueryGranularity.NONE) > 0);
+    }
+
+    Assert.assertTrue(d1.compare(d3) < 0);
+    Assert.assertTrue(d3.compare(d1) > 0);
+    Assert.assertTrue(d1.compare(d4) < 0);
+    Assert.assertTrue(d4.compare(d1) > 0);
+    Assert.assertTrue(d2.compare(d4) < 0);
+    Assert.assertTrue(d4.compare(d2) > 0);
+    Assert.assertNull(d1.compare(d2));
+    Assert.assertNull(d2.compare(d1));
+    Assert.assertNull(d2.compare(d3));
+    Assert.assertNull(d3.compare(d2));
+    Assert.assertNull(d1.compare(d5));
+    Assert.assertNull(d5.compare(d1));
+
+    PeriodGranularity p1 = new PeriodGranularity(new Period("PT10M"), null, null);
+    PeriodGranularity p2 = new PeriodGranularity(new Period("PT15M"), null, null);
+    PeriodGranularity p3 = new PeriodGranularity(new Period("PT30M"), null, null);
+    PeriodGranularity p4 = new PeriodGranularity(new Period("PT30M"), new DateTime("2010-01-01T01:00:00"), null);
+    PeriodGranularity p5 = new PeriodGranularity(new Period("PT1H"), null, null);
+    PeriodGranularity p6 = new PeriodGranularity(new Period("P1D"), null, null);
+    PeriodGranularity p7 = new PeriodGranularity(new Period("P1W"), null, null);
+    PeriodGranularity p8 = new PeriodGranularity(new Period("P1WT30M"), null, null);
+    PeriodGranularity p9 = new PeriodGranularity(new Period("P1M"), null, null);
+
+    for (PeriodGranularity p : Arrays.asList(p1, p2, p3, p4, p5, p6, p7, p8, p9)) {
+      Assert.assertTrue(QueryGranularity.ALL.compare(p) > 0);
+      Assert.assertTrue(QueryGranularity.NONE.compare(p) < 0);
+      Assert.assertTrue(p.compare(QueryGranularity.ALL) < 0);
+      Assert.assertTrue(p.compare(QueryGranularity.NONE) > 0);
+    }
+
+    Assert.assertTrue(p1.compare(p3) < 0);
+    Assert.assertTrue(p3.compare(p1) > 0);
+    Assert.assertNull(p1.compare(p2));
+    Assert.assertNull(p2.compare(p1));
+    Assert.assertNull(p1.compare(p4));
+    Assert.assertNull(p4.compare(p1));
+    Assert.assertTrue(p3.compare(p5) < 0);
+    Assert.assertTrue(p5.compare(p3) > 0);
+    Assert.assertTrue(p6.compare(p7) < 0);
+    Assert.assertTrue(p7.compare(p6) > 0);
+    Assert.assertTrue(p3.compare(p8) < 0);
+    Assert.assertTrue(p8.compare(p3) > 0);
+    Assert.assertNull(p1.compare(p9));
+    Assert.assertNull(p9.compare(p1));
+
+    PeriodGranularity p10 = new PeriodGranularity(new Period("P12M"), null, null);
+    PeriodGranularity p11 = new PeriodGranularity(new Period("P1Y"), null, null);
+    PeriodGranularity p12 = new PeriodGranularity(new Period("P2Y"), null, null);
+
+    Assert.assertNull(p10.compare(p11));
+    Assert.assertNull(p11.compare(p10));
+    Assert.assertTrue(p11.compare(p12) < 0);
+    Assert.assertTrue(p12.compare(p11) > 0);
+
   }
 }
