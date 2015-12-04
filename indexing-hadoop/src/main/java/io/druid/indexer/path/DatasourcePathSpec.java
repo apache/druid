@@ -99,7 +99,7 @@ public class DatasourcePathSpec implements PathSpec
         "Found total [%d] segments for [%s]  in interval [%s]",
         segments.size(),
         ingestionSpec.getDataSource(),
-        ingestionSpec.getInterval()
+        ingestionSpec.getIntervals()
     );
 
     DatasourceIngestionSpec updatedIngestionSpec = ingestionSpec;

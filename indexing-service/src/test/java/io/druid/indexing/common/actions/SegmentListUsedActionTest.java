@@ -17,14 +17,11 @@
 * under the License.
 */
 
-package io.druid.indexer.hadoop;
+package io.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import io.druid.granularity.QueryGranularity;
-import io.druid.query.filter.SelectorDimFilter;
-import io.druid.segment.TestHelper;
+import io.druid.TestUtil;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -33,26 +30,22 @@ import java.util.List;
 
 /**
  */
-public class DatasourceIngestionSpecTest
+public class SegmentListUsedActionTest
 {
-  private static final ObjectMapper MAPPER = TestHelper.getObjectMapper();
+  private static final ObjectMapper MAPPER = TestUtil.MAPPER;
 
   @Test
   public void testSingleIntervalSerde() throws Exception
   {
     Interval interval = Interval.parse("2014/2015");
 
-    DatasourceIngestionSpec expected = new DatasourceIngestionSpec(
-        "test",
+    SegmentListUsedAction expected = new SegmentListUsedAction(
+        "dataSource",
         interval,
-        null,
-        new SelectorDimFilter("dim", "value"),
-        QueryGranularity.DAY,
-        Lists.newArrayList("d1", "d2"),
-        Lists.newArrayList("m1", "m2", "m3")
+        null
     );
 
-    DatasourceIngestionSpec actual = MAPPER.readValue(MAPPER.writeValueAsString(expected), DatasourceIngestionSpec.class);
+    SegmentListUsedAction actual = MAPPER.readValue(MAPPER.writeValueAsString(expected), SegmentListUsedAction.class);
     Assert.assertEquals(ImmutableList.of(interval), actual.getIntervals());
     Assert.assertEquals(expected, actual);
   }
@@ -61,20 +54,13 @@ public class DatasourceIngestionSpecTest
   public void testMultiIntervalSerde() throws Exception
   {
     List<Interval> intervals = ImmutableList.of(Interval.parse("2014/2015"), Interval.parse("2016/2017"));
-    DatasourceIngestionSpec expected = new DatasourceIngestionSpec(
-        "test",
+    SegmentListUsedAction expected = new SegmentListUsedAction(
+        "dataSource",
         null,
-        intervals,
-        new SelectorDimFilter("dim", "value"),
-        QueryGranularity.DAY,
-        Lists.newArrayList("d1", "d2"),
-        Lists.newArrayList("m1", "m2", "m3")
+        intervals
     );
 
-    DatasourceIngestionSpec actual = MAPPER.readValue(
-        MAPPER.writeValueAsString(expected),
-        DatasourceIngestionSpec.class
-    );
+    SegmentListUsedAction actual = MAPPER.readValue(MAPPER.writeValueAsString(expected), SegmentListUsedAction.class);
     Assert.assertEquals(intervals, actual.getIntervals());
     Assert.assertEquals(expected, actual);
   }
@@ -82,12 +68,9 @@ public class DatasourceIngestionSpecTest
   @Test
   public void testOldJsonDeserialization() throws Exception
   {
-    String jsonStr = "{\"dataSource\": \"test\", \"interval\": \"2014/2015\"}";
-    DatasourceIngestionSpec actual = MAPPER.readValue(jsonStr, DatasourceIngestionSpec.class);
+    String jsonStr = "{\"type\": \"segmentListUsed\", \"dataSource\": \"test\", \"interval\": \"2014/2015\"}";
+    SegmentListUsedAction actual = (SegmentListUsedAction) MAPPER.readValue(jsonStr, TaskAction.class);
 
-    Assert.assertEquals(
-        new DatasourceIngestionSpec("test", Interval.parse("2014/2015"), null, null, null, null, null),
-        actual
-    );
+    Assert.assertEquals(new SegmentListUsedAction("test", Interval.parse("2014/2015"), null), actual);
   }
 }

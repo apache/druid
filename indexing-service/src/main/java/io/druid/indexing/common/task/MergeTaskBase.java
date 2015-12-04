@@ -204,7 +204,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
 
       final Set<String> current = ImmutableSet.copyOf(
           Iterables.transform(
-              taskActionClient.submit(new SegmentListUsedAction(getDataSource(), getInterval())),
+              taskActionClient.submit(new SegmentListUsedAction(getDataSource(), getInterval(), null)),
               toIdentifier
           )
       );

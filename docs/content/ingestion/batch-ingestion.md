@@ -177,12 +177,12 @@ Here is what goes inside "ingestionSpec"
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
 |dataSource|String|Druid dataSource name from which you are loading the data.|yes|
-|interval|String|A string representing ISO-8601 Intervals.|yes|
+|interval|String|This is deprecated, please use intervals.|no|
+|intervals|List|A list of strings representing ISO-8601 Intervals.|yes|
 |granularity|String|Defines the granularity of the query while loading data. Default value is "none".See [Granularities](../querying/granularities.html).|no|
 |filter|Json|See [Filters](../querying/filters.html)|no|
 |dimensions|Array of String|Name of dimension columns to load. By default, the list will be constructed from parseSpec. If parseSpec does not have explicit list of dimensions then all the dimension columns present in stored data will be read.|no|
 |metrics|Array of String|Name of metric columns to load. By default, the list will be constructed from the "name" of all the configured aggregators.|no|
-
 
 For example
 
