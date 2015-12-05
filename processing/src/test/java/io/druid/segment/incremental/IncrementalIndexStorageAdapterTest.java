@@ -125,7 +125,7 @@ public class IncrementalIndexStorageAdapterTest
                     .setInterval(new Interval(0, new DateTime().getMillis()))
                     .addDimension("billy")
                     .addDimension("sally")
-                    .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
+                    .addAggregator(new LongSumAggregatorFactory("cnt", "cnt", 1))
                     .build(),
         new IncrementalIndexStorageAdapter(index)
     );
@@ -173,7 +173,7 @@ public class IncrementalIndexStorageAdapterTest
                     .addDimension("billy")
                     .addDimension("sally")
                     .addAggregator(
-                        new LongSumAggregatorFactory("cnt", "cnt")
+                        new LongSumAggregatorFactory("cnt", "cnt", 1)
                     )
                     .addAggregator(
                         new JavaScriptAggregatorFactory(
@@ -314,7 +314,8 @@ public class IncrementalIndexStorageAdapterTest
                                       Lists.<AggregatorFactory>newArrayList(
                                           new LongSumAggregatorFactory(
                                               "cnt",
-                                              "cnt"
+                                              "cnt",
+                                              1
                                           )
                                       )
                                   )
@@ -356,7 +357,7 @@ public class IncrementalIndexStorageAdapterTest
                     .setInterval(new Interval(0, new DateTime().getMillis()))
                     .addDimension("billy")
                     .addDimension("sally")
-                    .addAggregator(new LongSumAggregatorFactory("cnt", "cnt"))
+                    .addAggregator(new LongSumAggregatorFactory("cnt", "cnt", 1))
                     .setDimFilter(DimFilters.dimEquals("sally", (String) null))
                     .build(),
         new IncrementalIndexStorageAdapter(index)

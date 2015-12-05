@@ -17,6 +17,7 @@
 
 package io.druid.query.aggregation;
 
+import com.google.common.math.LongMath;
 import com.google.common.primitives.Longs;
 import io.druid.segment.LongColumnSelector;
 
@@ -41,13 +42,15 @@ public class LongSumAggregator implements Aggregator
 
   private final LongColumnSelector selector;
   private final String name;
+  private final int exponent;
 
   private long sum;
 
-  public LongSumAggregator(String name, LongColumnSelector selector)
+  public LongSumAggregator(String name, LongColumnSelector selector, int exponent)
   {
     this.name = name;
     this.selector = selector;
+    this.exponent = exponent;
 
     this.sum = 0;
   }
@@ -55,7 +58,8 @@ public class LongSumAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    sum += selector.get();
+    //TODO: should we do LongMath.checkPow(..) instead which would fail in case of overflow?
+    sum += (exponent == 1 ? selector.get() : LongMath.pow(selector.get(), exponent));
   }
 
   @Override
@@ -91,7 +95,7 @@ public class LongSumAggregator implements Aggregator
   @Override
   public Aggregator clone()
   {
-    return new LongSumAggregator(name, selector);
+    return new LongSumAggregator(name, selector, exponent);
   }
 
   @Override

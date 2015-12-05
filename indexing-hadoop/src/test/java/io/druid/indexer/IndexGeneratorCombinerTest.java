@@ -75,7 +75,7 @@ public class IndexGeneratorCombinerTest
                     Map.class
                 ),
                 new AggregatorFactory[]{
-                    new LongSumAggregatorFactory("visited_sum", "visited"),
+                    new LongSumAggregatorFactory("visited_sum", "visited", 1),
                     new HyperUniquesAggregatorFactory("unique_hosts", "host")
                 },
                 new UniformGranularitySpec(

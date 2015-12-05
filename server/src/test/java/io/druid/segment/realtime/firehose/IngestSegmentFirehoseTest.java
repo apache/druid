@@ -115,7 +115,7 @@ public class IngestSegmentFirehoseTest
     );
 
     AggregatorFactory[] aggregators = new AggregatorFactory[]{
-        new LongSumAggregatorFactory("visited_sum", "visited")
+        new LongSumAggregatorFactory("visited_sum", "visited", 1)
     };
 
     IncrementalIndex index = null;

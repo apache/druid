@@ -60,7 +60,7 @@ public class JavaScriptAggregatorBenchmark extends SimpleBenchmark
         )
     );
 
-    doubleAgg = new DoubleSumAggregator("billy", selector);
+    doubleAgg = new DoubleSumAggregator("billy", selector, 1);
   }
 
   public double timeJavaScriptDoubleSum(int reps)

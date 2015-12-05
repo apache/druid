@@ -109,8 +109,8 @@ public class JavaScriptTieredBrokerSelectorStrategyTest
             queryBuilder.aggregators(
                 ImmutableList.of(
                     new CountAggregatorFactory("count"),
-                    new LongSumAggregatorFactory("longSum", "a"),
-                    new DoubleSumAggregatorFactory("doubleSum", "b")
+                    new LongSumAggregatorFactory("longSum", "a", 1),
+                    new DoubleSumAggregatorFactory("doubleSum", "b", 1)
                 )
             ).build()
         )
@@ -125,8 +125,8 @@ public class JavaScriptTieredBrokerSelectorStrategyTest
             queryBuilder.aggregators(
                 ImmutableList.of(
                     new CountAggregatorFactory("count"),
-                    new LongSumAggregatorFactory("longSum", "a"),
-                    new DoubleSumAggregatorFactory("doubleSum", "b")
+                    new LongSumAggregatorFactory("longSum", "a", 1),
+                    new DoubleSumAggregatorFactory("doubleSum", "b", 1)
                 )
             ).build()
         )

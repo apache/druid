@@ -20,6 +20,7 @@ package io.druid.query.aggregation;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.math.LongMath;
 import com.google.common.primitives.Longs;
 import com.metamx.common.StringUtils;
 import io.druid.segment.ColumnSelectorFactory;
@@ -37,11 +38,13 @@ public class LongSumAggregatorFactory implements AggregatorFactory
 
   private final String fieldName;
   private final String name;
+  private final LongFn function;
 
   @JsonCreator
   public LongSumAggregatorFactory(
       @JsonProperty("name") String name,
-      @JsonProperty("fieldName") final String fieldName
+      @JsonProperty("fieldName") final String fieldName,
+      @JsonProperty("function") final LongFn function
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
@@ -49,6 +52,7 @@ public class LongSumAggregatorFactory implements AggregatorFactory
 
     this.name = name;
     this.fieldName = fieldName;
+    this.function = function;
   }
 
   @Override
@@ -56,14 +60,15 @@ public class LongSumAggregatorFactory implements AggregatorFactory
   {
     return new LongSumAggregator(
         name,
-        metricFactory.makeLongColumnSelector(fieldName)
+        metricFactory.makeLongColumnSelector(fieldName),
+        function
     );
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new LongSumBufferAggregator(metricFactory.makeLongColumnSelector(fieldName));
+    return new LongSumBufferAggregator(metricFactory.makeLongColumnSelector(fieldName), function);
   }
 
   @Override
@@ -81,13 +86,13 @@ public class LongSumAggregatorFactory implements AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new LongSumAggregatorFactory(name, name);
+    return new LongSumAggregatorFactory(name, name, null);
   }
 
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.<AggregatorFactory>asList(new LongSumAggregatorFactory(fieldName, fieldName));
+    return Arrays.<AggregatorFactory>asList(new LongSumAggregatorFactory(fieldName, fieldName, function));
   }
 
   @Override
@@ -184,5 +189,33 @@ public class LongSumAggregatorFactory implements AggregatorFactory
     int result = fieldName != null ? fieldName.hashCode() : 0;
     result = 31 * result + (name != null ? name.hashCode() : 0);
     return result;
+  }
+}
+
+interface LongFn {
+  long apply(long x);
+  byte[] getCacheKey();
+}
+
+class ExponentLongFn implements LongFn {
+
+  private final int k;
+
+  @JsonCreator
+  public ExponentLongFn(final Integer k)
+  {
+    this.k = k == null? 1 : k.intValue();
+  }
+
+  @Override
+  public long apply(long x)
+  {
+    return LongMath.pow(x,k);
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new byte[0];
   }
 }

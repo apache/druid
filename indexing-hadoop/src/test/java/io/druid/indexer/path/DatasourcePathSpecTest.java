@@ -190,7 +190,7 @@ public class DatasourcePathSpecTest
                     Map.class
                 ),
                 new AggregatorFactory[]{
-                    new LongSumAggregatorFactory("visited_sum", "visited")
+                    new LongSumAggregatorFactory("visited_sum", "visited", 1)
                 },
                 new UniformGranularitySpec(
                     Granularity.DAY, QueryGranularity.NONE, ImmutableList.of(Interval.parse("2000/3000"))

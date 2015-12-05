@@ -64,8 +64,8 @@ public class DataSchemaTest
         "test",
         parser,
         new AggregatorFactory[]{
-            new DoubleSumAggregatorFactory("metric1", "col1"),
-            new DoubleSumAggregatorFactory("metric2", "col2"),
+            new DoubleSumAggregatorFactory("metric1", "col1", 1),
+            new DoubleSumAggregatorFactory("metric2", "col2", 1),
         },
         new ArbitraryGranularitySpec(QueryGranularity.DAY, ImmutableList.of(Interval.parse("2014/2015"))),
         jsonMapper
@@ -93,8 +93,8 @@ public class DataSchemaTest
         "test",
         parser,
         new AggregatorFactory[]{
-            new DoubleSumAggregatorFactory("metric1", "col1"),
-            new DoubleSumAggregatorFactory("metric2", "col2"),
+            new DoubleSumAggregatorFactory("metric1", "col1", 1),
+            new DoubleSumAggregatorFactory("metric2", "col2", 1),
         },
         new ArbitraryGranularitySpec(QueryGranularity.DAY, ImmutableList.of(Interval.parse("2014/2015"))),
         jsonMapper
@@ -122,8 +122,8 @@ public class DataSchemaTest
         "test",
         parser,
         new AggregatorFactory[]{
-            new DoubleSumAggregatorFactory("metric1", "col1"),
-            new DoubleSumAggregatorFactory("metric2", "col2"),
+            new DoubleSumAggregatorFactory("metric1", "col1", 1),
+            new DoubleSumAggregatorFactory("metric2", "col2", 1),
         },
         new ArbitraryGranularitySpec(QueryGranularity.DAY, ImmutableList.of(Interval.parse("2014/2015"))),
         jsonMapper
@@ -199,7 +199,7 @@ public class DataSchemaTest
                 ), new TypeReference<Map<String, Object>>() {}
             ),
             new AggregatorFactory[]{
-                new DoubleSumAggregatorFactory("metric1", "col1")
+                new DoubleSumAggregatorFactory("metric1", "col1", 1)
             },
             new ArbitraryGranularitySpec(QueryGranularity.DAY, ImmutableList.of(Interval.parse("2014/2015"))),
             jsonMapper

@@ -65,7 +65,17 @@ public class ArithmeticPostAggregatorTest
     Assert.assertEquals(18.0, arithmeticPostAggregator.compute(metricValues));
 
     arithmeticPostAggregator = new ArithmeticPostAggregator("divide", "/", postAggregatorList);
-    Assert.assertEquals(2.0, arithmeticPostAggregator.compute(metricValues));
+    Assert.assertEquals(2.0, (double)arithmeticPostAggregator.compute(metricValues), 0.001);
+
+    postAggregatorList =
+        Lists.<PostAggregator>newArrayList(
+            new ConstantPostAggregator(
+                "roku", 25
+            )
+        );
+    arithmeticPostAggregator = new ArithmeticPostAggregator("sqrt", "sqrt", postAggregatorList);
+    Assert.assertEquals(5.0, arithmeticPostAggregator.compute(metricValues));
+
   }
 
   @Test

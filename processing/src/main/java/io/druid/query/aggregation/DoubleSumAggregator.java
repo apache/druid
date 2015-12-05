@@ -43,13 +43,15 @@ public class DoubleSumAggregator implements Aggregator
 
   private final FloatColumnSelector selector;
   private final String name;
+  private final int exponent;
 
   private double sum;
 
-  public DoubleSumAggregator(String name, FloatColumnSelector selector)
+  public DoubleSumAggregator(String name, FloatColumnSelector selector, int exponent)
   {
     this.name = name;
     this.selector = selector;
+    this.exponent = exponent;
 
     this.sum = 0;
   }
@@ -57,7 +59,7 @@ public class DoubleSumAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    sum += selector.get();
+    sum += (exponent == 1 ? selector.get() : Math.pow(selector.get(), exponent));
   }
 
   @Override
@@ -93,7 +95,7 @@ public class DoubleSumAggregator implements Aggregator
   @Override
   public Aggregator clone()
   {
-    return new DoubleSumAggregator(name, selector);
+    return new DoubleSumAggregator(name, selector, exponent);
   }
 
   @Override

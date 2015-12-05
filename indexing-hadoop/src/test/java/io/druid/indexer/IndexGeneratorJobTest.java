@@ -368,7 +368,7 @@ public class IndexGeneratorJobTest
                     Map.class
                 ),
                 new AggregatorFactory[]{
-                    new LongSumAggregatorFactory("visited_num", "visited_num"),
+                    new LongSumAggregatorFactory("visited_num", "visited_num", 1),
                     new HyperUniquesAggregatorFactory("unique_hosts", "host")
                 },
                 new UniformGranularitySpec(

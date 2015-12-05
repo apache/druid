@@ -44,7 +44,7 @@ import java.util.Map;
 public class TopNBinaryFnTest
 {
   final CountAggregatorFactory rowsCount = new CountAggregatorFactory("rows");
-  final LongSumAggregatorFactory indexLongSum = new LongSumAggregatorFactory("index", "index");
+  final LongSumAggregatorFactory indexLongSum = new LongSumAggregatorFactory("index", "index", 1);
   final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L);
   final FieldAccessPostAggregator rowsPostAgg = new FieldAccessPostAggregator("rows", "rows");
   final FieldAccessPostAggregator indexPostAgg = new FieldAccessPostAggregator("index", "index");

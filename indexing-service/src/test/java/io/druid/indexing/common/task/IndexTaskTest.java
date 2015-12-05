@@ -118,7 +118,7 @@ public class IndexTaskTest
                     Map.class
                 ),
                 new AggregatorFactory[]{
-                    new LongSumAggregatorFactory("val", "val")
+                    new LongSumAggregatorFactory("val", "val", 1)
                 },
                 new UniformGranularitySpec(
                     Granularity.DAY,
@@ -189,7 +189,7 @@ public class IndexTaskTest
                     Map.class
                 ),
                 new AggregatorFactory[]{
-                    new LongSumAggregatorFactory("val", "val")
+                    new LongSumAggregatorFactory("val", "val", 1)
                 },
                 new ArbitraryGranularitySpec(
                     QueryGranularity.MINUTE,
@@ -302,7 +302,7 @@ public class IndexTaskTest
                     Map.class
                 ),
                 new AggregatorFactory[]{
-                    new LongSumAggregatorFactory("val", "val")
+                    new LongSumAggregatorFactory("val", "val", 1)
                 },
                 new UniformGranularitySpec(
                     Granularity.HOUR,

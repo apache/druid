@@ -146,8 +146,8 @@ public class AggregatorUtilTest
   @Test
   public void testNullPostAggregatorNames()
   {
-    AggregatorFactory agg1 = new DoubleSumAggregatorFactory("agg1", "value");
-    AggregatorFactory agg2 = new DoubleSumAggregatorFactory("agg2", "count");
+    AggregatorFactory agg1 = new DoubleSumAggregatorFactory("agg1", "value", 1);
+    AggregatorFactory agg2 = new DoubleSumAggregatorFactory("agg2", "count", 1);
     PostAggregator postAgg1 = new ArithmeticPostAggregator(
         null, "*", Lists.<PostAggregator>newArrayList(
         new FieldAccessPostAggregator(
@@ -181,8 +181,8 @@ public class AggregatorUtilTest
   @Test
   public void testCasing()
   {
-    AggregatorFactory agg1 = new DoubleSumAggregatorFactory("Agg1", "value");
-    AggregatorFactory agg2 = new DoubleSumAggregatorFactory("Agg2", "count");
+    AggregatorFactory agg1 = new DoubleSumAggregatorFactory("Agg1", "value", 1);
+    AggregatorFactory agg2 = new DoubleSumAggregatorFactory("Agg2", "count", 1);
     PostAggregator postAgg1 = new ArithmeticPostAggregator(
         null, "*", Lists.<PostAggregator>newArrayList(
         new FieldAccessPostAggregator(

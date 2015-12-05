@@ -78,7 +78,7 @@ public class SpatialFilterTest
 
   private static AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{
       new CountAggregatorFactory("rows"),
-      new LongSumAggregatorFactory("val", "val")
+      new LongSumAggregatorFactory("val", "val", 1)
   };
 
   private static List<String> DIMS = Lists.newArrayList("dim", "lat", "long", "lat2", "long2");
@@ -527,7 +527,7 @@ public class SpatialFilterTest
                                   .aggregators(
                                       Arrays.<AggregatorFactory>asList(
                                           new CountAggregatorFactory("rows"),
-                                          new LongSumAggregatorFactory("val", "val")
+                                          new LongSumAggregatorFactory("val", "val", 1)
                                       )
                                   )
                                   .build();
@@ -580,7 +580,7 @@ public class SpatialFilterTest
                                   .aggregators(
                                       Arrays.<AggregatorFactory>asList(
                                           new CountAggregatorFactory("rows"),
-                                          new LongSumAggregatorFactory("val", "val")
+                                          new LongSumAggregatorFactory("val", "val", 1)
                                       )
                                   )
                                   .build();
@@ -632,7 +632,7 @@ public class SpatialFilterTest
                                   .aggregators(
                                       Arrays.<AggregatorFactory>asList(
                                           new CountAggregatorFactory("rows"),
-                                          new LongSumAggregatorFactory("val", "val")
+                                          new LongSumAggregatorFactory("val", "val", 1)
                                       )
                                   )
                                   .build();

@@ -69,9 +69,9 @@ public class InputRowSerdeTest
     );
 
     AggregatorFactory[] aggregatorFactories = new AggregatorFactory[] {
-        new DoubleSumAggregatorFactory("agg_non_existing", "agg_non_existing_in"),
-        new DoubleSumAggregatorFactory("m1out", "m1"),
-        new LongSumAggregatorFactory("m2out", "m2"),
+        new DoubleSumAggregatorFactory("agg_non_existing", "agg_non_existing_in", 1),
+        new DoubleSumAggregatorFactory("m1out", "m1", 1),
+        new LongSumAggregatorFactory("m2out", "m2", 1),
         new HyperUniquesAggregatorFactory("m3out", "m3")
     };
 

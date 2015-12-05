@@ -69,7 +69,7 @@ public class ArithmeticPostAggregator implements PostAggregator
   )
   {
     Preconditions.checkArgument(fnName != null, "fn cannot not be null");
-    Preconditions.checkArgument(fields != null && fields.size() > 1, "Illegal number of fields[%s], must be > 1");
+    Preconditions.checkArgument(fields != null && fields.size() >= 1, "Illegal number of fields[%s], must be >= 1");
 
     this.name = name;
     this.fnName = fnName;
@@ -106,7 +106,7 @@ public class ArithmeticPostAggregator implements PostAggregator
     Iterator<PostAggregator> fieldsIter = fields.iterator();
     double retVal = 0.0;
     if (fieldsIter.hasNext()) {
-      retVal = ((Number) fieldsIter.next().compute(values)).doubleValue();
+      retVal = op.compute(((Number) fieldsIter.next().compute(values)).doubleValue());
       while (fieldsIter.hasNext()) {
         retVal = op.compute(retVal, ((Number) fieldsIter.next().compute(values)).doubleValue());
       }
@@ -186,6 +186,13 @@ public class ArithmeticPostAggregator implements PostAggregator
           {
             return lhs / rhs;
           }
+        },
+    SQRT("sqrt")
+        {
+          public double compute(double val)
+          {
+            return Math.sqrt(val);
+          }
         };
 
     private static final Map<String, Ops> lookupMap = Maps.newHashMap();
@@ -208,7 +215,15 @@ public class ArithmeticPostAggregator implements PostAggregator
       return fn;
     }
 
-    public abstract double compute(double lhs, double rhs);
+    public double compute(double lhs, double rhs)
+    {
+      throw new UnsupportedOperationException("operation not supported");
+    }
+
+    public double compute(double val)
+    {
+      return val;
+    }
 
     static Ops lookup(String fn)
     {

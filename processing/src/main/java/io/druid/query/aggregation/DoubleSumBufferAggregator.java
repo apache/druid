@@ -26,12 +26,15 @@ import java.nio.ByteBuffer;
 public class DoubleSumBufferAggregator implements BufferAggregator
 {
   private final FloatColumnSelector selector;
+  private final int exponent;
 
   public DoubleSumBufferAggregator(
-      FloatColumnSelector selector
+      FloatColumnSelector selector,
+      int exponent
   )
   {
     this.selector = selector;
+    this.exponent = exponent;
   }
 
   @Override
@@ -43,7 +46,10 @@ public class DoubleSumBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    buf.putDouble(position, buf.getDouble(position) + (double) selector.get());
+    buf.putDouble(
+        position,
+        buf.getDouble(position) + (exponent == 1 ?  + selector.get() : Math.pow(selector.get(), exponent))
+    );
   }
 
   @Override

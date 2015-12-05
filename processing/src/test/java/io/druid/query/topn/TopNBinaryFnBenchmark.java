@@ -66,7 +66,7 @@ public class TopNBinaryFnBenchmark extends SimpleBenchmark
 
     final List<AggregatorFactory> aggregatorFactories = new ArrayList<>();
     aggregatorFactories.add(new CountAggregatorFactory("rows"));
-    aggregatorFactories.add(new LongSumAggregatorFactory("index", "index"));
+    aggregatorFactories.add(new LongSumAggregatorFactory("index", "index", 1));
     for (int i = 1; i < aggCount; i++) {
       aggregatorFactories.add(new CountAggregatorFactory("rows" + i));
     }

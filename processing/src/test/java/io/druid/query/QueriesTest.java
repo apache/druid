@@ -39,8 +39,8 @@ public class QueriesTest
   {
     List<AggregatorFactory> aggFactories = Arrays.<AggregatorFactory>asList(
         new CountAggregatorFactory("count"),
-        new DoubleSumAggregatorFactory("idx", "index"),
-        new DoubleSumAggregatorFactory("rev", "revenue")
+        new DoubleSumAggregatorFactory("idx", "index", 1),
+        new DoubleSumAggregatorFactory("rev", "revenue", 1)
     );
 
     List<PostAggregator> postAggs = Arrays.<PostAggregator>asList(
@@ -71,8 +71,8 @@ public class QueriesTest
   {
     List<AggregatorFactory> aggFactories = Arrays.<AggregatorFactory>asList(
         new CountAggregatorFactory("count"),
-        new DoubleSumAggregatorFactory("idx", "index"),
-        new DoubleSumAggregatorFactory("rev", "revenue")
+        new DoubleSumAggregatorFactory("idx", "index", 1),
+        new DoubleSumAggregatorFactory("rev", "revenue", 1)
     );
 
     List<PostAggregator> postAggs = Arrays.<PostAggregator>asList(
@@ -103,8 +103,8 @@ public class QueriesTest
   {
     List<AggregatorFactory> aggFactories = Arrays.<AggregatorFactory>asList(
         new CountAggregatorFactory("count"),
-        new DoubleSumAggregatorFactory("idx", "index"),
-        new DoubleSumAggregatorFactory("rev", "revenue")
+        new DoubleSumAggregatorFactory("idx", "index", 1),
+        new DoubleSumAggregatorFactory("rev", "revenue", 1)
     );
 
     List<PostAggregator> postAggs = Arrays.<PostAggregator>asList(
@@ -157,8 +157,8 @@ public class QueriesTest
   {
     List<AggregatorFactory> aggFactories = Arrays.<AggregatorFactory>asList(
         new CountAggregatorFactory("count"),
-        new DoubleSumAggregatorFactory("idx", "index"),
-        new DoubleSumAggregatorFactory("rev", "revenue")
+        new DoubleSumAggregatorFactory("idx", "index", 1),
+        new DoubleSumAggregatorFactory("rev", "revenue", 1)
     );
 
     List<PostAggregator> postAggs = Arrays.<PostAggregator>asList(
