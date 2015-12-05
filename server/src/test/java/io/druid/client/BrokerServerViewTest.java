@@ -320,8 +320,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     baseView = new BatchServerInventoryView(
         zkPathsConfig,
         curator,
-        jsonMapper,
-        Predicates.<DataSegment>alwaysTrue()
+        jsonMapper
     )
     {
       @Override
