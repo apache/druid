@@ -478,10 +478,11 @@ public class HadoopDruidIndexerConfig
   {
     return new Path(
         String.format(
-            "%s/%s/%s",
+            "%s/%s/%s/%s",
             getWorkingPath(),
             schema.getDataSchema().getDataSource(),
-            schema.getTuningConfig().getVersion().replace(":", "")
+            schema.getTuningConfig().getVersion().replace(":", ""),
+            schema.getUniqueId()
         )
     );
   }
