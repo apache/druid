@@ -306,8 +306,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     baseView = new BatchServerInventoryView(
         zkPathsConfig,
         curator,
-        jsonMapper,
-        Predicates.<DataSegment>alwaysTrue()
+        jsonMapper
     )
     {
       @Override
