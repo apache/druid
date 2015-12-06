@@ -47,12 +47,12 @@ Runtime.properties:
 ```
 druid.host=#{IP_ADDR}:8080
 druid.port=8080
-druid.service=druid/prod/router
+druid.service=druid/router
 
 druid.processing.numThreads=1
-druid.router.defaultBrokerServiceName=druid:prod:broker-cold
-druid.router.coordinatorServiceName=druid:prod:coordinator
-druid.router.tierToBrokerMap={"hot":"druid:prod:broker-hot","_default_tier":"druid:prod:broker-cold"}
+druid.router.defaultBrokerServiceName=druid:broker-cold
+druid.router.coordinatorServiceName=druid:coordinator
+druid.router.tierToBrokerMap={"hot":"druid:broker-hot","_default_tier":"druid:broker-cold"}
 druid.router.http.numConnections=50
 druid.router.http.readTimeout=PT5M
 
@@ -69,11 +69,11 @@ The router module uses several of the default modules in [Configuration](../conf
 
 |Property|Possible Values|Description|Default|
 |--------|---------------|-----------|-------|
-|`druid.router.defaultBrokerServiceName`|Any string.|The default broker to connect to in case service discovery fails.|"". Must be set.|
+|`druid.router.defaultBrokerServiceName`|Any string.|The default broker to connect to in case service discovery fails.|druid/broker|
 |`druid.router.tierToBrokerMap`|An ordered JSON map of tiers to broker names. The priority of brokers is based on the ordering.|Queries for a certain tier of data are routed to their appropriate broker.|{"_default": "<defaultBrokerServiceName>"}|
 |`druid.router.defaultRule`|Any string.|The default rule for all datasources.|"_default"|
 |`druid.router.rulesEndpoint`|Any string.|The coordinator endpoint to extract rules from.|"/druid/coordinator/v1/rules"|
-|`druid.router.coordinatorServiceName`|Any string.|The service discovery name of the coordinator.|null. Must be set.|
+|`druid.router.coordinatorServiceName`|Any string.|The service discovery name of the coordinator.|druid/coordinator|
 |`druid.router.pollPeriod`|Any ISO8601 duration.|How often to poll for new rules.|PT1M|
 |`druid.router.strategies`|An ordered JSON array of objects.|All custom strategies to use for routing.|[{"type":"timeBoundary"},{"type":"priority"}]|
 
