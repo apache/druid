@@ -61,7 +61,7 @@ druid.cache.maxOperationQueueSize=1073741824
 druid.cache.readBufferSize=10485760
 
 # Indexing Service Service Discovery
-druid.selectors.indexing.serviceName=druid:prod:overlord
+druid.selectors.indexing.serviceName=druid:overlord
 
 ```
 
@@ -101,7 +101,7 @@ Runtime.properties:
 ```
 druid.host=#{IP_ADDR}
 druid.port=8080
-druid.service=druid/prod/overlord
+druid.service=druid/overlord
 
 # Only required if you are autoscaling middle managers
 druid.indexer.autoscale.doAutoscale=true
@@ -157,7 +157,7 @@ Runtime.properties:
 ```
 druid.host=#{IP_ADDR}
 druid.port=8080
-druid.service=druid/prod/middlemanager
+druid.service=druid/middlemanager
 
 # Store task logs in deep storage
 druid.indexer.logs.type=s3
@@ -221,7 +221,7 @@ Runtime.properties:
 ```
 druid.host=#{IP_ADDR}
 druid.port=8080
-druid.service=druid/prod/coordinator
+druid.service=druid/coordinator
 ```
 
 ### Historical Node
@@ -261,7 +261,7 @@ Runtime.properties:
 ```
 druid.host=#{IP_ADDR}
 druid.port=8080
-druid.service=druid/prod/historical
+druid.service=druid/historical
 
 druid.historical.cache.useCache=true
 druid.historical.cache.populateCache=true
@@ -318,7 +318,7 @@ Runtime.properties:
 ```
 druid.host=#{IP_ADDR}
 druid.port=8080
-druid.service=druid/prod/broker
+druid.service=druid/broker
 
 druid.broker.http.numConnections=20
 druid.broker.http.readTimeout=PT5M
@@ -372,7 +372,7 @@ Runtime.properties:
 ```
 druid.host=#{IP_ADDR}
 druid.port=8080
-druid.service=druid/prod/realtime
+druid.service=druid/realtime
 
 druid.processing.buffer.sizeBytes=1073741824
 druid.processing.numThreads=7
