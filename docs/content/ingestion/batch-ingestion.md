@@ -190,7 +190,7 @@ For example
 "ingestionSpec" :
     {
         "dataSource": "wikipedia",
-        "interval": "2014-10-20T00:00:00Z/P2W"
+        "intervals": ["2014-10-20T00:00:00Z/P2W"]
     }
 ```
 
@@ -210,7 +210,7 @@ For example
         "type" : "dataSource",
         "ingestionSpec" : {
             "dataSource": "wikipedia",
-            "interval": "2014-10-20T00:00:00Z/P2W"
+            "intervals": ["2014-10-20T00:00:00Z/P2W"]
         }
     },
     {
