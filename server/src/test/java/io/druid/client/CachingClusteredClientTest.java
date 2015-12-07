@@ -558,7 +558,7 @@ public class CachingClusteredClientTest
         dataSegment,
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
     );
-    selector.addServer(new QueryableDruidServer(lastServer, null));
+    selector.addServerAndUpdateSegment(new QueryableDruidServer(lastServer, null), dataSegment);
     timeline.add(interval, "v", new SingleElementPartitionChunk<>(selector));
 
     client.run(query, context);
@@ -1714,7 +1714,7 @@ public class CachingClusteredClientTest
             expectation.getSegment(),
             new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
         );
-        selector.addServer(new QueryableDruidServer(lastServer, null));
+        selector.addServerAndUpdateSegment(new QueryableDruidServer(lastServer, null), selector.getSegment());
 
         final PartitionChunk<ServerSelector> chunk;
         if (numChunks == 1) {
