@@ -210,7 +210,7 @@ public class BrokerServerView implements TimelineServerView
       if (queryableDruidServer == null) {
         queryableDruidServer = addServer(baseView.getInventoryValue(server.getName()));
       }
-      selector.addServer(queryableDruidServer);
+      selector.addServerAndUpdateSegment(queryableDruidServer, segment);
     }
   }
 
