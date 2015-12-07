@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
-import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -326,10 +325,10 @@ public class RealtimeIndexTaskTokyoDrift extends AbstractTask
 
           // Acquire locks for all pending segments.
           for (final SegmentIdentifier identifier : appenderator.getSegments()) {
-            final Optional<TaskLock> tryLock = toolbox.getTaskActionClient()
-                                                      .submit(new LockTryAcquireAction(identifier.getInterval()));
+            final TaskLock tryLock = toolbox.getTaskActionClient()
+                                            .submit(new LockTryAcquireAction(identifier.getInterval()));
 
-            if (tryLock.isPresent()) {
+            if (tryLock != null) {
               log.info("Taking over segment[%s] from prior epoch.", identifier);
               outgoingSegments.add(identifier);
             } else {
