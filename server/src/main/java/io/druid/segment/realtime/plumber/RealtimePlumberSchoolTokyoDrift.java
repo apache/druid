@@ -23,10 +23,11 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.FilteredServerView;
+import io.druid.client.cache.Cache;
+import io.druid.client.cache.CacheConfig;
 import io.druid.guice.annotations.Processing;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMaker;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
@@ -53,7 +54,8 @@ public class RealtimePlumberSchoolTokyoDrift implements PlumberSchool
   private final SegmentPublisher segmentPublisher;
   private final IndexIO indexIO;
   private final IndexMerger indexMerger;
-  private final IndexMaker indexMaker;
+  private final Cache cache;
+  private final CacheConfig cacheConfig;
 
   public RealtimePlumberSchoolTokyoDrift(
       @JacksonInject ServiceEmitter emitter,
@@ -66,7 +68,8 @@ public class RealtimePlumberSchoolTokyoDrift implements PlumberSchool
       @JacksonInject SegmentPublisher segmentPublisher,
       @JacksonInject IndexIO indexIO,
       @JacksonInject IndexMerger indexMerger,
-      @JacksonInject IndexMaker indexMaker
+      @JacksonInject Cache cache,
+      @JacksonInject CacheConfig cacheConfig
   )
   {
     this.emitter = emitter;
@@ -79,7 +82,8 @@ public class RealtimePlumberSchoolTokyoDrift implements PlumberSchool
     this.segmentPublisher = segmentPublisher;
     this.indexIO = indexIO;
     this.indexMerger = indexMerger;
-    this.indexMaker = indexMaker;
+    this.cache = cache;
+    this.cacheConfig = cacheConfig;
   }
 
   @Override
@@ -108,7 +112,9 @@ public class RealtimePlumberSchoolTokyoDrift implements PlumberSchool
         conglomerate,
         segmentAnnouncer,
         emitter,
-        queryExecutorService
+        queryExecutorService,
+        cache,
+        cacheConfig
     );
 
     return new RealtimePlumberTokyoDrift(

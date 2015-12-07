@@ -572,7 +572,9 @@ public class RealtimeIndexTaskTokyoDrift extends AbstractTask
         toolbox.getQueryRunnerFactoryConglomerate(),
         toolbox.getSegmentAnnouncer(),
         toolbox.getEmitter(),
-        toolbox.getQueryExecutorService()
+        toolbox.getQueryExecutorService(),
+        toolbox.getCache(),
+        toolbox.getCacheConfig()
     );
 
     log.info("We have an appenderator. Starting the job!");

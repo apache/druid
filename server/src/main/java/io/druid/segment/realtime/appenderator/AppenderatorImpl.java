@@ -41,6 +41,9 @@ import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.client.CachingQueryRunner;
+import io.druid.client.cache.Cache;
+import io.druid.client.cache.CacheConfig;
 import io.druid.common.guava.ThreadRenamingCallable;
 import io.druid.concurrent.Execs;
 import io.druid.data.input.Committer;
@@ -63,6 +66,7 @@ import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
+import io.druid.segment.ReferenceCountingSegment;
 import io.druid.segment.Segment;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IndexSizeExceededException;
@@ -107,6 +111,7 @@ public class AppenderatorImpl implements Appenderator
   private static final EmittingLogger log = new EmittingLogger(AppenderatorImpl.class);
   private static final int WARN_DELAY = 1000;
   private static final String IDENTIFIER_FILE_NAME = "identifier.json";
+  private static final String CONTEXT_SKIP_INCREMENTAL_SEGMENT = "skipIncrementalSegment";
 
   private final DataSchema schema;
   private final RealtimeTuningConfig config;
@@ -119,6 +124,8 @@ public class AppenderatorImpl implements Appenderator
   private final ExecutorService queryExecutorService;
   private final IndexIO indexIO;
   private final IndexMerger indexMerger;
+  private final Cache cache;
+  private final CacheConfig cacheConfig;
   private final Map<SegmentIdentifier, Sink> sinks = Maps.newConcurrentMap();
   private final Set<SegmentIdentifier> droppingSinks = Sets.newConcurrentHashSet();
   private final VersionedIntervalTimeline<String, Sink> sinkTimeline = new VersionedIntervalTimeline<>(
@@ -142,7 +149,9 @@ public class AppenderatorImpl implements Appenderator
       ServiceEmitter emitter,
       ExecutorService queryExecutorService,
       IndexIO indexIO,
-      IndexMerger indexMerger
+      IndexMerger indexMerger,
+      Cache cache,
+      CacheConfig cacheConfig
   )
   {
     this.schema = Preconditions.checkNotNull(schema, "schema");
@@ -156,13 +165,21 @@ public class AppenderatorImpl implements Appenderator
     this.queryExecutorService = queryExecutorService;
     this.indexIO = indexIO;
     this.indexMerger = indexMerger;
+    this.cache = cache;
+    this.cacheConfig = cacheConfig;
 
-    // If we're not querying (no conglomerate) then it's ok for the other query stuff to be null.
-    // But otherwise, we need them all.
     if (conglomerate != null) {
+      // If we're not querying (no conglomerate) then it's ok for the other query stuff to be null.
+      // But otherwise, we need them all.
       Preconditions.checkNotNull(segmentAnnouncer, "segmentAnnouncer");
       Preconditions.checkNotNull(emitter, "emitter");
       Preconditions.checkNotNull(queryExecutorService, "queryExecutorService");
+      Preconditions.checkNotNull(cache, "cache");
+      Preconditions.checkNotNull(cacheConfig, "cacheConfig");
+
+      if (!cache.isLocal()) {
+        log.error("Configured cache is not local, caching will not be enabled");
+      }
     }
 
     log.info("Creating appenderator for dataSource[%s]", schema.getDataSource());
@@ -371,6 +388,7 @@ public class AppenderatorImpl implements Appenderator
             return toolchest.makeMetricBuilder(query);
           }
         };
+    final boolean skipIncrementalSegment = query.getContextValue(CONTEXT_SKIP_INCREMENTAL_SEGMENT, false);
 
     return toolchest.mergeResults(
         factory.mergeRunners(
@@ -381,19 +399,19 @@ public class AppenderatorImpl implements Appenderator
                     new Function<SegmentDescriptor, QueryRunner<T>>()
                     {
                       @Override
-                      public QueryRunner<T> apply(final SegmentDescriptor spec)
+                      public QueryRunner<T> apply(final SegmentDescriptor descriptor)
                       {
                         final PartitionHolder<Sink> holder = sinkTimeline.findEntry(
-                            spec.getInterval(),
-                            spec.getVersion()
+                            descriptor.getInterval(),
+                            descriptor.getVersion()
                         );
                         if (holder == null) {
-                          return new ReportTimelineMissingSegmentQueryRunner<>(spec);
+                          return new ReportTimelineMissingSegmentQueryRunner<>(descriptor);
                         }
 
-                        final PartitionChunk<Sink> chunk = holder.getChunk(spec.getPartitionNumber());
+                        final PartitionChunk<Sink> chunk = holder.getChunk(descriptor.getPartitionNumber());
                         if (chunk == null) {
-                          return new ReportTimelineMissingSegmentQueryRunner<>(spec);
+                          return new ReportTimelineMissingSegmentQueryRunner<>(descriptor);
                         }
 
                         final Sink theSink = chunk.getObject();
@@ -404,7 +422,7 @@ public class AppenderatorImpl implements Appenderator
                                 builderFn,
                                 new BySegmentQueryRunner<T>(
                                     theSink.getSegment().getIdentifier(),
-                                    spec.getInterval().getStart(),
+                                    descriptor.getInterval().getStart(),
                                     factory.mergeRunners(
                                         MoreExecutors.sameThreadExecutor(),
                                         Iterables.transform(
@@ -414,18 +432,36 @@ public class AppenderatorImpl implements Appenderator
                                               @Override
                                               public QueryRunner<T> apply(final FireHydrant hydrant)
                                               {
-                                                // TODO: Make sure this still works when hydrants are actually closed
-                                                return new ReferenceCountingSegmentQueryRunner<>(
-                                                    factory,
-                                                    hydrant.getSegment()
-                                                );
+                                                if (skipIncrementalSegment && !hydrant.hasSwapped()) {
+                                                  return new NoopQueryRunner<>();
+                                                }
+
+                                                final ReferenceCountingSegment segment = hydrant.getSegment();
+                                                final boolean cacheable =
+                                                    hydrant.hasSwapped() // only use caching if data is immutable
+                                                    && cache.isLocal(); // hydrants may not be in sync between replicas, make sure cache is local
+
+                                                if (cacheable) {
+                                                  return new CachingQueryRunner<>(
+                                                      makeHydrantCacheIdentifier(hydrant, segment),
+                                                      descriptor,
+                                                      objectMapper,
+                                                      cache,
+                                                      toolchest,
+                                                      new ReferenceCountingSegmentQueryRunner<>(factory, segment),
+                                                      MoreExecutors.sameThreadExecutor(),
+                                                      cacheConfig
+                                                  );
+                                                } else {
+                                                  return new ReferenceCountingSegmentQueryRunner<>(factory, segment);
+                                                }
                                               }
                                             }
                                         )
                                     )
                                 )
                             ).withWaitMeasuredFromNow(),
-                            new SpecificSegmentSpec(spec)
+                            new SpecificSegmentSpec(descriptor)
                         );
                       }
                     }
@@ -1154,5 +1190,10 @@ public class AppenderatorImpl implements Appenderator
            .emit();
       }
     }
+  }
+
+  private static String makeHydrantCacheIdentifier(FireHydrant input, Segment segment)
+  {
+    return segment.getIdentifier() + "_" + input.getCount();
   }
 }

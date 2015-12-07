@@ -26,6 +26,8 @@ import com.metamx.common.logger.Logger;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.core.LoggingEmitter;
 import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.MapCache;
 import io.druid.concurrent.Execs;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
@@ -224,7 +226,9 @@ public class AppenderatorTester implements AutoCloseable
           }
         },
         emitter,
-        queryExecutor
+        queryExecutor,
+        MapCache.create(2048),
+        new CacheConfig()
     );
   }
 

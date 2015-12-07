@@ -21,6 +21,8 @@ package io.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.client.cache.Cache;
+import io.druid.client.cache.CacheConfig;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMaker;
@@ -48,7 +50,9 @@ public class Appenderators
       QueryRunnerFactoryConglomerate conglomerate,
       DataSegmentAnnouncer segmentAnnouncer,
       ServiceEmitter emitter,
-      ExecutorService queryExecutorService
+      ExecutorService queryExecutorService,
+      Cache cache,
+      CacheConfig cacheConfig
   )
   {
     return new AppenderatorImpl(
@@ -62,7 +66,9 @@ public class Appenderators
         emitter,
         queryExecutorService,
         indexIO,
-        indexMerger
+        indexMerger,
+        cache,
+        cacheConfig
     );
   }
 
@@ -112,7 +118,9 @@ public class Appenderators
         null,
         null,
         indexIO,
-        indexMerger
+        indexMerger,
+        null,
+        null
     );
   }
 }
