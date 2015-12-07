@@ -29,6 +29,8 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
 
 public class DruidJsonValidatorTest
 {
@@ -66,6 +68,57 @@ public class DruidJsonValidatorTest
     Assert.assertNotNull(command);
     DruidJsonValidator druidJsonValidator = (DruidJsonValidator) command;
     druidJsonValidator.run();
+  }
+
+  @Test(expected = RuntimeException.class)
+  public void testParseValidatorInvalid()
+  {
+    String type = "parse";
+    Cli<?> parser = Cli.builder("validator")
+        .withCommand(DruidJsonValidator.class)
+        .build();
+    Object command = parser.parse(
+        "validator",
+        "-f", "simple_test_data_record_parser_invalid.json",
+        "-t", type
+    );
+    Assert.assertNotNull(command);
+    DruidJsonValidator druidJsonValidator = (DruidJsonValidator) command;
+    druidJsonValidator.run();
+  }
+
+  @Test
+  public void testParseValidator()
+  {
+    String type = "parse";
+    Cli<?> parser = Cli.builder("validator")
+        .withCommand(DruidJsonValidator.class)
+        .build();
+    Object command = parser.parse(
+        "validator",
+        "-f", "simple_test_data_record_parser.json",
+        "-r", "simple_test_data.tsv",
+        "-t", type
+    );
+    Assert.assertNotNull(command);
+
+    Writer writer = new StringWriter()
+    {
+      @Override
+      public void write(String str)
+      {
+        super.write(str + '\n');
+      }
+    };
+    DruidJsonValidator druidJsonValidator = (DruidJsonValidator) command;
+    druidJsonValidator.setLogWriter(writer);
+    druidJsonValidator.run();
+
+    String expected = "loading parse spec from resource 'simple_test_data_record_parser.json'\n" +
+                      "loading data from resource 'simple_test_data.tsv'\n" +
+                      "2014-10-20T00:00:00.000Z\tproduct_1\n";
+
+    Assert.assertEquals(expected, writer.toString());
   }
 
   @After public void tearDown()

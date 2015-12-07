@@ -21,6 +21,7 @@ package io.druid.indexer;
 
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import io.druid.indexer.partitions.HashedPartitionsSpec;
@@ -240,6 +241,32 @@ public class HadoopIngestionSpecTest
         schema.getTuningConfig().getPartitionsSpec().isDeterminingPartitions(),
         false
     );
+
+    Assert.assertFalse(Strings.isNullOrEmpty(schema.getUniqueId()));
+  }
+
+  @Test
+  public void testUniqueId() throws Exception
+  {
+    final HadoopIngestionSpec schema = jsonReadWriteRead(
+        "{\"uniqueId\" : \"test_unique_id\"}",
+        HadoopIngestionSpec.class
+    );
+
+    Assert.assertEquals("test_unique_id", schema.getUniqueId());
+
+    //test uniqueId assigned is really unique
+    final String id1 = jsonReadWriteRead(
+        "{}",
+        HadoopIngestionSpec.class
+    ).getUniqueId();
+
+    final String id2 = jsonReadWriteRead(
+        "{}",
+        HadoopIngestionSpec.class
+    ).getUniqueId();
+
+    Assert.assertNotEquals(id1, id2);
   }
 
   @Test
