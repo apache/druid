@@ -35,8 +35,9 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
 
   private final Set<QueryableDruidServer> servers = Sets.newHashSet();
 
-  private final DataSegment segment;
   private final TierSelectorStrategy strategy;
+
+  private DataSegment segment;
 
   public ServerSelector(
       DataSegment segment,
@@ -49,14 +50,17 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
 
   public DataSegment getSegment()
   {
-    return segment;
+    synchronized (this) {
+      return segment;
+    }
   }
 
-  public void addServer(
-      QueryableDruidServer server
+  public void addServerAndUpdateSegment(
+      QueryableDruidServer server, DataSegment segment
   )
   {
     synchronized (this) {
+      this.segment = segment;
       servers.add(server);
     }
   }
