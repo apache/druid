@@ -156,7 +156,7 @@ public class CachingClusteredClientTest
   public static final ImmutableMap<String, Object> CONTEXT = ImmutableMap.<String, Object>of("finalize", false);
   public static final MultipleIntervalSegmentSpec SEG_SPEC = new MultipleIntervalSegmentSpec(ImmutableList.<Interval>of());
   public static final String DATA_SOURCE = "test";
-  protected static final DefaultObjectMapper jsonMapper = new DefaultObjectMapper(new SmileFactory());
+  static final DefaultObjectMapper jsonMapper = new DefaultObjectMapper(new SmileFactory());
 
   static {
     jsonMapper.getFactory().setCodec(jsonMapper);
@@ -211,7 +211,7 @@ public class CachingClusteredClientTest
   private static final QueryGranularity PT1H_TZ_GRANULARITY = new PeriodGranularity(new Period("PT1H"), null, TIMEZONE);
   private static final String TOP_DIM = "a_dim";
   private static final Supplier<GroupByQueryConfig> GROUPBY_QUERY_CONFIG_SUPPLIER = Suppliers.ofInstance(new GroupByQueryConfig());
-  private static final QueryToolChestWarehouse WAREHOUSE = new MapQueryToolChestWarehouse(
+  static final QueryToolChestWarehouse WAREHOUSE = new MapQueryToolChestWarehouse(
       ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
                   .put(
                       TimeseriesQuery.class,

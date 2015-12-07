@@ -164,9 +164,33 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     Set<Pair<ServerSelector, SegmentDescriptor>> segments = Sets.newLinkedHashSet();
 
     List<TimelineObjectHolder<String, ServerSelector>> serversLookup = Lists.newLinkedList();
+    List<Interval> uncoveredIntervals = Lists.newLinkedList();
 
     for (Interval interval : query.getIntervals()) {
-      Iterables.addAll(serversLookup, timeline.lookup(interval));
+      Iterable<TimelineObjectHolder<String, ServerSelector>> lookup = timeline.lookup(interval);
+      long startMillis = interval.getStartMillis();
+      long endMillis = interval.getEndMillis();
+      for (TimelineObjectHolder<String, ServerSelector> holder : lookup) {
+        Interval holderInterval = holder.getInterval();
+        long intervalStart = holderInterval.getStartMillis();
+        if (startMillis != intervalStart) {
+          uncoveredIntervals.add(new Interval(startMillis, intervalStart));
+        }
+        startMillis = holderInterval.getEndMillis();
+        serversLookup.add(holder);
+      }
+
+      if (startMillis < endMillis) {
+        uncoveredIntervals.add(new Interval(startMillis, endMillis));
+      }
+    }
+
+    if (!uncoveredIntervals.isEmpty()) {
+      // This returns intervals for which NO segment is present.
+      // Which is not necessarily an indication that the data doesn't exist or is
+      // incomplete. The data could exist and just not be loaded yet.  In either
+      // case, though, this query will not include any data from the identified intervals.
+      responseContext.put("uncoveredIntervals", uncoveredIntervals);
     }
 
     // Let tool chest filter out unneeded segments
