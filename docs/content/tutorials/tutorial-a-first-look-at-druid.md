@@ -5,7 +5,7 @@ layout: doc_page
 # Tutorial: A First Look at Druid
 Greetings! This tutorial will help clarify some core Druid concepts. We will use a real-time dataset and issue some basic Druid queries. If you are ready to explore Druid, and learn a thing or two, read on!
 
-Note: If you are behind a corporate firewall, please see our additional [instructions](../tutorials/firewall.html) for running this tutorial. 
+Note: If you are behind a corporate firewall, please see our additional [instructions](../tutorials/firewall.html) for running this tutorial.
 
 About the data
 --------------
@@ -91,17 +91,20 @@ This tutorial only requires Zookeeper be set up.
 
 #### Set up Zookeeper
 
-* Download zookeeper from [http://www.apache.org/dyn/closer.cgi/zookeeper/](http://www.apache.org/dyn/closer.cgi/zookeeper/). 
+* Download zookeeper from [http://www.apache.org/dyn/closer.cgi/zookeeper/](http://www.apache.org/dyn/closer.cgi/zookeeper/).
 * Install zookeeper.
 
 ```bash
-curl http://www.gtlib.gatech.edu/pub/apache/zookeeper/zookeeper-3.4.6/zookeeper-3.4.6.tar.gz -o zookeeper-3.4.6.tar.gz
-tar xzf zookeeper-3.4.6.tar.gz
-cd zookeeper-3.4.6
+ZOOKEPER_VERSION=zookeeper-3.4.7
+curl http://www.gtlib.gatech.edu/pub/apache/zookeeper/$ZOOKEPER_VERSION/$ZOOKEPER_VERSION.tar.gz -o $ZOOKEPER_VERSION.tar.gz
+tar xzf $ZOOKEPER_VERSION.tar.gz
+cd $ZOOKEPER_VERSION
 cp conf/zoo_sample.cfg conf/zoo.cfg
 ./bin/zkServer.sh start
 cd ..
 ```
+
+Note you might update zookeper version. (see [here](http://www.gtlib.gatech.edu/pub/apache/zookeeper/)).
 
 Running Example Scripts
 -----------------------
@@ -173,12 +176,12 @@ We are going to make a slightly more complicated query, the [TimeseriesQuery](..
 
 ```json
 {
-    "queryType": "timeseries", 
-    "dataSource": "wikipedia", 
-    "intervals": [ "2010-01-01/2020-01-01" ], 
-    "granularity": "all", 
+    "queryType": "timeseries",
+    "dataSource": "wikipedia",
+    "intervals": [ "2010-01-01/2020-01-01" ],
+    "granularity": "all",
     "aggregations": [
-        {"type": "longSum", "fieldName": "count", "name": "edit_count"}, 
+        {"type": "longSum", "fieldName": "count", "name": "edit_count"},
         {"type": "doubleSum", "fieldName": "added", "name": "chars_added"}
     ]
 }
@@ -208,12 +211,12 @@ We can change granularity for the results to "minute". To specify different gran
 
 ```json
 {
-  "queryType": "timeseries", 
-  "dataSource": "wikipedia", 
-  "intervals": [ "2010-01-01/2020-01-01" ], 
-  "granularity": "minute", 
+  "queryType": "timeseries",
+  "dataSource": "wikipedia",
+  "intervals": [ "2010-01-01/2020-01-01" ],
+  "granularity": "minute",
   "aggregations": [
-     {"type": "longSum", "fieldName": "count", "name": "edit_count"}, 
+     {"type": "longSum", "fieldName": "count", "name": "edit_count"},
      {"type": "doubleSum", "fieldName": "added", "name": "chars_added"}
   ]
 }
@@ -226,11 +229,11 @@ This gives us results like the following:
  {
    "timestamp" : "2013-09-04T21:44:00.000Z",
    "result" : { "chars_added" : 30665.0, "edit_count" : 128 }
- }, 
+ },
  {
    "timestamp" : "2013-09-04T21:45:00.000Z",
    "result" : { "chars_added" : 122637.0, "edit_count" : 167 }
- }, 
+ },
  {
    "timestamp" : "2013-09-04T21:46:00.000Z",
    "result" : { "chars_added" : 78938.0, "edit_count" : 159 }
@@ -255,15 +258,15 @@ and put the following in there:
 ```json
 {
   "queryType": "topN",
-  "dataSource": "wikipedia", 
-  "granularity": "all", 
+  "dataSource": "wikipedia",
+  "granularity": "all",
   "dimension": "page",
   "metric": "edit_count",
   "threshold" : 10,
   "aggregations": [
     {"type": "longSum", "fieldName": "count", "name": "edit_count"}
-  ], 
-  "filter": { "type": "selector", "dimension": "country", "value": "United States" }, 
+  ],
+  "filter": { "type": "selector", "dimension": "country", "value": "United States" },
   "intervals": ["2012-10-01T00:00/2020-01-01T00"]
 }
 ```
