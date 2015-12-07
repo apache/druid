@@ -136,12 +136,12 @@ public class DirectDruidClientTest
         new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 0),
         client1
     );
-    serverSelector.addServer(queryableDruidServer1);
+    serverSelector.addServerAndUpdateSegment(queryableDruidServer1, serverSelector.getSegment());
     QueryableDruidServer queryableDruidServer2 = new QueryableDruidServer(
         new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 0),
         client2
     );
-    serverSelector.addServer(queryableDruidServer2);
+    serverSelector.addServerAndUpdateSegment(queryableDruidServer2, serverSelector.getSegment());
 
     TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder().dataSource("test").build();
     HashMap<String, List> context = Maps.newHashMap();
@@ -238,7 +238,7 @@ public class DirectDruidClientTest
         new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 0),
         client1
     );
-    serverSelector.addServer(queryableDruidServer1);
+    serverSelector.addServerAndUpdateSegment(queryableDruidServer1, serverSelector.getSegment());
 
     TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder().dataSource("test").build();
     HashMap<String, List> context = Maps.newHashMap();

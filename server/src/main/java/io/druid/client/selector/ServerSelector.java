@@ -25,6 +25,7 @@ import io.druid.timeline.DataSegment;
 
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  */
@@ -35,28 +36,30 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
 
   private final Set<QueryableDruidServer> servers = Sets.newHashSet();
 
-  private final DataSegment segment;
   private final TierSelectorStrategy strategy;
+
+  private final AtomicReference<DataSegment> segment;
 
   public ServerSelector(
       DataSegment segment,
       TierSelectorStrategy strategy
   )
   {
-    this.segment = segment;
+    this.segment = new AtomicReference<DataSegment>(segment);
     this.strategy = strategy;
   }
 
   public DataSegment getSegment()
   {
-    return segment;
+    return segment.get();
   }
 
-  public void addServer(
-      QueryableDruidServer server
+  public void addServerAndUpdateSegment(
+      QueryableDruidServer server, DataSegment segment
   )
   {
     synchronized (this) {
+      this.segment.set(segment);
       servers.add(server);
     }
   }
@@ -88,7 +91,7 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
         theServers.add(server);
       }
 
-      return strategy.pick(prioritizedServers, segment);
+      return strategy.pick(prioritizedServers, segment.get());
     }
   }
 }
