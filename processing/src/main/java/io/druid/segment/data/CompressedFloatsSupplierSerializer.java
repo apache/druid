@@ -19,8 +19,6 @@
 
 package io.druid.segment.data;
 
-import com.google.common.io.ByteStreams;
-import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
@@ -100,21 +98,21 @@ public class CompressedFloatsSupplierSerializer
     ++numInserted;
   }
 
-  public void closeAndConsolidate(OutputSupplier<? extends OutputStream> consolidatedOut) throws IOException
+  public void closeAndConsolidate(OutputStream consolidate) throws IOException
   {
     endBuffer.limit(endBuffer.position());
     endBuffer.rewind();
     flattener.write(StupidResourceHolder.create(endBuffer));
     endBuffer = null;
-    
+
     flattener.close();
 
-    try (OutputStream out = consolidatedOut.getOutput()) {
+    try (OutputStream out = consolidate) {
       out.write(CompressedFloatsIndexedSupplier.version);
       out.write(Ints.toByteArray(numInserted));
       out.write(Ints.toByteArray(sizePer));
       out.write(new byte[]{compression.getId()});
-      ByteStreams.copy(flattener.combineStreams(), out);
+      flattener.combineStreams().copyTo(out);
     }
   }
 }

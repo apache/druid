@@ -33,7 +33,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
-import com.google.common.io.ByteStreams;
+import com.google.common.io.ByteSink;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
@@ -511,10 +511,8 @@ public class IndexMaker
     outDir.mkdirs();
     final FileSmoosher v9Smoosher = new FileSmoosher(outDir);
 
-    ByteStreams.write(
-        Ints.toByteArray(IndexIO.V9_VERSION),
-        Files.newOutputStreamSupplier(new File(outDir, "version.bin"))
-    );
+    ByteSink fileSink = Files.asByteSink(new File(outDir, "version.bin"));
+    fileSink.write(Ints.toByteArray(IndexIO.V9_VERSION));
 
     final Map<String, Integer> dimIndexes = Maps.newHashMap();
     final Map<String, Iterable<String>> dimensionValuesLookup = Maps.newHashMap();

@@ -24,9 +24,8 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
-import com.google.common.io.ByteStreams;
+import com.google.common.io.ByteSink;
 import com.google.common.io.Files;
-import com.google.common.io.OutputSupplier;
 import com.metamx.common.FileUtils;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
@@ -263,12 +262,11 @@ public class JobHelper
   static void uploadJar(File jarFile, final Path path, final FileSystem fs) throws IOException
   {
     log.info("Uploading jar to path[%s]", path);
-    ByteStreams.copy(
-        Files.newInputStreamSupplier(jarFile),
-        new OutputSupplier<OutputStream>()
+    Files.asByteSource(jarFile).copyTo(
+        new ByteSink()
         {
           @Override
-          public OutputStream getOutput() throws IOException
+          public OutputStream openStream() throws IOException
           {
             return fs.create(path);
           }

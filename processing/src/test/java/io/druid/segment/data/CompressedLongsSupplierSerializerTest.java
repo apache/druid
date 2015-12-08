@@ -19,7 +19,7 @@
 
 package io.druid.segment.data;
 
-import com.google.common.io.OutputSupplier;
+import com.google.common.io.ByteSink;
 import io.druid.collections.ResourceHolder;
 import org.junit.Assert;
 import org.junit.Test;
@@ -64,16 +64,7 @@ public class CompressedLongsSupplierSerializerTest extends CompressionStrategyTe
     }
 
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    serializer.closeAndConsolidate(
-        new OutputSupplier<OutputStream>()
-        {
-          @Override
-          public OutputStream getOutput() throws IOException
-          {
-            return baos;
-          }
-        }
-    );
+    serializer.closeAndConsolidate(baos);
 
     IndexedLongs longs = CompressedLongsIndexedSupplier
         .fromByteBuffer(ByteBuffer.wrap(baos.toByteArray()), order)

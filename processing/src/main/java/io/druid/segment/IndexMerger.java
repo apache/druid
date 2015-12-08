@@ -31,9 +31,9 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
-import com.google.common.io.ByteStreams;
+import com.google.common.io.ByteSink;
+import com.google.common.io.FileWriteMode;
 import com.google.common.io.Files;
-import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import com.metamx.collections.bitmap.BitmapFactory;
@@ -44,13 +44,13 @@ import com.metamx.collections.spatial.RTree;
 import com.metamx.collections.spatial.split.LinearGutmanSplitStrategy;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
+import com.metamx.common.Pair;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.guava.MergeIterable;
 import com.metamx.common.guava.nary.BinaryFn;
 import com.metamx.common.io.smoosh.Smoosh;
 import com.metamx.common.logger.Logger;
 import io.druid.collections.CombiningIterable;
-import io.druid.common.guava.FileOutputSupplier;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.common.utils.JodaUtils;
 import io.druid.common.utils.SerializerUtils;
@@ -547,7 +547,7 @@ public class IndexMerger
     startTime = System.currentTimeMillis();
 
     IOPeon ioPeon = new TmpFileIOPeon();
-    ArrayList<FileOutputSupplier> dimOuts = Lists.newArrayListWithCapacity(mergedDimensions.size());
+    ArrayList<Pair<File, ByteSink>> dimOuts = Lists.newArrayListWithCapacity(mergedDimensions.size());
     Map<String, Integer> dimensionCardinalities = Maps.newHashMap();
     ArrayList<Map<String, IntBuffer>> dimConversions = Lists.newArrayListWithCapacity(indexes.size());
 
@@ -613,12 +613,13 @@ public class IndexMerger
       }
       dimensionCardinalities.put(dimension, count);
 
-      FileOutputSupplier dimOut = new FileOutputSupplier(IndexIO.makeDimFile(v8OutDir, dimension), true);
-      dimOuts.add(dimOut);
+      File file = IndexIO.makeDimFile(v8OutDir, dimension);
+      ByteSink dimOut = Files.asByteSink(file, FileWriteMode.APPEND);
+      dimOuts.add(Pair.of(file, dimOut));
 
       writer.close();
       serializerUtils.writeString(dimOut, dimension);
-      ByteStreams.copy(writer.combineStreams(), dimOut);
+      writer.combineStreams().copyTo(dimOut);
       for (int i = 0; i < indexes.size(); ++i) {
         DimValueConverter converter = converters[i];
         if (converter != null) {
@@ -785,13 +786,13 @@ public class IndexMerger
 
     final File timeFile = IndexIO.makeTimeFile(v8OutDir, IndexIO.BYTE_ORDER);
     timeFile.delete();
-    OutputSupplier<FileOutputStream> out = Files.newOutputStreamSupplier(timeFile, true);
-    timeWriter.closeAndConsolidate(out);
+    ByteSink out = Files.asByteSink(timeFile, FileWriteMode.APPEND);
+    timeWriter.closeAndConsolidate(out.openStream());
     IndexIO.checkFileSize(timeFile);
 
     for (int i = 0; i < mergedDimensions.size(); ++i) {
       forwardDimWriters.get(i).close();
-      ByteStreams.copy(forwardDimWriters.get(i).combineStreams(), dimOuts.get(i));
+      forwardDimWriters.get(i).combineStreams().copyTo(dimOuts.get(i).rhs);
     }
 
     for (MetricColumnSerializer metWriter : metWriters) {
@@ -811,17 +812,17 @@ public class IndexMerger
 
     final File invertedFile = new File(v8OutDir, "inverted.drd");
     Files.touch(invertedFile);
-    out = Files.newOutputStreamSupplier(invertedFile, true);
+    out = Files.asByteSink(invertedFile, FileWriteMode.APPEND);
 
     final File geoFile = new File(v8OutDir, "spatial.drd");
     Files.touch(geoFile);
-    OutputSupplier<FileOutputStream> spatialOut = Files.newOutputStreamSupplier(geoFile, true);
+    ByteSink spatialOut = Files.asByteSink(geoFile, FileWriteMode.APPEND);
 
     for (int i = 0; i < mergedDimensions.size(); ++i) {
       long dimStartTime = System.currentTimeMillis();
       String dimension = mergedDimensions.get(i);
 
-      File dimOutFile = dimOuts.get(i).getFile();
+      File dimOutFile = dimOuts.get(i).lhs;
       final MappedByteBuffer dimValsMapped = Files.map(dimOutFile);
 
       if (!dimension.equals(serializerUtils.readString(dimValsMapped))) {
@@ -890,7 +891,7 @@ public class IndexMerger
       writer.close();
 
       serializerUtils.writeString(out, dimension);
-      ByteStreams.copy(writer.combineStreams(), out);
+      writer.combineStreams().copyTo(out);
       ioPeon.cleanup();
 
       log.info("Completed dimension[%s] in %,d millis.", dimension, System.currentTimeMillis() - dimStartTime);
@@ -900,7 +901,7 @@ public class IndexMerger
         spatialWriter.close();
 
         serializerUtils.writeString(spatialOut, dimension);
-        ByteStreams.copy(spatialWriter.combineStreams(), spatialOut);
+        spatialWriter.combineStreams().copyTo(spatialOut);
         spatialIoPeon.cleanup();
       }
 
