@@ -136,7 +136,7 @@ In the directory, there should be a `runtime.properties` file with the following
 ```
 druid.host=localhost
 druid.port=8081
-druid.service=coordinator
+druid.service=druid/coordinator
 
 # The coordinator begins assignment operations after the start delay.
 # We override the default here to start things up faster for examples.
@@ -167,7 +167,7 @@ In the directory we just created, we should have the file `runtime.properties` w
 ```
 druid.host=localhost
 druid.port=8083
-druid.service=historical
+druid.service=druid/historical
 
 # We can only 1 scan segment in parallel with these configs.
 # Our intermediate buffer is also very small so longer topNs will be slow.
@@ -200,7 +200,7 @@ In the directory, there should be a `runtime.properties` file with the following
 ```
 druid.host=localhost
 druid.port=8082
-druid.service=broker
+druid.service=druid/broker
 
 druid.broker.cache.useCache=true
 druid.broker.cache.populateCache=true
@@ -267,7 +267,7 @@ The configurations are located in `config/realtime/runtime.properties` and shoul
 ```
 druid.host=localhost
 druid.port=8084
-druid.service=realtime
+druid.service=druid/realtime
 
 # We can only 1 scan segment in parallel with these configs.
 # Our intermediate buffer is also very small so longer topNs will be slow.
