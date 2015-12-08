@@ -47,7 +47,7 @@ public class OverlordProxyServlet extends ProxyServlet
   }
 
   @Override
-  protected URI rewriteURI(HttpServletRequest request)
+  protected String rewriteTarget(HttpServletRequest request)
   {
     try {
       final Server indexer = selector.pick();
@@ -60,7 +60,7 @@ public class OverlordProxyServlet extends ProxyServlet
           request.getRequestURI(),
           request.getQueryString(),
           null
-      );
+      ).toString();
     }
     catch (URISyntaxException e) {
       throw Throwables.propagate(e);
