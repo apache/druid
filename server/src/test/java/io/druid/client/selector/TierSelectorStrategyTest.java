@@ -130,7 +130,7 @@ public class TierSelectorStrategyTest
         tierSelectorStrategy
     );
     for (QueryableDruidServer server : servers) {
-      serverSelector.addServer(server);
+      serverSelector.addServerAndUpdateSegment(server, serverSelector.getSegment());
     }
     Assert.assertEquals(expectedSelection, serverSelector.pick());
   }
