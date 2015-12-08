@@ -47,6 +47,6 @@ public class SingleServerInventoryProvider implements ServerInventoryViewProvide
   @Override
   public ServerInventoryView get()
   {
-    return new SingleServerInventoryView(zkPaths, curator, jsonMapper, Predicates.<DataSegment>alwaysTrue());
+    return new SingleServerInventoryView(zkPaths, curator, jsonMapper);
   }
 }

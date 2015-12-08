@@ -21,37 +21,25 @@ package io.druid.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
-import com.google.common.base.Predicates;
-import com.google.common.collect.MapMaker;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.guice.ManageLifecycle;
-import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;
 
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Executor;
-
 /**
  */
 @ManageLifecycle
-public class SingleServerInventoryView extends ServerInventoryView<DataSegment> implements FilteredServerView
+public class SingleServerInventoryView extends ServerInventoryView<DataSegment>
 {
   private static final EmittingLogger log = new EmittingLogger(SingleServerInventoryView.class);
-
-  final private ConcurrentMap<SegmentCallback, Predicate<DataSegment>> segmentPredicates = new MapMaker().makeMap();
-  private final Predicate<DataSegment> defaultFilter;
 
   @Inject
   public SingleServerInventoryView(
       final ZkPathsConfig zkPaths,
       final CuratorFramework curator,
-      final ObjectMapper jsonMapper,
-      final Predicate<DataSegment> defaultFilter
+      final ObjectMapper jsonMapper
   )
   {
     super(
@@ -60,11 +48,10 @@ public class SingleServerInventoryView extends ServerInventoryView<DataSegment> 
         zkPaths.getServedSegmentsPath(),
         curator,
         jsonMapper,
-        new TypeReference<DataSegment>(){}
+        new TypeReference<DataSegment>()
+        {
+        }
     );
-
-    Preconditions.checkNotNull(defaultFilter);
-    this.defaultFilter = defaultFilter;
   }
 
   @Override
@@ -72,10 +59,7 @@ public class SingleServerInventoryView extends ServerInventoryView<DataSegment> 
       DruidServer container, String inventoryKey, DataSegment inventory
   )
   {
-    Predicate<DataSegment> predicate = Predicates.or(defaultFilter, Predicates.or(segmentPredicates.values()));
-    if(predicate.apply(inventory)) {
-      addSingleInventory(container, inventory);
-    }
+    addSingleInventory(container, inventory);
     return container;
   }
 
@@ -92,59 +76,5 @@ public class SingleServerInventoryView extends ServerInventoryView<DataSegment> 
   {
     removeSingleInventory(container, inventoryKey);
     return container;
-  }
-
-  @Override
-  public void registerSegmentCallback(
-      final Executor exec, final SegmentCallback callback, final Predicate<DataSegment> filter
-  )
-  {
-    segmentPredicates.put(callback, filter);
-    registerSegmentCallback(
-        exec, new SegmentCallback()
-        {
-          @Override
-          public CallbackAction segmentAdded(
-              DruidServerMetadata server, DataSegment segment
-          )
-          {
-            final CallbackAction action;
-            if(filter.apply(segment)) {
-              action = callback.segmentAdded(server, segment);
-              if (action.equals(CallbackAction.UNREGISTER)) {
-                segmentPredicates.remove(callback);
-              }
-            } else {
-              action = CallbackAction.CONTINUE;
-            }
-            return action;
-          }
-
-          @Override
-          public CallbackAction segmentRemoved(
-              DruidServerMetadata server, DataSegment segment
-          )
-          {
-            {
-              final CallbackAction action;
-              if(filter.apply(segment)) {
-                action = callback.segmentRemoved(server, segment);
-                if (action.equals(CallbackAction.UNREGISTER)) {
-                  segmentPredicates.remove(callback);
-                }
-              } else {
-                action = CallbackAction.CONTINUE;
-              }
-              return action;
-            }
-          }
-
-          @Override
-          public CallbackAction segmentViewInitialized()
-          {
-            return callback.segmentViewInitialized();
-          }
-        }
-    );
   }
 }

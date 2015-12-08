@@ -26,6 +26,7 @@ import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import io.druid.cli.QueryJettyServerInitializer;
 import io.druid.client.cache.CacheConfig;
+import io.druid.client.coordinator.CoordinatorClient;
 import io.druid.metadata.MetadataSegmentPublisher;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.segment.realtime.FireDepartment;
@@ -36,6 +37,9 @@ import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.segment.realtime.firehose.ChatHandlerResource;
 import io.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import io.druid.segment.realtime.firehose.ServiceAnnouncingChatHandlerProvider;
+import io.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierConfig;
+import io.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierFactory;
+import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.QueryResource;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import org.eclipse.jetty.server.Server;
@@ -79,9 +83,19 @@ public class RealtimeModule implements Module
                          .to(NoopChatHandlerProvider.class).in(LazySingleton.class);
 
     JsonConfigProvider.bind(binder, "druid.realtime", RealtimeManagerConfig.class);
-    binder.bind(new TypeLiteral<List<FireDepartment>>(){})
+    binder.bind(
+        new TypeLiteral<List<FireDepartment>>()
+        {
+        }
+    )
           .toProvider(FireDepartmentsProvider.class)
           .in(LazySingleton.class);
+
+    JsonConfigProvider.bind(binder, "druid.segment.handoff", CoordinatorBasedSegmentHandoffNotifierConfig.class);
+    binder.bind(SegmentHandoffNotifierFactory.class)
+          .to(CoordinatorBasedSegmentHandoffNotifierFactory.class)
+          .in(LazySingleton.class);
+    binder.bind(CoordinatorClient.class).in(LazySingleton.class);
 
     JsonConfigProvider.bind(binder, "druid.realtime.cache", CacheConfig.class);
     binder.install(new CacheModule());

@@ -257,6 +257,16 @@ This config is used to find the [Indexing Service](../design/indexing-service.ht
 |--------|-----------|-------|
 |`druid.selectors.indexing.serviceName`|The druid.service name of the indexing service Overlord node. To start the Overlord with a different name, set it with this property. |druid/overlord|
 
+
+### Coordinator Discovery
+
+This config is used to find the [Coordinator](../design/coordinator.html) using Curator service discovery. This config is used by the realtime indexing nodes to get information about the segments loaded in the cluster.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.selectors.coordinator.serviceName`|The druid.service name of the coordinator node. To start the Coordinator with a different name, set it with this property. |druid/coordinator|
+
+
 ### Announcing Segments
 
 You can optionally configure how to announce and unannounce Znodes in ZooKeeper (using Curator). For normal operations you do not need to override any of these configs.

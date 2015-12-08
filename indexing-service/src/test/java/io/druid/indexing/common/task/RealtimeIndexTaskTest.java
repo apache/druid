@@ -25,11 +25,13 @@ import com.google.api.client.util.Sets;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.Granularity;
 import com.metamx.common.ISE;
+import com.metamx.common.Pair;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
 import com.metamx.emitter.EmittingLogger;
@@ -60,7 +62,6 @@ import io.druid.indexing.test.TestDataSegmentAnnouncer;
 import io.druid.indexing.test.TestDataSegmentKiller;
 import io.druid.indexing.test.TestDataSegmentPusher;
 import io.druid.indexing.test.TestIndexerMetadataStorageCoordinator;
-import io.druid.indexing.test.TestServerView;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.DefaultQueryRunnerFactoryConglomerate;
 import io.druid.query.Druids;
@@ -72,6 +73,7 @@ import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryWatcher;
 import io.druid.query.Result;
+import io.druid.query.SegmentDescriptor;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -90,9 +92,10 @@ import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.firehose.EventReceiverFirehoseFactory;
 import io.druid.segment.realtime.firehose.NoopChatHandlerProvider;
+import io.druid.segment.realtime.plumber.SegmentHandoffNotifier;
+import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.metrics.EventReceiverFirehoseRegister;
-import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Period;
@@ -107,7 +110,9 @@ import java.io.File;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Callable;
+import java.util.concurrent.Executor;
 
 public class RealtimeIndexTaskTest
 {
@@ -136,6 +141,8 @@ public class RealtimeIndexTaskTest
 
   private DateTime now;
   private ListeningExecutorService taskExec;
+  private Map<SegmentDescriptor, Pair<Executor, Runnable>> handOffCallbacks;
+  private SegmentHandoffNotifierFactory handoffNotifierFactory;
 
   @Before
   public void setUp()
@@ -204,9 +211,10 @@ public class RealtimeIndexTaskTest
     Assert.assertEquals(2, countEvents(task));
 
     // Simulate handoff.
-    for (DataSegment segment : mdc.getPublished()) {
-      ((TestServerView) taskToolbox.getNewSegmentServerView()).segmentAdded(dummyServer, segment);
+    for(Pair<Executor, Runnable> executorRunnablePair : handOffCallbacks.values()){
+      executorRunnablePair.lhs.execute(executorRunnablePair.rhs);
     }
+    handOffCallbacks.clear();
 
     // Wait for the task to finish.
     final TaskStatus taskStatus = statusFuture.get();
@@ -294,9 +302,10 @@ public class RealtimeIndexTaskTest
       Assert.assertEquals(2, countEvents(task2));
 
       // Simulate handoff.
-      for (DataSegment segment : mdc.getPublished()) {
-        ((TestServerView) taskToolbox.getNewSegmentServerView()).segmentAdded(dummyServer, segment);
+      for(Pair<Executor, Runnable> executorRunnablePair : handOffCallbacks.values()){
+        executorRunnablePair.lhs.execute(executorRunnablePair.rhs);
       }
+      handOffCallbacks.clear();
 
       // Wait for the task to finish.
       final TaskStatus taskStatus = statusFuture.get();
@@ -485,6 +494,42 @@ public class RealtimeIndexTaskTest
             )
         )
     );
+    handOffCallbacks = Maps.newConcurrentMap();
+    handoffNotifierFactory = new SegmentHandoffNotifierFactory()
+    {
+      @Override
+      public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource)
+      {
+        return new SegmentHandoffNotifier()
+        {
+          @Override
+          public boolean registerSegmentHandoffCallback(
+              SegmentDescriptor descriptor, Executor exec, Runnable handOffRunnable
+          )
+          {
+            handOffCallbacks.put(descriptor, new Pair<>(exec, handOffRunnable));
+            return true;
+          }
+
+          @Override
+          public void start()
+          {
+            //Noop
+          }
+
+          @Override
+          public void stop()
+          {
+            //Noop
+          }
+
+          Map<SegmentDescriptor, Pair<Executor, Runnable>> getHandOffCallbacks()
+          {
+            return handOffCallbacks;
+          }
+        };
+      }
+    };
     final TestUtils testUtils = new TestUtils();
     final TaskToolboxFactory toolboxFactory = new TaskToolboxFactory(
         taskConfig,
@@ -495,7 +540,7 @@ public class RealtimeIndexTaskTest
         null, // DataSegmentMover
         null, // DataSegmentArchiver
         new TestDataSegmentAnnouncer(),
-        new TestServerView(),
+        handoffNotifierFactory,
         conglomerate,
         MoreExecutors.sameThreadExecutor(), // queryExecutorService
         EasyMock.createMock(MonitorScheduler.class),

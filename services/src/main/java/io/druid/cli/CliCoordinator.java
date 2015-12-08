@@ -29,6 +29,7 @@ import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.logger.Logger;
 import io.airlift.airline.Command;
 import io.druid.audit.AuditManager;
+import io.druid.client.CoordinatorServerView;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.guice.ConfigProvider;
 import io.druid.guice.Jerseys;
@@ -119,6 +120,7 @@ public class CliCoordinator extends ServerRunnable
                   .in(ManageLifecycle.class);
 
             binder.bind(IndexingServiceClient.class).in(LazySingleton.class);
+            binder.bind(CoordinatorServerView.class).in(LazySingleton.class);
 
             binder.bind(DruidCoordinator.class);
 
@@ -138,6 +140,8 @@ public class CliCoordinator extends ServerRunnable
             Jerseys.addResource(binder, IntervalsResource.class);
 
             LifecycleModule.register(binder, Server.class);
+            LifecycleModule.register(binder, DatasourcesResource.class);
+
           }
 
           @Provides
