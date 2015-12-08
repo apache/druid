@@ -295,7 +295,7 @@ public class RealtimePlumberSchoolTest
     EasyMock.expect(row.getTimestampFromEpoch()).andReturn(0L);
     EasyMock.expect(row.getDimensions()).andReturn(new ArrayList<String>());
     EasyMock.replay(row);
-    plumber.add(row, Committers.supplierOf(Committers.nil()));
+    plumber.add(row, Suppliers.ofInstance(Committers.nil()));
     plumber.persist(
         Committers.supplierFromRunnable(
             new Runnable()

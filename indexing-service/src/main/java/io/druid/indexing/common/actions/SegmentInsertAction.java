@@ -20,7 +20,6 @@
 package io.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableSet;
@@ -42,21 +41,45 @@ import java.util.Set;
  */
 public class SegmentInsertAction implements TaskAction<Set<DataSegment>>
 {
-  @JsonIgnore
   private final Set<DataSegment> segments;
+  private final Object oldCommitMetadata;
+  private final Object newCommitMetadata;
+
+  public SegmentInsertAction(
+      Set<DataSegment> segments
+  )
+  {
+    this(segments, null, null);
+  }
 
   @JsonCreator
   public SegmentInsertAction(
-      @JsonProperty("segments") Set<DataSegment> segments
+      @JsonProperty("segments") Set<DataSegment> segments,
+      @JsonProperty("oldCommitMetadata") Object oldCommitMetadata,
+      @JsonProperty("newCommitMetadata") Object newCommitMetadata
   )
   {
     this.segments = ImmutableSet.copyOf(segments);
+    this.oldCommitMetadata = oldCommitMetadata;
+    this.newCommitMetadata = newCommitMetadata;
   }
 
   @JsonProperty
   public Set<DataSegment> getSegments()
   {
     return segments;
+  }
+
+  @JsonProperty
+  public Object getOldCommitMetadata()
+  {
+    return oldCommitMetadata;
+  }
+
+  @JsonProperty
+  public Object getNewCommitMetadata()
+  {
+    return newCommitMetadata;
   }
 
   public TypeReference<Set<DataSegment>> getReturnTypeReference()
@@ -69,9 +92,18 @@ public class SegmentInsertAction implements TaskAction<Set<DataSegment>>
   @Override
   public Set<DataSegment> perform(Task task, TaskActionToolbox toolbox) throws IOException
   {
+    // TODO: It's possible that we lose our locks after calling this. This should be OK if we're using commitMetadata.
+    // TODO: Although, of course, that's not always used...
     toolbox.verifyTaskLocks(task, segments);
 
-    final Set<DataSegment> retVal = toolbox.getIndexerMetadataStorageCoordinator().announceHistoricalSegments(segments);
+    // TODO: I'm pretty sure the attempt at transactionality is foiled by:
+    // TODO:  - a zombie task can clobber a good segment on deep storage
+    // TODO:  - announceHistoricalSegments will silently do nothing if one already exists with the same id
+    final Set<DataSegment> retVal = toolbox.getIndexerMetadataStorageCoordinator().announceHistoricalSegments(
+        segments,
+        oldCommitMetadata,
+        newCommitMetadata
+    );
 
     // Emit metrics
     final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder()

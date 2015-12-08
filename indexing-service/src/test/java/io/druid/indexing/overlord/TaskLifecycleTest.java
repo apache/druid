@@ -38,9 +38,7 @@ import com.metamx.common.Granularity;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Comparators;
 import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.core.Event;
 import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceEventBuilder;
 import com.metamx.metrics.Monitor;
 import com.metamx.metrics.MonitorScheduler;
 import io.druid.client.FilteredServerView;
@@ -69,7 +67,6 @@ import io.druid.indexing.common.task.AbstractFixedIntervalTask;
 import io.druid.indexing.common.task.IndexTask;
 import io.druid.indexing.common.task.KillTask;
 import io.druid.indexing.common.task.RealtimeIndexTask;
-import io.druid.indexing.common.task.RealtimeIndexTaskTest;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
 import io.druid.indexing.overlord.config.TaskQueueConfig;
@@ -100,6 +97,7 @@ import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentTest;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
@@ -223,20 +221,7 @@ public class TaskLifecycleTest
 
   private static ServiceEmitter newMockEmitter()
   {
-    return new ServiceEmitter(null, null, null)
-    {
-      @Override
-      public void emit(Event event)
-      {
-
-      }
-
-      @Override
-      public void emit(ServiceEventBuilder builder)
-      {
-
-      }
-    };
+    return new NoopServiceEmitter();
   }
 
   private static InputRow IR(String dt, String dim1, String dim2, float met)

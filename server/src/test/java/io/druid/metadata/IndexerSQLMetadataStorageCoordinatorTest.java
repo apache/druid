@@ -27,11 +27,14 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
 import io.druid.timeline.partition.NoneShardSpec;
+import org.hamcrest.CoreMatchers;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableMessageMatcher;
+import org.junit.rules.ExpectedException;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
@@ -42,9 +45,13 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+
+  @Rule
+  public ExpectedException thrown = ExpectedException.none();
+
   private final ObjectMapper mapper = new DefaultObjectMapper();
   private final DataSegment defaultSegment = new DataSegment(
-      "dataSource",
+      "fooDataSource",
       Interval.parse("2015-01-01T00Z/2015-01-02T00Z"),
       "version",
       ImmutableMap.<String, Object>of(),
@@ -56,7 +63,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   );
 
   private final DataSegment defaultSegment2 = new DataSegment(
-      "dataSource",
+      "fooDataSource",
       Interval.parse("2015-01-01T00Z/2015-01-02T00Z"),
       "version",
       ImmutableMap.<String, Object>of(),
@@ -88,6 +95,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   {
     derbyConnector = derbyConnectorRule.getConnector();
     mapper.registerSubtypes(LinearShardSpec.class);
+    derbyConnector.createDataSourceTable();
     derbyConnector.createTaskTables();
     derbyConnector.createSegmentTable();
     coordinator = new IndexerSQLMetadataStorageCoordinator(
@@ -132,6 +140,113 @@ public class IndexerSQLMetadataStorageCoordinatorTest
             "payload",
             defaultSegment.getIdentifier()
         )
+    );
+  }
+
+  @Test
+  public void testTransactionalAnnounceSuccess() throws IOException
+  {
+    // Insert first segment.
+    coordinator.announceHistoricalSegments(
+        ImmutableSet.of(defaultSegment),
+        null,
+        ImmutableMap.of("foo", "bar")
+    );
+
+    Assert.assertArrayEquals(
+        mapper.writeValueAsString(defaultSegment).getBytes("UTF-8"),
+        derbyConnector.lookup(
+            derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
+            "id",
+            "payload",
+            defaultSegment.getIdentifier()
+        )
+    );
+
+    // Insert second segment.
+    coordinator.announceHistoricalSegments(
+        ImmutableSet.of(defaultSegment2),
+        ImmutableMap.of("foo", "bar"),
+        ImmutableMap.of("foo", "baz")
+    );
+
+    Assert.assertArrayEquals(
+        mapper.writeValueAsString(defaultSegment2).getBytes("UTF-8"),
+        derbyConnector.lookup(
+            derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
+            "id",
+            "payload",
+            defaultSegment2.getIdentifier()
+        )
+    );
+
+    // Examine metadata.
+    Assert.assertEquals(
+        ImmutableMap.of("foo", "baz"),
+        coordinator.getDataSourceMetadata("fooDataSource")
+    );
+  }
+
+  @Test
+  public void testTransactionalAnnounceFailDbNullWantNotNull() throws IOException
+  {
+    thrown.expectCause(
+        CoreMatchers.allOf(
+            CoreMatchers.instanceOf(RuntimeException.class),
+            ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("dataSource metadata transaction check failed"))
+        )
+    );
+
+    coordinator.announceHistoricalSegments(
+        ImmutableSet.of(defaultSegment),
+        ImmutableMap.of("foo", "bar"),
+        ImmutableMap.of("foo", "baz")
+    );
+  }
+
+  @Test
+  public void testTransactionalAnnounceFailDbNotNullWantNull() throws IOException
+  {
+    coordinator.announceHistoricalSegments(
+        ImmutableSet.of(defaultSegment),
+        null,
+        ImmutableMap.of("foo", "baz")
+    );
+
+    thrown.expectCause(
+        CoreMatchers.allOf(
+            CoreMatchers.instanceOf(RuntimeException.class),
+            ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("dataSource metadata transaction check failed"))
+        )
+    );
+
+    coordinator.announceHistoricalSegments(
+        ImmutableSet.of(defaultSegment2),
+        null,
+        ImmutableMap.of("foo", "baz")
+    );
+  }
+
+  @Test
+  public void testTransactionalAnnounceFailDbNotNullWantDifferent() throws IOException
+  {
+    coordinator.announceHistoricalSegments(
+        ImmutableSet.of(defaultSegment),
+        null,
+        ImmutableMap.of("foo", "baz")
+    );
+
+    thrown.expectCause(
+        CoreMatchers.allOf(
+            CoreMatchers.instanceOf(RuntimeException.class),
+            ThrowableMessageMatcher.hasMessage(CoreMatchers.startsWith("dataSource metadata transaction check failed"))
+        )
+    );
+
+    coordinator.announceHistoricalSegments(
+        ImmutableSet.of(defaultSegment2),
+        ImmutableMap.of("foo", "qux"),
+        ImmutableMap.of("foo", "baz")
     );
   }
 
@@ -191,7 +306,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableList.of(defaultSegment3),
         coordinator.getUsedSegmentsForIntervals(
             defaultSegment.getDataSource(),
-            ImmutableList.of(Interval.parse("2015-01-03T00Z/2015-01-03T05Z"), Interval.parse("2015-01-03T09Z/2015-01-04T00Z"))
+            ImmutableList.of(
+                Interval.parse("2015-01-03T00Z/2015-01-03T05Z"),
+                Interval.parse("2015-01-03T09Z/2015-01-04T00Z")
+            )
         )
     );
   }
