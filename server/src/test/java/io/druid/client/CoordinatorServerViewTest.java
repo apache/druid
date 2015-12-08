@@ -1,18 +1,18 @@
 /*
  * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements. See the NOTICE file
+ * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership. Metamarkets licenses this file
+ * regarding copyright ownership.  Metamarkets licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at
+ * with the License.  You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *   http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the
+ * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -20,8 +20,6 @@
 package io.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.smile.SmileFactory;
-import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
 import com.google.common.base.Function;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
@@ -30,27 +28,19 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.metamx.common.Pair;
-import com.metamx.http.client.HttpClient;
-import io.druid.client.selector.HighestPriorityTierSelectorStrategy;
-import io.druid.client.selector.RandomServerSelectorStrategy;
-import io.druid.client.selector.ServerSelector;
 import io.druid.curator.CuratorTestBase;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.query.QueryToolChestWarehouse;
-import io.druid.query.QueryWatcher;
 import io.druid.query.TableDataSource;
+import io.druid.segment.Segment;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.initialization.ZkPathsConfig;
-import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.PartitionHolder;
-import io.druid.timeline.partition.SingleElementPartitionChunk;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.zookeeper.CreateMode;
-import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
@@ -59,10 +49,11 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 
-public class BrokerServerViewTest extends CuratorTestBase
+public class CoordinatorServerViewTest extends CuratorTestBase
 {
   private final ObjectMapper jsonMapper;
   private final ZkPathsConfig zkPathsConfig;
@@ -74,9 +65,9 @@ public class BrokerServerViewTest extends CuratorTestBase
   private CountDownLatch segmentRemovedLatch;
 
   private ServerInventoryView baseView;
-  private BrokerServerView brokerServerView;
+  private CoordinatorServerView overlordServerView;
 
-  public BrokerServerViewTest()
+  public CoordinatorServerViewTest()
   {
     jsonMapper = new DefaultObjectMapper();
     zkPathsConfig = new ZkPathsConfig();
@@ -116,7 +107,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
 
-    TimelineLookup timeline = brokerServerView.getTimeline(new TableDataSource("test_broker_server_view"));
+    TimelineLookup timeline = overlordServerView.getTimeline(new TableDataSource("test_overlord_server_view"));
     List<TimelineObjectHolder> serverLookupRes = (List<TimelineObjectHolder>) timeline.lookup(
         new Interval(
             "2014-10-20T00:00:00Z/P1D"
@@ -124,19 +115,17 @@ public class BrokerServerViewTest extends CuratorTestBase
     );
     Assert.assertEquals(1, serverLookupRes.size());
 
-    TimelineObjectHolder<String, ServerSelector> actualTimelineObjectHolder = serverLookupRes.get(0);
+    TimelineObjectHolder<String, SegmentLoadInfo> actualTimelineObjectHolder = serverLookupRes.get(0);
     Assert.assertEquals(new Interval("2014-10-20T00:00:00Z/P1D"), actualTimelineObjectHolder.getInterval());
     Assert.assertEquals("v1", actualTimelineObjectHolder.getVersion());
 
-    PartitionHolder<ServerSelector> actualPartitionHolder = actualTimelineObjectHolder.getObject();
+    PartitionHolder<SegmentLoadInfo> actualPartitionHolder = actualTimelineObjectHolder.getObject();
     Assert.assertTrue(actualPartitionHolder.isComplete());
     Assert.assertEquals(1, Iterables.size(actualPartitionHolder));
 
-    ServerSelector selector = ((SingleElementPartitionChunk<ServerSelector>) actualPartitionHolder.iterator()
-                                                                                                  .next()).getObject();
-    Assert.assertFalse(selector.isEmpty());
-    Assert.assertEquals(segment, selector.getSegment());
-    Assert.assertEquals(druidServer, selector.pick().getServer());
+    SegmentLoadInfo segmentLoadInfo = actualPartitionHolder.iterator().next().getObject();
+    Assert.assertFalse(segmentLoadInfo.isEmpty());
+    Assert.assertEquals(druidServer.getMetadata(), Iterables.getOnlyElement(segmentLoadInfo.toImmutableSegmentLoadInfo().getServers()));
 
     unannounceSegmentForServer(druidServer, segment);
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
@@ -205,7 +194,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
 
-    TimelineLookup timeline = brokerServerView.getTimeline(new TableDataSource("test_broker_server_view"));
+    TimelineLookup timeline = overlordServerView.getTimeline(new TableDataSource("test_overlord_server_view"));
     assertValues(
         Arrays.asList(
             createExpected("2011-04-01/2011-04-02", "v3", druidServers.get(4), segments.get(4)),
@@ -226,7 +215,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     // renew segmentRemovedLatch since we still have 4 segments to unannounce
     segmentRemovedLatch = new CountDownLatch(4);
 
-    timeline = brokerServerView.getTimeline(new TableDataSource("test_broker_server_view"));
+    timeline = overlordServerView.getTimeline(new TableDataSource("test_overlord_server_view"));
     assertValues(
         Arrays.asList(
             createExpected("2011-04-01/2011-04-02", "v3", druidServers.get(4), segments.get(4)),
@@ -297,20 +286,18 @@ public class BrokerServerViewTest extends CuratorTestBase
 
     for (int i = 0; i < expected.size(); ++i) {
       Pair<Interval, Pair<String, Pair<DruidServer, DataSegment>>> expectedPair = expected.get(i);
-      TimelineObjectHolder<String, ServerSelector> actualTimelineObjectHolder = actual.get(i);
+      TimelineObjectHolder<String,SegmentLoadInfo> actualTimelineObjectHolder = actual.get(i);
 
       Assert.assertEquals(expectedPair.lhs, actualTimelineObjectHolder.getInterval());
       Assert.assertEquals(expectedPair.rhs.lhs, actualTimelineObjectHolder.getVersion());
 
-      PartitionHolder<ServerSelector> actualPartitionHolder = actualTimelineObjectHolder.getObject();
+      PartitionHolder<SegmentLoadInfo> actualPartitionHolder = actualTimelineObjectHolder.getObject();
       Assert.assertTrue(actualPartitionHolder.isComplete());
       Assert.assertEquals(1, Iterables.size(actualPartitionHolder));
 
-      ServerSelector selector = ((SingleElementPartitionChunk<ServerSelector>) actualPartitionHolder.iterator()
-                                                                                                    .next()).getObject();
-      Assert.assertFalse(selector.isEmpty());
-      Assert.assertEquals(expectedPair.rhs.rhs.lhs, selector.pick().getServer());
-      Assert.assertEquals(expectedPair.rhs.rhs.rhs, selector.getSegment());
+      SegmentLoadInfo segmentLoadInfo =  actualPartitionHolder.iterator().next().getObject();
+      Assert.assertFalse(segmentLoadInfo.isEmpty());
+      Assert.assertEquals(expectedPair.rhs.rhs.lhs.getMetadata(),Iterables.getOnlyElement(segmentLoadInfo.toImmutableSegmentLoadInfo().getServers()));
     }
   }
 
@@ -356,14 +343,8 @@ public class BrokerServerViewTest extends CuratorTestBase
       }
     };
 
-    brokerServerView = new BrokerServerView(
-        EasyMock.createMock(QueryToolChestWarehouse.class),
-        EasyMock.createMock(QueryWatcher.class),
-        getSmileMapper(),
-        EasyMock.createMock(HttpClient.class),
-        baseView,
-        new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
-        new NoopServiceEmitter()
+    overlordServerView = new CoordinatorServerView(
+        baseView
     );
 
     baseView.start();
@@ -385,7 +366,7 @@ public class BrokerServerViewTest extends CuratorTestBase
   private DataSegment dataSegmentWithIntervalAndVersion(String intervalStr, String version)
   {
     return DataSegment.builder()
-                      .dataSource("test_broker_server_view")
+                      .dataSource("test_overlord_server_view")
                       .interval(new Interval(intervalStr))
                       .loadSpec(
                           ImmutableMap.<String, Object>of(
@@ -402,16 +383,6 @@ public class BrokerServerViewTest extends CuratorTestBase
                       .binaryVersion(9)
                       .size(0)
                       .build();
-  }
-
-  public ObjectMapper getSmileMapper()
-  {
-    final SmileFactory smileFactory = new SmileFactory();
-    smileFactory.configure(SmileGenerator.Feature.ENCODE_BINARY_AS_7BIT, false);
-    smileFactory.delegateToTextual(true);
-    final ObjectMapper retVal = new DefaultObjectMapper(smileFactory);
-    retVal.getFactory().setCodec(retVal);
-    return retVal;
   }
 
   @After
