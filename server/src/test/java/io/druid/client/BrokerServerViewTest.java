@@ -374,6 +374,11 @@ public class BrokerServerViewTest extends CuratorTestBase
     final String zNodePathAnnounce = ZKPaths.makePath(announcementsPath, server.getHost());
     final String zNodePathSegment = ZKPaths.makePath(inventoryPath, server.getHost());
 
+    /*
+     * Explicitly check whether the zNodes we are about to create exist or not,
+     * if exist, delete them to make sure we have a clean state on zookeeper.
+     * Address issue: https://github.com/druid-io/druid/issues/1512
+     */
     if (curator.checkExists().forPath(zNodePathAnnounce) != null) {
       curator.delete().guaranteed().forPath(zNodePathAnnounce);
     }
