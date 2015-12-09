@@ -45,6 +45,6 @@ public class BatchServerInventoryViewProvider implements ServerInventoryViewProv
   @Override
   public BatchServerInventoryView get()
   {
-    return new BatchServerInventoryView(zkPaths, curator, jsonMapper, Predicates.<DataSegment>alwaysTrue());
+    return new BatchServerInventoryView(zkPaths, curator, jsonMapper);
   }
 }

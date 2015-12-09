@@ -191,6 +191,18 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
     }
   }
 
+  @Override
+  public Iterable<TimelineObjectHolder<VersionType, ObjectType>> lookupWithIncompletePartitions(Interval interval)
+  {
+    try {
+      lock.readLock().lock();
+      return lookup(interval, true);
+    }
+    finally {
+      lock.readLock().unlock();
+    }
+  }
+
   public Set<TimelineObjectHolder<VersionType, ObjectType>> findOvershadowed()
   {
     try {

@@ -22,7 +22,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.metamx.emitter.service.ServiceEmitter;
-import io.druid.client.FilteredServerView;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.guice.annotations.Processing;
@@ -45,7 +44,7 @@ public class RealtimePlumberSchool implements PlumberSchool
   private final DataSegmentPusher dataSegmentPusher;
   private final DataSegmentAnnouncer segmentAnnouncer;
   private final SegmentPublisher segmentPublisher;
-  private final FilteredServerView serverView;
+  private final SegmentHandoffNotifierFactory handoffNotifierFactory;
   private final ExecutorService queryExecutorService;
   private final Cache cache;
   private final CacheConfig cacheConfig;
@@ -58,19 +57,19 @@ public class RealtimePlumberSchool implements PlumberSchool
       @JacksonInject DataSegmentPusher dataSegmentPusher,
       @JacksonInject DataSegmentAnnouncer segmentAnnouncer,
       @JacksonInject SegmentPublisher segmentPublisher,
-      @JacksonInject FilteredServerView serverView,
+      @JacksonInject SegmentHandoffNotifierFactory handoffNotifierFactory,
       @JacksonInject @Processing ExecutorService executorService,
       @JacksonInject Cache cache,
       @JacksonInject CacheConfig cacheConfig,
       @JacksonInject ObjectMapper objectMapper
-      )
+  )
   {
     this.emitter = emitter;
     this.conglomerate = conglomerate;
     this.dataSegmentPusher = dataSegmentPusher;
     this.segmentAnnouncer = segmentAnnouncer;
     this.segmentPublisher = segmentPublisher;
-    this.serverView = serverView;
+    this.handoffNotifierFactory = handoffNotifierFactory;
     this.queryExecutorService = executorService;
 
     this.cache = cache;
@@ -97,7 +96,7 @@ public class RealtimePlumberSchool implements PlumberSchool
         queryExecutorService,
         dataSegmentPusher,
         segmentPublisher,
-        serverView,
+        handoffNotifierFactory.createSegmentHandoffNotifier(schema.getDataSource()),
         cache,
         cacheConfig,
         objectMapper
@@ -110,7 +109,7 @@ public class RealtimePlumberSchool implements PlumberSchool
     Preconditions.checkNotNull(dataSegmentPusher, "must specify a segmentPusher to do this action.");
     Preconditions.checkNotNull(segmentAnnouncer, "must specify a segmentAnnouncer to do this action.");
     Preconditions.checkNotNull(segmentPublisher, "must specify a segmentPublisher to do this action.");
-    Preconditions.checkNotNull(serverView, "must specify a serverView to do this action.");
+    Preconditions.checkNotNull(handoffNotifierFactory, "must specify a handoffNotifierFactory to do this action.");
     Preconditions.checkNotNull(emitter, "must specify a serviceEmitter to do this action.");
   }
 }

@@ -34,6 +34,7 @@ import io.druid.curator.CuratorModule;
 import io.druid.curator.discovery.DiscoveryModule;
 import io.druid.guice.AWSModule;
 import io.druid.guice.AnnouncerModule;
+import io.druid.guice.CoordinatorDiscoveryModule;
 import io.druid.guice.DruidProcessingModule;
 import io.druid.guice.DruidSecondaryModule;
 import io.druid.guice.ExtensionsConfig;
@@ -391,6 +392,7 @@ public class Initialization
         new DerbyMetadataStorageDruidModule(),
         new JacksonConfigManagerModule(),
         new IndexingServiceDiscoveryModule(),
+        new CoordinatorDiscoveryModule(),
         new LocalDataStorageDruidModule(),
         new FirehoseModule(),
         new ParsersModule()
