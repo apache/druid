@@ -49,11 +49,22 @@ Returns the first matching group for the given regular expression.
 If there is no match, it returns the dimension value as is.
 
 ```json
-{ "type" : "regex", "expr" : <regular_expression> }
+{
+  "type" : "regex", "expr" : <regular_expression>,
+  "replaceMissingValues" : true,
+  "replaceMissingValuesWith" : "foobar"
+}
 ```
 
 For example, using `"expr" : "(\\w\\w\\w).*"` will transform
 `'Monday'`, `'Tuesday'`, `'Wednesday'` into `'Mon'`, `'Tue'`, `'Wed'`.
+
+If the `replaceMissingValues` property is true, the extraction function will transform dimension values that do not match the regex pattern to a user-specified String. Default value is `false`.
+
+The `replaceMissingValuesWith` property sets the String that unmatched dimension values will be replaced with, if `replaceMissingValues` is true. If `replaceMissingValuesWith` is not specified, unmatched dimension values will be replaced with nulls.
+
+For example, if `expr` is `"(a\w+)"` in the example JSON above, a regex that matches words starting with the letter `a`, the extraction function will convert a dimension value like `banana` to `foobar`.
+
 
 ### Partial Extraction Function
 
