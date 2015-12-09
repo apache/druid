@@ -39,7 +39,7 @@ import java.util.List;
 import java.util.Map;
 
 @JsonTypeName("map")
-public class MapLookupExtractor implements LookupExtractor
+public class MapLookupExtractor extends LookupExtractor
 {
   private final Map<String, String> map;
 
@@ -65,7 +65,7 @@ public class MapLookupExtractor implements LookupExtractor
   }
 
   @Override
-  public List<String> unApply(final String value)
+  public List<String> unapply(final String value)
   {
     return Lists.newArrayList(Maps.filterKeys(map, new Predicate<String>()
     {

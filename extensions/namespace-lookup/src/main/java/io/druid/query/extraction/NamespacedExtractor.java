@@ -37,7 +37,7 @@ import java.util.List;
  * In the event that an unknown namespace is passed, a simple reflective function is returned instead.
  */
 @JsonTypeName("namespace")
-public class NamespacedExtractor implements LookupExtractor
+public class NamespacedExtractor extends LookupExtractor
 {
   private static final byte CACHE_TYPE_ID = 0x05;
 
@@ -83,7 +83,7 @@ public class NamespacedExtractor implements LookupExtractor
   }
 
   @Override
-  public List<String> unApply(@NotNull String value)
+  public List<String> unapply(@NotNull String value)
   {
     return reverseExtractionFunction.apply(value);
   }

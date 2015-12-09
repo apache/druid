@@ -137,11 +137,11 @@ public class NamespacedExtractorTest
     for (int i = 0; i < 10; ++i) {
       final String val = UUID.randomUUID().toString();
       Assert.assertEquals(val, namespacedExtractor.apply(val));
-      Assert.assertEquals(Arrays.asList(val), namespacedExtractor.unApply(val));
+      Assert.assertEquals(Arrays.asList(val), namespacedExtractor.unapply(val));
     }
     Assert.assertEquals("", namespacedExtractor.apply(""));
     Assert.assertNull(namespacedExtractor.apply(null));
-    Assert.assertEquals(Collections.emptyList(), namespacedExtractor.unApply(null));
+    Assert.assertEquals(Collections.emptyList(), namespacedExtractor.unapply(null));
     Assert.assertEquals("The awesomeness", namespacedExtractor.apply("The awesomeness"));
   }
 
