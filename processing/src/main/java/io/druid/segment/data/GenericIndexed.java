@@ -35,9 +35,9 @@ import java.util.Iterator;
 /**
  * A generic, flat storage mechanism.  Use static methods fromArray() or fromIterable() to construct.  If input
  * is sorted, supports binary search index lookups.  If input is not sorted, only supports array-like index lookups.
- * 
+ *
  * V1 Storage Format:
- * 
+ *
  * byte 1: version (0x1)
  * byte 2 == 0x1 =&gt; allowReverseLookup
  * bytes 3-6 =&gt; numBytesUsed
@@ -66,48 +66,42 @@ public class GenericIndexed<T> implements Indexed<T>
     }
 
     boolean allowReverseLookup = true;
-    int count = 1;
-    T prevVal = objects.next();
-    while (objects.hasNext()) {
-      T next = objects.next();
-      if (!(strategy.compare(prevVal, next) < 0)) {
-        allowReverseLookup = false;
-      }
-      if (prevVal instanceof Closeable) {
-        CloseQuietly.close((Closeable) prevVal);
-      }
+    int count = 0;
 
-      prevVal = next;
-      ++count;
-    }
-    if (prevVal instanceof Closeable) {
-      CloseQuietly.close((Closeable) prevVal);
-    }
-
-    ByteArrayOutputStream headerBytes = new ByteArrayOutputStream(4 + (count * 4));
+    ByteArrayOutputStream headerBytes = new ByteArrayOutputStream();
     ByteArrayOutputStream valueBytes = new ByteArrayOutputStream();
-    int offset = 0;
-
     try {
-      headerBytes.write(Ints.toByteArray(count));
+      int offset = 0;
+      T prevVal = null;
+      do {
+        count++;
+        T next = objects.next();
+        if (allowReverseLookup && prevVal != null && !(strategy.compare(prevVal, next) < 0)) {
+          allowReverseLookup = false;
+        }
 
-      for (T object : objectsIterable) {
-        final byte[] bytes = strategy.toBytes(object);
+        final byte[] bytes = strategy.toBytes(next);
         offset += 4 + bytes.length;
         headerBytes.write(Ints.toByteArray(offset));
         valueBytes.write(Ints.toByteArray(bytes.length));
         valueBytes.write(bytes);
 
-        if (object instanceof Closeable) {
-          CloseQuietly.close((Closeable) object);
+        if (prevVal instanceof Closeable) {
+          CloseQuietly.close((Closeable) prevVal);
         }
+        prevVal = next;
+      } while (objects.hasNext());
+
+      if (prevVal instanceof Closeable) {
+        CloseQuietly.close((Closeable) prevVal);
       }
     }
     catch (IOException e) {
       throw new RuntimeException(e);
     }
 
-    ByteBuffer theBuffer = ByteBuffer.allocate(headerBytes.size() + valueBytes.size());
+    ByteBuffer theBuffer = ByteBuffer.allocate(Ints.BYTES + headerBytes.size() + valueBytes.size());
+    theBuffer.put(Ints.toByteArray(count));
     theBuffer.put(headerBytes.toByteArray());
     theBuffer.put(valueBytes.toByteArray());
     theBuffer.flip();
