@@ -192,7 +192,7 @@ public class InitializationTest
     final File tmpDir = temporaryFolder.newFolder();
     Assert.assertTrue("could not create missing folder", !tmpDir.exists() || tmpDir.delete());
     Assert.assertArrayEquals(
-        "Non-exist root extensionsDir should return emply array of File",
+        "Non-exist root extensionsDir should return an empty array of File",
         new File[]{},
         Initialization.getExtensionFilesToLoad(new ExtensionsConfig(){
           @Override
@@ -233,7 +233,7 @@ public class InitializationTest
     };
 
     Assert.assertArrayEquals(
-        "Empty root extensionsDir should return emply array of File",
+        "Empty root extensionsDir should return an empty array of File",
         new File[]{},
         Initialization.getExtensionFilesToLoad(config)
     );
