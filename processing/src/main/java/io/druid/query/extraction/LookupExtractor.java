@@ -25,23 +25,50 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "map", value = MapLookupExtractor.class)
 })
-public interface LookupExtractor
+public abstract class LookupExtractor
 {
   /**
    * Apply a particular lookup methodology to the input string
+   *
    * @param key The value to apply the lookup to. May not be null
+   *
    * @return The lookup, or null key cannot have the lookup applied to it and should be treated as missing.
    */
-  @Nullable String apply(@NotNull String key);
+  @Nullable
+  abstract String apply(@NotNull String key);
+
+  /**
+   * @param keys set of keys to apply lookup for each element
+   *
+   * @return Returns {@link Map} whose keys are the contents of {@code keys} and whose values are computed on demand using lookup function {@link #unapply(String)}
+   * or empty map if {@code values} is `null`
+   * User can override this method if there is a better way to perform bulk lookup
+   */
+
+  Map<String, String> applyAll(Iterable<String> keys)
+  {
+    if (keys == null) {
+      return Collections.emptyMap();
+    }
+    Map<String, String> map = new HashMap<>();
+    for (String key : keys) {
+      map.put(key, apply(key));
+    }
+    return map;
+  }
 
   /**
    * Provide the reverse mapping from a given value to a list of keys
+   *
    * @param value the value to apply the reverse lookup
    *              Null and empty are considered to be the same value = nullToEmpty(value)
    *
@@ -50,11 +77,35 @@ public interface LookupExtractor
    * returning an empty list implies that user want to ignore such a lookup value.
    * In the other hand returning a list with the null element implies user want to map the none existing value to the key null.
    */
-  List<String> unApply(String value);
+
+  abstract List<String> unapply(String value);
+
+  /**
+   * @param values Iterable of values for which will perform reverse lookup
+   *
+   * @return Returns {@link Map} whose keys are the contents of {@code values} and whose values are computed on demand using the reverse lookup function {@link #unapply(String)}
+   * or empty map if {@code values} is `null`
+   * User can override this method if there is a better way to perform bulk reverse lookup
+   */
+
+  Map<String, List<String>> unapplyAll(Iterable<String> values)
+  {
+    if (values == null) {
+      return Collections.emptyMap();
+    }
+    Map<String, List<String>> map = new HashMap<>();
+    for (String value : values) {
+      map.put(value, unapply(value));
+    }
+    return map;
+  }
 
   /**
    * Create a cache key for use in results caching
+   *
    * @return A byte array that can be used to uniquely identify if results of a prior lookup can use the cached values
    */
-  @NotNull byte[] getCacheKey();
+
+  @Nullable
+  abstract byte[] getCacheKey();
 }
