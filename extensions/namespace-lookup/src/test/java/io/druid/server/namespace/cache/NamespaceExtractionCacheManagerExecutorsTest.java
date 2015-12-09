@@ -85,10 +85,12 @@ public class NamespaceExtractionCacheManagerExecutorsTest
   private final AtomicLong numRuns = new AtomicLong(0L);
 
   @Before
-  public void setUp() throws IOException
+  public void setUp() throws Exception
   {
     final Path tmpDir = temporaryFolder.newFolder().toPath();
     lifecycle = new Lifecycle();
+    // Lifecycle stop is used to shut down executors. Start does nothing, so it's ok to call it here.
+    lifecycle.start();
     final URIExtractionNamespaceFunctionFactory factory = new URIExtractionNamespaceFunctionFactory(
         ImmutableMap.<String, SearchableVersionedDataFinder>of("file", new LocalFileTimestampVersionFinder())
     )
