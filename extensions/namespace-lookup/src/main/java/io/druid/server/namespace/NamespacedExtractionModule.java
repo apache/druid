@@ -66,6 +66,7 @@ public class NamespacedExtractionModule implements DruidModule
   private static final String TYPE_PREFIX = "druid.query.extraction.namespace.cache.type";
   private static final String STATIC_CONFIG_PREFIX = "druid.query.extraction.namespace";
   private final ConcurrentMap<String, Function<String, String>> fnCache = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, Function<String, List<String>>> reverseFnCache= new ConcurrentHashMap<>();
 
   @Override
   public List<? extends Module> getJacksonModules()
@@ -177,6 +178,13 @@ public class NamespacedExtractionModule implements DruidModule
   }
 
   @Provides
+  @Named("namespaceReverseExtractionFunctionCache")
+  public ConcurrentMap<String, Function<String, List<String>>> getReverseFnCache()
+  {
+    return reverseFnCache;
+  }
+
+  @Provides
   @Named("dimExtractionNamespace")
   @LazySingleton
   public Function<String, Function<String, String>> getFunctionMaker(
@@ -193,6 +201,29 @@ public class NamespacedExtractionModule implements DruidModule
         Function<String, String> fn = fnCache.get(namespace);
         if (fn == null) {
           throw new IAE("Namespace [%s] not found", namespace);
+        }
+        return fn;
+      }
+    };
+  }
+
+  @Provides
+  @Named("dimReverseExtractionNamespace")
+  @LazySingleton
+  public Function<String, Function<String, List<String>>> getReverseFunctionMaker(
+      @Named("namespaceReverseExtractionFunctionCache")
+      final ConcurrentMap<String, Function<String, List<String>>> reverseFn
+  )
+  {
+    return new Function<String, Function<String, List<String>>>()
+    {
+      @Nullable
+      @Override
+      public Function<String, List<String>> apply(final String namespace)
+      {
+        Function<String, List<String>> fn = reverseFn.get(namespace);
+        if (fn == null) {
+          throw new IAE("Namespace reverse function [%s] not found", namespace);
         }
         return fn;
       }
