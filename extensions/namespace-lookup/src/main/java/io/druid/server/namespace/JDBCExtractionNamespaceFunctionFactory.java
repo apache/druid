@@ -20,7 +20,10 @@
 package io.druid.server.namespace;
 
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.metamx.common.Pair;
 import io.druid.common.utils.JodaUtils;
 import io.druid.query.extraction.namespace.ExtractionNamespaceFunctionFactory;
@@ -51,7 +54,7 @@ public class JDBCExtractionNamespaceFunctionFactory
   private final ConcurrentMap<String, DBI> dbiCache = new ConcurrentHashMap<>();
 
   @Override
-  public Function<String, String> build(JDBCExtractionNamespace extractionNamespace, final Map<String, String> cache)
+  public Function<String, String> buildFn(JDBCExtractionNamespace extractionNamespace, final Map<String, String> cache)
   {
     return new Function<String, String>()
     {
@@ -63,6 +66,28 @@ public class JDBCExtractionNamespaceFunctionFactory
           return null;
         }
         return Strings.emptyToNull(cache.get(input));
+      }
+    };
+  }
+
+  @Override
+  public Function<String, List<String>> buildReverseFn(
+      JDBCExtractionNamespace extractionNamespace, final Map<String, String> cache
+  )
+  {
+    return new Function<String, List<String>>()
+    {
+      @Nullable
+      @Override
+      public List<String> apply(@Nullable final String value)
+      {
+        return Lists.newArrayList(Maps.filterKeys(cache, new Predicate<String>()
+        {
+          @Override public boolean apply(@Nullable String key)
+          {
+            return cache.get(key).equals(Strings.nullToEmpty(value));
+          }
+        }).keySet());
       }
     };
   }
