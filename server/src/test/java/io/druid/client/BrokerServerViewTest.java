@@ -371,15 +371,24 @@ public class BrokerServerViewTest extends CuratorTestBase
 
   private void setupZNodeForServer(DruidServer server) throws Exception
   {
+    final String zNodePathAnnounce = ZKPaths.makePath(announcementsPath, server.getHost());
+    final String zNodePathSegment = ZKPaths.makePath(inventoryPath, server.getHost());
+
+    if (curator.checkExists().forPath(zNodePathAnnounce) != null) {
+      curator.delete().guaranteed().forPath(zNodePathAnnounce);
+    }
+    if (curator.checkExists().forPath(zNodePathSegment) != null) {
+      curator.delete().guaranteed().forPath(zNodePathSegment);
+    }
     curator.create()
            .creatingParentsIfNeeded()
            .forPath(
-               ZKPaths.makePath(announcementsPath, server.getHost()),
+               zNodePathAnnounce,
                jsonMapper.writeValueAsBytes(server.getMetadata())
            );
     curator.create()
            .creatingParentsIfNeeded()
-           .forPath(ZKPaths.makePath(inventoryPath, server.getHost()));
+           .forPath(zNodePathSegment);
   }
 
   private DataSegment dataSegmentWithIntervalAndVersion(String intervalStr, String version)
