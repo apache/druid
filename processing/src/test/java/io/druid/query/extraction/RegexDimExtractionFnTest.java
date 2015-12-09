@@ -55,7 +55,7 @@ public class RegexDimExtractionFnTest
   public void testPathExtraction()
   {
     String regex = "/([^/]+)/";
-    ExtractionFn extractionFn = new RegexDimExtractionFn(regex);
+    ExtractionFn extractionFn = new RegexDimExtractionFn(regex, false, null, false);
     Set<String> extracted = Sets.newHashSet();
 
     for (String path : paths) {
@@ -71,7 +71,7 @@ public class RegexDimExtractionFnTest
   public void testDeeperPathExtraction()
   {
     String regex = "^/([^/]+/[^/]+)(/|$)";
-    ExtractionFn extractionFn = new RegexDimExtractionFn(regex);
+    ExtractionFn extractionFn = new RegexDimExtractionFn(regex, false, null, false);
     Set<String> extracted = Sets.newHashSet();
 
     for (String path : paths) {
@@ -89,7 +89,7 @@ public class RegexDimExtractionFnTest
   public void testStringExtraction()
   {
     String regex = "(.)";
-    ExtractionFn extractionFn = new RegexDimExtractionFn(regex);
+    ExtractionFn extractionFn = new RegexDimExtractionFn(regex, false, null, false);
     Set<String> extracted = Sets.newHashSet();
 
     for (String testString : testStrings) {
@@ -107,7 +107,7 @@ public class RegexDimExtractionFnTest
   public void testNullAndEmpty()
   {
     String regex = "(.*)/.*/.*";
-    ExtractionFn extractionFn = new RegexDimExtractionFn(regex);
+    ExtractionFn extractionFn = new RegexDimExtractionFn(regex, false, null, false);
     // no match, map empty input value to null
     Assert.assertEquals(null, extractionFn.apply(""));
     // null value, returns null
@@ -117,13 +117,54 @@ public class RegexDimExtractionFnTest
   }
 
   @Test
+  public void testMissingValueReplacement()
+  {
+    String regex = "(a\\w*)";
+    ExtractionFn extractionFn = new RegexDimExtractionFn(regex, true, "foobar", false);
+    Set<String> extracted = Sets.newHashSet();
+
+    for (String testString : testStrings) {
+      extracted.add(extractionFn.apply(testString));
+    }
+
+    Assert.assertEquals(4, extracted.size());
+    Assert.assertTrue(extracted.contains("apple"));
+    Assert.assertTrue(extracted.contains("awesome"));
+    Assert.assertTrue(extracted.contains("asylum"));
+    Assert.assertTrue(extracted.contains("foobar"));
+
+    byte[] cacheKey = extractionFn.getCacheKey();
+    Assert.assertEquals(17, cacheKey.length);
+
+    ExtractionFn nullExtractionFn = new RegexDimExtractionFn(regex, true, null, false);
+    Set<String> extracted2 = Sets.newHashSet();
+
+    for (String testString : testStrings) {
+      extracted2.add(nullExtractionFn.apply(testString));
+    }
+
+    Assert.assertEquals(4, extracted2.size());
+    Assert.assertTrue(extracted2.contains("apple"));
+    Assert.assertTrue(extracted2.contains("awesome"));
+    Assert.assertTrue(extracted2.contains("asylum"));
+    Assert.assertTrue(extracted2.contains(null));
+
+    cacheKey = nullExtractionFn.getCacheKey();
+    Assert.assertEquals(11, cacheKey.length);
+  }
+
+  @Test
   public void testSerde() throws Exception
   {
     final ObjectMapper objectMapper = new DefaultObjectMapper();
-    final String json = "{ \"type\" : \"regex\", \"expr\" : \".(...)?\" }";
+    final String json = "{ \"type\" : \"regex\", \"expr\" : \".(...)?\" , \"injective\":true, " +
+                        "\"replaceMissingValues\": true, \"replaceMissingValuesWith\":\"foobar\"}";
     RegexDimExtractionFn extractionFn = (RegexDimExtractionFn) objectMapper.readValue(json, ExtractionFn.class);
 
     Assert.assertEquals(".(...)?", extractionFn.getExpr());
+    Assert.assertTrue(extractionFn.isReplaceMissingValues());
+    Assert.assertEquals("foobar", extractionFn.getReplaceMissingValuesWith());
+    Assert.assertTrue(extractionFn.isInjective());
 
     // round trip
     Assert.assertEquals(
