@@ -151,6 +151,101 @@ The grammar for a IN filter is as follows:
 }
 ```
 
+### Bound filter
+
+Bound filter can be used to filter by comparing dimension values to an upper value or/and a lower value. 
+By default Comparison is string based and **case sensitive**.
+To use numeric comparison you can set `alphaNumeric` to `true`.
+By default the bound filter is a not a strict inclusion `inputString <= upper && inputSting >= lower`.
+
+The grammar for a bound filter is as follows:
+
+```json
+{
+    "type": "bound",
+    "dimension": "age",
+    "lower": "21",
+    "upper": "31" ,
+    "alphaNumeric": true
+}
+```
+Equivalent to retain column if `21 <= age <= 31`
+
+```json
+{
+    "type": "bound",
+    "dimension": "name",
+    "lower": "foo",
+    "upper": "hoo"
+}
+```
+
+Equivalent to retain column if `foo <= name <= hoo`
+
+In order to have a strict inclusion user can set `lowerStrict` or/and `upperStrict` to `true`
+
+To have strict bounds:
+
+```json
+{
+    "type": "bound",
+    "dimension": "age",
+    "lower": "21",
+    "lowerStrict": true,
+    "upper": "31" ,
+    "upperStrict": true,
+    "alphaNumeric": true
+}
+```
+Equivalent to retain column if `21 < age < 31`
+
+To have strict upper bound:
+
+```json
+{
+    "type": "bound",
+    "dimension": "age",
+    "lower": "21",
+    "upper": "31" ,
+    "upperStrict": true,
+    "alphaNumeric": true
+}
+```
+
+Equivalent to retain column if `21 <= age < 31`
+
+To compare to only an upper bound or lowe bound
+
+```json
+{
+    "type": "bound",
+    "dimension": "age",
+    "upper": "31" ,
+    "upperStrict": true,
+    "alphaNumeric": true
+}
+```
+
+Equivalent to retain column if `age < 31`
+
+```json
+{
+    "type": "bound",
+    "dimension": "age",
+    "lower": "18" ,
+    "alphaNumeric": true
+}
+```
+
+Equivalent to retain column if ` 18 <= age`
+
+For `alphaNumeric` comparator, in case of the dimension value includes none-digits you may expect **fuzzy matching**
+If dimension value starts with a none digit, the filter will consider it out of range (`value < lowerBound` and `value > upperBound`)
+If dimension value starts with digit and contains a none digits comparing will be done character wise.  
+For instance suppose lower bound is `100` and value is `10K` the filter will match (`100 < 10K` returns `true`) since `K` is greater than any digit
+Now suppose that the lower bound is `110` the filter will not match (`110 < 10K` returns `false`)
+
+
 #### Search Query Spec
 
 ##### Insensitive Contains
