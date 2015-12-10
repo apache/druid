@@ -37,13 +37,13 @@ public class MapLookupExtractorTest
   @Test
   public void testUnApply()
   {
-    Assert.assertEquals(Arrays.asList("foo"), fn.unApply("bar"));
-    Assert.assertEquals(Sets.newHashSet("null", "empty String"), Sets.newHashSet(fn.unApply("")));
+    Assert.assertEquals(Arrays.asList("foo"), fn.unapply("bar"));
+    Assert.assertEquals(Sets.newHashSet("null", "empty String"), Sets.newHashSet(fn.unapply("")));
     Assert.assertEquals("Null value should be equal to empty string",
                         Sets.newHashSet("null", "empty String"),
-                        Sets.newHashSet(fn.unApply(null)));
-    Assert.assertEquals(Sets.newHashSet(""), Sets.newHashSet(fn.unApply("empty_string")));
-    Assert.assertEquals("not existing value returns empty list", Collections.EMPTY_LIST, fn.unApply("not There"));
+                        Sets.newHashSet(fn.unapply((String) null)));
+    Assert.assertEquals(Sets.newHashSet(""), Sets.newHashSet(fn.unapply("empty_string")));
+    Assert.assertEquals("not existing value returns empty list", Collections.EMPTY_LIST, fn.unapply("not There"));
   }
 
   @Test
