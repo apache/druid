@@ -175,14 +175,16 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       // subsequent ones) and return an error if the aggregator types are different.
       for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {
         for (final AggregatorFactory transferAgg : aggregatorFactory.getRequiredColumns()) {
-          if (Iterables.any(aggs, new Predicate<AggregatorFactory>() {
+          if (Iterables.any(aggs, new Predicate<AggregatorFactory>()
+          {
             @Override
-            public boolean apply(AggregatorFactory agg) {
+            public boolean apply(AggregatorFactory agg)
+            {
               return agg.getName().equals(transferAgg.getName()) && !agg.equals(transferAgg);
             }
           })) {
             throw new IAE("Inner aggregator can currently only be referenced by a single type of outer aggregator" +
-                " for '%s'", transferAgg.getName());
+                          " for '%s'", transferAgg.getName());
           }
 
           aggs.add(transferAgg);
@@ -417,10 +419,14 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
                   return runner.run(query, responseContext);
                 }
                 GroupByQuery groupByQuery = (GroupByQuery) query;
+                if (groupByQuery.getDimFilter() != null){
+                  groupByQuery = groupByQuery.withDimFilter(groupByQuery.getDimFilter().optimize());
+                }
+                final GroupByQuery delegateGroupByQuery = groupByQuery;
                 ArrayList<DimensionSpec> dimensionSpecs = new ArrayList<>();
                 Set<String> optimizedDimensions = ImmutableSet.copyOf(
                     Iterables.transform(
-                        extractionsToRewrite(groupByQuery),
+                        extractionsToRewrite(delegateGroupByQuery),
                         new Function<DimensionSpec, String>()
                         {
                           @Override
@@ -431,7 +437,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
                         }
                     )
                 );
-                for (DimensionSpec dimensionSpec : groupByQuery.getDimensions()) {
+                for (DimensionSpec dimensionSpec : delegateGroupByQuery.getDimensions()) {
                   if (optimizedDimensions.contains(dimensionSpec.getDimension())) {
                     dimensionSpecs.add(
                         new DefaultDimensionSpec(dimensionSpec.getDimension(), dimensionSpec.getOutputName())
@@ -441,7 +447,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
                   }
                 }
                 return runner.run(
-                    groupByQuery.withDimensionSpecs(dimensionSpecs),
+                    delegateGroupByQuery.withDimensionSpecs(dimensionSpecs),
                     responseContext
                 );
               }

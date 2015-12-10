@@ -59,6 +59,12 @@ public class SelectorDimFilter implements DimFilter
                      .array();
   }
 
+  @Override
+  public DimFilter optimize()
+  {
+    return this;
+  }
+
   @JsonProperty
   public String getDimension()
   {

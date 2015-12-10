@@ -90,13 +90,15 @@ public class LookupExtractionFnTest
         new MapLookupExtractor(ImmutableMap.of("foo", "bar")),
         retainMissing,
         replaceMissing,
-        injective
+        injective,
+        false
     );
     final LookupExtractionFn lookupExtractionFn2 = new LookupExtractionFn(
         new MapLookupExtractor(ImmutableMap.of("foo", "bar")),
         retainMissing,
         replaceMissing,
-        injective
+        injective,
+        false
     );
 
 
@@ -104,7 +106,8 @@ public class LookupExtractionFnTest
         new MapLookupExtractor(ImmutableMap.of("foo", "bar2")),
         retainMissing,
         replaceMissing,
-        injective
+        injective,
+        false
     );
 
     Assert.assertEquals(lookupExtractionFn1, lookupExtractionFn2);
@@ -124,7 +127,8 @@ public class LookupExtractionFnTest
         new MapLookupExtractor(ImmutableMap.of("foo", "bar")),
         retainMissing,
         replaceMissing,
-        injective
+        injective,
+        false
     );
     final String str1 = OBJECT_MAPPER.writeValueAsString(lookupExtractionFn);
 
@@ -150,7 +154,8 @@ public class LookupExtractionFnTest
           new MapLookupExtractor(ImmutableMap.of("foo", "bar")),
           retainMissing,
           Strings.emptyToNull(replaceMissing),
-          injective
+          injective,
+          false
       );
     } else {
       throw new IAE("Case not valid");
@@ -171,7 +176,8 @@ public class LookupExtractionFnTest
         new MapLookupExtractor(ImmutableMap.of("foo", "bar")),
         retainMissing,
         replaceMissing,
-        injective
+        injective,
+        false
     );
 
     if (Strings.isNullOrEmpty(replaceMissing) || retainMissing) {
@@ -182,7 +188,8 @@ public class LookupExtractionFnTest
                   lookupExtractionFn.getLookup(),
                   !lookupExtractionFn.isRetainMissingValue(),
                   lookupExtractionFn.getReplaceMissingValueWith(),
-                  lookupExtractionFn.isInjective()
+                  lookupExtractionFn.isInjective(),
+                  false
               ).getCacheKey()
           )
       );
@@ -193,7 +200,8 @@ public class LookupExtractionFnTest
                   lookupExtractionFn.getLookup(),
                   !lookupExtractionFn.isRetainMissingValue(),
                   lookupExtractionFn.getReplaceMissingValueWith(),
-                  !lookupExtractionFn.isInjective()
+                  !lookupExtractionFn.isInjective(),
+                  false
               ).getCacheKey()
           )
       );
@@ -205,7 +213,8 @@ public class LookupExtractionFnTest
                 new MapLookupExtractor(weirdMap),
                 lookupExtractionFn.isRetainMissingValue(),
                 lookupExtractionFn.getReplaceMissingValueWith(),
-                lookupExtractionFn.isInjective()
+                lookupExtractionFn.isInjective(),
+                false
             ).getCacheKey()
         )
     );
@@ -216,7 +225,8 @@ public class LookupExtractionFnTest
                 lookupExtractionFn.getLookup(),
                 lookupExtractionFn.isRetainMissingValue(),
                 lookupExtractionFn.getReplaceMissingValueWith(),
-                !lookupExtractionFn.isInjective()
+                !lookupExtractionFn.isInjective(),
+                false
             ).getCacheKey()
         )
     );

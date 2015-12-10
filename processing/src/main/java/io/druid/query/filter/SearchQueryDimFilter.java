@@ -72,6 +72,12 @@ public class SearchQueryDimFilter implements DimFilter
   }
 
   @Override
+  public DimFilter optimize()
+  {
+    return this;
+  }
+
+  @Override
   public String toString()
   {
     return "SearchQueryDimFilter{" +

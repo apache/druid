@@ -70,6 +70,12 @@ public class JavaScriptDimFilter implements DimFilter
   }
 
   @Override
+  public DimFilter optimize()
+  {
+    return this;
+  }
+
+  @Override
   public String toString()
   {
     return "JavaScriptDimFilter{" +

@@ -259,6 +259,23 @@ public class GroupByQuery extends BaseQuery<Row>
     );
   }
 
+  public GroupByQuery withDimFilter(final DimFilter dimFilter)
+  {
+    return new GroupByQuery(
+        getDataSource(),
+        getQuerySegmentSpec(),
+        dimFilter,
+        getGranularity(),
+        getDimensions(),
+        getAggregatorSpecs(),
+        getPostAggregatorSpecs(),
+        getHavingSpec(),
+        getLimitSpec(),
+        limitFn,
+        getContext()
+    );
+  }
+
   @Override
   public Query<Row> withDataSource(DataSource dataSource)
   {

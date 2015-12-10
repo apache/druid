@@ -26,7 +26,7 @@ Namespaced lookups are appropriate for lookups which are not possible to pass at
    "table": "lookupTable", "keyColumn": "mykeyColumn", "valueColumn": "MyValueColumn", "tsColumn": "timeColumn"}]
  ```
 
-Proper funcitonality of Namespaced lookups requires the following extension to be loaded on the broker, peon, and historical nodes:
+Proper functionality of Namespaced lookups requires the following extension to be loaded on the broker, peon, and historical nodes:
 `io.druid.extensions:druid-namespace-lookup`
 
 ## Cache Settings
