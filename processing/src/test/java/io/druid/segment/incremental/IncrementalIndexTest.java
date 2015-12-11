@@ -24,7 +24,6 @@ import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.granularity.QueryGranularity;
-import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import org.joda.time.DateTime;
@@ -71,23 +70,6 @@ public class IncrementalIndexTest
                   }
                 }
 
-            },
-            {
-                new IndexCreator()
-                {
-                  @Override
-                  public IncrementalIndex createIndex()
-                  {
-                    return new OffheapIncrementalIndex(
-                        0,
-                        QueryGranularity.MINUTE,
-                        new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
-                        TestQueryRunners.pool,
-                        true,
-                        100 * 1024 * 1024
-                    );
-                  }
-                }
             }
 
         }
