@@ -47,9 +47,9 @@ import io.druid.segment.data.RoaringBitmapSerdeFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
 import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.joda.time.DateTime;
-import io.druid.segment.incremental.IndexSizeExceededException;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -219,12 +219,8 @@ public class IndexMergerTest
     Assert.assertEquals(3, index.getColumnNames().size());
     assertDimCompression(index, indexSpec.getDimensionCompressionStrategy());
 
-    final IndexableAdapter adapter = new QueryableIndexIndexableAdapter(index);
-    Iterable<Rowboat> boats = adapter.getRows();
-    List<Rowboat> boatList = new ArrayList<>();
-    for (Rowboat boat : boats) {
-      boatList.add(boat);
-    }
+    final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(index);
+    final List<Rowboat> boatList = ImmutableList.copyOf(adapter.getRows());
 
     Assert.assertEquals(2, boatList.size());
     Assert.assertArrayEquals(new int[][]{{0}, {1}}, boatList.get(0).getDims());
@@ -846,12 +842,8 @@ public class IndexMergerTest
         )
     );
 
-    final IndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
-    Iterable<Rowboat> boats = adapter.getRows();
-    List<Rowboat> boatList = new ArrayList<>();
-    for (Rowboat boat : boats) {
-      boatList.add(boat);
-    }
+    final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
+    final List<Rowboat> boatList = ImmutableList.copyOf(adapter.getRows());
 
     Assert.assertEquals(ImmutableList.of("d3", "d1", "d2"), ImmutableList.copyOf(adapter.getDimensionNames()));
     Assert.assertEquals(3, boatList.size());
@@ -945,12 +937,8 @@ public class IndexMergerTest
         )
     );
 
-    final IndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
-    Iterable<Rowboat> boats = adapter.getRows();
-    List<Rowboat> boatList = new ArrayList<>();
-    for (Rowboat boat : boats) {
-      boatList.add(boat);
-    }
+    final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
+    final List<Rowboat> boatList = ImmutableList.copyOf(adapter.getRows());
 
     Assert.assertEquals(ImmutableList.of("dimA", "dimC"), ImmutableList.copyOf(adapter.getDimensionNames()));
     Assert.assertEquals(4, boatList.size());
@@ -1040,11 +1028,11 @@ public class IndexMergerTest
         )
     );
 
-    final IndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
-    List<Rowboat> boatList = ImmutableList.copyOf(adapter.getRows());
+    final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
+    final List<Rowboat> boatList = ImmutableList.copyOf(adapter.getRows());
 
-    final IndexableAdapter adapter2 = new QueryableIndexIndexableAdapter(merged2);
-    List<Rowboat> boatList2 = ImmutableList.copyOf(adapter2.getRows());
+    final QueryableIndexIndexableAdapter adapter2 = new QueryableIndexIndexableAdapter(merged2);
+    final List<Rowboat> boatList2 = ImmutableList.copyOf(adapter2.getRows());
 
     Assert.assertEquals(ImmutableList.of("dimA", "dimB"), ImmutableList.copyOf(adapter.getDimensionNames()));
     Assert.assertEquals(5, boatList.size());
@@ -1187,12 +1175,8 @@ public class IndexMergerTest
         )
     );
 
-    final IndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
-    Iterable<Rowboat> boats = adapter.getRows();
-    List<Rowboat> boatList = new ArrayList<>();
-    for (Rowboat boat : boats) {
-      boatList.add(boat);
-    }
+    final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
+    final List<Rowboat> boatList = ImmutableList.copyOf(adapter.getRows());
 
     Assert.assertEquals(
         ImmutableList.of("d2", "d3", "d5", "d6", "d7", "d8", "d9"),
@@ -1234,14 +1218,12 @@ public class IndexMergerTest
     checkBitmapIndex(Lists.newArrayList(3), adapter.getBitmapIndex("d9", "921"));
   }
 
-  private void checkBitmapIndex(ArrayList<Integer> expectIndex, IndexedInts index)
+  private void checkBitmapIndex(ArrayList<Integer> expected, IndexedInts real)
   {
-    Assert.assertEquals(expectIndex.size(), index.size());
+    Assert.assertEquals(expected.size(), real.size());
     int i = 0;
-    Iterator it = index.iterator();
-    while (it.hasNext()) {
-      Assert.assertEquals(expectIndex.get(i), it.next());
-      i++;
+    for (Object index : real) {
+      Assert.assertEquals(expected.get(i++), index);
     }
   }
 
@@ -1361,13 +1343,11 @@ public class IndexMergerTest
         )
     );
 
-    final IndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
-    Iterable<Rowboat> boats = adapter.getRows();
-    List<Rowboat> boatList = ImmutableList.copyOf(boats);
+    final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
+    final List<Rowboat> boatList = ImmutableList.copyOf(adapter.getRows());
 
-    final IndexableAdapter adapter2 = new QueryableIndexIndexableAdapter(merged2);
-    Iterable<Rowboat> boats2 = adapter2.getRows();
-    List<Rowboat> boatList2 = ImmutableList.copyOf(boats2);
+    final QueryableIndexIndexableAdapter adapter2 = new QueryableIndexIndexableAdapter(merged2);
+    final List<Rowboat> boatList2 = ImmutableList.copyOf(adapter2.getRows());
 
     Assert.assertEquals(ImmutableList.of("dimB", "dimA"), ImmutableList.copyOf(adapter.getDimensionNames()));
     Assert.assertEquals(5, boatList.size());
