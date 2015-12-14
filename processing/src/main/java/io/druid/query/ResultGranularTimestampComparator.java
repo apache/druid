@@ -19,6 +19,7 @@
 
 package io.druid.query;
 
+import com.google.common.collect.Ordering;
 import com.google.common.primitives.Longs;
 import io.druid.granularity.QueryGranularity;
 
@@ -42,5 +43,10 @@ public class ResultGranularTimestampComparator<T> implements Comparator<Result<T
         gran.truncate(r1.getTimestamp().getMillis()),
         gran.truncate(r2.getTimestamp().getMillis())
     );
+  }
+
+  public static <T> Ordering<Result<T>> create(QueryGranularity granularity, boolean descending) {
+    Comparator<Result<T>> comparator = new ResultGranularTimestampComparator<>(granularity);
+    return descending ? Ordering.from(comparator).reverse() : Ordering.from(comparator);
   }
 }

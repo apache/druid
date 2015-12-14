@@ -24,7 +24,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
-import io.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import junit.framework.Assert;
 import org.junit.Test;
 
@@ -56,12 +55,7 @@ public class UnionQueryRunnerTest
         }
       }
     };
-    UnionQueryRunner runner = new UnionQueryRunner(
-        baseRunner,
-        new TimeseriesQueryQueryToolChest(
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-        )
-    );
+    UnionQueryRunner runner = new UnionQueryRunner(baseRunner);
     // Make a dummy query with Union datasource
     Query q = Druids.newTimeseriesQueryBuilder()
                     .dataSource(

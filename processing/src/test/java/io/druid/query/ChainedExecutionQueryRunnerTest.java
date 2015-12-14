@@ -21,7 +21,6 @@ package io.druid.query;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.metamx.common.guava.Sequence;
@@ -114,7 +113,6 @@ public class ChainedExecutionQueryRunnerTest
 
     ChainedExecutionQueryRunner chainedRunner = new ChainedExecutionQueryRunner<>(
         exec,
-        Ordering.<Integer>natural(),
         watcher,
         Lists.<QueryRunner<Integer>>newArrayList(
          runners
@@ -242,7 +240,6 @@ public class ChainedExecutionQueryRunnerTest
 
     ChainedExecutionQueryRunner chainedRunner = new ChainedExecutionQueryRunner<>(
         exec,
-        Ordering.<Integer>natural(),
         watcher,
         Lists.<QueryRunner<Integer>>newArrayList(
             runners

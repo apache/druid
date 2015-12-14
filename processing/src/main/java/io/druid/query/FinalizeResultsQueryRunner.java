@@ -49,8 +49,8 @@ public class FinalizeResultsQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final Query<T> query, Map<String, Object> responseContext)
   {
-    final boolean isBySegment = query.getContextBySegment(false);
-    final boolean shouldFinalize = query.getContextFinalize(true);
+    final boolean isBySegment = BaseQuery.getContextBySegment(query, false);
+    final boolean shouldFinalize = BaseQuery.getContextFinalize(query, true);
 
     final Query<T> queryToRun;
     final Function<T, T> finalizerFn;

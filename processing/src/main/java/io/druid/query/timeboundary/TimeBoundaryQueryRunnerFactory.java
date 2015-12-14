@@ -63,9 +63,7 @@ public class TimeBoundaryQueryRunnerFactory
       ExecutorService queryExecutor, Iterable<QueryRunner<Result<TimeBoundaryResultValue>>> queryRunners
   )
   {
-    return new ChainedExecutionQueryRunner<>(
-        queryExecutor, toolChest.getOrdering(), queryWatcher, queryRunners
-    );
+    return new ChainedExecutionQueryRunner<>(queryExecutor, queryWatcher, queryRunners);
   }
 
   @Override
@@ -85,8 +83,8 @@ public class TimeBoundaryQueryRunnerFactory
 
     @Override
     public Sequence<Result<TimeBoundaryResultValue>> run(
-        Query<Result<TimeBoundaryResultValue>> input,
-        Map<String, Object> responseContext
+        final Query<Result<TimeBoundaryResultValue>> input,
+        final Map<String, Object> responseContext
     )
     {
       if (!(input instanceof TimeBoundaryQuery)) {

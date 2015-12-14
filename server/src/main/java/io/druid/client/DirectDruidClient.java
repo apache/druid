@@ -52,6 +52,7 @@ import com.metamx.http.client.response.ClientResponse;
 import com.metamx.http.client.response.HttpResponseHandler;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
+import io.druid.query.BaseQuery;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.DruidMetrics;
 import io.druid.query.Query;
@@ -134,7 +135,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   public Sequence<T> run(final Query<T> query, final Map<String, Object> context)
   {
     QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
-    boolean isBySegment = query.getContextBySegment(false);
+    boolean isBySegment = BaseQuery.getContextBySegment(query, false);
 
     Pair<JavaType, JavaType> types = typesMap.get(query.getClass());
     if (types == null) {

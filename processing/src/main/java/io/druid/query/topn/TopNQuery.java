@@ -66,7 +66,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, context);
+    super(dataSource, querySegmentSpec, false, context);
     this.dimensionSpec = dimensionSpec;
     this.topNMetricSpec = topNMetricSpec;
     this.threshold = threshold;

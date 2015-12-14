@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.guava.Yielder;
@@ -93,7 +94,12 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
           if (!config.isReturnPartialResults() && !finalMissingSegs.isEmpty()) {
             throw new SegmentMissingException("No results found for segments[%s]", finalMissingSegs);
           }
-          return toolChest.mergeSequencesUnordered(Sequences.simple(listOfSequences)).toYielder(initValue, accumulator);
+
+          return new MergeSequence<>(
+              query.getResultOrdering(),
+              Sequences.simple(listOfSequences)).toYielder(
+              initValue, accumulator
+          );
         }
         else {
           return Iterables.getOnlyElement(listOfSequences).toYielder(initValue, accumulator);

@@ -33,21 +33,69 @@ public class BitmapOffset implements Offset
   private final IntIterator itr;
   private final BitmapFactory bitmapFactory;
   private final ImmutableBitmap bitmapIndex;
+  private final boolean descending;
 
   private volatile int val;
 
-  public BitmapOffset(BitmapFactory bitmapFactory, ImmutableBitmap bitmapIndex)
+  public BitmapOffset(BitmapFactory bitmapFactory, ImmutableBitmap bitmapIndex, boolean descending)
   {
     this.bitmapFactory = bitmapFactory;
     this.bitmapIndex = bitmapIndex;
-    this.itr = bitmapIndex.iterator();
+    this.descending = descending;
+    this.itr = newIterator();
     increment();
+  }
+
+  private IntIterator newIterator()
+  {
+    if (!descending) {
+      return bitmapIndex.iterator();
+    }
+    // ImmutableRoaringReverseIntIterator is not cloneable.. looks like a bug
+    // update : it's fixed in 0.5.13
+    int i = bitmapIndex.size();
+    int[] back = new int[bitmapIndex.size()];
+    IntIterator iterator = bitmapIndex.iterator();
+    while (iterator.hasNext()) {
+      back[--i] = iterator.next();
+    }
+    return new ArrayIntIterator(back, 0);
+  }
+
+  private static class ArrayIntIterator implements IntIterator {
+
+    private final int[] array;
+    private int index;
+
+    private ArrayIntIterator(int[] array, int index) {
+      this.array = array;
+      this.index = index;
+    }
+
+    @Override
+    public boolean hasNext()
+    {
+      return index < array.length;
+    }
+
+    @Override
+    public int next()
+    {
+      return array[index++];
+    }
+
+    @Override
+    public IntIterator clone()
+    {
+      return new ArrayIntIterator(array, index);
+    }
   }
 
   private BitmapOffset(BitmapOffset otherOffset)
   {
     this.bitmapFactory = otherOffset.bitmapFactory;
     this.bitmapIndex = otherOffset.bitmapIndex;
+    this.descending = otherOffset.descending;
     this.itr = otherOffset.itr.clone();
     this.val = otherOffset.val;
   }
@@ -72,7 +120,7 @@ public class BitmapOffset implements Offset
   public Offset clone()
   {
     if (bitmapIndex == null || bitmapIndex.size() == 0) {
-      return new BitmapOffset(bitmapFactory, bitmapFactory.makeEmptyImmutableBitmap());
+      return new BitmapOffset(bitmapFactory, bitmapFactory.makeEmptyImmutableBitmap(), descending);
     }
 
     return new BitmapOffset(this);

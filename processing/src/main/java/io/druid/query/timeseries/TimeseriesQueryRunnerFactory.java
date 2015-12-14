@@ -68,7 +68,7 @@ public class TimeseriesQueryRunnerFactory
   )
   {
     return new ChainedExecutionQueryRunner<Result<TimeseriesResultValue>>(
-        queryExecutor, toolChest.getOrdering(), queryWatcher, queryRunners
+        queryExecutor, queryWatcher, queryRunners
     );
   }
 

@@ -32,14 +32,17 @@ public class SelectBinaryFn
 {
   private final QueryGranularity gran;
   private final PagingSpec pagingSpec;
+  private final boolean descending;
 
   public SelectBinaryFn(
       QueryGranularity granularity,
-      PagingSpec pagingSpec
+      PagingSpec pagingSpec,
+      boolean descending
   )
   {
     this.gran = granularity;
     this.pagingSpec = pagingSpec;
+    this.descending = descending;
   }
 
   @Override
@@ -59,7 +62,7 @@ public class SelectBinaryFn
                                ? arg1.getTimestamp()
                                : gran.toDateTime(gran.truncate(arg1.getTimestamp().getMillis()));
 
-    SelectResultValueBuilder builder = new SelectResultValueBuilder(timestamp, pagingSpec.getThreshold());
+    SelectResultValueBuilder builder = new SelectResultValueBuilder(timestamp, pagingSpec.getThreshold(), descending);
 
     SelectResultValue arg1Val = arg1.getValue();
     SelectResultValue arg2Val = arg2.getValue();

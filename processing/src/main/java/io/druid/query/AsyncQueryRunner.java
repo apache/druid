@@ -49,7 +49,7 @@ public class AsyncQueryRunner<T> implements QueryRunner<T>
   @Override
   public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
   {
-    final int priority = query.getContextPriority(0);
+    final int priority = BaseQuery.getContextPriority(query, 0);
     final ListenableFuture<Sequence<T>> future = executor.submit(new AbstractPrioritizedCallable<Sequence<T>>(priority)
         {
           @Override

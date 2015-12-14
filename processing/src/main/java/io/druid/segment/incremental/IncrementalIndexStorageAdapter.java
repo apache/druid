@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.metamx.collections.spatial.search.Bound;
@@ -153,7 +154,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public Sequence<Cursor> makeCursors(final Filter filter, final Interval interval, final QueryGranularity gran)
+  public Sequence<Cursor> makeCursors(final Filter filter, final Interval interval, final QueryGranularity gran, final boolean descending)
   {
     if (index.isEmpty()) {
       return Sequences.empty();
@@ -179,8 +180,13 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
     final Interval actualInterval = actualIntervalTmp;
 
+    Iterable<Long> iterable = gran.iterable(actualInterval.getStartMillis(), actualInterval.getEndMillis());
+    if (descending) {
+      // might be better to be included in granularity#iterable
+      iterable = Lists.reverse(ImmutableList.copyOf(iterable));
+    }
     return Sequences.map(
-        Sequences.simple(gran.iterable(actualInterval.getStartMillis(), actualInterval.getEndMillis())),
+        Sequences.simple(iterable),
         new Function<Long, Cursor>()
         {
           EntryHolder currEntry = new EntryHolder();
@@ -212,6 +218,9 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                         Math.min(actualInterval.getEndMillis(), gran.next(input)), new String[][]{}
                     )
                 );
+                if (descending) {
+                  cursorMap = cursorMap.descendingMap();
+                }
                 time = gran.toDateTime(input);
 
                 reset();
@@ -309,7 +318,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
 
                 if (dimension.equals(Column.TIME_COLUMN_NAME)) {
-                  return new SingleScanTimeDimSelector(makeLongColumnSelector(dimension), extractionFn);
+                  return new SingleScanTimeDimSelector(makeLongColumnSelector(dimension), extractionFn, descending);
                 }
 
                 final IncrementalIndex.DimDim dimValLookup = index.getDimensionValues(dimension);

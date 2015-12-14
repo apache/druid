@@ -27,13 +27,29 @@ import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.aggregation.PostAggregator;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.util.Arrays;
 
+@RunWith(Parameterized.class)
 public class TimeseriesQueryTest
 {
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+
+  @Parameterized.Parameters(name="descending={0}")
+  public static Iterable<Object[]> constructorFeeder() throws IOException
+  {
+    return QueryRunnerTestHelper.cartesian(Arrays.asList(false, true));
+  }
+
+  private final boolean descending;
+
+  public TimeseriesQueryTest(boolean descending)
+  {
+    this.descending = descending;
+  }
 
   @Test
   public void testQuerySerialization() throws IOException
@@ -49,6 +65,7 @@ public class TimeseriesQueryTest
             )
         )
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .descending(descending)
         .build();
 
     String json = jsonMapper.writeValueAsString(query);

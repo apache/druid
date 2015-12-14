@@ -26,7 +26,7 @@ import org.joda.time.Interval;
 import java.util.List;
 import java.util.Map;
 
-public class SegmentAnalysis
+public class SegmentAnalysis implements Comparable<SegmentAnalysis>
 {
   private final String id;
   private final List<Interval> interval;
@@ -142,5 +142,15 @@ public class SegmentAnalysis
     result = 31 * result + (int) (size ^ (size >>> 32));
     result = 31 * result + (int) (numRows ^ (numRows >>> 32));
     return result;
+  }
+
+  @Override
+  public int compareTo(SegmentAnalysis rhs)
+  {
+    // Nulls first
+    if (rhs == null) {
+      return 1;
+    }
+    return id.compareTo(rhs.getId());
   }
 }

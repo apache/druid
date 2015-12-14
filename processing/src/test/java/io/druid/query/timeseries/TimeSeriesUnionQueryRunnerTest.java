@@ -43,7 +43,6 @@ import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -52,25 +51,39 @@ import java.util.Map;
 public class TimeSeriesUnionQueryRunnerTest
 {
   private final QueryRunner runner;
+  private final boolean descending;
 
   public TimeSeriesUnionQueryRunnerTest(
-      QueryRunner runner
+      QueryRunner runner, boolean descending
   )
   {
     this.runner = runner;
+    this.descending = descending;
   }
 
-  @Parameterized.Parameters
-  public static Collection<?> constructorFeeder() throws IOException
+  @Parameterized.Parameters(name="{0}:descending={1}")
+  public static Iterable<Object[]> constructorFeeder() throws IOException
   {
-    return QueryRunnerTestHelper.makeUnionQueryRunners(
-        new TimeseriesQueryRunnerFactory(
-            new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
-            new TimeseriesQueryEngine(),
-            QueryRunnerTestHelper.NOOP_QUERYWATCHER
+    return QueryRunnerTestHelper.cartesian(
+        QueryRunnerTestHelper.makeUnionQueryRunners(
+            new TimeseriesQueryRunnerFactory(
+                new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
+                new TimeseriesQueryEngine(),
+                QueryRunnerTestHelper.NOOP_QUERYWATCHER
+            ),
+            QueryRunnerTestHelper.unionDataSource
         ),
-        QueryRunnerTestHelper.unionDataSource
+        // descending?
+        Arrays.asList(false, true)
     );
+  }
+
+  private <T> void assertExpectedResults(Iterable<Result<T>> expectedResults, Iterable<Result<T>> results)
+  {
+    if (descending) {
+      expectedResults = TestHelper.revert(expectedResults);
+    }
+    TestHelper.assertExpectedResults(expectedResults, results);
   }
 
   @Test
@@ -90,29 +103,30 @@ public class TimeSeriesUnionQueryRunnerTest
                                           QueryRunnerTestHelper.qualityUniques
                                       )
                                   )
+                                  .descending(descending)
                                   .build();
 
     List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
-        new Result<TimeseriesResultValue>(
+        new Result<>(
             new DateTime("2011-04-01"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of("rows", 52L, "idx", 26476L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
             )
         ),
-        new Result<TimeseriesResultValue>(
+        new Result<>(
             new DateTime("2011-04-02"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>of("rows", 52L, "idx", 23308L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
             )
         )
     );
-    HashMap<String, Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<>();
     Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
         runner.run(query, context),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
 
-    TestHelper.assertExpectedResults(expectedResults, results);
+    assertExpectedResults(expectedResults, results);
   }
 
   @Test
@@ -138,86 +152,51 @@ public class TimeSeriesUnionQueryRunnerTest
                                           )
                                       )
                                   )
+                                  .descending(descending)
                                   .build();
     QueryToolChest toolChest = new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator());
+    final List<Result<TimeseriesResultValue>> ds1 = Lists.newArrayList(
+        new Result<>(
+            new DateTime("2011-04-02"),
+            new TimeseriesResultValue(ImmutableMap.<String, Object>of("rows", 1L, "idx", 2L))
+        ),
+        new Result<>(
+            new DateTime("2011-04-03"),
+            new TimeseriesResultValue(ImmutableMap.<String, Object>of("rows", 3L, "idx", 4L))
+        )
+    );
+    final List<Result<TimeseriesResultValue>> ds2 = Lists.newArrayList(
+        new Result<>(
+            new DateTime("2011-04-01"),
+            new TimeseriesResultValue(ImmutableMap.<String, Object>of("rows", 5L, "idx", 6L))
+        ),
+        new Result<>(
+            new DateTime("2011-04-02"),
+            new TimeseriesResultValue(ImmutableMap.<String, Object>of("rows", 7L, "idx", 8L))
+        ),
+        new Result<>(
+            new DateTime("2011-04-04"),
+            new TimeseriesResultValue(ImmutableMap.<String, Object>of("rows", 9L, "idx", 10L))
+        )
+    );
+
     QueryRunner mergingrunner = toolChest.mergeResults(
-        new UnionQueryRunner<Result<TimeseriesResultValue>>(
+        new UnionQueryRunner<>(
             new QueryRunner<Result<TimeseriesResultValue>>()
             {
               @Override
-              public Sequence<Result<TimeseriesResultValue>> run(Query<Result<TimeseriesResultValue>> query,
-                                                                 Map<String, Object> responseContext
+              public Sequence<Result<TimeseriesResultValue>> run(
+                  Query<Result<TimeseriesResultValue>> query,
+                  Map<String, Object> responseContext
               )
               {
                 if (query.getDataSource().equals(new TableDataSource("ds1"))) {
-                  return Sequences.simple(
-                      Lists.newArrayList(
-                          new Result<TimeseriesResultValue>(
-                              new DateTime("2011-04-02"),
-                              new TimeseriesResultValue(
-                                  ImmutableMap.<String, Object>of(
-                                      "rows",
-                                      1L,
-                                      "idx",
-                                      2L
-                                  )
-                              )
-                          ),
-                          new Result<TimeseriesResultValue>(
-                              new DateTime("2011-04-03"),
-                              new TimeseriesResultValue(
-                                  ImmutableMap.<String, Object>of(
-                                      "rows",
-                                      3L,
-                                      "idx",
-                                      4L
-                                  )
-                              )
-                          )
-                      )
-                  );
+                  return Sequences.simple(descending ? Lists.reverse(ds1) : ds1);
                 } else {
-                  return Sequences.simple(
-                      Lists.newArrayList(
-                          new Result<TimeseriesResultValue>(
-                              new DateTime("2011-04-01"),
-                              new TimeseriesResultValue(
-                                  ImmutableMap.<String, Object>of(
-                                      "rows",
-                                      5L,
-                                      "idx",
-                                      6L
-                                  )
-                              )
-                          ),
-                          new Result<TimeseriesResultValue>(
-                              new DateTime("2011-04-02"),
-                              new TimeseriesResultValue(
-                                  ImmutableMap.<String, Object>of(
-                                      "rows",
-                                      7L,
-                                      "idx",
-                                      8L
-                                  )
-                              )
-                          ),
-                          new Result<TimeseriesResultValue>(
-                              new DateTime("2011-04-04"),
-                              new TimeseriesResultValue(
-                                  ImmutableMap.<String, Object>of(
-                                      "rows",
-                                      9L,
-                                      "idx",
-                                      10L
-                                  )
-                              )
-                          )
-                      )
-                  );
+                  return Sequences.simple(descending ? Lists.reverse(ds2) : ds2);
                 }
               }
-            },
-            toolChest
+            }
         )
     );
 
@@ -253,8 +232,7 @@ public class TimeSeriesUnionQueryRunnerTest
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
 
-    System.out.println(results);
-    TestHelper.assertExpectedResults(expectedResults, results);
+    assertExpectedResults(expectedResults, results);
 
   }
 

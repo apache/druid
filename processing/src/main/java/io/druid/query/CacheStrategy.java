@@ -21,20 +21,39 @@ package io.druid.query;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
-import com.metamx.common.guava.Sequence;
 
 /**
 */
 public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
 {
-  public byte[] computeCacheKey(QueryType query);
+  /**
+   * Computes the cache key for the given query
+   *
+   * @param query the query to compute a cache key for
+   * @return the cache key
+   */
+  byte[] computeCacheKey(QueryType query);
 
-  public TypeReference<CacheType> getCacheObjectClazz();
+  /**
+   * Returns the class type of what is used in the cache
+   *
+   * @return Returns the class type of what is used in the cache
+   */
+  TypeReference<CacheType> getCacheObjectClazz();
 
-  // Resultant function must be THREAD SAFE
-  public Function<T, CacheType> prepareForCache();
+  /**
+   * Returns a function that converts from the QueryType's result type to something cacheable.
+   *
+   * The resulting function must be thread-safe.
+   *
+   * @return a thread-safe function that converts the QueryType's result type into something cacheable
+   */
+  Function<T, CacheType> prepareForCache();
 
-  public Function<CacheType, T> pullFromCache();
-
-  public Sequence<T> mergeSequences(Sequence<Sequence<T>> seqOfSequences);
+  /**
+   * A function that does the inverse of the operation that the function prepareForCache returns
+   *
+   * @return A function that does the inverse of the operation that the function prepareForCache returns
+   */
+  Function<CacheType, T> pullFromCache();
 }

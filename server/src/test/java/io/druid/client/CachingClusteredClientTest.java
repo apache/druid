@@ -926,11 +926,15 @@ public class CachingClusteredClientTest
             new DateTime("2011-01-09T01"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
         ),
         client.mergeCachedAndUncachedSequences(
-            sequences,
-            new TopNQueryQueryToolChest(
-                new TopNQueryConfig(),
-                QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-            )
+            new TopNQueryBuilder()
+                .dataSource("test")
+                .intervals("2011-01-06/2011-01-10")
+                .dimension("a")
+                .metric("b")
+                .threshold(3)
+                .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("b")))
+                .build(),
+            sequences
         )
     );
   }
