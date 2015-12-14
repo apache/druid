@@ -231,6 +231,9 @@ public class CliOverlord extends ServerRunnable
     public void initialize(Server server, Injector injector)
     {
       final ServletContextHandler root = new ServletContextHandler(ServletContextHandler.SESSIONS);
+      root.setInitParameter("org.eclipse.jetty.servlet.Default.dirAllowed", "false");
+      root.setInitParameter("org.eclipse.jetty.servlet.Default.redirectWelcome", "true");
+      root.setWelcomeFiles(new String[]{"index.html", "console.html"});
 
       ServletHolder holderPwd = new ServletHolder("default", DefaultServlet.class);
 

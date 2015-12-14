@@ -70,7 +70,7 @@ public class VSizeIndexedWriter implements Closeable
 
   public void write(List<Integer> ints) throws IOException
   {
-    byte[] bytesToWrite = ints == null ? EMPTY_ARRAY : VSizeIndexedInts.fromList(ints, maxId).getBytesNoPadding();
+    byte[] bytesToWrite = ints == null ? EMPTY_ARRAY : VSizeIndexedInts.getBytesNoPaddingfromList(ints, maxId);
 
     valuesOut.write(bytesToWrite);
 

@@ -50,11 +50,31 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
     return fromList(Lists.<Integer>newArrayList(), 0);
   }
 
+  /**
+   * provide for performance reason.
+   */
+  public static byte[] getBytesNoPaddingfromList(List<Integer> list, int maxValue)
+  {
+    int numBytes = getNumBytesForMax(maxValue);
+
+    final ByteBuffer buffer = ByteBuffer.allocate((list.size() * numBytes));
+    writeToBuffer(buffer, list, numBytes, maxValue);
+
+    return buffer.array();
+  }
+
   public static VSizeIndexedInts fromList(List<Integer> list, int maxValue)
   {
     int numBytes = getNumBytesForMax(maxValue);
 
     final ByteBuffer buffer = ByteBuffer.allocate((list.size() * numBytes) + (4 - numBytes));
+    writeToBuffer(buffer, list, numBytes, maxValue);
+
+    return new VSizeIndexedInts(buffer.asReadOnlyBuffer(), numBytes);
+  }
+
+  private static void writeToBuffer(ByteBuffer buffer, List<Integer> list, int numBytes, int maxValue)
+  {
     int i = 0;
     for (Integer val : list) {
       if (val < 0) {
@@ -69,8 +89,6 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
       ++i;
     }
     buffer.position(0);
-
-    return new VSizeIndexedInts(buffer.asReadOnlyBuffer(), numBytes);
   }
 
   public static byte getNumBytesForMax(int maxValue)
