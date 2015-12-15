@@ -1519,7 +1519,7 @@ public class TopNQueryRunnerTest
         .dimension(
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.qualityDimension, QueryRunnerTestHelper.qualityDimension,
-                new RegexDimExtractionFn(".(.)"), null
+                new RegexDimExtractionFn(".(.)", false, null), null
             )
         )
         .metric("index")
@@ -1568,7 +1568,7 @@ public class TopNQueryRunnerTest
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.marketDimension,
                 QueryRunnerTestHelper.marketDimension,
-                new RegexDimExtractionFn("(.)"),
+                new RegexDimExtractionFn("(.)", false, null),
                 null
             )
         )
@@ -2074,7 +2074,7 @@ public class TopNQueryRunnerTest
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.marketDimension,
                 QueryRunnerTestHelper.marketDimension,
-                new RegexDimExtractionFn("(.)"),
+                new RegexDimExtractionFn("(.)", false, null),
                 null
             )
         )
@@ -2128,7 +2128,7 @@ public class TopNQueryRunnerTest
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.marketDimension,
                 QueryRunnerTestHelper.marketDimension,
-                new RegexDimExtractionFn("..(.)"),
+                new RegexDimExtractionFn("..(.)", false, null),
                 null
             )
         )
@@ -2182,7 +2182,7 @@ public class TopNQueryRunnerTest
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.marketDimension,
                 QueryRunnerTestHelper.marketDimension,
-                new RegexDimExtractionFn("(.)"),
+                new RegexDimExtractionFn("(.)", false, null),
                 null
             )
         )
@@ -2300,7 +2300,7 @@ public class TopNQueryRunnerTest
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.marketDimension,
                 QueryRunnerTestHelper.marketDimension,
-                new RegexDimExtractionFn("(.)"),
+                new RegexDimExtractionFn("(.)", false, null),
                 null
             )
         )
@@ -2347,7 +2347,7 @@ public class TopNQueryRunnerTest
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.marketDimension,
                 QueryRunnerTestHelper.marketDimension,
-                new RegexDimExtractionFn("..(.)"),
+                new RegexDimExtractionFn("..(.)", false, null),
                 null
             )
         )
