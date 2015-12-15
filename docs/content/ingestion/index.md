@@ -102,7 +102,9 @@ If `format` is not included, the parseSpec defaults to `tsv`.
 | format | String | This should say `json`. | no |
 | timestampSpec | JSON Object | Specifies the column and format of the timestamp. | yes |
 | dimensionsSpec | JSON Object | Specifies the dimensions of the data. | yes |
-
+| flattenSpec | JSON Object | Specifies flattening configuration for nested JSON data. See [Flattening JSON](./flatten-json.html) for more info. | no |
+  
+  
 #### JSON Lowercase ParseSpec
 
 This is a special variation of the JSON ParseSpec that lower cases all the column names in the incoming JSON data. This parseSpec is required if you are updating to Druid 0.7.x from Druid 0.6.x, are directly ingesting JSON with mixed case column names, do not have any ETL in place to lower case those column names, and would like to make queries that include the data you created using 0.6.x and 0.7.x.
