@@ -46,9 +46,6 @@ public class SpatialFilter implements Filter
   public ImmutableBitmap getBitmapIndex(final BitmapIndexSelector selector)
   {
     Iterable<ImmutableBitmap> search = selector.getSpatialIndex(dimension).search(bound);
-    for (ImmutableBitmap immutableBitmap : search) {
-      System.out.println(immutableBitmap);
-    }
     return selector.getBitmapFactory().union(search);
   }
 
