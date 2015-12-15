@@ -1668,7 +1668,9 @@ public class IndexMergerTest
     dimConversions.put(0);
     dimConversions.put(2);
     dimConversions.put(4);
-    IndexMerger.DictIdSeeker dictIdSeeker = new IndexMerger.DictIdSeeker((IntBuffer) dimConversions.asReadOnlyBuffer().rewind());
+    IndexMerger.IndexSeeker dictIdSeeker = new IndexMerger.IndexSeekerWithConversion(
+        (IntBuffer) dimConversions.asReadOnlyBuffer().rewind()
+    );
     Assert.assertEquals(0, dictIdSeeker.seek(0));
     Assert.assertEquals(-1, dictIdSeeker.seek(1));
     Assert.assertEquals(1, dictIdSeeker.seek(2));
