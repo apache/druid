@@ -50,7 +50,7 @@ public class ClientMergeQuery
   @JsonProperty
   public String getType()
   {
-    return "append";
+    return "merge";
   }
 
   @JsonProperty
@@ -65,7 +65,7 @@ public class ClientMergeQuery
     return segments;
   }
 
-  @JsonProperty
+  @JsonProperty("aggregations")
   public List<AggregatorFactory> getAggregators()
   {
     return aggregators;
