@@ -730,7 +730,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithNullProducingDimExtractionFn()
   {
-    final ExtractionFn nullExtractionFn = new RegexDimExtractionFn("(\\w{1})")
+    final ExtractionFn nullExtractionFn = new RegexDimExtractionFn("(\\w{1})", false, null)
     {
       @Override
       public byte[] getCacheKey()
@@ -797,7 +797,7 @@ public class GroupByQueryRunnerTest
    */
   public void testGroupByWithEmptyStringProducingDimExtractionFn()
   {
-    final ExtractionFn emptyStringExtractionFn = new RegexDimExtractionFn("(\\w{1})")
+    final ExtractionFn emptyStringExtractionFn = new RegexDimExtractionFn("(\\w{1})", false, null)
     {
       @Override
       public byte[] getCacheKey()

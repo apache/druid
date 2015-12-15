@@ -34,28 +34,53 @@ import java.util.regex.Pattern;
 public class RegexDimExtractionFn extends DimExtractionFn
 {
   private static final byte CACHE_TYPE_ID = 0x1;
+  private static final byte CACHE_KEY_SEPARATOR = (byte) 0xFF;
 
   private final String expr;
   private final Pattern pattern;
+  private final boolean replaceMissingValues;
+  private final String replaceMissingValuesWith;
 
   @JsonCreator
   public RegexDimExtractionFn(
-      @JsonProperty("expr") String expr
+      @JsonProperty("expr") String expr,
+      @JsonProperty("replaceMissingValues") Boolean replaceMissingValues,
+      @JsonProperty("replaceMissingValuesWith") String replaceMissingValuesWith
   )
   {
     Preconditions.checkNotNull(expr, "expr must not be null");
 
     this.expr = expr;
     this.pattern = Pattern.compile(expr);
+    this.replaceMissingValues = replaceMissingValues == null ? false : replaceMissingValues;
+    this.replaceMissingValuesWith = replaceMissingValuesWith;
   }
 
   @Override
   public byte[] getCacheKey()
   {
     byte[] exprBytes = StringUtils.toUtf8(expr);
-    return ByteBuffer.allocate(1 + exprBytes.length)
+    byte[] replaceBytes = replaceMissingValues ? new byte[]{1} : new byte[]{0};
+    byte[] replaceStrBytes;
+    if (replaceMissingValuesWith == null) {
+      replaceStrBytes = new byte[]{};
+    } else {
+      replaceStrBytes = StringUtils.toUtf8(replaceMissingValuesWith);
+    }
+
+    int totalLen = 1
+                   + exprBytes.length
+                   + replaceBytes.length
+                   + replaceStrBytes.length; // fields
+    totalLen += 2; // separators
+
+    return ByteBuffer.allocate(totalLen)
                      .put(CACHE_TYPE_ID)
                      .put(exprBytes)
+                     .put(CACHE_KEY_SEPARATOR)
+                     .put(replaceStrBytes)
+                     .put(CACHE_KEY_SEPARATOR)
+                     .put(replaceBytes)
                      .array();
   }
 
@@ -65,14 +90,32 @@ public class RegexDimExtractionFn extends DimExtractionFn
     if (dimValue == null) {
       return null;
     }
+    String retVal;
     Matcher matcher = pattern.matcher(dimValue);
-    return Strings.emptyToNull(matcher.find() ? matcher.group(1) : dimValue);
+    if (matcher.find()) {
+      retVal = matcher.group(1);
+    } else {
+      retVal = replaceMissingValues ? replaceMissingValuesWith : dimValue;
+    }
+    return Strings.emptyToNull(retVal);
   }
 
   @JsonProperty("expr")
   public String getExpr()
   {
     return expr;
+  }
+
+  @JsonProperty("replaceMissingValues")
+  public boolean isReplaceMissingValues()
+  {
+    return replaceMissingValues;
+  }
+
+  @JsonProperty("replaceMissingValuesWith")
+  public String getReplaceMissingValuesWith()
+  {
+    return replaceMissingValuesWith;
   }
 
   @Override
