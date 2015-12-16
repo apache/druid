@@ -144,7 +144,7 @@ Returns a map of an interval to a map of segment metadata to a set of server nam
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/intervals/{interval}`
 
-Returns a set of segment ids for an ISO8601 interval.
+Returns a set of segment ids for an ISO8601 interval. Note that the interval is delimited by a `_` instead of a `/`
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/intervals/{interval}?simple`
 
