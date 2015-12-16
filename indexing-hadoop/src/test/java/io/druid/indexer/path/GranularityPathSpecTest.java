@@ -20,15 +20,44 @@
 package io.druid.indexer.path;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Optional;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.metamx.common.Granularity;
+import io.druid.indexer.HadoopDruidIndexerConfig;
+import io.druid.indexer.hadoop.FSSpideringIterator;
 import io.druid.jackson.DefaultObjectMapper;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.input.CombineTextInputFormat;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.easymock.Capture;
+import org.easymock.CaptureType;
+import org.easymock.EasyMock;
+import org.joda.time.Interval;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.powermock.api.easymock.PowerMock;
+import org.powermock.core.classloader.annotations.PrepareForTest;
+import org.powermock.core.classloader.annotations.SuppressStaticInitializationFor;
+import org.powermock.modules.junit4.PowerMockRunner;
 
+import java.util.Iterator;
+import java.util.Set;
 
+import static org.easymock.EasyMock.anyObject;
+import static org.easymock.EasyMock.eq;
+
+@RunWith(PowerMockRunner.class)
+@PrepareForTest({ FSSpideringIterator.class, StaticPathSpec.class })
+@SuppressStaticInitializationFor("io.druid.indexer.HadoopDruidIndexerConfig")
 public class GranularityPathSpecTest
 {
   private GranularityPathSpec granularityPathSpec;
@@ -83,6 +112,70 @@ public class GranularityPathSpecTest
   public void testSerdeNoInputFormat() throws Exception
   {
     testSerde("/test/path", "*.test", "pat_pat", Granularity.SECOND, null);
+  }
+
+  @Test
+  public void testAddInputPath() throws Exception
+  {
+    Iterable<FileStatus> testIterable = new Iterable<FileStatus>() {
+      private int j;
+
+      @Override
+      public Iterator<FileStatus> iterator() {
+        if (++j % 2 == 0) {
+          return new FSSpideringIterator(new LocalFileSystem(), new FileStatus[]{});
+        }
+
+        return new Iterator<FileStatus>() {
+          private int i;
+
+          @Override
+          public boolean hasNext() {
+            return ++i <= 3;
+          }
+
+          @Override
+          public FileStatus next() {
+            return new FileStatus(0L, false, 0, 0L, 0L, new Path(String.format("file:///test/path/%d/%d.gz", j, i)));
+          }
+
+          @Override
+          public void remove() { }
+        };
+      }
+    };
+
+    UserGroupInformation.setLoginUser(UserGroupInformation.createUserForTesting("test", new String[]{"testGroup"}));
+    granularityPathSpec.setDataGranularity(Granularity.HOUR);
+    granularityPathSpec.setInputPath("/test/path");
+    granularityPathSpec.setFilePattern("file:/+test/path/\\d+/\\d+.gz");
+    granularityPathSpec.setInputFormat(CombineTextInputFormat.class);
+
+    HadoopDruidIndexerConfig mockIndexerConfig = EasyMock.createNiceMock(HadoopDruidIndexerConfig.class);
+    Capture<String> pathCapture = Capture.newInstance(CaptureType.ALL);
+    Job job = Job.getInstance();
+
+    PowerMock.mockStatic(FSSpideringIterator.class);
+    PowerMock.mockStatic(StaticPathSpec.class);
+    EasyMock.expect(FSSpideringIterator.spiderIterable(anyObject(FileSystem.class), anyObject(Path.class)))
+        .andReturn(testIterable).times(3);
+
+    StaticPathSpec.addToMultipleInputs(eq(mockIndexerConfig), eq(job),
+        EasyMock.capture(pathCapture), eq(CombineTextInputFormat.class));
+    PowerMock.expectLastCall().times(6);
+
+    EasyMock.expect(mockIndexerConfig.getSegmentGranularIntervals())
+        .andReturn(Optional.<Set<Interval>>of(Sets.newHashSet(Interval.parse("2015-11-10T00:00Z/2015-11-10T03:00Z"))));
+
+    PowerMock.replay(FSSpideringIterator.class, StaticPathSpec.class, mockIndexerConfig);
+    granularityPathSpec.addInputPaths(mockIndexerConfig, job);
+
+    PowerMock.verify(FSSpideringIterator.class, StaticPathSpec.class, mockIndexerConfig);
+    Assert.assertEquals(6, pathCapture.getValues().size());
+    Assert.assertTrue("Didn't find all expected paths", pathCapture.getValues().containsAll(Lists.newArrayList(
+        "file:/test/path/1/1.gz", "file:/test/path/1/2.gz", "file:/test/path/1/3.gz",
+        "file:/test/path/3/1.gz", "file:/test/path/3/2.gz", "file:/test/path/3/3.gz"
+    )));
   }
 
   private void testSerde(
