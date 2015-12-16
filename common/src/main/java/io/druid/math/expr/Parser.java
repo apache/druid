@@ -20,108 +20,37 @@
 package io.druid.math.expr;
 
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import com.google.common.collect.ImmutableMap;
+import io.druid.math.expr.antlr.ExprLexer;
+import io.druid.math.expr.antlr.ExprParser;
+import org.antlr.v4.runtime.ANTLRInputStream;
+import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.tree.ParseTree;
+import org.antlr.v4.runtime.tree.ParseTreeWalker;
+
 import java.util.Map;
 
 public class Parser
 {
-  static final Map<String, Function> func = new HashMap<>();
+  static final Map<String, Function> func;
 
   static {
-    func.put("sqrt", new SqrtFunc());
-    func.put("if", new ConditionFunc());
+    func = ImmutableMap.<String, Function>builder()
+                       .put("sqrt", new SqrtFunc())
+                       .put("if", new ConditionFunc())
+                       .build();
   }
 
-  private final Lexer lexer;
-
-  private Parser(Lexer lexer)
+  public static Expr parse(String in)
   {
-    this.lexer = lexer;
-  }
-
-  public static Expr parse(String input)
-  {
-    return new Parser(new Lexer(input)).parseExpr(0);
-  }
-
-  private Expr parseExpr(int p)
-  {
-    Expr result = new SimpleExpr(parseAtom());
-
-    Token t = lexer.peek();
-    while (
-        t.getType() < Token.NUM_BINARY_OPERATORS
-        &&
-        Token.PRECEDENCE[t.getType()] >= p
-        ) {
-      lexer.consume();
-      result = new BinExpr(
-          t,
-          result,
-          parseExpr(Token.R_PRECEDENCE[t.getType()])
-      );
-
-      t = lexer.peek();
-    }
-
-    return result;
-  }
-
-  private Atom parseAtom()
-  {
-    Token t = lexer.peek();
-
-    switch(t.getType()) {
-      case Token.IDENTIFIER:
-        lexer.consume();
-        String id = t.getMatch();
-
-        if (func.containsKey(id)) {
-          expect(Token.LPAREN);
-          List<Expr> args = new ArrayList<>();
-          t = lexer.peek();
-          while(t.getType() != Token.RPAREN) {
-            args.add(parseExpr(0));
-            t = lexer.peek();
-            if (t.getType() == Token.COMMA) {
-              lexer.consume();
-            }
-          }
-          expect(Token.RPAREN);
-          return new FunctionAtom(id, args);
-        }
-
-        return new IdentifierAtom(t);
-      case Token.LONG:
-        lexer.consume();
-        return new LongValueAtom(Long.valueOf(t.getMatch()));
-      case Token.DOUBLE:
-        lexer.consume();
-        return new DoubleValueAtom(Double.valueOf(t.getMatch()));
-      case Token.MINUS:
-        lexer.consume();
-        return new UnaryMinusExprAtom(parseExpr(Token.UNARY_MINUS_PRECEDENCE));
-      case Token.NOT:
-        lexer.consume();
-        return new UnaryNotExprAtom(parseExpr(Token.UNARY_NOT_PRECEDENCE));
-      case Token.LPAREN:
-        lexer.consume();
-        Expr expression = parseExpr(0);
-        if(lexer.consume().getType() == Token.RPAREN) {
-          return new NestedExprAtom(expression);
-        }
-      default:
-        throw new RuntimeException("Invalid token found " + t + " in input " + lexer);
-    }
-  }
-
-  private void expect(int type)
-  {
-    Token t = lexer.consume();
-    if(t.getType() != type) {
-      throw new RuntimeException("Invalid token found " + t + " in input " + lexer);
-    }
+    ExprLexer lexer = new ExprLexer(new ANTLRInputStream(in));
+    CommonTokenStream tokens = new CommonTokenStream(lexer);
+    ExprParser parser = new ExprParser(tokens);
+    parser.setBuildParseTree(true);
+    ParseTree parseTree = parser.expr();
+    ParseTreeWalker walker = new ParseTreeWalker();
+    ExprListenerImpl listener = new ExprListenerImpl(parseTree);
+    walker.walk(listener, parseTree);
+    return listener.getAST();
   }
 }

@@ -31,209 +31,11 @@ public interface Expr
   Number eval(Map<String, Number> bindings);
 }
 
-class SimpleExpr implements Expr
-{
-  private final Atom atom;
-
-  public SimpleExpr(Atom atom)
-  {
-    this.atom = atom;
-  }
-
-  @Override
-  public String toString()
-  {
-    return atom.toString();
-  }
-
-  @Override
-  public Number eval(Map<String, Number> bindings)
-  {
-    return atom.eval(bindings);
-  }
-}
-
-class BinExpr implements Expr
-{
-  private final Token opToken;
-  private final Expr left;
-  private final Expr right;
-
-  public BinExpr(Token opToken, Expr left, Expr right)
-  {
-    this.opToken = opToken;
-    this.left = left;
-    this.right = right;
-  }
-
-  public Number eval(Map<String, Number> bindings)
-  {
-    switch(opToken.getType()) {
-      case Token.AND:
-        Number leftVal = left.eval(bindings);
-        Number rightVal = right.eval(bindings);
-        if (isLong(leftVal, rightVal)) {
-          long lval = leftVal.longValue();
-          if (lval > 0) {
-            long rval = rightVal.longValue();
-            return rval > 0 ? 1 : 0;
-          } else {
-            return 0;
-          }
-        } else {
-          double lval = leftVal.doubleValue();
-          if (lval > 0) {
-            double rval = rightVal.doubleValue();
-            return rval > 0 ? 1.0d : 0.0d;
-          } else {
-            return 0.0d;
-          }
-        }
-      case Token.OR:
-        leftVal = left.eval(bindings);
-        rightVal = right.eval(bindings);
-        if (isLong(leftVal, rightVal)) {
-          long lval = leftVal.longValue();
-          if (lval > 0) {
-            return 1;
-          } else {
-            long rval = rightVal.longValue();
-            return rval > 0 ? 1 : 0;
-          }
-        } else {
-          double lval = leftVal.doubleValue();
-          if (lval > 0) {
-            return 1.0d;
-          } else {
-            double rval = rightVal.doubleValue();
-            return rval > 0 ? 1.0d : 0.0d;
-          }
-        }
-      case Token.LT:
-        leftVal = left.eval(bindings);
-        rightVal = right.eval(bindings);
-        if (isLong(leftVal, rightVal)) {
-          return leftVal.longValue() < rightVal.longValue() ? 1 : 0;
-        } else {
-          return leftVal.doubleValue() < rightVal.doubleValue() ? 1.0d : 0.0d;
-        }
-      case Token.LEQ:
-        leftVal = left.eval(bindings);
-        rightVal = right.eval(bindings);
-        if (isLong(leftVal, rightVal)) {
-          return leftVal.longValue() <= rightVal.longValue() ? 1 : 0;
-        } else {
-          return leftVal.doubleValue() <= rightVal.doubleValue() ? 1.0d : 0.0d;
-        }
-      case Token.GT:
-        leftVal = left.eval(bindings);
-        rightVal = right.eval(bindings);
-        if (isLong(leftVal, rightVal)) {
-          return leftVal.longValue() > rightVal.longValue() ? 1 : 0;
-        } else {
-          return leftVal.doubleValue() > rightVal.doubleValue() ? 1.0d : 0.0d;
-        }
-      case Token.GEQ:
-        leftVal = left.eval(bindings);
-        rightVal = right.eval(bindings);
-        if (isLong(leftVal, rightVal)) {
-          return leftVal.longValue() >= rightVal.longValue() ? 1 : 0;
-        } else {
-          return leftVal.doubleValue() >= rightVal.doubleValue() ? 1.0d : 0.0d;
-        }
-      case Token.EQ:
-        leftVal = left.eval(bindings);
-        rightVal = right.eval(bindings);
-        if (isLong(leftVal, rightVal)) {
-          return leftVal.longValue() == rightVal.longValue() ? 1 : 0;
-        } else {
-          return leftVal.doubleValue() == rightVal.doubleValue() ? 1.0d : 0.0d;
-        }
-      case Token.NEQ:
-        leftVal = left.eval(bindings);
-        rightVal = right.eval(bindings);
-        if (isLong(leftVal, rightVal)) {
-          return leftVal.longValue() != rightVal.longValue() ? 1 : 0;
-        } else {
-          return leftVal.doubleValue() != rightVal.doubleValue() ? 1.0d : 0.0d;
-        }
-      case Token.PLUS:
-        leftVal = left.eval(bindings);
-        rightVal = right.eval(bindings);
-        if (isLong(leftVal, rightVal)) {
-          return leftVal.longValue() + rightVal.longValue();
-        } else {
-          return leftVal.doubleValue() + rightVal.doubleValue();
-        }
-      case Token.MINUS:
-        leftVal = left.eval(bindings);
-        rightVal = right.eval(bindings);
-        if (isLong(leftVal, rightVal)) {
-          return leftVal.longValue() - rightVal.longValue();
-        } else {
-          return leftVal.doubleValue() - rightVal.doubleValue();
-        }
-      case Token.MUL:
-        leftVal = left.eval(bindings);
-        rightVal = right.eval(bindings);
-        if (isLong(leftVal, rightVal)) {
-          return leftVal.longValue() * rightVal.longValue();
-        } else {
-          return leftVal.doubleValue() * rightVal.doubleValue();
-        }
-      case Token.DIV:
-        leftVal = left.eval(bindings);
-        rightVal = right.eval(bindings);
-        if (isLong(leftVal, rightVal)) {
-          return leftVal.longValue() / rightVal.longValue();
-        } else {
-          return leftVal.doubleValue() / rightVal.doubleValue();
-        }
-      case Token.MODULO:
-        leftVal = left.eval(bindings);
-        rightVal = right.eval(bindings);
-        if (isLong(leftVal, rightVal)) {
-          return leftVal.longValue() % rightVal.longValue();
-        } else {
-          return leftVal.doubleValue() % rightVal.doubleValue();
-        }
-      case Token.CARROT:
-        leftVal = left.eval(bindings);
-        rightVal = right.eval(bindings);
-        if (isLong(leftVal, rightVal)) {
-          return LongMath.pow(leftVal.longValue(), rightVal.intValue());
-        } else {
-          return Math.pow(leftVal.doubleValue(), rightVal.doubleValue());
-        }
-      default:
-        throw new RuntimeException("Unknown operator " + opToken.getMatch());
-    }
-  }
-
-  private boolean isLong(Number left, Number right)
-  {
-    return left instanceof Long && right instanceof Long;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "(" + opToken.getMatch() + " " + left + " " + right + ")";
-  }
-}
-
-
-
-interface Atom
-{
-  Number eval(Map<String, Number> bindings);
-}
-
-class LongValueAtom implements Atom
+class LongExpr implements Expr
 {
   private final long value;
 
-  public LongValueAtom(long value)
+  public LongExpr(long value)
   {
     this.value = value;
   }
@@ -251,11 +53,11 @@ class LongValueAtom implements Atom
   }
 }
 
-class DoubleValueAtom implements Atom
+class DoubleExpr implements Expr
 {
   private final double value;
 
-  public DoubleValueAtom(double value)
+  public DoubleExpr(double value)
   {
     this.value = value;
   }
@@ -273,11 +75,11 @@ class DoubleValueAtom implements Atom
   }
 }
 
-class IdentifierAtom implements Atom
+class IdentifierExpr implements Expr
 {
-  private final Token value;
+  private final String value;
 
-  public IdentifierAtom(Token value)
+  public IdentifierExpr(String value)
   {
     this.value = value;
   }
@@ -285,100 +87,27 @@ class IdentifierAtom implements Atom
   @Override
   public String toString()
   {
-    return value.getMatch();
+    return value;
   }
 
   @Override
   public Number eval(Map<String, Number> bindings)
   {
-    Number val = bindings.get(value.getMatch());
+    Number val = bindings.get(value);
     if (val == null) {
-      throw new RuntimeException("No binding found for " + value.getMatch());
+      throw new RuntimeException("No binding found for " + value);
     } else {
-      return val;
+      return val instanceof Long ? val : val.doubleValue();
     }
   }
 }
 
-class UnaryNotExprAtom implements Atom
-{
-  private final Expr expr;
-
-  public UnaryNotExprAtom(Expr expr)
-  {
-    this.expr = expr;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "!" + expr.toString();
-  }
-
-  @Override
-  public Number eval(Map<String, Number> bindings)
-  {
-    Number valObj = expr.eval(bindings);
-    return valObj.doubleValue() > 0 ? 0.0d : 1.0d;
-  }
-}
-
-class UnaryMinusExprAtom implements Atom
-{
-  private final Expr expr;
-
-  public UnaryMinusExprAtom(Expr expr)
-  {
-    this.expr = expr;
-  }
-
-  @Override
-  public String toString()
-  {
-    return "-" + expr.toString();
-  }
-
-  @Override
-  public Number eval(Map<String, Number> bindings)
-  {
-    Number valObj = expr.eval(bindings);
-    if (valObj instanceof Long) {
-      return -1 * valObj.longValue();
-    } else {
-      return -1 * valObj.doubleValue();
-    }
-  }
-}
-
-
-class NestedExprAtom implements Atom
-{
-  private final Expr expr;
-
-  public NestedExprAtom(Expr expr)
-  {
-    this.expr = expr;
-  }
-
-  @Override
-  public String toString()
-  {
-    return expr.toString();
-  }
-
-  @Override
-  public Number eval(Map<String, Number> bindings)
-  {
-    return expr.eval(bindings);
-  }
-}
-
-class FunctionAtom implements Atom
+class FunctionExpr implements Expr
 {
   private final String name;
   private final List<Expr> args;
 
-  public FunctionAtom(String name, List<Expr> args)
+  public FunctionExpr(String name, List<Expr> args)
   {
     this.name = name;
     this.args = args;
@@ -394,5 +123,398 @@ class FunctionAtom implements Atom
   public Number eval(Map<String, Number> bindings)
   {
     return Parser.func.get(name).apply(args, bindings);
+  }
+}
+
+class UnaryMinusExpr implements Expr
+{
+  private final Expr expr;
+
+  UnaryMinusExpr(Expr expr)
+  {
+    this.expr = expr;
+  }
+
+  @Override
+  public Number eval(Map<String, Number> bindings)
+  {
+    Number valObj = expr.eval(bindings);
+    if (valObj instanceof Long) {
+      return -1 * valObj.longValue();
+    } else {
+      return -1 * valObj.doubleValue();
+    }
+  }
+
+  @Override
+  public String toString()
+  {
+    return "-" + expr.toString();
+  }
+}
+
+class UnaryNotExpr implements Expr
+{
+  private final Expr expr;
+
+  UnaryNotExpr(Expr expr)
+  {
+    this.expr = expr;
+  }
+
+  @Override
+  public Number eval(Map<String, Number> bindings)
+  {
+    Number valObj = expr.eval(bindings);
+    return valObj.doubleValue() > 0 ? 0.0d : 1.0d;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "!" + expr.toString();
+  }
+}
+
+abstract class BinaryOpExprBase implements Expr
+{
+  protected final String op;
+  protected final Expr left;
+  protected final Expr right;
+
+  public BinaryOpExprBase(String op, Expr left, Expr right)
+  {
+    this.op = op;
+    this.left = left;
+    this.right = right;
+  }
+
+  protected boolean isLong(Number left, Number right)
+  {
+    return left instanceof Long && right instanceof Long;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "(" + op + " " + left + " " + right + ")";
+  }
+}
+
+class BinMinusExpr extends BinaryOpExprBase
+{
+
+  BinMinusExpr(String op, Expr left, Expr right)
+  {
+    super(op, left, right);
+  }
+
+  @Override
+  public Number eval(Map<String, Number> bindings)
+  {
+    Number leftVal = left.eval(bindings);
+    Number rightVal = right.eval(bindings);
+    if (isLong(leftVal, rightVal)) {
+      return leftVal.longValue() - rightVal.longValue();
+    } else {
+      return leftVal.doubleValue() - rightVal.doubleValue();
+    }
+  }
+}
+
+class BinPowExpr extends BinaryOpExprBase
+{
+
+  BinPowExpr(String op, Expr left, Expr right)
+  {
+    super(op, left, right);
+  }
+
+  @Override
+  public Number eval(Map<String, Number> bindings)
+  {
+    Number leftVal = left.eval(bindings);
+    Number rightVal = right.eval(bindings);
+    if (isLong(leftVal, rightVal)) {
+      return LongMath.pow(leftVal.longValue(), rightVal.intValue());
+    } else {
+      return Math.pow(leftVal.doubleValue(), rightVal.doubleValue());
+    }
+  }
+}
+
+class BinMulExpr extends BinaryOpExprBase
+{
+
+  BinMulExpr(String op, Expr left, Expr right)
+  {
+    super(op, left, right);
+  }
+
+  @Override
+  public Number eval(Map<String, Number> bindings)
+  {
+    Number leftVal = left.eval(bindings);
+    Number rightVal = right.eval(bindings);
+    if (isLong(leftVal, rightVal)) {
+      return leftVal.longValue() * rightVal.longValue();
+    } else {
+      return leftVal.doubleValue() * rightVal.doubleValue();
+    }
+  }
+}
+
+class BinDivExpr extends BinaryOpExprBase
+{
+
+  BinDivExpr(String op, Expr left, Expr right)
+  {
+    super(op, left, right);
+  }
+
+  @Override
+  public Number eval(Map<String, Number> bindings)
+  {
+    Number leftVal = left.eval(bindings);
+    Number rightVal = right.eval(bindings);
+    if (isLong(leftVal, rightVal)) {
+      return leftVal.longValue() / rightVal.longValue();
+    } else {
+      return leftVal.doubleValue() / rightVal.doubleValue();
+    }
+  }
+}
+
+class BinModuloExpr extends BinaryOpExprBase
+{
+
+  BinModuloExpr(String op, Expr left, Expr right)
+  {
+    super(op, left, right);
+  }
+
+  @Override
+  public Number eval(Map<String, Number> bindings)
+  {
+    Number leftVal = left.eval(bindings);
+    Number rightVal = right.eval(bindings);
+    if (isLong(leftVal, rightVal)) {
+      return leftVal.longValue() % rightVal.longValue();
+    } else {
+      return leftVal.doubleValue() % rightVal.doubleValue();
+    }
+  }
+}
+
+class BinPlusExpr extends BinaryOpExprBase
+{
+
+  BinPlusExpr(String op, Expr left, Expr right)
+  {
+    super(op, left, right);
+  }
+
+  @Override
+  public Number eval(Map<String, Number> bindings)
+  {
+    Number leftVal = left.eval(bindings);
+    Number rightVal = right.eval(bindings);
+    if (isLong(leftVal, rightVal)) {
+      return leftVal.longValue() + rightVal.longValue();
+    } else {
+      return leftVal.doubleValue() + rightVal.doubleValue();
+    }
+  }
+}
+
+class BinLtExpr extends BinaryOpExprBase
+{
+
+  BinLtExpr(String op, Expr left, Expr right)
+  {
+    super(op, left, right);
+  }
+
+  @Override
+  public Number eval(Map<String, Number> bindings)
+  {
+    Number leftVal = left.eval(bindings);
+    Number rightVal = right.eval(bindings);
+    if (isLong(leftVal, rightVal)) {
+      return leftVal.longValue() < rightVal.longValue() ? 1 : 0;
+    } else {
+      return leftVal.doubleValue() < rightVal.doubleValue() ? 1.0d : 0.0d;
+    }
+  }
+}
+
+class BinLeqExpr extends BinaryOpExprBase
+{
+
+  BinLeqExpr(String op, Expr left, Expr right)
+  {
+    super(op, left, right);
+  }
+
+  @Override
+  public Number eval(Map<String, Number> bindings)
+  {
+    Number leftVal = left.eval(bindings);
+    Number rightVal = right.eval(bindings);
+    if (isLong(leftVal, rightVal)) {
+      return leftVal.longValue() <= rightVal.longValue() ? 1 : 0;
+    } else {
+      return leftVal.doubleValue() <= rightVal.doubleValue() ? 1.0d : 0.0d;
+    }
+  }
+}
+
+class BinGtExpr extends BinaryOpExprBase
+{
+
+  BinGtExpr(String op, Expr left, Expr right)
+  {
+    super(op, left, right);
+  }
+
+  @Override
+  public Number eval(Map<String, Number> bindings)
+  {
+    Number leftVal = left.eval(bindings);
+    Number rightVal = right.eval(bindings);
+    if (isLong(leftVal, rightVal)) {
+      return leftVal.longValue() > rightVal.longValue() ? 1 : 0;
+    } else {
+      return leftVal.doubleValue() > rightVal.doubleValue() ? 1.0d : 0.0d;
+    }
+  }
+}
+
+class BinGeqExpr extends BinaryOpExprBase
+{
+
+  BinGeqExpr(String op, Expr left, Expr right)
+  {
+    super(op, left, right);
+  }
+
+  @Override
+  public Number eval(Map<String, Number> bindings)
+  {
+    Number leftVal = left.eval(bindings);
+    Number rightVal = right.eval(bindings);
+    if (isLong(leftVal, rightVal)) {
+      return leftVal.longValue() >= rightVal.longValue() ? 1 : 0;
+    } else {
+      return leftVal.doubleValue() >= rightVal.doubleValue() ? 1.0d : 0.0d;
+    }
+  }
+}
+
+class BinEqExpr extends BinaryOpExprBase
+{
+
+  BinEqExpr(String op, Expr left, Expr right)
+  {
+    super(op, left, right);
+  }
+
+  @Override
+  public Number eval(Map<String, Number> bindings)
+  {
+    Number leftVal = left.eval(bindings);
+    Number rightVal = right.eval(bindings);
+    if (isLong(leftVal, rightVal)) {
+      return leftVal.longValue() == rightVal.longValue() ? 1 : 0;
+    } else {
+      return leftVal.doubleValue() == rightVal.doubleValue() ? 1.0d : 0.0d;
+    }
+  }
+}
+
+class BinNeqExpr extends BinaryOpExprBase
+{
+
+  BinNeqExpr(String op, Expr left, Expr right)
+  {
+    super(op, left, right);
+  }
+
+  @Override
+  public Number eval(Map<String, Number> bindings)
+  {
+    Number leftVal = left.eval(bindings);
+    Number rightVal = right.eval(bindings);
+    if (isLong(leftVal, rightVal)) {
+      return leftVal.longValue() != rightVal.longValue() ? 1 : 0;
+    } else {
+      return leftVal.doubleValue() != rightVal.doubleValue() ? 1.0d : 0.0d;
+    }
+  }
+}
+
+class BinAndExpr extends BinaryOpExprBase
+{
+
+  BinAndExpr(String op, Expr left, Expr right)
+  {
+    super(op, left, right);
+  }
+
+  @Override
+  public Number eval(Map<String, Number> bindings)
+  {
+    Number leftVal = left.eval(bindings);
+    Number rightVal = right.eval(bindings);
+    if (isLong(leftVal, rightVal)) {
+      long lval = leftVal.longValue();
+      if (lval > 0) {
+        long rval = rightVal.longValue();
+        return rval > 0 ? 1 : 0;
+      } else {
+        return 0;
+      }
+    } else {
+      double lval = leftVal.doubleValue();
+      if (lval > 0) {
+        double rval = rightVal.doubleValue();
+        return rval > 0 ? 1.0d : 0.0d;
+      } else {
+        return 0.0d;
+      }
+    }
+  }
+}
+
+class BinOrExpr extends BinaryOpExprBase
+{
+
+  BinOrExpr(String op, Expr left, Expr right)
+  {
+    super(op, left, right);
+  }
+
+  @Override
+  public Number eval(Map<String, Number> bindings)
+  {
+    Number leftVal = left.eval(bindings);
+    Number rightVal = right.eval(bindings);
+    if (isLong(leftVal, rightVal)) {
+      long lval = leftVal.longValue();
+      if (lval > 0) {
+        return 1;
+      } else {
+        long rval = rightVal.longValue();
+        return rval > 0 ? 1 : 0;
+      }
+    } else {
+      double lval = leftVal.doubleValue();
+      if (lval > 0) {
+        return 1.0d;
+      } else {
+        double rval = rightVal.doubleValue();
+        return rval > 0 ? 1.0d : 0.0d;
+      }
+    }
   }
 }

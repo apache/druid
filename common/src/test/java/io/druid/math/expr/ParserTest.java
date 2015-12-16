@@ -97,12 +97,12 @@ public class ParserTest
     expected = "(!= x y)";
     Assert.assertEquals(expected, actual);
 
-    actual = Parser.parse("x and y").toString();
-    expected = "(and x y)";
+    actual = Parser.parse("x && y").toString();
+    expected = "(&& x y)";
     Assert.assertEquals(expected, actual);
 
-    actual = Parser.parse("x or y").toString();
-    expected = "(or x y)";
+    actual = Parser.parse("x || y").toString();
+    expected = "(|| x y)";
     Assert.assertEquals(expected, actual);
   }
 
@@ -217,20 +217,20 @@ public class ParserTest
     Assert.assertEquals(expected, actual);
 
 
-    actual = Parser.parse("1+2^3)").toString();
+    actual = Parser.parse("1+2^3").toString();
     expected = "(+ 1 (^ 2 3))";
     Assert.assertEquals(expected, actual);
 
-    actual = Parser.parse("1+(2^3))").toString();
+    actual = Parser.parse("1+(2^3)").toString();
     expected = "(+ 1 (^ 2 3))";
     Assert.assertEquals(expected, actual);
 
-    actual = Parser.parse("(1+2)^3)").toString();
+    actual = Parser.parse("(1+2)^3").toString();
     expected = "(^ (+ 1 2) 3)";
     Assert.assertEquals(expected, actual);
 
 
-    actual = Parser.parse("1^2+3)").toString();
+    actual = Parser.parse("1^2+3").toString();
     expected = "(+ (^ 1 2) 3)";
     Assert.assertEquals(expected, actual);
 
@@ -243,11 +243,11 @@ public class ParserTest
     Assert.assertEquals(expected, actual);
 
 
-    actual = Parser.parse("1^2*3+4)").toString();
+    actual = Parser.parse("1^2*3+4").toString();
     expected = "(+ (* (^ 1 2) 3) 4)";
     Assert.assertEquals(expected, actual);
 
-    actual = Parser.parse("-1^-2*-3+-4)").toString();
+    actual = Parser.parse("-1^-2*-3+-4").toString();
     expected = "(+ (* (^ -1 -2) -3) -4)";
     Assert.assertEquals(expected, actual);
   }

@@ -37,11 +37,11 @@ public class EvalTest
 
     Assert.assertEquals(2.0, Parser.parse("x").eval(bindings).doubleValue(), 0.0001);
 
-    Assert.assertFalse(Parser.parse("1.0 and 0.0").eval(bindings).doubleValue() > 0.0);
-    Assert.assertTrue(Parser.parse("1.0 and 2.0").eval(bindings).doubleValue() > 0.0);
+    Assert.assertFalse(Parser.parse("1.0 && 0.0").eval(bindings).doubleValue() > 0.0);
+    Assert.assertTrue(Parser.parse("1.0 && 2.0").eval(bindings).doubleValue() > 0.0);
 
-    Assert.assertTrue(Parser.parse("1.0 or 0.0").eval(bindings).doubleValue() > 0.0);
-    Assert.assertFalse(Parser.parse("0.0 or 0.0").eval(bindings).doubleValue() > 0.0);
+    Assert.assertTrue(Parser.parse("1.0 || 0.0").eval(bindings).doubleValue() > 0.0);
+    Assert.assertFalse(Parser.parse("0.0 || 0.0").eval(bindings).doubleValue() > 0.0);
 
     Assert.assertTrue(Parser.parse("2.0 > 1.0").eval(bindings).doubleValue() > 0.0);
     Assert.assertTrue(Parser.parse("2.0 >= 2.0").eval(bindings).doubleValue() > 0.0);
@@ -71,17 +71,17 @@ public class EvalTest
   public void testLongEval()
   {
     Map<String, Number> bindings = new HashMap<>();
-    bindings.put("x", 9223372036854775807l);
+    bindings.put("x", 9223372036854775807L);
 
-    Assert.assertEquals(9223372036854775807l, Parser.parse("x").eval(bindings).longValue());
+    Assert.assertEquals(9223372036854775807L, Parser.parse("x").eval(bindings).longValue());
 
-    Assert.assertFalse(Parser.parse("9223372036854775807 and 0").eval(bindings).longValue() > 0);
-    Assert.assertTrue(Parser.parse("9223372036854775807 and 9223372036854775806").eval(bindings).longValue() > 0);
+    Assert.assertFalse(Parser.parse("9223372036854775807 && 0").eval(bindings).longValue() > 0);
+    Assert.assertTrue(Parser.parse("9223372036854775807 && 9223372036854775806").eval(bindings).longValue() > 0);
 
-    Assert.assertTrue(Parser.parse("9223372036854775807 or 0").eval(bindings).longValue() > 0);
-    Assert.assertFalse(Parser.parse("-9223372036854775807 or -9223372036854775807").eval(bindings).longValue() > 0);
-    Assert.assertTrue(Parser.parse("-9223372036854775807 or 9223372036854775807").eval(bindings).longValue() > 0);
-    Assert.assertFalse(Parser.parse("0 or 0").eval(bindings).longValue() > 0);
+    Assert.assertTrue(Parser.parse("9223372036854775807 || 0").eval(bindings).longValue() > 0);
+    Assert.assertFalse(Parser.parse("-9223372036854775807 || -9223372036854775807").eval(bindings).longValue() > 0);
+    Assert.assertTrue(Parser.parse("-9223372036854775807 || 9223372036854775807").eval(bindings).longValue() > 0);
+    Assert.assertFalse(Parser.parse("0 || 0").eval(bindings).longValue() > 0);
 
     Assert.assertTrue(Parser.parse("9223372036854775807 > 9223372036854775806").eval(bindings).longValue() > 0);
     Assert.assertTrue(Parser.parse("9223372036854775807 >= 9223372036854775807").eval(bindings).longValue() > 0);
@@ -90,20 +90,20 @@ public class EvalTest
     Assert.assertTrue(Parser.parse("9223372036854775807 == 9223372036854775807").eval(bindings).longValue() > 0);
     Assert.assertTrue(Parser.parse("9223372036854775807 != 9223372036854775806").eval(bindings).longValue() > 0);
 
-    Assert.assertEquals(9223372036854775807l, Parser.parse("9223372036854775806 + 1").eval(bindings).longValue());
-    Assert.assertEquals(9223372036854775806l, Parser.parse("9223372036854775807 - 1").eval(bindings).longValue());
-    Assert.assertEquals(9223372036854775806l, Parser.parse("4611686018427387903 * 2").eval(bindings).longValue());
-    Assert.assertEquals(4611686018427387903l, Parser.parse("9223372036854775806 / 2").eval(bindings).longValue());
-    Assert.assertEquals(7, Parser.parse("9223372036854775807 % 9223372036854775800").eval(bindings).longValue());
-    Assert.assertEquals( 9223372030926249001l, Parser.parse("3037000499 ^ 2").eval(bindings).longValue());
-    Assert.assertEquals(-9223372036854775807l, Parser.parse("-9223372036854775807").eval(bindings).longValue());
+    Assert.assertEquals(9223372036854775807L, Parser.parse("9223372036854775806 + 1").eval(bindings).longValue());
+    Assert.assertEquals(9223372036854775806L, Parser.parse("9223372036854775807 - 1").eval(bindings).longValue());
+    Assert.assertEquals(9223372036854775806L, Parser.parse("4611686018427387903 * 2").eval(bindings).longValue());
+    Assert.assertEquals(4611686018427387903L, Parser.parse("9223372036854775806 / 2").eval(bindings).longValue());
+    Assert.assertEquals(7L, Parser.parse("9223372036854775807 % 9223372036854775800").eval(bindings).longValue());
+    Assert.assertEquals( 9223372030926249001L, Parser.parse("3037000499 ^ 2").eval(bindings).longValue());
+    Assert.assertEquals(-9223372036854775807L, Parser.parse("-9223372036854775807").eval(bindings).longValue());
 
     Assert.assertTrue(Parser.parse("!-9223372036854775807").eval(bindings).longValue() > 0);
     Assert.assertTrue(Parser.parse("!0").eval(bindings).longValue() > 0);
     Assert.assertFalse(Parser.parse("!9223372036854775807").eval(bindings).longValue() > 0);
 
-    Assert.assertEquals(3037000499l, Parser.parse("sqrt(9223372036854775807)").eval(bindings).longValue());
-    Assert.assertEquals(9223372036854775807l, Parser.parse("if(9223372036854775807, 9223372036854775807, 9223372036854775806)").eval(bindings).longValue());
-    Assert.assertEquals(9223372036854775806l, Parser.parse("if(0, 9223372036854775807, 9223372036854775806)").eval(bindings).longValue());
+    Assert.assertEquals(3037000499L, Parser.parse("sqrt(9223372036854775807)").eval(bindings).longValue());
+    Assert.assertEquals(9223372036854775807L, Parser.parse("if(9223372036854775807, 9223372036854775807, 9223372036854775806)").eval(bindings).longValue());
+    Assert.assertEquals(9223372036854775806L, Parser.parse("if(0, 9223372036854775807, 9223372036854775806)").eval(bindings).longValue());
   }
 }
