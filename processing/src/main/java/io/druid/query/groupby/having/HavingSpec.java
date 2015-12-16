@@ -27,7 +27,7 @@ import io.druid.data.input.Row;
  * A "having" clause that filters aggregated/dimension value. This is similar to SQL's "having"
  * clause.
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = AlwaysHavingSpec.class)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "and", value = AndHavingSpec.class),
     @JsonSubTypes.Type(name = "or", value = OrHavingSpec.class),
@@ -35,7 +35,8 @@ import io.druid.data.input.Row;
     @JsonSubTypes.Type(name = "greaterThan", value = GreaterThanHavingSpec.class),
     @JsonSubTypes.Type(name = "lessThan", value = LessThanHavingSpec.class),
     @JsonSubTypes.Type(name = "equalTo", value = EqualToHavingSpec.class),
-    @JsonSubTypes.Type(name = "dimSelector", value = DimensionSelectorHavingSpec.class)
+    @JsonSubTypes.Type(name = "dimSelector", value = DimensionSelectorHavingSpec.class),
+    @JsonSubTypes.Type(name = "always", value = AlwaysHavingSpec.class)
 })
 public interface HavingSpec
 {
