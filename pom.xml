@@ -124,7 +124,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>emitter</artifactId>
-                <version>0.3.2</version>
+                <version>0.3.6</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -144,7 +144,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>server-metrics</artifactId>
-                <version>0.2.5</version>
+                <version>0.2.8</version>
             </dependency>
             <dependency>
                 <groupId>commons-codec</groupId>
