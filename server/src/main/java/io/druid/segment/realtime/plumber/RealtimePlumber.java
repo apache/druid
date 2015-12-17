@@ -1025,6 +1025,7 @@ public class RealtimePlumber implements Plumber
 
         final File persistedFile = indexMerger.persist(
             indexToPersist.getIndex(),
+            interval,
             new File(computePersistDir(schema, interval), String.valueOf(indexToPersist.getCount())),
             metaData,
             indexSpec

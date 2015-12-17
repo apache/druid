@@ -396,21 +396,23 @@ public class RealtimePlumberSchoolTest
     Map<Long, Sink> sinks = restoredPlumber.getSinks();
     Assert.assertEquals(1, sinks.size());
 
+
     List<FireHydrant> hydrants = Lists.newArrayList(sinks.get(new Long(0)));
     DateTime startTime = new DateTime("1970-01-01T00:00:00.000Z");
+    Interval expectedInterval = new Interval(startTime, new DateTime("1971-01-01T00:00:00.000Z"));
     Assert.assertEquals(0, hydrants.get(0).getCount());
     Assert.assertEquals(
-        new Interval(startTime, new DateTime("1970-01-01T00:00:00.001Z")),
+        expectedInterval,
         hydrants.get(0).getSegment().getDataInterval()
     );
     Assert.assertEquals(2, hydrants.get(1).getCount());
     Assert.assertEquals(
-        new Interval(startTime, new DateTime("1970-03-01T00:00:00.001Z")),
+        expectedInterval,
         hydrants.get(1).getSegment().getDataInterval()
     );
     Assert.assertEquals(4, hydrants.get(2).getCount());
     Assert.assertEquals(
-        new Interval(startTime, new DateTime("1970-05-01T00:00:00.001Z")),
+        expectedInterval,
         hydrants.get(2).getSegment().getDataInterval()
     );
 

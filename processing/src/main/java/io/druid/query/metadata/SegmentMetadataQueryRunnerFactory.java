@@ -45,9 +45,11 @@ import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
+import org.joda.time.Interval;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -117,12 +119,13 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
             columns.put(columnName, column);
           }
         }
+        List<Interval> retIntervals = query.hasInterval() ? Arrays.asList(segment.getDataInterval()) : null;
 
         return Sequences.simple(
             Arrays.asList(
                 new SegmentAnalysis(
                     segment.getIdentifier(),
-                    Arrays.asList(segment.getDataInterval()),
+                    retIntervals,
                     columns,
                     totalSize,
                     numRows
