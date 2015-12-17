@@ -51,6 +51,7 @@ Here is what goes inside `ingestionSpec`:
 |-----|----|-----------|--------|
 |dataSource|String|Druid dataSource name from which you are loading the data.|yes|
 |intervals|List|A list of strings representing ISO-8601 Intervals.|yes|
+|segments|List|A list of segments from which to read the data. It is determined automatically if not specified and the list of segments might change on multiple invocations. But user might want to provide it manually to make the ingestion task idempotent.|no|
 |granularity|String|Defines the granularity of the query while loading data. Default value is "none". See [Granularities](../querying/granularities.html).|no|
 |filter|JSON|See [Filters](../querying/filters.html)|no|
 |dimensions|Array of String|Name of dimension columns to load. By default, the list will be constructed from parseSpec. If parseSpec does not have an explicit list of dimensions then all the dimension columns present in stored data will be read.|no|
