@@ -120,8 +120,7 @@ public class BatchDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
         SegmentZNode availableZNode = new SegmentZNode(makeServedSegmentPath());
         availableZNode.addSegment(segment);
 
-        log.info("Announcing segment[%s] at new path[%s]", segment.getIdentifier(),
-            availableZNode.getPath());
+        log.info("Announcing segment[%s] at new path[%s]", segment.getIdentifier(), availableZNode.getPath());
         announcer.announce(availableZNode.getPath(), availableZNode.getBytes());
         segmentLookup.put(segment, availableZNode);
         availableZNodes.add(availableZNode);
@@ -196,9 +195,21 @@ public class BatchDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
     }
   }
 
-  private String makeServedSegmentPath(){
+  @Override
+  public boolean isAnnounced(DataSegment segment)
+  {
+    return segmentLookup.containsKey(segment);
+  }
+
+  private String makeServedSegmentPath()
+  {
     // server.getName() is already in the zk path
-    return makeServedSegmentPath(UUIDUtils.generateUuid(server.getHost(), server.getType(), server.getTier(), new DateTime().toString()));
+    return makeServedSegmentPath(UUIDUtils.generateUuid(
+        server.getHost(),
+        server.getType(),
+        server.getTier(),
+        new DateTime().toString()
+    ));
   }
 
   private String makeServedSegmentPath(String zNode)
@@ -241,8 +252,8 @@ public class BatchDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
       try {
         return jsonMapper.readValue(
             bytes, new TypeReference<Set<DataSegment>>()
-        {
-        }
+            {
+            }
         );
       }
       catch (Exception e) {

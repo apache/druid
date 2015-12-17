@@ -46,6 +46,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -72,6 +73,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
   private final DataSegmentAnnouncer announcer;
   private final ServerManager serverManager;
   private final ScheduledExecutorService exec;
+  private final ConcurrentSkipListSet<DataSegment> segmentsToDelete;
 
 
   private volatile PathChildrenCache loadQueueCache;
@@ -98,6 +100,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
     this.serverManager = serverManager;
 
     this.exec = factory.create(1, "ZkCoordinator-Exec--%d");
+    this.segmentsToDelete = new ConcurrentSkipListSet<>();
   }
 
   @LifecycleStart
@@ -289,7 +292,13 @@ public class ZkCoordinator implements DataSegmentChangeHandler
     return ZkCoordinator.this;
   }
 
-  private boolean loadSegment(DataSegment segment, DataSegmentChangeCallback callback) throws SegmentLoadingException
+  /**
+   * Load a single segment. If the segment is loaded succesfully, this function simply returns. Otherwise it will
+   * throw a SegmentLoadingException
+   *
+   * @throws SegmentLoadingException
+   */
+  private void loadSegment(DataSegment segment, DataSegmentChangeCallback callback) throws SegmentLoadingException
   {
     final boolean loaded;
     try {
@@ -314,7 +323,6 @@ public class ZkCoordinator implements DataSegmentChangeHandler
         }
       }
     }
-    return loaded;
   }
 
   @Override
@@ -322,7 +330,25 @@ public class ZkCoordinator implements DataSegmentChangeHandler
   {
     try {
       log.info("Loading segment %s", segment.getIdentifier());
-      if (loadSegment(segment, callback)) {
+      /*
+         The lock below is used to prevent a race condition when the scheduled runnable in removeSegment() starts,
+         and if(segmentsToDelete.remove(segment)) returns true, in which case historical will start deleting segment
+         files. At that point, it's possible that right after the "if" check, addSegment() is called and actually loads
+         the segment, which makes dropping segment and downloading segment happen at the same time.
+       */
+      if (segmentsToDelete.contains(segment)) {
+        /*
+           Both contains(segment) and remove(segment) can be moved inside the synchronized block. However, in that case,
+           each time when addSegment() is called, it has to wait for the lock in order to make progress, which will make
+           things slow. Given that in most cases segmentsToDelete.contains(segment) returns false, it will save a lot of
+           cost of acquiring lock by doing the "contains" check outside the synchronized block.
+         */
+        synchronized (lock) {
+          segmentsToDelete.remove(segment);
+        }
+      }
+      loadSegment(segment, callback);
+      if (!announcer.isAnnounced(segment)) {
         try {
           announcer.announceSegment(segment);
         }
@@ -369,8 +395,8 @@ public class ZkCoordinator implements DataSegmentChangeHandler
                       numSegments,
                       segment.getIdentifier()
                   );
-                  final boolean loaded = loadSegment(segment, callback);
-                  if (loaded) {
+                  loadSegment(segment, callback);
+                  if (!announcer.isAnnounced(segment)) {
                     try {
                       backgroundSegmentAnnouncer.announceSegment(segment);
                     }
@@ -426,6 +452,7 @@ public class ZkCoordinator implements DataSegmentChangeHandler
   {
     try {
       announcer.unannounceSegment(segment);
+      segmentsToDelete.add(segment);
 
       log.info("Completely removing [%s] in [%,d] millis", segment.getIdentifier(), config.getDropSegmentDelayMillis());
       exec.schedule(
@@ -435,11 +462,15 @@ public class ZkCoordinator implements DataSegmentChangeHandler
             public void run()
             {
               try {
-                serverManager.dropSegment(segment);
+                synchronized (lock) {
+                  if (segmentsToDelete.remove(segment)) {
+                    serverManager.dropSegment(segment);
 
-                File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getIdentifier());
-                if (!segmentInfoCacheFile.delete()) {
-                  log.warn("Unable to delete segmentInfoCacheFile[%s]", segmentInfoCacheFile);
+                    File segmentInfoCacheFile = new File(config.getInfoDir(), segment.getIdentifier());
+                    if (!segmentInfoCacheFile.delete()) {
+                      log.warn("Unable to delete segmentInfoCacheFile[%s]", segmentInfoCacheFile);
+                    }
+                  }
                 }
               }
               catch (Exception e) {

@@ -152,5 +152,11 @@ public class CliRealtimeExample extends ServerRunnable
     {
       // do nothing
     }
+
+    @Override
+    public boolean isAnnounced(DataSegment segment)
+    {
+      return false;
+    }
   }
 }

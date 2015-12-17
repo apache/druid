@@ -510,6 +510,12 @@ public class TaskLifecycleTest
           {
 
           }
+
+          @Override
+          public boolean isAnnounced(DataSegment segment)
+          {
+            return false;
+          }
         }, // segment announcer
         handoffNotifierFactory,
         queryRunnerFactoryConglomerate, // query runner factory conglomerate corporation unionized collective

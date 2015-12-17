@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Binder;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -59,20 +60,39 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.ScheduledThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  */
 public class ZkCoordinatorTest extends CuratorTestBase
 {
-  private static final Logger log = new Logger(ZkCoordinatorTest.class);
   public static final int COUNT = 50;
+
+  private static final Logger log = new Logger(ZkCoordinatorTest.class);
+
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
+  private final DruidServerMetadata me = new DruidServerMetadata(
+      "dummyServer",
+      "dummyHost",
+      0,
+      "dummyType",
+      "normal",
+      0
+  );
+
   private ZkCoordinator zkCoordinator;
   private ServerManager serverManager;
   private DataSegmentAnnouncer announcer;
   private File infoDir;
   private AtomicInteger announceCount;
+  private ConcurrentSkipListSet<DataSegment> segmentsAnnouncedByMe;
+  private CacheTestSegmentLoader segmentLoader;
+  private List<Runnable> scheduledRunnable;
 
   @Before
   public void setUp() throws Exception
@@ -92,8 +112,12 @@ public class ZkCoordinatorTest extends CuratorTestBase
       throw new RuntimeException(e);
     }
 
+    scheduledRunnable = Lists.newArrayList();
+
+    segmentLoader = new CacheTestSegmentLoader();
+
     serverManager = new ServerManager(
-        new CacheTestSegmentLoader(),
+        segmentLoader,
         new NoopQueryRunnerFactoryConglomerate(),
         new NoopServiceEmitter(),
         MoreExecutors.sameThreadExecutor(),
@@ -102,8 +126,6 @@ public class ZkCoordinatorTest extends CuratorTestBase
         new LocalCacheProvider().get(),
         new CacheConfig()
     );
-
-    final DruidServerMetadata me = new DruidServerMetadata("dummyServer", "dummyHost", 0, "dummyType", "normal", 0);
 
     final ZkPathsConfig zkPaths = new ZkPathsConfig()
     {
@@ -114,6 +136,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
       }
     };
 
+    segmentsAnnouncedByMe = new ConcurrentSkipListSet<>();
     announceCount = new AtomicInteger(0);
     announcer = new DataSegmentAnnouncer()
     {
@@ -128,6 +151,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
       @Override
       public void announceSegment(DataSegment segment) throws IOException
       {
+        segmentsAnnouncedByMe.add(segment);
         announceCount.incrementAndGet();
         delegate.announceSegment(segment);
       }
@@ -135,6 +159,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
       @Override
       public void unannounceSegment(DataSegment segment) throws IOException
       {
+        segmentsAnnouncedByMe.remove(segment);
         announceCount.decrementAndGet();
         delegate.unannounceSegment(segment);
       }
@@ -142,6 +167,9 @@ public class ZkCoordinatorTest extends CuratorTestBase
       @Override
       public void announceSegments(Iterable<DataSegment> segments) throws IOException
       {
+        for (DataSegment segment : segments) {
+          segmentsAnnouncedByMe.add(segment);
+        }
         announceCount.addAndGet(Iterables.size(segments));
         delegate.announceSegments(segments);
       }
@@ -149,8 +177,17 @@ public class ZkCoordinatorTest extends CuratorTestBase
       @Override
       public void unannounceSegments(Iterable<DataSegment> segments) throws IOException
       {
+        for (DataSegment segment : segments) {
+          segmentsAnnouncedByMe.remove(segment);
+        }
         announceCount.addAndGet(-Iterables.size(segments));
         delegate.unannounceSegments(segments);
+      }
+
+      @Override
+      public boolean isAnnounced(DataSegment segment)
+      {
+        return segmentsAnnouncedByMe.contains(segment);
       }
     };
 
@@ -175,13 +212,42 @@ public class ZkCoordinatorTest extends CuratorTestBase
           {
             return 50;
           }
+
+          @Override
+          public int getDropSegmentDelayMillis()
+          {
+            return 0;
+          }
         },
         zkPaths,
         me,
         announcer,
         curator,
         serverManager,
-        ScheduledExecutors.createFactory(new Lifecycle())
+        new ScheduledExecutorFactory()
+        {
+          @Override
+          public ScheduledExecutorService create(int corePoolSize, String nameFormat)
+          {
+            /*
+               Override normal behavoir by adding the runnable to a list so that you can make sure
+               all the shceduled runnables are executed by explicitly calling run() on each item in the list
+             */
+            return new ScheduledThreadPoolExecutor(
+                corePoolSize, new ThreadFactoryBuilder().setDaemon(true).setNameFormat(nameFormat).build()
+            )
+            {
+              @Override
+              public ScheduledFuture<?> schedule(
+                  Runnable command, long delay, TimeUnit unit
+              )
+              {
+                scheduledRunnable.add(command);
+                return null;
+              }
+            };
+          }
+        }
     );
   }
 
@@ -189,6 +255,114 @@ public class ZkCoordinatorTest extends CuratorTestBase
   public void tearDown() throws Exception
   {
     tearDownServerAndCurator();
+  }
+
+  /**
+   * Steps:
+   * 1. removeSegment() schedules a delete runnable that deletes segment files,
+   * 2. addSegment() succesfully loads the segment and annouces it
+   * 3. scheduled delete task executes and realizes it should not delete the segment files.
+   */
+  @Test
+  public void testSegmentLoading1() throws Exception
+  {
+    zkCoordinator.start();
+
+    final DataSegment segment = makeSegment("test", "1", new Interval("P1d/2011-04-01"));
+
+    zkCoordinator.removeSegment(segment, new DataSegmentChangeCallback()
+    {
+      @Override
+      public void execute()
+      {
+        // do nothing
+      }
+    });
+
+    Assert.assertFalse(segmentsAnnouncedByMe.contains(segment));
+
+    zkCoordinator.addSegment(segment, new DataSegmentChangeCallback()
+    {
+      @Override
+      public void execute()
+      {
+        // do nothing
+      }
+    });
+
+    /*
+       make sure the scheduled runnable that "deletes" segment files has been executed.
+       Because another addSegment() call is executed, which removes the segment from segmentsToDelete field in
+       ZkCoordinator, the scheduled runnable will not actually delete segment files.
+     */
+    for (Runnable runnable : scheduledRunnable) {
+      runnable.run();
+    }
+
+    Assert.assertTrue(segmentsAnnouncedByMe.contains(segment));
+    Assert.assertFalse("segment files shouldn't be deleted", segmentLoader.getSegmentsInTrash().contains(segment));
+
+    zkCoordinator.stop();
+  }
+
+  /**
+   * Steps:
+   * 1. addSegment() succesfully loads the segment and annouces it
+   * 2. removeSegment() unannounces the segment and schedules a delete runnable that deletes segment files
+   * 3. addSegment() calls loadSegment() and annouces it again
+   * 4. scheduled delete task executes and realizes it should not delete the segment files.
+   */
+  @Test
+  public void testSegmentLoading2() throws Exception
+  {
+    zkCoordinator.start();
+
+    final DataSegment segment = makeSegment("test", "1", new Interval("P1d/2011-04-01"));
+
+    zkCoordinator.addSegment(segment, new DataSegmentChangeCallback()
+    {
+      @Override
+      public void execute()
+      {
+        // do nothing
+      }
+    });
+
+    Assert.assertTrue(segmentsAnnouncedByMe.contains(segment));
+
+    zkCoordinator.removeSegment(segment, new DataSegmentChangeCallback()
+    {
+      @Override
+      public void execute()
+      {
+        // do nothing
+      }
+    });
+
+    Assert.assertFalse(segmentsAnnouncedByMe.contains(segment));
+
+    zkCoordinator.addSegment(segment, new DataSegmentChangeCallback()
+    {
+      @Override
+      public void execute()
+      {
+        // do nothing
+      }
+    });
+
+    /*
+       make sure the scheduled runnable that "deletes" segment files has been executed.
+       Because another addSegment() call is executed, which removes the segment from segmentsToDelete field in
+       ZkCoordinator, the scheduled runnable will not actually delete segment files.
+     */
+    for (Runnable runnable : scheduledRunnable) {
+      runnable.run();
+    }
+
+    Assert.assertTrue(segmentsAnnouncedByMe.contains(segment));
+    Assert.assertFalse("segment files shouldn't be deleted", segmentLoader.getSegmentsInTrash().contains(segment));
+
+    zkCoordinator.stop();
   }
 
   @Test
