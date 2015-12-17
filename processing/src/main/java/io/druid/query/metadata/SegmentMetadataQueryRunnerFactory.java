@@ -124,7 +124,8 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                     segment.getIdentifier(),
                     Arrays.asList(segment.getDataInterval()),
                     columns,
-                    totalSize
+                    totalSize,
+                    numRows
                 )
             )
         );
