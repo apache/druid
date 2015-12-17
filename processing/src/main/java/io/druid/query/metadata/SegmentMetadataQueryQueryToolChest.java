@@ -134,7 +134,13 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
               columns.put(columnName, rightColumns.get(columnName));
             }
 
-            return new SegmentAnalysis("merged", newIntervals, columns, arg1.getSize() + arg2.getSize());
+            return new SegmentAnalysis(
+                "merged",
+                newIntervals,
+                columns,
+                arg1.getSize() + arg2.getSize(),
+                arg1.getNumRows() + arg2.getNumRows()
+            );
           }
         };
       }
