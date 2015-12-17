@@ -51,7 +51,8 @@ public class CompressedLongsSupplierSerializerTest extends CompressionStrategyTe
         new GenericIndexedWriter<ResourceHolder<LongBuffer>>(
             new IOPeonForTesting(),
             "test",
-            CompressedLongBufferObjectStrategy.getBufferForOrder(order, compressionStrategy, sizePer)
+            CompressedLongBufferObjectStrategy.getBufferForOrder(order, compressionStrategy, sizePer),
+            -1
         ),
         compressionStrategy
     );

@@ -32,6 +32,7 @@ import com.google.common.collect.Sets;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closeables;
 import com.google.common.io.Files;
+import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import com.metamx.collections.bitmap.BitmapFactory;
@@ -80,11 +81,14 @@ import io.druid.segment.serde.LongGenericColumnSupplier;
 import io.druid.segment.serde.SpatialIndexColumnPartSupplier;
 import org.joda.time.Interval;
 
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.AbstractList;
@@ -105,6 +109,8 @@ public class IndexIO
   public static final int CURRENT_VERSION_ID = V9_VERSION;
 
   public static final ByteOrder BYTE_ORDER = ByteOrder.nativeOrder();
+
+  public static final int MAX_BUFFER_SIZE = 65536;
 
   private final Map<Integer, IndexLoader> indexLoaders;
 
@@ -551,7 +557,7 @@ public class IndexIO
       v9Dir.mkdirs();
       final FileSmoosher v9Smoosher = new FileSmoosher(v9Dir);
 
-      ByteStreams.write(Ints.toByteArray(9), Files.newOutputStreamSupplier(new File(v9Dir, "version.bin")));
+      ByteStreams.write(Ints.toByteArray(9), IndexIO.toBufferedStreamSupplier(new File(v9Dir, "version.bin"), false));
 
       Map<String, GenericIndexed<ImmutableBitmap>> bitmapIndexes = Maps.newHashMap();
       final ByteBuffer invertedBuffer = v8SmooshedFiles.mapFile("inverted.drd");
@@ -1079,5 +1085,24 @@ public class IndexIO
   public static File makeMetricFile(File dir, String metricName, ByteOrder order)
   {
     return new File(dir, String.format("met_%s_%s.drd", metricName, order));
+  }
+
+  public static OutputSupplier<OutputStream> toBufferedStreamSupplier(File file, boolean append)
+  {
+    return toBufferedStreamSupplier(file, append, -1);
+  }
+
+  public static OutputSupplier<OutputStream> toBufferedStreamSupplier(File file, boolean append, final int bufferSize)
+  {
+    final OutputSupplier<FileOutputStream> supplier = Files.newOutputStreamSupplier(file, append);
+    return new OutputSupplier<OutputStream>()
+    {
+      @Override
+      public OutputStream getOutput() throws IOException
+      {
+        FileOutputStream output = supplier.getOutput();
+        return bufferSize < 0 ? output : new BufferedOutputStream(output, Math.min(MAX_BUFFER_SIZE, bufferSize));
+      }
+    };
   }
 }

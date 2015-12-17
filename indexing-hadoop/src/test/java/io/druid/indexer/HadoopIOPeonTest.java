@@ -61,12 +61,12 @@ public class HadoopIOPeonTest
 
   @Test public void testMakeOutputStream() throws IOException
   {
-    Assert.assertNotNull(ioPeon.makeOutputStream(TMP_FILE_NAME));
+    Assert.assertNotNull(ioPeon.makeOutputStream(TMP_FILE_NAME, -1));
   }
 
   @Test public void testMakeInputStream() throws IOException
   {
-    Assert.assertNotNull(ioPeon.makeInputStream(tmpFolder.newFile(TMP_FILE_NAME).getName()));
+    Assert.assertNotNull(ioPeon.makeInputStream(tmpFolder.newFile(TMP_FILE_NAME).getName(), -1));
   }
 
   @Test(expected = UnsupportedOperationException.class) public void testCleanup() throws IOException

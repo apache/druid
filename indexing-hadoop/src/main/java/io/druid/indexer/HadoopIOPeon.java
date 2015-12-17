@@ -43,13 +43,13 @@ class HadoopIOPeon implements IOPeon
   }
 
   @Override
-  public OutputStream makeOutputStream(String filename) throws IOException
+  public OutputStream makeOutputStream(String filename, int bufferSize) throws IOException
   {
     return Utils.makePathAndOutputStream(job, new Path(baseDir, filename), overwriteFiles);
   }
 
   @Override
-  public InputStream makeInputStream(String filename) throws IOException
+  public InputStream makeInputStream(String filename, int bufferSize) throws IOException
   {
     return Utils.openInputStream(job, new Path(baseDir, filename));
   }

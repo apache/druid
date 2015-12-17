@@ -55,7 +55,8 @@ public class CompressedFloatsSupplierSerializerTest extends CompressionStrategyT
                 order,
                 compressionStrategy,
                 sizePer
-            )
+            ),
+            -1
         ),
         compressionStrategy
     );

@@ -50,22 +50,25 @@ public class VSizeIndexedWriter implements Closeable
   int numWritten = 0;
   private final IOPeon ioPeon;
   private final String filenameBase;
+  private final int bufferSize;
 
   public VSizeIndexedWriter(
       IOPeon ioPeon,
       String filenameBase,
-      int maxId
+      int maxId,
+      int bufferSize
   )
   {
     this.ioPeon = ioPeon;
     this.filenameBase = filenameBase;
     this.maxId = maxId;
+    this.bufferSize = bufferSize;
   }
 
   public void open() throws IOException
   {
-    headerOut = new CountingOutputStream(ioPeon.makeOutputStream(makeFilename("header")));
-    valuesOut = new CountingOutputStream(ioPeon.makeOutputStream(makeFilename("values")));
+    headerOut = new CountingOutputStream(ioPeon.makeOutputStream(makeFilename("header"), bufferSize));
+    valuesOut = new CountingOutputStream(ioPeon.makeOutputStream(makeFilename("values"), bufferSize));
   }
 
   public void write(List<Integer> ints) throws IOException
@@ -107,15 +110,10 @@ public class VSizeIndexedWriter implements Closeable
         numBytesWritten < Integer.MAX_VALUE, "Wrote[%s] bytes, which is too many.", numBytesWritten
     );
 
-    OutputStream metaOut = ioPeon.makeOutputStream(makeFilename("meta"));
-
-    try {
+    try (OutputStream metaOut = ioPeon.makeOutputStream(makeFilename("meta"), 16)) {
       metaOut.write(new byte[]{version, numBytesForMax});
       metaOut.write(Ints.toByteArray((int) numBytesWritten + 4));
       metaOut.write(Ints.toByteArray(numWritten));
-    }
-    finally {
-      metaOut.close();
     }
   }
 
@@ -134,7 +132,7 @@ public class VSizeIndexedWriter implements Closeable
                   @Override
                   public InputStream getInput() throws IOException
                   {
-                    return ioPeon.makeInputStream(makeFilename(input));
+                    return ioPeon.makeInputStream(makeFilename(input), bufferSize);
                   }
                 };
               }
