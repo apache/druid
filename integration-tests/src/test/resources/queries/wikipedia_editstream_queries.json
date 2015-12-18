@@ -1056,7 +1056,8 @@
                         "errorMessage": null
                     }
                 },
-                "size": 902457341
+                "size": 902457341,
+                "numRows": 4462111
             }
         ]
     }
