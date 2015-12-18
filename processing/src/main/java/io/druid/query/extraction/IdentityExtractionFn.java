@@ -59,4 +59,16 @@ public class IdentityExtractionFn implements ExtractionFn
   {
     return ExtractionType.ONE_TO_ONE;
   }
+  
+  @Override
+  public String toString()
+  {
+     return "Identity";
+  }
+  
+  @Override
+  public boolean equals(Object o)
+  {
+     return o != null && o instanceof IdentityExtractionFn;
+  }
 }
