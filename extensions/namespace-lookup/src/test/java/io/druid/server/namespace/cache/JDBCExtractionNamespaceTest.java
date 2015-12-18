@@ -52,6 +52,8 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  *
@@ -96,7 +98,7 @@ public class JDBCExtractionNamespaceTest
   private OnHeapNamespaceExtractionCacheManager extractionCacheManager;
   private final Lifecycle lifecycle = new Lifecycle();
   private final AtomicLong updates = new AtomicLong(0L);
-  private final Object updateLock = new Object();
+  private final Lock updateLock = new ReentrantLock(true);
   private Handle handle;
 
   @Before
@@ -145,7 +147,8 @@ public class JDBCExtractionNamespaceTest
                   @Override
                   public String call() throws Exception
                   {
-                    synchronized (updateLock) {
+                    updateLock.lockInterruptibly();
+                    try {
                       log.debug("Running cache populator");
                       try {
                         return cachePopulator.call();
@@ -153,6 +156,9 @@ public class JDBCExtractionNamespaceTest
                       finally {
                         updates.incrementAndGet();
                       }
+                    }
+                    finally {
+                      updateLock.unlock();
                     }
                   }
                 };
@@ -206,7 +212,7 @@ public class JDBCExtractionNamespaceTest
     Thread.sleep(2);
   }
 
-  @Test(timeout = 60_000L)
+  @Test(timeout = 10_000L)
   public void testMapping()
       throws ClassNotFoundException, NoSuchFieldException, IllegalAccessException, ExecutionException,
              InterruptedException, TimeoutException
@@ -231,7 +237,7 @@ public class JDBCExtractionNamespaceTest
     Assert.assertEquals("null check", null, extractionFn.apply("baz"));
   }
 
-  @Test(timeout = 60_000L)
+  @Test(timeout = 10_000L)
   public void testReverseLookup() throws InterruptedException
   {
     final JDBCExtractionNamespace extractionNamespace = new JDBCExtractionNamespace(
@@ -254,7 +260,7 @@ public class JDBCExtractionNamespaceTest
                         reverseExtractionFn.apply("does't exist"));
   }
 
-  @Test(timeout = 60_000L)
+  @Test(timeout = 10_000L)
   public void testSkipOld()
       throws NoSuchFieldException, IllegalAccessException, ExecutionException, InterruptedException
   {
@@ -269,7 +275,7 @@ public class JDBCExtractionNamespaceTest
     assertUpdated(extractionNamespace.getNamespace(), "foo", "bar");
   }
 
-  @Test(timeout = 60_000L)
+  @Test(timeout = 10_000L)
   public void testFindNew()
       throws NoSuchFieldException, IllegalAccessException, ExecutionException, InterruptedException
   {
@@ -310,17 +316,25 @@ public class JDBCExtractionNamespaceTest
   {
     long startTime = System.currentTimeMillis();
     long pre = 0L;
-    synchronized (updateLock) {
+    updateLock.lockInterruptibly();
+    try {
       pre = updates.get();
+    }
+    finally {
+      updateLock.unlock();
     }
     long post = 0L;
     do {
       // Sleep to spare a few cpu cycles
       Thread.sleep(5);
       log.debug("Waiting for updateLock");
-      synchronized (updateLock) {
+      updateLock.lockInterruptibly();
+      try {
         Assert.assertTrue("Failed waiting for update", System.currentTimeMillis() - startTime < timeout);
         post = updates.get();
+      }
+      finally {
+        updateLock.unlock();
       }
     } while (post < pre + numUpdates);
   }
