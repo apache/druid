@@ -42,7 +42,7 @@ public class ClientMergeQueryTest
   @Test
   public void testGetType()
   {
-    Assert.assertEquals("append", CLIENT_MERGE_QUERY.getType());
+    Assert.assertEquals("merge", CLIENT_MERGE_QUERY.getType());
   }
 
   @Test

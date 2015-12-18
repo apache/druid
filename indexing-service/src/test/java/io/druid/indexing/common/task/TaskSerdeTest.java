@@ -24,6 +24,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.Granularity;
+import io.druid.client.indexing.ClientAppendQuery;
+import io.druid.client.indexing.ClientKillQuery;
+import io.druid.client.indexing.ClientMergeQuery;
 import io.druid.granularity.QueryGranularity;
 import io.druid.guice.FirehoseModule;
 import io.druid.indexer.HadoopIOConfig;
@@ -52,6 +55,7 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 public class TaskSerdeTest
 {
@@ -161,15 +165,17 @@ public class TaskSerdeTest
   @Test
   public void testMergeTaskSerde() throws Exception
   {
+    final List<DataSegment> segments = ImmutableList.<DataSegment>of(DataSegment.builder()
+                                                                                .dataSource("foo")
+                                                                                .interval(new Interval("2010-01-01/P1D"))
+                                                                                .version("1234")
+                                                                                .build());
+    final List<AggregatorFactory> aggregators = ImmutableList.<AggregatorFactory>of(new CountAggregatorFactory("cnt"));
     final MergeTask task = new MergeTask(
         null,
         "foo",
-        ImmutableList.<DataSegment>of(
-            DataSegment.builder().dataSource("foo").interval(new Interval("2010-01-01/P1D")).version("1234").build()
-        ),
-        ImmutableList.<AggregatorFactory>of(
-            new CountAggregatorFactory("cnt")
-        ),
+        segments,
+        aggregators,
         indexSpec,
         null
     );
@@ -191,6 +197,17 @@ public class TaskSerdeTest
         task.getAggregators().get(0).getName(),
         task2.getAggregators().get(0).getName()
     );
+
+    final MergeTask task3 = (MergeTask) jsonMapper.readValue(jsonMapper.writeValueAsString(new ClientMergeQuery(
+        "foo",
+        segments,
+        aggregators
+    )), Task.class);
+
+    Assert.assertEquals("foo", task3.getDataSource());
+    Assert.assertEquals(new Interval("2010-01-01/P1D"), task3.getInterval());
+    Assert.assertEquals(segments, task3.getSegments());
+    Assert.assertEquals(aggregators, task3.getAggregators());
   }
 
   @Test
@@ -215,6 +232,14 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
     Assert.assertEquals(task.getInterval(), task2.getInterval());
+
+    final KillTask task3 = (KillTask) jsonMapper.readValue(jsonMapper.writeValueAsString(new ClientKillQuery(
+        "foo",
+        new Interval("2010-01-01/P1D")
+    )), Task.class);
+
+    Assert.assertEquals("foo", task3.getDataSource());
+    Assert.assertEquals(new Interval("2010-01-01/P1D"), task3.getInterval());
   }
 
   @Test
@@ -349,12 +374,22 @@ public class TaskSerdeTest
   @Test
   public void testAppendTaskSerde() throws Exception
   {
+    final List<DataSegment> segments = ImmutableList.of(
+        DataSegment.builder()
+                   .dataSource("foo")
+                   .interval(new Interval("2010-01-01/P1D"))
+                   .version("1234")
+                   .build(),
+        DataSegment.builder()
+                   .dataSource("foo")
+                   .interval(new Interval("2010-01-02/P1D"))
+                   .version("5678")
+                   .build()
+    );
     final AppendTask task = new AppendTask(
         null,
         "foo",
-        ImmutableList.of(
-            DataSegment.builder().dataSource("foo").interval(new Interval("2010-01-01/P1D")).version("1234").build()
-        ),
+        segments,
         indexSpec,
         null
     );
@@ -365,13 +400,22 @@ public class TaskSerdeTest
     final AppendTask task2 = (AppendTask) jsonMapper.readValue(json, Task.class);
 
     Assert.assertEquals("foo", task.getDataSource());
-    Assert.assertEquals(new Interval("2010-01-01/P1D"), task.getInterval());
+    Assert.assertEquals(new Interval("2010-01-01/P2D"), task.getInterval());
 
     Assert.assertEquals(task.getId(), task2.getId());
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
     Assert.assertEquals(task.getInterval(), task2.getInterval());
     Assert.assertEquals(task.getSegments(), task2.getSegments());
+
+    final AppendTask task3 = (AppendTask) jsonMapper.readValue(jsonMapper.writeValueAsString(new ClientAppendQuery(
+        "foo",
+        segments
+    )), Task.class);
+
+    Assert.assertEquals("foo", task3.getDataSource());
+    Assert.assertEquals(new Interval("2010-01-01/P2D"), task3.getInterval());
+    Assert.assertEquals(task3.getSegments(), segments);
   }
 
   @Test

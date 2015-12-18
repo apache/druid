@@ -111,14 +111,6 @@ public class DoubleMaxAggregationTest
     Assert.assertFalse(one.equals(two));
   }
 
-  @Test
-  public void testMaxDeserialization() throws Exception
-  {
-    String aggSpecJson = "{\"type\": \"max\", \"name\": \"billy\", \"fieldName\": \"nilly\"}";
-    MaxAggregatorFactory agg = new DefaultObjectMapper().readValue(aggSpecJson , MaxAggregatorFactory.class);
-    Assert.assertNotNull(agg);
-  }
-
   private void aggregate(TestFloatColumnSelector selector, DoubleMaxAggregator agg)
   {
     agg.aggregate();
