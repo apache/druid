@@ -72,6 +72,8 @@
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-cassandra-storage</argument>
                                 <argument>-c</argument>
+                                <argument>io.druid.extensions:druid-datasketches</argument>
+                                <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-hdfs-storage</argument>
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-histogram</argument>
