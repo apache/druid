@@ -109,11 +109,13 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory<StringInputRowPa
   @JsonCreator
   public RabbitMQFirehoseFactory(
       @JsonProperty("connection") JacksonifiedConnectionFactory connectionFactory,
-      @JsonProperty("config") RabbitMQFirehoseConfig config
+      @JsonProperty("config") RabbitMQFirehoseConfig config,
+      // See https://github.com/druid-io/druid/pull/1922
+      @JsonProperty("connectionFactory") JacksonifiedConnectionFactory connectionFactoryCOMPAT
   ) throws Exception
   {
     this.connectionFactory = connectionFactory == null
-                             ? JacksonifiedConnectionFactory.makeDefaultConnectionFactory()
+                             ? connectionFactoryCOMPAT == null ? JacksonifiedConnectionFactory.makeDefaultConnectionFactory() : connectionFactoryCOMPAT
                              : connectionFactory;
     this.config = config == null ? RabbitMQFirehoseConfig.makeDefaultConfig() : config;
 
@@ -125,7 +127,7 @@ public class RabbitMQFirehoseFactory implements FirehoseFactory<StringInputRowPa
     return config;
   }
 
-  @JsonProperty
+  @JsonProperty("connection")
   public JacksonifiedConnectionFactory getConnectionFactory()
   {
     return connectionFactory;

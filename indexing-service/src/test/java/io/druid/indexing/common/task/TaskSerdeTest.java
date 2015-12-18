@@ -545,6 +545,7 @@ public class TaskSerdeTest
         "foo",
         new Interval("2010-01-01/P1D"),
         ImmutableMap.<String, Object>of("bucket", "hey", "baseKey", "what"),
+        null,
         null
     );
 

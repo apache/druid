@@ -206,7 +206,8 @@ public class HadoopDruidIndexerConfigTest
             false,
             null,
             false,
-            false
+            false,
+            null
         )
     );
     HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(spec);
