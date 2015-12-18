@@ -78,12 +78,14 @@ public class ExtractionDimFilter implements DimFilter
   {
     byte[] dimensionBytes = StringUtils.toUtf8(dimension);
     byte[] valueBytes = StringUtils.toUtf8(value);
-
-    return ByteBuffer.allocate(2 + dimensionBytes.length + valueBytes.length)
+    byte[] extractionFnBytes = extractionFn.getCacheKey();
+    return ByteBuffer.allocate(3 + dimensionBytes.length + valueBytes.length + extractionFnBytes.length)
                      .put(DimFilterCacheHelper.EXTRACTION_CACHE_ID)
                      .put(dimensionBytes)
                      .put(DimFilterCacheHelper.STRING_SEPARATOR)
                      .put(valueBytes)
+                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                     .put(extractionFnBytes)
                      .array();
   }
 

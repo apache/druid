@@ -24,6 +24,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
+import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
@@ -1157,6 +1158,18 @@ public class IndexMerger
     @Override
     public Iterator<Rowboat> iterator()
     {
+      final IntBuffer[] converterArray = FluentIterable
+          .from(convertedDims)
+          .transform(
+              new Function<String, IntBuffer>()
+              {
+                @Override
+                public IntBuffer apply(String input)
+                {
+                  return converters.get(input);
+                }
+              }
+          ).toArray(IntBuffer.class);
       return Iterators.transform(
           index.iterator(),
           new Function<Rowboat, Rowboat>()
@@ -1169,7 +1182,7 @@ public class IndexMerger
               int[][] dims = input.getDims();
               int[][] newDims = new int[convertedDims.size()][];
               for (int i = 0; i < convertedDims.size(); ++i) {
-                IntBuffer converter = converters.get(convertedDims.get(i));
+                IntBuffer converter = converterArray[i];
 
                 if (converter == null) {
                   continue;

@@ -19,8 +19,8 @@
 
 package io.druid.query.filter;
 
-import io.druid.query.extraction.ExtractionFn;
-import org.easymock.EasyMock;
+import io.druid.query.extraction.IdentityExtractionFn;
+import io.druid.query.extraction.RegexDimExtractionFn;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -35,15 +35,25 @@ public class ExtractionDimFilterTest
     ExtractionDimFilter extractionDimFilter = new ExtractionDimFilter(
         "abc",
         "d",
-        EasyMock.createMock(ExtractionFn.class),
+        new IdentityExtractionFn(),
         null
     );
     ExtractionDimFilter extractionDimFilter2 = new ExtractionDimFilter(
         "ab",
         "cd",
-        EasyMock.createMock(ExtractionFn.class),
+        new IdentityExtractionFn(),
         null
     );
+
     Assert.assertFalse(Arrays.equals(extractionDimFilter.getCacheKey(), extractionDimFilter2.getCacheKey()));
+
+    ExtractionDimFilter extractionDimFilter3 = new ExtractionDimFilter(
+        "ab",
+        "cd",
+        new RegexDimExtractionFn("xx", null, null),
+        null
+    );
+
+    Assert.assertFalse(Arrays.equals(extractionDimFilter2.getCacheKey(), extractionDimFilter3.getCacheKey()));
   }
 }
