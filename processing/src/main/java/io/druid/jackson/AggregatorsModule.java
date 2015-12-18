@@ -34,8 +34,6 @@ import io.druid.query.aggregation.JavaScriptAggregatorFactory;
 import io.druid.query.aggregation.LongMaxAggregatorFactory;
 import io.druid.query.aggregation.LongMinAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
-import io.druid.query.aggregation.MaxAggregatorFactory;
-import io.druid.query.aggregation.MinAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
@@ -70,10 +68,6 @@ public class AggregatorsModule extends SimpleModule
       @JsonSubTypes.Type(name = "doubleSum", value = DoubleSumAggregatorFactory.class),
       @JsonSubTypes.Type(name = "doubleMax", value = DoubleMaxAggregatorFactory.class),
       @JsonSubTypes.Type(name = "doubleMin", value = DoubleMinAggregatorFactory.class),
-      //Note: max/min are exactly same as doubleMax/doubleMin, max/min are still here only
-      //to be backward compatible with 0.7.2 and before
-      @JsonSubTypes.Type(name = "max", value = MaxAggregatorFactory.class),
-      @JsonSubTypes.Type(name = "min", value = MinAggregatorFactory.class),
       @JsonSubTypes.Type(name = "longMax", value = LongMaxAggregatorFactory.class),
       @JsonSubTypes.Type(name = "longMin", value = LongMinAggregatorFactory.class),
       @JsonSubTypes.Type(name = "javascript", value = JavaScriptAggregatorFactory.class),

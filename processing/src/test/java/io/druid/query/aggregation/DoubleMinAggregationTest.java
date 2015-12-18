@@ -111,14 +111,6 @@ public class DoubleMinAggregationTest
     Assert.assertFalse(one.equals(two));
   }
 
-  @Test
-  public void testMinDeserialization() throws Exception
-  {
-    String aggSpecJson = "{\"type\": \"min\", \"name\": \"billy\", \"fieldName\": \"nilly\"}";
-    MinAggregatorFactory agg = new DefaultObjectMapper().readValue(aggSpecJson , MinAggregatorFactory.class);
-    Assert.assertNotNull(agg);
-  }
-
   private void aggregate(TestFloatColumnSelector selector, DoubleMinAggregator agg)
   {
     agg.aggregate();
