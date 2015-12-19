@@ -123,6 +123,53 @@ public class SegmentMetadataQueryTest
   }
 
   @Test
+  public void testSegmentMetadataQueryWithDefaultAnalysisMerge()
+  {
+    SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
+        "merged",
+        ImmutableList.of(
+            expectedSegmentAnalysis.getIntervals().get(0),
+            expectedSegmentAnalysis.getIntervals().get(0)
+        ),
+        ImmutableMap.of(
+            "placement",
+            new ColumnAnalysis(
+                ValueType.STRING.toString(),
+                21762,
+                1,
+                null
+            )
+        ),
+        expectedSegmentAnalysis.getSize()*2,
+        expectedSegmentAnalysis.getNumRows()*2
+    );
+
+    QueryToolChest toolChest = factory.getToolchest();
+
+    QueryRunner singleSegmentQueryRunner = toolChest.preMergeQueryDecoration(runner);
+    ExecutorService exec = Executors.newCachedThreadPool();
+    QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
+        toolChest.mergeResults(
+            factory.mergeRunners(
+                Executors.newCachedThreadPool(),
+                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(singleSegmentQueryRunner, singleSegmentQueryRunner)
+            )
+        ),
+        toolChest
+    );
+
+    TestHelper.assertExpectedObjects(
+        ImmutableList.of(mergedSegmentAnalysis),
+        myRunner.run(
+            testQuery,
+            Maps.newHashMap()
+        ),
+        "failed SegmentMetadata bySegment query"
+    );
+    exec.shutdownNow();
+  }
+
+  @Test
   public void testBySegmentResults()
   {
     Result<BySegmentResultValue> bySegmentResult = new Result<BySegmentResultValue>(
