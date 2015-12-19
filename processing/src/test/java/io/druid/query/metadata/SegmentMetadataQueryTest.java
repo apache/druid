@@ -164,7 +164,7 @@ public class SegmentMetadataQueryTest
             testQuery,
             Maps.newHashMap()
         ),
-        "failed SegmentMetadata bySegment query"
+        "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
   }
