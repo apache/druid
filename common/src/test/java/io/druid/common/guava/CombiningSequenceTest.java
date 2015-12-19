@@ -214,7 +214,8 @@ public class CombiningSequenceTest
 
             return Pair.of(lhs.lhs, lhs.rhs + rhs.rhs);
           }
-        }
+        },
+        null
     );
 
     List<Pair<Integer, Integer>> merged = Sequences.toList(seq, Lists.<Pair<Integer, Integer>>newArrayList());

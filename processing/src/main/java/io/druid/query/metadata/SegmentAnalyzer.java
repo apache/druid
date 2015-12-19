@@ -281,4 +281,8 @@ public class SegmentAnalyzer
     return analysisTypes.contains(SegmentMetadataQuery.AnalysisType.CARDINALITY);
   }
 
+  private boolean analysisHasInterva(EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes) {
+    return analysisTypes.contains(SegmentMetadataQuery.AnalysisType.INTERVAL);
+  }
+
 }
