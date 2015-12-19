@@ -30,6 +30,7 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.QueryInterruptedException;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
@@ -294,10 +295,19 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
               @Override
               public DimensionSelector makeDimensionSelector(
-                  final String dimension,
-                  @Nullable final ExtractionFn extractionFn
+                  DimensionSpec dimensionSpec
               )
               {
+                return dimensionSpec.decorate(makeDimensionSelectorUndecorated(dimensionSpec));
+              }
+
+              private DimensionSelector makeDimensionSelectorUndecorated(
+                  DimensionSpec dimensionSpec
+              )
+              {
+                final String dimension = dimensionSpec.getDimension();
+                final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
+
                 if (dimension.equals(Column.TIME_COLUMN_NAME)) {
                   return new SingleScanTimeDimSelector(makeLongColumnSelector(dimension), extractionFn);
                 }

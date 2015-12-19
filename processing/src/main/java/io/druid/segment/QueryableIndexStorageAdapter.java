@@ -30,6 +30,7 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.QueryInterruptedException;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.Filter;
 import io.druid.segment.column.Column;
@@ -44,7 +45,6 @@ import io.druid.segment.data.Offset;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Iterator;
@@ -296,10 +296,19 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
                     @Override
                     public DimensionSelector makeDimensionSelector(
-                        final String dimension,
-                        @Nullable final ExtractionFn extractionFn
+                        DimensionSpec dimensionSpec
                     )
                     {
+                      return dimensionSpec.decorate(makeDimensionSelectorUndecorated(dimensionSpec));
+                    }
+
+                    private DimensionSelector makeDimensionSelectorUndecorated(
+                        DimensionSpec dimensionSpec
+                    )
+                    {
+                      final String dimension = dimensionSpec.getDimension();
+                      final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
+
                       final Column columnDesc = index.getColumn(dimension);
                       if (columnDesc == null) {
                         return NULL_DIMENSION_SELECTOR;
