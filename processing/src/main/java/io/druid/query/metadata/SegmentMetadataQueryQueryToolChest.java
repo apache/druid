@@ -36,7 +36,6 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.OrderedMergeSequence;
 import io.druid.common.guava.CombiningSequence;
 import io.druid.common.utils.JodaUtils;
-import io.druid.data.input.Row;
 import io.druid.query.CacheStrategy;
 import io.druid.query.DruidMetrics;
 import io.druid.query.Query;
@@ -53,6 +52,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -149,7 +149,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
 
             List<Interval> newIntervals = null;
             if (query.hasInterval()) {
-              newIntervals = arg1.getIntervals();
+              newIntervals = new ArrayList<>(arg1.getIntervals());
               newIntervals.addAll(arg2.getIntervals());
             }
 
