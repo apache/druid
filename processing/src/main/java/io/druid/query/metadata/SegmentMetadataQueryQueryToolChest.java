@@ -34,7 +34,9 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.nary.BinaryFn;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.collections.OrderedMergeSequence;
+import io.druid.common.guava.CombiningSequence;
 import io.druid.common.utils.JodaUtils;
+import io.druid.data.input.Row;
 import io.druid.query.CacheStrategy;
 import io.druid.query.DruidMetrics;
 import io.druid.query.Query;
@@ -77,6 +79,36 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   {
     return new ResultMergeQueryRunner<SegmentAnalysis>(runner)
     {
+      private Function<SegmentAnalysis, SegmentAnalysis> transformFn = new Function<SegmentAnalysis, SegmentAnalysis>()
+      {
+        @Override
+        public SegmentAnalysis apply(SegmentAnalysis analysis)
+        {
+          return new SegmentAnalysis(
+              analysis.getId(),
+              JodaUtils.condenseIntervals(analysis.getIntervals()),
+              analysis.getColumns(),
+              analysis.getSize(),
+              analysis.getNumRows()
+          );
+        }
+      };
+
+      @Override
+      public Sequence<SegmentAnalysis> doRun(
+          QueryRunner<SegmentAnalysis> baseRunner,
+          Query<SegmentAnalysis> query,
+          Map<String, Object> context
+      )
+      {
+        return CombiningSequence.create(
+            baseRunner.run(query, context),
+            makeOrdering(query),
+            createMergeFn(query),
+            transformFn
+        );
+      }
+
       @Override
       protected Ordering<SegmentAnalysis> makeOrdering(Query<SegmentAnalysis> query)
       {
@@ -115,9 +147,11 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
               return arg1;
             }
 
-            List<Interval> newIntervals = JodaUtils.condenseIntervals(
-                Iterables.concat(arg1.getIntervals(), arg2.getIntervals())
-            );
+            List<Interval> newIntervals = null;
+            if (query.hasInterval()) {
+              newIntervals = arg1.getIntervals();
+              newIntervals.addAll(arg2.getIntervals());
+            }
 
             final Map<String, ColumnAnalysis> leftColumns = arg1.getColumns();
             final Map<String, ColumnAnalysis> rightColumns = arg2.getColumns();

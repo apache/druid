@@ -50,7 +50,8 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   public enum AnalysisType
   {
     CARDINALITY,
-    SIZE;
+    SIZE,
+    INTERVAL;
 
     @JsonValue
     @Override
@@ -77,7 +78,8 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
 
   public static final EnumSet<AnalysisType> DEFAULT_ANALYSIS_TYPES = EnumSet.of(
       AnalysisType.CARDINALITY,
-      AnalysisType.SIZE
+      AnalysisType.SIZE,
+      AnalysisType.INTERVAL
   );
 
   private final ColumnIncluderator toInclude;
@@ -161,6 +163,11 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   public boolean hasSize()
   {
     return analysisTypes.contains(AnalysisType.SIZE);
+  }
+
+  public boolean hasInterval()
+  {
+    return analysisTypes.contains(AnalysisType.INTERVAL);
   }
 
   public byte[] getAnalysisTypesCacheKey()
@@ -259,6 +266,10 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     if (usingDefaultInterval != that.usingDefaultInterval) {
       return false;
     }
+
+    if (!analysisTypes.equals(that.analysisTypes)) {
+      return false;
+    }
     return !(toInclude != null ? !toInclude.equals(that.toInclude) : that.toInclude != null);
 
   }
@@ -270,6 +281,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     result = 31 * result + (toInclude != null ? toInclude.hashCode() : 0);
     result = 31 * result + (merge ? 1 : 0);
     result = 31 * result + (usingDefaultInterval ? 1 : 0);
+    result = 31 * result + analysisTypes.hashCode();
     return result;
   }
 }
