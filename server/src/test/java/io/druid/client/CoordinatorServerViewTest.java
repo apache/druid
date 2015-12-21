@@ -21,7 +21,6 @@ package io.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -31,7 +30,6 @@ import com.metamx.common.Pair;
 import io.druid.curator.CuratorTestBase;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.TableDataSource;
-import io.druid.segment.Segment;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.DataSegment;
@@ -49,7 +47,6 @@ import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 
@@ -100,7 +97,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
         0
     );
 
-    setupZNodeForServer(druidServer);
+    setupZNodeForServer(druidServer, zkPathsConfig, jsonMapper);
 
     final DataSegment segment = dataSegmentWithIntervalAndVersion("2014-10-20T00:00:00Z/P1D", "v1");
     announceSegmentForServer(druidServer, segment);
@@ -168,7 +165,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     );
 
     for (DruidServer druidServer : druidServers) {
-      setupZNodeForServer(druidServer);
+      setupZNodeForServer(druidServer, zkPathsConfig, jsonMapper);
     }
 
     final List<DataSegment> segments = Lists.transform(
@@ -348,19 +345,6 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     );
 
     baseView.start();
-  }
-
-  private void setupZNodeForServer(DruidServer server) throws Exception
-  {
-    curator.create()
-           .creatingParentsIfNeeded()
-           .forPath(
-               ZKPaths.makePath(announcementsPath, server.getHost()),
-               jsonMapper.writeValueAsBytes(server.getMetadata())
-           );
-    curator.create()
-           .creatingParentsIfNeeded()
-           .forPath(ZKPaths.makePath(inventoryPath, server.getHost()));
   }
 
   private DataSegment dataSegmentWithIntervalAndVersion(String intervalStr, String version)
