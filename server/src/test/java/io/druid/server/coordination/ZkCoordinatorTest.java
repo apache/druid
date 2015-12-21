@@ -19,35 +19,6 @@
 
 package io.druid.server.coordination;
 
-import io.druid.client.cache.CacheConfig;
-import io.druid.client.cache.LocalCacheProvider;
-import io.druid.concurrent.Execs;
-import io.druid.curator.CuratorTestBase;
-import io.druid.curator.announcement.Announcer;
-import io.druid.jackson.DefaultObjectMapper;
-import io.druid.query.NoopQueryRunnerFactoryConglomerate;
-import io.druid.segment.IndexIO;
-import io.druid.segment.loading.CacheTestSegmentLoader;
-import io.druid.segment.loading.SegmentLoaderConfig;
-import io.druid.server.initialization.ZkPathsConfig;
-import io.druid.server.metrics.NoopServiceEmitter;
-import io.druid.timeline.DataSegment;
-import io.druid.timeline.partition.NoneShardSpec;
-
-import java.io.File;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
-
-import org.apache.curator.framework.CuratorFramework;
-import org.joda.time.Interval;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -61,6 +32,34 @@ import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
+import io.druid.client.cache.CacheConfig;
+import io.druid.client.cache.LocalCacheProvider;
+import io.druid.concurrent.Execs;
+import io.druid.curator.CuratorTestBase;
+import io.druid.curator.announcement.Announcer;
+import io.druid.jackson.DefaultObjectMapper;
+import io.druid.query.NoopQueryRunnerFactoryConglomerate;
+import io.druid.segment.IndexIO;
+import io.druid.segment.loading.CacheTestSegmentLoader;
+import io.druid.segment.loading.SegmentLoaderConfig;
+import io.druid.server.initialization.BatchDataSegmentAnnouncerConfig;
+import io.druid.server.initialization.ZkPathsConfig;
+import io.druid.server.metrics.NoopServiceEmitter;
+import io.druid.timeline.DataSegment;
+import io.druid.timeline.partition.NoneShardSpec;
+import org.apache.curator.framework.CuratorFramework;
+import org.joda.time.Interval;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  */
@@ -117,8 +116,12 @@ public class ZkCoordinatorTest extends CuratorTestBase
     announceCount = new AtomicInteger(0);
     announcer = new DataSegmentAnnouncer()
     {
-      private final DataSegmentAnnouncer delegate = new SingleDataSegmentAnnouncer(
-          me, zkPaths, new Announcer(curator, Execs.singleThreaded("blah")), jsonMapper
+      private final DataSegmentAnnouncer delegate = new BatchDataSegmentAnnouncer(
+          me,
+          new BatchDataSegmentAnnouncerConfig(),
+          zkPaths,
+          new Announcer(curator, Execs.singleThreaded("blah")),
+          jsonMapper
       );
 
       @Override
@@ -191,7 +194,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
   public void testLoadCache() throws Exception
   {
     List<DataSegment> segments = Lists.newLinkedList();
-    for(int i = 0; i < COUNT; ++i) {
+    for (int i = 0; i < COUNT; ++i) {
       segments.add(makeSegment("test" + i, "1", new Interval("P1d/2011-04-01")));
       segments.add(makeSegment("test" + i, "1", new Interval("P1d/2011-04-02")));
       segments.add(makeSegment("test" + i, "2", new Interval("P1d/2011-04-02")));
@@ -216,7 +219,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
     Assert.assertTrue(serverManager.getDataSourceCounts().isEmpty());
     zkCoordinator.start();
     Assert.assertTrue(!serverManager.getDataSourceCounts().isEmpty());
-    for(int i = 0; i < COUNT; ++i) {
+    for (int i = 0; i < COUNT; ++i) {
       Assert.assertEquals(11L, serverManager.getDataSourceCounts().get("test" + i).longValue());
       Assert.assertEquals(2L, serverManager.getDataSourceCounts().get("test_two" + i).longValue());
     }
