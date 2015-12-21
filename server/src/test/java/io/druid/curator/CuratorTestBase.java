@@ -102,5 +102,4 @@ public class CuratorTestBase
     CloseQuietly.close(curator);
     CloseQuietly.close(server);
   }
-  
 }
