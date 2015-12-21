@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
 import com.google.common.base.Function;
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
@@ -109,7 +108,7 @@ public class BrokerServerViewTest extends CuratorTestBase
         0
     );
 
-    setupZNodeForServer(druidServer);
+    setupZNodeForServer(druidServer, zkPathsConfig, jsonMapper);
 
     final DataSegment segment = dataSegmentWithIntervalAndVersion("2014-10-20T00:00:00Z/P1D", "v1");
     announceSegmentForServer(druidServer, segment);
@@ -179,7 +178,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     );
 
     for (DruidServer druidServer : druidServers) {
-      setupZNodeForServer(druidServer);
+      setupZNodeForServer(druidServer, zkPathsConfig, jsonMapper);
     }
 
     final List<DataSegment> segments = Lists.transform(
@@ -367,33 +366,6 @@ public class BrokerServerViewTest extends CuratorTestBase
     );
 
     baseView.start();
-  }
-
-  private void setupZNodeForServer(DruidServer server) throws Exception
-  {
-    final String zNodePathAnnounce = ZKPaths.makePath(announcementsPath, server.getHost());
-    final String zNodePathSegment = ZKPaths.makePath(inventoryPath, server.getHost());
-
-    /*
-     * Explicitly check whether the zNodes we are about to create exist or not,
-     * if exist, delete them to make sure we have a clean state on zookeeper.
-     * Address issue: https://github.com/druid-io/druid/issues/1512
-     */
-    if (curator.checkExists().forPath(zNodePathAnnounce) != null) {
-      curator.delete().guaranteed().forPath(zNodePathAnnounce);
-    }
-    if (curator.checkExists().forPath(zNodePathSegment) != null) {
-      curator.delete().guaranteed().forPath(zNodePathSegment);
-    }
-    curator.create()
-           .creatingParentsIfNeeded()
-           .forPath(
-               zNodePathAnnounce,
-               jsonMapper.writeValueAsBytes(server.getMetadata())
-           );
-    curator.create()
-           .creatingParentsIfNeeded()
-           .forPath(zNodePathSegment);
   }
 
   private DataSegment dataSegmentWithIntervalAndVersion(String intervalStr, String version)
