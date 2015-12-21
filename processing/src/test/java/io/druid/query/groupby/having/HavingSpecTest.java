@@ -87,6 +87,19 @@ public class HavingSpecTest
     assertEquals(andHavingSpec,  mapper.convertValue(payloadMap, AndHavingSpec.class));
   }
 
+  @Test(expected = IllegalArgumentException.class)
+  public void testTypeTypo()
+  {
+    Map<String, Object> greaterMap = ImmutableMap.<String, Object>of(
+        "type", "nonExistingType",
+        "aggregation", "agg",
+        "value", 1.3
+    );
+    ObjectMapper mapper = new DefaultObjectMapper();
+    HavingSpec spec = mapper.convertValue (greaterMap, HavingSpec.class);
+
+  }
+
   @Test
   public void testGreaterThanHavingSpec() {
     GreaterThanHavingSpec spec = new GreaterThanHavingSpec("metric", Long.valueOf(Long.MAX_VALUE - 10));
