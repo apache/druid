@@ -60,7 +60,6 @@ import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import io.druid.indexing.common.actions.LockListAction;
 import io.druid.indexing.common.actions.SegmentInsertAction;
-import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
@@ -127,7 +126,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
-import java.util.concurrent.TimeUnit;
 
 @RunWith(Parameterized.class)
 public class TaskLifecycleTest
@@ -866,7 +864,7 @@ public class TaskLifecycleTest
     Assert.assertEquals("segments nuked", 0, mdc.getNuked().size());
   }
 
-  @Test(timeout = 4000L)
+  @Test(timeout = 10000L)
   public void testRealtimeIndexTask() throws Exception
   {
     monitorScheduler.addMonitor(EasyMock.anyObject(Monitor.class));
@@ -880,7 +878,7 @@ public class TaskLifecycleTest
 
     tq.add(realtimeIndexTask);
     //wait for task to process events and publish segment
-    Assert.assertTrue(publishCountDown.await(1000, TimeUnit.MILLISECONDS));
+    publishCountDown.await();
 
     // Realtime Task has published the segment, simulate loading of segment to a historical node so that task finishes with SUCCESS status
     Assert.assertEquals(1, handOffCallbacks.size());
