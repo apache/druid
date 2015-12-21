@@ -30,6 +30,8 @@ import org.apache.curator.test.TestingServer;
 import org.apache.curator.test.Timing;
 import org.apache.curator.utils.ZKPaths;
 
+import java.io.IOException;
+
 /**
  */
 public class CuratorTestBase
@@ -88,6 +90,12 @@ public class CuratorTestBase
   protected void tearDownServerAndCurator()
   {
     CloseQuietly.close(curator);
+    try {
+      server.stop();
+    }
+    catch (IOException ex) {
+      throw new RuntimeException(ex);
+    }
     CloseQuietly.close(server);
   }
 }
