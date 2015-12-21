@@ -269,19 +269,7 @@ This config is used to find the [Coordinator](../design/coordinator.html) using 
 
 ### Announcing Segments
 
-You can optionally configure how to announce and unannounce Znodes in ZooKeeper (using Curator). For normal operations you do not need to override any of these configs.
-
-#### Data Segment Announcer
-
-Data segment announcers are used to announce segments.
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.announcer.type`|Choices: legacy or batch. The type of data segment announcer to use.|batch|
-
-##### Single Data Segment Announcer
-
-In legacy Druid, each segment served by a node would be announced as an individual Znode.
+You can configure how to announce and unannounce Znodes in ZooKeeper (using Curator). For normal operations you do not need to override any of these configs.
 
 ##### Batch Data Segment Announcer
 

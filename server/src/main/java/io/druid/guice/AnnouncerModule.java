@@ -27,7 +27,6 @@ import io.druid.curator.announcement.Announcer;
 import io.druid.server.coordination.BatchDataSegmentAnnouncer;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.server.coordination.DataSegmentAnnouncerProvider;
-import io.druid.server.coordination.SingleDataSegmentAnnouncer;
 import io.druid.server.initialization.BatchDataSegmentAnnouncerConfig;
 import org.apache.curator.framework.CuratorFramework;
 
@@ -42,7 +41,6 @@ public class AnnouncerModule implements Module
     JsonConfigProvider.bind(binder, "druid.announcer", DataSegmentAnnouncerProvider.class);
     binder.bind(DataSegmentAnnouncer.class).toProvider(DataSegmentAnnouncerProvider.class);
     binder.bind(BatchDataSegmentAnnouncer.class).in(ManageLifecycleLast.class);
-    binder.bind(SingleDataSegmentAnnouncer.class).in(ManageLifecycleLast.class);
   }
 
   @Provides
