@@ -101,7 +101,7 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
       final long elapsed;
       boolean error = false;
 
-      if (task.canRestore()) {
+      if (taskConfig.isRestoreTasksOnRestart() && task.canRestore()) {
         // Attempt graceful shutdown.
         graceful = true;
         log.info("Starting graceful shutdown of task[%s].", task.getId());

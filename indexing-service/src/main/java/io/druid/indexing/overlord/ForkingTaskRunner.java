@@ -149,7 +149,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
           throw new ISE("WTF?! Task[%s] restore file had wrong id[%s].", taskId, task.getId());
         }
 
-        if (task.canRestore()) {
+        if (taskConfig.isRestoreTasksOnRestart() && task.canRestore()) {
           log.info("Restoring task[%s].", task.getId());
           retVal.add(Pair.of(task, run(task)));
         }
