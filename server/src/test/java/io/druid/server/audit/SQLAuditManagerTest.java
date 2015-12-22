@@ -63,7 +63,7 @@ public class SQLAuditManagerTest
     );
   }
 
-  @Test
+  @Test(timeout = 10_000L)
   public void testAuditEntrySerde() throws IOException
   {
     AuditEntry entry = new AuditEntry(
@@ -82,7 +82,7 @@ public class SQLAuditManagerTest
     Assert.assertEquals(entry, serde);
   }
 
-  @Test
+  @Test(timeout = 10_000L)
   public void testCreateAuditEntry() throws IOException
   {
     AuditEntry entry = new AuditEntry(
@@ -108,7 +108,7 @@ public class SQLAuditManagerTest
 
   }
 
-  @Test
+  @Test(timeout = 10_000L)
   public void testFetchAuditHistory() throws IOException
   {
     AuditEntry entry = new AuditEntry(
@@ -136,7 +136,7 @@ public class SQLAuditManagerTest
     Assert.assertEquals(entry, auditEntries.get(1));
   }
 
-  @Test
+  @Test(timeout = 10_000L)
   public void testFetchAuditHistoryByKeyAndTypeWithLimit() throws IOException
   {
     AuditEntry entry1 = new AuditEntry(
@@ -172,7 +172,7 @@ public class SQLAuditManagerTest
     Assert.assertEquals(entry1, auditEntries.get(0));
   }
 
-  @Test
+  @Test(timeout = 10_000L)
   public void testFetchAuditHistoryByTypeWithLimit() throws IOException
   {
     AuditEntry entry1 = new AuditEntry(
@@ -220,13 +220,13 @@ public class SQLAuditManagerTest
     Assert.assertEquals(entry2, auditEntries.get(1));
   }
 
-  @Test(expected=IllegalArgumentException.class)
+  @Test(expected=IllegalArgumentException.class, timeout = 10_000L)
   public void testFetchAuditHistoryLimitBelowZero() throws IOException
   {
     auditManager.fetchAuditHistory("testType", -1);
   }
 
-  @Test(expected=IllegalArgumentException.class)
+  @Test(expected=IllegalArgumentException.class, timeout = 10_000L)
   public void testFetchAuditHistoryLimitZero() throws IOException
   {
     auditManager.fetchAuditHistory("testType", 0);
@@ -240,7 +240,7 @@ public class SQLAuditManagerTest
 
   private void dropTable(final String tableName)
   {
-    connector.getDBI().withHandle(
+    Assert.assertNull(connector.getDBI().withHandle(
         new HandleCallback<Void>()
         {
           @Override
@@ -251,6 +251,6 @@ public class SQLAuditManagerTest
             return null;
           }
         }
-    );
+    ));
   }
 }

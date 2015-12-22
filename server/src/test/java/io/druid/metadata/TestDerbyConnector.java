@@ -73,7 +73,7 @@ public class TestDerbyConnector extends DerbyConnector
   {
     return jdbcUri;
   }
-  
+
   public static class DerbyConnectorRule extends ExternalResource
   {
     private TestDerbyConnector connector;
@@ -82,7 +82,14 @@ public class TestDerbyConnector extends DerbyConnector
 
     public DerbyConnectorRule()
     {
-      this(Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase("druidTest")));
+      this("druidTest" + dbSafeUUID());
+    }
+
+    private DerbyConnectorRule(
+        final String defaultBase
+    )
+    {
+      this(Suppliers.ofInstance(MetadataStorageTablesConfig.fromBase(defaultBase)));
     }
 
     public DerbyConnectorRule(
