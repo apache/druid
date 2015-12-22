@@ -408,6 +408,7 @@ public class RemoteTaskRunnerTest
     TaskStatus status = future.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
 
     Assert.assertEquals(TaskStatus.Status.FAILED, status.getStatusCode());
+    RemoteTaskRunnerConfig config = remoteTaskRunner.getRemoteTaskRunnerConfig();
     Assert.assertTrue(
         TestUtils.conditionValid(
             new IndexingServiceCondition()
@@ -417,7 +418,9 @@ public class RemoteTaskRunnerTest
               {
                 return remoteTaskRunner.getRemovedWorkerCleanups().isEmpty();
               }
-            }
+            },
+            // cleanup task is independently scheduled by event listener. we need to wait some more time.
+            config.getTaskCleanupTimeout().toStandardDuration().getMillis() * 2
         )
     );
     Assert.assertNull(cf.checkExists().forPath(statusPath));

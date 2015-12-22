@@ -20,6 +20,7 @@
 package io.druid.indexing.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
@@ -1062,8 +1063,15 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     return ImmutableList.copyOf(lazyWorkers.values());
   }
 
+  @VisibleForTesting
   ConcurrentMap<String, ScheduledFuture> getRemovedWorkerCleanups()
   {
     return removedWorkerCleanups;
+  }
+
+  @VisibleForTesting
+  RemoteTaskRunnerConfig getRemoteTaskRunnerConfig()
+  {
+    return config;
   }
 }
