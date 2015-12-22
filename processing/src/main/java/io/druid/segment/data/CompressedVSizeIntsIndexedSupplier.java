@@ -79,7 +79,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     return 1 << (Integer.SIZE - 1 - Integer.numberOfLeadingZeros(maxSizePer));
   }
 
-  private static int bufferPadding(int numBytes)
+  public static int bufferPadding(int numBytes)
   {
     // when numBytes == 3 we need to pad the buffer to allow reading an extra byte
     // beyond the end of the last value, since we use buffer.getInt() to read values.
