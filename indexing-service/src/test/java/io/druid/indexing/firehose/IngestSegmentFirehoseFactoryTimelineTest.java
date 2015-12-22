@@ -298,7 +298,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
       SegmentHandoffNotifierFactory notifierFactory = EasyMock.createNiceMock(SegmentHandoffNotifierFactory.class);
       EasyMock.replay(notifierFactory);
       final TaskToolboxFactory taskToolboxFactory = new TaskToolboxFactory(
-          new TaskConfig(testCase.tmpDir.getAbsolutePath(), null, null, 50000, null, null, null),
+          new TaskConfig(testCase.tmpDir.getAbsolutePath(), null, null, 50000, null, false, null, null),
           new TaskActionClientFactory()
           {
             @Override
