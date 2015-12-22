@@ -261,7 +261,22 @@ public class GroupByQueryRunnerTest
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    assertExpectedObjects(expectedResults, results, "");
+  }
+
+  private void assertExpectedObjects(List<Row> expectedResults, Iterable<Row> results, String msg)
+  {
+    TestHelper.assertObjectsUnordered(expectedResults, results, msg);
+  }
+
+  private void assertExpectedObjects(Iterable<Row> expectedResults, Sequence<Row> results, String msg)
+  {
+    TestHelper.assertObjectsUnordered(expectedResults, Sequences.toList(results, new ArrayList()), msg);
+  }
+
+  private void assertExpectedObjects(List<Result> expectedResults, Sequence results, String msg)
+  {
+    TestHelper.assertObjectsUnordered(expectedResults, Sequences.toList(results, new ArrayList()), msg);
   }
 
 
@@ -361,7 +376,7 @@ public class GroupByQueryRunnerTest
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    assertExpectedObjects(expectedResults, results, "");
   }
 
 
@@ -440,7 +455,7 @@ public class GroupByQueryRunnerTest
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    assertExpectedObjects(expectedResults, results, "");
   }
 
 
@@ -519,7 +534,7 @@ public class GroupByQueryRunnerTest
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    assertExpectedObjects(expectedResults, results, "");
   }
 
 
@@ -598,7 +613,7 @@ public class GroupByQueryRunnerTest
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    assertExpectedObjects(expectedResults, results, "");
   }
 
   @Test
@@ -676,7 +691,7 @@ public class GroupByQueryRunnerTest
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    assertExpectedObjects(expectedResults, results, "");
   }
 
   @Test
@@ -706,7 +721,7 @@ public class GroupByQueryRunnerTest
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    assertExpectedObjects(expectedResults, results, "");
   }
 
   @Test(expected = IllegalArgumentException.class)
@@ -744,7 +759,7 @@ public class GroupByQueryRunnerTest
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    assertExpectedObjects(expectedResults, results, "");
   }
 
   @Test
@@ -774,7 +789,7 @@ public class GroupByQueryRunnerTest
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    assertExpectedObjects(expectedResults, results, "");
   }
 
   @Test
@@ -832,7 +847,7 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "t", "rows", 2L, "idx", 223L)
     );
 
-    TestHelper.assertExpectedObjects(
+    assertExpectedObjects(
         expectedResults,
         GroupByQueryRunnerTestHelper.runQuery(factory, runner, query),
         ""
@@ -900,7 +915,7 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "t", "rows", 2L, "idx", 223L)
     );
 
-    TestHelper.assertExpectedObjects(
+    assertExpectedObjects(
         expectedResults,
         GroupByQueryRunnerTestHelper.runQuery(factory, runner, query),
         ""
@@ -1108,7 +1123,7 @@ public class GroupByQueryRunnerTest
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    assertExpectedObjects(expectedResults, results, "");
   }
 
   @Test
@@ -1163,8 +1178,8 @@ public class GroupByQueryRunnerTest
     );
 
     Map<String, Object> context = Maps.newHashMap();
-    TestHelper.assertExpectedObjects(expectedResults, runner.run(fullQuery, context), "direct");
-    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(fullQuery, context), "merged");
+    assertExpectedObjects(expectedResults, runner.run(fullQuery, context), "direct");
+    assertExpectedObjects(expectedResults, mergedRunner.run(fullQuery, context), "merged");
 
     List<Row> allGranExpectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "automotive", "rows", 2L, "idx", 269L),
@@ -1178,8 +1193,8 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
-    TestHelper.assertExpectedObjects(allGranExpectedResults, runner.run(allGranQuery, context), "direct");
-    TestHelper.assertExpectedObjects(allGranExpectedResults, mergedRunner.run(allGranQuery, context), "merged");
+    assertExpectedObjects(allGranExpectedResults, runner.run(allGranQuery, context), "direct");
+    assertExpectedObjects(allGranExpectedResults, mergedRunner.run(allGranQuery, context), "merged");
   }
 
   @Test
@@ -1223,7 +1238,7 @@ public class GroupByQueryRunnerTest
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
 
     Map<String, Object> context = Maps.newHashMap();
-    TestHelper.assertExpectedObjects(
+    assertExpectedObjects(
         Iterables.limit(expectedResults, limit), mergeRunner.run(fullQuery, context), String.format("limit: %d", limit)
     );
   }
@@ -1270,7 +1285,7 @@ public class GroupByQueryRunnerTest
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
 
     Map<String, Object> context = Maps.newHashMap();
-    TestHelper.assertExpectedObjects(
+    assertExpectedObjects(
         Iterables.limit(expectedResults, limit), mergeRunner.run(fullQuery, context), String.format("limit: %d", limit)
     );
   }
@@ -1395,7 +1410,7 @@ public class GroupByQueryRunnerTest
     );
 
     Map<String, Object> context = Maps.newHashMap();
-    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(fullQuery, context), "merged");
+    assertExpectedObjects(expectedResults, mergedRunner.run(fullQuery, context), "merged");
   }
 
   @Test
@@ -1432,9 +1447,9 @@ public class GroupByQueryRunnerTest
 
     Map<String, Object> context = Maps.newHashMap();
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
+    assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
 
-    TestHelper.assertExpectedObjects(
+    assertExpectedObjects(
         Iterables.limit(expectedResults, 5), mergeRunner.run(builder.limit(5).build(), context), "limited"
     );
   }
@@ -1473,8 +1488,8 @@ public class GroupByQueryRunnerTest
 
     Map<String, Object> context = Maps.newHashMap();
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
-    TestHelper.assertExpectedObjects(
+    assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
+    assertExpectedObjects(
         Iterables.limit(expectedResults, 5), mergeRunner.run(builder.limit(5).build(), context), "limited"
     );
   }
@@ -1585,8 +1600,8 @@ public class GroupByQueryRunnerTest
 
     Map<String, Object> context = Maps.newHashMap();
     QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
-    TestHelper.assertExpectedObjects(
+    assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
+    assertExpectedObjects(
         Iterables.limit(expectedResults, 5), mergeRunner.run(builder.limit(5).build(), context), "limited"
     );
   }
@@ -1648,7 +1663,7 @@ public class GroupByQueryRunnerTest
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "order-limit");
+    assertExpectedObjects(expectedResults, results, "order-limit");
   }
 
   @Test
@@ -1696,7 +1711,7 @@ public class GroupByQueryRunnerTest
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "order-limit");
+    assertExpectedObjects(expectedResults, results, "order-limit");
   }
 
   @Test
@@ -2166,7 +2181,7 @@ public class GroupByQueryRunnerTest
     );
 
     Map<String, Object> context = Maps.newHashMap();
-    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(fullQuery, context), "merged");
+    assertExpectedObjects(expectedResults, mergedRunner.run(fullQuery, context), "merged");
   }
 
   @Test
@@ -2247,7 +2262,7 @@ public class GroupByQueryRunnerTest
 
     GroupByQuery fullQuery = builder.build();
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, fullQuery);
-    TestHelper.assertExpectedObjects(
+    assertExpectedObjects(
         expectedResults,
         results,
         ""
@@ -2304,7 +2319,7 @@ public class GroupByQueryRunnerTest
         );
 
     final GroupByQuery fullQuery = builder.build();
-    TestHelper.assertExpectedObjects(
+    assertExpectedObjects(
         expectedResults,
         GroupByQueryRunnerTestHelper.runQuery(factory, runner, fullQuery),
         ""
@@ -2343,7 +2358,7 @@ public class GroupByQueryRunnerTest
         );
 
     final GroupByQuery fullQuery = builder.build();
-    TestHelper.assertExpectedObjects(
+    assertExpectedObjects(
         expectedResults,
         GroupByQueryRunnerTestHelper.runQuery(factory, runner, fullQuery),
         ""
@@ -2403,7 +2418,7 @@ public class GroupByQueryRunnerTest
     );
 
     Map<String, Object> context = Maps.newHashMap();
-    TestHelper.assertExpectedObjects(expectedResults, mergedRunner.run(fullQuery, context), "merged");
+    assertExpectedObjects(expectedResults, mergedRunner.run(fullQuery, context), "merged");
   }
 
   @Test
@@ -2511,7 +2526,7 @@ public class GroupByQueryRunnerTest
 
     Map<String, Object> context = Maps.newHashMap();
     // add an extra layer of merging, simulate broker forwarding query to historical
-    TestHelper.assertExpectedObjects(
+    assertExpectedObjects(
         expectedResults,
         factory.getToolchest().postMergeQueryDecoration(
             factory.getToolchest().mergeResults(
@@ -2566,7 +2581,7 @@ public class GroupByQueryRunnerTest
         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
     ).mergeResults(runner);
     Map<String, Object> context = Maps.newHashMap();
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
+    assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
   }
 
   @Test
@@ -2624,7 +2639,7 @@ public class GroupByQueryRunnerTest
     );
 
     Map<String, Object> context = Maps.newHashMap();
-    TestHelper.assertExpectedObjects(expectedResults, runner.run(query, context), "normal");
+    assertExpectedObjects(expectedResults, runner.run(query, context), "normal");
     final GroupByQueryEngine engine = new GroupByQueryEngine(
         configSupplier,
         new StupidPool<>(
@@ -2646,7 +2661,7 @@ public class GroupByQueryRunnerTest
         TestQueryRunners.pool,
         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
     ).mergeResults(runner);
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
+    assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
   }
 
   @Test
@@ -2704,7 +2719,7 @@ public class GroupByQueryRunnerTest
     );
 
     Map<String, Object> context = Maps.newHashMap();
-    TestHelper.assertExpectedObjects(expectedResults, runner.run(query, context), "normal");
+    assertExpectedObjects(expectedResults, runner.run(query, context), "normal");
     final GroupByQueryEngine engine = new GroupByQueryEngine(
         configSupplier,
         new StupidPool<>(
@@ -2726,7 +2741,7 @@ public class GroupByQueryRunnerTest
         TestQueryRunners.pool,
         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
     ).mergeResults(runner);
-    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
+    assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
   }
 
   // A subquery identical to the query should yield identical results
@@ -2791,7 +2806,7 @@ public class GroupByQueryRunnerTest
 
     // Subqueries are handled by the ToolChest
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    assertExpectedObjects(expectedResults, results, "");
   }
 
   @Test
@@ -2862,7 +2877,7 @@ public class GroupByQueryRunnerTest
 
     // Subqueries are handled by the ToolChest
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    assertExpectedObjects(expectedResults, results, "");
   }
 
   @Test
@@ -2962,7 +2977,7 @@ public class GroupByQueryRunnerTest
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    assertExpectedObjects(expectedResults, results, "");
   }
 
   @Test
@@ -3019,7 +3034,7 @@ public class GroupByQueryRunnerTest
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    assertExpectedObjects(expectedResults, results, "");
   }
 
 
@@ -3073,7 +3088,7 @@ public class GroupByQueryRunnerTest
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    assertExpectedObjects(expectedResults, results, "");
   }
 
   @Test
@@ -3110,7 +3125,7 @@ public class GroupByQueryRunnerTest
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    assertExpectedObjects(expectedResults, results, "");
   }
 
   @Test
@@ -3409,7 +3424,7 @@ public class GroupByQueryRunnerTest
 
     // Subqueries are handled by the ToolChest
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    assertExpectedObjects(expectedResults, results, "");
   }
 
   @Test
@@ -3672,7 +3687,7 @@ public class GroupByQueryRunnerTest
 
     // Subqueries are handled by the ToolChest
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    assertExpectedObjects(expectedResults, results, "");
   }
 
   @Test
@@ -3843,7 +3858,7 @@ public class GroupByQueryRunnerTest
 
     // Subqueries are handled by the ToolChest
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    assertExpectedObjects(expectedResults, results, "");
   }
 
   @Test
@@ -3983,7 +3998,7 @@ public class GroupByQueryRunnerTest
 
     // Subqueries are handled by the ToolChest
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    assertExpectedObjects(expectedResults, results, "");
   }
 
   @Test
@@ -4045,7 +4060,7 @@ public class GroupByQueryRunnerTest
 
     // Subqueries are handled by the ToolChest
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    assertExpectedObjects(expectedResults, results, "");
   }
 
   @Test
@@ -4078,7 +4093,7 @@ public class GroupByQueryRunnerTest
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    assertExpectedObjects(expectedResults, results, "");
   }
 
   @Test
@@ -4303,7 +4318,7 @@ public class GroupByQueryRunnerTest
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    assertExpectedObjects(expectedResults, results, "");
   }
 
   @Test
@@ -4359,7 +4374,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    TestHelper.assertExpectedObjects(bySegmentResults, theRunner.run(fullQuery, Maps.newHashMap()), "");
+    assertExpectedObjects(bySegmentResults, theRunner.run(fullQuery, Maps.newHashMap()), "");
     exec.shutdownNow();
   }
 
@@ -4435,7 +4450,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    TestHelper.assertExpectedObjects(bySegmentResults, theRunner.run(fullQuery, Maps.newHashMap()), "");
+    assertExpectedObjects(bySegmentResults, theRunner.run(fullQuery, Maps.newHashMap()), "");
     exec.shutdownNow();
   }
 
@@ -4510,7 +4525,7 @@ public class GroupByQueryRunnerTest
         )
     );
 
-    TestHelper.assertExpectedObjects(bySegmentResults, theRunner.run(fullQuery, Maps.newHashMap()), "");
+    assertExpectedObjects(bySegmentResults, theRunner.run(fullQuery, Maps.newHashMap()), "");
     exec.shutdownNow();
   }
 
@@ -4579,7 +4594,7 @@ public class GroupByQueryRunnerTest
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    assertExpectedObjects(expectedResults, results, "");
 
   }
 
@@ -4626,7 +4641,7 @@ public class GroupByQueryRunnerTest
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    assertExpectedObjects(expectedResults, results, "");
   }
 
   @Test
@@ -4664,7 +4679,7 @@ public class GroupByQueryRunnerTest
     List<Row> expectedResults = Arrays.asList();
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    assertExpectedObjects(expectedResults, results, "");
   }
 
 
@@ -4709,7 +4724,7 @@ public class GroupByQueryRunnerTest
         );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    assertExpectedObjects(expectedResults, results, "");
   }
 
   @Test
@@ -4775,7 +4790,7 @@ public class GroupByQueryRunnerTest
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    assertExpectedObjects(expectedResults, results, "");
 
   }
 

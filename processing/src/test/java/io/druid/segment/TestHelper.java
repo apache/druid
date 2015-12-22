@@ -30,6 +30,7 @@ import io.druid.segment.column.ColumnConfig;
 import org.junit.Assert;
 
 import java.util.Iterator;
+import java.util.List;
 
 /**
  */
@@ -164,6 +165,21 @@ public class TestHelper
               expectedResultsIter.next()
           )
       );
+    }
+  }
+
+  public static <T> void assertObjectsUnordered(Iterable<T> expectedResults, Iterable<T> actualResults, String failMsg)
+  {
+    int counter = 0;
+    List expected = Lists.newLinkedList(expectedResults);
+    for (Object t : actualResults) {
+      counter++;
+      if (!expected.remove(t)) {
+        Assert.fail(failMsg + ": " + counter + " th return value " + t + " was not in expected value list");
+      }
+    }
+    if (!expected.isEmpty()) {
+      Assert.fail(failMsg + ": Some expected values was not arrived something like " + expected.get(0));
     }
   }
 

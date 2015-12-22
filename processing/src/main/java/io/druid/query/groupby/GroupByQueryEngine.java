@@ -149,9 +149,7 @@ public class GroupByQueryEngine
     private final BufferAggregator[] aggregators;
     private final PositionMaintainer positionMaintainer;
 
-    private final Map<ByteBuffer, Integer> positions = Maps.newTreeMap();
-    // GroupBy queries tend to do a lot of reads from this. We co-store a hash map to make those reads go faster.
-    private final Map<ByteBuffer, Integer> positionsHash = Maps.newHashMap();
+    private final Map<ByteBuffer, Integer> positions = Maps.newHashMap();
 
     public RowUpdater(
         ByteBuffer metricValues,
@@ -205,7 +203,7 @@ public class GroupByQueryEngine
         return retVal;
       } else {
         key.clear();
-        Integer position = positionsHash.get(key);
+        Integer position = positions.get(key);
         int[] increments = positionMaintainer.getIncrements();
         int thePosition;
 
@@ -220,7 +218,6 @@ public class GroupByQueryEngine
           }
 
           positions.put(keyCopy, position);
-          positionsHash.put(keyCopy, position);
           thePosition = position;
           for (int i = 0; i < aggregators.length; ++i) {
             aggregators[i].init(metricValues, thePosition);
