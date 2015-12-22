@@ -247,6 +247,16 @@ public class DruidCoordinator
     return retVal;
   }
 
+  CountingMap<String> getLoadPendingDatasources() {
+    final CountingMap<String> retVal = new CountingMap<>();
+    for (LoadQueuePeon peon : loadManagementPeons.values()) {
+      for (DataSegment segment : peon.getSegmentsToLoad()) {
+        retVal.add(segment.getDataSource(), 1);
+      }
+    }
+    return retVal;
+  }
+
   public Map<String, Double> getLoadStatus()
   {
     Map<String, Double> loadStatus = Maps.newHashMap();

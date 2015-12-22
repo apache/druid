@@ -338,6 +338,10 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Assert.assertEquals(1, segmentAvailability.size());
     Assert.assertEquals(0l, segmentAvailability.get(dataSource));
 
+    while (coordinator.getLoadPendingDatasources().get(dataSource).get() > 0) {
+      Thread.sleep(50);
+    }
+
     Map<String, CountingMap<String>> replicationStatus = coordinator.getReplicationStatus();
     Assert.assertNotNull(replicationStatus);
     Assert.assertEquals(1, replicationStatus.entrySet().size());
