@@ -606,7 +606,7 @@ public class RealtimeIndexTaskTest
       final File directory
   )
   {
-    final TaskConfig taskConfig = new TaskConfig(directory.getPath(), null, null, 50000, null, null, null);
+    final TaskConfig taskConfig = new TaskConfig(directory.getPath(), null, null, 50000, null, false, null, null);
     final TaskLockbox taskLockbox = new TaskLockbox(taskStorage);
     try {
       taskStorage.insert(task, TaskStatus.running(task.getId()));

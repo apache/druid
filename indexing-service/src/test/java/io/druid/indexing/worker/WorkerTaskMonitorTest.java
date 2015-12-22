@@ -129,7 +129,16 @@ public class WorkerTaskMonitorTest
 
   private WorkerTaskMonitor createTaskMonitor()
   {
-    final TaskConfig taskConfig = new TaskConfig(Files.createTempDir().toString(), null, null, 0, null, null, null);
+    final TaskConfig taskConfig = new TaskConfig(
+        Files.createTempDir().toString(),
+        null,
+        null,
+        0,
+        null,
+        false,
+        null,
+        null
+    );
     TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);
     TaskActionClient taskActionClient = EasyMock.createNiceMock(TaskActionClient.class);
     EasyMock.expect(taskActionClientFactory.create(EasyMock.<Task>anyObject())).andReturn(taskActionClient).anyTimes();

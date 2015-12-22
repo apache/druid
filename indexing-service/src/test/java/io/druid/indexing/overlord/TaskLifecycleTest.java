@@ -440,7 +440,7 @@ public class TaskLifecycleTest
 
   private void setUpAndStartTaskQueue(DataSegmentPusher dataSegmentPusher)
   {
-    final TaskConfig taskConfig = new TaskConfig(tmpDir.toString(), null, null, 50000, null, null, null);
+    final TaskConfig taskConfig = new TaskConfig(tmpDir.toString(), null, null, 50000, null, false, null, null);
     tsqa = new TaskStorageQueryAdapter(ts);
     tl = new TaskLockbox(ts);
     mdc = newMockMDC();
