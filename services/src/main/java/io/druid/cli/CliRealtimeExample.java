@@ -30,6 +30,7 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.RealtimeModule;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.server.coordination.DataSegmentAnnouncer;
+import io.druid.server.initialization.jetty.ChatHandlerServerModule;
 import io.druid.timeline.DataSegment;
 
 import java.io.File;
@@ -70,7 +71,8 @@ public class CliRealtimeExample extends ServerRunnable
             binder.bind(InventoryView.class).to(NoopInventoryView.class).in(LazySingleton.class);
             binder.bind(ServerView.class).to(NoopServerView.class).in(LazySingleton.class);
           }
-        }
+        },
+        new ChatHandlerServerModule()
     );
   }
 
