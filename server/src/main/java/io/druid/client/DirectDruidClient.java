@@ -278,6 +278,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               byteCount.get() / (0.0001 * (stopTime - responseStartTime))
           );
           emitter.emit(builder.build("query/node/time", stopTime - requestStartTime));
+          emitter.emit(builder.build("query/node/bytes", byteCount.get()));
           synchronized (done) {
             try {
               // An empty byte array is put at the end to give the SequenceInputStream.close() as something to close out
