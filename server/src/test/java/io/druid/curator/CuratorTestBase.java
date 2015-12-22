@@ -21,15 +21,18 @@ package io.druid.curator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.api.client.repackaged.com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableSet;
 import com.metamx.common.guava.CloseQuietly;
 import io.druid.client.DruidServer;
 import io.druid.server.initialization.ZkPathsConfig;
+import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.RetryOneTime;
 import org.apache.curator.test.TestingServer;
 import org.apache.curator.test.Timing;
 import org.apache.curator.utils.ZKPaths;
+import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 
 /**
@@ -94,7 +97,57 @@ public class CuratorTestBase
     catch (Exception e) {
       Throwables.propagate(e);
     }
+  }
 
+  protected void announceSegmentForServer(
+      DruidServer druidServer,
+      DataSegment segment,
+      ZkPathsConfig zkPathsConfig,
+      ObjectMapper jsonMapper
+  )
+  {
+    final String segmentAnnouncementPath = ZKPaths.makePath(ZKPaths.makePath(
+        zkPathsConfig.getLiveSegmentsPath(),
+        druidServer.getHost()
+    ), segment.getIdentifier());
+
+    try {
+      curator.create()
+             .compressed()
+             .withMode(CreateMode.EPHEMERAL)
+             .forPath(
+                 segmentAnnouncementPath,
+                 jsonMapper.writeValueAsBytes(
+                     ImmutableSet.<DataSegment>of(segment)
+                 )
+             );
+    }
+    catch (KeeperException.NodeExistsException e) {
+      try {
+        curator.setData()
+               .forPath(
+                   segmentAnnouncementPath,
+                   jsonMapper.writeValueAsBytes(ImmutableSet.<DataSegment>of(segment))
+               );
+      }
+      catch (Exception e1) {
+        Throwables.propagate(e1);
+      }
+    }
+    catch (Exception e) {
+      Throwables.propagate(e);
+    }
+  }
+
+  protected void unannounceSegmentForServer(DruidServer druidServer, DataSegment segment, ZkPathsConfig zkPathsConfig)
+      throws Exception
+  {
+    curator.delete().guaranteed().forPath(
+        ZKPaths.makePath(
+            ZKPaths.makePath(zkPathsConfig.getLiveSegmentsPath(), druidServer.getHost()),
+            segment.getIdentifier()
+        )
+    );
   }
 
   protected void tearDownServerAndCurator()
@@ -104,3 +157,5 @@ public class CuratorTestBase
   }
 
 }
+
+// build #13

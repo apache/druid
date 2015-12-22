@@ -25,7 +25,6 @@ import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.metamx.common.Pair;
@@ -47,8 +46,6 @@ import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.PartitionHolder;
 import io.druid.timeline.partition.SingleElementPartitionChunk;
-import org.apache.curator.utils.ZKPaths;
-import org.apache.zookeeper.CreateMode;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -65,8 +62,6 @@ public class BrokerServerViewTest extends CuratorTestBase
 {
   private final ObjectMapper jsonMapper;
   private final ZkPathsConfig zkPathsConfig;
-  private final String announcementsPath;
-  private final String inventoryPath;
 
   private CountDownLatch segmentViewInitLatch;
   private CountDownLatch segmentAddedLatch;
@@ -79,8 +74,6 @@ public class BrokerServerViewTest extends CuratorTestBase
   {
     jsonMapper = new DefaultObjectMapper();
     zkPathsConfig = new ZkPathsConfig();
-    announcementsPath = zkPathsConfig.getAnnouncementsPath();
-    inventoryPath = zkPathsConfig.getLiveSegmentsPath();
   }
 
   @Before
@@ -111,7 +104,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     setupZNodeForServer(druidServer, zkPathsConfig, jsonMapper);
 
     final DataSegment segment = dataSegmentWithIntervalAndVersion("2014-10-20T00:00:00Z/P1D", "v1");
-    announceSegmentForServer(druidServer, segment);
+    announceSegmentForServer(druidServer, segment, zkPathsConfig, jsonMapper);
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
 
@@ -137,7 +130,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     Assert.assertEquals(segment, selector.getSegment());
     Assert.assertEquals(druidServer, selector.pick().getServer());
 
-    unannounceSegmentForServer(druidServer, segment);
+    unannounceSegmentForServer(druidServer, segment, zkPathsConfig);
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
 
     Assert.assertEquals(
@@ -199,7 +192,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     );
 
     for (int i = 0; i < 5; ++i) {
-      announceSegmentForServer(druidServers.get(i), segments.get(i));
+      announceSegmentForServer(druidServers.get(i), segments.get(i), zkPathsConfig, jsonMapper);
     }
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
@@ -219,7 +212,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     );
 
     // unannounce the segment created by dataSegmentWithIntervalAndVersion("2011-04-01/2011-04-09", "v2")
-    unannounceSegmentForServer(druidServers.get(2), segments.get(2));
+    unannounceSegmentForServer(druidServers.get(2), segments.get(2), zkPathsConfig);
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
 
     // renew segmentRemovedLatch since we still have 4 segments to unannounce
@@ -244,7 +237,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     for (int i = 0; i < 5; ++i) {
       // skip the one that was previously unannounced
       if (i != 2) {
-        unannounceSegmentForServer(druidServers.get(i), segments.get(i));
+        unannounceSegmentForServer(druidServers.get(i), segments.get(i), zkPathsConfig);
       }
     }
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
@@ -252,29 +245,6 @@ public class BrokerServerViewTest extends CuratorTestBase
     Assert.assertEquals(
         0,
         ((List<TimelineObjectHolder>) timeline.lookup(new Interval("2011-04-01/2011-04-09"))).size()
-    );
-  }
-
-  private void announceSegmentForServer(DruidServer druidServer, DataSegment segment) throws Exception
-  {
-    curator.create()
-           .compressed()
-           .withMode(CreateMode.EPHEMERAL)
-           .forPath(
-               ZKPaths.makePath(ZKPaths.makePath(inventoryPath, druidServer.getHost()), segment.getIdentifier()),
-               jsonMapper.writeValueAsBytes(
-                   ImmutableSet.<DataSegment>of(segment)
-               )
-           );
-  }
-
-  private void unannounceSegmentForServer(DruidServer druidServer, DataSegment segment) throws Exception
-  {
-    curator.delete().guaranteed().forPath(
-        ZKPaths.makePath(
-            ZKPaths.makePath(inventoryPath, druidServer.getHost()),
-            segment.getIdentifier()
-        )
     );
   }
 
