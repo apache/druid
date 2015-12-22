@@ -53,6 +53,9 @@ public class TaskConfig
   private final List<String> defaultHadoopCoordinates;
 
   @JsonProperty
+  private final boolean restoreTasksOnRestart;
+
+  @JsonProperty
   private final Period gracefulShutdownTimeout;
 
   @JsonProperty
@@ -65,6 +68,7 @@ public class TaskConfig
       @JsonProperty("hadoopWorkingPath") String hadoopWorkingPath,
       @JsonProperty("defaultRowFlushBoundary") Integer defaultRowFlushBoundary,
       @JsonProperty("defaultHadoopCoordinates") List<String> defaultHadoopCoordinates,
+      @JsonProperty("restoreTasksOnRestart") boolean restoreTasksOnRestart,
       @JsonProperty("gracefulShutdownTimeout") Period gracefulShutdownTimeout,
       @JsonProperty("directoryLockTimeout") Period directoryLockTimeout
   )
@@ -76,6 +80,7 @@ public class TaskConfig
     this.defaultHadoopCoordinates = defaultHadoopCoordinates == null
                                     ? DEFAULT_DEFAULT_HADOOP_COORDINATES
                                     : defaultHadoopCoordinates;
+    this.restoreTasksOnRestart = restoreTasksOnRestart;
     this.gracefulShutdownTimeout = gracefulShutdownTimeout == null
                                    ? DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT
                                    : gracefulShutdownTimeout;
@@ -127,6 +132,12 @@ public class TaskConfig
   public List<String> getDefaultHadoopCoordinates()
   {
     return defaultHadoopCoordinates;
+  }
+
+  @JsonProperty
+  public boolean isRestoreTasksOnRestart()
+  {
+    return restoreTasksOnRestart;
   }
 
   @JsonProperty

@@ -455,7 +455,7 @@ public class RealtimeIndexTaskTest
   private TaskToolbox makeToolbox(final Task task, final IndexerMetadataStorageCoordinator mdc, final File directory)
   {
     final TaskStorage taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
-    final TaskConfig taskConfig = new TaskConfig(directory.getPath(), null, null, 50000, null, null, null);
+    final TaskConfig taskConfig = new TaskConfig(directory.getPath(), null, null, 50000, null, false, null, null);
     final TaskLockbox taskLockbox = new TaskLockbox(taskStorage);
     final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(
         taskLockbox,
