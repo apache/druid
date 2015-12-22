@@ -59,7 +59,10 @@ public class SegmentAnalyzer
    */
   private static final int NUM_BYTES_IN_TEXT_FLOAT = 8;
 
-  public Map<String, ColumnAnalysis> analyze(QueryableIndex index, EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes)
+  public Map<String, ColumnAnalysis> analyze(
+      QueryableIndex index,
+      EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes
+  )
   {
     Preconditions.checkNotNull(index, "Index cannot be null");
 
@@ -100,7 +103,10 @@ public class SegmentAnalyzer
     return columns;
   }
 
-  public Map<String, ColumnAnalysis> analyze(StorageAdapter adapter, EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes)
+  public Map<String, ColumnAnalysis> analyze(
+      StorageAdapter adapter,
+      EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes
+  )
   {
     Preconditions.checkNotNull(adapter, "Adapter cannot be null");
     Map<String, ColumnAnalysis> columns = Maps.newTreeMap();
@@ -174,7 +180,11 @@ public class SegmentAnalyzer
     return lengthBasedAnalysis(column, NUM_BYTES_IN_TEXT_FLOAT, analysisTypes);
   }
 
-  private ColumnAnalysis lengthBasedAnalysis(Column column, final int numBytes, EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes)
+  private ColumnAnalysis lengthBasedAnalysis(
+      Column column,
+      final int numBytes,
+      EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes
+  )
   {
     final ColumnCapabilities capabilities = column.getCapabilities();
     if (capabilities.hasMultipleValues()) {
@@ -273,16 +283,13 @@ public class SegmentAnalyzer
     );
   }
 
-  private boolean analysisHasSize(EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes) {
+  private boolean analysisHasSize(EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes)
+  {
     return analysisTypes.contains(SegmentMetadataQuery.AnalysisType.SIZE);
   }
 
-  private boolean analysisHasCardinality(EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes) {
+  private boolean analysisHasCardinality(EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes)
+  {
     return analysisTypes.contains(SegmentMetadataQuery.AnalysisType.CARDINALITY);
   }
-
-  private boolean analysisHasInterva(EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes) {
-    return analysisTypes.contains(SegmentMetadataQuery.AnalysisType.INTERVAL);
-  }
-
 }
