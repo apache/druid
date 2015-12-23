@@ -96,6 +96,7 @@ public class BatchServerInventoryViewTest
                                 .compressionProvider(new PotentiallyGzippedCompressionProvider(true))
                                 .build();
     cf.start();
+    cf.blockUntilConnected();
     cf.create().creatingParentsIfNeeded().forPath(testBasePath);
 
     jsonMapper = new DefaultObjectMapper();

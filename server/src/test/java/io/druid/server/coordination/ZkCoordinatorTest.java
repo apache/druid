@@ -79,6 +79,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
   {
     setupServerAndCurator();
     curator.start();
+    curator.blockUntilConnected();
     try {
       infoDir = new File(File.createTempFile("blah", "blah2").getParent(), "ZkCoordinatorTest");
       infoDir.mkdirs();
