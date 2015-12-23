@@ -38,29 +38,25 @@ public class CombiningSequence<T> implements Sequence<T>
   public static <T> CombiningSequence<T> create(
       Sequence<T> baseSequence,
       Ordering<T> ordering,
-      BinaryFn<T, T, T> mergeFn,
-      Function transformFn
+      BinaryFn<T, T, T> mergeFn
   )
   {
-    return new CombiningSequence<T>(baseSequence, ordering, mergeFn, transformFn);
+    return new CombiningSequence<T>(baseSequence, ordering, mergeFn);
   }
 
   private final Sequence<T> baseSequence;
   private final Ordering<T> ordering;
   private final BinaryFn<T, T, T> mergeFn;
-  private final Function transformFn;
 
   public CombiningSequence(
       Sequence<T> baseSequence,
       Ordering<T> ordering,
-      BinaryFn<T, T, T> mergeFn,
-      Function transformFn
+      BinaryFn<T, T, T> mergeFn
   )
   {
     this.baseSequence = baseSequence;
     this.ordering = ordering;
     this.mergeFn = mergeFn;
-    this.transformFn = transformFn;
   }
 
   @Override
@@ -122,9 +118,6 @@ public class CombiningSequence<T> implements Sequence<T>
       @Override
       public OutType get()
       {
-        if (transformFn != null) {
-          return (OutType) transformFn.apply(retVal);
-        }
         return retVal;
       }
 

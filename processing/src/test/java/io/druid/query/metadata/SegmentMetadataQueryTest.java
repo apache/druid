@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.guava.Sequences;
 import io.druid.common.utils.JodaUtils;
 import io.druid.jackson.DefaultObjectMapper;
@@ -89,6 +90,7 @@ public class SegmentMetadataQueryTest
                       .dataSource("testing")
                       .intervals("2013/2014")
                       .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
+                      .analysisTypes(null)
                       .merge(true)
                       .build();
 
@@ -127,10 +129,7 @@ public class SegmentMetadataQueryTest
   {
     SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
         "merged",
-        ImmutableList.of(
-            expectedSegmentAnalysis.getIntervals().get(0),
-            expectedSegmentAnalysis.getIntervals().get(0)
-        ),
+        ImmutableList.of(expectedSegmentAnalysis.getIntervals().get(0)),
         ImmutableMap.of(
             "placement",
             new ColumnAnalysis(
@@ -151,7 +150,7 @@ public class SegmentMetadataQueryTest
     QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             factory.mergeRunners(
-                Executors.newCachedThreadPool(),
+                MoreExecutors.sameThreadExecutor(),
                 Lists.<QueryRunner<SegmentAnalysis>>newArrayList(singleSegmentQueryRunner, singleSegmentQueryRunner)
             )
         ),
@@ -162,6 +161,56 @@ public class SegmentMetadataQueryTest
         ImmutableList.of(mergedSegmentAnalysis),
         myRunner.run(
             testQuery,
+            Maps.newHashMap()
+        ),
+        "failed SegmentMetadata merging query"
+    );
+    exec.shutdownNow();
+  }
+
+  @Test
+  public void testSegmentMetadataQueryWithNoAnalysisTypesMerge()
+  {
+    SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
+        "merged",
+        null,
+        ImmutableMap.of(
+            "placement",
+            new ColumnAnalysis(
+                ValueType.STRING.toString(),
+                0,
+                0,
+                null
+            )
+        ),
+        0,
+        expectedSegmentAnalysis.getNumRows()*2
+    );
+
+    QueryToolChest toolChest = factory.getToolchest();
+
+    QueryRunner singleSegmentQueryRunner = toolChest.preMergeQueryDecoration(runner);
+    ExecutorService exec = Executors.newCachedThreadPool();
+    QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
+        toolChest.mergeResults(
+            factory.mergeRunners(
+                MoreExecutors.sameThreadExecutor(),
+                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(singleSegmentQueryRunner, singleSegmentQueryRunner)
+            )
+        ),
+        toolChest
+    );
+
+    TestHelper.assertExpectedObjects(
+        ImmutableList.of(mergedSegmentAnalysis),
+        myRunner.run(
+            Druids.newSegmentMetadataQueryBuilder()
+                  .dataSource("testing")
+                  .intervals("2013/2014")
+                  .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
+                  .analysisTypes()
+                  .merge(true)
+                  .build(),
             Maps.newHashMap()
         ),
         "failed SegmentMetadata merging query"
@@ -188,7 +237,7 @@ public class SegmentMetadataQueryTest
     QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             factory.mergeRunners(
-                Executors.newCachedThreadPool(),
+                MoreExecutors.sameThreadExecutor(),
                 //Note: It is essential to have atleast 2 query runners merged to reproduce the regression bug described in
                 //https://github.com/druid-io/druid/pull/1172
                 //the bug surfaces only when ordering is used which happens only when you have 2 things to compare

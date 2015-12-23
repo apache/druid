@@ -40,7 +40,7 @@ public abstract class ResultMergeQueryRunner<T> extends BySegmentSkippingQueryRu
   @Override
   public Sequence<T> doRun(QueryRunner<T> baseRunner, Query<T> query, Map<String, Object> context)
   {
-    return CombiningSequence.create(baseRunner.run(query, context), makeOrdering(query), createMergeFn(query), null);
+    return CombiningSequence.create(baseRunner.run(query, context), makeOrdering(query), createMergeFn(query));
   }
 
   protected abstract Ordering<T> makeOrdering(Query<T> query);
