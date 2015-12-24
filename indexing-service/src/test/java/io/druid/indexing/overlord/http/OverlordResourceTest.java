@@ -146,6 +146,7 @@ public class OverlordResourceTest
     IndexerZkConfig indexerZkConfig = new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null, null);
     setupServerAndCurator();
     curator.start();
+    curator.blockUntilConnected();
     curator.create().creatingParentsIfNeeded().forPath(indexerZkConfig.getLeaderLatchPath());
     druidNode = new DruidNode("hey", "what", 1234);
     ServiceEmitter serviceEmitter = new NoopServiceEmitter();

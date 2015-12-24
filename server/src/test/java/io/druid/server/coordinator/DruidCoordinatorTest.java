@@ -112,6 +112,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock.replay(configManager);
     setupServerAndCurator();
     curator.start();
+    curator.blockUntilConnected();
     curator.create().creatingParentsIfNeeded().forPath(LOADPATH);
     objectMapper = new DefaultObjectMapper();
     druidCoordinatorConfig = new TestDruidCoordinatorConfig(new Duration(COORDINATOR_START_DELAY), new Duration(COORDINATOR_PERIOD), null, null, null, false, false);

@@ -66,6 +66,7 @@ public class WorkerResourceTest
                                 .compressionProvider(new PotentiallyGzippedCompressionProvider(false))
                                 .build();
     cf.start();
+    cf.blockUntilConnected();
     cf.create().creatingParentsIfNeeded().forPath(basePath);
 
     worker = new Worker(
