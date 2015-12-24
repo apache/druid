@@ -46,6 +46,7 @@ public class ServiceAnnouncerTest extends CuratorTestBase
   public void testServiceAnnouncement() throws Exception
   {
     curator.start();
+    curator.blockUntilConnected();
     List<String> serviceNames = ImmutableList.of(
         "druid/overlord",
         "druid/coordinator",
@@ -79,6 +80,7 @@ public class ServiceAnnouncerTest extends CuratorTestBase
   public void testServiceAnnouncementFail() throws Exception
   {
     curator.start();
+    curator.blockUntilConnected();
     createAndAnnounceServices(ImmutableList.of("placeholder/\u0001"));
   }
 

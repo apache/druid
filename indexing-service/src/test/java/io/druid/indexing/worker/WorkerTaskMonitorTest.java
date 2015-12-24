@@ -102,6 +102,7 @@ public class WorkerTaskMonitorTest
                                 .compressionProvider(new PotentiallyGzippedCompressionProvider(false))
                                 .build();
     cf.start();
+    cf.blockUntilConnected();
     cf.create().creatingParentsIfNeeded().forPath(basePath);
 
     worker = new Worker(
@@ -202,10 +203,6 @@ public class WorkerTaskMonitorTest
   @Test
   public void testRunTask() throws Exception
   {
-    cf.create()
-      .creatingParentsIfNeeded()
-      .forPath(joiner.join(tasksPath, task.getId()), jsonMapper.writeValueAsBytes(task));
-
     Assert.assertTrue(
         TestUtils.conditionValid(
             new IndexingServiceCondition()
@@ -223,6 +220,10 @@ public class WorkerTaskMonitorTest
             }
         )
     );
+
+    cf.create()
+      .creatingParentsIfNeeded()
+      .forPath(joiner.join(tasksPath, task.getId()), jsonMapper.writeValueAsBytes(task));
 
     Assert.assertTrue(
         TestUtils.conditionValid(
@@ -339,7 +340,7 @@ public class WorkerTaskMonitorTest
             }
         )
     );
-    // ephermal owner is 0 is created node is PERSISTENT
+    // ephemeral owner is 0 is created node is PERSISTENT
     Assert.assertEquals(0, cf.checkExists().forPath(joiner.join(statusPath, task.getId())).getEphemeralOwner());
 
   }

@@ -66,6 +66,8 @@ public class CuratorInventoryManagerTest extends io.druid.curator.CuratorTestBas
     );
 
     curator.start();
+    curator.blockUntilConnected();
+
     manager.start();
 
     Assert.assertTrue(Iterables.isEmpty(manager.getInventory()));

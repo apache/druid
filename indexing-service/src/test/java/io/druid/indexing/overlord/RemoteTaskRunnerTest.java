@@ -99,6 +99,7 @@ public class RemoteTaskRunnerTest
                                 .compressionProvider(new PotentiallyGzippedCompressionProvider(false))
                                 .build();
     cf.start();
+    cf.blockUntilConnected();
     cf.create().creatingParentsIfNeeded().forPath(basePath);
     cf.create().creatingParentsIfNeeded().forPath(tasksPath);
 

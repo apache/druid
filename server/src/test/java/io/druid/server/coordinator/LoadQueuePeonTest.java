@@ -64,6 +64,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
   {
     setupServerAndCurator();
     curator.start();
+    curator.blockUntilConnected();
     curator.create().creatingParentsIfNeeded().forPath(LOAD_QUEUE_PATH);
 
     loadQueueCache = new PathChildrenCache(

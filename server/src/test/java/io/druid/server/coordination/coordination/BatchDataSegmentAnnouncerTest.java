@@ -76,6 +76,7 @@ public class BatchDataSegmentAnnouncerTest
                                 .compressionProvider(new PotentiallyGzippedCompressionProvider(false))
                                 .build();
     cf.start();
+    cf.blockUntilConnected();
     cf.create().creatingParentsIfNeeded().forPath(testBasePath);
 
     jsonMapper = new DefaultObjectMapper();

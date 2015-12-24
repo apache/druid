@@ -73,6 +73,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
   {
     setupServerAndCurator();
     curator.start();
+    curator.blockUntilConnected();
   }
 
   @Test

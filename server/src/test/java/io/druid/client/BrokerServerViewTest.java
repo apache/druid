@@ -81,6 +81,7 @@ public class BrokerServerViewTest extends CuratorTestBase
   {
     setupServerAndCurator();
     curator.start();
+    curator.blockUntilConnected();
   }
 
   @Test
