@@ -454,6 +454,7 @@ public class IndexGeneratorJob implements Jobby
         @Override
         public void progress()
         {
+          super.progress();
           context.progress();
         }
       };

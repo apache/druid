@@ -39,7 +39,19 @@ import java.nio.channels.WritableByteChannel;
 })
 public interface ColumnPartSerde
 {
-  public long numBytes();
-  public void write(WritableByteChannel channel) throws IOException;
-  public ColumnPartSerde read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig);
+  public Serializer getSerializer();
+
+  public Deserializer getDeserializer();
+
+  public interface Serializer
+  {
+    public long numBytes();
+
+    public void write(WritableByteChannel channel) throws IOException;
+  }
+
+  public interface Deserializer
+  {
+    public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig);
+  }
 }

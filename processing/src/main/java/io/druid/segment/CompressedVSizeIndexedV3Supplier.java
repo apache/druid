@@ -44,7 +44,7 @@ import java.util.List;
  */
 public class CompressedVSizeIndexedV3Supplier implements WritableSupplier<IndexedMultivalue<IndexedInts>>
 {
-  public static final byte version = 0x3;
+  public static final byte VERSION = 0x3;
 
   private final CompressedIntsIndexedSupplier offsetSupplier;
   private final CompressedVSizeIntsIndexedSupplier valueSupplier;
@@ -62,7 +62,7 @@ public class CompressedVSizeIndexedV3Supplier implements WritableSupplier<Indexe
   {
     byte versionFromBuffer = buffer.get();
 
-    if (versionFromBuffer == version) {
+    if (versionFromBuffer == VERSION) {
       CompressedIntsIndexedSupplier offsetSupplier = CompressedIntsIndexedSupplier.fromByteBuffer(
           buffer,
           order
@@ -124,7 +124,7 @@ public class CompressedVSizeIndexedV3Supplier implements WritableSupplier<Indexe
   @Override
   public void writeToChannel(WritableByteChannel channel) throws IOException
   {
-    channel.write(ByteBuffer.wrap(new byte[]{version}));
+    channel.write(ByteBuffer.wrap(new byte[]{VERSION}));
     offsetSupplier.writeToChannel(channel);
     valueSupplier.writeToChannel(channel);
   }

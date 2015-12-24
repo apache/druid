@@ -23,6 +23,7 @@ import com.google.common.io.ByteStreams;
 import com.google.common.primitives.Ints;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
+import io.druid.segment.IndexIO;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -34,9 +35,23 @@ import java.nio.channels.WritableByteChannel;
 /**
  * Streams array of integers out in the binary format described by CompressedVSizeIntsIndexedSupplier
  */
-public class CompressedVSizeIntsIndexedWriter
+public class CompressedVSizeIntsIndexedWriter extends SingleValueIndexedIntsWriter
 {
-  public static final byte version = CompressedVSizeIntsIndexedSupplier.version;
+  private static final byte VERSION = CompressedVSizeIntsIndexedSupplier.VERSION;
+
+  public static CompressedVSizeIntsIndexedWriter create(
+      final IOPeon ioPeon,
+      final String filenameBase,
+      final int maxValue,
+      final CompressedObjectStrategy.CompressionStrategy compression
+  )
+  {
+    return new CompressedVSizeIntsIndexedWriter(
+        ioPeon, filenameBase, maxValue,
+        CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForValue(maxValue),
+        IndexIO.BYTE_ORDER, compression
+    );
+  }
 
   private final int numBytes;
   private final int chunkFactor;
@@ -71,17 +86,19 @@ public class CompressedVSizeIntsIndexedWriter
     this.numInserted = 0;
   }
 
+  @Override
   public void open() throws IOException
   {
     flattener.open();
   }
 
-  public void add(int val) throws IOException
+  @Override
+  protected void addValue(int val) throws IOException
   {
     if (!endBuffer.hasRemaining()) {
       endBuffer.rewind();
       flattener.write(StupidResourceHolder.create(endBuffer));
-      endBuffer.rewind();
+      endBuffer = ByteBuffer.allocate(chunkBytes).order(byteOrder);
       endBuffer.limit(numBytes * chunkFactor);
     }
     intBuffer.putInt(0, val);
@@ -93,27 +110,41 @@ public class CompressedVSizeIntsIndexedWriter
     numInserted++;
   }
 
-  public long closeAndWriteToChannel(WritableByteChannel channel) throws IOException
+  @Override
+  public void close() throws IOException
   {
-    if (numInserted > 0) {
-      endBuffer.limit(endBuffer.position());
-      endBuffer.rewind();
-      flattener.write(StupidResourceHolder.create(endBuffer));
+    try {
+      if (numInserted > 0) {
+        endBuffer.limit(endBuffer.position());
+        endBuffer.rewind();
+        flattener.write(StupidResourceHolder.create(endBuffer));
+      }
+      endBuffer = null;
     }
-    endBuffer = null;
-    flattener.close();
+    finally {
+      flattener.close();
+    }
+  }
 
-    channel.write(ByteBuffer.wrap(new byte[]{version, (byte) numBytes}));
-    channel.write(ByteBuffer.wrap(Ints.toByteArray(numInserted)));
-    channel.write(ByteBuffer.wrap(Ints.toByteArray(chunkFactor)));
-    channel.write(ByteBuffer.wrap(new byte[]{compression.getId()}));
-    final ReadableByteChannel from = Channels.newChannel(flattener.combineStreams().getInput());
-    long dataLen = ByteStreams.copy(from, channel);
+  @Override
+  public long getSerializedSize()
+  {
     return 1 +             // version
            1 +             // numBytes
            Ints.BYTES +    // numInserted
            Ints.BYTES +    // chunkFactor
            1 +             // compression id
-           dataLen;        // data
+           flattener.getSerializedSize();
+  }
+
+  @Override
+  public void writeToChannel(WritableByteChannel channel) throws IOException
+  {
+    channel.write(ByteBuffer.wrap(new byte[]{VERSION, (byte) numBytes}));
+    channel.write(ByteBuffer.wrap(Ints.toByteArray(numInserted)));
+    channel.write(ByteBuffer.wrap(Ints.toByteArray(chunkFactor)));
+    channel.write(ByteBuffer.wrap(new byte[]{compression.getId()}));
+    final ReadableByteChannel from = Channels.newChannel(flattener.combineStreams().getInput());
+    ByteStreams.copy(from, channel);
   }
 }

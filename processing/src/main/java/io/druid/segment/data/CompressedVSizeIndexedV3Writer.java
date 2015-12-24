@@ -23,14 +23,45 @@
 package io.druid.segment.data;
 
 import io.druid.segment.CompressedVSizeIndexedV3Supplier;
+import io.druid.segment.IndexIO;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
+import java.util.ArrayList;
+import java.util.List;
 
-public class CompressedVSizeIndexedV3Writer
+public class CompressedVSizeIndexedV3Writer extends MultiValueIndexedIntsWriter
 {
-  public static final byte version = CompressedVSizeIndexedV3Supplier.version;
+  private static final byte VERSION = CompressedVSizeIndexedV3Supplier.VERSION;
+
+  private static final List<Integer> EMPTY_LIST = new ArrayList<>();
+
+  public static CompressedVSizeIndexedV3Writer create(
+      final IOPeon ioPeon,
+      final String filenameBase,
+      final int maxValue,
+      final CompressedObjectStrategy.CompressionStrategy compression
+  )
+  {
+    return new CompressedVSizeIndexedV3Writer(
+        new CompressedIntsIndexedWriter(
+            ioPeon,
+            String.format("%s.offsets", filenameBase),
+            CompressedIntsIndexedSupplier.MAX_INTS_IN_BUFFER,
+            IndexIO.BYTE_ORDER,
+            compression
+        ),
+        new CompressedVSizeIntsIndexedWriter(
+            ioPeon,
+            String.format("%s.values", filenameBase),
+            maxValue,
+            CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForValue(maxValue),
+            IndexIO.BYTE_ORDER,
+            compression
+        )
+    );
+  }
 
   private final CompressedIntsIndexedWriter offsetWriter;
   private final CompressedVSizeIntsIndexedWriter valueWriter;
@@ -46,27 +77,51 @@ public class CompressedVSizeIndexedV3Writer
     this.offset = 0;
   }
 
+  @Override
   public void open() throws IOException
   {
     offsetWriter.open();
     valueWriter.open();
   }
 
-  public void add(int[] vals) throws IOException
+  @Override
+  protected void addValues(List<Integer> vals) throws IOException
   {
+    if (vals == null) {
+      vals = EMPTY_LIST;
+    }
     offsetWriter.add(offset);
-    for (int val : vals) {
+    for (Integer val : vals) {
       valueWriter.add(val);
     }
-    offset += vals.length;
+    offset += vals.size();
   }
 
-  public long closeAndWriteToChannel(WritableByteChannel channel) throws IOException
+  @Override
+  public void close() throws IOException
   {
-    channel.write(ByteBuffer.wrap(new byte[]{version}));
-    offsetWriter.add(offset);
-    long offsetLen = offsetWriter.closeAndWriteToChannel(channel);
-    long dataLen = valueWriter.closeAndWriteToChannel(channel);
-    return 1 + offsetLen + dataLen;
+    try {
+      offsetWriter.add(offset);
+    }
+    finally {
+      offsetWriter.close();
+      valueWriter.close();
+    }
+  }
+
+  @Override
+  public long getSerializedSize()
+  {
+    return 1 +   // version
+           offsetWriter.getSerializedSize() +
+           valueWriter.getSerializedSize();
+  }
+
+  @Override
+  public void writeToChannel(WritableByteChannel channel) throws IOException
+  {
+    channel.write(ByteBuffer.wrap(new byte[]{VERSION}));
+    offsetWriter.writeToChannel(channel);
+    valueWriter.writeToChannel(channel);
   }
 }

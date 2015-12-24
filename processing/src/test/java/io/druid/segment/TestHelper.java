@@ -36,6 +36,7 @@ import java.util.Iterator;
 public class TestHelper
 {
   private static final IndexMerger INDEX_MERGER;
+  private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
   public static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
 
@@ -52,12 +53,18 @@ public class TestHelper
         }
     );
     INDEX_MERGER = new IndexMerger(JSON_MAPPER, INDEX_IO);
+    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO);
   }
 
 
   public static IndexMerger getTestIndexMerger()
   {
     return INDEX_MERGER;
+  }
+
+  public static IndexMergerV9 getTestIndexMergerV9()
+  {
+    return INDEX_MERGER_V9;
   }
 
   public static IndexIO getTestIndexIO()

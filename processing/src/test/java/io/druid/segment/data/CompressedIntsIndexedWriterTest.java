@@ -115,8 +115,10 @@ public class CompressedIntsIndexedWriterTest
     for (int val : vals) {
       writer.add(val);
     }
+    writer.close();
+    long writtenLength = writer.getSerializedSize();
     final WritableByteChannel outputChannel = Channels.newChannel(ioPeon.makeOutputStream("output"));
-    long writtenLength = writer.closeAndWriteToChannel(outputChannel);
+    writer.writeToChannel(outputChannel);
     outputChannel.close();
 
     assertEquals(writtenLength, supplierFromList.getSerializedSize());

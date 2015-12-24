@@ -255,7 +255,7 @@ public class IndexMerger
     return merge(indexes, metricAggs, outDir, segmentMetadata, indexSpec, new BaseProgressIndicator());
   }
 
-  private List<String> getLexicographicMergedDimensions(List<IndexableAdapter> indexes)
+  private static List<String> getLexicographicMergedDimensions(List<IndexableAdapter> indexes)
   {
     return mergeIndexed(
         Lists.transform(
@@ -272,7 +272,7 @@ public class IndexMerger
     );
   }
 
-  private List<String> getMergedDimensions(List<IndexableAdapter> indexes)
+  public static List<String> getMergedDimensions(List<IndexableAdapter> indexes)
   {
     if (indexes.size() == 0) {
       return ImmutableList.of();
@@ -280,7 +280,7 @@ public class IndexMerger
     Indexed<String> dimOrder = indexes.get(0).getDimensionNames();
     for (IndexableAdapter index : indexes) {
       Indexed<String> dimOrder2 = index.getDimensionNames();
-      if(!Iterators.elementsEqual(dimOrder.iterator(), dimOrder2.iterator())) {
+      if (!Iterators.elementsEqual(dimOrder.iterator(), dimOrder2.iterator())) {
         return getLexicographicMergedDimensions(indexes);
       }
     }
@@ -964,7 +964,7 @@ public class IndexMerger
     return outDir;
   }
 
-  private <T extends Comparable> ArrayList<T> mergeIndexed(final List<Iterable<T>> indexedLists)
+  public static <T extends Comparable> ArrayList<T> mergeIndexed(final List<Iterable<T>> indexedLists)
   {
     Set<T> retVal = Sets.newTreeSet(Ordering.<T>natural().nullsFirst());
 
@@ -1003,7 +1003,7 @@ public class IndexMerger
     IndexIO.checkFileSize(indexFile);
   }
 
-  private static class DimValueConverter
+  public static class DimValueConverter
   {
     private final Indexed<String> dimSet;
     private final IntBuffer conversionBuf;
@@ -1074,7 +1074,7 @@ public class IndexMerger
     }
   }
 
-  private static class ConvertingIndexedInts implements Iterable<Integer>
+  public static class ConvertingIndexedInts implements Iterable<Integer>
   {
     private final IndexedInts baseIndex;
     private final IntBuffer conversionBuffer;
@@ -1115,7 +1115,7 @@ public class IndexMerger
     }
   }
 
-  private static class MMappedIndexRowIterable implements Iterable<Rowboat>
+  public static class MMappedIndexRowIterable implements Iterable<Rowboat>
   {
     private final Iterable<Rowboat> index;
     private final List<String> convertedDims;
@@ -1140,21 +1140,6 @@ public class IndexMerger
       return index;
     }
 
-    public List<String> getConvertedDims()
-    {
-      return convertedDims;
-    }
-
-    public Map<String, IntBuffer> getConverters()
-    {
-      return converters;
-    }
-
-    public int getIndexNumber()
-    {
-      return indexNumber;
-    }
-
     @Override
     public Iterator<Rowboat> iterator()
     {
@@ -1174,8 +1159,6 @@ public class IndexMerger
           index.iterator(),
           new Function<Rowboat, Rowboat>()
           {
-            int rowCount = 0;
-
             @Override
             public Rowboat apply(@Nullable Rowboat input)
             {
@@ -1218,7 +1201,7 @@ public class IndexMerger
     }
   }
 
-  private static class AggFactoryStringIndexed implements Indexed<String>
+  public static class AggFactoryStringIndexed implements Indexed<String>
   {
     private final AggregatorFactory[] metricAggs;
 
@@ -1255,7 +1238,7 @@ public class IndexMerger
     }
   }
 
-  private static class RowboatMergeFunction implements BinaryFn<Rowboat, Rowboat, Rowboat>
+  public static class RowboatMergeFunction implements BinaryFn<Rowboat, Rowboat, Rowboat>
   {
     private final AggregatorFactory[] metricAggs;
 
@@ -1301,7 +1284,7 @@ public class IndexMerger
     }
   }
 
-  static boolean isNullColumn(Iterable<String> dimValues)
+  public static boolean isNullColumn(Iterable<String> dimValues)
   {
     if (dimValues == null) {
       return true;
