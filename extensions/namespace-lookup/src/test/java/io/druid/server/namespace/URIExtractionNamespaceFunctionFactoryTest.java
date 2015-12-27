@@ -308,10 +308,7 @@ public class URIExtractionNamespaceFunctionFactoryTest
     Assert.assertNull(fnCache.get(namespace.getNamespace()));
     NamespaceExtractionCacheManagersTest.waitFor(manager.schedule(namespace));
     Function<String, String> fn = fnCache.get(namespace.getNamespace());
-    while (fn == null) {
-      Thread.sleep(1);
-      fn = fnCache.get(namespace.getNamespace());
-    }
+   Assert.assertNotNull(fn);
     Assert.assertEquals("bar", fn.apply("foo"));
     Assert.assertEquals(null, fn.apply("baz"));
   }
@@ -355,10 +352,7 @@ public class URIExtractionNamespaceFunctionFactoryTest
     for (int i = 0; i < size; ++i) {
       URIExtractionNamespace namespace = namespaces.get(i);
       Function<String, String> fn = fnCache.get(namespace.getNamespace());
-      while (fn == null) {
-        Thread.sleep(1);
-        fn = fnCache.get(namespace.getNamespace());
-      }
+      Assert.assertNotNull(fn);
       Assert.assertEquals("bar", fn.apply("foo"));
       Assert.assertEquals(null, fn.apply("baz"));
       manager.delete(namespace.getNamespace());
