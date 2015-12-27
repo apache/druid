@@ -177,3 +177,14 @@ Service](../design/indexing-service.html) in the course of its work.
 The Audit table is used to store the audit history for configuration changes
 e.g rule changes done by [Coordinator](../design/coordinator.html) and other
 config changes.
+
++
++##Accessed By: ##
++
++The Metadata Storage is accessed only by:
++
++1. Realtime Nodes
+ 2. Indexing Service Nodes (if any)
++3. Coordinator Nodes
++
++Thus you need to give permissions (eg in AWS Security Groups)  only for these machines to access the Metadata storage.
