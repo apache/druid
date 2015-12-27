@@ -46,6 +46,8 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 /**
  *
@@ -145,31 +147,16 @@ public class NamespaceExtractionCacheManagersTest
     Assert.assertArrayEquals(nsList.toArray(), retvalList.toArray());
   }
 
-  public static void waitFor(ListenableFuture<?> future) throws InterruptedException
+  public static void waitFor(Future<?> future) throws InterruptedException
   {
-    final CountDownLatch latch = new CountDownLatch(1);
-    Futures.addCallback(
-        future, new FutureCallback<Object>()
-        {
-          @Override
-          public void onSuccess(Object result)
-          {
-            latch.countDown();
-          }
-
-          @Override
-          public void onFailure(Throwable t)
-          {
-            try {
-              log.error(t, "Error waiting");
-              throw Throwables.propagate(t);
-            }
-            finally {
-              latch.countDown();
-            }
-          }
-        }
-    );
-    latch.await();
+    while (!future.isDone()) {
+      try {
+        future.get();
+      }
+      catch (ExecutionException e) {
+        log.error(e.getCause(), "Error waiting");
+        throw Throwables.propagate(e.getCause());
+      }
+    }
   }
 }
