@@ -151,7 +151,7 @@ The Druid servers emit various metrics and alerts via something we call an Emitt
 
 ### Metadata Storage
 
-These properties specify the jdbc connection and other configuration around the metadata storage. The only processes that connect to the metadata storage with these properties are the [Coordinator](../design/coordinator.html), [Indexing service](../design/indexing-service.html) and [Realtime Nodes]((../design/realtime.html).
+These properties specify the jdbc connection and other configuration around the metadata storage. The only processes that connect to the metadata storage with these properties are the [Coordinator](../design/coordinator.html), [Indexing service](../design/indexing-service.html) and [Realtime Nodes](../design/realtime.html).
 
 |Property|Description|Default|
 |--------|-----------|-------|
