@@ -96,12 +96,17 @@ public class TestUtils
 
   public static boolean conditionValid(IndexingServiceCondition condition)
   {
+    return conditionValid(condition, 1000);
+  }
+
+  public static boolean conditionValid(IndexingServiceCondition condition, long timeout)
+  {
     try {
       Stopwatch stopwatch = Stopwatch.createUnstarted();
       stopwatch.start();
       while (!condition.isValid()) {
         Thread.sleep(100);
-        if (stopwatch.elapsed(TimeUnit.MILLISECONDS) > 1000) {
+        if (stopwatch.elapsed(TimeUnit.MILLISECONDS) > timeout) {
           throw new ISE("Cannot find running task");
         }
       }
