@@ -343,6 +343,9 @@ public class DruidCoordinatorTest extends CuratorTestBase
       Thread.sleep(50);
     }
 
+    // wait historical data to be updated
+    Thread.sleep(druidCoordinatorConfig.getCoordinatorPeriod().getMillis());
+
     Map<String, CountingMap<String>> replicationStatus = coordinator.getReplicationStatus();
     Assert.assertNotNull(replicationStatus);
     Assert.assertEquals(1, replicationStatus.entrySet().size());
