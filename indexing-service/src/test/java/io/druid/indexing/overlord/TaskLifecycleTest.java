@@ -907,7 +907,7 @@ public class TaskLifecycleTest
     EasyMock.verify(monitorScheduler, queryRunnerFactoryConglomerate);
   }
 
-  @Test(timeout = 4000L)
+  @Test(timeout = 60_000L)
   public void testRealtimeIndexTaskFailure() throws Exception
   {
     setUpAndStartTaskQueue(

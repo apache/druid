@@ -168,7 +168,7 @@ public class RealtimeIndexTaskTest
     );
   }
 
-  @Test(timeout = 10000L)
+  @Test(timeout = 60_000L)
   public void testBasics() throws Exception
   {
     final TestIndexerMetadataStorageCoordinator mdc = new TestIndexerMetadataStorageCoordinator();
@@ -221,7 +221,7 @@ public class RealtimeIndexTaskTest
     Assert.assertEquals(TaskStatus.Status.SUCCESS, taskStatus.getStatusCode());
   }
 
-  @Test(timeout = 10000L)
+  @Test(timeout = 60_000L)
   public void testRestore() throws Exception
   {
     final File directory = tempFolder.newFolder();

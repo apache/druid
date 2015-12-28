@@ -413,7 +413,7 @@ public class JDBCExtractionNamespaceTest
     assertUpdated(extractionNamespace.getNamespace(), "foo", "bar");
   }
 
-  @Test(timeout = 10_000L)
+  @Test(timeout = 60_000L)
   public void testFindNew()
       throws NoSuchFieldException, IllegalAccessException, ExecutionException, InterruptedException
   {
@@ -482,6 +482,12 @@ public class JDBCExtractionNamespaceTest
     waitForUpdates(1_000L, 2L);
 
     Function<String, String> extractionFn = fnCache.get(namespace);
+
+    // rely on test timeout to break out of this loop
+    while (!extractionFn.apply(key).equals(expected)) {
+      Thread.sleep(100);
+    }
+
     Assert.assertEquals(
         "update check",
         expected,

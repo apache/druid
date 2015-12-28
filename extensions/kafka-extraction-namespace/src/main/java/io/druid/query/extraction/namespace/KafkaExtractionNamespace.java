@@ -39,10 +39,8 @@ public class KafkaExtractionNamespace implements ExtractionNamespace
 
   @JsonCreator
   public KafkaExtractionNamespace(
-      @NotNull @JsonProperty(value = "kafkaTopic", required = true)
-      final String kafkaTopic,
-      @NotNull @JsonProperty(value = "namespace", required = true)
-      final String namespace
+      @NotNull @JsonProperty(value = "kafkaTopic", required = true) final String kafkaTopic,
+      @NotNull @JsonProperty(value = "namespace", required = true) final String namespace
   )
   {
     Preconditions.checkNotNull(kafkaTopic, "kafkaTopic required");
