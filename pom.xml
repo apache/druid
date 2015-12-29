@@ -92,9 +92,6 @@
         <module>extensions/cassandra-storage</module>
         <module>extensions/hdfs-storage</module>
         <module>extensions/s3-extensions</module>
-        <!-- kafka-seven extension is not built by default since
-             Kafka 0.7 is not available in Maven Central -->
-        <!-- <module>extensions/kafka&#45;seven</module> -->
         <module>extensions/kafka-eight</module>
         <module>extensions/kafka-eight-simpleConsumer</module>
         <module>extensions/rabbitmq</module>
