@@ -54,7 +54,7 @@ public class FileTaskLogsTest
 
       final Map<Long, String> expected = ImmutableMap.of(0L, "blah", 1L, "lah", -2L, "ah", -5L, "blah");
       for (Map.Entry<Long, String> entry : expected.entrySet()) {
-        final byte[] bytes = ByteStreams.toByteArray(taskLogs.streamTaskLog("foo", entry.getKey()).get().getInput());
+        final byte[] bytes = ByteStreams.toByteArray(taskLogs.streamTaskLog("foo", entry.getKey()).get().openStream());
         final String string = new String(bytes);
         Assert.assertEquals(String.format("Read with offset %,d", entry.getKey()), string, entry.getValue());
       }

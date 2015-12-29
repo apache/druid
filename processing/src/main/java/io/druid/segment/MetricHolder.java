@@ -19,9 +19,7 @@
 
 package io.druid.segment;
 
-import com.google.common.io.ByteStreams;
-import com.google.common.io.InputSupplier;
-import com.google.common.io.OutputSupplier;
+import com.google.common.io.ByteSink;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import io.druid.common.utils.SerializerUtils;
@@ -39,7 +37,6 @@ import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -67,39 +64,39 @@ public class MetricHolder
   }
 
   public static void writeComplexMetric(
-      OutputSupplier<? extends OutputStream> outSupplier, String name, String typeName, GenericIndexedWriter column
+      ByteSink sink, String name, String typeName, GenericIndexedWriter column
   ) throws IOException
   {
-    try (OutputStream out = outSupplier.getOutput()) {
+    try (OutputStream out = sink.openStream()) {
       out.write(version);
       serializerUtils.writeString(out, name);
       serializerUtils.writeString(out, typeName);
-
-      final InputSupplier<InputStream> supplier = column.combineStreams();
-      try (InputStream in = supplier.getInput()) {
-        ByteStreams.copy(in, out);
-      }
+      column.combineStreams().copyTo(out);
     }
   }
 
   public static void writeFloatMetric(
-      OutputSupplier<? extends OutputStream> outSupplier, String name, CompressedFloatsSupplierSerializer column
+      ByteSink sink, String name, CompressedFloatsSupplierSerializer column
   ) throws IOException
   {
-    ByteStreams.write(version, outSupplier);
-    serializerUtils.writeString(outSupplier, name);
-    serializerUtils.writeString(outSupplier, "float");
-    column.closeAndConsolidate(outSupplier);
+    try (OutputStream out = sink.openStream()) {
+      out.write(version);
+      serializerUtils.writeString(out, name);
+      serializerUtils.writeString(out, "float");
+      column.closeAndConsolidate(out);
+    }
   }
 
   public static void writeLongMetric(
-      OutputSupplier<? extends OutputStream> outSupplier, String name, CompressedLongsSupplierSerializer column
+      ByteSink sink, String name, CompressedLongsSupplierSerializer column
   ) throws IOException
   {
-    ByteStreams.write(version, outSupplier);
-    serializerUtils.writeString(outSupplier, name);
-    serializerUtils.writeString(outSupplier, "long");
-    column.closeAndConsolidate(outSupplier);
+    try (OutputStream out = sink.openStream()) {
+      out.write(version);
+      serializerUtils.writeString(out, name);
+      serializerUtils.writeString(out, "long");
+      column.closeAndConsolidate(out);
+    }
   }
 
   public static void writeToChannel(MetricHolder holder, WritableByteChannel out) throws IOException
@@ -109,6 +106,9 @@ public class MetricHolder
     serializerUtils.writeString(out, holder.typeName);
 
     switch (holder.type) {
+      case LONG:
+        holder.longType.writeToChannel(out);
+        break;
       case FLOAT:
         holder.floatType.writeToChannel(out);
         break;

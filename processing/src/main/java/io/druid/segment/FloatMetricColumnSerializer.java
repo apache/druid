@@ -19,6 +19,8 @@
 
 package io.druid.segment;
 
+import com.google.common.io.ByteSink;
+import com.google.common.io.FileWriteMode;
 import com.google.common.io.Files;
 import io.druid.segment.data.CompressedFloatsSupplierSerializer;
 import io.druid.segment.data.CompressedObjectStrategy;
@@ -71,9 +73,8 @@ public class FloatMetricColumnSerializer implements MetricColumnSerializer
   {
     final File outFile = IndexIO.makeMetricFile(outDir, metricName, IndexIO.BYTE_ORDER);
     outFile.delete();
-    MetricHolder.writeFloatMetric(
-        Files.newOutputStreamSupplier(outFile, true), metricName, writer
-    );
+    final ByteSink outSink = Files.asByteSink(outFile, FileWriteMode.APPEND);
+    MetricHolder.writeFloatMetric(outSink, metricName, writer);
     IndexIO.checkFileSize(outFile);
 
     writer = null;

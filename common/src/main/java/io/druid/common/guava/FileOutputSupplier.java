@@ -28,6 +28,7 @@ import java.io.OutputStream;
 
 /**
 */
+@Deprecated
 public class FileOutputSupplier implements OutputSupplier<OutputStream>
 {
   private final File file;

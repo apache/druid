@@ -22,7 +22,7 @@ package io.druid.storage.s3;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.ByteStreams;
+import com.google.common.io.ByteSource;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
 import com.metamx.common.CompressionUtils;
@@ -112,7 +112,7 @@ public class S3DataSegmentPusher implements DataSegmentPusher
                                                       .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
 
               File descriptorFile = File.createTempFile("druid", "descriptor.json");
-              Files.copy(ByteStreams.newInputStreamSupplier(jsonMapper.writeValueAsBytes(inSegment)), descriptorFile);
+              ByteSource.wrap(jsonMapper.writeValueAsBytes(inSegment)).copyTo(Files.asByteSink(descriptorFile));
               S3Object descriptorObject = new S3Object(descriptorFile);
               descriptorObject.setBucketName(outputBucket);
               descriptorObject.setKey(s3DescriptorPath);

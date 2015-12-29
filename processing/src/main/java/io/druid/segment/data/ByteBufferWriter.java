@@ -22,9 +22,8 @@ package io.druid.segment.data;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import com.google.common.io.ByteStreams;
+import com.google.common.io.ByteSource;
 import com.google.common.io.CountingOutputStream;
-import com.google.common.io.InputSupplier;
 import com.google.common.primitives.Ints;
 
 import java.io.Closeable;
@@ -85,20 +84,20 @@ public class ByteBufferWriter<T> implements Closeable
     );
   }
 
-  public InputSupplier<InputStream> combineStreams()
+  public ByteSource combineStreams()
   {
-    return ByteStreams.join(
+    return ByteSource.concat(
         Iterables.transform(
             Arrays.asList("header", "value"),
-            new Function<String, InputSupplier<InputStream>>()
+            new Function<String, ByteSource>()
             {
               @Override
-              public InputSupplier<InputStream> apply(final String input)
+              public ByteSource apply(final String input)
               {
-                return new InputSupplier<InputStream>()
+                return new ByteSource()
                 {
                   @Override
-                  public InputStream getInput() throws IOException
+                  public InputStream openStream() throws IOException
                   {
                     return ioPeon.makeInputStream(makeFilename(input));
                   }

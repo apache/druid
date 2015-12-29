@@ -19,6 +19,8 @@
 
 package io.druid.segment.serde;
 
+import com.google.common.io.ByteSink;
+import com.google.common.io.FileWriteMode;
 import com.google.common.io.Files;
 import io.druid.segment.IndexIO;
 import io.druid.segment.MetricColumnSerializer;
@@ -77,9 +79,8 @@ public class ComplexMetricColumnSerializer implements MetricColumnSerializer
 
     final File outFile = IndexIO.makeMetricFile(outDir, metricName, IndexIO.BYTE_ORDER);
     outFile.delete();
-    MetricHolder.writeComplexMetric(
-        Files.newOutputStreamSupplier(outFile, true), metricName, serde.getTypeName(), writer
-    );
+    final ByteSink outSink = Files.asByteSink(outFile, FileWriteMode.APPEND);
+    MetricHolder.writeComplexMetric(outSink, metricName, serde.getTypeName(), writer);
     IndexIO.checkFileSize(outFile);
 
     writer = null;

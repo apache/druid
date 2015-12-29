@@ -22,9 +22,8 @@ package io.druid.segment.data;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import com.google.common.io.ByteStreams;
+import com.google.common.io.ByteSource;
 import com.google.common.io.CountingOutputStream;
-import com.google.common.io.InputSupplier;
 import com.google.common.primitives.Ints;
 
 import java.io.Closeable;
@@ -107,33 +106,28 @@ public class GenericIndexedWriter<T> implements Closeable
         numBytesWritten < Integer.MAX_VALUE, "Wrote[%s] bytes, which is too many.", numBytesWritten
     );
 
-    OutputStream metaOut = ioPeon.makeOutputStream(makeFilename("meta"));
-
-    try {
+    try (OutputStream metaOut = ioPeon.makeOutputStream(makeFilename("meta"))) {
       metaOut.write(0x1);
       metaOut.write(objectsSorted ? 0x1 : 0x0);
       metaOut.write(Ints.toByteArray((int) numBytesWritten + 4));
       metaOut.write(Ints.toByteArray(numWritten));
     }
-    finally {
-      metaOut.close();
-    }
   }
 
-  public InputSupplier<InputStream> combineStreams()
+  public ByteSource combineStreams()
   {
-    return ByteStreams.join(
+    return ByteSource.concat(
         Iterables.transform(
             Arrays.asList("meta", "header", "values"),
-            new Function<String,InputSupplier<InputStream>>() {
-
+            new Function<String, ByteSource>()
+            {
               @Override
-              public InputSupplier<InputStream> apply(final String input)
+              public ByteSource apply(final String input)
               {
-                return new InputSupplier<InputStream>()
+                return new ByteSource()
                 {
                   @Override
-                  public InputStream getInput() throws IOException
+                  public InputStream openStream() throws IOException
                   {
                     return ioPeon.makeInputStream(makeFilename(input));
                   }

@@ -19,7 +19,6 @@
 
 package io.druid.segment.data;
 
-import com.google.common.io.OutputSupplier;
 import io.druid.collections.ResourceHolder;
 import org.junit.Assert;
 import org.junit.Test;
@@ -27,8 +26,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.FloatBuffer;
@@ -68,16 +65,7 @@ public class CompressedFloatsSupplierSerializerTest extends CompressionStrategyT
     }
 
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    serializer.closeAndConsolidate(
-        new OutputSupplier<OutputStream>()
-        {
-          @Override
-          public OutputStream getOutput() throws IOException
-          {
-            return baos;
-          }
-        }
-    );
+    serializer.closeAndConsolidate(baos);
 
     IndexedFloats floats = CompressedFloatsIndexedSupplier
         .fromByteBuffer(ByteBuffer.wrap(baos.toByteArray()), order)
