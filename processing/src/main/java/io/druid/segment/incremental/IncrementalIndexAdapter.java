@@ -46,6 +46,7 @@ import javax.annotation.Nullable;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -66,17 +67,19 @@ public class IncrementalIndexAdapter implements IndexableAdapter
 
     this.invertedIndexes = Maps.newHashMap();
 
-    for (String dimension : index.getDimensions()) {
-      invertedIndexes.put(dimension, Maps.<String, MutableBitmap>newHashMap());
+    final List<IncrementalIndex.DimensionDesc> dimensions = index.getDimensions();
+
+    for (IncrementalIndex.DimensionDesc dimension : dimensions) {
+      invertedIndexes.put(dimension.getName(), Maps.<String, MutableBitmap>newHashMap());
     }
 
     int rowNum = 0;
     for (IncrementalIndex.TimeAndDims timeAndDims : index.getFacts().keySet()) {
       final String[][] dims = timeAndDims.getDims();
 
-      for (String dimension : index.getDimensions()) {
-        int dimIndex = index.getDimensionIndex(dimension);
-        Map<String, MutableBitmap> bitmapIndexes = invertedIndexes.get(dimension);
+      for (IncrementalIndex.DimensionDesc dimension : dimensions) {
+        final int dimIndex = dimension.getIndex();
+        final Map<String, MutableBitmap> bitmapIndexes = invertedIndexes.get(dimension.getName());
 
         if (bitmapIndexes == null || dims == null) {
           log.error("bitmapIndexes and dims are null!");
@@ -122,7 +125,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   @Override
   public Indexed<String> getDimensionNames()
   {
-    return new ListIndexed<String>(index.getDimensions(), String.class);
+    return new ListIndexed<String>(index.getDimensionNames(), String.class);
   }
 
   @Override
@@ -134,7 +137,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   @Override
   public Indexed<String> getDimValueLookup(String dimension)
   {
-    final IncrementalIndex.DimDim dimDim = index.getDimension(dimension);
+    final IncrementalIndex.DimDim dimDim = index.getDimensionValues(dimension);
     dimDim.sort();
 
     return new Indexed<String>()
@@ -179,6 +182,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
       @Override
       public Iterator<Rowboat> iterator()
       {
+        final List<IncrementalIndex.DimensionDesc> dimensions = index.getDimensions();
         /*
          * Note that the transform function increments a counter to determine the rowNum of
          * the iterated Rowboats. We need to return a new iterator on each
@@ -200,9 +204,9 @@ public class IncrementalIndexAdapter implements IndexableAdapter
                 final int rowOffset = input.getValue();
 
                 int[][] dims = new int[dimValues.length][];
-                for (String dimension : index.getDimensions()) {
-                  int dimIndex = index.getDimensionIndex(dimension);
-                  final IncrementalIndex.DimDim dimDim = index.getDimension(dimension);
+                for (IncrementalIndex.DimensionDesc dimension : dimensions) {
+                  final int dimIndex = dimension.getIndex();
+                  final IncrementalIndex.DimDim dimDim = dimension.getValues();
                   dimDim.sort();
 
                   if (dimIndex >= dimValues.length || dimValues[dimIndex] == null) {

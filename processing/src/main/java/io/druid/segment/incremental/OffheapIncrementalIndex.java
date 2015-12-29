@@ -293,7 +293,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
 
   private DimDim getDimDim(int dimIndex)
   {
-    return getDimValues().get(getDimensions().get(dimIndex));
+    return getDimensionValues(getDimensionNames().get(dimIndex));
   }
 
   // MapDB forces serializers to implement serializable, which sucks
@@ -470,7 +470,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       }
     }
 
-    public boolean compareCannonicalValues(String s1, String s2)
+    public boolean compareCanonicalValues(String s1, String s2)
     {
       return s1.equals(s2);
     }
