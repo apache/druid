@@ -20,6 +20,7 @@
 package io.druid.curator.announcement;
 
 import com.google.common.collect.Sets;
+import com.metamx.common.ISE;
 import io.druid.concurrent.Execs;
 import io.druid.curator.CuratorTestBase;
 import org.apache.curator.framework.CuratorFramework;
@@ -171,6 +172,14 @@ public class AnnouncerTest extends CuratorTestBase
       Assert.assertArrayEquals(billy, curator.getData().decompressed().forPath(testPath2));
 
       announcer.stop();
+
+      int count = 0;
+      while ((curator.checkExists().forPath(testPath1) != null) || (curator.checkExists().forPath(testPath1) != null)) {
+        Thread.sleep(100);
+        if (++count > 10) {
+          throw new ISE("Curator paths not getting cleaned up");
+        }
+      }
 
       Assert.assertNull(curator.checkExists().forPath(testPath1));
       Assert.assertNull(curator.checkExists().forPath(testPath2));
