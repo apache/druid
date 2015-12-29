@@ -38,6 +38,7 @@ import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.filter.AndDimFilter;
+import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.InDimFilter;
 import io.druid.query.filter.NotDimFilter;
@@ -2121,5 +2122,84 @@ public class TimeseriesQueryRunnerTest
     );
 
     TestHelper.assertExpectedResults(expectedResults, actualResults);
+  }
+
+  @Test
+  public void testTimeseriesWithBetweenFilter1()
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.dataSource)
+                                  .granularity(QueryRunnerTestHelper.dayGran)
+                                  .filters(
+                                      new AndDimFilter(
+                                          Arrays.asList(
+                                              new BoundDimFilter(
+                                                  QueryRunnerTestHelper.marketDimension,
+                                                  "spa",
+                                                  "spot",
+                                                  true,
+                                                  null,
+                                                  null
+                                              ),
+                                              new BoundDimFilter(
+                                                  QueryRunnerTestHelper.marketDimension,
+                                                  "spot",
+                                                  "spotify",
+                                                  null,
+                                                  true,
+                                                  null
+                                              ),
+                                              (DimFilter) new BoundDimFilter(
+                                                  QueryRunnerTestHelper.marketDimension,
+                                                  "SPOT",
+                                                  "spot",
+                                                  null,
+                                                  null,
+                                                  null
+                                              )
+                                          )
+                                      )
+                                  )
+                                  .intervals(QueryRunnerTestHelper.firstToThird)
+                                  .aggregators(
+                                      Arrays.<AggregatorFactory>asList(
+                                          QueryRunnerTestHelper.rowsCount,
+                                          QueryRunnerTestHelper.indexLongSum,
+                                          QueryRunnerTestHelper.qualityUniques
+                                      )
+                                  )
+                                  .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+                                  .build();
+
+    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-04-01"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "rows", 9L,
+                    "index", 1102L,
+                    "addRowsIndexConstant", 1112.0,
+                    "uniques", QueryRunnerTestHelper.UNIQUES_9
+                )
+            )
+        ),
+        new Result<>(
+            new DateTime("2011-04-02"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "rows", 9L,
+                    "index", 1120L,
+                    "addRowsIndexConstant", 1130.0,
+                    "uniques", QueryRunnerTestHelper.UNIQUES_9
+                )
+            )
+        )
+    );
+
+    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
+        runner.run(query, CONTEXT),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+    TestHelper.assertExpectedResults(expectedResults, results);
   }
 }
