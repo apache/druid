@@ -202,7 +202,7 @@ public class SimpleResourceManagementStrategyTest
     ServiceEmitter emitter = EasyMock.createMock(ServiceEmitter.class);
     EmittingLogger.registerEmitter(emitter);
     emitter.emit(EasyMock.<ServiceEventBuilder>anyObject());
-    EasyMock.expectLastCall();
+    EasyMock.expectLastCall().atLeastOnce();
     EasyMock.replay(emitter);
 
     EasyMock.expect(autoScaler.getMinNumWorkers()).andReturn(0).times(2);

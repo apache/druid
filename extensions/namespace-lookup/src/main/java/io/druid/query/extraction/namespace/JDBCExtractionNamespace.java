@@ -36,7 +36,6 @@ import javax.validation.constraints.NotNull;
 @JsonTypeName("jdbc")
 public class JDBCExtractionNamespace implements ExtractionNamespace
 {
-
   @JsonProperty
   private final MetadataStorageConnectorConfig connectorConfig;
   @JsonProperty
