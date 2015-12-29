@@ -19,12 +19,14 @@
 
 package io.druid.segment.realtime;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.metrics.AbstractMonitor;
+import com.metamx.metrics.MonitorUtils;
 import io.druid.query.DruidMetrics;
 
 import java.util.List;
@@ -38,12 +40,19 @@ public class RealtimeMetricsMonitor extends AbstractMonitor
 
   private final Map<FireDepartment, FireDepartmentMetrics> previousValues;
   private final List<FireDepartment> fireDepartments;
+  private final Map<String, String[]> dimensions;
 
   @Inject
   public RealtimeMetricsMonitor(List<FireDepartment> fireDepartments)
   {
+    this(fireDepartments, ImmutableMap.<String, String[]>of());
+  }
+
+  public RealtimeMetricsMonitor(List<FireDepartment> fireDepartments, Map<String, String[]> dimensions)
+  {
     this.fireDepartments = fireDepartments;
     this.previousValues = Maps.newHashMap();
+    this.dimensions = ImmutableMap.copyOf(dimensions);
   }
 
   @Override
@@ -59,6 +68,7 @@ public class RealtimeMetricsMonitor extends AbstractMonitor
 
       final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder()
           .setDimension(DruidMetrics.DATASOURCE, fireDepartment.getDataSchema().getDataSource());
+      MonitorUtils.addDimensionsToBuilder(builder, dimensions);
 
       final long thrownAway = metrics.thrownAway() - previous.thrownAway();
       if (thrownAway > 0) {

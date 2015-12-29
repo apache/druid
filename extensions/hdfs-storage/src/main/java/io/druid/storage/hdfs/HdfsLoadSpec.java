@@ -38,17 +38,21 @@ public class HdfsLoadSpec implements LoadSpec
 {
   private final Path path;
   final HdfsDataSegmentPuller puller;
+
   @JsonCreator
   public HdfsLoadSpec(
       @JacksonInject HdfsDataSegmentPuller puller,
       @JsonProperty(value = "path", required = true) String path
-  ){
+  )
+  {
     Preconditions.checkNotNull(path);
     this.path = new Path(path);
     this.puller = puller;
   }
+
   @JsonProperty("path")
-  public final String getPathString(){
+  public final String getPathString()
+  {
     return path.toString();
   }
 
