@@ -25,6 +25,7 @@ import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.MapMaker;
+import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
@@ -184,14 +185,20 @@ public class QueryResource
                   public void write(OutputStream outputStream) throws IOException, WebApplicationException
                   {
                     // json serializer will always close the yielder
-                    jsonWriter.writeValue(outputStream, yielder);
-                    outputStream.flush(); // Some types of OutputStream suppress flush errors in the .close() method.
-                    outputStream.close();
+                    CountingOutputStream os = new CountingOutputStream(outputStream);
+                    jsonWriter.writeValue(os, yielder);
+
+                    os.flush(); // Some types of OutputStream suppress flush errors in the .close() method.
+                    os.close();
 
                     final long queryTime = System.currentTimeMillis() - start;
                     emitter.emit(
                         DruidMetrics.makeQueryTimeMetric(jsonMapper, theQuery, req.getRemoteAddr())
                                        .build("query/time", queryTime)
+                    );
+                    emitter.emit(
+                        DruidMetrics.makeQueryTimeMetric(jsonMapper, theQuery, req.getRemoteAddr())
+                                    .build("query/bytes", os.getCount())
                     );
 
                     requestLogger.log(
@@ -202,6 +209,7 @@ public class QueryResource
                             new QueryStats(
                                 ImmutableMap.<String, Object>of(
                                     "query/time", queryTime,
+                                    "query/bytes", os.getCount(),
                                     "success", true
                                 )
                             )
