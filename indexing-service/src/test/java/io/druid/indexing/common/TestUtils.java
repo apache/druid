@@ -27,7 +27,6 @@ import com.metamx.common.ISE;
 import io.druid.guice.ServerModule;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMaker;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.column.ColumnConfig;
 
@@ -40,7 +39,6 @@ public class TestUtils
 {
   private final ObjectMapper jsonMapper;
   private final IndexMerger indexMerger;
-  private final IndexMaker indexMaker;
   private final IndexIO indexIO;
 
   public TestUtils()
@@ -58,7 +56,6 @@ public class TestUtils
         }
     );
     indexMerger = new IndexMerger(jsonMapper, indexIO);
-    indexMaker = new IndexMaker(jsonMapper, indexIO);
 
     final List<? extends Module> list = new ServerModule().getJacksonModules();
     for (Module module : list) {
@@ -69,7 +66,6 @@ public class TestUtils
         new InjectableValues.Std()
             .addValue(IndexIO.class, indexIO)
             .addValue(IndexMerger.class, indexMerger)
-            .addValue(IndexMaker.class, indexMaker)
             .addValue(ObjectMapper.class, jsonMapper)
     );
   }
@@ -82,11 +78,6 @@ public class TestUtils
   public IndexMerger getTestIndexMerger()
   {
     return indexMerger;
-  }
-
-  public IndexMaker getTestIndexMaker()
-  {
-    return indexMaker;
   }
 
   public IndexIO getTestIndexIO()
