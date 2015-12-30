@@ -117,7 +117,13 @@ public class RealtimeIndexTask extends AbstractTask
   private volatile Firehose firehose = null;
 
   @JsonIgnore
-  private volatile boolean stopped = false;
+  private volatile boolean gracefullyStopped = false;
+
+  @JsonIgnore
+  private volatile boolean finishingJob = false;
+
+  @JsonIgnore
+  private volatile Thread runThread = null;
 
   @JsonIgnore
   private volatile QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate = null;
@@ -174,14 +180,10 @@ public class RealtimeIndexTask extends AbstractTask
   @Override
   public TaskStatus run(final TaskToolbox toolbox) throws Exception
   {
+    runThread = Thread.currentThread();
+
     if (this.plumber != null) {
       throw new IllegalStateException("WTF?!? run with non-null plumber??!");
-    }
-
-    // Shed any locks we might have (e.g. if we were uncleanly killed and restarted) since we'll reacquire
-    // them if we actually need them
-    for (final TaskLock taskLock : getTaskLocks(toolbox)) {
-      toolbox.getTaskActionClient().submit(new LockReleaseAction(taskLock.getInterval()));
     }
 
     boolean normalExit = true;
@@ -320,7 +322,7 @@ public class RealtimeIndexTask extends AbstractTask
       committerSupplier = Committers.supplierFromFirehose(firehose);
 
       // Time to read data!
-      while ((!stopped || firehoseDrainableByClosing) && firehose.hasMore()) {
+      while ((!gracefullyStopped || firehoseDrainableByClosing) && firehose.hasMore()) {
         final InputRow inputRow;
 
         try {
@@ -357,38 +359,54 @@ public class RealtimeIndexTask extends AbstractTask
     finally {
       if (normalExit) {
         try {
-          if (!stopped) {
-            // Hand off all pending data
-            log.info("Persisting and handing off pending data.");
-            plumber.persist(committerSupplier.get());
-            plumber.finishJob();
-          } else {
-            log.info("Persisting pending data without handoff, in preparation for restart.");
-            final Committer committer = committerSupplier.get();
-            final CountDownLatch persistLatch = new CountDownLatch(1);
-            plumber.persist(
-                new Committer()
-                {
-                  @Override
-                  public Object getMetadata()
-                  {
-                    return committer.getMetadata();
-                  }
+          // Always want to persist.
+          log.info("Persisting remaining data.");
 
-                  @Override
-                  public void run()
-                  {
-                    try {
-                      committer.run();
-                    }
-                    finally {
-                      persistLatch.countDown();
-                    }
+          final Committer committer = committerSupplier.get();
+          final CountDownLatch persistLatch = new CountDownLatch(1);
+          plumber.persist(
+              new Committer()
+              {
+                @Override
+                public Object getMetadata()
+                {
+                  return committer.getMetadata();
+                }
+
+                @Override
+                public void run()
+                {
+                  try {
+                    committer.run();
+                  }
+                  finally {
+                    persistLatch.countDown();
                   }
                 }
-            );
-            persistLatch.await();
+              }
+          );
+          persistLatch.await();
+
+          if (gracefullyStopped) {
+            log.info("Gracefully stopping.");
+          } else {
+            log.info("Finishing the job.");
+            synchronized (this) {
+              if (gracefullyStopped) {
+                // Someone called stopGracefully after we checked the flag. That's okay, just stop now.
+                log.info("Gracefully stopping.");
+              } else {
+                finishingJob = true;
+              }
+            }
+
+            if (finishingJob) {
+              plumber.finishJob();
+            }
           }
+        }
+        catch (InterruptedException e) {
+          log.debug(e, "Interrupted while finishing the job");
         }
         catch (Exception e) {
           log.makeAlert(e, "Failed to finish realtime task").emit();
@@ -417,13 +435,17 @@ public class RealtimeIndexTask extends AbstractTask
   {
     try {
       synchronized (this) {
-        if (!stopped) {
-          stopped = true;
-          log.info("Gracefully stopping.");
-          if (isFirehoseDrainableByClosing(spec.getIOConfig().getFirehoseFactory())) {
+        if (!gracefullyStopped) {
+          gracefullyStopped = true;
+          if (finishingJob) {
+            log.info("stopGracefully: Interrupting finishJob.");
+            runThread.interrupt();
+          } else if (isFirehoseDrainableByClosing(spec.getIOConfig().getFirehoseFactory())) {
+            log.info("stopGracefully: Draining firehose.");
             firehose.close();
           } else {
-            log.debug("Cannot drain firehose[%s] by closing, so skipping closing.", firehose);
+            log.info("stopGracefully: Cannot drain firehose by closing, interrupting run thread.");
+            runThread.interrupt();
           }
         }
       }
