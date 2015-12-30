@@ -90,8 +90,10 @@ public class TaskLockbox
 
     try {
       // Load stuff from taskStorage first. If this fails, we don't want to lose all our locks.
+      final Set<String> storedActiveTasks = Sets.newHashSet();
       final List<Pair<Task, TaskLock>> storedLocks = Lists.newArrayList();
       for (final Task task : taskStorage.getActiveTasks()) {
+        storedActiveTasks.add(task.getId());
         for (final TaskLock taskLock : taskStorage.getLocks(task.getId())) {
           storedLocks.add(Pair.of(task, taskLock));
         }
@@ -111,6 +113,7 @@ public class TaskLockbox
       };
       running.clear();
       activeTasks.clear();
+      activeTasks.addAll(storedActiveTasks);
       // Bookkeeping for a log message at the end
       int taskLockCount = 0;
       for (final Pair<Task, TaskLock> taskAndLock : byVersionOrdering.sortedCopy(storedLocks)) {
@@ -121,7 +124,6 @@ public class TaskLockbox
           log.warn("WTF?! Got lock with empty interval for task: %s", task.getId());
           continue;
         }
-        activeTasks.add(task.getId());
         final Optional<TaskLock> acquiredTaskLock = tryLock(
             task,
             savedTaskLock.getInterval(),
