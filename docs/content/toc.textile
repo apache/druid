@@ -17,6 +17,7 @@ h2. Data Ingestion
 * "Schema Changes":../ingestion/schema-changes.html
 * "Realtime Ingestion":../ingestion/realtime-ingestion.html
 * "Batch Ingestion":../ingestion/batch-ingestion.html
+* "Updating Existing Data":../ingestion/update-existing-data.html
 * "FAQ":../ingestion/faq.html
 
 h2. Querying
