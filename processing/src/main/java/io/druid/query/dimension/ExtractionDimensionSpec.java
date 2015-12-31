@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.metamx.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.segment.DimensionSelector;
 
 import java.nio.ByteBuffer;
 
@@ -75,6 +76,12 @@ public class ExtractionDimensionSpec implements DimensionSpec
   public ExtractionFn getExtractionFn()
   {
     return extractionFn;
+  }
+
+  @Override
+  public DimensionSelector decorate(DimensionSelector selector)
+  {
+    return selector;
   }
 
   @Override

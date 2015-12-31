@@ -36,6 +36,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.JavaScriptAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
+import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.filter.DimFilters;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
@@ -260,7 +261,7 @@ public class IncrementalIndexStorageAdapterTest
     Cursor cursor = Sequences.toList(Sequences.limit(cursorSequence, 1), Lists.<Cursor>newArrayList()).get(0);
     DimensionSelector dimSelector;
 
-    dimSelector = cursor.makeDimensionSelector("sally", null);
+    dimSelector = cursor.makeDimensionSelector(new DefaultDimensionSpec("sally", "sally"));
     Assert.assertEquals("bo", dimSelector.lookupName(dimSelector.getRow().get(0)));
 
     index.add(
@@ -274,7 +275,7 @@ public class IncrementalIndexStorageAdapterTest
     // Cursor reset should not be affected by out of order values
     cursor.reset();
 
-    dimSelector = cursor.makeDimensionSelector("sally", null);
+    dimSelector = cursor.makeDimensionSelector(new DefaultDimensionSpec("sally", "sally"));
     Assert.assertEquals("bo", dimSelector.lookupName(dimSelector.getRow().get(0)));
   }
 

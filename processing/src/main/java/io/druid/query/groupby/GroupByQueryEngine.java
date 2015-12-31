@@ -316,10 +316,7 @@ public class GroupByQueryEngine
 
       for (int i = 0; i < dimensionSpecs.size(); ++i) {
         final DimensionSpec dimSpec = dimensionSpecs.get(i);
-        final DimensionSelector selector = cursor.makeDimensionSelector(
-            dimSpec.getDimension(),
-            dimSpec.getExtractionFn()
-        );
+        final DimensionSelector selector = cursor.makeDimensionSelector(dimSpec);
         if (selector != null) {
           dimensions.add(selector);
           dimNames.add(dimSpec.getOutputName());

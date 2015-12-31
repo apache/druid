@@ -175,7 +175,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
             for (DimensionSpec dim : dimsToSearch) {
               dimSelectors.put(
                   dim.getOutputName(),
-                  cursor.makeDimensionSelector(dim.getDimension(), dim.getExtractionFn())
+                  cursor.makeDimensionSelector(dim)
               );
             }
 
