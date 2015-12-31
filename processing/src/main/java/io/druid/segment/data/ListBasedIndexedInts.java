@@ -17,17 +17,47 @@
  * under the License.
  */
 
-package io.druid.segment;
+package io.druid.segment.data;
 
-import io.druid.query.dimension.DimensionSpec;
+import java.io.IOException;
+import java.util.Iterator;
+import java.util.List;
 
 /**
- * Factory class for MetricSelectors
  */
-public interface ColumnSelectorFactory
+public class ListBasedIndexedInts implements IndexedInts
 {
-  public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec);
-  public FloatColumnSelector makeFloatColumnSelector(String columnName);
-  public LongColumnSelector makeLongColumnSelector(String columnName);
-  public ObjectColumnSelector makeObjectColumnSelector(String columnName);
+  private final List<Integer> expansion;
+
+  public ListBasedIndexedInts(List<Integer> expansion) {this.expansion = expansion;}
+
+  @Override
+  public int size()
+  {
+    return expansion.size();
+  }
+
+  @Override
+  public int get(int index)
+  {
+    return expansion.get(index);
+  }
+
+  @Override
+  public Iterator<Integer> iterator()
+  {
+    return new IndexedIntsIterator(this);
+  }
+
+  @Override
+  public void fill(int index, int[] toFill)
+  {
+    throw new UnsupportedOperationException("fill not supported");
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+
+  }
 }

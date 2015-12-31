@@ -31,6 +31,7 @@ import io.druid.data.input.Firehose;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.granularity.QueryGranularity;
+import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.select.EventHolder;
 import io.druid.segment.Cursor;
@@ -85,7 +86,9 @@ public class IngestSegmentFirehose implements Firehose
 
                             final Map<String, DimensionSelector> dimSelectors = Maps.newHashMap();
                             for (String dim : dims) {
-                              final DimensionSelector dimSelector = cursor.makeDimensionSelector(dim, null);
+                              final DimensionSelector dimSelector = cursor.makeDimensionSelector(
+                                  new DefaultDimensionSpec(dim, dim)
+                              );
                               // dimSelector is null if the dimension is not present
                               if (dimSelector != null) {
                                 dimSelectors.put(dim, dimSelector);

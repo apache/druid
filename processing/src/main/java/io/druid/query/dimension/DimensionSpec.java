@@ -22,23 +22,30 @@ package io.druid.query.dimension;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.segment.DimensionSelector;
 
 /**
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = LegacyDimensionSpec.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "default", value = DefaultDimensionSpec.class),
-    @JsonSubTypes.Type(name = "extraction", value = ExtractionDimensionSpec.class)
+    @JsonSubTypes.Type(name = "extraction", value = ExtractionDimensionSpec.class),
+    @JsonSubTypes.Type(name = "regexFiltered", value = RegexFilteredDimensionSpec.class),
+    @JsonSubTypes.Type(name = "listFiltered", value = ListFilteredDimensionSpec.class)
 })
 public interface DimensionSpec
 {
-  public String getDimension();
+  String getDimension();
 
-  public String getOutputName();
+  String getOutputName();
 
-  public ExtractionFn getExtractionFn();
+  //ExtractionFn can be implemented with decorate(..) fn
+  @Deprecated
+  ExtractionFn getExtractionFn();
 
-  public byte[] getCacheKey();
+  DimensionSelector decorate(DimensionSelector selector);
 
-  public boolean preservesOrdering();
+  byte[] getCacheKey();
+
+  boolean preservesOrdering();
 }

@@ -38,6 +38,7 @@ import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
@@ -169,8 +170,20 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       }
 
       @Override
-      public DimensionSelector makeDimensionSelector(final String dimension, final ExtractionFn extractionFn)
+      public DimensionSelector makeDimensionSelector(
+          DimensionSpec dimensionSpec
+      )
       {
+        return dimensionSpec.decorate(makeDimensionSelectorUndecorated(dimensionSpec));
+      }
+
+      private DimensionSelector makeDimensionSelectorUndecorated(
+          DimensionSpec dimensionSpec
+      )
+      {
+        final String dimension = dimensionSpec.getDimension();
+        final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
+
         return new DimensionSelector()
         {
           @Override

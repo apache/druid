@@ -43,8 +43,7 @@ public class TopNMapFn implements Function<Cursor, Result<TopNResultValue>>
   public Result<TopNResultValue> apply(Cursor cursor)
   {
     final DimensionSelector dimSelector = cursor.makeDimensionSelector(
-        query.getDimensionSpec().getDimension(),
-        query.getDimensionSpec().getExtractionFn()
+        query.getDimensionSpec()
     );
     if (dimSelector == null) {
       return null;

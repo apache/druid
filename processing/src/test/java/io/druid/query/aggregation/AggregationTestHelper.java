@@ -296,12 +296,12 @@ public class AggregationTestHelper
 
   public Sequence<Row> runQueryOnSegments(final List<File> segmentDirs, final GroupByQuery query)
   {
-    final List<QueryableIndexSegment> segments = Lists.transform(
+    final List<Segment> segments = Lists.transform(
         segmentDirs,
-        new Function<File, QueryableIndexSegment>()
+        new Function<File, Segment>()
         {
           @Override
-          public QueryableIndexSegment apply(File segmentDir)
+          public Segment apply(File segmentDir)
           {
             try {
               return new QueryableIndexSegment("", indexIO.loadIndex(segmentDir));
@@ -314,48 +314,52 @@ public class AggregationTestHelper
     );
 
     try {
-      final FinalizeResultsQueryRunner baseRunner = new FinalizeResultsQueryRunner(
-          toolChest.postMergeQueryDecoration(
-              toolChest.mergeResults(
-                  toolChest.preMergeQueryDecoration(
-                      new ConcatQueryRunner(
-                          Sequences.simple(
-                              Lists.transform(
-                                  segments,
-                                  new Function<Segment, QueryRunner>()
-                                  {
-                                    @Override
-                                    public QueryRunner apply(final Segment segment)
-                                    {
-                                      try {
-                                        return makeStringSerdeQueryRunner(
-                                            mapper,
-                                            toolChest,
-                                            query,
-                                            factory.createRunner(segment)
-                                        );
-                                      }
-                                      catch (Exception ex) {
-                                        throw Throwables.propagate(ex);
-                                      }
-                                    }
-                                  }
-                              )
-                          )
-                      )
-                  )
-              )
-          ),
-          toolChest
-      );
-
-      return baseRunner.run(query, Maps.newHashMap());
+      return runQueryOnSegmentsObjs(segments, query);
     } finally {
       for(Segment segment: segments) {
         CloseQuietly.close(segment);
       }
     }
+  }
 
+  public Sequence<Row> runQueryOnSegmentsObjs(final List<Segment> segments, final GroupByQuery query)
+  {
+    final FinalizeResultsQueryRunner baseRunner = new FinalizeResultsQueryRunner(
+        toolChest.postMergeQueryDecoration(
+            toolChest.mergeResults(
+                toolChest.preMergeQueryDecoration(
+                    new ConcatQueryRunner(
+                        Sequences.simple(
+                            Lists.transform(
+                                segments,
+                                new Function<Segment, QueryRunner>()
+                                {
+                                  @Override
+                                  public QueryRunner apply(final Segment segment)
+                                  {
+                                    try {
+                                      return makeStringSerdeQueryRunner(
+                                          mapper,
+                                          toolChest,
+                                          query,
+                                          factory.createRunner(segment)
+                                      );
+                                    }
+                                    catch (Exception ex) {
+                                      throw Throwables.propagate(ex);
+                                    }
+                                  }
+                                }
+                            )
+                        )
+                    )
+                )
+            )
+        ),
+        toolChest
+    );
+
+    return baseRunner.run(query, Maps.newHashMap());
   }
 
   public QueryRunner<Row> makeStringSerdeQueryRunner(final ObjectMapper mapper, final QueryToolChest toolChest, final Query<Row> query, final QueryRunner<Row> baseRunner)

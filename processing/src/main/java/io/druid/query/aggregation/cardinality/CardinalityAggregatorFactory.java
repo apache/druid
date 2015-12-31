@@ -33,6 +33,7 @@ import io.druid.query.aggregation.Aggregators;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import org.apache.commons.codec.binary.Base64;
@@ -107,7 +108,7 @@ public class CardinalityAggregatorFactory implements AggregatorFactory
               @Override
               public DimensionSelector apply(@Nullable String input)
               {
-                return columnFactory.makeDimensionSelector(input, null);
+                return columnFactory.makeDimensionSelector(new DefaultDimensionSpec(input, input));
               }
             }
             ), Predicates.notNull()
