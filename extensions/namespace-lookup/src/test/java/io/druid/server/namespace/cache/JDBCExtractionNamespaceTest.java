@@ -486,6 +486,7 @@ public class JDBCExtractionNamespaceTest
     // rely on test timeout to break out of this loop
     while (!extractionFn.apply(key).equals(expected)) {
       Thread.sleep(100);
+      extractionFn = fnCache.get(namespace);
     }
 
     Assert.assertEquals(
