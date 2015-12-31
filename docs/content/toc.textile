@@ -38,6 +38,7 @@ h2. Querying
 ** "Context":../querying/query-context.html
 * "SQL":../querying/sql.html
 * "Joins":../querying/joins.html
+* "Multi-Valued Dimensions":../querying/multi-valued-dimensions.html
 
 h2. Design
 * "Overview":../design/design.html
