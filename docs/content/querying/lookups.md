@@ -3,42 +3,82 @@ layout: doc_page
 ---
 # Lookups
 
-Lookups are a concept in Druid where dimension values are (optionally) replaced with a new value. See [dimension specs](../querying/dimensionspecs.html) for more information. For the purpose of these documents, a "key" refers to a dimension value to match, and a "value" refers to its replacement. So if you wanted to rename `appid-12345` to `Super Mega Awesome App` then the key would be `appid-12345` and the value would be `Super Mega Awesome App`. 
+Lookups are a concept in Druid where dimension values are (optionally) replaced with new values. 
+See [dimension specs](../querying/dimensionspecs.html) for more information. For the purpose of these documents, 
+a "key" refers to a dimension value to match, and a "value" refers to its replacement. 
+So if you wanted to rename `appid-12345` to `Super Mega Awesome App` then the key would be `appid-12345` and the value 
+would be `Super Mega Awesome App`. 
 
-It is worth noting that lookups support use cases where keys map to unique values (injective) as per a country code and a country name, and also supports use cases where multiple IDs map to the same value as per multiple app-ids belonging to a single account manager.
+It is worth noting that lookups support use cases where keys map to unique values (injective) such as a country code and 
+a country name, and also supports use cases where multiple IDs map to the same value, e.g. multiple app-ids belonging to 
+a single account manager.
 
-Lookups do not have history. They always use the current data. This means that if the chief account manager for a particular app-id changes, and you issue a query with a lookup to store the app-id to account manager relationship, it will return the current account manager for that app-id REGARDLESS of the time range over which you query.
+Lookups do not have history. They always use the current data. This means that if the chief account manager for a 
+particular app-id changes, and you issue a query with a lookup to store the app-id to account manager relationship, 
+it will return the current account manager for that app-id REGARDLESS of the time range over which you query.
 
-If you require data timerange sensitive lookups, such a use case is not currently supported dynamically at query time, and such data belongs in the raw denormalized data for use in Druid.
+If you require data time range sensitive lookups, such a use case is not currently supported dynamically at query time, 
+and such data belongs in the raw denormalized data for use in Druid.
 
-Very small lookups (count of keys on the order of a few dozen to a few hundred) can be passed at query time as a map lookup as per [dimension specs](../querying/dimensionspecs.html).
+Very small lookups (count of keys on the order of a few dozen to a few hundred) can be passed at query time as a "map" 
+lookup as per [dimension specs](../querying/dimensionspecs.html).
 
-Namespaced lookups are appropriate for lookups which are not possible to pass at query time due to their size, or are not desired to be passed at query time because the data is to reside in and be handled by the Druid servers. Namespaced lookups can be specified as part of the runtime properties file. The property is a list of the namespaces described as per the sections on this page.
+Namespaced lookups are appropriate for lookups which are not possible to pass at query time due to their size, 
+or are not desired to be passed at query time because the data is to reside in and be handled by the Druid servers. 
+Namespaced lookups can be specified as part of the runtime properties file. The property is a list of the namespaces 
+described as per the sections on this page. For example:
 
  ```json
- druid.query.extraction.namespace.lookups=\
-   [{ "type":"uri", "namespace":"some_uri_lookup","uri": "file:/tmp/prefix/",\
-   "namespaceParseSpec":\
-     {"format":"csv","columns":["key","value"]},\
-   "pollPeriod":"PT5M"},\
-   { "type":"jdbc", "namespace":"some_jdbc_lookup",\
-   "connectorConfig":{"createTables":true,"connectURI":"jdbc:mysql://localhost:3306/druid","user":"druid","password":"diurd"},\
-   "table": "lookupTable", "keyColumn": "mykeyColumn", "valueColumn": "MyValueColumn", "tsColumn": "timeColumn"}]
+ druid.query.extraction.namespace.lookups=
+   [
+     {
+       "type": "uri",
+       "namespace": "some_uri_lookup",
+       "uri": "file:/tmp/prefix/",
+       "namespaceParseSpec": {
+         "format": "csv",
+         "columns": [
+           "key",
+           "value"
+         ]
+       },
+       "pollPeriod": "PT5M"
+     },
+     {
+       "type": "jdbc",
+       "namespace": "some_jdbc_lookup",
+       "connectorConfig": {
+         "createTables": true,
+         "connectURI": "jdbc:mysql:\/\/localhost:3306\/druid",
+         "user": "druid",
+         "password": "diurd"
+       },
+       "table": "lookupTable",
+       "keyColumn": "mykeyColumn",
+       "valueColumn": "MyValueColumn",
+       "tsColumn": "timeColumn"
+     }
+   ]
  ```
 
-Proper funcitonality of Namespaced lookups requires the following extension to be loaded on the broker, peon, and historical nodes:
+Proper functionality of Namespaced lookups requires the following extension to be loaded on the broker, peon, and historical nodes:
 `io.druid.extensions:druid-namespace-lookup`
 
 ## Cache Settings
-The following are settings used by the nodes which service queries when setting namespaces (broker, peon, historical)
+
+Lookups are cached locally on historical nodes. The following are settings used by the nodes which service queries when 
+setting namespaces (broker, peon, historical)
 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.query.extraction.namespace.cache.type`|Specifies the type of caching to be used by the namespaces. May be one of [`offHeap`, `onHeap`]. `offHeap` uses a temporary file for off-heap storage of the namespace (memory mapped files). `onHeap` stores all cache on the heap in standard java map types.|`onHeap`|
 
-The cache is populated in different ways depending on the settings below. In general, most namespaces employ a `pollPeriod` at the end of which time they poll the remote resource of interest for updates. The notable exception being the kafka namespace lookup as defined below.
+The cache is populated in different ways depending on the settings below. In general, most namespaces employ 
+a `pollPeriod` at the end of which time they poll the remote resource of interest for updates. A notable exception 
+is the Kafka namespace lookup, defined below.
 
 ## URI namespace update
+
 The remapping values for each namespaced lookup can be specified by json as per
 
 ```json
@@ -204,6 +244,7 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
 ```
 
 # Kafka namespaced lookup
+
 If you need updates to populate as promptly as possible, it is possible to plug into a kafka topic whose key is the old value and message is the desired new value (both in UTF-8). This requires the following extension: "io.druid.extensions:kafka-extraction-namespace"
 
 ```json
@@ -221,11 +262,13 @@ If you need updates to populate as promptly as possible, it is possible to plug 
 
 
 ## Kafka renames
+
 The extension `kafka-extraction-namespace` enables reading from a kafka feed which has name/key pairs to allow renaming of dimension values. An example use case would be to rename an ID to a human readable format.
 
 Currently the historical node caches the key/value pairs from the kafka feed in an ephemeral memory mapped DB via MapDB.
 
 ## Configuration
+
 The following options are used to define the behavior and should be included wherever the extension is included (all query servicing nodes):
 
 |Property|Description|Default|
@@ -240,7 +283,8 @@ The following are the handling for kafka consumer properties in `druid.query.ren
 |`group.id`|Group ID, auto-assigned for publish-subscribe model and cannot be overridden|`UUID.randomUUID().toString()`|
 |`auto.offset.reset`|Setting to get the entire kafka rename stream. Cannot be overridden|`smallest`|
 
-## Testing the kafka rename functionality
+## Testing the Kafka rename functionality
+
 To test this setup, you can send key/value pairs to a kafka stream via the following producer console:
 
 `./bin/kafka-console-producer.sh --property parse.key=true --property key.separator="->" --broker-list localhost:9092 --topic testTopic`

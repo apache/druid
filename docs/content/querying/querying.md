@@ -9,8 +9,13 @@ Queries are made using an HTTP REST style request to queryable nodes ([Broker](.
 [Historical](../design/historical.html), or [Realtime](../design/realtime.html)). The
 query is expressed in JSON and each of these node types expose the same
 REST query interface. For normal Druid operations, queries should be issued to the broker nodes.
+ 
+Druid's native query language is JSON over HTTP, although many members of the community have contributed different 
+[client libraries](../development/libraries.html) in other languages to query Druid. 
 
-Although Druid's native query language is JSON over HTTP, many members of the community have contributed different [client libraries](../development/libraries.html) in other languages to query Druid.
+Druid's native query is relatively low level, mapping closely to how computations are performed internally. Druid queries 
+are designed to be lightweight and complete very quickly. This means that for more complex analysis, or to build 
+more complex visualizations, multiple Druid queries may be required.
 
 Available Queries
 -----------------
