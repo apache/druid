@@ -139,29 +139,33 @@ public class JDBCExtractionNamespaceTest
             );
             handle.createStatement(String.format("TRUNCATE TABLE %s", tableName)).setQueryTimeout(1).execute();
             handle.commit();
-            closer.register(new Closeable()
-            {
-              @Override
-              public void close() throws IOException
-              {
-                // Register first so it gets run last and checks for cleanup
-                final NamespaceExtractionCacheManager.NamespaceImplData implData = extractionCacheManager.implData.get(
-                    namespace);
-                if (implData != null && implData.future != null) {
-                  implData.future.cancel(true);
-                  Assert.assertTrue(implData.future.isDone());
+            closer.register(
+                new Closeable()
+                {
+                  @Override
+                  public void close() throws IOException
+                  {
+                    // Register first so it gets run last and checks for cleanup
+                    final NamespaceExtractionCacheManager.NamespaceImplData implData =
+                        extractionCacheManager.implData.get(namespace);
+                    if (implData != null && implData.future != null) {
+                      implData.future.cancel(true);
+                      Assert.assertTrue(implData.future.isDone());
+                    }
+                  }
                 }
-              }
-            });
-            closer.register(new Closeable()
-            {
-              @Override
-              public void close() throws IOException
-              {
-                handle.createStatement("DROP TABLE " + tableName).setQueryTimeout(1).execute();
-                handle.close();
-              }
-            });
+            );
+            closer.register(
+                new Closeable()
+                {
+                  @Override
+                  public void close() throws IOException
+                  {
+                    handle.createStatement("DROP TABLE " + tableName).setQueryTimeout(1).execute();
+                    handle.close();
+                  }
+                }
+            );
             for (Map.Entry<String, String> entry : renames.entrySet()) {
               try {
                 insertValues(entry.getKey(), entry.getValue(), "2015-01-01 00:00:00");
@@ -219,36 +223,42 @@ public class JDBCExtractionNamespaceTest
             catch (Exception e) {
               throw Throwables.propagate(e);
             }
-            closer.register(new Closeable()
-            {
-              @Override
-              public void close() throws IOException
-              {
-                lifecycle.stop();
-              }
-            });
-            closer.register(new Closeable()
-            {
-              @Override
-              public void close() throws IOException
-              {
-                Assert.assertTrue("Delete failed", extractionCacheManager.delete(namespace));
-              }
-            });
+            closer.register(
+                new Closeable()
+                {
+                  @Override
+                  public void close() throws IOException
+                  {
+                    lifecycle.stop();
+                  }
+                }
+            );
+            closer.register(
+                new Closeable()
+                {
+                  @Override
+                  public void close() throws IOException
+                  {
+                    Assert.assertTrue("Delete failed", extractionCacheManager.delete(namespace));
+                  }
+                }
+            );
           }
         }
     );
     final Closer setupCloser = Closer.create();
-    setupCloser.register(new Closeable()
-    {
-      @Override
-      public void close() throws IOException
-      {
-        if (!setupFuture.isDone() && !setupFuture.cancel(true) && !setupFuture.isDone()) {
-          throw new IOException("Unable to stop future");
+    setupCloser.register(
+        new Closeable()
+        {
+          @Override
+          public void close() throws IOException
+          {
+            if (!setupFuture.isDone() && !setupFuture.cancel(true) && !setupFuture.isDone()) {
+              throw new IOException("Unable to stop future");
+            }
+          }
         }
-      }
-    });
+    );
     try {
       setupFuture.get(10, TimeUnit.SECONDS);
     }
@@ -264,21 +274,24 @@ public class JDBCExtractionNamespaceTest
   public void tearDown() throws InterruptedException, ExecutionException, TimeoutException, IOException
   {
     final Closer tearDownCloser = Closer.create();
-    tearDownCloser.register(new Closeable()
-    {
-      @Override
-      public void close() throws IOException
-      {
-        setupTeardownService.shutdownNow();
-        try {
-          setupTeardownService.awaitTermination(10, TimeUnit.SECONDS);
+    tearDownCloser.register(
+        new Closeable()
+        {
+          @Override
+          public void close() throws IOException
+          {
+            setupTeardownService.shutdownNow();
+            try {
+              setupTeardownService.awaitTermination(60, TimeUnit.SECONDS);
+            }
+            catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
+              throw new IOException("Interrupted", e);
+            }
+          }
         }
-        catch (InterruptedException e) {
-          Thread.currentThread().interrupt();
-          throw new IOException("Interrupted", e);
-        }
-      }
-    });
+    );
+
     try {
       setupTeardownService.submit(
           new Runnable()
@@ -294,7 +307,7 @@ public class JDBCExtractionNamespaceTest
               }
             }
           }
-      ).get(10, TimeUnit.SECONDS);
+      ).get(60, TimeUnit.SECONDS);
     }
     catch (Throwable t) {
       throw closer.rethrow(t);
