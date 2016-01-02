@@ -207,6 +207,11 @@ public class TaskQueue
     }
   }
 
+  public boolean isActive()
+  {
+    return active;
+  }
+
   /**
    * Main task runner management loop. Meant to run forever, or, at least until we're stopped.
    */
