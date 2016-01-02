@@ -81,6 +81,7 @@ h2. Configuration
 * "Production Zookeeper Configuration":../configuration/zookeeper.html
 
 h2. Development
+* "Overview":../development/overview.html
 * "Libraries":../development/libraries.html
 * "Extending Druid":../development/modules.html
 * "Build From Source":../development/build.html
