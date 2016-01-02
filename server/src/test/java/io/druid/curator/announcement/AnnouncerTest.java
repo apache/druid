@@ -173,12 +173,8 @@ public class AnnouncerTest extends CuratorTestBase
 
       announcer.stop();
 
-      int count = 0;
-      while ((curator.checkExists().forPath(testPath1) != null) || (curator.checkExists().forPath(testPath1) != null)) {
+      while ((curator.checkExists().forPath(testPath1) != null) || (curator.checkExists().forPath(testPath2) != null)) {
         Thread.sleep(100);
-        if (++count > 10) {
-          throw new ISE("Curator paths not getting cleaned up");
-        }
       }
 
       Assert.assertNull(curator.checkExists().forPath(testPath1));
