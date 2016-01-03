@@ -20,7 +20,6 @@
 package io.druid.curator.announcement;
 
 import com.google.common.collect.Sets;
-import com.metamx.common.ISE;
 import io.druid.concurrent.Execs;
 import io.druid.curator.CuratorTestBase;
 import org.apache.curator.framework.CuratorFramework;
@@ -33,6 +32,7 @@ import org.apache.zookeeper.data.Stat;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.util.Set;
@@ -128,6 +128,7 @@ public class AnnouncerTest extends CuratorTestBase
     Assert.assertNull("expect /somewhere/test2 unannounced", curator.checkExists().forPath(testPath2));
   }
 
+  @Ignore // https://github.com/druid-io/druid/issues/2167
   @Test(timeout = 60_000L)
   public void testSessionKilled() throws Exception
   {
