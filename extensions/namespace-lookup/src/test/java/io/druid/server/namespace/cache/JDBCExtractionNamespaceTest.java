@@ -42,6 +42,7 @@ import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -426,6 +427,7 @@ public class JDBCExtractionNamespaceTest
     assertUpdated(extractionNamespace.getNamespace(), "foo", "bar");
   }
 
+  @Ignore // https://github.com/druid-io/druid/issues/2160
   @Test(timeout = 60_000L)
   public void testFindNew()
       throws NoSuchFieldException, IllegalAccessException, ExecutionException, InterruptedException
