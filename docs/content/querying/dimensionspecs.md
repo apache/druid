@@ -195,7 +195,10 @@ Example for the `__time` dimension:
 ```
 
 ### Lookup extraction function
-Explicit lookups allow you to specify a set of keys and values to use when performing the extraction
+
+Lookups are a concept in Druid where dimension values are (optionally) replaced with new values. 
+For more documentation on using lookups, please see [here](../querying/lookups.html). 
+Explicit lookups allow you to specify a set of keys and values to use when performing the extraction.
 
 ```json
 {
@@ -240,11 +243,12 @@ Explicit lookups allow you to specify a set of keys and values to use when perfo
 }
 ```
 
-A lookup can be of type `namespace` or `map`. A `map` lookup is passed as part of the query. A `namespace` lookup is populated on all the nodes which handle queries as per [lookups](../querying/lookups.html)
+A lookup can be of type `namespace` or `map`. A `map` lookup is passed as part of the query. 
+A `namespace` lookup is populated on all the nodes which handle queries as per [lookups](../querying/lookups.html)
 
-A property of `retainMissingValue` and `replaceMissingValueWith` can be specified at query time to hint how to handle missing values. Setting `replaceMissingValueWith` to `""` has the same effect of setting it to `null` or omitting the property. Setting `retainMissingValue` to true will use the dimension's original value if it is not found in the lookup. The default values are `replaceMissingValueWith = null` and `retainMissingValue = false` which causes missing values to be treated as missing.
+A property of `retainMissingValue` and `replaceMissingValueWith` can be specified at query time to hint how to handle missing values. Setting `replaceMissingValueWith` to `""` has the same effect as setting it to `null` or omitting the property. Setting `retainMissingValue` to true will use the dimension's original value if it is not found in the lookup. The default values are `replaceMissingValueWith = null` and `retainMissingValue = false` which causes missing values to be treated as missing.
  
-It is illegal to set `retainMissingValue = true` and also specify a `replaceMissingValueWith`
+It is illegal to set `retainMissingValue = true` and also specify a `replaceMissingValueWith`.
 
 A property of `injective` specifies if optimizations can be used which assume there is no combining of multiple names into one. For example: If ABC123 is the only key that maps to SomeCompany, that can be optimized since it is a unique lookup. But if both ABC123 and DEF456 BOTH map to SomeCompany, then that is NOT a unique lookup. Setting this value to true and setting `retainMissingValue` to FALSE (the default) may cause undesired behavior.
 
@@ -254,6 +258,7 @@ For example, specifying `{"":"bar","bat":"baz"}` with dimension values `[null, "
 Omitting the empty string key will cause the missing value to take over. For example, specifying `{"bat":"baz"}` with dimension values `[null, "foo", "bat"]` and replacing missing values with `"oof"` will yield results of `["oof", "oof", "baz"]`.
 
 ### Filtering DimensionSpecs
+
 These are only valid for multi-valued dimensions. If you have a row in druid that has a multi-valued dimension with values ["v1", "v2", "v3"] and you send a groupBy/topN query grouping by that dimension with [query filter](filter.html) for value "v1". In the response you will get 3 rows containing "v1", "v2" and "v3". This behavior might be unintuitive for some use cases.
 
 It happens because `query filter` is internally used on the bitmaps and only used to match the row to be included in the query result processing. With multivalued dimensions, "query filter" behaves like a contains check, which will match the row with dimension value ["v1", "v2", "v3"]. Please see the section on "Multi-value columns" in [segment](../design/segments.html) for more details.
