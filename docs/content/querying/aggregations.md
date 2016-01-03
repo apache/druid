@@ -2,16 +2,24 @@
 layout: doc_page
 ---
 # Aggregations
-Aggregations are specifications of processing over metrics available in Druid.
+
+Aggregations can be provided at ingestion time as part of the ingestion spec as a way of summarizing data before it enters Druid. 
+Aggregations can also be specified as part of many queries at query time.
+
 Available aggregations are:
 
 ### Count aggregator
 
-`count` computes the row count that match the filters
+`count` computes the count of Druid rows that match the filters.
 
 ```json
 { "type" : "count", "name" : <output_name> }
 ```
+
+Please note the count aggregator counts the number of Druid rows, which does not always reflect the number of raw events ingested. 
+This is because Druid rolls up data at ingestion time. To 
+count the number of ingested rows of data, include a count aggregator at ingestion time, and a longSum aggregator at 
+query time.
 
 ### Sum aggregators
 
@@ -100,6 +108,9 @@ All JavaScript functions must return numerical values.
 }
 ```
 
+The javascript aggregator is recommended for rapidly prototyping features. This aggregator will be much slower in production 
+use than a native Java aggregator.
+
 ### Cardinality aggregator
 
 Computes the cardinality of a set of Druid dimensions, using HyperLogLog to estimate the cardinality.
@@ -168,6 +179,8 @@ Determine the number of distinct people (i.e. combinations of first and last nam
 ```
 
 ## Complex Aggregations
+
+Druid supports complex aggregations such as various types of approximate sketches. 
 
 ### HyperUnique aggregator
 

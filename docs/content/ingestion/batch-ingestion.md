@@ -164,6 +164,14 @@ s3n://billy-bucket/the/data/is/here/y=2012/m=06/d=01/H=01
 s3n://billy-bucket/the/data/is/here/y=2012/m=06/d=01/H=23
 ```
 
+##### `dataSource`
+
+Read Druid segments. See [here](../ingestion/update-existing-data.html) for more information.
+
+##### `multi`
+
+Read multiple sources of data. See [here](../ingestion/update-existing-data.html) for more information.
+
 #### Metadata Update Job Spec
 
 This is a specification of the properties that tell the job how to update metadata such that the Druid cluster will see the output segments and load them.

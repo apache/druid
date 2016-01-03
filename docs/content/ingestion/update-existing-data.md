@@ -1,84 +1,115 @@
 ---
 layout: doc_page
 ---
+# Updating Existing Data
 
-Once you ingest some data in a dataSource for an interval, You might want to make following kind of changes to existing data.
+Once you ingest some data in a dataSource for an interval and create Druid segments, you might want to make changes to 
+the ingested data. There are several ways this can be done.
 
-##### Reindexing
-You ingested some raw data to a dataSource A and later you want to re-index and create another dataSource B which has a subset of columns or different granularity. Or, you may want to change granularity of data in A itself for some interval.
+##### Updating Dimension Values
 
-##### Delta-ingestion
-You ingested some raw data to a dataSource A in an interval, later you want to "append" more data to same interval. This might happen because you used realtime ingestion originally and then received some late events. 
+If you have a dimension where values need to be updated frequently, try first using [lookups](../querying/lookups.html). A 
+classic use case of lookups is when you have an ID dimension stored in a Druid segment, and want to map the ID dimension to a 
+human-readable String value that may need to be updated periodically.
 
-Here are the Druid Features you could use to achieve above updates.
+##### Rebuilding Segments (Reindexing)
 
-- You can use batch ingestion to override an interval completely by doing the ingestion again with the raw data.
-- You can use re-indexing and delta-ingestion features provided by batch ingestion.
+If lookups are not sufficient, you can entirely rebuild Druid segments for specific intervals of time. Rebuilding a segment 
+is known as reindexing the data. For example, if you want to add or remove columns from your existing segments, or you want to 
+change the rollup granularity of your segments, you will have to reindex your data.
 
+We recommend keeping a copy of your raw data around in case you ever need to reindex your data.
 
-### Re-indexing and Delta Ingestion with Hadoop Batch Ingestion
+##### Dealing with Delayed Events (Delta Ingestion)
 
-This section assumes the reader has understanding of batch ingestion using Hadoop. See [HadoopIndexTask](../misc/tasks.html#index-hadoop-task) and further explained in [batch-ingestion](batch-ingestion.md). You can use hadoop batch-ingestion to do re-indexing and delta-ingestion as well.
+If you have a batch ingestion pipeline and have delayed events come in and want to append these events to existing 
+segments and avoid the overhead of rebuilding new segments with reindexing, you can use delta ingestion.
 
-It is enabled by how Druid reads input data for doing hadoop batch ingestion. Druid uses specified `inputSpec` to know where the data to be ingested is located and how to read it. For simple hadoop batch ingestion you would use `static` or `granularity` spec types  which allow you to read data stored on HDFS.
+### Reindexing and Delta Ingestion with Hadoop Batch Ingestion
 
-There are two other `inputSpec` types to enable reindexing and delta-ingestion.
+This section assumes the reader understands how to do batch ingestion using Hadoop. See 
+[batch-ingestion](batch-ingestion.md) for more information. Hadoop batch-ingestion can be used for reindexing and delta ingestion.
+
+Druid uses an `inputSpec` in the `ioConfig` to know where the data to be ingested is located and how to read it. 
+For simple Hadoop batch ingestion, `static` or `granularity` spec types allow you to read data stored in deep storage.
+
+There are other types of `inputSpec` to enable reindexing and delta ingestion.
 
 #### `dataSource`
 
-It is a type of inputSpec that reads data already stored inside druid. It is useful for doing "re-indexing".
+This is a type of `inputSpec` that reads data already stored inside Druid.
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
-|ingestionSpec|Json Object|Specification of druid segments to be loaded. See below.|yes|
+|type|String.|This should always be 'dataSource'.|yes|
+|ingestionSpec|JSON object.|Specification of Druid segments to be loaded. See below.|yes|
 |maxSplitSize|Number|Enables combining multiple segments into single Hadoop InputSplit according to size of segments. Default is none. |no|
 
-Here is what goes inside "ingestionSpec"
+Here is what goes inside `ingestionSpec`:
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
 |dataSource|String|Druid dataSource name from which you are loading the data.|yes|
 |intervals|List|A list of strings representing ISO-8601 Intervals.|yes|
-|granularity|String|Defines the granularity of the query while loading data. Default value is "none".See [Granularities](../querying/granularities.html).|no|
-|filter|Json|See [Filters](../querying/filters.html)|no|
-|dimensions|Array of String|Name of dimension columns to load. By default, the list will be constructed from parseSpec. If parseSpec does not have explicit list of dimensions then all the dimension columns present in stored data will be read.|no|
+|granularity|String|Defines the granularity of the query while loading data. Default value is "none". See [Granularities](../querying/granularities.html).|no|
+|filter|JSON|See [Filters](../querying/filters.html)|no|
+|dimensions|Array of String|Name of dimension columns to load. By default, the list will be constructed from parseSpec. If parseSpec does not have an explicit list of dimensions then all the dimension columns present in stored data will be read.|no|
 |metrics|Array of String|Name of metric columns to load. By default, the list will be constructed from the "name" of all the configured aggregators.|no|
 
 For example
 
-```
-"ingestionSpec" :
-    {
-        "dataSource": "wikipedia",
-        "intervals": ["2014-10-20T00:00:00Z/P2W"]
+```json
+"ioConfig" : {
+  "type" : "hadoop",
+  "inputSpec" : {
+    "type" : "dataSource",
+    "ingestionSpec" : {
+      "dataSource": "wikipedia",
+      "intervals": ["2014-10-20T00:00:00Z/P2W"]
     }
+  },
+  ...
+}
 ```
 
 #### `multi`
 
-It is a composing inputSpec to combine two other input specs. It is useful for doing delta ingestion. Note that this is not idempotent operation, we might add some features in future to make it idempotent.
+This is a composing inputSpec to combine other inputSpecs. This inputSpec is used for delta ingestion. 
+Please note that delta ingestion is not an idempotent operation. We may add change things in future to make it idempotent.
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
-|children|Array of Json Objects|List of json objects containing other inputSpecs |yes|
+|children|Array of JSON objects|List of JSON objects containing other inputSpecs.|yes|
 
-For example
+For example:
 
-```
-"children": [
-    {
+```json
+"ioConfig" : {
+  "type" : "hadoop",
+  "inputSpec" : {
+    "type" : "multi",
+    "children": [
+      {
         "type" : "dataSource",
         "ingestionSpec" : {
-            "dataSource": "wikipedia",
-            "intervals": ["2014-10-20T00:00:00Z/P2W"]
+          "dataSource": "wikipedia",
+          "intervals": ["2014-10-20T00:00:00Z/P2W"]
         }
-    },
-    {
+      },
+      {
         "type" : "static",
         "paths": "/path/to/more/wikipedia/data/"
-    }
-]
+      }
+    ]  
+  },
+  ...
+}
 ```
 
-### Re-indexing with non-hadoop Batch Ingestion
-This section assumes the reader has understanding of batch ingestion without hadoop using [IndexTask](../misc/tasks.html#index-task) which uses a "firehose" to know where and how to read the input data. [IngestSegmentFirehose](firehose.html#ingestsegmentfirehose) can be used to read data from segments inside Druid. Note that IndexTask is to be used for prototyping purposes only as it has to do all processing inside a single process and can't scale, please use hadoop batch ingestion for realistic scenarios such as dealing with data more than a GB.
+### Reindexing without Hadoop Batch Ingestion
+
+This section assumes the reader understands how to do batch ingestion without Hadoop using the [IndexTask](../misc/tasks.html#index-task),  
+which uses a "firehose" to know where and how to read the input data. [IngestSegmentFirehose](firehose.html#ingestsegmentfirehose) 
+can be used to read data from segments inside Druid. Note that IndexTask is to be used for prototyping purposes only as 
+it has to do all processing inside a single process and can't scale. Please use Hadoop batch ingestion for production 
+scenarios dealing with more than 1GB of data.
