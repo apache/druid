@@ -363,7 +363,7 @@ public abstract class NamespaceExtractionCacheManager
             tasksStarted.incrementAndGet();
             final String newVersion = runnable.call();
             if (preVersion != null && preVersion.equals(newVersion)) {
-              throw new IllegalStateException("Already exists");
+              throw new CancellationException(String.format("Version `%s` already exists", preVersion));
             }
             if (newVersion != null) {
               lastVersion.put(namespaceName, newVersion);
@@ -378,6 +378,9 @@ public abstract class NamespaceExtractionCacheManager
             log.debug(t, "Namespace [%s] cancelled", namespaceName);
           } else {
             log.error(t, "Failed update namespace [%s]", namespace);
+          }
+          if(Thread.currentThread().isInterrupted()) {
+            throw Throwables.propagate(t);
           }
         }
       }
