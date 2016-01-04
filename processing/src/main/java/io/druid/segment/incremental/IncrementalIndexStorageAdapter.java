@@ -685,6 +685,64 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     }
 
     @Override
+    public ValueMatcher makeValueMatcher(final String[] dimensions, final Predicate<String[]> predicate)
+    {
+      Integer[] dimIndexObject = new Integer[dimensions.length];
+      final int[] dimIndex = new int[dimensions.length];
+      for (int idx = 0; idx < dimensions.length; idx++) {
+        dimIndexObject[idx] = index.getDimensionIndex(dimensions[idx]);
+        if (dimIndexObject[idx] == null) {
+          return new BooleanValueMatcher(false);
+        }
+        dimIndex[idx] = dimIndexObject[idx];
+      }
+
+      return new ValueMatcher()
+      {
+        @Override
+        public boolean matches()
+        {
+          String[][] dims = holder.getKey().getDims();
+          String[][] selected = new String[dimensions.length][];
+          String[] current = new String[dimensions.length];
+          int[] currentIdx = new int[dimensions.length];
+          for (int idx = 0; idx < dimensions.length; idx++) {
+            if (dimIndex[idx] >= dims.length || dims[dimIndex[idx]] == null) {
+              return predicate.apply(null);
+            }
+            selected[idx] = dims[dimIndex[idx]];
+            current[idx] = selected[idx][0];
+            currentIdx[idx] = 0;
+          }
+
+          if (predicate.apply(current)) {
+            return true;
+          }
+
+          int currentIteratorIdx = 0;
+          while (true) {
+            currentIdx[currentIteratorIdx]++;
+            if (currentIdx[currentIteratorIdx] < selected[currentIteratorIdx].length) {
+              if (predicate.apply(current)) {
+                return true;
+              }
+              if (currentIteratorIdx > 0) {
+                for (int idx = 0; idx < currentIteratorIdx; idx++) {
+                  currentIdx[idx] = 0;
+                }
+                currentIteratorIdx = 0;
+              }
+            } else {
+              currentIteratorIdx++;
+              if (currentIteratorIdx == dimensions.length) break;
+            }
+          }
+          return false;
+        }
+      };
+    }
+
+    @Override
     public ValueMatcher makeValueMatcher(final String dimension, final Bound bound)
     {
       Integer dimIndexObject = index.getDimensionIndex(dimension);

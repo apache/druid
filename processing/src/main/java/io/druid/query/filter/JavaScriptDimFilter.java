@@ -21,32 +21,47 @@ package io.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.metamx.common.StringUtils;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
 public class JavaScriptDimFilter implements DimFilter
 {
-  private final String dimension;
+  private final String[] dimensions;
   private final String function;
 
   @JsonCreator
   public JavaScriptDimFilter(
       @JsonProperty("dimension") String dimension,
+      @JsonProperty("dimensions") String[] dimensions,
       @JsonProperty("function") String function
   )
   {
-    Preconditions.checkArgument(dimension != null, "dimension must not be null");
+    Preconditions.checkArgument(dimension != null || dimensions != null, "dimension or dimensions must not be null");
+    Preconditions.checkArgument(!(dimension != null && dimensions != null), "both dimension and dimensions are defined");
     Preconditions.checkArgument(function != null, "function must not be null");
-    this.dimension = dimension;
+    this.dimensions = (dimension != null) ? new String[]{dimension} : dimensions;
     this.function = function;
   }
 
   @JsonProperty
   public String getDimension()
   {
-    return dimension;
+    return (dimensions.length == 1) ? dimensions[0] : null;
+  }
+
+  @JsonProperty
+  public String[] getDimensions()
+  {
+    return (dimensions.length > 1) ? dimensions: null;
+  }
+
+  public String[] getAllDimensions()
+  {
+    return dimensions;
   }
 
   @JsonProperty
@@ -58,23 +73,51 @@ public class JavaScriptDimFilter implements DimFilter
   @Override
   public byte[] getCacheKey()
   {
-    final byte[] dimensionBytes = StringUtils.toUtf8(dimension);
     final byte[] functionBytes = StringUtils.toUtf8(function);
+    byte[][] dimensionsBytes = new byte[dimensions.length][];
+    int totalDimensionsBytes = 0;
 
-    return ByteBuffer.allocate(2 + dimensionBytes.length + functionBytes.length)
-                     .put(DimFilterCacheHelper.JAVASCRIPT_CACHE_ID)
-                     .put(dimensionBytes)
-                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
-                     .put(functionBytes)
+    for (int idx = 0; idx < dimensions.length; idx++) {
+      dimensionsBytes[idx] = StringUtils.toUtf8(dimensions[idx]);
+      totalDimensionsBytes += dimensionsBytes[idx].length;
+    }
+
+    ByteBuffer byteBuffer = ByteBuffer.allocate(2 + dimensions.length + totalDimensionsBytes + functionBytes.length)
+                     .put(DimFilterCacheHelper.JAVASCRIPT_CACHE_ID);
+    for (byte[] dimBytes: dimensionsBytes) {
+      byteBuffer.put(dimBytes)
+                .put(DimFilterCacheHelper.STRING_SEPARATOR);
+    }
+    return byteBuffer.put(functionBytes)
                      .array();
   }
 
   @Override
   public String toString()
   {
+    String dimensionString = (dimensions.length == 1) ? "dimension='" + dimensions[0] + '\''
+                                                      : "dimensions=['" + Joiner.on("', '").join(dimensions) + "']";
     return "JavaScriptDimFilter{" +
-           "dimension='" + dimension + '\'' +
+           dimensionString +
            ", function='" + function + '\'' +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof JavaScriptDimFilter)) {
+      return false;
+    }
+
+    JavaScriptDimFilter that = (JavaScriptDimFilter) o;
+
+    if (!function.equals(that.function)) {
+      return false;
+    }
+    return Arrays.equals(that.dimensions, dimensions);
   }
 }

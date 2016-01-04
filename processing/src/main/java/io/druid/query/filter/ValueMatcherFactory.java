@@ -28,5 +28,6 @@ public interface ValueMatcherFactory
 {
   public ValueMatcher makeValueMatcher(String dimension, String value);
   public ValueMatcher makeValueMatcher(String dimension, Predicate<String> value);
+  public ValueMatcher makeValueMatcher(String[] dimensions, Predicate<String[]> value);
   public ValueMatcher makeValueMatcher(String dimension, Bound bound);
 }

@@ -93,7 +93,7 @@ public class Filters
     } else if (dimFilter instanceof JavaScriptDimFilter) {
       final JavaScriptDimFilter javaScriptDimFilter = (JavaScriptDimFilter) dimFilter;
 
-      filter = new JavaScriptFilter(javaScriptDimFilter.getDimension(), javaScriptDimFilter.getFunction());
+      filter = new JavaScriptFilter(javaScriptDimFilter.getAllDimensions(), javaScriptDimFilter.getFunction());
     } else if (dimFilter instanceof SpatialDimFilter) {
       final SpatialDimFilter spatialDimFilter = (SpatialDimFilter) dimFilter;
 

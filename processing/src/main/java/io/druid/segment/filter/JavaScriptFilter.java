@@ -22,7 +22,6 @@ package io.druid.segment.filter;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.common.guava.FunctionalIterable;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
@@ -33,14 +32,14 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.ScriptableObject;
 
-import javax.annotation.Nullable;
+import java.util.Iterator;
 
 public class JavaScriptFilter implements Filter
 {
   private final JavaScriptPredicate predicate;
-  private final String dimension;
+  private final String[] dimension;
 
-  public JavaScriptFilter(String dimension, final String script)
+  public JavaScriptFilter(String[] dimension, final String script)
   {
     this.dimension = dimension;
     this.predicate = new JavaScriptPredicate(script);
@@ -51,34 +50,56 @@ public class JavaScriptFilter implements Filter
   {
     final Context cx = Context.enter();
     try {
-      final Indexed<String> dimValues = selector.getDimensionValues(dimension);
       ImmutableBitmap bitmap;
-      if (dimValues == null) {
-        bitmap = selector.getBitmapFactory().makeEmptyImmutableBitmap();
-      } else {
-        bitmap = selector.getBitmapFactory().union(
-            FunctionalIterable.create(dimValues)
-                              .filter(
-                                  new Predicate<String>()
-                                  {
-                                    @Override
-                                    public boolean apply(@Nullable String input)
-                                    {
-                                      return predicate.applyInContext(cx, input);
-                                    }
-                                  }
-                              )
-                              .transform(
-                                  new com.google.common.base.Function<String, ImmutableBitmap>()
-                                  {
-                                    @Override
-                                    public ImmutableBitmap apply(@Nullable String input)
-                                    {
-                                      return selector.getBitmapIndex(dimension, input);
-                                    }
-                                  }
-                              )
-        );
+
+      boolean hasEmptyDimension = false;
+      Indexed<String> [] dimValuesList = new Indexed[dimension.length];
+      Iterator<String> [] dimValuesIterator = new Iterator[dimension.length];
+      String[] currentDim = new String[dimension.length];
+      for(int idx = 0; idx < dimension.length; idx++) {
+        dimValuesList[idx] = selector.getDimensionValues(dimension[idx]);
+        if (dimValuesList[idx].size() == 0) {
+          hasEmptyDimension = true;
+          break;
+        }
+        dimValuesIterator[idx] = dimValuesList[idx].iterator();
+        if (idx != 0) {
+          currentDim[idx] = dimValuesIterator[idx].next();
+        }
+      }
+
+      bitmap = selector.getBitmapFactory().makeEmptyImmutableBitmap();
+      if (!hasEmptyDimension) {
+        int iteratingIndex = 0;
+        while(true) {
+          // advance iterator
+          Iterator<String> iterator = dimValuesIterator[iteratingIndex];
+          if (iterator.hasNext()) {
+            currentDim[iteratingIndex] = iterator.next();
+            if (predicate.applyInContext(cx, currentDim))
+            {
+              // update bitmap
+              ImmutableBitmap overlap = null;
+              for (int idx = 0; idx < dimension.length; idx++) {
+                ImmutableBitmap dimBitMap = selector.getBitmapIndex(dimension[idx], currentDim[idx]);
+                overlap = (overlap == null) ? dimBitMap : overlap.intersection(dimBitMap);
+              }
+              bitmap = bitmap.union(overlap);
+            }
+
+            if (iteratingIndex > 0) {
+              // reset inner loop iterators
+              for (int idx = 0; idx < iteratingIndex; idx++) {
+                dimValuesIterator[idx] = dimValuesList[idx].iterator();
+              }
+              // move to the most inner loop
+              iteratingIndex = 0;
+            }
+          } else {
+            iteratingIndex++;
+            if (iteratingIndex == dimension.length) break;
+          }
+        }
       }
       return bitmap;
     }
@@ -94,7 +115,7 @@ public class JavaScriptFilter implements Filter
     return factory.makeValueMatcher(dimension, predicate);
   }
 
-  static class JavaScriptPredicate implements Predicate<String>
+  static class JavaScriptPredicate implements Predicate<String[]>
   {
     final ScriptableObject scope;
     final Function fnApply;
@@ -118,7 +139,7 @@ public class JavaScriptFilter implements Filter
     }
 
     @Override
-    public boolean apply(final String input)
+    public boolean apply(final String[] input)
     {
       // one and only one context per thread
       final Context cx = Context.enter();
@@ -131,9 +152,9 @@ public class JavaScriptFilter implements Filter
 
     }
 
-    public boolean applyInContext(Context cx, String input)
+    public boolean applyInContext(Context cx, String[] input)
     {
-      return Context.toBoolean(fnApply.call(cx, scope, scope, new String[]{input}));
+      return Context.toBoolean(fnApply.call(cx, scope, scope, input));
     }
 
     @Override
