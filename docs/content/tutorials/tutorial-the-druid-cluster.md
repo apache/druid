@@ -35,9 +35,9 @@ For deep storage, we will use the local disk in this tutorial, but for productio
 * Install zookeeper.
 
 ```bash
-curl http://www.gtlib.gatech.edu/pub/apache/zookeeper/zookeeper-3.4.6/zookeeper-3.4.6.tar.gz -o zookeeper-3.4.6.tar.gz
-tar xzf zookeeper-3.4.6.tar.gz
-cd zookeeper-3.4.6
+curl http://www.gtlib.gatech.edu/pub/apache/zookeeper/zookeeper-3.4.7/zookeeper-3.4.7.tar.gz -o zookeeper-3.4.7.tar.gz
+tar xzf zookeeper-3.4.7.tar.gz
+cd zookeeper-3.4.7
 cp conf/zoo_sample.cfg conf/zoo.cfg
 ./bin/zkServer.sh start
 cd ..

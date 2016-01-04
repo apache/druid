@@ -23,7 +23,7 @@ Druid segments are memory mapped in `IndexIO.java` to be exposed for querying.
 ## Query Engine
 
 Most of the logic related to Druid queries can be found in the Query* classes. Druid leverages query runners to run queries. 
-Query runners often embed other query runners and each query runner adds on a layer of logic. A good starting to point trace 
+Query runners often embed other query runners and each query runner adds on a layer of logic. A good starting point to trace 
 the query logic is to start from `QueryResource.java`.
 
 ## Coordination
@@ -33,9 +33,9 @@ Most of the coordination logic for (real-time) ingestion is in the Druid indexin
 
 ## Real-time Ingestion
 
-Druid loads data through `FirehoseFactory.java` classes. Firehoses can often wrap other firehoses, where, similar to the 
+Druid loads data through `FirehoseFactory.java` classes. Firehoses often wrap other firehoses, where, similar to the design of the  
 query runners, each firehose adds a layer of logic. Much of the core management logic is in `RealtimeManager.java` and the 
-persist logic is in `RealtimePlumber.java`.
+persist and hand-off logic is in `RealtimePlumber.java`.
 
 ## Hadoop-based Batch Ingestion
 
