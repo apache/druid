@@ -21,7 +21,7 @@ To let Druid load your extensions, follow the steps below
 
 1) Specify `druid.extensions.directory` (root directory for normal Druid extensions). If you don' specify it, Druid will use their default value, see [Configuration](../configuration/index.html).
 
-2) Prepare normal extension directories under root extension directory.  Under the root extension directory, you should create sub-directories for each extension you might want to load.  Inside each sub-directory, you can put extension related files in it.  (If you don't want to manually setup the extension directory, Druid also provides a [pull-deps](../pull-deps.html) tool that can help you genereate these directories automatically)
+2) Prepare normal extension directories under root extension directory.  Under the root extension directory, you should create sub-directories for each extension you might want to load.  Inside each sub-directory, you can put extension related files in it.  (If you don't want to manually setup the extension directory, Druid also provides a [pull-deps](../pull-deps.html) tool that can help you generate these directories automatically)
 
 Example:
 
@@ -54,7 +54,7 @@ extensions/
 │   ├── slf4j-log4j12-1.6.1.jar
 │   ├── snappy-java-1.1.1.6.jar
 │   ├── zkclient-0.3.jar
-│   └── zookeeper-3.4.6.jar
+│   └── zookeeper-3.4.7.jar
 └── mysql-metadata-storage
     ├── jdbi-2.32.jar
     ├── mysql-connector-java-5.1.34.jar
