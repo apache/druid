@@ -140,33 +140,29 @@ public class JDBCExtractionNamespaceTest
             );
             handle.createStatement(String.format("TRUNCATE TABLE %s", tableName)).setQueryTimeout(1).execute();
             handle.commit();
-            closer.register(
-                new Closeable()
-                {
-                  @Override
-                  public void close() throws IOException
-                  {
-                    // Register first so it gets run last and checks for cleanup
-                    final NamespaceExtractionCacheManager.NamespaceImplData implData =
-                        extractionCacheManager.implData.get(namespace);
-                    if (implData != null && implData.future != null) {
-                      implData.future.cancel(true);
-                      Assert.assertTrue(implData.future.isDone());
-                    }
-                  }
+            closer.register(new Closeable()
+            {
+              @Override
+              public void close() throws IOException
+              {
+                handle.createStatement("DROP TABLE " + tableName).setQueryTimeout(1).execute();
+                handle.close();
+              }
+            });
+            closer.register(new Closeable()
+            {
+              @Override
+              public void close() throws IOException
+              {
+                // Register first so it gets run last and checks for cleanup
+                final NamespaceExtractionCacheManager.NamespaceImplData implData = extractionCacheManager.implData.get(
+                    namespace);
+                if (implData != null && implData.future != null) {
+                  implData.future.cancel(true);
+                  Assert.assertTrue(implData.future.isDone());
                 }
-            );
-            closer.register(
-                new Closeable()
-                {
-                  @Override
-                  public void close() throws IOException
-                  {
-                    handle.createStatement("DROP TABLE " + tableName).setQueryTimeout(1).execute();
-                    handle.close();
-                  }
-                }
-            );
+              }
+            });
             for (Map.Entry<String, String> entry : renames.entrySet()) {
               try {
                 insertValues(entry.getKey(), entry.getValue(), "2015-01-01 00:00:00");
@@ -427,7 +423,6 @@ public class JDBCExtractionNamespaceTest
     assertUpdated(extractionNamespace.getNamespace(), "foo", "bar");
   }
 
-  @Ignore // https://github.com/druid-io/druid/issues/2160
   @Test(timeout = 60_000L)
   public void testFindNew()
       throws NoSuchFieldException, IllegalAccessException, ExecutionException, InterruptedException
