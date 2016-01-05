@@ -186,7 +186,7 @@ public class IngestSegmentFirehoseFactoryTest
     EasyMock.replay(notifierFactory);
 
     final TaskToolboxFactory taskToolboxFactory = new TaskToolboxFactory(
-        new TaskConfig(tmpDir.getAbsolutePath(), null, null, 50000, null, null, null),
+        new TaskConfig(tmpDir.getAbsolutePath(), null, null, 50000, null, false, null, null),
         tac,
         newMockEmitter(),
         new DataSegmentPusher()
