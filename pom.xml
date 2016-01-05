@@ -61,7 +61,7 @@
         <connection>scm:git:ssh://git@github.com/druid-io/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/druid-io/druid.git</developerConnection>
         <url>https://github.com/druid-io/druid.git</url>
-        <tag>druid-0.8.0-SNAPSHOT</tag>
+        <tag>0.9.0-SNAPSHOT</tag>
     </scm>
 
     <properties>
