@@ -72,7 +72,7 @@ public class RemoteTaskRunnerTest
   private static final String announcementsPath = String.format("%s/indexer/announcements/worker", basePath);
   private static final String tasksPath = String.format("%s/indexer/tasks/worker", basePath);
   private static final String statusPath = String.format("%s/indexer/status/worker", basePath);
-  private static final int TIMEOUT_SECONDS = 5;
+  private static final int TIMEOUT_SECONDS = 20;
 
   private ObjectMapper jsonMapper;
 
@@ -453,7 +453,7 @@ public class RemoteTaskRunnerTest
   private void doSetup() throws Exception
   {
     makeWorker();
-    makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(new Period("PT1S")));
+    makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(new Period("PT5S")));
   }
 
   private void makeRemoteTaskRunner(RemoteTaskRunnerConfig config) throws Exception
