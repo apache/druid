@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import org.joda.time.Period;
 
 import java.io.File;
+import java.nio.file.Paths;
 import java.util.List;
 
 public class TaskConfig
@@ -73,9 +74,10 @@ public class TaskConfig
       @JsonProperty("directoryLockTimeout") Period directoryLockTimeout
   )
   {
-    this.baseDir = baseDir == null ? "/tmp" : baseDir;
+    this.baseDir = baseDir == null ? System.getProperty("java.io.tmpdir") : baseDir;
     this.baseTaskDir = new File(defaultDir(baseTaskDir, "persistent/task"));
-    this.hadoopWorkingPath = defaultDir(hadoopWorkingPath, "druid-indexing");
+    // This is usually on HDFS or similar, so we can't use java.io.tmpdir
+    this.hadoopWorkingPath = hadoopWorkingPath == null ? "/tmp/druid-indexing" : hadoopWorkingPath;
     this.defaultRowFlushBoundary = defaultRowFlushBoundary == null ? 500000 : defaultRowFlushBoundary;
     this.defaultHadoopCoordinates = defaultHadoopCoordinates == null
                                     ? DEFAULT_DEFAULT_HADOOP_COORDINATES
@@ -85,8 +87,8 @@ public class TaskConfig
                                    ? DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT
                                    : gracefulShutdownTimeout;
     this.directoryLockTimeout = directoryLockTimeout == null
-                                   ? DEFAULT_DIRECTORY_LOCK_TIMEOUT
-                                   : directoryLockTimeout;
+                                ? DEFAULT_DIRECTORY_LOCK_TIMEOUT
+                                : directoryLockTimeout;
   }
 
   @JsonProperty
@@ -155,7 +157,7 @@ public class TaskConfig
   private String defaultDir(String configParameter, final String defaultVal)
   {
     if (configParameter == null) {
-      return String.format("%s/%s", getBaseDir(), defaultVal);
+      return Paths.get(getBaseDir(), defaultVal).toString();
     }
 
     return configParameter;
