@@ -49,7 +49,7 @@ A count aggregator at ingestion time can be used to count the number of events i
 that when you query for this metric, you should use a `longSum` aggregator. A `count` aggregator at query time will return 
 the number of Druid rows for the time interval, which can be used to determine what the roll-up ratio was.
 
-To clarify with an example, if you ingestion spec contains:
+To clarify with an example, if your ingestion spec contains:
 
 ```
 ...
