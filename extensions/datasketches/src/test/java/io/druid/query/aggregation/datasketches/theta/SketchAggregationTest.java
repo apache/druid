@@ -56,7 +56,7 @@ public class SketchAggregationTest
   {
     SketchModule sm = new SketchModule();
     sm.configure(null);
-    helper = new AggregationTestHelper(sm.getJacksonModules(), tempFolder);
+    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(sm.getJacksonModules(), tempFolder);
   }
 
   @Test
