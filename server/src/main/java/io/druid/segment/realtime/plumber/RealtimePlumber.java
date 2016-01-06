@@ -651,7 +651,7 @@ public class RealtimePlumber implements Plumber
       }
     }
 
-    handoffNotifier.stop();
+    handoffNotifier.close();
     shutdownExecutors();
 
     stopped = true;
