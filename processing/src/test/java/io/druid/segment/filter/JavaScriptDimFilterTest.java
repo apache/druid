@@ -46,10 +46,19 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class JavaScriptDimFilterTest
 {
+  /*
+   *  3 row values of three dimensions
+   *
+   *     foo  |  bar  |  baz
+   *     ====================
+   *     foo1 |  bar1 |  foo1
+   *     foo2 |  foo3 |  foo3
+   *     foo3 |  foo1 |  foo3
+   */
   private static final Map<String, String[]> DIM_VALS = ImmutableMap.of(
       "foo", new String[]{"foo1", "foo2", "foo3"},
-      "bar", new String[]{"bar1", "foo3", "foo1"},
-      "baz", new String[]{"foo1", "foo3", "foo3"}
+      "bar", new String[]{"bar1", "foo1", "foo3"},
+      "baz", new String[]{"foo1", "foo3"}
   );
 
   @Parameterized.Parameters
@@ -80,24 +89,22 @@ public class JavaScriptDimFilterTest
     final MutableBitmap mutableBitmapbar2 = bitmapFactory.makeEmptyMutableBitmap();
     final MutableBitmap mutableBitmapbar3 = bitmapFactory.makeEmptyMutableBitmap();
     mutableBitmapbar1.add(0);
-    mutableBitmapbar2.add(1);
-    mutableBitmapbar3.add(2);
+    mutableBitmapbar2.add(2);
+    mutableBitmapbar3.add(1);
     Map<String, ImmutableBitmap> bar = new LinkedHashMap<>();
     bar.put("bar1", bitmapFactory.makeImmutableBitmap(mutableBitmapbar1));
-    bar.put("foo3", bitmapFactory.makeImmutableBitmap(mutableBitmapbar2));
-    bar.put("foo1", bitmapFactory.makeImmutableBitmap(mutableBitmapbar3));
+    bar.put("foo1", bitmapFactory.makeImmutableBitmap(mutableBitmapbar2));
+    bar.put("foo3", bitmapFactory.makeImmutableBitmap(mutableBitmapbar3));
     this.bitmapMap.put("bar", bar);
 
     final MutableBitmap mutableBitmapbaz1 = bitmapFactory.makeEmptyMutableBitmap();
     final MutableBitmap mutableBitmapbaz2 = bitmapFactory.makeEmptyMutableBitmap();
-    final MutableBitmap mutableBitmapbaz3 = bitmapFactory.makeEmptyMutableBitmap();
     mutableBitmapbaz1.add(0);
     mutableBitmapbaz2.add(1);
-    mutableBitmapbaz3.add(2);
+    mutableBitmapbaz2.add(2);
     Map<String, ImmutableBitmap> baz = new LinkedHashMap<>();
     baz.put("foo1", bitmapFactory.makeImmutableBitmap(mutableBitmapbaz1));
     baz.put("foo3", bitmapFactory.makeImmutableBitmap(mutableBitmapbaz2));
-    baz.put("foo3", bitmapFactory.makeImmutableBitmap(mutableBitmapbaz3));
     this.bitmapMap.put("baz", baz);
 
     this.factory = bitmapFactory;
