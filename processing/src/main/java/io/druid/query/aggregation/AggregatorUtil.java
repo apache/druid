@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.metamx.common.Pair;
 import io.druid.segment.ColumnSelectorFactory;
@@ -89,6 +90,17 @@ public class AggregatorUtil
     return new Pair(condensedAggs, condensedPostAggs);
   }
 
+  public static Supplier<Number> asSupplier(final FloatColumnSelector selector) {
+    return new Supplier<Number>()
+    {
+      @Override
+      public Number get()
+      {
+        return (float)selector.get();
+      }
+    };
+  }
+
   public static FloatColumnSelector getFloatColumnSelector(
       ColumnSelectorFactory metricFactory,
       String fieldName,
@@ -105,6 +117,17 @@ public class AggregatorUtil
       public float get()
       {
         return numeric.get().floatValue();
+      }
+    };
+  }
+
+  public static Supplier<Number> asSupplier(final LongColumnSelector selector) {
+    return new Supplier<Number>()
+    {
+      @Override
+      public Number get()
+      {
+        return (long)selector.get();
       }
     };
   }

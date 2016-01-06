@@ -25,6 +25,9 @@ import io.druid.query.filter.ValueMatcher;
 */
 public class BooleanValueMatcher implements ValueMatcher
 {
+  public static final ValueMatcher TRUE = new BooleanValueMatcher(true);
+  public static final ValueMatcher FALSE = new BooleanValueMatcher(false);
+
   private final boolean matches;
 
   public BooleanValueMatcher(final boolean matches) {

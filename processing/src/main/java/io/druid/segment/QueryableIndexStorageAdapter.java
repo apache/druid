@@ -37,6 +37,7 @@ import io.druid.query.QueryInterruptedException;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.Filter;
+import io.druid.query.filter.ValueMatcher;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
@@ -47,6 +48,8 @@ import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.Offset;
+import io.druid.segment.filter.BooleanValueMatcher;
+import io.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -216,8 +219,13 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       actualInterval = actualInterval.withEnd(dataInterval.getEnd());
     }
 
+    final Filter[] filters = Filters.partitionWithBitmapSupport(filter);
+
+    final Filter bitmapFilter = filters == null ? null : filters[0];
+    final Filter valuesFilter = filters == null ? null : filters[1];
+
     final Offset offset;
-    if (filter == null) {
+    if (bitmapFilter == null) {
       offset = new NoFilterOffset(0, index.getNumRows(), descending);
     } else {
       final ColumnSelectorBitmapIndexSelector selector = new ColumnSelectorBitmapIndexSelector(
@@ -225,7 +233,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
           index
       );
 
-      offset = new BitmapOffset(selector.getBitmapFactory(), filter.getBitmapIndex(selector), descending);
+      offset = new BitmapOffset(selector.getBitmapFactory(), bitmapFilter.getBitmapIndex(selector), descending);
     }
 
     return Sequences.filter(
@@ -234,6 +242,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
             actualInterval,
             gran,
             offset,
+            valuesFilter,
             minDataTimestamp,
             maxDataTimestamp,
             descending
@@ -252,11 +261,14 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     private final long maxDataTimestamp;
     private final boolean descending;
 
+    private final Filter filter;
+
     public CursorSequenceBuilder(
         ColumnSelector index,
         Interval interval,
         QueryGranularity gran,
         Offset offset,
+        Filter filter,
         long minDataTimestamp,
         long maxDataTimestamp,
         boolean descending
@@ -266,6 +278,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       this.interval = interval;
       this.gran = gran;
       this.offset = offset;
+      this.filter = filter;
       this.minDataTimestamp = minDataTimestamp;
       this.maxDataTimestamp = maxDataTimestamp;
       this.descending = descending;
@@ -330,7 +343,14 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                   {
                     private final Offset initOffset = offset.clone();
                     private final DateTime myBucket = gran.toDateTime(input);
+                    private final ValueMatcher filterMatcher =
+                        filter == null ? BooleanValueMatcher.TRUE : filter.makeMatcher(this);
                     private Offset cursorOffset = offset;
+
+                    {
+                      while (!filterMatcher.matches() && cursorOffset.increment()) {
+                      }
+                    }
 
                     @Override
                     public DateTime getTime()
@@ -344,7 +364,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       if (Thread.interrupted()) {
                         throw new QueryInterruptedException(new InterruptedException());
                       }
-                      cursorOffset.increment();
+
+                      while (cursorOffset.increment() && !filterMatcher.matches()) {
+                      }
                     }
 
                     @Override
@@ -854,9 +876,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     protected abstract boolean timeInRange(long current);
 
     @Override
-    public void increment()
+    public boolean increment()
     {
-      baseOffset.increment();
+      return baseOffset.increment();
     }
 
     @Override
@@ -944,9 +966,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
 
     @Override
-    public void increment()
+    public boolean increment()
     {
-      currentOffset++;
+      return ++currentOffset < rowCount;
     }
 
     @Override

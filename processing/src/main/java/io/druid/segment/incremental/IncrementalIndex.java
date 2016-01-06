@@ -791,7 +791,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
   public String getMetricType(String metric)
   {
-    final MetricDesc metricDesc = metricDescs.get(metric);
+    final MetricDesc metricDesc = getMetricDesc(metric);
     return metricDesc != null ? metricDesc.getType() : null;
   }
 
@@ -870,8 +870,12 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
   public Integer getMetricIndex(String metricName)
   {
-    MetricDesc metSpec = metricDescs.get(metricName);
+    MetricDesc metSpec = getMetricDesc(metricName);
     return metSpec == null ? null : metSpec.getIndex();
+  }
+
+  public MetricDesc getMetricDesc(String metricName) {
+    return metricDescs.get(metricName);
   }
 
   public ColumnCapabilities getCapabilities(String column)

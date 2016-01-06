@@ -34,7 +34,7 @@ import java.util.Set;
 
 /**
  */
-public class InFilter implements Filter
+public class InFilter extends Filter.WithDictionary
 {
   private final String dimension;
   private final Set<String> values;
@@ -96,5 +96,15 @@ public class InFilter implements Filter
           }
         }
     );
+  }
+
+  @Override
+  public String toString()
+  {
+    return "InFilter{" +
+           "dimension='" + dimension + '\'' +
+           ", values=" + values +
+           ", extractionFn=" + extractionFn +
+           '}';
   }
 }

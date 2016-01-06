@@ -28,7 +28,7 @@ import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 import org.mozilla.javascript.Context;
 
-public class JavaScriptFilter implements Filter
+public class JavaScriptFilter extends Filter.WithDictionary
 {
   private final String dimension;
   private final JavaScriptDimFilter.JavaScriptPredicate predicate;
@@ -68,5 +68,14 @@ public class JavaScriptFilter implements Filter
   {
     // suboptimal, since we need create one context per call to predicate.apply()
     return factory.makeValueMatcher(dimension, predicate);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "JavaScriptFilter{" +
+           "dimension='" + dimension + '\'' +
+           ", predicate=" + predicate +
+           '}';
   }
 }

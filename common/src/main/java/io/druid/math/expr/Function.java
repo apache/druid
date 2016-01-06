@@ -622,11 +622,7 @@ interface Function
       }
 
       Number x = args.get(0).eval(bindings);
-      if (x instanceof Long) {
-        return x.longValue() > 0 ? args.get(1).eval(bindings) : args.get(2).eval(bindings);
-      } else {
-        return x.doubleValue() > 0 ? args.get(1).eval(bindings) : args.get(2).eval(bindings);
-      }
+      return Evals.asBoolean(x) ? args.get(1).eval(bindings) : args.get(2).eval(bindings);
     }
   }
 }

@@ -169,9 +169,6 @@ public class TestHelper
 
   private static <T> void assertObjects(Iterable<T> expectedResults, Iterable<T> actualResults, String msg)
   {
-    for (Object X: actualResults) {
-      System.out.println("[TestHelper/assertResults] " + X);
-    }
     Iterator resultsIter = actualResults.iterator();
     Iterator resultsIter2 = actualResults.iterator();
     Iterator expectedResultsIter = expectedResults.iterator();

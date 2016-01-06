@@ -28,23 +28,25 @@ class IndexedIntsOffset implements Offset
 {
   int currRow;
   private final IndexedInts invertedIndex;
+  private final int limit;
 
   public IndexedIntsOffset(IndexedInts invertedIndex)
   {
     this.invertedIndex = invertedIndex;
+    this.limit = invertedIndex.size();
     currRow = 0;
   }
 
   @Override
-  public void increment()
+  public boolean increment()
   {
-    ++currRow;
+    return ++currRow < limit;
   }
 
   @Override
   public boolean withinBounds()
   {
-    return currRow < invertedIndex.size();
+    return currRow < limit;
   }
 
   @Override

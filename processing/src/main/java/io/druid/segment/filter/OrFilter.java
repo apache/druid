@@ -26,12 +26,18 @@ import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
  */
-public class OrFilter implements Filter
+public class OrFilter extends Filter.WithDictionary implements Filter.Relational
 {
+  public static Filter of(Filter... filters)
+  {
+    return filters == null ? null : filters.length == 1 ? filters[0] : new OrFilter(Arrays.asList(filters));
+  }
+
   private final List<Filter> filters;
 
   public OrFilter(
@@ -71,7 +77,8 @@ public class OrFilter implements Filter
     return makeMatcher(matchers);
   }
 
-  private ValueMatcher makeMatcher(final ValueMatcher[] baseMatchers){
+  private ValueMatcher makeMatcher(final ValueMatcher[] baseMatchers)
+  {
     if (baseMatchers.length == 1) {
       return baseMatchers[0];
     }
@@ -91,4 +98,26 @@ public class OrFilter implements Filter
     };
   }
 
+  @Override
+  public boolean supportsBitmap()
+  {
+    for (Filter child : filters) {
+      if (!child.supportsBitmap()) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  @Override
+  public List<Filter> getChildren()
+  {
+    return filters;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "OR " + filters;
+  }
 }
