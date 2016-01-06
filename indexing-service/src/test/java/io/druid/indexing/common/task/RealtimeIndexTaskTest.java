@@ -275,6 +275,13 @@ public class RealtimeIndexTaskTest
   }
 
   @Test(timeout = 60_000L)
+  public void testDefaultResource() throws Exception
+  {
+    final RealtimeIndexTask task = makeRealtimeTask(null);
+    Assert.assertEquals(task.getId(), task.getTaskResource().getAvailabilityGroup());
+  }
+
+  @Test(timeout = 60_000L)
   public void testBasics() throws Exception
   {
     final TestIndexerMetadataStorageCoordinator mdc = new TestIndexerMetadataStorageCoordinator();
