@@ -57,7 +57,7 @@ import java.util.Set;
 
 @Command(
     name = "pull-deps",
-    description = "Pull down dependencies to the local repository specified by druid.extensions.localRepository, extensions directory specified by druid.extensions.extensionsDir and hadoop depenencies directory specified by druid.extensions.hadoopDependenciesDir"
+    description = "Pull down dependencies to the local repository specified by druid.extensions.localRepository, extensions directory specified by druid.extensions.extensionsDir and hadoop dependencies directory specified by druid.extensions.hadoopDependenciesDir"
 )
 public class PullDependencies implements Runnable
 {

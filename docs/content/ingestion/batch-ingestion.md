@@ -3,112 +3,83 @@ layout: doc_page
 ---
 
 # Batch Data Ingestion
-There are two choices for batch data ingestion to your Druid cluster, you can use the [Indexing service](../design/indexing-service.html) or you can use the `HadoopDruidIndexer`.
 
-Which should I use?
--------------------
+Druid can load data from static files through a variety of methods described here.
 
-The [Indexing service](../design/indexing-service.html) is a set of nodes that can run as part of your Druid cluster and can accomplish a number of different types of indexing tasks. Even if all you care about is batch indexing, it provides for the encapsulation of things like the [metadata store](../dependencies/metadata-storage.html) that is used for segment metadata and other things, so that your indexing tasks do not need to include such information. The indexing service was created such that external systems could programmatically interact with it and run periodic indexing tasks. Long-term, the indexing service is going to be the preferred method of ingesting data.
+## Hadoop-based Batch Ingestion
 
-The `HadoopDruidIndexer` runs hadoop jobs in order to separate and index data segments. It takes advantage of Hadoop as a job scheduling and distributed job execution platform. It is a simple method if you already have Hadoop running and don’t want to spend the time configuring and deploying the [Indexing service](../design/indexing-service.html) just yet.
-
-## Batch Ingestion using the HadoopDruidIndexer
-
-The HadoopDruidIndexer can be run like so:
-
-```
-java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:<hadoop_config_path> io.druid.cli.Main index hadoop <spec_file>
-```
-
-## Hadoop "specFile"
-
-The spec\_file is a path to a file that contains JSON and an example looks like:
+Hadoop-based batch ingestion in Druid is supported via a Hadoop-ingestion task. These tasks can be posted to a running instance  
+of a Druid [overlord](../design/indexing-service.html). A sample task is shown below:
 
 ```json
 {
-  "dataSchema" : {
-    "dataSource" : "wikipedia",
-    "parser" : {
-      "type" : "hadoopyString",
-      "parseSpec" : {
-        "format" : "json",
-        "timestampSpec" : {
-          "column" : "timestamp",
-          "format" : "auto"
-        },
-        "dimensionsSpec" : {
-          "dimensions": ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"],
-          "dimensionExclusions" : [],
-          "spatialDimensions" : []
+  "type" : "index_hadoop",
+  "spec" : {
+    "dataSchema" : {
+      "dataSource" : "wikipedia",
+      "parser" : {
+        "type" : "hadoopyString",
+        "parseSpec" : {
+          "format" : "json",
+          "timestampSpec" : {
+            "column" : "timestamp",
+            "format" : "auto"
+          },
+          "dimensionsSpec" : {
+            "dimensions": ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"],
+            "dimensionExclusions" : [],
+            "spatialDimensions" : []
+          }
         }
+      },
+      "metricsSpec" : [
+        {
+          "type" : "count",
+          "name" : "count"
+        },
+        {
+          "type" : "doubleSum",
+          "name" : "added",
+          "fieldName" : "added"
+        },
+        {
+          "type" : "doubleSum",
+          "name" : "deleted",
+          "fieldName" : "deleted"
+        },
+        {
+          "type" : "doubleSum",
+          "name" : "delta",
+          "fieldName" : "delta"
+        }
+      ],
+      "granularitySpec" : {
+        "type" : "uniform",
+        "segmentGranularity" : "DAY",
+        "queryGranularity" : "NONE",
+        "intervals" : [ "2013-08-31/2013-09-01" ]
       }
     },
-    "metricsSpec" : [
-      {
-        "type" : "count",
-        "name" : "count"
-      },
-      {
-        "type" : "doubleSum",
-        "name" : "added",
-        "fieldName" : "added"
-      },
-      {
-        "type" : "doubleSum",
-        "name" : "deleted",
-        "fieldName" : "deleted"
-      },
-      {
-        "type" : "doubleSum",
-        "name" : "delta",
-        "fieldName" : "delta"
+    "ioConfig" : {
+      "type" : "hadoop",
+      "inputSpec" : {
+        "type" : "static",
+        "paths" : "/MyDirectory/example/wikipedia_data.json"
       }
-    ],
-    "granularitySpec" : {
-      "type" : "uniform",
-      "segmentGranularity" : "DAY",
-      "queryGranularity" : "NONE",
-      "intervals" : [ "2013-08-31/2013-09-01" ]
+    },
+    "tuningConfig" : {
+      "type": "hadoop"
     }
-  },
-  "ioConfig" : {
-    "type" : "hadoop",
-    "inputSpec" : {
-      "type" : "static",
-      "paths" : "/MyDirectory/examples/indexing/wikipedia_data.json"
-    },
-    "metadataUpdateSpec" : {
-      "type":"mysql",
-      "connectURI" : "jdbc:mysql://localhost:3306/druid",
-      "password" : "diurd",
-      "segmentTable" : "druid_segments",
-      "user" : "druid"
-    },
-    "segmentOutputPath" : "/MyDirectory/data/index/output"
-  },
-  "tuningConfig" : {
-    "type" : "hadoop",
-    "workingPath": "/tmp",
-    "partitionsSpec" : {
-      "type" : "dimension",
-      "partitionDimension" : null,
-      "targetPartitionSize" : 5000000,
-      "maxPartitionSize" : 7500000,
-      "assumeGrouped" : false,
-      "numShards" : -1
-    },
-    "shardSpecs" : { },
-    "leaveIntermediate" : false,
-    "cleanupOnFailure" : true,
-    "overwriteFiles" : false,
-    "ignoreInvalidRows" : false,
-    "jobProperties" : { },
-    "combineText" : false,        
-    "rowFlushBoundary" : 300000,
-    "buildV9Directly" : false
   }
 }
 ```
+
+|property|description|required?|
+|--------|-----------|---------|
+|type|The task type, this should always be "index_hadoop".|yes|
+|spec|A Hadoop Index Spec. See [Batch Ingestion](../ingestion/batch-ingestion.html)|yes|
+|hadoopDependencyCoordinates|A JSON array of Hadoop dependency coordinates that Druid will use, this property will override the default Hadoop coordinates. Once specified, Druid will look for those Hadoop dependencies from the location specified by `druid.extensions.hadoopDependenciesDir`|no|
+|classpathPrefix|Classpath that will be pre-appended for the peon process.|no|
 
 ### DataSchema
 
@@ -138,7 +109,6 @@ Is a type of inputSpec where a static path to where the data files are located i
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
 |paths|Array of String|A String of input paths indicating where the raw data is located.|yes|
-|inputFormat|String|The input format of the data files. Default is `org.apache.hadoop.mapreduce.lib.input.TextInputFormat`, or `org.apache.hadoop.mapreduce.lib.input.CombineTextInputFormat` if `combineText` in tuningConfig is `true`.|no|
 
 For example, using the static input paths:
 
@@ -156,7 +126,6 @@ Is a type of inputSpec that expects data to be laid out in a specific path forma
 |inputPath|String|Base path to append the expected time path to.|yes|
 |filePattern|String|Pattern that files should match to be included.|yes|
 |pathFormat|String|Joda date-time format for each directory. Default value is `"'y'=yyyy/'m'=MM/'d'=dd/'H'=HH"`, or see [Joda documentation](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html)|no|
-|inputFormat|String|The input format of the data files. Default is `org.apache.hadoop.mapreduce.lib.input.TextInputFormat`, or `org.apache.hadoop.mapreduce.lib.input.CombineTextInputFormat` if `combineText` in tuningConfig is `true`.|no|
 
 For example, if the sample config were run with the interval 2012-06-01/2012-06-02, it would expect data at the paths
 
@@ -174,21 +143,6 @@ Read Druid segments. See [here](../ingestion/update-existing-data.html) for more
 ##### `multi`
 
 Read multiple sources of data. See [here](../ingestion/update-existing-data.html) for more information.
-
-#### Metadata Update Job Spec
-
-This is a specification of the properties that tell the job how to update metadata such that the Druid cluster will see the output segments and load them.
-
-
-|Field|Type|Description|Required|
-|-----|----|-----------|--------|
-|type|String|"metadata" is the only value available.|yes|
-|connectURI|String|A valid JDBC url to metadata storage.|yes|
-|user|String|Username for db.|yes|
-|password|String|password for db.|yes|
-|segmentTable|String|Table to use in DB.|yes|
-
-These properties should parrot what you have configured for your [Coordinator](../design/coordinator.html).
 
 ### TuningConfig
 
@@ -266,123 +220,64 @@ The configuration options are:
 
 ### Remote Hadoop Cluster
 
-If you have a remote Hadoop cluster, make sure to include the folder holding your configuration `*.xml` files in the classpath of the indexer.
+If you have a remote Hadoop cluster, make sure to include the folder holding your configuration `*.xml` files in your Druid `_common` configuration folder.  
+If you having dependency problems with your version of Hadoop and the version compiled with Druid, please see [these docs](../operations/other-hadoop.html).
 
-Batch Ingestion Using the Indexing Service
-------------------------------------------
+### Using Elastic MapReduce
 
-Batch ingestion for the indexing service is done by submitting an [Index Task](../misc/tasks.html) (for datasets < 1G) or a [Hadoop Index Task](../misc/tasks.html). The indexing service can be started by issuing:
+If your cluster is running on Amazon Web Services, you can use Elastic MapReduce (EMR) to index data
+from S3. To do this:
+
+- Create a persistent, [long-running cluster](http://docs.aws.amazon.com/ElasticMapReduce/latest/ManagementGuide/emr-plan-longrunning-transient.html).
+- When creating your cluster, enter the following configuration. If you're using the wizard, this
+should be in advanced mode under "Edit software settings".
 
 ```
-java -Xmx2g -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:config/overlord io.druid.cli.Main server overlord
+classification=yarn-site,properties=[mapreduce.reduce.memory.mb=6144,mapreduce.reduce.java.opts=-server -Xms2g -Xmx2g -Duser.timezone=UTC -Dfile.encoding=UTF-8 -XX:+PrintGCDetails -XX:+PrintGCTimeStamps,mapreduce.map.java.opts=758,mapreduce.map.java.opts=-server -Xms512m -Xmx512m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -XX:+PrintGCDetails -XX:+PrintGCTimeStamps,mapreduce.task.timeout=1800000]
 ```
 
-This will start up a very simple local indexing service. For more complex deployments of the indexing service, see [here](../design/indexing-service.html).
+- Follow the instructions under "[Configure Hadoop for data
+loads](cluster.html#configure-cluster-for-hadoop-data-loads)" using the XML files from
+`/etc/hadoop/conf` on your EMR master.
 
-The schema of the Hadoop Index Task contains a task "type" and a Hadoop Index Config. A sample Hadoop index task is shown below:
+#### Loading from S3 with EMR
 
-```json
-{
-  "type" : "index_hadoop",
-  "spec" : {
-    "dataSchema" : {
-      "dataSource" : "wikipedia",
-      "parser" : {
-        "type" : "hadoopyString",
-        "parseSpec" : {
-          "format" : "json",
-          "timestampSpec" : {
-            "column" : "timestamp",
-            "format" : "auto"
-          },
-          "dimensionsSpec" : {
-            "dimensions": ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"],
-            "dimensionExclusions" : [],
-            "spatialDimensions" : []
-          }
-        }
-      },
-      "metricsSpec" : [
-        {
-          "type" : "count",
-          "name" : "count"
-        },
-        {
-          "type" : "doubleSum",
-          "name" : "added",
-          "fieldName" : "added"
-        },
-        {
-          "type" : "doubleSum",
-          "name" : "deleted",
-          "fieldName" : "deleted"
-        },
-        {
-          "type" : "doubleSum",
-          "name" : "delta",
-          "fieldName" : "delta"
-        }
-      ],
-      "granularitySpec" : {
-        "type" : "uniform",
-        "segmentGranularity" : "DAY",
-        "queryGranularity" : "NONE",
-        "intervals" : [ "2013-08-31/2013-09-01" ]
-      }
-    },
-    "ioConfig" : {
-      "type" : "hadoop",
-      "inputSpec" : {
-        "type" : "static",
-        "paths" : "/MyDirectory/examples/indexing/wikipedia_data.json"
-      }
-    },
-    "tuningConfig" : {
-      "type": "hadoop"
-    }
-  }
+- In the `jobProperties` field in the `tuningConfig` section of your Hadoop indexing task, add:
+
+```
+"jobProperties" : {
+   "fs.s3.awsAccessKeyId" : "YOUR_ACCESS_KEY",
+   "fs.s3.awsSecretAccessKey" : "YOUR_SECRET_KEY",
+   "fs.s3.impl" : "org.apache.hadoop.fs.s3native.NativeS3FileSystem",
+   "fs.s3n.awsAccessKeyId" : "YOUR_ACCESS_KEY",
+   "fs.s3n.awsSecretAccessKey" : "YOUR_SECRET_KEY",
+   "fs.s3n.impl" : "org.apache.hadoop.fs.s3native.NativeS3FileSystem",
+   "io.compression.codecs" : "org.apache.hadoop.io.compress.GzipCodec,org.apache.hadoop.io.compress.DefaultCodec,org.apache.hadoop.io.compress.BZip2Codec,org.apache.hadoop.io.compress.SnappyCodec"
 }
 ```
 
-### DataSchema
+Note that this method uses Hadoop's builtin S3 filesystem rather than Amazon's EMRFS, and is not compatible
+with Amazon-specific features such as S3 encryption and consistent views. If you need to use those
+features, you will need to make the Amazon EMR Hadoop JARs available to Druid through one of the
+mechanisms described in the [Using other Hadoop distributions](#using-other-hadoop-distributions) section.
 
-This field is required.
+### Using other Hadoop distributions
 
-See [Ingestion](../ingestion/index.html)
+Druid works out of the box with many Hadoop distributions.
 
-### IOConfig
+If you are having dependency conflicts between Druid and your version of Hadoop, you can try
+searching for a solution in the [Druid user groups](https://groups.google.com/forum/#!forum/druid-
+user), or reading the Druid [Different Hadoop Versions](..//operations/other-hadoop.html) documentation.
 
-This field is required.
+## Command Line Hadoop Indexer
 
-|Field|Type|Description|Required|
-|-----|----|-----------|--------|
-|type|String|This should always be 'hadoop'.|yes|
-|pathSpec|Object|a specification of where to pull the data in from|yes|
+If you don't want to use a full indexing service to use Hadoop to get data into Druid, you can also use the standalone command line Hadoop indexer. 
+See [here](../ingestion/command-line-hadoop-indexer.html) for more info.
 
-### TuningConfig
+## IndexTask-based Batch Ingestion
 
-The tuningConfig is optional and default parameters will be used if no tuningConfig is specified. This is the same as the tuningConfig for the standalone Hadoop indexer. See above for more details.
-
-### Running the Task
-
-The Hadoop Index Config submitted as part of an Hadoop Index Task is identical to the Hadoop Index Config used by the `HadoopDruidIndexer` except that three fields must be omitted: `segmentOutputPath`, `workingPath`, `metadataUpdateSpec`. The Indexing Service takes care of setting these fields internally.
-
-To run the task:
-
-```
-curl -X 'POST' -H 'Content-Type:application/json' -d @example_index_hadoop_task.json localhost:8090/druid/indexer/v1/task
-```
-
-If the task succeeds, you should see in the logs of the indexing service:
-
-```
-2013-10-16 16:38:31,945 INFO [pool-6-thread-1] io.druid.indexing.overlord.exec.TaskConsumer - Task SUCCESS: HadoopIndexTask...
-```
-
-### Remote Hadoop Cluster
-
-If you have a remote Hadoop cluster, make sure to include the folder holding your configuration `*.xml` files in the classpath of the middle manager.
+If you do not want to have a dependency on Hadoop for batch ingestion, you can also use the index task. This task will be much slower and less scalable than the Hadoop-based method. See [here](../ingestion/tasks.html)for more info.   
 
 Having Problems?
 ----------------
-Getting data into Druid can definitely be difficult for first time users. Please don't hesitate to ask questions in our IRC channel or on our [google groups page](https://groups.google.com/forum/#!forum/druid-development).
+Getting data into Druid can definitely be difficult for first time users. Please don't hesitate to ask questions in our IRC channel or on our [google groups page](https://groups.google.com/forum/#!forum/druid-user).

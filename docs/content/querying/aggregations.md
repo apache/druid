@@ -82,6 +82,9 @@ Computes an arbitrary JavaScript function over a set of columns (both metrics an
 
 All JavaScript functions must return numerical values.
 
+JavaScript aggregators are much slower than native Java aggregators and if performance is critical, you should implement 
+your functionality as a native Java aggregator.
+
 ```json
 { "type": "javascript",
   "name": "<output_name>",

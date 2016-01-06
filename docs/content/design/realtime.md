@@ -1,8 +1,10 @@
 ---
 layout: doc_page
 ---
+
 Real-time Node
 ==============
+
 For Real-time Node Configuration, see [Realtime Configuration](../configuration/realtime.html).
 
 For Real-time Ingestion, see [Realtime Ingestion](../ingestion/realtime-ingestion.html).

@@ -1,6 +1,13 @@
+
 ---
 layout: doc_page
 ---
+
+```note-caution
+If you are doing stream-pull based ingestion, we suggest using [stream-pushed](../ingestion/stream-push.html) based ingestion instead and not 
+using real-time nodes.
+```
+
 Realtime Node Configuration
 ==============================
 For general Realtime Node information, see [here](../design/realtime.html).
