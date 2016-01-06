@@ -19,12 +19,12 @@ To make this work, follow the steps below
 
 Example:
 
-Suppose you specify `druid.extensions.hadoopDependenciesDir=/usr/local/druid/hadoop_dependencies`, and you want to prepare both `hadoop-client` 2.3.0 and 2.4.0 for Druid,
+Suppose you specify `druid.extensions.hadoopDependenciesDir=/usr/local/druid/hadoop-dependencies`, and you want to prepare both `hadoop-client` 2.3.0 and 2.4.0 for Druid,
 
-Then you can either use [pull-deps](../pull-deps.html) or manually set up Hadoop dependencies directories such that under ```hadoop_dependencies```, it looks like this,
+Then you can either use [pull-deps](../pull-deps.html) or manually set up Hadoop dependencies directories such that under ```hadoop-dependencies```, it looks like this,
 
 ```
-hadoop_dependencies/
+hadoop-dependencies/
 └── hadoop-client
     ├── 2.3.0
     │   ├── activation-1.1.jar
@@ -44,7 +44,7 @@ hadoop_dependencies/
     ..... lots of jars
 ```
 
-As you can see, under ```hadoop-client```, there are two sub-directories, each denotes a version of ```hadoop-client```. During runtime, Druid will look for these directories and load appropriate ```hadoop-client``` based on `hadoopDependencyCoordinates` passed to [Hadoop Index Task](../misc/tasks.html).
+As you can see, under ```hadoop-client```, there are two sub-directories, each denotes a version of ```hadoop-client```. During runtime, Druid will look for these directories and load appropriate ```hadoop-client``` based on `hadoopDependencyCoordinates` passed to [Hadoop Index Task](../ingestion/tasks.html).
 
 ### Append your Hadoop jars to the Druid classpath
 
@@ -58,7 +58,7 @@ If you really don't like the way above, and you just want to use one specific Ha
 
 The default version of Hadoop bundled with Druid is 2.3.
 
-To override the default Hadoop version, both the Hadoop Index Task and the standalone Hadoop indexer support the parameter `hadoopDependencyCoordinates`(See [Index Hadoop Task](../misc/tasks.html). You can pass another set of Hadoop coordinates through this parameter (e.g. You can specify coordinates for Hadoop 2.4.0 as `["org.apache.hadoop:hadoop-client:2.4.0"]`), which will overwrite the default Hadoop coordinates Druid uses.
+To override the default Hadoop version, both the Hadoop Index Task and the standalone Hadoop indexer support the parameter `hadoopDependencyCoordinates`(See [Index Hadoop Task](../ingestion/tasks.html). You can pass another set of Hadoop coordinates through this parameter (e.g. You can specify coordinates for Hadoop 2.4.0 as `["org.apache.hadoop:hadoop-client:2.4.0"]`), which will overwrite the default Hadoop coordinates Druid uses.
 
 The Hadoop Index Task takes this parameter has part of the task JSON and the standalone Hadoop indexer takes this parameter as a command line argument.
 

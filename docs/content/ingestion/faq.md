@@ -6,11 +6,9 @@ layout: doc_page
 
 ### Realtime Ingestion
 
-If you are trying to stream in historical (not current time) data into Druid and you are using the [serverTime](../ingestion/realtime-ingestion.html) rejection policy in your ingestion spec (the default rejection policy), Druid will not ingest this data as it is outside of the acceptable window period. You can verify this is what is happening by looking at the logs of your real-time process for log lines containing "ingest/events/*". These metrics will indicate the events ingested, rejected, etc. We recommend using batch ingestion methods for historical data in production.
-
-If you are doing a POC, you can use the [messageTime](../ingestion/realtime-ingestion.html) rejection policy, but please be aware of the hand-off caveats. This rejection policy is not recommended in production. 
-
-If you are experimenting with realtime ingestion, you can also use the [none](../ingestion/realtime-ingestion.html) rejection policy to load all incoming events, but hand-off will never occur. 
+The most common cause of this is because events being ingested are out of band of Druid's `windowPeriod`. Druid realtime ingestion 
+only accepts events within a configurable windowPeriod of the current time. You can verify this is what is happening by looking at the logs of your real-time process for log lines containing "ingest/events/*". These metrics will indicate the events ingested, rejected, etc. 
+We recommend using batch ingestion methods for historical data in production. 
  
 ### Batch Ingestion
  
@@ -30,17 +28,17 @@ If the number of ingested events seem correct, make sure your query is correctly
 
 Depending on what `druid.storage.type` is set to, Druid will upload segments to some [Deep Storage](../dependencies/deep-storage.html). Local disk is used as the default deep storage.
 
-## My realtime node is not handing segments off
+## My stream ingest is not handing segments off
 
-First, make sure there are no exceptions in the logs of your node. Also make sure that `druid.storage.type` is set to a deep storage that makes sense.
+First, make sure there are no exceptions in the logs of the ingestion process. Also make sure that `druid.storage.type` is set to a deep storage that isn't `local` if you are running a distributed cluster.
 
 Other common reasons that hand-off fails are as follows:
 
-1) Druid is unable to write to the metadata storage. Make sure your configuration is correct.
+1) Druid is unable to write to the metadata storage. Make sure your configurations are correct.
 
-2) Historical nodes are out of capacity and cannot download any more segments. You'll see exceptions in the coordinator logs if this occurs.
+2) Historical nodes are out of capacity and cannot download any more segments. You'll see exceptions in the coordinator logs if this occurs and the coordinator console will show the historicals are near capacity.
 
-3) Segments are corrupt and cannot download. You'll see exceptions in your historical nodes if this occurs.
+3) Segments are corrupt and cannot be downloaded. You'll see exceptions in your historical nodes if this occurs.
 
 4) Deep storage is improperly configured. Make sure that your segment actually exists in deep storage and that the coordinator logs have no errors.
 
@@ -49,6 +47,7 @@ Other common reasons that hand-off fails are as follows:
 Make sure to include the `druid-hdfs-storage` and all the hadoop configuration, dependencies (that can be obtained by running command `hadoop classpath` on a machine where hadoop has been setup) in the classpath. And, provide necessary HDFS settings as described in [Deep Storage](../dependencies/deep-storage.html) .
 
 ## I don't see my Druid segments on my historical nodes
+
 You can check the coordinator console located at `<COORDINATOR_IP>:<PORT>`. Make sure that your segments have actually loaded on [historical nodes](../design/historical.html). If your segments are not present, check the coordinator logs for messages about capacity of replication errors. One reason that segments are not downloaded is because historical nodes have maxSizes that are too small, making them incapable of downloading more data. You can change that with (for example):
 
 ```
@@ -58,7 +57,7 @@ You can check the coordinator console located at `<COORDINATOR_IP>:<PORT>`. Make
 
 ## My queries are returning empty results
 
-You can check `<BROKER_IP>:<PORT>/druid/v2/datasources/<YOUR_DATASOURCE>?interval=0/3000` for the dimensions and metrics that have been created for your datasource. Make sure that the name of the aggregators you use in your query match one of these metrics. Also make sure that the query interval you specify match a valid time range where data exists. Note: the broker endpoint will only return valid results on historical segments and not segments served by real-time nodes.
+You can use a [segment metadata query](../querying/segmentmetadataquery.html) for the dimensions and metrics that have been created for your datasource. Make sure that the name of the aggregators you use in your query match one of these metrics. Also make sure that the query interval you specify match a valid time range where data exists.
 
 ## How can I Reindex existing data in Druid with schema changes?
 

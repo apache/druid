@@ -4,21 +4,40 @@ layout: doc_page
 Production Cluster Configuration
 ================================
 
-__This configuration is an example of what a production cluster could look like. Many other hardware combinations are possible! Cheaper hardware is absolutely possible.__
+```note-info
+This configuration is an example of what a production cluster could look like. Many other hardware combinations are 
+possible! Cheaper hardware is absolutely possible.
+```
 
-This production Druid cluster assumes that metadata storage and Zookeeper are already set up. The deep storage that is used for examples is S3 and memcached is used as a distributed cache.
+This production Druid cluster assumes that metadata storage and Zookeeper are already set up. The deep storage that is 
+used for examples is [S3](https://aws.amazon.com/s3/) and [memcached](http://memcached.org/) is used for a distributed cache.
 
-The nodes that respond to queries (Historical, Broker, and Middle manager nodes) will use as many cores as are available, depending on usage, so it is best to keep these on dedicated machines. The upper limit of effectively utilized cores is not well characterized yet and would depend on types of queries, query load, and the schema. Historical daemons should have a heap a size of at least 1GB per core for normal usage, but could be squeezed into a smaller heap for testing. Since in-memory caching is essential for good performance, even more RAM is better. Broker nodes will use RAM for caching, so they do more than just route queries. SSDs are highly recommended for Historical nodes not all data is loaded in available memory.
+```note-info
+The nodes in this example do not need to be on their own individual servers. Overlord and Coordinator nodes should be 
+co-located on the same hardware. 
+``` 
+
+The nodes that respond to queries (Historical, Broker, and MiddleManager nodes) will use as many cores as are available, 
+depending on usage, so it is best to keep these on dedicated machines. The upper limit of effectively utilized cores is 
+not well characterized yet and would depend on types of queries, query load, and the schema. Historical daemons should 
+have a heap size of at least 1GB per core for normal usage, but could be squeezed into a smaller heap for testing. 
+Since in-memory caching is essential for good performance, even more RAM is better. 
+Broker nodes will use RAM for caching, so they do more than just route queries. 
+SSDs are highly recommended for Historical nodes when all they have more segments loaded than available memory.
 
 The nodes that are responsible for coordination (Coordinator and Overlord nodes) require much less processing.
 
-The effective utilization of cores by Zookeeper, metadata storage, and Coordinator nodes is likely to be between 1 and 2 for each process/daemon, so these could potentially share a machine with lots of cores. These daemons work with heap a size between 500MB and 1GB.
+The effective utilization of cores by Zookeeper, metadata storage, and Coordinator nodes is likely to be between 1 and 2 
+for each process/daemon, so these could potentially share a machine with lots of cores. These daemons work with heap 
+size between 500MB and 1GB.
 
-We'll use r3.8xlarge nodes for query facing nodes and m1.xlarge nodes for coordination nodes. The following examples work relatively well in production, however, a more optimized tuning for the nodes we selected and more optimal hardware for a Druid cluster are both definitely possible.
+We'll use [EC2](https://aws.amazon.com/ec2/) r3.8xlarge nodes for query facing nodes and m1.xlarge nodes for coordination nodes. 
+The following examples work relatively well in production, however, a more optimized tuning for the nodes we selected and 
+more optimal hardware for a Druid cluster are both definitely possible.
 
-For general purposes of high availability, there should be at least 2 of every node type.
-
-To setup a local Druid cluster, see [Simple Cluster Configuration](../configuration/simple-cluster.html).
+```note-caution
+For high availability, there should be at least a redundant copy of every process running on separate hardware.
+```
 
 ### Common Configuration (common.runtime.properties)
 

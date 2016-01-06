@@ -34,85 +34,152 @@
             </excludes>
             <outputDirectory>extensions</outputDirectory>
         </fileSet>
+
         <fileSet>
-            <directory>${project.build.directory}/hadoop_dependencies</directory>
+            <directory>${project.build.directory}/hadoop-dependencies</directory>
             <includes>
                 <include>*/*/*</include>
             </includes>
-            <outputDirectory>hadoop_dependencies</outputDirectory>
+            <outputDirectory>hadoop-dependencies</outputDirectory>
         </fileSet>
+
         <fileSet>
-            <directory>../examples/config</directory>
+            <directory>../examples/quickstart/</directory>
             <includes>
                 <include>*</include>
             </includes>
-            <outputDirectory>config</outputDirectory>
+            <outputDirectory>quickstart</outputDirectory>
         </fileSet>
+
         <fileSet>
-            <directory>../examples/config/_common</directory>
+            <directory>../examples/conf-quickstart</directory>
             <includes>
                 <include>*</include>
             </includes>
-            <outputDirectory>config/_common</outputDirectory>
+            <outputDirectory>conf-quickstart</outputDirectory>
         </fileSet>
         <fileSet>
-            <directory>../examples/config/broker</directory>
+            <directory>../examples/conf-quickstart/druid</directory>
             <includes>
                 <include>*</include>
             </includes>
-            <outputDirectory>config/broker</outputDirectory>
+            <outputDirectory>conf-quickstart/druid</outputDirectory>
         </fileSet>
         <fileSet>
-            <directory>../examples/config/coordinator</directory>
+            <directory>../examples/conf-quickstart/druid/_common</directory>
             <includes>
                 <include>*</include>
             </includes>
-            <outputDirectory>config/coordinator</outputDirectory>
+            <outputDirectory>conf-quickstart/druid/_common/</outputDirectory>
         </fileSet>
         <fileSet>
-            <directory>../examples/config/realtime</directory>
+            <directory>../examples/conf-quickstart/druid/broker</directory>
             <includes>
                 <include>*</include>
             </includes>
-            <outputDirectory>config/realtime</outputDirectory>
+            <outputDirectory>conf-quickstart/druid/broker</outputDirectory>
         </fileSet>
         <fileSet>
-            <directory>../examples/config/historical</directory>
+            <directory>../examples/conf-quickstart/druid/coordinator</directory>
             <includes>
                 <include>*</include>
             </includes>
-            <outputDirectory>config/historical</outputDirectory>
+            <outputDirectory>conf-quickstart/druid/coordinator</outputDirectory>
         </fileSet>
         <fileSet>
-            <directory>../examples/config/overlord</directory>
+            <directory>../examples/conf-quickstart/druid/historical</directory>
             <includes>
                 <include>*</include>
             </includes>
-            <outputDirectory>config/overlord</outputDirectory>
+            <outputDirectory>conf-quickstart/druid/historical</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../examples/conf-quickstart/druid/overlord</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>conf-quickstart/druid/overlord</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../examples/conf-quickstart/druid/middleManager</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>conf-quickstart/druid/middleManager</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../examples/conf-quickstart/tranquility</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>conf-quickstart/tranquility</outputDirectory>
+        </fileSet>
+
+        <fileSet>
+            <directory>../examples/conf</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>conf</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../examples/conf/druid/_common</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>conf/druid/_common</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../examples/conf/druid/broker</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>conf/druid/broker</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../examples/conf/druid/coordinator</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>conf/druid/coordinator</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../examples/conf/druid/historical</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>conf/druid/historical</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../examples/conf/druid/overlord</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>conf/druid/overlord</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../examples/conf/druid/middleManager</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>conf/druid/middleManager</outputDirectory>
+        </fileSet>
+        <fileSet>
+            <directory>../examples/conf/tranquility</directory>
+            <includes>
+                <include>*</include>
+            </includes>
+            <outputDirectory>conf/tranquility</outputDirectory>
         </fileSet>
         <fileSet>
             <directory>../examples/bin</directory>
             <includes>
-                <include>*sh</include>
+                <include>*</include>
             </includes>
             <fileMode>744</fileMode>
-            <outputDirectory>/</outputDirectory>
+            <outputDirectory>bin</outputDirectory>
         </fileSet>
-        <fileSet>
-            <directory>../examples/bin/examples</directory>
-            <includes>
-                <include>**</include>
-            </includes>
-            <outputDirectory>examples</outputDirectory>
-        </fileSet>
-        <fileSet>
-            <directory>../examples/bin/examples/twitter</directory>
-            <includes>
-                <include>*sh</include>
-            </includes>
-            <fileMode>744</fileMode>
-            <outputDirectory>examples/twitter</outputDirectory>
-        </fileSet>
+
         <fileSet>
             <directory>../</directory>
             <includes>
