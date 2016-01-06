@@ -90,7 +90,7 @@ Druid is a column store, which means each individual column is stored separately
 in that query, and Druid is pretty good about only scanning exactly what it needs for a query.
 Different columns can also employ different compression methods. Different columns can also have different indexes associated with them.
 
-Druid indexes data on a per shard (segment) level.
+Druid indexes data on a per-shard (segment) level.
 
 ## Loading the Data
 

@@ -2,9 +2,10 @@
 layout: doc_page
 ---
 # Segment Metadata Queries
-Segment metadata queries return per segment information about:
+Segment metadata queries return per-segment information about:
 
 * Cardinality of all columns in the segment
+* Min/max values of string type columns in the segment
 * Estimated byte size for the segment columns if they were stored in a flat format
 * Number of rows stored inside the segment
 * Interval the segment covers
@@ -103,12 +104,16 @@ This is a list of properties that determines the amount of information returned 
 
 By default, all analysis types will be used. If a property is not needed, omitting it from this list will result in a more efficient query.
 
-There are four types of column analyses:
+There are five types of column analyses:
 
 #### cardinality
 
 * `cardinality` in the result will return the estimated floor of cardinality for each column. Only relevant for
 dimension columns.
+
+#### minmax
+
+* Estimated min/max values for each column. Only relevant for dimension columns.
 
 #### size
 
