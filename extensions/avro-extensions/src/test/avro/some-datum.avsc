@@ -1,0 +1,31 @@
+[{
+  "namespace": "io.druid.data.input",
+	"name": "SomeAvroDatum",
+	"type": "record",
+	"fields" : [
+		{"name":"timestamp","type":"long"},
+		{"name":"eventType","type":"string"},
+		{"name":"id","type":"long"},
+		{"name":"someOtherId","type":"long"},
+		{"name":"isValid","type":"boolean"},
+		{"name":"someIntArray","type":{"type":"array","items":"int"}},
+		{"name":"someStringArray","type":{"type":"array","items":"string"}},
+		{"name":"someIntValueMap","type":{"type":"map","values":"int"}},
+		{"name":"someStringValueMap","type":{"type":"map","values":"string"}},
+		{"name":"someUnion","type":["null","string"]},
+		{"name":"someNull","type":"null"},
+    {"name":"someFixed","type":{"type":"fixed","size":16,"name":"MyFixed"}},
+    {"name":"someBytes","type":"bytes"},
+    {"name":"someEnum","type":{"type":"enum","name":"MyEnum","symbols":["ENUM0","ENUM1","ENUM2"]}},
+    {"name":"someRecord","type":{
+      "type":"record","name":"MySubRecord","fields":[
+        {"name":"subInt","type":"int"},
+        {"name":"subLong","type":"long"}
+      ]
+    }},
+
+   	{"name":"someLong","type":"long"},
+		{"name":"someInt","type":"int"},
+		{"name":"someFloat","type":"float"}
+	]
+}]

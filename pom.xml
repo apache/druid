@@ -61,11 +61,11 @@
         <connection>scm:git:ssh://git@github.com/druid-io/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/druid-io/druid.git</developerConnection>
         <url>https://github.com/druid-io/druid.git</url>
-        <tag>druid-0.8.0-SNAPSHOT</tag>
+        <tag>0.9.0-SNAPSHOT</tag>
     </scm>
 
     <properties>
-        <metamx.java-util.version>0.27.5</metamx.java-util.version>
+        <metamx.java-util.version>0.27.6</metamx.java-util.version>
         <apache.curator.version>2.9.1</apache.curator.version>
         <jetty.version>9.2.5.v20141112</jetty.version>
         <jersey.version>1.19</jersey.version>
@@ -103,7 +103,7 @@
         <module>extensions/kafka-extraction-namespace</module>
         <module>extensions/cloudfiles-extensions</module>
         <module>extensions/datasketches</module>
-
+        <module>extensions/avro-extensions</module>
         <!-- distribution packaging -->
         <module>distribution</module>
 
