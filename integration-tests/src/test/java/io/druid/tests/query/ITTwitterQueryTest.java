@@ -57,7 +57,7 @@ public class ITTwitterQueryTest
   }
 
   @Test
-  public void testQueriesFromFile() throws Exception
+  public void testTwitterQueriesFromFile() throws Exception
   {
     queryHelper.testQueriesFromFile(TWITTER_QUERIES_RESOURCE, 2);
   }
