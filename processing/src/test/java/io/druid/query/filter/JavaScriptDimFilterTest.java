@@ -29,29 +29,45 @@ public class JavaScriptDimFilterTest
 {
 
   @Test
-  public void testGetCacheKey()
+  public void testGetCacheKey1()
   {
-    JavaScriptDimFilter javaScriptDimFilter = new JavaScriptDimFilter("dim", "fn", null);
-    JavaScriptDimFilter javaScriptDimFilter2 = new JavaScriptDimFilter("di", "mfn", null);
+    JavaScriptDimFilter javaScriptDimFilter = JavaScriptDimFilter.of("dim", "fn", null);
+    JavaScriptDimFilter javaScriptDimFilter2 = JavaScriptDimFilter.of("di", "mfn", null);
+    Assert.assertFalse(Arrays.equals(javaScriptDimFilter.getCacheKey(), javaScriptDimFilter2.getCacheKey()));
+  }
+
+  @Test
+  public void testGetCacheKey2()
+  {
+    JavaScriptDimFilter javaScriptDimFilter = JavaScriptDimFilter.of(new String[]{"dim1", "dim2"}, "fn", null);
+    JavaScriptDimFilter javaScriptDimFilter2 = JavaScriptDimFilter.of(new String[]{"dim1", "dim"}, "2fn", null);
+    Assert.assertFalse(Arrays.equals(javaScriptDimFilter.getCacheKey(), javaScriptDimFilter2.getCacheKey()));
+  }
+
+  @Test
+  public void testGetCacheKey3()
+  {
+    JavaScriptDimFilter javaScriptDimFilter = JavaScriptDimFilter.byRow(new String[]{"dim1", "dim2"}, "fn", null);
+    JavaScriptDimFilter javaScriptDimFilter2 = JavaScriptDimFilter.byRow(new String[]{"dim1", "dim2"}, "mfn", null);
     Assert.assertFalse(Arrays.equals(javaScriptDimFilter.getCacheKey(), javaScriptDimFilter2.getCacheKey()));
 
     RegexDimExtractionFn regexFn = new RegexDimExtractionFn(".*", false, null);
-    JavaScriptDimFilter javaScriptDimFilter3 = new JavaScriptDimFilter("dim", "fn", regexFn);
+    JavaScriptDimFilter javaScriptDimFilter3 = JavaScriptDimFilter.of("dim", "fn", regexFn);
     Assert.assertFalse(Arrays.equals(javaScriptDimFilter.getCacheKey(), javaScriptDimFilter3.getCacheKey()));
   }
 
   @Test
   public void testEquals()
   {
-    JavaScriptDimFilter javaScriptDimFilter = new JavaScriptDimFilter("dim", "fn", null);
-    JavaScriptDimFilter javaScriptDimFilter2 = new JavaScriptDimFilter("di", "mfn", null);
-    JavaScriptDimFilter javaScriptDimFilter3 = new JavaScriptDimFilter("di", "mfn", null);
+    JavaScriptDimFilter javaScriptDimFilter = JavaScriptDimFilter.of("dim", "fn", null);
+    JavaScriptDimFilter javaScriptDimFilter2 = JavaScriptDimFilter.of("di", "mfn", null);
+    JavaScriptDimFilter javaScriptDimFilter3 = JavaScriptDimFilter.of("di", "mfn", null);
     Assert.assertNotEquals(javaScriptDimFilter, javaScriptDimFilter2);
     Assert.assertEquals(javaScriptDimFilter2, javaScriptDimFilter3);
 
     RegexDimExtractionFn regexFn = new RegexDimExtractionFn(".*", false, null);
-    JavaScriptDimFilter javaScriptDimFilter4 = new JavaScriptDimFilter("dim", "fn", regexFn);
-    JavaScriptDimFilter javaScriptDimFilter5 = new JavaScriptDimFilter("dim", "fn", regexFn);
+    JavaScriptDimFilter javaScriptDimFilter4 = JavaScriptDimFilter.of("dim", "fn", regexFn);
+    JavaScriptDimFilter javaScriptDimFilter5 = JavaScriptDimFilter.of("dim", "fn", regexFn);
     Assert.assertNotEquals(javaScriptDimFilter, javaScriptDimFilter3);
     Assert.assertEquals(javaScriptDimFilter4, javaScriptDimFilter5);
   }
@@ -59,15 +75,15 @@ public class JavaScriptDimFilterTest
   @Test
   public void testHashcode()
   {
-    JavaScriptDimFilter javaScriptDimFilter = new JavaScriptDimFilter("dim", "fn", null);
-    JavaScriptDimFilter javaScriptDimFilter2 = new JavaScriptDimFilter("di", "mfn", null);
-    JavaScriptDimFilter javaScriptDimFilter3 = new JavaScriptDimFilter("di", "mfn", null);
+    JavaScriptDimFilter javaScriptDimFilter = JavaScriptDimFilter.of("dim", "fn", null);
+    JavaScriptDimFilter javaScriptDimFilter2 = JavaScriptDimFilter.of("di", "mfn", null);
+    JavaScriptDimFilter javaScriptDimFilter3 = JavaScriptDimFilter.of("di", "mfn", null);
     Assert.assertNotEquals(javaScriptDimFilter.hashCode(), javaScriptDimFilter2.hashCode());
     Assert.assertEquals(javaScriptDimFilter2.hashCode(), javaScriptDimFilter3.hashCode());
 
     RegexDimExtractionFn regexFn = new RegexDimExtractionFn(".*", false, null);
-    JavaScriptDimFilter javaScriptDimFilter4 = new JavaScriptDimFilter("dim", "fn", regexFn);
-    JavaScriptDimFilter javaScriptDimFilter5 = new JavaScriptDimFilter("dim", "fn", regexFn);
+    JavaScriptDimFilter javaScriptDimFilter4 = JavaScriptDimFilter.of("dim", "fn", regexFn);
+    JavaScriptDimFilter javaScriptDimFilter5 = JavaScriptDimFilter.of("dim", "fn", regexFn);
     Assert.assertNotEquals(javaScriptDimFilter.hashCode(), javaScriptDimFilter3.hashCode());
     Assert.assertEquals(javaScriptDimFilter4.hashCode(), javaScriptDimFilter5.hashCode());
   }

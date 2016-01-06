@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequences;
+import io.druid.collections.IterableUtils;
 import io.druid.granularity.PeriodGranularity;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Druids;
@@ -41,7 +42,9 @@ import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.InDimFilter;
+import io.druid.query.filter.JavaScriptDimFilter;
 import io.druid.query.filter.NotDimFilter;
+import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.RegexDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -72,7 +75,7 @@ public class TimeseriesQueryRunnerTest
   @Parameterized.Parameters(name="{0}:descending={1}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
-    return QueryRunnerTestHelper.cartesian(
+    return IterableUtils.cartesian(
         // runners
         QueryRunnerTestHelper.makeQueryRunners(
             new TimeseriesQueryRunnerFactory(
@@ -987,6 +990,132 @@ public class TimeseriesQueryRunnerTest
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
     assertExpectedResults(expectedResults, results);
+  }
+
+  @Test
+  public void testTimeseriesWithMultiJavaScriptFilter()
+  {
+    DimFilter filter = JavaScriptDimFilter.byRow(
+        new String[]{
+            QueryRunnerTestHelper.marketDimension,
+            QueryRunnerTestHelper.qualityDimension
+        },
+        "function(m, q){ return m === \"spot\" && q === \"business\"; }",
+        null
+    );
+
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.dataSource)
+                                  .granularity(QueryRunnerTestHelper.dayGran)
+                                  .filters(filter)
+                                  .intervals(QueryRunnerTestHelper.firstToThird)
+                                  .aggregators(
+                                      Arrays.<AggregatorFactory>asList(
+                                          QueryRunnerTestHelper.rowsCount,
+                                          QueryRunnerTestHelper.indexLongSum,
+                                          QueryRunnerTestHelper.qualityUniques
+                                      )
+                                  )
+                                  .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+                                  .build();
+
+    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-04-01"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "rows", 1L,
+                    "index", 118L,
+                    "addRowsIndexConstant", 120.0,
+                    "uniques", QueryRunnerTestHelper.UNIQUES_1
+                )
+            )
+        ),
+        new Result<>(
+            new DateTime("2011-04-02"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "rows", 1L,
+                    "index", 112L,
+                    "addRowsIndexConstant", 114.0,
+                    "uniques", QueryRunnerTestHelper.UNIQUES_1
+                )
+            )
+        )
+    );
+
+    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
+        runner.run(query, CONTEXT),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+    TestHelper.assertExpectedResults(expectedResults, results);
+  }
+
+  @Test
+  public void testTimeseriesWithMultiJavaScriptFilter2()
+  {
+    DimFilter filter1 = JavaScriptDimFilter.byRow(
+        new String[]{
+            QueryRunnerTestHelper.marketDimension,
+            QueryRunnerTestHelper.qualityDimension
+        },
+        "function(m, q){ return m === \"spot\" && q === \"business\"; }",
+        null
+    );
+
+    SelectorDimFilter filter2 = new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "mezzanine", null);
+
+    DimFilter filter = new OrDimFilter(Arrays.asList(filter1, filter2));
+
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.dataSource)
+                                  .granularity(QueryRunnerTestHelper.dayGran)
+                                  .filters(filter)
+                                  .intervals(QueryRunnerTestHelper.firstToThird)
+                                  .aggregators(
+                                      Arrays.<AggregatorFactory>asList(
+                                          QueryRunnerTestHelper.rowsCount,
+                                          QueryRunnerTestHelper.indexLongSum,
+                                          QueryRunnerTestHelper.qualityUniques
+                                      )
+                                  )
+                                  .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+                                  .build();
+
+
+    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-04-01"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "rows", 4L,
+                    "index", 2988L,
+                    "addRowsIndexConstant", 2993.0,
+                    "uniques", QueryRunnerTestHelper.UNIQUES_2
+                )
+            )
+        ),
+        new Result<>(
+            new DateTime("2011-04-02"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "rows", 4L,
+                    "index", 2559L,
+                    "addRowsIndexConstant", 2564.0,
+                    "uniques", QueryRunnerTestHelper.UNIQUES_2
+                )
+            )
+        )
+    );
+
+    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
+        runner.run(query, CONTEXT),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+    for (Result x : results) {
+      System.out.println("[TimeseriesQueryRunnerTest/testTimeseriesWithMultiJavaScriptFilter2] " + x);
+    }
+    TestHelper.assertExpectedResults(expectedResults, results);
   }
 
   @Test

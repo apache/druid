@@ -36,4 +36,8 @@ public class BooleanValueMatcher implements ValueMatcher
   {
     return matches;
   }
+
+  public static final BooleanValueMatcher TRUE = new BooleanValueMatcher(true);
+
+  public static final BooleanValueMatcher FALSE = new BooleanValueMatcher(false);
 }

@@ -252,66 +252,6 @@ public class QueryRunnerTestHelper
     );
   }
 
-  // simple cartesian iterable
-  public static Iterable<Object[]> cartesian(final Iterable... iterables)
-  {
-    return new Iterable<Object[]>()
-    {
-
-      @Override
-      public Iterator<Object[]> iterator()
-      {
-        return new Iterator<Object[]>()
-        {
-          private final Iterator[] iterators = new Iterator[iterables.length];
-          private final Object[] cached = new Object[iterables.length];
-
-          @Override
-          public boolean hasNext()
-          {
-            return hasNext(0);
-          }
-
-          private boolean hasNext(int index)
-          {
-            if (iterators[index] == null) {
-              iterators[index] = iterables[index].iterator();
-            }
-            for (; hasMore(index); cached[index] = null) {
-              if (index == iterables.length - 1 || hasNext(index + 1)) {
-                return true;
-              }
-            }
-            iterators[index] = null;
-            return false;
-          }
-
-          private boolean hasMore(int index)
-          {
-            if (cached[index] == null && iterators[index].hasNext()) {
-              cached[index] = iterators[index].next();
-            }
-            return cached[index] != null;
-          }
-
-          @Override
-          public Object[] next()
-          {
-            Object[] result = Arrays.copyOf(cached, cached.length);
-            cached[cached.length - 1] = null;
-            return result;
-          }
-
-          @Override
-          public void remove()
-          {
-            throw new UnsupportedOperationException("remove");
-          }
-        };
-      }
-    };
-  }
-
   public static <T, QueryType extends Query<T>> List<QueryRunner<T>> makeQueryRunners(
       QueryRunnerFactory<T, QueryType> factory
   )

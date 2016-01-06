@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.io.CharSource;
 import com.metamx.common.guava.Sequences;
+import io.druid.collections.IterableUtils;
 import io.druid.granularity.QueryGranularity;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Druids;
@@ -193,7 +194,7 @@ public class MultiSegmentSelectQueryTest
   @Parameterized.Parameters(name = "fromNext={0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
-    return QueryRunnerTestHelper.cartesian(Arrays.asList(false, true));
+    return IterableUtils.cartesian(Arrays.asList(false, true));
   }
 
   private final boolean fromNext;

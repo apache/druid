@@ -20,6 +20,7 @@
 package io.druid.query.timeseries;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.druid.collections.IterableUtils;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Druids;
 import io.druid.query.Query;
@@ -41,7 +42,7 @@ public class TimeseriesQueryTest
   @Parameterized.Parameters(name="descending={0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
-    return QueryRunnerTestHelper.cartesian(Arrays.asList(false, true));
+    return IterableUtils.cartesian(Arrays.asList(false, true));
   }
 
   private final boolean descending;

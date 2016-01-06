@@ -77,12 +77,14 @@ public class BitmapOffset implements Offset
   }
 
   @Override
-  public void increment()
+  public boolean increment()
   {
     if (itr.hasNext()) {
       val = itr.next();
+      return true;
     } else {
       val = INVALID_VALUE;
+      return false;
     }
   }
 

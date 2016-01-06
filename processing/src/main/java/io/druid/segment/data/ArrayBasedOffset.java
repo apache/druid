@@ -49,9 +49,9 @@ public class ArrayBasedOffset implements Offset
   }
 
   @Override
-  public void increment()
+  public boolean increment()
   {
-    ++currIndex;
+    return ++currIndex < ints.length;
   }
 
   @Override

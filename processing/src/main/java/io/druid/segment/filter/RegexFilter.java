@@ -45,6 +45,12 @@ public class RegexFilter extends DimensionPredicateFilter
           {
             return (input != null) && compiled.matcher(input).find();
           }
+
+          @Override
+          public String toString()
+          {
+            return pattern;
+          }
         },
         extractionFn
     );

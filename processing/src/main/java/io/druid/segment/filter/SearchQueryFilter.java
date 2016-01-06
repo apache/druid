@@ -47,6 +47,12 @@ public class SearchQueryFilter extends DimensionPredicateFilter
           {
             return query.accept(input);
           }
+
+          @Override
+          public String toString()
+          {
+            return query.toString();
+          }
         },
         extractionFn
     );

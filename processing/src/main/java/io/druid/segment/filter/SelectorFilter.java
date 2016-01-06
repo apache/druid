@@ -28,15 +28,12 @@ import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
-import io.druid.segment.data.Indexed;
 
-import java.util.Arrays;
-import java.util.Iterator;
 import java.util.List;
 
 /**
  */
-public class SelectorFilter implements Filter
+public class SelectorFilter extends Filter.AbstractFilter
 {
   private final String dimension;
   private final String value;
@@ -103,5 +100,14 @@ public class SelectorFilter implements Filter
     }
 
     return filters;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "SelectorFilter{" +
+           "dimension='" + dimension + '\'' +
+           ", value='" + value + '\'' +
+           '}';
   }
 }

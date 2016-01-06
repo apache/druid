@@ -66,7 +66,7 @@ public class UnioningOffset implements Offset
     this.nextOffsetIndex = nextOffsetIndex;
   }
 
-  private void figureOutNextValue() {
+  private boolean figureOutNextValue() {
     if (offsets[0] != null) {
       if (offsets[1] != null) {
         int lhs = offsetVals[0];
@@ -85,7 +85,9 @@ public class UnioningOffset implements Offset
       else {
         nextOffsetIndex = 0;
       }
+      return true;
     }
+    return false;
   }
 
   private void rollIndexForward(int i) {
@@ -110,10 +112,10 @@ public class UnioningOffset implements Offset
   }
 
   @Override
-  public void increment()
+  public boolean increment()
   {
     rollIndexForward(nextOffsetIndex);
-    figureOutNextValue();
+    return figureOutNextValue();
   }
 
   @Override

@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
+import io.druid.collections.IterableUtils;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.ValueMatcher;
@@ -32,8 +34,10 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.BooleanValueMatcher;
 import io.druid.segment.filter.Filters;
+import io.druid.segment.incremental.IncrementalIndex;
 
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Comparator;
 import java.util.List;
@@ -296,6 +300,43 @@ public class FilteredAggregatorFactory extends AggregatorFactory
             }
             return false;
           }
+        }
+      };
+    }
+
+    @Override
+    public ValueMatcher makeValueMatcher(final String[] dimensions, final Predicate<Object[]> predicate)
+    {
+      final DimensionSelector[] dimValues = new DimensionSelector[dimensions.length];
+      for (int i = 0; i < dimensions.length; i++) {
+        dimValues[i] = columnSelectorFactory.makeDimensionSelector(
+            new DefaultDimensionSpec(dimensions[i], dimensions[i])
+        );
+      }
+
+      return new ValueMatcher()
+      {
+        @Override
+        public boolean matches()
+        {
+          List<Object>[] dimValuesList = new List[dimValues.length];
+          for (int i = 0; i < dimValues.length; i++) {
+            final IndexedInts row = dimValues[i].getRow();
+            if (row == null || row.size() == 0) {
+              dimValuesList[i] = Arrays.asList((Object) null);
+            } else {
+              dimValuesList[i] = Lists.newArrayListWithCapacity(row.size());
+              for (int j = 0; j < row.size(); j++) {
+                dimValuesList[i].add(dimValues[i].lookupName(row.get(j)));
+              }
+            }
+          }
+          for (Object[] param : IterableUtils.cartesian(Object.class, dimValuesList)) {
+            if (predicate.apply(param)) {
+              return true;
+            }
+          }
+          return false;
         }
       };
     }

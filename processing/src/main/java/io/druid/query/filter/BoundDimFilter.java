@@ -165,6 +165,18 @@ public class BoundDimFilter implements DimFilter
     return new BoundFilter(this);
   }
 
+  public String toString()
+  {
+    return "BoundDimFilter{" +
+           "dimension='" + dimension + '\'' +
+           ", upper='" + upper + '\'' +
+           ", lower='" + lower + '\'' +
+           ", lowerStrict=" + lowerStrict +
+           ", upperStrict=" + upperStrict +
+           ", alphaNumeric=" + alphaNumeric +
+           '}';
+  }
+
   @Override
   public boolean equals(Object o)
   {
