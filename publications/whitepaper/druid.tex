@@ -419,7 +419,7 @@ first maps the query to a set of segments. Results for certain segments may
 already exist in the cache and there is no need to recompute them. For any
 results that do not exist in the cache, the broker node will forward the query
 to the correct historical and real-time nodes. Once historical nodes return
-their results, the broker will cache these results on a per segment basis for
+their results, the broker will cache these results on a per-segment basis for
 future use. This process is illustrated in Figure~\ref{fig:caching}. Real-time
 data is never cached and hence requests for real-time data will always be
 forwarded to real-time nodes. Real-time data is perpetually changing and
@@ -428,7 +428,7 @@ caching the results is unreliable.
 \begin{figure*}
 \centering
 \includegraphics[width = 4.5in]{caching}
-\caption{Results are cached per segment. Queries combine cached results with results computed on historical and real-time nodes.}
+\caption{Results are cached per-segment. Queries combine cached results with results computed on historical and real-time nodes.}
 \label{fig:caching}
 \end{figure*}
 

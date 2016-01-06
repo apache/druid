@@ -21,14 +21,21 @@ package io.druid.query.metadata;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
 import com.metamx.common.StringUtils;
+import com.metamx.common.guava.Accumulator;
+import com.metamx.common.guava.Sequence;
 import com.metamx.common.logger.Logger;
+import io.druid.granularity.QueryGranularity;
+import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.metadata.metadata.ColumnAnalysis;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
+import io.druid.segment.Cursor;
+import io.druid.segment.DimensionSelector;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
@@ -38,8 +45,10 @@ import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ComplexColumn;
 import io.druid.segment.column.ValueType;
+import io.druid.segment.data.IndexedInts;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.util.EnumSet;
@@ -104,7 +113,11 @@ public class SegmentAnalyzer
           analysis = analyzeNumericColumn(capabilities, length, NUM_BYTES_IN_TEXT_FLOAT);
           break;
         case STRING:
-          analysis = analyzeStringColumn(capabilities, column, storageAdapter.getDimensionCardinality(columnName));
+          if (index != null) {
+            analysis = analyzeStringColumn(capabilities, column);
+          } else {
+            analysis = analyzeStringColumn(capabilities, storageAdapter, columnName);
+          }
           break;
         case COMPLEX:
           analysis = analyzeComplexColumn(capabilities, column, storageAdapter.getColumnTypeName(columnName));
@@ -140,6 +153,11 @@ public class SegmentAnalyzer
     return analysisTypes.contains(SegmentMetadataQuery.AnalysisType.CARDINALITY);
   }
 
+  public boolean analyzingMinMax()
+  {
+    return analysisTypes.contains(SegmentMetadataQuery.AnalysisType.MINMAX);
+  }
+
   private ColumnAnalysis analyzeNumericColumn(
       final ColumnCapabilities capabilities,
       final int length,
@@ -161,28 +179,30 @@ public class SegmentAnalyzer
         capabilities.hasMultipleValues(),
         size,
         null,
+        null,
+        null,
         null
     );
   }
 
   private ColumnAnalysis analyzeStringColumn(
       final ColumnCapabilities capabilities,
-      @Nullable final Column column,
-      final int cardinality
+      final Column column
   )
   {
     long size = 0;
 
-    if (column != null && analyzingSize()) {
-      if (!capabilities.hasBitmapIndexes()) {
-        return ColumnAnalysis.error("string_no_bitmap");
-      }
+    Comparable min = null;
+    Comparable max = null;
 
-      final BitmapIndex bitmapIndex = column.getBitmapIndex();
-      if (cardinality != bitmapIndex.getCardinality()) {
-        return ColumnAnalysis.error("bitmap_wrong_cardinality");
-      }
+    if (!capabilities.hasBitmapIndexes()) {
+      return ColumnAnalysis.error("string_no_bitmap");
+    }
 
+    final BitmapIndex bitmapIndex = column.getBitmapIndex();
+    final int cardinality = bitmapIndex.getCardinality();
+
+    if (analyzingSize()) {
       for (int i = 0; i < cardinality; ++i) {
         String value = bitmapIndex.getValue(i);
         if (value != null) {
@@ -191,11 +211,91 @@ public class SegmentAnalyzer
       }
     }
 
+    if (analyzingMinMax() && cardinality > 0) {
+      min = Strings.nullToEmpty(bitmapIndex.getValue(0));
+      max = Strings.nullToEmpty(bitmapIndex.getValue(cardinality - 1));
+    }
+
     return new ColumnAnalysis(
         capabilities.getType().name(),
         capabilities.hasMultipleValues(),
         size,
         analyzingCardinality() ? cardinality : 0,
+        min,
+        max,
+        null
+    );
+  }
+
+  private ColumnAnalysis analyzeStringColumn(
+      final ColumnCapabilities capabilities,
+      final StorageAdapter storageAdapter,
+      final String columnName
+  )
+  {
+    int cardinality = 0;
+    long size = 0;
+
+    Comparable min = null;
+    Comparable max = null;
+
+    if (analyzingCardinality()) {
+      cardinality = storageAdapter.getDimensionCardinality(columnName);
+    }
+
+    if (analyzingSize()) {
+      final long start = storageAdapter.getMinTime().getMillis();
+      final long end = storageAdapter.getMaxTime().getMillis();
+
+      final Sequence<Cursor> cursors =
+          storageAdapter.makeCursors(null, new Interval(start, end), QueryGranularity.ALL, false);
+
+      size = cursors.accumulate(
+          0L,
+          new Accumulator<Long, Cursor>()
+          {
+            @Override
+            public Long accumulate(Long accumulated, Cursor cursor)
+            {
+              DimensionSelector selector = cursor.makeDimensionSelector(
+                  new DefaultDimensionSpec(
+                      columnName,
+                      columnName
+                  )
+              );
+              if (selector == null) {
+                return accumulated;
+              }
+              long current = accumulated;
+              while (!cursor.isDone()) {
+                final IndexedInts vals = selector.getRow();
+                for (int i = 0; i < vals.size(); ++i) {
+                  final String dimVal = selector.lookupName(vals.get(i));
+                  if (dimVal != null && !dimVal.isEmpty()) {
+                    current += StringUtils.toUtf8(dimVal).length;
+                  }
+                }
+                cursor.advance();
+              }
+
+              return current;
+            }
+          }
+      );
+    }
+
+    if (analyzingMinMax()) {
+      min = storageAdapter.getMinValue(columnName);
+      max = storageAdapter.getMaxValue(columnName);
+    }
+
+    return new ColumnAnalysis(
+        capabilities.getType().name(),
+        capabilities.hasMultipleValues(),
+        size,
+        cardinality,
+        min,
+        max,
         null
     );
   }
@@ -218,7 +318,7 @@ public class SegmentAnalyzer
 
       final Function<Object, Long> inputSizeFn = serde.inputSizeFn();
       if (inputSizeFn == null) {
-        return new ColumnAnalysis(typeName, hasMultipleValues, 0, null, null);
+        return new ColumnAnalysis(typeName, hasMultipleValues, 0, null, null, null, null);
       }
 
       final int length = column.getLength();
@@ -231,6 +331,8 @@ public class SegmentAnalyzer
         typeName,
         hasMultipleValues,
         size,
+        null,
+        null,
         null,
         null
     );

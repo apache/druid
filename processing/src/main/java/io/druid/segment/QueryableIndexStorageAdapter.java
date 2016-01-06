@@ -35,6 +35,7 @@ import io.druid.query.QueryInterruptedException;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.Filter;
+import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ComplexColumn;
@@ -138,6 +139,28 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     finally {
       CloseQuietly.close(column);
     }
+  }
+
+  @Override
+  public Comparable getMinValue(String dimension)
+  {
+    Column column = index.getColumn(dimension);
+    if (column != null && column.getCapabilities().hasBitmapIndexes()) {
+      BitmapIndex bitmap = column.getBitmapIndex();
+      return bitmap.getCardinality() > 0 ? bitmap.getValue(0) : null;
+    }
+    return null;
+  }
+
+  @Override
+  public Comparable getMaxValue(String dimension)
+  {
+    Column column = index.getColumn(dimension);
+    if (column != null && column.getCapabilities().hasBitmapIndexes()) {
+      BitmapIndex bitmap = column.getBitmapIndex();
+      return bitmap.getCardinality() > 0 ? bitmap.getValue(bitmap.getCardinality() - 1) : null;
+    }
+    return null;
   }
 
   @Override

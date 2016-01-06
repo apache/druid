@@ -278,6 +278,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   static class OnHeapDimDim implements DimDim
   {
     private final Map<String, Integer> valueToId = Maps.newHashMap();
+    private String minValue = null;
+    private String maxValue = null;
 
     private final List<String> idToValue = Lists.newArrayList();
     private final Object lock;
@@ -326,8 +328,22 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
         final int index = size();
         valueToId.put(value, index);
         idToValue.add(value);
+        minValue = minValue == null || minValue.compareTo(value) > 0 ? value : minValue;
+        maxValue = maxValue == null || maxValue.compareTo(value) < 0 ? value : maxValue;
         return index;
       }
+    }
+
+    @Override
+    public String getMinValue()
+    {
+      return minValue;
+    }
+
+    @Override
+    public String getMaxValue()
+    {
+      return maxValue;
     }
 
     public OnHeapDimLookup sort()
