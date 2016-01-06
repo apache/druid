@@ -58,15 +58,23 @@ The filter specified at field can be any other filter defined on this page.
 
 ### JavaScript filter
 
-The JavaScript filter matches a dimension against the specified JavaScript function predicate. The filter matches values for which the function returns true.
+The JavaScript filter matches dimensions against the specified JavaScript function predicate. The filter matches values for which the function returns true.
 
-The function takes a single argument, the dimension value, and returns either true or false.
+The function takes the same number of arguments as the dimension values, and returns either true or false.
 
 ```json
 {
   "type" : "javascript",
   "dimension" : <dimension_string>,
   "function" : "function(value) { <...> }"
+}
+```
+or 
+```json
+{
+  "type" : "javascript",
+  "dimensions" : <array of dimension_strings>,
+  "function" : "function(value1, value2, ...) { <...> }"
 }
 ```
 
@@ -78,6 +86,15 @@ The following matches any dimension values for the dimension `name` between `'ba
   "type" : "javascript",
   "dimension" : "name",
   "function" : "function(x) { return(x >= 'bar' && x <= 'foo') }"
+}
+```
+
+The following matches values of the given two dimensions `dim1` and `dim2` are the same
+```json
+{
+  "type" : "javascript",
+  "dimension" : ["dim1","dim2"]
+  "function" : "function(x, y) { return x === y }"
 }
 ```
 
