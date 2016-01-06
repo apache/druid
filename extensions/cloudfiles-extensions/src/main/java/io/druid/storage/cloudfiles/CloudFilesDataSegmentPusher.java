@@ -68,8 +68,9 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
   public DataSegment push(final File indexFilesDir, final DataSegment inSegment) throws IOException
   {
     final String segmentPath = CloudFilesUtils.buildCloudFilesPath(this.config.getBasePath(), inSegment);
-    final File zipOutFile = File.createTempFile("druid", "index.zip");
     final File descriptorFile = File.createTempFile("descriptor", ".json");
+    final File zipOutFile = File.createTempFile("druid", "index.zip");
+    final long indexSize = CompressionUtils.zip(indexFilesDir, zipOutFile);
 
     log.info("Copying segment[%s] to CloudFiles at location[%s]", inSegment.getIdentifier(), segmentPath);
 
@@ -80,7 +81,6 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
             @Override
             public DataSegment call() throws Exception
             {
-              CompressionUtils.zip(indexFilesDir, zipOutFile);
               CloudFilesObject segmentData = new CloudFilesObject(
                   segmentPath, zipOutFile, objectApi.getRegion(),
                   objectApi.getContainer()
@@ -99,7 +99,7 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
               objectApi.put(descriptorData);
 
               final DataSegment outSegment = inSegment
-                  .withSize(segmentData.getFile().length())
+                  .withSize(indexSize)
                   .withLoadSpec(
                       ImmutableMap.<String, Object>of(
                           "type",
