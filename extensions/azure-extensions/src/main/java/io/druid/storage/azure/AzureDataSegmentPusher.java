@@ -64,15 +64,6 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
     return null;
   }
 
-  public File createCompressedSegmentDataFile(final File indexFilesDir) throws IOException
-  {
-    final File zipOutFile = File.createTempFile("index", ".zip");
-    CompressionUtils.zip(indexFilesDir, zipOutFile);
-
-    return zipOutFile;
-
-  }
-
   public File createSegmentDescriptorFile(final ObjectMapper jsonMapper, final DataSegment segment) throws
                                                                                                     IOException
   {
@@ -98,6 +89,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
   public DataSegment uploadDataSegment(
       DataSegment segment,
       final int version,
+      final long size,
       final File compressedSegmentData,
       final File descriptorFile,
       final Map<String, String> azurePaths
@@ -108,7 +100,7 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
     azureStorage.uploadBlob(descriptorFile, config.getContainer(), azurePaths.get("descriptor"));
 
     final DataSegment outSegment = segment
-        .withSize(compressedSegmentData.length())
+        .withSize(size)
         .withLoadSpec(
             ImmutableMap.<String, Object>of(
                 "type",
@@ -137,18 +129,23 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
     log.info("Uploading [%s] to Azure.", indexFilesDir);
 
     final int version = SegmentUtils.getVersionFromDir(indexFilesDir);
-    final File compressedSegmentData = createCompressedSegmentDataFile(indexFilesDir);
-    final File descriptorFile = createSegmentDescriptorFile(jsonMapper, segment);
-    final Map<String, String> azurePaths = getAzurePaths(segment);
+    File zipOutFile = null;
+    File descriptorFile = null;
 
     try {
+      final File outFile = zipOutFile = File.createTempFile("index", ".zip");
+      final long size = CompressionUtils.zip(indexFilesDir, zipOutFile);
+
+      final File descFile = descriptorFile = createSegmentDescriptorFile(jsonMapper, segment);
+      final Map<String, String> azurePaths = getAzurePaths(segment);
+
       return AzureUtils.retryAzureOperation(
           new Callable<DataSegment>()
           {
             @Override
             public DataSegment call() throws Exception
             {
-              return uploadDataSegment(segment, version, compressedSegmentData, descriptorFile, azurePaths);
+              return uploadDataSegment(segment, version, size, outFile, descFile, azurePaths);
             }
           },
           config.getMaxTries()
@@ -156,6 +153,17 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
+    }
+    finally {
+      if (zipOutFile != null) {
+        log.info("Deleting zipped index File[%s]", zipOutFile);
+        zipOutFile.delete();
+      }
+
+      if (descriptorFile != null) {
+        log.info("Deleting descriptor file[%s]", descriptorFile);
+        descriptorFile.delete();
+      }
     }
   }
 }

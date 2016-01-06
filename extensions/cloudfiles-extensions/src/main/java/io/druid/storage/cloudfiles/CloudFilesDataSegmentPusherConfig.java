@@ -28,7 +28,6 @@ import javax.validation.constraints.NotNull;
  */
 public class CloudFilesDataSegmentPusherConfig
 {
-
   @JsonProperty
   @NotNull
   private String region;
@@ -43,6 +42,26 @@ public class CloudFilesDataSegmentPusherConfig
 
   @JsonProperty
   private int operationMaxRetries = 10;
+
+  public void setRegion(String region)
+  {
+    this.region = region;
+  }
+
+  public void setContainer(String container)
+  {
+    this.container = container;
+  }
+
+  public void setBasePath(String basePath)
+  {
+    this.basePath = basePath;
+  }
+
+  public void setOperationMaxRetries(int operationMaxRetries)
+  {
+    this.operationMaxRetries = operationMaxRetries;
+  }
 
   public String getRegion()
   {

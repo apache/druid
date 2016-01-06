@@ -26,13 +26,28 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class S3DataSegmentPusherConfig
 {
   @JsonProperty
-  public String bucket = "";
+  private String bucket = "";
 
   @JsonProperty
-  public String baseKey = "";
+  private String baseKey = "";
 
   @JsonProperty
-  public boolean disableAcl = false;
+  private boolean disableAcl = false;
+
+  public void setBucket(String bucket)
+  {
+    this.bucket = bucket;
+  }
+
+  public void setBaseKey(String baseKey)
+  {
+    this.baseKey = baseKey;
+  }
+
+  public void setDisableAcl(boolean disableAcl)
+  {
+    this.disableAcl = disableAcl;
+  }
 
   public String getBucket()
   {
