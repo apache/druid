@@ -93,7 +93,7 @@ The following matches values of the given two dimensions `dim1` and `dim2` are t
 ```json
 {
   "type" : "javascript",
-  "dimension" : ["dim1","dim2"]
+  "dimensions" : ["dim1","dim2"]
   "function" : "function(x, y) { return x === y }"
 }
 ```
