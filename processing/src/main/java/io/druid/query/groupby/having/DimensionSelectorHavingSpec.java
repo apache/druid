@@ -48,11 +48,7 @@ public class DimensionSelectorHavingSpec implements HavingSpec
   {
     dimension = Preconditions.checkNotNull(dimName, "Must have attribute 'dimension'");
     this.value = value;
-    if (extractionFn != null) {
-      this.extractionFn = extractionFn;
-    } else {
-      this.extractionFn = new IdentityExtractionFn(); 
-    }
+    this.extractionFn = extractionFn != null ? extractionFn : IdentityExtractionFn.getInstance();
   }
 
   @JsonProperty("value")

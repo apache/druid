@@ -35,13 +35,13 @@ public class ExtractionDimFilterTest
     ExtractionDimFilter extractionDimFilter = new ExtractionDimFilter(
         "abc",
         "d",
-        new IdentityExtractionFn(),
+        IdentityExtractionFn.getInstance(),
         null
     );
     ExtractionDimFilter extractionDimFilter2 = new ExtractionDimFilter(
         "ab",
         "cd",
-        new IdentityExtractionFn(),
+        IdentityExtractionFn.getInstance(),
         null
     );
 
