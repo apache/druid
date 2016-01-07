@@ -162,7 +162,7 @@ public class DimensionSelectorHavingSpecTest
   @Test
   public void testGetCacheKey()
   {
-    ExtractionFn extractionFn = new IdentityExtractionFn();
+    ExtractionFn extractionFn = IdentityExtractionFn.getInstance();
     byte[] dimBytes = "dimension".getBytes(Charsets.UTF_8);
     byte[] valBytes = "v".getBytes(Charsets.UTF_8);
     byte[] extFunKey = extractionFn.getCacheKey();
