@@ -128,6 +128,12 @@ public class BoundDimFilter implements DimFilter
   }
 
   @Override
+  public DimFilter optimize()
+  {
+    return this;
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

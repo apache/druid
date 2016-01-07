@@ -31,6 +31,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.io.CountingInputStream;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
@@ -58,6 +59,7 @@ import java.util.NoSuchElementException;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Builds firehoses that accept events through the {@link io.druid.segment.realtime.firehose.EventReceiver} interface. Can also register these
@@ -137,6 +139,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
 
     private volatile InputRow nextRow = null;
     private volatile boolean closed = false;
+    private final AtomicLong bytesReceived = new AtomicLong(0);
 
     public EventReceiverFirehose(MapInputRowParser parser)
     {
@@ -158,17 +161,20 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
       final String contentType = isSmile ? SmileMediaTypes.APPLICATION_JACKSON_SMILE : MediaType.APPLICATION_JSON;
 
       ObjectMapper objectMapper = isSmile ? smileMapper : jsonMapper;
-
+      CountingInputStream countingInputStream = new CountingInputStream(in);
       Collection<Map<String, Object>> events = null;
       try {
         events = objectMapper.readValue(
-            in, new TypeReference<Collection<Map<String, Object>>>()
+            countingInputStream, new TypeReference<Collection<Map<String, Object>>>()
             {
             }
         );
       }
       catch (IOException e) {
         return Response.serverError().entity(ImmutableMap.<String, Object>of("error", e.getMessage())).build();
+      }
+      finally {
+        bytesReceived.addAndGet(countingInputStream.getCount());
       }
       log.debug("Adding %,d events to firehose: %s", events.size(), serviceName);
 
@@ -254,6 +260,12 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
     public int getCapacity()
     {
       return bufferSize;
+    }
+
+    @Override
+    public long getBytesReceived()
+    {
+      return bytesReceived.get();
     }
 
     @Override

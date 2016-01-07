@@ -38,4 +38,11 @@ public interface EventReceiverFirehoseMetric
    * Return the capacity of the buffer.
    */
   int getCapacity();
+
+  /**
+   * Return the number of bytes received by the firehose.
+   */
+  long getBytesReceived();
+
+
 }
