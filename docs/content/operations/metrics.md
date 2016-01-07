@@ -118,7 +118,7 @@ These metrics are for the Druid coordinator and are reset each time the coordina
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
-|`segment/added/count`|Number of segments added to the cluster.|tier.|Varies.|
+|`segment/assigned/count`|Number of segments assigned to be loaded in the cluster.|tier.|Varies.|
 |`segment/moved/count`|Number of segments moved in the cluster.|tier.|Varies.|
 |`segment/dropped/count`|Number of segments dropped due to being overshadowed.|tier.|Varies.|
 |`segment/deleted/count`|Number of segments dropped due to rules.|tier.|Varies.|
