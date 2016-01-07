@@ -43,7 +43,10 @@ public class ApproximateHistogramAggregationTest
   {
     ApproximateHistogramDruidModule module = new ApproximateHistogramDruidModule();
     module.configure(null);
-    helper = new AggregationTestHelper(Lists.newArrayList(module.getJacksonModules()), tempFolder);
+    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
+        Lists.newArrayList(module.getJacksonModules()),
+        tempFolder
+    );
   }
 
   @Test
