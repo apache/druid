@@ -57,7 +57,7 @@ public class ITWikipediaQueryTest
   }
 
   @Test
-  public void testQueriesFromFile() throws Exception
+  public void testWikipediaQueriesFromFile() throws Exception
   {
     queryHelper.testQueriesFromFile(WIKIPEDIA_QUERIES_RESOURCE, 2);
   }

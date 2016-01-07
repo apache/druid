@@ -61,7 +61,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
   IntegrationTestingConfig config;
 
   @Test
-  public void testRealtimeIndexTask() throws Exception
+  public void testUnionQuery() throws Exception
   {
     final int numTasks = 4;
 
