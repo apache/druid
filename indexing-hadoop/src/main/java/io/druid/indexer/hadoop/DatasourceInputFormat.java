@@ -20,14 +20,25 @@
 package io.druid.indexer.hadoop;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Supplier;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.metamx.common.ISE;
+import com.metamx.common.Pair;
 import com.metamx.common.logger.Logger;
+import io.druid.collections.CountingMap;
 import io.druid.data.input.InputRow;
 import io.druid.indexer.HadoopDruidIndexerConfig;
+import io.druid.indexer.JobHelper;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.mapred.FileInputFormat;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
@@ -36,9 +47,13 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.TreeSet;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
 {
@@ -89,9 +104,11 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
     List<WindowedDataSegment> list = new ArrayList<>();
     long size = 0;
 
+    JobConf dummyConf = new JobConf();
+    org.apache.hadoop.mapred.InputFormat fio = supplier.get();
     for (WindowedDataSegment segment : segments) {
       if (size + segment.getSegment().getSize() > maxSize && size > 0) {
-        splits.add(new DatasourceInputSplit(list));
+        splits.add(toDataSourceSplit(list, fio, dummyConf));
         list = Lists.newArrayList();
         size = 0;
       }
@@ -101,7 +118,7 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
     }
 
     if (list.size() > 0) {
-      splits.add(new DatasourceInputSplit(list));
+      splits.add(toDataSourceSplit(list, fio, dummyConf));
     }
 
     logger.info("Number of splits [%d]", splits.size());
@@ -115,5 +132,86 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
   ) throws IOException, InterruptedException
   {
     return new DatasourceRecordReader();
+  }
+
+  private Supplier<org.apache.hadoop.mapred.InputFormat> supplier = new Supplier<org.apache.hadoop.mapred.InputFormat>()
+  {
+    @Override
+    public org.apache.hadoop.mapred.InputFormat get()
+    {
+      return new TextInputFormat();
+    }
+  };
+
+  @VisibleForTesting
+  DatasourceInputFormat setSupplier(Supplier<org.apache.hadoop.mapred.InputFormat> supplier) {
+    this.supplier = supplier;
+    return this;
+  }
+
+  private DatasourceInputSplit toDataSourceSplit(
+      List<WindowedDataSegment> segments,
+      org.apache.hadoop.mapred.InputFormat fio,
+      JobConf conf
+  )
+  {
+    String[] locations = null;
+    try {
+      locations = getFrequentLocations(segments, fio, conf);
+    }
+    catch (Exception e) {
+      logger.error("Exception thrown finding location of splits", e);
+    }
+    return new DatasourceInputSplit(segments, locations);
+  }
+
+  private String[] getFrequentLocations(
+      List<WindowedDataSegment> segments,
+      org.apache.hadoop.mapred.InputFormat fio,
+      JobConf conf
+  ) throws IOException
+  {
+    Iterable<String> locations = Collections.emptyList();
+    for (WindowedDataSegment segment : segments) {
+      FileInputFormat.setInputPaths(conf, new Path(JobHelper.getURIFromSegment(segment.getSegment())));
+      for (org.apache.hadoop.mapred.InputSplit split : fio.getSplits(conf, 1)) {
+        locations = Iterables.concat(locations, Arrays.asList(split.getLocations()));
+      }
+    }
+    return getFrequentLocations(locations);
+  }
+
+  private static String[] getFrequentLocations(Iterable<String> hosts) {
+
+    final CountingMap<String> counter = new CountingMap<>();
+    for (String location : hosts) {
+      counter.add(location, 1);
+    }
+
+    final TreeSet<Pair<Long, String>> sorted = Sets.<Pair<Long, String>>newTreeSet(
+        new Comparator<Pair<Long, String>>()
+        {
+          @Override
+          public int compare(Pair<Long, String> o1, Pair<Long, String> o2)
+          {
+            int compare = o2.lhs.compareTo(o1.lhs); // descending
+            if (compare == 0) {
+              compare = o1.rhs.compareTo(o2.rhs);   // ascending
+            }
+            return compare;
+          }
+        }
+    );
+
+    for (Map.Entry<String, AtomicLong> entry : counter.entrySet()) {
+      sorted.add(Pair.of(entry.getValue().get(), entry.getKey()));
+    }
+
+    // use default replication factor, if possible
+    final List<String> locations = Lists.newArrayListWithCapacity(3);
+    for (Pair<Long, String> frequent : Iterables.limit(sorted, 3)) {
+      locations.add(frequent.rhs);
+    }
+    return locations.toArray(new String[locations.size()]);
   }
 }
