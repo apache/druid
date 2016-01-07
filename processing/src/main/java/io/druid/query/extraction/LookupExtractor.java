@@ -78,7 +78,7 @@ public abstract class LookupExtractor
    * In the other hand returning a list with the null element implies user want to map the none existing value to the key null.
    */
 
-  abstract List<String> unapply(String value);
+  public abstract List<String> unapply(String value);
 
   /**
    * @param values Iterable of values for which will perform reverse lookup
