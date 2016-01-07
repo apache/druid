@@ -41,7 +41,14 @@ public class CompressedLongsSupplierSerializer
     final CompressedLongsSupplierSerializer retVal = new CompressedLongsSupplierSerializer(
         CompressedLongsIndexedSupplier.MAX_LONGS_IN_BUFFER,
         new GenericIndexedWriter<ResourceHolder<LongBuffer>>(
-            ioPeon, filenameBase, CompressedLongBufferObjectStrategy.getBufferForOrder(order, compression, CompressedLongsIndexedSupplier.MAX_LONGS_IN_BUFFER)
+            ioPeon,
+            filenameBase,
+            CompressedLongBufferObjectStrategy.getBufferForOrder(
+                order,
+                compression,
+                CompressedLongsIndexedSupplier.MAX_LONGS_IN_BUFFER
+            ),
+            -1
         ),
         compression
     );

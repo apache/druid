@@ -19,7 +19,6 @@
 
 package io.druid.segment;
 
-import com.google.common.io.Files;
 import io.druid.segment.data.CompressedLongsSupplierSerializer;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.IOPeon;
@@ -72,7 +71,7 @@ public class LongMetricColumnSerializer implements MetricColumnSerializer
     final File outFile = IndexIO.makeMetricFile(outDir, metricName, IndexIO.BYTE_ORDER);
     outFile.delete();
     MetricHolder.writeLongMetric(
-        Files.newOutputStreamSupplier(outFile, true), metricName, writer
+        IndexIO.toBufferedStreamSupplier(outFile, true), metricName, writer
     );
     IndexIO.checkFileSize(outFile);
 

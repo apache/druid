@@ -36,7 +36,7 @@ class IOPeonForTesting implements IOPeon
   Map<String, ByteArrayOutputStream> outStreams = Maps.newHashMap();
 
   @Override
-  public OutputStream makeOutputStream(String filename) throws IOException
+  public OutputStream makeOutputStream(String filename, int bufferSize) throws IOException
   {
     ByteArrayOutputStream stream = outStreams.get(filename);
 
@@ -49,7 +49,7 @@ class IOPeonForTesting implements IOPeon
   }
 
   @Override
-  public InputStream makeInputStream(String filename) throws IOException
+  public InputStream makeInputStream(String filename, int bufferSize) throws IOException
   {
     ByteArrayOutputStream outStream = outStreams.get(filename);
 

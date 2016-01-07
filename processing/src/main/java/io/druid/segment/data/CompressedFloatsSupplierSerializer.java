@@ -48,7 +48,7 @@ public class CompressedFloatsSupplierSerializer
     final CompressedFloatsSupplierSerializer retVal = new CompressedFloatsSupplierSerializer(
         sizePer,
         new GenericIndexedWriter<ResourceHolder<FloatBuffer>>(
-            ioPeon, filenameBase, CompressedFloatBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)
+            ioPeon, filenameBase, CompressedFloatBufferObjectStrategy.getBufferForOrder(order, compression, sizePer), -1
         ),
         compression
     );

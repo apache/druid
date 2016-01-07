@@ -21,6 +21,7 @@ package io.druid.segment.data;
 
 import com.google.common.collect.Maps;
 
+import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -34,10 +35,10 @@ import java.util.Map;
 */
 public class TmpFileIOPeon implements IOPeon
 {
-  Map<String, File> createdFiles = Maps.newLinkedHashMap();
+  private final Map<String, File> createdFiles = Maps.newLinkedHashMap();
 
   @Override
-  public OutputStream makeOutputStream(String filename) throws IOException
+  public OutputStream makeOutputStream(String filename, int bufferSize) throws IOException
   {
     File retFile = createdFiles.get(filename);
     if (retFile == null) {
@@ -45,15 +46,19 @@ public class TmpFileIOPeon implements IOPeon
       retFile.deleteOnExit();
       createdFiles.put(filename, retFile);
     }
-    return new BufferedOutputStream(new FileOutputStream(retFile));
+    FileOutputStream out = new FileOutputStream(retFile);
+    return bufferSize <= 0 ? new BufferedOutputStream(out) : new BufferedOutputStream(out, bufferSize);
   }
 
   @Override
-  public InputStream makeInputStream(String filename) throws IOException
+  public InputStream makeInputStream(String filename, int bufferSize) throws IOException
   {
     final File retFile = createdFiles.get(filename);
-
-    return retFile == null ? null : new FileInputStream(retFile);
+    if (retFile == null) {
+      return null;
+    }
+    FileInputStream in = new FileInputStream(retFile);
+    return bufferSize <= 0 ? new BufferedInputStream(in) : new BufferedInputStream(in, bufferSize);
   }
 
   @Override

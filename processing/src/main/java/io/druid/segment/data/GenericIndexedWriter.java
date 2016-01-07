@@ -38,9 +38,13 @@ import java.util.Arrays;
  */
 public class GenericIndexedWriter<T> implements Closeable
 {
+  private static final int DEFAULT_HEADER_BUFFER_SIZE = 1024;
+  private static final int METADATA_SIZE = 10;
+
   private final IOPeon ioPeon;
   private final String filenameBase;
   private final ObjectStrategy<T> strategy;
+  private final int bufferSize;
 
   private boolean objectsSorted = true;
   private T prevObject = null;
@@ -52,18 +56,20 @@ public class GenericIndexedWriter<T> implements Closeable
   public GenericIndexedWriter(
       IOPeon ioPeon,
       String filenameBase,
-      ObjectStrategy<T> strategy
+      ObjectStrategy<T> strategy,
+      int bufferSize
   )
   {
     this.ioPeon = ioPeon;
     this.filenameBase = filenameBase;
     this.strategy = strategy;
+    this.bufferSize = bufferSize;
   }
 
   public void open() throws IOException
   {
-    headerOut = new CountingOutputStream(ioPeon.makeOutputStream(makeFilename("header")));
-    valuesOut = new CountingOutputStream(ioPeon.makeOutputStream(makeFilename("values")));
+    headerOut = new CountingOutputStream(ioPeon.makeOutputStream(makeFilename("header"), DEFAULT_HEADER_BUFFER_SIZE));
+    valuesOut = new CountingOutputStream(ioPeon.makeOutputStream(makeFilename("values"), bufferSize));
   }
 
   public void write(T objectToWrite) throws IOException
@@ -107,16 +113,11 @@ public class GenericIndexedWriter<T> implements Closeable
         numBytesWritten < Integer.MAX_VALUE, "Wrote[%s] bytes, which is too many.", numBytesWritten
     );
 
-    OutputStream metaOut = ioPeon.makeOutputStream(makeFilename("meta"));
-
-    try {
+    try (OutputStream metaOut = ioPeon.makeOutputStream(makeFilename("meta"), METADATA_SIZE)) {
       metaOut.write(0x1);
       metaOut.write(objectsSorted ? 0x1 : 0x0);
       metaOut.write(Ints.toByteArray((int) numBytesWritten + 4));
       metaOut.write(Ints.toByteArray(numWritten));
-    }
-    finally {
-      metaOut.close();
     }
   }
 
@@ -135,7 +136,7 @@ public class GenericIndexedWriter<T> implements Closeable
                   @Override
                   public InputStream getInput() throws IOException
                   {
-                    return ioPeon.makeInputStream(makeFilename(input));
+                    return ioPeon.makeInputStream(makeFilename(input), bufferSize);
                   }
                 };
               }

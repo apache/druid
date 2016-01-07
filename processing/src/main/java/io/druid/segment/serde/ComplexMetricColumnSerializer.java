@@ -19,7 +19,6 @@
 
 package io.druid.segment.serde;
 
-import com.google.common.io.Files;
 import io.druid.segment.IndexIO;
 import io.druid.segment.MetricColumnSerializer;
 import io.druid.segment.MetricHolder;
@@ -37,6 +36,7 @@ public class ComplexMetricColumnSerializer implements MetricColumnSerializer
   private final ComplexMetricSerde serde;
   private final IOPeon ioPeon;
   private final File outDir;
+  private final int bufferSize;
 
   private GenericIndexedWriter writer;
 
@@ -44,13 +44,15 @@ public class ComplexMetricColumnSerializer implements MetricColumnSerializer
       String metricName,
       File outDir,
       IOPeon ioPeon,
-      ComplexMetricSerde serde
+      ComplexMetricSerde serde,
+      int bufferSize
   )
   {
     this.metricName = metricName;
     this.serde = serde;
     this.ioPeon = ioPeon;
     this.outDir = outDir;
+    this.bufferSize = bufferSize;
   }
 
   @SuppressWarnings(value = "unchecked")
@@ -58,7 +60,7 @@ public class ComplexMetricColumnSerializer implements MetricColumnSerializer
   public void open() throws IOException
   {
     writer = new GenericIndexedWriter(
-        ioPeon, String.format("%s_%s", metricName, outDir.getName()), serde.getObjectStrategy()
+        ioPeon, String.format("%s_%s", metricName, outDir.getName()), serde.getObjectStrategy(), bufferSize
     );
 
     writer.open();
@@ -78,7 +80,7 @@ public class ComplexMetricColumnSerializer implements MetricColumnSerializer
     final File outFile = IndexIO.makeMetricFile(outDir, metricName, IndexIO.BYTE_ORDER);
     outFile.delete();
     MetricHolder.writeComplexMetric(
-        Files.newOutputStreamSupplier(outFile, true), metricName, serde.getTypeName(), writer
+        IndexIO.toBufferedStreamSupplier(outFile, true), metricName, serde.getTypeName(), writer
     );
     IndexIO.checkFileSize(outFile);
 

@@ -86,6 +86,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.nio.MappedByteBuffer;
@@ -107,6 +108,8 @@ public class IndexMerger
   private static final SerializerUtils serializerUtils = new SerializerUtils();
   private static final int INVALID_ROW = -1;
   private static final Splitter SPLITTER = Splitter.on(",");
+
+  private static final int DEFAULT_BUFFER_SIZE = 8192;
 
   private final ObjectMapper mapper;
   private final IndexIO indexIO;
@@ -558,7 +561,7 @@ public class IndexMerger
 
     for (String dimension : mergedDimensions) {
       final GenericIndexedWriter<String> writer = new GenericIndexedWriter<String>(
-          ioPeon, dimension, GenericIndexed.STRING_STRATEGY
+          ioPeon, dimension, GenericIndexed.STRING_STRATEGY, DEFAULT_BUFFER_SIZE
       );
       writer.open();
 
@@ -693,6 +696,11 @@ public class IndexMerger
 
     Iterable<Rowboat> theRows = rowMergerFn.apply(boats);
 
+    int numMaxRow = 0;
+    for (IndexableAdapter index : indexes) {
+      numMaxRow = Math.max(numMaxRow, index.getNumRows());
+    }
+
     CompressedLongsSupplierSerializer timeWriter = CompressedLongsSupplierSerializer.create(
         ioPeon, "little_end_time", IndexIO.BYTE_ORDER, CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
     );
@@ -701,7 +709,12 @@ public class IndexMerger
 
     ArrayList<VSizeIndexedWriter> forwardDimWriters = Lists.newArrayListWithCapacity(mergedDimensions.size());
     for (String dimension : mergedDimensions) {
-      VSizeIndexedWriter writer = new VSizeIndexedWriter(ioPeon, dimension, dimensionCardinalities.get(dimension));
+      VSizeIndexedWriter writer = new VSizeIndexedWriter(
+          ioPeon,
+          dimension,
+          dimensionCardinalities.get(dimension),
+          DEFAULT_BUFFER_SIZE
+      );
       writer.open();
       forwardDimWriters.add(writer);
     }
@@ -724,7 +737,7 @@ public class IndexMerger
             throw new ISE("Unknown type[%s]", typeName);
           }
 
-          metWriters.add(new ComplexMetricColumnSerializer(metric, v8OutDir, ioPeon, serde));
+          metWriters.add(new ComplexMetricColumnSerializer(metric, v8OutDir, ioPeon, serde, DEFAULT_BUFFER_SIZE));
           break;
         default:
           throw new ISE("Unknown type[%s]", type);
@@ -786,7 +799,7 @@ public class IndexMerger
 
     final File timeFile = IndexIO.makeTimeFile(v8OutDir, IndexIO.BYTE_ORDER);
     timeFile.delete();
-    OutputSupplier<FileOutputStream> out = Files.newOutputStreamSupplier(timeFile, true);
+    OutputSupplier<OutputStream> out = IndexIO.toBufferedStreamSupplier(timeFile, true);
     timeWriter.closeAndConsolidate(out);
     IndexIO.checkFileSize(timeFile);
 
@@ -812,11 +825,11 @@ public class IndexMerger
 
     final File invertedFile = new File(v8OutDir, "inverted.drd");
     Files.touch(invertedFile);
-    out = Files.newOutputStreamSupplier(invertedFile, true);
+    out = IndexIO.toBufferedStreamSupplier(invertedFile, true);
 
     final File geoFile = new File(v8OutDir, "spatial.drd");
     Files.touch(geoFile);
-    OutputSupplier<FileOutputStream> spatialOut = Files.newOutputStreamSupplier(geoFile, true);
+    OutputSupplier<OutputStream> spatialOut = IndexIO.toBufferedStreamSupplier(geoFile, true);
 
     for (int i = 0; i < mergedDimensions.size(); ++i) {
       long dimStartTime = System.currentTimeMillis();
@@ -833,7 +846,7 @@ public class IndexMerger
 
       final BitmapSerdeFactory bitmapSerdeFactory = indexSpec.getBitmapSerdeFactory();
       GenericIndexedWriter<ImmutableBitmap> writer = new GenericIndexedWriter<>(
-          ioPeon, dimension, bitmapSerdeFactory.getObjectStrategy()
+          ioPeon, dimension, bitmapSerdeFactory.getObjectStrategy(), DEFAULT_BUFFER_SIZE
       );
       writer.open();
 
@@ -844,7 +857,7 @@ public class IndexMerger
       if (isSpatialDim) {
         BitmapFactory bitmapFactory = bitmapSerdeFactory.getBitmapFactory();
         spatialWriter = new ByteBufferWriter<ImmutableRTree>(
-            spatialIoPeon, dimension, new IndexedRTree.ImmutableRTreeObjectStrategy(bitmapFactory)
+            spatialIoPeon, dimension, new IndexedRTree.ImmutableRTreeObjectStrategy(bitmapFactory), -1
         );
         spatialWriter.open();
         tree = new RTree(2, new LinearGutmanSplitStrategy(0, 50, bitmapFactory), bitmapFactory);

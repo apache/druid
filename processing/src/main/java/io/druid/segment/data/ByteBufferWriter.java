@@ -36,9 +36,12 @@ import java.util.Arrays;
  */
 public class ByteBufferWriter<T> implements Closeable
 {
+  private static final int DEFAULT_HEADER_BUFFER_SIZE = 1024;
+
   private final IOPeon ioPeon;
   private final String filenameBase;
   private final ObjectStrategy<T> strategy;
+  private final int bufferSize;
 
   private CountingOutputStream headerOut = null;
   private CountingOutputStream valueOut = null;
@@ -46,18 +49,20 @@ public class ByteBufferWriter<T> implements Closeable
   public ByteBufferWriter(
       IOPeon ioPeon,
       String filenameBase,
-      ObjectStrategy<T> strategy
+      ObjectStrategy<T> strategy,
+      int bufferSize
   )
   {
     this.ioPeon = ioPeon;
     this.filenameBase = filenameBase;
     this.strategy = strategy;
+    this.bufferSize = bufferSize;
   }
 
   public void open() throws IOException
   {
-    headerOut = new CountingOutputStream(ioPeon.makeOutputStream(makeFilename("header")));
-    valueOut = new CountingOutputStream(ioPeon.makeOutputStream(makeFilename("value")));
+    headerOut = new CountingOutputStream(ioPeon.makeOutputStream(makeFilename("header"), DEFAULT_HEADER_BUFFER_SIZE));
+    valueOut = new CountingOutputStream(ioPeon.makeOutputStream(makeFilename("value"), bufferSize));
   }
 
   public void write(T objectToWrite) throws IOException
@@ -100,7 +105,7 @@ public class ByteBufferWriter<T> implements Closeable
                   @Override
                   public InputStream getInput() throws IOException
                   {
-                    return ioPeon.makeInputStream(makeFilename(input));
+                    return ioPeon.makeInputStream(makeFilename(input), bufferSize);
                   }
                 };
               }

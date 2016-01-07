@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.metamx.common.ISE;
 import io.druid.jackson.DefaultObjectMapper;
+import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -45,6 +46,17 @@ public class Utils
   public static OutputStream makePathAndOutputStream(JobContext job, Path outputPath, boolean deleteExisting)
       throws IOException
   {
+    return makePathAndOutputStream(job, outputPath, deleteExisting, -1);
+  }
+
+  public static OutputStream makePathAndOutputStream(
+      JobContext job,
+      Path outputPath,
+      boolean deleteExisting,
+      int bufferSize
+  )
+      throws IOException
+  {
     OutputStream retVal;
     FileSystem fs = outputPath.getFileSystem(job.getConfiguration());
     Class<? extends CompressionCodec> codecClass;
@@ -64,10 +76,10 @@ public class Utils
       }
     }
 
+    retVal = bufferSize < 0 ? fs.create(outputPath, false) : fs.create(outputPath, false, bufferSize);
+
     if (FileOutputFormat.getCompressOutput(job)) {
-      retVal = codec.createOutputStream(fs.create(outputPath, false));
-    } else {
-      retVal = fs.create(outputPath, false);
+      retVal = codec.createOutputStream(retVal);
     }
     return retVal;
   }
@@ -91,15 +103,25 @@ public class Utils
   public static InputStream openInputStream(JobContext job, Path inputPath, final FileSystem fileSystem)
       throws IOException
   {
+    return openInputStream(job, inputPath, fileSystem, -1);
+  }
+  public static InputStream openInputStream(JobContext job, Path inputPath, final FileSystem fileSystem, int bufferSize)
+      throws IOException
+  {
     if (!FileOutputFormat.getCompressOutput(job)) {
-      return fileSystem.open(inputPath);
+      return openInputStream(inputPath, fileSystem, bufferSize);
     } else {
       Class<? extends CompressionCodec> codecClass = FileOutputFormat.getOutputCompressorClass(job, GzipCodec.class);
       CompressionCodec codec = ReflectionUtils.newInstance(codecClass, job.getConfiguration());
       inputPath = new Path(inputPath.toString() + codec.getDefaultExtension());
 
-      return codec.createInputStream(fileSystem.open(inputPath));
+      return codec.createInputStream(openInputStream(inputPath, fileSystem, bufferSize));
     }
+  }
+
+  private static InputStream openInputStream(Path inputPath, FileSystem fileSystem, int bufferSize) throws IOException
+  {
+    return bufferSize < 0 ? fileSystem.open(inputPath) : fileSystem.open(inputPath, bufferSize);
   }
 
   public static Map<String, Object> getStats(JobContext job, Path statsPath)
