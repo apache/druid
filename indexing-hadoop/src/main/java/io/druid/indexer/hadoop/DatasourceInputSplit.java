@@ -33,17 +33,21 @@ import java.util.List;
 
 public class DatasourceInputSplit extends InputSplit implements Writable
 {
+  private static final String[] EMPTY_STR_ARRAY = new String[0];
+
   private List<WindowedDataSegment> segments = null;
+  private String[] locations = null;
 
   //required for deserialization
   public DatasourceInputSplit()
   {
   }
 
-  public DatasourceInputSplit(@NotNull List<WindowedDataSegment> segments)
+  public DatasourceInputSplit(@NotNull List<WindowedDataSegment> segments, String[] locations)
   {
     Preconditions.checkArgument(segments != null && segments.size() > 0, "no segments");
     this.segments = segments;
+    this.locations = locations == null ? EMPTY_STR_ARRAY : locations;
   }
 
   @Override
@@ -59,7 +63,7 @@ public class DatasourceInputSplit extends InputSplit implements Writable
   @Override
   public String[] getLocations() throws IOException, InterruptedException
   {
-    return new String[]{};
+    return locations;
   }
 
   public List<WindowedDataSegment> getSegments()
@@ -71,6 +75,10 @@ public class DatasourceInputSplit extends InputSplit implements Writable
   public void write(DataOutput out) throws IOException
   {
     out.writeUTF(HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsString(segments));
+    out.writeInt(locations.length);
+    for (String location : locations) {
+      out.writeUTF(location);
+    }
   }
 
   @Override
@@ -82,5 +90,9 @@ public class DatasourceInputSplit extends InputSplit implements Writable
         {
         }
     );
+    locations = new String[in.readInt()];
+    for (int i = 0; i < locations.length; i++) {
+      locations[i] = in.readUTF();
+    }
   }
 }
