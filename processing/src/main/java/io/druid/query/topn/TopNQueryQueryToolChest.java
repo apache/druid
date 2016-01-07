@@ -532,7 +532,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     return Ordering.natural();
   }
 
-  private static class ThresholdAdjustingQueryRunner implements QueryRunner<Result<TopNResultValue>>
+  static class ThresholdAdjustingQueryRunner implements QueryRunner<Result<TopNResultValue>>
   {
     private final QueryRunner<Result<TopNResultValue>> runner;
     private final TopNQueryConfig config;
