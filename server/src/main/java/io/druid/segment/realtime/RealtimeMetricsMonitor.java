@@ -95,6 +95,7 @@ public class RealtimeMetricsMonitor extends AbstractMonitor
       emitter.emit(builder.build("ingest/handoff/failed", metrics.failedHandoffs() - previous.failedHandoffs()));
       emitter.emit(builder.build("ingest/merge/time", metrics.mergeTimeMillis() - previous.mergeTimeMillis()));
       emitter.emit(builder.build("ingest/merge/cpu", metrics.mergeCpuTime() - previous.mergeCpuTime()));
+      emitter.emit(builder.build("ingest/handoff/count", metrics.handOffCount() - previous.handOffCount()));
       previousValues.put(fireDepartment, metrics);
     }
 
