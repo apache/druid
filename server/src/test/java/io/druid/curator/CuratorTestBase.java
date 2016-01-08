@@ -20,9 +20,8 @@
 package io.druid.curator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.api.client.repackaged.com.google.common.base.Throwables;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
-import com.metamx.common.guava.CloseQuietly;
 import io.druid.client.DruidServer;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.DataSegment;
@@ -34,6 +33,8 @@ import org.apache.curator.test.Timing;
 import org.apache.curator.utils.ZKPaths;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
+
+import java.io.IOException;
 
 /**
  */
@@ -152,8 +153,13 @@ public class CuratorTestBase
 
   protected void tearDownServerAndCurator()
   {
-    CloseQuietly.close(curator);
-    CloseQuietly.close(server);
+    try {
+      curator.close();
+      server.close();
+    } catch(IOException ex)
+    {
+      throw Throwables.propagate(ex);
+    }
   }
 
 }
