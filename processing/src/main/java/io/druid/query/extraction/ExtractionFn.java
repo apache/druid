@@ -30,7 +30,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
     @JsonSubTypes.Type(name = "regex", value = RegexDimExtractionFn.class),
     @JsonSubTypes.Type(name = "partial", value = MatchingDimExtractionFn.class),
     @JsonSubTypes.Type(name = "searchQuery", value = SearchQuerySpecDimExtractionFn.class),
-    @JsonSubTypes.Type(name = "javascript", value = JavascriptExtractionFn.class),
+    @JsonSubTypes.Type(name = "javascript", value = JavaScriptExtractionFn.class),
     @JsonSubTypes.Type(name = "timeFormat", value = TimeFormatExtractionFn.class),
     @JsonSubTypes.Type(name = "identity", value = IdentityExtractionFn.class),
     @JsonSubTypes.Type(name = "lookup", value = LookupExtractionFn.class),
