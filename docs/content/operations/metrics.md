@@ -86,6 +86,8 @@ Memcached client metrics are reported as per the following. These metrics come d
 
 ## Ingestion Metrics
 
+These metrics are only available if the RealtimeMetricsMonitor is included in the monitors list for the Realtime node. These metrics are deltas for each emission period.
+
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
 |`ingest/events/thrownAway`|Number of events rejected because they are outside the windowPeriod.|dataSource.|0|
@@ -100,6 +102,7 @@ Memcached client metrics are reported as per the following. These metrics come d
 |`ingest/handoff/failed`|Number of handoffs that failed.|dataSource.|0|
 |`ingest/merge/time`|Milliseconds spent merging intermediate segments|dataSource.|Depends on configuration. Generally a few minutes at most.|
 |`ingest/merge/cpu`|Cpu time in Nanoseconds spent on merging intermediate segments.|dataSource.|Depends on configuration. Generally a few minutes at most.|
+|`ingest/handoff/count`|Number of handoffs that happened.|dataSource.|Varies. Generally greater than 0 once every segment granular period if cluster operating normally|
 
 Note: If the JVM does not support CPU time measurement for the current thread, ingest/merge/cpu and ingest/persists/cpu will be 0. 
 
