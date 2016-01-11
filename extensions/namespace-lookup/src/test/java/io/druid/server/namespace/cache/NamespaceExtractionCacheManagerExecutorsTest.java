@@ -482,7 +482,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
           new URIExtractionNamespace.ObjectMapperFlatDataParser(
               URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
           ),
-          new Period(5l),
+          new Period(5L),
           null
       );
 
