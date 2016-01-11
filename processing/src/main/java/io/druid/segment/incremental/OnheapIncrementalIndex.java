@@ -155,12 +155,15 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     } else {
       aggs = new Aggregator[metrics.length];
 
+      rowContainer.set(row);
       for (int i = 0; i < metrics.length; i++) {
         final AggregatorFactory agg = metrics[i];
         aggs[i] = agg.factorize(
             selectors.get(agg.getName())
         );
       }
+      rowContainer.set(null);
+
       final Integer rowIndex = indexIncrement.getAndIncrement();
 
       concurrentSet(rowIndex, aggs);
