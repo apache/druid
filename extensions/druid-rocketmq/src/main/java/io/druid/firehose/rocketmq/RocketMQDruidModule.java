@@ -34,7 +34,7 @@ public class RocketMQDruidModule implements DruidModule {
         return ImmutableList.of(
                 new SimpleModule("RocketMQFirehoseModule")
                         .registerSubtypes(
-                                new NamedType(RocketMQFirehoseFactory.class, "RocketMQ-3.2.6")
+                                new NamedType(RocketMQFirehoseFactory.class, "RocketMQ")
                         )
         );
     }
