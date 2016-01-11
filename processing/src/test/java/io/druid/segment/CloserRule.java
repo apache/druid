@@ -19,6 +19,7 @@
 
 package io.druid.segment;
 
+import com.google.common.collect.Lists;
 import com.metamx.common.logger.Logger;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
@@ -59,7 +60,7 @@ public class CloserRule implements TestRule
         }
         finally {
           Throwable exception = null;
-          for (AutoCloseable autoCloseable : autoCloseables) {
+          for (AutoCloseable autoCloseable : Lists.reverse(autoCloseables)) {
             try {
               autoCloseable.close();
             }

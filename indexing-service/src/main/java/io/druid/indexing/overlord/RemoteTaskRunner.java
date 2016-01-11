@@ -22,6 +22,7 @@ package io.druid.indexing.overlord;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
+import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
@@ -29,6 +30,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -42,7 +44,6 @@ import com.google.common.util.concurrent.ListenableScheduledFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
-import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.RE;
 import com.metamx.common.lifecycle.LifecycleStart;
@@ -53,7 +54,6 @@ import com.metamx.http.client.Request;
 import com.metamx.http.client.response.InputStreamResponseHandler;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
-import io.druid.concurrent.Execs;
 import io.druid.curator.CuratorUtils;
 import io.druid.curator.cache.PathChildrenCacheFactory;
 import io.druid.indexing.common.TaskStatus;
@@ -113,7 +113,7 @@ import java.util.concurrent.TimeUnit;
  * <p/>
  * The RemoteTaskRunner uses ZK for job management and assignment and http for IPC messages.
  */
-public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
+public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 {
   private static final EmittingLogger log = new EmittingLogger(RemoteTaskRunner.class);
   private static final StatusResponseHandler RESPONSE_HANDLER = new StatusResponseHandler(Charsets.UTF_8);
@@ -153,7 +153,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
   private final ListeningScheduledExecutorService cleanupExec;
 
   private final ConcurrentMap<String, ScheduledFuture> removedWorkerCleanups = new ConcurrentHashMap<>();
-  private final ResourceManagementStrategy<RemoteTaskRunner> resourceManagement;
+  private final ResourceManagementStrategy<WorkerTaskRunner> resourceManagement;
 
   public RemoteTaskRunner(
       ObjectMapper jsonMapper,
@@ -164,7 +164,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
       HttpClient httpClient,
       Supplier<WorkerBehaviorConfig> workerConfigRef,
       ScheduledExecutorService cleanupExec,
-      ResourceManagementStrategy<RemoteTaskRunner> resourceManagement
+      ResourceManagementStrategy<WorkerTaskRunner> resourceManagement
   )
   {
     this.jsonMapper = jsonMapper;
@@ -180,6 +180,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     this.resourceManagement = resourceManagement;
   }
 
+  @Override
   @LifecycleStart
   public void start()
   {
@@ -298,6 +299,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     }
   }
 
+  @Override
   @LifecycleStop
   public void stop()
   {
@@ -325,7 +327,13 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     return ImmutableList.of();
   }
 
-  public Collection<ZkWorker> getWorkers()
+  @Override
+  public Collection<Worker> getWorkers()
+  {
+    return ImmutableList.copyOf(getWorkerFromZK(zkWorkers.values()));
+  }
+
+  public Collection<ZkWorker> getZkWorkers()
   {
     return ImmutableList.copyOf(zkWorkers.values());
   }
@@ -1018,7 +1026,8 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     taskRunnerWorkItem.setResult(taskStatus);
   }
 
-  public List<ZkWorker> markWorkersLazy(Predicate<ZkWorker> isLazyWorker, int maxWorkers)
+  @Override
+  public Collection<Worker> markWorkersLazy(Predicate<Worker> isLazyWorker, int maxWorkers)
   {
     // status lock is used to prevent any tasks being assigned to the worker while we mark it lazy
     synchronized (statusLock) {
@@ -1027,7 +1036,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
         String worker = iterator.next();
         ZkWorker zkWorker = zkWorkers.get(worker);
         try {
-          if (getAssignedTasks(zkWorker.getWorker()).isEmpty() && isLazyWorker.apply(zkWorker)) {
+          if (getAssignedTasks(zkWorker.getWorker()).isEmpty() && isLazyWorker.apply(zkWorker.getWorker())) {
             log.info("Adding Worker[%s] to lazySet!", zkWorker.getWorker().getHost());
             lazyWorkers.put(worker, zkWorker);
             if (lazyWorkers.size() == maxWorkers) {
@@ -1040,13 +1049,13 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
           throw Throwables.propagate(e);
         }
       }
-      return ImmutableList.copyOf(lazyWorkers.values());
+      return ImmutableList.copyOf(getWorkerFromZK(lazyWorkers.values()));
     }
   }
 
-  private List<String> getAssignedTasks(Worker worker) throws Exception
+  protected List<String> getAssignedTasks(Worker worker) throws Exception
   {
-    List<String> assignedTasks = Lists.newArrayList(
+    final List<String> assignedTasks = Lists.newArrayList(
         cf.getChildren().forPath(JOINER.join(indexerZkConfig.getTasksPath(), worker.getHost()))
     );
 
@@ -1066,9 +1075,25 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     return assignedTasks;
   }
 
-  public List<ZkWorker> getLazyWorkers()
+  @Override
+  public Collection<Worker> getLazyWorkers()
   {
-    return ImmutableList.copyOf(lazyWorkers.values());
+    return ImmutableList.copyOf(getWorkerFromZK(lazyWorkers.values()));
+  }
+
+  public static Collection<Worker> getWorkerFromZK(Collection<ZkWorker> workers)
+  {
+    return Collections2.transform(
+        workers,
+        new Function<ZkWorker, Worker>()
+        {
+          @Override
+          public Worker apply(ZkWorker input)
+          {
+            return input.getWorker();
+          }
+        }
+    );
   }
 
   @VisibleForTesting

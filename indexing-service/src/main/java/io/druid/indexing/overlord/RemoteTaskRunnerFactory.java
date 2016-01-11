@@ -43,6 +43,7 @@ import java.util.concurrent.ScheduledExecutorService;
  */
 public class RemoteTaskRunnerFactory implements TaskRunnerFactory<RemoteTaskRunner>
 {
+  public static final String TYPE_NAME = "remote";
   private static final Logger LOG = new Logger(RemoteTaskRunnerFactory.class);
   private final CuratorFramework curator;
   private final RemoteTaskRunnerConfig remoteTaskRunnerConfig;
@@ -83,7 +84,7 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory<RemoteTaskRunn
   @Override
   public RemoteTaskRunner build()
   {
-    final ResourceManagementStrategy<RemoteTaskRunner> resourceManagementStrategy;
+    final ResourceManagementStrategy<WorkerTaskRunner> resourceManagementStrategy;
     if (resourceManagementSchedulerConfig.isDoAutoscale()) {
       resourceManagementStrategy = new SimpleResourceManagementStrategy(
           config,

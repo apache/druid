@@ -21,6 +21,9 @@ package io.druid.indexing.worker;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import org.joda.time.DateTime;
+
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * A container for worker metadata.
@@ -31,19 +34,24 @@ public class Worker
   private final String ip;
   private final int capacity;
   private final String version;
+  private final AtomicReference<DateTime> lastCompletedTaskTime;
 
   @JsonCreator
   public Worker(
       @JsonProperty("host") String host,
       @JsonProperty("ip") String ip,
       @JsonProperty("capacity") int capacity,
-      @JsonProperty("version") String version
+      @JsonProperty("version") String version,
+      @JsonProperty("lastCompletedTaskTime") DateTime lastCompletedTaskTime
   )
   {
     this.host = host;
     this.ip = ip;
     this.capacity = capacity;
     this.version = version;
+    this.lastCompletedTaskTime = new AtomicReference<>(lastCompletedTaskTime == null
+                                                       ? DateTime.now()
+                                                       : lastCompletedTaskTime);
   }
 
   @JsonProperty
@@ -68,6 +76,22 @@ public class Worker
   public String getVersion()
   {
     return version;
+  }
+
+  @JsonProperty
+  public DateTime getLastCompletedTaskTime()
+  {
+    return lastCompletedTaskTime.get();
+  }
+
+  public void setLastCompletedTaskTime(DateTime completedTaskTime)
+  {
+    lastCompletedTaskTime.set(completedTaskTime);
+  }
+
+  public boolean isValidVersion(final String minVersion)
+  {
+    return getVersion().compareTo(minVersion) >= 0;
   }
 
   @Override
