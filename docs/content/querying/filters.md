@@ -65,14 +65,6 @@ The function takes the same number of arguments as the dimension values, and ret
 ```json
 {
   "type" : "javascript",
-  "dimension" : <dimension_string>,
-  "function" : "function(value) { <...> }"
-}
-```
-or 
-```json
-{
-  "type" : "javascript",
   "dimensions" : <array of dimension_strings>,
   "function" : "function(value1, value2, ...) { <...> }"
 }

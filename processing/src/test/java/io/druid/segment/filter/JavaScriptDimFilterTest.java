@@ -238,8 +238,6 @@ public class JavaScriptDimFilterTest
     );
   }
 
-  /*
-   * commented because complement() of roaring bitmap does not work correctly yet
   @Test
   public void testNot()
   {
@@ -269,5 +267,4 @@ public class JavaScriptDimFilterTest
         ).getBitmapIndex(BITMAP_INDEX_SELECTOR).size()
     );
   }
-  */
 }

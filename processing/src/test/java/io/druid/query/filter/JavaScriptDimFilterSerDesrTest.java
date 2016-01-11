@@ -29,16 +29,14 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.Arrays;
 
 public class JavaScriptDimFilterSerDesrTest
 {
   private static ObjectMapper mapper;
 
-  private final String actualJSFilter1 = "{\"type\":\"javascript\",\"dimension\":\"dimTest\",\"dimensions\":null,\"function\":\"function(d1) { return true }\"}";
-  private final String actualJSFilter2 = "{\"type\":\"javascript\",\"dimension\":null,\"dimensions\":[\"dimTest1\",\"dimTest2\"],\"function\":\"function(d1, d2) { return d1 === d2 }\"}";
-  private final String actualJSFilterSkipNull1 = "{\"type\":\"javascript\",\"dimension\":\"dimTest\",\"function\":\"function(d1) { return true }\"}";
-  private final String actualJSFilterSkipNull2 = "{\"type\":\"javascript\",\"dimensions\":[\"dimTest1\",\"dimTest2\"],\"function\":\"function(d1, d2) { return d1 === d2 }\"}";
+  private final String JSFilter = "{\"type\":\"javascript\",\"dimensions\":[\"dimTest1\",\"dimTest2\"],\"function\":\"function(d1, d2) { return d1 === d2 }\"}";
+  private final String JSFilterBackwardCompatible = "{\"type\":\"javascript\",\"dimension\":\"dimTest\",\"function\":\"function(d1) { return true }\"}";
+  private final String JSFilterRewritten = "{\"type\":\"javascript\",\"dimensions\":[\"dimTest\"],\"function\":\"function(d1) { return true }\"}";
 
   @Before
   public void setUp()
@@ -50,7 +48,7 @@ public class JavaScriptDimFilterSerDesrTest
   @Test
   public void testDeserialization1() throws IOException
   {
-    final JavaScriptDimFilter actualJSDimFilter = mapper.reader(DimFilter.class).readValue(actualJSFilter1);
+    final JavaScriptDimFilter actualJSDimFilter = mapper.reader(DimFilter.class).readValue(JSFilterBackwardCompatible);
     final JavaScriptDimFilter expectedJSDimFilter =
         new JavaScriptDimFilter("dimTest", null, "function(d1) { return true }");
     Assert.assertEquals(expectedJSDimFilter, actualJSDimFilter);
@@ -59,25 +57,7 @@ public class JavaScriptDimFilterSerDesrTest
   @Test
   public void testDeserialization2() throws IOException
   {
-    final JavaScriptDimFilter actualJSDimFilter = mapper.reader(DimFilter.class).readValue(actualJSFilter2);
-    final JavaScriptDimFilter expectedJSDimFilter =
-        new JavaScriptDimFilter(null, new String[]{"dimTest1", "dimTest2"}, "function(d1, d2) { return d1 === d2 }");
-    Assert.assertEquals(expectedJSDimFilter, actualJSDimFilter);
-  }
-
-  @Test
-  public void testDeserialization3() throws IOException
-  {
-    final JavaScriptDimFilter actualJSDimFilter = mapper.reader(DimFilter.class).readValue(actualJSFilterSkipNull1);
-    final JavaScriptDimFilter expectedJSDimFilter =
-        new JavaScriptDimFilter("dimTest", null, "function(d1) { return true }");
-    Assert.assertEquals(expectedJSDimFilter, actualJSDimFilter);
-  }
-
-  @Test
-  public void testDeserialization4() throws IOException
-  {
-    final JavaScriptDimFilter actualJSDimFilter = mapper.reader(DimFilter.class).readValue(actualJSFilterSkipNull2);
+    final JavaScriptDimFilter actualJSDimFilter = mapper.reader(DimFilter.class).readValue(JSFilter);
     final JavaScriptDimFilter expectedJSDimFilter =
         new JavaScriptDimFilter(null, new String[]{"dimTest1", "dimTest2"}, "function(d1, d2) { return d1 === d2 }");
     Assert.assertEquals(expectedJSDimFilter, actualJSDimFilter);
@@ -86,17 +66,17 @@ public class JavaScriptDimFilterSerDesrTest
   @Test
   public void testSerialization1() throws IOException
   {
-    final JavaScriptDimFilter JSDimFilter = new JavaScriptDimFilter("dimTest", null, "function(d1) { return true }");
+    final JavaScriptDimFilter JSDimFilter =
+        new JavaScriptDimFilter(null, new String[]{"dimTest1", "dimTest2"}, "function(d1, d2) { return d1 === d2 }");
     final String expectedJSDimFilter = mapper.writeValueAsString(JSDimFilter);
-    Assert.assertEquals(expectedJSDimFilter, actualJSFilter1);
+    Assert.assertEquals(expectedJSDimFilter, JSFilter);
   }
 
   @Test
   public void testSerialization2() throws IOException
   {
-    final JavaScriptDimFilter JSDimFilter =
-        new JavaScriptDimFilter(null, new String[]{"dimTest1", "dimTest2"}, "function(d1, d2) { return d1 === d2 }");
+    final JavaScriptDimFilter JSDimFilter = new JavaScriptDimFilter("dimTest", null, "function(d1) { return true }");
     final String expectedJSDimFilter = mapper.writeValueAsString(JSDimFilter);
-    Assert.assertEquals(expectedJSDimFilter, actualJSFilter2);
+    Assert.assertEquals(expectedJSDimFilter, JSFilterRewritten);
   }
 }

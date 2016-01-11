@@ -35,31 +35,20 @@ public class JavaScriptDimFilter implements DimFilter
 
   @JsonCreator
   public JavaScriptDimFilter(
+      // for backwards compatibility
       @JsonProperty("dimension") String dimension,
       @JsonProperty("dimensions") String[] dimensions,
       @JsonProperty("function") String function
   )
   {
-    Preconditions.checkArgument(dimension != null || dimensions != null, "dimension or dimensions must not be null");
-    Preconditions.checkArgument(!(dimension != null && dimensions != null), "both dimension and dimensions are defined");
+    Preconditions.checkArgument(dimension != null ^ dimensions != null, "dimensions(xor dimension) must not be null");
     Preconditions.checkArgument(function != null, "function must not be null");
-    this.dimensions = (dimension != null) ? new String[]{dimension} : dimensions;
+    this.dimensions = (dimensions != null) ? dimensions : new String[]{dimension};
     this.function = function;
   }
 
   @JsonProperty
-  public String getDimension()
-  {
-    return (dimensions.length == 1) ? dimensions[0] : null;
-  }
-
-  @JsonProperty
   public String[] getDimensions()
-  {
-    return (dimensions.length > 1) ? dimensions: null;
-  }
-
-  public String[] getAllDimensions()
   {
     return dimensions;
   }
