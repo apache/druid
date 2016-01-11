@@ -34,6 +34,7 @@ import java.util.Properties;
  */
 public class ForkingTaskRunnerFactory implements TaskRunnerFactory<ForkingTaskRunner>
 {
+  public static final String TYPE_NAME = "forking";
   private final ForkingTaskRunnerConfig config;
   private final TaskConfig taskConfig;
   private final WorkerConfig workerConfig;

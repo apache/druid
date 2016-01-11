@@ -108,7 +108,7 @@ public class CliOverlord extends ServerRunnable
   }
 
   @Override
-  protected List<? extends Module> getModules()
+  public List<? extends Module> getModules()
   {
     return ImmutableList.<Module>of(
         new Module()
