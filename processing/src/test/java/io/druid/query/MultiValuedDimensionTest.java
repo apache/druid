@@ -72,7 +72,7 @@ public class MultiValuedDimensionTest
 
   public MultiValuedDimensionTest() throws Exception
   {
-    helper = new AggregationTestHelper(
+    helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
         ImmutableList.<Module>of(), null
     );
   }

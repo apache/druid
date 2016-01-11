@@ -17,24 +17,24 @@
  * under the License.
  */
 
-package io.druid.storage.hdfs;
+package io.druid.query.aggregation.datasketches.theta;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonSerializer;
+import com.fasterxml.jackson.databind.SerializerProvider;
+import com.yahoo.sketches.memory.Memory;
+
+import java.io.IOException;
 
 /**
  */
-public class HdfsDataSegmentPusherConfig
+public class MemoryJsonSerializer extends JsonSerializer<Memory>
 {
-  @JsonProperty
-  private String storageDirectory = "";
-
-  public void setStorageDirectory(String storageDirectory)
+  @Override
+  public void serialize(Memory mem, JsonGenerator jgen, SerializerProvider provider)
+      throws IOException, JsonProcessingException
   {
-    this.storageDirectory = storageDirectory;
-  }
-
-  public String getStorageDirectory()
-  {
-    return storageDirectory;
+    jgen.writeBinary(SketchOperations.deserializeFromMemory(mem).toByteArray());
   }
 }

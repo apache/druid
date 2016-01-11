@@ -330,7 +330,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
         return ByteBuffer
             .allocate(
                 1 + dimensionSpecBytes.length + metricSpecBytes.length + 4 +
-                granularityBytes.length + filterBytes.length + aggregatorBytes.length
+                granularityBytes.length                                    + filterBytes.length               + aggregatorBytes.length
             )
             .put(TOPN_QUERY)
             .put(dimensionSpecBytes)
@@ -440,11 +440,15 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
             if (!(query instanceof TopNQuery)) {
               return runner.run(query, responseContext);
             } else {
-              final TopNQuery topNQuery = (TopNQuery) query;
-              if (TopNQueryEngine.canApplyExtractionInPost(topNQuery)) {
-                final DimensionSpec dimensionSpec = topNQuery.getDimensionSpec();
+              TopNQuery topNQuery = (TopNQuery) query;
+              if (topNQuery.getDimensionsFilter() != null) {
+                topNQuery = topNQuery.withDimFilter(topNQuery.getDimensionsFilter().optimize());
+              }
+              final TopNQuery delegateTopNQuery = topNQuery;
+              if (TopNQueryEngine.canApplyExtractionInPost(delegateTopNQuery)) {
+                final DimensionSpec dimensionSpec = delegateTopNQuery.getDimensionSpec();
                 return runner.run(
-                    topNQuery.withDimensionSpec(
+                    delegateTopNQuery.withDimensionSpec(
                         new DefaultDimensionSpec(
                             dimensionSpec.getDimension(),
                             dimensionSpec.getOutputName()
@@ -452,7 +456,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                     ), responseContext
                 );
               } else {
-                return runner.run(query, responseContext);
+                return runner.run(delegateTopNQuery, responseContext);
               }
             }
           }
@@ -499,7 +503,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                               {
                                 @Override
                                 public DimensionAndMetricValueExtractor apply(
-                                   DimensionAndMetricValueExtractor input
+                                    DimensionAndMetricValueExtractor input
                                 )
                                 {
                                   String dimOutputName = topNQuery.getDimensionSpec().getOutputName();

@@ -592,6 +592,7 @@ public class RealtimePlumber implements Plumber
           public void run()
           {
             abandonSegment(sink.getInterval().getStartMillis(), sink);
+            metrics.incrementHandOffCount();
           }
         }
     );

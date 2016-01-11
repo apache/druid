@@ -39,6 +39,7 @@ public class FireDepartmentMetrics
   private final AtomicLong mergeTimeMillis = new AtomicLong(0);
   private final AtomicLong mergeCpuTime = new AtomicLong(0);
   private final AtomicLong persistCpuTime = new AtomicLong(0);
+  private final AtomicLong handOffCount = new AtomicLong(0);
 
   public void incrementProcessed()
   {
@@ -96,6 +97,10 @@ public class FireDepartmentMetrics
 
   public void incrementPersistCpuTime(long persistTime){
     persistCpuTime.addAndGet(persistTime);
+  }
+
+  public void incrementHandOffCount(){
+    handOffCount.incrementAndGet();
   }
 
   public long processed()
@@ -158,6 +163,11 @@ public class FireDepartmentMetrics
     return persistCpuTime.get();
   }
 
+  public long handOffCount()
+  {
+    return handOffCount.get();
+  }
+
 
   public FireDepartmentMetrics snapshot()
   {
@@ -174,6 +184,7 @@ public class FireDepartmentMetrics
     retVal.mergeTimeMillis.set(mergeTimeMillis.get());
     retVal.mergeCpuTime.set(mergeCpuTime.get());
     retVal.persistCpuTime.set(persistCpuTime.get());
+    retVal.handOffCount.set(handOffCount.get());
     return retVal;
   }
 
@@ -198,6 +209,7 @@ public class FireDepartmentMetrics
     mergeTimeMillis.addAndGet(otherSnapshot.mergeTimeMillis());
     mergeCpuTime.addAndGet(otherSnapshot.mergeCpuTime());
     persistCpuTime.addAndGet(otherSnapshot.persistCpuTime());
+    handOffCount.addAndGet(otherSnapshot.handOffCount());
     return this;
   }
 

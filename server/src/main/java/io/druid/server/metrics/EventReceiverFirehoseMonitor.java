@@ -19,24 +19,39 @@
 
 package io.druid.server.metrics;
 
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.metrics.AbstractMonitor;
+import com.metamx.metrics.KeyedDiff;
+import com.metamx.metrics.MonitorUtils;
+import io.druid.query.DruidMetrics;
+import io.druid.segment.realtime.firehose.EventReceiverFirehoseFactory;
 
 import java.util.Map;
+import java.util.Properties;
+import java.util.concurrent.atomic.AtomicLong;
 
 public class EventReceiverFirehoseMonitor extends AbstractMonitor
 {
 
   private final EventReceiverFirehoseRegister register;
+  private final KeyedDiff keyedDiff = new KeyedDiff();
+  private final Map<String, String[]> dimensions;
 
   @Inject
   public EventReceiverFirehoseMonitor(
-      EventReceiverFirehoseRegister eventReceiverFirehoseRegister
+      EventReceiverFirehoseRegister eventReceiverFirehoseRegister,
+      Properties props
   )
   {
     this.register = eventReceiverFirehoseRegister;
+    this.dimensions = MonitorsConfig.extractDimensions(
+        props,
+        Lists.newArrayList(DruidMetrics.DATASOURCE, DruidMetrics.TASK_ID)
+    );
   }
 
   @Override
@@ -46,16 +61,32 @@ public class EventReceiverFirehoseMonitor extends AbstractMonitor
       final String serviceName = entry.getKey();
       final EventReceiverFirehoseMetric metric = entry.getValue();
 
-      final ServiceMetricEvent.Builder builder = ServiceMetricEvent.builder()
-                                                                   .setDimension("serviceName", serviceName)
-                                                                   .setDimension(
-                                                                       "bufferCapacity",
-                                                                       String.valueOf(metric.getCapacity())
-                                                                   );
-
+      final ServiceMetricEvent.Builder builder = createEventBuilder(serviceName)
+          .setDimension(
+              "bufferCapacity",
+              String.valueOf(metric.getCapacity())
+          );
       emitter.emit(builder.build("ingest/events/buffered", metric.getCurrentBufferSize()));
+      Map<String, Long> diff = keyedDiff.to(
+          serviceName,
+          ImmutableMap.of("ingest/bytes/received", metric.getBytesReceived())
+      );
+      if (diff != null) {
+        final ServiceMetricEvent.Builder eventBuilder = createEventBuilder(serviceName);
+        for (Map.Entry<String, Long> diffEntry : diff.entrySet()) {
+          emitter.emit(eventBuilder.build(diffEntry.getKey(), diffEntry.getValue()));
+        }
+      }
     }
 
     return true;
+  }
+
+  private ServiceMetricEvent.Builder createEventBuilder(String serviceName)
+  {
+    ServiceMetricEvent.Builder builder = ServiceMetricEvent.builder()
+                                                           .setDimension("serviceName", serviceName);
+    MonitorUtils.addDimensionsToBuilder(builder, dimensions);
+    return builder;
   }
 }

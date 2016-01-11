@@ -31,7 +31,7 @@ import org.mozilla.javascript.ScriptableObject;
 
 import java.nio.ByteBuffer;
 
-public class JavascriptExtractionFn implements ExtractionFn
+public class JavaScriptExtractionFn implements ExtractionFn
 {
   private static Function<Object, String> compile(String function)
   {
@@ -68,7 +68,7 @@ public class JavascriptExtractionFn implements ExtractionFn
   private final boolean injective;
 
   @JsonCreator
-  public JavascriptExtractionFn(
+  public JavaScriptExtractionFn(
       @JsonProperty("function") String function,
       @JsonProperty("injective") boolean injective
   )
@@ -150,7 +150,7 @@ public class JavascriptExtractionFn implements ExtractionFn
       return false;
     }
 
-    JavascriptExtractionFn that = (JavascriptExtractionFn) o;
+    JavaScriptExtractionFn that = (JavaScriptExtractionFn) o;
 
     if (!function.equals(that.function)) {
       return false;

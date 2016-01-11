@@ -252,6 +252,57 @@ It is illegal to set `retainMissingValue = true` and also specify a `replaceMiss
 
 A property of `injective` specifies if optimizations can be used which assume there is no combining of multiple names into one. For example: If ABC123 is the only key that maps to SomeCompany, that can be optimized since it is a unique lookup. But if both ABC123 and DEF456 BOTH map to SomeCompany, then that is NOT a unique lookup. Setting this value to true and setting `retainMissingValue` to FALSE (the default) may cause undesired behavior.
 
+A property `optimize` can be supplied to allow optimization of lookup based extraction filter (by default `optimize = false`). 
+The optimization layer will run on the broker and it will rewrite the extraction filter as clause of selector filters.
+For instance the following filter 
+
+```json
+{
+    "filter": {
+        "type": "extraction",
+        "dimension": "product",
+        "value": "bar_1",
+        "extractionFn": {
+            "type": "lookup",
+            "optimize": true,
+            "lookup": {
+                "type": "map",
+                "map": {
+                    "product_1": "bar_1",
+                    "product_3": "bar_1"
+                }
+            }
+        }
+    }
+}
+```
+
+will be rewritten as
+
+```json
+{
+   "filter":{
+      "type":"or",
+      "fields":[
+         {
+            "filter":{
+               "type":"selector",
+               "dimension":"product",
+               "value":"product_1"
+            }
+         },
+         {
+            "filter":{
+               "type":"selector",
+               "dimension":"product",
+               "value":"product_3"
+            }
+         }
+      ]
+   }
+}
+```
+
 A null dimension value can be mapped to a specific value by specifying the empty string as the key.
 This allows distinguishing between a null dimension and a lookup resulting in a null.
 For example, specifying `{"":"bar","bat":"baz"}` with dimension values `[null, "foo", "bat"]` and replacing missing values with `"oof"` will yield results of `["bar", "oof", "baz"]`.

@@ -93,6 +93,12 @@ public class JavaScriptDimFilter implements DimFilter
   }
 
   @Override
+  public DimFilter optimize()
+  {
+    return this;
+  }
+
+  @Override
   public String toString()
   {
     String dimensionString = (dimensions.length == 1) ? "dimension='" + dimensions[0] + '\''

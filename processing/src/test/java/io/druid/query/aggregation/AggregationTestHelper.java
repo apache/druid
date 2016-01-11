@@ -19,9 +19,14 @@
 
 package io.druid.query.aggregation;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.JsonToken;
+import com.fasterxml.jackson.core.ObjectCodec;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
@@ -30,6 +35,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Closeables;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.metamx.common.IAE;
 import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
@@ -46,13 +52,17 @@ import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.IntervalChunkingQueryRunnerDecorator;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
+import io.druid.query.QueryRunnerFactory;
+import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryWatcher;
-import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryEngine;
 import io.druid.query.groupby.GroupByQueryQueryToolChest;
 import io.druid.query.groupby.GroupByQueryRunnerFactory;
+import io.druid.query.select.SelectQueryEngine;
+import io.druid.query.select.SelectQueryQueryToolChest;
+import io.druid.query.select.SelectQueryRunnerFactory;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
@@ -88,17 +98,39 @@ public class AggregationTestHelper
   private final ObjectMapper mapper;
   private final IndexMerger indexMerger;
   private final IndexIO indexIO;
-  private final GroupByQueryQueryToolChest toolChest;
-  private final GroupByQueryRunnerFactory factory;
+  private final QueryToolChest toolChest;
+  private final QueryRunnerFactory factory;
 
   private final TemporaryFolder tempFolder;
 
-  public AggregationTestHelper(List<? extends Module> jsonModulesToRegister, TemporaryFolder tempFoler)
+  private AggregationTestHelper(
+      ObjectMapper mapper,
+      IndexMerger indexMerger,
+      IndexIO indexIO,
+      QueryToolChest toolchest,
+      QueryRunnerFactory factory,
+      TemporaryFolder tempFolder,
+      List<? extends Module> jsonModulesToRegister
+  )
   {
-    this.tempFolder = tempFoler;
-    mapper = new DefaultObjectMapper();
-    indexIO = TestHelper.getTestIndexIO();
-    indexMerger = TestHelper.getTestIndexMerger();
+    this.mapper = mapper;
+    this.indexMerger = indexMerger;
+    this.indexIO = indexIO;
+    this.toolChest = toolchest;
+    this.factory = factory;
+    this.tempFolder = tempFolder;
+
+    for(Module mod : jsonModulesToRegister) {
+      mapper.registerModule(mod);
+    }
+  }
+
+  public static final AggregationTestHelper createGroupByQueryAggregationTestHelper(
+      List<? extends Module> jsonModulesToRegister,
+      TemporaryFolder tempFolder
+  )
+  {
+    ObjectMapper mapper = new DefaultObjectMapper();
 
     for(Module mod : jsonModulesToRegister) {
       mapper.registerModule(mod);
@@ -125,16 +157,58 @@ public class AggregationTestHelper
     };
 
     GroupByQueryEngine engine = new GroupByQueryEngine(configSupplier, pool);
-    toolChest = new GroupByQueryQueryToolChest(
+    GroupByQueryQueryToolChest toolchest = new GroupByQueryQueryToolChest(
         configSupplier, mapper, engine, pool,
         NoopIntervalChunkingQueryRunnerDecorator()
     );
-    factory = new GroupByQueryRunnerFactory(
+    GroupByQueryRunnerFactory factory = new GroupByQueryRunnerFactory(
         engine,
         noopQueryWatcher,
         configSupplier,
-        toolChest,
+        toolchest,
         pool
+    );
+
+    return new AggregationTestHelper(
+        mapper,
+        TestHelper.getTestIndexMerger(),
+        TestHelper.getTestIndexIO(),
+        toolchest,
+        factory,
+        tempFolder,
+        jsonModulesToRegister
+    );
+  }
+
+  public static final AggregationTestHelper createSelectQueryAggregationTestHelper(
+      List<? extends Module> jsonModulesToRegister,
+      TemporaryFolder tempFolder
+  )
+  {
+    ObjectMapper mapper = new DefaultObjectMapper();
+
+    SelectQueryQueryToolChest toolchest = new SelectQueryQueryToolChest(
+        new DefaultObjectMapper(),
+        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+    );
+
+    SelectQueryRunnerFactory factory = new SelectQueryRunnerFactory(
+        new SelectQueryQueryToolChest(
+            new DefaultObjectMapper(),
+            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        ),
+        new SelectQueryEngine(),
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER
+    );
+
+    return new AggregationTestHelper(
+        mapper,
+        TestHelper.getTestIndexMerger(),
+        TestHelper.getTestIndexIO(),
+        toolchest,
+        factory,
+        tempFolder,
+        jsonModulesToRegister
     );
   }
 
@@ -289,12 +363,12 @@ public class AggregationTestHelper
 
   //Simulates running group-by query on individual segments as historicals would do, json serialize the results
   //from each segment, later deserialize and merge and finally return the results
-  public Sequence<Row> runQueryOnSegments(final List<File> segmentDirs, final String groupByQueryJson) throws Exception
+  public Sequence<Row> runQueryOnSegments(final List<File> segmentDirs, final String queryJson) throws Exception
   {
-    return runQueryOnSegments(segmentDirs, mapper.readValue(groupByQueryJson, GroupByQuery.class));
+    return runQueryOnSegments(segmentDirs, mapper.readValue(queryJson, Query.class));
   }
 
-  public Sequence<Row> runQueryOnSegments(final List<File> segmentDirs, final GroupByQuery query)
+  public Sequence<Row> runQueryOnSegments(final List<File> segmentDirs, final Query query)
   {
     final List<Segment> segments = Lists.transform(
         segmentDirs,
@@ -322,7 +396,7 @@ public class AggregationTestHelper
     }
   }
 
-  public Sequence<Row> runQueryOnSegmentsObjs(final List<Segment> segments, final GroupByQuery query)
+  public Sequence<Row> runQueryOnSegmentsObjs(final List<Segment> segments, final Query query)
   {
     final FinalizeResultsQueryRunner baseRunner = new FinalizeResultsQueryRunner(
         toolChest.postMergeQueryDecoration(
@@ -385,10 +459,11 @@ public class AggregationTestHelper
           );
           String resultStr = mapper.writer().writeValueAsString(yielder);
 
+          TypeFactory typeFactory = mapper.getTypeFactory();
+          JavaType baseType = typeFactory.constructType(toolChest.getResultTypeReference());
+
           List resultRows = Lists.transform(
-              (List<Row>)mapper.readValue(
-                  resultStr, new TypeReference<List<Row>>() {}
-              ),
+              readQueryResultArrayFromString(resultStr),
               toolChest.makePreComputeManipulatorFn(
                   query,
                   MetricManipulatorFns.deserializing()
@@ -400,6 +475,24 @@ public class AggregationTestHelper
         }
       }
     };
+  }
+
+  private List readQueryResultArrayFromString(String str) throws Exception
+  {
+    List result = new ArrayList();
+
+    JsonParser jp = mapper.getFactory().createParser(str);
+
+    if (jp.nextToken() != JsonToken.START_ARRAY) {
+      throw new IAE("not an array [%s]", str);
+    }
+
+    ObjectCodec objectCodec = jp.getCodec();
+
+    while(jp.nextToken() != JsonToken.END_ARRAY) {
+      result.add(objectCodec.readValue(jp, toolChest.getResultTypeReference()));
+    }
+    return result;
   }
 
   public static IntervalChunkingQueryRunnerDecorator NoopIntervalChunkingQueryRunnerDecorator()

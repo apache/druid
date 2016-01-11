@@ -121,7 +121,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
         final BitmapIndex bitmapIndex = column.getBitmapIndex();
         ExtractionFn extractionFn = dimension.getExtractionFn();
         if (extractionFn == null) {
-          extractionFn = new IdentityExtractionFn();
+          extractionFn = IdentityExtractionFn.getInstance();
         }
         if (bitmapIndex != null) {
           for (int i = 0; i < bitmapIndex.getCardinality(); ++i) {
