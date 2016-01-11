@@ -55,7 +55,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
 
     /**
      * Passed in configuration for consumer client.
-     * This provides an approach to overrides default values defined in {@link com.alibaba.rocketmq.common.MixAll}.
+     * This provides an approach to override default values defined in {@link com.alibaba.rocketmq.common.MixAll}.
      */
     @JsonProperty
     private final Properties consumerProps;
