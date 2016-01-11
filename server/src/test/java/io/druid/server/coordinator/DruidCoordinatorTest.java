@@ -351,7 +351,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     }
     Map segmentAvailability = coordinator.getSegmentAvailability().snapshot();
     Assert.assertEquals(1, segmentAvailability.size());
-    Assert.assertEquals(0l, segmentAvailability.get(dataSource));
+    Assert.assertEquals(0L, segmentAvailability.get(dataSource));
 
     while (coordinator.getLoadPendingDatasources().get(dataSource).get() > 0) {
       Thread.sleep(50);
@@ -370,7 +370,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Assert.assertNotNull(dataSourceMap.get(dataSource));
     // Simulated the adding of segment to druidServer during SegmentChangeRequestLoad event
     // The load rules asks for 2 replicas, therefore 1 replica should still be pending
-    Assert.assertEquals(1l, dataSourceMap.get(dataSource).get());
+    Assert.assertEquals(1L, dataSourceMap.get(dataSource).get());
     coordinator.stop();
     leaderUnannouncerLatch.await();
     Assert.assertFalse(coordinator.isLeader());

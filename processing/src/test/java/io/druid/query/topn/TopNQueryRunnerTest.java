@@ -1495,7 +1495,7 @@ public class TopNQueryRunnerTest
                         "index", 503332.5071372986D,
                         QueryRunnerTestHelper.marketDimension, "POTATO",
                         "uniques", QueryRunnerTestHelper.UNIQUES_9,
-                        "rows", 1209l
+                        "rows", 1209L
                     )
                 )
             )

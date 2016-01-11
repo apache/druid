@@ -1450,7 +1450,7 @@ public class IndexMergerTest
         new LongSumAggregatorFactory("A", "A"),
         new LongSumAggregatorFactory("C", "C")
     });
-    index2.add(new MapBasedInputRow(1l, Lists.newArrayList("d2"), ImmutableMap.<String, Object>of("d2", "z", "A", 2, "C", 100)));
+    index2.add(new MapBasedInputRow(1L, Lists.newArrayList("d2"), ImmutableMap.<String, Object>of("d2", "z", "A", 2, "C", 100)));
     closer.closeLater(index2);
 
     Interval interval = new Interval(0, new DateTime().getMillis());
