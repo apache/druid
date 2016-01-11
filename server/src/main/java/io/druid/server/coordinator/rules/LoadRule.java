@@ -67,7 +67,7 @@ public abstract class LoadRule implements Rule
       final MinMaxPriorityQueue<ServerHolder> serverQueue = params.getDruidCluster().getServersByTier(tier);
       if (serverQueue == null) {
         log.makeAlert("Tier[%s] has no servers! Check your cluster configuration!", tier).emit();
-        return stats;
+        continue;
       }
 
       final List<ServerHolder> serverHolderList = Lists.newArrayList(serverQueue);
@@ -192,7 +192,7 @@ public abstract class LoadRule implements Rule
       MinMaxPriorityQueue<ServerHolder> serverQueue = params.getDruidCluster().get(tier);
       if (serverQueue == null) {
         log.makeAlert("No holders found for tier[%s]", entry.getKey()).emit();
-        return stats;
+        continue;
       }
 
       List<ServerHolder> droppedServers = Lists.newArrayList();
