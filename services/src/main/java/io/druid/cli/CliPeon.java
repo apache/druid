@@ -85,6 +85,7 @@ import org.eclipse.jetty.server.Server;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 
 /**
  */
@@ -246,6 +247,15 @@ public class CliPeon extends GuiceRunnable
             )
         );
         injector.getInstance(ExecutorLifecycle.class).join();
+
+        // Sanity check to help debug unexpected non-daemon threads
+        final Set<Thread> threadSet = Thread.getAllStackTraces().keySet();
+        for (Thread thread : threadSet) {
+          if (!thread.isDaemon() && thread != Thread.currentThread()) {
+            log.info("Thread [%s] is non daemon.", thread);
+          }
+        }
+
         // Explicitly call lifecycle stop, dont rely on shutdown hook.
         lifecycle.stop();
       }
