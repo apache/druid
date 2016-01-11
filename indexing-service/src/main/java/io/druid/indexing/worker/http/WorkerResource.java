@@ -27,10 +27,11 @@ import com.google.common.collect.Lists;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
-import io.druid.indexing.overlord.ForkingTaskRunner;
+import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.TaskRunnerWorkItem;
 import io.druid.indexing.worker.Worker;
 import io.druid.indexing.worker.WorkerCuratorCoordinator;
+import io.druid.tasklogs.TaskLogStreamer;
 
 import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
@@ -52,20 +53,18 @@ public class WorkerResource
   private static String DISABLED_VERSION = "";
 
   private final Worker enabledWorker;
-  private final Worker disabledWorker;
   private final WorkerCuratorCoordinator curatorCoordinator;
-  private final ForkingTaskRunner taskRunner;
+  private final TaskRunner taskRunner;
 
   @Inject
   public WorkerResource(
       Worker worker,
       WorkerCuratorCoordinator curatorCoordinator,
-      ForkingTaskRunner taskRunner
+      TaskRunner taskRunner
 
   ) throws Exception
   {
     this.enabledWorker = worker;
-    this.disabledWorker = new Worker(worker.getHost(), worker.getIp(), worker.getCapacity(), DISABLED_VERSION);
     this.curatorCoordinator = curatorCoordinator;
     this.taskRunner = taskRunner;
   }
@@ -77,6 +76,13 @@ public class WorkerResource
   public Response doDisable()
   {
     try {
+      final Worker disabledWorker = new Worker(
+          enabledWorker.getHost(),
+          enabledWorker.getIp(),
+          enabledWorker.getCapacity(),
+          DISABLED_VERSION,
+          enabledWorker.getLastCompletedTaskTime()
+      );
       curatorCoordinator.updateWorkerAnnouncement(disabledWorker);
       return Response.ok(ImmutableMap.of(disabledWorker.getHost(), "disabled")).build();
     }
@@ -164,18 +170,26 @@ public class WorkerResource
       @QueryParam("offset") @DefaultValue("0") long offset
   )
   {
-    final Optional<ByteSource> stream = taskRunner.streamTaskLog(taskid, offset);
+    if (!(taskRunner instanceof TaskLogStreamer)) {
+      return Response.status(501)
+                     .entity(String.format(
+                         "Log streaming not supported by [%s]",
+                         taskRunner.getClass().getCanonicalName()
+                     ))
+                     .build();
+    }
+    try {
+      final Optional<ByteSource> stream = ((TaskLogStreamer) taskRunner).streamTaskLog(taskid, offset);
 
-    if (stream.isPresent()) {
-      try {
+      if (stream.isPresent()) {
         return Response.ok(stream.get().openStream()).build();
+      } else {
+        return Response.status(Response.Status.NOT_FOUND).build();
       }
-      catch (IOException e) {
-        log.warn(e, "Failed to read log for task: %s", taskid);
-        return Response.serverError().build();
-      }
-    } else {
-      return Response.status(Response.Status.NOT_FOUND).build();
+    }
+    catch (IOException e) {
+      log.warn(e, "Failed to read log for task: %s", taskid);
+      return Response.serverError().build();
     }
   }
 }

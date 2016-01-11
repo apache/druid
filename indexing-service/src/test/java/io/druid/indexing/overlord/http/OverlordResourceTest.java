@@ -73,6 +73,7 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class OverlordResourceTest
 {
@@ -274,6 +275,7 @@ public class OverlordResourceTest
     private CountDownLatch[] runLatches;
     private ConcurrentHashMap<String, TaskRunnerWorkItem> taskRunnerWorkItems;
     private List<String> runningTasks;
+    private final AtomicBoolean started = new AtomicBoolean(false);
 
     public MockTaskRunner(CountDownLatch[] runLatches, CountDownLatch[] completionLatches)
     {
@@ -287,12 +289,6 @@ public class OverlordResourceTest
     public List<Pair<Task, ListenableFuture<TaskStatus>>> restore()
     {
       return ImmutableList.of();
-    }
-
-    @Override
-    public void stop()
-    {
-      // Do nothing
     }
 
     @Override
@@ -365,6 +361,18 @@ public class OverlordResourceTest
     public Optional<ScalingStats> getScalingStats()
     {
       return Optional.absent();
+    }
+
+    @Override
+    public void start()
+    {
+      started.set(true);
+    }
+
+    @Override
+    public void stop()
+    {
+      started.set(false);
     }
   }
 }

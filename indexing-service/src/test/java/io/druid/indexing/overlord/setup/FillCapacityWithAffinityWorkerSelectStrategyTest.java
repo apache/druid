@@ -26,6 +26,7 @@ import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.overlord.ImmutableZkWorker;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.worker.Worker;
+import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -45,12 +46,12 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
         ImmutableMap.of(
             "lhost",
             new ImmutableZkWorker(
-                new Worker("lhost", "lhost", 1, "v1"), 0,
+                new Worker("lhost", "lhost", 1, "v1", DateTime.now()), 0,
                 Sets.<String>newHashSet()
             ),
             "localhost",
             new ImmutableZkWorker(
-                new Worker("localhost", "localhost", 1, "v1"), 0,
+                new Worker("localhost", "localhost", 1, "v1", DateTime.now()), 0,
                 Sets.<String>newHashSet()
             )
         ),
@@ -79,12 +80,12 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
         ImmutableMap.of(
             "lhost",
             new ImmutableZkWorker(
-                new Worker("lhost", "lhost", 1, "v1"), 0,
+                new Worker("lhost", "lhost", 1, "v1", DateTime.now()), 0,
                 Sets.<String>newHashSet()
             ),
             "localhost",
             new ImmutableZkWorker(
-                new Worker("localhost", "localhost", 1, "v1"), 0,
+                new Worker("localhost", "localhost", 1, "v1", DateTime.now()), 0,
                 Sets.<String>newHashSet()
             )
         ),
@@ -106,7 +107,7 @@ public class FillCapacityWithAffinityWorkerSelectStrategyTest
         ImmutableMap.of(
             "localhost",
             new ImmutableZkWorker(
-                new Worker("localhost", "localhost", 1, "v1"), 0,
+                new Worker("localhost", "localhost", 1, "v1", DateTime.now()), 0,
                 Sets.<String>newHashSet()
             )
         ),

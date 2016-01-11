@@ -102,6 +102,7 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
     );
   }
 
+  @Override
   @LifecycleStop
   public void stop()
   {
@@ -257,6 +258,12 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
   public Optional<ScalingStats> getScalingStats()
   {
     return Optional.absent();
+  }
+
+  @Override
+  public void start()
+  {
+    // No state startup required
   }
 
   @Override

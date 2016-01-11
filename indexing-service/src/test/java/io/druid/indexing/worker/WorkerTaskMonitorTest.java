@@ -54,6 +54,7 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingCluster;
 import org.easymock.EasyMock;
+import org.joda.time.DateTime;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -112,7 +113,8 @@ public class WorkerTaskMonitorTest
         "worker",
         "localhost",
         3,
-        "0"
+        "0",
+        DateTime.now()
     );
 
     workerCuratorCoordinator = new WorkerCuratorCoordinator(
