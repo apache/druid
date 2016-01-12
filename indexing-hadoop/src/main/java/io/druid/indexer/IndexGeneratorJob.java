@@ -337,11 +337,12 @@ public class IndexGeneratorJob implements Jobby
     private void flushIndexToContextAndClose(BytesWritable key, IncrementalIndex index, Context context)
         throws IOException, InterruptedException
     {
+      final List<String> dimensions = index.getDimensionNames();
       Iterator<Row> rows = index.iterator();
       while (rows.hasNext()) {
         context.progress();
         Row row = rows.next();
-        InputRow inputRow = getInputRowFromRow(row, index.getDimensions());
+        InputRow inputRow = getInputRowFromRow(row, dimensions);
         context.write(
             key,
             new BytesWritable(InputRowSerde.toBytes(inputRow, combiningAggs))
