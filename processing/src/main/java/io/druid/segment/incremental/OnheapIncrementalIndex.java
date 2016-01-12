@@ -340,7 +340,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       }
     }
 
-    public boolean compareCannonicalValues(String s1, String s2)
+    public boolean compareCanonicalValues(String s1, String s2)
     {
       return s1 == s2;
     }
