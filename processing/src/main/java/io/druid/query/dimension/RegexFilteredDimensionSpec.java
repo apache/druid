@@ -95,7 +95,7 @@ public class RegexFilteredDimensionSpec extends BaseFilteredDimensionSpec
       @Override
       public int getValueCardinality()
       {
-        return bitSetOfIds.cardinality();
+        return selector.getValueCardinality();
       }
 
       @Override
