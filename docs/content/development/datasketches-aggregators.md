@@ -37,12 +37,22 @@ Note that you can use `thetaSketch` aggregator on columns which were not ingeste
 
 #### Sketch Estimator
 ```json
-{ "type"  : "thetaSketchEstimate", "name": <output name>, "fieldName"  : <the name field value of the thetaSketch aggregator>}
+{
+  "type"  : "thetaSketchEstimate",
+  "name": <output name>,
+  "fieldName"  : <the name field value of the thetaSketch aggregator>
+}
 ```
 
 #### Sketch Operations
 ```json
-{ "type"  : "thetaSketchSetOp", "name": <output name>, "func": <UNION|INTERSECT|NOT>, "fields"  : <the name field value of the thetaSketch aggregators>}
+{
+  "type"  : "thetaSketchSetOp",
+  "name": <output name>,
+  "func": <UNION|INTERSECT|NOT>,
+  "fields"  : <the name field value of the thetaSketch aggregators>,
+  "size": <16384 by default, must be max of size from sketches in fields input>
+}
 ```
 
 ### Examples

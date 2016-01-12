@@ -41,7 +41,10 @@ public class HyperUniquesAggregationTest
   @Test
   public void testIngestAndQuery() throws Exception
   {
-    AggregationTestHelper helper = new AggregationTestHelper(Lists.newArrayList(new AggregatorsModule()), tempFolder);
+    AggregationTestHelper helper = AggregationTestHelper.createGroupByQueryAggregationTestHelper(
+        Lists.newArrayList(new AggregatorsModule()),
+        tempFolder
+    );
 
     String metricSpec = "[{"
                         + "\"type\": \"hyperUnique\","

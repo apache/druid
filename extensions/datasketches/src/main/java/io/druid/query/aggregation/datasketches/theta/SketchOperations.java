@@ -22,6 +22,7 @@ package io.druid.query.aggregation.datasketches.theta;
 import com.google.common.base.Charsets;
 import com.metamx.common.logger.Logger;
 import com.yahoo.sketches.Family;
+import com.yahoo.sketches.memory.Memory;
 import com.yahoo.sketches.memory.NativeMemory;
 import com.yahoo.sketches.theta.AnotB;
 import com.yahoo.sketches.theta.Intersection;
@@ -72,7 +73,11 @@ public class SketchOperations
 
   public static Sketch deserializeFromByteArray(byte[] data)
   {
-    NativeMemory mem = new NativeMemory(data);
+    return deserializeFromMemory(new NativeMemory(data));
+  }
+
+  public static Sketch deserializeFromMemory(Memory mem)
+  {
     if (Sketch.getSerializationVersion(mem) < 3) {
       return Sketches.heapifySketch(mem);
     } else {
