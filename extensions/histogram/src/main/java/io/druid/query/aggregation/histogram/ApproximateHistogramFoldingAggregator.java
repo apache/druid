@@ -94,6 +94,18 @@ public class ApproximateHistogramFoldingAggregator implements Aggregator
   }
 
   @Override
+  public int getInt()
+  {
+    throw new UnsupportedOperationException("ApproximateHistogramFoldingAggregator does not support getInt()");
+  }
+
+  @Override
+  public double getDouble()
+  {
+    throw new UnsupportedOperationException("ApproximateHistogramFoldingAggregator does not support getDouble()");
+  }
+
+  @Override
   public String getName()
   {
     return name;

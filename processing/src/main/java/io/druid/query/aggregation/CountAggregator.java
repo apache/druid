@@ -71,6 +71,18 @@ public class CountAggregator implements Aggregator
   }
 
   @Override
+  public int getInt()
+  {
+    return (int) count;
+  }
+
+  @Override
+  public double getDouble()
+  {
+    return (double) count;
+  }
+
+  @Override
   public String getName()
   {
     return this.name;

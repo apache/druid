@@ -147,6 +147,12 @@ public class LongMaxAggregatorFactory implements AggregatorFactory
   }
 
   @Override
+  public boolean isComplex()
+  {
+    return false;
+  }
+
+  @Override
   public String toString()
   {
     return "LongMaxAggregatorFactory{" +

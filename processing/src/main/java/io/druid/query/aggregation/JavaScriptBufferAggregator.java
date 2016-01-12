@@ -60,9 +60,8 @@ public class JavaScriptBufferAggregator implements BufferAggregator
   @Override
   public float getFloat(ByteBuffer buf, int position)
   {
-    return (float)buf.getDouble(position);
+    return (float) buf.getDouble(position);
   }
-
 
   @Override
   public long getLong(ByteBuffer buf, int position)
@@ -71,7 +70,20 @@ public class JavaScriptBufferAggregator implements BufferAggregator
   }
 
   @Override
-  public void close() {
+  public int getInt(ByteBuffer buf, int position)
+  {
+    return (int) buf.getDouble(position);
+  }
+
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    return buf.getDouble(position);
+  }
+
+  @Override
+  public void close()
+  {
     script.close();
   }
 }

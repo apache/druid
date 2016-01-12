@@ -1457,7 +1457,7 @@ public class GroupByQueryRunnerTest
             "rows",
             6L,
             "idx",
-            4423.6533203125D
+            4423.653350830078d
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "2011-04-01",
@@ -1466,7 +1466,7 @@ public class GroupByQueryRunnerTest
             "rows",
             6L,
             "idx",
-            4418.61865234375D
+            4418.618499755859d
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "2011-04-01",
@@ -1475,7 +1475,7 @@ public class GroupByQueryRunnerTest
             "rows",
             2L,
             "idx",
-            319.94403076171875D
+            319.9440155029297d
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "2011-04-01",
@@ -1484,7 +1484,7 @@ public class GroupByQueryRunnerTest
             "rows",
             2L,
             "idx",
-            270.3977966308594D
+            270.39778900146484d
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "2011-04-01",
@@ -1502,7 +1502,7 @@ public class GroupByQueryRunnerTest
             "rows",
             2L,
             "idx",
-            222.20980834960938D
+            222.2098159790039D
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "2011-04-01",
@@ -1520,7 +1520,7 @@ public class GroupByQueryRunnerTest
             "rows",
             2L,
             "idx",
-            216.97836303710938D
+            216.97835540771484D
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "2011-04-01",
@@ -1815,7 +1815,7 @@ public class GroupByQueryRunnerTest
             "rows",
             3L,
             "index",
-            312.38165283203125
+            312.3816375732422
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "2011-01-25",
@@ -1824,7 +1824,7 @@ public class GroupByQueryRunnerTest
             "rows",
             3L,
             "index",
-            312.7834167480469
+            312.78340911865234
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "2011-01-25",
@@ -1833,7 +1833,7 @@ public class GroupByQueryRunnerTest
             "rows",
             3L,
             "index",
-            324.6412353515625
+            324.64124298095703
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "2011-01-25",
@@ -1842,7 +1842,7 @@ public class GroupByQueryRunnerTest
             "rows",
             3L,
             "index",
-            393.36322021484375
+            393.3632049560547
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "2011-01-25",
@@ -1851,7 +1851,7 @@ public class GroupByQueryRunnerTest
             "rows",
             3L,
             "index",
-            511.2996826171875
+            511.29969787597656
         )
     );
 
@@ -3645,11 +3645,11 @@ public class GroupByQueryRunnerTest
             "market",
             "spot",
             "index",
-            13219.574157714844,
+            13219.574020385742,
             "rows",
             117L,
             "addRowsIndexConstant",
-            13337.574157714844
+            13337.574020385742
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "1970-01-01",
@@ -3658,11 +3658,11 @@ public class GroupByQueryRunnerTest
             "market",
             "spot",
             "index",
-            13557.738830566406,
+            13557.73889541626,
             "rows",
             117L,
             "addRowsIndexConstant",
-            13675.738830566406
+            13675.73889541626
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "1970-01-01",
@@ -3671,11 +3671,11 @@ public class GroupByQueryRunnerTest
             "market",
             "spot",
             "index",
-            13493.751281738281,
+            13493.751190185547,
             "rows",
             117L,
             "addRowsIndexConstant",
-            13611.751281738281
+            13611.751190185547
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "1970-01-01",
@@ -3684,11 +3684,11 @@ public class GroupByQueryRunnerTest
             "market",
             "spot",
             "index",
-            13585.541015625,
+            13585.540908813477,
             "rows",
             117L,
             "addRowsIndexConstant",
-            13703.541015625
+            13703.540908813477
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "1970-01-01",
@@ -3697,11 +3697,11 @@ public class GroupByQueryRunnerTest
             "market",
             "spot",
             "index",
-            14279.127197265625,
+            14279.127326965332,
             "rows",
             126L,
             "addRowsIndexConstant",
-            14406.127197265625
+            14406.127326965332
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "1970-01-01",
@@ -3710,11 +3710,11 @@ public class GroupByQueryRunnerTest
             "market",
             "spot",
             "index",
-            13199.471435546875,
+            13199.471267700195,
             "rows",
             117L,
             "addRowsIndexConstant",
-            13317.471435546875
+            13317.471267700195
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "1970-01-01",
@@ -3723,11 +3723,11 @@ public class GroupByQueryRunnerTest
             "market",
             "spot",
             "index",
-            14271.368591308594,
+            14271.368713378906,
             "rows",
             126L,
             "addRowsIndexConstant",
-            14398.368591308594
+            14398.368713378906
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "1970-01-01",
@@ -3736,11 +3736,11 @@ public class GroupByQueryRunnerTest
             "market",
             "upfront",
             "index",
-            27297.8623046875,
+            27297.862365722656,
             "rows",
             26L,
             "addRowsIndexConstant",
-            27324.8623046875
+            27324.862365722656
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "1970-01-01",
@@ -3749,11 +3749,11 @@ public class GroupByQueryRunnerTest
             "market",
             "upfront",
             "index",
-            27619.58447265625,
+            27619.58477783203,
             "rows",
             26L,
             "addRowsIndexConstant",
-            27646.58447265625
+            27646.58477783203
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "1970-01-01",
@@ -3762,11 +3762,11 @@ public class GroupByQueryRunnerTest
             "market",
             "upfront",
             "index",
-            27820.83154296875,
+            27820.831176757812,
             "rows",
             26L,
             "addRowsIndexConstant",
-            27847.83154296875
+            27847.831176757812
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "1970-01-01",
@@ -3775,11 +3775,11 @@ public class GroupByQueryRunnerTest
             "market",
             "upfront",
             "index",
-            24791.223876953125,
+            24791.22381591797,
             "rows",
             26L,
             "addRowsIndexConstant",
-            24818.223876953125
+            24818.22381591797
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "1970-01-01",
@@ -3788,11 +3788,11 @@ public class GroupByQueryRunnerTest
             "market",
             "upfront",
             "index",
-            28562.748901367188,
+            28562.748779296875,
             "rows",
             28L,
             "addRowsIndexConstant",
-            28591.748901367188
+            28591.748779296875
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "1970-01-01",
@@ -3801,11 +3801,11 @@ public class GroupByQueryRunnerTest
             "market",
             "upfront",
             "index",
-            26968.280639648438,
+            26968.28009033203,
             "rows",
             26L,
             "addRowsIndexConstant",
-            26995.280639648438
+            26995.28009033203
         ),
         GroupByQueryRunnerTestHelper.createExpectedRow(
             "1970-01-01",
@@ -3814,11 +3814,11 @@ public class GroupByQueryRunnerTest
             "market",
             "upfront",
             "index",
-            28985.5751953125,
+            28985.57501220703,
             "rows",
             28L,
             "addRowsIndexConstant",
-            29014.5751953125
+            29014.57501220703
         )
     );
 

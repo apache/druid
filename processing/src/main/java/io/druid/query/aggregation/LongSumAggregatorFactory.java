@@ -150,6 +150,12 @@ public class LongSumAggregatorFactory implements AggregatorFactory
   }
 
   @Override
+  public boolean isComplex()
+  {
+    return false;
+  }
+
+  @Override
   public String toString()
   {
     return "LongSumAggregatorFactory{" +

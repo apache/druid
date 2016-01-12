@@ -244,6 +244,12 @@ public class JavaScriptAggregatorFactory implements AggregatorFactory
   }
 
   @Override
+  public boolean isComplex()
+  {
+    return false;
+  }
+
+  @Override
   public String toString()
   {
     return "JavaScriptAggregatorFactory{" +

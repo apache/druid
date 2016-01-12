@@ -97,6 +97,18 @@ public class HistogramBufferAggregator implements BufferAggregator
   }
 
   @Override
+  public int getInt(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("HistogramBufferAggregator does not support getInt()");
+  }
+
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("HistogramBufferAggregator does not support getDouble()");
+  }
+
+  @Override
   public void close()
   {
     // no resources to cleanup

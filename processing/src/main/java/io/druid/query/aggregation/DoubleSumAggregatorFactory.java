@@ -58,14 +58,14 @@ public class DoubleSumAggregatorFactory implements AggregatorFactory
   {
     return new DoubleSumAggregator(
         name,
-        metricFactory.makeFloatColumnSelector(fieldName)
+        metricFactory.makeDoubleColumnSelector(fieldName)
     );
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new DoubleSumBufferAggregator(metricFactory.makeFloatColumnSelector(fieldName));
+    return new DoubleSumBufferAggregator(metricFactory.makeDoubleColumnSelector(fieldName));
   }
 
   @Override
@@ -138,7 +138,7 @@ public class DoubleSumAggregatorFactory implements AggregatorFactory
   @Override
   public String getTypeName()
   {
-    return "float";
+    return "double";
   }
 
   @Override
@@ -151,6 +151,12 @@ public class DoubleSumAggregatorFactory implements AggregatorFactory
   public Object getAggregatorStartValue()
   {
     return 0;
+  }
+
+  @Override
+  public boolean isComplex()
+  {
+    return false;
   }
 
   @Override

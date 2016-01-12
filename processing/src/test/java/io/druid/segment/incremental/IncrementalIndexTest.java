@@ -70,26 +70,7 @@ public class IncrementalIndexTest
                     );
                   }
                 }
-
-            },
-            {
-                new IndexCreator()
-                {
-                  @Override
-                  public IncrementalIndex createIndex()
-                  {
-                    return new OffheapIncrementalIndex(
-                        0,
-                        QueryGranularity.MINUTE,
-                        new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
-                        TestQueryRunners.pool,
-                        true,
-                        100 * 1024 * 1024
-                    );
-                  }
-                }
             }
-
         }
     );
   }

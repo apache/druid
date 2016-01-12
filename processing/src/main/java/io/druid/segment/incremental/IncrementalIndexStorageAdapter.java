@@ -38,7 +38,9 @@ import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.IntColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.NullDimensionSelector;
 import io.druid.segment.ObjectColumnSelector;
@@ -468,6 +470,58 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                         currEntry.getValue(),
                         metricIndex
                     );
+                  }
+                };
+              }
+
+              @Override
+              public IntColumnSelector makeIntColumnSelector(String columnName)
+              {
+                final Integer metricIndexInt = index.getMetricIndex(columnName);
+                if (metricIndexInt == null) {
+                  return new IntColumnSelector()
+                  {
+                    @Override
+                    public int get()
+                    {
+                      return 0;
+                    }
+                  };
+                }
+
+                final int metricIndex = metricIndexInt;
+                return new IntColumnSelector()
+                {
+                  @Override
+                  public int get()
+                  {
+                    return index.getMetricIntValue(currEntry.getValue(), metricIndex);
+                  }
+                };
+              }
+
+              @Override
+              public DoubleColumnSelector makeDoubleColumnSelector(String columnName)
+              {
+                final Integer metricIndexInt = index.getMetricIndex(columnName);
+                if (metricIndexInt == null) {
+                  return new DoubleColumnSelector()
+                  {
+                    @Override
+                    public double get()
+                    {
+                      return 0.0d;
+                    }
+                  };
+                }
+
+                final int metricIndex = metricIndexInt;
+                return new DoubleColumnSelector()
+                {
+                  @Override
+                  public double get()
+                  {
+                    return index.getMetricDoubleValue(currEntry.getValue(), metricIndex);
                   }
                 };
               }

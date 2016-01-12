@@ -20,7 +20,9 @@
 package io.druid.segment.column;
 
 import io.druid.segment.data.Indexed;
+import io.druid.segment.data.IndexedDoubles;
 import io.druid.segment.data.IndexedFloats;
+import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedLongs;
 
 import java.io.Closeable;
@@ -30,13 +32,28 @@ import java.io.Closeable;
 public interface GenericColumn extends Closeable
 {
   public int length();
+
   public ValueType getType();
+
   public boolean hasMultipleValues();
 
   public String getStringSingleValueRow(int rowNum);
+
   public Indexed<String> getStringMultiValueRow(int rowNum);
+
   public float getFloatSingleValueRow(int rowNum);
+
   public IndexedFloats getFloatMultiValueRow(int rowNum);
+
   public long getLongSingleValueRow(int rowNum);
+
   public IndexedLongs getLongMultiValueRow(int rowNum);
+
+  public int getIntSingleValueRow(int rowNum);
+
+  public IndexedInts getIntMultiValueRow(int rowNum);
+
+  public double getDoubleSingleValueRow(int rowNum);
+
+  public IndexedDoubles getDoubleMultiValueRow(int rowNum);
 }

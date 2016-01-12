@@ -56,13 +56,13 @@ public class DoubleMaxAggregatorFactory implements AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new DoubleMaxAggregator(name, metricFactory.makeFloatColumnSelector(fieldName));
+    return new DoubleMaxAggregator(name, metricFactory.makeDoubleColumnSelector(fieldName));
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new DoubleMaxBufferAggregator(metricFactory.makeFloatColumnSelector(fieldName));
+    return new DoubleMaxBufferAggregator(metricFactory.makeDoubleColumnSelector(fieldName));
   }
 
   @Override
@@ -135,7 +135,7 @@ public class DoubleMaxAggregatorFactory implements AggregatorFactory
   @Override
   public String getTypeName()
   {
-    return "float";
+    return "double";
   }
 
   @Override
@@ -148,6 +148,12 @@ public class DoubleMaxAggregatorFactory implements AggregatorFactory
   public Object getAggregatorStartValue()
   {
     return Double.NEGATIVE_INFINITY;
+  }
+
+  @Override
+  public boolean isComplex()
+  {
+    return false;
   }
 
   @Override

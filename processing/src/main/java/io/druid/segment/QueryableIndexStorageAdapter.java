@@ -347,7 +347,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                           public String lookupName(int id)
                           {
                             final String value = column.lookupName(id);
-                            return extractionFn == null ?
+                            return extractionFn == null       ?
                                    Strings.nullToEmpty(value) :
                                    extractionFn.apply(Strings.nullToEmpty(value));
                           }
@@ -438,8 +438,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
                       if (cachedMetricVals == null) {
                         Column holder = index.getColumn(columnName);
-                        if (holder != null && (holder.getCapabilities().getType() == ValueType.FLOAT
-                                               || holder.getCapabilities().getType() == ValueType.LONG)) {
+                        if (holder != null && (holder.getCapabilities().isNumeric())) {
                           cachedMetricVals = holder.getGenericColumn();
                           genericColumnCache.put(columnName, cachedMetricVals);
                         }
@@ -474,8 +473,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
                       if (cachedMetricVals == null) {
                         Column holder = index.getColumn(columnName);
-                        if (holder != null && (holder.getCapabilities().getType() == ValueType.LONG
-                                               || holder.getCapabilities().getType() == ValueType.FLOAT)) {
+                        if (holder != null && (holder.getCapabilities().isNumeric())) {
                           cachedMetricVals = holder.getGenericColumn();
                           genericColumnCache.put(columnName, cachedMetricVals);
                         }
@@ -499,6 +497,76 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         public long get()
                         {
                           return metricVals.getLongSingleValueRow(cursorOffset.getOffset());
+                        }
+                      };
+                    }
+
+                    @Override
+                    public IntColumnSelector makeIntColumnSelector(String columnName)
+                    {
+                      GenericColumn cachedMetricVals = genericColumnCache.get(columnName);
+
+                      if (cachedMetricVals == null) {
+                        Column holder = index.getColumn(columnName);
+                        if (holder != null && (holder.getCapabilities().isNumeric())) {
+                          cachedMetricVals = holder.getGenericColumn();
+                          genericColumnCache.put(columnName, cachedMetricVals);
+                        }
+                      }
+
+                      if (cachedMetricVals == null) {
+                        return new IntColumnSelector()
+                        {
+                          @Override
+                          public int get()
+                          {
+                            return 0;
+                          }
+                        };
+                      }
+
+                      final GenericColumn metricVals = cachedMetricVals;
+                      return new IntColumnSelector()
+                      {
+                        @Override
+                        public int get()
+                        {
+                          return metricVals.getIntSingleValueRow(cursorOffset.getOffset());
+                        }
+                      };
+                    }
+
+                    @Override
+                    public DoubleColumnSelector makeDoubleColumnSelector(String columnName)
+                    {
+                      GenericColumn cachedMetricVals = genericColumnCache.get(columnName);
+
+                      if (cachedMetricVals == null) {
+                        Column holder = index.getColumn(columnName);
+                        if (holder != null && (holder.getCapabilities().isNumeric())) {
+                          cachedMetricVals = holder.getGenericColumn();
+                          genericColumnCache.put(columnName, cachedMetricVals);
+                        }
+                      }
+
+                      if (cachedMetricVals == null) {
+                        return new DoubleColumnSelector()
+                        {
+                          @Override
+                          public double get()
+                          {
+                            return 0.0d;
+                          }
+                        };
+                      }
+
+                      final GenericColumn metricVals = cachedMetricVals;
+                      return new DoubleColumnSelector()
+                      {
+                        @Override
+                        public double get()
+                        {
+                          return metricVals.getDoubleSingleValueRow(cursorOffset.getOffset());
                         }
                       };
                     }
@@ -571,6 +639,38 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                             public Long get()
                             {
                               return columnVals.getLongSingleValueRow(cursorOffset.getOffset());
+                            }
+                          };
+                        }
+                        if (type == ValueType.INT) {
+                          return new ObjectColumnSelector<Integer>()
+                          {
+                            @Override
+                            public Class classOfObject()
+                            {
+                              return Integer.TYPE;
+                            }
+
+                            @Override
+                            public Integer get()
+                            {
+                              return columnVals.getIntSingleValueRow(cursorOffset.getOffset());
+                            }
+                          };
+                        }
+                        if (type == ValueType.DOUBLE) {
+                          return new ObjectColumnSelector<Double>()
+                          {
+                            @Override
+                            public Class classOfObject()
+                            {
+                              return Double.TYPE;
+                            }
+
+                            @Override
+                            public Double get()
+                            {
+                              return columnVals.getDoubleSingleValueRow(cursorOffset.getOffset());
                             }
                           };
                         }

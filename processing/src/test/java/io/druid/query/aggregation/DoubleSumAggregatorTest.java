@@ -28,7 +28,7 @@ import java.util.Comparator;
  */
 public class DoubleSumAggregatorTest
 {
-  private void aggregate(TestFloatColumnSelector selector, DoubleSumAggregator agg)
+  private void aggregate(TestDoubleColumnSelector selector, DoubleSumAggregator agg)
   {
     agg.aggregate();
     selector.increment();
@@ -37,14 +37,14 @@ public class DoubleSumAggregatorTest
   @Test
   public void testAggregate()
   {
-    final float[] values = {0.15f, 0.27f};
-    final TestFloatColumnSelector selector = new TestFloatColumnSelector(values);
+    final double[] values = {0.15d, 0.27d};
+    final TestDoubleColumnSelector selector = new TestDoubleColumnSelector(values);
     DoubleSumAggregator agg = new DoubleSumAggregator("billy", selector);
 
     Assert.assertEquals("billy", agg.getName());
 
-    double expectedFirst = new Float(values[0]).doubleValue();
-    double expectedSecond = new Float(values[1]).doubleValue() + expectedFirst;
+    double expectedFirst = values[0];
+    double expectedSecond = values[1] + expectedFirst;
 
     Assert.assertEquals(0.0d, agg.get());
     Assert.assertEquals(0.0d, agg.get());
@@ -62,7 +62,7 @@ public class DoubleSumAggregatorTest
   @Test
   public void testComparator()
   {
-    final TestFloatColumnSelector selector = new TestFloatColumnSelector(new float[]{0.15f, 0.27f});
+    final TestDoubleColumnSelector selector = new TestDoubleColumnSelector(new double[]{0.15d, 0.27d});
     DoubleSumAggregator agg = new DoubleSumAggregator("billy", selector);
 
     Assert.assertEquals("billy", agg.getName());

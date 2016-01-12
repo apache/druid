@@ -102,6 +102,18 @@ public class CombiningFirehoseFactoryTest
       }
 
       @Override
+      public int getIntMetric(String s)
+      {
+        return new Float(metricValue).intValue();
+      }
+
+      @Override
+      public double getDoubleMetric(String s)
+      {
+        return new Float(metricValue).doubleValue();
+      }
+
+      @Override
       public Object getRaw(String dimension)
       {
         return null;

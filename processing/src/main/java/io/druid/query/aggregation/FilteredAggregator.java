@@ -65,6 +65,18 @@ public class FilteredAggregator implements Aggregator
   }
 
   @Override
+  public int getInt()
+  {
+    return delegate.getInt();
+  }
+
+  @Override
+  public double getDouble()
+  {
+    return delegate.getDouble();
+  }
+
+  @Override
   public String getName()
   {
     return delegate.getName();

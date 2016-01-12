@@ -110,6 +110,18 @@ public class SinkTest
           }
 
           @Override
+          public int getIntMetric(String s)
+          {
+            return 0;
+          }
+
+          @Override
+          public double getDoubleMetric(String s)
+          {
+            return 0;
+          }
+
+          @Override
           public Object getRaw(String dimension)
           {
             return null;
@@ -166,6 +178,18 @@ public class SinkTest
           public long getLongMetric(String metric)
           {
             return 0L;
+          }
+
+          @Override
+          public int getIntMetric(String s)
+          {
+            return 0;
+          }
+
+          @Override
+          public double getDoubleMetric(String s)
+          {
+            return 0;
           }
 
           @Override

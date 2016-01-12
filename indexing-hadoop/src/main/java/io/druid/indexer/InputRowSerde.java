@@ -99,6 +99,10 @@ public class InputRowSerde
           out.writeFloat(agg.getFloat());
         } else if (t.equals("long")) {
           WritableUtils.writeVLong(out, agg.getLong());
+        } else if (t.equals("int")) {
+          out.writeInt(agg.getInt());
+        } else if (t.equals("double")) {
+          out.writeDouble(agg.getDouble());
         } else {
           //its a complex metric
           Object val = agg.get();
@@ -199,6 +203,10 @@ public class InputRowSerde
           event.put(metric, in.readFloat());
         } else if (type.equals("long")) {
           event.put(metric, WritableUtils.readVLong(in));
+        } else if (type.equals("int")) {
+          event.put(metric, in.readInt());
+        } else if (type.equals("double")) {
+          event.put(metric, in.readDouble());
         } else {
           ComplexMetricSerde serde = getComplexMetricSerde(type);
           byte[] value = readBytes(in);

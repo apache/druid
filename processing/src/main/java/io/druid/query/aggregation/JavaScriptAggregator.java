@@ -83,6 +83,18 @@ public class JavaScriptAggregator implements Aggregator
   }
 
   @Override
+  public int getInt()
+  {
+    return (int) current;
+  }
+
+  @Override
+  public double getDouble()
+  {
+    return current;
+  }
+
+  @Override
   public String getName()
   {
     return name;

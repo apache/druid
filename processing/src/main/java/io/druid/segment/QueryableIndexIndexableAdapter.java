@@ -34,7 +34,9 @@ import io.druid.segment.column.ComplexColumn;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.EmptyBitmapIndexSeeker;
 import io.druid.segment.column.GenericColumn;
+import io.druid.segment.column.IndexedDoublesGenericColumn;
 import io.druid.segment.column.IndexedFloatsGenericColumn;
+import io.druid.segment.column.IndexedIntsGenericColumn;
 import io.druid.segment.column.IndexedLongsGenericColumn;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.ArrayBasedIndexedInts;
@@ -270,6 +272,10 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
                 metricArray[i] = ((GenericColumn) metrics[i]).getFloatSingleValueRow(currRow);
               } else if (metrics[i] instanceof IndexedLongsGenericColumn) {
                 metricArray[i] = ((GenericColumn) metrics[i]).getLongSingleValueRow(currRow);
+              } else if (metrics[i] instanceof IndexedIntsGenericColumn) {
+                metricArray[i] = ((GenericColumn) metrics[i]).getIntSingleValueRow(currRow);
+              } else if (metrics[i] instanceof IndexedDoublesGenericColumn) {
+                metricArray[i] = ((GenericColumn) metrics[i]).getDoubleSingleValueRow(currRow);
               } else if (metrics[i] instanceof ComplexColumn) {
                 metricArray[i] = ((ComplexColumn) metrics[i]).getRowValue(currRow);
               }
@@ -322,6 +328,10 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
         return "float";
       case LONG:
         return "long";
+      case INT:
+        return "int";
+      case DOUBLE:
+        return "double";
       case COMPLEX:
         return column.getComplexColumn().getTypeName();
       default:
@@ -380,7 +390,8 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
         if (lastVal != null) {
           if (GenericIndexed.STRING_STRATEGY.compare(value, lastVal) <= 0) {
             throw new ISE("Value[%s] is less than the last value[%s] I have, cannot be.",
-                value, lastVal);
+                          value, lastVal
+            );
           }
           return new EmptyIndexedInts();
         }
@@ -399,7 +410,8 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
           return ret;
         } else if (compareResult < 0) {
           throw new ISE("Skipped currValue[%s], currIndex[%,d]; incoming value[%s]",
-              currVal, currIndex, value);
+                        currVal, currIndex, value
+          );
         } else {
           return new EmptyIndexedInts();
         }

@@ -110,10 +110,10 @@ public class HyperUniquesAggregatorFactory implements AggregatorFactory
       @Override
       public int compare(HyperLogLogCollector lhs, HyperLogLogCollector rhs)
       {
-        if(lhs == null) {
+        if (lhs == null) {
           return -1;
         }
-        if(rhs == null) {
+        if (rhs == null) {
           return 1;
         }
         return lhs.compareTo(rhs);
@@ -213,6 +213,12 @@ public class HyperUniquesAggregatorFactory implements AggregatorFactory
   }
 
   @Override
+  public boolean isComplex()
+  {
+    return true;
+  }
+
+  @Override
   public String toString()
   {
     return "HyperUniquesAggregatorFactory{" +
@@ -224,13 +230,21 @@ public class HyperUniquesAggregatorFactory implements AggregatorFactory
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
 
     HyperUniquesAggregatorFactory that = (HyperUniquesAggregatorFactory) o;
 
-    if (!fieldName.equals(that.fieldName)) return false;
-    if (!name.equals(that.name)) return false;
+    if (!fieldName.equals(that.fieldName)) {
+      return false;
+    }
+    if (!name.equals(that.name)) {
+      return false;
+    }
 
     return true;
   }

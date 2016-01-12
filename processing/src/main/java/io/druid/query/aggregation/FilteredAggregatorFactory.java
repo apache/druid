@@ -143,6 +143,12 @@ public class FilteredAggregatorFactory implements AggregatorFactory
     return delegate.getAggregatorStartValue();
   }
 
+  @Override
+  public boolean isComplex()
+  {
+    return false;
+  }
+
   @JsonProperty
   public AggregatorFactory getAggregator()
   {

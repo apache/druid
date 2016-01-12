@@ -54,7 +54,7 @@ public class DruidMetrics
     int retVal = 0;
     for (AggregatorFactory agg : aggs) {
       // This needs to change when we have support column types better
-      if (!agg.getTypeName().equals("float") && !agg.getTypeName().equals("long")) {
+      if (agg.isComplex()) {
         retVal++;
       }
     }

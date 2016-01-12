@@ -47,6 +47,12 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
   }
 
   @Override
+  public boolean isNumeric()
+  {
+    return (type == ValueType.FLOAT) || (type == ValueType.LONG) || (type == ValueType.INT) || (type == ValueType.DOUBLE);
+  }
+
+  @Override
   @JsonProperty
   public boolean isDictionaryEncoded()
   {

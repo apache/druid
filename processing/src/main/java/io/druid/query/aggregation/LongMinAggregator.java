@@ -78,6 +78,18 @@ public class LongMinAggregator implements Aggregator
   }
 
   @Override
+  public int getInt()
+  {
+    return (int) min;
+  }
+
+  @Override
+  public double getDouble()
+  {
+    return (double) min;
+  }
+
+  @Override
   public String getName()
   {
     return this.name;

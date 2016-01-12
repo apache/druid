@@ -152,6 +152,28 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
       }
 
       @Override
+      public int getIntMetric(String metric)
+      {
+        try {
+          return row.getIntMetric(metric);
+        }
+        catch (ParseException e) {
+          throw Throwables.propagate(e);
+        }
+      }
+
+      @Override
+      public double getDoubleMetric(String metric)
+      {
+        try {
+          return row.getDoubleMetric(metric);
+        }
+        catch (ParseException e) {
+          throw Throwables.propagate(e);
+        }
+      }
+
+      @Override
       public String toString()
       {
         return row.toString();
@@ -223,10 +245,12 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
     return true;
   }
 
-  private static Float tryParseFloat(String val) {
+  private static Float tryParseFloat(String val)
+  {
     try {
       return Float.parseFloat(val);
-    } catch (NullPointerException | NumberFormatException e) {
+    }
+    catch (NullPointerException | NumberFormatException e) {
       return null;
     }
   }

@@ -60,11 +60,22 @@ public class LongSumBufferAggregator implements BufferAggregator
     return (float) buf.getLong(position);
   }
 
-
   @Override
   public long getLong(ByteBuffer buf, int position)
   {
     return buf.getLong(position);
+  }
+
+  @Override
+  public int getInt(ByteBuffer buf, int position)
+  {
+    return buf.getInt(position);
+  }
+
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    return buf.getDouble(position);
   }
 
   @Override

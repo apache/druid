@@ -42,7 +42,9 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.IntColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.Column;
@@ -120,6 +122,32 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       }
 
       @Override
+      public IntColumnSelector makeIntColumnSelector(final String columnName)
+      {
+        return new IntColumnSelector()
+        {
+          @Override
+          public int get()
+          {
+            return in.get().getIntMetric(columnName);
+          }
+        };
+      }
+
+      @Override
+      public DoubleColumnSelector makeDoubleColumnSelector(final String columnName)
+      {
+        return new DoubleColumnSelector()
+        {
+          @Override
+          public double get()
+          {
+            return in.get().getDoubleMetric(columnName);
+          }
+        };
+      }
+
+      @Override
       public ObjectColumnSelector makeObjectColumnSelector(final String column)
       {
         final String typeName = agg.getTypeName();
@@ -142,7 +170,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
         if (!deserializeComplexMetrics) {
           return rawColumnSelector;
         } else {
-          if (typeName.equals("float")) {
+          if (!agg.isComplex()) {
             return rawColumnSelector;
           }
 
@@ -334,6 +362,10 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
         type = ValueType.FLOAT;
       } else if (entry.getValue().equalsIgnoreCase("long")) {
         type = ValueType.LONG;
+      } else if (entry.getValue().equalsIgnoreCase("int")) {
+        type = ValueType.INT;
+      } else if (entry.getValue().equalsIgnoreCase("double")) {
+        type = ValueType.DOUBLE;
       } else {
         type = ValueType.COMPLEX;
       }
@@ -389,6 +421,10 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
   protected abstract long getMetricLongValue(int rowOffset, int aggOffset);
 
+  protected abstract int getMetricIntValue(int rowOffset, int aggOffset);
+
+  protected abstract double getMetricDoubleValue(int rowOffset, int aggOffset);
+
   protected abstract Object getMetricObjectValue(int rowOffset, int aggOffset);
 
   @Override
@@ -412,10 +448,10 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   /**
    * Adds a new row.  The row might correspond with another row that already exists, in which case this will
    * update that row instead of inserting a new one.
-   * <p/>
-   * <p/>
+   * <p>
+   * <p>
    * Calls to add() are thread safe.
-   * <p/>
+   * <p>
    *
    * @param row the row of data to add
    *
@@ -457,7 +493,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
             overflow = Lists.newArrayList();
           }
           overflow.add(getDimVals(dimValues.add(dimension), dimensionValues));
-        } else if (index > dims.length || dims[index] != null)  {
+        } else if (index > dims.length || dims[index] != null) {
           /*
            * index > dims.length requires that we saw this dimension and added it to the dimensionOrder map,
            * otherwise index is null. Since dims is initialized based on the size of dimensionOrder on each call to add,
@@ -641,8 +677,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
                   String[] dim = theDims[i];
                   if (dim != null && dim.length != 0) {
                     theVals.put(dimensions.get(i), dim.length == 1 ? dim[0] : Arrays.asList(dim));
-                  }
-                  else {
+                  } else {
                     theVals.put(dimensions.get(i), null);
                   }
                 }

@@ -280,7 +280,7 @@ public class IndexMerger
     Indexed<String> dimOrder = indexes.get(0).getDimensionNames();
     for (IndexableAdapter index : indexes) {
       Indexed<String> dimOrder2 = index.getDimensionNames();
-      if(!Iterators.elementsEqual(dimOrder.iterator(), dimOrder2.iterator())) {
+      if (!Iterators.elementsEqual(dimOrder.iterator(), dimOrder2.iterator())) {
         return getLexicographicMergedDimensions(indexes);
       }
     }
@@ -715,6 +715,12 @@ public class IndexMerger
           break;
         case FLOAT:
           metWriters.add(new FloatMetricColumnSerializer(metric, v8OutDir, ioPeon));
+          break;
+        case INT:
+          metWriters.add(new IntMetricColumnSerializer(metric, v8OutDir, ioPeon));
+          break;
+        case DOUBLE:
+          metWriters.add(new DoubleMetricColumnSerializer(metric, v8OutDir, ioPeon));
           break;
         case COMPLEX:
           final String typeName = metricTypeNames.get(metric);
