@@ -194,7 +194,7 @@ public class IncrementalIndexTest
     long timestamp = System.currentTimeMillis();
     IncrementalIndex index = indexCreator.createIndex(defaultAggregatorFactories);
     populateIndex(timestamp, index);
-    Assert.assertEquals(Arrays.asList("dim1", "dim2"), index.getDimensions());
+    Assert.assertEquals(Arrays.asList("dim1", "dim2"), index.getDimensionNames());
     Assert.assertEquals(2, index.size());
 
     final Iterator<Row> rows = index.iterator();
@@ -456,7 +456,7 @@ public class IncrementalIndexTest
     }
     Assert.assertTrue(latch.await(60, TimeUnit.SECONDS));
 
-    Assert.assertEquals(dimensionCount, index.getDimensions().size());
+    Assert.assertEquals(dimensionCount, index.getDimensionNames().size());
     Assert.assertEquals(elementsPerThread, index.size());
     Iterator<Row> iterator = index.iterator();
     int curr = 0;
@@ -492,6 +492,6 @@ public class IncrementalIndexTest
         true,
         1000000
     );
-    Assert.assertEquals(Arrays.asList("dim0", "dim1"), incrementalIndex.getDimensions());
+    Assert.assertEquals(Arrays.asList("dim0", "dim1"), incrementalIndex.getDimensionNames());
   }
 }

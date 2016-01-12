@@ -94,7 +94,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   @Override
   public Indexed<String> getAvailableDimensions()
   {
-    return new ListIndexed<String>(index.getDimensions(), String.class);
+    return new ListIndexed<String>(index.getDimensionNames(), String.class);
   }
 
   @Override
@@ -109,7 +109,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     if (dimension.equals(Column.TIME_COLUMN_NAME)) {
       return Integer.MAX_VALUE;
     }
-    IncrementalIndex.DimDim dimDim = index.getDimension(dimension);
+    IncrementalIndex.DimDim dimDim = index.getDimensionValues(dimension);
     if (dimDim == null) {
       return 0;
     }
@@ -312,7 +312,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   return new SingleScanTimeDimSelector(makeLongColumnSelector(dimension), extractionFn);
                 }
 
-                final IncrementalIndex.DimDim dimValLookup = index.getDimension(dimension);
+                final IncrementalIndex.DimDim dimValLookup = index.getDimensionValues(dimension);
                 if (dimValLookup == null) {
                   return NULL_DIMENSION_SELECTOR;
                 }
@@ -611,7 +611,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       if (dimIndexObject == null) {
         return new BooleanValueMatcher(Strings.isNullOrEmpty(value));
       }
-      final IncrementalIndex.DimDim dimDim = index.getDimension(dimension);
+      final IncrementalIndex.DimDim dimDim = index.getDimensionValues(dimension);
       if (!dimDim.contains(value)) {
         if (Strings.isNullOrEmpty(value)) {
           final int dimIndex = dimIndexObject;
@@ -646,7 +646,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
           }
 
           for (String dimVal : dims[dimIndex]) {
-            if (dimDim.compareCannonicalValues(id, dimVal)) {
+            if (dimDim.compareCanonicalValues(id, dimVal)) {
               return true;
             }
           }
