@@ -723,14 +723,16 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
           while (true) {
             currentIdx[currentIteratorIdx]++;
             if (currentIdx[currentIteratorIdx] < selected[currentIteratorIdx].length) {
-              if (predicate.apply(current)) {
-                return true;
-              }
+              current[currentIteratorIdx] = selected[currentIteratorIdx][currentIdx[currentIteratorIdx]];
               if (currentIteratorIdx > 0) {
                 for (int idx = 0; idx < currentIteratorIdx; idx++) {
                   currentIdx[idx] = 0;
+                  current[idx] = selected[idx][0];
                 }
                 currentIteratorIdx = 0;
+              }
+              if (predicate.apply(current)) {
+                return true;
               }
             } else {
               currentIteratorIdx++;
