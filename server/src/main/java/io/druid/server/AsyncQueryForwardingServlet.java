@@ -322,6 +322,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
                         requestTime,
                         "success",
                         result.isSucceeded()
+                        && result.getResponse().getStatus() == javax.ws.rs.core.Response.Status.OK.getStatusCode()
                     )
                 )
             )
