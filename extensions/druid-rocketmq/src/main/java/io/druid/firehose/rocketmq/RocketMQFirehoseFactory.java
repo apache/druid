@@ -355,7 +355,7 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
             }
         }
 
-        private synchronized void swapRequests() {
+        private void swapRequests() {
             List<DruidPullRequest> tmp = requestsWrite;
             requestsWrite = requestsRead;
             requestsRead = tmp;
@@ -438,7 +438,9 @@ public class RocketMQFirehoseFactory implements FirehoseFactory<ByteBufferInputR
                 LOGGER.error("", e);
             }
 
-            swapRequests();
+            synchronized (this) {
+                swapRequests();
+            }
 
             doPull();
             LOGGER.info(getServiceName() + " terminated.");
