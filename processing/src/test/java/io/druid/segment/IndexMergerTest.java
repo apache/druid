@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.collections.bitmap.RoaringBitmapFactory;
+import com.metamx.common.IAE;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.granularity.QueryGranularity;
@@ -1466,7 +1467,108 @@ public class IndexMergerTest
         tmpDirMerged,
         indexSpec
     );
+  }
 
+  @Test
+  public void testMismatchedMetrics() throws IOException
+  {
+    IncrementalIndex index1 = IncrementalIndexTest.createIndex(new AggregatorFactory[]{
+        new LongSumAggregatorFactory("A", "A")
+    });
+    closer.closeLater(index1);
+
+    IncrementalIndex index2 = IncrementalIndexTest.createIndex(new AggregatorFactory[]{
+        new LongSumAggregatorFactory("A", "A"),
+        new LongSumAggregatorFactory("C", "C")
+    });
+    closer.closeLater(index2);
+
+    IncrementalIndex index3 = IncrementalIndexTest.createIndex(new AggregatorFactory[]{
+        new LongSumAggregatorFactory("B", "B")
+    });
+    closer.closeLater(index3);
+
+    IncrementalIndex index4 = IncrementalIndexTest.createIndex(new AggregatorFactory[]{
+        new LongSumAggregatorFactory("C", "C"),
+        new LongSumAggregatorFactory("A", "A"),
+        new LongSumAggregatorFactory("B", "B")
+    });
+    closer.closeLater(index4);
+
+    IncrementalIndex index5 = IncrementalIndexTest.createIndex(new AggregatorFactory[]{
+        new LongSumAggregatorFactory("C", "C"),
+        new LongSumAggregatorFactory("B", "B")
+    });
+    closer.closeLater(index5);
+
+
+    Interval interval = new Interval(0, new DateTime().getMillis());
+    RoaringBitmapFactory factory = new RoaringBitmapFactory();
+    ArrayList<IndexableAdapter> toMerge = Lists.<IndexableAdapter>newArrayList(
+        new IncrementalIndexAdapter(interval, index1, factory),
+        new IncrementalIndexAdapter(interval, index2, factory),
+        new IncrementalIndexAdapter(interval, index3, factory),
+        new IncrementalIndexAdapter(interval, index4, factory),
+        new IncrementalIndexAdapter(interval, index5, factory)
+    );
+
+    final File tmpDirMerged = temporaryFolder.newFolder();
+
+    File merged = INDEX_MERGER.merge(
+        toMerge,
+        new AggregatorFactory[]{
+            new LongSumAggregatorFactory("A", "A"),
+            new LongSumAggregatorFactory("B", "B"),
+            new LongSumAggregatorFactory("C", "C"),
+            new LongSumAggregatorFactory("D", "D")
+        },
+        tmpDirMerged,
+        indexSpec
+    );
+
+    // Since D was not present in any of the indices, it is not present in the output
+    final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(closer.closeLater(INDEX_IO.loadIndex(merged)));
+    Assert.assertEquals(ImmutableSet.of("A", "B", "C"), ImmutableSet.copyOf(adapter.getAvailableMetrics()));
+
+  }
+
+  @Test(expected = IAE.class)
+  public void testMismatchedMetricsVarying() throws IOException
+  {
+
+    IncrementalIndex index2 = IncrementalIndexTest.createIndex(new AggregatorFactory[]{
+        new LongSumAggregatorFactory("A", "A"),
+        new LongSumAggregatorFactory("C", "C")
+    });
+    closer.closeLater(index2);
+
+    IncrementalIndex index5 = IncrementalIndexTest.createIndex(new AggregatorFactory[]{
+        new LongSumAggregatorFactory("C", "C"),
+        new LongSumAggregatorFactory("B", "B")
+    });
+    closer.closeLater(index5);
+
+
+    Interval interval = new Interval(0, new DateTime().getMillis());
+    RoaringBitmapFactory factory = new RoaringBitmapFactory();
+    ArrayList<IndexableAdapter> toMerge = Lists.<IndexableAdapter>newArrayList(
+        new IncrementalIndexAdapter(interval, index2, factory)
+    );
+
+    final File tmpDirMerged = temporaryFolder.newFolder();
+
+    final File merged = INDEX_MERGER.merge(
+        toMerge,
+        new AggregatorFactory[] {
+            new LongSumAggregatorFactory("B", "B"),
+            new LongSumAggregatorFactory("A", "A"),
+            new LongSumAggregatorFactory("D", "D")
+        },
+        tmpDirMerged,
+        indexSpec
+    );
+    final QueryableIndexStorageAdapter adapter = new QueryableIndexStorageAdapter(closer.closeLater(INDEX_IO.loadIndex(merged)));
+    Assert.assertEquals(ImmutableSet.of("A", "B", "C"), ImmutableSet.copyOf(adapter.getAvailableMetrics()));
   }
 
   private IncrementalIndex getIndexD3() throws Exception
