@@ -132,10 +132,6 @@ public class AggregationTestHelper
   {
     ObjectMapper mapper = new DefaultObjectMapper();
 
-    for(Module mod : jsonModulesToRegister) {
-      mapper.registerModule(mod);
-    }
-
     Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(new GroupByQueryConfig());
     StupidPool<ByteBuffer> pool = new StupidPool<>(
         new Supplier<ByteBuffer>()
