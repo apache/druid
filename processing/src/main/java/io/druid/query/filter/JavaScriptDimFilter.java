@@ -90,10 +90,8 @@ public class JavaScriptDimFilter implements DimFilter
   @Override
   public String toString()
   {
-    String dimensionString = (dimensions.length == 1) ? "dimension='" + dimensions[0] + '\''
-                                                      : "dimensions=['" + Joiner.on("', '").join(dimensions) + "']";
     return "JavaScriptDimFilter{" +
-           dimensionString +
+           "dimensions=['" + Joiner.on("', '").join(dimensions) + "']" +
            ", function='" + function + '\'' +
            '}';
   }

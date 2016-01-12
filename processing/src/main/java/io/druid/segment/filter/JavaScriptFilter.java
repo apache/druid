@@ -76,18 +76,18 @@ public class JavaScriptFilter implements Filter
           Iterator<String> iterator = dimValuesIterator[iteratingIndex];
           if (iterator.hasNext()) {
             currentDim[iteratingIndex] = iterator.next();
-            if (predicate.applyInContext(cx, currentDim))
-            {
-              // update bitmap
-              ImmutableBitmap overlap = null;
-              for (int idx = 0; idx < dimension.length; idx++) {
-                ImmutableBitmap dimBitMap = selector.getBitmapIndex(dimension[idx], currentDim[idx]);
-                overlap = (overlap == null) ? dimBitMap : overlap.intersection(dimBitMap);
+            if (iteratingIndex == 0) {
+              if (predicate.applyInContext(cx, currentDim))
+              {
+                // update bitmap
+                ImmutableBitmap overlap = null;
+                for (int idx = 0; idx < dimension.length; idx++) {
+                  ImmutableBitmap dimBitMap = selector.getBitmapIndex(dimension[idx], currentDim[idx]);
+                  overlap = (overlap == null) ? dimBitMap : overlap.intersection(dimBitMap);
+                }
+                bitmap = bitmap.union(overlap);
               }
-              bitmap = bitmap.union(overlap);
-            }
-
-            if (iteratingIndex > 0) {
+            } else {
               // reset inner loop iterators
               for (int idx = 0; idx < iteratingIndex; idx++) {
                 dimValuesIterator[idx] = dimValuesList[idx].iterator();
