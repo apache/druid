@@ -57,8 +57,6 @@ public class LoadQueuePeon
   private static final int DROP = 0;
   private static final int LOAD = 1;
 
-  private static Comparator<DataSegment> segmentComparator = Comparators.inverse(DataSegment.bucketMonthComparator());
-
   private static void executeCallbacks(List<LoadPeonCallback> callbacks)
   {
     for (LoadPeonCallback callback : callbacks) {
@@ -79,10 +77,10 @@ public class LoadQueuePeon
   private final AtomicInteger failedAssignCount = new AtomicInteger(0);
 
   private final ConcurrentSkipListMap<DataSegment, SegmentHolder> segmentsToLoad = new ConcurrentSkipListMap<>(
-      segmentComparator
+      DruidCoordinator.SEGMENT_COMPARATOR
   );
   private final ConcurrentSkipListMap<DataSegment, SegmentHolder> segmentsToDrop = new ConcurrentSkipListMap<>(
-      segmentComparator
+      DruidCoordinator.SEGMENT_COMPARATOR
   );
 
   private final Object lock = new Object();
