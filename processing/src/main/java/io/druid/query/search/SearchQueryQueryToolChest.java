@@ -157,16 +157,20 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
           ++index;
         }
 
+        final byte[] sortSpecBytes = query.getSort().getCacheKey();
+
         final ByteBuffer queryCacheKey = ByteBuffer
             .allocate(
                 1 + 4 + granularityBytes.length + filterBytes.length +
-                querySpecBytes.length + dimensionsBytesSize
+                querySpecBytes.length + dimensionsBytesSize + sortSpecBytes.length
             )
             .put(SEARCH_QUERY)
             .put(Ints.toByteArray(query.getLimit()))
             .put(granularityBytes)
             .put(filterBytes)
-            .put(querySpecBytes);
+            .put(querySpecBytes)
+            .put(sortSpecBytes)
+            ;
 
         for (byte[] bytes : dimensionsBytes) {
           queryCacheKey.put(bytes);

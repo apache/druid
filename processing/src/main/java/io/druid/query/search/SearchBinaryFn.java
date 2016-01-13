@@ -21,15 +21,16 @@ package io.druid.query.search;
 
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.metamx.common.guava.nary.BinaryFn;
 import io.druid.granularity.AllGranularity;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Result;
 import io.druid.query.search.search.SearchHit;
 import io.druid.query.search.search.SearchSortSpec;
+import org.joda.time.DateTime;
 
-import java.util.TreeSet;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  */
@@ -62,24 +63,53 @@ public class SearchBinaryFn
       return arg1;
     }
 
+    final int limit = gran instanceof AllGranularity ? this.limit : -1;
+
     SearchResultValue arg1Vals = arg1.getValue();
     SearchResultValue arg2Vals = arg2.getValue();
 
-    TreeSet<SearchHit> results = Sets.newTreeSet(searchSortSpec.getComparator());
-    results.addAll(Lists.newArrayList(arg1Vals));
-    results.addAll(Lists.newArrayList(arg2Vals));
+    Iterable<SearchHit> merged = Iterables.mergeSorted(
+        Arrays.asList(arg1Vals, arg2Vals),
+        searchSortSpec.getComparator()
+    );
 
-    return (gran instanceof AllGranularity)
-           ? new Result<SearchResultValue>(
-        arg1.getTimestamp(), new SearchResultValue(
-        Lists.newArrayList(
-            Iterables.limit(results, limit)
-        )
-    )
-    )
-           : new Result<SearchResultValue>(
-               gran.toDateTime(gran.truncate(arg1.getTimestamp().getMillis())),
-               new SearchResultValue(Lists.newArrayList(results))
-           );
+    int maxSize = arg1Vals.getValue().size() + arg2Vals.getValue().size();
+    if (limit > 0) {
+      maxSize = Math.min(limit, maxSize);
+    }
+    List<SearchHit> results = Lists.newArrayListWithExpectedSize(maxSize);
+
+    SearchHit prev = null;
+    for (SearchHit searchHit : merged) {
+      if (prev == null) {
+        prev = searchHit;
+        continue;
+      }
+      if (prev.equals(searchHit)) {
+        if (prev.getCount() != null) {
+          prev = new SearchHit(
+              prev.getDimension(),
+              prev.getValue(),
+              prev.getCount() + searchHit.getCount()
+          );
+        }
+      } else {
+        results.add(prev);
+        prev = searchHit;
+        if (limit > 0 && results.size() >= limit) {
+          break;
+        }
+      }
+    }
+
+    if (prev != null && (limit < 0 || results.size() < limit)) {
+      results.add(prev);
+    }
+
+    final DateTime timestamp = gran instanceof AllGranularity
+                               ? arg1.getTimestamp()
+                               : gran.toDateTime(gran.truncate(arg1.getTimestamp().getMillis()));
+
+    return new Result<SearchResultValue>(timestamp, new SearchResultValue(results));
   }
 }

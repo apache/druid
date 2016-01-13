@@ -19,12 +19,12 @@
 
 package io.druid.query.search;
 
+import com.google.common.base.Function;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.common.ISE;
@@ -55,11 +55,12 @@ import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
+import org.apache.commons.lang.mutable.MutableInt;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeSet;
+import java.util.TreeMap;
 
 /**
  */
@@ -94,7 +95,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     final QueryableIndex index = segment.asQueryableIndex();
 
     if (index != null) {
-      final TreeSet<SearchHit> retVal = Sets.newTreeSet(query.getSort().getComparator());
+      final TreeMap<SearchHit, MutableInt> retVal = Maps.newTreeMap(query.getSort().getComparator());
 
       Iterable<DimensionSpec> dimsToSearch;
       if (dimensions == null || dimensions.isEmpty()) {
@@ -105,13 +106,8 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
 
       final BitmapFactory bitmapFactory = index.getBitmapFactoryForDimensions();
 
-      final ImmutableBitmap baseFilter;
-      if (filter == null) {
-        baseFilter = bitmapFactory.complement(bitmapFactory.makeEmptyImmutableBitmap(), index.getNumRows());
-      } else {
-        final ColumnSelectorBitmapIndexSelector selector = new ColumnSelectorBitmapIndexSelector(bitmapFactory, index);
-        baseFilter = filter.getBitmapIndex(selector);
-      }
+      final ImmutableBitmap baseFilter =
+          filter == null ? null : filter.getBitmapIndex(new ColumnSelectorBitmapIndexSelector(bitmapFactory, index));
 
       for (DimensionSpec dimension : dimsToSearch) {
         final Column column = index.getColumn(dimension.getDimension());
@@ -127,9 +123,19 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
         if (bitmapIndex != null) {
           for (int i = 0; i < bitmapIndex.getCardinality(); ++i) {
             String dimVal = Strings.nullToEmpty(extractionFn.apply(bitmapIndex.getValue(i)));
-            if (searchQuerySpec.accept(dimVal) &&
-                bitmapFactory.intersection(Arrays.asList(baseFilter, bitmapIndex.getBitmap(i))).size() > 0) {
-              retVal.add(new SearchHit(dimension.getOutputName(), dimVal));
+            if (!searchQuerySpec.accept(dimVal)) {
+              continue;
+            }
+            ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
+            if (baseFilter != null) {
+              bitmap = bitmapFactory.intersection(Arrays.asList(baseFilter, bitmap));
+            }
+            if (bitmap.size() > 0) {
+              MutableInt counter = new MutableInt(bitmap.size());
+              MutableInt prev = retVal.put(new SearchHit(dimension.getOutputName(), dimVal), counter);
+              if (prev != null) {
+                counter.add(prev.intValue());
+              }
               if (retVal.size() >= limit) {
                 return makeReturnResult(limit, retVal);
               }
@@ -161,12 +167,12 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
 
     final Sequence<Cursor> cursors = adapter.makeCursors(filter, segment.getDataInterval(), QueryGranularity.ALL, descending);
 
-    final TreeSet<SearchHit> retVal = cursors.accumulate(
-        Sets.newTreeSet(query.getSort().getComparator()),
-        new Accumulator<TreeSet<SearchHit>, Cursor>()
+    final TreeMap<SearchHit, MutableInt> retVal = cursors.accumulate(
+        Maps.<SearchHit, SearchHit, MutableInt>newTreeMap(query.getSort().getComparator()),
+        new Accumulator<TreeMap<SearchHit, MutableInt>, Cursor>()
         {
           @Override
-          public TreeSet<SearchHit> accumulate(TreeSet<SearchHit> set, Cursor cursor)
+          public TreeMap<SearchHit, MutableInt> accumulate(TreeMap<SearchHit, MutableInt> set, Cursor cursor)
           {
             if (set.size() >= limit) {
               return set;
@@ -189,7 +195,11 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
                   for (int i = 0; i < vals.size(); ++i) {
                     final String dimVal = selector.lookupName(vals.get(i));
                     if (searchQuerySpec.accept(dimVal)) {
-                      set.add(new SearchHit(entry.getKey(), dimVal));
+                      MutableInt counter = new MutableInt(1);
+                      MutableInt prev = set.put(new SearchHit(entry.getKey(), dimVal), counter);
+                      if (prev != null) {
+                        counter.add(prev.intValue());
+                      }
                       if (set.size() >= limit) {
                         return set;
                       }
@@ -209,14 +219,26 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     return makeReturnResult(limit, retVal);
   }
 
-  private Sequence<Result<SearchResultValue>> makeReturnResult(int limit, TreeSet<SearchHit> retVal)
+  private Sequence<Result<SearchResultValue>> makeReturnResult(
+      int limit, TreeMap<SearchHit, MutableInt> retVal)
   {
+    Iterable<SearchHit> source = Iterables.transform(
+        retVal.entrySet(), new Function<Map.Entry<SearchHit, MutableInt>, SearchHit>()
+        {
+          @Override
+          public SearchHit apply(Map.Entry<SearchHit, MutableInt> input)
+          {
+            SearchHit hit = input.getKey();
+            return new SearchHit(hit.getDimension(), hit.getValue(), input.getValue().intValue());
+          }
+        }
+    );
     return Sequences.simple(
         ImmutableList.of(
             new Result<SearchResultValue>(
                 segment.getDataInterval().getStart(),
                 new SearchResultValue(
-                    Lists.newArrayList(new FunctionalIterable<SearchHit>(retVal).limit(limit))
+                    Lists.newArrayList(new FunctionalIterable<SearchHit>(source).limit(limit))
                 )
             )
         )
