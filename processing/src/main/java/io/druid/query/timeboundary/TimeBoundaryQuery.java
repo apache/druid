@@ -66,6 +66,7 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
         dataSource,
         (querySegmentSpec == null) ? new MultipleIntervalSegmentSpec(Arrays.asList(MY_Y2K_INTERVAL))
                                    : querySegmentSpec,
+        false,
         context
     );
 

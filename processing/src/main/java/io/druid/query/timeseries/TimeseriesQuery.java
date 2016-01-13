@@ -51,6 +51,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   public TimeseriesQuery(
       @JsonProperty("dataSource") DataSource dataSource,
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
+      @JsonProperty("descending") boolean descending,
       @JsonProperty("filter") DimFilter dimFilter,
       @JsonProperty("granularity") QueryGranularity granularity,
       @JsonProperty("aggregations") List<AggregatorFactory> aggregatorSpecs,
@@ -58,7 +59,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, context);
+    super(dataSource, querySegmentSpec, descending, context);
     this.dimFilter = dimFilter;
     this.granularity = granularity;
     this.aggregatorSpecs = aggregatorSpecs;
@@ -113,6 +114,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     return new TimeseriesQuery(
         getDataSource(),
         querySegmentSpec,
+        isDescending(),
         dimFilter,
         granularity,
         aggregatorSpecs,
@@ -127,6 +129,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     return new TimeseriesQuery(
         dataSource,
         getQuerySegmentSpec(),
+        isDescending(),
         dimFilter,
         granularity,
         aggregatorSpecs,
@@ -140,6 +143,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     return new TimeseriesQuery(
         getDataSource(),
         getQuerySegmentSpec(),
+        isDescending(),
         dimFilter,
         granularity,
         aggregatorSpecs,
@@ -154,6 +158,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     return "TimeseriesQuery{" +
         "dataSource='" + getDataSource() + '\'' +
         ", querySegmentSpec=" + getQuerySegmentSpec() +
+        ", descending=" + isDescending() +
         ", dimFilter=" + dimFilter +
         ", granularity='" + granularity + '\'' +
         ", aggregatorSpecs=" + aggregatorSpecs +

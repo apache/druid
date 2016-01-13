@@ -59,7 +59,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, context);
+    super(dataSource, querySegmentSpec, false, context);
     this.dimFilter = dimFilter;
     this.sortSpec = sortSpec == null ? new LexicographicSearchSortSpec() : sortSpec;
     this.granularity = granularity == null ? QueryGranularity.ALL : granularity;

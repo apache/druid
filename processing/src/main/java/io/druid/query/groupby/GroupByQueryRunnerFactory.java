@@ -36,6 +36,7 @@ import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
 import io.druid.guice.annotations.Global;
 import io.druid.query.AbstractPrioritizedCallable;
+import io.druid.query.BaseQuery;
 import io.druid.query.ConcatQueryRunner;
 import io.druid.query.GroupByParallelQueryRunner;
 import io.druid.query.Query;
@@ -119,8 +120,8 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
                               computationBufferPool
                           );
                       final Pair<Queue, Accumulator<Queue, Row>> bySegmentAccumulatorPair = GroupByQueryHelper.createBySegmentAccumulatorPair();
-                      final int priority = query.getContextPriority(0);
-                      final boolean bySegment = query.getContextBySegment(false);
+                      final int priority = BaseQuery.getContextPriority(query, 0);
+                      final boolean bySegment = BaseQuery.getContextBySegment(query, false);
 
                       final ListenableFuture<Void> future = queryExecutor.submit(
                           new AbstractPrioritizedCallable<Void>(priority)
@@ -173,7 +174,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
                         return Sequences.simple(bySegmentAccumulatorPair.lhs);
                       }
 
-                      return Sequences.simple(indexAccumulatorPair.lhs.iterableWithPostAggregations(null));
+                      return Sequences.simple(indexAccumulatorPair.lhs.iterableWithPostAggregations(null, query.isDescending()));
                     }
                   };
                 }

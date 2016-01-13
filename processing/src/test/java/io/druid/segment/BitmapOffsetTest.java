@@ -42,7 +42,7 @@ public class BitmapOffsetTest
 
     ImmutableConciseSet set = ImmutableConciseSet.newImmutableFromMutable(mutableSet);
 
-    BitmapOffset offset = new BitmapOffset(new ConciseBitmapFactory(), new WrappedImmutableConciseBitmap(set));
+    BitmapOffset offset = new BitmapOffset(new ConciseBitmapFactory(), new WrappedImmutableConciseBitmap(set), false);
 
     int count = 0;
     while (offset.withinBounds()) {

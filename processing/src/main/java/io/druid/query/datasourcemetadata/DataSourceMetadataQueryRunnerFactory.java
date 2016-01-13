@@ -63,7 +63,7 @@ public class DataSourceMetadataQueryRunnerFactory
   )
   {
     return new ChainedExecutionQueryRunner<>(
-        queryExecutor, toolChest.getOrdering(), queryWatcher, queryRunners
+        queryExecutor, queryWatcher, queryRunners
     );
   }
 

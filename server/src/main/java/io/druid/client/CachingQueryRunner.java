@@ -35,6 +35,7 @@ import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
+import io.druid.query.BaseQuery;
 import io.druid.query.CacheStrategy;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -87,12 +88,12 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
   {
     final CacheStrategy strategy = toolChest.getCacheStrategy(query);
 
-    final boolean populateCache = query.getContextPopulateCache(true)
+    final boolean populateCache = BaseQuery.getContextPopulateCache(query, true)
                                   && strategy != null
                                   && cacheConfig.isPopulateCache()
                                   && cacheConfig.isQueryCacheable(query);
 
-    final boolean useCache = query.getContextUseCache(true)
+    final boolean useCache = BaseQuery.getContextUseCache(query, true)
                              && strategy != null
                              && cacheConfig.isUseCache()
                              && cacheConfig.isQueryCacheable(query);

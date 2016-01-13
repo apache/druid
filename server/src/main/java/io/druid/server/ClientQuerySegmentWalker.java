@@ -97,8 +97,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
                                 retryConfig,
                                 objectMapper
                             )
-                        ),
-                        toolChest
+                        )
                     )
                 )
             ),

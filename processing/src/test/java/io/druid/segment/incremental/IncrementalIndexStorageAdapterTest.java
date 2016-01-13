@@ -252,31 +252,35 @@ public class IncrementalIndexStorageAdapterTest
     );
 
     IncrementalIndexStorageAdapter adapter = new IncrementalIndexStorageAdapter(index);
-    Sequence<Cursor> cursorSequence = adapter.makeCursors(
-        new SelectorFilter("sally", "bo"),
-        interval,
-        QueryGranularity.NONE
-    );
 
-    Cursor cursor = Sequences.toList(Sequences.limit(cursorSequence, 1), Lists.<Cursor>newArrayList()).get(0);
-    DimensionSelector dimSelector;
+    for (boolean descending : Arrays.asList(false, true)) {
+      Sequence<Cursor> cursorSequence = adapter.makeCursors(
+          new SelectorFilter("sally", "bo"),
+          interval,
+          QueryGranularity.NONE,
+          descending
+      );
 
-    dimSelector = cursor.makeDimensionSelector(new DefaultDimensionSpec("sally", "sally"));
-    Assert.assertEquals("bo", dimSelector.lookupName(dimSelector.getRow().get(0)));
+      Cursor cursor = Sequences.toList(Sequences.limit(cursorSequence, 1), Lists.<Cursor>newArrayList()).get(0);
+      DimensionSelector dimSelector;
 
-    index.add(
-        new MapBasedInputRow(
-            t.minus(1).getMillis(),
-            Lists.newArrayList("sally"),
-            ImmutableMap.<String, Object>of("sally", "ah")
-        )
-    );
+      dimSelector = cursor.makeDimensionSelector(new DefaultDimensionSpec("sally", "sally"));
+      Assert.assertEquals("bo", dimSelector.lookupName(dimSelector.getRow().get(0)));
 
-    // Cursor reset should not be affected by out of order values
-    cursor.reset();
+      index.add(
+          new MapBasedInputRow(
+              t.minus(1).getMillis(),
+              Lists.newArrayList("sally"),
+              ImmutableMap.<String, Object>of("sally", "ah")
+          )
+      );
 
-    dimSelector = cursor.makeDimensionSelector(new DefaultDimensionSpec("sally", "sally"));
-    Assert.assertEquals("bo", dimSelector.lookupName(dimSelector.getRow().get(0)));
+      // Cursor reset should not be affected by out of order values
+      cursor.reset();
+
+      dimSelector = cursor.makeDimensionSelector(new DefaultDimensionSpec("sally", "sally"));
+      Assert.assertEquals("bo", dimSelector.lookupName(dimSelector.getRow().get(0)));
+    }
   }
 
   @Test

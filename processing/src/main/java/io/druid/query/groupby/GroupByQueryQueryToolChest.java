@@ -31,24 +31,22 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.Accumulator;
-import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.ResourceClosingSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import io.druid.collections.OrderedMergeSequence;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
 import io.druid.guice.annotations.Global;
+import io.druid.query.BaseQuery;
 import io.druid.query.CacheStrategy;
 import io.druid.query.DataSource;
 import io.druid.query.DruidMetrics;
@@ -126,20 +124,20 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     return new QueryRunner<Row>()
     {
       @Override
-      public Sequence<Row> run(Query<Row> input, Map<String, Object> responseContext)
+      public Sequence<Row> run(Query<Row> query, Map<String, Object> responseContext)
       {
-        if (input.getContextBySegment(false)) {
-          return runner.run(input, responseContext);
+        if (BaseQuery.getContextBySegment(query, false)) {
+          return runner.run(query, responseContext);
         }
 
-        if (Boolean.valueOf(input.getContextValue(GROUP_BY_MERGE_KEY, "true"))) {
+        if (Boolean.valueOf(query.getContextValue(GROUP_BY_MERGE_KEY, "true"))) {
           return mergeGroupByResults(
-              (GroupByQuery) input,
+              (GroupByQuery) query,
               runner,
               responseContext
           );
         }
-        return runner.run(input, responseContext);
+        return runner.run(query, responseContext);
       }
     };
   }
@@ -261,7 +259,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   private Sequence<Row> postAggregate(final GroupByQuery query, IncrementalIndex index)
   {
     return Sequences.map(
-        Sequences.simple(index.iterableWithPostAggregations(query.getPostAggregatorSpecs())),
+        Sequences.simple(index.iterableWithPostAggregations(query.getPostAggregatorSpecs(), query.isDescending())),
         new Function<Row, Row>()
         {
           @Override
@@ -288,23 +286,6 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     );
 
     return rows.accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
-  }
-
-  @Override
-  public Sequence<Row> mergeSequences(Sequence<Sequence<Row>> seqOfSequences)
-  {
-    return new OrderedMergeSequence<>(getOrdering(), seqOfSequences);
-  }
-
-  @Override
-  public Sequence<Row> mergeSequencesUnordered(Sequence<Sequence<Row>> seqOfSequences)
-  {
-    return new MergeSequence<>(getOrdering(), seqOfSequences);
-  }
-
-  private Ordering<Row> getOrdering()
-  {
-    return Ordering.<Row>natural().nullsFirst();
   }
 
   @Override
@@ -585,12 +566,6 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
             );
           }
         };
-      }
-
-      @Override
-      public Sequence<Row> mergeSequences(Sequence<Sequence<Row>> seqOfSequences)
-      {
-        return new MergeSequence<>(getOrdering(), seqOfSequences);
       }
     };
   }

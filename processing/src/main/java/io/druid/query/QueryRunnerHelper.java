@@ -56,6 +56,7 @@ public class QueryRunnerHelper
       final StorageAdapter adapter,
       List<Interval> queryIntervals,
       Filter filter,
+      boolean descending,
       QueryGranularity granularity,
       final Function<Cursor, Result<T>> mapFn
   )
@@ -66,7 +67,7 @@ public class QueryRunnerHelper
 
     return Sequences.filter(
         Sequences.map(
-            adapter.makeCursors(filter, queryIntervals.get(0), granularity),
+            adapter.makeCursors(filter, queryIntervals.get(0), granularity, descending),
             new Function<Cursor, Result<T>>()
             {
               @Override

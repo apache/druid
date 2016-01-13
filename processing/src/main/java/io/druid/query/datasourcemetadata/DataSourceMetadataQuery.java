@@ -55,6 +55,7 @@ public class DataSourceMetadataQuery extends BaseQuery<Result<DataSourceMetadata
         dataSource,
         (querySegmentSpec == null) ? new MultipleIntervalSegmentSpec(Arrays.asList(MY_Y2K_INTERVAL))
                                    : querySegmentSpec,
+        false,
         context
     );
   }

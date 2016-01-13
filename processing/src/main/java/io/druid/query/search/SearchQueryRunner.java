@@ -88,6 +88,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     final List<DimensionSpec> dimensions = query.getDimensions();
     final SearchQuerySpec searchQuerySpec = query.getQuery();
     final int limit = query.getLimit();
+    final boolean descending = query.isDescending();
 
     // Closing this will cause segfaults in unit tests.
     final QueryableIndex index = segment.asQueryableIndex();
@@ -158,7 +159,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
       dimsToSearch = dimensions;
     }
 
-    final Sequence<Cursor> cursors = adapter.makeCursors(filter, segment.getDataInterval(), QueryGranularity.ALL);
+    final Sequence<Cursor> cursors = adapter.makeCursors(filter, segment.getDataInterval(), QueryGranularity.ALL, descending);
 
     final TreeSet<SearchHit> retVal = cursors.accumulate(
         Sets.newTreeSet(query.getSort().getComparator()),

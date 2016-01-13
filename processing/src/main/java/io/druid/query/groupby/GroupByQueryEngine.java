@@ -95,7 +95,8 @@ public class GroupByQueryEngine
     final Sequence<Cursor> cursors = storageAdapter.makeCursors(
         Filters.convertDimensionFilters(query.getDimFilter()),
         intervals.get(0),
-        query.getGranularity()
+        query.getGranularity(),
+        false
     );
 
     final ResourceHolder<ByteBuffer> bufferHolder = intermediateResultsBufferPool.take();
