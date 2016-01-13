@@ -42,4 +42,10 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 public interface DimFilter
 {
   public byte[] getCacheKey();
+
+  /**
+   * @return Returns an optimized filter.
+   * returning the same filter can be a straightforward default implementation.
+   */
+  public DimFilter optimize();
 }

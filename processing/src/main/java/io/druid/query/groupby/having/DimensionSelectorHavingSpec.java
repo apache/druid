@@ -25,6 +25,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.metamx.common.StringUtils;
 import io.druid.data.input.Row;
+import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.extraction.IdentityExtractionFn;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -35,41 +37,51 @@ public class DimensionSelectorHavingSpec implements HavingSpec
   private static final byte STRING_SEPARATOR = (byte) 0xFF;
   private final String dimension;
   private final String value;
+  private final ExtractionFn extractionFn;
 
   @JsonCreator
   public DimensionSelectorHavingSpec(
       @JsonProperty("dimension") String dimName,
-      @JsonProperty("value") String value
+      @JsonProperty("value") String value,
+      @JsonProperty("extractionFn") ExtractionFn extractionFn
   )
   {
-    this.dimension = Preconditions.checkNotNull(dimName, "Must have attribute 'dimension'");
+    dimension = Preconditions.checkNotNull(dimName, "Must have attribute 'dimension'");
     this.value = value;
+    this.extractionFn = extractionFn != null ? extractionFn : IdentityExtractionFn.getInstance();
   }
 
   @JsonProperty("value")
   public String getValue()
   {
-    return this.value;
+    return value;
   }
 
   @JsonProperty("dimension")
   public String getDimension()
   {
-    return this.dimension;
+    return dimension;
+  }
+
+  @JsonProperty
+  public ExtractionFn getExtractionFn()
+  {
+    return extractionFn;
   }
 
   public boolean eval(Row row)
   {
-    List<String> dimRowValList = row.getDimension(this.dimension);
+    List<String> dimRowValList = row.getDimension(dimension);
     if (dimRowValList == null || dimRowValList.isEmpty()) {
       return Strings.isNullOrEmpty(value);
     }
 
     for (String rowVal : dimRowValList) {
-      if (this.value != null && this.value.equals(rowVal)) {
+      String extracted = getExtractionFn().apply(rowVal);
+      if (value != null && value.equals(extracted)) {
         return true;
       }
-      if (rowVal == null || rowVal.isEmpty()) {
+      if (extracted == null || extracted.isEmpty()) {
         return Strings.isNullOrEmpty(value);
       }
     }
@@ -79,14 +91,18 @@ public class DimensionSelectorHavingSpec implements HavingSpec
 
   public byte[] getCacheKey()
   {
-    byte[] dimBytes = StringUtils.toUtf8(this.dimension);
-    byte[] valBytes = StringUtils.toUtf8(this.value);
-    return ByteBuffer.allocate(2 + dimBytes.length + valBytes.length)
-                     .put(CACHE_KEY)
-                     .put(dimBytes)
-                     .put(STRING_SEPARATOR)
-                     .put(valBytes)
-                     .array();
+    byte[] dimBytes = StringUtils.toUtf8(dimension);
+    byte[] valBytes = StringUtils.toUtf8(value);
+    byte [] extractionFnBytes = this.getExtractionFn().getCacheKey();
+
+    return ByteBuffer.allocate(3 + dimBytes.length + valBytes.length + extractionFnBytes.length)
+                       .put(CACHE_KEY)
+                       .put(dimBytes)
+                       .put(STRING_SEPARATOR)
+                       .put(valBytes)
+                       .put(STRING_SEPARATOR)
+                       .put(extractionFnBytes)
+                       .array();
   }
 
   @Override
@@ -115,7 +131,7 @@ public class DimensionSelectorHavingSpec implements HavingSpec
       dimEquals = true;
     }
 
-    return (valEquals && dimEquals);
+    return (valEquals && dimEquals && extractionFn.equals(that.extractionFn));
   }
 
   @Override
@@ -131,9 +147,10 @@ public class DimensionSelectorHavingSpec implements HavingSpec
   {
     StringBuilder sb = new StringBuilder();
     sb.append("DimensionSelectorHavingSpec");
-    sb.append("{dimension='").append(this.dimension).append('\'');
-    sb.append(", value='").append(this.value).append('\'');
-    sb.append('}');
+    sb.append("{dimension='").append(dimension).append('\'');
+    sb.append(", value='").append(value);
+    sb.append("', extractionFunction='").append(getExtractionFn());
+    sb.append("'}");
     return sb.toString();
   }
 

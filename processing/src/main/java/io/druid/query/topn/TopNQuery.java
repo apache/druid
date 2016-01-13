@@ -241,6 +241,22 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     );
   }
 
+  public TopNQuery withDimFilter(DimFilter dimFilter)
+  {
+    return new TopNQuery(
+        getDataSource(),
+        getDimensionSpec(),
+        topNMetricSpec,
+        threshold,
+        getQuerySegmentSpec(),
+        dimFilter,
+        granularity,
+        aggregatorSpecs,
+        postAggregatorSpecs,
+        getContext()
+    );
+  }
+
   @Override
   public String toString()
   {

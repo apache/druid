@@ -257,7 +257,8 @@ public class SearchQueryRunnerTest
       new MapLookupExtractor(ImmutableMap.of("automotive", automotiveSnowman)),
       true,
       null,
-      true
+      true,
+      false
     );
 
     checkSearchQuery(

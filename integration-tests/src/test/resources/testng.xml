@@ -19,6 +19,9 @@
 
 
 <suite name="IntegrationTestSuite">
+<listeners>
+  <listener class-name="io.druid.testing.utils.LoggerListener" />
+</listeners>
 <test name="AllTests">
 <packages>
   <package name="io.druid.tests.*"/>

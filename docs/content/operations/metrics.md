@@ -86,6 +86,8 @@ Memcached client metrics are reported as per the following. These metrics come d
 
 ## Ingestion Metrics
 
+These metrics are only available if the RealtimeMetricsMonitor is included in the monitors list for the Realtime node. These metrics are deltas for each emission period.
+
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
 |`ingest/events/thrownAway`|Number of events rejected because they are outside the windowPeriod.|dataSource.|0|
@@ -100,6 +102,7 @@ Memcached client metrics are reported as per the following. These metrics come d
 |`ingest/handoff/failed`|Number of handoffs that failed.|dataSource.|0|
 |`ingest/merge/time`|Milliseconds spent merging intermediate segments|dataSource.|Depends on configuration. Generally a few minutes at most.|
 |`ingest/merge/cpu`|Cpu time in Nanoseconds spent on merging intermediate segments.|dataSource.|Depends on configuration. Generally a few minutes at most.|
+|`ingest/handoff/count`|Number of handoffs that happened.|dataSource.|Varies. Generally greater than 0 once every segment granular period if cluster operating normally|
 
 Note: If the JVM does not support CPU time measurement for the current thread, ingest/merge/cpu and ingest/persists/cpu will be 0. 
 
@@ -118,7 +121,7 @@ These metrics are for the Druid coordinator and are reset each time the coordina
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
-|`segment/added/count`|Number of segments added to the cluster.|tier.|Varies.|
+|`segment/assigned/count`|Number of segments assigned to be loaded in the cluster.|tier.|Varies.|
 |`segment/moved/count`|Number of segments moved in the cluster.|tier.|Varies.|
 |`segment/dropped/count`|Number of segments dropped due to being overshadowed.|tier.|Varies.|
 |`segment/deleted/count`|Number of segments dropped due to rules.|tier.|Varies.|
@@ -171,7 +174,8 @@ The following metric is only available if the EventReceiverFirehoseMonitor modul
 
 |Metric|Description|Dimensions|Normal Value|
 |------|-----------|----------|------------|
-|`ingest/events/buffered`|Number of events queued in the EventReceiverFirehose's buffer|serviceName, bufferCapacity.|Equal to current # of events in the buffer queue.|
+|`ingest/events/buffered`|Number of events queued in the EventReceiverFirehose's buffer|serviceName, dataSource, taskId, bufferCapacity.|Equal to current # of events in the buffer queue.|
+|`ingest/bytes/received`|Number of bytes received by the EventReceiverFirehose.|serviceName, dataSource, taskId.|Varies.|
 
 ## Sys
 

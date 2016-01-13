@@ -30,4 +30,10 @@ public class NoopDimFilter implements DimFilter
   {        
     return ByteBuffer.allocate(1).put(DimFilterCacheHelper.NOOP_CACHE_ID).array();
   }
+
+  @Override
+  public DimFilter optimize()
+  {
+    return this;
+  }
 }

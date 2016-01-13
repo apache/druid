@@ -45,6 +45,31 @@ public class AzureAccountConfig
   @NotNull
   private String container;
 
+  public void setProtocol(String protocol)
+  {
+    this.protocol = protocol;
+  }
+
+  public void setMaxTries(int maxTries)
+  {
+    this.maxTries = maxTries;
+  }
+
+  public void setAccount(String account)
+  {
+    this.account = account;
+  }
+
+  public void setKey(String key)
+  {
+    this.key = key;
+  }
+
+  public void setContainer(String container)
+  {
+    this.container = container;
+  }
+
   public String getProtocol() { return protocol; }
 
   public int getMaxTries() { return maxTries; }

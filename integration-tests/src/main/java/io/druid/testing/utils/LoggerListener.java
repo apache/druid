@@ -17,24 +17,38 @@
  * under the License.
  */
 
-package io.druid.storage.hdfs;
+package io.druid.testing.utils;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import org.testng.ITestResult;
+import org.testng.TestListenerAdapter;
+import com.metamx.common.logger.Logger;
 
-/**
- */
-public class HdfsDataSegmentPusherConfig
+public class LoggerListener extends TestListenerAdapter
 {
-  @JsonProperty
-  private String storageDirectory = "";
+  private static final Logger LOG = new Logger(LoggerListener.class);
 
-  public void setStorageDirectory(String storageDirectory)
+  @Override
+  public void onTestFailure(ITestResult tr)
   {
-    this.storageDirectory = storageDirectory;
+      LOG.info ("[%s] -- Test method failed", tr.getName());
   }
 
-  public String getStorageDirectory()
+  @Override
+  public void onTestSkipped(ITestResult tr)
   {
-    return storageDirectory;
+      LOG.info ("[%s] -- Test method skipped", tr.getName());
   }
+
+  @Override
+  public void onTestSuccess(ITestResult tr)
+  {
+      LOG.info ("[%s] -- Test method passed", tr.getName());
+  }
+
+  @Override
+  public void onTestStart(ITestResult tr)
+  {
+      LOG.info ("[%s] -- TEST START", tr.getName() );
+  }
+
 }

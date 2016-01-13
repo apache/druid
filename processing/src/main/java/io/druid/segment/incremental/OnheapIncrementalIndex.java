@@ -255,6 +255,18 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     return concurrentGet(rowOffset)[aggOffset].get();
   }
 
+  /**
+   * Clear out maps to allow GC
+   * NOTE: This is NOT thread-safe with add... so make sure all the adding is DONE before closing
+   */
+  @Override
+  public void close()
+  {
+    super.close();
+    aggregators.clear();
+    facts.clear();
+  }
+
   private static class OnHeapDimDim implements DimDim
   {
     private final Map<String, Integer> falseIds;
@@ -340,7 +352,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       }
     }
 
-    public boolean compareCannonicalValues(String s1, String s2)
+    public boolean compareCanonicalValues(String s1, String s2)
     {
       return s1 == s2;
     }
