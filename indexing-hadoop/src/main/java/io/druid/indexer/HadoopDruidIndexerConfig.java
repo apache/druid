@@ -51,6 +51,7 @@ import io.druid.indexer.path.PathSpec;
 import io.druid.initialization.Initialization;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
+import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.server.DruidNode;
@@ -89,6 +90,7 @@ public class HadoopDruidIndexerConfig
   public static final ObjectMapper JSON_MAPPER;
   public static final IndexIO INDEX_IO;
   public static final IndexMerger INDEX_MERGER;
+  public static final IndexMergerV9 INDEX_MERGER_V9;
 
   private static final String DEFAULT_WORKING_PATH = "/tmp/druid-indexing";
 
@@ -112,6 +114,7 @@ public class HadoopDruidIndexerConfig
     JSON_MAPPER = injector.getInstance(ObjectMapper.class);
     INDEX_IO = injector.getInstance(IndexIO.class);
     INDEX_MERGER = injector.getInstance(IndexMerger.class);
+    INDEX_MERGER_V9 = injector.getInstance(IndexMergerV9.class);
   }
 
   public static enum IndexJobCounters
@@ -349,6 +352,11 @@ public class HadoopDruidIndexerConfig
   public HadoopyShardSpec getShardSpec(Bucket bucket)
   {
     return schema.getTuningConfig().getShardSpecs().get(bucket.time).get(bucket.partitionNum);
+  }
+
+  public boolean isBuildV9Directly()
+  {
+    return schema.getTuningConfig().getBuildV9Directly();
   }
 
   /**

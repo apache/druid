@@ -104,12 +104,12 @@ public class IndexMerger
 {
   private static final Logger log = new Logger(IndexMerger.class);
 
-  private static final SerializerUtils serializerUtils = new SerializerUtils();
-  private static final int INVALID_ROW = -1;
-  private static final Splitter SPLITTER = Splitter.on(",");
+  protected static final SerializerUtils serializerUtils = new SerializerUtils();
+  protected static final int INVALID_ROW = -1;
+  protected static final Splitter SPLITTER = Splitter.on(",");
 
-  private final ObjectMapper mapper;
-  private final IndexIO indexIO;
+  protected final ObjectMapper mapper;
+  protected final IndexIO indexIO;
 
   @Inject
   public IndexMerger(
@@ -473,7 +473,7 @@ public class IndexMerger
     return makeIndexFiles(indexes, outDir, progress, mergedDimensions, mergedMetrics, null, rowMergerFn, indexSpec);
   }
 
-  private File makeIndexFiles(
+  protected File makeIndexFiles(
       final List<IndexableAdapter> indexes,
       final File outDir,
       final ProgressIndicator progress,

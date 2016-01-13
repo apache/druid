@@ -571,6 +571,7 @@ public class RealtimeIndexTaskTest
         null,
         null,
         null,
+        null,
         null
     );
     return new RealtimeIndexTask(
@@ -715,7 +716,8 @@ public class RealtimeIndexTaskTest
         testUtils.getTestIndexMerger(),
         testUtils.getTestIndexIO(),
         MapCache.create(1024),
-        new CacheConfig()
+        new CacheConfig(),
+        testUtils.getTestIndexMergerV9()
     );
 
     return toolboxFactory.build(task);
