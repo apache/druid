@@ -30,11 +30,9 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.metamx.common.guava.MappedSequence;
-import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.nary.BinaryFn;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import io.druid.collections.OrderedMergeSequence;
 import io.druid.common.guava.CombiningSequence;
 import io.druid.common.utils.JodaUtils;
 import io.druid.query.CacheStrategy;
@@ -128,7 +126,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
           };
         }
 
-        return getOrdering(); // No two elements should be equal, so it should never merge
+        return query.getResultOrdering(); // No two elements should be equal, so it should never merge
       }
 
       @Override
@@ -183,18 +181,6 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
         };
       }
     };
-  }
-
-  @Override
-  public Sequence<SegmentAnalysis> mergeSequences(Sequence<Sequence<SegmentAnalysis>> seqOfSequences)
-  {
-    return new OrderedMergeSequence<>(getOrdering(), seqOfSequences);
-  }
-
-  @Override
-  public Sequence<SegmentAnalysis> mergeSequencesUnordered(Sequence<Sequence<SegmentAnalysis>> seqOfSequences)
-  {
-    return new MergeSequence<>(getOrdering(), seqOfSequences);
   }
 
   @Override
@@ -265,12 +251,6 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
           }
         };
       }
-
-      @Override
-      public Sequence<SegmentAnalysis> mergeSequences(Sequence<Sequence<SegmentAnalysis>> seqOfSequences)
-      {
-        return new MergeSequence<SegmentAnalysis>(getOrdering(), seqOfSequences);
-      }
     };
   }
 
@@ -303,17 +283,5 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
             }
         )
     );
-  }
-
-  private Ordering<SegmentAnalysis> getOrdering()
-  {
-    return new Ordering<SegmentAnalysis>()
-    {
-      @Override
-      public int compare(SegmentAnalysis left, SegmentAnalysis right)
-      {
-        return left.getId().compareTo(right.getId());
-      }
-    }.nullsFirst();
   }
 }

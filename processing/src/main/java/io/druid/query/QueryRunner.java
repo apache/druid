@@ -27,5 +27,11 @@ import java.util.Map;
  */
 public interface QueryRunner<T>
 {
-  public Sequence<T> run(Query<T> query, Map<String, Object> responseContext);
+  /**
+   * Runs the given query and returns results in a time-ordered sequence
+   * @param query
+   * @param responseContext
+   * @return
+   */
+  Sequence<T> run(Query<T> query, Map<String, Object> responseContext);
 }

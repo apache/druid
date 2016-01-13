@@ -134,7 +134,7 @@ public class GroupByTimeseriesQueryRunnerTest extends TimeseriesQueryRunnerTest
 
   public GroupByTimeseriesQueryRunnerTest(QueryRunner runner)
   {
-    super(runner);
+    super(runner, false);
   }
 
   @Override

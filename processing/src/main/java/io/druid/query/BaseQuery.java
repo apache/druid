@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Ordering;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
 import io.druid.query.spec.QuerySegmentSpec;
@@ -34,10 +35,66 @@ import java.util.Map;
 
 /**
  */
-public abstract class BaseQuery<T> implements Query<T>
+public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
 {
+  public static <T> int getContextPriority(Query<T> query, int defaultValue)
+  {
+    return parseInt(query, "priority", defaultValue);
+  }
+
+  public static <T> boolean getContextBySegment(Query<T> query, boolean defaultValue)
+  {
+    return parseBoolean(query, "bySegment", defaultValue);
+  }
+
+  public static <T> boolean getContextPopulateCache(Query<T> query, boolean defaultValue)
+  {
+    return parseBoolean(query, "populateCache", defaultValue);
+  }
+
+  public static <T> boolean getContextUseCache(Query<T> query, boolean defaultValue)
+  {
+    return parseBoolean(query, "useCache", defaultValue);
+  }
+
+  public static <T> boolean getContextFinalize(Query<T> query, boolean defaultValue)
+  {
+    return parseBoolean(query, "finalize", defaultValue);
+  }
+
+  private static <T> int parseInt(Query<T> query, String key, int defaultValue)
+  {
+    Object val = query.getContextValue(key);
+    if (val == null) {
+      return defaultValue;
+    }
+    if (val instanceof String) {
+      return Integer.parseInt((String) val);
+    } else if (val instanceof Integer) {
+      return (int) val;
+    } else {
+      throw new ISE("Unknown type [%s]", val.getClass());
+    }
+  }
+
+  private static <T> boolean parseBoolean(Query<T> query, String key, boolean defaultValue)
+  {
+    Object val = query.getContextValue(key);
+    if (val == null) {
+      return defaultValue;
+    }
+    if (val instanceof String) {
+      return Boolean.parseBoolean((String) val);
+    } else if (val instanceof Boolean) {
+      return (boolean) val;
+    } else {
+      throw new ISE("Unknown type [%s]. Cannot parse!", val.getClass());
+    }
+  }
+
   public static final String QUERYID = "queryId";
   private final DataSource dataSource;
+  private final boolean descending;
   private final Map<String, Object> context;
   private final QuerySegmentSpec querySegmentSpec;
   private volatile Duration duration;
@@ -45,6 +102,7 @@ public abstract class BaseQuery<T> implements Query<T>
   public BaseQuery(
       DataSource dataSource,
       QuerySegmentSpec querySegmentSpec,
+      boolean descending,
       Map<String, Object> context
   )
   {
@@ -54,6 +112,7 @@ public abstract class BaseQuery<T> implements Query<T>
     this.dataSource = dataSource;
     this.context = context;
     this.querySegmentSpec = querySegmentSpec;
+    this.descending = descending;
   }
 
   @JsonProperty
@@ -61,6 +120,13 @@ public abstract class BaseQuery<T> implements Query<T>
   public DataSource getDataSource()
   {
     return dataSource;
+  }
+
+  @JsonProperty
+  @Override
+  public boolean isDescending()
+  {
+    return descending;
   }
 
   @JsonProperty("intervals")
@@ -122,67 +188,6 @@ public abstract class BaseQuery<T> implements Query<T>
     return retVal == null ? defaultValue : retVal;
   }
 
-  @Override
-  public int getContextPriority(int defaultValue)
-  {
-    if (context == null) {
-      return defaultValue;
-    }
-    Object val = context.get("priority");
-    if (val == null) {
-      return defaultValue;
-    }
-    if (val instanceof String) {
-      return Integer.parseInt((String) val);
-    } else if (val instanceof Integer) {
-      return (int) val;
-    } else {
-      throw new ISE("Unknown type [%s]", val.getClass());
-    }
-  }
-
-  @Override
-  public boolean getContextBySegment(boolean defaultValue)
-  {
-    return parseBoolean("bySegment", defaultValue);
-  }
-
-  @Override
-  public boolean getContextPopulateCache(boolean defaultValue)
-  {
-    return parseBoolean("populateCache", defaultValue);
-  }
-
-  @Override
-  public boolean getContextUseCache(boolean defaultValue)
-  {
-    return parseBoolean("useCache", defaultValue);
-  }
-
-  @Override
-  public boolean getContextFinalize(boolean defaultValue)
-  {
-    return parseBoolean("finalize", defaultValue);
-  }
-
-  private boolean parseBoolean(String key, boolean defaultValue)
-  {
-    if (context == null) {
-      return defaultValue;
-    }
-    Object val = context.get(key);
-    if (val == null) {
-      return defaultValue;
-    }
-    if (val instanceof String) {
-      return Boolean.parseBoolean((String) val);
-    } else if (val instanceof Boolean) {
-      return (boolean) val;
-    } else {
-      throw new ISE("Unknown type [%s]. Cannot parse!", val.getClass());
-    }
-  }
-
   protected Map<String, Object> computeOverridenContext(Map<String, Object> overrides)
   {
     Map<String, Object> overridden = Maps.newTreeMap();
@@ -193,6 +198,13 @@ public abstract class BaseQuery<T> implements Query<T>
     overridden.putAll(overrides);
 
     return overridden;
+  }
+
+  @Override
+  public Ordering<T> getResultOrdering()
+  {
+    Ordering<T> retVal = Ordering.natural();
+    return descending ? retVal.reverse() : retVal;
   }
 
   @Override
@@ -219,6 +231,9 @@ public abstract class BaseQuery<T> implements Query<T>
 
     BaseQuery baseQuery = (BaseQuery) o;
 
+    if (descending != baseQuery.descending) {
+      return false;
+    }
     if (context != null ? !context.equals(baseQuery.context) : baseQuery.context != null) {
       return false;
     }
@@ -241,6 +256,7 @@ public abstract class BaseQuery<T> implements Query<T>
   public int hashCode()
   {
     int result = dataSource != null ? dataSource.hashCode() : 0;
+    result = 31 * result + (descending ? 1 : 0);
     result = 31 * result + (context != null ? context.hashCode() : 0);
     result = 31 * result + (querySegmentSpec != null ? querySegmentSpec.hashCode() : 0);
     result = 31 * result + (duration != null ? duration.hashCode() : 0);

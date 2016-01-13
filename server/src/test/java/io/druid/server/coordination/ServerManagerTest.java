@@ -30,7 +30,6 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.IAE;
 import com.metamx.common.MapUtils;
 import com.metamx.common.Pair;
-import com.metamx.common.guava.ConcatSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.guava.Yielder;
@@ -569,18 +568,6 @@ public class ServerManagerTest
     public QueryRunner<T> mergeResults(QueryRunner<T> runner)
     {
       return runner;
-    }
-
-    @Override
-    public Sequence<T> mergeSequences(Sequence<Sequence<T>> seqOfSequences)
-    {
-      return new ConcatSequence<T>(seqOfSequences);
-    }
-
-    @Override
-    public Sequence<T> mergeSequencesUnordered(Sequence<Sequence<T>> seqOfSequences)
-    {
-      return new ConcatSequence<T>(seqOfSequences);
     }
 
     @Override

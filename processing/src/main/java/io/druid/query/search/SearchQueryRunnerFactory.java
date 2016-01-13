@@ -60,7 +60,7 @@ public class SearchQueryRunnerFactory implements QueryRunnerFactory<Result<Searc
   )
   {
     return new ChainedExecutionQueryRunner<Result<SearchResultValue>>(
-        queryExecutor, toolChest.getOrdering(), queryWatcher, queryRunners
+        queryExecutor, queryWatcher, queryRunners
     );
   }
 

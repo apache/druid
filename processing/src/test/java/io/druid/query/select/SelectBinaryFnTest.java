@@ -44,7 +44,7 @@ public class SelectBinaryFnTest
   @Test
   public void testApply() throws Exception
   {
-    SelectBinaryFn binaryFn = new SelectBinaryFn(QueryGranularity.ALL, new PagingSpec(null, 5));
+    SelectBinaryFn binaryFn = new SelectBinaryFn(QueryGranularity.ALL, new PagingSpec(null, 5), false);
 
     Result<SelectResultValue> res1 = new Result<>(
         new DateTime("2013-01-01"),

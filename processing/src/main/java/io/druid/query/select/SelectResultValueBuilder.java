@@ -23,6 +23,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.primitives.Longs;
+import com.metamx.common.guava.Comparators;
 import io.druid.query.Result;
 import org.joda.time.DateTime;
 
@@ -59,12 +60,13 @@ public class SelectResultValueBuilder
 
   public SelectResultValueBuilder(
       DateTime timestamp,
-      int threshold
+      int threshold,
+      boolean descending
   )
   {
     this.timestamp = timestamp;
 
-    instantiatePQueue(threshold, comparator);
+    instantiatePQueue(threshold, descending ? Comparators.inverse(comparator) : comparator);
   }
 
   public void addEntry(

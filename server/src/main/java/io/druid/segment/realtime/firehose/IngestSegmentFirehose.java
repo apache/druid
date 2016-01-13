@@ -75,7 +75,8 @@ public class IngestSegmentFirehose implements Firehose
                         adapter.getAdapter().makeCursors(
                             Filters.convertDimensionFilters(dimFilter),
                             adapter.getInterval(),
-                            granularity
+                            granularity,
+                            false
                         ), new Function<Cursor, Sequence<InputRow>>()
                         {
                           @Nullable

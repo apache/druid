@@ -54,6 +54,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -87,15 +88,26 @@ public class QueryRunnerTestHelper
           }
       )
   );
+
+  public static final DateTime minTime = new DateTime("2011-01-12T00:00:00.000Z");
+
   public static final QueryGranularity dayGran = QueryGranularity.DAY;
   public static final QueryGranularity allGran = QueryGranularity.ALL;
   public static final String marketDimension = "market";
   public static final String qualityDimension = "quality";
   public static final String placementDimension = "placement";
   public static final String placementishDimension = "placementish";
+  public static final List<String> dimensions = Lists.newArrayList(
+      marketDimension,
+      qualityDimension,
+      placementDimension,
+      placementishDimension
+  );
   public static final String indexMetric = "index";
   public static final String uniqueMetric = "uniques";
   public static final String addRowsIndexConstantMetric = "addRowsIndexConstant";
+  public static final List<String> metrics = Lists.newArrayList(indexMetric, uniqueMetric, addRowsIndexConstantMetric);
+
   public static String dependentPostAggMetric = "dependentPostAgg";
   public static final CountAggregatorFactory rowsCount = new CountAggregatorFactory("rows");
   public static final LongSumAggregatorFactory indexLongSum = new LongSumAggregatorFactory("index", "index");
@@ -192,6 +204,17 @@ public class QueryRunnerTestHelper
       "5506.567192077637", "4743.144546508789", "4913.282669067383", "4723.869743347168"
   };
 
+  public static final String[] expectedFullOnIndexValuesDesc;
+
+  static {
+    List<String> list = new ArrayList(Arrays.asList(expectedFullOnIndexValues));
+    Collections.reverse(list);
+    expectedFullOnIndexValuesDesc = list.toArray(new String[list.size()]);
+  }
+
+  public static final DateTime earliest = new DateTime("2011-01-12");
+  public static final DateTime last = new DateTime("2011-04-15");
+
   public static final DateTime skippedDay = new DateTime("2011-01-21T00:00:00.000Z");
 
   public static final QuerySegmentSpec firstToThird = new MultipleIntervalSegmentSpec(
@@ -220,6 +243,66 @@ public class QueryRunnerTestHelper
           }
         }
     );
+  }
+
+  // simple cartesian iterable
+  public static Iterable<Object[]> cartesian(final Iterable... iterables)
+  {
+    return new Iterable<Object[]>()
+    {
+
+      @Override
+      public Iterator<Object[]> iterator()
+      {
+        return new Iterator<Object[]>()
+        {
+          private final Iterator[] iterators = new Iterator[iterables.length];
+          private final Object[] cached = new Object[iterables.length];
+
+          @Override
+          public boolean hasNext()
+          {
+            return hasNext(0);
+          }
+
+          private boolean hasNext(int index)
+          {
+            if (iterators[index] == null) {
+              iterators[index] = iterables[index].iterator();
+            }
+            for (; hasMore(index); cached[index] = null) {
+              if (index == iterables.length - 1 || hasNext(index + 1)) {
+                return true;
+              }
+            }
+            iterators[index] = null;
+            return false;
+          }
+
+          private boolean hasMore(int index)
+          {
+            if (cached[index] == null && iterators[index].hasNext()) {
+              cached[index] = iterators[index].next();
+            }
+            return cached[index] != null;
+          }
+
+          @Override
+          public Object[] next()
+          {
+            Object[] result = Arrays.copyOf(cached, cached.length);
+            cached[cached.length - 1] = null;
+            return result;
+          }
+
+          @Override
+          public void remove()
+          {
+            throw new UnsupportedOperationException("remove");
+          }
+        };
+      }
+    };
   }
 
   public static <T, QueryType extends Query<T>> List<QueryRunner<T>> makeQueryRunners(
@@ -252,23 +335,13 @@ public class QueryRunnerTestHelper
     final IncrementalIndex rtIndexOffheap = TestIndex.getIncrementalTestIndex(true);
 
     return Arrays.asList(
-        new Object[][]{
-            {
-                makeUnionQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId))
-            },
-            {
-                makeUnionQueryRunner(factory, new QueryableIndexSegment(segmentId, mMappedTestIndex))
-            },
-            {
-                makeUnionQueryRunner(
-                    factory,
-                    new QueryableIndexSegment(segmentId, mergedRealtimeIndex)
-                )
-            },
-            {
-                makeUnionQueryRunner(factory, new IncrementalIndexSegment(rtIndexOffheap, segmentId))
-            }
-        }
+        makeUnionQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId)),
+        makeUnionQueryRunner(factory, new QueryableIndexSegment(segmentId, mMappedTestIndex)),
+        makeUnionQueryRunner(
+            factory,
+            new QueryableIndexSegment(segmentId, mergedRealtimeIndex)
+        ),
+        makeUnionQueryRunner(factory, new IncrementalIndexSegment(rtIndexOffheap, segmentId))
     );
   }
   /**
@@ -361,8 +434,7 @@ public class QueryRunnerTestHelper
                     new BySegmentQueryRunner<T>(
                         segmentId, adapter.getDataInterval().getStart(),
                         factory.createRunner(adapter)
-                    ),
-                    factory.getToolchest()
+                    )
                 )
             )
         ),

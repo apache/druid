@@ -88,7 +88,7 @@ public class GroupByQuery extends BaseQuery<Row>
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, context);
+    super(dataSource, querySegmentSpec, false, context);
     this.dimFilter = dimFilter;
     this.granularity = granularity;
     this.dimensions = dimensions == null ? ImmutableList.<DimensionSpec>of() : dimensions;
@@ -152,7 +152,7 @@ public class GroupByQuery extends BaseQuery<Row>
       Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, context);
+    super(dataSource, querySegmentSpec, false, context);
 
     this.dimFilter = dimFilter;
     this.granularity = granularity;

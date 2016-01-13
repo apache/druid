@@ -332,6 +332,8 @@ public class Druids
     private List<PostAggregator> postAggregatorSpecs;
     private Map<String, Object> context;
 
+    private boolean descending;
+
     private TimeseriesQueryBuilder()
     {
       dataSource = null;
@@ -348,6 +350,7 @@ public class Druids
       return new TimeseriesQuery(
           dataSource,
           querySegmentSpec,
+          descending,
           dimFilter,
           granularity,
           aggregatorSpecs,
@@ -362,6 +365,7 @@ public class Druids
           .dataSource(query.getDataSource())
           .intervals(query.getIntervals())
           .filters(query.getDimensionsFilter())
+          .descending(query.isDescending())
           .granularity(query.getGranularity())
           .aggregators(query.getAggregatorSpecs())
           .postAggregators(query.getPostAggregatorSpecs())
@@ -374,6 +378,7 @@ public class Druids
           .dataSource(builder.dataSource)
           .intervals(builder.querySegmentSpec)
           .filters(builder.dimFilter)
+          .descending(builder.descending)
           .granularity(builder.granularity)
           .aggregators(builder.aggregatorSpecs)
           .postAggregators(builder.postAggregatorSpecs)
@@ -393,6 +398,11 @@ public class Druids
     public DimFilter getDimFilter()
     {
       return dimFilter;
+    }
+
+    public boolean isDescending()
+    {
+      return descending;
     }
 
     public QueryGranularity getGranularity()
@@ -464,6 +474,12 @@ public class Druids
     public TimeseriesQueryBuilder filters(DimFilter f)
     {
       dimFilter = f;
+      return this;
+    }
+
+    public TimeseriesQueryBuilder descending(boolean d)
+    {
+      descending = d;
       return this;
     }
 
