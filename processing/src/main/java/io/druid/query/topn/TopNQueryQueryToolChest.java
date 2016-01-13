@@ -470,7 +470,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   {
     final ThresholdAdjustingQueryRunner thresholdRunner = new ThresholdAdjustingQueryRunner(
         runner,
-        config.getMinTopNThreshold()
+        config
     );
     return new QueryRunner<Result<TopNResultValue>>()
     {
@@ -532,18 +532,18 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     return Ordering.natural();
   }
 
-  private static class ThresholdAdjustingQueryRunner implements QueryRunner<Result<TopNResultValue>>
+  static class ThresholdAdjustingQueryRunner implements QueryRunner<Result<TopNResultValue>>
   {
     private final QueryRunner<Result<TopNResultValue>> runner;
-    private final int minTopNThreshold;
+    private final TopNQueryConfig config;
 
     public ThresholdAdjustingQueryRunner(
         QueryRunner<Result<TopNResultValue>> runner,
-        int minTopNThreshold
+        TopNQueryConfig config
     )
     {
       this.runner = runner;
-      this.minTopNThreshold = minTopNThreshold;
+      this.config = config;
     }
 
     @Override
@@ -557,6 +557,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       }
 
       final TopNQuery query = (TopNQuery) input;
+      final int minTopNThreshold = query.getContextValue("minTopNThreshold", config.getMinTopNThreshold());
       if (query.getThreshold() > minTopNThreshold) {
         return runner.run(query, responseContext);
       }
