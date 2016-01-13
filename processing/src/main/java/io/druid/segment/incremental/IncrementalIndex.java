@@ -355,6 +355,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       boolean deserializeComplexMetrics
   );
 
+  // Note: This method needs to be thread safe.
   protected abstract Integer addToFacts(
       AggregatorFactory[] metrics,
       boolean deserializeComplexMetrics,
