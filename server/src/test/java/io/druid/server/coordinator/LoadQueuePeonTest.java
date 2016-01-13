@@ -137,9 +137,27 @@ public class LoadQueuePeonTest extends CuratorTestBase
 
     final List<DataSegment> segmentToLoad = Lists.transform(
         ImmutableList.<String>of(
+            "2014-10-27T00:00:00Z/P1D",
+            "2014-10-29T00:00:00Z/P1M",
             "2014-10-31T00:00:00Z/P1D",
             "2014-10-30T00:00:00Z/P1D",
-            "2014-10-29T00:00:00Z/P1D",
+            "2014-10-28T00:00:00Z/P1D"
+        ), new Function<String, DataSegment>()
+        {
+          @Override
+          public DataSegment apply(String intervalStr)
+          {
+            return dataSegmentWithInterval(intervalStr);
+          }
+        }
+    );
+
+    // segment with latest interval should be loaded first
+    final List<DataSegment> expectedLoadOrder = Lists.transform(
+        ImmutableList.<String>of(
+            "2014-10-29T00:00:00Z/P1M",
+            "2014-10-31T00:00:00Z/P1D",
+            "2014-10-30T00:00:00Z/P1D",
             "2014-10-28T00:00:00Z/P1D",
             "2014-10-27T00:00:00Z/P1D"
         ), new Function<String, DataSegment>()
@@ -235,7 +253,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
       }
     }
 
-    for (DataSegment segment : segmentToLoad) {
+    for (DataSegment segment : expectedLoadOrder) {
       String loadRequestPath = ZKPaths.makePath(LOAD_QUEUE_PATH, segment.getIdentifier());
       Assert.assertTrue(timing.forWaiting().awaitLatch(loadRequestSignal[requestSignalIdx.get()]));
       Assert.assertNotNull(curator.checkExists().forPath(loadRequestPath));

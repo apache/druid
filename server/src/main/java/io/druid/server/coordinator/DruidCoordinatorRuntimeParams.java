@@ -199,7 +199,7 @@ public class DruidCoordinatorRuntimeParams
       this.databaseRuleManager = null;
       this.segmentReplicantLookup = null;
       this.dataSources = Sets.newHashSet();
-      this.availableSegments = Sets.newTreeSet(Comparators.inverse(DataSegment.bucketMonthComparator()));
+      this.availableSegments = Sets.newTreeSet(DruidCoordinator.SEGMENT_COMPARATOR);
       this.loadManagementPeons = Maps.newHashMap();
       this.replicationManager = null;
       this.emitter = null;
