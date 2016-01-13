@@ -36,6 +36,9 @@ public class CuratorConfig
 
   @JsonProperty("compress")
   private boolean enableCompression = true;
+  
+  @JsonProperty("acl")
+  private boolean enableAcl = false;
 
   public String getZkHosts()
   {
@@ -65,5 +68,15 @@ public class CuratorConfig
   public void setEnableCompression(Boolean enableCompression)
   {
     this.enableCompression = enableCompression;
+  }
+  
+  public Boolean getEnableAcl()
+  {
+    return enableAcl;
+  }
+
+  public void setEnableAcl(Boolean enableAcl)
+  {
+    this.enableAcl = enableAcl;
   }
 }
