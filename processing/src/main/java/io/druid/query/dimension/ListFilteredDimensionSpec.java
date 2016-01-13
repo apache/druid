@@ -110,7 +110,7 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
       @Override
       public int getValueCardinality()
       {
-        return matched.size();
+        return selector.getValueCardinality();
       }
 
       @Override
