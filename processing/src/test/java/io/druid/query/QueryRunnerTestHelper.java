@@ -102,6 +102,8 @@ public class QueryRunnerTestHelper
   public static final String qualityDimension = "quality";
   public static final String placementDimension = "placement";
   public static final String placementishDimension = "placementish";
+  public static final String partialNullDimension = "partial_null_column";
+
   public static final List<String> dimensions = Lists.newArrayList(
       marketDimension,
       qualityDimension,
