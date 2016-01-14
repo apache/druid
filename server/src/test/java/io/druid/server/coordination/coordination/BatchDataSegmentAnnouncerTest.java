@@ -182,16 +182,27 @@ public class BatchDataSegmentAnnouncerTest
   {
     int prevMax = maxBytesPerNode.get();
     maxBytesPerNode.set(2048);
+    // each segment is about 317 bytes long and that makes 2048 / 317 = 6 segments included per node
+    // so 100 segments makes (100 / 6) + 1 = 17 nodes
     try {
       for (DataSegment segment : testSegments) {
         segmentAnnouncer.announceSegment(segment);
       }
-      List<String> zNodes = cf.getChildren().forPath(testSegmentsPath);
-      Assert.assertEquals(17, zNodes.size());
     }
     finally {
       maxBytesPerNode.set(prevMax);
     }
+
+    List<String> zNodes = cf.getChildren().forPath(testSegmentsPath);
+    Assert.assertEquals(17, zNodes.size());
+
+    Set<DataSegment> segments = Sets.newHashSet(testSegments);
+    for (String zNode : zNodes) {
+      for (DataSegment segment : segmentReader.read(joiner.join(testSegmentsPath, zNode))) {
+        Assert.assertTrue("Invalid segment " + segment, segments.remove(segment));
+      }
+    }
+    Assert.assertTrue("Failed to find segments " + segments, segments.isEmpty());
   }
 
   @Test
