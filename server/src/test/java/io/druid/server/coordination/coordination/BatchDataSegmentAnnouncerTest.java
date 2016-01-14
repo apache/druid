@@ -47,6 +47,7 @@ import org.junit.Test;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  */
@@ -63,6 +64,8 @@ public class BatchDataSegmentAnnouncerTest
   private SegmentReader segmentReader;
   private BatchDataSegmentAnnouncer segmentAnnouncer;
   private Set<DataSegment> testSegments;
+
+  private final AtomicInteger maxBytesPerNode = new AtomicInteger(512 * 1024);
 
   @Before
   public void setUp() throws Exception
@@ -103,6 +106,12 @@ public class BatchDataSegmentAnnouncerTest
           public int getSegmentsPerNode()
           {
             return 50;
+          }
+
+          @Override
+          public long getMaxBytesPerNode()
+          {
+            return maxBytesPerNode.get();
           }
         },
         new ZkPathsConfig()
@@ -169,13 +178,30 @@ public class BatchDataSegmentAnnouncerTest
   }
 
   @Test
+  public void testSingleAnnounceManyTimes() throws Exception
+  {
+    int prevMax = maxBytesPerNode.get();
+    maxBytesPerNode.set(2048);
+    try {
+      for (DataSegment segment : testSegments) {
+        segmentAnnouncer.announceSegment(segment);
+      }
+      List<String> zNodes = cf.getChildren().forPath(testSegmentsPath);
+      Assert.assertEquals(17, zNodes.size());
+    }
+    finally {
+      maxBytesPerNode.set(prevMax);
+    }
+  }
+
+  @Test
   public void testBatchAnnounce() throws Exception
   {
     segmentAnnouncer.announceSegments(testSegments);
 
     List<String> zNodes = cf.getChildren().forPath(testSegmentsPath);
 
-    Assert.assertTrue(zNodes.size() == 2);
+    Assert.assertEquals(2, zNodes.size());
 
     Set<DataSegment> allSegments = Sets.newHashSet();
     for (String zNode : zNodes) {
@@ -192,7 +218,7 @@ public class BatchDataSegmentAnnouncerTest
   public void testMultipleBatchAnnounce() throws Exception
   {
     for (int i = 0; i < 10; i++) {
-       testBatchAnnounce();
+      testBatchAnnounce();
     }
   }
 
@@ -227,8 +253,8 @@ public class BatchDataSegmentAnnouncerTest
         if (cf.checkExists().forPath(path) != null) {
           return jsonMapper.readValue(
               cf.getData().forPath(path), new TypeReference<Set<DataSegment>>()
-          {
-          }
+              {
+              }
           );
         }
       }
