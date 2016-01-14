@@ -21,16 +21,14 @@ package io.druid.query.dimension;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.metamx.common.StringUtils;
 import io.druid.query.filter.DimFilterCacheHelper;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.data.IndexedInts;
-import io.druid.segment.data.ListBasedIndexedInts;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -40,12 +38,12 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
 
   private static final byte CACHE_TYPE_ID = 0x3;
 
-  private final List<String> values;
+  private final Set<String> values;
   private final boolean isWhitelist;
 
   public ListFilteredDimensionSpec(
       @JsonProperty("delegate") DimensionSpec delegate,
-      @JsonProperty("values") List<String> values,
+      @JsonProperty("values") Set<String> values,
       @JsonProperty("isWhitelist") Boolean isWhitelist
   )
   {
@@ -58,7 +56,7 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
   }
 
   @JsonProperty
-  public List<String> getValues()
+  public Set<String> getValues()
   {
     return values;
   }
@@ -76,55 +74,31 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
       return selector;
     }
 
-    final Set<Integer> matched = new HashSet<>(values.size());
-    for (String value : values) {
-      int i = selector.lookupId(value);
-      if (i >= 0) {
-        matched.add(i);
-      }
-    };
+    int selectorCardinality = selector.getValueCardinality();
+    int cardinality = isWhitelist ? values.size() : selectorCardinality - values.size();
 
-    return new DimensionSelector()
-    {
-      @Override
-      public IndexedInts getRow()
-      {
-        IndexedInts baseRow = selector.getRow();
-        List<Integer> result = new ArrayList<>(baseRow.size());
+    int count = 0;
+    final Map<Integer,Integer> forwardMapping = new HashMap<>(cardinality);
+    final int[] reverseMapping = new int[cardinality];
 
-        for (int i : baseRow) {
-          if (matched.contains(i)) {
-            if (isWhitelist) {
-              result.add(i);
-            }
-          } else {
-            if (!isWhitelist) {
-              result.add(i);
-            }
-          }
+    if (isWhitelist) {
+      for (String value : values) {
+        int i = selector.lookupId(value);
+        if (i >= 0) {
+          forwardMapping.put(i, count);
+          reverseMapping[count++] = i;
         }
-
-        return new ListBasedIndexedInts(result);
       }
-
-      @Override
-      public int getValueCardinality()
-      {
-        return selector.getValueCardinality();
+    } else {
+      for (int i = 0; i < selectorCardinality; i++) {
+        if (!values.contains(Strings.nullToEmpty(selector.lookupName(i)))) {
+          forwardMapping.put(i, count);
+          reverseMapping[count++] = i;
+        }
       }
+    }
 
-      @Override
-      public String lookupName(int id)
-      {
-        return selector.lookupName(id);
-      }
-
-      @Override
-      public int lookupId(String name)
-      {
-        return selector.lookupId(name);
-      }
-    };
+    return BaseFilteredDimensionSpec.decorate(selector, forwardMapping, reverseMapping);
   }
 
   @Override

@@ -25,13 +25,10 @@ import com.google.common.base.Strings;
 import com.metamx.common.StringUtils;
 import io.druid.query.filter.DimFilterCacheHelper;
 import io.druid.segment.DimensionSelector;
-import io.druid.segment.data.IndexedInts;
-import io.druid.segment.data.ListBasedIndexedInts;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.BitSet;
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 /**
@@ -68,48 +65,24 @@ public class RegexFilteredDimensionSpec extends BaseFilteredDimensionSpec
       return selector;
     }
 
-    final BitSet bitSetOfIds = new BitSet(selector.getValueCardinality());
+    if (selector == null) {
+      return selector;
+    }
+
+    int count = 0;
+    final Map<Integer,Integer> forwardMapping = new HashMap<>();
+
     for (int i = 0; i < selector.getValueCardinality(); i++) {
       if (compiledRegex.matcher(Strings.nullToEmpty(selector.lookupName(i))).matches()) {
-        bitSetOfIds.set(i);
+        forwardMapping.put(i, count++);
       }
     }
 
-    return new DimensionSelector()
-    {
-      @Override
-      public IndexedInts getRow()
-      {
-        IndexedInts baseRow = selector.getRow();
-        List<Integer> result = new ArrayList<>(baseRow.size());
-
-        for (int i : baseRow) {
-          if (bitSetOfIds.get(i)) {
-            result.add(i);
-          }
-        }
-
-        return new ListBasedIndexedInts(result);
-      }
-
-      @Override
-      public int getValueCardinality()
-      {
-        return selector.getValueCardinality();
-      }
-
-      @Override
-      public String lookupName(int id)
-      {
-        return selector.lookupName(id);
-      }
-
-      @Override
-      public int lookupId(String name)
-      {
-        return selector.lookupId(name);
-      }
-    };
+    final int[] reverseMapping = new int[forwardMapping.size()];
+    for (Map.Entry<Integer, Integer> e : forwardMapping.entrySet()) {
+      reverseMapping[e.getValue().intValue()] = e.getKey().intValue();
+    }
+    return BaseFilteredDimensionSpec.decorate(selector, forwardMapping, reverseMapping);
   }
 
   @Override

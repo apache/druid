@@ -22,6 +22,7 @@ package io.druid.query;
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
@@ -268,7 +269,7 @@ public class MultiValuedDimensionTest
         .granularity(QueryGranularity.ALL)
         .dimension(new ListFilteredDimensionSpec(
             new DefaultDimensionSpec("tags", "tags"),
-            ImmutableList.of("t3"),
+            ImmutableSet.of("t3"),
             null
         ))
         .metric("count")
