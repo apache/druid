@@ -19,6 +19,8 @@
 
 package io.druid.query.search.search;
 
+import com.google.common.primitives.Ints;
+
 import java.util.Comparator;
 
 /**
@@ -36,9 +38,14 @@ public class StrlenSearchSortSpec implements SearchSortSpec
       @Override
       public int compare(SearchHit s, SearchHit s1)
       {
-        int res = s.getValue().length() - s1.getValue().length();
+        final String v1 = s.getValue();
+        final String v2 = s1.getValue();
+        int res = Ints.compare(v1.length(), v2.length());
         if (res == 0) {
-          return (s.getValue().compareTo(s1.getValue()));
+          res = v1.compareTo(v2);
+        }
+        if (res == 0) {
+          res = s.getDimension().compareTo(s1.getDimension());
         }
         return res;
       }
