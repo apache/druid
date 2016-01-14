@@ -110,7 +110,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
         chatHandlerProvider.get().register(serviceName.replaceAll(".*:", ""), firehose); // rofl
       }
     } else {
-      log.info("No chathandler detected");
+      log.warn("No chathandler detected");
     }
 
     eventReceiverFirehoseRegister.register(serviceName, firehose);
