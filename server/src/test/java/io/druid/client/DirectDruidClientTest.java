@@ -133,12 +133,12 @@ public class DirectDruidClientTest
     );
 
     QueryableDruidServer queryableDruidServer1 = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 0),
+        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 0, "service", "hostText", -1),
         client1
     );
     serverSelector.addServerAndUpdateSegment(queryableDruidServer1, serverSelector.getSegment());
     QueryableDruidServer queryableDruidServer2 = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 0),
+        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 0, "service", "hostText", -1),
         client2
     );
     serverSelector.addServerAndUpdateSegment(queryableDruidServer2, serverSelector.getSegment());
@@ -235,7 +235,7 @@ public class DirectDruidClientTest
     );
 
     QueryableDruidServer queryableDruidServer1 = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 0),
+        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 0, "service", "hostText", -1),
         client1
     );
     serverSelector.addServerAndUpdateSegment(queryableDruidServer1, serverSelector.getSegment());

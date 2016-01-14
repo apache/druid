@@ -164,7 +164,10 @@ public class LoadRuleTest
                             1000,
                             "historical",
                             "hot",
-                            0
+                            0,
+                            "service",
+                            "hostText",
+                            -1
                         ).toImmutableDruidServer(),
                         mockPeon
                     )
@@ -180,7 +183,10 @@ public class LoadRuleTest
                             1000,
                             "historical",
                             DruidServer.DEFAULT_TIER,
-                            0
+                            0,
+                            "service",
+                            "hostText",
+                            -1
                         ).toImmutableDruidServer(),
                         mockPeon
                     )
@@ -256,7 +262,10 @@ public class LoadRuleTest
         1000,
         "historical",
         "hot",
-        0
+        0,
+        "service",
+        "hostText",
+        -1
     );
     server1.addDataSegment(segment.getIdentifier(), segment);
     DruidServer server2 = new DruidServer(
@@ -265,7 +274,10 @@ public class LoadRuleTest
         1000,
         "historical",
         DruidServer.DEFAULT_TIER,
-        0
+        0,
+        "service",
+        "hostText",
+        -1
     );
     server2.addDataSegment(segment.getIdentifier(), segment);
     DruidCluster druidCluster = new DruidCluster(
@@ -365,7 +377,10 @@ public class LoadRuleTest
                             1000,
                             "historical",
                             "hot",
-                            0
+                            0,
+                            "service",
+                            "hostText",
+                            -1
                         ).toImmutableDruidServer(),
                         mockPeon
                     )
@@ -440,7 +455,10 @@ public class LoadRuleTest
         1000,
         "historical",
         "hot",
-        0
+        0,
+        "service",
+        "hostText",
+        -1
     );
     DruidServer server2 = new DruidServer(
         "serverHo2t",
@@ -448,7 +466,10 @@ public class LoadRuleTest
         1000,
         "historical",
         "hot",
-        0
+        0,
+        "service",
+        "hostText",
+        -1
     );
     server1.addDataSegment(segment.getIdentifier(), segment);
     server2.addDataSegment(segment.getIdentifier(), segment);

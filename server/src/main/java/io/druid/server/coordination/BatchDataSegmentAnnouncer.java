@@ -69,7 +69,6 @@ public class BatchDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
       ObjectMapper jsonMapper
   )
   {
-    super(server, zkPaths, announcer, jsonMapper);
     this.config = config;
     this.announcer = announcer;
     this.jsonMapper = jsonMapper;

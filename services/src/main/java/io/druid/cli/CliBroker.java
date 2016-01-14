@@ -38,7 +38,7 @@ import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
-import io.druid.guice.ManageLifecycle;
+import io.druid.guice.NodeTypeConfig;
 import io.druid.query.MapQueryToolChestWarehouse;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChestWarehouse;
@@ -84,6 +84,7 @@ public class CliBroker extends ServerRunnable
                 TieredBrokerConfig.DEFAULT_BROKER_SERVICE_NAME
             );
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8082);
+            binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig("broker"));
 
             binder.bind(QueryToolChestWarehouse.class).to(MapQueryToolChestWarehouse.class);
 

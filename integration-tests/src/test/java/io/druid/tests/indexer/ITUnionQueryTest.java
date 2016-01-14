@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import com.metamx.http.client.HttpClient;
+import io.druid.curator.discovery.ExternalServerDiscoverySelector;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.guice.annotations.Global;
@@ -148,7 +149,7 @@ public class ITUnionQueryTest extends AbstractIndexerTest
 
   public void postEvents(int id) throws Exception
   {
-    final ServerDiscoverySelector eventReceiverSelector = factory.createSelector(EVENT_RECEIVER_SERVICE_PREFIX + id);
+    final ExternalServerDiscoverySelector eventReceiverSelector = factory.createExternalSelector(EVENT_RECEIVER_SERVICE_PREFIX + id);
     eventReceiverSelector.start();
     try {
       ServerDiscoveryUtil.waitUntilInstanceReady(eventReceiverSelector, "Event Receiver");

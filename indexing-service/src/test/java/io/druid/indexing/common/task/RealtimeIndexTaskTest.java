@@ -132,7 +132,9 @@ public class RealtimeIndexTaskTest
       0,
       "historical",
       "dummy_tier",
-      0
+      0,
+      "service",
+      "hostText", -1
   );
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
   private static final ServiceEmitter emitter = new ServiceEmitter(

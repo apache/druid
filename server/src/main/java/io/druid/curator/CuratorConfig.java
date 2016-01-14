@@ -31,6 +31,9 @@ public class CuratorConfig
   @JsonProperty("host")
   private String zkHosts = "localhost";
 
+  @JsonProperty("externalHost")
+  private String externalZkHosts = "localhost";
+
   @JsonProperty("sessionTimeoutMs")
   @Min(0)
   private int zkSessionTimeoutMs = 30000;
@@ -46,19 +49,9 @@ public class CuratorConfig
     return zkHosts;
   }
 
-  public void setZkHosts(String zkHosts)
-  {
-    this.zkHosts = zkHosts;
-  }
-
   public Integer getZkSessionTimeoutMs()
   {
     return zkSessionTimeoutMs;
-  }
-
-  public void setZkSessionTimeoutMs(Integer zkSessionTimeoutMs)
-  {
-    this.zkSessionTimeoutMs = zkSessionTimeoutMs;
   }
 
   public boolean getEnableCompression()
@@ -66,20 +59,13 @@ public class CuratorConfig
     return enableCompression;
   }
 
-  public void setEnableCompression(Boolean enableCompression)
-  {
-    Preconditions.checkNotNull(enableCompression, "enableCompression");
-    this.enableCompression = enableCompression;
-  }
-
   public boolean getEnableAcl()
   {
     return enableAcl;
   }
 
-  public void setEnableAcl(Boolean enableAcl)
+  public String getExternalZkHosts()
   {
-    Preconditions.checkNotNull(enableAcl, "enableAcl");
-    this.enableAcl = enableAcl;
+    return externalZkHosts;
   }
 }

@@ -98,7 +98,9 @@ public class BatchDataSegmentAnnouncerTest
             Long.MAX_VALUE,
             "type",
             "tier",
-            0
+            0,
+            "service",
+            "hostText", -1
         ),
         new BatchDataSegmentAnnouncerConfig()
         {

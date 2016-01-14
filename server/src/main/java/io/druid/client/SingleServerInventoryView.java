@@ -44,7 +44,7 @@ public class SingleServerInventoryView extends ServerInventoryView<DataSegment>
   {
     super(
         log,
-        zkPaths.getAnnouncementsPath(),
+        zkPaths.getCapabilityPathFor("segmentServer"),
         zkPaths.getServedSegmentsPath(),
         curator,
         jsonMapper,

@@ -158,7 +158,7 @@ public class CachingClusteredClientFunctionalityTest {
               @Override
               public QueryableDruidServer pick(TreeMap<Integer, Set<QueryableDruidServer>> prioritizedServers, DataSegment segment) {
                 return new QueryableDruidServer(
-                    new DruidServer("localhost", "localhost", 100, "historical", "a", 10),
+                    new DruidServer("localhost", "localhost", 100, "historical", "a", 10, "service", "hostText", -1),
                     EasyMock.createNiceMock(DirectDruidClient.class)
                 );
               }

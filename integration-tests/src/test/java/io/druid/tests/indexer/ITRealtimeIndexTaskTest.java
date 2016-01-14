@@ -25,6 +25,7 @@ import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import com.metamx.http.client.HttpClient;
+import io.druid.curator.discovery.ExternalServerDiscoverySelector;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.guice.annotations.Global;
@@ -183,7 +184,7 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
   public void postEvents() throws Exception
   {
     DateTimeZone zone = DateTimeZone.forID("UTC");
-    final ServerDiscoverySelector eventReceiverSelector = factory.createSelector(EVENT_RECEIVER_SERVICE_NAME);
+    final ExternalServerDiscoverySelector eventReceiverSelector = factory.createExternalSelector(EVENT_RECEIVER_SERVICE_NAME);
     eventReceiverSelector.start();
     BufferedReader reader = null;
     InputStreamReader isr = null;

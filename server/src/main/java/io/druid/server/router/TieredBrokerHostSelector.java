@@ -19,23 +19,29 @@
 
 package io.druid.server.router;
 
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import com.metamx.common.Pair;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.client.DruidServerDiscovery;
 import io.druid.client.selector.HostSelector;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
 import io.druid.query.Query;
+import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.coordinator.rules.LoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -80,9 +86,21 @@ public class TieredBrokerHostSelector<T> implements HostSelector<T>
       }
 
       try {
-        for (Map.Entry<String, String> entry : tierConfig.getTierToBrokerMap().entrySet()) {
-          ServerDiscoverySelector selector = serverDiscoveryFactory.createSelector(entry.getValue());
-          selector.start();
+        for (final Map.Entry<String, String> entry : tierConfig.getTierToBrokerMap().entrySet()) {
+          final ServerDiscoverySelector selector = serverDiscoveryFactory.createSelector(
+              new Function<DruidServerDiscovery, List<DruidServerMetadata>>()
+              {
+                @Override
+                public List<DruidServerMetadata> apply(DruidServerDiscovery discovery)
+                {
+                  try {
+                    return discovery.getServersForTypeWithService("broker", entry.getValue());
+                  }
+                  catch (Exception e) {
+                    throw Throwables.propagate(e);
+                  }
+                }
+              });
           selectorMap.put(entry.getValue(), selector);
         }
       }
@@ -101,15 +119,6 @@ public class TieredBrokerHostSelector<T> implements HostSelector<T>
     synchronized (lock) {
       if (!started) {
         return;
-      }
-
-      try {
-        for (ServerDiscoverySelector selector : selectorMap.values()) {
-          selector.stop();
-        }
-      }
-      catch (Exception e) {
-        throw Throwables.propagate(e);
       }
 
       started = false;

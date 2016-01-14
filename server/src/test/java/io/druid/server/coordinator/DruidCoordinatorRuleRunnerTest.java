@@ -135,7 +135,10 @@ public class DruidCoordinatorRuleRunnerTest
                             1000,
                             "historical",
                             "hot",
-                            0
+                            0,
+                            "service",
+                            "hostText",
+                            -1
                         ).toImmutableDruidServer(),
                         mockPeon
                     )
@@ -151,7 +154,10 @@ public class DruidCoordinatorRuleRunnerTest
                             1000,
                             "historical",
                             "normal",
-                            0
+                            0,
+                            "service",
+                            "hostText",
+                            -1
                         ).toImmutableDruidServer(),
                         mockPeon
                     )
@@ -167,7 +173,10 @@ public class DruidCoordinatorRuleRunnerTest
                             1000,
                             "historical",
                             "cold",
-                            0
+                            0,
+                            "service",
+                            "hostText",
+                            -1
                         ).toImmutableDruidServer(),
                         mockPeon
                     )
@@ -234,7 +243,10 @@ public class DruidCoordinatorRuleRunnerTest
                             1000,
                             "historical",
                             "hot",
-                            0
+                            0,
+                            "service",
+                            "hostText",
+                            -1
                         ).toImmutableDruidServer(),
                         mockPeon
                     ),
@@ -245,7 +257,10 @@ public class DruidCoordinatorRuleRunnerTest
                             1000,
                             "historical",
                             "hot",
-                            0
+                            0,
+                            "service",
+                            "hostText",
+                            -1
                         ).toImmutableDruidServer(),
                         mockPeon
                     )
@@ -261,7 +276,10 @@ public class DruidCoordinatorRuleRunnerTest
                             1000,
                             "historical",
                             "cold",
-                            0
+                            0,
+                            "service",
+                            "hostText",
+                            -1
                         ).toImmutableDruidServer(),
                         mockPeon
                     )
@@ -321,7 +339,10 @@ public class DruidCoordinatorRuleRunnerTest
         1000,
         "historical",
         "normal",
-        0
+        0,
+        "service",
+        "hostText",
+        -1
     );
     for (DataSegment availableSegment : availableSegments) {
       normServer.addDataSegment(availableSegment.getIdentifier(), availableSegment);
@@ -339,7 +360,10 @@ public class DruidCoordinatorRuleRunnerTest
                             1000,
                             "historical",
                             "hot",
-                            0
+                            0,
+                            "service",
+                            "hostText",
+                            -1
                         ).toImmutableDruidServer(),
                         mockPeon
                     )
@@ -413,7 +437,10 @@ public class DruidCoordinatorRuleRunnerTest
                             1000,
                             "historical",
                             "normal",
-                            0
+                            0,
+                            "service",
+                            "hostText",
+                            -1
                         ).toImmutableDruidServer(),
                         mockPeon
                     )
@@ -465,7 +492,10 @@ public class DruidCoordinatorRuleRunnerTest
                             1000,
                             "historical",
                             "normal",
-                            0
+                            0,
+                            "service",
+                            "hostText",
+                            -1
                         ).toImmutableDruidServer(),
                         mockPeon
                     )
@@ -520,7 +550,10 @@ public class DruidCoordinatorRuleRunnerTest
         1000,
         "historical",
         "normal",
-        0
+        0,
+        "service",
+        "hostText",
+        -1
     );
     for (DataSegment segment : availableSegments) {
       server.addDataSegment(segment.getIdentifier(), segment);
@@ -583,7 +616,10 @@ public class DruidCoordinatorRuleRunnerTest
         1000,
         "historical",
         "normal",
-        0
+        0,
+        "service",
+        "hostText",
+        -1
     );
     server1.addDataSegment(availableSegments.get(0).getIdentifier(), availableSegments.get(0));
 
@@ -593,7 +629,10 @@ public class DruidCoordinatorRuleRunnerTest
         1000,
         "historical",
         "normal",
-        0
+        0,
+        "service",
+        "hostText",
+        -1
     );
     for (DataSegment segment : availableSegments) {
       server2.addDataSegment(segment.getIdentifier(), segment);
@@ -663,7 +702,10 @@ public class DruidCoordinatorRuleRunnerTest
         1000,
         "historical",
         "hot",
-        0
+        0,
+        "service",
+        "hostText",
+        -1
     );
     server1.addDataSegment(availableSegments.get(0).getIdentifier(), availableSegments.get(0));
     DruidServer server2 = new DruidServer(
@@ -672,7 +714,10 @@ public class DruidCoordinatorRuleRunnerTest
         1000,
         "historical",
         "normal",
-        0
+        0,
+        "service",
+        "hostText",
+        -1
     );
     for (DataSegment segment : availableSegments) {
       server2.addDataSegment(segment.getIdentifier(), segment);
@@ -745,7 +790,10 @@ public class DruidCoordinatorRuleRunnerTest
         1000,
         "historical",
         "hot",
-        0
+        0,
+        "service",
+        "hostText",
+        -1
     );
     DruidServer server2 = new DruidServer(
         "serverNorm2",
@@ -753,7 +801,10 @@ public class DruidCoordinatorRuleRunnerTest
         1000,
         "historical",
         "normal",
-        0
+        0,
+        "service",
+        "hostText",
+        -1
     );
     for (DataSegment segment : availableSegments) {
       server2.addDataSegment(segment.getIdentifier(), segment);
@@ -818,7 +869,10 @@ public class DruidCoordinatorRuleRunnerTest
         1000,
         "historical",
         "normal",
-        0
+        0,
+        "service",
+        "hostText",
+        -1
     );
     server1.addDataSegment(availableSegments.get(0).getIdentifier(), availableSegments.get(0));
     DruidServer server2 = new DruidServer(
@@ -827,7 +881,10 @@ public class DruidCoordinatorRuleRunnerTest
         1000,
         "historical",
         "normal",
-        0
+        0,
+        "service",
+        "hostText",
+        -1
     );
     server2.addDataSegment(availableSegments.get(1).getIdentifier(), availableSegments.get(1));
     DruidServer server3 = new DruidServer(
@@ -836,7 +893,10 @@ public class DruidCoordinatorRuleRunnerTest
         1000,
         "historical",
         "normal",
-        0
+        0,
+        "service",
+        "hostText",
+        -1
     );
     server3.addDataSegment(availableSegments.get(1).getIdentifier(), availableSegments.get(1));
     server3.addDataSegment(availableSegments.get(2).getIdentifier(), availableSegments.get(2));
@@ -929,7 +989,10 @@ public class DruidCoordinatorRuleRunnerTest
                             1000,
                             "historical",
                             "hot",
-                            0
+                            0,
+                            "service",
+                            "hostText",
+                            -1
                         ).toImmutableDruidServer(),
                         mockPeon
                     ),
@@ -940,7 +1003,10 @@ public class DruidCoordinatorRuleRunnerTest
                             1000,
                             "historical",
                             "hot",
-                            0
+                            0,
+                            "service",
+                            "hostText",
+                            -1
                         ).toImmutableDruidServer(),
                         mockPeon
                     )
@@ -1043,7 +1109,10 @@ public class DruidCoordinatorRuleRunnerTest
                             1000,
                             "historical",
                             "hot",
-                            0
+                            0,
+                            "service",
+                            "hostText",
+                            -1
                         ).toImmutableDruidServer(),
                         mockPeon
                     )
@@ -1059,7 +1128,10 @@ public class DruidCoordinatorRuleRunnerTest
                             1000,
                             "historical",
                             DruidServer.DEFAULT_TIER,
-                            0
+                            0,
+                            "service",
+                            "hostText",
+                            -1
                         ).toImmutableDruidServer(),
                         mockPeon
                     )
@@ -1125,7 +1197,10 @@ public class DruidCoordinatorRuleRunnerTest
         1000,
         "historical",
         "normal",
-        0
+        0,
+        "service",
+        "hostText",
+        -1
     );
     for (DataSegment availableSegment : longerAvailableSegments) {
       server1.addDataSegment(availableSegment.getIdentifier(), availableSegment);
@@ -1136,7 +1211,10 @@ public class DruidCoordinatorRuleRunnerTest
         1000,
         "historical",
         "normal",
-        0
+        0,
+        "service",
+        "hostText",
+        -1
     );
     for (DataSegment availableSegment : longerAvailableSegments) {
       server2.addDataSegment(availableSegment.getIdentifier(), availableSegment);

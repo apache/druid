@@ -35,6 +35,7 @@ import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.server.DruidNode;
+import io.druid.server.coordination.ServerAnnouncer;
 import io.druid.server.initialization.IndexerZkConfig;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.recipes.leader.LeaderSelector;
@@ -75,7 +76,8 @@ public class TaskMaster
       final TaskRunnerFactory runnerFactory,
       final CuratorFramework curator,
       final ServiceAnnouncer serviceAnnouncer,
-      final ServiceEmitter emitter
+      final ServiceEmitter emitter,
+      final ServerAnnouncer serverAnnouncer
   )
   {
     this.taskActionClientFactory = taskActionClientFactory;
@@ -121,12 +123,14 @@ public class TaskMaster
                     public void start() throws Exception
                     {
                       serviceAnnouncer.announce(node);
+                      serverAnnouncer.announceLeadership();
                     }
 
                     @Override
                     public void stop()
                     {
                       serviceAnnouncer.unannounce(node);
+                      serverAnnouncer.unannounceLeadership();
                     }
                   }
               );

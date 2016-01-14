@@ -41,8 +41,11 @@ import io.druid.collections.StupidResourceHolder;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.ManageLifecycle;
+import io.druid.guice.NodeTypeConfig;
 import io.druid.initialization.Initialization;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.server.coordination.NoopServerAnnouncer;
+import io.druid.server.coordination.ServerAnnouncer;
 import net.spy.memcached.BroadcastOpFactory;
 import net.spy.memcached.CASResponse;
 import net.spy.memcached.CASValue;
@@ -152,9 +155,10 @@ public class MemcachedCacheTest
               {
                 binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test/memcached");
                 binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
-
                 binder.bind(MemcachedCacheConfig.class).toInstance(config);
                 binder.bind(Cache.class).toProvider(MemcachedProviderWithConfig.class).in(ManageLifecycle.class);
+                binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig("coordinator"));
+                binder.bind(ServerAnnouncer.class).to(NoopServerAnnouncer.class);
               }
             }
         )

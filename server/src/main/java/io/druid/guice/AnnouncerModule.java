@@ -22,11 +22,15 @@ package io.druid.guice;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import com.google.inject.multibindings.Multibinder;
 import io.druid.concurrent.Execs;
 import io.druid.curator.announcement.Announcer;
+import io.druid.curator.discovery.ServiceAnnouncer;
 import io.druid.server.coordination.BatchDataSegmentAnnouncer;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.server.coordination.DataSegmentAnnouncerProvider;
+import io.druid.server.coordination.ZooKeeperServerAnnouncer;
+import io.druid.server.coordination.ServerAnnouncer;
 import io.druid.server.initialization.BatchDataSegmentAnnouncerConfig;
 import org.apache.curator.framework.CuratorFramework;
 
@@ -41,6 +45,10 @@ public class AnnouncerModule implements Module
     JsonConfigProvider.bind(binder, "druid.announcer", DataSegmentAnnouncerProvider.class);
     binder.bind(DataSegmentAnnouncer.class).toProvider(DataSegmentAnnouncerProvider.class);
     binder.bind(BatchDataSegmentAnnouncer.class).in(ManageLifecycleLast.class);
+    binder.bind(ServerAnnouncer.class).to(ZooKeeperServerAnnouncer.class);
+    binder.bind(ZooKeeperServerAnnouncer.class).in(ManageLifecycleLast.class);
+    Multibinder.newSetBinder(binder, String.class, Capability.class);
+    LifecycleModule.register(binder, ServerAnnouncer.class);
   }
 
   @Provides

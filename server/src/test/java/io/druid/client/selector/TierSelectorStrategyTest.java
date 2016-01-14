@@ -41,11 +41,11 @@ public class TierSelectorStrategyTest
   {
     DirectDruidClient client = EasyMock.createMock(DirectDruidClient.class);
     QueryableDruidServer lowPriority = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 0),
+        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 0, "service", "hostText", -1),
         client
     );
     QueryableDruidServer highPriority = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 1),
+        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 1, "service", "hostText", -1),
         client
     );
 
@@ -61,11 +61,11 @@ public class TierSelectorStrategyTest
   {
     DirectDruidClient client = EasyMock.createMock(DirectDruidClient.class);
     QueryableDruidServer lowPriority = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 0),
+        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 0, "service", "hostText", -1),
         client
     );
     QueryableDruidServer highPriority = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 1),
+        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 1, "service", "hostText", -1),
         client
     );
 
@@ -81,15 +81,15 @@ public class TierSelectorStrategyTest
   {
     DirectDruidClient client = EasyMock.createMock(DirectDruidClient.class);
     QueryableDruidServer lowPriority = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, -1),
+        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, -1, "service", "hostText", -1),
         client
     );
     QueryableDruidServer mediumPriority = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 0),
+        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 0, "service", "hostText", -1),
         client
     );
     QueryableDruidServer highPriority = new QueryableDruidServer(
-        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 1),
+        new DruidServer("test1", "localhost", 0, "historical", DruidServer.DEFAULT_TIER, 1, "service", "hostText", -1),
         client
     );
 

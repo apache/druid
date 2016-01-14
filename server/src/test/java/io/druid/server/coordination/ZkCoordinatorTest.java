@@ -82,7 +82,9 @@ public class ZkCoordinatorTest extends CuratorTestBase
       0,
       "dummyType",
       "normal",
-      0
+      0,
+      "service",
+      "hostText", -1
   );
 
   private ZkCoordinator zkCoordinator;
@@ -515,7 +517,9 @@ public class ZkCoordinatorTest extends CuratorTestBase
                 }
             );
             binder.bind(DruidServerMetadata.class)
-                  .toInstance(new DruidServerMetadata("dummyServer", "dummyHost", 0, "dummyType", "normal", 0));
+                  .toInstance(new DruidServerMetadata("dummyServer", "dummyHost", 0, "dummyType", "normal", 0,
+                                                      "service", "hostText", -1
+                  ));
             binder.bind(DataSegmentAnnouncer.class).toInstance(announcer);
             binder.bind(CuratorFramework.class).toInstance(curator);
             binder.bind(ServerManager.class).toInstance(serverManager);

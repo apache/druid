@@ -34,6 +34,7 @@ import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
+import io.druid.guice.NodeTypeConfig;
 import io.druid.guice.annotations.Self;
 import io.druid.guice.http.JettyHttpClientModule;
 import io.druid.query.extraction.LookupReferencesManager;
@@ -76,6 +77,7 @@ public class CliRouter extends ServerRunnable
           {
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/router");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8888);
+            binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig("router"));
 
             JsonConfigProvider.bind(binder, "druid.router", TieredBrokerConfig.class);
 
@@ -93,17 +95,6 @@ public class CliRouter extends ServerRunnable
             LifecycleModule.register(binder, Server.class);
             DiscoveryModule.register(binder, Self.class);
             LifecycleModule.register(binder, LookupReferencesManager.class);
-          }
-
-          @Provides
-          @ManageLifecycle
-          public ServerDiscoverySelector getCoordinatorServerDiscoverySelector(
-              TieredBrokerConfig config,
-              ServerDiscoveryFactory factory
-
-          )
-          {
-            return factory.createSelector(config.getCoordinatorServiceName());
           }
         }
     );

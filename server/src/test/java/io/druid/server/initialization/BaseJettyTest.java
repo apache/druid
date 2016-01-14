@@ -36,9 +36,12 @@ import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
+import io.druid.guice.NodeTypeConfig;
 import io.druid.guice.annotations.Self;
 import io.druid.initialization.Initialization;
 import io.druid.server.DruidNode;
+import io.druid.server.coordination.NoopServerAnnouncer;
+import io.druid.server.coordination.ServerAnnouncer;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.initialization.jetty.ServletFilterHolder;
@@ -115,6 +118,8 @@ public class BaseJettyTest
                 JsonConfigProvider.bindInstance(
                     binder, Key.get(DruidNode.class, Self.class), new DruidNode("test", "localhost", null)
                 );
+                binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig("coordinator"));
+                binder.bind(ServerAnnouncer.class).to(NoopServerAnnouncer.class);
                 binder.bind(JettyServerInitializer.class).to(JettyServerInit.class).in(LazySingleton.class);
                 
                 Multibinder<ServletFilterHolder> multibinder = Multibinder.newSetBinder(binder, ServletFilterHolder.class);

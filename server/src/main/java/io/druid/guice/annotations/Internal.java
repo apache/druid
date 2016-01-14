@@ -17,41 +17,20 @@
  * under the License.
  */
 
-package io.druid.server.coordination;
+package io.druid.guice.annotations;
 
-import com.metamx.common.lifecycle.LifecycleStart;
-import com.metamx.common.lifecycle.LifecycleStop;
+import com.google.inject.BindingAnnotation;
+
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  */
-public abstract class AbstractDataSegmentAnnouncer implements DataSegmentAnnouncer
+@BindingAnnotation
+@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
+@Retention(RetentionPolicy.RUNTIME)
+public @interface Internal
 {
-  private final Object lock = new Object();
-
-  private volatile boolean started = false;
-
-  @LifecycleStart
-  public void start()
-  {
-    synchronized (lock) {
-      if (started) {
-        return;
-      }
-
-      started = true;
-    }
-  }
-
-  @LifecycleStop
-  public void stop()
-  {
-    synchronized (lock) {
-      if (!started) {
-        return;
-      }
-
-      started = false;
-    }
-  }
-
 }
