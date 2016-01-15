@@ -21,6 +21,7 @@ package io.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -42,6 +43,7 @@ import io.druid.timeline.partition.PartitionChunk;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
+import org.skife.jdbi.v2.BaseResultSetMapper;
 import org.skife.jdbi.v2.Batch;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;
@@ -57,6 +59,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -507,5 +510,59 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   private String getSegmentsTable()
   {
     return dbTables.get().getSegmentsTable();
+  }
+
+  @Override
+  public List<Interval> getUnusedSegmentIntervals(
+      final String dataSource,
+      final Interval interval,
+      final int limit
+  )
+  {
+    return dbi.withHandle(
+        new HandleCallback<List<Interval>>()
+        {
+          @Override
+          public List<Interval> withHandle(Handle handle) throws IOException, SQLException
+          {
+            Iterator<Interval> iter = handle
+                .createQuery(
+                    String.format(
+                        "SELECT start, \"end\" FROM %s WHERE dataSource = :dataSource and start >= :start and \"end\" <= :end and used = false ORDER BY start, \"end\"",
+                        getSegmentsTable()
+                    )
+                )
+                .bind("dataSource", dataSource)
+                .bind("start", interval.getStart().toString())
+                .bind("end", interval.getEnd().toString())
+                .map(
+                    new BaseResultSetMapper<Interval>()
+                    {
+                      @Override
+                      protected Interval mapInternal(int index, Map<String, Object> row)
+                      {
+                        return new Interval(
+                            DateTime.parse((String) row.get("start")),
+                            DateTime.parse((String) row.get("end"))
+                        );
+                      }
+                    }
+                )
+                .iterator();
+
+
+            List<Interval> result = Lists.newArrayListWithCapacity(limit);
+            for (int i = 0; i < limit && iter.hasNext(); i++) {
+              try {
+                result.add(iter.next());
+              }
+              catch (Exception e) {
+                throw Throwables.propagate(e);
+              }
+            }
+            return result;
+          }
+        }
+    );
   }
 }

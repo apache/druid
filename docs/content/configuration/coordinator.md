@@ -28,6 +28,10 @@ The coordinator node uses several of the global configs in [Configuration](../co
 |`druid.coordinator.merge.on`|Boolean flag for whether or not the coordinator should try and merge small segments into a more optimal segment size.|false|
 |`druid.coordinator.conversion.on`|Boolean flag for converting old segment indexing versions to the latest segment indexing version.|false|
 |`druid.coordinator.load.timeout`|The timeout duration for when the coordinator assigns a segment to a historical node.|PT15M|
+|`druid.coordinator.kill.on`|Boolean flag for whether or not the coordinator should submit kill task for unused segments, that is, hard delete them from metadata store and deep storage. If set to true, then for all the whitelisted dataSources, coordinator will submit tasks periodically based on `period` specified. These kill tasks will delete all segments except for the last `durationToRetain` period. Whitelist can be set via dynamic configuration `killDataSourceWhitelist` described later.|false|
+|`druid.coordinator.kill.period`|How often to send kill tasks to the indexing service. Value must be greater than `druid.coordinator.period.indexingPeriod`. Only applies if kill is turned on.|PT1D (1 Day)|
+|`druid.coordinator.kill.durationToRetain`| Do not kill segments in last `durationToRetain`, must be greater or equal to 0. Only applies and MUST be specified if kill is turned on. Note that default value is invalid.|PT-1S (-1 seconds)|
+|`druid.coordinator.kill.maxSegments`|Kill at most n segments per kill task submission, must be greater than 0. Only applies and MUST be specified if kill is turned on. Note that default value is invalid.|0|
 
 ### Metadata Retrieval
 
@@ -67,7 +71,8 @@ A sample coordinator dynamic config JSON object is shown below:
   "maxSegmentsToMove": 5,
   "replicantLifetime": 15,
   "replicationThrottleLimit": 10,
-  "emitBalancingStats": false
+  "emitBalancingStats": false,
+  "killDataSourceWhitelist": ["wikipedia", "testDatasource"]
 }
 ```
 
@@ -82,6 +87,7 @@ Issuing a GET request at the same URL will return the spec that is currently in 
 |`replicantLifetime`|The maximum number of coordinator runs for a segment to be replicated before we start alerting.|15|
 |`replicationThrottleLimit`|The maximum number of segments that can be replicated at one time.|10|
 |`emitBalancingStats`|Boolean flag for whether or not we should emit balancing stats. This is an expensive operation.|false|
+|`killDataSourceWhitelist`|List of dataSources for which kill tasks are sent if property `druid.coordinator.kill.on` is true.|none|
 
 To view the audit history of coordinator dynamic config issue a GET request to the URL -
 
