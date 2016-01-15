@@ -82,8 +82,7 @@ public class SelectQueryEngine
           {
             final SelectResultValueBuilder builder = new SelectResultValueBuilder(
                 cursor.getTime(),
-                query.getPagingSpec()
-                     .getThreshold(),
+                query.getPagingSpec(),
                 query.isDescending()
             );
 
@@ -102,18 +101,11 @@ public class SelectQueryEngine
               metSelectors.put(metric, metricSelector);
             }
 
-            int startOffset;
-            if (query.getPagingSpec().getPagingIdentifiers() == null) {
-              startOffset = 0;
-            } else {
-              Integer offset = query.getPagingSpec().getPagingIdentifiers().get(segment.getIdentifier());
-              startOffset = (offset == null) ? 0 : offset;
-            }
+            final PagingOffset offset = query.getPagingOffset(segment.getIdentifier());
 
-            cursor.advanceTo(startOffset);
+            cursor.advanceTo(offset.startDelta());
 
-            int offset = 0;
-            while (!cursor.isDone() && offset < query.getPagingSpec().getThreshold()) {
+            for (; !cursor.isDone() && offset.hasNext(); cursor.advance(), offset.next()) {
               final Map<String, Object> theEvent = Maps.newLinkedHashMap();
               theEvent.put(EventHolder.timestampKey, new DateTime(timestampColumnSelector.get()));
 
@@ -153,12 +145,10 @@ public class SelectQueryEngine
               builder.addEntry(
                   new EventHolder(
                       segment.getIdentifier(),
-                      startOffset + offset,
+                      offset.current(),
                       theEvent
                   )
               );
-              cursor.advance();
-              offset++;
             }
 
             return builder.build();

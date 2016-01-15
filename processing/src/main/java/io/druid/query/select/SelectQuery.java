@@ -49,6 +49,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
   public SelectQuery(
       @JsonProperty("dataSource") DataSource dataSource,
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
+      @JsonProperty("descending") boolean descending,
       @JsonProperty("filter") DimFilter dimFilter,
       @JsonProperty("granularity") QueryGranularity granularity,
       @JsonProperty("dimensions") List<String> dimensions,
@@ -57,7 +58,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, false, context);
+    super(dataSource, querySegmentSpec, descending, context);
     this.dimFilter = dimFilter;
     this.granularity = granularity;
     this.dimensions = dimensions;
@@ -65,6 +66,17 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
     this.pagingSpec = pagingSpec;
 
     Preconditions.checkNotNull(pagingSpec, "must specify a pagingSpec");
+    Preconditions.checkArgument(checkPagingSpec(pagingSpec, descending), "invalid pagingSpec");
+  }
+
+  private boolean checkPagingSpec(PagingSpec pagingSpec, boolean descending)
+  {
+    for (Integer value : pagingSpec.getPagingIdentifiers().values()) {
+      if (descending ^ (value < 0)) {
+        return false;
+      }
+    }
+    return pagingSpec.getThreshold() >= 0;
   }
 
   @Override
@@ -109,11 +121,17 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
     return metrics;
   }
 
+  public PagingOffset getPagingOffset(String identifier)
+  {
+    return pagingSpec.getOffset(identifier, isDescending());
+  }
+
   public SelectQuery withQuerySegmentSpec(QuerySegmentSpec querySegmentSpec)
   {
     return new SelectQuery(
         getDataSource(),
         querySegmentSpec,
+        isDescending(),
         dimFilter,
         granularity,
         dimensions,
@@ -129,6 +147,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
     return new SelectQuery(
         dataSource,
         getQuerySegmentSpec(),
+        isDescending(),
         dimFilter,
         granularity,
         dimensions,
@@ -143,6 +162,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
     return new SelectQuery(
         getDataSource(),
         getQuerySegmentSpec(),
+        isDescending(),
         dimFilter,
         granularity,
         dimensions,
@@ -158,6 +178,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
     return "SelectQuery{" +
            "dataSource='" + getDataSource() + '\'' +
            ", querySegmentSpec=" + getQuerySegmentSpec() +
+           ", descending=" + isDescending() +
            ", dimFilter=" + dimFilter +
            ", granularity=" + granularity +
            ", dimensions=" + dimensions +

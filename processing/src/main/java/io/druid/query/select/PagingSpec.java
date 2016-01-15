@@ -98,4 +98,14 @@ public class PagingSpec
            ", threshold=" + threshold +
            '}';
   }
+
+  public PagingOffset getOffset(String identifier, boolean descending)
+  {
+    Integer offset = pagingIdentifiers.get(identifier);
+    if (offset == null) {
+      offset = PagingOffset.toOffset(0, descending);
+    }
+    return PagingOffset.of(offset, threshold);
+  }
+
 }
