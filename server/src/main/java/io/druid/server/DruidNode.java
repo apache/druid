@@ -156,4 +156,35 @@ public class DruidNode
            ", port=" + port +
            '}';
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    DruidNode node = (DruidNode) o;
+
+    if (port != node.port) {
+      return false;
+    }
+    if (!serviceName.equals(node.serviceName)) {
+      return false;
+    }
+    return host.equals(node.host);
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = serviceName.hashCode();
+    result = 31 * result + host.hashCode();
+    result = 31 * result + port;
+    return result;
+  }
 }

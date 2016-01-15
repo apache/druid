@@ -114,4 +114,30 @@ public class DruidNodeTest
   {
     new DruidNode("test/service", "[2001:db8:85a3::8a2e:370:7334]:123", 456);
   }
+
+  @Test
+  public void testEquals() throws Exception
+  {
+    final String serviceName = "serviceName";
+    final String host = "some.host";
+    final int port = 9898;
+    Assert.assertEquals(new DruidNode(serviceName, host, port), new DruidNode(serviceName, host, port));
+    Assert.assertNotEquals(new DruidNode(serviceName, host, port), new DruidNode(serviceName, host, -1));
+    Assert.assertNotEquals(new DruidNode(serviceName, host, port), new DruidNode(serviceName, "other.host", port));
+    Assert.assertNotEquals(new DruidNode(serviceName, host, port), new DruidNode("otherServiceName", host, port));
+  }
+
+  @Test
+  public void testHashCode() throws Exception
+  {
+
+    final String serviceName = "serviceName";
+    final String host = "some.host";
+    final int port = 9898;
+    Assert.assertEquals(new DruidNode(serviceName, host, port).hashCode(), new DruidNode(serviceName, host, port).hashCode());
+    // Potential hash collision if hashCode method ever changes
+    Assert.assertNotEquals(new DruidNode(serviceName, host, port).hashCode(), new DruidNode(serviceName, host, -1).hashCode());
+    Assert.assertNotEquals(new DruidNode(serviceName, host, port).hashCode(), new DruidNode(serviceName, "other.host", port).hashCode());
+    Assert.assertNotEquals(new DruidNode(serviceName, host, port).hashCode(), new DruidNode("otherServiceName", host, port).hashCode());
+  }
 }
