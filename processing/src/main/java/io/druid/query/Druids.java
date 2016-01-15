@@ -1073,6 +1073,7 @@ public class Druids
   {
     private DataSource dataSource;
     private QuerySegmentSpec querySegmentSpec;
+    private boolean descending;
     private Map<String, Object> context;
     private DimFilter dimFilter;
     private QueryGranularity granularity;
@@ -1097,6 +1098,7 @@ public class Druids
       return new SelectQuery(
           dataSource,
           querySegmentSpec,
+          descending,
           dimFilter,
           granularity,
           dimensions,
@@ -1141,6 +1143,12 @@ public class Druids
     public SelectQueryBuilder intervals(List<Interval> l)
     {
       querySegmentSpec = new LegacySegmentSpec(l);
+      return this;
+    }
+
+    public SelectQueryBuilder descending(boolean descending)
+    {
+      this.descending = descending;
       return this;
     }
 

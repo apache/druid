@@ -8,6 +8,7 @@ Select queries return raw Druid rows and support pagination.
  {
    "queryType": "select",
    "dataSource": "wikipedia",
+   "descending": "false",
    "dimensions":[],
    "metrics":[],
    "granularity": "all",
@@ -25,6 +26,7 @@ There are several main parts to a select query:
 |queryType|This String should always be "select"; this is the first thing Druid looks at to figure out how to interpret the query|yes|
 |dataSource|A String or Object defining the data source to query, very similar to a table in a relational database. See [DataSource](../querying/datasource.html) for more information.|yes|
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
+|descending|Whether to make descending ordered result. Default is `false`(ascending). When this is `true`, page identifier and offsets will be negative value.|no|
 |filter|See [Filters](../querying/filters.html)|no|
 |dimensions|A String array of dimensions to select. If left empty, all dimensions are returned.|no|
 |metrics|A String array of metrics to select. If left empty, all metrics are returned.|no|
@@ -140,7 +142,7 @@ The format of the result is:
 } ]
 ```
 
-The `threshold` determines how many hits are returned, with each hit indexed by an offset.
+The `threshold` determines how many hits are returned, with each hit indexed by an offset. When `descending` is true, the offset will be negative value.
 
 The results above include:
 
@@ -166,4 +168,4 @@ This can be used with the next query's pagingSpec:
       
  }
 
-Note that in the second query, an offset is specified and that it is 1 greater than the largest offset found in the initial results. To return the next "page", this offset must be incremented by 1 with each new query. When an empty results set is received, the very last page has been returned.
+Note that in the second query, an offset is specified and that it is 1 greater than the largest offset found in the initial results. To return the next "page", this offset must be incremented by 1 (should be decremented by 1 for descending query), with each new query. When an empty results set is received, the very last page has been returned.

@@ -62,7 +62,7 @@ public class SelectBinaryFn
                                ? arg1.getTimestamp()
                                : gran.toDateTime(gran.truncate(arg1.getTimestamp().getMillis()));
 
-    SelectResultValueBuilder builder = new SelectResultValueBuilder(timestamp, pagingSpec.getThreshold(), descending);
+    SelectResultValueBuilder builder = new SelectResultValueBuilder(timestamp, pagingSpec, descending);
 
     SelectResultValue arg1Val = arg1.getValue();
     SelectResultValue arg2Val = arg2.getValue();
