@@ -28,12 +28,14 @@ import java.lang.reflect.InvocationTargetException;
 public class CuratorConfigTest extends JsonConfigTesterBase<CuratorConfig>
 {
   @Test
-  public void testHostName() throws IllegalAccessException, NoSuchMethodException, InvocationTargetException
+  public void testSerde() throws IllegalAccessException, NoSuchMethodException, InvocationTargetException
   {
-    propertyValues.put(getPropertyKey("host"),"fooHost");
+    propertyValues.put(getPropertyKey("host"), "fooHost");
+    propertyValues.put(getPropertyKey("acl"), "true");
     testProperties.putAll(propertyValues);
     configProvider.inject(testProperties, configurator);
     CuratorConfig config = configProvider.get().get();
     Assert.assertEquals("fooHost", config.getZkHosts());
+    Assert.assertEquals(true, config.getEnableAcl());
   }
 }
