@@ -20,6 +20,7 @@
 package io.druid.storage.hdfs;
 
 import com.google.inject.Inject;
+import com.metamx.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.timeline.DataSegment;
@@ -31,6 +32,10 @@ import java.io.IOException;
 
 public class HdfsDataSegmentKiller implements DataSegmentKiller
 {
+  private static final Logger log = new Logger(HdfsDataSegmentKiller.class);
+
+  private static final String PATH_KEY = "path";
+
   private final Configuration config;
 
   @Inject
@@ -43,6 +48,8 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
   public void kill(DataSegment segment) throws SegmentLoadingException
   {
     final Path path = getPath(segment);
+    log.info("killing segment[%s] mapped to path[%s]", segment.getIdentifier(), path);
+
     final FileSystem fs = checkPathAndGetFilesystem(path);
     try {
       if (path.getName().endsWith(".zip")) {
@@ -86,7 +93,7 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
 
   private Path getPath(DataSegment segment)
   {
-    return new Path(String.valueOf(segment.getLoadSpec().get("path")));
+    return new Path(String.valueOf(segment.getLoadSpec().get(PATH_KEY)));
   }
 
   private FileSystem checkPathAndGetFilesystem(Path path) throws SegmentLoadingException
