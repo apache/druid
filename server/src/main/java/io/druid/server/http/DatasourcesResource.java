@@ -167,6 +167,7 @@ public class DatasourcesResource
   }
 
   @DELETE
+	@Deprecated
   @Path("/{dataSourceName}")
   @Produces(MediaType.APPLICATION_JSON)
   public Response deleteDataSource(
@@ -200,7 +201,30 @@ public class DatasourcesResource
     return Response.ok().build();
   }
 
-  @GET
+	@DELETE
+	@Path("/{dataSourceName}/intervals/{interval}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response deleteDataSourceSpecificInterval(@PathParam("dataSourceName") final String dataSourceName, @PathParam("interval") final String interval, @QueryParam("kill") final String kill)
+	{
+		if (indexingServiceClient == null) {
+			return Response.ok(ImmutableMap.of("error", "no indexing service found")).build();
+		}
+		final Interval theInterval = new Interval(interval.replace("_", "/"));
+		if (kill != null && Boolean.valueOf(kill)) {
+			try {
+				indexingServiceClient.killSegments(dataSourceName, new Interval(theInterval));
+			} catch (Exception e) {
+				return Response.serverError().entity(ImmutableMap.of("error", "Exception occurred. Are you sure you have an indexing service?")).build();
+			}
+		} else {
+			if (!databaseSegmentManager.removeDatasource(dataSourceName)) {
+				return Response.noContent().build();
+			}
+		}
+		return Response.ok().build();
+	}
+
+	@GET
   @Path("/{dataSourceName}/intervals")
   @Produces(MediaType.APPLICATION_JSON)
   public Response getSegmentDataSourceIntervals(
