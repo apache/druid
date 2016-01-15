@@ -233,19 +233,18 @@ public class CliPeon extends GuiceRunnable
       Injector injector = makeInjector();
       try {
         final Lifecycle lifecycle = initLifecycle(injector);
-        Runtime.getRuntime().addShutdownHook(
-            new Thread(
-                new Runnable()
-                {
-                  @Override
-                  public void run()
-                  {
-                    log.info("Running shutdown hook");
-                    lifecycle.stop();
-                  }
-                }
-            )
+        final Thread hook = new Thread(
+            new Runnable()
+            {
+              @Override
+              public void run()
+              {
+                log.info("Running shutdown hook");
+                lifecycle.stop();
+              }
+            }
         );
+        Runtime.getRuntime().addShutdownHook(hook);
         injector.getInstance(ExecutorLifecycle.class).join();
 
         // Sanity check to help debug unexpected non-daemon threads
@@ -258,6 +257,7 @@ public class CliPeon extends GuiceRunnable
 
         // Explicitly call lifecycle stop, dont rely on shutdown hook.
         lifecycle.stop();
+        Runtime.getRuntime().removeShutdownHook(hook);
       }
       catch (Throwable t) {
         log.error(t, "Error when starting up.  Failing.");
