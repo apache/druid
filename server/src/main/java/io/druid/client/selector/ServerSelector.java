@@ -19,10 +19,14 @@
 
 package io.druid.client.selector;
 
+import com.google.api.client.util.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.client.DruidServer;
+import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
 
+import java.util.List;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicReference;
@@ -76,6 +80,16 @@ public class ServerSelector implements DiscoverySelector<QueryableDruidServer>
     synchronized (this) {
       return servers.isEmpty();
     }
+  }
+
+  public List<DruidServerMetadata> getCandidates() {
+    List<DruidServerMetadata> result = Lists.newArrayList();
+    synchronized (this) {
+      for (QueryableDruidServer server : servers) {
+        result.add(server.getServer().getMetadata());
+      }
+    }
+    return result;
   }
 
   public QueryableDruidServer pick()

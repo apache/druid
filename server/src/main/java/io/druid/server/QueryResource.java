@@ -68,19 +68,19 @@ import java.util.UUID;
 @Path("/druid/v2/")
 public class QueryResource
 {
-  private static final EmittingLogger log = new EmittingLogger(QueryResource.class);
+  protected static final EmittingLogger log = new EmittingLogger(QueryResource.class);
   @Deprecated // use SmileMediaTypes.APPLICATION_JACKSON_SMILE
-  private static final String APPLICATION_SMILE = "application/smile";
+  protected static final String APPLICATION_SMILE = "application/smile";
 
-  private static final int RESPONSE_CTX_HEADER_LEN_LIMIT = 7*1024;
+  protected static final int RESPONSE_CTX_HEADER_LEN_LIMIT = 7*1024;
 
-  private final ServerConfig config;
-  private final ObjectMapper jsonMapper;
-  private final ObjectMapper smileMapper;
-  private final QuerySegmentWalker texasRanger;
-  private final ServiceEmitter emitter;
-  private final RequestLogger requestLogger;
-  private final QueryManager queryManager;
+  protected final ServerConfig config;
+  protected final ObjectMapper jsonMapper;
+  protected final ObjectMapper smileMapper;
+  protected final QuerySegmentWalker texasRanger;
+  protected final ServiceEmitter emitter;
+  protected final RequestLogger requestLogger;
+  protected final QueryManager queryManager;
 
   @Inject
   public QueryResource(
