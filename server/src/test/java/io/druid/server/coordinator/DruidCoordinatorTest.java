@@ -115,7 +115,18 @@ public class DruidCoordinatorTest extends CuratorTestBase
     curator.blockUntilConnected();
     curator.create().creatingParentsIfNeeded().forPath(LOADPATH);
     objectMapper = new DefaultObjectMapper();
-    druidCoordinatorConfig = new TestDruidCoordinatorConfig(new Duration(COORDINATOR_START_DELAY), new Duration(COORDINATOR_PERIOD), null, null, null, false, false);
+    druidCoordinatorConfig = new TestDruidCoordinatorConfig(
+        new Duration(COORDINATOR_START_DELAY),
+        new Duration(COORDINATOR_PERIOD),
+        null,
+        null,
+        new Duration(COORDINATOR_PERIOD),
+        null,
+        10,
+        null,
+        false,
+        false
+    );
     pathChildrenCache = new PathChildrenCache(curator, LOADPATH, true, true, Execs.singleThreaded("coordinator_test_path_children_cache-%d"));
     loadQueuePeon = new LoadQueuePeon(
       curator,

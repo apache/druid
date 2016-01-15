@@ -51,6 +51,24 @@ public abstract class DruidCoordinatorConfig
     return false;
   }
 
+  @Config("druid.coordinator.kill.on")
+  public boolean isKillSegments()
+  {
+    return false;
+  }
+
+  @Config("druid.coordinator.kill.period")
+  @Default("P1D")
+  public abstract Duration getCoordinatorKillPeriod();
+
+  @Config("druid.coordinator.kill.durationToRetain")
+  @Default("PT-1s")
+  public abstract Duration getCoordinatorKillDurationToRetain();
+
+  @Config("druid.coordinator.kill.maxSegments")
+  @Default("0")
+  public abstract int getCoordinatorKillMaxSegments();
+
   @Config("druid.coordinator.load.timeout")
   public Duration getLoadTimeoutDelay()
   {
