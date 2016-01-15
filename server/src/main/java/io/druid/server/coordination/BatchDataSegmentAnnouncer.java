@@ -87,34 +87,44 @@ public class BatchDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
     }
 
     synchronized (lock) {
-      // create new batch
-      if (availableZNodes.isEmpty()) {
-        SegmentZNode availableZNode = new SegmentZNode(makeServedSegmentPath());
-        availableZNode.addSegment(segment);
-
-      log.info("Announcing segment[%s] at path[%s]", segment.getIdentifier(), availableZNode.getPath());
-      announcer.announce(availableZNode.getPath(), availableZNode.getBytes());
-      segmentLookup.put(segment, availableZNode);
-      availableZNodes.add(availableZNode);
-    } else { // update existing batch
-      Iterator<SegmentZNode> iter = availableZNodes.iterator();
       boolean done = false;
-      while (iter.hasNext() && !done) {
-        SegmentZNode availableZNode = iter.next();
-        if (availableZNode.getBytes().length + newBytesLen < config.getMaxBytesPerNode()) {
-          availableZNode.addSegment(segment);
+      if (!availableZNodes.isEmpty()) {
+        // update existing batch
+        Iterator<SegmentZNode> iter = availableZNodes.iterator();
+        while (iter.hasNext() && !done) {
+          SegmentZNode availableZNode = iter.next();
+          if (availableZNode.getBytes().length + newBytesLen < config.getMaxBytesPerNode()) {
+            availableZNode.addSegment(segment);
 
-            log.info("Announcing segment[%s] at path[%s]", segment.getIdentifier(), availableZNode.getPath());
+            log.info("Announcing segment[%s] at existing path[%s]", segment.getIdentifier(), availableZNode.getPath());
             announcer.update(availableZNode.getPath(), availableZNode.getBytes());
             segmentLookup.put(segment, availableZNode);
 
             if (availableZNode.getCount() >= config.getSegmentsPerNode()) {
               availableZNodes.remove(availableZNode);
             }
-
             done = true;
+          } else {
+            // We could have kept the znode around for later use, however we remove it since segment announcements should
+            // have similar size unless there are significant schema changes. Removing the znode reduces the number of
+            // znodes that would be scanned at each announcement.
+            availableZNodes.remove(availableZNode);
           }
         }
+      }
+
+      if (!done) {
+        assert (availableZNodes.isEmpty());
+        // create new batch
+
+        SegmentZNode availableZNode = new SegmentZNode(makeServedSegmentPath());
+        availableZNode.addSegment(segment);
+
+        log.info("Announcing segment[%s] at new path[%s]", segment.getIdentifier(),
+            availableZNode.getPath());
+        announcer.announce(availableZNode.getPath(), availableZNode.getBytes());
+        segmentLookup.put(segment, availableZNode);
+        availableZNodes.add(availableZNode);
       }
     }
   }

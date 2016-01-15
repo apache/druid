@@ -17,43 +17,48 @@
  * under the License.
  */
 
-package io.druid.query.search.search;
+package io.druid.query.dimension;
 
-import com.google.common.primitives.Ints;
-
-import java.util.Comparator;
+import io.druid.segment.DimensionSelector;
+import io.druid.segment.data.ArrayBasedIndexedInts;
+import io.druid.segment.data.IndexedInts;
 
 /**
+ * Test dimension selector that has cardinality=26
+ * encoding 0 -> a, 1 -> b, ...
+ * row -> [c,e,g]
  */
-public class StrlenSearchSortSpec implements SearchSortSpec
+class TestDimensionSelector implements DimensionSelector
 {
-  public StrlenSearchSortSpec()
+  public final static TestDimensionSelector instance = new TestDimensionSelector();
+
+  private TestDimensionSelector()
   {
+
   }
 
   @Override
-  public Comparator<SearchHit> getComparator()
+  public IndexedInts getRow()
   {
-    return new Comparator<SearchHit>() {
-      @Override
-      public int compare(SearchHit s, SearchHit s1)
-      {
-        final String v1 = s.getValue();
-        final String v2 = s1.getValue();
-        int res = Ints.compare(v1.length(), v2.length());
-        if (res == 0) {
-          res = v1.compareTo(v2);
-        }
-        if (res == 0) {
-          res = s.getDimension().compareTo(s1.getDimension());
-        }
-        return res;
-      }
-    };
+    return new ArrayBasedIndexedInts(new int[]{2, 4, 6});
   }
 
-  public String toString()
+  @Override
+  public int getValueCardinality()
   {
-    return "stringLengthSort";
+    return 26;
   }
+
+  @Override
+  public String lookupName(int id)
+  {
+    return String.valueOf((char) (id + 'a'));
+  }
+
+  @Override
+  public int lookupId(String name)
+  {
+    return name.charAt(0) - 'a';
+  }
+
 }

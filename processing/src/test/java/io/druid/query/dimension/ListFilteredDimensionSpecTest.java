@@ -20,8 +20,10 @@
 package io.druid.query.dimension;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import io.druid.segment.DimensionSelector;
 import io.druid.segment.TestHelper;
+import io.druid.segment.data.IndexedInts;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -54,7 +56,7 @@ public class ListFilteredDimensionSpecTest
 
     ListFilteredDimensionSpec expected = new ListFilteredDimensionSpec(
         new DefaultDimensionSpec("foo", "bar"),
-        ImmutableList.of("xxx"),
+        ImmutableSet.of("xxx"),
         true
     );
 
@@ -78,7 +80,7 @@ public class ListFilteredDimensionSpecTest
 
     expected = new ListFilteredDimensionSpec(
         new DefaultDimensionSpec("foo", "bar"),
-        ImmutableList.of("xxx"),
+        ImmutableSet.of("xxx"),
         false
     );
 
@@ -90,13 +92,13 @@ public class ListFilteredDimensionSpecTest
   {
     ListFilteredDimensionSpec spec1 = new ListFilteredDimensionSpec(
         new DefaultDimensionSpec("foo", "bar"),
-        ImmutableList.of("xxx"),
+        ImmutableSet.of("xxx"),
         null
     );
 
     ListFilteredDimensionSpec spec2 = new ListFilteredDimensionSpec(
         new DefaultDimensionSpec("foo", "bar"),
-        ImmutableList.of("xyz"),
+        ImmutableSet.of("xyz"),
         null
     );
 
@@ -104,10 +106,59 @@ public class ListFilteredDimensionSpecTest
 
     ListFilteredDimensionSpec spec3 = new ListFilteredDimensionSpec(
         new DefaultDimensionSpec("foo", "bar"),
-        ImmutableList.of("xxx"),
+        ImmutableSet.of("xxx"),
         false
     );
 
     Assert.assertFalse(Arrays.equals(spec1.getCacheKey(), spec3.getCacheKey()));
+  }
+
+  @Test
+  public void testDecoratorWithWhitelist()
+  {
+    ListFilteredDimensionSpec spec = new ListFilteredDimensionSpec(
+        new DefaultDimensionSpec("foo", "bar"),
+        ImmutableSet.of("c", "g"),
+        true
+    );
+
+    DimensionSelector selector = spec.decorate(TestDimensionSelector.instance);
+
+    Assert.assertEquals(2, selector.getValueCardinality());
+
+    IndexedInts row = selector.getRow();
+    Assert.assertEquals(2, row.size());
+    Assert.assertEquals(0, row.get(0));
+    Assert.assertEquals(1, row.get(1));
+
+    Assert.assertEquals("c", selector.lookupName(0));
+    Assert.assertEquals("g", selector.lookupName(1));
+
+    Assert.assertEquals(0, selector.lookupId("c"));
+    Assert.assertEquals(1, selector.lookupId("g"));
+  }
+
+  @Test
+  public void testDecoratorWithBlacklist()
+  {
+    ListFilteredDimensionSpec spec = new ListFilteredDimensionSpec(
+        new DefaultDimensionSpec("foo", "bar"),
+        ImmutableSet.of("c", "g"),
+        false
+    );
+
+    DimensionSelector selector = spec.decorate(TestDimensionSelector.instance);
+
+    Assert.assertEquals(24, selector.getValueCardinality());
+
+    IndexedInts row = selector.getRow();
+    Assert.assertEquals(1, row.size());
+    Assert.assertEquals(3, row.get(0));
+
+    Assert.assertEquals("a", selector.lookupName(0));
+    Assert.assertEquals("z", selector.lookupName(23));
+
+    Assert.assertEquals(0, selector.lookupId("a"));
+    Assert.assertEquals(23, selector.lookupId("z"));
   }
 }

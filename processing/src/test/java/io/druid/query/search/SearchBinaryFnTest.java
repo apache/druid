@@ -29,7 +29,9 @@ import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 /**
  */
@@ -220,47 +222,55 @@ public class SearchBinaryFnTest
   {
     Result<SearchResultValue> r1 = new Result<SearchResultValue>(
         currTime,
-        new SearchResultValue(
-            ImmutableList.<SearchHit>of(
-                new SearchHit(
-                    "blah",
-                    "thisislong"
-                )
-            )
-        )
+        new SearchResultValue(toHits("blah:thisislong"))
     );
 
     Result<SearchResultValue> r2 = new Result<SearchResultValue>(
         currTime,
-        new SearchResultValue(
-            ImmutableList.<SearchHit>of(
-                new SearchHit(
-                    "blah",
-                    "short"
-                )
-            )
-        )
+        new SearchResultValue(toHits("blah:short"))
     );
 
     Result<SearchResultValue> expected = new Result<SearchResultValue>(
         currTime,
-        new SearchResultValue(
-            ImmutableList.<SearchHit>of(
-                new SearchHit(
-                    "blah",
-                    "short"
-                ),
-                new SearchHit(
-                    "blah",
-                    "thisislong"
-                )
-            )
-        )
+        new SearchResultValue(toHits("blah:short", "blah:thisislong"))
     );
 
     Result<SearchResultValue> actual = new SearchBinaryFn(new StrlenSearchSortSpec(), QueryGranularity.ALL, Integer.MAX_VALUE).apply(r1, r2);
     Assert.assertEquals(expected.getTimestamp(), actual.getTimestamp());
     assertSearchMergeResult(expected.getValue(), actual.getValue());
+  }
+
+  @Test
+  public void testStrlenMerge2()
+  {
+    Result<SearchResultValue> r1 = new Result<SearchResultValue>(
+        currTime,
+        new SearchResultValue(toHits("blah:thisislong", "blah:short", "blah2:thisislong"))
+    );
+
+    Result<SearchResultValue> r2 = new Result<SearchResultValue>(
+        currTime,
+        new SearchResultValue(toHits("blah:short", "blah2:thisislong"))
+    );
+
+    Result<SearchResultValue> expected = new Result<SearchResultValue>(
+        currTime,
+        new SearchResultValue(toHits("blah:short", "blah:thisislong", "blah2:thisislong"))
+    );
+
+    Result<SearchResultValue> actual = new SearchBinaryFn(new StrlenSearchSortSpec(), QueryGranularity.ALL, Integer.MAX_VALUE).apply(r1, r2);
+    Assert.assertEquals(expected.getTimestamp(), actual.getTimestamp());
+    System.out.println("[SearchBinaryFnTest/testStrlenMerge2] " + actual.getValue());
+    assertSearchMergeResult(expected.getValue(), actual.getValue());
+  }
+
+  private List<SearchHit> toHits(String... hits) {
+    List<SearchHit> result = new ArrayList<>();
+    for (String hit : hits) {
+      int index = hit.indexOf(':');
+      result.add(new SearchHit(hit.substring(0, index), hit.substring(index + 1)));
+    }
+    return result;
   }
 
   @Test

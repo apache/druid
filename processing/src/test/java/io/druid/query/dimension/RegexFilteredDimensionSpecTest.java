@@ -20,7 +20,9 @@
 package io.druid.query.dimension;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.druid.segment.DimensionSelector;
 import io.druid.segment.TestHelper;
+import io.druid.segment.data.IndexedInts;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -72,5 +74,29 @@ public class RegexFilteredDimensionSpecTest
     );
 
     Assert.assertFalse(Arrays.equals(spec1.getCacheKey(), spec2.getCacheKey()));
+  }
+
+  @Test
+  public void testDecorator()
+  {
+    RegexFilteredDimensionSpec spec = new RegexFilteredDimensionSpec(
+        new DefaultDimensionSpec("foo", "bar"),
+        "[c,g]"
+    );
+
+    DimensionSelector selector = spec.decorate(TestDimensionSelector.instance);
+
+    Assert.assertEquals(2, selector.getValueCardinality());
+
+    IndexedInts row = selector.getRow();
+    Assert.assertEquals(2, row.size());
+    Assert.assertEquals(0, row.get(0));
+    Assert.assertEquals(1, row.get(1));
+
+    Assert.assertEquals("c", selector.lookupName(0));
+    Assert.assertEquals("g", selector.lookupName(1));
+
+    Assert.assertEquals(0, selector.lookupId("c"));
+    Assert.assertEquals(1, selector.lookupId("g"));
   }
 }
