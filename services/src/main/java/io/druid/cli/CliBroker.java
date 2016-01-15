@@ -44,9 +44,9 @@ import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.RetryQueryRunnerConfig;
 import io.druid.query.lookup.LookupModule;
+import io.druid.server.BrokerQueryResource;
 import io.druid.server.ClientInfoResource;
 import io.druid.server.ClientQuerySegmentWalker;
-import io.druid.server.QueryResource;
 import io.druid.server.coordination.broker.DruidBroker;
 import io.druid.server.http.BrokerResource;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
@@ -101,10 +101,10 @@ public class CliBroker extends ServerRunnable
             binder.bind(QuerySegmentWalker.class).to(ClientQuerySegmentWalker.class).in(LazySingleton.class);
 
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
-            Jerseys.addResource(binder, QueryResource.class);
+            Jerseys.addResource(binder, BrokerQueryResource.class);
             Jerseys.addResource(binder, BrokerResource.class);
             Jerseys.addResource(binder, ClientInfoResource.class);
-            LifecycleModule.register(binder, QueryResource.class);
+            LifecycleModule.register(binder, BrokerQueryResource.class);
             LifecycleModule.register(binder, DruidBroker.class);
 
             MetricsModule.register(binder, CacheMonitor.class);
