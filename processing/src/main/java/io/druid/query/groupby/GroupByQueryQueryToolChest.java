@@ -238,7 +238,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
                           outerQuery.withQuerySegmentSpec(
                               new MultipleIntervalSegmentSpec(ImmutableList.of(interval))
                           ),
-                          new IncrementalIndexStorageAdapter(innerQueryResultIndex)
+                          new IncrementalIndexStorageAdapter(innerQueryResultIndex),
+                          true
                       );
                     }
                   }
