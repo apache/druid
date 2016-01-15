@@ -22,7 +22,9 @@ package io.druid.query;
 import com.fasterxml.jackson.databind.Module;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
@@ -37,11 +39,18 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.dimension.ListFilteredDimensionSpec;
 import io.druid.query.dimension.RegexFilteredDimensionSpec;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryRunnerTestHelper;
 import io.druid.query.spec.LegacySegmentSpec;
+import io.druid.query.topn.TopNQuery;
+import io.druid.query.topn.TopNQueryBuilder;
+import io.druid.query.topn.TopNQueryConfig;
+import io.druid.query.topn.TopNQueryQueryToolChest;
+import io.druid.query.topn.TopNQueryRunnerFactory;
+import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.QueryableIndex;
@@ -50,6 +59,7 @@ import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.apache.commons.io.FileUtils;
+import org.joda.time.DateTime;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -58,6 +68,7 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /**
  */
@@ -248,6 +259,63 @@ public class MultiValuedDimensionTest
     );
 
     TestHelper.assertExpectedObjects(expectedResults, Sequences.toList(result, new ArrayList<Row>()), "");
+  }
+
+  @Test
+  public void testTopNWithDimFilterAndWithFilteredDimSpec() throws Exception
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource("xx")
+        .granularity(QueryGranularity.ALL)
+        .dimension(new ListFilteredDimensionSpec(
+            new DefaultDimensionSpec("tags", "tags"),
+            ImmutableSet.of("t3"),
+            null
+        ))
+        .metric("count")
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Arrays.asList(
+                new AggregatorFactory[]
+                    {
+                        new CountAggregatorFactory("count")
+                    }
+            ))
+        .threshold(5)
+        .filters(new SelectorDimFilter("tags", "t3")).build();
+
+    QueryRunnerFactory factory = new TopNQueryRunnerFactory(
+        TestQueryRunners.getPool(),
+        new TopNQueryQueryToolChest(
+            new TopNQueryConfig(),
+            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        ),
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER
+    );
+    QueryRunner<Result<TopNResultValue>> runner = QueryRunnerTestHelper.makeQueryRunner(
+        factory,
+        new QueryableIndexSegment("sid1", queryableIndex)
+    );
+    Map<String, Object> context = Maps.newHashMap();
+    Sequence<Result<TopNResultValue>> result = runner.run(query, context);
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<TopNResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>of(
+                        "tags", "t3",
+                        "count", 2L
+                    )
+                )
+            )
+        )
+    );
+    TestHelper.assertExpectedObjects(
+        expectedResults,
+        Sequences.toList(result, new ArrayList<Result<TopNResultValue>>()),
+        ""
+    );
   }
 
   @AfterClass
