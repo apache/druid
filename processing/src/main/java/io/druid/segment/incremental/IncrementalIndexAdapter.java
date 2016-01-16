@@ -20,13 +20,14 @@
 package io.druid.segment.incremental;
 
 import com.google.common.base.Function;
+import com.google.common.base.Strings;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.MutableBitmap;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
-
 import io.druid.segment.IndexableAdapter;
 import io.druid.segment.Rowboat;
 import io.druid.segment.column.BitmapIndexSeeker;
@@ -38,16 +39,15 @@ import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIterable;
 import io.druid.segment.data.ListIndexed;
-
 import org.joda.time.Interval;
 import org.roaringbitmap.IntIterator;
 
 import javax.annotation.Nullable;
-
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  */
@@ -57,6 +57,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   private final Interval dataInterval;
   private final IncrementalIndex<?> index;
   private final Map<String, Map<String, MutableBitmap>> invertedIndexes;
+  private final Set<String> hasNullValueDimensions;
 
   public IncrementalIndexAdapter(
       Interval dataInterval, IncrementalIndex<?> index, BitmapFactory bitmapFactory
@@ -64,8 +65,17 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   {
     this.dataInterval = dataInterval;
     this.index = index;
-
     this.invertedIndexes = Maps.newHashMap();
+    /* Sometimes it's hard to tell whether one dimension contains a null value or not.
+     * If one dimension had show a null or empty value explicitly, then yes, it contains
+     * null value. But if one dimension's values are all non-null, it still early to say
+     * this dimension does not contain null value. Consider a two row case, first row had
+     * "dimA=1" and "dimB=2", the second row only had "dimA=3". To dimB, its value are "2" and
+     * never showed a null or empty value. But when we combines these two rows, dimB is null
+     * in row 2. So we should iterate all rows to determine whether one dimension contains
+     * a null value.
+     */
+    this.hasNullValueDimensions = Sets.newHashSet();
 
     final List<IncrementalIndex.DimensionDesc> dimensions = index.getDimensions();
 
@@ -86,7 +96,11 @@ public class IncrementalIndexAdapter implements IndexableAdapter
           continue;
         }
         if (dimIndex >= dims.length || dims[dimIndex] == null) {
+          hasNullValueDimensions.add(dimension.getName());
           continue;
+        }
+        if (hasNullValue(dims[dimIndex])) {
+          hasNullValueDimensions.add(dimension.getName());
         }
 
         for (String dimValue : dims[dimIndex]) {
@@ -138,6 +152,11 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   public Indexed<String> getDimValueLookup(String dimension)
   {
     final IncrementalIndex.DimDim dimDim = index.getDimensionValues(dimension);
+    if (hasNullValueDimensions.contains(dimension)
+        && !dimDim.contains(null))
+    {
+      dimDim.add(null);
+    }
     dimDim.sort();
 
     return new Indexed<String>()
@@ -287,10 +306,13 @@ public class IncrementalIndexAdapter implements IndexableAdapter
       @Override
       public IndexedInts seek(String value)
       {
-        if (value != null && GenericIndexed.STRING_STRATEGY.compare(value, lastVal) <= 0)  {
-          throw new ISE("Value[%s] is less than the last value[%s] I have, cannot be.",
-              value, lastVal);
+        if (value != null && GenericIndexed.STRING_STRATEGY.compare(value, lastVal) <= 0) {
+          throw new ISE(
+              "Value[%s] is less than the last value[%s] I have, cannot be.",
+              value, lastVal
+          );
         }
+        value = Strings.nullToEmpty(value);
         lastVal = value;
         final MutableBitmap bitmapIndex = dimInverted.get(value);
         if (bitmapIndex == null) {
@@ -301,7 +323,21 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     };
   }
 
-  static class BitmapIndexedInts implements IndexedInts {
+  private boolean hasNullValue(String[] dimValues)
+  {
+    if (dimValues == null || dimValues.length == 0) {
+      return true;
+    }
+    for (String dimVal : dimValues) {
+      if (Strings.isNullOrEmpty(dimVal)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  static class BitmapIndexedInts implements IndexedInts
+  {
 
     private final MutableBitmap bitmapIndex;
 

@@ -21,6 +21,7 @@ package io.druid.segment.serde;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.segment.FloatColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.column.ValueType;
@@ -32,7 +33,7 @@ import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
 /**
-*/
+ */
 public class FloatGenericColumnPartSerde implements ColumnPartSerde
 {
   @JsonCreator
@@ -40,16 +41,16 @@ public class FloatGenericColumnPartSerde implements ColumnPartSerde
       @JsonProperty("byteOrder") ByteOrder byteOrder
   )
   {
-    return new FloatGenericColumnPartSerde(null, byteOrder);
+    return new FloatGenericColumnPartSerde(byteOrder, null);
   }
 
-  private final CompressedFloatsIndexedSupplier compressedFloats;
   private final ByteOrder byteOrder;
+  private Serializer serializer;
 
-  public FloatGenericColumnPartSerde(CompressedFloatsIndexedSupplier compressedFloats, ByteOrder byteOrder)
+  private FloatGenericColumnPartSerde(ByteOrder byteOrder, Serializer serializer)
   {
-    this.compressedFloats = compressedFloats;
     this.byteOrder = byteOrder;
+    this.serializer = serializer;
   }
 
   @JsonProperty
@@ -58,27 +59,114 @@ public class FloatGenericColumnPartSerde implements ColumnPartSerde
     return byteOrder;
   }
 
-  @Override
-  public long numBytes()
+  public static SerializerBuilder serializerBuilder()
   {
-    return compressedFloats.getSerializedSize();
+    return new SerializerBuilder();
+  }
+
+  public static class SerializerBuilder
+  {
+    private ByteOrder byteOrder = null;
+    private FloatColumnSerializer delegate = null;
+
+    public SerializerBuilder withByteOrder(final ByteOrder byteOrder)
+    {
+      this.byteOrder = byteOrder;
+      return this;
+    }
+
+    public SerializerBuilder withDelegate(final FloatColumnSerializer delegate)
+    {
+      this.delegate = delegate;
+      return this;
+    }
+
+    public FloatGenericColumnPartSerde build()
+    {
+      return new FloatGenericColumnPartSerde(
+          byteOrder, new Serializer()
+      {
+        @Override
+        public long numBytes()
+        {
+          return delegate.getSerializedSize();
+        }
+
+        @Override
+        public void write(WritableByteChannel channel) throws IOException
+        {
+          delegate.writeToChannel(channel);
+        }
+      }
+      );
+    }
+  }
+
+  public static LegacySerializerBuilder legacySerializerBuilder()
+  {
+    return new LegacySerializerBuilder();
+  }
+
+  public static class LegacySerializerBuilder
+  {
+    private ByteOrder byteOrder = null;
+    private CompressedFloatsIndexedSupplier delegate = null;
+
+    public LegacySerializerBuilder withByteOrder(final ByteOrder byteOrder)
+    {
+      this.byteOrder = byteOrder;
+      return this;
+    }
+
+    public LegacySerializerBuilder withDelegate(final CompressedFloatsIndexedSupplier delegate)
+    {
+      this.delegate = delegate;
+      return this;
+    }
+
+    public FloatGenericColumnPartSerde build()
+    {
+      return new FloatGenericColumnPartSerde(
+          byteOrder, new Serializer()
+      {
+        @Override
+        public long numBytes()
+        {
+          return delegate.getSerializedSize();
+        }
+
+        @Override
+        public void write(WritableByteChannel channel) throws IOException
+        {
+          delegate.writeToChannel(channel);
+        }
+      }
+      );
+    }
   }
 
   @Override
-  public void write(WritableByteChannel channel) throws IOException
+  public Serializer getSerializer()
   {
-    compressedFloats.writeToChannel(channel);
+    return serializer;
   }
 
   @Override
-  public ColumnPartSerde read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
+  public Deserializer getDeserializer()
   {
-    final CompressedFloatsIndexedSupplier column = CompressedFloatsIndexedSupplier.fromByteBuffer(buffer, byteOrder);
-
-    builder.setType(ValueType.FLOAT)
-           .setHasMultipleValues(false)
-           .setGenericColumn(new FloatGenericColumnSupplier(column, byteOrder));
-
-    return new FloatGenericColumnPartSerde(column, byteOrder);
+    return new Deserializer()
+    {
+      @Override
+      public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
+      {
+        final CompressedFloatsIndexedSupplier column = CompressedFloatsIndexedSupplier.fromByteBuffer(
+            buffer,
+            byteOrder
+        );
+        builder.setType(ValueType.FLOAT)
+               .setHasMultipleValues(false)
+               .setGenericColumn(new FloatGenericColumnSupplier(column, byteOrder));
+      }
+    };
   }
 }

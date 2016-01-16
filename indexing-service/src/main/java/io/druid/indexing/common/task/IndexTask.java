@@ -48,6 +48,7 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.index.YeOldePlumberSchool;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
+import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.IOConfig;
@@ -134,7 +135,8 @@ public class IndexTask extends AbstractFixedIntervalTask
         null,
         null,
         shardSpec,
-        indexSpec
+        indexSpec,
+        null
     );
   }
 
@@ -353,12 +355,15 @@ public class IndexTask extends AbstractFixedIntervalTask
     final FireDepartmentMetrics metrics = new FireDepartmentMetrics();
     final Firehose firehose = firehoseFactory.connect(ingestionSchema.getDataSchema().getParser());
     final Supplier<Committer> committerSupplier = Committers.supplierFromFirehose(firehose);
+    final IndexMerger indexMerger = ingestionSchema.getTuningConfig().getBuildV9Directly()
+                                    ? toolbox.getIndexMergerV9()
+                                    : toolbox.getIndexMerger();
     final Plumber plumber = new YeOldePlumberSchool(
         interval,
         version,
         wrappedDataSegmentPusher,
         tmpDir,
-        toolbox.getIndexMerger(),
+        indexMerger,
         toolbox.getIndexIO()
     ).findPlumber(
         schema,
@@ -434,7 +439,7 @@ public class IndexTask extends AbstractFixedIntervalTask
 
       this.dataSchema = dataSchema;
       this.ioConfig = ioConfig;
-      this.tuningConfig = tuningConfig == null ? new IndexTuningConfig(0, 0, null, null) : tuningConfig;
+      this.tuningConfig = tuningConfig == null ? new IndexTuningConfig(0, 0, null, null, null) : tuningConfig;
     }
 
     @Override
@@ -485,18 +490,21 @@ public class IndexTask extends AbstractFixedIntervalTask
     private static final int DEFAULT_TARGET_PARTITION_SIZE = 5000000;
     private static final int DEFAULT_ROW_FLUSH_BOUNDARY = 500000;
     private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
+    private static final Boolean DEFAULT_BUILD_V9_DIRECTLY = Boolean.FALSE;
 
     private final int targetPartitionSize;
     private final int rowFlushBoundary;
     private final int numShards;
     private final IndexSpec indexSpec;
+    private final Boolean buildV9Directly;
 
     @JsonCreator
     public IndexTuningConfig(
         @JsonProperty("targetPartitionSize") int targetPartitionSize,
         @JsonProperty("rowFlushBoundary") int rowFlushBoundary,
         @JsonProperty("numShards") @Nullable Integer numShards,
-        @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec
+        @JsonProperty("indexSpec") @Nullable IndexSpec indexSpec,
+        @JsonProperty("buildV9Directly") Boolean buildV9Directly
     )
     {
       this.targetPartitionSize = targetPartitionSize == 0 ? DEFAULT_TARGET_PARTITION_SIZE : targetPartitionSize;
@@ -508,6 +516,7 @@ public class IndexTask extends AbstractFixedIntervalTask
           this.targetPartitionSize == -1 || this.numShards == -1,
           "targetPartitionsSize and shardCount both cannot be set"
       );
+      this.buildV9Directly = buildV9Directly == null ? DEFAULT_BUILD_V9_DIRECTLY : buildV9Directly;
     }
 
     @JsonProperty
@@ -532,6 +541,12 @@ public class IndexTask extends AbstractFixedIntervalTask
     public IndexSpec getIndexSpec()
     {
       return indexSpec;
+    }
+
+    @JsonProperty
+    public Boolean getBuildV9Directly()
+    {
+      return buildV9Directly;
     }
   }
 }

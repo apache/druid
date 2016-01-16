@@ -40,12 +40,13 @@ import java.util.List;
  */
 public class CompressedVSizeIndexedSupplierTest
 {
-  private List<int[]> vals;
+  protected List<int[]> vals;
 
-  private CompressedVSizeIndexedSupplier indexedSupplier;
+  protected WritableSupplier<IndexedMultivalue<IndexedInts>> indexedSupplier;
 
   @Before
-  public void setUpSimple(){
+  public void setUpSimple()
+  {
     vals = Arrays.asList(
         new int[1],
         new int[]{1, 2, 3, 4, 5},
@@ -70,7 +71,8 @@ public class CompressedVSizeIndexedSupplierTest
   }
 
   @After
-  public void teardown(){
+  public void teardown()
+  {
     indexedSupplier = null;
     vals = null;
   }
@@ -89,7 +91,7 @@ public class CompressedVSizeIndexedSupplierTest
 
     final byte[] bytes = baos.toByteArray();
     Assert.assertEquals(indexedSupplier.getSerializedSize(), bytes.length);
-    CompressedVSizeIndexedSupplier deserializedIndexed = CompressedVSizeIndexedSupplier.fromByteBuffer(
+    WritableSupplier<IndexedMultivalue<IndexedInts>> deserializedIndexed = fromByteBuffer(
         ByteBuffer.wrap(bytes),
         ByteOrder.nativeOrder()
     );
@@ -98,26 +100,28 @@ public class CompressedVSizeIndexedSupplierTest
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testGetInvalidElementInRow(){
+  public void testGetInvalidElementInRow()
+  {
     indexedSupplier.get().get(3).get(15);
   }
 
   @Test
-  public void testIterators(){
+  public void testIterators()
+  {
     Iterator<IndexedInts> iterator = indexedSupplier.get().iterator();
     int row = 0;
-    while(iterator.hasNext()){
+    while (iterator.hasNext()) {
       final int[] ints = vals.get(row);
       final IndexedInts vSizeIndexedInts = iterator.next();
 
       Assert.assertEquals(ints.length, vSizeIndexedInts.size());
       Iterator<Integer> valsIterator = vSizeIndexedInts.iterator();
-      int j=0;
-      while(valsIterator.hasNext()){
-        Assert.assertEquals((Integer)ints[j], valsIterator.next());
+      int j = 0;
+      while (valsIterator.hasNext()) {
+        Assert.assertEquals((Integer) ints[j], valsIterator.next());
         j++;
       }
-      row ++;
+      row++;
     }
   }
 
@@ -133,5 +137,12 @@ public class CompressedVSizeIndexedSupplierTest
         Assert.assertEquals(ints[j], vSizeIndexedInts.get(j));
       }
     }
+  }
+
+  protected WritableSupplier<IndexedMultivalue<IndexedInts>> fromByteBuffer(ByteBuffer buffer, ByteOrder order)
+  {
+    return CompressedVSizeIndexedSupplier.fromByteBuffer(
+        buffer, ByteOrder.nativeOrder()
+    );
   }
 }

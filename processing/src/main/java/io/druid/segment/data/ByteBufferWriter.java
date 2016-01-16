@@ -30,6 +30,9 @@ import com.google.common.primitives.Ints;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 import java.util.Arrays;
 
 /**
@@ -85,6 +88,11 @@ public class ByteBufferWriter<T> implements Closeable
     );
   }
 
+  public long getSerializedSize()
+  {
+    return headerOut.getCount() + valueOut.getCount();
+  }
+
   public InputSupplier<InputStream> combineStreams()
   {
     return ByteStreams.join(
@@ -107,5 +115,11 @@ public class ByteBufferWriter<T> implements Closeable
             }
         )
     );
+  }
+
+  public void writeToChannel(WritableByteChannel channel) throws IOException
+  {
+    final ReadableByteChannel from = Channels.newChannel(combineStreams().getInput());
+    ByteStreams.copy(from, channel);
   }
 }

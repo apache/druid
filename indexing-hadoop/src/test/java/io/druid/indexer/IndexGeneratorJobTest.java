@@ -395,6 +395,7 @@ public class IndexGeneratorJobTest
                 ImmutableMap.of(JobContext.NUM_REDUCES, "0"), //verifies that set num reducers is ignored
                 false,
                 useCombiner,
+                null,
                 null
             )
         )

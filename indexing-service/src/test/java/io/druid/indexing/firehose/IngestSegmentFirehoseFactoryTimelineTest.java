@@ -55,6 +55,7 @@ import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.filter.NoopDimFilter;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
+import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
@@ -111,12 +112,14 @@ public class IngestSegmentFirehoseFactoryTimelineTest
   private static final ObjectMapper MAPPER;
   private static final IndexMerger INDEX_MERGER;
   private static final IndexIO INDEX_IO;
+  private static final IndexMergerV9 INDEX_MERGER_V9;
 
   static {
     TestUtils testUtils = new TestUtils();
     MAPPER = IngestSegmentFirehoseFactoryTest.setupInjectablesInObjectMapper(testUtils.getTestObjectMapper());
     INDEX_MERGER = testUtils.getTestIndexMerger();
     INDEX_IO = testUtils.getTestIndexIO();
+    INDEX_MERGER_V9 = testUtils.getTestIndexMergerV9();
   }
 
   public IngestSegmentFirehoseFactoryTimelineTest(
@@ -334,7 +337,8 @@ public class IngestSegmentFirehoseFactoryTimelineTest
           INDEX_MERGER,
           INDEX_IO,
           null,
-          null
+          null,
+          INDEX_MERGER_V9
       );
       final Injector injector = Guice.createInjector(
           new Module()

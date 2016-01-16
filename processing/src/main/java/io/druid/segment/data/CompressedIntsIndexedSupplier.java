@@ -38,7 +38,7 @@ import java.util.List;
 
 public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedInts>
 {
-  public static final byte version = 0x2;
+  public static final byte VERSION = 0x2;
   public static final int MAX_INTS_IN_BUFFER = CompressedPools.BUFFER_SIZE / Ints.BYTES;
 
 
@@ -103,7 +103,7 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
 
   public void writeToChannel(WritableByteChannel channel) throws IOException
   {
-    channel.write(ByteBuffer.wrap(new byte[]{version}));
+    channel.write(ByteBuffer.wrap(new byte[]{VERSION}));
     channel.write(ByteBuffer.wrap(Ints.toByteArray(totalSize)));
     channel.write(ByteBuffer.wrap(Ints.toByteArray(sizePer)));
     channel.write(ByteBuffer.wrap(new byte[]{compression.getId()}));
@@ -132,7 +132,7 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
   {
     byte versionFromBuffer = buffer.get();
 
-    if (versionFromBuffer == version) {
+    if (versionFromBuffer == VERSION) {
       final int totalSize = buffer.getInt();
       final int sizePer = buffer.getInt();
       final CompressedObjectStrategy.CompressionStrategy compression = CompressedObjectStrategy.CompressionStrategy.forId(buffer.get());
