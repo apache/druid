@@ -454,6 +454,7 @@ public class IndexGeneratorJob implements Jobby
         @Override
         public void progress()
         {
+          super.progress();
           context.progress();
         }
       };
@@ -466,9 +467,15 @@ public class IndexGeneratorJob implements Jobby
         final ProgressIndicator progressIndicator
     ) throws IOException
     {
-      return HadoopDruidIndexerConfig.INDEX_MERGER.persist(
-          index, interval, file, null, config.getIndexSpec(), progressIndicator
-      );
+      if (config.isBuildV9Directly()) {
+        return HadoopDruidIndexerConfig.INDEX_MERGER_V9.persist(
+            index, interval, file, null, config.getIndexSpec(), progressIndicator
+        );
+      } else {
+        return HadoopDruidIndexerConfig.INDEX_MERGER.persist(
+            index, interval, file, null, config.getIndexSpec(), progressIndicator
+        );
+      }
     }
 
     protected File mergeQueryableIndex(
@@ -478,9 +485,15 @@ public class IndexGeneratorJob implements Jobby
         ProgressIndicator progressIndicator
     ) throws IOException
     {
-      return HadoopDruidIndexerConfig.INDEX_MERGER.mergeQueryableIndex(
-          indexes, aggs, file, config.getIndexSpec(), progressIndicator
-      );
+      if (config.isBuildV9Directly()) {
+        return HadoopDruidIndexerConfig.INDEX_MERGER_V9.mergeQueryableIndex(
+            indexes, aggs, file, config.getIndexSpec(), progressIndicator
+        );
+      } else {
+        return HadoopDruidIndexerConfig.INDEX_MERGER.mergeQueryableIndex(
+            indexes, aggs, file, config.getIndexSpec(), progressIndicator
+        );
+      }
     }
 
     @Override
@@ -586,7 +599,7 @@ public class IndexGeneratorJob implements Jobby
             indexes.add(HadoopDruidIndexerConfig.INDEX_IO.loadIndex(file));
           }
           mergedBase = mergeQueryableIndex(
-                        indexes, aggregators, new File(baseFlushFile, "merged"), progressIndicator
+              indexes, aggregators, new File(baseFlushFile, "merged"), progressIndicator
           );
         }
         final FileSystem outputFS = new Path(config.getSchema().getIOConfig().getSegmentOutputPath())

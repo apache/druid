@@ -33,7 +33,7 @@ import java.util.List;
  */
 public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInts>
 {
-  private static final byte version = 0x0;
+  public static final byte VERSION = 0x0;
 
   public static VSizeIndexedInts fromArray(int[] array)
   {
@@ -185,7 +185,7 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
 
   public void writeToChannel(WritableByteChannel channel) throws IOException
   {
-    channel.write(ByteBuffer.wrap(new byte[]{version, (byte) numBytes}));
+    channel.write(ByteBuffer.wrap(new byte[]{VERSION, (byte) numBytes}));
     channel.write(ByteBuffer.wrap(Ints.toByteArray(buffer.remaining())));
     channel.write(buffer.asReadOnlyBuffer());
   }
@@ -194,7 +194,7 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
   {
     byte versionFromBuffer = buffer.get();
 
-    if (version == versionFromBuffer) {
+    if (VERSION == versionFromBuffer) {
       int numBytes = buffer.get();
       int size = buffer.getInt();
       ByteBuffer bufferToUse = buffer.asReadOnlyBuffer();

@@ -42,6 +42,7 @@ public class HadoopTuningConfig implements TuningConfig
   private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
   private static final int DEFAULT_ROW_FLUSH_BOUNDARY = 80000;
   private static final boolean DEFAULT_USE_COMBINER = false;
+  private static final Boolean DEFAULT_BUILD_V9_DIRECTLY = Boolean.FALSE;
 
   public static HadoopTuningConfig makeDefaultTuningConfig()
   {
@@ -59,7 +60,8 @@ public class HadoopTuningConfig implements TuningConfig
         null,
         false,
         false,
-        null
+        null,
+        DEFAULT_BUILD_V9_DIRECTLY
     );
   }
 
@@ -76,6 +78,7 @@ public class HadoopTuningConfig implements TuningConfig
   private final Map<String, String> jobProperties;
   private final boolean combineText;
   private final boolean useCombiner;
+  private final Boolean buildV9Directly;
 
   @JsonCreator
   public HadoopTuningConfig(
@@ -93,7 +96,8 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("combineText") boolean combineText,
       final @JsonProperty("useCombiner") Boolean useCombiner,
       // See https://github.com/druid-io/druid/pull/1922
-      final @JsonProperty("rowFlushBoundary") Integer maxRowsInMemoryCOMPAT
+      final @JsonProperty("rowFlushBoundary") Integer maxRowsInMemoryCOMPAT,
+      final @JsonProperty("buildV9Directly") Boolean buildV9Directly
   )
   {
     this.workingPath = workingPath;
@@ -111,6 +115,7 @@ public class HadoopTuningConfig implements TuningConfig
                           : ImmutableMap.copyOf(jobProperties));
     this.combineText = combineText;
     this.useCombiner = useCombiner == null ? DEFAULT_USE_COMBINER : useCombiner.booleanValue();
+    this.buildV9Directly = buildV9Directly == null ? DEFAULT_BUILD_V9_DIRECTLY : buildV9Directly;
   }
 
   @JsonProperty
@@ -191,6 +196,11 @@ public class HadoopTuningConfig implements TuningConfig
     return useCombiner;
   }
 
+  @JsonProperty
+  public Boolean getBuildV9Directly() {
+    return buildV9Directly;
+  }
+
   public HadoopTuningConfig withWorkingPath(String path)
   {
     return new HadoopTuningConfig(
@@ -207,7 +217,8 @@ public class HadoopTuningConfig implements TuningConfig
         jobProperties,
         combineText,
         useCombiner,
-        null
+        null,
+        buildV9Directly
     );
   }
 
@@ -227,7 +238,8 @@ public class HadoopTuningConfig implements TuningConfig
         jobProperties,
         combineText,
         useCombiner,
-        null
+        null,
+        buildV9Directly
     );
   }
 
@@ -247,7 +259,8 @@ public class HadoopTuningConfig implements TuningConfig
         jobProperties,
         combineText,
         useCombiner,
-        null
+        null,
+        buildV9Directly
     );
   }
 }

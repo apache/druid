@@ -39,6 +39,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
+import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
@@ -70,6 +71,7 @@ public class IndexTaskTest
   private final IndexSpec indexSpec;
   private final ObjectMapper jsonMapper;
   private IndexMerger indexMerger;
+  private IndexMergerV9 indexMergerV9;
   private IndexIO indexIO;
 
   public IndexTaskTest()
@@ -78,6 +80,7 @@ public class IndexTaskTest
     TestUtils testUtils = new TestUtils();
     jsonMapper = testUtils.getTestObjectMapper();
     indexMerger = testUtils.getTestIndexMerger();
+    indexMergerV9 = testUtils.getTestIndexMergerV9();
     indexIO = testUtils.getTestIndexIO();
   }
 
@@ -140,7 +143,8 @@ public class IndexTaskTest
                 2,
                 0,
                 null,
-                indexSpec
+                indexSpec,
+                null
             )
         ),
         jsonMapper,
@@ -252,7 +256,7 @@ public class IndexTaskTest
             return segment;
           }
         }, null, null, null, null, null, null, null, null, null, null, temporaryFolder.newFolder(),
-            indexMerger, indexIO, null, null
+            indexMerger, indexIO, null, null, indexMergerV9
         )
     );
 
@@ -332,7 +336,8 @@ public class IndexTaskTest
         100,
         1000,
         null,
-        new IndexSpec()
+        new IndexSpec(),
+        null
     );
     RealtimeTuningConfig realtimeTuningConfig = IndexTask.convertTuningConfig(
         spec,

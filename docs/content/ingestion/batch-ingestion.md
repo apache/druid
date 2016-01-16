@@ -104,7 +104,8 @@ The spec\_file is a path to a file that contains JSON and an example looks like:
     "ignoreInvalidRows" : false,
     "jobProperties" : { },
     "combineText" : false,        
-    "rowFlushBoundary" : 300000
+    "rowFlushBoundary" : 300000,
+    "buildV9Directly" : false
   }
 }
 ```
@@ -205,6 +206,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |ignoreInvalidRows|Boolean|Ignore rows found to have problems.|no (default == false)|
 |useCombiner|Boolean|Use hadoop combiner to merge rows at mapper if possible.|no (default == false)|
 |jobProperties|Object|a map of properties to add to the Hadoop job configuration.|no (default == null)|
+|buildV9Directly|Boolean|Whether to build v9 index directly instead of building v8 index and convert it to v9 format|no (default = false)|
 
 ### Partitioning specification
 

@@ -31,6 +31,9 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 import java.util.Arrays;
 
 /**
@@ -120,6 +123,15 @@ public class GenericIndexedWriter<T> implements Closeable
     }
   }
 
+  public long getSerializedSize()
+  {
+    return 2 +                    // version and sorted flag
+           Ints.BYTES +           // numBytesWritten
+           Ints.BYTES +           // numElements
+           headerOut.getCount() + // header length
+           valuesOut.getCount();  // value length
+  }
+
   public InputSupplier<InputStream> combineStreams()
   {
     return ByteStreams.join(
@@ -142,5 +154,11 @@ public class GenericIndexedWriter<T> implements Closeable
             }
         )
     );
+  }
+
+  public void writeToChannel(WritableByteChannel channel) throws IOException
+  {
+    final ReadableByteChannel from = Channels.newChannel(combineStreams().getInput());
+    ByteStreams.copy(from, channel);
   }
 }
