@@ -20,12 +20,14 @@
 package io.druid.server.http;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.druid.client.CoordinatorServerView;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.InventoryView;
 import io.druid.client.indexing.IndexingServiceClient;
+import io.druid.metadata.MetadataSegmentManager;
 import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
@@ -385,21 +387,56 @@ public class DatasourcesResourceTest
     EasyMock.verify(inventoryView);
   }
 
-	@Test
-	public void testDeleteDataSourceSpecificInterval() throws Exception
-	{
-		String interval = "2010-01-01_P1D";
-		Interval theInterval = new Interval(interval.replace("_", "/"));
+  @Test
+  public void testDeleteDataSourceSpecificInterval() throws Exception
+  {
+    String interval = "2010-01-01_P1D";
+    Interval theInterval = new Interval(interval.replace("_", "/"));
 
-		IndexingServiceClient indexingServiceClient = EasyMock.createStrictMock(IndexingServiceClient.class);
-		indexingServiceClient.killSegments("datasource1", theInterval);
-		EasyMock.expectLastCall().once();
-		EasyMock.replay(indexingServiceClient, server);
+    IndexingServiceClient indexingServiceClient = EasyMock.createStrictMock(IndexingServiceClient.class);
+    indexingServiceClient.killSegments("datasource1", theInterval);
+    EasyMock.expectLastCall().once();
+    EasyMock.replay(indexingServiceClient, server);
 
-		DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, indexingServiceClient);
-		Response response = datasourcesResource.deleteDataSourceSpecificInterval("datasource1", interval, "true");
-		Assert.assertEquals(200, response.getStatus());
-		EasyMock.verify(indexingServiceClient, server);
-	}
+    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, indexingServiceClient);
+    Response response = datasourcesResource.deleteDataSourceSpecificInterval("datasource1", interval, "true");
+
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(null,response.getEntity());
+    EasyMock.verify(indexingServiceClient, server);
+  }
+
+  @Test
+  public void testDeleteDataSourceSpecificIntervalKillFalse() throws Exception
+  {
+    String interval = "2010-01-01_P1D";
+    Interval theInterval = new Interval(interval.replace("_", "/"));
+
+    IndexingServiceClient indexingServiceClient = EasyMock.createStrictMock(IndexingServiceClient.class);
+    EasyMock.replay(indexingServiceClient, server);
+
+    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, indexingServiceClient);
+    Response response = datasourcesResource.deleteDataSourceSpecificInterval("datasource1", interval, "false");
+
+    Assert.assertEquals(200, response.getStatus());
+    ImmutableMap<String, String> results = (ImmutableMap<String, String>) response.getEntity();
+    Assert.assertEquals(results, ImmutableMap.<String, String>of("error", "kill is set to false"));
+    EasyMock.verify(indexingServiceClient, server);
+  }
+
+  @Test
+  public void testDeleteDataSource() throws Exception
+  {
+    MetadataSegmentManager databaseSegmentManager = EasyMock.createStrictMock(MetadataSegmentManager.class);
+    EasyMock.expect(databaseSegmentManager.removeDatasource("datasource1")).andReturn(true).atLeastOnce();
+    EasyMock.replay(server, databaseSegmentManager);
+
+    DatasourcesResource datasourcesResource = new DatasourcesResource(null, databaseSegmentManager, null);
+    Response response = datasourcesResource.deleteDataSource("datasource1");
+
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(null,response.getEntity());
+    EasyMock.verify(databaseSegmentManager, server);
+  }
 
 }

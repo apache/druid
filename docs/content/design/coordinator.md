@@ -258,7 +258,7 @@ Optional Header Parameters for auditing the config change can also be specified.
 
 Disables a datasource.
 
-* `/druid/coordinator/v1/datasources/{dataSourceName}?kill=true&interval={myISO8601Interval}>`
+* `/druid/coordinator/v1/datasources/{dataSourceName}/intervals/{interval}?kill=true>`
 
 Runs a [Kill task](../misc/tasks.html) for a given interval and datasource.
 
