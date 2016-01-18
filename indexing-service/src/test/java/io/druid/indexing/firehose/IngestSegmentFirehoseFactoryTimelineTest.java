@@ -55,6 +55,7 @@ import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.filter.NoopDimFilter;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
+import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
@@ -62,10 +63,12 @@ import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.StorageLocationConfig;
+import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
 import org.apache.commons.io.FileUtils;
+import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -109,12 +112,14 @@ public class IngestSegmentFirehoseFactoryTimelineTest
   private static final ObjectMapper MAPPER;
   private static final IndexMerger INDEX_MERGER;
   private static final IndexIO INDEX_IO;
+  private static final IndexMergerV9 INDEX_MERGER_V9;
 
   static {
     TestUtils testUtils = new TestUtils();
     MAPPER = IngestSegmentFirehoseFactoryTest.setupInjectablesInObjectMapper(testUtils.getTestObjectMapper());
     INDEX_MERGER = testUtils.getTestIndexMerger();
     INDEX_IO = testUtils.getTestIndexIO();
+    INDEX_MERGER_V9 = testUtils.getTestIndexMergerV9();
   }
 
   public IngestSegmentFirehoseFactoryTimelineTest(
@@ -283,7 +288,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
           if (taskAction instanceof SegmentListUsedAction) {
             // Expect the interval we asked for
             final SegmentListUsedAction action = (SegmentListUsedAction) taskAction;
-            if (action.getInterval().equals(testCase.interval)) {
+            if (action.getIntervals().equals(ImmutableList.of(testCase.interval))) {
               return (RetType) ImmutableList.copyOf(testCase.segments);
             } else {
               throw new IllegalArgumentException("WTF");
@@ -293,8 +298,10 @@ public class IngestSegmentFirehoseFactoryTimelineTest
           }
         }
       };
+      SegmentHandoffNotifierFactory notifierFactory = EasyMock.createNiceMock(SegmentHandoffNotifierFactory.class);
+      EasyMock.replay(notifierFactory);
       final TaskToolboxFactory taskToolboxFactory = new TaskToolboxFactory(
-          new TaskConfig(testCase.tmpDir.getAbsolutePath(), null, null, 50000, null),
+          new TaskConfig(testCase.tmpDir.getAbsolutePath(), null, null, 50000, null, false, null, null),
           new TaskActionClientFactory()
           {
             @Override
@@ -308,8 +315,8 @@ public class IngestSegmentFirehoseFactoryTimelineTest
           null, // segment killer
           null, // segment mover
           null, // segment archiver
-          null, // segment announcer
-          null, // new segment server view
+          null, // segment announcer,
+          notifierFactory,
           null, // query runner factory conglomerate corporation unionized collective
           null, // query executor service
           null, // monitor scheduler
@@ -330,7 +337,8 @@ public class IngestSegmentFirehoseFactoryTimelineTest
           INDEX_MERGER,
           INDEX_IO,
           null,
-          null
+          null,
+          INDEX_MERGER_V9
       );
       final Injector injector = Guice.createInjector(
           new Module()

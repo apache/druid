@@ -32,5 +32,7 @@ public class ExtractionCacheHelper
   public static final byte CACHE_TYPE_ID_TIME_FORMAT = 0x5;
   public static final byte CACHE_TYPE_ID_IDENTITY = 0x6;
   public static final byte CACHE_TYPE_ID_LOOKUP = 0x7;
-  public static final byte CACHE_TYPE_ID_CONCAT = 0x8;
+  public static final byte CACHE_TYPE_ID_SUBSTRING = 0x8;
+  public static final byte CACHE_TYPE_ID_CASCADE = 0x9;
+  public static final byte CACHE_TYPE_ID_CONCAT = 0xA;
 }

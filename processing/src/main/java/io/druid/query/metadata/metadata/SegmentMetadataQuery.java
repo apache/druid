@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.query.metadata.metadata;
@@ -48,7 +50,8 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   public enum AnalysisType
   {
     CARDINALITY,
-    SIZE;
+    SIZE,
+    INTERVAL;
 
     @JsonValue
     @Override
@@ -75,7 +78,8 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
 
   public static final EnumSet<AnalysisType> DEFAULT_ANALYSIS_TYPES = EnumSet.of(
       AnalysisType.CARDINALITY,
-      AnalysisType.SIZE
+      AnalysisType.SIZE,
+      AnalysisType.INTERVAL
   );
 
   private final ColumnIncluderator toInclude;
@@ -98,6 +102,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
         dataSource,
         (querySegmentSpec == null) ? new MultipleIntervalSegmentSpec(Arrays.asList(DEFAULT_INTERVAL))
                                    : querySegmentSpec,
+        false,
         context
     );
 
@@ -159,6 +164,11 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   public boolean hasSize()
   {
     return analysisTypes.contains(AnalysisType.SIZE);
+  }
+
+  public boolean hasInterval()
+  {
+    return analysisTypes.contains(AnalysisType.INTERVAL);
   }
 
   public byte[] getAnalysisTypesCacheKey()
@@ -257,6 +267,10 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     if (usingDefaultInterval != that.usingDefaultInterval) {
       return false;
     }
+
+    if (!analysisTypes.equals(that.analysisTypes)) {
+      return false;
+    }
     return !(toInclude != null ? !toInclude.equals(that.toInclude) : that.toInclude != null);
 
   }
@@ -268,6 +282,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     result = 31 * result + (toInclude != null ? toInclude.hashCode() : 0);
     result = 31 * result + (merge ? 1 : 0);
     result = 31 * result + (usingDefaultInterval ? 1 : 0);
+    result = 31 * result + analysisTypes.hashCode();
     return result;
   }
 }

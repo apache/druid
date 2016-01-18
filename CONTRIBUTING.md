@@ -2,18 +2,21 @@
 
 When submitting a pull request (PR), please use the following guidelines:
 
+- Make sure your code respects existing formatting conventions. In general, follow
+  the same coding style as the code that you are modifying. If you are using
+  IntelliJ, you can import our code style settings jar:
+  [intellij_formatting.jar](https://github.com/druid-io/druid/raw/master/intellij_formatting.jar).
+- Do add/update documentation appropriately for the change you are making.
+- If you are introducing a new feature you may want to first submit your idea
+  for feedback to the [mailing list](mailto:druid-development@googlegroups.com).
+  Non-trivial features should include unit tests covering the new functionality.
+- Bugfixes should include a unit test or integration test reproducing the issue.
+- Do not use author tags/information in the code.
+- Always include license header on each java file your create. See [this example](https://github.com/druid-io/druid/blob/master/common/src/main/java/io/druid/metadata/PasswordProvider.java)
 - Try to keep pull requests short and submit separate ones for unrelated
   features, but feel free to combine simple bugfixes/tests into one pull request.
 - Keep the number of commits small and combine commits for related changes.
   Each commit should compile on its own and ideally pass tests.
-- If you are introducing a new feature you may want to first submit your idea
-  for feedback to the [mailing list](mailto:druid-development@googlegroups.com).
-- Bugfixes should include a unit test or integration test reproducing the issue.
-- Non-trivial features should include unit tests covering the new functionality.
-- Make sure your code respects existing formatting conventions. We don't have a
-  formal style guide yet, but use your own judgement. If you are using
-  IntelliJ, you can import our code style settings jar:
-  [intellij_formatting.jar](https://github.com/druid-io/druid/raw/master/intellij_formatting.jar).
 - Keep formatting changes in separate commits to make code reviews easier and
   distinguish them from actual code changes.
 

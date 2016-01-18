@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.tests.indexer;
@@ -140,7 +142,7 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
         this.queryHelper.testQueriesFromString(getRouterURL(), queryStr, 2);
       }
       catch (Exception e) {
-        Throwables.propagate(e);
+        throw Throwables.propagate(e);
       }
 
       // wait for the task to complete
@@ -166,12 +168,10 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
       this.queryHelper.testQueriesFromString(getRouterURL(), queryStr, 2);
     }
     catch (Exception e) {
-      Throwables.propagate(e);
+      throw Throwables.propagate(e);
     }
     finally {
-      String first = DateTimeFormat.forPattern("yyyy-MM-dd'T'00:00:00.000'Z'").print(dtFirst);
-      String last = DateTimeFormat.forPattern("yyyy-MM-dd'T'00:00:00.000'Z'").print(dtFirst.plusDays(1));
-      unloadAndKillData(INDEX_DATASOURCE, first, last);
+      unloadAndKillData(INDEX_DATASOURCE);
     }
   }
 
@@ -191,7 +191,7 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
       isr = new InputStreamReader(ITRealtimeIndexTaskTest.class.getResourceAsStream(EVENT_DATA_FILE));
     }
     catch (Exception e) {
-      Throwables.propagate(e);
+      throw Throwables.propagate(e);
     }
     try {
       reader = new BufferedReader(isr);
@@ -243,7 +243,7 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
       }
     }
     catch (Exception e) {
-      Throwables.propagate(e);
+      throw Throwables.propagate(e);
     }
     finally {
       reader.close();

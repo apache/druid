@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.indexing.overlord;
@@ -28,53 +30,121 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
+import com.metamx.common.Pair;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
+import com.metamx.emitter.service.AlertEvent;
+import com.metamx.emitter.service.ServiceEmitter;
+import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.concurrent.Execs;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.TaskToolboxFactory;
+import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
 import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
-import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.SegmentDescriptor;
-import org.apache.commons.io.FileUtils;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import java.io.File;
 import java.util.Collection;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Runs tasks in a JVM thread using an ExecutorService.
  */
 public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
 {
+  private static final EmittingLogger log = new EmittingLogger(ThreadPoolTaskRunner.class);
+
   private final TaskToolboxFactory toolboxFactory;
+  private final TaskConfig taskConfig;
   private final ListeningExecutorService exec;
   private final Set<ThreadPoolTaskRunnerWorkItem> runningItems = new ConcurrentSkipListSet<>();
-  private final QueryRunnerFactoryConglomerate conglomerate;
-  private static final EmittingLogger log = new EmittingLogger(ThreadPoolTaskRunner.class);
+  private final ServiceEmitter emitter;
 
   @Inject
   public ThreadPoolTaskRunner(
       TaskToolboxFactory toolboxFactory,
-      QueryRunnerFactoryConglomerate conglomerate
+      TaskConfig taskConfig,
+      ServiceEmitter emitter
   )
   {
     this.toolboxFactory = Preconditions.checkNotNull(toolboxFactory, "toolboxFactory");
+    this.taskConfig = taskConfig;
     this.exec = MoreExecutors.listeningDecorator(Execs.singleThreaded("task-runner-%d"));
-    this.conglomerate = conglomerate;
+    this.emitter = Preconditions.checkNotNull(emitter, "emitter");
+  }
+
+  @Override
+  public List<Pair<Task, ListenableFuture<TaskStatus>>> restore()
+  {
+    return ImmutableList.of();
   }
 
   @LifecycleStop
   public void stop()
   {
+    exec.shutdown();
+
+    for (ThreadPoolTaskRunnerWorkItem item : runningItems) {
+      final Task task = item.getTask();
+      final long start = System.currentTimeMillis();
+      final boolean graceful;
+      final long elapsed;
+      boolean error = false;
+
+      if (taskConfig.isRestoreTasksOnRestart() && task.canRestore()) {
+        // Attempt graceful shutdown.
+        graceful = true;
+        log.info("Starting graceful shutdown of task[%s].", task.getId());
+
+        try {
+          task.stopGracefully();
+          final TaskStatus taskStatus = item.getResult().get(
+              new Interval(new DateTime(start), taskConfig.getGracefulShutdownTimeout()).toDurationMillis(),
+              TimeUnit.MILLISECONDS
+          );
+          log.info(
+              "Graceful shutdown of task[%s] finished in %,dms with status[%s].",
+              task.getId(),
+              System.currentTimeMillis() - start,
+              taskStatus.getStatusCode()
+          );
+        }
+        catch (Exception e) {
+          log.makeAlert(e, "Graceful task shutdown failed: %s", task.getDataSource())
+             .addData("taskId", task.getId())
+             .addData("dataSource", task.getDataSource())
+             .emit();
+          log.warn(e, "Graceful shutdown of task[%s] aborted with exception.");
+          error = true;
+        }
+      } else {
+        graceful = false;
+      }
+
+      elapsed = System.currentTimeMillis() - start;
+
+      final ServiceMetricEvent.Builder metricBuilder = ServiceMetricEvent
+          .builder()
+          .setDimension("task", task.getId())
+          .setDimension("dataSource", task.getDataSource())
+          .setDimension("graceful", String.valueOf(graceful))
+          .setDimension("error", String.valueOf(error));
+
+      emitter.emit(metricBuilder.build("task/interrupt/count", 1L));
+      emitter.emit(metricBuilder.build("task/interrupt/elapsed", elapsed));
+    }
+
+    // Ok, now interrupt everything.
     exec.shutdownNow();
   }
 
@@ -210,7 +280,6 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
     public TaskStatus call()
     {
       final long startTime = System.currentTimeMillis();
-      final File taskDir = toolbox.getTaskWorkDir();
 
       TaskStatus status;
 
@@ -229,19 +298,6 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
       catch (Throwable t) {
         log.error(t, "Uncaught Throwable while running task[%s]", task);
         throw Throwables.propagate(t);
-      }
-
-      try {
-        if (taskDir.exists()) {
-          log.info("Removing task directory: %s", taskDir);
-          FileUtils.deleteDirectory(taskDir);
-        }
-      }
-      catch (Exception e) {
-        log.makeAlert(e, "Failed to delete task directory")
-           .addData("taskDir", taskDir.toString())
-           .addData("task", task.getId())
-           .emit();
       }
 
       try {

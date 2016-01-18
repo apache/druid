@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.query.search;
@@ -27,7 +29,9 @@ import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 
 /**
  */
@@ -218,47 +222,55 @@ public class SearchBinaryFnTest
   {
     Result<SearchResultValue> r1 = new Result<SearchResultValue>(
         currTime,
-        new SearchResultValue(
-            ImmutableList.<SearchHit>of(
-                new SearchHit(
-                    "blah",
-                    "thisislong"
-                )
-            )
-        )
+        new SearchResultValue(toHits("blah:thisislong"))
     );
 
     Result<SearchResultValue> r2 = new Result<SearchResultValue>(
         currTime,
-        new SearchResultValue(
-            ImmutableList.<SearchHit>of(
-                new SearchHit(
-                    "blah",
-                    "short"
-                )
-            )
-        )
+        new SearchResultValue(toHits("blah:short"))
     );
 
     Result<SearchResultValue> expected = new Result<SearchResultValue>(
         currTime,
-        new SearchResultValue(
-            ImmutableList.<SearchHit>of(
-                new SearchHit(
-                    "blah",
-                    "short"
-                ),
-                new SearchHit(
-                    "blah",
-                    "thisislong"
-                )
-            )
-        )
+        new SearchResultValue(toHits("blah:short", "blah:thisislong"))
     );
 
     Result<SearchResultValue> actual = new SearchBinaryFn(new StrlenSearchSortSpec(), QueryGranularity.ALL, Integer.MAX_VALUE).apply(r1, r2);
     Assert.assertEquals(expected.getTimestamp(), actual.getTimestamp());
     assertSearchMergeResult(expected.getValue(), actual.getValue());
+  }
+
+  @Test
+  public void testStrlenMerge2()
+  {
+    Result<SearchResultValue> r1 = new Result<SearchResultValue>(
+        currTime,
+        new SearchResultValue(toHits("blah:thisislong", "blah:short", "blah2:thisislong"))
+    );
+
+    Result<SearchResultValue> r2 = new Result<SearchResultValue>(
+        currTime,
+        new SearchResultValue(toHits("blah:short", "blah2:thisislong"))
+    );
+
+    Result<SearchResultValue> expected = new Result<SearchResultValue>(
+        currTime,
+        new SearchResultValue(toHits("blah:short", "blah:thisislong", "blah2:thisislong"))
+    );
+
+    Result<SearchResultValue> actual = new SearchBinaryFn(new StrlenSearchSortSpec(), QueryGranularity.ALL, Integer.MAX_VALUE).apply(r1, r2);
+    Assert.assertEquals(expected.getTimestamp(), actual.getTimestamp());
+    System.out.println("[SearchBinaryFnTest/testStrlenMerge2] " + actual.getValue());
+    assertSearchMergeResult(expected.getValue(), actual.getValue());
+  }
+
+  private List<SearchHit> toHits(String... hits) {
+    List<SearchHit> result = new ArrayList<>();
+    for (String hit : hits) {
+      int index = hit.indexOf(':');
+      result.add(new SearchHit(hit.substring(0, index), hit.substring(index + 1)));
+    }
+    return result;
   }
 
   @Test

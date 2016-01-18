@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.query.topn;
@@ -26,13 +28,12 @@ import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
-import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.guava.nary.BinaryFn;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import io.druid.collections.OrderedMergeSequence;
 import io.druid.granularity.QueryGranularity;
+import io.druid.query.BaseQuery;
 import io.druid.query.BySegmentResultValue;
 import io.druid.query.CacheStrategy;
 import io.druid.query.DruidMetrics;
@@ -108,17 +109,17 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   }
 
   @Override
-  public QueryRunner<Result<TopNResultValue>> mergeResults(QueryRunner<Result<TopNResultValue>> runner)
+  public QueryRunner<Result<TopNResultValue>> mergeResults(
+      QueryRunner<Result<TopNResultValue>> runner
+  )
   {
     return new ResultMergeQueryRunner<Result<TopNResultValue>>(runner)
     {
       @Override
       protected Ordering<Result<TopNResultValue>> makeOrdering(Query<Result<TopNResultValue>> query)
       {
-        return Ordering.from(
-            new ResultGranularTimestampComparator<TopNResultValue>(
-                ((TopNQuery) query).getGranularity()
-            )
+        return ResultGranularTimestampComparator.create(
+            ((TopNQuery) query).getGranularity(), query.isDescending()
         );
       }
 
@@ -139,18 +140,6 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
         );
       }
     };
-  }
-
-  @Override
-  public Sequence<Result<TopNResultValue>> mergeSequences(Sequence<Sequence<Result<TopNResultValue>>> seqOfSequences)
-  {
-    return new OrderedMergeSequence<>(getOrdering(), seqOfSequences);
-  }
-
-  @Override
-  public Sequence<Result<TopNResultValue>> mergeSequencesUnordered(Sequence<Sequence<Result<TopNResultValue>>> seqOfSequences)
-  {
-    return new MergeSequence<>(getOrdering(), seqOfSequences);
   }
 
   @Override
@@ -415,12 +404,6 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
           }
         };
       }
-
-      @Override
-      public Sequence<Result<TopNResultValue>> mergeSequences(Sequence<Sequence<Result<TopNResultValue>>> seqOfSequences)
-      {
-        return new MergeSequence<>(getOrdering(), seqOfSequences);
-      }
     };
   }
 
@@ -438,11 +421,15 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
             if (!(query instanceof TopNQuery)) {
               return runner.run(query, responseContext);
             } else {
-              final TopNQuery topNQuery = (TopNQuery) query;
-              if (TopNQueryEngine.canApplyExtractionInPost(topNQuery)) {
-                final DimensionSpec dimensionSpec = topNQuery.getDimensionSpec();
+              TopNQuery topNQuery = (TopNQuery) query;
+              if (topNQuery.getDimensionsFilter() != null) {
+                topNQuery = topNQuery.withDimFilter(topNQuery.getDimensionsFilter().optimize());
+              }
+              final TopNQuery delegateTopNQuery = topNQuery;
+              if (TopNQueryEngine.canApplyExtractionInPost(delegateTopNQuery)) {
+                final DimensionSpec dimensionSpec = delegateTopNQuery.getDimensionSpec();
                 return runner.run(
-                    topNQuery.withDimensionSpec(
+                    delegateTopNQuery.withDimensionSpec(
                         new DefaultDimensionSpec(
                             dimensionSpec.getDimension(),
                             dimensionSpec.getOutputName()
@@ -450,7 +437,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                     ), responseContext
                 );
               } else {
-                return runner.run(query, responseContext);
+                return runner.run(delegateTopNQuery, responseContext);
               }
             }
           }
@@ -464,7 +451,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   {
     final ThresholdAdjustingQueryRunner thresholdRunner = new ThresholdAdjustingQueryRunner(
         runner,
-        config.getMinTopNThreshold()
+        config
     );
     return new QueryRunner<Result<TopNResultValue>>()
     {
@@ -497,7 +484,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                               {
                                 @Override
                                 public DimensionAndMetricValueExtractor apply(
-                                   DimensionAndMetricValueExtractor input
+                                    DimensionAndMetricValueExtractor input
                                 )
                                 {
                                   String dimOutputName = topNQuery.getDimensionSpec().getOutputName();
@@ -521,23 +508,18 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
     };
   }
 
-  public Ordering<Result<TopNResultValue>> getOrdering()
-  {
-    return Ordering.natural();
-  }
-
-  private static class ThresholdAdjustingQueryRunner implements QueryRunner<Result<TopNResultValue>>
+  static class ThresholdAdjustingQueryRunner implements QueryRunner<Result<TopNResultValue>>
   {
     private final QueryRunner<Result<TopNResultValue>> runner;
-    private final int minTopNThreshold;
+    private final TopNQueryConfig config;
 
     public ThresholdAdjustingQueryRunner(
         QueryRunner<Result<TopNResultValue>> runner,
-        int minTopNThreshold
+        TopNQueryConfig config
     )
     {
       this.runner = runner;
-      this.minTopNThreshold = minTopNThreshold;
+      this.config = config;
     }
 
     @Override
@@ -551,11 +533,12 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       }
 
       final TopNQuery query = (TopNQuery) input;
+      final int minTopNThreshold = query.getContextValue("minTopNThreshold", config.getMinTopNThreshold());
       if (query.getThreshold() > minTopNThreshold) {
         return runner.run(query, responseContext);
       }
 
-      final boolean isBySegment = query.getContextBySegment(false);
+      final boolean isBySegment = BaseQuery.getContextBySegment(query, false);
 
       return Sequences.map(
           runner.run(query.withThreshold(minTopNThreshold), responseContext),

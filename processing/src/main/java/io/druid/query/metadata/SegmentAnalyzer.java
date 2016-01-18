@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.query.metadata;
@@ -57,7 +59,10 @@ public class SegmentAnalyzer
    */
   private static final int NUM_BYTES_IN_TEXT_FLOAT = 8;
 
-  public Map<String, ColumnAnalysis> analyze(QueryableIndex index, EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes)
+  public Map<String, ColumnAnalysis> analyze(
+      QueryableIndex index,
+      EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes
+  )
   {
     Preconditions.checkNotNull(index, "Index cannot be null");
 
@@ -98,7 +103,10 @@ public class SegmentAnalyzer
     return columns;
   }
 
-  public Map<String, ColumnAnalysis> analyze(StorageAdapter adapter, EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes)
+  public Map<String, ColumnAnalysis> analyze(
+      StorageAdapter adapter,
+      EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes
+  )
   {
     Preconditions.checkNotNull(adapter, "Adapter cannot be null");
     Map<String, ColumnAnalysis> columns = Maps.newTreeMap();
@@ -172,7 +180,11 @@ public class SegmentAnalyzer
     return lengthBasedAnalysis(column, NUM_BYTES_IN_TEXT_FLOAT, analysisTypes);
   }
 
-  private ColumnAnalysis lengthBasedAnalysis(Column column, final int numBytes, EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes)
+  private ColumnAnalysis lengthBasedAnalysis(
+      Column column,
+      final int numBytes,
+      EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes
+  )
   {
     final ColumnCapabilities capabilities = column.getCapabilities();
     if (capabilities.hasMultipleValues()) {
@@ -271,12 +283,13 @@ public class SegmentAnalyzer
     );
   }
 
-  private boolean analysisHasSize(EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes) {
+  private boolean analysisHasSize(EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes)
+  {
     return analysisTypes.contains(SegmentMetadataQuery.AnalysisType.SIZE);
   }
 
-  private boolean analysisHasCardinality(EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes) {
+  private boolean analysisHasCardinality(EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes)
+  {
     return analysisTypes.contains(SegmentMetadataQuery.AnalysisType.CARDINALITY);
   }
-
 }

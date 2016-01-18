@@ -1,18 +1,18 @@
 /*
  * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements.  See the NOTICE file
+ * or more contributor license agreements. See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership.  Metamarkets licenses this file
+ * regarding copyright ownership. Metamarkets licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * with the License. You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
+ * KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -43,6 +43,7 @@ import io.druid.query.extraction.namespace.ExtractionNamespaceFunctionFactory;
 
 import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -85,11 +86,13 @@ public abstract class NamespaceExtractionCacheManager
     final String name;
     final AtomicBoolean enabled = new AtomicBoolean(false);
     final AtomicReference<Function<String, String>> fn = new AtomicReference<>(null);
+    final AtomicReference<Function<String, List<String>>> reverseFn = new AtomicReference<>(null);
   }
 
   private static final Logger log = new Logger(NamespaceExtractionCacheManager.class);
   private final ListeningScheduledExecutorService listeningScheduledExecutorService;
   protected final ConcurrentMap<String, Function<String, String>> fnCache;
+  protected final ConcurrentMap<String, Function<String, List<String>>> reverseFnCache;
   protected final ConcurrentMap<String, NamespaceImplData> implData = new ConcurrentHashMap<>();
   protected final AtomicLong tasksStarted = new AtomicLong(0);
   protected final AtomicLong dataSize = new AtomicLong(0);
@@ -100,6 +103,7 @@ public abstract class NamespaceExtractionCacheManager
   public NamespaceExtractionCacheManager(
       Lifecycle lifecycle,
       final ConcurrentMap<String, Function<String, String>> fnCache,
+      final ConcurrentMap<String, Function<String, List<String>>> reverseFnCache,
       final ServiceEmitter serviceEmitter,
       final Map<Class<? extends ExtractionNamespace>, ExtractionNamespaceFunctionFactory<?>> namespaceFunctionFactoryMap
   )
@@ -117,6 +121,7 @@ public abstract class NamespaceExtractionCacheManager
     ExecutorServices.manageLifecycle(lifecycle, listeningScheduledExecutorService);
     this.serviceEmitter = serviceEmitter;
     this.fnCache = fnCache;
+    this.reverseFnCache = reverseFnCache;
     this.namespaceFunctionFactoryMap = namespaceFunctionFactoryMap;
     listeningScheduledExecutorService.scheduleAtFixedRate(
         new Runnable()
@@ -177,12 +182,18 @@ public abstract class NamespaceExtractionCacheManager
             return;
           }
           swapAndClearCache(nsName, cacheId);
-          final Function<String, String> fn = factory.build(namespace, getCacheMap(nsName));
+          final Function<String, String> fn = factory.buildFn(namespace, getCacheMap(nsName));
+          final Function<String, List<String>> reverseFn = factory.buildReverseFn(namespace, getCacheMap(nsName));
           final Function<String, String> priorFn = fnCache.put(nsName, fn);
+          final Function<String, List<String>> priorReverseFn = reverseFnCache.put(nsName, reverseFn);
           if (priorFn != null && priorFn != namespaceDatum.fn.get()) {
             log.warn("Replaced prior function for namespace [%s]", nsName);
           }
+          if (priorReverseFn != null && priorReverseFn != namespaceDatum.reverseFn.get()) {
+            log.warn("Replaced prior reverse function for namespace [%s]", nsName);
+          }
           namespaceDatum.fn.set(fn);
+          namespaceDatum.reverseFn.set(reverseFn);
         }
       }
     };
@@ -325,150 +336,75 @@ public abstract class NamespaceExtractionCacheManager
   {
     final String namespaceName = namespace.getNamespace();
     log.debug("Trying to update namespace [%s]", namespaceName);
-    final AtomicReference<NamespaceImplData> implDatum = new AtomicReference<>(implData.get(namespaceName));
-    if (implDatum.get() != null) {
-      synchronized (implDatum.get().enabled) {
-        if (implDatum.get().enabled.get()) {
+    final NamespaceImplData implDatum = implData.get(namespaceName);
+    if (implDatum != null) {
+      synchronized (implDatum.enabled) {
+        if (implDatum.enabled.get()) {
           // We also check at the end of the function, but fail fast here
           throw new IAE("Namespace [%s] already exists! Leaving prior running", namespace.toString());
         }
       }
     }
+    final long updateMs = namespace.getPollMs();
     final CountDownLatch startLatch = new CountDownLatch(1);
+
+    final Runnable command = new Runnable()
+    {
+      @Override
+      public void run()
+      {
+        try {
+          startLatch.await(); // wait for "election" to leadership or cancellation
+          if (!Thread.currentThread().isInterrupted()) {
+            final Map<String, String> cache = getCacheMap(cacheId);
+            final String preVersion = lastVersion.get(namespaceName);
+            final Callable<String> runnable = factory.getCachePopulator(namespace, preVersion, cache);
+
+            tasksStarted.incrementAndGet();
+            final String newVersion = runnable.call();
+            if (preVersion != null && preVersion.equals(newVersion)) {
+              throw new CancellationException(String.format("Version `%s` already exists", preVersion));
+            }
+            if (newVersion != null) {
+              lastVersion.put(namespaceName, newVersion);
+            }
+            postRunnable.run();
+            log.debug("Namespace [%s] successfully updated", namespaceName);
+          }
+        }
+        catch (Throwable t) {
+          delete(cacheId);
+          if (t instanceof CancellationException) {
+            log.debug(t, "Namespace [%s] cancelled", namespaceName);
+          } else {
+            log.error(t, "Failed update namespace [%s]", namespace);
+          }
+          if(Thread.currentThread().isInterrupted()) {
+            throw Throwables.propagate(t);
+          }
+        }
+      }
+    };
+
+    ListenableFuture<?> future;
     try {
-      ListenableFuture<?> future = null;
-      try {
-        if (namespace.getPollMs() > 0) {
-          final long updateMs = namespace.getPollMs();
-          future = listeningScheduledExecutorService.scheduleAtFixedRate(
-              new Runnable()
-              {
-                @Override
-                public void run()
-                {
-                  try {
-                    startLatch.await(); // wait for "election" to leadership or cancellation
-                    if (!Thread.interrupted()) {
-                      final Map<String, String> cache = getCacheMap(cacheId);
-                      final String preVersion = lastVersion.get(namespaceName);
-                      final Callable<String> runnable = factory.getCachePopulator(namespace, preVersion, cache);
-                      tasksStarted.incrementAndGet();
-                      final String newVersion = runnable.call();
-                      if (newVersion != null) {
-                        lastVersion.put(namespaceName, newVersion);
-                      }
-                      if (preVersion == null || !preVersion.equals(lastVersion.get(namespaceName))) {
-                        postRunnable.run();
-                      } else {
-                        delete(cacheId);
-                      }
-                    } else {
-                      Thread.currentThread().interrupt();
-                    }
-                  }
-                  catch (Exception e) {
-                    if (e instanceof CancellationException) {
-                      log.debug("Thread for namespace[%s] cancelled", namespaceName);
-                    } else {
-                      log.error(e, "Error in listener for namespace [%s]", namespaceName);
-                    }
-                    // Don't leave stale cache on error
-                    delete(cacheId);
-                    throw Throwables.propagate(e);
-                  }
-                }
-              },
-              0,
-              updateMs,
-              TimeUnit.MILLISECONDS
-          );
-        } else {
-          final Map<String, String> cache = getCacheMap(cacheId);
-          final Callable<String> runnable = factory.getCachePopulator(namespace, null, cache);
-          final ListenableFuture<String> futureWithString = listeningScheduledExecutorService.schedule(
-              new Callable<String>()
-              {
-                @Override
-                public String call() throws Exception
-                {
-                  startLatch.await(); // wait for "election" to leadership or cancellation
-                  tasksStarted.incrementAndGet();
-                  return runnable.call();
-                }
-              },
-              0,
-              TimeUnit.MILLISECONDS
-          );
-          Futures.addCallback(
-              futureWithString, new FutureCallback<String>()
-              {
-                @Override
-                public void onSuccess(String result)
-                {
-                  try {
-                    postRunnable.run();
-                  }
-                  catch (RuntimeException e) {
-                    delete(cacheId);
-                    throw e;
-                  }
-                  // Must have been set in order to make it here
-                  if (implDatum.get().enabled.get()) {
-                    lastVersion.put(namespaceName, result);
-                  }
-                }
-
-                @Override
-                public void onFailure(Throwable t)
-                {
-                  // NOOP
-                }
-              }
-          );
-          future = futureWithString;
-        }
+      if (updateMs > 0) {
+        future = listeningScheduledExecutorService.scheduleAtFixedRate(command, 0, updateMs, TimeUnit.MILLISECONDS);
+      } else {
+        future = listeningScheduledExecutorService.schedule(command, 0, TimeUnit.MILLISECONDS);
       }
-      catch (Exception e) {
-        if (future != null) {
-          if (!future.isDone() && !future.cancel(true)) {
-            log.warn("Could not cancel future for [%s]", namespaceName);
-          }
-        }
-        throw Throwables.propagate(e);
-      }
-      Futures.addCallback(
-          future, new FutureCallback<Object>()
-          {
-            @Override
-            public void onSuccess(@Nullable Object result)
-            {
-              log.debug("Namespace [%s] successfully updated", namespaceName);
-            }
 
-            @Override
-            public void onFailure(Throwable t)
-            {
-              delete(cacheId);
-              if (t instanceof CancellationException) {
-                log.debug(t, "Namespace [%s] cancelled", namespaceName);
-              } else {
-                log.error(t, "Failed update namespace [%s]", namespace);
-              }
-            }
-          }
-      );
       final NamespaceImplData me = new NamespaceImplData(future, namespace, namespaceName);
       final NamespaceImplData other = implData.putIfAbsent(namespaceName, me);
       if (other != null) {
         if (!future.isDone() && !future.cancel(true)) {
-          log.warn("Unable to cancle future for namespace[%s] on race loss", namespaceName);
+          log.warn("Unable to cancel future for namespace[%s] on race loss", namespaceName);
         }
         throw new IAE("Namespace [%s] already exists! Leaving prior running", namespace);
       } else {
         if (!me.enabled.compareAndSet(false, true)) {
           log.wtf("How did someone enable this before ME?");
         }
-        implDatum.set(me);
         log.debug("I own namespace [%s]", namespaceName);
         return future;
       }

@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.indexing.common.task;
@@ -23,12 +25,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
 import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.parsers.ParseException;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
+import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
@@ -36,18 +40,23 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockReleaseAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.query.DruidMetrics;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QueryToolChest;
+import io.druid.segment.IndexMerger;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.RealtimeMetricsMonitor;
 import io.druid.segment.realtime.SegmentPublisher;
+import io.druid.segment.realtime.firehose.ClippedFirehoseFactory;
+import io.druid.segment.realtime.firehose.EventReceiverFirehoseFactory;
+import io.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 import io.druid.segment.realtime.plumber.Committers;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.PlumberSchool;
@@ -62,6 +71,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
 
 public class RealtimeIndexTask extends AbstractTask
 {
@@ -103,6 +113,18 @@ public class RealtimeIndexTask extends AbstractTask
 
   @JsonIgnore
   private volatile Plumber plumber = null;
+
+  @JsonIgnore
+  private volatile Firehose firehose = null;
+
+  @JsonIgnore
+  private volatile boolean gracefullyStopped = false;
+
+  @JsonIgnore
+  private volatile boolean finishingJob = false;
+
+  @JsonIgnore
+  private volatile Thread runThread = null;
 
   @JsonIgnore
   private volatile QueryRunnerFactoryConglomerate queryRunnerFactoryConglomerate = null;
@@ -159,14 +181,10 @@ public class RealtimeIndexTask extends AbstractTask
   @Override
   public TaskStatus run(final TaskToolbox toolbox) throws Exception
   {
+    runThread = Thread.currentThread();
+
     if (this.plumber != null) {
       throw new IllegalStateException("WTF?!? run with non-null plumber??!");
-    }
-
-    // Shed any locks we might have (e.g. if we were uncleanly killed and restarted) since we'll reacquire
-    // them if we actually need them
-    for (final TaskLock taskLock : getTaskLocks(toolbox)) {
-      toolbox.getTaskActionClient().submit(new LockReleaseAction(taskLock.getInterval()));
     }
 
     boolean normalExit = true;
@@ -261,9 +279,17 @@ public class RealtimeIndexTask extends AbstractTask
         realtimeIOConfig,
         tuningConfig
     );
-    final RealtimeMetricsMonitor metricsMonitor = new RealtimeMetricsMonitor(ImmutableList.of(fireDepartment));
+    final RealtimeMetricsMonitor metricsMonitor = new RealtimeMetricsMonitor(
+        ImmutableList.of(fireDepartment),
+        ImmutableMap.of(
+            DruidMetrics.TASK_ID, new String[]{getId()}
+        )
+    );
     this.queryRunnerFactoryConglomerate = toolbox.getQueryRunnerFactoryConglomerate();
 
+    IndexMerger indexMerger = spec.getTuningConfig().getBuildV9Directly()
+                         ? toolbox.getIndexMergerV9()
+                         : toolbox.getIndexMerger();
     // NOTE: This pusher selects path based purely on global configuration and the DataSegment, which means
     // NOTE: that redundant realtime tasks will upload to the same location. This can cause index.zip and
     // NOTE: descriptor.json to mismatch, or it can cause historical nodes to load different instances of the
@@ -274,9 +300,9 @@ public class RealtimeIndexTask extends AbstractTask
         toolbox.getSegmentPusher(),
         lockingSegmentAnnouncer,
         segmentPublisher,
-        toolbox.getNewSegmentServerView(),
+        toolbox.getSegmentHandoffNotifierFactory(),
         toolbox.getQueryExecutorService(),
-        toolbox.getIndexMerger(),
+        indexMerger,
         toolbox.getIndexIO(),
         toolbox.getCache(),
         toolbox.getCacheConfig(),
@@ -285,8 +311,6 @@ public class RealtimeIndexTask extends AbstractTask
 
     this.plumber = plumberSchool.findPlumber(dataSchema, tuningConfig, fireDepartment.getMetrics());
 
-    // Delay firehose connection to avoid claiming input resources while the plumber is starting up.
-    Firehose firehose = null;
     Supplier<Committer> committerSupplier = null;
 
     try {
@@ -295,12 +319,14 @@ public class RealtimeIndexTask extends AbstractTask
       // Set up metrics emission
       toolbox.getMonitorScheduler().addMonitor(metricsMonitor);
 
-      // Set up firehose
-      firehose = spec.getIOConfig().getFirehoseFactory().connect(spec.getDataSchema().getParser());
+      // Delay firehose connection to avoid claiming input resources while the plumber is starting up.
+      final FirehoseFactory firehoseFactory = spec.getIOConfig().getFirehoseFactory();
+      final boolean firehoseDrainableByClosing = isFirehoseDrainableByClosing(firehoseFactory);
+      firehose = firehoseFactory.connect(spec.getDataSchema().getParser());
       committerSupplier = Committers.supplierFromFirehose(firehose);
 
       // Time to read data!
-      while (firehose.hasMore()) {
+      while ((!gracefullyStopped || firehoseDrainableByClosing) && firehose.hasMore()) {
         final InputRow inputRow;
 
         try {
@@ -337,8 +363,54 @@ public class RealtimeIndexTask extends AbstractTask
     finally {
       if (normalExit) {
         try {
-          plumber.persist(committerSupplier.get());
-          plumber.finishJob();
+          // Always want to persist.
+          log.info("Persisting remaining data.");
+
+          final Committer committer = committerSupplier.get();
+          final CountDownLatch persistLatch = new CountDownLatch(1);
+          plumber.persist(
+              new Committer()
+              {
+                @Override
+                public Object getMetadata()
+                {
+                  return committer.getMetadata();
+                }
+
+                @Override
+                public void run()
+                {
+                  try {
+                    committer.run();
+                  }
+                  finally {
+                    persistLatch.countDown();
+                  }
+                }
+              }
+          );
+          persistLatch.await();
+
+          if (gracefullyStopped) {
+            log.info("Gracefully stopping.");
+          } else {
+            log.info("Finishing the job.");
+            synchronized (this) {
+              if (gracefullyStopped) {
+                // Someone called stopGracefully after we checked the flag. That's okay, just stop now.
+                log.info("Gracefully stopping.");
+              } else {
+                finishingJob = true;
+              }
+            }
+
+            if (finishingJob) {
+              plumber.finishJob();
+            }
+          }
+        }
+        catch (InterruptedException e) {
+          log.debug(e, "Interrupted while finishing the job");
         }
         catch (Exception e) {
           log.makeAlert(e, "Failed to finish realtime task").emit();
@@ -352,13 +424,69 @@ public class RealtimeIndexTask extends AbstractTask
       }
     }
 
+    log.info("Job done!");
     return TaskStatus.success(getId());
+  }
+
+  @Override
+  public boolean canRestore()
+  {
+    return true;
+  }
+
+  @Override
+  public void stopGracefully()
+  {
+    try {
+      synchronized (this) {
+        if (!gracefullyStopped) {
+          gracefullyStopped = true;
+          if (finishingJob) {
+            log.info("stopGracefully: Interrupting finishJob.");
+            runThread.interrupt();
+          } else if (isFirehoseDrainableByClosing(spec.getIOConfig().getFirehoseFactory())) {
+            log.info("stopGracefully: Draining firehose.");
+            firehose.close();
+          } else {
+            log.info("stopGracefully: Cannot drain firehose by closing, interrupting run thread.");
+            runThread.interrupt();
+          }
+        }
+      }
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  /**
+   * Public for tests.
+   */
+  @JsonIgnore
+  public Firehose getFirehose()
+  {
+    return firehose;
   }
 
   @JsonProperty("spec")
   public FireDepartment getRealtimeIngestionSchema()
   {
     return spec;
+  }
+
+  /**
+   * Is a firehose from this factory drainable by closing it? If so, we should drain on stopGracefully rather than
+   * abruptly stopping.
+   * <p>
+   * This is a hack to get around the fact that the Firehose and FirehoseFactory interfaces do not help us do this.
+   */
+  private static boolean isFirehoseDrainableByClosing(FirehoseFactory firehoseFactory)
+  {
+    return firehoseFactory instanceof EventReceiverFirehoseFactory
+           || (firehoseFactory instanceof TimedShutoffFirehoseFactory
+               && isFirehoseDrainableByClosing(((TimedShutoffFirehoseFactory) firehoseFactory).getDelegateFactory()))
+           || (firehoseFactory instanceof ClippedFirehoseFactory
+               && isFirehoseDrainableByClosing(((ClippedFirehoseFactory) firehoseFactory).getDelegate()));
   }
 
   public static class TaskActionSegmentPublisher implements SegmentPublisher

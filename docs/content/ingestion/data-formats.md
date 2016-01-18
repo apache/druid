@@ -4,11 +4,12 @@ layout: doc_page
 Data Formats for Ingestion
 ==========================
 
-Druid can ingest denormalized data in JSON, CSV, or a custom delimited form such as TSV. While most examples in the documentation use data in JSON format, it is not difficult to configure Druid to ingest CSV or other delimited data.
-We also welcome any contributions to new formats.
+Druid can ingest denormalized data in JSON, CSV, or a delimited form such as TSV, or any custom format. While most examples in the documentation use data in JSON format, it is not difficult to configure Druid to ingest any other delimited data.
+We welcome any contributions to new formats.
 
 ## Formatting the Data
-The following are three samples of the data used in the [Wikipedia example](../tutorials/tutorial-loading-streaming-data.html).
+
+The following are some samples of the data used in the [Wikipedia example](../tutorials/tutorial-loading-streaming-data.html).
 
 _JSON_
 
@@ -42,6 +43,11 @@ _TSV (Delimited)_
 
 Note that the CSV and TSV data do not contain column heads. This becomes important when you specify the data for ingesting.
 
+## Custom Formats
+
+Druid supports custom data formats and can use the `Regex` parser or the `JavaScript` parsers to parse these formats. Please note that using any of these parsers for 
+parsing data will not be as efficient as writing a native Java parser or using an external stream processor. We welcome contributions of new Parsers.
+
 ## Configuration
 
 All forms of Druid ingestion require some form of schema object. The format of the data to be ingested is specified using the`parseSpec` entry in your `dataSchema`.
@@ -61,6 +67,7 @@ All forms of Druid ingestion require some form of schema object. The format of t
 ```
 
 ### CSV
+
 Since the CSV data cannot contain the column names (no header is allowed), these must be added before that data can be processed:
 
 ```json
@@ -76,7 +83,10 @@ Since the CSV data cannot contain the column names (no header is allowed), these
   }
 ```
 
+The `columns` field must match the columns of your input data in the same order.
+
 ### TSV
+
 ```json
   "parseSpec":{
     "format" : "tsv",
@@ -90,7 +100,50 @@ Since the CSV data cannot contain the column names (no header is allowed), these
     }
   }
 ```
+
+The `columns` field must match the columns of your input data in the same order. 
+
 Be sure to change the `delimiter` to the appropriate delimiter for your data. Like CSV, you must specify the columns and which subset of the columns you want indexed.
 
+### Regex
+
+```json
+  "parseSpec":{
+    "format" : "regex",
+    "timestampSpec" : {
+      "column" : "timestamp"
+    },        
+    "dimensionsSpec" : {
+      "dimensions" : [<your_list_of_dimensions>]
+    },
+    "columns" : [<your_columns_here>],
+    "pattern" : <regex pattern for partitioning data>
+  }
+```
+
+The `columns` field must match the columns of your regex matching groups in the same order. If columns are not provided, default 
+columns names ("column_1", "column2", ... "column_n") will be assigned. Ensure that your column names include all your dimensions. 
+
+### JavaScript
+
+```json
+  "parseSpec":{
+    "format" : "javascript",
+    "timestampSpec" : {
+      "column" : "timestamp"
+    },        
+    "dimensionsSpec" : {
+      "dimensions" : ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"]
+    },
+    "function" : "function(str) { var parts = str.split(\"-\"); return { one: parts[0], two: parts[1] } }"
+  }
+```
+
+Please note with the JavaScript parser that data must be fully parsed and returned as a `{key:value}` format in the JS logic. 
+This means any flattening or parsing multi-dimensional values must be done here.
+
 ### Multi-value dimensions
+
 Dimensions can have multiple values for TSV and CSV data. To specify the delimiter for a multi-value dimension, set the `listDelimiter` in the `parseSpec`.
+
+JSON data can contain multi-value dimensions as well. The multiple values for a dimension must be formatted as a JSON array in the ingested data. No additional `parseSpec` configuration is needed.

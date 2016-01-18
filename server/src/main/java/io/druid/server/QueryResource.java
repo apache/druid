@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.server;
@@ -23,6 +25,7 @@ import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.MapMaker;
+import com.google.common.io.CountingOutputStream;
 import com.google.inject.Inject;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
@@ -182,14 +185,21 @@ public class QueryResource
                   public void write(OutputStream outputStream) throws IOException, WebApplicationException
                   {
                     // json serializer will always close the yielder
-                    jsonWriter.writeValue(outputStream, yielder);
-                    outputStream.flush(); // Some types of OutputStream suppress flush errors in the .close() method.
-                    outputStream.close();
+                    CountingOutputStream os = new CountingOutputStream(outputStream);
+                    jsonWriter.writeValue(os, yielder);
+
+                    os.flush(); // Some types of OutputStream suppress flush errors in the .close() method.
+                    os.close();
 
                     final long queryTime = System.currentTimeMillis() - start;
                     emitter.emit(
                         DruidMetrics.makeQueryTimeMetric(jsonMapper, theQuery, req.getRemoteAddr())
-                                       .build("query/time", queryTime)
+                                    .setDimension("success", "true")
+                                    .build("query/time", queryTime)
+                    );
+                    emitter.emit(
+                        DruidMetrics.makeQueryTimeMetric(jsonMapper, theQuery, req.getRemoteAddr())
+                                    .build("query/bytes", os.getCount())
                     );
 
                     requestLogger.log(
@@ -200,6 +210,7 @@ public class QueryResource
                             new QueryStats(
                                 ImmutableMap.<String, Object>of(
                                     "query/time", queryTime,
+                                    "query/bytes", os.getCount(),
                                     "success", true
                                 )
                             )
@@ -226,6 +237,12 @@ public class QueryResource
     catch (QueryInterruptedException e) {
       try {
         log.info("%s [%s]", e.getMessage(), queryId);
+        final long queryTime = System.currentTimeMillis() - start;
+        emitter.emit(
+            DruidMetrics.makeQueryTimeMetric(jsonMapper, query, req.getRemoteAddr())
+                        .setDimension("success", "false")
+                        .build("query/time", queryTime)
+        );
         requestLogger.log(
             new RequestLogLine(
                 new DateTime(),
@@ -233,6 +250,8 @@ public class QueryResource
                 query,
                 new QueryStats(
                     ImmutableMap.<String, Object>of(
+                        "query/time",
+                        queryTime,
                         "success",
                         false,
                         "interrupted",
@@ -265,12 +284,25 @@ public class QueryResource
       log.warn(e, "Exception occurred on request [%s]", queryString);
 
       try {
+        final long queryTime = System.currentTimeMillis() - start;
+        emitter.emit(
+            DruidMetrics.makeQueryTimeMetric(jsonMapper, query, req.getRemoteAddr())
+                        .setDimension("success", "false")
+                        .build("query/time", queryTime)
+        );
         requestLogger.log(
             new RequestLogLine(
                 new DateTime(),
                 req.getRemoteAddr(),
                 query,
-                new QueryStats(ImmutableMap.<String, Object>of("success", false, "exception", e.toString()))
+                new QueryStats(ImmutableMap.<String, Object>of(
+                    "query/time",
+                    queryTime,
+                    "success",
+                    false,
+                    "exception",
+                    e.toString()
+                ))
             )
         );
       }

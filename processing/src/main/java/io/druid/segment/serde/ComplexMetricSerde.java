@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.segment.serde;
@@ -34,14 +36,10 @@ public abstract class ComplexMetricSerde
    * Deserializes a ByteBuffer and adds it to the ColumnBuilder.  This method allows for the ComplexMetricSerde
    * to implement it's own versioning scheme to allow for changes of binary format in a forward-compatible manner.
    *
-   * The method is also in charge of returning a ColumnPartSerde that knows how to serialize out the object it
-   * added to the builder.
-   *
    * @param buffer the buffer to deserialize
    * @param builder ColumnBuilder to add the column to
-   * @return a ColumnPartSerde that can serialize out the object that was read from the buffer to the builder
    */
-  public abstract ColumnPartSerde deserializeColumn(ByteBuffer buffer, ColumnBuilder builder);
+  public abstract void deserializeColumn(ByteBuffer buffer, ColumnBuilder builder);
 
   /**
    * This is deprecated because its usage is going to be removed from the code.

@@ -1,18 +1,18 @@
 /*
  * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements.  See the NOTICE file
+ * or more contributor license agreements. See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership.  Metamarkets licenses this file
+ * regarding copyright ownership. Metamarkets licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * with the License. You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
+ * KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -46,6 +46,8 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 /**
  *
@@ -62,11 +64,13 @@ public class NamespaceExtractionCacheManagersTest
     ArrayList<Object[]> params = new ArrayList<>();
 
     ConcurrentMap<String, Function<String, String>> fnMap = new ConcurrentHashMap<String, Function<String, String>>();
+    ConcurrentMap<String, Function<String, List<String>>> reverserFnMap = new ConcurrentHashMap<String, Function<String, List<String>>>();
     params.add(
         new Object[]{
                    new OffHeapNamespaceExtractionCacheManager(
                    lifecycle,
                    fnMap,
+                   reverserFnMap,
                    new NoopServiceEmitter(),
                    ImmutableMap.<Class<? extends ExtractionNamespace>, ExtractionNamespaceFunctionFactory<?>>of()
                ), fnMap
@@ -77,6 +81,7 @@ public class NamespaceExtractionCacheManagersTest
             new OnHeapNamespaceExtractionCacheManager(
                 lifecycle,
                 fnMap,
+                reverserFnMap,
                 new NoopServiceEmitter(),
                 ImmutableMap.<Class<? extends ExtractionNamespace>, ExtractionNamespaceFunctionFactory<?>>of()
             ), fnMap
@@ -142,31 +147,16 @@ public class NamespaceExtractionCacheManagersTest
     Assert.assertArrayEquals(nsList.toArray(), retvalList.toArray());
   }
 
-  public static void waitFor(ListenableFuture<?> future) throws InterruptedException
+  public static void waitFor(Future<?> future) throws InterruptedException
   {
-    final CountDownLatch latch = new CountDownLatch(1);
-    Futures.addCallback(
-        future, new FutureCallback<Object>()
-        {
-          @Override
-          public void onSuccess(Object result)
-          {
-            latch.countDown();
-          }
-
-          @Override
-          public void onFailure(Throwable t)
-          {
-            try {
-              log.error(t, "Error waiting");
-              throw Throwables.propagate(t);
-            }
-            finally {
-              latch.countDown();
-            }
-          }
-        }
-    );
-    latch.await();
+    while (!future.isDone()) {
+      try {
+        future.get();
+      }
+      catch (ExecutionException e) {
+        log.error(e.getCause(), "Error waiting");
+        throw Throwables.propagate(e.getCause());
+      }
+    }
   }
 }

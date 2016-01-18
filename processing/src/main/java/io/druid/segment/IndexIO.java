@@ -1,21 +1,21 @@
 /*
-* Licensed to Metamarkets Group Inc. (Metamarkets) under one
-* or more contributor license agreements. See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership. Metamarkets licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License. You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied. See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 package io.druid.segment;
 
@@ -255,8 +255,7 @@ public class IndexIO
       IndexSpec indexSpec,
       boolean forceIfCurrent,
       boolean validate
-  )
-  throws IOException
+  ) throws IOException
   {
     final int version = SegmentUtils.getVersionFromDir(toConvert);
     switch (version) {
@@ -695,8 +694,8 @@ public class IndexIO
 
           final CompressedObjectStrategy.CompressionStrategy compressionStrategy = indexSpec.getDimensionCompressionStrategy();
 
-          final DictionaryEncodedColumnPartSerde.Builder columnPartBuilder = DictionaryEncodedColumnPartSerde
-              .builder()
+          final DictionaryEncodedColumnPartSerde.LegacySerializerBuilder columnPartBuilder = DictionaryEncodedColumnPartSerde
+              .legacySerializerBuilder()
               .withDictionary(dictionary)
               .withBitmapSerdeFactory(bitmapSerdeFactory)
               .withBitmaps(bitmaps)
@@ -758,11 +757,21 @@ public class IndexIO
           switch (holder.getType()) {
             case LONG:
               builder.setValueType(ValueType.LONG);
-              builder.addSerde(new LongGenericColumnPartSerde(holder.longType, BYTE_ORDER));
+              builder.addSerde(
+                  LongGenericColumnPartSerde.legacySerializerBuilder()
+                                            .withByteOrder(BYTE_ORDER)
+                                            .withDelegate(holder.longType)
+                                            .build()
+              );
               break;
             case FLOAT:
               builder.setValueType(ValueType.FLOAT);
-              builder.addSerde(new FloatGenericColumnPartSerde(holder.floatType, BYTE_ORDER));
+              builder.addSerde(
+                  FloatGenericColumnPartSerde.legacySerializerBuilder()
+                                             .withByteOrder(BYTE_ORDER)
+                                             .withDelegate(holder.floatType)
+                                             .build()
+              );
               break;
             case COMPLEX:
               if (!(holder.complexType instanceof GenericIndexed)) {
@@ -770,9 +779,12 @@ public class IndexIO
               }
               final GenericIndexed column = (GenericIndexed) holder.complexType;
               final String complexType = holder.getTypeName();
-
               builder.setValueType(ValueType.COMPLEX);
-              builder.addSerde(new ComplexColumnPartSerde(column, complexType));
+              builder.addSerde(
+                  ComplexColumnPartSerde.legacySerializerBuilder()
+                                        .withTypeName(complexType)
+                                        .withDelegate(column).build()
+              );
               break;
             default:
               throw new ISE("Unknown type[%s]", holder.getType());
@@ -797,8 +809,12 @@ public class IndexIO
 
           final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
           builder.setValueType(ValueType.LONG);
-          builder.addSerde(new LongGenericColumnPartSerde(timestamps, BYTE_ORDER));
-
+          builder.addSerde(
+              LongGenericColumnPartSerde.legacySerializerBuilder()
+                                        .withByteOrder(BYTE_ORDER)
+                                        .withDelegate(timestamps)
+                                        .build()
+          );
           final ColumnDescriptor serdeficator = builder.build();
 
           ByteArrayOutputStream baos = new ByteArrayOutputStream();

@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.segment.data;
@@ -31,7 +33,7 @@ import java.util.List;
  */
 public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInts>
 {
-  private static final byte version = 0x0;
+  public static final byte VERSION = 0x0;
 
   public static VSizeIndexedInts fromArray(int[] array)
   {
@@ -48,11 +50,31 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
     return fromList(Lists.<Integer>newArrayList(), 0);
   }
 
+  /**
+   * provide for performance reason.
+   */
+  public static byte[] getBytesNoPaddingfromList(List<Integer> list, int maxValue)
+  {
+    int numBytes = getNumBytesForMax(maxValue);
+
+    final ByteBuffer buffer = ByteBuffer.allocate((list.size() * numBytes));
+    writeToBuffer(buffer, list, numBytes, maxValue);
+
+    return buffer.array();
+  }
+
   public static VSizeIndexedInts fromList(List<Integer> list, int maxValue)
   {
     int numBytes = getNumBytesForMax(maxValue);
 
     final ByteBuffer buffer = ByteBuffer.allocate((list.size() * numBytes) + (4 - numBytes));
+    writeToBuffer(buffer, list, numBytes, maxValue);
+
+    return new VSizeIndexedInts(buffer.asReadOnlyBuffer(), numBytes);
+  }
+
+  private static void writeToBuffer(ByteBuffer buffer, List<Integer> list, int numBytes, int maxValue)
+  {
     int i = 0;
     for (Integer val : list) {
       if (val < 0) {
@@ -67,8 +89,6 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
       ++i;
     }
     buffer.position(0);
-
-    return new VSizeIndexedInts(buffer.asReadOnlyBuffer(), numBytes);
   }
 
   public static byte getNumBytesForMax(int maxValue)
@@ -165,7 +185,7 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
 
   public void writeToChannel(WritableByteChannel channel) throws IOException
   {
-    channel.write(ByteBuffer.wrap(new byte[]{version, (byte) numBytes}));
+    channel.write(ByteBuffer.wrap(new byte[]{VERSION, (byte) numBytes}));
     channel.write(ByteBuffer.wrap(Ints.toByteArray(buffer.remaining())));
     channel.write(buffer.asReadOnlyBuffer());
   }
@@ -174,7 +194,7 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
   {
     byte versionFromBuffer = buffer.get();
 
-    if (version == versionFromBuffer) {
+    if (VERSION == versionFromBuffer) {
       int numBytes = buffer.get();
       int size = buffer.getInt();
       ByteBuffer bufferToUse = buffer.asReadOnlyBuffer();

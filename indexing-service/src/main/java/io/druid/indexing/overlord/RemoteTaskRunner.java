@@ -1,23 +1,26 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.indexing.overlord;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Charsets;
 import com.google.common.base.Joiner;
 import com.google.common.base.Optional;
@@ -40,6 +43,7 @@ import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
 import com.metamx.common.ISE;
+import com.metamx.common.Pair;
 import com.metamx.common.RE;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
@@ -303,6 +307,12 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     catch (Exception e) {
       throw Throwables.propagate(e);
     }
+  }
+
+  @Override
+  public List<Pair<Task, ListenableFuture<TaskStatus>>> restore()
+  {
+    return ImmutableList.of();
   }
 
   @Override
@@ -1053,8 +1063,15 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
     return ImmutableList.copyOf(lazyWorkers.values());
   }
 
+  @VisibleForTesting
   ConcurrentMap<String, ScheduledFuture> getRemovedWorkerCleanups()
   {
     return removedWorkerCleanups;
+  }
+
+  @VisibleForTesting
+  RemoteTaskRunnerConfig getRemoteTaskRunnerConfig()
+  {
+    return config;
   }
 }

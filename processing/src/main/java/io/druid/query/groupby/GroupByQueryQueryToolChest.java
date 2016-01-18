@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.query.groupby;
@@ -29,24 +31,22 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.Accumulator;
-import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.ResourceClosingSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import io.druid.collections.OrderedMergeSequence;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
 import io.druid.guice.annotations.Global;
+import io.druid.query.BaseQuery;
 import io.druid.query.CacheStrategy;
 import io.druid.query.DataSource;
 import io.druid.query.DruidMetrics;
@@ -124,20 +124,20 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     return new QueryRunner<Row>()
     {
       @Override
-      public Sequence<Row> run(Query<Row> input, Map<String, Object> responseContext)
+      public Sequence<Row> run(Query<Row> query, Map<String, Object> responseContext)
       {
-        if (input.getContextBySegment(false)) {
-          return runner.run(input, responseContext);
+        if (BaseQuery.getContextBySegment(query, false)) {
+          return runner.run(query, responseContext);
         }
 
-        if (Boolean.valueOf(input.getContextValue(GROUP_BY_MERGE_KEY, "true"))) {
+        if (Boolean.valueOf(query.getContextValue(GROUP_BY_MERGE_KEY, "true"))) {
           return mergeGroupByResults(
-              (GroupByQuery) input,
+              (GroupByQuery) query,
               runner,
               responseContext
           );
         }
-        return runner.run(input, responseContext);
+        return runner.run(query, responseContext);
       }
     };
   }
@@ -173,14 +173,16 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       // subsequent ones) and return an error if the aggregator types are different.
       for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {
         for (final AggregatorFactory transferAgg : aggregatorFactory.getRequiredColumns()) {
-          if (Iterables.any(aggs, new Predicate<AggregatorFactory>() {
+          if (Iterables.any(aggs, new Predicate<AggregatorFactory>()
+          {
             @Override
-            public boolean apply(AggregatorFactory agg) {
+            public boolean apply(AggregatorFactory agg)
+            {
               return agg.getName().equals(transferAgg.getName()) && !agg.equals(transferAgg);
             }
           })) {
             throw new IAE("Inner aggregator can currently only be referenced by a single type of outer aggregator" +
-                " for '%s'", transferAgg.getName());
+                          " for '%s'", transferAgg.getName());
           }
 
           aggs.add(transferAgg);
@@ -257,7 +259,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   private Sequence<Row> postAggregate(final GroupByQuery query, IncrementalIndex index)
   {
     return Sequences.map(
-        Sequences.simple(index.iterableWithPostAggregations(query.getPostAggregatorSpecs())),
+        Sequences.simple(index.iterableWithPostAggregations(query.getPostAggregatorSpecs(), query.isDescending())),
         new Function<Row, Row>()
         {
           @Override
@@ -284,23 +286,6 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     );
 
     return rows.accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
-  }
-
-  @Override
-  public Sequence<Row> mergeSequences(Sequence<Sequence<Row>> seqOfSequences)
-  {
-    return new OrderedMergeSequence<>(getOrdering(), seqOfSequences);
-  }
-
-  @Override
-  public Sequence<Row> mergeSequencesUnordered(Sequence<Sequence<Row>> seqOfSequences)
-  {
-    return new MergeSequence<>(getOrdering(), seqOfSequences);
-  }
-
-  private Ordering<Row> getOrdering()
-  {
-    return Ordering.<Row>natural().nullsFirst();
   }
 
   @Override
@@ -415,10 +400,14 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
                   return runner.run(query, responseContext);
                 }
                 GroupByQuery groupByQuery = (GroupByQuery) query;
+                if (groupByQuery.getDimFilter() != null){
+                  groupByQuery = groupByQuery.withDimFilter(groupByQuery.getDimFilter().optimize());
+                }
+                final GroupByQuery delegateGroupByQuery = groupByQuery;
                 ArrayList<DimensionSpec> dimensionSpecs = new ArrayList<>();
                 Set<String> optimizedDimensions = ImmutableSet.copyOf(
                     Iterables.transform(
-                        extractionsToRewrite(groupByQuery),
+                        extractionsToRewrite(delegateGroupByQuery),
                         new Function<DimensionSpec, String>()
                         {
                           @Override
@@ -429,7 +418,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
                         }
                     )
                 );
-                for (DimensionSpec dimensionSpec : groupByQuery.getDimensions()) {
+                for (DimensionSpec dimensionSpec : delegateGroupByQuery.getDimensions()) {
                   if (optimizedDimensions.contains(dimensionSpec.getDimension())) {
                     dimensionSpecs.add(
                         new DefaultDimensionSpec(dimensionSpec.getDimension(), dimensionSpec.getOutputName())
@@ -439,7 +428,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
                   }
                 }
                 return runner.run(
-                    groupByQuery.withDimensionSpecs(dimensionSpecs),
+                    delegateGroupByQuery.withDimensionSpecs(dimensionSpecs),
                     responseContext
                 );
               }
@@ -577,12 +566,6 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
             );
           }
         };
-      }
-
-      @Override
-      public Sequence<Row> mergeSequences(Sequence<Sequence<Row>> seqOfSequences)
-      {
-        return new MergeSequence<>(getOrdering(), seqOfSequences);
       }
     };
   }

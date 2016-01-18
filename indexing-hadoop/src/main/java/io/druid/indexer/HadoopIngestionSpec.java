@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.indexer;
@@ -22,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import io.druid.common.utils.UUIDUtils;
 import io.druid.indexer.hadoop.DatasourceIngestionSpec;
 import io.druid.indexer.hadoop.WindowedDataSegment;
 import io.druid.indexer.path.UsedSegmentLister;
@@ -31,6 +34,7 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
+import org.joda.time.Interval;
 
 import java.io.IOException;
 import java.util.List;
@@ -44,11 +48,15 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
   private final HadoopIOConfig ioConfig;
   private final HadoopTuningConfig tuningConfig;
 
+  //this is used in the temporary paths on the hdfs unique to an hadoop indexing task
+  private final String uniqueId;
+
   @JsonCreator
   public HadoopIngestionSpec(
       @JsonProperty("dataSchema") DataSchema dataSchema,
       @JsonProperty("ioConfig") HadoopIOConfig ioConfig,
-      @JsonProperty("tuningConfig") HadoopTuningConfig tuningConfig
+      @JsonProperty("tuningConfig") HadoopTuningConfig tuningConfig,
+      @JsonProperty("uniqueId") String uniqueId
   )
   {
     super(dataSchema, ioConfig, tuningConfig);
@@ -56,6 +64,17 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
     this.dataSchema = dataSchema;
     this.ioConfig = ioConfig;
     this.tuningConfig = tuningConfig == null ? HadoopTuningConfig.makeDefaultTuningConfig() : tuningConfig;
+    this.uniqueId = uniqueId == null ? UUIDUtils.generateUuid() : uniqueId;
+  }
+
+  //for unit tests
+  public HadoopIngestionSpec(
+      DataSchema dataSchema,
+      HadoopIOConfig ioConfig,
+      HadoopTuningConfig tuningConfig
+  )
+  {
+    this(dataSchema, ioConfig, tuningConfig, null);
   }
 
   @JsonProperty("dataSchema")
@@ -79,12 +98,19 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
     return tuningConfig;
   }
 
+  @JsonProperty("uniqueId")
+  public String getUniqueId()
+  {
+    return uniqueId;
+  }
+
   public HadoopIngestionSpec withDataSchema(DataSchema schema)
   {
     return new HadoopIngestionSpec(
         schema,
         ioConfig,
-        tuningConfig
+        tuningConfig,
+        uniqueId
     );
   }
 
@@ -93,7 +119,8 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
     return new HadoopIngestionSpec(
         dataSchema,
         config,
-        tuningConfig
+        tuningConfig,
+        uniqueId
     );
   }
 
@@ -102,7 +129,8 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
     return new HadoopIngestionSpec(
         dataSchema,
         ioConfig,
-        config
+        config,
+        uniqueId
     );
   }
 
@@ -140,22 +168,26 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
           ingestionSpecMap,
           DatasourceIngestionSpec.class
       );
-      List<DataSegment> segmentsList = segmentLister.getUsedSegmentsForInterval(
+      List<DataSegment> segmentsList = segmentLister.getUsedSegmentsForIntervals(
           ingestionSpecObj.getDataSource(),
-          ingestionSpecObj.getInterval()
+          ingestionSpecObj.getIntervals()
       );
       VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(Ordering.natural());
       for (DataSegment segment : segmentsList) {
         timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
       }
-      final List<TimelineObjectHolder<String, DataSegment>> timeLineSegments = timeline.lookup(ingestionSpecObj.getInterval());
+
       final List<WindowedDataSegment> windowedSegments = Lists.newArrayList();
-      for (TimelineObjectHolder<String, DataSegment> holder : timeLineSegments) {
-        for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
-          windowedSegments.add(new WindowedDataSegment(chunk.getObject(), holder.getInterval()));
+      for (Interval interval : ingestionSpecObj.getIntervals()) {
+        final List<TimelineObjectHolder<String, DataSegment>> timeLineSegments = timeline.lookup(interval);
+
+        for (TimelineObjectHolder<String, DataSegment> holder : timeLineSegments) {
+          for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
+            windowedSegments.add(new WindowedDataSegment(chunk.getObject(), holder.getInterval()));
+          }
         }
+        datasourcePathSpec.put(segments, windowedSegments);
       }
-      datasourcePathSpec.put(segments, windowedSegments);
     }
 
     return spec;

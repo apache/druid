@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.tests.indexer;
@@ -31,6 +33,8 @@ import org.joda.time.Interval;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.concurrent.Callable;
+import java.util.ArrayList;
+import java.util.Collections;
 
 public abstract class AbstractIndexerTest
 {
@@ -50,7 +54,17 @@ public abstract class AbstractIndexerTest
 
   protected void unloadAndKillData(final String dataSource) throws Exception
   {
-      unloadAndKillData (dataSource, "2013-01-01T00:00:00.000Z", "2013-12-01T00:00:00.000Z");
+      ArrayList<String> intervals = coordinator.getSegmentIntervals(dataSource);
+
+      // each element in intervals has this form:
+      //   2015-12-01T23:15:00.000Z/2015-12-01T23:16:00.000Z
+      // we'll sort the list (ISO dates have lexicographic order)
+      // then delete segments from the 1st date in the first string
+      // to the 2nd date in the last string
+      Collections.sort (intervals);
+      String first = intervals.get(0).split("/")[0];
+      String last = intervals.get(intervals.size() -1).split("/")[1];
+      unloadAndKillData (dataSource, first, last);
   }
 
   protected void unloadAndKillData(final String dataSource, String start, String end) throws Exception

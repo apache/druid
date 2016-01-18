@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.query.timeseries;
@@ -25,13 +27,29 @@ import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.aggregation.PostAggregator;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.IOException;
 import java.util.Arrays;
 
+@RunWith(Parameterized.class)
 public class TimeseriesQueryTest
 {
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
+
+  @Parameterized.Parameters(name="descending={0}")
+  public static Iterable<Object[]> constructorFeeder() throws IOException
+  {
+    return QueryRunnerTestHelper.cartesian(Arrays.asList(false, true));
+  }
+
+  private final boolean descending;
+
+  public TimeseriesQueryTest(boolean descending)
+  {
+    this.descending = descending;
+  }
 
   @Test
   public void testQuerySerialization() throws IOException
@@ -47,6 +65,7 @@ public class TimeseriesQueryTest
             )
         )
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+        .descending(descending)
         .build();
 
     String json = jsonMapper.writeValueAsString(query);

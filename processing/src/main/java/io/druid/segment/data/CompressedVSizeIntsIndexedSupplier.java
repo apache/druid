@@ -1,18 +1,18 @@
 /*
  * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements.  See the NOTICE file
+ * or more contributor license agreements. See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership.  Metamarkets licenses this file
+ * regarding copyright ownership. Metamarkets licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * with the License. You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
+ * KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -40,7 +40,7 @@ import java.util.List;
 
 public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<IndexedInts>
 {
-  public static final byte version = 0x2;
+  public static final byte VERSION = 0x2;
 
   private final int totalSize;
   private final int sizePer;
@@ -79,7 +79,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
     return 1 << (Integer.SIZE - 1 - Integer.numberOfLeadingZeros(maxSizePer));
   }
 
-  private static int bufferPadding(int numBytes)
+  public static int bufferPadding(int numBytes)
   {
     // when numBytes == 3 we need to pad the buffer to allow reading an extra byte
     // beyond the end of the last value, since we use buffer.getInt() to read values.
@@ -132,7 +132,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
 
   public void writeToChannel(WritableByteChannel channel) throws IOException
   {
-    channel.write(ByteBuffer.wrap(new byte[]{version, (byte) numBytes}));
+    channel.write(ByteBuffer.wrap(new byte[]{VERSION, (byte) numBytes}));
     channel.write(ByteBuffer.wrap(Ints.toByteArray(totalSize)));
     channel.write(ByteBuffer.wrap(Ints.toByteArray(sizePer)));
     channel.write(ByteBuffer.wrap(new byte[]{compression.getId()}));
@@ -151,7 +151,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
   {
     byte versionFromBuffer = buffer.get();
 
-    if (versionFromBuffer == version) {
+    if (versionFromBuffer == VERSION) {
       final int numBytes = buffer.get();
       final int totalSize = buffer.getInt();
       final int sizePer = buffer.getInt();

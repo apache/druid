@@ -1,18 +1,18 @@
 /*
  * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements.  See the NOTICE file
+ * or more contributor license agreements. See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership.  Metamarkets licenses this file
+ * regarding copyright ownership. Metamarkets licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * with the License. You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
+ * KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -24,6 +24,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Sets;
 import com.metamx.common.UOE;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -60,6 +61,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -136,11 +138,13 @@ public class URIExtractionNamespaceFunctionFactoryTest
         OnHeapNamespaceExtractionCacheManager.class.getConstructor(
             Lifecycle.class,
             ConcurrentMap.class,
+            ConcurrentMap.class,
             ServiceEmitter.class,
             Map.class
         ),
         OffHeapNamespaceExtractionCacheManager.class.getConstructor(
             Lifecycle.class,
+            ConcurrentMap.class,
             ConcurrentMap.class,
             ServiceEmitter.class,
             Map.class
@@ -172,6 +176,7 @@ public class URIExtractionNamespaceFunctionFactoryTest
               try {
                 manager = constructor.newInstance(
                     new Lifecycle(),
+                    new ConcurrentHashMap<String, Function<String, String>>(),
                     new ConcurrentHashMap<String, Function<String, String>>(),
                     new NoopServiceEmitter(),
                     new HashMap<Class<? extends ExtractionNamespace>, ExtractionNamespaceFunctionFactory<?>>()
@@ -222,9 +227,11 @@ public class URIExtractionNamespaceFunctionFactoryTest
     this.outStreamSupplier = outStreamSupplier;
     this.lifecycle = new Lifecycle();
     this.fnCache = new ConcurrentHashMap<>();
+    this.reverseFnCache = new ConcurrentHashMap<>();
     this.manager = cacheManagerConstructor.newInstance(
         lifecycle,
         fnCache,
+        reverseFnCache,
         new NoopServiceEmitter(),
         namespaceFunctionFactoryMap
     );
@@ -251,6 +258,7 @@ public class URIExtractionNamespaceFunctionFactoryTest
   private URIExtractionNamespaceFunctionFactory factory;
   private URIExtractionNamespace namespace;
   private ConcurrentHashMap<String, Function<String, String>> fnCache;
+  private ConcurrentHashMap<String, Function<String, List<String>>> reverseFnCache;
 
   @Before
   public void setUp() throws Exception
@@ -262,7 +270,16 @@ public class URIExtractionNamespaceFunctionFactoryTest
     final ObjectMapper mapper = new DefaultObjectMapper();
     try (OutputStream ostream = outStreamSupplier.apply(tmpFile)) {
       try (OutputStreamWriter out = new OutputStreamWriter(ostream)) {
-        out.write(mapper.writeValueAsString(ImmutableMap.<String, String>of("foo", "bar")));
+        out.write(mapper.writeValueAsString(ImmutableMap.<String, String>of(
+            "boo",
+            "bar",
+            "foo",
+            "bar",
+            "",
+            "MissingValue",
+            "emptyString",
+            ""
+        )));
       }
     }
     factory = new URIExtractionNamespaceFunctionFactory(
@@ -291,12 +308,23 @@ public class URIExtractionNamespaceFunctionFactoryTest
     Assert.assertNull(fnCache.get(namespace.getNamespace()));
     NamespaceExtractionCacheManagersTest.waitFor(manager.schedule(namespace));
     Function<String, String> fn = fnCache.get(namespace.getNamespace());
-    while (fn == null) {
-      Thread.sleep(1);
-      fn = fnCache.get(namespace.getNamespace());
-    }
+   Assert.assertNotNull(fn);
     Assert.assertEquals("bar", fn.apply("foo"));
     Assert.assertEquals(null, fn.apply("baz"));
+  }
+
+  @Test
+  public void testReverseFunction() throws InterruptedException
+  {
+    Assert.assertNull(reverseFnCache.get(namespace.getNamespace()));
+    NamespaceExtractionCacheManagersTest.waitFor(manager.schedule(namespace));
+    Function<String, List<String>> reverseFn = reverseFnCache.get(namespace.getNamespace());
+    Assert.assertNotNull(reverseFn);
+    Assert.assertEquals(Sets.newHashSet("boo", "foo"), Sets.newHashSet(reverseFn.apply("bar")));
+    Assert.assertEquals(Sets.newHashSet(""), Sets.newHashSet(reverseFn.apply("MissingValue")));
+    Assert.assertEquals(Sets.newHashSet("emptyString"), Sets.newHashSet(reverseFn.apply("")));
+    Assert.assertEquals(Sets.newHashSet("emptyString"), Sets.newHashSet(reverseFn.apply(null)));
+    Assert.assertEquals(Collections.EMPTY_LIST, reverseFn.apply("baz"));
   }
 
   @Test
@@ -324,10 +352,7 @@ public class URIExtractionNamespaceFunctionFactoryTest
     for (int i = 0; i < size; ++i) {
       URIExtractionNamespace namespace = namespaces.get(i);
       Function<String, String> fn = fnCache.get(namespace.getNamespace());
-      while (fn == null) {
-        Thread.sleep(1);
-        fn = fnCache.get(namespace.getNamespace());
-      }
+      Assert.assertNotNull(fn);
       Assert.assertEquals("bar", fn.apply("foo"));
       Assert.assertEquals(null, fn.apply("baz"));
       manager.delete(namespace.getNamespace());

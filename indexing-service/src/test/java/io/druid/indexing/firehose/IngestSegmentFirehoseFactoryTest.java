@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.indexing.firehose;
@@ -62,6 +64,7 @@ import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
+import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
@@ -76,8 +79,10 @@ import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.segment.realtime.firehose.IngestSegmentFirehose;
+import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NumberedShardSpec;
+import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -105,12 +110,14 @@ public class IngestSegmentFirehoseFactoryTest
 {
   private static final ObjectMapper MAPPER;
   private static final IndexMerger INDEX_MERGER;
+  private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
 
   static {
     TestUtils testUtils = new TestUtils();
     MAPPER = setupInjectablesInObjectMapper(testUtils.getTestObjectMapper());
     INDEX_MERGER = testUtils.getTestIndexMerger();
+    INDEX_MERGER_V9 = testUtils.getTestIndexMergerV9();
     INDEX_IO = testUtils.getTestIndexIO();
   }
 
@@ -162,6 +169,12 @@ public class IngestSegmentFirehoseFactoryTest
       }
 
       @Override
+      public List<DataSegment> getUsedSegmentsForIntervals(String dataSource, List<Interval> interval) throws IOException
+      {
+        return ImmutableList.copyOf(segmentSet);
+      }
+
+      @Override
       public List<DataSegment> getUnusedSegmentsForInterval(String dataSource, Interval interval)
       {
         return ImmutableList.of();
@@ -190,9 +203,11 @@ public class IngestSegmentFirehoseFactoryTest
         ts,
         new TaskActionToolbox(tl, mdc, newMockEmitter())
     );
+    SegmentHandoffNotifierFactory notifierFactory = EasyMock.createNiceMock(SegmentHandoffNotifierFactory.class);
+    EasyMock.replay(notifierFactory);
 
     final TaskToolboxFactory taskToolboxFactory = new TaskToolboxFactory(
-        new TaskConfig(tmpDir.getAbsolutePath(), null, null, 50000, null),
+        new TaskConfig(tmpDir.getAbsolutePath(), null, null, 50000, null, false, null, null),
         tac,
         newMockEmitter(),
         new DataSegmentPusher()
@@ -241,7 +256,7 @@ public class IngestSegmentFirehoseFactoryTest
           }
         },
         null, // segment announcer
-        null, // new segment server view
+        notifierFactory,
         null, // query runner factory conglomerate corporation unionized collective
         null, // query executor service
         null, // monitor scheduler
@@ -262,7 +277,8 @@ public class IngestSegmentFirehoseFactoryTest
         INDEX_MERGER,
         INDEX_IO,
         null,
-        null
+        null,
+        INDEX_MERGER_V9
     );
     Collection<Object[]> values = new LinkedList<>();
     for (InputRowParser parser : Arrays.<InputRowParser>asList(
@@ -513,5 +529,7 @@ public class IngestSegmentFirehoseFactoryTest
 
       }
     };
+
+
   }
 }

@@ -1,23 +1,26 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.server.coordinator;
 
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -73,6 +76,7 @@ import org.apache.curator.framework.recipes.leader.Participant;
 import org.apache.curator.utils.ZKPaths;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
+import org.joda.time.Interval;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -242,6 +246,16 @@ public class DruidCoordinator
       retVal.add(segment.getDataSource(), 1 - available);
     }
 
+    return retVal;
+  }
+
+  CountingMap<String> getLoadPendingDatasources() {
+    final CountingMap<String> retVal = new CountingMap<>();
+    for (LoadQueuePeon peon : loadManagementPeons.values()) {
+      for (DataSegment segment : peon.getSegmentsToLoad()) {
+        retVal.add(segment.getDataSource(), 1);
+      }
+    }
     return retVal;
   }
 
@@ -611,7 +625,9 @@ public class DruidCoordinator
     }
   }
 
-  private List<DruidCoordinatorHelper> makeIndexingServiceHelpers(final AtomicReference<DatasourceWhitelist> whitelistRef)
+  private List<DruidCoordinatorHelper> makeIndexingServiceHelpers(
+      final AtomicReference<DatasourceWhitelist> whitelistRef
+  )
   {
     List<DruidCoordinatorHelper> helpers = Lists.newArrayList();
 
@@ -643,7 +659,119 @@ public class DruidCoordinator
       );
     }
 
+    if (config.isKillSegments()) {
+      helpers.add(
+          new DruidCoordinatorSegmentKiller(
+              metadataSegmentManager,
+              indexingServiceClient,
+              config.getCoordinatorKillDurationToRetain(),
+              config.getCoordinatorKillPeriod(),
+              config.getCoordinatorKillMaxSegments()
+          )
+      );
+    }
+
     return ImmutableList.copyOf(helpers);
+  }
+
+  static class DruidCoordinatorSegmentKiller implements DruidCoordinatorHelper
+  {
+    
+    private final long period;
+    private final long retainDuration;
+    private final int maxSegmentsToKill;
+    private long lastKillTime = 0;
+
+
+    private final MetadataSegmentManager segmentManager;
+    private final IndexingServiceClient indexingServiceClient;
+
+    DruidCoordinatorSegmentKiller(
+        MetadataSegmentManager segmentManager,
+        IndexingServiceClient indexingServiceClient,
+        Duration retainDuration,
+        Duration period,
+        int maxSegmentsToKill
+    )
+    {
+      this.period = period.getMillis();
+      Preconditions.checkArgument(this.period > 0, "coordinator kill period must be > 0");
+
+      this.retainDuration = retainDuration.getMillis();
+      Preconditions.checkArgument(this.retainDuration >= 0, "coordinator kill retainDuration must be >= 0");
+
+      this.maxSegmentsToKill = maxSegmentsToKill;
+      Preconditions.checkArgument(this.maxSegmentsToKill > 0, "coordinator kill maxSegments must be > 0");
+
+      log.info(
+          "Kill Task scheduling enabled with period [%s], retainDuration [%s], maxSegmentsToKill [%s]",
+          this.period,
+          this.retainDuration,
+          this.maxSegmentsToKill
+      );
+
+      this.segmentManager = segmentManager;
+      this.indexingServiceClient = indexingServiceClient;
+    }
+
+    @Override
+    public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
+    {
+      Set<String> whitelist = params.getCoordinatorDynamicConfig().getKillDataSourceWhitelist();
+
+      if (whitelist != null && whitelist.size() > 0 && (lastKillTime + period) < System.currentTimeMillis()) {
+        lastKillTime = System.currentTimeMillis();
+
+        for (String dataSource : whitelist) {
+          final Interval intervalToKill = findIntervalForKillTask(dataSource, maxSegmentsToKill);
+          if (intervalToKill != null) {
+            try {
+              indexingServiceClient.killSegments(dataSource, intervalToKill);
+            }
+            catch (Exception ex) {
+              log.error(ex, "Failed to submit kill task for dataSource [%s]", dataSource);
+              if (Thread.currentThread().isInterrupted()) {
+                log.warn("skipping kill task scheduling because thread is interrupted.");
+                break;
+              }
+            }
+          }
+        }
+      }
+      return params;
+    }
+
+    private Interval findIntervalForKillTask(String dataSource, int limit)
+    {
+      List<Interval> unusedSegmentIntervals = segmentManager.getUnusedSegmentIntervals(
+          dataSource,
+          new Interval(
+              0,
+              System.currentTimeMillis()
+              - retainDuration
+          ),
+          limit
+      );
+
+      if (unusedSegmentIntervals != null && unusedSegmentIntervals.size() > 0) {
+        long start = Long.MIN_VALUE;
+        long end = Long.MAX_VALUE;
+
+        for (Interval interval : unusedSegmentIntervals) {
+          if (start < interval.getStartMillis()) {
+            start = interval.getStartMillis();
+          }
+
+          if (end > interval.getEndMillis()) {
+            end = interval.getEndMillis();
+          }
+        }
+
+        return new Interval(start, end);
+      } else {
+        return null;
+      }
+    }
   }
 
   public static class DruidCoordinatorVersionConverter implements DruidCoordinatorHelper

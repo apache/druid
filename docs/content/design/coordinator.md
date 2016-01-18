@@ -26,6 +26,7 @@ Cleaning Up Segments
 --------------------
 
 Each run, the Druid coordinator compares the list of available database segments in the database with the current segments in the cluster. Segments that are not in the database but are still being served in the cluster are flagged and appended to a removal list. Segments that are overshadowed (their versions are too old and their data has been replaced by newer segments) are also dropped.
+Note that if all segments in database are deleted(or marked unused), then coordinator will not drop anything from the historicals. This is done to prevent a race condition in which the coordinator would drop all segments if it started running cleanup before it finished polling the database for available segments for the first time and believed that there were no segments.
 
 Segment Availability
 --------------------
@@ -144,7 +145,7 @@ Returns a map of an interval to a map of segment metadata to a set of server nam
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/intervals/{interval}`
 
-Returns a set of segment ids for an ISO8601 interval.
+Returns a set of segment ids for an ISO8601 interval. Note that the interval is delimited by a `_` instead of a `/`
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/intervals/{interval}?simple`
 
@@ -153,6 +154,10 @@ Returns a map of segment intervals contained within the specified interval to a 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/intervals/{interval}?full`
 
 Returns a map of segment intervals contained within the specified interval to a map of segment metadata to a set of server names that contain the segment for an interval.
+
+* `/druid/coordinator/v1/datasources/{dataSourceName}/intervals/{interval}/serverview`
+
+Returns a map of segment intervals contained within the specified interval to information about the servers that contain the segment for an interval.
 
 * `/druid/coordinator/v1/datasources/{dataSourceName}/segments`
 

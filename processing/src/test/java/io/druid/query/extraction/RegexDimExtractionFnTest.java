@@ -1,23 +1,26 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.query.extraction;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import io.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
@@ -53,51 +56,50 @@ public class RegexDimExtractionFnTest
   public void testPathExtraction()
   {
     String regex = "/([^/]+)/";
-    ExtractionFn extractionFn = new RegexDimExtractionFn(regex);
-    Set<String> extracted = Sets.newHashSet();
+    ExtractionFn extractionFn = new RegexDimExtractionFn(regex, false, null);
+    Set<String> extracted = Sets.newLinkedHashSet();
 
     for (String path : paths) {
       extracted.add(extractionFn.apply(path));
     }
 
-    Assert.assertEquals(2, extracted.size());
-    Assert.assertTrue(extracted.contains("druid"));
-    Assert.assertTrue(extracted.contains("dash"));
+    Set<String> expected = Sets.newLinkedHashSet(ImmutableList.of("druid", "dash"));
+    Assert.assertEquals(expected, extracted);
   }
 
   @Test
   public void testDeeperPathExtraction()
   {
     String regex = "^/([^/]+/[^/]+)(/|$)";
-    ExtractionFn extractionFn = new RegexDimExtractionFn(regex);
-    Set<String> extracted = Sets.newHashSet();
+    ExtractionFn extractionFn = new RegexDimExtractionFn(regex, false, null);
+    Set<String> extracted = Sets.newLinkedHashSet();
 
     for (String path : paths) {
       extracted.add(extractionFn.apply(path));
     }
 
-    Assert.assertEquals(4, extracted.size());
-    Assert.assertTrue(extracted.contains("druid/prod"));
-    Assert.assertTrue(extracted.contains("druid/demo"));
-    Assert.assertTrue(extracted.contains("dash/aloe"));
-    Assert.assertTrue(extracted.contains("dash/baloo"));
+    Set<String> expected = Sets.newLinkedHashSet(
+        ImmutableList.of(
+            "druid/prod", "druid/demo",
+            "dash/aloe", "dash/baloo"
+        )
+    );
+    Assert.assertEquals(expected, extracted);
   }
 
   @Test
   public void testStringExtraction()
   {
     String regex = "(.)";
-    ExtractionFn extractionFn = new RegexDimExtractionFn(regex);
-    Set<String> extracted = Sets.newHashSet();
+    ExtractionFn extractionFn = new RegexDimExtractionFn(regex, false, null);
+    Set<String> extracted = Sets.newLinkedHashSet();
 
     for (String testString : testStrings) {
       extracted.add(extractionFn.apply(testString));
     }
 
-    Assert.assertEquals(3, extracted.size());
-    Assert.assertTrue(extracted.contains("a"));
-    Assert.assertTrue(extracted.contains("b"));
-    Assert.assertTrue(extracted.contains("c"));
+    Set<String> expected = Sets.newLinkedHashSet(ImmutableList.of("a", "b", "c"));
+    Assert.assertEquals(expected, extracted);
   }
 
 
@@ -105,7 +107,7 @@ public class RegexDimExtractionFnTest
   public void testNullAndEmpty()
   {
     String regex = "(.*)/.*/.*";
-    ExtractionFn extractionFn = new RegexDimExtractionFn(regex);
+    ExtractionFn extractionFn = new RegexDimExtractionFn(regex, false, null);
     // no match, map empty input value to null
     Assert.assertEquals(null, extractionFn.apply(""));
     // null value, returns null
@@ -115,13 +117,53 @@ public class RegexDimExtractionFnTest
   }
 
   @Test
+  public void testMissingValueReplacement()
+  {
+    String regex = "(a\\w*)";
+    ExtractionFn extractionFn = new RegexDimExtractionFn(regex, true, "foobar");
+    Set<String> extracted = Sets.newLinkedHashSet();
+
+    for (String testString : testStrings) {
+      extracted.add(extractionFn.apply(testString));
+    }
+
+    Set<String> expected = Sets.newLinkedHashSet(ImmutableList.of("apple", "awesome", "asylum", "foobar"));
+    Assert.assertEquals(expected, extracted);
+
+    byte[] cacheKey = extractionFn.getCacheKey();
+    byte[] expectedCacheKey = new byte[]{
+        0x01, 0x28, 0x61, 0x5C, 0x77, 0x2A, 0x29, (byte) 0xFF,
+        0x66, 0x6F, 0x6F, 0x62, 0x61, 0x72, (byte) 0xFF, 0x01
+    };
+    Assert.assertArrayEquals(expectedCacheKey, cacheKey);
+
+    ExtractionFn nullExtractionFn = new RegexDimExtractionFn(regex, true, null);
+    Set<String> extracted2 = Sets.newLinkedHashSet();
+
+    for (String testString : testStrings) {
+      extracted2.add(nullExtractionFn.apply(testString));
+    }
+
+    Set<String> expected2 = Sets.newLinkedHashSet(ImmutableList.of("apple", "awesome", "asylum"));
+    expected2.add(null);
+    Assert.assertEquals(expected2, extracted2);
+
+    cacheKey = nullExtractionFn.getCacheKey();
+    expectedCacheKey = new byte[]{0x01, 0x28, 0x61, 0x5C, 0x77, 0x2A, 0x29, (byte) 0xFF, (byte) 0xFF, 0x01};
+    Assert.assertArrayEquals(expectedCacheKey, cacheKey);
+  }
+
+  @Test
   public void testSerde() throws Exception
   {
     final ObjectMapper objectMapper = new DefaultObjectMapper();
-    final String json = "{ \"type\" : \"regex\", \"expr\" : \".(...)?\" }";
+    final String json = "{ \"type\" : \"regex\", \"expr\" : \".(...)?\" , " +
+                        "\"replaceMissingValues\": true, \"replaceMissingValuesWith\":\"foobar\"}";
     RegexDimExtractionFn extractionFn = (RegexDimExtractionFn) objectMapper.readValue(json, ExtractionFn.class);
 
     Assert.assertEquals(".(...)?", extractionFn.getExpr());
+    Assert.assertTrue(extractionFn.isReplaceMissingValues());
+    Assert.assertEquals("foobar", extractionFn.getReplaceMissingValuesWith());
 
     // round trip
     Assert.assertEquals(

@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.server;
@@ -111,5 +113,31 @@ public class DruidNodeTest
   public void testConflictingPortsNonsense() throws Exception
   {
     new DruidNode("test/service", "[2001:db8:85a3::8a2e:370:7334]:123", 456);
+  }
+
+  @Test
+  public void testEquals() throws Exception
+  {
+    final String serviceName = "serviceName";
+    final String host = "some.host";
+    final int port = 9898;
+    Assert.assertEquals(new DruidNode(serviceName, host, port), new DruidNode(serviceName, host, port));
+    Assert.assertNotEquals(new DruidNode(serviceName, host, port), new DruidNode(serviceName, host, -1));
+    Assert.assertNotEquals(new DruidNode(serviceName, host, port), new DruidNode(serviceName, "other.host", port));
+    Assert.assertNotEquals(new DruidNode(serviceName, host, port), new DruidNode("otherServiceName", host, port));
+  }
+
+  @Test
+  public void testHashCode() throws Exception
+  {
+
+    final String serviceName = "serviceName";
+    final String host = "some.host";
+    final int port = 9898;
+    Assert.assertEquals(new DruidNode(serviceName, host, port).hashCode(), new DruidNode(serviceName, host, port).hashCode());
+    // Potential hash collision if hashCode method ever changes
+    Assert.assertNotEquals(new DruidNode(serviceName, host, port).hashCode(), new DruidNode(serviceName, host, -1).hashCode());
+    Assert.assertNotEquals(new DruidNode(serviceName, host, port).hashCode(), new DruidNode(serviceName, "other.host", port).hashCode());
+    Assert.assertNotEquals(new DruidNode(serviceName, host, port).hashCode(), new DruidNode("otherServiceName", host, port).hashCode());
   }
 }

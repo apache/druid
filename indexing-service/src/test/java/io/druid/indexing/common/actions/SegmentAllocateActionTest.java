@@ -710,7 +710,7 @@ public class SegmentAllocateActionTest
         sequenceName,
         sequencePreviousId
     );
-    return action.perform(task, taskActionTestKit.getTaskActionToolbox()).orNull();
+    return action.perform(task, taskActionTestKit.getTaskActionToolbox());
   }
 
   private void assertSameIdentifier(final SegmentIdentifier one, final SegmentIdentifier other)

@@ -6,6 +6,7 @@ Segment metadata queries return per segment information about:
 
 * Cardinality of all columns in the segment
 * Estimated byte size for the segment columns if they were stored in a flat format
+* Number of rows stored inside the segment
 * Interval the segment covers
 * Column type of all the columns in the segment
 * Estimated total segment byte size in if it was stored in a flat format
@@ -29,7 +30,7 @@ There are several main parts to a segment metadata query:
 |toInclude|A JSON Object representing what columns should be included in the result. Defaults to "all".|no|
 |merge|Merge all individual segment metadata results into a single result|no|
 |context|See [Context](../querying/query-context.html)|no|
-|analysisTypes|A list of Strings specifying what column properties (e.g. cardinality, size) should be calculated and returned in the result. Defaults to ["cardinality", "size"]. See section [analysisTypes](#analysistypes) for more details.|no|
+|analysisTypes|A list of Strings specifying what column properties (e.g. cardinality, size) should be calculated and returned in the result. Defaults to ["cardinality", "size", "interval"]. See section [analysisTypes](#analysistypes) for more details.|no|
 
 The format of the result is:
 
@@ -43,7 +44,8 @@ The format of the result is:
     "dim2" : { "type" : "STRING", "size" : 100000, "cardinality" : 1504 },
     "metric1" : { "type" : "FLOAT", "size" : 100000, "cardinality" : null }
   },
-  "size" : 300000
+  "size" : 300000,
+  "numRows" : 5000000
 } ]
 ```
 
@@ -94,7 +96,7 @@ This is a list of properties that determines the amount of information returned 
 
 By default, all analysis types will be used. If a property is not needed, omitting it from this list will result in a more efficient query.
 
-There are 2 types of column analyses:
+There are 3 types of column analyses:
 
 #### cardinality
 
@@ -105,3 +107,7 @@ There are 2 types of column analyses:
 * Estimated byte size for the segment columns if they were stored in a flat format
 
 * Estimated total segment byte size in if it was stored in a flat format
+
+#### interval
+
+* If present, the SegmentMetadataQuery will return the list of intervals associated with the queried segments.

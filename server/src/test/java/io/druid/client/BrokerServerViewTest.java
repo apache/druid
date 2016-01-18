@@ -1,18 +1,18 @@
 /*
  * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements.  See the NOTICE file
+ * or more contributor license agreements. See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership.  Metamarkets licenses this file
+ * regarding copyright ownership. Metamarkets licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * with the License. You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
+ * KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -23,10 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
 import com.google.common.base.Function;
-import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.metamx.common.Pair;
@@ -48,8 +46,6 @@ import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.PartitionHolder;
 import io.druid.timeline.partition.SingleElementPartitionChunk;
-import org.apache.curator.utils.ZKPaths;
-import org.apache.zookeeper.CreateMode;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -66,8 +62,6 @@ public class BrokerServerViewTest extends CuratorTestBase
 {
   private final ObjectMapper jsonMapper;
   private final ZkPathsConfig zkPathsConfig;
-  private final String announcementsPath;
-  private final String inventoryPath;
 
   private CountDownLatch segmentViewInitLatch;
   private CountDownLatch segmentAddedLatch;
@@ -80,8 +74,6 @@ public class BrokerServerViewTest extends CuratorTestBase
   {
     jsonMapper = new DefaultObjectMapper();
     zkPathsConfig = new ZkPathsConfig();
-    announcementsPath = zkPathsConfig.getAnnouncementsPath();
-    inventoryPath = zkPathsConfig.getLiveSegmentsPath();
   }
 
   @Before
@@ -89,6 +81,7 @@ public class BrokerServerViewTest extends CuratorTestBase
   {
     setupServerAndCurator();
     curator.start();
+    curator.blockUntilConnected();
   }
 
   @Test
@@ -109,10 +102,10 @@ public class BrokerServerViewTest extends CuratorTestBase
         0
     );
 
-    setupZNodeForServer(druidServer);
+    setupZNodeForServer(druidServer, zkPathsConfig, jsonMapper);
 
     final DataSegment segment = dataSegmentWithIntervalAndVersion("2014-10-20T00:00:00Z/P1D", "v1");
-    announceSegmentForServer(druidServer, segment);
+    announceSegmentForServer(druidServer, segment, zkPathsConfig, jsonMapper);
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
 
@@ -138,7 +131,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     Assert.assertEquals(segment, selector.getSegment());
     Assert.assertEquals(druidServer, selector.pick().getServer());
 
-    unannounceSegmentForServer(druidServer, segment);
+    unannounceSegmentForServer(druidServer, segment, zkPathsConfig);
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
 
     Assert.assertEquals(
@@ -179,7 +172,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     );
 
     for (DruidServer druidServer : druidServers) {
-      setupZNodeForServer(druidServer);
+      setupZNodeForServer(druidServer, zkPathsConfig, jsonMapper);
     }
 
     final List<DataSegment> segments = Lists.transform(
@@ -200,7 +193,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     );
 
     for (int i = 0; i < 5; ++i) {
-      announceSegmentForServer(druidServers.get(i), segments.get(i));
+      announceSegmentForServer(druidServers.get(i), segments.get(i), zkPathsConfig, jsonMapper);
     }
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentViewInitLatch));
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentAddedLatch));
@@ -220,7 +213,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     );
 
     // unannounce the segment created by dataSegmentWithIntervalAndVersion("2011-04-01/2011-04-09", "v2")
-    unannounceSegmentForServer(druidServers.get(2), segments.get(2));
+    unannounceSegmentForServer(druidServers.get(2), segments.get(2), zkPathsConfig);
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
 
     // renew segmentRemovedLatch since we still have 4 segments to unannounce
@@ -245,7 +238,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     for (int i = 0; i < 5; ++i) {
       // skip the one that was previously unannounced
       if (i != 2) {
-        unannounceSegmentForServer(druidServers.get(i), segments.get(i));
+        unannounceSegmentForServer(druidServers.get(i), segments.get(i), zkPathsConfig);
       }
     }
     Assert.assertTrue(timing.forWaiting().awaitLatch(segmentRemovedLatch));
@@ -253,29 +246,6 @@ public class BrokerServerViewTest extends CuratorTestBase
     Assert.assertEquals(
         0,
         ((List<TimelineObjectHolder>) timeline.lookup(new Interval("2011-04-01/2011-04-09"))).size()
-    );
-  }
-
-  private void announceSegmentForServer(DruidServer druidServer, DataSegment segment) throws Exception
-  {
-    curator.create()
-           .compressed()
-           .withMode(CreateMode.EPHEMERAL)
-           .forPath(
-               ZKPaths.makePath(ZKPaths.makePath(inventoryPath, druidServer.getHost()), segment.getIdentifier()),
-               jsonMapper.writeValueAsBytes(
-                   ImmutableSet.<DataSegment>of(segment)
-               )
-           );
-  }
-
-  private void unannounceSegmentForServer(DruidServer druidServer, DataSegment segment) throws Exception
-  {
-    curator.delete().guaranteed().forPath(
-        ZKPaths.makePath(
-            ZKPaths.makePath(inventoryPath, druidServer.getHost()),
-            segment.getIdentifier()
-        )
     );
   }
 
@@ -319,8 +289,7 @@ public class BrokerServerViewTest extends CuratorTestBase
     baseView = new BatchServerInventoryView(
         zkPathsConfig,
         curator,
-        jsonMapper,
-        Predicates.<DataSegment>alwaysTrue()
+        jsonMapper
     )
     {
       @Override
@@ -368,19 +337,6 @@ public class BrokerServerViewTest extends CuratorTestBase
     );
 
     baseView.start();
-  }
-
-  private void setupZNodeForServer(DruidServer server) throws Exception
-  {
-    curator.create()
-           .creatingParentsIfNeeded()
-           .forPath(
-               ZKPaths.makePath(announcementsPath, server.getHost()),
-               jsonMapper.writeValueAsBytes(server.getMetadata())
-           );
-    curator.create()
-           .creatingParentsIfNeeded()
-           .forPath(ZKPaths.makePath(inventoryPath, server.getHost()));
   }
 
   private DataSegment dataSegmentWithIntervalAndVersion(String intervalStr, String version)

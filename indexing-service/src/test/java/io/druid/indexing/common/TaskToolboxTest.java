@@ -1,18 +1,18 @@
 /*
  * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements.  See the NOTICE file
+ * or more contributor license agreements. See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership.  Metamarkets licenses this file
+ * regarding copyright ownership. Metamarkets licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * with the License. You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
+ * KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.MonitorScheduler;
-import io.druid.client.FilteredServerView;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
@@ -32,6 +31,7 @@ import io.druid.indexing.common.task.Task;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
+import io.druid.segment.IndexMergerV9;
 import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.DataSegmentMover;
@@ -39,6 +39,7 @@ import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.SegmentLoadingException;
+import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
@@ -66,7 +67,9 @@ public class TaskToolboxTest
   private DataSegmentMover mockDataSegmentMover = EasyMock.createMock(DataSegmentMover.class);
   private DataSegmentArchiver mockDataSegmentArchiver = EasyMock.createMock(DataSegmentArchiver.class);
   private DataSegmentAnnouncer mockSegmentAnnouncer = EasyMock.createMock(DataSegmentAnnouncer.class);
-  private FilteredServerView mockNewSegmentServerView = EasyMock.createMock(FilteredServerView.class);
+  private SegmentHandoffNotifierFactory mockHandoffNotifierFactory = EasyMock.createNiceMock(
+      SegmentHandoffNotifierFactory.class
+  );
   private QueryRunnerFactoryConglomerate mockQueryRunnerFactoryConglomerate
       = EasyMock.createMock(QueryRunnerFactoryConglomerate.class);
   private MonitorScheduler mockMonitorScheduler = EasyMock.createMock(MonitorScheduler.class);
@@ -75,6 +78,7 @@ public class TaskToolboxTest
   private SegmentLoaderLocalCacheManager mockSegmentLoaderLocalCacheManager = EasyMock.createMock(SegmentLoaderLocalCacheManager.class);
   private Task task = EasyMock.createMock(Task.class);
   private IndexMerger mockIndexMerger = EasyMock.createMock(IndexMerger.class);
+  private IndexMergerV9 mockIndexMergerV9 = EasyMock.createMock(IndexMergerV9.class);
   private IndexIO mockIndexIO = EasyMock.createMock(IndexIO.class);
   private Cache mockCache = EasyMock.createMock(Cache.class);
   private CacheConfig mockCacheConfig = EasyMock.createMock(CacheConfig.class);
@@ -86,10 +90,11 @@ public class TaskToolboxTest
   public void setUp() throws IOException
   {
     EasyMock.expect(task.getId()).andReturn("task_id").anyTimes();
-    EasyMock.replay(task);
+    EasyMock.expect(task.getDataSource()).andReturn("task_ds").anyTimes();
+    EasyMock.replay(task, mockHandoffNotifierFactory);
 
     taskToolbox = new TaskToolboxFactory(
-        new TaskConfig(temporaryFolder.newFile().toString(), null, null, 50000, null),
+        new TaskConfig(temporaryFolder.newFile().toString(), null, null, 50000, null, false, null, null),
         mockTaskActionClientFactory,
         mockEmitter,
         mockSegmentPusher,
@@ -97,7 +102,7 @@ public class TaskToolboxTest
         mockDataSegmentMover,
         mockDataSegmentArchiver,
         mockSegmentAnnouncer,
-        mockNewSegmentServerView,
+        mockHandoffNotifierFactory,
         mockQueryRunnerFactoryConglomerate,
         mockQueryExecutorService,
         mockMonitorScheduler,
@@ -106,7 +111,8 @@ public class TaskToolboxTest
         mockIndexMerger,
         mockIndexIO,
         mockCache,
-        mockCacheConfig
+        mockCacheConfig,
+        mockIndexMergerV9
     );
   }
 
@@ -120,12 +126,6 @@ public class TaskToolboxTest
   public void testGetSegmentAnnouncer()
   {
     Assert.assertEquals(mockSegmentAnnouncer,taskToolbox.build(task).getSegmentAnnouncer());
-  }
-
-  @Test
-  public void testGetNewSegmentServerView()
-  {
-    Assert.assertEquals(mockNewSegmentServerView,taskToolbox.build(task).getNewSegmentServerView());
   }
 
   @Test

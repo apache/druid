@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.indexing.common;
@@ -25,8 +27,8 @@ import com.metamx.common.ISE;
 import io.druid.guice.ServerModule;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMaker;
 import io.druid.segment.IndexMerger;
+import io.druid.segment.IndexMergerV9;
 import io.druid.segment.column.ColumnConfig;
 
 import java.util.List;
@@ -38,7 +40,7 @@ public class TestUtils
 {
   private final ObjectMapper jsonMapper;
   private final IndexMerger indexMerger;
-  private final IndexMaker indexMaker;
+  private final IndexMergerV9 indexMergerV9;
   private final IndexIO indexIO;
 
   public TestUtils()
@@ -56,7 +58,7 @@ public class TestUtils
         }
     );
     indexMerger = new IndexMerger(jsonMapper, indexIO);
-    indexMaker = new IndexMaker(jsonMapper, indexIO);
+    indexMergerV9 = new IndexMergerV9(jsonMapper, indexIO);
 
     final List<? extends Module> list = new ServerModule().getJacksonModules();
     for (Module module : list) {
@@ -67,7 +69,6 @@ public class TestUtils
         new InjectableValues.Std()
             .addValue(IndexIO.class, indexIO)
             .addValue(IndexMerger.class, indexMerger)
-            .addValue(IndexMaker.class, indexMaker)
             .addValue(ObjectMapper.class, jsonMapper)
     );
   }
@@ -82,9 +83,8 @@ public class TestUtils
     return indexMerger;
   }
 
-  public IndexMaker getTestIndexMaker()
-  {
-    return indexMaker;
+  public IndexMergerV9 getTestIndexMergerV9() {
+    return indexMergerV9;
   }
 
   public IndexIO getTestIndexIO()
@@ -94,12 +94,17 @@ public class TestUtils
 
   public static boolean conditionValid(IndexingServiceCondition condition)
   {
+    return conditionValid(condition, 1000);
+  }
+
+  public static boolean conditionValid(IndexingServiceCondition condition, long timeout)
+  {
     try {
       Stopwatch stopwatch = Stopwatch.createUnstarted();
       stopwatch.start();
       while (!condition.isValid()) {
         Thread.sleep(100);
-        if (stopwatch.elapsed(TimeUnit.MILLISECONDS) > 1000) {
+        if (stopwatch.elapsed(TimeUnit.MILLISECONDS) > timeout) {
           throw new ISE("Cannot find running task");
         }
       }

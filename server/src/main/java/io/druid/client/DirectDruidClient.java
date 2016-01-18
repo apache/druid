@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.client;
@@ -50,6 +52,7 @@ import com.metamx.http.client.response.ClientResponse;
 import com.metamx.http.client.response.HttpResponseHandler;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
+import io.druid.query.BaseQuery;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.DruidMetrics;
 import io.druid.query.Query;
@@ -132,7 +135,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   public Sequence<T> run(final Query<T> query, final Map<String, Object> context)
   {
     QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
-    boolean isBySegment = query.getContextBySegment(false);
+    boolean isBySegment = BaseQuery.getContextBySegment(query, false);
 
     Pair<JavaType, JavaType> types = typesMap.get(query.getClass());
     if (types == null) {
@@ -276,6 +279,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               byteCount.get() / (0.0001 * (stopTime - responseStartTime))
           );
           emitter.emit(builder.build("query/node/time", stopTime - requestStartTime));
+          emitter.emit(builder.build("query/node/bytes", byteCount.get()));
           synchronized (done) {
             try {
               // An empty byte array is put at the end to give the SequenceInputStream.close() as something to close out

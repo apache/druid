@@ -1,23 +1,26 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.query.aggregation;
 
 import com.google.common.collect.Lists;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.DimFilter;
@@ -71,53 +74,58 @@ public class FilteredAggregatorTest
     return new ColumnSelectorFactory()
     {
       @Override
-      public DimensionSelector makeDimensionSelector(String dimensionName, ExtractionFn extractionFn)
+      public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
       {
+        final String dimensionName = dimensionSpec.getDimension();
+        final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
+
         if (dimensionName.equals("dim")) {
-          return new DimensionSelector()
-          {
-            @Override
-            public IndexedInts getRow()
-            {
-              if (selector.getIndex() % 3 == 2) {
-                return new ArrayBasedIndexedInts(new int[]{1});
-              } else {
-                return new ArrayBasedIndexedInts(new int[]{0});
-              }
-            }
+          return dimensionSpec.decorate(
+              new DimensionSelector()
+              {
+                @Override
+                public IndexedInts getRow()
+                {
+                  if (selector.getIndex() % 3 == 2) {
+                    return new ArrayBasedIndexedInts(new int[]{1});
+                  } else {
+                    return new ArrayBasedIndexedInts(new int[]{0});
+                  }
+                }
 
-            @Override
-            public int getValueCardinality()
-            {
-              return 2;
-            }
+                @Override
+                public int getValueCardinality()
+                {
+                  return 2;
+                }
 
-            @Override
-            public String lookupName(int id)
-            {
-              switch (id) {
-                case 0:
-                  return "a";
-                case 1:
-                  return "b";
-                default:
-                  throw new IllegalArgumentException();
-              }
-            }
+                @Override
+                public String lookupName(int id)
+                {
+                  switch (id) {
+                    case 0:
+                      return "a";
+                    case 1:
+                      return "b";
+                    default:
+                      throw new IllegalArgumentException();
+                  }
+                }
 
-            @Override
-            public int lookupId(String name)
-            {
-              switch (name) {
-                case "a":
-                  return 0;
-                case "b":
-                  return 1;
-                default:
-                  throw new IllegalArgumentException();
+                @Override
+                public int lookupId(String name)
+                {
+                  switch (name) {
+                    case "a":
+                      return 0;
+                    case "b":
+                      return 1;
+                    default:
+                      throw new IllegalArgumentException();
+                  }
+                }
               }
-            }
-          };
+          );
         } else {
           throw new UnsupportedOperationException();
         }

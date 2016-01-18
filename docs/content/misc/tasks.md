@@ -305,19 +305,6 @@ Merge tasks merge a list of segments together. Any common timestamps are merged.
 Segment Destroying Tasks
 ------------------------
 
-### Delete Task
-
-Delete tasks create empty segments with no data. The grammar is:
-
-```json
-{
-    "type": "delete",
-    "id": <task_id>,
-    "dataSource": <task_datasource>,
-    "segments": <JSON list of DataSegment objects to delete>
-}
-```
-
 ### Kill Task
 
 Kill tasks delete all information about a segment and removes it from deep storage. Killable segments must be disabled (used==0) in the Druid segment table. The available grammar is:

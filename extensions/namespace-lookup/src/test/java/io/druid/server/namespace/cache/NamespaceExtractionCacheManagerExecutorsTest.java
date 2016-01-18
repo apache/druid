@@ -1,18 +1,18 @@
 /*
  * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements.  See the NOTICE file
+ * or more contributor license agreements. See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership.  Metamarkets licenses this file
+ * regarding copyright ownership. Metamarkets licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * with the License. You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
+ * KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
@@ -56,6 +56,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
@@ -66,6 +67,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  *
@@ -80,15 +82,18 @@ public class NamespaceExtractionCacheManagerExecutorsTest
   private NamespaceExtractionCacheManager manager;
   private File tmpFile;
   private final ConcurrentMap<String, Function<String, String>> fnCache = new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, Function<String, List<String>>> reverseFnCache = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, Object> cacheUpdateAlerts = new ConcurrentHashMap<>();
 
   private final AtomicLong numRuns = new AtomicLong(0L);
 
   @Before
-  public void setUp() throws IOException
+  public void setUp() throws Exception
   {
     final Path tmpDir = temporaryFolder.newFolder().toPath();
     lifecycle = new Lifecycle();
+    // Lifecycle stop is used to shut down executors. Start does nothing, so it's ok to call it here.
+    lifecycle.start();
     final URIExtractionNamespaceFunctionFactory factory = new URIExtractionNamespaceFunctionFactory(
         ImmutableMap.<String, SearchableVersionedDataFinder>of("file", new LocalFileTimestampVersionFinder())
     )
@@ -114,7 +119,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
       }
     };
     manager = new OnHeapNamespaceExtractionCacheManager(
-        lifecycle, fnCache, new NoopServiceEmitter(),
+        lifecycle, fnCache, reverseFnCache, new NoopServiceEmitter(),
         ImmutableMap.<Class<? extends ExtractionNamespace>, ExtractionNamespaceFunctionFactory<?>>of(
             URIExtractionNamespace.class,
             factory

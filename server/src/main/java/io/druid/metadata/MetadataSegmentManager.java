@@ -1,50 +1,63 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.metadata;
 
 import io.druid.client.DruidDataSource;
+import org.joda.time.Interval;
 
 import java.util.Collection;
+import java.util.List;
 
 /**
  */
 
 public interface MetadataSegmentManager
 {
-  public void start();
+  void start();
 
-  public void stop();
+  void stop();
 
-  public boolean enableDatasource(final String ds);
+  boolean enableDatasource(final String ds);
 
-  public boolean enableSegment(final String segmentId);
+  boolean enableSegment(final String segmentId);
 
-  public boolean removeDatasource(final String ds);
+  boolean removeDatasource(final String ds);
 
-  public boolean removeSegment(String ds, final String segmentID);
+  boolean removeSegment(String ds, final String segmentID);
 
-  public boolean isStarted();
+  boolean isStarted();
 
-  public DruidDataSource getInventoryValue(String key);
+  DruidDataSource getInventoryValue(String key);
 
-  public Collection<DruidDataSource> getInventory();
+  Collection<DruidDataSource> getInventory();
 
-  public Collection<String> getAllDatasourceNames();
+  Collection<String> getAllDatasourceNames();
+
+  /**
+   * Returns top N unused segment intervals in given interval when ordered by segment start time, end time.
+   */
+  List<Interval> getUnusedSegmentIntervals(
+      final String dataSource,
+      final Interval interval,
+      final int limit
+  );
 
   public void poll();
 }

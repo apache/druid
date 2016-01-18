@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.indexer;
@@ -48,8 +50,8 @@ import io.druid.indexer.partitions.PartitionsSpec;
 import io.druid.indexer.path.PathSpec;
 import io.druid.initialization.Initialization;
 import io.druid.segment.IndexIO;
-import io.druid.segment.IndexMaker;
 import io.druid.segment.IndexMerger;
+import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.server.DruidNode;
@@ -88,7 +90,7 @@ public class HadoopDruidIndexerConfig
   public static final ObjectMapper JSON_MAPPER;
   public static final IndexIO INDEX_IO;
   public static final IndexMerger INDEX_MERGER;
-  public static final IndexMaker INDEX_MAKER;
+  public static final IndexMergerV9 INDEX_MERGER_V9;
 
   private static final String DEFAULT_WORKING_PATH = "/tmp/druid-indexing";
 
@@ -112,7 +114,7 @@ public class HadoopDruidIndexerConfig
     JSON_MAPPER = injector.getInstance(ObjectMapper.class);
     INDEX_IO = injector.getInstance(IndexIO.class);
     INDEX_MERGER = injector.getInstance(IndexMerger.class);
-    INDEX_MAKER = injector.getInstance(IndexMaker.class);
+    INDEX_MERGER_V9 = injector.getInstance(IndexMergerV9.class);
   }
 
   public static enum IndexJobCounters
@@ -352,6 +354,11 @@ public class HadoopDruidIndexerConfig
     return schema.getTuningConfig().getShardSpecs().get(bucket.time).get(bucket.partitionNum);
   }
 
+  public boolean isBuildV9Directly()
+  {
+    return schema.getTuningConfig().getBuildV9Directly();
+  }
+
   /**
    * Job instance should have Configuration set (by calling {@link #addJobProperties(Job)}
    * or via injected system properties) before this method is called.  The {@link PathSpec} may
@@ -476,10 +483,11 @@ public class HadoopDruidIndexerConfig
   {
     return new Path(
         String.format(
-            "%s/%s/%s",
+            "%s/%s/%s/%s",
             getWorkingPath(),
             schema.getDataSchema().getDataSource(),
-            schema.getTuningConfig().getVersion().replace(":", "")
+            schema.getTuningConfig().getVersion().replace(":", ""),
+            schema.getUniqueId()
         )
     );
   }

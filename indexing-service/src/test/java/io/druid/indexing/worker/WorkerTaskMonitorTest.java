@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.indexing.worker;
@@ -30,21 +32,28 @@ import io.druid.indexing.common.TaskToolboxFactory;
 import io.druid.indexing.common.TestMergeTask;
 import io.druid.indexing.common.TestRealtimeTask;
 import io.druid.indexing.common.TestUtils;
+import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
+import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.TestRemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.ThreadPoolTaskRunner;
 import io.druid.indexing.worker.config.WorkerConfig;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
+import io.druid.segment.IndexMergerV9;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.SegmentLoaderLocalCacheManager;
 import io.druid.segment.loading.StorageLocationConfig;
+import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.initialization.IndexerZkConfig;
 import io.druid.server.initialization.ZkPathsConfig;
+import io.druid.server.metrics.NoopServiceEmitter;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingCluster;
+import org.easymock.EasyMock;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -72,6 +81,7 @@ public class WorkerTaskMonitorTest
   private Worker worker;
   private ObjectMapper jsonMapper;
   private IndexMerger indexMerger;
+  private IndexMergerV9 indexMergerV9;
   private IndexIO indexIO;
 
   public WorkerTaskMonitorTest()
@@ -79,6 +89,7 @@ public class WorkerTaskMonitorTest
     TestUtils testUtils = new TestUtils();
     jsonMapper = testUtils.getTestObjectMapper();
     indexMerger = testUtils.getTestIndexMerger();
+    indexMergerV9 = testUtils.getTestIndexMergerV9();
     indexIO = testUtils.getTestIndexIO();
   }
 
@@ -94,6 +105,7 @@ public class WorkerTaskMonitorTest
                                 .compressionProvider(new PotentiallyGzippedCompressionProvider(false))
                                 .build();
     cf.start();
+    cf.blockUntilConnected();
     cf.create().creatingParentsIfNeeded().forPath(basePath);
 
     worker = new Worker(
@@ -133,14 +145,30 @@ public class WorkerTaskMonitorTest
 
   private WorkerTaskMonitor createTaskMonitor()
   {
+    final TaskConfig taskConfig = new TaskConfig(
+        Files.createTempDir().toString(),
+        null,
+        null,
+        0,
+        null,
+        false,
+        null,
+        null
+    );
+    TaskActionClientFactory taskActionClientFactory = EasyMock.createNiceMock(TaskActionClientFactory.class);
+    TaskActionClient taskActionClient = EasyMock.createNiceMock(TaskActionClient.class);
+    EasyMock.expect(taskActionClientFactory.create(EasyMock.<Task>anyObject())).andReturn(taskActionClient).anyTimes();
+    SegmentHandoffNotifierFactory notifierFactory = EasyMock.createNiceMock(SegmentHandoffNotifierFactory.class);
+    EasyMock.replay(taskActionClientFactory, taskActionClient, notifierFactory);
     return new WorkerTaskMonitor(
         jsonMapper,
         cf,
         workerCuratorCoordinator,
         new ThreadPoolTaskRunner(
             new TaskToolboxFactory(
-                new TaskConfig(Files.createTempDir().toString(), null, null, 0, null),
-                null, null, null, null, null, null, null, null, null, null, null, new SegmentLoaderFactory(
+                taskConfig,
+                taskActionClientFactory,
+                null, null, null, null, null, null, notifierFactory, null, null, null, new SegmentLoaderFactory(
                 new SegmentLoaderLocalCacheManager(
                     null,
                     new SegmentLoaderConfig()
@@ -158,9 +186,11 @@ public class WorkerTaskMonitorTest
                 indexMerger,
                 indexIO,
                 null,
-                null
+                null,
+                indexMergerV9
             ),
-            null
+            taskConfig,
+            new NoopServiceEmitter()
         ),
         new WorkerConfig().setCapacity(1)
     );
@@ -177,10 +207,6 @@ public class WorkerTaskMonitorTest
   @Test
   public void testRunTask() throws Exception
   {
-    cf.create()
-      .creatingParentsIfNeeded()
-      .forPath(joiner.join(tasksPath, task.getId()), jsonMapper.writeValueAsBytes(task));
-
     Assert.assertTrue(
         TestUtils.conditionValid(
             new IndexingServiceCondition()
@@ -198,6 +224,10 @@ public class WorkerTaskMonitorTest
             }
         )
     );
+
+    cf.create()
+      .creatingParentsIfNeeded()
+      .forPath(joiner.join(tasksPath, task.getId()), jsonMapper.writeValueAsBytes(task));
 
     Assert.assertTrue(
         TestUtils.conditionValid(
@@ -314,7 +344,7 @@ public class WorkerTaskMonitorTest
             }
         )
     );
-    // ephermal owner is 0 is created node is PERSISTENT
+    // ephemeral owner is 0 is created node is PERSISTENT
     Assert.assertEquals(0, cf.checkExists().forPath(joiner.join(statusPath, task.getId())).getEphemeralOwner());
 
   }

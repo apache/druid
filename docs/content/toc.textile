@@ -17,6 +17,7 @@ h2. Data Ingestion
 * "Schema Changes":../ingestion/schema-changes.html
 * "Realtime Ingestion":../ingestion/realtime-ingestion.html
 * "Batch Ingestion":../ingestion/batch-ingestion.html
+* "Updating Existing Data":../ingestion/update-existing-data.html
 * "FAQ":../ingestion/faq.html
 
 h2. Querying
@@ -38,6 +39,7 @@ h2. Querying
 ** "Context":../querying/query-context.html
 * "SQL":../querying/sql.html
 * "Joins":../querying/joins.html
+* "Multi-Valued Dimensions":../querying/multi-valued-dimensions.html
 
 h2. Design
 * "Overview":../design/design.html
@@ -79,6 +81,7 @@ h2. Configuration
 * "Production Zookeeper Configuration":../configuration/zookeeper.html
 
 h2. Development
+* "Overview":../development/overview.html
 * "Libraries":../development/libraries.html
 * "Extending Druid":../development/modules.html
 * "Build From Source":../development/build.html

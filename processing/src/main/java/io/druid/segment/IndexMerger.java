@@ -1,21 +1,21 @@
 /*
-* Licensed to Metamarkets Group Inc. (Metamarkets) under one
-* or more contributor license agreements. See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership. Metamarkets licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License. You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied. See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 package io.druid.segment;
 
@@ -24,6 +24,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Splitter;
+import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
@@ -103,12 +104,12 @@ public class IndexMerger
 {
   private static final Logger log = new Logger(IndexMerger.class);
 
-  private static final SerializerUtils serializerUtils = new SerializerUtils();
-  private static final int INVALID_ROW = -1;
-  private static final Splitter SPLITTER = Splitter.on(",");
+  protected static final SerializerUtils serializerUtils = new SerializerUtils();
+  protected static final int INVALID_ROW = -1;
+  protected static final Splitter SPLITTER = Splitter.on(",");
 
-  private final ObjectMapper mapper;
-  private final IndexIO indexIO;
+  protected final ObjectMapper mapper;
+  protected final IndexIO indexIO;
 
   @Inject
   public IndexMerger(
@@ -254,7 +255,7 @@ public class IndexMerger
     return merge(indexes, metricAggs, outDir, segmentMetadata, indexSpec, new BaseProgressIndicator());
   }
 
-  private List<String> getLexicographicMergedDimensions(List<IndexableAdapter> indexes)
+  private static List<String> getLexicographicMergedDimensions(List<IndexableAdapter> indexes)
   {
     return mergeIndexed(
         Lists.transform(
@@ -271,7 +272,7 @@ public class IndexMerger
     );
   }
 
-  private List<String> getMergedDimensions(List<IndexableAdapter> indexes)
+  public static List<String> getMergedDimensions(List<IndexableAdapter> indexes)
   {
     if (indexes.size() == 0) {
       return ImmutableList.of();
@@ -279,7 +280,7 @@ public class IndexMerger
     Indexed<String> dimOrder = indexes.get(0).getDimensionNames();
     for (IndexableAdapter index : indexes) {
       Indexed<String> dimOrder2 = index.getDimensionNames();
-      if(!Iterators.elementsEqual(dimOrder.iterator(), dimOrder2.iterator())) {
+      if (!Iterators.elementsEqual(dimOrder.iterator(), dimOrder2.iterator())) {
         return getLexicographicMergedDimensions(indexes);
       }
     }
@@ -472,7 +473,7 @@ public class IndexMerger
     return makeIndexFiles(indexes, outDir, progress, mergedDimensions, mergedMetrics, null, rowMergerFn, indexSpec);
   }
 
-  private File makeIndexFiles(
+  protected File makeIndexFiles(
       final List<IndexableAdapter> indexes,
       final File outDir,
       final ProgressIndicator progress,
@@ -963,7 +964,7 @@ public class IndexMerger
     return outDir;
   }
 
-  private <T extends Comparable> ArrayList<T> mergeIndexed(final List<Iterable<T>> indexedLists)
+  public static <T extends Comparable> ArrayList<T> mergeIndexed(final List<Iterable<T>> indexedLists)
   {
     Set<T> retVal = Sets.newTreeSet(Ordering.<T>natural().nullsFirst());
 
@@ -1002,7 +1003,7 @@ public class IndexMerger
     IndexIO.checkFileSize(indexFile);
   }
 
-  private static class DimValueConverter
+  public static class DimValueConverter
   {
     private final Indexed<String> dimSet;
     private final IntBuffer conversionBuf;
@@ -1073,7 +1074,7 @@ public class IndexMerger
     }
   }
 
-  private static class ConvertingIndexedInts implements Iterable<Integer>
+  public static class ConvertingIndexedInts implements Iterable<Integer>
   {
     private final IndexedInts baseIndex;
     private final IntBuffer conversionBuffer;
@@ -1114,7 +1115,7 @@ public class IndexMerger
     }
   }
 
-  private static class MMappedIndexRowIterable implements Iterable<Rowboat>
+  public static class MMappedIndexRowIterable implements Iterable<Rowboat>
   {
     private final Iterable<Rowboat> index;
     private final List<String> convertedDims;
@@ -1139,37 +1140,32 @@ public class IndexMerger
       return index;
     }
 
-    public List<String> getConvertedDims()
-    {
-      return convertedDims;
-    }
-
-    public Map<String, IntBuffer> getConverters()
-    {
-      return converters;
-    }
-
-    public int getIndexNumber()
-    {
-      return indexNumber;
-    }
-
     @Override
     public Iterator<Rowboat> iterator()
     {
+      final IntBuffer[] converterArray = FluentIterable
+          .from(convertedDims)
+          .transform(
+              new Function<String, IntBuffer>()
+              {
+                @Override
+                public IntBuffer apply(String input)
+                {
+                  return converters.get(input);
+                }
+              }
+          ).toArray(IntBuffer.class);
       return Iterators.transform(
           index.iterator(),
           new Function<Rowboat, Rowboat>()
           {
-            int rowCount = 0;
-
             @Override
             public Rowboat apply(@Nullable Rowboat input)
             {
               int[][] dims = input.getDims();
               int[][] newDims = new int[convertedDims.size()][];
               for (int i = 0; i < convertedDims.size(); ++i) {
-                IntBuffer converter = converters.get(convertedDims.get(i));
+                IntBuffer converter = converterArray[i];
 
                 if (converter == null) {
                   continue;
@@ -1205,7 +1201,7 @@ public class IndexMerger
     }
   }
 
-  private static class AggFactoryStringIndexed implements Indexed<String>
+  public static class AggFactoryStringIndexed implements Indexed<String>
   {
     private final AggregatorFactory[] metricAggs;
 
@@ -1242,7 +1238,7 @@ public class IndexMerger
     }
   }
 
-  private static class RowboatMergeFunction implements BinaryFn<Rowboat, Rowboat, Rowboat>
+  public static class RowboatMergeFunction implements BinaryFn<Rowboat, Rowboat, Rowboat>
   {
     private final AggregatorFactory[] metricAggs;
 
@@ -1288,7 +1284,7 @@ public class IndexMerger
     }
   }
 
-  static boolean isNullColumn(Iterable<String> dimValues)
+  public static boolean isNullColumn(Iterable<String> dimValues)
   {
     if (dimValues == null) {
       return true;

@@ -124,8 +124,8 @@ A sample worker config spec is shown below:
     "type": "fillCapacityWithAffinity",
     "affinityConfig": {
       "affinity": {
-        "datasource1": ["ip1:port", "ip2:port"],
-        "datasource2": ["ip3:port"]
+        "datasource1": ["host1:port", "host2:port"],
+        "datasource2": ["host3:port"]
       }
     }
   },
@@ -158,7 +158,7 @@ Issuing a GET request at the same URL will return the current worker config spec
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`selectStrategy`|How to assign tasks to middlemanagers. Choices are `fillCapacity`, `fillCapacityWithAffinity`, `equalDistribution` and `javascript`.|fillCapacity|
+|`selectStrategy`|How to assign tasks to middle managers. Choices are `fillCapacity`, `fillCapacityWithAffinity`, `equalDistribution` and `javascript`.|fillCapacity|
 |`autoScaler`|Only used if autoscaling is enabled. See below.|null|
 
 To view the audit history of worker config issue a GET request to the URL -
@@ -192,7 +192,7 @@ An affinity config can be provided.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`type`|`fillCapacityWithAffinity`.|fillCapacityWithAffinity|
-|`affinity`|A map to String to list of String host names.|{}|
+|`affinity`|JSON object mapping a datasource String name to a list of indexing service middle manager host:port String values. Druid doesn't perform DNS resolution, so the 'host' value must match what is configured on the middle manager and what the middle manager announces itself as (examine the Overlord logs to see what your middle manager announces itself as).|{}|
 
 Tasks will try to be assigned to preferred workers. Fill capacity strategy is used if no preference for a datasource specified.
 
@@ -264,7 +264,7 @@ Middle managers pass their configurations down to their child peons. The middle 
 
 
 #### Peon Configs
-Although peons inherit the configurations of their parent middle managers, explicit child peon configs in middlemanager can be set by prefixing them with:
+Although peons inherit the configurations of their parent middle managers, explicit child peon configs in middle manager can be set by prefixing them with:
 
 ```
 druid.indexer.fork.property
@@ -274,11 +274,14 @@ Additional peon configs include:
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.peon.mode`|Choices are "local" and "remote". Setting this to local means you intend to run the peon as a standalone node (Not recommended).|remote|
-|`druid.indexer.task.baseDir`|Base temporary working directory.|/tmp|
-|`druid.indexer.task.baseTaskDir`|Base temporary working directory for tasks.|/tmp/persistent/tasks|
-|`druid.indexer.task.hadoopWorkingPath`|Temporary working directory for Hadoop tasks.|/tmp/druid-indexing|
+|`druid.indexer.task.baseDir`|Base temporary working directory.|`System.getProperty("java.io.tmpdir")`|
+|`druid.indexer.task.baseTaskDir`|Base temporary working directory for tasks.|`${druid.indexer.task.baseDir}/persistent/tasks`|
+|`druid.indexer.task.hadoopWorkingPath`|Temporary working directory for Hadoop tasks.|`/tmp/druid-indexing`|
 |`druid.indexer.task.defaultRowFlushBoundary`|Highest row count before persisting to disk. Used for indexing generating tasks.|50000|
 |`druid.indexer.task.defaultHadoopCoordinates`|Hadoop version to use with HadoopIndexTasks that do not request a particular version.|org.apache.hadoop:hadoop-client:2.3.0|
+|`druid.indexer.task.restoreTasksOnRestart`|If true, middleManagers will attempt to stop tasks gracefully on shutdown and restore them on restart.|false|
+|`druid.indexer.task.gracefulShutdownTimeout`|Wait this long on middleManager restart for restorable tasks to gracefully exit.|PT5M|
+|`druid.indexer.task.directoryLockTimeout`|Wait this long for zombie peons to exit before giving up on their replacements.|PT10M|
 
 If `druid.indexer.runner.separateIngestionEndpoint` is set to true then following configurations are available for the ingestion server at peon:
 

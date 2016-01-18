@@ -40,6 +40,7 @@ We recommend just setting the base ZK path and the ZK service host, but all ZK p
 |--------|-----------|-------|
 |`druid.zk.service.sessionTimeoutMs`|ZooKeeper session timeout, in milliseconds.|`30000`|
 |`druid.zk.service.compress`|Boolean flag for whether or not created Znodes should be compressed.|`true`|
+|`druid.zk.service.acl`|Boolean flag for whether or not to enable ACL security for ZooKeeper. If ACL is enabled, zNode creators will have all permissions.|`false`|
 
 #### Path Configuration
 Druid interacts with ZK through a set of standard path configurations. We recommend just setting the base ZK path, but all ZK paths that Druid uses can be overwritten to absolute paths.
@@ -151,7 +152,7 @@ The Druid servers emit various metrics and alerts via something we call an Emitt
 
 ### Metadata Storage
 
-These properties specify the jdbc connection and other configuration around the metadata storage. The only processes that connect to the metadata storage with these properties are the [Coordinator](../design/coordinator.html) and [Indexing service](../design/indexing-service.html).
+These properties specify the jdbc connection and other configuration around the metadata storage. The only processes that connect to the metadata storage with these properties are the [Coordinator](../design/coordinator.html), [Indexing service](../design/indexing-service.html) and [Realtime Nodes](../design/realtime.html).
 
 |Property|Description|Default|
 |--------|-----------|-------|
@@ -257,21 +258,19 @@ This config is used to find the [Indexing Service](../design/indexing-service.ht
 |--------|-----------|-------|
 |`druid.selectors.indexing.serviceName`|The druid.service name of the indexing service Overlord node. To start the Overlord with a different name, set it with this property. |druid/overlord|
 
-### Announcing Segments
 
-You can optionally configure how to announce and unannounce Znodes in ZooKeeper (using Curator). For normal operations you do not need to override any of these configs.
+### Coordinator Discovery
 
-#### Data Segment Announcer
-
-Data segment announcers are used to announce segments.
+This config is used to find the [Coordinator](../design/coordinator.html) using Curator service discovery. This config is used by the realtime indexing nodes to get information about the segments loaded in the cluster.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.announcer.type`|Choices: legacy or batch. The type of data segment announcer to use.|batch|
+|`druid.selectors.coordinator.serviceName`|The druid.service name of the coordinator node. To start the Coordinator with a different name, set it with this property. |druid/coordinator|
 
-##### Single Data Segment Announcer
 
-In legacy Druid, each segment served by a node would be announced as an individual Znode.
+### Announcing Segments
+
+You can configure how to announce and unannounce Znodes in ZooKeeper (using Curator). For normal operations you do not need to override any of these configs.
 
 ##### Batch Data Segment Announcer
 

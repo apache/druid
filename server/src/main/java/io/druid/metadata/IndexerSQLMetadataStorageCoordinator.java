@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.metadata;
@@ -21,12 +23,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
+import com.metamx.common.IAE;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.logger.Logger;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -43,6 +47,7 @@ import org.joda.time.Interval;
 import org.skife.jdbi.v2.FoldController;
 import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
+import org.skife.jdbi.v2.Query;
 import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.TransactionCallback;
@@ -53,7 +58,9 @@ import org.skife.jdbi.v2.util.StringMapper;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -85,9 +92,18 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     connector.createSegmentTable();
   }
 
+  @Override
   public List<DataSegment> getUsedSegmentsForInterval(
       final String dataSource,
       final Interval interval
+  ) throws IOException
+  {
+    return getUsedSegmentsForIntervals(dataSource, ImmutableList.of(interval));
+  }
+
+  @Override
+  public List<DataSegment> getUsedSegmentsForIntervals(
+      final String dataSource, final List<Interval> intervals
   ) throws IOException
   {
     return connector.retryWithHandle(
@@ -96,16 +112,28 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           @Override
           public List<DataSegment> withHandle(Handle handle) throws Exception
           {
-            final VersionedIntervalTimeline<String, DataSegment> timeline = getTimelineForIntervalWithHandle(
+            final VersionedIntervalTimeline<String, DataSegment> timeline = getTimelineForIntervalsWithHandle(
                 handle,
                 dataSource,
-                interval
+                intervals
             );
 
-            return Lists.newArrayList(
+            Set<DataSegment> segments = Sets.newHashSet(
                 Iterables.concat(
                     Iterables.transform(
-                        timeline.lookup(interval),
+                        Iterables.concat(
+                            Iterables.transform(
+                                intervals,
+                                new Function<Interval, Iterable<TimelineObjectHolder<String, DataSegment>>>()
+                                {
+                                  @Override
+                                  public Iterable<TimelineObjectHolder<String, DataSegment>> apply(Interval interval)
+                                  {
+                                    return timeline.lookup(interval);
+                                  }
+                                }
+                            )
+                        ),
                         new Function<TimelineObjectHolder<String, DataSegment>, Iterable<DataSegment>>()
                         {
                           @Override
@@ -118,6 +146,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                 )
             );
 
+            return new ArrayList<>(segments);
           }
         }
     );
@@ -158,28 +187,50 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return identifiers;
   }
 
-  private VersionedIntervalTimeline<String, DataSegment> getTimelineForIntervalWithHandle(
+  private VersionedIntervalTimeline<String, DataSegment> getTimelineForIntervalsWithHandle(
       final Handle handle,
       final String dataSource,
-      final Interval interval
+      final List<Interval> intervals
   ) throws IOException
   {
+    if (intervals == null || intervals.isEmpty()) {
+      throw new IAE("null/empty intervals");
+    }
+
+    final StringBuilder sb = new StringBuilder();
+    sb.append("SELECT payload FROM %s WHERE used = true AND dataSource = ? AND (");
+    for (int i = 0; i < intervals.size(); i++) {
+      sb.append(
+          "(start <= ? AND \"end\" >= ?)"
+      );
+      if (i == intervals.size() - 1) {
+        sb.append(")");
+      } else {
+        sb.append(" OR ");
+      }
+    }
+
+    Query<Map<String, Object>> sql = handle.createQuery(
+        String.format(
+            sb.toString(),
+            dbTables.getSegmentsTable()
+        )
+    ).bind(0, dataSource);
+
+    for (int i = 0; i < intervals.size(); i++) {
+      Interval interval = intervals.get(i);
+      sql = sql
+          .bind(2 * i + 1, interval.getEnd().toString())
+          .bind(2 * i + 2, interval.getStart().toString());
+    }
+
+    final ResultIterator<byte[]> dbSegments = sql
+        .map(ByteArrayMapper.FIRST)
+        .iterator();
+
     final VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(
         Ordering.natural()
     );
-
-    final ResultIterator<byte[]> dbSegments =
-        handle.createQuery(
-            String.format(
-                "SELECT payload FROM %s WHERE used = true AND dataSource = :dataSource AND start <= :end and \"end\" >= :start  AND used = true",
-                dbTables.getSegmentsTable()
-            )
-        )
-              .bind("dataSource", dataSource)
-              .bind("start", interval.getStart().toString())
-              .bind("end", interval.getEnd().toString())
-              .map(ByteArrayMapper.FIRST)
-              .iterator();
 
     while (dbSegments.hasNext()) {
       final byte[] payload = dbSegments.next();
@@ -301,10 +352,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
             final SegmentIdentifier newIdentifier;
 
-            final List<TimelineObjectHolder<String, DataSegment>> existingChunks = getTimelineForIntervalWithHandle(
+            final List<TimelineObjectHolder<String, DataSegment>> existingChunks = getTimelineForIntervalsWithHandle(
                 handle,
                 dataSource,
-                interval
+                ImmutableList.of(interval)
             ).lookup(interval);
 
             if (existingChunks.size() > 1) {

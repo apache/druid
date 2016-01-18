@@ -1,24 +1,27 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.collect.Ordering;
 import com.metamx.common.guava.Sequence;
 import io.druid.query.datasourcemetadata.DataSourceMetadataQuery;
 import io.druid.query.groupby.GroupByQuery;
@@ -49,49 +52,46 @@ import java.util.Map;
 })
 public interface Query<T>
 {
-  public static final String TIMESERIES = "timeseries";
-  public static final String SEARCH = "search";
-  public static final String TIME_BOUNDARY = "timeBoundary";
-  public static final String GROUP_BY = "groupBy";
-  public static final String SEGMENT_METADATA = "segmentMetadata";
-  public static final String SELECT = "select";
-  public static final String TOPN = "topN";
-  public static final String DATASOURCE_METADATA = "dataSourceMetadata";
+  String TIMESERIES = "timeseries";
+  String SEARCH = "search";
+  String TIME_BOUNDARY = "timeBoundary";
+  String GROUP_BY = "groupBy";
+  String SEGMENT_METADATA = "segmentMetadata";
+  String SELECT = "select";
+  String TOPN = "topN";
+  String DATASOURCE_METADATA = "dataSourceMetadata";
 
-  public DataSource getDataSource();
+  DataSource getDataSource();
 
-  public boolean hasFilters();
+  boolean hasFilters();
 
-  public String getType();
+  String getType();
 
-  public Sequence<T> run(QuerySegmentWalker walker, Map<String, Object> context);
+  Sequence<T> run(QuerySegmentWalker walker, Map<String, Object> context);
 
-  public Sequence<T> run(QueryRunner<T> runner, Map<String, Object> context);
+  Sequence<T> run(QueryRunner<T> runner, Map<String, Object> context);
 
-  public List<Interval> getIntervals();
+  List<Interval> getIntervals();
 
-  public Duration getDuration();
+  Duration getDuration();
 
-  public Map<String, Object> getContext();
+  Map<String, Object> getContext();
 
-  public <ContextType> ContextType getContextValue(String key);
+  <ContextType> ContextType getContextValue(String key);
 
-  public <ContextType> ContextType getContextValue(String key, ContextType defaultValue);
+  <ContextType> ContextType getContextValue(String key, ContextType defaultValue);
 
-  // For backwards compatibility
-  @Deprecated public int getContextPriority(int defaultValue);
-  @Deprecated public boolean getContextBySegment(boolean defaultValue);
-  @Deprecated public boolean getContextPopulateCache(boolean defaultValue);
-  @Deprecated public boolean getContextUseCache(boolean defaultValue);
-  @Deprecated public boolean getContextFinalize(boolean defaultValue);
+  boolean isDescending();
 
-  public Query<T> withOverriddenContext(Map<String, Object> contextOverride);
+  Ordering<T> getResultOrdering();
 
-  public Query<T> withQuerySegmentSpec(QuerySegmentSpec spec);
+  Query<T> withOverriddenContext(Map<String, Object> contextOverride);
 
-  public Query<T> withId(String id);
+  Query<T> withQuerySegmentSpec(QuerySegmentSpec spec);
 
-  public String getId();
+  Query<T> withId(String id);
+
+  String getId();
 
   Query<T> withDataSource(DataSource dataSource);
 }

@@ -1,21 +1,21 @@
 /*
-* Licensed to Metamarkets Group Inc. (Metamarkets) under one
-* or more contributor license agreements. See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership. Metamarkets licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License. You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied. See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 package io.druid.indexing.overlord.http;
 
@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.metamx.common.Pair;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.guava.CloseQuietly;
 import com.metamx.emitter.EmittingLogger;
@@ -145,6 +146,7 @@ public class OverlordResourceTest
     IndexerZkConfig indexerZkConfig = new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null, null);
     setupServerAndCurator();
     curator.start();
+    curator.blockUntilConnected();
     curator.create().creatingParentsIfNeeded().forPath(indexerZkConfig.getLeaderLatchPath());
     druidNode = new DruidNode("hey", "what", 1234);
     ServiceEmitter serviceEmitter = new NoopServiceEmitter();
@@ -292,6 +294,18 @@ public class OverlordResourceTest
       this.completionLatches = completionLatches;
       this.taskRunnerWorkItems = new ConcurrentHashMap<>();
       this.runningTasks = new ArrayList<>();
+    }
+
+    @Override
+    public List<Pair<Task, ListenableFuture<TaskStatus>>> restore()
+    {
+      return ImmutableList.of();
+    }
+
+    @Override
+    public void stop()
+    {
+      // Do nothing
     }
 
     @Override

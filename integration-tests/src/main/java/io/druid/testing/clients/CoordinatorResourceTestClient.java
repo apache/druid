@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.testing.clients;
@@ -36,6 +38,7 @@ import org.joda.time.Interval;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.Map;
+import java.util.ArrayList;
 
 public class CoordinatorResourceTestClient
 {
@@ -64,9 +67,33 @@ public class CoordinatorResourceTestClient
     );
   }
 
+  private String getIntervalsURL(String dataSource)
+  {
+    return String.format("%sdatasources/%s/intervals", getCoordinatorURL(), dataSource);
+  }
+
   private String getLoadStatusURL()
   {
       return String.format("%s%s", getCoordinatorURL(), "loadstatus");
+  }
+
+  // return a list of the segment dates for the specified datasource
+  public ArrayList<String> getSegmentIntervals(final String dataSource) throws Exception
+  {
+    ArrayList<String> segments = null;
+    try {
+      StatusResponseHolder response = makeRequest(HttpMethod.GET, getIntervalsURL(dataSource));
+
+      segments = jsonMapper.readValue(
+          response.getContent(), new TypeReference<ArrayList<String>>()
+          {
+          }
+      );
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+    return segments;
   }
 
   private Map<String, Integer> getLoadStatus()
@@ -82,7 +109,7 @@ public class CoordinatorResourceTestClient
       );
     }
     catch (Exception e) {
-      Throwables.propagate(e);
+      throw Throwables.propagate(e);
     }
     return status;
   }

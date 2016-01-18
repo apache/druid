@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.query.metadata;
@@ -23,6 +25,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.guava.Sequences;
 import io.druid.common.utils.JodaUtils;
 import io.druid.jackson.DefaultObjectMapper;
@@ -87,6 +90,7 @@ public class SegmentMetadataQueryTest
                       .dataSource("testing")
                       .intervals("2013/2014")
                       .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
+                      .analysisTypes(null)
                       .merge(true)
                       .build();
 
@@ -103,7 +107,8 @@ public class SegmentMetadataQueryTest
                 1,
                 null
             )
-        ), 71982
+        ), 71982,
+        1209
     );
   }
 
@@ -117,6 +122,100 @@ public class SegmentMetadataQueryTest
     );
 
     Assert.assertEquals(Arrays.asList(expectedSegmentAnalysis), results);
+  }
+
+  @Test
+  public void testSegmentMetadataQueryWithDefaultAnalysisMerge()
+  {
+    SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
+        "merged",
+        ImmutableList.of(expectedSegmentAnalysis.getIntervals().get(0)),
+        ImmutableMap.of(
+            "placement",
+            new ColumnAnalysis(
+                ValueType.STRING.toString(),
+                21762,
+                1,
+                null
+            )
+        ),
+        expectedSegmentAnalysis.getSize()*2,
+        expectedSegmentAnalysis.getNumRows()*2
+    );
+
+    QueryToolChest toolChest = factory.getToolchest();
+
+    QueryRunner singleSegmentQueryRunner = toolChest.preMergeQueryDecoration(runner);
+    ExecutorService exec = Executors.newCachedThreadPool();
+    QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
+        toolChest.mergeResults(
+            factory.mergeRunners(
+                MoreExecutors.sameThreadExecutor(),
+                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(singleSegmentQueryRunner, singleSegmentQueryRunner)
+            )
+        ),
+        toolChest
+    );
+
+    TestHelper.assertExpectedObjects(
+        ImmutableList.of(mergedSegmentAnalysis),
+        myRunner.run(
+            testQuery,
+            Maps.newHashMap()
+        ),
+        "failed SegmentMetadata merging query"
+    );
+    exec.shutdownNow();
+  }
+
+  @Test
+  public void testSegmentMetadataQueryWithNoAnalysisTypesMerge()
+  {
+    SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
+        "merged",
+        null,
+        ImmutableMap.of(
+            "placement",
+            new ColumnAnalysis(
+                ValueType.STRING.toString(),
+                0,
+                0,
+                null
+            )
+        ),
+        0,
+        expectedSegmentAnalysis.getNumRows()*2
+    );
+
+    QueryToolChest toolChest = factory.getToolchest();
+
+    QueryRunner singleSegmentQueryRunner = toolChest.preMergeQueryDecoration(runner);
+    ExecutorService exec = Executors.newCachedThreadPool();
+    QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
+        toolChest.mergeResults(
+            factory.mergeRunners(
+                MoreExecutors.sameThreadExecutor(),
+                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(singleSegmentQueryRunner, singleSegmentQueryRunner)
+            )
+        ),
+        toolChest
+    );
+
+    TestHelper.assertExpectedObjects(
+        ImmutableList.of(mergedSegmentAnalysis),
+        myRunner.run(
+            Druids.newSegmentMetadataQueryBuilder()
+                  .dataSource("testing")
+                  .intervals("2013/2014")
+                  .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
+                  .analysisTypes()
+                  .merge(true)
+                  .build(),
+            Maps.newHashMap()
+        ),
+        "failed SegmentMetadata merging query"
+    );
+    exec.shutdownNow();
   }
 
   @Test
@@ -138,7 +237,7 @@ public class SegmentMetadataQueryTest
     QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             factory.mergeRunners(
-                Executors.newCachedThreadPool(),
+                MoreExecutors.sameThreadExecutor(),
                 //Note: It is essential to have atleast 2 query runners merged to reproduce the regression bug described in
                 //https://github.com/druid-io/druid/pull/1172
                 //the bug surfaces only when ordering is used which happens only when you have 2 things to compare

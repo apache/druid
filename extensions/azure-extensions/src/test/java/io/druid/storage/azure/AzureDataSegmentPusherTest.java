@@ -1,45 +1,56 @@
 /*
- * Druid - a distributed column store.
- *  Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- *  Licensed under the Apache License, Version 2.0 (the "License");
- *  you may not use this file except in compliance with the License.
- *  You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS,
- *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *  See the License for the specific language governing permissions and
- *  limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.storage.azure;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.io.Files;
 import com.metamx.common.MapUtils;
 import com.microsoft.azure.storage.StorageException;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.segment.loading.DataSegmentPusherUtil;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMockSupport;
 import org.joda.time.Interval;
+import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.Map;
 
-import static org.easymock.EasyMock.expect;
 import static org.easymock.EasyMock.expectLastCall;
 import static org.junit.Assert.assertEquals;
 
 public class AzureDataSegmentPusherTest extends EasyMockSupport
 {
+  @Rule
+  public final TemporaryFolder tempFolder = new TemporaryFolder();
+
   private static final String containerName = "container";
   private static final String blobPath = "test/2015-04-12T00:00:00.000Z_2015-04-13T00:00:00.000Z/1/0/index.zip";
   private static final DataSegment dataSegment = new DataSegment(
@@ -62,9 +73,40 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
   public void before()
   {
     azureStorage = createMock(AzureStorage.class);
-    azureAccountConfig = createMock(AzureAccountConfig.class);
-    jsonMapper = createMock(ObjectMapper.class);
+    azureAccountConfig = new AzureAccountConfig();
+    azureAccountConfig.setAccount("account");
+    azureAccountConfig.setContainer("container");
 
+    jsonMapper = new DefaultObjectMapper();
+  }
+
+  @Test
+  public void testPush() throws Exception
+  {
+    AzureDataSegmentPusher pusher = new AzureDataSegmentPusher(azureStorage, azureAccountConfig, jsonMapper);
+
+    // Create a mock segment on disk
+    File tmp = tempFolder.newFile("version.bin");
+
+    final byte[] data = new byte[]{0x0, 0x0, 0x0, 0x1};
+    Files.write(data, tmp);
+    final long size = data.length;
+
+    DataSegment segmentToPush = new DataSegment(
+        "foo",
+        new Interval("2015/2016"),
+        "0",
+        Maps.<String, Object>newHashMap(),
+        Lists.<String>newArrayList(),
+        Lists.<String>newArrayList(),
+        new NoneShardSpec(),
+        0,
+        size
+    );
+
+    DataSegment segment = pusher.push(tempFolder.getRoot(), segmentToPush);
+
+    Assert.assertEquals(segmentToPush.getSize(), segment.getSize());
   }
 
   @Test
@@ -91,7 +133,6 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
     final File descriptorFile = new File("descriptor.json");
     final Map<String, String> azurePaths = pusher.getAzurePaths(dataSegment);
 
-    expect(azureAccountConfig.getContainer()).andReturn(containerName).times(3);
     azureStorage.uploadBlob(compressedSegmentData, containerName, azurePaths.get("index"));
     expectLastCall();
     azureStorage.uploadBlob(descriptorFile, containerName, azurePaths.get("descriptor"));
@@ -102,6 +143,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
     DataSegment pushedDataSegment = pusher.uploadDataSegment(
         dataSegment,
         version,
+        0, // empty file
         compressedSegmentData,
         descriptorFile,
         azurePaths
@@ -114,7 +156,5 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
     assertEquals(azurePaths.get("index"), MapUtils.getString(loadSpec, "blobPath"));
 
     verifyAll();
-
   }
-
 }

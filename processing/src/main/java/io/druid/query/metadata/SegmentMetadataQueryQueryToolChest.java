@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.query.metadata;
@@ -27,11 +29,11 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
-import com.metamx.common.guava.MergeSequence;
+import com.metamx.common.guava.MappedSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.nary.BinaryFn;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import io.druid.collections.OrderedMergeSequence;
+import io.druid.common.guava.CombiningSequence;
 import io.druid.common.utils.JodaUtils;
 import io.druid.query.CacheStrategy;
 import io.druid.query.DruidMetrics;
@@ -49,6 +51,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -59,6 +62,20 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
   {
   };
   private static final byte[] SEGMENT_METADATA_CACHE_PREFIX = new byte[]{0x4};
+  private static final Function<SegmentAnalysis, SegmentAnalysis> MERGE_TRANSFORM_FN = new Function<SegmentAnalysis, SegmentAnalysis>()
+  {
+    @Override
+    public SegmentAnalysis apply(SegmentAnalysis analysis)
+    {
+      return new SegmentAnalysis(
+          analysis.getId(),
+          analysis.getIntervals() != null ? JodaUtils.condenseIntervals(analysis.getIntervals()) : null,
+          analysis.getColumns(),
+          analysis.getSize(),
+          analysis.getNumRows()
+      );
+    }
+  };
 
   private final SegmentMetadataQueryConfig config;
 
@@ -76,6 +93,23 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
     return new ResultMergeQueryRunner<SegmentAnalysis>(runner)
     {
       @Override
+      public Sequence<SegmentAnalysis> doRun(
+          QueryRunner<SegmentAnalysis> baseRunner,
+          Query<SegmentAnalysis> query,
+          Map<String, Object> context
+      )
+      {
+        return new MappedSequence<>(
+            CombiningSequence.create(
+                baseRunner.run(query, context),
+                makeOrdering(query),
+                createMergeFn(query)
+            ),
+            MERGE_TRANSFORM_FN
+        );
+      }
+
+      @Override
       protected Ordering<SegmentAnalysis> makeOrdering(Query<SegmentAnalysis> query)
       {
         if (((SegmentMetadataQuery) query).isMerge()) {
@@ -92,7 +126,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
           };
         }
 
-        return getOrdering(); // No two elements should be equal, so it should never merge
+        return query.getResultOrdering(); // No two elements should be equal, so it should never merge
       }
 
       @Override
@@ -113,9 +147,13 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
               return arg1;
             }
 
-            List<Interval> newIntervals = JodaUtils.condenseIntervals(
-                Iterables.concat(arg1.getIntervals(), arg2.getIntervals())
-            );
+            List<Interval> newIntervals = null;
+            if (query.hasInterval()) {
+              //List returned by arg1.getIntervals() is immutable, so a new list needs to
+              //be created.
+              newIntervals = new ArrayList<>(arg1.getIntervals());
+              newIntervals.addAll(arg2.getIntervals());
+            }
 
             final Map<String, ColumnAnalysis> leftColumns = arg1.getColumns();
             final Map<String, ColumnAnalysis> rightColumns = arg2.getColumns();
@@ -132,23 +170,17 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
               columns.put(columnName, rightColumns.get(columnName));
             }
 
-            return new SegmentAnalysis("merged", newIntervals, columns, arg1.getSize() + arg2.getSize());
+            return new SegmentAnalysis(
+                "merged",
+                newIntervals,
+                columns,
+                arg1.getSize() + arg2.getSize(),
+                arg1.getNumRows() + arg2.getNumRows()
+            );
           }
         };
       }
     };
-  }
-
-  @Override
-  public Sequence<SegmentAnalysis> mergeSequences(Sequence<Sequence<SegmentAnalysis>> seqOfSequences)
-  {
-    return new OrderedMergeSequence<>(getOrdering(), seqOfSequences);
-  }
-
-  @Override
-  public Sequence<SegmentAnalysis> mergeSequencesUnordered(Sequence<Sequence<SegmentAnalysis>> seqOfSequences)
-  {
-    return new MergeSequence<>(getOrdering(), seqOfSequences);
   }
 
   @Override
@@ -219,12 +251,6 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
           }
         };
       }
-
-      @Override
-      public Sequence<SegmentAnalysis> mergeSequences(Sequence<Sequence<SegmentAnalysis>> seqOfSequences)
-      {
-        return new MergeSequence<SegmentAnalysis>(getOrdering(), seqOfSequences);
-      }
     };
   }
 
@@ -257,17 +283,5 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
             }
         )
     );
-  }
-
-  private Ordering<SegmentAnalysis> getOrdering()
-  {
-    return new Ordering<SegmentAnalysis>()
-    {
-      @Override
-      public int compare(SegmentAnalysis left, SegmentAnalysis right)
-      {
-        return left.getId().compareTo(right.getId());
-      }
-    }.nullsFirst();
   }
 }

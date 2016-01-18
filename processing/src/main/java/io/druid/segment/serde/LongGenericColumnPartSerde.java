@@ -1,24 +1,27 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.segment.serde;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.segment.LongColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.column.ValueType;
@@ -30,7 +33,7 @@ import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
 /**
-*/
+ */
 public class LongGenericColumnPartSerde implements ColumnPartSerde
 {
   @JsonCreator
@@ -38,16 +41,16 @@ public class LongGenericColumnPartSerde implements ColumnPartSerde
       @JsonProperty("byteOrder") ByteOrder byteOrder
   )
   {
-    return new LongGenericColumnPartSerde(null, byteOrder);
+    return new LongGenericColumnPartSerde(byteOrder, null);
   }
 
-  private final CompressedLongsIndexedSupplier compressedLongs;
   private final ByteOrder byteOrder;
+  private Serializer serializer;
 
-  public LongGenericColumnPartSerde(CompressedLongsIndexedSupplier compressedLongs, ByteOrder byteOrder)
+  private LongGenericColumnPartSerde(ByteOrder byteOrder, Serializer serializer)
   {
-    this.compressedLongs = compressedLongs;
     this.byteOrder = byteOrder;
+    this.serializer = serializer;
   }
 
   @JsonProperty
@@ -56,27 +59,114 @@ public class LongGenericColumnPartSerde implements ColumnPartSerde
     return byteOrder;
   }
 
-  @Override
-  public long numBytes()
+  public static SerializerBuilder serializerBuilder()
   {
-    return compressedLongs.getSerializedSize();
+    return new SerializerBuilder();
+  }
+
+  public static class SerializerBuilder
+  {
+    private ByteOrder byteOrder = null;
+    private LongColumnSerializer delegate = null;
+
+    public SerializerBuilder withByteOrder(final ByteOrder byteOrder)
+    {
+      this.byteOrder = byteOrder;
+      return this;
+    }
+
+    public SerializerBuilder withDelegate(final LongColumnSerializer delegate)
+    {
+      this.delegate = delegate;
+      return this;
+    }
+
+    public LongGenericColumnPartSerde build()
+    {
+      return new LongGenericColumnPartSerde(
+          byteOrder, new Serializer()
+      {
+        @Override
+        public long numBytes()
+        {
+          return delegate.getSerializedSize();
+        }
+
+        @Override
+        public void write(WritableByteChannel channel) throws IOException
+        {
+          delegate.writeToChannel(channel);
+        }
+      }
+      );
+    }
+  }
+
+  public static LegacySerializerBuilder legacySerializerBuilder()
+  {
+    return new LegacySerializerBuilder();
+  }
+
+  public static class LegacySerializerBuilder
+  {
+    private ByteOrder byteOrder = null;
+    private CompressedLongsIndexedSupplier delegate = null;
+
+    public LegacySerializerBuilder withByteOrder(final ByteOrder byteOrder)
+    {
+      this.byteOrder = byteOrder;
+      return this;
+    }
+
+    public LegacySerializerBuilder withDelegate(final CompressedLongsIndexedSupplier delegate)
+    {
+      this.delegate = delegate;
+      return this;
+    }
+
+    public LongGenericColumnPartSerde build()
+    {
+      return new LongGenericColumnPartSerde(
+          byteOrder, new Serializer()
+      {
+        @Override
+        public long numBytes()
+        {
+          return delegate.getSerializedSize();
+        }
+
+        @Override
+        public void write(WritableByteChannel channel) throws IOException
+        {
+          delegate.writeToChannel(channel);
+        }
+      }
+      );
+    }
   }
 
   @Override
-  public void write(WritableByteChannel channel) throws IOException
+  public Serializer getSerializer()
   {
-    compressedLongs.writeToChannel(channel);
+    return serializer;
   }
 
   @Override
-  public ColumnPartSerde read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
+  public Deserializer getDeserializer()
   {
-    final CompressedLongsIndexedSupplier column = CompressedLongsIndexedSupplier.fromByteBuffer(buffer, byteOrder);
-
-    builder.setType(ValueType.LONG)
-           .setHasMultipleValues(false)
-           .setGenericColumn(new LongGenericColumnSupplier(column));
-
-    return new LongGenericColumnPartSerde(column, byteOrder);
+    return new Deserializer()
+    {
+      @Override
+      public void read(ByteBuffer buffer, ColumnBuilder builder, ColumnConfig columnConfig)
+      {
+        final CompressedLongsIndexedSupplier column = CompressedLongsIndexedSupplier.fromByteBuffer(
+            buffer,
+            byteOrder
+        );
+        builder.setType(ValueType.LONG)
+               .setHasMultipleValues(false)
+               .setGenericColumn(new LongGenericColumnSupplier(column));
+      }
+    };
   }
 }

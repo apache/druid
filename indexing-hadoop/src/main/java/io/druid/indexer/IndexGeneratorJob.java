@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.indexer;
@@ -335,11 +337,12 @@ public class IndexGeneratorJob implements Jobby
     private void flushIndexToContextAndClose(BytesWritable key, IncrementalIndex index, Context context)
         throws IOException, InterruptedException
     {
+      final List<String> dimensions = index.getDimensionNames();
       Iterator<Row> rows = index.iterator();
       while (rows.hasNext()) {
         context.progress();
         Row row = rows.next();
-        InputRow inputRow = getInputRowFromRow(row, index.getDimensions());
+        InputRow inputRow = getInputRowFromRow(row, dimensions);
         context.write(
             key,
             new BytesWritable(InputRowSerde.toBytes(inputRow, combiningAggs))
@@ -451,6 +454,7 @@ public class IndexGeneratorJob implements Jobby
         @Override
         public void progress()
         {
+          super.progress();
           context.progress();
         }
       };
@@ -463,9 +467,15 @@ public class IndexGeneratorJob implements Jobby
         final ProgressIndicator progressIndicator
     ) throws IOException
     {
-      return HadoopDruidIndexerConfig.INDEX_MERGER.persist(
-          index, interval, file, null, config.getIndexSpec(), progressIndicator
-      );
+      if (config.isBuildV9Directly()) {
+        return HadoopDruidIndexerConfig.INDEX_MERGER_V9.persist(
+            index, interval, file, null, config.getIndexSpec(), progressIndicator
+        );
+      } else {
+        return HadoopDruidIndexerConfig.INDEX_MERGER.persist(
+            index, interval, file, null, config.getIndexSpec(), progressIndicator
+        );
+      }
     }
 
     protected File mergeQueryableIndex(
@@ -475,9 +485,15 @@ public class IndexGeneratorJob implements Jobby
         ProgressIndicator progressIndicator
     ) throws IOException
     {
-      return HadoopDruidIndexerConfig.INDEX_MERGER.mergeQueryableIndex(
-          indexes, aggs, file, config.getIndexSpec(), progressIndicator
-      );
+      if (config.isBuildV9Directly()) {
+        return HadoopDruidIndexerConfig.INDEX_MERGER_V9.mergeQueryableIndex(
+            indexes, aggs, file, config.getIndexSpec(), progressIndicator
+        );
+      } else {
+        return HadoopDruidIndexerConfig.INDEX_MERGER.mergeQueryableIndex(
+            indexes, aggs, file, config.getIndexSpec(), progressIndicator
+        );
+      }
     }
 
     @Override
@@ -583,7 +599,7 @@ public class IndexGeneratorJob implements Jobby
             indexes.add(HadoopDruidIndexerConfig.INDEX_IO.loadIndex(file));
           }
           mergedBase = mergeQueryableIndex(
-                        indexes, aggregators, new File(baseFlushFile, "merged"), progressIndicator
+              indexes, aggregators, new File(baseFlushFile, "merged"), progressIndicator
           );
         }
         final FileSystem outputFS = new Path(config.getSchema().getIOConfig().getSegmentOutputPath())

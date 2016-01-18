@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.segment.data;
@@ -20,9 +22,12 @@ package io.druid.segment.data;
 import org.junit.Assert;
 import org.junit.Test;
 
+import com.google.common.primitives.Ints;
+
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
+import java.util.List;
 
 /**
  */
@@ -61,4 +66,15 @@ public class VSizeIndexedIntsTest
     }
   }
 
+  @Test
+  public void testGetBytesNoPaddingfromList() throws Exception
+  {
+    final int[] array = {1, 2, 4, 5, 6, 8, 9, 10};
+    List<Integer> list = Ints.asList(array);
+    int maxValue = Ints.max(array);
+    VSizeIndexedInts ints = VSizeIndexedInts.fromList(list, maxValue);
+    byte[] bytes1 = ints.getBytesNoPadding();
+    byte[] bytes2 = VSizeIndexedInts.getBytesNoPaddingfromList(list, maxValue);
+    Assert.assertArrayEquals(bytes1, bytes2);
+  }
 }

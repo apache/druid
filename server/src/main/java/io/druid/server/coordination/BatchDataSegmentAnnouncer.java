@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.server.coordination;
@@ -85,34 +87,44 @@ public class BatchDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
     }
 
     synchronized (lock) {
-      // create new batch
-      if (availableZNodes.isEmpty()) {
-        SegmentZNode availableZNode = new SegmentZNode(makeServedSegmentPath());
-        availableZNode.addSegment(segment);
-
-      log.info("Announcing segment[%s] at path[%s]", segment.getIdentifier(), availableZNode.getPath());
-      announcer.announce(availableZNode.getPath(), availableZNode.getBytes());
-      segmentLookup.put(segment, availableZNode);
-      availableZNodes.add(availableZNode);
-    } else { // update existing batch
-      Iterator<SegmentZNode> iter = availableZNodes.iterator();
       boolean done = false;
-      while (iter.hasNext() && !done) {
-        SegmentZNode availableZNode = iter.next();
-        if (availableZNode.getBytes().length + newBytesLen < config.getMaxBytesPerNode()) {
-          availableZNode.addSegment(segment);
+      if (!availableZNodes.isEmpty()) {
+        // update existing batch
+        Iterator<SegmentZNode> iter = availableZNodes.iterator();
+        while (iter.hasNext() && !done) {
+          SegmentZNode availableZNode = iter.next();
+          if (availableZNode.getBytes().length + newBytesLen < config.getMaxBytesPerNode()) {
+            availableZNode.addSegment(segment);
 
-            log.info("Announcing segment[%s] at path[%s]", segment.getIdentifier(), availableZNode.getPath());
+            log.info("Announcing segment[%s] at existing path[%s]", segment.getIdentifier(), availableZNode.getPath());
             announcer.update(availableZNode.getPath(), availableZNode.getBytes());
             segmentLookup.put(segment, availableZNode);
 
             if (availableZNode.getCount() >= config.getSegmentsPerNode()) {
               availableZNodes.remove(availableZNode);
             }
-
             done = true;
+          } else {
+            // We could have kept the znode around for later use, however we remove it since segment announcements should
+            // have similar size unless there are significant schema changes. Removing the znode reduces the number of
+            // znodes that would be scanned at each announcement.
+            availableZNodes.remove(availableZNode);
           }
         }
+      }
+
+      if (!done) {
+        assert (availableZNodes.isEmpty());
+        // create new batch
+
+        SegmentZNode availableZNode = new SegmentZNode(makeServedSegmentPath());
+        availableZNode.addSegment(segment);
+
+        log.info("Announcing segment[%s] at new path[%s]", segment.getIdentifier(),
+            availableZNode.getPath());
+        announcer.announce(availableZNode.getPath(), availableZNode.getBytes());
+        segmentLookup.put(segment, availableZNode);
+        availableZNodes.add(availableZNode);
       }
     }
   }

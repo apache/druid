@@ -1,21 +1,21 @@
 /*
-* Licensed to Metamarkets Group Inc. (Metamarkets) under one
-* or more contributor license agreements. See the NOTICE file
-* distributed with this work for additional information
-* regarding copyright ownership. Metamarkets licenses this file
-* to you under the Apache License, Version 2.0 (the
-* "License"); you may not use this file except in compliance
-* with the License. You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing,
-* software distributed under the License is distributed on an
-* "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-* KIND, either express or implied. See the License for the
-* specific language governing permissions and limitations
-* under the License.
-*/
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
 
 package io.druid.tests.indexer;
 
@@ -181,7 +181,6 @@ public class ITKafkaTest extends AbstractIndexerTest
 
     // send data to kafka
     while (dt.compareTo(dtStop) < 0) {  // as long as we're within the time span
-      LOG.info("sending event at [%s]", event_fmt.print(dt));
       num_events++;
       added += num_events;
       // construct the event to send
@@ -189,14 +188,14 @@ public class ITKafkaTest extends AbstractIndexerTest
           event_template,
           event_fmt.print(dt), num_events, 0, num_events
       );
-      LOG.debug("event: [%s]", event);
+      LOG.info("sending event: [%s]", event);
       try {
         // Send event to kafka
         KeyedMessage<String, String> message = new KeyedMessage<String, String>(TOPIC_NAME, event);
         producer.send(message);
       }
       catch (Exception ioe) {
-        Throwables.propagate(ioe);
+        throw Throwables.propagate(ioe);
       }
 
       try {
@@ -238,7 +237,7 @@ public class ITKafkaTest extends AbstractIndexerTest
     try {
       this.queryHelper.testQueriesFromString(queryStr, 2);
     } catch (Exception e) {
-	Throwables.propagate(e);
+      throw Throwables.propagate(e);
     }
 
     // wait for segments to be handed off
@@ -259,7 +258,7 @@ public class ITKafkaTest extends AbstractIndexerTest
       );
     }
     catch (Exception e) {
-      Throwables.propagate(e);
+      throw Throwables.propagate(e);
     }
     LOG.info("segments are present");
     segmentsExist = true;
@@ -269,7 +268,7 @@ public class ITKafkaTest extends AbstractIndexerTest
       this.queryHelper.testQueriesFromString(queryStr, 2);
     }
     catch (Exception e) {
-      Throwables.propagate(e);
+      throw Throwables.propagate(e);
     }
   }
 
@@ -287,9 +286,7 @@ public class ITKafkaTest extends AbstractIndexerTest
     // remove segments
     if (segmentsExist) {
       try {
-        String first = DateTimeFormat.forPattern("yyyy-MM-dd'T00:00:00.000Z'").print(dtFirst);
-        String last = DateTimeFormat.forPattern("yyyy-MM-dd'T00:00:00.000Z'").print(dtFirst.plusDays(1));
-        unloadAndKillData(DATASOURCE, first, last);
+        unloadAndKillData(DATASOURCE);
       }
       catch (Exception e) {
         LOG.warn("exception while removing segments: [%s]", e.getMessage());

@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.client;
@@ -35,15 +37,19 @@ import io.druid.client.cache.MapCache;
 import io.druid.granularity.AllGranularity;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.CacheStrategy;
+import io.druid.query.Druids;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
+import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
 import io.druid.query.SegmentDescriptor;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
-import io.druid.query.topn.TopNQuery;
+import io.druid.query.timeseries.TimeseriesQuery;
+import io.druid.query.timeseries.TimeseriesQueryQueryToolChest;
+import io.druid.query.timeseries.TimeseriesResultValue;
 import io.druid.query.topn.TopNQueryBuilder;
 import io.druid.query.topn.TopNQueryConfig;
 import io.druid.query.topn.TopNQueryQueryToolChest;
@@ -82,8 +88,10 @@ public class CachingQueryRunnerTest
   @Test
   public void testCloseAndPopulate() throws Exception
   {
-    Iterable<Result<TopNResultValue>> expectedRes = makeTopNResults(false, objects);
-    final TopNQueryBuilder builder = new TopNQueryBuilder()
+    List<Result> expectedRes = makeTopNResults(false, objects);
+    List<Result> expectedCacheRes = makeTopNResults(true, objects);
+
+    TopNQueryBuilder builder = new TopNQueryBuilder()
         .dataSource("ds")
         .dimension("top_dim")
         .metric("imps")
@@ -92,6 +100,72 @@ public class CachingQueryRunnerTest
         .aggregators(AGGS)
         .granularity(AllGranularity.ALL);
 
+    QueryToolChest toolchest = new TopNQueryQueryToolChest(
+        new TopNQueryConfig(),
+        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+    );
+
+    testCloseAndPopulate(expectedRes, expectedCacheRes, builder.build(), toolchest);
+    testUseCache(expectedCacheRes, builder.build(), toolchest);
+  }
+
+  @Test
+  public void testTimeseries() throws Exception
+  {
+    for (boolean descending : new boolean[]{false, true}) {
+      TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                    .dataSource(QueryRunnerTestHelper.dataSource)
+                                    .granularity(QueryRunnerTestHelper.dayGran)
+                                    .intervals(QueryRunnerTestHelper.firstToThird)
+                                    .aggregators(
+                                        Arrays.<AggregatorFactory>asList(
+                                            QueryRunnerTestHelper.rowsCount,
+                                            new LongSumAggregatorFactory(
+                                                "idx",
+                                                "index"
+                                            ),
+                                            QueryRunnerTestHelper.qualityUniques
+                                        )
+                                    )
+                                    .descending(descending)
+                                    .build();
+
+      Result row1 = new Result(
+          new DateTime("2011-04-01"),
+          new TimeseriesResultValue(
+              ImmutableMap.<String, Object>of("rows", 13L, "idx", 6619L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
+          )
+      );
+      Result row2 = new Result<>(
+          new DateTime("2011-04-02"),
+          new TimeseriesResultValue(
+              ImmutableMap.<String, Object>of("rows", 13L, "idx", 5827L, "uniques", QueryRunnerTestHelper.UNIQUES_9)
+          )
+      );
+      List<Result> expectedResults;
+      if (descending) {
+        expectedResults = Lists.newArrayList(row2, row1);
+      } else {
+        expectedResults = Lists.newArrayList(row1, row2);
+      }
+
+      QueryToolChest toolChest = new TimeseriesQueryQueryToolChest(
+          QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+      );
+
+      testCloseAndPopulate(expectedResults, expectedResults, query, toolChest);
+      testUseCache(expectedResults, query, toolChest);
+    }
+  }
+
+  private void testCloseAndPopulate(
+      List<Result> expectedRes,
+      List<Result> expectedCacheRes,
+      Query query,
+      QueryToolChest toolchest
+  )
+      throws Exception
+  {
     final AssertingClosable closable = new AssertingClosable();
     final Sequence resultSeq = new ResourceClosingSequence(
         Sequences.simple(expectedRes), closable
@@ -113,8 +187,6 @@ public class CachingQueryRunnerTest
     String segmentIdentifier = "segment";
     SegmentDescriptor segmentDescriptor = new SegmentDescriptor(new Interval("2011/2012"), "version", 0);
 
-    TopNQueryQueryToolChest toolchest = new TopNQueryQueryToolChest(new TopNQueryConfig(),
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator());
     DefaultObjectMapper objectMapper = new DefaultObjectMapper();
     CachingQueryRunner runner = new CachingQueryRunner(
         segmentIdentifier,
@@ -147,8 +219,7 @@ public class CachingQueryRunnerTest
         }
     );
 
-    TopNQuery query = builder.build();
-    CacheStrategy<Result<TopNResultValue>, Object, TopNQuery> cacheStrategy = toolchest.getCacheStrategy(query);
+    CacheStrategy cacheStrategy = toolchest.getCacheStrategy(query);
     Cache.NamedKey cacheKey = CacheUtil.computeSegmentCacheKey(
         segmentIdentifier,
         segmentDescriptor,
@@ -163,15 +234,13 @@ public class CachingQueryRunnerTest
 
     ArrayList results = Sequences.toList(res, new ArrayList());
     Assert.assertTrue(closable.isClosed());
-    Assert.assertEquals(expectedRes, results);
-
-    Iterable<Result<TopNResultValue>> expectedCacheRes = makeTopNResults(true, objects);
+    Assert.assertEquals(expectedRes.toString(), results.toString());
 
     byte[] cacheValue = cache.get(cacheKey);
     Assert.assertNotNull(cacheValue);
 
-    Function<Object, Result<TopNResultValue>> fn = cacheStrategy.pullFromCache();
-    List<Result<TopNResultValue>> cacheResults = Lists.newArrayList(
+    Function<Object, Result> fn = cacheStrategy.pullFromCache();
+    List<Result> cacheResults = Lists.newArrayList(
         Iterators.transform(
             objectMapper.readValues(
                 objectMapper.getFactory().createParser(cacheValue),
@@ -180,31 +249,20 @@ public class CachingQueryRunnerTest
             fn
         )
     );
-    Assert.assertEquals(expectedCacheRes, cacheResults);
+    Assert.assertEquals(expectedCacheRes.toString(), cacheResults.toString());
   }
 
-  @Test
-  public void testUseCache() throws Exception
+  private void testUseCache(
+      List<Result> expectedResults,
+      Query query,
+      QueryToolChest toolchest
+  ) throws Exception
   {
     DefaultObjectMapper objectMapper = new DefaultObjectMapper();
-    Iterable<Result<TopNResultValue>> expectedResults = makeTopNResults(true, objects);
     String segmentIdentifier = "segment";
     SegmentDescriptor segmentDescriptor = new SegmentDescriptor(new Interval("2011/2012"), "version", 0);
-    TopNQueryQueryToolChest toolchest = new TopNQueryQueryToolChest(new TopNQueryConfig(),
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator());
 
-    final TopNQueryBuilder builder = new TopNQueryBuilder()
-        .dataSource("ds")
-        .dimension("top_dim")
-        .metric("imps")
-        .threshold(3)
-        .intervals("2011-01-05/2011-01-10")
-        .aggregators(AGGS)
-        .granularity(AllGranularity.ALL);
-
-    final TopNQuery query = builder.build();
-
-    CacheStrategy<Result<TopNResultValue>, Object, TopNQuery> cacheStrategy = toolchest.getCacheStrategy(query);
+    CacheStrategy cacheStrategy = toolchest.getCacheStrategy(query);
     Cache.NamedKey cacheKey = CacheUtil.computeSegmentCacheKey(
         segmentIdentifier,
         segmentDescriptor,
@@ -252,14 +310,14 @@ public class CachingQueryRunnerTest
 
     );
     HashMap<String, Object> context = new HashMap<String, Object>();
-    List<Object> results = Sequences.toList(runner.run(query, context), new ArrayList());
-    Assert.assertEquals(expectedResults, results);
+    List<Result> results = Sequences.toList(runner.run(query, context), new ArrayList());
+    Assert.assertEquals(expectedResults.toString(), results.toString());
   }
 
-  private Iterable<Result<TopNResultValue>> makeTopNResults
+  private List<Result> makeTopNResults
       (boolean cachedResults, Object... objects)
   {
-    List<Result<TopNResultValue>> retVal = Lists.newArrayList();
+    List<Result> retVal = Lists.newArrayList();
     int index = 0;
     while (index < objects.length) {
       DateTime timestamp = (DateTime) objects[index++];

@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.jackson;
@@ -32,8 +34,6 @@ import io.druid.query.aggregation.JavaScriptAggregatorFactory;
 import io.druid.query.aggregation.LongMaxAggregatorFactory;
 import io.druid.query.aggregation.LongMinAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
-import io.druid.query.aggregation.MaxAggregatorFactory;
-import io.druid.query.aggregation.MinAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
@@ -68,10 +68,6 @@ public class AggregatorsModule extends SimpleModule
       @JsonSubTypes.Type(name = "doubleSum", value = DoubleSumAggregatorFactory.class),
       @JsonSubTypes.Type(name = "doubleMax", value = DoubleMaxAggregatorFactory.class),
       @JsonSubTypes.Type(name = "doubleMin", value = DoubleMinAggregatorFactory.class),
-      //Note: max/min are exactly same as doubleMax/doubleMin, max/min are still here only
-      //to be backward compatible with 0.7.2 and before
-      @JsonSubTypes.Type(name = "max", value = MaxAggregatorFactory.class),
-      @JsonSubTypes.Type(name = "min", value = MinAggregatorFactory.class),
       @JsonSubTypes.Type(name = "longMax", value = LongMaxAggregatorFactory.class),
       @JsonSubTypes.Type(name = "longMin", value = LongMinAggregatorFactory.class),
       @JsonSubTypes.Type(name = "javascript", value = JavaScriptAggregatorFactory.class),

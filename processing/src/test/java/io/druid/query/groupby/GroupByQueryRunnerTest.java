@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.query.groupby;
@@ -266,7 +268,7 @@ public class GroupByQueryRunnerTest
         .setDimensions(
             Lists.<DimensionSpec>newArrayList(
                 new ExtractionDimensionSpec(
-                    "quality", "alias", new LookupExtractionFn(new MapLookupExtractor(map), false, null, false), null
+                    "quality", "alias", new LookupExtractionFn(new MapLookupExtractor(map), false, null, false, false), null
                 )
             )
         )
@@ -342,7 +344,7 @@ public class GroupByQueryRunnerTest
         .setDimensions(
             Lists.<DimensionSpec>newArrayList(
                 new ExtractionDimensionSpec(
-                    "quality", "alias", new LookupExtractionFn(new MapLookupExtractor(map), true, null, false), null
+                    "quality", "alias", new LookupExtractionFn(new MapLookupExtractor(map), true, null, false, false), null
                 )
             )
         )
@@ -418,7 +420,7 @@ public class GroupByQueryRunnerTest
         .setDimensions(
             Lists.<DimensionSpec>newArrayList(
                 new ExtractionDimensionSpec(
-                    "quality", "alias", new LookupExtractionFn(new MapLookupExtractor(map), true, null, true), null
+                    "quality", "alias", new LookupExtractionFn(new MapLookupExtractor(map), true, null, true, false), null
                 )
             )
         )
@@ -496,7 +498,7 @@ public class GroupByQueryRunnerTest
                 new ExtractionDimensionSpec(
                     "quality",
                     "alias",
-                    new LookupExtractionFn(new MapLookupExtractor(map), false, "MISSING", true),
+                    new LookupExtractionFn(new MapLookupExtractor(map), false, "MISSING", true, false),
                     null
                 )
             )
@@ -572,7 +574,7 @@ public class GroupByQueryRunnerTest
         .setDimensions(
             Lists.<DimensionSpec>newArrayList(
                 new ExtractionDimensionSpec(
-                    "quality", "alias", new LookupExtractionFn(new MapLookupExtractor(map), false, null, true), null
+                    "quality", "alias", new LookupExtractionFn(new MapLookupExtractor(map), false, null, true, false), null
                 )
             )
         )
@@ -728,7 +730,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithNullProducingDimExtractionFn()
   {
-    final ExtractionFn nullExtractionFn = new RegexDimExtractionFn("(\\w{1})")
+    final ExtractionFn nullExtractionFn = new RegexDimExtractionFn("(\\w{1})", false, null)
     {
       @Override
       public byte[] getCacheKey()
@@ -795,7 +797,7 @@ public class GroupByQueryRunnerTest
    */
   public void testGroupByWithEmptyStringProducingDimExtractionFn()
   {
-    final ExtractionFn emptyStringExtractionFn = new RegexDimExtractionFn("(\\w{1})")
+    final ExtractionFn emptyStringExtractionFn = new RegexDimExtractionFn("(\\w{1})", false, null)
     {
       @Override
       public byte[] getCacheKey()
@@ -3921,7 +3923,8 @@ public class GroupByQueryRunnerTest
                                 "mezzanine",
                                 "mezzanine0"
                             )
-                        ), false, null, false
+                        ), false, null, false,
+                        false
                     ),
                     null
                 )
@@ -3994,7 +3997,8 @@ public class GroupByQueryRunnerTest
                                 "mezzanine",
                                 "mezzanine0"
                             )
-                        ), false, null, true
+                        ), false, null, true,
+                        false
                     ),
                     null
                 )
@@ -4040,7 +4044,7 @@ public class GroupByQueryRunnerTest
     extractionMap.put("news", "automotiveAndBusinessAndNewsAndMezzanine");
 
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap);
-    LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true);
+    LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, false);
 
     List<DimFilter> dimFilters = Lists.<DimFilter>newArrayList(
         new ExtractionDimFilter("quality", "automotiveAndBusinessAndNewsAndMezzanine", lookupExtractionFn, null),
@@ -4112,7 +4116,7 @@ public class GroupByQueryRunnerTest
     extractionMap.put("travel", "travel0");
 
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap);
-    LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true);
+    LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, false);
     GroupByQuery query = GroupByQuery.builder().setDataSource(QueryRunnerTestHelper.dataSource)
                                      .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
                                      .setDimensions(
@@ -4148,7 +4152,7 @@ public class GroupByQueryRunnerTest
   {
     Map<String, String> extractionMap = new HashMap<>();
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap);
-    LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true);
+    LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, false);
 
     GroupByQuery query = GroupByQuery.builder().setDataSource(QueryRunnerTestHelper.dataSource)
                                      .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
@@ -4189,7 +4193,7 @@ public class GroupByQueryRunnerTest
     extractionMap.put("", "NULLorEMPTY");
 
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap);
-    LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true);
+    LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, false);
 
     GroupByQuery query = GroupByQuery.builder().setDataSource(QueryRunnerTestHelper.dataSource)
                                      .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
@@ -4241,7 +4245,7 @@ public class GroupByQueryRunnerTest
     extractionMap.put("travel", "travel0");
 
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap);
-    LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, "missing", true);
+    LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, "missing", true, false);
     DimFilter filter = new ExtractionDimFilter("quality","mezzanineANDnews",lookupExtractionFn,null);
     GroupByQuery query = GroupByQuery.builder().setDataSource(QueryRunnerTestHelper.dataSource)
                                      .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
@@ -4293,4 +4297,54 @@ public class GroupByQueryRunnerTest
 
   }
 
+  @Test
+  public  void testGroupByWithExtractionDimFilterOptimazitionManyToOne()
+  {
+    Map<String, String> extractionMap = new HashMap<>();
+    extractionMap.put("mezzanine", "newsANDmezzanine");
+    extractionMap.put("news", "newsANDmezzanine");
+
+    MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap);
+    LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, true);
+    GroupByQuery query = GroupByQuery.builder().setDataSource(QueryRunnerTestHelper.dataSource)
+                                     .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+                                     .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+                                     .setAggregatorSpecs(
+                                         Arrays.asList(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index")))
+                                     .setGranularity(QueryRunnerTestHelper.dayGran)
+                                     .setDimFilter(new ExtractionDimFilter("quality", "newsANDmezzanine", lookupExtractionFn, null))
+                                     .build();
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news", "rows", 1L, "idx", 114L));
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+
+  @Test public void testGroupByWithExtractionDimFilterNullDims()
+  {
+    Map<String, String> extractionMap = new HashMap<>();
+    extractionMap.put("", "EMPTY");
+
+    MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap);
+    LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, true);
+
+    GroupByQuery query = GroupByQuery.builder().setDataSource(QueryRunnerTestHelper.dataSource)
+                                     .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+                                     .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("null_column", "alias")))
+                                     .setAggregatorSpecs(
+                                         Arrays.asList(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index")))
+                                     .setGranularity(QueryRunnerTestHelper.dayGran)
+                                     .setDimFilter(new ExtractionDimFilter("null_column", "EMPTY", lookupExtractionFn, null)).build();
+    List<Row> expectedResults = Arrays
+        .asList(GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", null, "rows", 13L, "idx", 6619L),
+                GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", null, "rows", 13L, "idx", 5827L));
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
 }

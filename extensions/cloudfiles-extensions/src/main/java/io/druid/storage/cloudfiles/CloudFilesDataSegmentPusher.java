@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.storage.cloudfiles;
@@ -66,38 +68,42 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
   public DataSegment push(final File indexFilesDir, final DataSegment inSegment) throws IOException
   {
     final String segmentPath = CloudFilesUtils.buildCloudFilesPath(this.config.getBasePath(), inSegment);
-    final File zipOutFile = File.createTempFile("druid", "index.zip");
-    final File descriptorFile = File.createTempFile("descriptor", ".json");
 
-    log.info("Copying segment[%s] to CloudFiles at location[%s]", inSegment.getIdentifier(), segmentPath);
+    File descriptorFile = null;
+    File zipOutFile = null;
 
     try {
+      final File descFile = descriptorFile = File.createTempFile("descriptor", ".json");
+      final File outFile = zipOutFile = File.createTempFile("druid", "index.zip");
+
+      final long indexSize = CompressionUtils.zip(indexFilesDir, zipOutFile);
+
+      log.info("Copying segment[%s] to CloudFiles at location[%s]", inSegment.getIdentifier(), segmentPath);
       return CloudFilesUtils.retryCloudFilesOperation(
           new Callable<DataSegment>()
           {
             @Override
             public DataSegment call() throws Exception
             {
-              CompressionUtils.zip(indexFilesDir, zipOutFile);
               CloudFilesObject segmentData = new CloudFilesObject(
-                  segmentPath, zipOutFile, objectApi.getRegion(),
+                  segmentPath, outFile, objectApi.getRegion(),
                   objectApi.getContainer()
               );
               log.info("Pushing %s.", segmentData.getPath());
               objectApi.put(segmentData);
 
-              try (FileOutputStream stream = new FileOutputStream(descriptorFile)) {
+              try (FileOutputStream stream = new FileOutputStream(descFile)) {
                 stream.write(jsonMapper.writeValueAsBytes(inSegment));
               }
               CloudFilesObject descriptorData = new CloudFilesObject(
-                  segmentPath, descriptorFile,
+                  segmentPath, descFile,
                   objectApi.getRegion(), objectApi.getContainer()
               );
               log.info("Pushing %s.", descriptorData.getPath());
               objectApi.put(descriptorData);
 
               final DataSegment outSegment = inSegment
-                  .withSize(segmentData.getFile().length())
+                  .withSize(indexSize)
                   .withLoadSpec(
                       ImmutableMap.<String, Object>of(
                           "type",
@@ -121,11 +127,15 @@ public class CloudFilesDataSegmentPusher implements DataSegmentPusher
       throw Throwables.propagate(e);
     }
     finally {
-      log.info("Deleting zipped index File[%s]", zipOutFile);
-      zipOutFile.delete();
+      if (zipOutFile != null) {
+        log.info("Deleting zipped index File[%s]", zipOutFile);
+        zipOutFile.delete();
+      }
 
-      log.info("Deleting descriptor file[%s]", descriptorFile);
-      descriptorFile.delete();
+      if (descriptorFile != null) {
+        log.info("Deleting descriptor file[%s]", descriptorFile);
+        descriptorFile.delete();
+      }
     }
   }
 }

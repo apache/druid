@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.client;
@@ -154,7 +156,7 @@ public class CachingClusteredClientTest
   public static final ImmutableMap<String, Object> CONTEXT = ImmutableMap.<String, Object>of("finalize", false);
   public static final MultipleIntervalSegmentSpec SEG_SPEC = new MultipleIntervalSegmentSpec(ImmutableList.<Interval>of());
   public static final String DATA_SOURCE = "test";
-  protected static final DefaultObjectMapper jsonMapper = new DefaultObjectMapper(new SmileFactory());
+  static final DefaultObjectMapper jsonMapper = new DefaultObjectMapper(new SmileFactory());
 
   static {
     jsonMapper.getFactory().setCodec(jsonMapper);
@@ -209,7 +211,7 @@ public class CachingClusteredClientTest
   private static final QueryGranularity PT1H_TZ_GRANULARITY = new PeriodGranularity(new Period("PT1H"), null, TIMEZONE);
   private static final String TOP_DIM = "a_dim";
   private static final Supplier<GroupByQueryConfig> GROUPBY_QUERY_CONFIG_SUPPLIER = Suppliers.ofInstance(new GroupByQueryConfig());
-  private static final QueryToolChestWarehouse WAREHOUSE = new MapQueryToolChestWarehouse(
+  static final QueryToolChestWarehouse WAREHOUSE = new MapQueryToolChestWarehouse(
       ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
                   .put(
                       TimeseriesQuery.class,
@@ -556,7 +558,7 @@ public class CachingClusteredClientTest
         dataSegment,
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
     );
-    selector.addServer(new QueryableDruidServer(lastServer, null));
+    selector.addServerAndUpdateSegment(new QueryableDruidServer(lastServer, null), dataSegment);
     timeline.add(interval, "v", new SingleElementPartitionChunk<>(selector));
 
     client.run(query, context);
@@ -924,11 +926,15 @@ public class CachingClusteredClientTest
             new DateTime("2011-01-09T01"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
         ),
         client.mergeCachedAndUncachedSequences(
-            sequences,
-            new TopNQueryQueryToolChest(
-                new TopNQueryConfig(),
-                QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-            )
+            new TopNQueryBuilder()
+                .dataSource("test")
+                .intervals("2011-01-06/2011-01-10")
+                .dimension("a")
+                .metric("b")
+                .threshold(3)
+                .aggregators(Arrays.<AggregatorFactory>asList(new CountAggregatorFactory("b")))
+                .build(),
+            sequences
         )
     );
   }
@@ -1712,7 +1718,7 @@ public class CachingClusteredClientTest
             expectation.getSegment(),
             new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
         );
-        selector.addServer(new QueryableDruidServer(lastServer, null));
+        selector.addServerAndUpdateSegment(new QueryableDruidServer(lastServer, null), selector.getSegment());
 
         final PartitionChunk<ServerSelector> chunk;
         if (numChunks == 1) {

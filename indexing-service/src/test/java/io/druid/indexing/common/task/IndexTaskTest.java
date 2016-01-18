@@ -1,18 +1,20 @@
 /*
- * Druid - a distributed column store.
- * Copyright 2012 - 2015 Metamarkets Group Inc.
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
  *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
  */
 
 package io.druid.indexing.common.task;
@@ -37,6 +39,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
+import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
@@ -68,6 +71,7 @@ public class IndexTaskTest
   private final IndexSpec indexSpec;
   private final ObjectMapper jsonMapper;
   private IndexMerger indexMerger;
+  private IndexMergerV9 indexMergerV9;
   private IndexIO indexIO;
 
   public IndexTaskTest()
@@ -76,6 +80,7 @@ public class IndexTaskTest
     TestUtils testUtils = new TestUtils();
     jsonMapper = testUtils.getTestObjectMapper();
     indexMerger = testUtils.getTestIndexMerger();
+    indexMergerV9 = testUtils.getTestIndexMergerV9();
     indexIO = testUtils.getTestIndexIO();
   }
 
@@ -138,7 +143,8 @@ public class IndexTaskTest
                 2,
                 0,
                 null,
-                indexSpec
+                indexSpec,
+                null
             )
         ),
         jsonMapper,
@@ -221,26 +227,19 @@ public class IndexTaskTest
 
     indexTask.run(
         new TaskToolbox(
-            null, null, new TaskActionClientFactory()
+            null, null, new TaskActionClient()
         {
           @Override
-          public TaskActionClient create(Task task)
+          public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
           {
-            return new TaskActionClient()
-            {
-              @Override
-              public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
-              {
-                if (taskAction instanceof LockListAction) {
-                  return (RetType) Arrays.asList(
-                      new TaskLock(
-                          "", "", null, new DateTime().toString()
-                      )
-                  );
-                }
-                return null;
-              }
-            };
+            if (taskAction instanceof LockListAction) {
+              return (RetType) Arrays.asList(
+                  new TaskLock(
+                      "", "", null, new DateTime().toString()
+                  )
+              );
+            }
+            return null;
           }
         }, null, new DataSegmentPusher()
         {
@@ -257,7 +256,7 @@ public class IndexTaskTest
             return segment;
           }
         }, null, null, null, null, null, null, null, null, null, null, temporaryFolder.newFolder(),
-            indexMerger, indexIO, null, null
+            indexMerger, indexIO, null, null, indexMergerV9
         )
     );
 
@@ -337,7 +336,8 @@ public class IndexTaskTest
         100,
         1000,
         null,
-        new IndexSpec()
+        new IndexSpec(),
+        null
     );
     RealtimeTuningConfig realtimeTuningConfig = IndexTask.convertTuningConfig(
         spec,
