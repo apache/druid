@@ -64,12 +64,7 @@ public class StringFormatExtractionFn extends DimExtractionFn
   {
     return String.format(format, value);
   }
-
-  /**
-   * when values are null, format result may not conform to the previous ordering.
-   *
-   * @return
-   */
+  
   @Override
   public boolean preservesOrdering()
   {
