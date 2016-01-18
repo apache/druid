@@ -207,7 +207,7 @@ The `simpleJson` lookupParseSpec does not take any parameters. It is simply a li
 
 ```json
 "namespaceParseSpec":{
-  "type": "simpleJson"
+  "format": "simpleJson"
 }
 ```
 
