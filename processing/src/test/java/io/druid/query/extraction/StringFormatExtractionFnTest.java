@@ -27,13 +27,13 @@ import org.junit.Test;
 /**
  *
  */
-public class ConcatExtractionFnTest
+public class StringFormatExtractionFnTest
 {
 
   @Test
   public void testApply() throws Exception
   {
-    ConcatExtractionFn fn = new ConcatExtractionFn("[%s]");
+    StringFormatExtractionFn fn = new StringFormatExtractionFn("[%s]");
     long test = 1000L;
     Assert.assertEquals("[1000]", fn.apply(test));
   }
@@ -41,7 +41,7 @@ public class ConcatExtractionFnTest
   @Test
   public void testApplyNull() throws Exception
   {
-    ConcatExtractionFn fn = new ConcatExtractionFn("[%s]");
+    StringFormatExtractionFn fn = new StringFormatExtractionFn("[%s]");
     String test = null;
     Assert.assertEquals("[null]", fn.apply(test));
   }
@@ -51,7 +51,7 @@ public class ConcatExtractionFnTest
   {
     final ObjectMapper objectMapper = new DefaultObjectMapper();
     final String json = "{ \"type\" : \"concat\", \"format\" : \"[%s]\" }";
-    ConcatExtractionFn extractionFn = (ConcatExtractionFn) objectMapper.readValue(json, ExtractionFn.class);
+    StringFormatExtractionFn extractionFn = (StringFormatExtractionFn) objectMapper.readValue(json, ExtractionFn.class);
 
     Assert.assertEquals("[%s]", extractionFn.getFormat());
 

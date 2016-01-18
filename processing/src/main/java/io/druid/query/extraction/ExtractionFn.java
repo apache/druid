@@ -36,7 +36,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
     @JsonSubTypes.Type(name = "lookup", value = LookupExtractionFn.class),
     @JsonSubTypes.Type(name = "substring", value = SubstringDimExtractionFn.class),
     @JsonSubTypes.Type(name = "cascade", value = CascadeExtractionFn.class),
-    @JsonSubTypes.Type(name = "concat", value = ConcatExtractionFn.class)
+    @JsonSubTypes.Type(name = "stringFormat", value = StringFormatExtractionFn.class)
 })
 /**
  * An ExtractionFn is a function that can be used to transform the values of a column (typically a dimension)

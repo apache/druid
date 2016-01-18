@@ -30,12 +30,14 @@ import java.nio.ByteBuffer;
 /**
  *
  */
-public class ConcatExtractionFn extends DimExtractionFn
+public class StringFormatExtractionFn extends DimExtractionFn
 {
   private final String format;
 
   @JsonCreator
-  public ConcatExtractionFn(@JsonProperty("format") String format)
+  public StringFormatExtractionFn(
+      @JsonProperty("format") String format
+  )
   {
     Preconditions.checkArgument(!Strings.isNullOrEmpty(format), "format string should not be empty");
     this.format = format;
@@ -90,7 +92,7 @@ public class ConcatExtractionFn extends DimExtractionFn
       return false;
     }
 
-    ConcatExtractionFn that = (ConcatExtractionFn) o;
+    StringFormatExtractionFn that = (StringFormatExtractionFn) o;
 
     return format.equals(that.format);
 

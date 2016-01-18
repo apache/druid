@@ -341,15 +341,15 @@ Example for chaining [regular expression extraction function](#regular-expressio
 It will transform dimension values with specified extraction functions in the order named.
 For example, `'/druid/prod/historical'` is transformed to `'the dru'` as regular expression extraction function first transforms it to `'druid'` and then, javascript extraction function transforms it to `'the druid'`, and lastly, substring extraction function transforms it to `'the dru'`. 
 
-### Concat Extraction Function
+### String Format Extraction Function
 
 Returns the dimension value formatted according to the given format string.
 
 ```json
-{ "type" : "concat", "format" : <sprintf_expression> }
+{ "type" : "stringFormat", "format" : <sprintf_expression> }
 ```
 
-For example if you want to concat "[" and "]" before and after the actual dimension value, you need to specify "[%s]" as format string.
+For example, if you want to concat "[" and "]" before and after the actual dimension value, you need to specify "[%s]" as format string.
 
 ### Filtering DimensionSpecs
 
