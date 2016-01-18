@@ -27,20 +27,23 @@ import io.druid.initialization.DruidModule;
 
 import java.util.List;
 
-public class RocketMQDruidModule implements DruidModule {
+public class RocketMQDruidModule implements DruidModule
+{
 
-    @Override
-    public List<? extends Module> getJacksonModules() {
-        return ImmutableList.of(
-                new SimpleModule("RocketMQFirehoseModule")
-                        .registerSubtypes(
-                                new NamedType(RocketMQFirehoseFactory.class, "rocketMQ")
-                        )
-        );
-    }
+  @Override
+  public List<? extends Module> getJacksonModules()
+  {
+    return ImmutableList.of(
+        new SimpleModule("RocketMQFirehoseModule")
+            .registerSubtypes(
+                new NamedType(RocketMQFirehoseFactory.class, "rocketMQ")
+            )
+    );
+  }
 
-    @Override
-    public void configure(Binder binder) {
+  @Override
+  public void configure(Binder binder)
+  {
 
-    }
+  }
 }
