@@ -95,7 +95,7 @@ This tutorial only requires Zookeeper be set up.
 * Install zookeeper.
 
 ```bash
-ZOOKEPER_VERSION=zookeeper-3.4.7
+ZOOKEPER_VERSION=zookeeper-3.4.6
 curl http://www.gtlib.gatech.edu/pub/apache/zookeeper/$ZOOKEPER_VERSION/$ZOOKEPER_VERSION.tar.gz -o $ZOOKEPER_VERSION.tar.gz
 tar xzf $ZOOKEPER_VERSION.tar.gz
 cd $ZOOKEPER_VERSION
