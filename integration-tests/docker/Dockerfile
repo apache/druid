@@ -18,9 +18,9 @@ RUN apt-get install -y mysql-server
 RUN apt-get install -y supervisor
 
 # Zookeeper
-RUN wget -q -O - http://www.us.apache.org/dist/zookeeper/zookeeper-3.4.7/zookeeper-3.4.7.tar.gz | tar -xzf - -C /usr/local \
-      && cp /usr/local/zookeeper-3.4.7/conf/zoo_sample.cfg /usr/local/zookeeper-3.4.7/conf/zoo.cfg \
-      && ln -s /usr/local/zookeeper-3.4.7 /usr/local/zookeeper
+RUN wget -q -O - http://www.us.apache.org/dist/zookeeper/zookeeper-3.4.6/zookeeper-3.4.6.tar.gz | tar -xzf - -C /usr/local \
+      && cp /usr/local/zookeeper-3.4.6/conf/zoo_sample.cfg /usr/local/zookeeper-3.4.6/conf/zoo.cfg \
+      && ln -s /usr/local/zookeeper-3.4.6 /usr/local/zookeeper
 
 # Kafka
 RUN wget -q -O - http://www.us.apache.org/dist/kafka/0.8.2.0/kafka_2.10-0.8.2.0.tgz | tar -xzf - -C /usr/local \
