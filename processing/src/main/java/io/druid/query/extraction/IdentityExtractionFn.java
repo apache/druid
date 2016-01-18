@@ -35,7 +35,7 @@ public class IdentityExtractionFn implements ExtractionFn
   @Override
   public byte[] getCacheKey()
   {
-    return new byte[]{CACHE_TYPE_ID};
+    return new byte[]{ExtractionCacheHelper.CACHE_TYPE_ID_IDENTITY};
   }
 
   @Override
@@ -67,13 +67,13 @@ public class IdentityExtractionFn implements ExtractionFn
   {
     return ExtractionType.ONE_TO_ONE;
   }
-  
+
   @Override
   public String toString()
   {
      return "Identity";
   }
-  
+
   @Override
   public boolean equals(Object o)
   {

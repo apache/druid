@@ -29,38 +29,44 @@ import java.util.Arrays;
 
 public class CascadeExtractionFn implements ExtractionFn
 {
-  private static final byte CACHE_TYPE_ID = 0x9;
-
   private final ExtractionFn extractionFns[];
   private final ChainedExtractionFn chainedExtractionFn;
   private final ChainedExtractionFn DEFAULT_CHAINED_EXTRACTION_FN = new ChainedExtractionFn(
-      new ExtractionFn() {
-        public byte[] getCacheKey() {
+      new ExtractionFn()
+      {
+        public byte[] getCacheKey()
+        {
           return new byte[0];
         }
 
-        public String apply(Object value) {
+        public String apply(Object value)
+        {
           return null;
         }
 
-        public String apply(String value) {
+        public String apply(String value)
+        {
           return null;
         }
 
-        public String apply(long value) {
+        public String apply(long value)
+        {
           return null;
         }
 
-        public boolean preservesOrdering() {
+        public boolean preservesOrdering()
+        {
           return false;
         }
 
-        public ExtractionType getExtractionType() {
+        public ExtractionType getExtractionType()
+        {
           return ExtractionType.MANY_TO_ONE;
         }
 
         @Override
-        public String toString() {
+        public String toString()
+        {
           return "nullExtractionFn{}";
         }
       },
@@ -87,39 +93,46 @@ public class CascadeExtractionFn implements ExtractionFn
   }
 
   @JsonProperty
-  public ExtractionFn[] getExtractionFns() {
+  public ExtractionFn[] getExtractionFns()
+  {
     return extractionFns;
   }
 
   @Override
-  public byte[] getCacheKey() {
-    byte[] cacheKey = new byte[] {CACHE_TYPE_ID};
+  public byte[] getCacheKey()
+  {
+    byte[] cacheKey = new byte[]{ExtractionCacheHelper.CACHE_TYPE_ID_CASCADE};
 
     return Bytes.concat(cacheKey, chainedExtractionFn.getCacheKey());
   }
 
   @Override
-  public String apply(Object value) {
+  public String apply(Object value)
+  {
     return chainedExtractionFn.apply(value);
   }
 
   @Override
-  public String apply(String value){
+  public String apply(String value)
+  {
     return chainedExtractionFn.apply(value);
   }
 
   @Override
-  public String apply(long value){
+  public String apply(long value)
+  {
     return chainedExtractionFn.apply(value);
   }
 
   @Override
-  public boolean preservesOrdering(){
+  public boolean preservesOrdering()
+  {
     return chainedExtractionFn.preservesOrdering();
   }
 
   @Override
-  public ExtractionType getExtractionType(){
+  public ExtractionType getExtractionType()
+  {
     return chainedExtractionFn.getExtractionType();
   }
 
@@ -152,44 +165,53 @@ public class CascadeExtractionFn implements ExtractionFn
   }
 
   @Override
-  public String toString() {
+  public String toString()
+  {
     return "CascadeExtractionFn{" +
-        "extractionFns=[" + chainedExtractionFn.toString() + "]}";
+           "extractionFns=[" + chainedExtractionFn.toString() + "]}";
   }
 
-  private class ChainedExtractionFn {
+  private class ChainedExtractionFn
+  {
     private final ExtractionFn fn;
     private final ChainedExtractionFn child;
 
-    public ChainedExtractionFn(ExtractionFn fn, ChainedExtractionFn child) {
+    public ChainedExtractionFn(ExtractionFn fn, ChainedExtractionFn child)
+    {
       this.fn = fn;
       this.child = child;
     }
 
-    public byte[] getCacheKey() {
+    public byte[] getCacheKey()
+    {
       byte[] fnCacheKey = fn.getCacheKey();
 
       return (child != null) ? Bytes.concat(fnCacheKey, child.getCacheKey()) : fnCacheKey;
     }
 
-    public String apply(Object value) {
+    public String apply(Object value)
+    {
       return fn.apply((child != null) ? child.apply(value) : value);
     }
 
-    public String apply(String value){
+    public String apply(String value)
+    {
       return fn.apply((child != null) ? child.apply(value) : value);
     }
 
-    public String apply(long value){
+    public String apply(long value)
+    {
       return fn.apply((child != null) ? child.apply(value) : value);
     }
 
-    public boolean preservesOrdering(){
+    public boolean preservesOrdering()
+    {
       boolean childPreservesOrdering = (child == null) || child.preservesOrdering();
       return fn.preservesOrdering() && childPreservesOrdering;
     }
 
-    public ExtractionType getExtractionType(){
+    public ExtractionType getExtractionType()
+    {
       if (child != null && child.getExtractionType() == ExtractionType.MANY_TO_ONE) {
         return ExtractionType.MANY_TO_ONE;
       } else {
@@ -227,10 +249,11 @@ public class CascadeExtractionFn implements ExtractionFn
       return result;
     }
 
-    public String toString() {
+    public String toString()
+    {
       return (child != null)
-          ? Joiner.on(",").join(child.toString(), fn.toString())
-          : fn.toString();
+             ? Joiner.on(",").join(child.toString(), fn.toString())
+             : fn.toString();
     }
   }
 }

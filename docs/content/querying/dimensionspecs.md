@@ -341,6 +341,16 @@ Example for chaining [regular expression extraction function](#regular-expressio
 It will transform dimension values with specified extraction functions in the order named.
 For example, `'/druid/prod/historical'` is transformed to `'the dru'` as regular expression extraction function first transforms it to `'druid'` and then, javascript extraction function transforms it to `'the druid'`, and lastly, substring extraction function transforms it to `'the dru'`. 
 
+### String Format Extraction Function
+
+Returns the dimension value formatted according to the given format string.
+
+```json
+{ "type" : "stringFormat", "format" : <sprintf_expression> }
+```
+
+For example, if you want to concat "[" and "]" before and after the actual dimension value, you need to specify "[%s]" as format string.
+
 ### Filtering DimensionSpecs
 
 These are only valid for multi-valued dimensions. If you have a row in druid that has a multi-valued dimension with values ["v1", "v2", "v3"] and you send a groupBy/topN query grouping by that dimension with [query filter](filter.html) for value "v1". In the response you will get 3 rows containing "v1", "v2" and "v3". This behavior might be unintuitive for some use cases.

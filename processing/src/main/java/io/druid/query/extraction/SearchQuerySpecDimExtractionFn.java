@@ -30,8 +30,6 @@ import java.nio.ByteBuffer;
  */
 public class SearchQuerySpecDimExtractionFn extends DimExtractionFn
 {
-  private static final byte CACHE_TYPE_ID = 0x3;
-
   private final SearchQuerySpec searchQuerySpec;
 
   @JsonCreator
@@ -55,7 +53,7 @@ public class SearchQuerySpecDimExtractionFn extends DimExtractionFn
   {
     byte[] specBytes = searchQuerySpec.getCacheKey();
     return ByteBuffer.allocate(1 + specBytes.length)
-                     .put(CACHE_TYPE_ID)
+                     .put(ExtractionCacheHelper.CACHE_TYPE_ID_SEARCH_QUERY)
                      .put(specBytes)
                      .array();
   }
