@@ -30,6 +30,7 @@ import io.druid.guice.annotations.Processing;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
+import io.druid.segment.IndexMergerV9;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.loading.DataSegmentPusher;
@@ -51,6 +52,7 @@ public class RealtimePlumberSchool implements PlumberSchool
   private final SegmentHandoffNotifierFactory handoffNotifierFactory;
   private final ExecutorService queryExecutorService;
   private final IndexMerger indexMerger;
+  private final IndexMergerV9 indexMergerV9;
   private final IndexIO indexIO;
   private final Cache cache;
   private final CacheConfig cacheConfig;
@@ -66,6 +68,7 @@ public class RealtimePlumberSchool implements PlumberSchool
       @JacksonInject SegmentHandoffNotifierFactory handoffNotifierFactory,
       @JacksonInject @Processing ExecutorService executorService,
       @JacksonInject IndexMerger indexMerger,
+      @JacksonInject IndexMergerV9 indexMergerV9,
       @JacksonInject IndexIO indexIO,
       @JacksonInject Cache cache,
       @JacksonInject CacheConfig cacheConfig,
@@ -80,6 +83,7 @@ public class RealtimePlumberSchool implements PlumberSchool
     this.handoffNotifierFactory = handoffNotifierFactory;
     this.queryExecutorService = executorService;
     this.indexMerger = Preconditions.checkNotNull(indexMerger, "Null IndexMerger");
+    this.indexMergerV9 = Preconditions.checkNotNull(indexMergerV9, "Null IndexMergerV9");
     this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
 
     this.cache = cache;
@@ -107,7 +111,7 @@ public class RealtimePlumberSchool implements PlumberSchool
         dataSegmentPusher,
         segmentPublisher,
         handoffNotifierFactory.createSegmentHandoffNotifier(schema.getDataSource()),
-        indexMerger,
+        config.getBuildV9Directly() ? indexMergerV9 : indexMerger,
         indexIO,
         cache,
         cacheConfig,

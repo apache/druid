@@ -124,7 +124,12 @@ public class IndexTask extends AbstractFixedIntervalTask
     );
   }
 
-  static RealtimeTuningConfig convertTuningConfig(ShardSpec shardSpec, int rowFlushBoundary, IndexSpec indexSpec)
+  static RealtimeTuningConfig convertTuningConfig(
+      ShardSpec shardSpec,
+      int rowFlushBoundary,
+      IndexSpec indexSpec,
+      boolean buildV9Directly
+  )
   {
     return new RealtimeTuningConfig(
         rowFlushBoundary,
@@ -136,7 +141,7 @@ public class IndexTask extends AbstractFixedIntervalTask
         null,
         shardSpec,
         indexSpec,
-        null
+        buildV9Directly
     );
   }
 
@@ -355,19 +360,22 @@ public class IndexTask extends AbstractFixedIntervalTask
     final FireDepartmentMetrics metrics = new FireDepartmentMetrics();
     final Firehose firehose = firehoseFactory.connect(ingestionSchema.getDataSchema().getParser());
     final Supplier<Committer> committerSupplier = Committers.supplierFromFirehose(firehose);
-    final IndexMerger indexMerger = ingestionSchema.getTuningConfig().getBuildV9Directly()
-                                    ? toolbox.getIndexMergerV9()
-                                    : toolbox.getIndexMerger();
     final Plumber plumber = new YeOldePlumberSchool(
         interval,
         version,
         wrappedDataSegmentPusher,
         tmpDir,
-        indexMerger,
+        toolbox.getIndexMerger(),
+        toolbox.getIndexMergerV9(),
         toolbox.getIndexIO()
     ).findPlumber(
         schema,
-        convertTuningConfig(shardSpec, myRowFlushBoundary, ingestionSchema.getTuningConfig().getIndexSpec()),
+        convertTuningConfig(
+            shardSpec,
+            myRowFlushBoundary,
+            ingestionSchema.getTuningConfig().getIndexSpec(),
+            ingestionSchema.tuningConfig.getBuildV9Directly()
+        ),
         metrics
     );
 
