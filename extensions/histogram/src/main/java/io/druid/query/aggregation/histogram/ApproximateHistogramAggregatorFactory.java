@@ -239,6 +239,12 @@ public class ApproximateHistogramAggregatorFactory implements AggregatorFactory
   }
 
   @Override
+  public boolean isComplex()
+  {
+    return true;
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

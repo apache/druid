@@ -81,6 +81,18 @@ public class HistogramAggregator implements Aggregator
   }
 
   @Override
+  public int getInt()
+  {
+    throw new UnsupportedOperationException("HistogramAggregator does not support getInt()");
+  }
+
+  @Override
+  public double getDouble()
+  {
+    throw new UnsupportedOperationException("HistogramAggregator does not support getDouble()");
+  }
+
+  @Override
   public String getName()
   {
     return name;

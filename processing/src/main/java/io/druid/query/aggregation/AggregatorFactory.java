@@ -112,4 +112,10 @@ public interface AggregatorFactory
    * @return the starting value for a corresponding aggregator.
    */
   public Object getAggregatorStartValue();
+
+  /**
+   * Returns if the aggregator is doing complex or simple (primitive) aggregations
+   * @return if the aggregator is complex
+   */
+  public boolean isComplex();
 }

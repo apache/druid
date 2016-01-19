@@ -73,8 +73,10 @@ import io.druid.segment.serde.ComplexColumnPartSerde;
 import io.druid.segment.serde.ComplexColumnPartSupplier;
 import io.druid.segment.serde.DictionaryEncodedColumnPartSerde;
 import io.druid.segment.serde.DictionaryEncodedColumnSupplier;
+import io.druid.segment.serde.DoubleGenericColumnPartSerde;
 import io.druid.segment.serde.FloatGenericColumnPartSerde;
 import io.druid.segment.serde.FloatGenericColumnSupplier;
+import io.druid.segment.serde.IntGenericColumnPartSerde;
 import io.druid.segment.serde.LongGenericColumnPartSerde;
 import io.druid.segment.serde.LongGenericColumnSupplier;
 import io.druid.segment.serde.SpatialIndexColumnPartSupplier;
@@ -772,6 +774,14 @@ public class IndexIO
                                              .withDelegate(holder.floatType)
                                              .build()
               );
+              break;
+            case INT:
+              builder.setValueType(ValueType.INT);
+              builder.addSerde(new IntGenericColumnPartSerde(holder.intType, BYTE_ORDER));
+              break;
+            case DOUBLE:
+              builder.setValueType(ValueType.DOUBLE);
+              builder.addSerde(new DoubleGenericColumnPartSerde(holder.doubleType, BYTE_ORDER));
               break;
             case COMPLEX:
               if (!(holder.complexType instanceof GenericIndexed)) {

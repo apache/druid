@@ -19,8 +19,9 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.DoubleColumnSelector;
 
+import java.nio.ByteBuffer;
 import java.util.Comparator;
 
 /**
@@ -34,12 +35,12 @@ public class DoubleMinAggregator implements Aggregator
     return Math.min(((Number) lhs).doubleValue(), ((Number) rhs).doubleValue());
   }
 
-  private final FloatColumnSelector selector;
+  private final DoubleColumnSelector selector;
   private final String name;
 
   private double min;
 
-  public DoubleMinAggregator(String name, FloatColumnSelector selector)
+  public DoubleMinAggregator(String name, DoubleColumnSelector selector)
   {
     this.name = name;
     this.selector = selector;
@@ -75,6 +76,18 @@ public class DoubleMinAggregator implements Aggregator
   public long getLong()
   {
     return (long) min;
+  }
+
+  @Override
+  public int getInt()
+  {
+    return (int) min;
+  }
+
+  @Override
+  public double getDouble()
+  {
+    return (double) min;
   }
 
   @Override

@@ -716,6 +716,12 @@ public class IndexMerger
         case FLOAT:
           metWriters.add(new FloatMetricColumnSerializer(metric, v8OutDir, ioPeon));
           break;
+        case INT:
+          metWriters.add(new IntMetricColumnSerializer(metric, v8OutDir, ioPeon));
+          break;
+        case DOUBLE:
+          metWriters.add(new DoubleMetricColumnSerializer(metric, v8OutDir, ioPeon));
+          break;
         case COMPLEX:
           final String typeName = metricTypeNames.get(metric);
           ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);

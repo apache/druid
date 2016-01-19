@@ -98,6 +98,18 @@ public class ApproximateHistogramFoldingBufferAggregator implements BufferAggreg
   }
 
   @Override
+  public int getInt(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("ApproximateHistogramFoldingBufferAggregator does not support getInt()");
+  }
+
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("ApproximateHistogramFoldingBufferAggregator does not support getDouble()");
+  }
+
+  @Override
   public void close()
   {
     // no resources to cleanup

@@ -398,6 +398,18 @@ public class IndexGeneratorJob implements Jobby
         }
 
         @Override
+        public int getIntMetric(String metric)
+        {
+          return row.getIntMetric(metric);
+        }
+
+        @Override
+        public double getDoubleMetric(String metric)
+        {
+          return row.getDoubleMetric(metric);
+        }
+
+        @Override
         public int compareTo(Row o)
         {
           return row.compareTo(o);

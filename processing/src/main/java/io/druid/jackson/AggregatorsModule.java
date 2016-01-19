@@ -29,7 +29,9 @@ import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
+import io.druid.query.aggregation.FloatSumAggregator;
 import io.druid.query.aggregation.HistogramAggregatorFactory;
+import io.druid.query.aggregation.IntSumAggregatorFactory;
 import io.druid.query.aggregation.JavaScriptAggregatorFactory;
 import io.druid.query.aggregation.LongMaxAggregatorFactory;
 import io.druid.query.aggregation.LongMinAggregatorFactory;
@@ -74,7 +76,9 @@ public class AggregatorsModule extends SimpleModule
       @JsonSubTypes.Type(name = "histogram", value = HistogramAggregatorFactory.class),
       @JsonSubTypes.Type(name = "hyperUnique", value = HyperUniquesAggregatorFactory.class),
       @JsonSubTypes.Type(name = "cardinality", value = CardinalityAggregatorFactory.class),
-      @JsonSubTypes.Type(name = "filtered", value = FilteredAggregatorFactory.class)
+      @JsonSubTypes.Type(name = "filtered", value = FilteredAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "intSum", value = IntSumAggregatorFactory.class),
+      @JsonSubTypes.Type(name = "floatSum", value = FloatSumAggregator.class)
   })
   public static interface AggregatorFactoryMixin
   {

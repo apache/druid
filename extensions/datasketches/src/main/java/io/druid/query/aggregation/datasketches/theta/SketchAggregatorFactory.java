@@ -160,6 +160,12 @@ public abstract class SketchAggregatorFactory implements AggregatorFactory
   }
 
   @Override
+  public boolean isComplex()
+  {
+    return true;
+  }
+
+  @Override
   public List<String> requiredFields()
   {
     return Collections.singletonList(fieldName);

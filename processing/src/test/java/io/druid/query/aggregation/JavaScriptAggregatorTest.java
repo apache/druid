@@ -45,15 +45,15 @@ public class JavaScriptAggregatorTest
     scriptDoubleSum.put("fnCombine", "function combine(a,b)          { return a + b }");
   }
 
-  private static void aggregate(TestFloatColumnSelector selector1, TestFloatColumnSelector selector2, Aggregator agg)
+  private static void aggregate(TestDoubleColumnSelector selector1, TestDoubleColumnSelector selector2, Aggregator agg)
   {
     agg.aggregate();
     selector1.increment();
     selector2.increment();
   }
 
-  private void aggregateBuffer(TestFloatColumnSelector selector1,
-                               TestFloatColumnSelector selector2,
+  private void aggregateBuffer(TestDoubleColumnSelector selector1,
+                               TestDoubleColumnSelector selector2,
                                BufferAggregator agg,
                                ByteBuffer buf, int position)
   {
@@ -62,7 +62,7 @@ public class JavaScriptAggregatorTest
     selector2.increment();
   }
 
-  private static void aggregate(TestFloatColumnSelector selector, Aggregator agg)
+  private static void aggregate(TestDoubleColumnSelector selector, Aggregator agg)
   {
     agg.aggregate();
     selector.increment();
@@ -77,8 +77,8 @@ public class JavaScriptAggregatorTest
   @Test
   public void testAggregate()
   {
-    final TestFloatColumnSelector selector1 = new TestFloatColumnSelector(new float[]{42.12f, 9f});
-    final TestFloatColumnSelector selector2 = new TestFloatColumnSelector(new float[]{2f, 3f});
+    final TestDoubleColumnSelector selector1 = new TestDoubleColumnSelector(new double[]{42.12d, 9d});
+    final TestDoubleColumnSelector selector2 = new TestDoubleColumnSelector(new double[]{2d, 3d});
 
     Map<String, String> script = sumLogATimesBPlusTen;
 
@@ -100,13 +100,13 @@ public class JavaScriptAggregatorTest
     Assert.assertEquals(val, agg.get());
     aggregate(selector1, selector2, agg);
 
-    val += Math.log(42.12f) * 2f;
+    val += Math.log(42.12d) * 2d;
     Assert.assertEquals(val, agg.get());
     Assert.assertEquals(val, agg.get());
     Assert.assertEquals(val, agg.get());
 
     aggregate(selector1, selector2, agg);
-    val += Math.log(9f) * 3f;
+    val += Math.log(9d) * 3d;
     Assert.assertEquals(val, agg.get());
     Assert.assertEquals(val, agg.get());
     Assert.assertEquals(val, agg.get());
@@ -115,8 +115,8 @@ public class JavaScriptAggregatorTest
   @Test
   public void testBufferAggregate()
   {
-    final TestFloatColumnSelector selector1 = new TestFloatColumnSelector(new float[]{42.12f, 9f});
-    final TestFloatColumnSelector selector2 = new TestFloatColumnSelector(new float[]{2f, 3f});
+    final TestDoubleColumnSelector selector1 = new TestDoubleColumnSelector(new double[]{42.12d, 9d});
+    final TestDoubleColumnSelector selector2 = new TestDoubleColumnSelector(new double[]{2d, 3d});
 
     Map<String, String> script = sumLogATimesBPlusTen;
     JavaScriptBufferAggregator agg = new JavaScriptBufferAggregator(
@@ -136,13 +136,13 @@ public class JavaScriptAggregatorTest
     Assert.assertEquals(val, agg.get(buf, position));
     aggregateBuffer(selector1, selector2, agg, buf, position);
 
-    val += Math.log(42.12f) * 2f;
+    val += Math.log(42.12d) * 2d;
     Assert.assertEquals(val, agg.get(buf, position));
     Assert.assertEquals(val, agg.get(buf, position));
     Assert.assertEquals(val, agg.get(buf, position));
 
     aggregateBuffer(selector1, selector2, agg, buf, position);
-    val += Math.log(9f) * 3f;
+    val += Math.log(9d) * 3d;
     Assert.assertEquals(val, agg.get(buf, position));
     Assert.assertEquals(val, agg.get(buf, position));
     Assert.assertEquals(val, agg.get(buf, position));
@@ -223,7 +223,7 @@ public class JavaScriptAggregatorTest
   }
 
   public static void main(String... args) throws Exception {
-    final JavaScriptAggregatorBenchmark.LoopingFloatColumnSelector selector = new JavaScriptAggregatorBenchmark.LoopingFloatColumnSelector(new float[]{42.12f, 9f});
+    final JavaScriptAggregatorBenchmark.LoopingDoubleColumnSelector selector = new JavaScriptAggregatorBenchmark.LoopingDoubleColumnSelector(new double[]{42.12d, 9d});
 
     /* memory usage test
     List<JavaScriptAggregator> aggs = Lists.newLinkedList();

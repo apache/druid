@@ -73,6 +73,18 @@ public class HyperUniquesAggregator implements Aggregator
   }
 
   @Override
+  public int getInt()
+  {
+    throw new UnsupportedOperationException("HyperUniquesAggregator does not support getInt()");
+  }
+
+  @Override
+  public double getDouble()
+  {
+    throw new UnsupportedOperationException("HyperUniquesAggregator does not support getDouble()");
+  }
+
+  @Override
   public String getName()
   {
     return name;

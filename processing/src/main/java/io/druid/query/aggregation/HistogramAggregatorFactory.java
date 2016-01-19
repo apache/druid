@@ -184,6 +184,12 @@ public class HistogramAggregatorFactory implements AggregatorFactory
   }
 
   @Override
+  public boolean isComplex()
+  {
+    return true;
+  }
+
+  @Override
   public String toString()
   {
     return "HistogramAggregatorFactory{" +

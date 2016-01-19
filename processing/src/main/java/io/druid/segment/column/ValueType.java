@@ -26,5 +26,7 @@ public enum ValueType
   FLOAT,
   LONG,
   STRING,
+  INT,
+  DOUBLE,
   COMPLEX
 }

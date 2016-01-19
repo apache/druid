@@ -24,6 +24,7 @@ package io.druid.segment.column;
 public interface ColumnCapabilities
 {
   public ValueType getType();
+  public boolean isNumeric();
 
   public boolean isDictionaryEncoded();
   public boolean isRunLengthEncoded();

@@ -78,6 +78,18 @@ public class LongMaxAggregator implements Aggregator
   }
 
   @Override
+  public int getInt()
+  {
+    return (int) max;
+  }
+
+  @Override
+  public double getDouble()
+  {
+    return max;
+  }
+
+  @Override
   public String getName()
   {
     return this.name;

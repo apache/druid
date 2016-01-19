@@ -54,6 +54,18 @@ public class Aggregators
       }
 
       @Override
+      public double getDouble()
+      {
+        return 0;
+      }
+
+      @Override
+      public int getInt()
+      {
+        return 0;
+      }
+
+      @Override
       public String getName()
       {
         return null;
@@ -101,11 +113,22 @@ public class Aggregators
         return 0;
       }
 
-
       @Override
       public long getLong(ByteBuffer buf, int position)
       {
         return 0L;
+      }
+
+      @Override
+      public int getInt(ByteBuffer buf, int position)
+      {
+        return 0;
+      }
+
+      @Override
+      public double getDouble(ByteBuffer buf, int position)
+      {
+        return 0d;
       }
 
       @Override

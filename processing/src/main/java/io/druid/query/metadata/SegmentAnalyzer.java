@@ -24,6 +24,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.primitives.Doubles;
+import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.metamx.common.StringUtils;
 import com.metamx.common.logger.Logger;
@@ -81,6 +83,12 @@ public class SegmentAnalyzer
         case FLOAT:
           analysis = analyzeFloatColumn(column, analysisTypes);
           break;
+        case INT:
+          analysis = analyzeIntColumn(column, analysisTypes);
+          break;
+        case DOUBLE:
+          analysis = analyzeDoubleColumn(column, analysisTypes);
+          break;
         case STRING:
           analysis = analyzeStringColumn(column, analysisTypes);
           break;
@@ -137,6 +145,20 @@ public class SegmentAnalyzer
               numRows, NUM_BYTES_IN_TEXT_FLOAT
           );
           break;
+        case INT:
+          analysis = lengthBasedAnalysisForAdapter(
+              analysisTypes,
+              capType.name(), capabilities,
+              numRows, Ints.BYTES
+          );
+          break;
+        case DOUBLE:
+          analysis = lengthBasedAnalysisForAdapter(
+              analysisTypes,
+              capType.name(), capabilities,
+              numRows, Double.BYTES
+          );
+          break;
         case STRING:
           analysis = new ColumnAnalysis(
               capType.name(),
@@ -178,6 +200,16 @@ public class SegmentAnalyzer
   public ColumnAnalysis analyzeFloatColumn(Column column, EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes)
   {
     return lengthBasedAnalysis(column, NUM_BYTES_IN_TEXT_FLOAT, analysisTypes);
+  }
+
+  public ColumnAnalysis analyzeIntColumn(Column column, EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes)
+  {
+    return lengthBasedAnalysis(column, Ints.BYTES, analysisTypes);
+  }
+
+  public ColumnAnalysis analyzeDoubleColumn(Column column, EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes)
+  {
+    return lengthBasedAnalysis(column, Doubles.BYTES, analysisTypes);
   }
 
   private ColumnAnalysis lengthBasedAnalysis(

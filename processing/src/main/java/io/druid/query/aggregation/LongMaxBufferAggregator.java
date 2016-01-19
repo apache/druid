@@ -65,6 +65,18 @@ public class LongMaxBufferAggregator implements BufferAggregator
   }
 
   @Override
+  public int getInt(ByteBuffer buf, int position)
+  {
+    return buf.getInt(position);
+  }
+
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    return buf.getDouble(position);
+  }
+
+  @Override
   public void close()
   {
     // no resources to cleanup

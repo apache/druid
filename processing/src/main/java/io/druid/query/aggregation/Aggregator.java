@@ -37,8 +37,9 @@ public interface Aggregator {
   void reset();
   Object get();
   float getFloat();
+  long getLong();
+  int getInt();
+  double getDouble();
   String getName();
   void close();
-
-  long getLong();
 }

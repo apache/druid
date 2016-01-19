@@ -19,7 +19,7 @@
 
 package io.druid.query.aggregation;
 
-import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.DoubleColumnSelector;
 
 import java.nio.ByteBuffer;
 
@@ -27,9 +27,9 @@ import java.nio.ByteBuffer;
  */
 public class DoubleMinBufferAggregator implements BufferAggregator
 {
-  private final FloatColumnSelector selector;
+  private final DoubleColumnSelector selector;
 
-  public DoubleMinBufferAggregator(FloatColumnSelector selector)
+  public DoubleMinBufferAggregator(DoubleColumnSelector selector)
   {
     this.selector = selector;
   }
@@ -58,11 +58,22 @@ public class DoubleMinBufferAggregator implements BufferAggregator
     return (float) buf.getDouble(position);
   }
 
-
   @Override
   public long getLong(ByteBuffer buf, int position)
   {
     return  (long) buf.getDouble(position);
+  }
+
+  @Override
+  public int getInt(ByteBuffer buf, int position)
+  {
+    return (int) buf.getDouble(position);
+  }
+
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    return buf.getDouble(position);
   }
 
   @Override

@@ -20,20 +20,23 @@
 package io.druid.segment.column;
 
 import io.druid.segment.data.Indexed;
+import io.druid.segment.data.IndexedDoubles;
 import io.druid.segment.data.IndexedFloats;
+import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedLongs;
 
 import java.io.IOException;
 
 /**
-*/
+ */
 public class IndexedFloatsGenericColumn implements GenericColumn
 {
   private final IndexedFloats column;
 
   public IndexedFloatsGenericColumn(
       final IndexedFloats column
-  ) {
+  )
+  {
     this.column = column;
   }
 
@@ -87,6 +90,30 @@ public class IndexedFloatsGenericColumn implements GenericColumn
 
   @Override
   public IndexedLongs getLongMultiValueRow(int rowNum)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public int getIntSingleValueRow(int rowNum)
+  {
+    return (int) column.get(rowNum);
+  }
+
+  @Override
+  public IndexedInts getIntMultiValueRow(int rowNum)
+  {
+    throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public double getDoubleSingleValueRow(int rowNum)
+  {
+    return (double) column.get(rowNum);
+  }
+
+  @Override
+  public IndexedDoubles getDoubleMultiValueRow(int rowNum)
   {
     throw new UnsupportedOperationException();
   }

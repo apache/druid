@@ -133,6 +133,18 @@ public class CardinalityAggregator implements Aggregator
   }
 
   @Override
+  public int getInt()
+  {
+    throw new UnsupportedOperationException("CardinalityAggregator does not support getInt()");
+  }
+
+  @Override
+  public double getDouble()
+  {
+    throw new UnsupportedOperationException("CardinalityAggregator does not support getDouble()");
+  }
+
+  @Override
   public String getName()
   {
     return name;

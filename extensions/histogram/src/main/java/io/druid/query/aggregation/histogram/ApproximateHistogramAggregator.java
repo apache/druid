@@ -96,6 +96,18 @@ public class ApproximateHistogramAggregator implements Aggregator
   }
 
   @Override
+  public double getDouble()
+  {
+    throw new UnsupportedOperationException("ApproximateHistogramAggregator does not support getDouble()");
+  }
+
+  @Override
+  public int getInt()
+  {
+    throw new UnsupportedOperationException("ApproximateHistogramAggregator does not support getInt()");
+  }
+
+  @Override
   public String getName()
   {
     return name;
