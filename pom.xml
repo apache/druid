@@ -100,6 +100,7 @@
         <module>extensions/cloudfiles-extensions</module>
         <module>extensions/datasketches</module>
         <module>extensions/avro-extensions</module>
+        <module>extensions/listening-announcer</module>
         <!-- distribution packaging -->
         <module>distribution</module>
 
