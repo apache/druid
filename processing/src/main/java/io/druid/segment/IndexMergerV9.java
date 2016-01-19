@@ -183,7 +183,7 @@ public class IndexMergerV9 extends IndexMerger
     /************* Walk through data sets, merge them, and write merged columns *************/
     progress.progress();
     final Iterable<Rowboat> theRows = makeRowIterable(
-        adapters, mergedDimensions, mergedMetrics, dimConversions, rowMergerFn
+        adapters, mergedDimensions, mergedMetrics, dimConversions, dimCardinalities, rowMergerFn
     );
     final LongColumnSerializer timeWriter = setupTimeWriter(ioPeon);
     final ArrayList<IndexedIntsWriter> dimWriters = setupDimensionWriters(
@@ -267,8 +267,8 @@ public class IndexMergerV9 extends IndexMerger
     progress.startSection(section);
 
     long startTime = System.currentTimeMillis();
-    final Set<String> finalColumns = Sets.newTreeSet();
-    final Set<String> finalDimensions = Sets.newTreeSet();
+    final Set<String> finalDimensions = Sets.newLinkedHashSet();
+    final Set<String> finalColumns = Sets.newLinkedHashSet();
     finalColumns.addAll(mergedMetrics);
     for (int i = 0; i < mergedDimensions.size(); ++i) {
       if (dimensionSkipFlag.get(i)) {
@@ -665,7 +665,7 @@ public class IndexMergerV9 extends IndexMerger
         if (dimensionSkipFlag.get(i)) {
           continue;
         }
-        if (dims[i] == null || dims[i].length == 0) {
+        if (dims[i] == null || dims[i].length == 0 || (dims[i].length == 1 && dims[i][0] == 0)) {
           nullRowsList.get(i).add(rowCount);
         }
         dimWriters.get(i).add(dims[i]);
@@ -778,6 +778,7 @@ public class IndexMergerV9 extends IndexMerger
       final List<String> mergedDimensions,
       final List<String> mergedMetrics,
       final ArrayList<Map<String, IntBuffer>> dimConversions,
+      final Map<String, Integer> dimCardinalities,
       final Function<ArrayList<Iterable<Rowboat>>, Iterable<Rowboat>> rowMergerFn
   )
   {
@@ -834,7 +835,8 @@ public class IndexMergerV9 extends IndexMerger
               ),
               mergedDimensions,
               dimConversions.get(i),
-              i
+              i,
+              dimCardinalities
           )
       );
     }
@@ -886,32 +888,39 @@ public class IndexMergerV9 extends IndexMerger
       // each converter converts dim values of this dimension to global dictionary
       DimValueConverter[] converters = new DimValueConverter[adapters.size()];
 
-      boolean existNullColumn = false;
+      boolean dimHasValues = false;
+      boolean[] dimHasValuesByIndex = new boolean[adapters.size()];
       for (int i = 0; i < adapters.size(); i++) {
         Indexed<String> dimValues = adapters.get(i).getDimValueLookup(dimension);
         if (!isNullColumn(dimValues)) {
+          dimHasValues = true;
+          dimHasValuesByIndex[i] = true;
           dimValueLookups.add(dimValues);
           converters[i] = new DimValueConverter(dimValues);
         } else {
-          existNullColumn = true;
+          dimHasValuesByIndex[i] = false;
         }
       }
 
-      Iterable<Indexed<String>> bumpedDimValueLookups;
-      if (!dimValueLookups.isEmpty() && existNullColumn) {
-        log.info("dim[%s] are null in some indexes, append null value to dim values", dimension);
-        bumpedDimValueLookups = Iterables.concat(
-            Arrays.asList(new ArrayIndexed<>(new String[]{null}, String.class)),
-            dimValueLookups
-        );
-      } else {
-        bumpedDimValueLookups = dimValueLookups;
+      /*
+       * Ensure the empty str is always in the dictionary if column is not null across indexes
+       * This is done so that MMappedIndexRowIterable can convert null columns to empty strings
+       * later on, to allow rows from indexes with no values at all for a dimension to merge correctly with
+       * rows from indexes with partial null values for that dimension.
+       */
+      if (dimHasValues) {
+        dimValueLookups.add(EMPTY_STR_DIM_VAL);
+        for (int i = 0; i < adapters.size(); i++) {
+          if (!dimHasValuesByIndex[i]) {
+            converters[i] = new DimValueConverter(EMPTY_STR_DIM_VAL);
+          }
+        }
       }
 
       // sort all dimension values and treat all null values as empty strings
       Iterable<String> dimensionValues = CombiningIterable.createSplatted(
           Iterables.transform(
-              bumpedDimValueLookups,
+              dimValueLookups,
               new Function<Indexed<String>, Iterable<String>>()
               {
                 @Override

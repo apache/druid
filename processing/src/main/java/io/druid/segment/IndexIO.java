@@ -610,6 +610,7 @@ public class IndexIO
             continue;
           }
 
+          int emptyStrIdx = dictionary.indexOf("");
           List<Integer> singleValCol = null;
           VSizeIndexed multiValCol = VSizeIndexed.readFromByteBuffer(dimBuffer.asReadOnlyBuffer());
           GenericIndexed<ImmutableBitmap> bitmaps = bitmapIndexes.get(dimension);
@@ -626,7 +627,7 @@ public class IndexIO
             if (rowValue.size() > 1) {
               onlyOneValue = false;
             }
-            if (rowValue.size() == 0) {
+            if (rowValue.size() == 0 || rowValue.get(0) == emptyStrIdx) {
               if (nullsSet == null) {
                 nullsSet = bitmapFactory.makeEmptyMutableBitmap();
               }
