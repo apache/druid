@@ -31,5 +31,5 @@ public interface SegmentLoader
   public boolean isSegmentLoaded(DataSegment segment) throws SegmentLoadingException;
   public Segment getSegment(DataSegment segment) throws SegmentLoadingException;
   public File getSegmentFiles(DataSegment segment) throws SegmentLoadingException;
-  public void cleanup(DataSegment loadSpec) throws SegmentLoadingException;
+  public void cleanup(DataSegment segment) throws SegmentLoadingException;
 }
