@@ -134,6 +134,7 @@ The Druid servers emit various metrics and alerts via something we call an Emitt
 |--------|-----------|-------|
 |`druid.emitter.logging.loggerClass`|Choices: HttpPostEmitter, LoggingEmitter, NoopServiceEmitter, ServiceEmitter. The class used for logging.|LoggingEmitter|
 |`druid.emitter.logging.logLevel`|Choices: debug, info, warn, error. The log level at which message are logged.|info|
+|`druid.emitter.logging.eventsToLog`|Choices: METRICS, ALERTS or ALL. Type of events to log, others will be ignored.|ALL|
 
 #### Http Emitter Module
 
