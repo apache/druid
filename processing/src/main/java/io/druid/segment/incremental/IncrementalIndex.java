@@ -401,10 +401,10 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   /**
    * Adds a new row.  The row might correspond with another row that already exists, in which case this will
    * update that row instead of inserting a new one.
-   * <p/>
-   * <p/>
+   * <p>
+   * <p>
    * Calls to add() are thread safe.
-   * <p/>
+   * <p>
    *
    * @param row the row of data to add
    *
@@ -597,6 +597,36 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   {
     DimensionDesc dimSpec = getDimension(dimension);
     return dimSpec == null ? null : dimSpec.getIndex();
+  }
+
+  public List<String> getDimensionOrder()
+  {
+    synchronized (dimensionDescs) {
+      return ImmutableList.copyOf(dimensionDescs.keySet());
+    }
+  }
+
+  /*
+   * Currently called to initialize IncrementalIndex dimension order during index creation
+   * Index dimension ordering could be changed to initalize from DimensionsSpec after resolution of
+   * https://github.com/druid-io/druid/issues/2011
+   */
+  public void loadDimensionIterable(Iterable<String> oldDimensionOrder)
+  {
+    synchronized (dimensionDescs) {
+      if (!dimensionDescs.isEmpty()) {
+        throw new ISE("Cannot load dimension order when existing order[%s] is not empty.", dimensionDescs.keySet());
+      }
+      for (String dim : oldDimensionOrder) {
+        if (dimensionDescs.get(dim) == null) {
+          ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
+          capabilities.setType(ValueType.STRING);
+          columnCapabilities.put(dim, capabilities);
+          DimensionDesc desc = new DimensionDesc(dimensionDescs.size(), dim, newDimDim(dim), capabilities);
+          dimensionDescs.put(dim, desc);
+        }
+      }
+    }
   }
 
   public List<String> getMetricNames()
@@ -903,13 +933,10 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     public int compareTo(TimeAndDims rhs)
     {
       int retVal = Longs.compare(timestamp, rhs.timestamp);
-
-      if (retVal == 0) {
-        retVal = Ints.compare(dims.length, rhs.dims.length);
-      }
+      int numComparisons = Math.min(dims.length, rhs.dims.length);
 
       int index = 0;
-      while (retVal == 0 && index < dims.length) {
+      while (retVal == 0 && index < numComparisons) {
         String[] lhsVals = dims[index];
         String[] rhsVals = rhs.dims[index];
 
@@ -933,6 +960,10 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
           ++valsIndex;
         }
         ++index;
+      }
+
+      if (retVal == 0) {
+        return Ints.compare(dims.length, rhs.dims.length);
       }
 
       return retVal;

@@ -21,6 +21,7 @@ package io.druid.segment.realtime.plumber;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.io.Files;
@@ -43,6 +44,7 @@ import io.druid.query.QueryRunnerFactory;
 import io.druid.query.SegmentDescriptor;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
+import io.druid.segment.QueryableIndex;
 import io.druid.segment.TestHelper;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
@@ -71,9 +73,9 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  */
@@ -245,7 +247,6 @@ public class RealtimePlumberSchoolTest
 
   private void testPersist(final Object commitMetadata) throws Exception
   {
-    final AtomicBoolean committed = new AtomicBoolean(false);
     plumber.getSinks()
            .put(
                0L,
@@ -262,6 +263,9 @@ public class RealtimePlumberSchoolTest
     EasyMock.expect(row.getTimestampFromEpoch()).andReturn(0L);
     EasyMock.expect(row.getDimensions()).andReturn(new ArrayList<String>());
     EasyMock.replay(row);
+
+    final CountDownLatch doneSignal = new CountDownLatch(1);
+
     final Committer committer = new Committer()
     {
       @Override
@@ -273,15 +277,14 @@ public class RealtimePlumberSchoolTest
       @Override
       public void run()
       {
-        committed.set(true);
+        doneSignal.countDown();
       }
     };
     plumber.add(row, Suppliers.ofInstance(committer));
     plumber.persist(committer);
 
-    while (!committed.get()) {
-      Thread.sleep(100);
-    }
+    doneSignal.await();
+
     plumber.getSinks().clear();
     plumber.finishJob();
   }
@@ -289,7 +292,6 @@ public class RealtimePlumberSchoolTest
   @Test(timeout = 60000)
   public void testPersistFails() throws Exception
   {
-    final AtomicBoolean committed = new AtomicBoolean(false);
     plumber.getSinks()
            .put(
                0L,
@@ -306,6 +308,9 @@ public class RealtimePlumberSchoolTest
     EasyMock.expect(row.getDimensions()).andReturn(new ArrayList<String>());
     EasyMock.replay(row);
     plumber.add(row, Committers.supplierOf(Committers.nil()));
+
+    final CountDownLatch doneSignal = new CountDownLatch(1);
+
     plumber.persist(
         Committers.supplierFromRunnable(
             new Runnable()
@@ -313,15 +318,14 @@ public class RealtimePlumberSchoolTest
               @Override
               public void run()
               {
-                committed.set(true);
+                doneSignal.countDown();
                 throw new RuntimeException();
               }
             }
         ).get()
     );
-    while (!committed.get()) {
-      Thread.sleep(100);
-    }
+
+    doneSignal.await();
 
     // Exception may need time to propagate
     while (metrics.failedPersists() < 1) {
@@ -340,7 +344,6 @@ public class RealtimePlumberSchoolTest
 
   private void testPersistHydrantGapsHelper(final Object commitMetadata) throws Exception
   {
-    final AtomicBoolean committed = new AtomicBoolean(false);
     Interval testInterval = new Interval(new DateTime("1970-01-01"), new DateTime("1971-01-01"));
 
     RealtimePlumber plumber2 = (RealtimePlumber) realtimePlumberSchool.findPlumber(schema2, tuningConfig, metrics);
@@ -355,7 +358,7 @@ public class RealtimePlumberSchoolTest
                 )
             );
     Assert.assertNull(plumber2.startJob());
-
+    final CountDownLatch doneSignal = new CountDownLatch(1);
     final Committer committer = new Committer()
     {
       @Override
@@ -367,7 +370,7 @@ public class RealtimePlumberSchoolTest
       @Override
       public void run()
       {
-        committed.set(true);
+        doneSignal.countDown();
       }
     };
     plumber2.add(getTestInputRow("1970-01-01"), Suppliers.ofInstance(committer));
@@ -378,9 +381,7 @@ public class RealtimePlumberSchoolTest
 
     plumber2.persist(committer);
 
-    while (!committed.get()) {
-      Thread.sleep(100);
-    }
+    doneSignal.await();
     plumber2.getSinks().clear();
     plumber2.finishJob();
 
@@ -438,6 +439,123 @@ public class RealtimePlumberSchoolTest
     Assert.assertEquals(0, restoredPlumber2.getSinks().size());
   }
 
+  @Test(timeout = 60000)
+  public void testDimOrderInheritance() throws Exception
+  {
+    final Object commitMetadata = "dummyCommitMetadata";
+    testDimOrderInheritanceHelper(commitMetadata);
+  }
+
+  private void testDimOrderInheritanceHelper(final Object commitMetadata) throws Exception
+  {
+    List<List<String>> expectedDims = ImmutableList.<List<String>>of(
+        ImmutableList.of("dimD"),
+        ImmutableList.of("dimC"),
+        ImmutableList.of("dimA"),
+        ImmutableList.of("dimB"),
+        ImmutableList.of("dimE"),
+        ImmutableList.of("dimD", "dimC", "dimA", "dimB", "dimE")
+    );
+
+    QueryableIndex qindex;
+    FireHydrant hydrant;
+    Map<Long, Sink> sinks;
+
+    RealtimePlumber plumber = (RealtimePlumber) realtimePlumberSchool.findPlumber(schema2, tuningConfig, metrics);
+    Assert.assertNull(plumber.startJob());
+
+    final CountDownLatch doneSignal = new CountDownLatch(1);
+
+    final Committer committer = new Committer()
+    {
+      @Override
+      public Object getMetadata()
+      {
+        return commitMetadata;
+      }
+
+      @Override
+      public void run()
+      {
+        doneSignal.countDown();
+      }
+    };
+
+    plumber.add(
+        getTestInputRowFull(
+            "1970-01-01",
+            ImmutableList.of("dimD"),
+            ImmutableList.of("1")
+        ),
+        Suppliers.ofInstance(committer)
+    );
+    plumber.add(
+        getTestInputRowFull(
+            "1970-01-01",
+            ImmutableList.of("dimC"),
+            ImmutableList.of("1")
+        ),
+        Suppliers.ofInstance(committer)
+    );
+    plumber.add(
+        getTestInputRowFull(
+            "1970-01-01",
+            ImmutableList.of("dimA"),
+            ImmutableList.of("1")
+        ),
+        Suppliers.ofInstance(committer)
+    );
+    plumber.add(
+        getTestInputRowFull(
+            "1970-01-01",
+            ImmutableList.of("dimB"),
+            ImmutableList.of("1")
+        ),
+        Suppliers.ofInstance(committer)
+    );
+    plumber.add(
+        getTestInputRowFull(
+            "1970-01-01",
+            ImmutableList.of("dimE"),
+            ImmutableList.of("1")
+        ),
+        Suppliers.ofInstance(committer)
+    );
+    plumber.add(
+        getTestInputRowFull(
+            "1970-01-01",
+            ImmutableList.of("dimA", "dimB", "dimC", "dimD", "dimE"),
+            ImmutableList.of("1")
+        ),
+        Suppliers.ofInstance(committer)
+    );
+
+    plumber.persist(committer);
+
+    doneSignal.await();
+
+    plumber.getSinks().clear();
+    plumber.finishJob();
+
+    RealtimePlumber restoredPlumber = (RealtimePlumber) realtimePlumberSchool.findPlumber(
+        schema2,
+        tuningConfig,
+        metrics
+    );
+    restoredPlumber.bootstrapSinksFromDisk();
+
+    sinks = restoredPlumber.getSinks();
+    Assert.assertEquals(1, sinks.size());
+    List<FireHydrant> hydrants = Lists.newArrayList(sinks.get(0L));
+
+    for (int i = 0; i < hydrants.size(); i++) {
+      hydrant = hydrants.get(i);
+      qindex = hydrant.getSegment().asQueryableIndex();
+      Assert.assertEquals(i, hydrant.getCount());
+      Assert.assertEquals(expectedDims.get(i), ImmutableList.copyOf(qindex.getAvailableDimensions()));
+    }
+  }
+
   private InputRow getTestInputRow(final String timeStr)
   {
     return new InputRow()
@@ -464,6 +582,60 @@ public class RealtimePlumberSchoolTest
       public List<String> getDimension(String dimension)
       {
         return Lists.newArrayList();
+      }
+
+      @Override
+      public float getFloatMetric(String metric)
+      {
+        return 0;
+      }
+
+      @Override
+      public long getLongMetric(String metric)
+      {
+        return 0L;
+      }
+
+      @Override
+      public Object getRaw(String dimension)
+      {
+        return null;
+      }
+
+      @Override
+      public int compareTo(Row o)
+      {
+        return 0;
+      }
+    };
+  }
+
+  private InputRow getTestInputRowFull(final String timeStr, final List<String> dims, final List<String> dimVals)
+  {
+    return new InputRow()
+    {
+      @Override
+      public List<String> getDimensions()
+      {
+        return dims;
+      }
+
+      @Override
+      public long getTimestampFromEpoch()
+      {
+        return new DateTime(timeStr).getMillis();
+      }
+
+      @Override
+      public DateTime getTimestamp()
+      {
+        return new DateTime(timeStr);
+      }
+
+      @Override
+      public List<String> getDimension(String dimension)
+      {
+        return dimVals;
       }
 
       @Override

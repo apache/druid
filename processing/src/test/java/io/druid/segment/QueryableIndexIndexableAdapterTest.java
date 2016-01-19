@@ -74,6 +74,8 @@ public class QueryableIndexIndexableAdapterTest {
 
     IndexableAdapter adapter = new QueryableIndexIndexableAdapter(index);
     BitmapIndexSeeker bitmapIndexSeeker = adapter.getBitmapIndexSeeker("dim1");
+    IndexedInts indexedIntsNull = bitmapIndexSeeker.seek(null);
+    Assert.assertEquals(0, indexedIntsNull.size());
     IndexedInts indexedInts0 = bitmapIndexSeeker.seek("0");
     Assert.assertEquals(0, indexedInts0.size());
     IndexedInts indexedInts1 = bitmapIndexSeeker.seek("1");

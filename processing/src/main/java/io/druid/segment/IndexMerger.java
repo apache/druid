@@ -71,6 +71,7 @@ import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIterable;
 import io.druid.segment.data.IndexedRTree;
+import io.druid.segment.data.ListIndexed;
 import io.druid.segment.data.TmpFileIOPeon;
 import io.druid.segment.data.VSizeIndexedWriter;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -104,6 +105,7 @@ public class IndexMerger
 {
   private static final Logger log = new Logger(IndexMerger.class);
 
+  protected static final ListIndexed EMPTY_STR_DIM_VAL = new ListIndexed<>(Arrays.asList(""), String.class);
   protected static final SerializerUtils serializerUtils = new SerializerUtils();
   protected static final int INVALID_ROW = -1;
   protected static final Splitter SPLITTER = Splitter.on(",");
@@ -269,19 +271,53 @@ public class IndexMerger
     );
   }
 
+  private static List<String> getLongestSharedDimOrder(List<IndexableAdapter> indexes)
+  {
+    int maxSize = 0;
+    Iterable<String> orderingCandidate = null;
+    for (IndexableAdapter index : indexes) {
+      int iterSize = index.getDimensionNames().size();
+      if (iterSize > maxSize) {
+        maxSize = iterSize;
+        orderingCandidate = index.getDimensionNames();
+      }
+    }
+
+    if (orderingCandidate == null) {
+      return null;
+    }
+
+    for (IndexableAdapter index : indexes) {
+      Iterator<String> candidateIter = orderingCandidate.iterator();
+      for (String matchDim : index.getDimensionNames()) {
+        boolean matched = false;
+        while (candidateIter.hasNext()) {
+          String nextDim = candidateIter.next();
+          if (matchDim.equals(nextDim)) {
+            matched = true;
+            break;
+          }
+        }
+        if (!matched) {
+          return null;
+        }
+      }
+    }
+    return ImmutableList.copyOf(orderingCandidate);
+  }
+
   public static List<String> getMergedDimensions(List<IndexableAdapter> indexes)
   {
     if (indexes.size() == 0) {
       return ImmutableList.of();
     }
-    Indexed<String> dimOrder = indexes.get(0).getDimensionNames();
-    for (IndexableAdapter index : indexes) {
-      Indexed<String> dimOrder2 = index.getDimensionNames();
-      if (!Iterators.elementsEqual(dimOrder.iterator(), dimOrder2.iterator())) {
-        return getLexicographicMergedDimensions(indexes);
-      }
+    List<String> commonDimOrder = getLongestSharedDimOrder(indexes);
+    if (commonDimOrder == null) {
+      log.warn("Indexes have incompatible dimension orders, using lexicographic order.");
+      return getLexicographicMergedDimensions(indexes);
+    } else {
+      return commonDimOrder;
     }
-    return ImmutableList.copyOf(dimOrder);
   }
 
   public File merge(
@@ -602,13 +638,35 @@ public class IndexMerger
       );
       writer.open();
 
-      List<Indexed<String>> dimValueLookups = Lists.newArrayListWithCapacity(indexes.size());
+      List<Indexed<String>> dimValueLookups = Lists.newArrayListWithCapacity(indexes.size() + 1);
       DimValueConverter[] converters = new DimValueConverter[indexes.size()];
+      boolean dimHasValues = false;
+      boolean[] dimHasValuesByIndex = new boolean[indexes.size()];
+
       for (int i = 0; i < indexes.size(); i++) {
         Indexed<String> dimValues = indexes.get(i).getDimValueLookup(dimension);
         if (!isNullColumn(dimValues)) {
+          dimHasValues = true;
+          dimHasValuesByIndex[i] = true;
           dimValueLookups.add(dimValues);
           converters[i] = new DimValueConverter(dimValues);
+        } else {
+          dimHasValuesByIndex[i] = false;
+        }
+      }
+
+      /*
+       * Ensure the empty str is always in the dictionary if column is not null across indexes
+       * This is done so that MMappedIndexRowIterable can convert null columns to empty strings
+       * later on, to allow rows from indexes with no values at all for a dimension to merge correctly with
+       * rows from indexes with partial null values for that dimension.
+       */
+      if (dimHasValues) {
+        dimValueLookups.add(EMPTY_STR_DIM_VAL);
+        for (int i = 0; i < indexes.size(); i++) {
+          if (!dimHasValuesByIndex[i]) {
+            converters[i] = new DimValueConverter(EMPTY_STR_DIM_VAL);
+          }
         }
       }
 
@@ -652,6 +710,7 @@ public class IndexMerger
 
         ++count;
       }
+
       dimensionCardinalities.put(dimension, count);
 
       FileOutputSupplier dimOut = new FileOutputSupplier(IndexIO.makeDimFile(v8OutDir, dimension), true);
@@ -725,8 +784,9 @@ public class IndexMerger
                       );
                     }
                   }
-              )
-              , mergedDimensions, dimConversions.get(i), i
+              ),
+              mergedDimensions, dimConversions.get(i), i,
+              dimensionCardinalities
           )
       );
     }
@@ -944,7 +1004,6 @@ public class IndexMerger
         ByteStreams.copy(spatialWriter.combineStreams(), spatialOut);
         spatialIoPeon.cleanup();
       }
-
     }
 
     log.info("outDir[%s] completed inverted.drd in %,d millis.", v8OutDir, System.currentTimeMillis() - startTime);
@@ -1161,18 +1220,22 @@ public class IndexMerger
     private final List<String> convertedDims;
     private final Map<String, IntBuffer> converters;
     private final int indexNumber;
+    private final Map<String, Integer> dimCardinalities;
+    private static final int[] EMPTY_STR_DIM = new int[]{0};
 
     MMappedIndexRowIterable(
         Iterable<Rowboat> index,
         List<String> convertedDims,
         Map<String, IntBuffer> converters,
-        int indexNumber
+        int indexNumber,
+        Map<String, Integer> dimCardinalities
     )
     {
       this.index = index;
       this.convertedDims = convertedDims;
       this.converters = converters;
       this.indexNumber = indexNumber;
+      this.dimCardinalities = dimCardinalities;
     }
 
     public Iterable<Rowboat> getIndex()
@@ -1206,12 +1269,20 @@ public class IndexMerger
               int[][] newDims = new int[convertedDims.size()][];
               for (int i = 0; i < convertedDims.size(); ++i) {
                 IntBuffer converter = converterArray[i];
+                String dimName = convertedDims.get(i);
 
                 if (converter == null) {
                   continue;
                 }
 
-                if (i >= dims.length || dims[i] == null) {
+                if (i >= dims.length) {
+                  continue;
+                }
+
+                if (dims[i] == null) {
+                  if (dimCardinalities.get(dimName) > 0) {
+                    newDims[i] = EMPTY_STR_DIM;
+                  }
                   continue;
                 }
 

@@ -69,6 +69,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -199,7 +201,8 @@ public class IndexGeneratorJob implements Jobby
   private static IncrementalIndex makeIncrementalIndex(
       Bucket theBucket,
       AggregatorFactory[] aggs,
-      HadoopDruidIndexerConfig config
+      HadoopDruidIndexerConfig config,
+      Iterable<String> oldDimOrder
   )
   {
     final HadoopTuningConfig tuningConfig = config.getSchema().getTuningConfig();
@@ -210,10 +213,16 @@ public class IndexGeneratorJob implements Jobby
         .withMetrics(aggs)
         .build();
 
-    return new OnheapIncrementalIndex(
+    OnheapIncrementalIndex newIndex = new OnheapIncrementalIndex(
         indexSchema,
         tuningConfig.getRowFlushBoundary()
     );
+
+    if (oldDimOrder != null && !indexSchema.getDimensionsSpec().hasCustomDimensions()) {
+      newIndex.loadDimensionIterable(oldDimOrder);
+    }
+
+    return newIndex;
   }
 
   public static class IndexGeneratorMapper extends HadoopDruidIndexerMapper<BytesWritable, BytesWritable>
@@ -310,9 +319,10 @@ public class IndexGeneratorJob implements Jobby
       BytesWritable first = iter.next();
 
       if (iter.hasNext()) {
+        LinkedHashSet<String> dimOrder = Sets.newLinkedHashSet();
         SortableBytes keyBytes = SortableBytes.fromBytesWritable(key);
         Bucket bucket = Bucket.fromGroupKey(keyBytes.getGroupKey()).lhs;
-        IncrementalIndex index = makeIncrementalIndex(bucket, combiningAggs, config);
+        IncrementalIndex index = makeIncrementalIndex(bucket, combiningAggs, config, null);
         index.add(InputRowSerde.fromBytes(first.getBytes(), aggregators));
 
         while (iter.hasNext()) {
@@ -320,9 +330,10 @@ public class IndexGeneratorJob implements Jobby
           InputRow value = InputRowSerde.fromBytes(iter.next().getBytes(), aggregators);
 
           if (!index.canAppendRow()) {
+            dimOrder.addAll(index.getDimensionOrder());
             log.info("current index full due to [%s]. creating new index.", index.getOutOfRowsReason());
             flushIndexToContextAndClose(key, index, context);
-            index = makeIncrementalIndex(bucket, combiningAggs, config);
+            index = makeIncrementalIndex(bucket, combiningAggs, config, dimOrder);
           }
 
           index.add(value);
@@ -523,7 +534,8 @@ public class IndexGeneratorJob implements Jobby
       IncrementalIndex index = makeIncrementalIndex(
           bucket,
           combiningAggs,
-          config
+          config,
+          null
       );
       try {
         File baseFlushFile = File.createTempFile("base", "flush");
@@ -536,19 +548,20 @@ public class IndexGeneratorJob implements Jobby
         int runningTotalLineCount = 0;
         long startTime = System.currentTimeMillis();
 
-        Set<String> allDimensionNames = Sets.newHashSet();
+        Set<String> allDimensionNames = Sets.newLinkedHashSet();
         final ProgressIndicator progressIndicator = makeProgressIndicator(context);
 
         for (final BytesWritable bw : values) {
           context.progress();
 
           final InputRow inputRow = index.formatRow(InputRowSerde.fromBytes(bw.getBytes(), aggregators));
-          allDimensionNames.addAll(inputRow.getDimensions());
           int numRows = index.add(inputRow);
 
           ++lineCount;
 
           if (!index.canAppendRow()) {
+            allDimensionNames.addAll(index.getDimensionOrder());
+
             log.info(index.getOutOfRowsReason());
             log.info(
                 "%,d lines to %,d rows in %,d millis",
@@ -569,12 +582,15 @@ public class IndexGeneratorJob implements Jobby
             index = makeIncrementalIndex(
                 bucket,
                 combiningAggs,
-                config
+                config,
+                allDimensionNames
             );
             startTime = System.currentTimeMillis();
             ++indexCount;
           }
         }
+
+        allDimensionNames.addAll(index.getDimensionOrder());
 
         log.info("%,d lines completed.", lineCount);
 
