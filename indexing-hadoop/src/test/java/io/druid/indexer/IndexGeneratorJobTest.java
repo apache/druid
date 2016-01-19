@@ -30,10 +30,12 @@ import com.metamx.common.Granularity;
 import io.druid.data.input.impl.CSVParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
+import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
@@ -76,9 +78,18 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class IndexGeneratorJobTest
 {
+  final private static AggregatorFactory[] aggs1 = {
+      new LongSumAggregatorFactory("visited_num", "visited_num"),
+      new HyperUniquesAggregatorFactory("unique_hosts", "host")
+  };
 
-  @Parameterized.Parameters(name = "partitionType={0}, interval={1}, shardInfoForEachSegment={2}, data={3}, " +
-                                   "inputFormatName={4}, buildV9Directly={5}")
+  final private static AggregatorFactory[] aggs2 = {
+      new CountAggregatorFactory("count")
+  };
+
+  @Parameterized.Parameters(name = "useCombiner={0}, partitionType={1}, interval={2}, shardInfoForEachSegment={3}, " +
+                                   "data={4}, inputFormatName={5}, inputRowParser={6}, maxRowsInMemory={7}, " +
+                                   "aggs={8}, datasourceName={9}, buildV9Directly={10}")
   public static Collection<Object[]> constructFeed()
   {
     final List<Object[]> baseConstructors = Arrays.asList(
@@ -133,7 +144,10 @@ public class IndexGeneratorJobTest
                         null,
                         ImmutableList.of("timestamp", "host", "visited_num")
                     )
-                )
+                ),
+                null,
+                aggs1,
+                "website"
             },
             {
                 false,
@@ -175,7 +189,10 @@ public class IndexGeneratorJobTest
                         null,
                         ImmutableList.of("timestamp", "host", "visited_num")
                     )
-                )
+                ),
+                null,
+                aggs1,
+                "website"
             },
             {
                 true,
@@ -217,7 +234,10 @@ public class IndexGeneratorJobTest
                         null,
                         ImmutableList.of("timestamp", "host", "visited_num")
                     )
-                )
+                ),
+                null,
+                aggs1,
+                "website"
             },
             {
                 false,
@@ -269,7 +289,68 @@ public class IndexGeneratorJobTest
                         null,
                         ImmutableList.of("timestamp", "host", "visited_num")
                     )
-                )
+                ),
+                null,
+                aggs1,
+                "website"
+            },
+            {
+                // Tests that new indexes inherit the dimension order from previous index
+                false,
+                "hashed",
+                "2014-10-22T00:00:00Z/P1D",
+                new Integer[][][]{
+                    {
+                        {0, 1} // use a single partition, dimension order inheritance is not supported across partitions
+                    }
+                },
+                ImmutableList.of(
+                    "{\"ts\":\"2014102200\", \"X\":\"x.example.com\"}",
+                    "{\"ts\":\"2014102201\", \"Y\":\"y.example.com\"}",
+                    "{\"ts\":\"2014102202\", \"M\":\"m.example.com\"}",
+                    "{\"ts\":\"2014102203\", \"Q\":\"q.example.com\"}",
+                    "{\"ts\":\"2014102204\", \"B\":\"b.example.com\"}",
+                    "{\"ts\":\"2014102205\", \"F\":\"f.example.com\"}"
+                ),
+                null,
+                new StringInputRowParser(
+                    new JSONParseSpec(
+                        new TimestampSpec("ts", "yyyyMMddHH", null),
+                        new DimensionsSpec(null, null, null)
+                    )
+                ),
+                1, // force 1 row max per index for easier testing
+                aggs2,
+                "inherit_dims"
+            },
+            {
+                // Tests that pre-specified dim order is maintained across indexes.
+                false,
+                "hashed",
+                "2014-10-22T00:00:00Z/P1D",
+                new Integer[][][]{
+                    {
+                        {0, 1}
+                    }
+                },
+                ImmutableList.of(
+                    "{\"ts\":\"2014102200\", \"X\":\"x.example.com\"}",
+                    "{\"ts\":\"2014102201\", \"Y\":\"y.example.com\"}",
+                    "{\"ts\":\"2014102202\", \"M\":\"m.example.com\"}",
+                    "{\"ts\":\"2014102203\", \"Q\":\"q.example.com\"}",
+                    "{\"ts\":\"2014102204\", \"B\":\"b.example.com\"}",
+                    "{\"ts\":\"2014102205\", \"F\":\"f.example.com\"}"
+                ),
+                null,
+                new StringInputRowParser(
+                    new JSONParseSpec(
+                        new TimestampSpec("ts", "yyyyMMddHH", null),
+                        new DimensionsSpec(ImmutableList.of("B", "F", "M", "Q", "X", "Y"), null, null)
+                    )
+                ),
+                1, // force 1 row max per index for easier testing
+                aggs2,
+                "inherit_dims2"
             }
         }
     );
@@ -300,6 +381,9 @@ public class IndexGeneratorJobTest
   private final List<String> data;
   private final String inputFormatName;
   private final InputRowParser inputRowParser;
+  private final Integer maxRowsInMemory;
+  private final AggregatorFactory[] aggs;
+  private final String datasourceName;
   private final boolean buildV9Directly;
 
   private ObjectMapper mapper;
@@ -315,8 +399,11 @@ public class IndexGeneratorJobTest
       List<String> data,
       String inputFormatName,
       InputRowParser inputRowParser,
+      Integer maxRowsInMemory,
+      AggregatorFactory[] aggs,
+      String datasourceName,
       boolean buildV9Directly
-  ) throws IOException
+      ) throws IOException
   {
     this.useCombiner = useCombiner;
     this.partitionType = partitionType;
@@ -325,6 +412,9 @@ public class IndexGeneratorJobTest
     this.data = data;
     this.inputFormatName = inputFormatName;
     this.inputRowParser = inputRowParser;
+    this.maxRowsInMemory = maxRowsInMemory;
+    this.aggs = aggs;
+    this.datasourceName = datasourceName;
     this.buildV9Directly = buildV9Directly;
   }
 
@@ -381,15 +471,12 @@ public class IndexGeneratorJobTest
     config = new HadoopDruidIndexerConfig(
         new HadoopIngestionSpec(
             new DataSchema(
-                "website",
+                datasourceName,
                 mapper.convertValue(
                     inputRowParser,
                     Map.class
                 ),
-                new AggregatorFactory[]{
-                    new LongSumAggregatorFactory("visited_num", "visited_num"),
-                    new HyperUniquesAggregatorFactory("unique_hosts", "host")
-                },
+                aggs,
                 new UniformGranularitySpec(
                     Granularity.DAY, QueryGranularity.NONE, ImmutableList.of(this.interval)
                 ),
@@ -406,7 +493,7 @@ public class IndexGeneratorJobTest
                 null,
                 null,
                 null,
-                null,
+                maxRowsInMemory,
                 false,
                 false,
                 false,
@@ -500,15 +587,29 @@ public class IndexGeneratorJobTest
         Assert.assertTrue(indexZip.exists());
 
         DataSegment dataSegment = mapper.readValue(descriptor, DataSegment.class);
-        Assert.assertEquals("website", dataSegment.getDataSource());
         Assert.assertEquals(config.getSchema().getTuningConfig().getVersion(), dataSegment.getVersion());
         Assert.assertEquals(new Interval(currTime, currTime.plusDays(1)), dataSegment.getInterval());
         Assert.assertEquals("local", dataSegment.getLoadSpec().get("type"));
         Assert.assertEquals(indexZip.getCanonicalPath(), dataSegment.getLoadSpec().get("path"));
-        Assert.assertEquals("host", dataSegment.getDimensions().get(0));
-        Assert.assertEquals("visited_num", dataSegment.getMetrics().get(0));
-        Assert.assertEquals("unique_hosts", dataSegment.getMetrics().get(1));
         Assert.assertEquals(Integer.valueOf(9), dataSegment.getBinaryVersion());
+
+        if (datasourceName.equals("website")) {
+          Assert.assertEquals("website", dataSegment.getDataSource());
+          Assert.assertEquals("host", dataSegment.getDimensions().get(0));
+          Assert.assertEquals("visited_num", dataSegment.getMetrics().get(0));
+          Assert.assertEquals("unique_hosts", dataSegment.getMetrics().get(1));
+        } else if (datasourceName.equals("inherit_dims")) {
+          Assert.assertEquals("inherit_dims", dataSegment.getDataSource());
+          Assert.assertEquals(ImmutableList.of("X", "Y", "M", "Q", "B", "F"), dataSegment.getDimensions());
+          Assert.assertEquals("count", dataSegment.getMetrics().get(0));
+        } else if (datasourceName.equals("inherit_dims2")) {
+          Assert.assertEquals("inherit_dims2", dataSegment.getDataSource());
+          Assert.assertEquals(ImmutableList.of("B", "F", "M", "Q", "X", "Y"), dataSegment.getDimensions());
+          Assert.assertEquals("count", dataSegment.getMetrics().get(0));
+        } else {
+          Assert.fail("Test did not specify supported datasource name");
+        }
+
         if (partitionType.equals("hashed")) {
           Integer[] hashShardInfo = (Integer[]) shardInfo[partitionNum];
           HashBasedNumberedShardSpec spec = (HashBasedNumberedShardSpec) dataSegment.getShardSpec();
