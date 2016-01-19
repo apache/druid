@@ -21,9 +21,6 @@ package io.druid.segment;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
-import com.google.common.base.Splitter;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -39,16 +36,12 @@ import com.metamx.collections.bitmap.MutableBitmap;
 import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.collections.spatial.RTree;
 import com.metamx.collections.spatial.split.LinearGutmanSplitStrategy;
-import com.metamx.common.IAE;
 import com.metamx.common.ISE;
-import com.metamx.common.guava.FunctionalIterable;
-import com.metamx.common.guava.MergeIterable;
 import com.metamx.common.io.smoosh.FileSmoosher;
 import com.metamx.common.io.smoosh.SmooshedWriter;
 import com.metamx.common.logger.Logger;
 import io.druid.collections.CombiningIterable;
 import io.druid.common.utils.JodaUtils;
-import io.druid.common.utils.SerializerUtils;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.column.BitmapIndexSeeker;
 import io.druid.segment.column.Column;
@@ -72,8 +65,6 @@ import io.druid.segment.data.IndexedRTree;
 import io.druid.segment.data.TmpFileIOPeon;
 import io.druid.segment.data.VSizeIndexedIntsWriter;
 import io.druid.segment.data.VSizeIndexedWriter;
-import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.segment.incremental.IncrementalIndexAdapter;
 import io.druid.segment.serde.ComplexColumnPartSerde;
 import io.druid.segment.serde.ComplexColumnSerializer;
 import io.druid.segment.serde.ComplexMetricSerde;
@@ -116,17 +107,47 @@ public class IndexMergerV9 extends IndexMerger
   @Override
   protected File makeIndexFiles(
       final List<IndexableAdapter> adapters,
+      final AggregatorFactory[] metricAggs,
       final File outDir,
       final ProgressIndicator progress,
       final List<String> mergedDimensions,
       final List<String> mergedMetrics,
-      final Map<String, Object> segmentMetadata,
       final Function<ArrayList<Iterable<Rowboat>>, Iterable<Rowboat>> rowMergerFn,
       final IndexSpec indexSpec
   ) throws IOException
   {
     progress.start();
     progress.progress();
+
+    List<Metadata> metadataList = Lists.transform(
+        adapters,
+        new Function<IndexableAdapter, Metadata>()
+        {
+          @Nullable
+          @Override
+          public Metadata apply(IndexableAdapter input)
+          {
+            return input.getMetadata();
+          }
+        }
+    );
+
+    Metadata segmentMetadata = null;
+    if (metricAggs != null) {
+      AggregatorFactory[] combiningMetricAggs = new AggregatorFactory[metricAggs.length];
+      for (int i = 0; i < metricAggs.length; i++) {
+        combiningMetricAggs[i] = metricAggs[i].getCombiningFactory();
+      }
+      segmentMetadata = Metadata.merge(
+          metadataList,
+          combiningMetricAggs
+      );
+    } else {
+      segmentMetadata = Metadata.merge(
+          metadataList,
+          null
+      );
+    }
 
     final IOPeon ioPeon = new TmpFileIOPeon(false);
     final FileSmoosher v9Smoosher = new FileSmoosher(outDir);
@@ -221,10 +242,10 @@ public class IndexMergerV9 extends IndexMerger
   private void makeMetadataBinary(
       final FileSmoosher v9Smoosher,
       final ProgressIndicator progress,
-      final Map<String, Object> segmentMetadata
+      final Metadata segmentMetadata
   ) throws IOException
   {
-    if (segmentMetadata != null && !segmentMetadata.isEmpty()) {
+    if (segmentMetadata != null) {
       progress.startSection("make metadata.drd");
       v9Smoosher.add("metadata.drd", ByteBuffer.wrap(mapper.writeValueAsBytes(segmentMetadata)));
       progress.stopSection("make metadata.drd");

@@ -258,7 +258,7 @@ public class IndexMergerV9WithSpatialIndexTest
     tmpFile.mkdirs();
     tmpFile.deleteOnExit();
 
-    INDEX_MERGER_V9.persist(theIndex, tmpFile, null, indexSpec);
+    INDEX_MERGER_V9.persist(theIndex, tmpFile, indexSpec);
     return INDEX_IO.loadIndex(tmpFile);
   }
 
@@ -478,9 +478,9 @@ public class IndexMergerV9WithSpatialIndexTest
       mergedFile.mkdirs();
       mergedFile.deleteOnExit();
 
-      INDEX_MERGER_V9.persist(first, DATA_INTERVAL, firstFile, null, indexSpec);
-      INDEX_MERGER_V9.persist(second, DATA_INTERVAL, secondFile, null, indexSpec);
-      INDEX_MERGER_V9.persist(third, DATA_INTERVAL, thirdFile, null, indexSpec);
+      INDEX_MERGER_V9.persist(first, DATA_INTERVAL, firstFile, indexSpec);
+      INDEX_MERGER_V9.persist(second, DATA_INTERVAL, secondFile, indexSpec);
+      INDEX_MERGER_V9.persist(third, DATA_INTERVAL, thirdFile, indexSpec);
 
       QueryableIndex mergedRealtime = INDEX_IO.loadIndex(
           INDEX_MERGER_V9.mergeQueryableIndex(

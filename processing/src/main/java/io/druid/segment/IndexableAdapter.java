@@ -49,4 +49,6 @@ public interface IndexableAdapter
   String getMetricType(String metric);
 
   ColumnCapabilities getCapabilities(String column);
+
+  Metadata getMetadata();
 }

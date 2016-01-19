@@ -19,7 +19,8 @@
 
 package io.druid.segment;
 
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
@@ -271,8 +272,10 @@ public class IndexIO
       case 6:
       case 7:
         log.info("Old version, re-persisting.");
+        QueryableIndex segmentToConvert = loadIndex(toConvert);
         new IndexMerger(mapper, this).append(
-            Arrays.<IndexableAdapter>asList(new QueryableIndexIndexableAdapter(loadIndex(toConvert))),
+            Arrays.<IndexableAdapter>asList(new QueryableIndexIndexableAdapter(segmentToConvert)),
+            null,
             converted,
             indexSpec
         );
@@ -1040,16 +1043,19 @@ public class IndexIO
         segmentBitmapSerdeFactory = new BitmapSerde.LegacyBitmapSerdeFactory();
       }
 
-      Map<String, Object> metadata = null;
+      Metadata metadata = null;
       ByteBuffer metadataBB = smooshedFiles.mapFile("metadata.drd");
       if (metadataBB != null) {
         try {
           metadata = mapper.readValue(
               serializerUtils.readBytes(metadataBB, metadataBB.remaining()),
-              new TypeReference<Map<String, Object>>()
-              {
-              }
+              Metadata.class
           );
+        }
+        catch (JsonParseException | JsonMappingException ex) {
+          // Any jackson deserialization errors are ignored e.g. if metadata contains some aggregator which
+          // is no longer supported then it is OK to not use the metadata instead of failing segment loading
+          log.warn(ex, "Failed to load metadata for segment [%s]", inDir);
         }
         catch (IOException ex) {
           throw new IOException("Failed to read metadata", ex);

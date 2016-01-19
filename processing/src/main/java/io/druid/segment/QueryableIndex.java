@@ -25,7 +25,6 @@ import org.joda.time.Interval;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.Map;
 
 /**
  */
@@ -36,7 +35,7 @@ public interface QueryableIndex extends ColumnSelector, Closeable
   public Indexed<String> getColumnNames();
   public Indexed<String> getAvailableDimensions();
   public BitmapFactory getBitmapFactoryForDimensions();
-  public Map<String, Object> getMetaData();
+  public Metadata getMetadata();
 
   /**
    * The close method shouldn't actually be here as this is nasty. We will adjust it in the future.

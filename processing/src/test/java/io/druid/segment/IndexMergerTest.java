@@ -142,7 +142,6 @@ public class IndexMergerTest
             INDEX_MERGER.persist(
                 toPersist,
                 tempDir,
-                null,
                 indexSpec
             )
         )
@@ -153,6 +152,11 @@ public class IndexMergerTest
     Assert.assertEquals(3, index.getColumnNames().size());
 
     assertDimCompression(index, indexSpec.getDimensionCompressionStrategy());
+
+    Assert.assertArrayEquals(
+        IncrementalIndexTest.getDefaultCombiningAggregatorFactories(),
+        index.getMetadata().getAggregators()
+    );
   }
 
   @Test
@@ -180,7 +184,6 @@ public class IndexMergerTest
             INDEX_MERGER.persist(
                 toPersist,
                 tempDir,
-                null,
                 indexSpec
             )
         )
@@ -210,6 +213,7 @@ public class IndexMergerTest
     checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("dim2", "2"));
   }
 
+
   @Test
   public void testMergeRetainsValues() throws Exception
   {
@@ -231,7 +235,6 @@ public class IndexMergerTest
             INDEX_MERGER.persist(
                 toPersist1,
                 tempDir1,
-                null,
                 indexSpec
             )
         )
@@ -246,12 +249,12 @@ public class IndexMergerTest
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
     Assert.assertEquals(3, index1.getColumnNames().size());
 
-
+    AggregatorFactory[] mergedAggregators = new AggregatorFactory[]{new CountAggregatorFactory("count")};
     QueryableIndex merged = closer.closeLater(
         INDEX_IO.loadIndex(
             INDEX_MERGER.mergeQueryableIndex(
                 ImmutableList.of(index1),
-                new AggregatorFactory[]{new CountAggregatorFactory("count")},
+                mergedAggregators,
                 mergedDir,
                 indexSpec
             )
@@ -276,7 +279,8 @@ public class IndexMergerTest
     IncrementalIndex toPersist = IncrementalIndexTest.createIndex(null);
     IncrementalIndexTest.populateIndex(timestamp, toPersist);
 
-    Map<String, Object> segmentMetadata = ImmutableMap.<String, Object>of("key", "value");
+    Map<String, Object> metadataElems = ImmutableMap.<String, Object>of("key", "value");
+    toPersist.getMetadata().putAll(metadataElems);
 
     final File tempDir = temporaryFolder.newFolder();
     QueryableIndex index = closer.closeLater(
@@ -284,7 +288,6 @@ public class IndexMergerTest
             INDEX_MERGER.persist(
                 toPersist,
                 tempDir,
-                segmentMetadata,
                 indexSpec
             )
         )
@@ -296,7 +299,14 @@ public class IndexMergerTest
 
     assertDimCompression(index, indexSpec.getDimensionCompressionStrategy());
 
-    Assert.assertEquals(segmentMetadata, index.getMetaData());
+    Assert.assertEquals(
+        new Metadata()
+            .setAggregators(
+                IncrementalIndexTest.getDefaultCombiningAggregatorFactories()
+            )
+            .putAll(metadataElems),
+        index.getMetadata()
+    );
   }
 
   @Test
@@ -338,7 +348,6 @@ public class IndexMergerTest
             INDEX_MERGER.persist(
                 toPersist1,
                 tempDir1,
-                null,
                 indexSpec
             )
         )
@@ -353,7 +362,6 @@ public class IndexMergerTest
             INDEX_MERGER.persist(
                 toPersist2,
                 tempDir2,
-                null,
                 indexSpec
             )
         )
@@ -363,11 +371,14 @@ public class IndexMergerTest
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index2.getAvailableDimensions()));
     Assert.assertEquals(3, index2.getColumnNames().size());
 
+    AggregatorFactory[] mergedAggregators = new AggregatorFactory[]{
+        new CountAggregatorFactory("count")
+    };
     QueryableIndex merged = closer.closeLater(
         INDEX_IO.loadIndex(
             INDEX_MERGER.mergeQueryableIndex(
                 Arrays.asList(index1, index2),
-                new AggregatorFactory[]{new CountAggregatorFactory("count")},
+                mergedAggregators,
                 mergedDir,
                 indexSpec
             )
@@ -380,6 +391,11 @@ public class IndexMergerTest
     assertDimCompression(index2, indexSpec.getDimensionCompressionStrategy());
     assertDimCompression(index1, indexSpec.getDimensionCompressionStrategy());
     assertDimCompression(merged, indexSpec.getDimensionCompressionStrategy());
+
+    Assert.assertArrayEquals(
+        getCombiningAggregators(mergedAggregators),
+        merged.getMetadata().getAggregators()
+    );
   }
 
   @Test
@@ -422,7 +438,6 @@ public class IndexMergerTest
             INDEX_MERGER.persist(
                 toPersist1,
                 tmpDir1,
-                null,
                 indexSpec
             )
         )
@@ -432,7 +447,6 @@ public class IndexMergerTest
             INDEX_MERGER.persist(
                 toPersist1,
                 tmpDir2,
-                null,
                 indexSpec
             )
         )
@@ -479,9 +493,9 @@ public class IndexMergerTest
     );
 
     QueryableIndex index1 = closer.closeLater(
-        INDEX_IO.loadIndex(
-            INDEX_MERGER.append(
-                ImmutableList.<IndexableAdapter>of(incrementalAdapter), tempDir1, indexSpec
+            INDEX_IO.loadIndex(
+                INDEX_MERGER.append(
+                ImmutableList.<IndexableAdapter>of(incrementalAdapter), null, tempDir1, indexSpec
             )
         )
     );
@@ -493,12 +507,17 @@ public class IndexMergerTest
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
     Assert.assertEquals(3, index1.getColumnNames().size());
 
+    Assert.assertArrayEquals(
+        IncrementalIndexTest.getDefaultCombiningAggregatorFactories(),
+        index1.getMetadata().getAggregators()
+    );
 
+    AggregatorFactory[] mergedAggregators = new AggregatorFactory[]{new CountAggregatorFactory("count")};
     QueryableIndex merged = closer.closeLater(
         INDEX_IO.loadIndex(
             INDEX_MERGER.mergeQueryableIndex(
                 ImmutableList.of(index1),
-                new AggregatorFactory[]{new CountAggregatorFactory("count")},
+                mergedAggregators,
                 mergedDir,
                 indexSpec
             )
@@ -513,6 +532,11 @@ public class IndexMergerTest
 
     assertDimCompression(index1, indexSpec.getDimensionCompressionStrategy());
     assertDimCompression(merged, indexSpec.getDimensionCompressionStrategy());
+
+    Assert.assertArrayEquals(
+        getCombiningAggregators(mergedAggregators),
+        merged.getMetadata().getAggregators()
+    );
   }
 
   @Test
@@ -536,7 +560,6 @@ public class IndexMergerTest
             INDEX_MERGER.persist(
                 toPersist1,
                 tempDir1,
-                null,
                 indexSpec
             )
         )
@@ -551,19 +574,18 @@ public class IndexMergerTest
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
     Assert.assertEquals(3, index1.getColumnNames().size());
 
-
     IndexSpec newSpec = new IndexSpec(
         indexSpec.getBitmapSerdeFactory(),
         "lz4".equals(indexSpec.getDimensionCompression()) ? "lzf" : "lz4",
         "lz4".equals(indexSpec.getMetricCompression()) ? "lzf" : "lz4"
     );
 
-
+    AggregatorFactory[] mergedAggregators = new AggregatorFactory[]{new CountAggregatorFactory("count")};
     QueryableIndex merged = closer.closeLater(
         INDEX_IO.loadIndex(
             INDEX_MERGER.mergeQueryableIndex(
                 ImmutableList.of(index1),
-                new AggregatorFactory[]{new CountAggregatorFactory("count")},
+                mergedAggregators,
                 mergedDir,
                 newSpec
             )
@@ -585,15 +607,15 @@ public class IndexMergerTest
   public void testConvertSame() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
-    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(
-        new AggregatorFactory[]{
-            new LongSumAggregatorFactory(
-                "longSum1",
-                "dim1"
-            ),
-            new LongSumAggregatorFactory("longSum2", "dim2")
-        }
-    );
+    final AggregatorFactory[] aggregators = new AggregatorFactory[]{
+        new LongSumAggregatorFactory(
+            "longSum1",
+            "dim1"
+        ),
+        new LongSumAggregatorFactory("longSum2", "dim2")
+    };
+
+    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(aggregators);
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
 
     final File tempDir1 = temporaryFolder.newFolder();
@@ -606,7 +628,7 @@ public class IndexMergerTest
     );
 
     QueryableIndex index1 = closer.closeLater(
-        INDEX_IO.loadIndex(INDEX_MERGER.persist(toPersist1, tempDir1, null, indexSpec))
+        INDEX_IO.loadIndex(INDEX_MERGER.persist(toPersist1, tempDir1, indexSpec))
     );
 
     final IndexableAdapter queryableAdapter = new QueryableIndexIndexableAdapter(index1);
@@ -636,6 +658,11 @@ public class IndexMergerTest
 
     assertDimCompression(index1, indexSpec.getDimensionCompressionStrategy());
     assertDimCompression(converted, indexSpec.getDimensionCompressionStrategy());
+
+    Assert.assertArrayEquals(
+        getCombiningAggregators(aggregators),
+        converted.getMetadata().getAggregators()
+    );
   }
 
 
@@ -643,15 +670,15 @@ public class IndexMergerTest
   public void testConvertDifferent() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
-    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(
-        new AggregatorFactory[]{
-            new LongSumAggregatorFactory(
-                "longSum1",
-                "dim1"
-            ),
-            new LongSumAggregatorFactory("longSum2", "dim2")
-        }
-    );
+    final AggregatorFactory[] aggregators = new AggregatorFactory[]{
+        new LongSumAggregatorFactory(
+            "longSum1",
+            "dim1"
+        ),
+        new LongSumAggregatorFactory("longSum2", "dim2")
+    };
+
+    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(aggregators);
     IncrementalIndexTest.populateIndex(timestamp, toPersist1);
 
     final File tempDir1 = temporaryFolder.newFolder();
@@ -668,7 +695,6 @@ public class IndexMergerTest
             INDEX_MERGER.persist(
                 toPersist1,
                 tempDir1,
-                null,
                 indexSpec
             )
         )
@@ -708,6 +734,11 @@ public class IndexMergerTest
 
     assertDimCompression(index1, indexSpec.getDimensionCompressionStrategy());
     assertDimCompression(converted, newSpec.getDimensionCompressionStrategy());
+
+    Assert.assertArrayEquals(
+        getCombiningAggregators(aggregators),
+        converted.getMetadata().getAggregators()
+    );
   }
 
   private void assertDimCompression(QueryableIndex index, CompressedObjectStrategy.CompressionStrategy expectedStrategy)
@@ -736,7 +767,6 @@ public class IndexMergerTest
     Assert.assertEquals(expectedStrategy, strategy);
   }
 
-
   @Test
   public void testNonLexicographicDimOrderMerge() throws Exception
   {
@@ -754,7 +784,6 @@ public class IndexMergerTest
             INDEX_MERGER.persist(
                 toPersist1,
                 tmpDir,
-                null,
                 indexSpec
             )
         )
@@ -765,7 +794,6 @@ public class IndexMergerTest
             INDEX_MERGER.persist(
                 toPersist2,
                 tmpDir2,
-                null,
                 indexSpec
             )
         )
@@ -776,7 +804,6 @@ public class IndexMergerTest
             INDEX_MERGER.persist(
                 toPersist3,
                 tmpDir3,
-                null,
                 indexSpec
             )
         )
@@ -826,7 +853,6 @@ public class IndexMergerTest
             INDEX_MERGER.persist(
                 toPersistA,
                 tmpDirA,
-                null,
                 indexSpec
             )
         )
@@ -837,7 +863,6 @@ public class IndexMergerTest
             INDEX_MERGER.persist(
                 toPersistB,
                 tmpDirB,
-                null,
                 indexSpec
             )
         )
@@ -954,7 +979,6 @@ public class IndexMergerTest
             INDEX_MERGER.persist(
                 toPersistA,
                 tmpDirA,
-                null,
                 indexSpec
             )
         )
@@ -965,7 +989,6 @@ public class IndexMergerTest
             INDEX_MERGER.persist(
                 toPersistB,
                 tmpDirB,
-                null,
                 indexSpec
             )
         )
@@ -1096,5 +1119,14 @@ public class IndexMergerTest
     }
 
     return toPersist1;
+  }
+
+  private AggregatorFactory[] getCombiningAggregators(AggregatorFactory[] aggregators)
+  {
+    AggregatorFactory[] combiningAggregators = new AggregatorFactory[aggregators.length];
+    for (int i = 0; i < aggregators.length; i++) {
+      combiningAggregators[i] = aggregators[i].getCombiningFactory();
+    }
+    return combiningAggregators;
   }
 }

@@ -33,7 +33,7 @@ import java.util.List;
 
 /**
  */
-public class DoubleMaxAggregatorFactory implements AggregatorFactory
+public class DoubleMaxAggregatorFactory extends AggregatorFactory
 {
   private static final byte CACHE_TYPE_ID = 0x3;
 
@@ -81,6 +81,16 @@ public class DoubleMaxAggregatorFactory implements AggregatorFactory
   public AggregatorFactory getCombiningFactory()
   {
     return new DoubleMaxAggregatorFactory(name, name);
+  }
+
+  @Override
+  public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
+  {
+    if (other.getName().equals(this.getName()) && this.getClass() == other.getClass()) {
+      return getCombiningFactory();
+    } else {
+      throw new AggregatorFactoryNotMergeableException(this, other);
+    }
   }
 
   @Override

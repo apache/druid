@@ -222,7 +222,6 @@ public class YeOldePlumberSchool implements PlumberSchool
             indexMerger.persist(
                 indexToPersist.getIndex(),
                 dirToPersist,
-                null,
                 config.getIndexSpec()
             );
 

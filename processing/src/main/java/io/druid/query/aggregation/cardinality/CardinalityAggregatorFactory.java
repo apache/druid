@@ -29,6 +29,7 @@ import com.google.common.collect.Lists;
 import com.metamx.common.StringUtils;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import io.druid.query.aggregation.Aggregators;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
@@ -43,7 +44,7 @@ import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.List;
 
-public class CardinalityAggregatorFactory implements AggregatorFactory
+public class CardinalityAggregatorFactory extends AggregatorFactory
 {
   public static Object estimateCardinality(Object object)
   {
@@ -145,6 +146,12 @@ public class CardinalityAggregatorFactory implements AggregatorFactory
   public AggregatorFactory getCombiningFactory()
   {
     return new HyperUniquesAggregatorFactory(name, name);
+  }
+
+  @Override
+  public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
+  {
+    throw new UnsupportedOperationException("can't merge CardinalityAggregatorFactory");
   }
 
   @Override

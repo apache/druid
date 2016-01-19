@@ -391,6 +391,9 @@ public class TaskSerdeTest
         null,
         "foo",
         segments,
+        ImmutableList.<AggregatorFactory>of(
+            new CountAggregatorFactory("cnt")
+        ),
         indexSpec,
         null
     );
@@ -417,6 +420,7 @@ public class TaskSerdeTest
     Assert.assertEquals("foo", task3.getDataSource());
     Assert.assertEquals(new Interval("2010-01-01/P2D"), task3.getInterval());
     Assert.assertEquals(task3.getSegments(), segments);
+    Assert.assertEquals(task.getAggregators(), task2.getAggregators());
   }
 
   @Test

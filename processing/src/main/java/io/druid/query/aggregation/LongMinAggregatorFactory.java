@@ -33,7 +33,7 @@ import java.util.List;
 
 /**
  */
-public class LongMinAggregatorFactory implements AggregatorFactory
+public class LongMinAggregatorFactory extends AggregatorFactory
 {
   private static final byte CACHE_TYPE_ID = 0xB;
 
@@ -81,6 +81,16 @@ public class LongMinAggregatorFactory implements AggregatorFactory
   public AggregatorFactory getCombiningFactory()
   {
     return new LongMinAggregatorFactory(name, name);
+  }
+
+  @Override
+  public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
+  {
+    if (other.getName().equals(this.getName()) && this.getClass() == other.getClass()) {
+      return getCombiningFactory();
+    } else {
+      throw new AggregatorFactoryNotMergeableException(this, other);
+    }
   }
 
   @Override
