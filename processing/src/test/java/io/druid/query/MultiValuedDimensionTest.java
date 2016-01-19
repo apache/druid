@@ -123,7 +123,7 @@ public class MultiValuedDimensionTest
 
     persistedSegmentDir = Files.createTempDir();
     TestHelper.getTestIndexMerger()
-              .persist(incrementalIndex, persistedSegmentDir, ImmutableMap.<String, Object>of(), new IndexSpec());
+              .persist(incrementalIndex, persistedSegmentDir, new IndexSpec());
 
     queryableIndex = TestHelper.getTestIndexIO().loadIndex(persistedSegmentDir);
   }

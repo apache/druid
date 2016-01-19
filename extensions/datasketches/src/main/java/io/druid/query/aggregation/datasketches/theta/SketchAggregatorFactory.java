@@ -41,7 +41,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-public abstract class SketchAggregatorFactory implements AggregatorFactory
+public abstract class SketchAggregatorFactory extends AggregatorFactory
 {
   public static final int DEFAULT_MAX_SKETCH_SIZE = 16384;
 

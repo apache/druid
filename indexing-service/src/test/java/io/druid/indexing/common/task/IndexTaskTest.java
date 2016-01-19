@@ -34,7 +34,6 @@ import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.actions.LockListAction;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.actions.TaskActionClient;
-import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.segment.IndexIO;
@@ -342,7 +341,8 @@ public class IndexTaskTest
     RealtimeTuningConfig realtimeTuningConfig = IndexTask.convertTuningConfig(
         spec,
         config.getRowFlushBoundary(),
-        config.getIndexSpec()
+        config.getIndexSpec(),
+        config.getBuildV9Directly()
     );
     Assert.assertEquals(realtimeTuningConfig.getMaxRowsInMemory(), config.getRowFlushBoundary());
     Assert.assertEquals(realtimeTuningConfig.getShardSpec(), spec);

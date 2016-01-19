@@ -68,7 +68,6 @@ import org.junit.runners.Parameterized;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -82,6 +81,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class RealtimePlumberSchoolTest
 {
   private final RejectionPolicyFactory rejectionPolicy;
+  private final boolean buildV9Directly;
   private RealtimePlumber plumber;
   private RealtimePlumberSchool realtimePlumberSchool;
   private DataSegmentAnnouncer announcer;
@@ -95,24 +95,28 @@ public class RealtimePlumberSchoolTest
   private DataSchema schema2;
   private FireDepartmentMetrics metrics;
 
-  public RealtimePlumberSchoolTest(RejectionPolicyFactory rejectionPolicy)
+  public RealtimePlumberSchoolTest(RejectionPolicyFactory rejectionPolicy, boolean buildV9Directly)
   {
     this.rejectionPolicy = rejectionPolicy;
+    this.buildV9Directly = buildV9Directly;
   }
 
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name = "rejectionPolicy = {0}, buildV9Directly = {1}")
   public static Collection<?> constructorFeeder() throws IOException
   {
-    return Arrays.asList(
-        new Object[][]{
-            {
-                new NoopRejectionPolicyFactory()
-            },
-            {
-                new MessageTimeRejectionPolicyFactory()
-            }
-        }
-    );
+    final RejectionPolicyFactory[] rejectionPolicies = new RejectionPolicyFactory[]{
+        new NoopRejectionPolicyFactory(),
+        new MessageTimeRejectionPolicyFactory()
+    };
+    final boolean[] buildV9Directlies = new boolean[]{true, false};
+
+    final List<Object[]> constructors = Lists.newArrayList();
+    for (RejectionPolicyFactory rejectionPolicy : rejectionPolicies) {
+      for (boolean buildV9Directly : buildV9Directlies) {
+        constructors.add(new Object[]{rejectionPolicy, buildV9Directly});
+      }
+    }
+    return constructors;
   }
 
   @Before
@@ -163,7 +167,9 @@ public class RealtimePlumberSchoolTest
     dataSegmentPusher = EasyMock.createNiceMock(DataSegmentPusher.class);
     handoffNotifierFactory = EasyMock.createNiceMock(SegmentHandoffNotifierFactory.class);
     handoffNotifier = EasyMock.createNiceMock(SegmentHandoffNotifier.class);
-    EasyMock.expect(handoffNotifierFactory.createSegmentHandoffNotifier(EasyMock.anyString())).andReturn(handoffNotifier).anyTimes();
+    EasyMock.expect(handoffNotifierFactory.createSegmentHandoffNotifier(EasyMock.anyString()))
+            .andReturn(handoffNotifier)
+            .anyTimes();
     EasyMock.expect(
         handoffNotifier.registerSegmentHandoffCallback(
             EasyMock.<SegmentDescriptor>anyObject(),
@@ -186,7 +192,7 @@ public class RealtimePlumberSchoolTest
         null,
         null,
         null,
-        null
+        buildV9Directly
     );
 
     realtimePlumberSchool = new RealtimePlumberSchool(
@@ -198,6 +204,7 @@ public class RealtimePlumberSchoolTest
         handoffNotifierFactory,
         MoreExecutors.sameThreadExecutor(),
         TestHelper.getTestIndexMerger(),
+        TestHelper.getTestIndexMergerV9(),
         TestHelper.getTestIndexIO(),
         MapCache.create(0),
         FireDepartmentTest.NO_CACHE_CONFIG,
@@ -211,7 +218,7 @@ public class RealtimePlumberSchoolTest
   @After
   public void tearDown() throws Exception
   {
-    EasyMock.verify(announcer, segmentPublisher, dataSegmentPusher,handoffNotifierFactory, handoffNotifier, emitter);
+    EasyMock.verify(announcer, segmentPublisher, dataSegmentPusher, handoffNotifierFactory, handoffNotifier, emitter);
     FileUtils.deleteDirectory(
         new File(
             tuningConfig.getBasePersistDirectory(),

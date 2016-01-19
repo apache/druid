@@ -47,7 +47,6 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QueryToolChest;
-import io.druid.segment.IndexMerger;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.RealtimeTuningConfig;
@@ -293,9 +292,6 @@ public class RealtimeIndexTask extends AbstractTask
     );
     this.queryRunnerFactoryConglomerate = toolbox.getQueryRunnerFactoryConglomerate();
 
-    IndexMerger indexMerger = spec.getTuningConfig().getBuildV9Directly()
-                         ? toolbox.getIndexMergerV9()
-                         : toolbox.getIndexMerger();
     // NOTE: This pusher selects path based purely on global configuration and the DataSegment, which means
     // NOTE: that redundant realtime tasks will upload to the same location. This can cause index.zip and
     // NOTE: descriptor.json to mismatch, or it can cause historical nodes to load different instances of the
@@ -308,7 +304,8 @@ public class RealtimeIndexTask extends AbstractTask
         segmentPublisher,
         toolbox.getSegmentHandoffNotifierFactory(),
         toolbox.getQueryExecutorService(),
-        indexMerger,
+        toolbox.getIndexMerger(),
+        toolbox.getIndexMergerV9(),
         toolbox.getIndexIO(),
         toolbox.getCache(),
         toolbox.getCacheConfig(),

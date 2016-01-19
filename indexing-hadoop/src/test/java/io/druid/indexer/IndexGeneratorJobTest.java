@@ -78,10 +78,10 @@ public class IndexGeneratorJobTest
 {
 
   @Parameterized.Parameters(name = "partitionType={0}, interval={1}, shardInfoForEachSegment={2}, data={3}, " +
-                                   "inputFormatName={4}")
+                                   "inputFormatName={4}, buildV9Directly={5}")
   public static Collection<Object[]> constructFeed()
   {
-    return Arrays.asList(
+    final List<Object[]> baseConstructors = Arrays.asList(
         new Object[][]{
             {
                 false,
@@ -273,22 +273,39 @@ public class IndexGeneratorJobTest
             }
         }
     );
+
+    // Run each baseConstructor with/without buildV9Directly.
+    final List<Object[]> constructors = Lists.newArrayList();
+    for (Object[] baseConstructor : baseConstructors) {
+      final Object[] c1 = new Object[baseConstructor.length + 1];
+      final Object[] c2 = new Object[baseConstructor.length + 1];
+      System.arraycopy(baseConstructor, 0, c1, 0, baseConstructor.length);
+      System.arraycopy(baseConstructor, 0, c2, 0, baseConstructor.length);
+      c1[c1.length - 1] = true;
+      c2[c2.length - 1] = false;
+      constructors.add(c1);
+      constructors.add(c2);
+    }
+
+    return constructors;
   }
 
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
+  private final boolean useCombiner;
+  private final String partitionType;
+  private final Interval interval;
+  private final Object[][][] shardInfoForEachSegment;
+  private final List<String> data;
+  private final String inputFormatName;
+  private final InputRowParser inputRowParser;
+  private final boolean buildV9Directly;
+
   private ObjectMapper mapper;
   private HadoopDruidIndexerConfig config;
   private File dataFile;
   private File tmpDir;
-  private Interval interval;
-  private String partitionType;
-  private Object[][][] shardInfoForEachSegment;
-  private List<String> data;
-  private boolean useCombiner;
-  private String inputFormatName;
-  private InputRowParser inputRowParser;
 
   public IndexGeneratorJobTest(
       boolean useCombiner,
@@ -297,7 +314,8 @@ public class IndexGeneratorJobTest
       Object[][][] shardInfoForEachSegment,
       List<String> data,
       String inputFormatName,
-      InputRowParser inputRowParser
+      InputRowParser inputRowParser,
+      boolean buildV9Directly
   ) throws IOException
   {
     this.useCombiner = useCombiner;
@@ -307,6 +325,7 @@ public class IndexGeneratorJobTest
     this.data = data;
     this.inputFormatName = inputFormatName;
     this.inputRowParser = inputRowParser;
+    this.buildV9Directly = buildV9Directly;
   }
 
   private void writeDataToLocalSequenceFile(File outputFile, List<String> data) throws IOException
@@ -396,7 +415,7 @@ public class IndexGeneratorJobTest
                 false,
                 useCombiner,
                 null,
-                null
+                buildV9Directly
             )
         )
     );

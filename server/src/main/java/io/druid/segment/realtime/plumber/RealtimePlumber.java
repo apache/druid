@@ -63,6 +63,7 @@ import io.druid.query.spec.SpecificSegmentSpec;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
+import io.druid.segment.Metadata;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.ReferenceCountingSegment;
@@ -86,6 +87,7 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+import javax.ws.rs.HEAD;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FilenameFilter;
@@ -403,7 +405,7 @@ public class RealtimePlumber implements Plumber
     final Stopwatch runExecStopwatch = Stopwatch.createStarted();
     final Stopwatch persistStopwatch = Stopwatch.createStarted();
 
-    final Map<String, Object> metadata = committer.getMetadata() == null ? null :
+    final Map<String, Object> metadataElems = committer.getMetadata() == null ? null :
                                          ImmutableMap.of(
                                              COMMIT_METADATA_KEY,
                                              committer.getMetadata(),
@@ -447,7 +449,7 @@ public class RealtimePlumber implements Plumber
               for (Pair<FireHydrant, Interval> pair : indexesToPersist) {
                 metrics.incrementRowOutputCount(
                     persistHydrant(
-                        pair.lhs, schema, pair.rhs, metadata
+                        pair.lhs, schema, pair.rhs, metadataElems
                     )
                 );
               }
@@ -767,7 +769,7 @@ public class RealtimePlumber implements Plumber
           //at some point.
           continue;
         }
-        Map<String, Object> segmentMetadata = queryableIndex.getMetaData();
+        Metadata segmentMetadata = queryableIndex.getMetadata();
         if (segmentMetadata != null) {
           Object timestampObj = segmentMetadata.get(COMMIT_METADATA_TIMESTAMP_KEY);
           if (timestampObj != null) {
@@ -775,10 +777,10 @@ public class RealtimePlumber implements Plumber
             if (timestamp > latestCommitTime) {
               log.info(
                   "Found metaData [%s] with latestCommitTime [%s] greater than previous recorded [%s]",
-                  queryableIndex.getMetaData(), timestamp, latestCommitTime
+                  queryableIndex.getMetadata(), timestamp, latestCommitTime
               );
               latestCommitTime = timestamp;
-              metadata = queryableIndex.getMetaData().get(COMMIT_METADATA_KEY);
+              metadata = queryableIndex.getMetadata().get(COMMIT_METADATA_KEY);
             }
           }
         }
@@ -1000,7 +1002,7 @@ public class RealtimePlumber implements Plumber
       FireHydrant indexToPersist,
       DataSchema schema,
       Interval interval,
-      Map<String, Object> metaData
+      Map<String, Object> metadataElems
   )
   {
     synchronized (indexToPersist) {
@@ -1016,7 +1018,7 @@ public class RealtimePlumber implements Plumber
           "DataSource[%s], Interval[%s], Metadata [%s] persisting Hydrant[%s]",
           schema.getDataSource(),
           interval,
-          metaData,
+          metadataElems,
           indexToPersist
       );
       try {
@@ -1024,11 +1026,11 @@ public class RealtimePlumber implements Plumber
 
         final IndexSpec indexSpec = config.getIndexSpec();
 
+        indexToPersist.getIndex().getMetadata().putAll(metadataElems);
         final File persistedFile = indexMerger.persist(
             indexToPersist.getIndex(),
             interval,
             new File(computePersistDir(schema, interval), String.valueOf(indexToPersist.getCount())),
-            metaData,
             indexSpec
         );
 

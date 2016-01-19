@@ -29,6 +29,7 @@ import com.google.common.primitives.Ints;
 import com.metamx.common.StringUtils;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.segment.ColumnSelectorFactory;
 import org.apache.commons.codec.binary.Base64;
@@ -39,7 +40,7 @@ import java.util.Comparator;
 import java.util.List;
 
 @JsonTypeName("approxHistogram")
-public class ApproximateHistogramAggregatorFactory implements AggregatorFactory
+public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
 {
   private static final byte CACHE_TYPE_ID = 0x8;
 
@@ -114,6 +115,26 @@ public class ApproximateHistogramAggregatorFactory implements AggregatorFactory
   public AggregatorFactory getCombiningFactory()
   {
     return new ApproximateHistogramFoldingAggregatorFactory(name, name, resolution, numBuckets, lowerLimit, upperLimit);
+  }
+
+  @Override
+  public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
+  {
+    if (other.getName().equals(this.getName()) && other instanceof ApproximateHistogramAggregatorFactory) {
+      ApproximateHistogramAggregatorFactory castedOther = (ApproximateHistogramAggregatorFactory) other;
+
+      return new ApproximateHistogramFoldingAggregatorFactory(
+          name,
+          name,
+          Math.max(resolution, castedOther.resolution),
+          numBuckets,
+          Math.min(lowerLimit, castedOther.lowerLimit),
+          Math.max(upperLimit, castedOther.upperLimit)
+      );
+
+    } else {
+      throw new AggregatorFactoryNotMergeableException(this, other);
+    }
   }
 
   @Override

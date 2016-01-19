@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.yahoo.sketches.theta.Sketch;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 
 import java.util.Collections;
 import java.util.List;
@@ -66,7 +67,25 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new SketchMergeAggregatorFactory(name, name, size, shouldFinalize, isInputThetaSketch);
+    return new SketchMergeAggregatorFactory(name, name, size, shouldFinalize, false);
+  }
+
+  @Override
+  public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
+  {
+    if (other.getName().equals(this.getName()) && other instanceof SketchMergeAggregatorFactory) {
+      SketchMergeAggregatorFactory castedOther = (SketchMergeAggregatorFactory) other;
+
+      return new SketchMergeAggregatorFactory(
+          name,
+          name,
+          Math.max(size, castedOther.size),
+          shouldFinalize,
+          true
+      );
+    } else {
+      throw new AggregatorFactoryNotMergeableException(this, other);
+    }
   }
 
   @JsonProperty

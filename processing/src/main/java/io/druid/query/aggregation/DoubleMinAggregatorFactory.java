@@ -33,7 +33,7 @@ import java.util.List;
 
 /**
  */
-public class DoubleMinAggregatorFactory implements AggregatorFactory
+public class DoubleMinAggregatorFactory extends AggregatorFactory
 {
   private static final byte CACHE_TYPE_ID = 0x4;
 
@@ -81,6 +81,16 @@ public class DoubleMinAggregatorFactory implements AggregatorFactory
   public AggregatorFactory getCombiningFactory()
   {
     return new DoubleMinAggregatorFactory(name, name);
+  }
+
+  @Override
+  public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
+  {
+    if (other.getName().equals(this.getName()) && this.getClass() == other.getClass()) {
+      return getCombiningFactory();
+    } else {
+      throw new AggregatorFactoryNotMergeableException(this, other);
+    }
   }
 
   @Override

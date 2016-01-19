@@ -469,11 +469,11 @@ public class IndexGeneratorJob implements Jobby
     {
       if (config.isBuildV9Directly()) {
         return HadoopDruidIndexerConfig.INDEX_MERGER_V9.persist(
-            index, interval, file, null, config.getIndexSpec(), progressIndicator
+            index, interval, file, config.getIndexSpec(), progressIndicator
         );
       } else {
         return HadoopDruidIndexerConfig.INDEX_MERGER.persist(
-            index, interval, file, null, config.getIndexSpec(), progressIndicator
+            index, interval, file, config.getIndexSpec(), progressIndicator
         );
       }
     }
