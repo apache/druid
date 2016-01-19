@@ -28,10 +28,18 @@ public class JavaScriptDimFilterTest
 {
 
   @Test
-  public void testGetCacheKey()
+  public void testGetCacheKey1()
   {
-    JavaScriptDimFilter javaScriptDimFilter = new JavaScriptDimFilter("dim", "fn");
-    JavaScriptDimFilter javaScriptDimFilter2 = new JavaScriptDimFilter("di", "mfn");
+    JavaScriptDimFilter javaScriptDimFilter = new JavaScriptDimFilter("dim", null, "fn");
+    JavaScriptDimFilter javaScriptDimFilter2 = new JavaScriptDimFilter("di", null, "mfn");
+    Assert.assertFalse(Arrays.equals(javaScriptDimFilter.getCacheKey(), javaScriptDimFilter2.getCacheKey()));
+  }
+
+  @Test
+  public void testGetCacheKey2()
+  {
+    JavaScriptDimFilter javaScriptDimFilter = new JavaScriptDimFilter(null, new String[]{"dim1", "dim2"}, "fn");
+    JavaScriptDimFilter javaScriptDimFilter2 = new JavaScriptDimFilter(null, new String[]{"dim1", "dim"}, "2fn");
     Assert.assertFalse(Arrays.equals(javaScriptDimFilter.getCacheKey(), javaScriptDimFilter2.getCacheKey()));
   }
 }
