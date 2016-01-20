@@ -371,3 +371,23 @@ Following filtered dimension spec retains only the values matching regex. Note t
 ```
 
 For more details and examples, see [multi-valued dimensions](multi-valued-dimensions.html).
+
+### Upper and Lower extraction functions.
+
+Returns the dimension values as all upper case or lower case.
+Optionally user can specify the language to use in order to perform upper or lower transformation 
+
+```json
+{
+  "type" : "upper",
+  "locale":"fr"
+}
+```
+
+or without setting "locale" (in this case, the current value of the default locale for this instance of the Java Virtual Machine.)
+
+```json
+{
+  "type" : "lower"
+}
+```
