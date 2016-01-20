@@ -153,6 +153,14 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
+  public String getColumnTypeName(String columnName)
+  {
+    final Column column = index.getColumn(columnName);
+    final ComplexColumn complexColumn = column.getComplexColumn();
+    return complexColumn != null ? complexColumn.getTypeName() : column.getCapabilities().getType().toString();
+  }
+
+  @Override
   public DateTime getMaxIngestedEventTime()
   {
     // For immutable indexes, maxIngestedEventTime is maxTime.

@@ -98,6 +98,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
     return "SegmentAnalysis{" +
            "id='" + id + '\'' +
            ", interval=" + interval +
+           ", columns=" + columns +
            ", size=" + size +
            ", numRows=" + numRows +
            '}';

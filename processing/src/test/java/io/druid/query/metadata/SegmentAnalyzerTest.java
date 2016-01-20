@@ -59,7 +59,7 @@ public class SegmentAnalyzerTest
   private void testIncrementalWorksHelper(EnumSet<SegmentMetadataQuery.AnalysisType> analyses) throws Exception
   {
     final List<SegmentAnalysis> results = getSegmentAnalysises(
-        new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(false), null),
+        new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), null),
         analyses
     );
 

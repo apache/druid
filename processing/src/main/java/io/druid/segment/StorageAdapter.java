@@ -46,6 +46,13 @@ public interface StorageAdapter extends CursorFactory
   public DateTime getMaxTime();
   public Capabilities getCapabilities();
   public ColumnCapabilities getColumnCapabilities(String column);
+
+  /**
+   * Like {@link ColumnCapabilities#getType()}, but may return a more descriptive string for complex columns.
+   * @param column column name
+   * @return type name
+   */
+  public String getColumnTypeName(String column);
   public int getNumRows();
   public DateTime getMaxIngestedEventTime();
 }
