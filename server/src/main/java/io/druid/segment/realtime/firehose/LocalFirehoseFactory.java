@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
+import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Firehose;
@@ -84,6 +85,9 @@ public class LocalFirehoseFactory implements FirehoseFactory<StringInputRowParse
   @Override
   public Firehose connect(StringInputRowParser firehoseParser) throws IOException
   {
+    if (baseDir == null) {
+      throw new IAE("baseDir is null");
+    }
     log.info("Searching for all [%s] in and beneath [%s]", filter, baseDir.getAbsoluteFile());
 
     Collection<File> foundFiles = FileUtils.listFiles(
