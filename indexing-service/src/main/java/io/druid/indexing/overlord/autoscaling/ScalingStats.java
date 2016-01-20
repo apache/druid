@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MinMaxPriorityQueue;
+import com.google.common.collect.Ordering;
 import org.joda.time.DateTime;
 
 import java.util.Collections;
@@ -33,20 +34,20 @@ import java.util.List;
  */
 public class ScalingStats
 {
-  public static enum EVENT
+  public enum EVENT
   {
     PROVISION,
     TERMINATE
   }
 
-  private static final Comparator<ScalingEvent> comparator = new Comparator<ScalingEvent>()
+  private static final Comparator<ScalingEvent> COMPARATOR = new Ordering<ScalingEvent>()
   {
     @Override
     public int compare(ScalingEvent s1, ScalingEvent s2)
     {
-      return -s1.getTimestamp().compareTo(s2.getTimestamp());
+      return s2.getTimestamp().compareTo(s1.getTimestamp());
     }
-  };
+  }.nullsLast();
 
   private final Object lock = new Object();
 
@@ -55,10 +56,10 @@ public class ScalingStats
   public ScalingStats(int capacity)
   {
     if (capacity == 0) {
-      this.recentEvents = MinMaxPriorityQueue.orderedBy(comparator).create();
+      this.recentEvents = MinMaxPriorityQueue.orderedBy(COMPARATOR).create();
     } else {
       this.recentEvents = MinMaxPriorityQueue
-          .orderedBy(comparator)
+          .orderedBy(COMPARATOR)
           .maximumSize(capacity)
           .create();
     }
@@ -95,7 +96,7 @@ public class ScalingStats
   {
     synchronized (lock) {
       List<ScalingEvent> retVal = Lists.newArrayList(recentEvents);
-      Collections.sort(retVal, comparator);
+      Collections.sort(retVal, COMPARATOR);
       return retVal;
     }
   }

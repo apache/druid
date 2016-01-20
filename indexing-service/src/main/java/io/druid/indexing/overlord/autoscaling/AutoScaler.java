@@ -34,17 +34,17 @@ import java.util.List;
 })
 public interface AutoScaler<T>
 {
-  public int getMinNumWorkers();
+  int getMinNumWorkers();
 
-  public int getMaxNumWorkers();
+  int getMaxNumWorkers();
 
-  public T getEnvConfig();
+  T getEnvConfig();
 
-  public AutoScalingData provision();
+  AutoScalingData provision();
 
-  public AutoScalingData terminate(List<String> ips);
+  AutoScalingData terminate(List<String> ips);
 
-  public AutoScalingData terminateWithIds(List<String> ids);
+  AutoScalingData terminateWithIds(List<String> ids);
 
   /**
    * Provides a lookup of ip addresses to node ids
@@ -53,7 +53,7 @@ public interface AutoScaler<T>
    *
    * @return node ids
    */
-  public List<String> ipToIdLookup(List<String> ips);
+  List<String> ipToIdLookup(List<String> ips);
 
   /**
    * Provides a lookup of node ids to ip addresses
@@ -62,5 +62,5 @@ public interface AutoScaler<T>
    *
    * @return IPs associated with the node
    */
-  public List<String> idToIpLookup(List<String> nodeIds);
+  List<String> idToIpLookup(List<String> nodeIds);
 }

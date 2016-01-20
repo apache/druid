@@ -19,10 +19,12 @@
 
 package io.druid.indexing.overlord;
 
+import com.google.common.base.Optional;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.metamx.common.Pair;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
+import io.druid.indexing.overlord.autoscaling.ScalingStats;
 
 import java.util.Collection;
 import java.util.List;
@@ -45,7 +47,7 @@ public interface TaskRunner
    *
    * @return task status, eventually
    */
-  public ListenableFuture<TaskStatus> run(Task task);
+  ListenableFuture<TaskStatus> run(Task task);
 
   /**
    * Inform the task runner it can clean up any resources associated with a task. This implies shutdown of any
@@ -53,19 +55,24 @@ public interface TaskRunner
    *
    * @param taskid task ID to clean up resources for
    */
-  public void shutdown(String taskid);
+  void shutdown(String taskid);
 
   /**
    * Stop this task runner. This may block until currently-running tasks can be gracefully stopped. After calling
    * stopping, "run" will not accept further tasks.
    */
-  public void stop();
+  void stop();
 
-  public Collection<? extends TaskRunnerWorkItem> getRunningTasks();
+  Collection<? extends TaskRunnerWorkItem> getRunningTasks();
 
-  public Collection<? extends TaskRunnerWorkItem> getPendingTasks();
+  Collection<? extends TaskRunnerWorkItem> getPendingTasks();
 
-  public Collection<? extends TaskRunnerWorkItem> getKnownTasks();
+  Collection<? extends TaskRunnerWorkItem> getKnownTasks();
 
-  public Collection<ZkWorker> getWorkers();
+  /**
+   * Some runners are able to scale up and down their capacity in a dynamic manner. This returns stats on those activities
+   *
+   * @return ScalingStats if the runner has an underlying resource which can scale, Optional.absent() otherwise
+   */
+  Optional<ScalingStats> getScalingStats();
 }
