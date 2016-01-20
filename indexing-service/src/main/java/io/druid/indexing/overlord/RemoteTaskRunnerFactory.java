@@ -30,7 +30,6 @@ import io.druid.guice.annotations.Global;
 import io.druid.indexing.overlord.autoscaling.NoopResourceManagementStrategy;
 import io.druid.indexing.overlord.autoscaling.ResourceManagementSchedulerConfig;
 import io.druid.indexing.overlord.autoscaling.ResourceManagementStrategy;
-import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.autoscaling.SimpleResourceManagementConfig;
 import io.druid.indexing.overlord.autoscaling.SimpleResourceManagementStrategy;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
@@ -66,8 +65,7 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory<RemoteTaskRunn
       final Supplier<WorkerBehaviorConfig> workerConfigRef,
       final ScheduledExecutorFactory factory,
       final SimpleResourceManagementConfig config,
-      final ResourceManagementSchedulerConfig resourceManagementSchedulerConfig,
-      final ScheduledExecutorService exec
+      final ResourceManagementSchedulerConfig resourceManagementSchedulerConfig
   )
   {
     this.curator = curator;
@@ -79,7 +77,7 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory<RemoteTaskRunn
     this.cleanupExec = factory.create(1, "RemoteTaskRunner-Scheduled-Cleanup--%d");
     this.config = config;
     this.resourceManagementSchedulerConfig = resourceManagementSchedulerConfig;
-    this.exec = exec;
+    this.exec = factory.create(1, "RemoteTaskRunner-ResourceManagement--%d");
   }
 
   @Override
