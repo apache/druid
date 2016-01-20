@@ -217,8 +217,8 @@ public class IndexMergerTest
     }
 
     Assert.assertEquals(2, boatList.size());
-    Assert.assertArrayEquals(new int[][]{{1}, {1}}, boatList.get(0).getDims());
-    Assert.assertArrayEquals(new int[][]{{2}, {0}}, boatList.get(1).getDims());
+    Assert.assertArrayEquals(new int[][]{{0}, {1}}, boatList.get(0).getDims());
+    Assert.assertArrayEquals(new int[][]{{1}, {0}}, boatList.get(1).getDims());
 
     checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("dim1", ""));
     checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("dim1", "1"));
@@ -845,11 +845,11 @@ public class IndexMergerTest
 
     Assert.assertEquals(ImmutableList.of("d3", "d1", "d2"), ImmutableList.copyOf(adapter.getDimensionNames()));
     Assert.assertEquals(3, boatList.size());
-    Assert.assertArrayEquals(new int[][]{{1}, {1}, {3}}, boatList.get(0).getDims());
+    Assert.assertArrayEquals(new int[][]{{0}, {0}, {2}}, boatList.get(0).getDims());
     Assert.assertArrayEquals(new Object[]{3L}, boatList.get(0).getMetrics());
-    Assert.assertArrayEquals(new int[][]{{2}, {3}, {1}}, boatList.get(1).getDims());
+    Assert.assertArrayEquals(new int[][]{{1}, {2}, {0}}, boatList.get(1).getDims());
     Assert.assertArrayEquals(new Object[]{3L}, boatList.get(1).getMetrics());
-    Assert.assertArrayEquals(new int[][]{{3}, {2}, {2}}, boatList.get(2).getDims());
+    Assert.assertArrayEquals(new int[][]{{2}, {1}, {1}}, boatList.get(2).getDims());
     Assert.assertArrayEquals(new Object[]{3L}, boatList.get(2).getMetrics());
 
     checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("d3", ""));
@@ -1189,10 +1189,10 @@ public class IndexMergerTest
         ImmutableList.copyOf(adapter.getDimensionNames())
     );
     Assert.assertEquals(4, boatList.size());
-    Assert.assertArrayEquals(new int[][]{{0}, {1}, {0}, {0}, {0}, {0}, {1}}, boatList.get(0).getDims());
-    Assert.assertArrayEquals(new int[][]{{1}, {2}, {0}, {0}, {1}, {1}, {2}}, boatList.get(1).getDims());
-    Assert.assertArrayEquals(new int[][]{{0}, {0}, {1}, {1}, {2}, {2}, {3}}, boatList.get(2).getDims());
-    Assert.assertArrayEquals(new int[][]{{0}, {0}, {0}, {2}, {0}, {3}, {4}}, boatList.get(3).getDims());
+    Assert.assertArrayEquals(new int[][]{{0}, {1}, {0}, {0}, {0}, {0}, {0}}, boatList.get(0).getDims());
+    Assert.assertArrayEquals(new int[][]{{1}, {2}, {0}, {0}, {1}, {1}, {1}}, boatList.get(1).getDims());
+    Assert.assertArrayEquals(new int[][]{{0}, {0}, {1}, {1}, {2}, {2}, {2}}, boatList.get(2).getDims());
+    Assert.assertArrayEquals(new int[][]{{0}, {0}, {0}, {2}, {0}, {3}, {3}}, boatList.get(3).getDims());
 
     checkBitmapIndex(Lists.newArrayList(0, 2, 3), adapter.getBitmapIndex("d2", ""));
     checkBitmapIndex(Lists.newArrayList(1), adapter.getBitmapIndex("d2", "210"));

@@ -104,7 +104,7 @@ public class SegmentMetadataQueryTest
             new ColumnAnalysis(
                 ValueType.STRING.toString(),
                 10881,
-                2,
+                1,
                 null
             )
         ), 71982,
@@ -135,7 +135,7 @@ public class SegmentMetadataQueryTest
             new ColumnAnalysis(
                 ValueType.STRING.toString(),
                 21762,
-                2,
+                1,
                 null
             )
         ),
