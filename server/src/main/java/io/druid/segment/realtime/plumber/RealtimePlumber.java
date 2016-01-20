@@ -329,13 +329,6 @@ public class RealtimePlumber implements Plumber
                                           @Override
                                           public QueryRunner<T> apply(FireHydrant input)
                                           {
-                                            // It is possible that we got a query for a segment, and while that query
-                                            // is in the jetty queue, the segment is abandoned. Here, we need to retry
-                                            // the query for the segment.
-                                            if (input == null || input.getSegment() == null) {
-                                              return new ReportTimelineMissingSegmentQueryRunner<T>(descriptor);
-                                            }
-
                                             if (skipIncrementalSegment && !input.hasSwapped()) {
                                               return new NoopQueryRunner<T>();
                                             }
