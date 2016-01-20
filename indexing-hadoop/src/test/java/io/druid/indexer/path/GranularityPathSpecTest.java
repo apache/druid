@@ -172,7 +172,8 @@ public class GranularityPathSpecTest
     sb.append(pathFormat);
     sb.append("\",");
     sb.append("\"dataGranularity\" : \"");
-    sb.append(granularity.toString());
+    // Double-check Jackson's lower-case enum support
+    sb.append(granularity.toString().toLowerCase());
     sb.append("\",");
     if(inputFormat != null) {
       sb.append("\"inputFormat\" : \"");
