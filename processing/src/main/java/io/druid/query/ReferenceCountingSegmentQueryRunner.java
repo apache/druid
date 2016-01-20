@@ -28,33 +28,41 @@ import java.io.Closeable;
 import java.util.Map;
 
 /**
-*/
+ */
 public class ReferenceCountingSegmentQueryRunner<T> implements QueryRunner<T>
 {
   private final QueryRunnerFactory<T, Query<T>> factory;
   private final ReferenceCountingSegment adapter;
+  private final SegmentDescriptor descriptor;
 
   public ReferenceCountingSegmentQueryRunner(
       QueryRunnerFactory<T, Query<T>> factory,
-      ReferenceCountingSegment adapter
+      ReferenceCountingSegment adapter,
+      SegmentDescriptor descriptor
   )
   {
     this.factory = factory;
     this.adapter = adapter;
+    this.descriptor = descriptor;
   }
 
   @Override
   public Sequence<T> run(final Query<T> query, Map<String, Object> responseContext)
   {
     final Closeable closeable = adapter.increment();
-    try {
-      final Sequence<T> baseSequence = factory.createRunner(adapter).run(query, responseContext);
+    if (closeable != null) {
+      try {
+        final Sequence<T> baseSequence = factory.createRunner(adapter).run(query, responseContext);
 
-      return new ResourceClosingSequence<T>(baseSequence, closeable);
-    }
-    catch (RuntimeException e) {
-      CloseQuietly.close(closeable);
-      throw e;
+        return new ResourceClosingSequence<T>(baseSequence, closeable);
+      }
+      catch (RuntimeException e) {
+        CloseQuietly.close(closeable);
+        throw e;
+      }
+    } else {
+      // Segment was closed before we had a chance to increment the reference count
+      return new ReportTimelineMissingSegmentQueryRunner<T>(descriptor).run(query, responseContext);
     }
   }
 }
