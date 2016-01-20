@@ -36,6 +36,7 @@ import com.metamx.common.Granularity;
 import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.concurrent.ScheduledExecutors;
+import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -55,6 +56,7 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
+import io.druid.query.QueryRunnerHelper;
 import io.druid.query.QueryToolChest;
 import io.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import io.druid.query.SegmentDescriptor;
@@ -327,47 +329,38 @@ public class RealtimePlumber implements Plumber
                                           @Override
                                           public QueryRunner<T> apply(FireHydrant input)
                                           {
-                                            // It is possible that we got a query for a segment, and while that query
-                                            // is in the jetty queue, the segment is abandoned. Here, we need to retry
-                                            // the query for the segment.
-                                            if (input == null || input.getSegment() == null) {
-                                              return new ReportTimelineMissingSegmentQueryRunner<T>(descriptor);
-                                            }
-
                                             if (skipIncrementalSegment && !input.hasSwapped()) {
                                               return new NoopQueryRunner<T>();
                                             }
 
-                                            // Prevent the underlying segment from closing when its being iterated
-                                            final ReferenceCountingSegment segment = input.getSegment();
-                                            final Closeable closeable = segment.increment();
+                                            // Prevent the underlying segment from swapping when its being iterated
+                                            final Pair<Segment, Closeable> segment = input.getAndIncrementSegment();
                                             try {
+                                              QueryRunner<T> baseRunner = QueryRunnerHelper.makeClosingQueryRunner(
+                                                  factory.createRunner(segment.lhs),
+                                                  segment.rhs
+                                              );
+
                                               if (input.hasSwapped() // only use caching if data is immutable
                                                   && cache.isLocal() // hydrants may not be in sync between replicas, make sure cache is local
                                                   ) {
                                                 return new CachingQueryRunner<>(
-                                                    makeHydrantIdentifier(input, segment),
+                                                    makeHydrantIdentifier(input, segment.lhs),
                                                     descriptor,
                                                     objectMapper,
                                                     cache,
                                                     toolchest,
-                                                    factory.createRunner(segment),
+                                                    baseRunner,
                                                     MoreExecutors.sameThreadExecutor(),
                                                     cacheConfig
                                                 );
                                               } else {
-                                                return factory.createRunner(input.getSegment());
+                                                return baseRunner;
                                               }
                                             }
-                                            finally {
-                                              try {
-                                                if (closeable != null) {
-                                                  closeable.close();
-                                                }
-                                              }
-                                              catch (IOException e) {
-                                                throw Throwables.propagate(e);
-                                              }
+                                            catch (RuntimeException e) {
+                                              CloseQuietly.close(segment.rhs);
+                                              throw e;
                                             }
                                           }
                                         }
@@ -385,7 +378,7 @@ public class RealtimePlumber implements Plumber
     );
   }
 
-  protected static String makeHydrantIdentifier(FireHydrant input, ReferenceCountingSegment segment)
+  protected static String makeHydrantIdentifier(FireHydrant input, Segment segment)
   {
     return segment.getIdentifier() + "_" + input.getCount();
   }
@@ -406,12 +399,12 @@ public class RealtimePlumber implements Plumber
     final Stopwatch persistStopwatch = Stopwatch.createStarted();
 
     final Map<String, Object> metadataElems = committer.getMetadata() == null ? null :
-                                         ImmutableMap.of(
-                                             COMMIT_METADATA_KEY,
-                                             committer.getMetadata(),
-                                             COMMIT_METADATA_TIMESTAMP_KEY,
-                                             System.currentTimeMillis()
-                                         );
+                                              ImmutableMap.of(
+                                                  COMMIT_METADATA_KEY,
+                                                  committer.getMetadata(),
+                                                  COMMIT_METADATA_TIMESTAMP_KEY,
+                                                  System.currentTimeMillis()
+                                              );
 
     persistExecutor.execute(
         new ThreadRenamingRunnable(String.format("%s-incremental-persist", schema.getDataSource()))
