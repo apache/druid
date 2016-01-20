@@ -31,6 +31,7 @@ There are several main parts to a segment metadata query:
 |merge|Merge all individual segment metadata results into a single result|no|
 |context|See [Context](../querying/query-context.html)|no|
 |analysisTypes|A list of Strings specifying what column properties (e.g. cardinality, size) should be calculated and returned in the result. Defaults to ["cardinality", "size", "interval"]. See section [analysisTypes](#analysistypes) for more details.|no|
+|lenientAggregatorMerge|If true, and if the "aggregators" analysisType is enabled, aggregators will be merged leniently. See below for details.|no|
 
 The format of the result is:
 
@@ -43,6 +44,9 @@ The format of the result is:
     "dim1" : { "type" : "STRING", "hasMultipleValues" : false, "size" : 100000, "cardinality" : 1944, "errorMessage" : null },
     "dim2" : { "type" : "STRING", "hasMultipleValues" : true, "size" : 100000, "cardinality" : 1504, "errorMessage" : null },
     "metric1" : { "type" : "FLOAT", "hasMultipleValues" : false, "size" : 100000, "cardinality" : null, "errorMessage" : null }
+  },
+  "aggregators" : {
+    "metric1" : { "type" : "longSum", "name" : "metric1", "fieldName" : "metric1" }
   },
   "size" : 300000,
   "numRows" : 5000000
@@ -99,18 +103,39 @@ This is a list of properties that determines the amount of information returned 
 
 By default, all analysis types will be used. If a property is not needed, omitting it from this list will result in a more efficient query.
 
-There are 3 types of column analyses:
+There are four types of column analyses:
 
 #### cardinality
 
-* Estimated floor of cardinality for each column. Only relevant for dimension columns.
+* `cardinality` in the result will return the estimated floor of cardinality for each column. Only relevant for
+dimension columns.
 
 #### size
 
-* Estimated byte size for the segment columns if they were stored in a flat format
-
-* Estimated total segment byte size in if it was stored in a flat format
+* `size` in the result will contain the estimated total segment byte size as if the data were stored in text format
 
 #### interval
 
-* If present, the SegmentMetadataQuery will return the list of intervals associated with the queried segments.
+* `intervals` in the result will contain the list of intervals associated with the queried segments.
+
+#### aggregators
+
+* `aggregators` in the result will contain the list of aggregators usable for querying metric columns. This may be
+null if the aggregators are unknown or unmergeable (if merging is enabled).
+
+* Merging can be strict or lenient. See *lenientAggregatorMerge* below for details.
+
+* The form of the result is a map of column name to aggregator.
+
+### lenientAggregatorMerge
+
+Conflicts between aggregator metadata across segments can occur if some segments have unknown aggregators, or if
+two segments use incompatible aggregators for the same column (e.g. longSum changed to doubleSum).
+
+Aggregators can be merged strictly (the default) or leniently. With strict merging, if there are any segments
+with unknown aggregators, or any conflicts of any kind, the merged aggregators list will be `null`. With lenient
+merging, segments with unknown aggregators will be ignored, and conflicts between aggregators will only null out
+the aggregator for that particular column.
+
+In particular, with lenient merging, it is possible for an invidiual column's aggregator to be `null`. This will not
+occur with strict merging.

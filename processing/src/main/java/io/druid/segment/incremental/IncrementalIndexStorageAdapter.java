@@ -41,6 +41,7 @@ import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
+import io.druid.segment.Metadata;
 import io.druid.segment.NullDimensionSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.SingleScanTimeDimSelector;
@@ -733,5 +734,11 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
         }
       };
     }
+  }
+
+  @Override
+  public Metadata getMetadata()
+  {
+    return index.getMetadata();
   }
 }
