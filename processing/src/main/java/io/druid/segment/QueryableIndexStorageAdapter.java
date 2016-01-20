@@ -899,4 +899,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
   }
 
+  @Override
+  public Metadata getMetadata()
+  {
+    return index.getMetadata();
+  }
 }

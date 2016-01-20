@@ -20,9 +20,11 @@
 package io.druid.query.metadata;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -41,6 +43,8 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.ResultMergeQueryRunner;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.metadata.metadata.ColumnAnalysis;
 import io.druid.query.metadata.metadata.SegmentAnalysis;
@@ -51,7 +55,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -67,13 +71,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
     @Override
     public SegmentAnalysis apply(SegmentAnalysis analysis)
     {
-      return new SegmentAnalysis(
-          analysis.getId(),
-          analysis.getIntervals() != null ? JodaUtils.condenseIntervals(analysis.getIntervals()) : null,
-          analysis.getColumns(),
-          analysis.getSize(),
-          analysis.getNumRows()
-      );
+      return finalizeAnalysis(analysis);
     }
   };
 
@@ -139,44 +137,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
           @Override
           public SegmentAnalysis apply(SegmentAnalysis arg1, SegmentAnalysis arg2)
           {
-            if (arg1 == null) {
-              return arg2;
-            }
-
-            if (arg2 == null) {
-              return arg1;
-            }
-
-            List<Interval> newIntervals = null;
-            if (query.analyzingInterval()) {
-              //List returned by arg1.getIntervals() is immutable, so a new list needs to
-              //be created.
-              newIntervals = new ArrayList<>(arg1.getIntervals());
-              newIntervals.addAll(arg2.getIntervals());
-            }
-
-            final Map<String, ColumnAnalysis> leftColumns = arg1.getColumns();
-            final Map<String, ColumnAnalysis> rightColumns = arg2.getColumns();
-            Map<String, ColumnAnalysis> columns = Maps.newTreeMap();
-
-            Set<String> rightColumnNames = Sets.newHashSet(rightColumns.keySet());
-            for (Map.Entry<String, ColumnAnalysis> entry : leftColumns.entrySet()) {
-              final String columnName = entry.getKey();
-              columns.put(columnName, entry.getValue().fold(rightColumns.get(columnName)));
-              rightColumnNames.remove(columnName);
-            }
-
-            for (String columnName : rightColumnNames) {
-              columns.put(columnName, rightColumns.get(columnName));
-            }
-
-            return new SegmentAnalysis(
-                "merged",
-                newIntervals,
-                columns,
-                arg1.getSize() + arg2.getSize(),
-                arg1.getNumRows() + arg2.getNumRows()
-            );
+            return mergeAnalyses(arg1, arg2, query.isLenientAggregatorMerge());
           }
         };
       }
@@ -282,6 +243,112 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
               }
             }
         )
+    );
+  }
+
+  @VisibleForTesting
+  public static SegmentAnalysis mergeAnalyses(
+      final SegmentAnalysis arg1,
+      final SegmentAnalysis arg2,
+      boolean lenientAggregatorMerge
+  )
+  {
+    if (arg1 == null) {
+      return arg2;
+    }
+
+    if (arg2 == null) {
+      return arg1;
+    }
+
+    List<Interval> newIntervals = null;
+    if (arg1.getIntervals() != null) {
+      newIntervals = Lists.newArrayList();
+      newIntervals.addAll(arg1.getIntervals());
+    }
+    if (arg2.getIntervals() != null) {
+      if (newIntervals == null) {
+        newIntervals = Lists.newArrayList();
+      }
+      newIntervals.addAll(arg2.getIntervals());
+    }
+
+    final Map<String, ColumnAnalysis> leftColumns = arg1.getColumns();
+    final Map<String, ColumnAnalysis> rightColumns = arg2.getColumns();
+    Map<String, ColumnAnalysis> columns = Maps.newTreeMap();
+
+    Set<String> rightColumnNames = Sets.newHashSet(rightColumns.keySet());
+    for (Map.Entry<String, ColumnAnalysis> entry : leftColumns.entrySet()) {
+      final String columnName = entry.getKey();
+      columns.put(columnName, entry.getValue().fold(rightColumns.get(columnName)));
+      rightColumnNames.remove(columnName);
+    }
+
+    for (String columnName : rightColumnNames) {
+      columns.put(columnName, rightColumns.get(columnName));
+    }
+
+    final Map<String, AggregatorFactory> aggregators = Maps.newHashMap();
+
+    if (lenientAggregatorMerge) {
+      // Merge each aggregator individually, ignoring nulls
+      for (SegmentAnalysis analysis : ImmutableList.of(arg1, arg2)) {
+        if (analysis.getAggregators() != null) {
+          for (AggregatorFactory aggregator : analysis.getAggregators().values()) {
+            AggregatorFactory merged = aggregators.get(aggregator.getName());
+            if (merged != null) {
+              try {
+                merged = merged.getMergingFactory(aggregator);
+              }
+              catch (AggregatorFactoryNotMergeableException e) {
+                merged = null;
+              }
+            } else {
+              merged = aggregator;
+            }
+            aggregators.put(aggregator.getName(), merged);
+          }
+        }
+      }
+    } else {
+      final AggregatorFactory[] aggs1 = arg1.getAggregators() != null
+                                        ? arg1.getAggregators()
+                                              .values()
+                                              .toArray(new AggregatorFactory[arg1.getAggregators().size()])
+                                        : null;
+      final AggregatorFactory[] aggs2 = arg2.getAggregators() != null
+                                        ? arg2.getAggregators()
+                                              .values()
+                                              .toArray(new AggregatorFactory[arg2.getAggregators().size()])
+                                        : null;
+      final AggregatorFactory[] merged = AggregatorFactory.mergeAggregators(Arrays.asList(aggs1, aggs2));
+      if (merged != null) {
+        for (AggregatorFactory aggregator : merged) {
+          aggregators.put(aggregator.getName(), aggregator);
+        }
+      }
+    }
+
+    return new SegmentAnalysis(
+        "merged",
+        newIntervals,
+        columns,
+        arg1.getSize() + arg2.getSize(),
+        arg1.getNumRows() + arg2.getNumRows(),
+        aggregators.isEmpty() ? null : aggregators
+    );
+  }
+
+  @VisibleForTesting
+  public static SegmentAnalysis finalizeAnalysis(SegmentAnalysis analysis)
+  {
+    return new SegmentAnalysis(
+        analysis.getId(),
+        analysis.getIntervals() != null ? JodaUtils.condenseIntervals(analysis.getIntervals()) : null,
+        analysis.getColumns(),
+        analysis.getSize(),
+        analysis.getNumRows(),
+        analysis.getAggregators()
     );
   }
 }
