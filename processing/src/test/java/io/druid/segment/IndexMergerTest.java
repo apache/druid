@@ -44,7 +44,6 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
-import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -62,24 +61,29 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
-@Deprecated
 @RunWith(Parameterized.class)
 public class IndexMergerTest
 {
-  // Deprecated, use IndexMergerV9Test instead
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
 
-  protected final static IndexMerger INDEX_MERGER = TestHelper.getTestIndexMerger();
+  protected IndexMerger INDEX_MERGER;
   private final static IndexIO INDEX_IO = TestHelper.getTestIndexIO();
 
-  @Parameterized.Parameters(name = "{index}: bitmap={0}, metric compression={1}, dimension compression={2}")
+  @Parameterized.Parameters(name = "{index}: useV9={0}, bitmap={1}, metric compression={2}, dimension compression={3}")
   public static Collection<Object[]> data()
   {
     return Collections2.transform(
         Sets.cartesianProduct(
             ImmutableList.of(
-                ImmutableSet.of(new RoaringBitmapSerdeFactory(), new ConciseBitmapSerdeFactory()),
+                ImmutableSet.of(
+                    true,
+                    false
+                ),
+                ImmutableSet.of(
+                    new RoaringBitmapSerdeFactory(),
+                    new ConciseBitmapSerdeFactory()
+                ),
                 ImmutableSet.of(
                     CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED,
                     CompressedObjectStrategy.CompressionStrategy.LZ4,
@@ -125,12 +129,18 @@ public class IndexMergerTest
   public final CloserRule closer = new CloserRule(false);
 
   public IndexMergerTest(
+      boolean useV9,
       BitmapSerdeFactory bitmapSerdeFactory,
       CompressedObjectStrategy.CompressionStrategy compressionStrategy,
       CompressedObjectStrategy.CompressionStrategy dimCompressionStrategy
   )
   {
     this.indexSpec = makeIndexSpec(bitmapSerdeFactory, compressionStrategy, dimCompressionStrategy);
+    if (useV9) {
+      INDEX_MERGER = TestHelper.getTestIndexMergerV9();
+    } else {
+      INDEX_MERGER = TestHelper.getTestIndexMerger();
+    }
   }
 
   @Test
@@ -216,64 +226,6 @@ public class IndexMergerTest
 
     checkBitmapIndex(Lists.newArrayList(1), adapter.getBitmapIndex("dim2", ""));
     checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("dim2", "2"));
-  }
-
-
-  @Test
-  public void testMergeRetainsValues() throws Exception
-  {
-    final long timestamp = System.currentTimeMillis();
-    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(null);
-    IncrementalIndexTest.populateIndex(timestamp, toPersist1);
-
-    final File tempDir1 = temporaryFolder.newFolder();
-    final File mergedDir = temporaryFolder.newFolder();
-    final IndexableAdapter incrementalAdapter = new IncrementalIndexAdapter(
-        toPersist1.getInterval(),
-        toPersist1,
-        indexSpec.getBitmapSerdeFactory()
-                 .getBitmapFactory()
-    );
-
-    QueryableIndex index1 = closer.closeLater(
-        INDEX_IO.loadIndex(
-            INDEX_MERGER.persist(
-                toPersist1,
-                tempDir1,
-                indexSpec
-            )
-        )
-    );
-
-
-    final IndexableAdapter queryableAdapter = new QueryableIndexIndexableAdapter(index1);
-
-    INDEX_IO.validateTwoSegments(incrementalAdapter, queryableAdapter);
-
-    Assert.assertEquals(2, index1.getColumn(Column.TIME_COLUMN_NAME).getLength());
-    Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
-    Assert.assertEquals(3, index1.getColumnNames().size());
-
-    AggregatorFactory[] mergedAggregators = new AggregatorFactory[]{new CountAggregatorFactory("count")};
-    QueryableIndex merged = closer.closeLater(
-        INDEX_IO.loadIndex(
-            INDEX_MERGER.mergeQueryableIndex(
-                ImmutableList.of(index1),
-                mergedAggregators,
-                mergedDir,
-                indexSpec
-            )
-        )
-    );
-
-    Assert.assertEquals(2, merged.getColumn(Column.TIME_COLUMN_NAME).getLength());
-    Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(merged.getAvailableDimensions()));
-    Assert.assertEquals(3, merged.getColumnNames().size());
-
-    INDEX_IO.validateTwoSegments(tempDir1, mergedDir);
-
-    assertDimCompression(index1, indexSpec.getDimensionCompressionStrategy());
-    assertDimCompression(merged, indexSpec.getDimensionCompressionStrategy());
   }
 
   @Test
@@ -478,6 +430,63 @@ public class IndexMergerTest
 
     assertDimCompression(index1, indexSpec.getDimensionCompressionStrategy());
     assertDimCompression(index2, indexSpec.getDimensionCompressionStrategy());
+    assertDimCompression(merged, indexSpec.getDimensionCompressionStrategy());
+  }
+
+  @Test
+  public void testMergeRetainsValues() throws Exception
+  {
+    final long timestamp = System.currentTimeMillis();
+    IncrementalIndex toPersist1 = IncrementalIndexTest.createIndex(null);
+    IncrementalIndexTest.populateIndex(timestamp, toPersist1);
+
+    final File tempDir1 = temporaryFolder.newFolder();
+    final File mergedDir = temporaryFolder.newFolder();
+    final IndexableAdapter incrementalAdapter = new IncrementalIndexAdapter(
+        toPersist1.getInterval(),
+        toPersist1,
+        indexSpec.getBitmapSerdeFactory()
+                 .getBitmapFactory()
+    );
+
+    QueryableIndex index1 = closer.closeLater(
+        INDEX_IO.loadIndex(
+            INDEX_MERGER.persist(
+                toPersist1,
+                tempDir1,
+                indexSpec
+            )
+        )
+    );
+
+
+    final IndexableAdapter queryableAdapter = new QueryableIndexIndexableAdapter(index1);
+
+    INDEX_IO.validateTwoSegments(incrementalAdapter, queryableAdapter);
+
+    Assert.assertEquals(2, index1.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index1.getAvailableDimensions()));
+    Assert.assertEquals(3, index1.getColumnNames().size());
+
+
+    QueryableIndex merged = closer.closeLater(
+        INDEX_IO.loadIndex(
+            INDEX_MERGER.mergeQueryableIndex(
+                ImmutableList.of(index1),
+                new AggregatorFactory[]{new CountAggregatorFactory("count")},
+                mergedDir,
+                indexSpec
+            )
+        )
+    );
+
+    Assert.assertEquals(2, merged.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(merged.getAvailableDimensions()));
+    Assert.assertEquals(3, merged.getColumnNames().size());
+
+    INDEX_IO.validateTwoSegments(tempDir1, mergedDir);
+
+    assertDimCompression(index1, indexSpec.getDimensionCompressionStrategy());
     assertDimCompression(merged, indexSpec.getDimensionCompressionStrategy());
   }
 
@@ -772,6 +781,7 @@ public class IndexMergerTest
     Assert.assertEquals(expectedStrategy, strategy);
   }
 
+
   @Test
   public void testNonLexicographicDimOrderMerge() throws Exception
   {
@@ -841,6 +851,22 @@ public class IndexMergerTest
     Assert.assertArrayEquals(new Object[]{3L}, boatList.get(1).getMetrics());
     Assert.assertArrayEquals(new int[][]{{3}, {2}, {2}}, boatList.get(2).getDims());
     Assert.assertArrayEquals(new Object[]{3L}, boatList.get(2).getMetrics());
+
+    checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("d3", ""));
+    checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("d3", "30000"));
+    checkBitmapIndex(Lists.newArrayList(1), adapter.getBitmapIndex("d3", "40000"));
+    checkBitmapIndex(Lists.newArrayList(2), adapter.getBitmapIndex("d3", "50000"));
+
+    checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("d1", ""));
+    checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("d1", "100"));
+    checkBitmapIndex(Lists.newArrayList(2), adapter.getBitmapIndex("d1", "200"));
+    checkBitmapIndex(Lists.newArrayList(1), adapter.getBitmapIndex("d1", "300"));
+
+    checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("d2", ""));
+    checkBitmapIndex(Lists.newArrayList(1), adapter.getBitmapIndex("d2", "2000"));
+    checkBitmapIndex(Lists.newArrayList(2), adapter.getBitmapIndex("d2", "3000"));
+    checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("d2", "4000"));
+
   }
 
   @Test
@@ -926,6 +952,16 @@ public class IndexMergerTest
     Assert.assertArrayEquals(new Object[]{2L}, boatList.get(2).getMetrics());
     Assert.assertArrayEquals(new int[][]{{2}, {0}}, boatList.get(3).getDims());
     Assert.assertArrayEquals(new Object[]{2L}, boatList.get(3).getMetrics());
+
+    checkBitmapIndex(Lists.newArrayList(0, 1), adapter.getBitmapIndex("dimA", ""));
+    checkBitmapIndex(Lists.newArrayList(2), adapter.getBitmapIndex("dimA", "1"));
+    checkBitmapIndex(Lists.newArrayList(3), adapter.getBitmapIndex("dimA", "2"));
+
+    checkBitmapIndex(new ArrayList<Integer>(), adapter.getBitmapIndex("dimB", ""));
+
+    checkBitmapIndex(Lists.newArrayList(2, 3), adapter.getBitmapIndex("dimC", ""));
+    checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("dimC", "1"));
+    checkBitmapIndex(Lists.newArrayList(1), adapter.getBitmapIndex("dimC", "2"));
   }
 
 
@@ -1013,6 +1049,15 @@ public class IndexMergerTest
     Assert.assertArrayEquals(new int[][]{{2}, {0}}, boatList.get(4).getDims());
     Assert.assertArrayEquals(new Object[]{1L}, boatList.get(4).getMetrics());
 
+    checkBitmapIndex(Lists.newArrayList(0, 1, 2), adapter.getBitmapIndex("dimA", ""));
+    checkBitmapIndex(Lists.newArrayList(3), adapter.getBitmapIndex("dimA", "1"));
+    checkBitmapIndex(Lists.newArrayList(4), adapter.getBitmapIndex("dimA", "2"));
+
+    checkBitmapIndex(Lists.newArrayList(3, 4), adapter.getBitmapIndex("dimB", ""));
+    checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("dimB", "1"));
+    checkBitmapIndex(Lists.newArrayList(1), adapter.getBitmapIndex("dimB", "2"));
+    checkBitmapIndex(Lists.newArrayList(2), adapter.getBitmapIndex("dimB", "3"));
+
     Assert.assertEquals(ImmutableList.of("dimA", "dimB"), ImmutableList.copyOf(adapter2.getDimensionNames()));
     Assert.assertEquals(5, boatList2.size());
     Assert.assertArrayEquals(new int[][]{{0}, {1}}, boatList2.get(0).getDims());
@@ -1026,14 +1071,14 @@ public class IndexMergerTest
     Assert.assertArrayEquals(new int[][]{{2}, {0}}, boatList2.get(4).getDims());
     Assert.assertArrayEquals(new Object[]{1L}, boatList2.get(4).getMetrics());
 
-    checkBitmapIndex(Lists.newArrayList(0, 1, 2), adapter.getBitmapIndex("dimA", ""));
-    checkBitmapIndex(Lists.newArrayList(3), adapter.getBitmapIndex("dimA", "1"));
-    checkBitmapIndex(Lists.newArrayList(4), adapter.getBitmapIndex("dimA", "2"));
+    checkBitmapIndex(Lists.newArrayList(0, 1, 2), adapter2.getBitmapIndex("dimA", ""));
+    checkBitmapIndex(Lists.newArrayList(3), adapter2.getBitmapIndex("dimA", "1"));
+    checkBitmapIndex(Lists.newArrayList(4), adapter2.getBitmapIndex("dimA", "2"));
 
-    checkBitmapIndex(Lists.newArrayList(3, 4), adapter.getBitmapIndex("dimB", ""));
-    checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("dimB", "1"));
-    checkBitmapIndex(Lists.newArrayList(1), adapter.getBitmapIndex("dimB", "2"));
-    checkBitmapIndex(Lists.newArrayList(2), adapter.getBitmapIndex("dimB", "3"));
+    checkBitmapIndex(Lists.newArrayList(3, 4), adapter2.getBitmapIndex("dimB", ""));
+    checkBitmapIndex(Lists.newArrayList(0), adapter2.getBitmapIndex("dimB", "1"));
+    checkBitmapIndex(Lists.newArrayList(1), adapter2.getBitmapIndex("dimB", "2"));
+    checkBitmapIndex(Lists.newArrayList(2), adapter2.getBitmapIndex("dimB", "3"));
   }
 
   @Test
@@ -1327,6 +1372,16 @@ public class IndexMergerTest
     Assert.assertArrayEquals(new int[][]{{3}, {0}}, boatList.get(4).getDims());
     Assert.assertArrayEquals(new Object[]{2L}, boatList.get(4).getMetrics());
 
+    checkBitmapIndex(Lists.newArrayList(2, 3, 4), adapter.getBitmapIndex("dimA", ""));
+    checkBitmapIndex(Lists.newArrayList(0), adapter.getBitmapIndex("dimA", "1"));
+    checkBitmapIndex(Lists.newArrayList(1), adapter.getBitmapIndex("dimA", "2"));
+
+    checkBitmapIndex(Lists.newArrayList(0, 1), adapter.getBitmapIndex("dimB", ""));
+    checkBitmapIndex(Lists.newArrayList(2), adapter.getBitmapIndex("dimB", "1"));
+    checkBitmapIndex(Lists.newArrayList(3), adapter.getBitmapIndex("dimB", "2"));
+    checkBitmapIndex(Lists.newArrayList(4), adapter.getBitmapIndex("dimB", "3"));
+
+
     Assert.assertEquals(ImmutableList.of("dimA", "dimB", "dimC"), ImmutableList.copyOf(adapter2.getDimensionNames()));
     Assert.assertEquals(12, boatList2.size());
     Assert.assertArrayEquals(new int[][]{{0}, {0}, {1}}, boatList2.get(0).getDims());
@@ -1356,6 +1411,21 @@ public class IndexMergerTest
     Assert.assertArrayEquals(new Object[]{1L}, boatList2.get(10).getMetrics());
     Assert.assertArrayEquals(new int[][]{{2}, {0}, {0}}, boatList2.get(11).getDims());
     Assert.assertArrayEquals(new Object[]{2L}, boatList2.get(11).getMetrics());
+
+    checkBitmapIndex(Lists.newArrayList(0, 1, 2, 3, 4, 5, 8, 9, 10), adapter2.getBitmapIndex("dimA", ""));
+    checkBitmapIndex(Lists.newArrayList(6), adapter2.getBitmapIndex("dimA", "1"));
+    checkBitmapIndex(Lists.newArrayList(7, 11), adapter2.getBitmapIndex("dimA", "2"));
+
+    checkBitmapIndex(Lists.newArrayList(0, 1, 2, 6, 7, 11), adapter2.getBitmapIndex("dimB", ""));
+    checkBitmapIndex(Lists.newArrayList(3, 8), adapter2.getBitmapIndex("dimB", "1"));
+    checkBitmapIndex(Lists.newArrayList(4, 9), adapter2.getBitmapIndex("dimB", "2"));
+    checkBitmapIndex(Lists.newArrayList(5, 10), adapter2.getBitmapIndex("dimB", "3"));
+
+    checkBitmapIndex(Lists.newArrayList(3, 4, 5, 6, 7, 8, 9, 10, 11), adapter2.getBitmapIndex("dimC", ""));
+    checkBitmapIndex(Lists.newArrayList(0), adapter2.getBitmapIndex("dimC", "1"));
+    checkBitmapIndex(Lists.newArrayList(1), adapter2.getBitmapIndex("dimC", "2"));
+    checkBitmapIndex(Lists.newArrayList(2), adapter2.getBitmapIndex("dimC", "3"));
+
   }
 
   private IncrementalIndex getIndexD3() throws Exception
@@ -1379,7 +1449,7 @@ public class IndexMergerTest
         new MapBasedInputRow(
             1,
             Arrays.asList("d3", "d1", "d2"),
-            ImmutableMap.<String, Object>of("d1", "200", "d2", "3000", "d3", "50000")
+            ImmutableMap.<String, Object>of("d1", "300", "d2", "2000", "d3", "40000")
         )
     );
 
@@ -1387,7 +1457,7 @@ public class IndexMergerTest
         new MapBasedInputRow(
             1,
             Arrays.asList("d3", "d1", "d2"),
-            ImmutableMap.<String, Object>of("d1", "300", "d2", "2000", "d3", "40000")
+            ImmutableMap.<String, Object>of("d1", "200", "d2", "3000", "d3", "50000")
         )
     );
 
