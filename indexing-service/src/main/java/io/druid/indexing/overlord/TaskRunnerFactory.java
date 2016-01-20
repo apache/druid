@@ -19,7 +19,7 @@
 
 package io.druid.indexing.overlord;
 
-public interface TaskRunnerFactory
+public interface TaskRunnerFactory<T extends TaskRunner>
 {
-  public TaskRunner build();
+  T build();
 }

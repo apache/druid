@@ -19,17 +19,33 @@
 
 package io.druid.indexing.overlord.autoscaling;
 
-import io.druid.indexing.overlord.RemoteTaskRunner;
+import io.druid.indexing.overlord.TaskRunner;
 
 /**
  * The ResourceManagementStrategy decides if worker nodes should be provisioned or determined
  * based on the available tasks in the system and the state of the workers in the system.
+ * In general, the resource management is tied to the runner.
  */
-public interface ResourceManagementStrategy
+public interface ResourceManagementStrategy<T extends TaskRunner>
 {
-  public boolean doProvision(RemoteTaskRunner runner);
+  /**
+   * Equivalent to start() but requires a specific runner instance which holds state of interest.
+   * This method is intended to be called from the TaskRunner's lifecycle
+   *
+   * @param runner The TaskRunner state holder this strategy should use during execution
+   */
+  void startManagement(T runner);
 
-  public boolean doTerminate(RemoteTaskRunner runner);
+  /**
+   * Equivalent to stop()
+   * Should be called from TaskRunner's lifecycle
+   */
+  void stopManagement();
 
-  public ScalingStats getStats();
+  /**
+   * Get any interesting stats related to scaling
+   *
+   * @return The ScalingStats or `null` if nothing of interest
+   */
+  ScalingStats getStats();
 }

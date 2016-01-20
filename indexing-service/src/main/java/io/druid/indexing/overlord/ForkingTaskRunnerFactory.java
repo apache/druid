@@ -31,8 +31,8 @@ import io.druid.tasklogs.TaskLogPusher;
 import java.util.Properties;
 
 /**
-*/
-public class ForkingTaskRunnerFactory implements TaskRunnerFactory
+ */
+public class ForkingTaskRunnerFactory implements TaskRunnerFactory<ForkingTaskRunner>
 {
   private final ForkingTaskRunnerConfig config;
   private final TaskConfig taskConfig;
@@ -51,7 +51,8 @@ public class ForkingTaskRunnerFactory implements TaskRunnerFactory
       final ObjectMapper jsonMapper,
       final TaskLogPusher persistentTaskLogs,
       @Self DruidNode node
-  ) {
+  )
+  {
     this.config = config;
     this.taskConfig = taskConfig;
     this.workerConfig = workerConfig;
@@ -62,7 +63,7 @@ public class ForkingTaskRunnerFactory implements TaskRunnerFactory
   }
 
   @Override
-  public TaskRunner build()
+  public ForkingTaskRunner build()
   {
     return new ForkingTaskRunner(config, taskConfig, workerConfig, props, persistentTaskLogs, jsonMapper, node);
   }

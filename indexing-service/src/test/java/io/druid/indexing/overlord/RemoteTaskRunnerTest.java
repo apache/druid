@@ -41,6 +41,9 @@ import io.druid.indexing.common.TestRealtimeTask;
 import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
+import io.druid.indexing.overlord.autoscaling.NoopResourceManagementStrategy;
+import io.druid.indexing.overlord.autoscaling.ResourceManagementStrategy;
+import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.worker.TaskAnnouncement;
@@ -475,7 +478,8 @@ public class RemoteTaskRunnerTest
         new SimplePathChildrenCacheFactory.Builder().build(),
         null,
         DSuppliers.of(new AtomicReference<>(WorkerBehaviorConfig.defaultConfig())),
-        ScheduledExecutors.fixed(1, "Remote-Task-Runner-Cleanup--%d")
+        ScheduledExecutors.fixed(1, "Remote-Task-Runner-Cleanup--%d"),
+        new NoopResourceManagementStrategy<RemoteTaskRunner>()
     );
 
     remoteTaskRunner.start();

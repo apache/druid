@@ -20,13 +20,13 @@
 package io.druid.indexing.overlord.http;
 
 import com.google.common.base.Function;
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.Pair;
-import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.guava.CloseQuietly;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -39,7 +39,6 @@ import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
-import io.druid.indexing.overlord.RemoteTaskRunner;
 import io.druid.indexing.overlord.TaskLockbox;
 import io.druid.indexing.overlord.TaskMaster;
 import io.druid.indexing.overlord.TaskRunner;
@@ -47,10 +46,7 @@ import io.druid.indexing.overlord.TaskRunnerFactory;
 import io.druid.indexing.overlord.TaskRunnerWorkItem;
 import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.TaskStorageQueryAdapter;
-import io.druid.indexing.overlord.ZkWorker;
-import io.druid.indexing.overlord.autoscaling.NoopResourceManagementScheduler;
-import io.druid.indexing.overlord.autoscaling.ResourceManagementScheduler;
-import io.druid.indexing.overlord.autoscaling.ResourceManagementSchedulerFactory;
+import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.IndexerZkConfig;
@@ -157,22 +153,12 @@ public class OverlordResourceTest
         taskActionClientFactory,
         druidNode,
         indexerZkConfig,
-        new TaskRunnerFactory()
+        new TaskRunnerFactory<MockTaskRunner>()
         {
           @Override
-          public TaskRunner build()
+          public MockTaskRunner build()
           {
             return new MockTaskRunner(runTaskCountDownLatches, taskCompletionCountDownLatches);
-          }
-        },
-        new ResourceManagementSchedulerFactory()
-        {
-          @Override
-          public ResourceManagementScheduler build(
-              RemoteTaskRunner runner, ScheduledExecutorFactory executorFactory
-          )
-          {
-            return new NoopResourceManagementScheduler();
           }
         },
         curator,
@@ -195,7 +181,7 @@ public class OverlordResourceTest
     // basic task master lifecycle test
     taskMaster.start();
     announcementLatch.await();
-    while(!taskMaster.isLeading()){
+    while (!taskMaster.isLeading()) {
       // I believe the control will never reach here and thread will never sleep but just to be on safe side
       Thread.sleep(10);
     }
@@ -265,7 +251,8 @@ public class OverlordResourceTest
    * These method will not timeout until the condition is met so calling method should ensure timeout
    * This method also assumes that the task with given taskId is present
    * */
-  private void waitForTaskStatus(String taskId, TaskStatus.Status status) throws InterruptedException {
+  private void waitForTaskStatus(String taskId, TaskStatus.Status status) throws InterruptedException
+  {
     while (true) {
       Response response = overlordResource.getTaskStatus(taskId);
       if (status.equals(((TaskStatus) ((Map) response.getEntity()).get("status")).getStatusCode())) {
@@ -313,28 +300,28 @@ public class OverlordResourceTest
     {
       final String taskId = task.getId();
       ListenableFuture<TaskStatus> future = MoreExecutors.listeningDecorator(
-        Execs.singleThreaded(
-            "noop_test_task_exec_%s"
-        )
+          Execs.singleThreaded(
+              "noop_test_task_exec_%s"
+          )
       ).submit(
-        new Callable<TaskStatus>()
-        {
-          @Override
-          public TaskStatus call() throws Exception
+          new Callable<TaskStatus>()
           {
-            // adding of task to list of runningTasks should be done before count down as
-            // getRunningTasks may not include the task for which latch has been counted down
-            // Count down to let know that task is actually running
-            // this is equivalent of getting process holder to run task in ForkingTaskRunner
-            runningTasks.add(taskId);
-            runLatches[Integer.parseInt(taskId)].countDown();
-            // Wait for completion count down
-            completionLatches[Integer.parseInt(taskId)].await();
-            taskRunnerWorkItems.remove(taskId);
-            runningTasks.remove(taskId);
-            return TaskStatus.success(taskId);
+            @Override
+            public TaskStatus call() throws Exception
+            {
+              // adding of task to list of runningTasks should be done before count down as
+              // getRunningTasks may not include the task for which latch has been counted down
+              // Count down to let know that task is actually running
+              // this is equivalent of getting process holder to run task in ForkingTaskRunner
+              runningTasks.add(taskId);
+              runLatches[Integer.parseInt(taskId)].countDown();
+              // Wait for completion count down
+              completionLatches[Integer.parseInt(taskId)].await();
+              taskRunnerWorkItems.remove(taskId);
+              runningTasks.remove(taskId);
+              return TaskStatus.success(taskId);
+            }
           }
-        }
       );
       TaskRunnerWorkItem taskRunnerWorkItem = new TaskRunnerWorkItem(taskId, future);
       taskRunnerWorkItems.put(taskId, taskRunnerWorkItem);
@@ -348,16 +335,16 @@ public class OverlordResourceTest
     public synchronized Collection<? extends TaskRunnerWorkItem> getRunningTasks()
     {
       List runningTaskList = Lists.transform(
-        runningTasks,
-        new Function<String, TaskRunnerWorkItem>()
-        {
-          @Nullable
-          @Override
-          public TaskRunnerWorkItem apply(String input)
+          runningTasks,
+          new Function<String, TaskRunnerWorkItem>()
           {
-            return taskRunnerWorkItems.get(input);
+            @Nullable
+            @Override
+            public TaskRunnerWorkItem apply(String input)
+            {
+              return taskRunnerWorkItems.get(input);
+            }
           }
-        }
       );
       return runningTaskList;
     }
@@ -375,9 +362,9 @@ public class OverlordResourceTest
     }
 
     @Override
-    public Collection<ZkWorker> getWorkers()
+    public Optional<ScalingStats> getScalingStats()
     {
-      return ImmutableList.of();
+      return Optional.absent();
     }
   }
 }
