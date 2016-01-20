@@ -569,7 +569,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
   public String getMetricType(String metric)
   {
-    return metricDescs.get(metric).getType();
+    final MetricDesc metricDesc = metricDescs.get(metric);
+    return metricDesc != null ? metricDesc.getType() : null;
   }
 
   public Interval getInterval()

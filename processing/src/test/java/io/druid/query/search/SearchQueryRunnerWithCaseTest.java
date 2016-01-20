@@ -83,8 +83,8 @@ public class SearchQueryRunnerWithCaseTest
         "2011-01-13T00:00:00.000Z\tspot\tautomotive\tpreferred\ta\u0001preferred\t94.874713"
     );
 
-    IncrementalIndex index1 = TestIndex.makeRealtimeIndex(input, true);
-    IncrementalIndex index2 = TestIndex.makeRealtimeIndex(input, false);
+    IncrementalIndex index1 = TestIndex.makeRealtimeIndex(input);
+    IncrementalIndex index2 = TestIndex.makeRealtimeIndex(input);
 
     QueryableIndex index3 = TestIndex.persistRealtimeAndLoadMMapped(index1);
     QueryableIndex index4 = TestIndex.persistRealtimeAndLoadMMapped(index2);
