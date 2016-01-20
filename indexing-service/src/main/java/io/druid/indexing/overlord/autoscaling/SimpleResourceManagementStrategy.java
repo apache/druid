@@ -29,6 +29,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
+import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.granularity.PeriodGranularity;
@@ -69,6 +70,21 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   private DateTime lastTerminateTime = new DateTime();
 
   @Inject
+  public SimpleResourceManagementStrategy(
+      SimpleResourceManagementConfig config,
+      Supplier<WorkerBehaviorConfig> workerConfigRef,
+      ResourceManagementSchedulerConfig resourceManagementSchedulerConfig,
+      ScheduledExecutorFactory factory
+  )
+  {
+    this(
+        config,
+        workerConfigRef,
+        resourceManagementSchedulerConfig,
+        factory.create(1, "SimpleResourceManagement-manager--%d")
+    );
+  }
+
   public SimpleResourceManagementStrategy(
       SimpleResourceManagementConfig config,
       Supplier<WorkerBehaviorConfig> workerConfigRef,
