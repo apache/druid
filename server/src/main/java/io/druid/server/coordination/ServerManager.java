@@ -442,7 +442,7 @@ public class ServerManager implements QuerySegmentWalker
                                 return toolChest.makeMetricBuilder(input);
                               }
                             },
-                            new ReferenceCountingSegmentQueryRunner<T>(factory, adapter),
+                            new ReferenceCountingSegmentQueryRunner<T>(factory, segmentDescriptor, adapter),
                             "query/segment/time",
                             ImmutableMap.of("segment", adapter.getIdentifier())
                         ),

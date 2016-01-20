@@ -56,6 +56,7 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QueryToolChest;
+import io.druid.query.ReferenceCountingSegmentQueryRunner;
 import io.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import io.druid.query.SegmentDescriptor;
 import io.druid.query.spec.SpecificSegmentQueryRunner;
@@ -87,8 +88,6 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
-import javax.ws.rs.HEAD;
-import java.io.Closeable;
 import java.io.File;
 import java.io.FilenameFilter;
 import java.io.IOException;
@@ -340,34 +339,28 @@ public class RealtimePlumber implements Plumber
 
                                             // Prevent the underlying segment from closing when its being iterated
                                             final ReferenceCountingSegment segment = input.getSegment();
-                                            final Closeable closeable = segment.increment();
-                                            try {
-                                              if (input.hasSwapped() // only use caching if data is immutable
-                                                  && cache.isLocal() // hydrants may not be in sync between replicas, make sure cache is local
-                                                  ) {
-                                                return new CachingQueryRunner<>(
-                                                    makeHydrantIdentifier(input, segment),
-                                                    descriptor,
-                                                    objectMapper,
-                                                    cache,
-                                                    toolchest,
-                                                    factory.createRunner(segment),
-                                                    MoreExecutors.sameThreadExecutor(),
-                                                    cacheConfig
-                                                );
-                                              } else {
-                                                return factory.createRunner(input.getSegment());
-                                              }
-                                            }
-                                            finally {
-                                              try {
-                                                if (closeable != null) {
-                                                  closeable.close();
-                                                }
-                                              }
-                                              catch (IOException e) {
-                                                throw Throwables.propagate(e);
-                                              }
+                                            final ReferenceCountingSegmentQueryRunner<T> baseRunner = new ReferenceCountingSegmentQueryRunner<>(
+                                                factory,
+                                                descriptor,
+                                                segment
+                                            );
+                                            final boolean cacheable =
+                                                input.hasSwapped() && // only use caching if data is immutable
+                                                cache.isLocal(); // hydrants may not be in sync between replicas, make sure cache is local
+
+                                            if (cacheable) {
+                                              return new CachingQueryRunner<>(
+                                                  makeHydrantIdentifier(input, segment),
+                                                  descriptor,
+                                                  objectMapper,
+                                                  cache,
+                                                  toolchest,
+                                                  baseRunner,
+                                                  MoreExecutors.sameThreadExecutor(),
+                                                  cacheConfig
+                                              );
+                                            } else {
+                                              return baseRunner;
                                             }
                                           }
                                         }
@@ -406,12 +399,12 @@ public class RealtimePlumber implements Plumber
     final Stopwatch persistStopwatch = Stopwatch.createStarted();
 
     final Map<String, Object> metadataElems = committer.getMetadata() == null ? null :
-                                         ImmutableMap.of(
-                                             COMMIT_METADATA_KEY,
-                                             committer.getMetadata(),
-                                             COMMIT_METADATA_TIMESTAMP_KEY,
-                                             System.currentTimeMillis()
-                                         );
+                                              ImmutableMap.of(
+                                                  COMMIT_METADATA_KEY,
+                                                  committer.getMetadata(),
+                                                  COMMIT_METADATA_TIMESTAMP_KEY,
+                                                  System.currentTimeMillis()
+                                              );
 
     persistExecutor.execute(
         new ThreadRenamingRunnable(String.format("%s-incremental-persist", schema.getDataSource()))
