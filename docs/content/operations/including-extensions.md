@@ -19,9 +19,9 @@ If you don't want to fiddle with classpath, you can create an extension director
 
 To let Druid load your extensions, follow the steps below
 
-1) Specify `druid.extensions.directory` (root directory for normal Druid extensions). If you don' specify it, Druid will use their default value, see [Configuration](../configuration/index.html).
+1) Specify `druid.extensions.directory` (root directory for normal Druid extensions). If you don't specify it, Druid will use the default value, see [Configuration](../configuration/index.html).
 
-2) Prepare normal extension directories under root extension directory.  Under the root extension directory, you should create sub-directories for each extension you might want to load.  Inside each sub-directory, you can put extension related files in it.  (If you don't want to manually setup the extension directory, Druid also provides a [pull-deps](../pull-deps.html) tool that can help you generate these directories automatically)
+2) Under the root extension directory, create sub-directories for each extension you might want to load.  Inside each sub-directory, put extension-related files.  (If you don't want to manually set up the extension directory, you can use Druid's [pull-deps](../pull-deps.html) tool to help you generate these directories automatically.)
 
 Example:
 
@@ -63,8 +63,8 @@ extensions/
 
 As you can see, under ```extensions``` there are three sub-directories ```druid-examples```, ```druid-kafka-eight``` and ```mysql-metadata-storage```, each sub-directory denotes an extension that Druid might load.
 
-3) Tell Druid which extensions to load.  Now you have prepared your extension directories, if you want Druid to load a specific list of extensions under root extension directory, you need to specify `druid.extensions.loadList`. Using the example above, if you want Druid to load ```druid-kafka-eight``` and ```mysql-metadata-storage```, you can specify `druid.extensions.loadList=["druid-kafka-eight", "mysql-metadata-storage"]`.
+3) To have Druid load a specific list of extensions present under the root extension directory, set `druid.extensions.loadList` to the list of extensions to load. Using the example above, if you want Druid to load ```druid-kafka-eight``` and ```mysql-metadata-storage```, you can specify `druid.extensions.loadList=["druid-kafka-eight", "mysql-metadata-storage"]`.
 
-If you specify `druid.extensions.loadList=[]`, Druid won't load any extension from file system.
+If you specify `druid.extensions.loadList=[]`, Druid won't load any extensions from the file system.
 
-If you don't specify `druid.extensions.loadList`, Druid will load all the extensions under root extension directory.
+If you don't specify `druid.extensions.loadList`, Druid will load all the extensions under the root extension directory.

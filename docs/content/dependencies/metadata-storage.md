@@ -11,18 +11,28 @@ a number of tables used for various purposes described below.
 
 The following metadata storage engines are supported:
 
-* Derby (default - only works if you have all processes running on the same node)
-* MySQL (io.druid.extensions:mysql-metadata-storage)
-* PostgreSQL (io.druid.extensions:postgresql-metadata-storage)
+* Derby (default, but not suitable for production)
+* MySQL
+* PostgreSQL
 
-To choose a metadata storage,
+Even though Derby is the default, it works only if you have all Druid
+processes running on the same host, and should be used only for experimentation.
+For production, MySQL or PostgreSQL should be used.
 
-1. Make sure Druid can pick up the extension files from either classpath or
-extensions directory, see [Including Extensions](../operations/including-extensions.html) for more information.
+To choose the metadata storage type, set `druid.metadata.storage.type` to
+`mysql`, `postgres` or `derby`.
+Set other `druid.metadata.storage` configuration
+keywords as shown below to give Druid information about how to connect to
+the database.
 
-2. set the `druid.extensions` configuration to include the extension for the
-metadata storage you plan to use. See below.
-
+As discussed in [Including Extensions](../operations/including-extensions.html),
+there are two ways for giving Druid the extension files it needs for the
+database you are using.
+The first is to put the extension files in the classpath.  The second is to
+put the extension files in a subdirectory of
+`druid.extensions.directory` (by default `extensions` under the Druid working directory) and list the subdirectory name in
+`druid.extensions.loadList`.  The example properties below show the second
+way.
 
 ## Setting up MySQL
 
@@ -57,20 +67,20 @@ metadata storage you plan to use. See below.
 3. Configure your Druid metadata storage extension:
 
   Add the following parameters to your Druid configuration, replacing `<host>`
-  with the hostname of the database.
+  with the location (host name and port) of the database.
 
   ```properties
   druid.extensions.loadList=["mysql-metadata-storage"]
   druid.metadata.storage.type=mysql
-  druid.metadata.storage.connector.connectURI=jdbc:mysql://<host>/druid_test
+  druid.metadata.storage.connector.connectURI=jdbc:mysql://<host>/druid
   druid.metadata.storage.connector.user=druid
   druid.metadata.storage.connector.password=diurd
   ```
 
-  Note: metadata storage extension is not packaged within the main Druid tarball, it is
+  Note: the metadata storage extension is not packaged within the main Druid tarball; it is
   packaged in a separate tarball that can be downloaded from [here](http://druid.io/downloads.html).
-  However, you can always get it using [pull-deps](../pull-deps.html), or you can even build
-  it from source code, see [Build from Source](../development/build.html)
+  You can also get it using [pull-deps](../pull-deps.html), or you can build
+  it from source code; see [Build from Source](../development/build.html).
 
 ## Setting up PostgreSQL
 
@@ -104,14 +114,23 @@ metadata storage you plan to use. See below.
 3. Configure your Druid metadata storage extension:
 
   Add the following parameters to your Druid configuration, replacing `<host>`
-  with the hostname of the database.
+  with the location (host name and port) of the database.
 
   ```properties
   druid.extensions.loadList=["postgresql-metadata-storage"]
   druid.metadata.storage.type=postgresql
-  druid.metadata.storage.connector.connectURI=jdbc:postgresql://<host>/druid_test
+  druid.metadata.storage.connector.connectURI=jdbc:postgresql://<host>/druid
   druid.metadata.storage.connector.user=druid
   druid.metadata.storage.connector.password=diurd
+  ```
+
+## Using derby
+
+  Add the following to your Druid configuration.
+
+  ```properties
+  druid.metadata.storage.type=derby
+  druid.metadata.storage.connector.connectURI=jdbc:derby://localhost:1527//home/y/var/druid_state/derby;create=true
   ```
 
 ## Metadata Storage Tables

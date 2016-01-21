@@ -24,7 +24,7 @@ To setup a local Druid cluster, see [Simple Cluster Configuration](../configurat
 
 ```
 # Extensions
-druid.extensions.coordinates=["io.druid.extensions:druid-s3-extensions", "io.druid.extensions:druid-histogram", "io.druid.extensions:mysql-metadata-storage"]
+druid.extensions.loadList=["druid-s3-extensions", "druid-histogram", "mysql-metadata-storage"]
 
 # Zookeeper
 druid.zk.service.host=#{ZK_IPs}
