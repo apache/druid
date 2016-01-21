@@ -5,10 +5,10 @@ layout: doc_page
 Experimental features are features we have developed but have not fully tested in a production environment. If you choose to try them out, there will likely be edge cases that we have not covered. We would love feedback on any of these features, whether they are bug reports, suggestions for improvement, or letting us know they work as intended.
 
 
-To enable experimental features, include their artifacts in the configuration runtime.properties file. Eg-
+To enable experimental features, include their artifacts in the configuration runtime.properties file, e.g.,
 
 ```
-druid.extensions.coordinates=["io.druid.extensions:druid-histogram:{VERSION}"]
+druid.extensions.loadList=["druid-histogram"]
 ```
 
-The configuration for all the indexer and query nodes need to be updated with this.
+The configuration files for all the indexer and query nodes need to be updated with this.
