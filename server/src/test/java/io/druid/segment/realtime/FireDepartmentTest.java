@@ -117,7 +117,7 @@ public class FireDepartmentTest
             null
         ),
         new RealtimeTuningConfig(
-            null, null, null, null, null, null, null, null, null, null
+            null, null, null, null, null, null, null, null, null, null, 0, 0
         )
     );
 

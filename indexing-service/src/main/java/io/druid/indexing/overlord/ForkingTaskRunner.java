@@ -322,6 +322,14 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
 
                               command.add(String.format("-Ddruid.host=%s", childHost));
                               command.add(String.format("-Ddruid.port=%d", childPort));
+                              /**
+                               * These are not enabled per default to allow the user to either set or not set them
+                               * Users are highly suggested to be set in druid.indexer.runner.javaOpts
+                               * See io.druid.concurrent.TaskThreadPriority#getThreadPriorityFromTaskPriority(int)
+                               * for more information
+                              command.add("-XX:+UseThreadPriorities");
+                              command.add("-XX:ThreadPriorityPolicy=42");
+                               */
 
                               if (config.isSeparateIngestionEndpoint()) {
                                 command.add(String.format(
