@@ -627,6 +627,7 @@ public class IndexMerger
     ArrayList<FileOutputSupplier> dimOuts = Lists.newArrayListWithCapacity(mergedDimensions.size());
     Map<String, Integer> dimensionCardinalities = Maps.newHashMap();
     ArrayList<Map<String, IntBuffer>> dimConversions = Lists.newArrayListWithCapacity(indexes.size());
+    final ArrayList<Boolean> convertMissingDimsFlags = Lists.newArrayListWithCapacity(mergedDimensions.size());
 
     for (IndexableAdapter index : indexes) {
       dimConversions.add(Maps.<String, IntBuffer>newHashMap());
@@ -641,6 +642,7 @@ public class IndexMerger
       List<Indexed<String>> dimValueLookups = Lists.newArrayListWithCapacity(indexes.size() + 1);
       DimValueConverter[] converters = new DimValueConverter[indexes.size()];
       boolean dimHasValues = false;
+      boolean dimAbsentFromSomeIndex = false;
       boolean[] dimHasValuesByIndex = new boolean[indexes.size()];
 
       for (int i = 0; i < indexes.size(); i++) {
@@ -651,17 +653,22 @@ public class IndexMerger
           dimValueLookups.add(dimValues);
           converters[i] = new DimValueConverter(dimValues);
         } else {
+          dimAbsentFromSomeIndex = true;
           dimHasValuesByIndex[i] = false;
         }
       }
 
+      boolean convertMissingDims = dimHasValues && dimAbsentFromSomeIndex;
+      convertMissingDimsFlags.add(convertMissingDims);
+
       /*
-       * Ensure the empty str is always in the dictionary if column is not null across indexes
+       * Ensure the empty str is always in the dictionary if the dimension was missing from one index but
+       * has non-null values in another index.
        * This is done so that MMappedIndexRowIterable can convert null columns to empty strings
-       * later on, to allow rows from indexes with no values at all for a dimension to merge correctly with
-       * rows from indexes with partial null values for that dimension.
+       * later on, to allow rows from indexes without a particular dimension to merge correctly with
+       * rows from indexes with null/empty str values for that dimension.
        */
-      if (dimHasValues) {
+      if (convertMissingDims) {
         dimValueLookups.add(EMPTY_STR_DIM_VAL);
         for (int i = 0; i < indexes.size(); i++) {
           if (!dimHasValuesByIndex[i]) {
@@ -786,7 +793,7 @@ public class IndexMerger
                   }
               ),
               mergedDimensions, dimConversions.get(i), i,
-              dimensionCardinalities
+              convertMissingDimsFlags
           )
       );
     }
@@ -1220,7 +1227,7 @@ public class IndexMerger
     private final List<String> convertedDims;
     private final Map<String, IntBuffer> converters;
     private final int indexNumber;
-    private final Map<String, Integer> dimCardinalities;
+    private final ArrayList<Boolean> convertMissingDimsFlags;
     private static final int[] EMPTY_STR_DIM = new int[]{0};
 
     MMappedIndexRowIterable(
@@ -1228,14 +1235,14 @@ public class IndexMerger
         List<String> convertedDims,
         Map<String, IntBuffer> converters,
         int indexNumber,
-        Map<String, Integer> dimCardinalities
+        ArrayList<Boolean> convertMissingDimsFlags
     )
     {
       this.index = index;
       this.convertedDims = convertedDims;
       this.converters = converters;
       this.indexNumber = indexNumber;
-      this.dimCardinalities = dimCardinalities;
+      this.convertMissingDimsFlags = convertMissingDimsFlags;
     }
 
     public Iterable<Rowboat> getIndex()
@@ -1280,7 +1287,7 @@ public class IndexMerger
                 }
 
                 if (dims[i] == null) {
-                  if (dimCardinalities.get(dimName) > 0) {
+                  if (convertMissingDimsFlags.get(i)) {
                     newDims[i] = EMPTY_STR_DIM;
                   }
                   continue;
