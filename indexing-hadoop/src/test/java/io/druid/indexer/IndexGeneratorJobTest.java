@@ -502,7 +502,8 @@ public class IndexGeneratorJobTest
                 false,
                 useCombiner,
                 null,
-                buildV9Directly
+                buildV9Directly,
+                null
             )
         )
     );
