@@ -592,7 +592,8 @@ public class RealtimeIndexTaskTest
         null,
         null,
         null,
-        buildV9Directly
+        buildV9Directly,
+        0, 0
     );
     return new RealtimeIndexTask(
         taskId,

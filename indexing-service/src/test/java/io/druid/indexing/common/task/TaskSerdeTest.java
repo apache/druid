@@ -333,7 +333,9 @@ public class TaskSerdeTest
                 1,
                 new NoneShardSpec(),
                 indexSpec,
-                null
+                null,
+                0,
+                0
             )
         ),
         null
