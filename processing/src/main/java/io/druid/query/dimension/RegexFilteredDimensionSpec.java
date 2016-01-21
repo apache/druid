@@ -65,10 +65,6 @@ public class RegexFilteredDimensionSpec extends BaseFilteredDimensionSpec
       return selector;
     }
 
-    if (selector == null) {
-      return selector;
-    }
-
     int count = 0;
     final Map<Integer,Integer> forwardMapping = new HashMap<>();
 
