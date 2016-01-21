@@ -32,7 +32,7 @@ First create the schema above. I use a new keyspace called `druid` for this purp
 Then, add the following to your historical and realtime runtime properties files to enable a Cassandra backend.
 
 ```properties
-druid.extensions.coordinates=["io.druid.extensions:druid-cassandra-storage:<druid version>"]
+druid.extensions.loadList=["druid-cassandra-storage"]
 druid.storage.type=c*
 druid.storage.host=localhost:9160
 druid.storage.keyspace=druid
