@@ -53,7 +53,7 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory<RemoteTaskRunn
   private final ScheduledExecutorService cleanupExec;
   private final SimpleResourceManagementConfig config;
   private final ResourceManagementSchedulerConfig resourceManagementSchedulerConfig;
-  private final ScheduledExecutorService exec;
+  private final ScheduledExecutorService resourceManagementExec;
 
   @Inject
   public RemoteTaskRunnerFactory(
@@ -77,7 +77,7 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory<RemoteTaskRunn
     this.cleanupExec = factory.create(1, "RemoteTaskRunner-Scheduled-Cleanup--%d");
     this.config = config;
     this.resourceManagementSchedulerConfig = resourceManagementSchedulerConfig;
-    this.exec = factory.create(1, "RemoteTaskRunner-ResourceManagement--%d");
+    this.resourceManagementExec = factory.create(1, "RemoteTaskRunner-ResourceManagement--%d");
   }
 
   @Override
@@ -89,7 +89,7 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory<RemoteTaskRunn
           config,
           workerConfigRef,
           resourceManagementSchedulerConfig,
-          exec
+          resourceManagementExec
       );
     } else {
       resourceManagementStrategy = new NoopResourceManagementStrategy<>();
