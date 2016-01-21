@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.metamx.collections.bitmap.RoaringBitmapFactory;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.granularity.QueryGranularity;
@@ -44,6 +45,9 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
+import org.joda.time.DateTime;
+import io.druid.segment.incremental.IndexSizeExceededException;
+import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
@@ -53,6 +57,7 @@ import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -1425,6 +1430,42 @@ public class IndexMergerTest
     checkBitmapIndex(Lists.newArrayList(0), adapter2.getBitmapIndex("dimC", "1"));
     checkBitmapIndex(Lists.newArrayList(1), adapter2.getBitmapIndex("dimC", "2"));
     checkBitmapIndex(Lists.newArrayList(2), adapter2.getBitmapIndex("dimC", "3"));
+
+  }
+
+  public void testMismatchedDimensions() throws IOException, IndexSizeExceededException
+  {
+    IncrementalIndex index1 = IncrementalIndexTest.createIndex(new AggregatorFactory[]{
+        new LongSumAggregatorFactory("A", "A")
+    });
+    index1.add(new MapBasedInputRow(1L, Lists.newArrayList("d1", "d2"), ImmutableMap.<String, Object>of("d1", "a", "d2", "z", "A", 1)));
+    closer.closeLater(index1);
+
+    IncrementalIndex index2 = IncrementalIndexTest.createIndex(new AggregatorFactory[]{
+        new LongSumAggregatorFactory("A", "A"),
+        new LongSumAggregatorFactory("C", "C")
+    });
+    index2.add(new MapBasedInputRow(1l, Lists.newArrayList("d2"), ImmutableMap.<String, Object>of("d2", "z", "A", 2, "C", 100)));
+    closer.closeLater(index2);
+
+    Interval interval = new Interval(0, new DateTime().getMillis());
+    RoaringBitmapFactory factory = new RoaringBitmapFactory();
+    ArrayList<IndexableAdapter> toMerge = Lists.<IndexableAdapter>newArrayList(
+        new IncrementalIndexAdapter(interval, index1, factory),
+        new IncrementalIndexAdapter(interval, index2, factory)
+    );
+
+    final File tmpDirMerged = temporaryFolder.newFolder();
+
+    INDEX_MERGER.merge(
+        toMerge,
+        new AggregatorFactory[] {
+            new LongSumAggregatorFactory("A", "A"),
+            new LongSumAggregatorFactory("C", "C"),
+        },
+        tmpDirMerged,
+        indexSpec
+    );
 
   }
 
