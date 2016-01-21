@@ -35,4 +35,6 @@ public class ExtractionCacheHelper
   public static final byte CACHE_TYPE_ID_SUBSTRING = 0x8;
   public static final byte CACHE_TYPE_ID_CASCADE = 0x9;
   public static final byte CACHE_TYPE_ID_STRING_FORMAT = 0xA;
+  public static final byte CACHE_TYPE_ID_UPPER = 0xB;
+  public static final byte CACHE_TYPE_ID_LOWER = 0xC;
 }
