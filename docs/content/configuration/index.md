@@ -150,6 +150,11 @@ The Druid servers emit various metrics and alerts via something we call an Emitt
 |--------|-----------|-------|
 |`druid.emitter.composing.emitters`|List of emitter modules to load e.g. ["logging","http"].|[]|
 
+#### Graphite Emitter
+
+To use graphite as emitter set `druid.emitter=graphite`. For configuration details please follow this [link](https://github.com/druid-io/druid/tree/master/extensions/graphite-emitter/README.md).
+
+
 ### Metadata Storage
 
 These properties specify the jdbc connection and other configuration around the metadata storage. The only processes that connect to the metadata storage with these properties are the [Coordinator](../design/coordinator.html), [Indexing service](../design/indexing-service.html) and [Realtime Nodes](../design/realtime.html).
