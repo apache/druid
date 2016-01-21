@@ -87,4 +87,5 @@ public class NamespacedExtractor extends LookupExtractor
   {
     return reverseExtractionFunction.apply(value);
   }
+
 }

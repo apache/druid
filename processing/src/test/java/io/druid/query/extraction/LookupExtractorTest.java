@@ -21,11 +21,14 @@
 
 package io.druid.query.extraction;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import io.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -54,7 +57,14 @@ public class LookupExtractorTest
       "emptyString",
       Arrays.asList("")
   );
-  LookupExtractor lookupExtractor = new MapLookupExtractor(EXPECTED_MAP);
+  LookupExtractor lookupExtractor = new MapLookupExtractor(EXPECTED_MAP, false);
+
+  @Test
+  public void testSerDes() throws IOException
+  {
+    ObjectMapper mapper = new DefaultObjectMapper();
+    Assert.assertEquals(lookupExtractor, mapper.reader(LookupExtractor.class).readValue(mapper.writeValueAsBytes(lookupExtractor)));
+  }
 
   @Test
   public void testApplyAll()

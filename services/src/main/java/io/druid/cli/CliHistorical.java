@@ -35,6 +35,7 @@ import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.NodeTypeConfig;
 import io.druid.query.QuerySegmentWalker;
+import io.druid.query.extraction.LookupReferencesManager;
 import io.druid.server.QueryResource;
 import io.druid.server.coordination.ServerManager;
 import io.druid.server.coordination.ZkCoordinator;
@@ -83,7 +84,7 @@ public class CliHistorical extends ServerRunnable
             Jerseys.addResource(binder, QueryResource.class);
             Jerseys.addResource(binder, HistoricalResource.class);
             LifecycleModule.register(binder, QueryResource.class);
-
+            LifecycleModule.register(binder, LookupReferencesManager.class);
             LifecycleModule.register(binder, ZkCoordinator.class);
 
             JsonConfigProvider.bind(binder, "druid.historical.cache", CacheConfig.class);
