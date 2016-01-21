@@ -48,6 +48,10 @@
       <artifactId>druid-api</artifactId>
     </dependency>
     <dependency>
+        <groupId>com.metamx</groupId>
+        <artifactId>java-util</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.schemarepo</groupId>
       <artifactId>schema-repo-api</artifactId>
       <version>${schemarepo.version}</version>
@@ -70,6 +74,11 @@
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.hamcrest</groupId>
+      <artifactId>hamcrest-all</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -99,6 +108,9 @@
             <goals>
               <goal>schema</goal>
             </goals>
+            <configuration>
+              <testSourceDirectory>${project.basedir}/src/test/resources/</testSourceDirectory>
+            </configuration>
           </execution>
         </executions>
       </plugin>

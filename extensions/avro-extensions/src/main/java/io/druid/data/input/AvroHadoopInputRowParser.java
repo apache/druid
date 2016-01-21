@@ -19,34 +19,46 @@
 package io.druid.data.input;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.data.input.avro.AvroSchemaMappingHelper;
+import io.druid.data.input.avro.PathComponent;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.ParseSpec;
 import org.apache.avro.generic.GenericRecord;
 
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 public class AvroHadoopInputRowParser implements InputRowParser<GenericRecord>
 {
   private final ParseSpec parseSpec;
   private final List<String> dimensions;
   private final boolean fromPigAvroStorage;
+  private final Map<String, String> schemaMappings;
+  
+  @JsonIgnore
+  private final Map<String, List<PathComponent>> mappingCache;
 
   @JsonCreator
   public AvroHadoopInputRowParser(
       @JsonProperty("parseSpec") ParseSpec parseSpec,
-      @JsonProperty("fromPigAvroStorage") Boolean fromPigAvroStorage
+      @JsonProperty("fromPigAvroStorage") Boolean fromPigAvroStorage,
+      @JsonProperty("schemaMappings") Map<String, String> schemaMappings
   )
   {
     this.parseSpec = parseSpec;
     this.dimensions = parseSpec.getDimensionsSpec().getDimensions();
     this.fromPigAvroStorage = fromPigAvroStorage == null ? false : fromPigAvroStorage;
+    this.schemaMappings = schemaMappings == null ? Collections.<String, String>emptyMap() : schemaMappings;
+    this.mappingCache = AvroSchemaMappingHelper.buildMappingCache(this.schemaMappings);
   }
 
   @Override
   public InputRow parse(GenericRecord record)
   {
-    return AvroStreamInputRowParser.parseGenericRecord(record, parseSpec, dimensions, fromPigAvroStorage);
+    return AvroStreamInputRowParser.parseGenericRecord(record, parseSpec, dimensions, fromPigAvroStorage, mappingCache);
   }
 
   @JsonProperty
@@ -62,9 +74,15 @@ public class AvroHadoopInputRowParser implements InputRowParser<GenericRecord>
     return fromPigAvroStorage;
   }
 
-  @Override
-  public InputRowParser withParseSpec(ParseSpec parseSpec)
+  @JsonProperty
+  public Map<String, String> getSchemaMappings()
   {
-    return new AvroHadoopInputRowParser(parseSpec, fromPigAvroStorage);
+    return schemaMappings;
+  }
+
+  @Override
+  public InputRowParser<GenericRecord> withParseSpec(ParseSpec parseSpec)
+  {
+    return new AvroHadoopInputRowParser(parseSpec, fromPigAvroStorage, schemaMappings);
   }
 }

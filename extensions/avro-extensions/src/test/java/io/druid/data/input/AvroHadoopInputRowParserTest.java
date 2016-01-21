@@ -34,8 +34,13 @@ import org.junit.Test;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Map;
+
+import io.druid.data.input.impl.TimeAndDimsParseSpec;
 
 import static io.druid.data.input.AvroStreamInputRowParserTest.PARSE_SPEC;
+import static io.druid.data.input.AvroStreamInputRowParserTest.SCHEMA_MAPPING;
+import static io.druid.data.input.AvroStreamInputRowParserTest.TRAVERSING_PARSE_SPEC;
 import static io.druid.data.input.AvroStreamInputRowParserTest.assertInputRowCorrect;
 import static io.druid.data.input.AvroStreamInputRowParserTest.buildSomeAvroDatum;
 
@@ -46,32 +51,38 @@ public class AvroHadoopInputRowParserTest
   @Test
   public void testParseNotFromPigAvroStorage() throws IOException
   {
-    testParse(buildSomeAvroDatum(), false);
+    GenericRecord record = buildSomeAvroDatum();
+    testParse(PARSE_SPEC, record, false, null);
+    testParse(TRAVERSING_PARSE_SPEC, record, false, SCHEMA_MAPPING);
   }
 
   @Test
   public void testParseFromPiggyBankAvroStorage() throws IOException
   {
-    testParse(buildPiggyBankAvro(), false);
+    GenericRecord record = buildPiggyBankAvro();
+    testParse(PARSE_SPEC, record, false, null);
+    testParse(TRAVERSING_PARSE_SPEC, record, false, SCHEMA_MAPPING);
   }
 
   @Test
   public void testParseFromPigAvroStorage() throws IOException
   {
-    testParse(buildPigAvro(), true);
+    GenericRecord record = buildPigAvro();
+    testParse(PARSE_SPEC, record, true, null);
+    testParse(TRAVERSING_PARSE_SPEC, record, true, SCHEMA_MAPPING);
   }
 
-  private void testParse(GenericRecord record, boolean fromPigAvroStorage) throws IOException
+  private void testParse(TimeAndDimsParseSpec parseSpec, GenericRecord record, boolean fromPigAvroStorage,
+      Map<String, String> schemaMappings) throws IOException
   {
-    AvroHadoopInputRowParser parser = new AvroHadoopInputRowParser(PARSE_SPEC, fromPigAvroStorage);
+    AvroHadoopInputRowParser parser = new AvroHadoopInputRowParser(parseSpec, fromPigAvroStorage, schemaMappings);
     AvroHadoopInputRowParser parser2 = jsonMapper.readValue(
         jsonMapper.writeValueAsBytes(parser),
         AvroHadoopInputRowParser.class
     );
     InputRow inputRow = parser2.parse(record);
-    assertInputRowCorrect(inputRow);
+    assertInputRowCorrect(parseSpec.getDimensionsSpec().getDimensions(), schemaMappings, inputRow);
   }
-
 
   public static GenericRecord buildPigAvro() throws IOException
   {
@@ -83,7 +94,14 @@ public class AvroHadoopInputRowParserTest
     return buildPigAvro(
         buildSomeAvroDatum(),
         "org.apache.pig.piggybank.storage.avro.AvroStorage",
-        "org.apache.pig.piggybank.storage.avro.AvroStorage('field7','{\"type\":\"map\",\"values\":\"int\"}','field8','{\"type\":\"map\",\"values\":\"string\"}')"
+        "org.apache.pig.piggybank.storage.avro.AvroStorage("
+            + "'field7','{\"type\":\"map\",\"values\":\"int\"}',"
+            + "'field8','{\"type\":\"map\",\"values\":\"string\"}'"
+            + "'field14','{\"type\":\"record\",\"name\":\"MySubRecord\",\"fields\":["
+            + "{\"name\":\"subInt\",\"type\":\"int\"},"
+            + "{\"name\":\"subLong\",\"type\":\"long\"}, "
+            + "{\"name\":\"subMap\",\"type\":{\"type\":\"map\",\"values\":\"int\"}}, "
+            + "{\"name\":\"subArray\",\"type\":{\"type\":\"array\",\"items\":\"string\"}}]}')"
     );
   }
 
@@ -108,8 +126,7 @@ public class AvroHadoopInputRowParserTest
           String.format(
               "A = LOAD '%s' USING %s;",
               someAvroDatumFile,
-              inputStorage
-          )
+              inputStorage)
       );
       // 2. write new avro file using AvroStorage
       File outputDir = new File(tmpDir, "output");

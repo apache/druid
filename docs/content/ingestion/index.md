@@ -100,8 +100,9 @@ This is for realtime ingestion. Make sure to include "io.druid.extensions:druid-
 | type | String | This should say `avro_stream`. | no |
 | avroBytesDecoder | JSON Object | Specifies how to decode bytes to Avro record. | yes |
 | parseSpec | JSON Object | Specifies the format of the data. | yes |
+| schemaMappings | JSON Object | Specifies a mapping from field names found within the parseSpec to data within a complex avro structure. | no |
 
-For example, using Avro stream parser with schema repo Avro bytes decoder:
+For example, using Avro stream parser with schema repo Avro bytes decoder and specifying several schema mappings:
 
 ```json
 "parser" : {
@@ -116,6 +117,14 @@ For example, using Avro stream parser with schema repo Avro bytes decoder:
       "type" : "avro_1124_rest_client",
       "url" : "${YOUR_SCHEMA_REPO_END_POINT}",
     }
+  },
+  "schemaMappings" : {
+    "user" : "userInfo.userName",
+    "language" : "userInfo.language[0]",
+    "country" : "geoInfo(country)",
+    "region" : "geoInfo(region)",
+    "city" : "geoInfo(city)",
+    "added" : "created"
   },
   "parseSpec" : <standard_druid_parseSpec>
 }
@@ -150,6 +159,39 @@ This Avro bytes decoder first extract `subject` and `id` from input message byte
 | type | String | This should say `avro_1124_rest_client`. | no |
 | url | String | Specifies the endpoint url of your Avro-1124 schema repository. | yes |
 
+#### Avro Schema Mappings
+
+If `schemaMappings` is not included, no mappings are assumed and any field, either dimension or 
+metric, referenced in the parseSpec is assumed to be a top-level field in the incoming avro 
+record. On the other hand, if the avro record being ingested is complex in nature, containing arrays,
+maps, and sub-records, `schemaMappings` can be used to specify how to extract data from the complex
+structure. If `schemaMappings` is present, it is considered to be a map, with keys being fields that
+might be of interest in the parseSpec and the values being the path through the avro record.
+
+The syntax for mappings matches the standard defined in Apache Commons-BeanUtils and follows the
+following grammer:
+
+```
+MAPPING  : fieldName ( PATH_SEG )*
+PATH_SEG : '.' fieldName
+         | '(' mapKey ')'
+         | '[' arrayIndex ']'
+```
+
+So each of the following are valid mappings:
+- `A` - selects the field in the toplevel record
+- `A.B` - selects the subfield B from field A
+- `A(foo)` - selects the map value denoted by key foo from the field A in the top level record.
+- `A[1]` - selects the 2nd entry in the array from field A in the top level record
+- `A.B[2](hello).D` - A complex path! Selects field A, then subfield B,
+which is an array. Takes the third entry in the array, which is a map,
+and finds the value denoted by key hello. This in turn is another
+record, so takes field D.
+
+If a mapping does not resolve to a valid entry in the Avro record, null
+is returned.
+
+
 ### Avro Hadoop Parser
 
 This is for batch ingestion using the HadoopDruidIndexer. The `inputFormat` of `inputSpec` in `ioConfig` must be set to `"io.druid.data.input.avro.AvroValueInputFormat"`. You may want to set Avro reader's schema in `jobProperties` in `tuningConfig`, eg: `"avro.schema.path.input.value": "/path/to/your/schema.avsc"` or `"avro.schema.input.value": "your_schema_JSON_object"`, if reader's schema is not set, the schema in Avro object container file will be used, see [Avro specification](http://avro.apache.org/docs/1.7.7/spec.html#Schema+Resolution). Make sure to include "io.druid.extensions:druid-avro-extensions" as an extension.
@@ -159,6 +201,7 @@ This is for batch ingestion using the HadoopDruidIndexer. The `inputFormat` of `
 | type | String | This should say `avro_hadoop`. | no |
 | parseSpec | JSON Object | Specifies the format of the data. | yes |
 | fromPigAvroStorage | Boolean | Specifies whether the data file is stored using AvroStorage. | no(default == false) |
+| schemaMappings | JSON Object | Specifies a mapping from field names found within the parseSpec to data within a complex avro structure. | no |
 
 For example, using Avro Hadoop parser with custom reader's schema file:
 
@@ -170,6 +213,7 @@ For example, using Avro Hadoop parser with custom reader's schema file:
       "dataSource" : "",
       "parser" : {
         "type" : "avro_hadoop",
+        "schemaMappings" : <avro_schema_mapping>,
         "parseSpec" : <standard_druid_parseSpec>
       }
     },
