@@ -59,7 +59,8 @@ public class DatasourceInputSplitTest
                 ),
                 interval
             )
-        )
+        ),
+        new String[] { "server1", "server2", "server3"}
     );
 
     ByteArrayDataOutput out = ByteStreams.newDataOutput();
@@ -70,6 +71,7 @@ public class DatasourceInputSplitTest
     actual.readFields(in);
 
     Assert.assertEquals(expected.getSegments(), actual.getSegments());
+    Assert.assertArrayEquals(expected.getLocations(), actual.getLocations());
     Assert.assertEquals(12334, actual.getLength());
   }
 }

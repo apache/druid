@@ -19,13 +19,24 @@
 
 package io.druid.indexer.hadoop;
 
+import com.google.api.client.util.Maps;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
+import io.druid.indexer.JobHelper;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.BlockLocation;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.mapred.InputFormat;
+import org.apache.hadoop.mapred.JobConf;
+import org.apache.hadoop.mapred.TextInputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.easymock.EasyMock;
@@ -34,13 +45,17 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /**
  */
 public class DatasourceInputFormatTest
 {
   private List<WindowedDataSegment> segments;
+  private List<LocatedFileStatus> locations;
   private Configuration config;
   private JobContext context;
 
@@ -98,6 +113,36 @@ public class DatasourceInputFormatTest
         )
     );
 
+    Path path1 = new Path(JobHelper.getURIFromSegment(segments.get(0).getSegment()));
+    Path path2 = new Path(JobHelper.getURIFromSegment(segments.get(1).getSegment()));
+    Path path3 = new Path(JobHelper.getURIFromSegment(segments.get(2).getSegment()));
+
+    // dummy locations for test
+    locations = ImmutableList.of(
+        new LocatedFileStatus(
+            1000, false, 0, 0, 0, 0, null, null, null, null, path1,
+            new BlockLocation[]{
+                new BlockLocation(null, new String[]{"s1", "s2"}, 0, 600),
+                new BlockLocation(null, new String[]{"s2", "s3"}, 600, 400)
+            }
+        ),
+        new LocatedFileStatus(
+            4000, false, 0, 0, 0, 0, null, null, null, null, path2,
+            new BlockLocation[]{
+                new BlockLocation(null, new String[]{"s1", "s2"}, 0, 1000),
+                new BlockLocation(null, new String[]{"s1", "s3"}, 1000, 1200),
+                new BlockLocation(null, new String[]{"s2", "s3"}, 2200, 1100),
+                new BlockLocation(null, new String[]{"s1", "s2"}, 3300, 700),
+            }
+        ),
+        new LocatedFileStatus(
+            500, false, 0, 0, 0, 0, null, null, null, null, path3,
+            new BlockLocation[]{
+                new BlockLocation(null, new String[]{"s2", "s3"}, 0, 500)
+            }
+        )
+    );
+
     config = new Configuration();
     config.set(
         DatasourceInputFormat.CONF_INPUT_SEGMENTS,
@@ -109,35 +154,75 @@ public class DatasourceInputFormatTest
     EasyMock.replay(context);
   }
 
+  private Supplier<InputFormat> testFormatter = new Supplier<InputFormat>() {
+    @Override
+    public InputFormat get()
+    {
+      final Map<String, LocatedFileStatus> locationMap = Maps.newHashMap();
+      for (LocatedFileStatus status : locations) {
+        locationMap.put(status.getPath().getName(), status);
+      }
+
+      return new TextInputFormat()
+      {
+        @Override
+        protected boolean isSplitable(FileSystem fs, Path file) {
+          return false;
+        }
+
+        @Override
+        protected FileStatus[] listStatus(JobConf job) throws IOException
+        {
+          Path[] dirs = getInputPaths(job);
+          if (dirs.length == 0) {
+            throw new IOException("No input paths specified in job");
+          }
+          FileStatus[] status = new FileStatus[dirs.length];
+          for (int i = 0; i < dirs.length; i++) {
+            status[i] = locationMap.get(dirs[i].getName());
+          }
+          return status;
+        }
+      };
+    }
+  };
+
   @Test
   public void testGetSplitsNoCombining() throws Exception
   {
-    List<InputSplit> splits = new DatasourceInputFormat().getSplits(context);
+    DatasourceInputFormat inputFormat = new DatasourceInputFormat().setSupplier(testFormatter);
+    List<InputSplit> splits = inputFormat.getSplits(context);
 
     Assert.assertEquals(segments.size(), splits.size());
     for (int i = 0; i < segments.size(); i++) {
-      Assert.assertEquals(segments.get(i), ((DatasourceInputSplit) splits.get(i)).getSegments().get(0));
+      DatasourceInputSplit split = (DatasourceInputSplit) splits.get(i);
+      Assert.assertEquals(segments.get(i), split.getSegments().get(0));
     }
+    Assert.assertArrayEquals(new String[] {"s1", "s2"}, splits.get(0).getLocations());
+    Assert.assertArrayEquals(new String[] {"s1", "s2"}, splits.get(1).getLocations());
+    Assert.assertArrayEquals(new String[] {"s2", "s3"}, splits.get(2).getLocations());
   }
 
   @Test
   public void testGetSplitsAllCombined() throws Exception
   {
     config.set(DatasourceInputFormat.CONF_MAX_SPLIT_SIZE, "999999");
-    List<InputSplit> splits = new DatasourceInputFormat().getSplits(context);
+    List<InputSplit> splits = new DatasourceInputFormat().setSupplier(testFormatter).getSplits(context);
 
     Assert.assertEquals(1, splits.size());
     Assert.assertEquals(
         Sets.newHashSet(segments),
         Sets.newHashSet((((DatasourceInputSplit) splits.get(0)).getSegments()))
     );
+
+    Assert.assertArrayEquals(new String[]{"s2", "s1", "s3"}, splits.get(0).getLocations());
   }
 
   @Test
   public void testGetSplitsCombineInTwo() throws Exception
   {
     config.set(DatasourceInputFormat.CONF_MAX_SPLIT_SIZE, "6");
-    List<InputSplit> splits = new DatasourceInputFormat().getSplits(context);
+    List<InputSplit> splits = new DatasourceInputFormat().setSupplier(testFormatter).getSplits(context);
 
     Assert.assertEquals(2, splits.size());
 
@@ -145,11 +230,13 @@ public class DatasourceInputFormatTest
         Sets.newHashSet(segments.get(0), segments.get(2)),
         Sets.newHashSet((((DatasourceInputSplit) splits.get(0)).getSegments()))
     );
+    Assert.assertArrayEquals(new String[]{"s2", "s1", "s3"}, splits.get(0).getLocations());
 
     Assert.assertEquals(
         Sets.newHashSet(segments.get(1)),
         Sets.newHashSet((((DatasourceInputSplit) splits.get(1)).getSegments()))
     );
+    Assert.assertArrayEquals(new String[]{"s1", "s2"}, splits.get(1).getLocations());
   }
 
   @Test

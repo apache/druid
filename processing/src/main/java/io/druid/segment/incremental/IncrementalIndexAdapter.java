@@ -156,45 +156,50 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   public Indexed<String> getDimValueLookup(String dimension)
   {
     final IncrementalIndex.DimDim dimDim = index.getDimensionValues(dimension);
-    if (hasNullValueDimensions.contains(dimension)
-        && !dimDim.contains(null))
-    {
-      dimDim.add(null);
+
+    if (dimDim != null) {
+      if (hasNullValueDimensions.contains(dimension)
+          && !dimDim.contains(null))
+      {
+        dimDim.add(null);
+      }
+      dimDim.sort();
+
+      return new Indexed<String>()
+      {
+        @Override
+        public Class<? extends String> getClazz()
+        {
+          return String.class;
+        }
+
+        @Override
+        public int size()
+        {
+          return dimDim.size();
+        }
+
+        @Override
+        public String get(int index)
+        {
+          return dimDim.getSortedValue(index);
+        }
+
+        @Override
+        public int indexOf(String value)
+        {
+          return dimDim.getSortedId(value);
+        }
+
+        @Override
+        public Iterator<String> iterator()
+        {
+          return IndexedIterable.create(this).iterator();
+        }
+      };
+    } else {
+      return null;
     }
-    dimDim.sort();
-
-    return new Indexed<String>()
-    {
-      @Override
-      public Class<? extends String> getClazz()
-      {
-        return String.class;
-      }
-
-      @Override
-      public int size()
-      {
-        return dimDim.size();
-      }
-
-      @Override
-      public String get(int index)
-      {
-        return dimDim.getSortedValue(index);
-      }
-
-      @Override
-      public int indexOf(String value)
-      {
-        return dimDim.getSortedId(value);
-      }
-
-      @Override
-      public Iterator<String> iterator()
-      {
-        return IndexedIterable.create(this).iterator();
-      }
-    };
   }
 
   @Override
