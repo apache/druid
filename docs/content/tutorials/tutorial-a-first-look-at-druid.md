@@ -12,9 +12,9 @@ About the data
 
 The data source we'll be working with is Wikipedia edits. Each time an edit is made in Wikipedia, an event gets pushed to an IRC channel associated with the language of the Wikipedia page. We scrape IRC channels for several different languages and load this data into Druid.
 
-Each event has a timestamp indicating the time of the edit (in UTC time), a list of dimensions indicating various metadata about the event (such as information about the user editing the page and where the user is a bot), and a list of metrics associated with the event (such as the number of characters added and deleted).
+Each event has a timestamp indicating the time of the edit (in UTC time), a list of dimensions indicating various metadata about the event (such as information about the user editing the page and whether the user is a bot), and a list of metrics associated with the event (such as the number of characters added and deleted).
 
-Specifically. the data schema looks like so:
+Specifically. the data schema looks like this:
 
 Dimensions (things to filter on):
 
@@ -53,7 +53,7 @@ We've built a tarball that contains everything you'll need. You'll find it [here
 
 ### Build From Source
 
-Follow the [Build From Source](../development/build.html) guide to build from source. Then grab the tarball from services/target/druid-<version>-bin.tar.gz.
+Follow the [Build From Source](../development/build.html) guide to build from source. Then grab the tarball from distribution/target/druid-<version>-bin.tar.gz.
 
 ### Unpack the Tarball
 
