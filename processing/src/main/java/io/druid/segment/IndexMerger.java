@@ -350,7 +350,6 @@ public class IndexMerger
                           }
                         }
                     )
-                    .concat(Arrays.<Iterable<String>>asList(new AggFactoryStringIndexed(metricAggs)))
             )
         ),
         new Function<String, String>()
@@ -362,14 +361,28 @@ public class IndexMerger
           }
         }
     );
-    if (mergedMetrics.size() != metricAggs.length) {
-      throw new IAE("Bad number of metrics[%d], expected [%d]", mergedMetrics.size(), metricAggs.length);
-    }
 
     final AggregatorFactory[] sortedMetricAggs = new AggregatorFactory[mergedMetrics.size()];
     for (int i = 0; i < metricAggs.length; i++) {
       AggregatorFactory metricAgg = metricAggs[i];
-      sortedMetricAggs[mergedMetrics.indexOf(metricAgg.getName())] = metricAgg;
+      int metricIndex = mergedMetrics.indexOf(metricAgg.getName());
+      /*
+        If metricIndex is negative, one of the metricAggs was not present in the union of metrics from the indices
+        we are merging
+       */
+      if (metricIndex > -1) {
+        sortedMetricAggs[metricIndex] = metricAgg;
+      }
+    }
+
+    /*
+      If there is nothing at sortedMetricAggs[i], then we did not have a metricAgg whose name matched the name
+      of the ith element of mergedMetrics. I.e. There was a metric in the indices to merge that we did not ask for.
+     */
+    for (int i = 0; i < sortedMetricAggs.length; i++) {
+      if (sortedMetricAggs[i] == null) {
+        throw new IAE("Indices to merge contained metric[%s], but requested metrics did not", mergedMetrics.get(i));
+      }
     }
 
     for (int i = 0; i < mergedMetrics.size(); i++) {
@@ -377,7 +390,7 @@ public class IndexMerger
         throw new IAE(
             "Metric mismatch, index[%d] [%s] != [%s]",
             i,
-            metricAggs[i].getName(),
+            sortedMetricAggs[i].getName(),
             mergedMetrics.get(i)
         );
       }
