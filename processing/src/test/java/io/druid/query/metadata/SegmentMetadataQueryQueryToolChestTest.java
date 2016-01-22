@@ -23,9 +23,15 @@ package io.druid.query.metadata;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.CacheStrategy;
 import io.druid.query.TableDataSource;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
+import io.druid.query.aggregation.DoubleSumAggregatorFactory;
+import io.druid.query.aggregation.LongMaxAggregatorFactory;
+import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.metadata.metadata.ColumnAnalysis;
 import io.druid.query.metadata.metadata.SegmentAnalysis;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
@@ -35,19 +41,22 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Map;
+
 public class SegmentMetadataQueryQueryToolChestTest
 {
   @Test
   public void testCacheStrategy() throws Exception
   {
     SegmentMetadataQuery query = new SegmentMetadataQuery(
-      new TableDataSource("dummy"),
-      QuerySegmentSpecs.create("2015-01-01/2015-01-02"),
-      null,
-      null,
-      null,
-      null,
-      false
+        new TableDataSource("dummy"),
+        QuerySegmentSpecs.create("2015-01-01/2015-01-02"),
+        null,
+        null,
+        null,
+        null,
+        false,
+        false
     );
 
     CacheStrategy<SegmentAnalysis, SegmentAnalysis, SegmentMetadataQuery> strategy =
@@ -73,7 +82,8 @@ public class SegmentMetadataQueryQueryToolChestTest
                 null
             )
         ), 71982,
-        100
+        100,
+        null
     );
 
     Object preparedValue = strategy.prepareForCache().apply(result);
@@ -87,5 +97,163 @@ public class SegmentMetadataQueryQueryToolChestTest
     SegmentAnalysis fromCacheResult = strategy.pullFromCache().apply(fromCacheValue);
 
     Assert.assertEquals(result, fromCacheResult);
+  }
+
+  @Test
+  public void testMergeAggregators()
+  {
+    final SegmentAnalysis analysis1 = new SegmentAnalysis(
+        "id",
+        null,
+        Maps.<String, ColumnAnalysis>newHashMap(),
+        0,
+        0,
+        ImmutableMap.of(
+            "foo", new LongSumAggregatorFactory("foo", "foo"),
+            "baz", new DoubleSumAggregatorFactory("baz", "baz")
+        )
+    );
+    final SegmentAnalysis analysis2 = new SegmentAnalysis(
+        "id",
+        null,
+        Maps.<String, ColumnAnalysis>newHashMap(),
+        0,
+        0,
+        ImmutableMap.of(
+            "foo", new LongSumAggregatorFactory("foo", "foo"),
+            "bar", new DoubleSumAggregatorFactory("bar", "bar")
+        )
+    );
+
+    Assert.assertEquals(
+        ImmutableMap.of(
+            "foo", new LongSumAggregatorFactory("foo", "foo"),
+            "bar", new DoubleSumAggregatorFactory("bar", "bar"),
+            "baz", new DoubleSumAggregatorFactory("baz", "baz")
+        ),
+        mergeStrict(analysis1, analysis2).getAggregators()
+    );
+    Assert.assertEquals(
+        ImmutableMap.of(
+            "foo", new LongSumAggregatorFactory("foo", "foo"),
+            "bar", new DoubleSumAggregatorFactory("bar", "bar"),
+            "baz", new DoubleSumAggregatorFactory("baz", "baz")
+        ),
+        mergeLenient(analysis1, analysis2).getAggregators()
+    );
+  }
+
+  @Test
+  public void testMergeAggregatorsOneNull()
+  {
+    final SegmentAnalysis analysis1 = new SegmentAnalysis(
+        "id",
+        null,
+        Maps.<String, ColumnAnalysis>newHashMap(),
+        0,
+        0,
+        null
+    );
+    final SegmentAnalysis analysis2 = new SegmentAnalysis(
+        "id",
+        null,
+        Maps.<String, ColumnAnalysis>newHashMap(),
+        0,
+        0,
+        ImmutableMap.of(
+            "foo", new LongSumAggregatorFactory("foo", "foo"),
+            "bar", new DoubleSumAggregatorFactory("bar", "bar")
+        )
+    );
+
+    Assert.assertNull(mergeStrict(analysis1, analysis2).getAggregators());
+    Assert.assertEquals(
+        ImmutableMap.of(
+            "foo", new LongSumAggregatorFactory("foo", "foo"),
+            "bar", new DoubleSumAggregatorFactory("bar", "bar")
+        ),
+        mergeLenient(analysis1, analysis2).getAggregators()
+    );
+  }
+
+  @Test
+  public void testMergeAggregatorsAllNull()
+  {
+    final SegmentAnalysis analysis1 = new SegmentAnalysis(
+        "id",
+        null,
+        Maps.<String, ColumnAnalysis>newHashMap(),
+        0,
+        0,
+        null
+    );
+    final SegmentAnalysis analysis2 = new SegmentAnalysis(
+        "id",
+        null,
+        Maps.<String, ColumnAnalysis>newHashMap(),
+        0,
+        0,
+        null
+    );
+
+    Assert.assertNull(mergeStrict(analysis1, analysis2).getAggregators());
+    Assert.assertNull(mergeLenient(analysis1, analysis2).getAggregators());
+  }
+
+  @Test
+  public void testMergeAggregatorsConflict()
+  {
+    final SegmentAnalysis analysis1 = new SegmentAnalysis(
+        "id",
+        null,
+        Maps.<String, ColumnAnalysis>newHashMap(),
+        0,
+        0,
+        ImmutableMap.of(
+            "foo", new LongSumAggregatorFactory("foo", "foo"),
+            "bar", new DoubleSumAggregatorFactory("bar", "bar")
+        )
+    );
+    final SegmentAnalysis analysis2 = new SegmentAnalysis(
+        "id",
+        null,
+        Maps.<String, ColumnAnalysis>newHashMap(),
+        0,
+        0,
+        ImmutableMap.of(
+            "foo", new LongSumAggregatorFactory("foo", "foo"),
+            "bar", new DoubleMaxAggregatorFactory("bar", "bar"),
+            "baz", new LongMaxAggregatorFactory("baz", "baz")
+        )
+    );
+
+    final Map<String, AggregatorFactory> expectedLenient = Maps.newHashMap();
+    expectedLenient.put("foo", new LongSumAggregatorFactory("foo", "foo"));
+    expectedLenient.put("bar", null);
+    expectedLenient.put("baz", new LongMaxAggregatorFactory("baz", "baz"));
+    Assert.assertNull(mergeStrict(analysis1, analysis2).getAggregators());
+    Assert.assertEquals(expectedLenient, mergeLenient(analysis1, analysis2).getAggregators());
+  }
+
+  private static SegmentAnalysis mergeStrict(SegmentAnalysis analysis1, SegmentAnalysis analysis2)
+  {
+    return SegmentMetadataQueryQueryToolChest.finalizeAnalysis(
+        SegmentMetadataQueryQueryToolChest.mergeAnalyses(
+            analysis1,
+            analysis2,
+            false
+        )
+    );
+  }
+
+  private static SegmentAnalysis mergeLenient(SegmentAnalysis analysis1, SegmentAnalysis analysis2)
+  {
+    return SegmentMetadataQueryQueryToolChest.finalizeAnalysis(
+        SegmentMetadataQueryQueryToolChest.mergeAnalyses(
+            analysis1,
+            analysis2,
+            true
+        )
+    );
   }
 }

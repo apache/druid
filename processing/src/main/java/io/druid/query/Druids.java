@@ -938,6 +938,7 @@ public class Druids
     private ColumnIncluderator toInclude;
     private EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes;
     private Boolean merge;
+    private Boolean lenientAggregatorMerge;
     private Map<String, Object> context;
 
     public SegmentMetadataQueryBuilder()
@@ -948,6 +949,7 @@ public class Druids
       analysisTypes = null;
       merge = null;
       context = null;
+      lenientAggregatorMerge = null;
     }
 
     public SegmentMetadataQuery build()
@@ -959,7 +961,8 @@ public class Druids
           merge,
           context,
           analysisTypes,
-          false
+          false,
+          lenientAggregatorMerge
       );
     }
 
@@ -975,6 +978,7 @@ public class Druids
           .toInclude(toInclude)
           .analysisTypes(analysisTypesArray)
           .merge(merge)
+          .lenientAggregatorMerge(lenientAggregatorMerge)
           .context(builder.context);
     }
 
@@ -1029,6 +1033,12 @@ public class Druids
     public SegmentMetadataQueryBuilder merge(boolean merge)
     {
       this.merge = merge;
+      return this;
+    }
+
+    public SegmentMetadataQueryBuilder lenientAggregatorMerge(boolean lenientAggregatorMerge)
+    {
+      this.lenientAggregatorMerge = lenientAggregatorMerge;
       return this;
     }
 
