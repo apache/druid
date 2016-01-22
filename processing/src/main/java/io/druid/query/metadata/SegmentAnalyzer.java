@@ -22,28 +22,29 @@ package io.druid.query.metadata;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
 import com.metamx.common.StringUtils;
 import com.metamx.common.logger.Logger;
 import io.druid.query.metadata.metadata.ColumnAnalysis;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.segment.QueryableIndex;
+import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ComplexColumn;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.Indexed;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
 
-import java.util.Collections;
+import javax.annotation.Nullable;
 import java.util.EnumSet;
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 public class SegmentAnalyzer
 {
@@ -59,33 +60,54 @@ public class SegmentAnalyzer
    */
   private static final int NUM_BYTES_IN_TEXT_FLOAT = 8;
 
-  public Map<String, ColumnAnalysis> analyze(
-      QueryableIndex index,
-      EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes
-  )
+  private final EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes;
+
+  public SegmentAnalyzer(EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes)
   {
-    Preconditions.checkNotNull(index, "Index cannot be null");
+    this.analysisTypes = analysisTypes;
+  }
+
+  public int numRows(Segment segment)
+  {
+    return Preconditions.checkNotNull(segment, "segment").asStorageAdapter().getNumRows();
+  }
+
+  public Map<String, ColumnAnalysis> analyze(Segment segment)
+  {
+    Preconditions.checkNotNull(segment, "segment");
+
+    // index is null for incremental-index-based segments, but storageAdapter is always available
+    final QueryableIndex index = segment.asQueryableIndex();
+    final StorageAdapter storageAdapter = segment.asStorageAdapter();
+
+    // get length and column names from storageAdapter
+    final int length = storageAdapter.getNumRows();
+    final Set<String> columnNames = Sets.newHashSet();
+    Iterables.addAll(columnNames, storageAdapter.getAvailableDimensions());
+    Iterables.addAll(columnNames, storageAdapter.getAvailableMetrics());
 
     Map<String, ColumnAnalysis> columns = Maps.newTreeMap();
 
-    for (String columnName : index.getColumnNames()) {
-      final Column column = index.getColumn(columnName);
-      final ColumnCapabilities capabilities = column.getCapabilities();
+    for (String columnName : columnNames) {
+      final Column column = index == null ? null : index.getColumn(columnName);
+      final ColumnCapabilities capabilities = column != null
+                                              ? column.getCapabilities()
+                                              : storageAdapter.getColumnCapabilities(columnName);
 
       final ColumnAnalysis analysis;
       final ValueType type = capabilities.getType();
       switch (type) {
         case LONG:
-          analysis = analyzeLongColumn(column, analysisTypes);
+          analysis = analyzeNumericColumn(capabilities, length, Longs.BYTES);
           break;
         case FLOAT:
-          analysis = analyzeFloatColumn(column, analysisTypes);
+          analysis = analyzeNumericColumn(capabilities, length, NUM_BYTES_IN_TEXT_FLOAT);
           break;
         case STRING:
-          analysis = analyzeStringColumn(column, analysisTypes);
+          analysis = analyzeStringColumn(capabilities, column, storageAdapter.getDimensionCardinality(columnName));
           break;
         case COMPLEX:
-          analysis = analyzeComplexColumn(column, analysisTypes);
+          analysis = analyzeComplexColumn(capabilities, column, storageAdapter.getColumnTypeName(columnName));
           break;
         default:
           log.warn("Unknown column type[%s].", type);
@@ -95,201 +117,122 @@ public class SegmentAnalyzer
       columns.put(columnName, analysis);
     }
 
+    // Add time column too
+    ColumnCapabilities timeCapabilities = storageAdapter.getColumnCapabilities(Column.TIME_COLUMN_NAME);
+    if (timeCapabilities == null) {
+      timeCapabilities = new ColumnCapabilitiesImpl().setType(ValueType.LONG).setHasMultipleValues(false);
+    }
     columns.put(
         Column.TIME_COLUMN_NAME,
-        lengthBasedAnalysis(index.getColumn(Column.TIME_COLUMN_NAME), NUM_BYTES_IN_TIMESTAMP, analysisTypes)
+        analyzeNumericColumn(timeCapabilities, length, NUM_BYTES_IN_TIMESTAMP)
     );
 
     return columns;
   }
 
-  public Map<String, ColumnAnalysis> analyze(
-      StorageAdapter adapter,
-      EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes
+  public boolean analyzingSize()
+  {
+    return analysisTypes.contains(SegmentMetadataQuery.AnalysisType.SIZE);
+  }
+
+  public boolean analyzingCardinality()
+  {
+    return analysisTypes.contains(SegmentMetadataQuery.AnalysisType.CARDINALITY);
+  }
+
+  private ColumnAnalysis analyzeNumericColumn(
+      final ColumnCapabilities capabilities,
+      final int length,
+      final int sizePerRow
   )
   {
-    Preconditions.checkNotNull(adapter, "Adapter cannot be null");
-    Map<String, ColumnAnalysis> columns = Maps.newTreeMap();
-    List<String> columnNames = getStorageAdapterColumnNames(adapter);
-
-    int numRows = adapter.getNumRows();
-    for (String columnName : columnNames) {
-      final ColumnCapabilities capabilities = adapter.getColumnCapabilities(columnName);
-      final ColumnAnalysis analysis;
-
-      /**
-       * StorageAdapter doesn't provide a way to get column values, so size is
-       * not calculated for STRING and COMPLEX columns.
-       */
-      ValueType capType = capabilities.getType();
-      switch (capType) {
-        case LONG:
-          analysis = lengthBasedAnalysisForAdapter(
-              analysisTypes,
-              capType.name(), capabilities,
-              numRows, Longs.BYTES
-          );
-          break;
-        case FLOAT:
-          analysis = lengthBasedAnalysisForAdapter(
-              analysisTypes,
-              capType.name(), capabilities,
-              numRows, NUM_BYTES_IN_TEXT_FLOAT
-          );
-          break;
-        case STRING:
-          analysis = new ColumnAnalysis(
-              capType.name(),
-              0,
-              analysisHasCardinality(analysisTypes) ? adapter.getDimensionCardinality(columnName) : 0,
-              null
-          );
-          break;
-        case COMPLEX:
-          analysis = new ColumnAnalysis(
-              capType.name(),
-              0,
-              null,
-              null
-          );
-          break;
-        default:
-          log.warn("Unknown column type[%s].", capType);
-          analysis = ColumnAnalysis.error(String.format("unknown_type_%s", capType));
-      }
-
-      columns.put(columnName, analysis);
-    }
-
-    columns.put(
-        Column.TIME_COLUMN_NAME,
-        lengthBasedAnalysisForAdapter(analysisTypes, ValueType.LONG.name(), null, numRows, NUM_BYTES_IN_TIMESTAMP)
-    );
-
-    return columns;
-  }
-
-
-  public ColumnAnalysis analyzeLongColumn(Column column, EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes)
-  {
-    return lengthBasedAnalysis(column, Longs.BYTES, analysisTypes);
-  }
-
-  public ColumnAnalysis analyzeFloatColumn(Column column, EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes)
-  {
-    return lengthBasedAnalysis(column, NUM_BYTES_IN_TEXT_FLOAT, analysisTypes);
-  }
-
-  private ColumnAnalysis lengthBasedAnalysis(
-      Column column,
-      final int numBytes,
-      EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes
-  )
-  {
-    final ColumnCapabilities capabilities = column.getCapabilities();
-    if (capabilities.hasMultipleValues()) {
-      return ColumnAnalysis.error("multi_value");
-    }
-
-    int size = 0;
-    if (analysisHasSize(analysisTypes)) {
-      size = column.getLength() * numBytes;
-    }
-
-    return new ColumnAnalysis(capabilities.getType().name(), size, null, null);
-  }
-
-  public ColumnAnalysis analyzeStringColumn(Column column, EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes)
-  {
-    final ColumnCapabilities capabilities = column.getCapabilities();
-
-    if (capabilities.hasBitmapIndexes()) {
-      final BitmapIndex bitmapIndex = column.getBitmapIndex();
-
-      int cardinality = bitmapIndex.getCardinality();
-      long size = 0;
-
-      if (analysisHasSize(analysisTypes)) {
-        for (int i = 0; i < cardinality; ++i) {
-          String value = bitmapIndex.getValue(i);
-          if (value != null) {
-            size += StringUtils.toUtf8(value).length * bitmapIndex.getBitmap(value).size();
-          }
-        }
-      }
-
-      return new ColumnAnalysis(
-          capabilities.getType().name(),
-          size,
-          analysisHasCardinality(analysisTypes) ? cardinality : 0,
-          null
-      );
-    }
-
-    return ColumnAnalysis.error("string_no_bitmap");
-  }
-
-  public ColumnAnalysis analyzeComplexColumn(Column column, EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes)
-  {
-    final ColumnCapabilities capabilities = column.getCapabilities();
-    final ComplexColumn complexColumn = column.getComplexColumn();
-
-    final String typeName = complexColumn.getTypeName();
-    final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
-    if (serde == null) {
-      return ColumnAnalysis.error(String.format("unknown_complex_%s", typeName));
-    }
-
-    final Function<Object, Long> inputSizeFn = serde.inputSizeFn();
-    if (inputSizeFn == null) {
-      return new ColumnAnalysis(typeName, 0, null, null);
-    }
-
-    final int length = column.getLength();
     long size = 0;
-    if (analysisHasSize(analysisTypes)) {
-      for (int i = 0; i < length; ++i) {
-        size += inputSizeFn.apply(complexColumn.getRowValue(i));
+
+    if (analyzingSize()) {
+      if (capabilities.hasMultipleValues()) {
+        return ColumnAnalysis.error("multi_value");
       }
+
+      size = ((long) length) * sizePerRow;
     }
 
-    return new ColumnAnalysis(typeName, size, null, null);
-  }
-
-  private List<String> getStorageAdapterColumnNames(StorageAdapter adapter)
-  {
-    Indexed<String> dims = adapter.getAvailableDimensions();
-    Iterable<String> metrics = adapter.getAvailableMetrics();
-    Iterable<String> columnNames = Iterables.concat(dims, metrics);
-    List<String> sortedColumnNames = Lists.newArrayList(columnNames);
-    Collections.sort(sortedColumnNames);
-    return sortedColumnNames;
-  }
-
-  private ColumnAnalysis lengthBasedAnalysisForAdapter(
-      EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes,
-      String type, ColumnCapabilities capabilities,
-      int numRows, final int numBytes
-  )
-  {
-    if (capabilities != null && capabilities.hasMultipleValues()) {
-      return ColumnAnalysis.error("multi_value");
-    }
     return new ColumnAnalysis(
-        type,
-        analysisHasSize(analysisTypes) ? numRows * numBytes : 0,
+        capabilities.getType().name(),
+        capabilities.hasMultipleValues(),
+        size,
         null,
         null
     );
   }
 
-  private boolean analysisHasSize(EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes)
+  private ColumnAnalysis analyzeStringColumn(
+      final ColumnCapabilities capabilities,
+      @Nullable final Column column,
+      final int cardinality
+  )
   {
-    return analysisTypes.contains(SegmentMetadataQuery.AnalysisType.SIZE);
+    long size = 0;
+
+    if (column != null && analyzingSize()) {
+      if (!capabilities.hasBitmapIndexes()) {
+        return ColumnAnalysis.error("string_no_bitmap");
+      }
+
+      final BitmapIndex bitmapIndex = column.getBitmapIndex();
+      if (cardinality != bitmapIndex.getCardinality()) {
+        return ColumnAnalysis.error("bitmap_wrong_cardinality");
+      }
+
+      for (int i = 0; i < cardinality; ++i) {
+        String value = bitmapIndex.getValue(i);
+        if (value != null) {
+          size += StringUtils.toUtf8(value).length * bitmapIndex.getBitmap(value).size();
+        }
+      }
+    }
+
+    return new ColumnAnalysis(
+        capabilities.getType().name(),
+        capabilities.hasMultipleValues(),
+        size,
+        analyzingCardinality() ? cardinality : 0,
+        null
+    );
   }
 
-  private boolean analysisHasCardinality(EnumSet<SegmentMetadataQuery.AnalysisType> analysisTypes)
+  private ColumnAnalysis analyzeComplexColumn(
+      @Nullable final ColumnCapabilities capabilities,
+      @Nullable final Column column,
+      final String typeName
+  )
   {
-    return analysisTypes.contains(SegmentMetadataQuery.AnalysisType.CARDINALITY);
+    final ComplexColumn complexColumn = column != null ? column.getComplexColumn() : null;
+    final boolean hasMultipleValues = capabilities != null && capabilities.hasMultipleValues();
+    long size = 0;
+
+    if (analyzingSize() && complexColumn != null) {
+      final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(typeName);
+      if (serde == null) {
+        return ColumnAnalysis.error(String.format("unknown_complex_%s", typeName));
+      }
+
+      final Function<Object, Long> inputSizeFn = serde.inputSizeFn();
+      if (inputSizeFn == null) {
+        return new ColumnAnalysis(typeName, hasMultipleValues, 0, null, null);
+      }
+
+      final int length = column.getLength();
+      for (int i = 0; i < length; ++i) {
+        size += inputSizeFn.apply(complexColumn.getRowValue(i));
+      }
+    }
+
+    return new ColumnAnalysis(
+        typeName,
+        hasMultipleValues,
+        size,
+        null,
+        null
+    );
   }
 }

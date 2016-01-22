@@ -22,18 +22,21 @@ package io.druid.query.metadata.metadata;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Objects;
+
 /**
-*/
+ */
 public class ColumnAnalysis
 {
   private static final String ERROR_PREFIX = "error:";
 
   public static ColumnAnalysis error(String reason)
   {
-    return new ColumnAnalysis("STRING", -1, null, ERROR_PREFIX + reason);
+    return new ColumnAnalysis("STRING", false, -1, null, ERROR_PREFIX + reason);
   }
 
   private final String type;
+  private final boolean hasMultipleValues;
   private final long size;
   private final Integer cardinality;
   private final String errorMessage;
@@ -41,12 +44,14 @@ public class ColumnAnalysis
   @JsonCreator
   public ColumnAnalysis(
       @JsonProperty("type") String type,
+      @JsonProperty("hasMultipleValues") boolean hasMultipleValues,
       @JsonProperty("size") long size,
       @JsonProperty("cardinality") Integer cardinality,
       @JsonProperty("errorMessage") String errorMessage
   )
   {
     this.type = type;
+    this.hasMultipleValues = hasMultipleValues;
     this.size = size;
     this.cardinality = cardinality;
     this.errorMessage = errorMessage;
@@ -56,6 +61,12 @@ public class ColumnAnalysis
   public String getType()
   {
     return type;
+  }
+
+  @JsonProperty
+  public boolean isHasMultipleValues()
+  {
+    return hasMultipleValues;
   }
 
   @JsonProperty
@@ -96,14 +107,19 @@ public class ColumnAnalysis
     if (cardinality == null) {
 
       cardinality = rhsCardinality;
-    }
-    else {
+    } else {
       if (rhsCardinality != null) {
         cardinality = Math.max(cardinality, rhsCardinality);
       }
     }
 
-    return new ColumnAnalysis(type, size + rhs.getSize(), cardinality, null);
+    return new ColumnAnalysis(
+        type,
+        hasMultipleValues || rhs.isHasMultipleValues(),
+        size + rhs.getSize(),
+        cardinality,
+        null
+    );
   }
 
   @Override
@@ -111,6 +127,7 @@ public class ColumnAnalysis
   {
     return "ColumnAnalysis{" +
            "type='" + type + '\'' +
+           ", hasMultipleValues=" + hasMultipleValues +
            ", size=" + size +
            ", cardinality=" + cardinality +
            ", errorMessage='" + errorMessage + '\'' +
@@ -126,29 +143,17 @@ public class ColumnAnalysis
     if (o == null || getClass() != o.getClass()) {
       return false;
     }
-
     ColumnAnalysis that = (ColumnAnalysis) o;
-
-    if (size != that.size) {
-      return false;
-    }
-    if (type != null ? !type.equals(that.type) : that.type != null) {
-      return false;
-    }
-    if (cardinality != null ? !cardinality.equals(that.cardinality) : that.cardinality != null) {
-      return false;
-    }
-    return !(errorMessage != null ? !errorMessage.equals(that.errorMessage) : that.errorMessage != null);
-
+    return hasMultipleValues == that.hasMultipleValues &&
+           size == that.size &&
+           Objects.equals(type, that.type) &&
+           Objects.equals(cardinality, that.cardinality) &&
+           Objects.equals(errorMessage, that.errorMessage);
   }
 
   @Override
   public int hashCode()
   {
-    int result = type != null ? type.hashCode() : 0;
-    result = 31 * result + (int) (size ^ (size >>> 32));
-    result = 31 * result + (cardinality != null ? cardinality.hashCode() : 0);
-    result = 31 * result + (errorMessage != null ? errorMessage.hashCode() : 0);
-    return result;
+    return Objects.hash(type, hasMultipleValues, size, cardinality, errorMessage);
   }
 }

@@ -43,6 +43,7 @@ import io.druid.query.metadata.metadata.ColumnAnalysis;
 import io.druid.query.metadata.metadata.ListColumnIncluderator;
 import io.druid.query.metadata.metadata.SegmentAnalysis;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
+import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.TestIndex;
@@ -51,27 +52,27 @@ import io.druid.timeline.LogicalSegment;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+@RunWith(Parameterized.class)
 public class SegmentMetadataQueryTest
 {
-  private final SegmentMetadataQueryRunnerFactory factory = new SegmentMetadataQueryRunnerFactory(
+  private static final SegmentMetadataQueryRunnerFactory FACTORY = new SegmentMetadataQueryRunnerFactory(
       new SegmentMetadataQueryQueryToolChest(new SegmentMetadataQueryConfig()),
       QueryRunnerTestHelper.NOOP_QUERYWATCHER
   );
+  private static final ObjectMapper MAPPER = new DefaultObjectMapper();
 
   @SuppressWarnings("unchecked")
-  private final QueryRunner runner = makeQueryRunner(factory);
-
-  private final ObjectMapper mapper = new DefaultObjectMapper();
-
-  @SuppressWarnings("unchecked")
-  public static QueryRunner makeQueryRunner(
+  public static QueryRunner makeMMappedQueryRunner(
       QueryRunnerFactory factory
   )
   {
@@ -81,15 +82,39 @@ public class SegmentMetadataQueryTest
     );
   }
 
+  @SuppressWarnings("unchecked")
+  public static QueryRunner makeIncrementalIndexQueryRunner(
+      QueryRunnerFactory factory
+  )
+  {
+    return QueryRunnerTestHelper.makeQueryRunner(
+        factory,
+        new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), QueryRunnerTestHelper.segmentId)
+    );
+  }
+
+  private final QueryRunner runner;
+  private final boolean usingMmappedSegment;
   private final SegmentMetadataQuery testQuery;
   private final SegmentAnalysis expectedSegmentAnalysis;
 
-  public SegmentMetadataQueryTest()
+  @Parameterized.Parameters(name = "runner = {1}")
+  public static Collection<Object[]> constructorFeeder()
   {
+    return ImmutableList.of(
+        new Object[]{makeMMappedQueryRunner(FACTORY), "mmap", true},
+        new Object[]{makeIncrementalIndexQueryRunner(FACTORY), "incremental", false}
+    );
+  }
+
+  public SegmentMetadataQueryTest(QueryRunner runner, String runnerName, boolean usingMmappedSegment)
+  {
+    this.runner = runner;
+    this.usingMmappedSegment = usingMmappedSegment;
     testQuery = Druids.newSegmentMetadataQueryBuilder()
                       .dataSource("testing")
                       .intervals("2013/2014")
-                      .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
+                      .toInclude(new ListColumnIncluderator(Arrays.asList("__time", "index", "placement")))
                       .analysisTypes(null)
                       .merge(true)
                       .build();
@@ -100,14 +125,31 @@ public class SegmentMetadataQueryTest
             new Interval("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z")
         ),
         ImmutableMap.of(
+            "__time",
+            new ColumnAnalysis(
+                ValueType.LONG.toString(),
+                false,
+                12090,
+                null,
+                null
+            ),
             "placement",
             new ColumnAnalysis(
                 ValueType.STRING.toString(),
-                10881,
+                false,
+                usingMmappedSegment ? 10881 : 0,
                 1,
                 null
+            ),
+            "index",
+            new ColumnAnalysis(
+                ValueType.FLOAT.toString(),
+                false,
+                9672,
+                null,
+                null
             )
-        ), 71982,
+        ), usingMmappedSegment ? 71982 : 32643,
         1209
     );
   }
@@ -125,31 +167,166 @@ public class SegmentMetadataQueryTest
   }
 
   @Test
+  public void testSegmentMetadataQueryWithHasMultipleValuesMerge()
+  {
+    SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
+        "merged",
+        null,
+        ImmutableMap.of(
+            "placement",
+            new ColumnAnalysis(
+                ValueType.STRING.toString(),
+                false,
+                0,
+                1,
+                null
+            ),
+            "placementish",
+            new ColumnAnalysis(
+                ValueType.STRING.toString(),
+                true,
+                0,
+                9,
+                null
+            )
+        ),
+        0,
+        expectedSegmentAnalysis.getNumRows() * 2
+    );
+
+    QueryToolChest toolChest = FACTORY.getToolchest();
+
+    QueryRunner singleSegmentQueryRunner = toolChest.preMergeQueryDecoration(runner);
+    ExecutorService exec = Executors.newCachedThreadPool();
+    QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
+        toolChest.mergeResults(
+            FACTORY.mergeRunners(
+                MoreExecutors.sameThreadExecutor(),
+                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(singleSegmentQueryRunner, singleSegmentQueryRunner)
+            )
+        ),
+        toolChest
+    );
+
+    TestHelper.assertExpectedObjects(
+        ImmutableList.of(mergedSegmentAnalysis),
+        myRunner.run(
+            Druids.newSegmentMetadataQueryBuilder()
+                  .dataSource("testing")
+                  .intervals("2013/2014")
+                  .toInclude(new ListColumnIncluderator(Arrays.asList("placement", "placementish")))
+                  .analysisTypes(SegmentMetadataQuery.AnalysisType.CARDINALITY)
+                  .merge(true)
+                  .build(),
+            Maps.newHashMap()
+        ),
+        "failed SegmentMetadata merging query"
+    );
+    exec.shutdownNow();
+  }
+
+  @Test
+  public void testSegmentMetadataQueryWithComplexColumnMerge()
+  {
+    SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
+        "merged",
+        null,
+        ImmutableMap.of(
+            "placement",
+            new ColumnAnalysis(
+                ValueType.STRING.toString(),
+                false,
+                0,
+                1,
+                null
+            ),
+            "quality_uniques",
+            new ColumnAnalysis(
+                "hyperUnique",
+                false,
+                0,
+                null,
+                null
+            )
+        ),
+        0,
+        expectedSegmentAnalysis.getNumRows() * 2
+    );
+
+    QueryToolChest toolChest = FACTORY.getToolchest();
+
+    QueryRunner singleSegmentQueryRunner = toolChest.preMergeQueryDecoration(runner);
+    ExecutorService exec = Executors.newCachedThreadPool();
+    QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
+        toolChest.mergeResults(
+            FACTORY.mergeRunners(
+                MoreExecutors.sameThreadExecutor(),
+                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(singleSegmentQueryRunner, singleSegmentQueryRunner)
+            )
+        ),
+        toolChest
+    );
+
+    TestHelper.assertExpectedObjects(
+        ImmutableList.of(mergedSegmentAnalysis),
+        myRunner.run(
+            Druids.newSegmentMetadataQueryBuilder()
+                  .dataSource("testing")
+                  .intervals("2013/2014")
+                  .toInclude(new ListColumnIncluderator(Arrays.asList("placement", "quality_uniques")))
+                  .analysisTypes(SegmentMetadataQuery.AnalysisType.CARDINALITY)
+                  .merge(true)
+                  .build(),
+            Maps.newHashMap()
+        ),
+        "failed SegmentMetadata merging query"
+    );
+    exec.shutdownNow();
+  }
+
+  @Test
   public void testSegmentMetadataQueryWithDefaultAnalysisMerge()
   {
     SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
         "merged",
         ImmutableList.of(expectedSegmentAnalysis.getIntervals().get(0)),
         ImmutableMap.of(
+            "__time",
+            new ColumnAnalysis(
+                ValueType.LONG.toString(),
+                false,
+                12090 * 2,
+                null,
+                null
+            ),
             "placement",
             new ColumnAnalysis(
                 ValueType.STRING.toString(),
-                21762,
+                false,
+                usingMmappedSegment ? 21762 : 0,
                 1,
+                null
+            ),
+            "index",
+            new ColumnAnalysis(
+                ValueType.FLOAT.toString(),
+                false,
+                9672 * 2,
+                null,
                 null
             )
         ),
-        expectedSegmentAnalysis.getSize()*2,
-        expectedSegmentAnalysis.getNumRows()*2
+        expectedSegmentAnalysis.getSize() * 2,
+        expectedSegmentAnalysis.getNumRows() * 2
     );
 
-    QueryToolChest toolChest = factory.getToolchest();
+    QueryToolChest toolChest = FACTORY.getToolchest();
 
     QueryRunner singleSegmentQueryRunner = toolChest.preMergeQueryDecoration(runner);
     ExecutorService exec = Executors.newCachedThreadPool();
     QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
-            factory.mergeRunners(
+            FACTORY.mergeRunners(
                 MoreExecutors.sameThreadExecutor(),
                 Lists.<QueryRunner<SegmentAnalysis>>newArrayList(singleSegmentQueryRunner, singleSegmentQueryRunner)
             )
@@ -178,22 +355,23 @@ public class SegmentMetadataQueryTest
             "placement",
             new ColumnAnalysis(
                 ValueType.STRING.toString(),
+                false,
                 0,
                 0,
                 null
             )
         ),
         0,
-        expectedSegmentAnalysis.getNumRows()*2
+        expectedSegmentAnalysis.getNumRows() * 2
     );
 
-    QueryToolChest toolChest = factory.getToolchest();
+    QueryToolChest toolChest = FACTORY.getToolchest();
 
     QueryRunner singleSegmentQueryRunner = toolChest.preMergeQueryDecoration(runner);
     ExecutorService exec = Executors.newCachedThreadPool();
     QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
-            factory.mergeRunners(
+            FACTORY.mergeRunners(
                 MoreExecutors.sameThreadExecutor(),
                 Lists.<QueryRunner<SegmentAnalysis>>newArrayList(singleSegmentQueryRunner, singleSegmentQueryRunner)
             )
@@ -230,13 +408,13 @@ public class SegmentMetadataQueryTest
         )
     );
 
-    QueryToolChest toolChest = factory.getToolchest();
+    QueryToolChest toolChest = FACTORY.getToolchest();
 
     QueryRunner singleSegmentQueryRunner = toolChest.preMergeQueryDecoration(runner);
     ExecutorService exec = Executors.newCachedThreadPool();
     QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
-            factory.mergeRunners(
+            FACTORY.mergeRunners(
                 MoreExecutors.sameThreadExecutor(),
                 //Note: It is essential to have atleast 2 query runners merged to reproduce the regression bug described in
                 //https://github.com/druid-io/druid/pull/1172
@@ -273,14 +451,14 @@ public class SegmentMetadataQueryTest
         SegmentMetadataQuery.AnalysisType.SIZE
     );
 
-    Query query = mapper.readValue(queryStr, Query.class);
+    Query query = MAPPER.readValue(queryStr, Query.class);
     Assert.assertTrue(query instanceof SegmentMetadataQuery);
     Assert.assertEquals("test_ds", Iterables.getOnlyElement(query.getDataSource().getNames()));
     Assert.assertEquals(new Interval("2013-12-04T00:00:00.000Z/2013-12-05T00:00:00.000Z"), query.getIntervals().get(0));
     Assert.assertEquals(expectedAnalysisTypes, ((SegmentMetadataQuery) query).getAnalysisTypes());
 
     // test serialize and deserialize
-    Assert.assertEquals(query, mapper.readValue(mapper.writeValueAsString(query), Query.class));
+    Assert.assertEquals(query, MAPPER.readValue(MAPPER.writeValueAsString(query), Query.class));
   }
 
   @Test
@@ -290,14 +468,14 @@ public class SegmentMetadataQueryTest
                       + "  \"queryType\":\"segmentMetadata\",\n"
                       + "  \"dataSource\":\"test_ds\"\n"
                       + "}";
-    Query query = mapper.readValue(queryStr, Query.class);
+    Query query = MAPPER.readValue(queryStr, Query.class);
     Assert.assertTrue(query instanceof SegmentMetadataQuery);
     Assert.assertEquals("test_ds", Iterables.getOnlyElement(query.getDataSource().getNames()));
     Assert.assertEquals(new Interval(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT), query.getIntervals().get(0));
     Assert.assertTrue(((SegmentMetadataQuery) query).isUsingDefaultInterval());
 
     // test serialize and deserialize
-    Assert.assertEquals(query, mapper.readValue(mapper.writeValueAsString(query), Query.class));
+    Assert.assertEquals(query, MAPPER.readValue(MAPPER.writeValueAsString(query), Query.class));
   }
 
   @Test

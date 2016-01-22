@@ -39,19 +39,22 @@ The format of the result is:
   "id" : "some_id",
   "intervals" : [ "2013-05-13T00:00:00.000Z/2013-05-14T00:00:00.000Z" ],
   "columns" : {
-    "__time" : { "type" : "LONG", "size" : 407240380, "cardinality" : null },
-    "dim1" : { "type" : "STRING", "size" : 100000, "cardinality" : 1944 },
-    "dim2" : { "type" : "STRING", "size" : 100000, "cardinality" : 1504 },
-    "metric1" : { "type" : "FLOAT", "size" : 100000, "cardinality" : null }
+    "__time" : { "type" : "LONG", "hasMultipleValues" : false, "size" : 407240380, "cardinality" : null, "errorMessage" : null },
+    "dim1" : { "type" : "STRING", "hasMultipleValues" : false, "size" : 100000, "cardinality" : 1944, "errorMessage" : null },
+    "dim2" : { "type" : "STRING", "hasMultipleValues" : true, "size" : 100000, "cardinality" : 1504, "errorMessage" : null },
+    "metric1" : { "type" : "FLOAT", "hasMultipleValues" : false, "size" : 100000, "cardinality" : null, "errorMessage" : null }
   },
   "size" : 300000,
   "numRows" : 5000000
 } ]
 ```
 
-Dimension columns will have type `STRING`.  
+Dimension columns will have type `STRING`.
 Metric columns will have type `FLOAT` or `LONG` or name of the underlying complex type such as `hyperUnique` in case of COMPLEX metric.
 Timestamp column will have type `LONG`.
+
+If the `errorMessage` field is non-null, you should not trust the other fields in the response. Their contents are
+undefined.
 
 Only columns which are dimensions (ie, have type `STRING`) will have any cardinality. Rest of the columns (timestamp and metric columns) will show cardinality as `null`.
 

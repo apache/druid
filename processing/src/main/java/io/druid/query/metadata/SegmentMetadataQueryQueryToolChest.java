@@ -148,7 +148,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
             }
 
             List<Interval> newIntervals = null;
-            if (query.hasInterval()) {
+            if (query.analyzingInterval()) {
               //List returned by arg1.getIntervals() is immutable, so a new list needs to
               //be created.
               newIntervals = new ArrayList<>(arg1.getIntervals());

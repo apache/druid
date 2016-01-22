@@ -151,22 +151,12 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   }
 
   @JsonProperty
-  public EnumSet getAnalysisTypes()
+  public EnumSet<AnalysisType> getAnalysisTypes()
   {
     return analysisTypes;
   }
 
-  public boolean hasCardinality()
-  {
-    return analysisTypes.contains(AnalysisType.CARDINALITY);
-  }
-
-  public boolean hasSize()
-  {
-    return analysisTypes.contains(AnalysisType.SIZE);
-  }
-
-  public boolean hasInterval()
+  public boolean analyzingInterval()
   {
     return analysisTypes.contains(AnalysisType.INTERVAL);
   }
