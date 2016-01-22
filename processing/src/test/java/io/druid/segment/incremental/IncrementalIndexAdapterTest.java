@@ -22,7 +22,6 @@ package io.druid.segment.incremental;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.IndexableAdapter;
 import io.druid.segment.Rowboat;
-import io.druid.segment.column.BitmapIndexSeeker;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.data.IncrementalIndexTest;
@@ -30,8 +29,6 @@ import io.druid.segment.data.IndexedInts;
 
 import org.junit.Assert;
 import org.junit.Test;
-
-import com.metamx.common.ISE;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -45,7 +42,7 @@ public class IncrementalIndexAdapterTest
   );
 
   @Test
-  public void testGetBitmapIndexSeeker() throws Exception
+  public void testGetBitmapIndex() throws Exception
   {
     final long timestamp = System.currentTimeMillis();
     IncrementalIndex incrementalIndex = IncrementalIndexTest.createIndex(null);
@@ -55,24 +52,11 @@ public class IncrementalIndexAdapterTest
         incrementalIndex,
         INDEX_SPEC.getBitmapSerdeFactory().getBitmapFactory()
     );
-    BitmapIndexSeeker bitmapIndexSeeker = adapter.getBitmapIndexSeeker("dim1");
-    IndexedInts indexedInts0 = bitmapIndexSeeker.seek("0");
-    Assert.assertEquals(0, indexedInts0.size());
-    IndexedInts indexedInts1 = bitmapIndexSeeker.seek("1");
-    Assert.assertEquals(1, indexedInts1.size());
-    try {
-      bitmapIndexSeeker.seek("01");
-      Assert.assertFalse("Only support access in order", true);
+    String dimension = "dim1";
+    for (int i = 0; i < adapter.getDimValueLookup(dimension).size(); i++) {
+      IndexedInts indexedInts = adapter.getBitmapIndex(dimension, i);
+      Assert.assertEquals(1, indexedInts.size());
     }
-    catch (ISE ise) {
-      Assert.assertTrue("Only support access in order", true);
-    }
-    IndexedInts indexedInts2 = bitmapIndexSeeker.seek("2");
-    Assert.assertEquals(0, indexedInts2.size());
-    IndexedInts indexedInts3 = bitmapIndexSeeker.seek("3");
-    Assert.assertEquals(1, indexedInts3.size());
-    IndexedInts indexedInts4 = bitmapIndexSeeker.seek("4");
-    Assert.assertEquals(0, indexedInts4.size());
   }
 
   @Test
