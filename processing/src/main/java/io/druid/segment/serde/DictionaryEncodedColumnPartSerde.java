@@ -31,6 +31,7 @@ import io.druid.segment.CompressedVSizeIndexedV3Supplier;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.column.ValueType;
+import io.druid.segment.data.BitmapSerde;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.ByteBufferSerializer;
 import io.druid.segment.data.ByteBufferWriter;
@@ -93,7 +94,11 @@ public class DictionaryEncodedColumnPartSerde implements ColumnPartSerde
       @NotNull @JsonProperty("byteOrder") ByteOrder byteOrder
   )
   {
-    return new DictionaryEncodedColumnPartSerde(byteOrder, bitmapSerdeFactory, null);
+    return new DictionaryEncodedColumnPartSerde(
+        byteOrder,
+        bitmapSerdeFactory != null ? bitmapSerdeFactory : new BitmapSerde.LegacyBitmapSerdeFactory(),
+        null
+    );
   }
 
   private final ByteOrder byteOrder;
