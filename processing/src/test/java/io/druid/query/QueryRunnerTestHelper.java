@@ -310,15 +310,13 @@ public class QueryRunnerTestHelper
   )
       throws IOException
   {
-    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex(false);
+    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
     final QueryableIndex mMappedTestIndex = TestIndex.getMMappedTestIndex();
     final QueryableIndex mergedRealtimeIndex = TestIndex.mergedRealtimeIndex();
-    final IncrementalIndex rtIndexOffheap = TestIndex.getIncrementalTestIndex(true);
     return ImmutableList.of(
         makeQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId)),
         makeQueryRunner(factory, new QueryableIndexSegment(segmentId, mMappedTestIndex)),
-        makeQueryRunner(factory, new QueryableIndexSegment(segmentId, mergedRealtimeIndex)),
-        makeQueryRunner(factory, new IncrementalIndexSegment(rtIndexOffheap, segmentId))
+        makeQueryRunner(factory, new QueryableIndexSegment(segmentId, mergedRealtimeIndex))
     );
   }
 
@@ -329,10 +327,9 @@ public class QueryRunnerTestHelper
   )
       throws IOException
   {
-    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex(false);
+    final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
     final QueryableIndex mMappedTestIndex = TestIndex.getMMappedTestIndex();
     final QueryableIndex mergedRealtimeIndex = TestIndex.mergedRealtimeIndex();
-    final IncrementalIndex rtIndexOffheap = TestIndex.getIncrementalTestIndex(true);
 
     return Arrays.asList(
         makeUnionQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId)),
@@ -340,8 +337,7 @@ public class QueryRunnerTestHelper
         makeUnionQueryRunner(
             factory,
             new QueryableIndexSegment(segmentId, mergedRealtimeIndex)
-        ),
-        makeUnionQueryRunner(factory, new IncrementalIndexSegment(rtIndexOffheap, segmentId))
+        )
     );
   }
   /**

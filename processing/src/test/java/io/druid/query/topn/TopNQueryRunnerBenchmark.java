@@ -106,7 +106,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
         TestCases.rtIndex,
         QueryRunnerTestHelper.makeQueryRunner(
             factory,
-            new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(false), segmentId)
+            new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), segmentId)
         )
     );
     testCaseMap.put(
@@ -121,13 +121,6 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
         QueryRunnerTestHelper.makeQueryRunner(
             factory,
             new QueryableIndexSegment(segmentId, TestIndex.mergedRealtimeIndex())
-        )
-    );
-    testCaseMap.put(
-        TestCases.rtIndexOffheap,
-        QueryRunnerTestHelper.makeQueryRunner(
-            factory,
-            new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(true), segmentId)
         )
     );
     //Thread.sleep(10000);
