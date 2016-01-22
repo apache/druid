@@ -43,7 +43,6 @@ import com.metamx.common.logger.Logger;
 import io.druid.collections.CombiningIterable;
 import io.druid.common.utils.JodaUtils;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.segment.column.BitmapIndexSeeker;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
@@ -59,7 +58,6 @@ import io.druid.segment.data.GenericIndexedWriter;
 import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedIntsWriter;
-import io.druid.segment.data.IndexedIterable;
 import io.druid.segment.data.IndexedRTree;
 import io.druid.segment.data.TmpFileIOPeon;
 import io.druid.segment.data.VSizeIndexedIntsWriter;
@@ -220,7 +218,7 @@ public class IndexMergerV9 extends IndexMerger
     );
     makeInvertedIndexes(
         adapters, progress, mergedDimensions, indexSpec, v9TmpDir, rowNumConversions,
-        nullRowsList, dimValueWriters, bitmapIndexWriters, spatialIndexWriters
+        nullRowsList, dimValueWriters, bitmapIndexWriters, spatialIndexWriters, dimConversions
     );
 
     /************ Finalize Build Columns *************/
@@ -499,7 +497,8 @@ public class IndexMergerV9 extends IndexMerger
       final ArrayList<MutableBitmap> nullRowsList,
       final ArrayList<GenericIndexedWriter<String>> dimValueWriters,
       final ArrayList<GenericIndexedWriter<ImmutableBitmap>> bitmapIndexWriters,
-      final ArrayList<ByteBufferWriter<ImmutableRTree>> spatialIndexWriters
+      final ArrayList<ByteBufferWriter<ImmutableRTree>> spatialIndexWriters,
+      final ArrayList<Map<String, IntBuffer>> dimConversions
   ) throws IOException
   {
     final String section = "build inverted index";
@@ -527,24 +526,33 @@ public class IndexMergerV9 extends IndexMerger
         tree = new RTree(2, new LinearGutmanSplitStrategy(0, 50, bitmapFactory), bitmapFactory);
       }
 
-      BitmapIndexSeeker[] bitmapIndexSeeker = new BitmapIndexSeeker[adapters.size()];
+      DictIdSeeker[] dictIdSeeker = new DictIdSeeker[adapters.size()];
       for (int j = 0; j < adapters.size(); j++) {
-        bitmapIndexSeeker[j] = adapters.get(j).getBitmapIndexSeeker(dimension);
+        IntBuffer dimConversion = dimConversions.get(j).get(dimension);
+        if (dimConversion != null) {
+          dictIdSeeker[j] = new DictIdSeeker((IntBuffer)dimConversion.asReadOnlyBuffer().rewind());
+        } else {
+          dictIdSeeker[j] = new DictIdSeeker(null);
+        }
       }
 
       ImmutableBitmap nullRowBitmap = bitmapSerdeFactory.getBitmapFactory().makeImmutableBitmap(
           nullRowsList.get(dimIndex)
       );
 
-      for (String dimVal : IndexedIterable.create(dimVals)) {
+      //Iterate all dim values's dictionary id in ascending order which in line with dim values's compare result.
+      for (int dictId = 0; dictId < dimVals.size(); dictId++) {
         progress.progress();
         List<Iterable<Integer>> convertedInverteds = Lists.newArrayListWithCapacity(adapters.size());
         for (int j = 0; j < adapters.size(); ++j) {
-          convertedInverteds.add(
-              new ConvertingIndexedInts(
-                  bitmapIndexSeeker[j].seek(dimVal), rowNumConversions.get(j)
-              )
-          );
+          int seekedDictId = dictIdSeeker[j].seek(dictId);
+          if (seekedDictId != DictIdSeeker.NOT_EXIST) {
+            convertedInverteds.add(
+                new ConvertingIndexedInts(
+                    adapters.get(j).getBitmapIndex(dimension, seekedDictId), rowNumConversions.get(j)
+                )
+            );
+          }
         }
 
         MutableBitmap bitset = bitmapSerdeFactory.getBitmapFactory().makeEmptyMutableBitmap();
@@ -558,19 +566,22 @@ public class IndexMergerV9 extends IndexMerger
         }
 
         ImmutableBitmap bitmapToWrite = bitmapSerdeFactory.getBitmapFactory().makeImmutableBitmap(bitset);
-        if (dimVal == null) {
+        if ((dictId == 0) && (Iterables.getFirst(dimVals, "") == null)) {
           bitmapIndexWriters.get(dimIndex).write(nullRowBitmap.union(bitmapToWrite));
         } else {
           bitmapIndexWriters.get(dimIndex).write(bitmapToWrite);
         }
 
-        if (spatialIndexWriter != null && dimVal != null) {
-          List<String> stringCoords = Lists.newArrayList(SPLITTER.split(dimVal));
-          float[] coords = new float[stringCoords.size()];
-          for (int j = 0; j < coords.length; j++) {
-            coords[j] = Float.valueOf(stringCoords.get(j));
+        if (spatialIndexWriter != null) {
+          String dimVal = dimVals.get(dictId);
+          if (dimVal != null) {
+            List<String> stringCoords = Lists.newArrayList(SPLITTER.split(dimVal));
+            float[] coords = new float[stringCoords.size()];
+            for (int j = 0; j < coords.length; j++) {
+              coords[j] = Float.valueOf(stringCoords.get(j));
+            }
+            tree.insert(coords, bitset);
           }
-          tree.insert(coords, bitset);
         }
       }
       if (spatialIndexWriter != null) {
