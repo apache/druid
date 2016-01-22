@@ -567,12 +567,12 @@ public class IndexGeneratorJob implements Jobby
 
         Set<String> allDimensionNames = Sets.newLinkedHashSet();
         final ProgressIndicator progressIndicator = makeProgressIndicator(context);
-        int persistBackgroundCount = config.getSchema().getTuningConfig().getPersistBackgroundCount();
-        if (persistBackgroundCount > 0) {
+        int numBackgroundPersistThreads = config.getSchema().getTuningConfig().getNumBackgroundPersistThreads();
+        if (numBackgroundPersistThreads > 0) {
           final BlockingQueue<Runnable> queue = new SynchronousQueue<>();
           ExecutorService executorService = new ThreadPoolExecutor(
-              persistBackgroundCount,
-              persistBackgroundCount,
+              numBackgroundPersistThreads,
+              numBackgroundPersistThreads,
               0L,
               TimeUnit.MILLISECONDS,
               queue,
