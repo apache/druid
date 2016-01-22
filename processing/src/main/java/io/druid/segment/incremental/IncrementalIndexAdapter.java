@@ -26,16 +26,12 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.MutableBitmap;
-import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import io.druid.segment.IndexableAdapter;
 import io.druid.segment.Metadata;
 import io.druid.segment.Rowboat;
-import io.druid.segment.column.BitmapIndexSeeker;
 import io.druid.segment.column.ColumnCapabilities;
-import io.druid.segment.column.EmptyBitmapIndexSeeker;
 import io.druid.segment.data.EmptyIndexedInts;
-import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIterable;
@@ -276,13 +272,13 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     Map<String, MutableBitmap> dimInverted = invertedIndexes.get(dimension);
 
     if (dimInverted == null) {
-      return new EmptyIndexedInts();
+      return EmptyIndexedInts.EMPTY_INDEXED_INTS;
     }
 
     final MutableBitmap bitmapIndex = dimInverted.get(value);
 
     if (bitmapIndex == null) {
-      return new EmptyIndexedInts();
+      return EmptyIndexedInts.EMPTY_INDEXED_INTS;
     }
 
     return new BitmapIndexedInts(bitmapIndex);
@@ -301,35 +297,17 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   }
 
   @Override
-  public BitmapIndexSeeker getBitmapIndexSeeker(String dimension)
+  public IndexedInts getBitmapIndex(String dimension, int dictId)
   {
-    final Map<String, MutableBitmap> dimInverted = invertedIndexes.get(dimension);
-    if (dimInverted == null) {
-      return new EmptyBitmapIndexSeeker();
+    if (dictId >= 0) {
+      final Indexed<String> dimValues = getDimValueLookup(dimension);
+      //NullValueConverterDimDim will convert empty to null, we need convert it back to the actual values,
+      //because getBitmapIndex relies on the actual values stored in DimDim.
+      String value = Strings.nullToEmpty(dimValues.get(dictId));
+      return getBitmapIndex(dimension, value);
+    } else {
+      return EmptyIndexedInts.EMPTY_INDEXED_INTS;
     }
-
-    return new BitmapIndexSeeker()
-    {
-      private String lastVal = null;
-
-      @Override
-      public IndexedInts seek(String value)
-      {
-        if (value != null && GenericIndexed.STRING_STRATEGY.compare(value, lastVal) <= 0) {
-          throw new ISE(
-              "Value[%s] is less than the last value[%s] I have, cannot be.",
-              value, lastVal
-          );
-        }
-        value = Strings.nullToEmpty(value);
-        lastVal = value;
-        final MutableBitmap bitmapIndex = dimInverted.get(value);
-        if (bitmapIndex == null) {
-          return new EmptyIndexedInts();
-        }
-        return new BitmapIndexedInts(bitmapIndex);
-      }
-    };
   }
 
   private boolean hasNullValue(String[] dimValues)

@@ -26,8 +26,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.google.common.primitives.Ints;
 import com.metamx.collections.bitmap.RoaringBitmapFactory;
 import com.metamx.common.IAE;
+import com.metamx.common.ISE;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.granularity.QueryGranularity;
@@ -60,6 +62,8 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.nio.ByteBuffer;
+import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -1655,5 +1659,28 @@ public class IndexMergerTest
       combiningAggregators[i] = aggregators[i].getCombiningFactory();
     }
     return combiningAggregators;
+  }
+
+  @Test
+  public void testDictIdSeeker() throws Exception
+  {
+    IntBuffer dimConversions = ByteBuffer.allocateDirect(3 * Ints.BYTES).asIntBuffer();
+    dimConversions.put(0);
+    dimConversions.put(2);
+    dimConversions.put(4);
+    IndexMerger.DictIdSeeker dictIdSeeker = new IndexMerger.DictIdSeeker((IntBuffer) dimConversions.asReadOnlyBuffer().rewind());
+    Assert.assertEquals(0, dictIdSeeker.seek(0));
+    Assert.assertEquals(-1, dictIdSeeker.seek(1));
+    Assert.assertEquals(1, dictIdSeeker.seek(2));
+    try {
+      dictIdSeeker.seek(5);
+      Assert.fail("Only support access in order");
+    }
+    catch (ISE ise) {
+      Assert.assertTrue("Only support access in order", true);
+    }
+    Assert.assertEquals(-1, dictIdSeeker.seek(3));
+    Assert.assertEquals(2, dictIdSeeker.seek(4));
+    Assert.assertEquals(-1, dictIdSeeker.seek(5));
   }
 }

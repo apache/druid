@@ -56,7 +56,6 @@ import io.druid.common.guava.GuavaUtils;
 import io.druid.common.utils.JodaUtils;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.segment.column.BitmapIndexSeeker;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
@@ -970,19 +969,28 @@ public class IndexMerger
         tree = new RTree(2, new LinearGutmanSplitStrategy(0, 50, bitmapFactory), bitmapFactory);
       }
 
-      BitmapIndexSeeker[] bitmapIndexSeeker = new BitmapIndexSeeker[indexes.size()];
+      DictIdSeeker[] dictIdSeeker = new DictIdSeeker[indexes.size()];
       for (int j = 0; j < indexes.size(); j++) {
-        bitmapIndexSeeker[j] = indexes.get(j).getBitmapIndexSeeker(dimension);
+        IntBuffer dimConversion = dimConversions.get(j).get(dimension);
+        if (dimConversion != null) {
+          dictIdSeeker[j] = new DictIdSeeker((IntBuffer) dimConversion.asReadOnlyBuffer().rewind());
+        } else {
+          dictIdSeeker[j] = new DictIdSeeker(null);
+        }
       }
-      for (String dimVal : IndexedIterable.create(dimVals)) {
+      //Iterate all dim values's dictionary id in ascending order which in line with dim values's compare result.
+      for (int dictId = 0; dictId < dimVals.size(); dictId++) {
         progress.progress();
         List<Iterable<Integer>> convertedInverteds = Lists.newArrayListWithCapacity(indexes.size());
         for (int j = 0; j < indexes.size(); ++j) {
-          convertedInverteds.add(
-              new ConvertingIndexedInts(
-                  bitmapIndexSeeker[j].seek(dimVal), rowNumConversions.get(j)
-              )
-          );
+          int seekedDictId = dictIdSeeker[j].seek(dictId);
+          if (seekedDictId != DictIdSeeker.NOT_EXIST) {
+            convertedInverteds.add(
+                new ConvertingIndexedInts(
+                    indexes.get(j).getBitmapIndex(dimension, seekedDictId), rowNumConversions.get(j)
+                )
+            );
+          }
         }
 
         MutableBitmap bitset = bitmapSerdeFactory.getBitmapFactory().makeEmptyMutableBitmap();
@@ -999,13 +1007,16 @@ public class IndexMerger
             bitmapSerdeFactory.getBitmapFactory().makeImmutableBitmap(bitset)
         );
 
-        if (isSpatialDim && dimVal != null) {
-          List<String> stringCoords = Lists.newArrayList(SPLITTER.split(dimVal));
-          float[] coords = new float[stringCoords.size()];
-          for (int j = 0; j < coords.length; j++) {
-            coords[j] = Float.valueOf(stringCoords.get(j));
+        if (isSpatialDim) {
+          String dimVal = dimVals.get(dictId);
+          if (dimVal != null) {
+            List<String> stringCoords = Lists.newArrayList(SPLITTER.split(dimVal));
+            float[] coords = new float[stringCoords.size()];
+            for (int j = 0; j < coords.length; j++) {
+              coords[j] = Float.valueOf(stringCoords.get(j));
+            }
+            tree.insert(coords, bitset);
           }
-          tree.insert(coords, bitset);
         }
       }
       writer.close();
@@ -1190,6 +1201,63 @@ public class IndexMerger
         );
       }
       return (IntBuffer) conversionBuf.asReadOnlyBuffer().rewind();
+    }
+  }
+
+  /**
+   * Get old dictId from new dictId, and only support access in order
+   */
+  public static class DictIdSeeker
+  {
+    static final int NOT_EXIST = -1;
+    static final int NOT_INIT = -1;
+    private final IntBuffer dimConversions;
+    private int currIndex;
+    private int currVal;
+    private int lastVal;
+
+    DictIdSeeker(
+        IntBuffer dimConversions
+    )
+    {
+      this.dimConversions = dimConversions;
+      this.currIndex = 0;
+      this.currVal = NOT_INIT;
+      this.lastVal = NOT_INIT;
+    }
+
+    public int seek(int dictId)
+    {
+      if (dimConversions == null) {
+        return NOT_EXIST;
+      }
+      if (lastVal != NOT_INIT) {
+        if (dictId <= lastVal) {
+          throw new ISE("Value dictId[%d] is less than the last value dictId[%d] I have, cannot be.",
+                        dictId, lastVal
+          );
+        }
+        return NOT_EXIST;
+      }
+      if (currVal == NOT_INIT) {
+        currVal = dimConversions.get();
+      }
+      if (currVal == dictId) {
+        int ret = currIndex;
+        ++currIndex;
+        if (dimConversions.hasRemaining()) {
+          currVal = dimConversions.get();
+        } else {
+          lastVal = dictId;
+        }
+        return ret;
+      } else if (currVal < dictId) {
+        throw new ISE("Skipped currValue dictId[%d], currIndex[%d]; incoming value dictId[%d]",
+                      currVal, currIndex, dictId
+        );
+      } else {
+        return NOT_EXIST;
+      }
     }
   }
 

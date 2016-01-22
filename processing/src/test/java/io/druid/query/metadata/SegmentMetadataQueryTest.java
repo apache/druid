@@ -39,6 +39,7 @@ import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.QueryToolChest;
 import io.druid.query.Result;
+import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.metadata.metadata.ColumnAnalysis;
 import io.druid.query.metadata.metadata.ListColumnIncluderator;
 import io.druid.query.metadata.metadata.SegmentAnalysis;
@@ -59,6 +60,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -150,7 +152,8 @@ public class SegmentMetadataQueryTest
                 null
             )
         ), usingMmappedSegment ? 71982 : 32643,
-        1209
+        1209,
+        null
     );
   }
 
@@ -191,7 +194,8 @@ public class SegmentMetadataQueryTest
             )
         ),
         0,
-        expectedSegmentAnalysis.getNumRows() * 2
+        expectedSegmentAnalysis.getNumRows() * 2,
+        null
     );
 
     QueryToolChest toolChest = FACTORY.getToolchest();
@@ -250,7 +254,8 @@ public class SegmentMetadataQueryTest
             )
         ),
         0,
-        expectedSegmentAnalysis.getNumRows() * 2
+        expectedSegmentAnalysis.getNumRows() * 2,
+        null
     );
 
     QueryToolChest toolChest = FACTORY.getToolchest();
@@ -317,7 +322,8 @@ public class SegmentMetadataQueryTest
             )
         ),
         expectedSegmentAnalysis.getSize() * 2,
-        expectedSegmentAnalysis.getNumRows() * 2
+        expectedSegmentAnalysis.getNumRows() * 2,
+        null
     );
 
     QueryToolChest toolChest = FACTORY.getToolchest();
@@ -362,7 +368,8 @@ public class SegmentMetadataQueryTest
             )
         ),
         0,
-        expectedSegmentAnalysis.getNumRows() * 2
+        expectedSegmentAnalysis.getNumRows() * 2,
+        null
     );
 
     QueryToolChest toolChest = FACTORY.getToolchest();
@@ -387,6 +394,62 @@ public class SegmentMetadataQueryTest
                   .intervals("2013/2014")
                   .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
                   .analysisTypes()
+                  .merge(true)
+                  .build(),
+            Maps.newHashMap()
+        ),
+        "failed SegmentMetadata merging query"
+    );
+    exec.shutdownNow();
+  }
+
+  @Test
+  public void testSegmentMetadataQueryWithAggregatorsMerge()
+  {
+    final Map<String, AggregatorFactory> expectedAggregators = Maps.newHashMap();
+    for (AggregatorFactory agg : TestIndex.METRIC_AGGS) {
+      expectedAggregators.put(agg.getName(), agg.getCombiningFactory());
+    }
+    SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
+        "merged",
+        null,
+        ImmutableMap.of(
+            "placement",
+            new ColumnAnalysis(
+                ValueType.STRING.toString(),
+                false,
+                0,
+                0,
+                null
+            )
+        ),
+        0,
+        expectedSegmentAnalysis.getNumRows() * 2,
+        expectedAggregators
+    );
+
+    QueryToolChest toolChest = FACTORY.getToolchest();
+
+    QueryRunner singleSegmentQueryRunner = toolChest.preMergeQueryDecoration(runner);
+    ExecutorService exec = Executors.newCachedThreadPool();
+    QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
+        toolChest.mergeResults(
+            FACTORY.mergeRunners(
+                MoreExecutors.sameThreadExecutor(),
+                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(singleSegmentQueryRunner, singleSegmentQueryRunner)
+            )
+        ),
+        toolChest
+    );
+
+    TestHelper.assertExpectedObjects(
+        ImmutableList.of(mergedSegmentAnalysis),
+        myRunner.run(
+            Druids.newSegmentMetadataQueryBuilder()
+                  .dataSource("testing")
+                  .intervals("2013/2014")
+                  .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
+                  .analysisTypes(SegmentMetadataQuery.AnalysisType.AGGREGATORS)
                   .merge(true)
                   .build(),
             Maps.newHashMap()

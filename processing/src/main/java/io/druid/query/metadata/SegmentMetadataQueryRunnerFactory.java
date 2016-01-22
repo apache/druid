@@ -39,10 +39,12 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryWatcher;
+import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.metadata.metadata.ColumnAnalysis;
 import io.druid.query.metadata.metadata.ColumnIncluderator;
 import io.druid.query.metadata.metadata.SegmentAnalysis;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
+import io.druid.segment.Metadata;
 import io.druid.segment.Segment;
 import org.joda.time.Interval;
 
@@ -108,6 +110,21 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
         }
         List<Interval> retIntervals = query.analyzingInterval() ? Arrays.asList(segment.getDataInterval()) : null;
 
+        final Map<String, AggregatorFactory> aggregators;
+        if (query.hasAggregators()) {
+          final Metadata metadata = segment.asStorageAdapter().getMetadata();
+          if (metadata != null && metadata.getAggregators() != null) {
+            aggregators = Maps.newHashMap();
+            for (AggregatorFactory aggregator : metadata.getAggregators()) {
+              aggregators.put(aggregator.getName(), aggregator);
+            }
+          } else {
+            aggregators = null;
+          }
+        } else {
+          aggregators = null;
+        }
+
         return Sequences.simple(
             Arrays.asList(
                 new SegmentAnalysis(
@@ -115,7 +132,8 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                     retIntervals,
                     columns,
                     totalSize,
-                    numRows
+                    numRows,
+                    aggregators
                 )
             )
         );
@@ -168,10 +186,10 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                       future.cancel(true);
                       throw new QueryInterruptedException("Query interrupted");
                     }
-                    catch(CancellationException e) {
+                    catch (CancellationException e) {
                       throw new QueryInterruptedException("Query cancelled");
                     }
-                    catch(TimeoutException e) {
+                    catch (TimeoutException e) {
                       log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
                       future.cancel(true);
                       throw new QueryInterruptedException("Query timeout");

@@ -28,7 +28,11 @@ import java.util.Iterator;
  */
 public class EmptyIndexedInts implements IndexedInts
 {
-  public static EmptyIndexedInts instance = new EmptyIndexedInts();
+  public static final EmptyIndexedInts EMPTY_INDEXED_INTS = new EmptyIndexedInts();
+
+  private EmptyIndexedInts()
+  {
+  }
 
   @Override
   public int size()
