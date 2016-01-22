@@ -594,13 +594,15 @@
                 "columns": {
                     "has_links": {
                         "type": "STRING",
+                        "hasMultipleValues": false,
                         "size": 7773438,
                         "cardinality": 2,
                         "errorMessage": null
                     }
                 },
                 "size": 747056474,
-                "numRows": 3702583
+                "numRows": 3702583,
+                "aggregators": null
             },
             {
                 "id": "twitterstream_2013-01-02T00:00:00.000Z_2013-01-03T00:00:00.000Z_2013-01-03T03:44:58.791Z_v9",
@@ -608,13 +610,15 @@
                 "columns": {
                     "has_links": {
                         "type": "STRING",
+                        "hasMultipleValues": false,
                         "size": 7901000,
                         "cardinality": 2,
                         "errorMessage": null
                     }
                 },
                 "size": 755796690,
-                "numRows": 3743002
+                "numRows": 3743002,
+                "aggregators": null
             },
             {
                 "id": "twitterstream_2013-01-03T00:00:00.000Z_2013-01-04T00:00:00.000Z_2013-01-04T04:09:13.590Z_v9",
@@ -622,13 +626,15 @@
                 "columns": {
                     "has_links": {
                         "type": "STRING",
+                        "hasMultipleValues": false,
                         "size": 7405654,
                         "cardinality": 2,
                         "errorMessage": null
                     }
                 },
                 "size": 706893542,
-                "numRows":3502959
+                "numRows":3502959,
+                "aggregators": null
             }
         ]
     },
