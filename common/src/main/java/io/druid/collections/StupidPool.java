@@ -38,11 +38,24 @@ public class StupidPool<T>
 
   private final Queue<T> objects = new ConcurrentLinkedQueue<>();
 
+  //note that this is just the max entries in the cache, pool can still create as many buffers as needed.
+  private final int objectsCacheMaxCount;
+
   public StupidPool(
       Supplier<T> generator
   )
   {
     this.generator = generator;
+    this.objectsCacheMaxCount = Integer.MAX_VALUE;
+  }
+
+  public StupidPool(
+      Supplier<T> generator,
+      int objectsCacheMaxCount
+  )
+  {
+    this.generator = generator;
+    this.objectsCacheMaxCount = objectsCacheMaxCount;
   }
 
   public ResourceHolder<T> take()
@@ -80,8 +93,12 @@ public class StupidPool<T>
         log.warn(new ISE("Already Closed!"), "Already closed");
         return;
       }
-      if (!objects.offer(object)) {
-        log.warn(new ISE("Queue offer failed"), "Could not offer object [%s] back into the queue", object);
+      if (objects.size() < objectsCacheMaxCount) {
+        if (!objects.offer(object)) {
+          log.warn(new ISE("Queue offer failed"), "Could not offer object [%s] back into the queue", object);
+        }
+      } else {
+        log.debug("cache num entries is exceeding max limit [%s]", objectsCacheMaxCount);
       }
     }
 
