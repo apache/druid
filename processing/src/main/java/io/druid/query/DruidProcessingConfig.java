@@ -31,6 +31,12 @@ public abstract class DruidProcessingConfig extends ExecutorServiceConfig implem
     return 1024 * 1024 * 1024;
   }
 
+  @Config({"druid.computation.buffer.poolCacheMaxCount", "${base_path}.buffer.poolCacheMaxCount"})
+  public int poolCacheMaxCount()
+  {
+    return Integer.MAX_VALUE;
+  }
+
   @Override @Config(value = "${base_path}.numThreads")
   public int getNumThreads()
   {
