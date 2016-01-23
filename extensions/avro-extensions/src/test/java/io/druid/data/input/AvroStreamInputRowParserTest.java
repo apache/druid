@@ -185,7 +185,6 @@ public class AvroStreamInputRowParserTest
 
   public static void assertInputRowCorrect(InputRow inputRow)
   {
-    Collections.sort(DIMENSIONS);
     assertEquals(DIMENSIONS, inputRow.getDimensions());
     assertEquals(DATE_TIME.getMillis(), inputRow.getTimestampFromEpoch());
 
