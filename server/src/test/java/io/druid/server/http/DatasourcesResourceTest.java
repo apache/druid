@@ -402,7 +402,7 @@ public class DatasourcesResourceTest
     Response response = datasourcesResource.deleteDataSourceSpecificInterval("datasource1", interval, "true");
 
     Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(null,response.getEntity());
+    Assert.assertEquals(null, response.getEntity());
     EasyMock.verify(indexingServiceClient, server);
   }
 
@@ -424,6 +424,8 @@ public class DatasourcesResourceTest
     EasyMock.verify(indexingServiceClient, server);
   }
 
+  /*
+  Uncomment this unit test once the method testDeleteDataSource(string dataSourceName) is uncommented in class DatasourcesResource
   @Test
   public void testDeleteDataSource() throws Exception
   {
@@ -438,5 +440,6 @@ public class DatasourcesResourceTest
     Assert.assertEquals(null,response.getEntity());
     EasyMock.verify(databaseSegmentManager, server);
   }
+  */
 
 }
