@@ -70,7 +70,7 @@ A topN query object looks like:
 }
 ```
 
-There are 10 parts to a topN query.
+There are 11 parts to a topN query.
 
 |property|description|required?|
 |--------|-----------|---------|
