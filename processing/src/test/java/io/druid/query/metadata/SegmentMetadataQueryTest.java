@@ -95,24 +95,34 @@ public class SegmentMetadataQueryTest
     );
   }
 
-  private final QueryRunner runner;
-  private final boolean usingMmappedSegment;
+  private final QueryRunner runner1;
+  private final QueryRunner runner2;
+  private final boolean mmap1;
+  private final boolean mmap2;
   private final SegmentMetadataQuery testQuery;
-  private final SegmentAnalysis expectedSegmentAnalysis;
+  private final SegmentAnalysis expectedSegmentAnalysis1;
+  private final SegmentAnalysis expectedSegmentAnalysis2;
 
-  @Parameterized.Parameters(name = "runner = {1}")
+  @Parameterized.Parameters(name = "mmap1 = {0}, mmap2 = {1}")
   public static Collection<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
-        new Object[]{makeMMappedQueryRunner(FACTORY), "mmap", true},
-        new Object[]{makeIncrementalIndexQueryRunner(FACTORY), "incremental", false}
+        new Object[]{true, true},
+        new Object[]{true, false},
+        new Object[]{false, true},
+        new Object[]{false, false}
     );
   }
 
-  public SegmentMetadataQueryTest(QueryRunner runner, String runnerName, boolean usingMmappedSegment)
+  public SegmentMetadataQueryTest(
+      boolean mmap1,
+      boolean mmap2
+  )
   {
-    this.runner = runner;
-    this.usingMmappedSegment = usingMmappedSegment;
+    this.runner1 = mmap1 ? makeMMappedQueryRunner(FACTORY) : makeIncrementalIndexQueryRunner(FACTORY);
+    this.runner2 = mmap2 ? makeMMappedQueryRunner(FACTORY) : makeIncrementalIndexQueryRunner(FACTORY);
+    this.mmap1 = mmap1;
+    this.mmap2 = mmap2;
     testQuery = Druids.newSegmentMetadataQueryBuilder()
                       .dataSource("testing")
                       .intervals("2013/2014")
@@ -121,7 +131,7 @@ public class SegmentMetadataQueryTest
                       .merge(true)
                       .build();
 
-    expectedSegmentAnalysis = new SegmentAnalysis(
+    expectedSegmentAnalysis1 = new SegmentAnalysis(
         "testSegment",
         ImmutableList.of(
             new Interval("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z")
@@ -139,7 +149,7 @@ public class SegmentMetadataQueryTest
             new ColumnAnalysis(
                 ValueType.STRING.toString(),
                 false,
-                usingMmappedSegment ? 10881 : 0,
+                mmap1 ? 10881 : 0,
                 1,
                 null
             ),
@@ -151,7 +161,41 @@ public class SegmentMetadataQueryTest
                 null,
                 null
             )
-        ), usingMmappedSegment ? 71982 : 32643,
+        ), mmap1 ? 71982 : 32643,
+        1209,
+        null
+    );
+    expectedSegmentAnalysis2 = new SegmentAnalysis(
+        "testSegment",
+        ImmutableList.of(
+            new Interval("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z")
+        ),
+        ImmutableMap.of(
+            "__time",
+            new ColumnAnalysis(
+                ValueType.LONG.toString(),
+                false,
+                12090,
+                null,
+                null
+            ),
+            "placement",
+            new ColumnAnalysis(
+                ValueType.STRING.toString(),
+                false,
+                mmap2 ? 10881 : 0,
+                1,
+                null
+            ),
+            "index",
+            new ColumnAnalysis(
+                ValueType.FLOAT.toString(),
+                false,
+                9672,
+                null,
+                null
+            )
+        ), mmap2 ? 71982 : 32643,
         1209,
         null
     );
@@ -162,11 +206,11 @@ public class SegmentMetadataQueryTest
   public void testSegmentMetadataQuery()
   {
     List<SegmentAnalysis> results = Sequences.toList(
-        runner.run(testQuery, Maps.newHashMap()),
+        runner1.run(testQuery, Maps.newHashMap()),
         Lists.<SegmentAnalysis>newArrayList()
     );
 
-    Assert.assertEquals(Arrays.asList(expectedSegmentAnalysis), results);
+    Assert.assertEquals(Arrays.asList(expectedSegmentAnalysis1), results);
   }
 
   @Test
@@ -194,19 +238,21 @@ public class SegmentMetadataQueryTest
             )
         ),
         0,
-        expectedSegmentAnalysis.getNumRows() * 2,
+        expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
         null
     );
 
     QueryToolChest toolChest = FACTORY.getToolchest();
 
-    QueryRunner singleSegmentQueryRunner = toolChest.preMergeQueryDecoration(runner);
     ExecutorService exec = Executors.newCachedThreadPool();
     QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             FACTORY.mergeRunners(
                 MoreExecutors.sameThreadExecutor(),
-                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(singleSegmentQueryRunner, singleSegmentQueryRunner)
+                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(
+                    toolChest.preMergeQueryDecoration(runner1),
+                    toolChest.preMergeQueryDecoration(runner2)
+                )
             )
         ),
         toolChest
@@ -254,19 +300,21 @@ public class SegmentMetadataQueryTest
             )
         ),
         0,
-        expectedSegmentAnalysis.getNumRows() * 2,
+        expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
         null
     );
 
     QueryToolChest toolChest = FACTORY.getToolchest();
 
-    QueryRunner singleSegmentQueryRunner = toolChest.preMergeQueryDecoration(runner);
     ExecutorService exec = Executors.newCachedThreadPool();
     QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             FACTORY.mergeRunners(
                 MoreExecutors.sameThreadExecutor(),
-                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(singleSegmentQueryRunner, singleSegmentQueryRunner)
+                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(
+                    toolChest.preMergeQueryDecoration(runner1),
+                    toolChest.preMergeQueryDecoration(runner2)
+                )
             )
         ),
         toolChest
@@ -294,7 +342,7 @@ public class SegmentMetadataQueryTest
   {
     SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
         "merged",
-        ImmutableList.of(expectedSegmentAnalysis.getIntervals().get(0)),
+        ImmutableList.of(expectedSegmentAnalysis1.getIntervals().get(0)),
         ImmutableMap.of(
             "__time",
             new ColumnAnalysis(
@@ -308,7 +356,7 @@ public class SegmentMetadataQueryTest
             new ColumnAnalysis(
                 ValueType.STRING.toString(),
                 false,
-                usingMmappedSegment ? 21762 : 0,
+                10881 * ((mmap1 ? 1 : 0) + (mmap2 ? 1 : 0)),
                 1,
                 null
             ),
@@ -321,20 +369,22 @@ public class SegmentMetadataQueryTest
                 null
             )
         ),
-        expectedSegmentAnalysis.getSize() * 2,
-        expectedSegmentAnalysis.getNumRows() * 2,
+        expectedSegmentAnalysis1.getSize() + expectedSegmentAnalysis2.getSize(),
+        expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
         null
     );
 
     QueryToolChest toolChest = FACTORY.getToolchest();
 
-    QueryRunner singleSegmentQueryRunner = toolChest.preMergeQueryDecoration(runner);
     ExecutorService exec = Executors.newCachedThreadPool();
     QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             FACTORY.mergeRunners(
                 MoreExecutors.sameThreadExecutor(),
-                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(singleSegmentQueryRunner, singleSegmentQueryRunner)
+                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(
+                    toolChest.preMergeQueryDecoration(runner1),
+                    toolChest.preMergeQueryDecoration(runner2)
+                )
             )
         ),
         toolChest
@@ -368,19 +418,21 @@ public class SegmentMetadataQueryTest
             )
         ),
         0,
-        expectedSegmentAnalysis.getNumRows() * 2,
+        expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
         null
     );
 
     QueryToolChest toolChest = FACTORY.getToolchest();
 
-    QueryRunner singleSegmentQueryRunner = toolChest.preMergeQueryDecoration(runner);
     ExecutorService exec = Executors.newCachedThreadPool();
     QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             FACTORY.mergeRunners(
                 MoreExecutors.sameThreadExecutor(),
-                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(singleSegmentQueryRunner, singleSegmentQueryRunner)
+                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(
+                    toolChest.preMergeQueryDecoration(runner1),
+                    toolChest.preMergeQueryDecoration(runner2)
+                )
             )
         ),
         toolChest
@@ -424,19 +476,21 @@ public class SegmentMetadataQueryTest
             )
         ),
         0,
-        expectedSegmentAnalysis.getNumRows() * 2,
+        expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
         expectedAggregators
     );
 
     QueryToolChest toolChest = FACTORY.getToolchest();
 
-    QueryRunner singleSegmentQueryRunner = toolChest.preMergeQueryDecoration(runner);
     ExecutorService exec = Executors.newCachedThreadPool();
     QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
             FACTORY.mergeRunners(
                 MoreExecutors.sameThreadExecutor(),
-                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(singleSegmentQueryRunner, singleSegmentQueryRunner)
+                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(
+                    toolChest.preMergeQueryDecoration(runner1),
+                    toolChest.preMergeQueryDecoration(runner2)
+                )
             )
         ),
         toolChest
@@ -463,17 +517,17 @@ public class SegmentMetadataQueryTest
   public void testBySegmentResults()
   {
     Result<BySegmentResultValue> bySegmentResult = new Result<BySegmentResultValue>(
-        expectedSegmentAnalysis.getIntervals().get(0).getStart(),
+        expectedSegmentAnalysis1.getIntervals().get(0).getStart(),
         new BySegmentResultValueClass(
             Arrays.asList(
-                expectedSegmentAnalysis
-            ), expectedSegmentAnalysis.getId(), testQuery.getIntervals().get(0)
+                expectedSegmentAnalysis1
+            ), expectedSegmentAnalysis1.getId(), testQuery.getIntervals().get(0)
         )
     );
 
     QueryToolChest toolChest = FACTORY.getToolchest();
 
-    QueryRunner singleSegmentQueryRunner = toolChest.preMergeQueryDecoration(runner);
+    QueryRunner singleSegmentQueryRunner = toolChest.preMergeQueryDecoration(runner1);
     ExecutorService exec = Executors.newCachedThreadPool();
     QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(
