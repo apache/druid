@@ -84,7 +84,7 @@ public class ProtoBufInputRowParserTest
 
     InputRow row = parser.parse(ByteBuffer.wrap(out.toByteArray()));
     System.out.println(row);
-    Arrays.sort(DIMENSIONS);
+
     assertEquals(Arrays.asList(DIMENSIONS), row.getDimensions());
     assertEquals(dateTime.getMillis(), row.getTimestampFromEpoch());
 
