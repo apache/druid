@@ -63,12 +63,6 @@ To index the data, we are going to need the overlord, a historical node, and a c
 
 Note: If Zookeeper isn't running, you'll have to start it again as described in [The Druid Cluster](../tutorials/tutorial-the-druid-cluster.html).
 
-To start the Indexing Service:
-
-```bash
-java -Xmx2g -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_common:config/overlord:lib/*:<hadoop_config_path> io.druid.cli.Main server overlord
-```
-
 To start the Coordinator Node:
 
 ```bash
@@ -79,6 +73,12 @@ To start the Historical Node:
 
 ```bash
 java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_common:config/historical:lib/* io.druid.cli.Main server historical
+```
+
+To start the Indexing Service:
+
+```bash
+java -Xmx2g -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath config/_common:config/overlord:lib/*:<hadoop_config_path> io.druid.cli.Main server overlord
 ```
 
 #### Index the Data
