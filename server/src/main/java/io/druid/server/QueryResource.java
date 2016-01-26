@@ -72,6 +72,8 @@ public class QueryResource
   @Deprecated // use SmileMediaTypes.APPLICATION_JACKSON_SMILE
   private static final String APPLICATION_SMILE = "application/smile";
 
+  private static final int RESPONSE_CTX_HEADER_LEN_LIMIT = 7*1024;
+
   private final ServerConfig config;
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
@@ -177,7 +179,7 @@ public class QueryResource
 
       try {
         final Query theQuery = query;
-        return Response
+        Response.ResponseBuilder builder = Response
             .ok(
                 new StreamingOutput()
                 {
@@ -220,8 +222,19 @@ public class QueryResource
                 },
                 contentType
             )
-            .header("X-Druid-Query-Id", queryId)
-            .header("X-Druid-Response-Context", jsonMapper.writeValueAsString(responseContext))
+            .header("X-Druid-Query-Id", queryId);
+
+        //Limit the response-context header, see https://github.com/druid-io/druid/issues/2331
+        //Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()
+        //and encodes the string using ASCII, so 1 char is = 1 byte
+        String responseCtxString = jsonMapper.writeValueAsString(responseContext);
+        if (responseCtxString.length() > RESPONSE_CTX_HEADER_LEN_LIMIT) {
+          log.warn("Response Context truncated for id [%s] . Full context is [%s].", queryId, responseCtxString);
+          responseCtxString = responseCtxString.substring(0, RESPONSE_CTX_HEADER_LEN_LIMIT);
+        }
+
+        return builder
+            .header("X-Druid-Response-Context", responseCtxString)
             .build();
       }
       catch (Exception e) {
