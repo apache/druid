@@ -37,7 +37,7 @@ public class LongMaxAggregationTest
   private ColumnSelectorFactory colSelectorFactory;
   private TestLongColumnSelector selector;
 
-  private long[] values = {9223372036854775802l, 9223372036854775803l, 9223372036854775806l, 9223372036854775805l};
+  private long[] values = {9223372036854775802L, 9223372036854775803L, 9223372036854775806L, 9223372036854775805L};
 
   public LongMaxAggregationTest() throws Exception
   {
@@ -95,7 +95,7 @@ public class LongMaxAggregationTest
   @Test
   public void testCombine()
   {
-    Assert.assertEquals(9223372036854775803l, longMaxAggFactory.combine(9223372036854775800l, 9223372036854775803l));
+    Assert.assertEquals(9223372036854775803L, longMaxAggFactory.combine(9223372036854775800L, 9223372036854775803L));
   }
 
   @Test

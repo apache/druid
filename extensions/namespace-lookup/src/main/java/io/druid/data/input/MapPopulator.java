@@ -59,7 +59,7 @@ public class MapPopulator<K, V>
     return source.asCharSource(Charsets.UTF_8).readLines(
         new LineProcessor<Long>()
         {
-          private long count = 0l;
+          private long count = 0L;
 
           @Override
           public boolean processLine(String line) throws IOException

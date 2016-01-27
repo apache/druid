@@ -65,7 +65,7 @@
     </scm>
 
     <properties>
-        <metamx.java-util.version>0.27.6</metamx.java-util.version>
+        <metamx.java-util.version>0.27.7</metamx.java-util.version>
         <apache.curator.version>2.9.1</apache.curator.version>
         <jetty.version>9.2.5.v20141112</jetty.version>
         <jersey.version>1.19</jersey.version>

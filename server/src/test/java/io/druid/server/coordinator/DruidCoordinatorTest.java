@@ -23,7 +23,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
+import com.google.common.collect.Maps;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
@@ -61,6 +63,7 @@ import org.junit.Test;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -348,7 +351,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     }
     Map segmentAvailability = coordinator.getSegmentAvailability().snapshot();
     Assert.assertEquals(1, segmentAvailability.size());
-    Assert.assertEquals(0l, segmentAvailability.get(dataSource));
+    Assert.assertEquals(0L, segmentAvailability.get(dataSource));
 
     while (coordinator.getLoadPendingDatasources().get(dataSource).get() > 0) {
       Thread.sleep(50);
@@ -367,12 +370,53 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Assert.assertNotNull(dataSourceMap.get(dataSource));
     // Simulated the adding of segment to druidServer during SegmentChangeRequestLoad event
     // The load rules asks for 2 replicas, therefore 1 replica should still be pending
-    Assert.assertEquals(1l, dataSourceMap.get(dataSource).get());
+    Assert.assertEquals(1L, dataSourceMap.get(dataSource).get());
     coordinator.stop();
     leaderUnannouncerLatch.await();
     Assert.assertFalse(coordinator.isLeader());
     Assert.assertNull(coordinator.getCurrentLeader());
     EasyMock.verify(serverInventoryView);
     EasyMock.verify(metadataRuleManager);
+  }
+
+  @Test
+  public void testOrderedAvailableDataSegments()
+  {
+    DruidDataSource dataSource = new DruidDataSource("test", new HashMap());
+    DataSegment[] segments = new DataSegment[]{
+        getSegment("test", new Interval("2016-01-10T03:00:00Z/2016-01-10T04:00:00Z")),
+        getSegment("test", new Interval("2016-01-11T01:00:00Z/2016-01-11T02:00:00Z")),
+        getSegment("test", new Interval("2016-01-09T10:00:00Z/2016-01-09T11:00:00Z")),
+        getSegment("test", new Interval("2016-01-09T10:00:00Z/2016-01-09T12:00:00Z"))
+    };
+    for (DataSegment segment : segments) {
+      dataSource.addSegment(segment.getIdentifier(), segment);
+    }
+
+    EasyMock.expect(databaseSegmentManager.getInventory()).andReturn(
+        ImmutableList.of(dataSource)
+    ).atLeastOnce();
+    EasyMock.replay(databaseSegmentManager);
+    Set<DataSegment> availableSegments = coordinator.getOrderedAvailableDataSegments();
+    DataSegment[] expected = new DataSegment[]{
+        getSegment("test", new Interval("2016-01-11T01:00:00Z/2016-01-11T02:00:00Z")),
+        getSegment("test", new Interval("2016-01-10T03:00:00Z/2016-01-10T04:00:00Z")),
+        getSegment("test", new Interval("2016-01-09T10:00:00Z/2016-01-09T12:00:00Z")),
+        getSegment("test", new Interval("2016-01-09T10:00:00Z/2016-01-09T11:00:00Z"))
+    };
+    Assert.assertEquals(expected.length, availableSegments.size());
+    Assert.assertEquals(expected, availableSegments.toArray());
+    EasyMock.verify(databaseSegmentManager);
+  }
+
+
+  private DataSegment getSegment(String dataSource, Interval interval)
+  {
+    // Not using EasyMock as it hampers the performance of multithreads.
+    DataSegment segment = new DataSegment(
+        dataSource, interval, "dummy_version", Maps.<String, Object>newConcurrentMap(),
+        Lists.<String>newArrayList(), Lists.<String>newArrayList(), null, 0, 0L
+    );
+    return segment;
   }
 }
