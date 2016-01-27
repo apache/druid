@@ -27,7 +27,7 @@ public interface IndexedIntsWriter extends Closeable
 {
   public void open() throws IOException;
 
-  public void add(Object obj) throws IOException;
+  public void add(int[] obj) throws IOException;
 
   public long getSerializedSize();
 

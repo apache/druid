@@ -60,7 +60,7 @@ public class VSizeIndexedIntsWriter extends SingleValueIndexedIntsWriter
   }
 
   @Override
-  protected void addValue(int val) throws IOException
+  protected void add(int val) throws IOException
   {
     byte[] intAsBytes = Ints.toByteArray(val);
     valuesOut.write(intAsBytes, intAsBytes.length - numBytes, numBytes);

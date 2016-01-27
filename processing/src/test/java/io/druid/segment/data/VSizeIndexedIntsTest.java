@@ -67,14 +67,25 @@ public class VSizeIndexedIntsTest
   }
 
   @Test
-  public void testGetBytesNoPaddingfromList() throws Exception
+  public void testGetBytesNoPaddingFromList() throws Exception
   {
     final int[] array = {1, 2, 4, 5, 6, 8, 9, 10};
-    List<Integer> list = Ints.asList(array);
+    final List<Integer> list = Ints.asList(array);
     int maxValue = Ints.max(array);
     VSizeIndexedInts ints = VSizeIndexedInts.fromList(list, maxValue);
     byte[] bytes1 = ints.getBytesNoPadding();
-    byte[] bytes2 = VSizeIndexedInts.getBytesNoPaddingfromList(list, maxValue);
+    byte[] bytes2 = VSizeIndexedInts.getBytesNoPaddingFromList(list, maxValue);
+    Assert.assertArrayEquals(bytes1, bytes2);
+  }
+
+  @Test
+  public void testGetBytesNoPaddingFromArray() throws Exception
+  {
+    final int[] array = {1, 2, 4, 5, 6, 8, 9, 10};
+    int maxValue = Ints.max(array);
+    VSizeIndexedInts ints = VSizeIndexedInts.fromArray(array, maxValue);
+    byte[] bytes1 = ints.getBytesNoPadding();
+    byte[] bytes2 = VSizeIndexedInts.getBytesNoPaddingFromArray(array, maxValue);
     Assert.assertArrayEquals(bytes1, bytes2);
   }
 }

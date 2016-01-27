@@ -93,7 +93,7 @@ public class CompressedVSizeIntsIndexedWriter extends SingleValueIndexedIntsWrit
   }
 
   @Override
-  protected void addValue(int val) throws IOException
+  protected void add(int val) throws IOException
   {
     if (!endBuffer.hasRemaining()) {
       endBuffer.rewind();

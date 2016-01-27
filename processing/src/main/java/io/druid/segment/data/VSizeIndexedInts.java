@@ -42,7 +42,12 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
 
   public static VSizeIndexedInts fromArray(int[] array, int maxValue)
   {
-    return fromList(Ints.asList(array), maxValue);
+    int numBytes = getNumBytesForMax(maxValue);
+
+    final ByteBuffer buffer = ByteBuffer.allocate(array.length * numBytes + (4 - numBytes));
+    writeToBuffer(buffer, array, numBytes, maxValue);
+
+    return new VSizeIndexedInts(buffer.asReadOnlyBuffer(), numBytes);
   }
 
   public static VSizeIndexedInts empty()
@@ -50,43 +55,46 @@ public class VSizeIndexedInts implements IndexedInts, Comparable<VSizeIndexedInt
     return fromList(Lists.<Integer>newArrayList(), 0);
   }
 
+  public static byte[] getBytesNoPaddingFromList(List<Integer> list, int maxValue)
+  {
+    return getBytesNoPaddingFromArray(Ints.toArray(list), maxValue);
+  }
+
   /**
    * provide for performance reason.
    */
-  public static byte[] getBytesNoPaddingfromList(List<Integer> list, int maxValue)
+  public static byte[] getBytesNoPaddingFromArray(int[] array, int maxValue)
   {
     int numBytes = getNumBytesForMax(maxValue);
 
-    final ByteBuffer buffer = ByteBuffer.allocate((list.size() * numBytes));
-    writeToBuffer(buffer, list, numBytes, maxValue);
+    return getBytesNoPaddingFromArray(array, maxValue, numBytes);
+  }
+
+  public static byte[] getBytesNoPaddingFromArray(int[] array, int maxValue, int numBytes)
+  {
+    final ByteBuffer buffer = ByteBuffer.allocate(array.length * numBytes);
+    writeToBuffer(buffer, array, numBytes, maxValue);
 
     return buffer.array();
   }
 
   public static VSizeIndexedInts fromList(List<Integer> list, int maxValue)
   {
-    int numBytes = getNumBytesForMax(maxValue);
-
-    final ByteBuffer buffer = ByteBuffer.allocate((list.size() * numBytes) + (4 - numBytes));
-    writeToBuffer(buffer, list, numBytes, maxValue);
-
-    return new VSizeIndexedInts(buffer.asReadOnlyBuffer(), numBytes);
+    return fromArray(Ints.toArray(list), maxValue);
   }
 
-  private static void writeToBuffer(ByteBuffer buffer, List<Integer> list, int numBytes, int maxValue)
+  private static void writeToBuffer(ByteBuffer buffer, int[] array, int numBytes, int maxValue)
   {
-    int i = 0;
-    for (Integer val : list) {
-      if (val < 0) {
-        throw new IAE("integer values must be positive, got[%d], i[%d]", val, i);
+    for (int i = 0; i < array.length; i++) {
+      if (array[i] < 0) {
+        throw new IAE("integer values must be positive, got[%d], i[%d]", array[i], i);
       }
-      if (val > maxValue) {
-        throw new IAE("val[%d] > maxValue[%d], please don't lie about maxValue.  i[%d]", val, maxValue, i);
+      if (array[i] > maxValue) {
+        throw new IAE("val[%d] > maxValue[%d], please don't lie about maxValue.  i[%d]", array[i], maxValue, i);
       }
 
-      byte[] intAsBytes = Ints.toByteArray(val);
+      byte[] intAsBytes = Ints.toByteArray(array[i]);
       buffer.put(intAsBytes, intAsBytes.length - numBytes, numBytes);
-      ++i;
     }
     buffer.position(0);
   }

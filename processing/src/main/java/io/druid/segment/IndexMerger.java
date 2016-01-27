@@ -874,10 +874,7 @@ public class IndexMerger
 
       int[][] dims = theRow.getDims();
       for (int i = 0; i < dims.length; ++i) {
-        List<Integer> listToWrite = (i >= dims.length || dims[i] == null)
-                                    ? null
-                                    : Ints.asList(dims[i]);
-        forwardDimWriters.get(i).write(listToWrite);
+        forwardDimWriters.get(i).add(dims[i]);
       }
 
       for (Map.Entry<Integer, TreeSet<Integer>> comprisedRow : theRow.getComprisedRows().entrySet()) {

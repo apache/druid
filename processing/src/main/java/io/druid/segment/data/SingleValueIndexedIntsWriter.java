@@ -19,30 +19,15 @@
 
 package io.druid.segment.data;
 
-import com.metamx.common.IAE;
-
 import java.io.IOException;
 
 public abstract class SingleValueIndexedIntsWriter implements IndexedIntsWriter
 {
   @Override
-  public void add(Object obj) throws IOException
+  public void add(int[] vals) throws IOException
   {
-    if (obj == null) {
-      addValue(0);
-    } else if (obj instanceof Integer) {
-      addValue(((Number) obj).intValue());
-    } else if (obj instanceof int[]) {
-      int[] vals = (int[]) obj;
-      if (vals.length == 0) {
-        addValue(0);
-      } else {
-        addValue(vals[0]);
-      }
-    } else {
-      throw new IAE("Unsupported single value type: " + obj.getClass());
-    }
+    add(vals == null || vals.length == 0 ? 0 : vals[0]);
   }
 
-  protected abstract void addValue(int val) throws IOException;
+  protected abstract void add(int val) throws IOException;
 }

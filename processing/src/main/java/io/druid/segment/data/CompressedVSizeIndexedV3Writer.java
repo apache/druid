@@ -28,14 +28,10 @@ import io.druid.segment.IndexIO;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
-import java.util.ArrayList;
-import java.util.List;
 
-public class CompressedVSizeIndexedV3Writer extends MultiValueIndexedIntsWriter
+public class CompressedVSizeIndexedV3Writer implements IndexedIntsWriter
 {
   private static final byte VERSION = CompressedVSizeIndexedV3Supplier.VERSION;
-
-  private static final List<Integer> EMPTY_LIST = new ArrayList<>();
 
   public static CompressedVSizeIndexedV3Writer create(
       final IOPeon ioPeon,
@@ -85,16 +81,16 @@ public class CompressedVSizeIndexedV3Writer extends MultiValueIndexedIntsWriter
   }
 
   @Override
-  protected void addValues(List<Integer> vals) throws IOException
+  public void add(int[] vals) throws IOException
   {
-    if (vals == null) {
-      vals = EMPTY_LIST;
-    }
     offsetWriter.add(offset);
-    for (Integer val : vals) {
-      valueWriter.add(val);
+    if (vals == null || vals.length == 0) {
+      return;
     }
-    offset += vals.size();
+    for (int i = 0; i < vals.length; i++) {
+      valueWriter.add(vals[i]);
+    }
+    offset += vals.length;
   }
 
   @Override

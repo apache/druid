@@ -36,17 +36,17 @@ import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.Arrays;
-import java.util.List;
 
 /**
  * Streams arrays of objects out in the binary format described by VSizeIndexed
  */
-public class VSizeIndexedWriter extends MultiValueIndexedIntsWriter implements Closeable
+public class VSizeIndexedWriter implements IndexedIntsWriter, Closeable
 {
   private static final byte VERSION = 0x1;
   private static final byte[] EMPTY_ARRAY = new byte[]{};
 
   private final int maxId;
+  private final int numBytes;
 
   private CountingOutputStream headerOut = null;
   private CountingOutputStream valuesOut = null;
@@ -67,6 +67,7 @@ public class VSizeIndexedWriter extends MultiValueIndexedIntsWriter implements C
     this.headerFileName = String.format("%s.header", filenameBase);
     this.valuesFileName = String.format("%s.values", filenameBase);
     this.maxId = maxId;
+    this.numBytes = VSizeIndexedInts.getNumBytesForMax(maxId);
   }
 
   public void open() throws IOException
@@ -76,14 +77,11 @@ public class VSizeIndexedWriter extends MultiValueIndexedIntsWriter implements C
   }
 
   @Override
-  protected void addValues(List<Integer> val) throws IOException
+  public void add(int[] ints) throws IOException
   {
-    write(val);
-  }
-
-  public void write(List<Integer> ints) throws IOException
-  {
-    byte[] bytesToWrite = ints == null ? EMPTY_ARRAY : VSizeIndexedInts.getBytesNoPaddingfromList(ints, maxId);
+    byte[] bytesToWrite = ints == null
+                          ? EMPTY_ARRAY
+                          : VSizeIndexedInts.getBytesNoPaddingFromArray(ints, maxId, numBytes);
 
     valuesOut.write(bytesToWrite);
 
