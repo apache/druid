@@ -49,7 +49,7 @@ public class NamespacedExtractor extends LookupExtractor
   public NamespacedExtractor(
       @NotNull @JacksonInject @Named("dimExtractionNamespace")
       final Function<String, Function<String, String>> namespaces,
-      @NotNull @JacksonInject @Named("reverseDimExtractionNamespace")
+      @NotNull @JacksonInject @Named("dimReverseExtractionNamespace")
       final Function<String, Function<String, List<String>>> reverseNamespaces,
       @NotNull @JsonProperty(value = "namespace", required = true)
       final String namespace
