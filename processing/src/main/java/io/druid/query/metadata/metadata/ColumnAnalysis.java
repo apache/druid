@@ -98,6 +98,14 @@ public class ColumnAnalysis
       return this;
     }
 
+    if (isError() && rhs.isError()) {
+      return errorMessage.equals(rhs.getErrorMessage()) ? this : ColumnAnalysis.error("multiple_errors");
+    } else if (isError()) {
+      return this;
+    } else if (rhs.isError()) {
+      return rhs;
+    }
+
     if (!type.equals(rhs.getType())) {
       return ColumnAnalysis.error("cannot_merge_diff_types");
     }
