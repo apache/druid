@@ -28,6 +28,7 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.metamx.common.Granularity;
+import com.metamx.common.ISE;
 import io.druid.data.input.impl.CSVParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
@@ -78,7 +79,8 @@ public class DatasourcePathSpecTest
         null,
         null,
         null,
-        null
+        null,
+        false
     );
 
     segments = ImmutableList.of(
@@ -174,43 +176,7 @@ public class DatasourcePathSpecTest
   @Test
   public void testAddInputPaths() throws Exception
   {
-    HadoopDruidIndexerConfig hadoopIndexerConfig = new HadoopDruidIndexerConfig(
-        new HadoopIngestionSpec(
-            new DataSchema(
-                ingestionSpec.getDataSource(),
-                HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
-                    new StringInputRowParser(
-                        new CSVParseSpec(
-                            new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                            new DimensionsSpec(null, null, null),
-                            null,
-                            ImmutableList.of("timestamp", "host", "visited")
-                        )
-                    ),
-                    Map.class
-                ),
-                new AggregatorFactory[]{
-                    new LongSumAggregatorFactory("visited_sum", "visited")
-                },
-                new UniformGranularitySpec(
-                    Granularity.DAY, QueryGranularity.NONE, ImmutableList.of(Interval.parse("2000/3000"))
-                ),
-                HadoopDruidIndexerConfig.JSON_MAPPER
-            ),
-            new HadoopIOConfig(
-                ImmutableMap.<String, Object>of(
-                    "paths",
-                    "/tmp/dummy",
-                    "type",
-                    "static"
-                ),
-                null,
-                "/tmp/dummy"
-            ),
-            HadoopTuningConfig.makeDefaultTuningConfig().withWorkingPath("/tmp/work").withVersion("ver")
-        )
-    );
-
+    HadoopDruidIndexerConfig hadoopIndexerConfig = makeHadoopDruidIndexerConfig();
 
     ObjectMapper mapper = new DefaultObjectMapper();
 
@@ -245,6 +211,86 @@ public class DatasourcePathSpecTest
             .withDimensions(ImmutableList.of("product"))
             .withMetrics(ImmutableList.of("visited_sum")),
         actualIngestionSpec
+    );
+  }
+
+  @Test
+  public void testAddInputPathsWithNoSegments() throws Exception
+  {
+    HadoopDruidIndexerConfig hadoopIndexerConfig = makeHadoopDruidIndexerConfig();
+
+    ObjectMapper mapper = new DefaultObjectMapper();
+
+    DatasourcePathSpec pathSpec = new DatasourcePathSpec(
+        mapper,
+        null,
+        ingestionSpec,
+        null
+    );
+
+    Configuration config = new Configuration();
+    Job job = EasyMock.createNiceMock(Job.class);
+    EasyMock.expect(job.getConfiguration()).andReturn(config).anyTimes();
+    EasyMock.replay(job);
+
+    try {
+      pathSpec.addInputPaths(hadoopIndexerConfig, job);
+      Assert.fail("should've been ISE");
+    }
+    catch (ISE ex) {
+      //OK
+    }
+
+    //now with ignoreWhenNoSegments flag set
+    pathSpec = new DatasourcePathSpec(
+        mapper,
+        null,
+        ingestionSpec.withIgnoreWhenNoSegments(true),
+        null
+    );
+    pathSpec.addInputPaths(hadoopIndexerConfig, job);
+
+    Assert.assertNull(config.get(DatasourceInputFormat.CONF_INPUT_SEGMENTS));
+    Assert.assertNull(config.get(DatasourceInputFormat.CONF_DRUID_SCHEMA));
+  }
+
+  private HadoopDruidIndexerConfig makeHadoopDruidIndexerConfig()
+  {
+    return new HadoopDruidIndexerConfig(
+        new HadoopIngestionSpec(
+            new DataSchema(
+                ingestionSpec.getDataSource(),
+                HadoopDruidIndexerConfig.JSON_MAPPER.convertValue(
+                    new StringInputRowParser(
+                        new CSVParseSpec(
+                            new TimestampSpec("timestamp", "yyyyMMddHH", null),
+                            new DimensionsSpec(null, null, null),
+                            null,
+                            ImmutableList.of("timestamp", "host", "visited")
+                        )
+                    ),
+                    Map.class
+                ),
+                new AggregatorFactory[]{
+                    new LongSumAggregatorFactory("visited_sum", "visited")
+                },
+                new UniformGranularitySpec(
+                    Granularity.DAY, QueryGranularity.NONE, ImmutableList.of(Interval.parse("2000/3000"))
+                ),
+                HadoopDruidIndexerConfig.JSON_MAPPER
+            ),
+            new HadoopIOConfig(
+                ImmutableMap.<String, Object>of(
+                    "paths",
+                    "/tmp/dummy",
+                    "type",
+                    "static"
+                ),
+                null,
+                "/tmp/dummy"
+            ),
+            HadoopTuningConfig.makeDefaultTuningConfig().withWorkingPath("/tmp/work").withVersion("ver")
+        )
     );
   }
 }
