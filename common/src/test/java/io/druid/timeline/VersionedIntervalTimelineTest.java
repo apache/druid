@@ -1495,6 +1495,16 @@ public class VersionedIntervalTimelineTest
     );
   }
 
+  @Test
+  public void testNotFoundReturnsEmpty() throws Exception
+  {
+    timeline = makeStringIntegerTimeline();
+
+    add("2011-04-01/2011-04-09", "1", 1);
+
+    Assert.assertTrue(timeline.lookup(Interval.parse("1970/1980")).isEmpty());
+  }
+  
   private Pair<Interval, Pair<String, PartitionHolder<Integer>>> createExpected(
       String intervalString,
       String version,
