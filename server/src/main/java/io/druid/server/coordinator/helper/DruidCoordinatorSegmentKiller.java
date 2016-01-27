@@ -19,9 +19,11 @@
 
 package io.druid.server.coordinator.helper;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.metamx.common.logger.Logger;
 import io.druid.client.indexing.IndexingServiceClient;
+import io.druid.common.utils.JodaUtils;
 import io.druid.metadata.MetadataSegmentManager;
 import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.joda.time.Duration;
@@ -100,7 +102,8 @@ public class DruidCoordinatorSegmentKiller implements DruidCoordinatorHelper
     return params;
   }
 
-  private Interval findIntervalForKillTask(String dataSource, int limit)
+  @VisibleForTesting
+  Interval findIntervalForKillTask(String dataSource, int limit)
   {
     List<Interval> unusedSegmentIntervals = segmentManager.getUnusedSegmentIntervals(
         dataSource,
@@ -113,20 +116,7 @@ public class DruidCoordinatorSegmentKiller implements DruidCoordinatorHelper
     );
 
     if (unusedSegmentIntervals != null && unusedSegmentIntervals.size() > 0) {
-      long start = Long.MIN_VALUE;
-      long end = Long.MAX_VALUE;
-
-      for (Interval interval : unusedSegmentIntervals) {
-        if (start < interval.getStartMillis()) {
-          start = interval.getStartMillis();
-        }
-
-        if (end > interval.getEndMillis()) {
-          end = interval.getEndMillis();
-        }
-      }
-
-      return new Interval(start, end);
+      return JodaUtils.umbrellaInterval(unusedSegmentIntervals);
     } else {
       return null;
     }
