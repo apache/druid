@@ -314,21 +314,19 @@ public class AggregationTestHelper
       index = new OnheapIncrementalIndex(minTimestamp, gran, metrics, deserializeComplexMetrics, maxRowCount);
       while (rows.hasNext()) {
         Object row = rows.next();
-        try {
-          if (row instanceof String && parser instanceof StringInputRowParser) {
-            //Note: this is required because StringInputRowParser is InputRowParser<ByteBuffer> as opposed to
-            //InputRowsParser<String>
-            index.add(((StringInputRowParser) parser).parse((String) row));
-          } else {
-            index.add(parser.parse(row));
-          }
-        }
-        catch (IndexSizeExceededException ex) {
+        if (!index.canAppendRow()) {
           File tmp = tempFolder.newFolder();
           toMerge.add(tmp);
           indexMerger.persist(index, tmp, new IndexSpec());
           index.close();
           index = new OnheapIncrementalIndex(minTimestamp, gran, metrics, deserializeComplexMetrics, maxRowCount);
+        }
+        if (row instanceof String && parser instanceof StringInputRowParser) {
+          //Note: this is required because StringInputRowParser is InputRowParser<ByteBuffer> as opposed to
+          //InputRowsParser<String>
+          index.add(((StringInputRowParser) parser).parse((String) row));
+        } else {
+          index.add(parser.parse(row));
         }
       }
 
