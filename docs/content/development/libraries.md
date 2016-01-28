@@ -40,11 +40,11 @@ Some great folks have written their own libraries to interact with Druid
 
 * [implydata/plyql](https://github.com/implydata/plyql) - A command line interface for issuing SQL queries to Druid via [plywood](https://github.com/implydata/plywood)
 
-
 Other Druid Distributions
 -------------------------
 
 * [Imply Analytics Platform](http://imply.io/download) - The Imply Analytics platform repackages Druid, all its dependencies, and an UI and SQL layer.
+* [eBay/embedded-druid](https://github.com/eBay/embedded-druid) - Leveraging Druid capabilities in stand alone application
 
 UIs
 ---
@@ -64,7 +64,6 @@ Community Helper Libraries
 
 * [madvertise/druid-dumbo](https://github.com/madvertise/druid-dumbo) - Scripts to help generate batch configs for the ingestion of data into Druid
 * [housejester/druid-test-harness](https://github.com/housejester/druid-test-harness) - A set of scripts to simplify standing up some servers and seeing how things work
-* [mingfang/docker-druid](https://github.com/mingfang/docker-druid) - A Dockerfile to run the entire Druid cluster
 
 Community Extensions
 --------------------
