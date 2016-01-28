@@ -40,11 +40,13 @@ import io.druid.query.Result;
 import io.druid.query.ResultGranularTimestampComparator;
 import io.druid.query.ResultMergeQueryRunner;
 import io.druid.query.aggregation.MetricManipulationFn;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
 import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -138,16 +140,16 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
         final byte[] filterBytes = dimFilter == null ? new byte[]{} : dimFilter.getCacheKey();
         final byte[] granularityBytes = query.getGranularity().cacheKey();
 
-        final Set<String> dimensions = Sets.newTreeSet();
-        if (query.getDimensions() != null) {
-          dimensions.addAll(query.getDimensions());
+        List<DimensionSpec> dimensionSpecs = query.getDimensions();
+        if (dimensionSpecs == null) {
+          dimensionSpecs = Collections.emptyList();
         }
 
-        final byte[][] dimensionsBytes = new byte[dimensions.size()][];
+        final byte[][] dimensionsBytes = new byte[dimensionSpecs.size()][];
         int dimensionsBytesSize = 0;
         int index = 0;
-        for (String dimension : dimensions) {
-          dimensionsBytes[index] = StringUtils.toUtf8(dimension);
+        for (DimensionSpec dimension : dimensionSpecs) {
+          dimensionsBytes[index] = dimension.getCacheKey();
           dimensionsBytesSize += dimensionsBytes[index].length;
           ++index;
         }

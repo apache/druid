@@ -1077,7 +1077,7 @@ public class Druids
     private Map<String, Object> context;
     private DimFilter dimFilter;
     private QueryGranularity granularity;
-    private List<String> dimensions;
+    private List<DimensionSpec> dimensions;
     private List<String> metrics;
     private PagingSpec pagingSpec;
 
@@ -1101,9 +1101,7 @@ public class Druids
           descending,
           dimFilter,
           granularity,
-          dimensions,
-          metrics,
-          pagingSpec,
+          dimensions, metrics, pagingSpec,
           context
       );
     }
@@ -1192,9 +1190,15 @@ public class Druids
       return this;
     }
 
-    public SelectQueryBuilder dimensions(List<String> d)
+    public SelectQueryBuilder dimensionSpecs(List<DimensionSpec> d)
     {
       dimensions = d;
+      return this;
+    }
+
+    public SelectQueryBuilder dimensions(List<String> d)
+    {
+      dimensions = DefaultDimensionSpec.toSpec(d);
       return this;
     }
 
