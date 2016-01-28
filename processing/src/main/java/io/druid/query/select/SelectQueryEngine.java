@@ -27,6 +27,7 @@ import com.metamx.common.guava.Sequence;
 import io.druid.query.QueryRunnerHelper;
 import io.druid.query.Result;
 import io.druid.query.dimension.DefaultDimensionSpec;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.LongColumnSelector;
@@ -55,9 +56,9 @@ public class SelectQueryEngine
       );
     }
 
-    final Iterable<String> dims;
+    final Iterable<DimensionSpec> dims;
     if (query.getDimensions() == null || query.getDimensions().isEmpty()) {
-      dims = adapter.getAvailableDimensions();
+      dims = DefaultDimensionSpec.toSpec(adapter.getAvailableDimensions());
     } else {
       dims = query.getDimensions();
     }
@@ -89,10 +90,9 @@ public class SelectQueryEngine
             final LongColumnSelector timestampColumnSelector = cursor.makeLongColumnSelector(Column.TIME_COLUMN_NAME);
 
             final Map<String, DimensionSelector> dimSelectors = Maps.newHashMap();
-            for (String dim : dims) {
-              // switching to using DimensionSpec for select would allow the use of extractionFn here.
-              final DimensionSelector dimSelector = cursor.makeDimensionSelector(new DefaultDimensionSpec(dim, dim));
-              dimSelectors.put(dim, dimSelector);
+            for (DimensionSpec dim : dims) {
+              final DimensionSelector dimSelector = cursor.makeDimensionSelector(dim);
+              dimSelectors.put(dim.getOutputName(), dimSelector);
             }
 
             final Map<String, ObjectColumnSelector> metSelectors = Maps.newHashMap();
