@@ -21,7 +21,10 @@ package io.druid.segment;
 
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
+import com.metamx.collections.bitmap.MutableBitmap;
+import com.metamx.collections.bitmap.WrappedImmutableRoaringBitmap;
 import io.druid.segment.data.Offset;
+import io.druid.segment.data.RoaringBitmapSerdeFactory;
 import org.roaringbitmap.IntIterator;
 
 /**
@@ -51,44 +54,17 @@ public class BitmapOffset implements Offset
     if (!descending) {
       return bitmapIndex.iterator();
     }
-    // ImmutableRoaringReverseIntIterator is not cloneable.. looks like a bug
-    // update : it's fixed in 0.5.13
-    int i = bitmapIndex.size();
-    int[] back = new int[bitmapIndex.size()];
-    IntIterator iterator = bitmapIndex.iterator();
-    while (iterator.hasNext()) {
-      back[--i] = iterator.next();
+    ImmutableBitmap roaringBitmap = bitmapIndex;
+    if (!(bitmapIndex instanceof WrappedImmutableRoaringBitmap)) {
+      final BitmapFactory factory = RoaringBitmapSerdeFactory.bitmapFactory;
+      final MutableBitmap bitmap = factory.makeEmptyMutableBitmap();
+      final IntIterator iterator = bitmapIndex.iterator();
+      while (iterator.hasNext()) {
+        bitmap.add(iterator.next());
+      }
+      roaringBitmap = factory.makeImmutableBitmap(bitmap);
     }
-    return new ArrayIntIterator(back, 0);
-  }
-
-  private static class ArrayIntIterator implements IntIterator {
-
-    private final int[] array;
-    private int index;
-
-    private ArrayIntIterator(int[] array, int index) {
-      this.array = array;
-      this.index = index;
-    }
-
-    @Override
-    public boolean hasNext()
-    {
-      return index < array.length;
-    }
-
-    @Override
-    public int next()
-    {
-      return array[index++];
-    }
-
-    @Override
-    public IntIterator clone()
-    {
-      return new ArrayIntIterator(array, index);
-    }
+    return ((WrappedImmutableRoaringBitmap) roaringBitmap).getBitmap().getReverseIntIterator();
   }
 
   private BitmapOffset(BitmapOffset otherOffset)
