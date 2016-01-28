@@ -61,18 +61,18 @@
         <connection>scm:git:ssh://git@github.com/druid-io/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/druid-io/druid.git</developerConnection>
         <url>https://github.com/druid-io/druid.git</url>
-        <tag>druid-0.8.0-SNAPSHOT</tag>
+        <tag>0.9.0-SNAPSHOT</tag>
     </scm>
 
     <properties>
-        <metamx.java-util.version>0.27.5</metamx.java-util.version>
+        <metamx.java-util.version>0.27.7</metamx.java-util.version>
         <apache.curator.version>2.9.1</apache.curator.version>
         <jetty.version>9.2.5.v20141112</jetty.version>
         <jersey.version>1.19</jersey.version>
-        <druid.api.version>0.3.15</druid.api.version>
+        <druid.api.version>0.3.16</druid.api.version>
         <!-- Watch out for Hadoop compatibility when updating to >= 2.5; see https://github.com/druid-io/druid/pull/1669 -->
         <jackson.version>2.4.6</jackson.version>
-        <log4j.version>2.4.1</log4j.version>
+        <log4j.version>2.5</log4j.version>
         <slf4j.version>1.7.12</slf4j.version>
         <hadoop.compile.version>2.3.0</hadoop.compile.version>
     </properties>
@@ -92,6 +92,10 @@
         <module>extensions/cassandra-storage</module>
         <module>extensions/hdfs-storage</module>
         <module>extensions/s3-extensions</module>
+        <module>extensions/graphite-emitter</module>
+        <!-- kafka-seven extension is not built by default since
+             Kafka 0.7 is not available in Maven Central -->
+        <!-- <module>extensions/kafka&#45;seven</module> -->
         <module>extensions/kafka-eight</module>
         <module>extensions/kafka-eight-simpleConsumer</module>
         <module>extensions/rabbitmq</module>
@@ -103,7 +107,7 @@
         <module>extensions/kafka-extraction-namespace</module>
         <module>extensions/cloudfiles-extensions</module>
         <module>extensions/datasketches</module>
-
+        <module>extensions/avro-extensions</module>
         <!-- distribution packaging -->
         <module>distribution</module>
 
@@ -136,7 +140,7 @@
             <dependency>
                 <groupId>com.metamx</groupId>
                 <artifactId>bytebuffer-collections</artifactId>
-                <version>0.2.1</version>
+                <version>0.2.4</version>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -156,7 +160,7 @@
             <dependency>
                 <groupId>commons-io</groupId>
                 <artifactId>commons-io</artifactId>
-                <version>2.0.1</version>
+                <version>2.4</version>
             </dependency>
             <dependency>
                 <groupId>commons-logging</groupId>

@@ -29,9 +29,15 @@ import com.google.common.collect.Sets;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.primitives.Longs;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
+import io.druid.common.guava.ThreadRenamingRunnable;
+import io.druid.concurrent.Execs;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.Rows;
@@ -69,8 +75,19 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.RejectedExecutionHandler;
+import java.util.concurrent.SynchronousQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 /**
  */
@@ -199,7 +216,8 @@ public class IndexGeneratorJob implements Jobby
   private static IncrementalIndex makeIncrementalIndex(
       Bucket theBucket,
       AggregatorFactory[] aggs,
-      HadoopDruidIndexerConfig config
+      HadoopDruidIndexerConfig config,
+      Iterable<String> oldDimOrder
   )
   {
     final HadoopTuningConfig tuningConfig = config.getSchema().getTuningConfig();
@@ -210,10 +228,16 @@ public class IndexGeneratorJob implements Jobby
         .withMetrics(aggs)
         .build();
 
-    return new OnheapIncrementalIndex(
+    OnheapIncrementalIndex newIndex = new OnheapIncrementalIndex(
         indexSchema,
         tuningConfig.getRowFlushBoundary()
     );
+
+    if (oldDimOrder != null && !indexSchema.getDimensionsSpec().hasCustomDimensions()) {
+      newIndex.loadDimensionIterable(oldDimOrder);
+    }
+
+    return newIndex;
   }
 
   public static class IndexGeneratorMapper extends HadoopDruidIndexerMapper<BytesWritable, BytesWritable>
@@ -310,9 +334,10 @@ public class IndexGeneratorJob implements Jobby
       BytesWritable first = iter.next();
 
       if (iter.hasNext()) {
+        LinkedHashSet<String> dimOrder = Sets.newLinkedHashSet();
         SortableBytes keyBytes = SortableBytes.fromBytesWritable(key);
         Bucket bucket = Bucket.fromGroupKey(keyBytes.getGroupKey()).lhs;
-        IncrementalIndex index = makeIncrementalIndex(bucket, combiningAggs, config);
+        IncrementalIndex index = makeIncrementalIndex(bucket, combiningAggs, config, null);
         index.add(InputRowSerde.fromBytes(first.getBytes(), aggregators));
 
         while (iter.hasNext()) {
@@ -320,9 +345,10 @@ public class IndexGeneratorJob implements Jobby
           InputRow value = InputRowSerde.fromBytes(iter.next().getBytes(), aggregators);
 
           if (!index.canAppendRow()) {
+            dimOrder.addAll(index.getDimensionOrder());
             log.info("current index full due to [%s]. creating new index.", index.getOutOfRowsReason());
             flushIndexToContextAndClose(key, index, context);
-            index = makeIncrementalIndex(bucket, combiningAggs, config);
+            index = makeIncrementalIndex(bucket, combiningAggs, config, dimOrder);
           }
 
           index.add(value);
@@ -337,11 +363,12 @@ public class IndexGeneratorJob implements Jobby
     private void flushIndexToContextAndClose(BytesWritable key, IncrementalIndex index, Context context)
         throws IOException, InterruptedException
     {
+      final List<String> dimensions = index.getDimensionNames();
       Iterator<Row> rows = index.iterator();
       while (rows.hasNext()) {
         context.progress();
         Row row = rows.next();
-        InputRow inputRow = getInputRowFromRow(row, index.getDimensions());
+        InputRow inputRow = getInputRowFromRow(row, dimensions);
         context.write(
             key,
             new BytesWritable(InputRowSerde.toBytes(inputRow, combiningAggs))
@@ -453,6 +480,7 @@ public class IndexGeneratorJob implements Jobby
         @Override
         public void progress()
         {
+          super.progress();
           context.progress();
         }
       };
@@ -465,9 +493,15 @@ public class IndexGeneratorJob implements Jobby
         final ProgressIndicator progressIndicator
     ) throws IOException
     {
-      return HadoopDruidIndexerConfig.INDEX_MERGER.persist(
-          index, interval, file, null, config.getIndexSpec(), progressIndicator
-      );
+      if (config.isBuildV9Directly()) {
+        return HadoopDruidIndexerConfig.INDEX_MERGER_V9.persist(
+            index, interval, file, config.getIndexSpec(), progressIndicator
+        );
+      } else {
+        return HadoopDruidIndexerConfig.INDEX_MERGER.persist(
+            index, interval, file, config.getIndexSpec(), progressIndicator
+        );
+      }
     }
 
     protected File mergeQueryableIndex(
@@ -477,9 +511,15 @@ public class IndexGeneratorJob implements Jobby
         ProgressIndicator progressIndicator
     ) throws IOException
     {
-      return HadoopDruidIndexerConfig.INDEX_MERGER.mergeQueryableIndex(
-          indexes, aggs, file, config.getIndexSpec(), progressIndicator
-      );
+      if (config.isBuildV9Directly()) {
+        return HadoopDruidIndexerConfig.INDEX_MERGER_V9.mergeQueryableIndex(
+            indexes, aggs, file, config.getIndexSpec(), progressIndicator
+        );
+      } else {
+        return HadoopDruidIndexerConfig.INDEX_MERGER.mergeQueryableIndex(
+            indexes, aggs, file, config.getIndexSpec(), progressIndicator
+        );
+      }
     }
 
     @Override
@@ -506,10 +546,13 @@ public class IndexGeneratorJob implements Jobby
 
       final Interval interval = config.getGranularitySpec().bucketInterval(bucket.time).get();
 
+      ListeningExecutorService persistExecutor = null;
+      List<ListenableFuture<?>> persistFutures = Lists.newArrayList();
       IncrementalIndex index = makeIncrementalIndex(
           bucket,
           combiningAggs,
-          config
+          config,
+          null
       );
       try {
         File baseFlushFile = File.createTempFile("base", "flush");
@@ -522,19 +565,49 @@ public class IndexGeneratorJob implements Jobby
         int runningTotalLineCount = 0;
         long startTime = System.currentTimeMillis();
 
-        Set<String> allDimensionNames = Sets.newHashSet();
+        Set<String> allDimensionNames = Sets.newLinkedHashSet();
         final ProgressIndicator progressIndicator = makeProgressIndicator(context);
+        int numBackgroundPersistThreads = config.getSchema().getTuningConfig().getNumBackgroundPersistThreads();
+        if (numBackgroundPersistThreads > 0) {
+          final BlockingQueue<Runnable> queue = new SynchronousQueue<>();
+          ExecutorService executorService = new ThreadPoolExecutor(
+              numBackgroundPersistThreads,
+              numBackgroundPersistThreads,
+              0L,
+              TimeUnit.MILLISECONDS,
+              queue,
+              Execs.makeThreadFactory("IndexGeneratorJob_persist_%d"),
+              new RejectedExecutionHandler()
+              {
+                @Override
+                public void rejectedExecution(Runnable r, ThreadPoolExecutor executor)
+                {
+                  try {
+                    executor.getQueue().put(r);
+                  }
+                  catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    throw new RejectedExecutionException("Got Interrupted while adding to the Queue");
+                  }
+                }
+              }
+          );
+          persistExecutor = MoreExecutors.listeningDecorator(executorService);
+        } else {
+          persistExecutor = MoreExecutors.sameThreadExecutor();
+        }
 
         for (final BytesWritable bw : values) {
           context.progress();
 
           final InputRow inputRow = index.formatRow(InputRowSerde.fromBytes(bw.getBytes(), aggregators));
-          allDimensionNames.addAll(inputRow.getDimensions());
           int numRows = index.add(inputRow);
 
           ++lineCount;
 
           if (!index.canAppendRow()) {
+            allDimensionNames.addAll(index.getDimensionOrder());
+
             log.info(index.getOutOfRowsReason());
             log.info(
                 "%,d lines to %,d rows in %,d millis",
@@ -548,19 +621,42 @@ public class IndexGeneratorJob implements Jobby
             toMerge.add(file);
 
             context.progress();
-            persist(index, interval, file, progressIndicator);
-            // close this index and make a new one, reusing same buffer
-            index.close();
+            final IncrementalIndex persistIndex = index;
+            persistFutures.add(
+                persistExecutor.submit(
+                    new ThreadRenamingRunnable(String.format("%s-persist", file.getName()))
+                    {
+                      @Override
+                      public void doRun()
+                      {
+                        try {
+                          persist(persistIndex, interval, file, progressIndicator);
+                        }
+                        catch (Exception e) {
+                          log.error("persist index error", e);
+                          throw Throwables.propagate(e);
+                        }
+                        finally {
+                          // close this index
+                          persistIndex.close();
+                        }
+                      }
+                    }
+                )
+            );
 
             index = makeIncrementalIndex(
                 bucket,
                 combiningAggs,
-                config
+                config,
+                allDimensionNames
             );
             startTime = System.currentTimeMillis();
             ++indexCount;
           }
         }
+
+        allDimensionNames.addAll(index.getDimensionOrder());
 
         log.info("%,d lines completed.", lineCount);
 
@@ -581,11 +677,14 @@ public class IndexGeneratorJob implements Jobby
             toMerge.add(finalFile);
           }
 
+          Futures.allAsList(persistFutures).get(1, TimeUnit.HOURS);
+          persistExecutor.shutdown();
+
           for (File file : toMerge) {
             indexes.add(HadoopDruidIndexerConfig.INDEX_IO.loadIndex(file));
           }
           mergedBase = mergeQueryableIndex(
-                        indexes, aggregators, new File(baseFlushFile, "merged"), progressIndicator
+              indexes, aggregators, new File(baseFlushFile, "merged"), progressIndicator
           );
         }
         final FileSystem outputFS = new Path(config.getSchema().getIOConfig().getSegmentOutputPath())
@@ -635,8 +734,17 @@ public class IndexGeneratorJob implements Jobby
           FileUtils.deleteDirectory(file);
         }
       }
+      catch (ExecutionException e) {
+        throw Throwables.propagate(e);
+      }
+      catch (TimeoutException e) {
+        throw Throwables.propagate(e);
+      }
       finally {
         index.close();
+        if (persistExecutor != null) {
+          persistExecutor.shutdownNow();
+        }
       }
     }
   }

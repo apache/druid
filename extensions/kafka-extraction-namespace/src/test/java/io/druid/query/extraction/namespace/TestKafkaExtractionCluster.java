@@ -408,15 +408,17 @@ public class TestKafkaExtractionCluster
   )
       throws InterruptedException
   {
-    final Function<String, String> extractionFn = lookup.get(namespace);
+    Function<String, String> extractionFn = lookup.get(namespace);
 
     if (expected == null) {
       while (extractionFn.apply(key) != null) {
         Thread.sleep(100);
+        extractionFn = lookup.get(namespace);
       }
     } else {
       while (!expected.equals(extractionFn.apply(key))) {
         Thread.sleep(100);
+        extractionFn = lookup.get(namespace);
       }
     }
 
@@ -431,10 +433,11 @@ public class TestKafkaExtractionCluster
   )
       throws InterruptedException
   {
-    final Function<String, List<String>> extractionFn = lookup.get(namespace);
+    Function<String, List<String>> extractionFn = lookup.get(namespace);
 
     while (!extractionFn.apply(key).equals(expected)) {
       Thread.sleep(100);
+      extractionFn = lookup.get(namespace);
     }
 
     Assert.assertEquals("update check", expected, extractionFn.apply(key));

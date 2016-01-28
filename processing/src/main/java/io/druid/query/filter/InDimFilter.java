@@ -78,6 +78,12 @@ public class InDimFilter implements DimFilter
   }
 
   @Override
+  public DimFilter optimize()
+  {
+    return this;
+  }
+
+  @Override
   public int hashCode()
   {
     int result = getValues().hashCode();

@@ -31,6 +31,7 @@ import io.druid.guice.annotations.Processing;
 import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
+import io.druid.segment.IndexMergerV9;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.FireDepartmentMetrics;
@@ -54,6 +55,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
   private final DataSegmentAnnouncer segmentAnnouncer;
   private final ExecutorService queryExecutorService;
   private final IndexMerger indexMerger;
+  private final IndexMergerV9 indexMergerV9;
   private final IndexIO indexIO;
   private final Cache cache;
   private final CacheConfig cacheConfig;
@@ -67,6 +69,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
       @JacksonInject DataSegmentAnnouncer segmentAnnouncer,
       @JacksonInject @Processing ExecutorService queryExecutorService,
       @JacksonInject IndexMerger indexMerger,
+      @JacksonInject IndexMergerV9 indexMergerV9,
       @JacksonInject IndexIO indexIO,
       @JacksonInject Cache cache,
       @JacksonInject CacheConfig cacheConfig,
@@ -82,6 +85,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
         null,
         queryExecutorService,
         indexMerger,
+        indexMergerV9,
         indexIO,
         cache,
         cacheConfig,
@@ -94,6 +98,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
     this.segmentAnnouncer = segmentAnnouncer;
     this.queryExecutorService = queryExecutorService;
     this.indexMerger = Preconditions.checkNotNull(indexMerger, "Null IndexMerger");
+    this.indexMergerV9 = Preconditions.checkNotNull(indexMergerV9, "Null IndexMergerV9");
     this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
     this.cache = cache;
     this.cacheConfig = cacheConfig;
@@ -118,7 +123,7 @@ public class FlushingPlumberSchool extends RealtimePlumberSchool
         conglomerate,
         segmentAnnouncer,
         queryExecutorService,
-        indexMerger,
+        config.getBuildV9Directly() ? indexMergerV9 : indexMerger,
         indexIO,
         cache,
         cacheConfig,

@@ -28,6 +28,7 @@ import io.druid.guice.ServerModule;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
+import io.druid.segment.IndexMergerV9;
 import io.druid.segment.column.ColumnConfig;
 
 import java.util.List;
@@ -39,6 +40,7 @@ public class TestUtils
 {
   private final ObjectMapper jsonMapper;
   private final IndexMerger indexMerger;
+  private final IndexMergerV9 indexMergerV9;
   private final IndexIO indexIO;
 
   public TestUtils()
@@ -56,6 +58,7 @@ public class TestUtils
         }
     );
     indexMerger = new IndexMerger(jsonMapper, indexIO);
+    indexMergerV9 = new IndexMergerV9(jsonMapper, indexIO);
 
     final List<? extends Module> list = new ServerModule().getJacksonModules();
     for (Module module : list) {
@@ -78,6 +81,10 @@ public class TestUtils
   public IndexMerger getTestIndexMerger()
   {
     return indexMerger;
+  }
+
+  public IndexMergerV9 getTestIndexMergerV9() {
+    return indexMergerV9;
   }
 
   public IndexIO getTestIndexIO()

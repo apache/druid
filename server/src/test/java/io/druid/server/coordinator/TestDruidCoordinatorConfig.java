@@ -28,6 +28,9 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   private final Duration coordinatorPeriod;
   private final Duration coordinatorIndexingPeriod;
   private final Duration loadTimeoutDelay;
+  private final Duration coordinatorKillPeriod;
+  private final Duration coordinatorKillDurationToRetain;
+  private final int coordinatorKillMaxSegments;
 
   private final String consoleStatic;
 
@@ -39,6 +42,9 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
       Duration coordinatorPeriod,
       Duration coordinatorIndexingPeriod,
       Duration loadTimeoutDelay,
+      Duration coordinatorKillPeriod,
+      Duration coordinatorKillDurationToRetain,
+      int coordinatorKillMaxSegments,
       String consoleStatic,
       boolean mergeSegments,
       boolean convertSegments
@@ -48,6 +54,9 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
     this.coordinatorPeriod = coordinatorPeriod;
     this.coordinatorIndexingPeriod = coordinatorIndexingPeriod;
     this.loadTimeoutDelay = loadTimeoutDelay;
+    this.coordinatorKillPeriod = coordinatorKillPeriod;
+    this.coordinatorKillDurationToRetain = coordinatorKillDurationToRetain;
+    this.coordinatorKillMaxSegments = coordinatorKillMaxSegments;
     this.consoleStatic = consoleStatic;
     this.mergeSegments = mergeSegments;
     this.convertSegments = convertSegments;
@@ -81,6 +90,24 @@ public class TestDruidCoordinatorConfig extends DruidCoordinatorConfig
   public boolean isConvertSegments()
   {
     return convertSegments;
+  }
+
+  @Override
+  public Duration getCoordinatorKillPeriod()
+  {
+    return coordinatorKillPeriod;
+  }
+
+  @Override
+  public Duration getCoordinatorKillDurationToRetain()
+  {
+    return coordinatorKillDurationToRetain;
+  }
+
+  @Override
+  public int getCoordinatorKillMaxSegments()
+  {
+    return coordinatorKillMaxSegments;
   }
 
   @Override

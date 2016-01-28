@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.metamx.collections.spatial.search.Bound;
@@ -30,6 +31,7 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.QueryInterruptedException;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
@@ -39,6 +41,7 @@ import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
+import io.druid.segment.Metadata;
 import io.druid.segment.NullDimensionSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.SingleScanTimeDimSelector;
@@ -93,7 +96,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   @Override
   public Indexed<String> getAvailableDimensions()
   {
-    return new ListIndexed<String>(index.getDimensions(), String.class);
+    return new ListIndexed<String>(index.getDimensionNames(), String.class);
   }
 
   @Override
@@ -108,7 +111,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     if (dimension.equals(Column.TIME_COLUMN_NAME)) {
       return Integer.MAX_VALUE;
     }
-    IncrementalIndex.DimDim dimDim = index.getDimension(dimension);
+    IncrementalIndex.DimDim dimDim = index.getDimensionValues(dimension);
     if (dimDim == null) {
       return 0;
     }
@@ -146,13 +149,20 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
+  public String getColumnTypeName(String column)
+  {
+    final String metricType = index.getMetricType(column);
+    return metricType != null ? metricType : getColumnCapabilities(column).getType().toString();
+  }
+
+  @Override
   public DateTime getMaxIngestedEventTime()
   {
     return index.getMaxIngestedEventTime();
   }
 
   @Override
-  public Sequence<Cursor> makeCursors(final Filter filter, final Interval interval, final QueryGranularity gran)
+  public Sequence<Cursor> makeCursors(final Filter filter, final Interval interval, final QueryGranularity gran, final boolean descending)
   {
     if (index.isEmpty()) {
       return Sequences.empty();
@@ -178,8 +188,13 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
     final Interval actualInterval = actualIntervalTmp;
 
+    Iterable<Long> iterable = gran.iterable(actualInterval.getStartMillis(), actualInterval.getEndMillis());
+    if (descending) {
+      // might be better to be included in granularity#iterable
+      iterable = Lists.reverse(ImmutableList.copyOf(iterable));
+    }
     return Sequences.map(
-        Sequences.simple(gran.iterable(actualInterval.getStartMillis(), actualInterval.getEndMillis())),
+        Sequences.simple(iterable),
         new Function<Long, Cursor>()
         {
           EntryHolder currEntry = new EntryHolder();
@@ -211,6 +226,9 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                         Math.min(actualInterval.getEndMillis(), gran.next(input)), new String[][]{}
                     )
                 );
+                if (descending) {
+                  cursorMap = cursorMap.descendingMap();
+                }
                 time = gran.toDateTime(input);
 
                 reset();
@@ -294,15 +312,24 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
               @Override
               public DimensionSelector makeDimensionSelector(
-                  final String dimension,
-                  @Nullable final ExtractionFn extractionFn
+                  DimensionSpec dimensionSpec
               )
               {
+                return dimensionSpec.decorate(makeDimensionSelectorUndecorated(dimensionSpec));
+              }
+
+              private DimensionSelector makeDimensionSelectorUndecorated(
+                  DimensionSpec dimensionSpec
+              )
+              {
+                final String dimension = dimensionSpec.getDimension();
+                final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
+
                 if (dimension.equals(Column.TIME_COLUMN_NAME)) {
-                  return new SingleScanTimeDimSelector(makeLongColumnSelector(dimension), extractionFn);
+                  return new SingleScanTimeDimSelector(makeLongColumnSelector(dimension), extractionFn, descending);
                 }
 
-                final IncrementalIndex.DimDim dimValLookup = index.getDimension(dimension);
+                final IncrementalIndex.DimDim dimValLookup = index.getDimensionValues(dimension);
                 if (dimValLookup == null) {
                   return NULL_DIMENSION_SELECTOR;
                 }
@@ -601,7 +628,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       if (dimIndexObject == null) {
         return new BooleanValueMatcher(Strings.isNullOrEmpty(value));
       }
-      final IncrementalIndex.DimDim dimDim = index.getDimension(dimension);
+      final IncrementalIndex.DimDim dimDim = index.getDimensionValues(dimension);
       if (!dimDim.contains(value)) {
         if (Strings.isNullOrEmpty(value)) {
           final int dimIndex = dimIndexObject;
@@ -636,7 +663,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
           }
 
           for (String dimVal : dims[dimIndex]) {
-            if (dimDim.compareCannonicalValues(id, dimVal)) {
+            if (dimDim.compareCanonicalValues(id, dimVal)) {
               return true;
             }
           }
@@ -707,5 +734,11 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
         }
       };
     }
+  }
+
+  @Override
+  public Metadata getMetadata()
+  {
+    return index.getMetadata();
   }
 }

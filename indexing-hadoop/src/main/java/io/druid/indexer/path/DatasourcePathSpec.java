@@ -28,6 +28,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.hadoop.DatasourceIngestionSpec;
@@ -93,7 +94,14 @@ public class DatasourcePathSpec implements PathSpec
       HadoopDruidIndexerConfig config, Job job
   ) throws IOException
   {
-    Preconditions.checkArgument(segments != null && !segments.isEmpty(), "no segments provided");
+    if (segments == null || segments.isEmpty()) {
+      if (ingestionSpec.isIgnoreWhenNoSegments()) {
+        logger.warn("No segments found for ingestionSpec [%s]", ingestionSpec);
+        return job;
+      } else {
+        throw new ISE("No segments found for ingestion spec [%s]", ingestionSpec);
+      }
+    }
 
     logger.info(
         "Found total [%d] segments for [%s]  in interval [%s]",

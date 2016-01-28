@@ -21,8 +21,11 @@ package io.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
+import io.druid.query.Druids;
 
 import java.util.Collections;
 import java.util.List;
@@ -55,6 +58,19 @@ public class AndDimFilter implements DimFilter
   public byte[] getCacheKey()
   {
     return DimFilterCacheHelper.computeCacheKey(DimFilterCacheHelper.AND_CACHE_ID, fields);
+  }
+
+  @Override
+  public DimFilter optimize()
+  {
+    return Druids.newAndDimFilterBuilder().fields(Lists.transform(this.getFields(), new Function<DimFilter, DimFilter>()
+    {
+      @Override
+      public DimFilter apply(DimFilter input)
+      {
+        return input.optimize();
+      }
+    })).build();
   }
 
   @Override

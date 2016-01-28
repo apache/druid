@@ -33,7 +33,6 @@ import java.util.regex.Pattern;
  */
 public class RegexDimExtractionFn extends DimExtractionFn
 {
-  private static final byte CACHE_TYPE_ID = 0x1;
   private static final byte CACHE_KEY_SEPARATOR = (byte) 0xFF;
 
   private final String expr;
@@ -75,7 +74,7 @@ public class RegexDimExtractionFn extends DimExtractionFn
     totalLen += 2; // separators
 
     return ByteBuffer.allocate(totalLen)
-                     .put(CACHE_TYPE_ID)
+                     .put(ExtractionCacheHelper.CACHE_TYPE_ID_REGEX)
                      .put(exprBytes)
                      .put(CACHE_KEY_SEPARATOR)
                      .put(replaceStrBytes)

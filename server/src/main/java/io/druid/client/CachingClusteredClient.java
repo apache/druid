@@ -39,6 +39,7 @@ import com.google.inject.Inject;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.LazySequence;
+import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.EmittingLogger;
@@ -49,6 +50,7 @@ import io.druid.client.selector.ServerSelector;
 import io.druid.concurrent.Execs;
 import io.druid.guice.annotations.BackgroundCaching;
 import io.druid.guice.annotations.Smile;
+import io.druid.query.BaseQuery;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.CacheStrategy;
 import io.druid.query.Query;
@@ -131,20 +133,20 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     final List<Pair<Interval, byte[]>> cachedResults = Lists.newArrayList();
     final Map<String, CachePopulator> cachePopulatorMap = Maps.newHashMap();
 
-    final boolean useCache = query.getContextUseCache(true)
+    final boolean useCache = BaseQuery.getContextUseCache(query, true)
                              && strategy != null
                              && cacheConfig.isUseCache()
                              && cacheConfig.isQueryCacheable(query);
-    final boolean populateCache = query.getContextPopulateCache(true)
+    final boolean populateCache = BaseQuery.getContextPopulateCache(query, true)
                                   && strategy != null
                                   && cacheConfig.isPopulateCache()
                                   && cacheConfig.isQueryCacheable(query);
-    final boolean isBySegment = query.getContextBySegment(false);
+    final boolean isBySegment = BaseQuery.getContextBySegment(query, false);
 
 
     final ImmutableMap.Builder<String, Object> contextBuilder = new ImmutableMap.Builder<>();
 
-    final int priority = query.getContextPriority(0);
+    final int priority = BaseQuery.getContextPriority(query, 0);
     contextBuilder.put("priority", priority);
 
     if (populateCache) {
@@ -164,33 +166,54 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     Set<Pair<ServerSelector, SegmentDescriptor>> segments = Sets.newLinkedHashSet();
 
     List<TimelineObjectHolder<String, ServerSelector>> serversLookup = Lists.newLinkedList();
-    List<Interval> uncoveredIntervals = Lists.newLinkedList();
 
-    for (Interval interval : query.getIntervals()) {
-      Iterable<TimelineObjectHolder<String, ServerSelector>> lookup = timeline.lookup(interval);
-      long startMillis = interval.getStartMillis();
-      long endMillis = interval.getEndMillis();
-      for (TimelineObjectHolder<String, ServerSelector> holder : lookup) {
-        Interval holderInterval = holder.getInterval();
-        long intervalStart = holderInterval.getStartMillis();
-        if (startMillis != intervalStart) {
-          uncoveredIntervals.add(new Interval(startMillis, intervalStart));
+    // Note that enabling this leads to putting uncovered intervals information in the response headers
+    // and might blow up in some cases https://github.com/druid-io/druid/issues/2108
+    int uncoveredIntervalsLimit = BaseQuery.getContextUncoveredIntervalsLimit(query, 0);
+
+    if (uncoveredIntervalsLimit > 0) {
+      List<Interval> uncoveredIntervals = Lists.newArrayListWithCapacity(uncoveredIntervalsLimit);
+      boolean uncoveredIntervalsOverflowed = false;
+
+      for (Interval interval : query.getIntervals()) {
+        Iterable<TimelineObjectHolder<String, ServerSelector>> lookup = timeline.lookup(interval);
+        long startMillis = interval.getStartMillis();
+        long endMillis = interval.getEndMillis();
+        for (TimelineObjectHolder<String, ServerSelector> holder : lookup) {
+          Interval holderInterval = holder.getInterval();
+          long intervalStart = holderInterval.getStartMillis();
+          if (!uncoveredIntervalsOverflowed && startMillis != intervalStart) {
+            if (uncoveredIntervalsLimit > uncoveredIntervals.size()) {
+              uncoveredIntervals.add(new Interval(startMillis, intervalStart));
+            } else {
+              uncoveredIntervalsOverflowed = true;
+            }
+          }
+          startMillis = holderInterval.getEndMillis();
+          serversLookup.add(holder);
         }
-        startMillis = holderInterval.getEndMillis();
-        serversLookup.add(holder);
+
+        if (!uncoveredIntervalsOverflowed && startMillis < endMillis) {
+          if (uncoveredIntervalsLimit > uncoveredIntervals.size()) {
+            uncoveredIntervals.add(new Interval(startMillis, endMillis));
+          } else {
+            uncoveredIntervalsOverflowed = true;
+          }
+        }
       }
 
-      if (startMillis < endMillis) {
-        uncoveredIntervals.add(new Interval(startMillis, endMillis));
+      if (!uncoveredIntervals.isEmpty()) {
+        // This returns intervals for which NO segment is present.
+        // Which is not necessarily an indication that the data doesn't exist or is
+        // incomplete. The data could exist and just not be loaded yet.  In either
+        // case, though, this query will not include any data from the identified intervals.
+        responseContext.put("uncoveredIntervals", uncoveredIntervals);
+        responseContext.put("uncoveredIntervalsOverflowed", uncoveredIntervalsOverflowed);
       }
-    }
-
-    if (!uncoveredIntervals.isEmpty()) {
-      // This returns intervals for which NO segment is present.
-      // Which is not necessarily an indication that the data doesn't exist or is
-      // incomplete. The data could exist and just not be loaded yet.  In either
-      // case, though, this query will not include any data from the identified intervals.
-      responseContext.put("uncoveredIntervals", uncoveredIntervals);
+    } else {
+      for (Interval interval : query.getIntervals()) {
+        Iterables.addAll(serversLookup, timeline.lookup(interval));
+      }
     }
 
     // Let tool chest filter out unneeded segments
@@ -292,7 +315,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
             addSequencesFromCache(sequencesByInterval);
             addSequencesFromServer(sequencesByInterval);
 
-            return mergeCachedAndUncachedSequences(sequencesByInterval, toolChest);
+            return mergeCachedAndUncachedSequences(query, sequencesByInterval);
           }
 
           private void addSequencesFromCache(ArrayList<Sequence<T>> listOfSequences)
@@ -340,8 +363,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
           {
             listOfSequences.ensureCapacity(listOfSequences.size() + serverSegments.size());
 
-            final Query<Result<BySegmentResultValueClass<T>>> rewrittenQuery = (Query<Result<BySegmentResultValueClass<T>>>) query
-                .withOverriddenContext(contextBuilder.build());
+            final Query<T> rewrittenQuery = query.withOverriddenContext(contextBuilder.build());
 
             // Loop through each server, setting up the query and initiating it.
             // The data gets handled as a Future and parsed in the long Sequence chain in the resultSeqToAdd setter.
@@ -366,7 +388,8 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
                   // bySegment queries need to be de-serialized, see DirectDruidClient.run()
 
                   @SuppressWarnings("unchecked")
-                  final Query<Result<BySegmentResultValueClass<T>>> bySegmentQuery = (Query<Result<BySegmentResultValueClass<T>>>) query;
+                  final Query<Result<BySegmentResultValueClass<T>>> bySegmentQuery =
+                      (Query<Result<BySegmentResultValueClass<T>>>) ((Query) query);
 
                   @SuppressWarnings("unchecked")
                   final Sequence<Result<BySegmentResultValueClass<T>>> resultSequence = clientQueryable.run(
@@ -406,7 +429,8 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
                     rewrittenQuery.withQuerySegmentSpec(segmentSpec),
                     responseContext
                 );
-                resultSeqToAdd = toolChest.mergeSequencesUnordered(
+                resultSeqToAdd = new MergeSequence(
+                    query.getResultOrdering(),
                     Sequences.<Result<BySegmentResultValueClass<T>>, Sequence<T>>map(
                         runningSequence,
                         new Function<Result<BySegmentResultValueClass<T>>, Sequence<T>>()
@@ -504,18 +528,17 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
   }
 
   protected Sequence<T> mergeCachedAndUncachedSequences(
-      List<Sequence<T>> sequencesByInterval,
-      QueryToolChest<T, Query<T>> toolChest
+      Query<T> query,
+      List<Sequence<T>> sequencesByInterval
   )
   {
     if (sequencesByInterval.isEmpty()) {
       return Sequences.empty();
     }
 
-    return toolChest.mergeSequencesUnordered(
-        Sequences.simple(
-            sequencesByInterval
-        )
+    return new MergeSequence<>(
+        query.getResultOrdering(),
+        Sequences.simple(sequencesByInterval)
     );
   }
 

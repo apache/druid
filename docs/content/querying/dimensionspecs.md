@@ -195,7 +195,10 @@ Example for the `__time` dimension:
 ```
 
 ### Lookup extraction function
-Explicit lookups allow you to specify a set of keys and values to use when performing the extraction
+
+Lookups are a concept in Druid where dimension values are (optionally) replaced with new values. 
+For more documentation on using lookups, please see [here](../querying/lookups.html). 
+Explicit lookups allow you to specify a set of keys and values to use when performing the extraction.
 
 ```json
 {
@@ -240,15 +243,151 @@ Explicit lookups allow you to specify a set of keys and values to use when perfo
 }
 ```
 
-A lookup can be of type `namespace` or `map`. A `map` lookup is passed as part of the query. A `namespace` lookup is populated on all the nodes which handle queries as per [lookups](../querying/lookups.html)
+A lookup can be of type `namespace` or `map`. A `map` lookup is passed as part of the query. 
+A `namespace` lookup is populated on all the nodes which handle queries as per [lookups](../querying/lookups.html)
 
-A property of `retainMissingValue` and `replaceMissingValueWith` can be specified at query time to hint how to handle missing values. Setting `replaceMissingValueWith` to `""` has the same effect of setting it to `null` or omitting the property. Setting `retainMissingValue` to true will use the dimension's original value if it is not found in the lookup. The default values are `replaceMissingValueWith = null` and `retainMissingValue = false` which causes missing values to be treated as missing.
+A property of `retainMissingValue` and `replaceMissingValueWith` can be specified at query time to hint how to handle missing values. Setting `replaceMissingValueWith` to `""` has the same effect as setting it to `null` or omitting the property. Setting `retainMissingValue` to true will use the dimension's original value if it is not found in the lookup. The default values are `replaceMissingValueWith = null` and `retainMissingValue = false` which causes missing values to be treated as missing.
  
-It is illegal to set `retainMissingValue = true` and also specify a `replaceMissingValueWith`
+It is illegal to set `retainMissingValue = true` and also specify a `replaceMissingValueWith`.
 
 A property of `injective` specifies if optimizations can be used which assume there is no combining of multiple names into one. For example: If ABC123 is the only key that maps to SomeCompany, that can be optimized since it is a unique lookup. But if both ABC123 and DEF456 BOTH map to SomeCompany, then that is NOT a unique lookup. Setting this value to true and setting `retainMissingValue` to FALSE (the default) may cause undesired behavior.
+
+A property `optimize` can be supplied to allow optimization of lookup based extraction filter (by default `optimize = false`). 
+The optimization layer will run on the broker and it will rewrite the extraction filter as clause of selector filters.
+For instance the following filter 
+
+```json
+{
+    "filter": {
+        "type": "extraction",
+        "dimension": "product",
+        "value": "bar_1",
+        "extractionFn": {
+            "type": "lookup",
+            "optimize": true,
+            "lookup": {
+                "type": "map",
+                "map": {
+                    "product_1": "bar_1",
+                    "product_3": "bar_1"
+                }
+            }
+        }
+    }
+}
+```
+
+will be rewritten as
+
+```json
+{
+   "filter":{
+      "type":"or",
+      "fields":[
+         {
+            "filter":{
+               "type":"selector",
+               "dimension":"product",
+               "value":"product_1"
+            }
+         },
+         {
+            "filter":{
+               "type":"selector",
+               "dimension":"product",
+               "value":"product_3"
+            }
+         }
+      ]
+   }
+}
+```
 
 A null dimension value can be mapped to a specific value by specifying the empty string as the key.
 This allows distinguishing between a null dimension and a lookup resulting in a null.
 For example, specifying `{"":"bar","bat":"baz"}` with dimension values `[null, "foo", "bat"]` and replacing missing values with `"oof"` will yield results of `["bar", "oof", "baz"]`.
 Omitting the empty string key will cause the missing value to take over. For example, specifying `{"bat":"baz"}` with dimension values `[null, "foo", "bat"]` and replacing missing values with `"oof"` will yield results of `["oof", "oof", "baz"]`.
+
+### Cascade Extraction Function
+
+Provides chained execution of extraction functions.
+
+A property of `extractionFns` contains an array of any extraction functions, which is executed in the array index order.
+
+Example for chaining [regular expression extraction function](#regular-expression-extraction-function), [javascript extraction function](#javascript-extraction-function), and [substring extraction function](#substring-extraction-function) is as followings.
+
+```json
+{
+  "type" : "cascade", 
+  "extractionFns": [
+    { 
+      "type" : "regex", 
+      "expr" : "/([^/]+)/", 
+      "replaceMissingValues": false, 
+      "replaceMissingValuesWith": null
+    },
+    { 
+      "type" : "javascript", 
+      "function" : "function(str) { return \"the \".concat(str) }" 
+    },
+    { 
+      "type" : "substring", 
+      "index" : 0, "length" : 7 
+    }
+  ]
+}
+```
+
+It will transform dimension values with specified extraction functions in the order named.
+For example, `'/druid/prod/historical'` is transformed to `'the dru'` as regular expression extraction function first transforms it to `'druid'` and then, javascript extraction function transforms it to `'the druid'`, and lastly, substring extraction function transforms it to `'the dru'`. 
+
+### String Format Extraction Function
+
+Returns the dimension value formatted according to the given format string.
+
+```json
+{ "type" : "stringFormat", "format" : <sprintf_expression> }
+```
+
+For example if you want to concat "[" and "]" before and after the actual dimension value, you need to specify "[%s]" as format string.
+
+### Filtering DimensionSpecs
+
+These are only valid for multi-valued dimensions. If you have a row in druid that has a multi-valued dimension with values ["v1", "v2", "v3"] and you send a groupBy/topN query grouping by that dimension with [query filter](filter.html) for value "v1". In the response you will get 3 rows containing "v1", "v2" and "v3". This behavior might be unintuitive for some use cases.
+
+It happens because `query filter` is internally used on the bitmaps and only used to match the row to be included in the query result processing. With multivalued dimensions, "query filter" behaves like a contains check, which will match the row with dimension value ["v1", "v2", "v3"]. Please see the section on "Multi-value columns" in [segment](../design/segments.html) for more details.
+Then groupBy/topN processing pipeline "explodes" all multi-valued dimensions resulting 3 rows for "v1", "v2" and "v3" each.
+
+In addition to "query filter" which efficiently selects the rows to be processed, you can use the filtering dimension spec to filter for specific values within the values of a multi-valued dimension. These dimensionSpecs take a delegate DimensionSpec and a filtering criteria. From the "exploded" rows, only rows matching the given filtering criteria are returned in the query result.
+
+The following filtered dimension spec acts as a whitelist or blacklist for values as per the "isWhitelist" attribute value.
+```json
+{ "type" : "listFiltered", "delegate" : <dimensionSpec>, "values": <array of strings>, "isWhitelist": <optional attribute for true/false, default is true> }
+```
+
+Following filtered dimension spec retains only the values matching regex. Note that `listFiltered` is faster than this and one should use that for whitelist or blacklist usecase.
+```json
+{ "type" : "regexFiltered", "delegate" : <dimensionSpec>, "pattern": <java regex pattern> }
+```
+
+For more details and examples, see [multi-valued dimensions](multi-valued-dimensions.html).
+
+### Upper and Lower extraction functions.
+
+Returns the dimension values as all upper case or lower case.
+Optionally user can specify the language to use in order to perform upper or lower transformation 
+
+```json
+{
+  "type" : "upper",
+  "locale":"fr"
+}
+```
+
+or without setting "locale" (in this case, the current value of the default locale for this instance of the Java Virtual Machine.)
+
+```json
+{
+  "type" : "lower"
+}
+```

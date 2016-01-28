@@ -181,7 +181,6 @@ public class ITKafkaTest extends AbstractIndexerTest
 
     // send data to kafka
     while (dt.compareTo(dtStop) < 0) {  // as long as we're within the time span
-      LOG.info("sending event at [%s]", event_fmt.print(dt));
       num_events++;
       added += num_events;
       // construct the event to send
@@ -189,7 +188,7 @@ public class ITKafkaTest extends AbstractIndexerTest
           event_template,
           event_fmt.print(dt), num_events, 0, num_events
       );
-      LOG.debug("event: [%s]", event);
+      LOG.info("sending event: [%s]", event);
       try {
         // Send event to kafka
         KeyedMessage<String, String> message = new KeyedMessage<String, String>(TOPIC_NAME, event);

@@ -37,6 +37,7 @@ public class LookupExtractionFnExpectationsTest
         new MapLookupExtractor(ImmutableMap.of("foo", "bar")),
         true,
         null,
+        false,
         false
     );
     Assert.assertNull(lookupExtractionFn.apply(null));
@@ -49,6 +50,7 @@ public class LookupExtractionFnExpectationsTest
         new MapLookupExtractor(ImmutableMap.of("foo", "bar")),
         false,
         "REPLACE",
+        false,
         false
     );
     Assert.assertEquals("REPLACE", lookupExtractionFn.apply(null));
@@ -61,6 +63,7 @@ public class LookupExtractionFnExpectationsTest
         new MapLookupExtractor(ImmutableMap.of("", "bar")),
         false,
         "REPLACE",
+        false,
         false
     );
     Assert.assertEquals("bar", lookupExtractionFn.apply(null));
@@ -73,6 +76,7 @@ public class LookupExtractionFnExpectationsTest
         new MapLookupExtractor(ImmutableMap.of("foo", "")),
         false,
         "REPLACE",
+        false,
         false
     );
     Assert.assertEquals("REPLACE", lookupExtractionFn.apply(null));

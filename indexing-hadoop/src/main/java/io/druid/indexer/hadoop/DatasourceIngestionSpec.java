@@ -38,6 +38,7 @@ public class DatasourceIngestionSpec
   private final QueryGranularity granularity;
   private final List<String> dimensions;
   private final List<String> metrics;
+  private final boolean ignoreWhenNoSegments;
 
   @JsonCreator
   public DatasourceIngestionSpec(
@@ -47,7 +48,8 @@ public class DatasourceIngestionSpec
       @JsonProperty("filter") DimFilter filter,
       @JsonProperty("granularity") QueryGranularity granularity,
       @JsonProperty("dimensions") List<String> dimensions,
-      @JsonProperty("metrics") List<String> metrics
+      @JsonProperty("metrics") List<String> metrics,
+      @JsonProperty("ignoreWhenNoSegments") boolean ignoreWhenNoSegments
   )
   {
     this.dataSource = Preconditions.checkNotNull(dataSource, "null dataSource");
@@ -70,6 +72,8 @@ public class DatasourceIngestionSpec
 
     this.dimensions = dimensions;
     this.metrics = metrics;
+
+    this.ignoreWhenNoSegments = ignoreWhenNoSegments;
   }
 
   @JsonProperty
@@ -108,19 +112,66 @@ public class DatasourceIngestionSpec
     return metrics;
   }
 
+  @JsonProperty
+  public boolean isIgnoreWhenNoSegments()
+  {
+    return ignoreWhenNoSegments;
+  }
+
   public DatasourceIngestionSpec withDimensions(List<String> dimensions)
   {
-    return new DatasourceIngestionSpec(dataSource, null, intervals, filter, granularity, dimensions, metrics);
+    return new DatasourceIngestionSpec(
+        dataSource,
+        null,
+        intervals,
+        filter,
+        granularity,
+        dimensions,
+        metrics,
+        ignoreWhenNoSegments
+    );
   }
 
   public DatasourceIngestionSpec withMetrics(List<String> metrics)
   {
-    return new DatasourceIngestionSpec(dataSource, null, intervals, filter, granularity, dimensions, metrics);
+    return new DatasourceIngestionSpec(
+        dataSource,
+        null,
+        intervals,
+        filter,
+        granularity,
+        dimensions,
+        metrics,
+        ignoreWhenNoSegments
+    );
   }
 
   public DatasourceIngestionSpec withQueryGranularity(QueryGranularity granularity)
   {
-    return new DatasourceIngestionSpec(dataSource, null, intervals, filter, granularity, dimensions, metrics);
+    return new DatasourceIngestionSpec(
+        dataSource,
+        null,
+        intervals,
+        filter,
+        granularity,
+        dimensions,
+        metrics,
+        ignoreWhenNoSegments
+    );
+  }
+
+  public DatasourceIngestionSpec withIgnoreWhenNoSegments(boolean ignoreWhenNoSegments)
+  {
+    return new DatasourceIngestionSpec(
+        dataSource,
+        null,
+        intervals,
+        filter,
+        granularity,
+        dimensions,
+        metrics,
+        ignoreWhenNoSegments
+    );
   }
 
   @Override
@@ -135,6 +186,9 @@ public class DatasourceIngestionSpec
 
     DatasourceIngestionSpec that = (DatasourceIngestionSpec) o;
 
+    if (ignoreWhenNoSegments != that.ignoreWhenNoSegments) {
+      return false;
+    }
     if (!dataSource.equals(that.dataSource)) {
       return false;
     }
@@ -163,6 +217,7 @@ public class DatasourceIngestionSpec
     result = 31 * result + granularity.hashCode();
     result = 31 * result + (dimensions != null ? dimensions.hashCode() : 0);
     result = 31 * result + (metrics != null ? metrics.hashCode() : 0);
+    result = 31 * result + (ignoreWhenNoSegments ? 1 : 0);
     return result;
   }
 
@@ -176,6 +231,7 @@ public class DatasourceIngestionSpec
            ", granularity=" + granularity +
            ", dimensions=" + dimensions +
            ", metrics=" + metrics +
+           ", ignoreWhenNoSegments=" + ignoreWhenNoSegments +
            '}';
   }
 }

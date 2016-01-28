@@ -23,6 +23,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.metamx.collections.bitmap.ImmutableBitmap;
+import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
@@ -124,7 +125,9 @@ public class ExtractionFilter implements Filter
   @Override
   public ValueMatcher makeMatcher(ColumnSelectorFactory columnSelectorFactory)
   {
-    final DimensionSelector dimensionSelector = columnSelectorFactory.makeDimensionSelector(dimension, null);
+    final DimensionSelector dimensionSelector = columnSelectorFactory.makeDimensionSelector(
+        new DefaultDimensionSpec(dimension, dimension)
+    );
     if (dimensionSelector == null) {
       return new BooleanValueMatcher(value.equals(Strings.nullToEmpty(fn.apply(null))));
     } else {

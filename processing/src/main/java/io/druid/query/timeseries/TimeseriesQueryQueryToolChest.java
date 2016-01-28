@@ -25,11 +25,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
-import com.metamx.common.guava.MergeSequence;
-import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.nary.BinaryFn;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import io.druid.collections.OrderedMergeSequence;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.CacheStrategy;
 import io.druid.query.DruidMetrics;
@@ -76,17 +73,17 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   }
 
   @Override
-  public QueryRunner<Result<TimeseriesResultValue>> mergeResults(QueryRunner<Result<TimeseriesResultValue>> queryRunner)
+  public QueryRunner<Result<TimeseriesResultValue>> mergeResults(
+      QueryRunner<Result<TimeseriesResultValue>> queryRunner
+  )
   {
     return new ResultMergeQueryRunner<Result<TimeseriesResultValue>>(queryRunner)
     {
       @Override
       protected Ordering<Result<TimeseriesResultValue>> makeOrdering(Query<Result<TimeseriesResultValue>> query)
       {
-        return Ordering.from(
-            new ResultGranularTimestampComparator<TimeseriesResultValue>(
-                ((TimeseriesQuery) query).getGranularity()
-            )
+        return ResultGranularTimestampComparator.create(
+            ((TimeseriesQuery) query).getGranularity(), query.isDescending()
         );
       }
 
@@ -102,18 +99,6 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
         );
       }
     };
-  }
-
-  @Override
-  public Sequence<Result<TimeseriesResultValue>> mergeSequences(Sequence<Sequence<Result<TimeseriesResultValue>>> seqOfSequences)
-  {
-    return new OrderedMergeSequence<>(getOrdering(), seqOfSequences);
-  }
-
-  @Override
-  public Sequence<Result<TimeseriesResultValue>> mergeSequencesUnordered(Sequence<Sequence<Result<TimeseriesResultValue>>> seqOfSequences)
-  {
-    return new MergeSequence<>(getOrdering(), seqOfSequences);
   }
 
   @Override
@@ -150,10 +135,12 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
         final byte[] filterBytes = dimFilter == null ? new byte[]{} : dimFilter.getCacheKey();
         final byte[] aggregatorBytes = QueryCacheHelper.computeAggregatorBytes(query.getAggregatorSpecs());
         final byte[] granularityBytes = query.getGranularity().cacheKey();
+        final byte descending = query.isDescending() ? (byte)1 : 0;
 
         return ByteBuffer
-            .allocate(1 + granularityBytes.length + filterBytes.length + aggregatorBytes.length)
+            .allocate(2 + granularityBytes.length + filterBytes.length + aggregatorBytes.length)
             .put(TIMESERIES_QUERY)
+            .put(descending)
             .put(granularityBytes)
             .put(filterBytes)
             .put(aggregatorBytes)
@@ -217,12 +204,6 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
           }
         };
       }
-
-      @Override
-      public Sequence<Result<TimeseriesResultValue>> mergeSequences(Sequence<Sequence<Result<TimeseriesResultValue>>> seqOfSequences)
-      {
-        return new MergeSequence<Result<TimeseriesResultValue>>(getOrdering(), seqOfSequences);
-      }
     };
   }
 
@@ -230,11 +211,6 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   public QueryRunner<Result<TimeseriesResultValue>> preMergeQueryDecoration(QueryRunner<Result<TimeseriesResultValue>> runner)
   {
     return intervalChunkingQueryRunnerDecorator.decorate(runner, this);
-  }
-
-  public Ordering<Result<TimeseriesResultValue>> getOrdering()
-  {
-    return Ordering.natural();
   }
 
   @Override

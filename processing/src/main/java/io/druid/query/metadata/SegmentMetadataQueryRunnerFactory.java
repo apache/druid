@@ -30,6 +30,7 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
 import io.druid.query.AbstractPrioritizedCallable;
+import io.druid.query.BaseQuery;
 import io.druid.query.ConcatQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryContextKeys;
@@ -38,13 +39,13 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryWatcher;
+import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.metadata.metadata.ColumnAnalysis;
 import io.druid.query.metadata.metadata.ColumnIncluderator;
 import io.druid.query.metadata.metadata.SegmentAnalysis;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
-import io.druid.segment.QueryableIndex;
+import io.druid.segment.Metadata;
 import io.druid.segment.Segment;
-import io.druid.segment.StorageAdapter;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;
@@ -59,7 +60,6 @@ import java.util.concurrent.TimeoutException;
 
 public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<SegmentAnalysis, SegmentMetadataQuery>
 {
-  private static final SegmentAnalyzer analyzer = new SegmentAnalyzer();
   private static final Logger log = new Logger(SegmentMetadataQueryRunnerFactory.class);
 
 
@@ -85,23 +85,12 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
       public Sequence<SegmentAnalysis> run(Query<SegmentAnalysis> inQ, Map<String, Object> responseContext)
       {
         SegmentMetadataQuery query = (SegmentMetadataQuery) inQ;
-
-        final QueryableIndex index = segment.asQueryableIndex();
-
-        final Map<String, ColumnAnalysis> analyzedColumns;
-        final int numRows;
+        final SegmentAnalyzer analyzer = new SegmentAnalyzer(query.getAnalysisTypes());
+        final Map<String, ColumnAnalysis> analyzedColumns = analyzer.analyze(segment);
+        final int numRows = analyzer.numRows(segment);
         long totalSize = 0;
-        if (index == null) {
-          // IncrementalIndexSegments (used by in-memory hydrants in the realtime service) do not have a QueryableIndex
-          StorageAdapter segmentAdapter = segment.asStorageAdapter();
-          analyzedColumns = analyzer.analyze(segmentAdapter, query.getAnalysisTypes());
-          numRows = segmentAdapter.getNumRows();
-        } else {
-          analyzedColumns = analyzer.analyze(index, query.getAnalysisTypes());
-          numRows = index.getNumRows();
-        }
 
-        if (query.hasSize()) {
+        if (analyzer.analyzingSize()) {
           // Initialize with the size of the whitespace, 1 byte per
           totalSize = analyzedColumns.size() * numRows;
         }
@@ -119,7 +108,22 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
             columns.put(columnName, column);
           }
         }
-        List<Interval> retIntervals = query.hasInterval() ? Arrays.asList(segment.getDataInterval()) : null;
+        List<Interval> retIntervals = query.analyzingInterval() ? Arrays.asList(segment.getDataInterval()) : null;
+
+        final Map<String, AggregatorFactory> aggregators;
+        if (query.hasAggregators()) {
+          final Metadata metadata = segment.asStorageAdapter().getMetadata();
+          if (metadata != null && metadata.getAggregators() != null) {
+            aggregators = Maps.newHashMap();
+            for (AggregatorFactory aggregator : metadata.getAggregators()) {
+              aggregators.put(aggregator.getName(), aggregator);
+            }
+          } else {
+            aggregators = null;
+          }
+        } else {
+          aggregators = null;
+        }
 
         return Sequences.simple(
             Arrays.asList(
@@ -128,7 +132,8 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                     retIntervals,
                     columns,
                     totalSize,
-                    numRows
+                    numRows,
+                    aggregators
                 )
             )
         );
@@ -158,7 +163,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                       final Map<String, Object> responseContext
                   )
                   {
-                    final int priority = query.getContextPriority(0);
+                    final int priority = BaseQuery.getContextPriority(query, 0);
                     ListenableFuture<Sequence<SegmentAnalysis>> future = queryExecutor.submit(
                         new AbstractPrioritizedCallable<Sequence<SegmentAnalysis>>(priority)
                         {
@@ -181,10 +186,10 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                       future.cancel(true);
                       throw new QueryInterruptedException("Query interrupted");
                     }
-                    catch(CancellationException e) {
+                    catch (CancellationException e) {
                       throw new QueryInterruptedException("Query cancelled");
                     }
-                    catch(TimeoutException e) {
+                    catch (TimeoutException e) {
                       log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
                       future.cancel(true);
                       throw new QueryInterruptedException("Query timeout");

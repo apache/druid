@@ -36,10 +36,12 @@ import java.util.Iterator;
 public class TestHelper
 {
   private static final IndexMerger INDEX_MERGER;
+  private static final IndexMergerV9 INDEX_MERGER_V9;
   private static final IndexIO INDEX_IO;
-  public static final ObjectMapper JSON_MAPPER = new DefaultObjectMapper();
+  public static final ObjectMapper JSON_MAPPER;
 
   static {
+    JSON_MAPPER = new DefaultObjectMapper();
     INDEX_IO = new IndexIO(
         JSON_MAPPER,
         new ColumnConfig()
@@ -52,12 +54,23 @@ public class TestHelper
         }
     );
     INDEX_MERGER = new IndexMerger(JSON_MAPPER, INDEX_IO);
+    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO);
+  }
+
+  public static ObjectMapper getTestObjectMapper()
+  {
+    return JSON_MAPPER;
   }
 
 
   public static IndexMerger getTestIndexMerger()
   {
     return INDEX_MERGER;
+  }
+
+  public static IndexMergerV9 getTestIndexMergerV9()
+  {
+    return INDEX_MERGER_V9;
   }
 
   public static IndexIO getTestIndexIO()
@@ -67,6 +80,10 @@ public class TestHelper
 
   public static ObjectMapper getObjectMapper() {
     return JSON_MAPPER;
+  }
+
+  public static <T> Iterable<T> revert(Iterable<T> input) {
+    return Lists.reverse(Lists.newArrayList(input));
   }
 
   public static <T> void assertExpectedResults(Iterable<Result<T>> expectedResults, Sequence<Result<T>> results)
@@ -150,17 +167,19 @@ public class TestHelper
     }
   }
 
-  private static <T> void assertObjects(Iterable<T> expectedResults, Iterable<T> actualResults, String failMsg)
+  private static <T> void assertObjects(Iterable<T> expectedResults, Iterable<T> actualResults, String msg)
   {
     Iterator resultsIter = actualResults.iterator();
     Iterator resultsIter2 = actualResults.iterator();
     Iterator expectedResultsIter = expectedResults.iterator();
 
+    int index = 0;
     while (resultsIter.hasNext() && resultsIter2.hasNext() && expectedResultsIter.hasNext()) {
       Object expectedNext = expectedResultsIter.next();
       final Object next = resultsIter.next();
       final Object next2 = resultsIter2.next();
 
+      String failMsg = msg + "-" + index++;
       Assert.assertEquals(failMsg, expectedNext, next);
       Assert.assertEquals(
           String.format("%s: Second iterator bad, multiple calls to iterator() should be safe", failMsg),
@@ -171,13 +190,13 @@ public class TestHelper
 
     if (resultsIter.hasNext()) {
       Assert.fail(
-          String.format("%s: Expected resultsIter to be exhausted, next element was %s", failMsg, resultsIter.next())
+          String.format("%s: Expected resultsIter to be exhausted, next element was %s", msg, resultsIter.next())
       );
     }
 
     if (resultsIter2.hasNext()) {
       Assert.fail(
-          String.format("%s: Expected resultsIter2 to be exhausted, next element was %s", failMsg, resultsIter.next())
+          String.format("%s: Expected resultsIter2 to be exhausted, next element was %s", msg, resultsIter.next())
       );
     }
 
@@ -185,7 +204,7 @@ public class TestHelper
       Assert.fail(
           String.format(
               "%s: Expected expectedResultsIter to be exhausted, next element was %s",
-              failMsg,
+              msg,
               expectedResultsIter.next()
           )
       );

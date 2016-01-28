@@ -67,7 +67,7 @@ public class SelectQueryRunnerFactory
   )
   {
     return new ChainedExecutionQueryRunner<Result<SelectResultValue>>(
-        queryExecutor, toolChest.getOrdering(), queryWatcher, queryRunners
+        queryExecutor, queryWatcher, queryRunners
     );
   }
 

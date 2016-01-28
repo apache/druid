@@ -57,7 +57,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, context);
+    super(dataSource, querySegmentSpec, false, context);
     this.dimFilter = dimFilter;
     this.granularity = granularity;
     this.dimensions = dimensions;

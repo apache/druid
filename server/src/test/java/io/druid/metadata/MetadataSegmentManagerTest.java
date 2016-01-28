@@ -113,4 +113,22 @@ public class MetadataSegmentManagerTest
     );
     manager.stop();
   }
+
+  @Test
+  public void testGetUnusedSegmentsForInterval() throws Exception
+  {
+    manager.start();
+    manager.poll();
+    Assert.assertTrue(manager.removeDatasource("wikipedia"));
+
+    Assert.assertEquals(
+        ImmutableList.of(segment2.getInterval()),
+        manager.getUnusedSegmentIntervals("wikipedia", new Interval("1970/3000"), 1)
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of(segment2.getInterval(), segment1.getInterval()),
+        manager.getUnusedSegmentIntervals("wikipedia", new Interval("1970/3000"), 5)
+    );
+  }
 }

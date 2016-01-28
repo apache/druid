@@ -40,6 +40,7 @@ We recommend just setting the base ZK path and the ZK service host, but all ZK p
 |--------|-----------|-------|
 |`druid.zk.service.sessionTimeoutMs`|ZooKeeper session timeout, in milliseconds.|`30000`|
 |`druid.zk.service.compress`|Boolean flag for whether or not created Znodes should be compressed.|`true`|
+|`druid.zk.service.acl`|Boolean flag for whether or not to enable ACL security for ZooKeeper. If ACL is enabled, zNode creators will have all permissions.|`false`|
 
 #### Path Configuration
 Druid interacts with ZK through a set of standard path configurations. We recommend just setting the base ZK path, but all ZK paths that Druid uses can be overwritten to absolute paths.
@@ -148,6 +149,11 @@ The Druid servers emit various metrics and alerts via something we call an Emitt
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.emitter.composing.emitters`|List of emitter modules to load e.g. ["logging","http"].|[]|
+
+#### Graphite Emitter
+
+To use graphite as emitter set `druid.emitter=graphite`. For configuration details please follow this [link](https://github.com/druid-io/druid/tree/master/extensions/graphite-emitter/README.md).
+
 
 ### Metadata Storage
 

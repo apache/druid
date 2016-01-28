@@ -21,7 +21,6 @@ package io.druid.query;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
-import com.metamx.common.guava.Sequence;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.timeline.LogicalSegment;
@@ -37,54 +36,23 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
 {
   /**
    * This method wraps a QueryRunner.  The input QueryRunner, by contract, will provide a series of
-   * ResultType objects in time order (ascending).  This method should return a new QueryRunner that
+   * ResultType objects in time order (ascending or descending).  This method should return a new QueryRunner that
    * potentially merges the stream of ordered ResultType objects.
    *
-   * @param runner A QueryRunner that provides a series of ResultType objects in time order (ascending)
-   * @return a QueryRunner that potentialy merges the stream of ordered ResultType objects
+   * @param runner A QueryRunner that provides a series of ResultType objects in time order (ascending or descending)
+   *
+   * @return a QueryRunner that potentially merges the stream of ordered ResultType objects
    */
   public abstract QueryRunner<ResultType> mergeResults(QueryRunner<ResultType> runner);
 
   /**
-   * This method doesn't belong here, but it's here for now just to make it work.  The method needs to
-   * take a Sequence of Sequences and return a single Sequence of ResultType objects in time-order (ascending)
-   *
-   * This method assumes that its input sequences provide values already in sorted order.
-   * Even more specifically, it assumes that the individual sequences are also ordered by their first element.
-   *
-   * In the vast majority of cases, this should just be implemented with:
-   *
-   *     return new OrderedMergeSequence<>(getOrdering(), seqOfSequences);
-   *
-   * @param seqOfSequences sequence of sequences to be merged
-   * @return the sequence of merged results
-   */
-  public abstract Sequence<ResultType> mergeSequences(Sequence<Sequence<ResultType>> seqOfSequences);
-
-  /**
-   * This method doesn't belong here, but it's here for now just to make it work.  The method needs to
-   * take a Sequence of Sequences and return a single Sequence of ResultType objects in time-order (ascending)
-   *
-   * This method assumes that its input sequences provide values already in sorted order, but, unlike
-   * mergeSequences, it does *not* assume that the individual sequences are also ordered by their first element.
-   *
-   * In the vast majority if ocases, this hsould just be implemented with:
-   *
-   *     return new MergeSequence<>(getOrdering(), seqOfSequences);
-   *
-   * @param seqOfSequences sequence of sequences to be merged
-   * @return the sequence of merged results
-   */
-  public abstract Sequence<ResultType> mergeSequencesUnordered(Sequence<Sequence<ResultType>> seqOfSequences);
-
-
-  /**
    * Creates a builder that is used to generate a metric for this specific query type.  This exists
    * to allow for query-specific dimensions on metrics.  That is, the ToolChest is expected to set some
-   * meaningful dimensions for metrics given this query type.  Examples might be the topN threshhold for
+   * meaningful dimensions for metrics given this query type.  Examples might be the topN threshold for
    * a TopN query or the number of dimensions included for a groupBy query.
    *
    * @param query The query that is being processed
+   *
    * @return A MetricEvent.Builder that can be used to make metrics for the provided query
    */
   public abstract ServiceMetricEvent.Builder makeMetricBuilder(QueryType query);
@@ -92,15 +60,16 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   /**
    * Creates a Function that can take in a ResultType and return a new ResultType having applied
    * the MetricManipulatorFn to each of the metrics.
-   *
+   * <p>
    * This exists because the QueryToolChest is the only thing that understands the internal serialization
    * format of ResultType, so it's primary responsibility is to "decompose" that structure and apply the
    * given function to all metrics.
-   *
+   * <p>
    * This function is called very early in the processing pipeline on the Broker.
    *
    * @param query The Query that is currently being processed
-   * @param fn The function that should be applied to all metrics in the results
+   * @param fn    The function that should be applied to all metrics in the results
+   *
    * @return A function that will apply the provided fn to all metrics in the input ResultType object
    */
   public abstract Function<ResultType, ResultType> makePreComputeManipulatorFn(
@@ -112,11 +81,12 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    * Generally speaking this is the exact same thing as makePreComputeManipulatorFn.  It is leveraged in
    * order to compute PostAggregators on results after they have been completely merged together, which
    * should actually be done in the mergeResults() call instead of here.
-   *
+   * <p>
    * This should never actually be overridden and it should be removed as quickly as possible.
    *
    * @param query The Query that is currently being processed
-   * @param fn The function that should be applied to all metrics in the results
+   * @param fn    The function that should be applied to all metrics in the results
+   *
    * @return A function that will apply the provided fn to all metrics in the input ResultType object
    */
   public Function<ResultType, ResultType> makePostComputeManipulatorFn(QueryType query, MetricManipulationFn fn)
@@ -134,11 +104,12 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
 
   /**
    * Returns a CacheStrategy to be used to load data into the cache and remove it from the cache.
-   *
+   * <p>
    * This is optional.  If it returns null, caching is effectively disabled for the query.
    *
    * @param query The query whose results might be cached
-   * @param <T> The type of object that will be stored in the cache
+   * @param <T>   The type of object that will be stored in the cache
+   *
    * @return A CacheStrategy that can be used to populate and read from the Cache
    */
   public <T> CacheStrategy<ResultType, T, QueryType> getCacheStrategy(QueryType query)
@@ -149,14 +120,15 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   /**
    * Wraps a QueryRunner.  The input QueryRunner is the QueryRunner as it exists *before* being passed to
    * mergeResults().
-   *
+   * <p>
    * In fact, the return value of this method is always passed to mergeResults, so it is equivalent to
    * just implement this functionality as extra decoration on the QueryRunner during mergeResults().
-   *
+   * <p>
    * In the interests of potentially simplifying these interfaces, the recommendation is to actually not
    * override this method and instead apply anything that might be needed here in the mergeResults() call.
    *
    * @param runner The runner to be wrapped
+   *
    * @return The wrapped runner
    */
   public QueryRunner<ResultType> preMergeQueryDecoration(QueryRunner<ResultType> runner)
@@ -166,14 +138,15 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
 
   /**
    * Wraps a QueryRunner.  The input QueryRunner is the QueryRunner as it exists coming out of mergeResults()
-   *
+   * <p>
    * In fact, the input value of this method is always the return value from mergeResults, so it is equivalent
    * to just implement this functionality as extra decoration on the QueryRunner during mergeResults().
-   *
+   * <p>
    * In the interests of potentially simplifying these interfaces, the recommendation is to actually not
    * override this method and instead apply anything that might be needed here in the mergeResults() call.
    *
    * @param runner The runner to be wrapped
+   *
    * @return The wrapped runner
    */
   public QueryRunner<ResultType> postMergeQueryDecoration(QueryRunner<ResultType> runner)
@@ -186,9 +159,10 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
    * be queried.  It can use whatever criteria it wants in order to do the pruning, it just needs to
    * return the list of Segments it actually wants to see queried.
    *
-   * @param query The query being processed
+   * @param query    The query being processed
    * @param segments The list of candidate segments to be queried
-   * @param <T> A Generic parameter because Java is cool
+   * @param <T>      A Generic parameter because Java is cool
+   *
    * @return The list of segments to actually query
    */
   public <T extends LogicalSegment> List<T> filterSegments(QueryType query, List<T> segments)

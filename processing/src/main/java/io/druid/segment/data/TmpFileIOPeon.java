@@ -34,7 +34,18 @@ import java.util.Map;
 */
 public class TmpFileIOPeon implements IOPeon
 {
+  private final boolean allowOverwrite;
   Map<String, File> createdFiles = Maps.newLinkedHashMap();
+
+  public TmpFileIOPeon()
+  {
+    this(true);
+  }
+
+  public TmpFileIOPeon(boolean allowOverwrite)
+  {
+    this.allowOverwrite = allowOverwrite;
+  }
 
   @Override
   public OutputStream makeOutputStream(String filename) throws IOException
@@ -44,8 +55,12 @@ public class TmpFileIOPeon implements IOPeon
       retFile = File.createTempFile("filePeon", filename);
       retFile.deleteOnExit();
       createdFiles.put(filename, retFile);
+      return new BufferedOutputStream(new FileOutputStream(retFile));
+    } else if (allowOverwrite) {
+      return new BufferedOutputStream(new FileOutputStream(retFile));
+    } else {
+      throw new IOException("tmp file conflicts, file[" + filename + "] already exist!");
     }
-    return new BufferedOutputStream(new FileOutputStream(retFile));
   }
 
   @Override
@@ -63,5 +78,10 @@ public class TmpFileIOPeon implements IOPeon
       file.delete();
     }
     createdFiles.clear();
+  }
+
+  public boolean isOverwriteAllowed()
+  {
+    return allowOverwrite;
   }
 }

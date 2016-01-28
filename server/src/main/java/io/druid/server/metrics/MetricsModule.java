@@ -40,6 +40,7 @@ import io.druid.guice.DruidBinders;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.ManageLifecycle;
+import io.druid.query.DruidMetrics;
 
 import java.util.HashMap;
 import java.util.List;
@@ -108,35 +109,37 @@ public class MetricsModule implements Module
   @ManageLifecycle
   public JvmMonitor getJvmMonitor(Properties props)
   {
-    return new JvmMonitor(getDimensions(props));
+    return new JvmMonitor(MonitorsConfig.extractDimensions(props,
+                                                           Lists.newArrayList(
+                                                               DruidMetrics.DATASOURCE,
+                                                               DruidMetrics.TASK_ID
+                                                           )
+    ));
   }
 
   @Provides
   @ManageLifecycle
   public JvmCpuMonitor getJvmCpuMonitor(Properties props)
   {
-    return new JvmCpuMonitor(getDimensions(props));
+    return new JvmCpuMonitor(MonitorsConfig.extractDimensions(props,
+                                                              Lists.newArrayList(
+                                                                  DruidMetrics.DATASOURCE,
+                                                                  DruidMetrics.TASK_ID
+                                                              )
+    ));
   }
 
   @Provides
   @ManageLifecycle
   public SysMonitor getSysMonitor(Properties props)
   {
-    return new SysMonitor(getDimensions(props));
+    return new SysMonitor(MonitorsConfig.extractDimensions(props,
+                                                           Lists.newArrayList(
+                                                               DruidMetrics.DATASOURCE,
+                                                               DruidMetrics.TASK_ID
+                                                           )
+    ));
   }
 
-  private Map<String, String[]> getDimensions(Properties props)
-  {
-    Map<String, String[]> dimensions = new HashMap<>();
-    for (String property : props.stringPropertyNames()) {
-      if (property.startsWith(MonitorsConfig.METRIC_DIMENSION_PREFIX)) {
-        dimensions.put(
-            property.substring(MonitorsConfig.METRIC_DIMENSION_PREFIX.length()),
-            new String[]{props.getProperty(property)}
-        );
-      }
-    }
-    return dimensions;
-  }
 
 }

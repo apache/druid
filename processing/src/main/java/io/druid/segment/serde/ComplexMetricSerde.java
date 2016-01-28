@@ -36,14 +36,10 @@ public abstract class ComplexMetricSerde
    * Deserializes a ByteBuffer and adds it to the ColumnBuilder.  This method allows for the ComplexMetricSerde
    * to implement it's own versioning scheme to allow for changes of binary format in a forward-compatible manner.
    *
-   * The method is also in charge of returning a ColumnPartSerde that knows how to serialize out the object it
-   * added to the builder.
-   *
    * @param buffer the buffer to deserialize
    * @param builder ColumnBuilder to add the column to
-   * @return a ColumnPartSerde that can serialize out the object that was read from the buffer to the builder
    */
-  public abstract ColumnPartSerde deserializeColumn(ByteBuffer buffer, ColumnBuilder builder);
+  public abstract void deserializeColumn(ByteBuffer buffer, ColumnBuilder builder);
 
   /**
    * This is deprecated because its usage is going to be removed from the code.

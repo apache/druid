@@ -37,6 +37,7 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
+import io.druid.segment.IndexMergerV9;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.incremental.IndexSizeExceededException;
@@ -68,6 +69,7 @@ public class YeOldePlumberSchool implements PlumberSchool
   private final DataSegmentPusher dataSegmentPusher;
   private final File tmpSegmentDir;
   private final IndexMerger indexMerger;
+  private final IndexMergerV9 indexMergerV9;
   private final IndexIO indexIO;
 
   private static final Logger log = new Logger(YeOldePlumberSchool.class);
@@ -79,6 +81,7 @@ public class YeOldePlumberSchool implements PlumberSchool
       @JacksonInject("segmentPusher") DataSegmentPusher dataSegmentPusher,
       @JacksonInject("tmpSegmentDir") File tmpSegmentDir,
       @JacksonInject IndexMerger indexMerger,
+      @JacksonInject IndexMergerV9 indexMergerV9,
       @JacksonInject IndexIO indexIO
   )
   {
@@ -87,6 +90,7 @@ public class YeOldePlumberSchool implements PlumberSchool
     this.dataSegmentPusher = dataSegmentPusher;
     this.tmpSegmentDir = tmpSegmentDir;
     this.indexMerger = Preconditions.checkNotNull(indexMerger, "Null IndexMerger");
+    this.indexMergerV9 = Preconditions.checkNotNull(indexMergerV9, "Null IndexMergerV9");
     this.indexIO = Preconditions.checkNotNull(indexIO, "Null IndexIO");
   }
 
@@ -105,6 +109,9 @@ public class YeOldePlumberSchool implements PlumberSchool
 
     // Set of spilled segments. Will be merged at the end.
     final Set<File> spilled = Sets.newHashSet();
+
+    // IndexMerger implementation.
+    final IndexMerger theIndexMerger = config.getBuildV9Directly() ? indexMergerV9 : indexMerger;
 
     return new Plumber()
     {
@@ -174,7 +181,7 @@ public class YeOldePlumberSchool implements PlumberSchool
             }
 
             fileToUpload = new File(tmpSegmentDir, "merged");
-            indexMerger.mergeQueryableIndex(indexes, schema.getAggregators(), fileToUpload, config.getIndexSpec());
+            theIndexMerger.mergeQueryableIndex(indexes, schema.getAggregators(), fileToUpload, config.getIndexSpec());
           }
 
           // Map merged segment so we can extract dimensions
@@ -219,10 +226,9 @@ public class YeOldePlumberSchool implements PlumberSchool
           log.info("Spilling index[%d] with rows[%d] to: %s", indexToPersist.getCount(), rowsToPersist, dirToPersist);
 
           try {
-            indexMerger.persist(
+            theIndexMerger.persist(
                 indexToPersist.getIndex(),
                 dirToPersist,
-                null,
                 config.getIndexSpec()
             );
 

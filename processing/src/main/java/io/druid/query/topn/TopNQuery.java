@@ -66,7 +66,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    super(dataSource, querySegmentSpec, context);
+    super(dataSource, querySegmentSpec, false, context);
     this.dimensionSpec = dimensionSpec;
     this.topNMetricSpec = topNMetricSpec;
     this.threshold = threshold;
@@ -238,6 +238,22 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
         aggregatorSpecs,
         postAggregatorSpecs,
         computeOverridenContext(contextOverrides)
+    );
+  }
+
+  public TopNQuery withDimFilter(DimFilter dimFilter)
+  {
+    return new TopNQuery(
+        getDataSource(),
+        getDimensionSpec(),
+        topNMetricSpec,
+        threshold,
+        getQuerySegmentSpec(),
+        dimFilter,
+        granularity,
+        aggregatorSpecs,
+        postAggregatorSpecs,
+        getContext()
     );
   }
 

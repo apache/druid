@@ -79,7 +79,7 @@ public class ColumnDescriptor
     long retVal = 0;
 
     for (ColumnPartSerde part : parts) {
-      retVal += part.numBytes();
+      retVal += part.getSerializer().numBytes();
     }
 
     return retVal;
@@ -88,7 +88,7 @@ public class ColumnDescriptor
   public void write(WritableByteChannel channel) throws IOException
   {
     for (ColumnPartSerde part : parts) {
-      part.write(channel);
+      part.getSerializer().write(channel);
     }
   }
 
@@ -99,7 +99,7 @@ public class ColumnDescriptor
         .setHasMultipleValues(hasMultipleValues);
 
     for (ColumnPartSerde part : parts) {
-      part.read(buffer, builder, columnConfig);
+      part.getDeserializer().read(buffer, builder, columnConfig);
     }
 
     return builder.build();

@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.metamx.common.IAE;
@@ -63,6 +64,7 @@ import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
 import io.druid.server.coordinator.helper.DruidCoordinatorLogger;
 import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentInfoLoader;
+import io.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
 import io.druid.server.coordinator.rules.LoadRule;
 import io.druid.server.coordinator.rules.Rule;
@@ -75,9 +77,11 @@ import org.apache.curator.framework.recipes.leader.Participant;
 import org.apache.curator.utils.ZKPaths;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
+import org.joda.time.Interval;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -92,6 +96,20 @@ import java.util.concurrent.atomic.AtomicReference;
 public class DruidCoordinator
 {
   public static final String COORDINATOR_OWNER_NODE = "_COORDINATOR";
+
+  public static Comparator<DataSegment> SEGMENT_COMPARATOR = Ordering.from(Comparators.intervalsByEndThenStart())
+                                                                     .onResultOf(
+                                                                         new Function<DataSegment, Interval>()
+                                                                         {
+                                                                           @Override
+                                                                           public Interval apply(DataSegment segment)
+                                                                           {
+                                                                             return segment.getInterval();
+                                                                           }
+                                                                         })
+                                                                     .compound(Ordering.<DataSegment>natural())
+                                                                     .reverse();
+
   private static final EmittingLogger log = new EmittingLogger(DruidCoordinator.class);
   private final Object lock = new Object();
   private final DruidCoordinatorConfig config;
@@ -247,7 +265,8 @@ public class DruidCoordinator
     return retVal;
   }
 
-  CountingMap<String> getLoadPendingDatasources() {
+  CountingMap<String> getLoadPendingDatasources()
+  {
     final CountingMap<String> retVal = new CountingMap<>();
     for (LoadQueuePeon peon : loadManagementPeons.values()) {
       for (DataSegment segment : peon.getSegmentsToLoad()) {
@@ -384,7 +403,7 @@ public class DruidCoordinator
             public void execute()
             {
               try {
-                if (curator.checkExists().forPath(toServedSegPath) != null &&
+                if (curator.checkExists().forPath(toServedSegPath) != null    &&
                     curator.checkExists().forPath(toLoadQueueSegPath) == null &&
                     !dropPeon.getSegmentsToDrop().contains(segment)) {
                   dropPeon.dropSegment(segment, callback);
@@ -409,7 +428,7 @@ public class DruidCoordinator
 
   public Set<DataSegment> getOrderedAvailableDataSegments()
   {
-    Set<DataSegment> availableSegments = Sets.newTreeSet(Comparators.inverse(DataSegment.bucketMonthComparator()));
+    Set<DataSegment> availableSegments = Sets.newTreeSet(SEGMENT_COMPARATOR);
 
     Iterable<DataSegment> dataSegments = getAvailableDataSegments();
 
@@ -623,7 +642,9 @@ public class DruidCoordinator
     }
   }
 
-  private List<DruidCoordinatorHelper> makeIndexingServiceHelpers(final AtomicReference<DatasourceWhitelist> whitelistRef)
+  private List<DruidCoordinatorHelper> makeIndexingServiceHelpers(
+      final AtomicReference<DatasourceWhitelist> whitelistRef
+  )
   {
     List<DruidCoordinatorHelper> helpers = Lists.newArrayList();
 
@@ -652,6 +673,18 @@ public class DruidCoordinator
               return params;
             }
           }
+      );
+    }
+
+    if (config.isKillSegments()) {
+      helpers.add(
+          new DruidCoordinatorSegmentKiller(
+              metadataSegmentManager,
+              indexingServiceClient,
+              config.getCoordinatorKillDurationToRetain(),
+              config.getCoordinatorKillPeriod(),
+              config.getCoordinatorKillMaxSegments()
+          )
       );
     }
 

@@ -30,11 +30,15 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
     @JsonSubTypes.Type(name = "regex", value = RegexDimExtractionFn.class),
     @JsonSubTypes.Type(name = "partial", value = MatchingDimExtractionFn.class),
     @JsonSubTypes.Type(name = "searchQuery", value = SearchQuerySpecDimExtractionFn.class),
-    @JsonSubTypes.Type(name = "javascript", value = JavascriptExtractionFn.class),
+    @JsonSubTypes.Type(name = "javascript", value = JavaScriptExtractionFn.class),
     @JsonSubTypes.Type(name = "timeFormat", value = TimeFormatExtractionFn.class),
     @JsonSubTypes.Type(name = "identity", value = IdentityExtractionFn.class),
     @JsonSubTypes.Type(name = "lookup", value = LookupExtractionFn.class),
-    @JsonSubTypes.Type(name = "substring", value = SubstringDimExtractionFn.class)
+    @JsonSubTypes.Type(name = "substring", value = SubstringDimExtractionFn.class),
+    @JsonSubTypes.Type(name = "cascade", value = CascadeExtractionFn.class),
+    @JsonSubTypes.Type(name = "stringFormat", value = StringFormatExtractionFn.class),
+    @JsonSubTypes.Type(name = "upper", value = UpperExtractionFn.class),
+    @JsonSubTypes.Type(name = "lower", value = LowerExtractionFn.class)
 })
 /**
  * An ExtractionFn is a function that can be used to transform the values of a column (typically a dimension)
@@ -55,7 +59,7 @@ public interface ExtractionFn
 
   /**
    * The "extraction" function.  This should map a value into some other String value.
-   *
+   * <p>
    * In order to maintain the "null and empty string are equivalent" semantics that Druid provides, the
    * empty string is considered invalid output for this method and should instead return null.  This is
    * a contract on the method rather than enforced at a lower level in order to eliminate a global check
@@ -73,7 +77,7 @@ public interface ExtractionFn
 
   /**
    * Offers information on whether the extraction will preserve the original ordering of the values.
-   * <p/>
+   * <p>
    * Some optimizations of queries is possible if ordering is preserved.  Null values *do* count towards
    * ordering.
    *

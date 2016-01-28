@@ -24,10 +24,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class S3DataSegmentArchiverConfig
 {
   @JsonProperty
-  public String archiveBucket = "";
+  private String archiveBucket = "";
 
   @JsonProperty
-  public String archiveBaseKey = "";
+  private String archiveBaseKey = "";
 
   public String getArchiveBucket()
   {

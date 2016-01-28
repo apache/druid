@@ -52,6 +52,7 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.tasklogs.LogUtils;
+import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.config.ForkingTaskRunnerConfig;
 import io.druid.indexing.worker.config.WorkerConfig;
 import io.druid.query.DruidMetrics;
@@ -321,6 +322,14 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
 
                               command.add(String.format("-Ddruid.host=%s", childHost));
                               command.add(String.format("-Ddruid.port=%d", childPort));
+                              /**
+                               * These are not enabled per default to allow the user to either set or not set them
+                               * Users are highly suggested to be set in druid.indexer.runner.javaOpts
+                               * See io.druid.concurrent.TaskThreadPriority#getThreadPriorityFromTaskPriority(int)
+                               * for more information
+                              command.add("-XX:+UseThreadPriorities");
+                              command.add("-XX:ThreadPriorityPolicy=42");
+                               */
 
                               if (config.isSeparateIngestionEndpoint()) {
                                 command.add(String.format(
@@ -542,9 +551,9 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   }
 
   @Override
-  public Collection<ZkWorker> getWorkers()
+  public Optional<ScalingStats> getScalingStats()
   {
-    return ImmutableList.of();
+    return Optional.absent();
   }
 
   @Override

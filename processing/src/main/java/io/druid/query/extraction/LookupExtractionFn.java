@@ -33,21 +33,16 @@ import java.io.IOException;
 
 public class LookupExtractionFn extends FunctionalExtraction
 {
-  private static final byte CACHE_TYPE_ID = 0x7;
-
   private final LookupExtractor lookup;
+  private final boolean optimize;
 
   @JsonCreator
   public LookupExtractionFn(
-      @JsonProperty("lookup")
-      final LookupExtractor lookup,
-      @JsonProperty("retainMissingValue")
-      final boolean retainMissingValue,
-      @Nullable
-      @JsonProperty("replaceMissingValueWith")
-      final String replaceMissingValueWith,
-      @JsonProperty("injective")
-      final boolean injective
+      @JsonProperty("lookup") final LookupExtractor lookup,
+      @JsonProperty("retainMissingValue") final boolean retainMissingValue,
+      @Nullable @JsonProperty("replaceMissingValueWith") final String replaceMissingValueWith,
+      @JsonProperty("injective") final boolean injective,
+      @JsonProperty("optimize") Boolean optimize
   )
   {
     super(
@@ -65,6 +60,7 @@ public class LookupExtractionFn extends FunctionalExtraction
         injective
     );
     this.lookup = lookup;
+    this.optimize = optimize == null ? false : optimize;
   }
 
 
@@ -89,18 +85,26 @@ public class LookupExtractionFn extends FunctionalExtraction
     return super.isInjective();
   }
 
+  @JsonProperty("optimize")
+  public boolean isOptimize()
+  {
+    return optimize;
+  }
+
   @Override
   public byte[] getCacheKey()
   {
     try {
       final ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-      outputStream.write(CACHE_TYPE_ID);
+      outputStream.write(ExtractionCacheHelper.CACHE_TYPE_ID_LOOKUP);
       outputStream.write(lookup.getCacheKey());
       if (getReplaceMissingValueWith() != null) {
         outputStream.write(StringUtils.toUtf8(getReplaceMissingValueWith()));
+        outputStream.write(0xFF);
       }
       outputStream.write(isInjective() ? 1 : 0);
       outputStream.write(isRetainMissingValue() ? 1 : 0);
+      outputStream.write(isOptimize() ? 1 : 0);
       return outputStream.toByteArray();
     }
     catch (IOException ex) {
@@ -115,19 +119,24 @@ public class LookupExtractionFn extends FunctionalExtraction
     if (this == o) {
       return true;
     }
-    if (o == null || getClass() != o.getClass()) {
+    if (!(o instanceof LookupExtractionFn)) {
       return false;
     }
 
     LookupExtractionFn that = (LookupExtractionFn) o;
 
-    return lookup.equals(that.lookup);
+    if (isOptimize() != that.isOptimize()) {
+      return false;
+    }
+    return getLookup().equals(that.getLookup());
 
   }
 
   @Override
   public int hashCode()
   {
-    return lookup.hashCode();
+    int result = getLookup().hashCode();
+    result = 31 * result + (isOptimize() ? 1 : 0);
+    return result;
   }
 }

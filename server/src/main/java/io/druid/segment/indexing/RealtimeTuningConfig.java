@@ -46,6 +46,7 @@ public class RealtimeTuningConfig implements TuningConfig
   private static final int defaultMaxPendingPersists = 0;
   private static final ShardSpec defaultShardSpec = new NoneShardSpec();
   private static final IndexSpec defaultIndexSpec = new IndexSpec();
+  private static final Boolean defaultBuildV9Directly = Boolean.FALSE;
 
   // Might make sense for this to be a builder
   public static RealtimeTuningConfig makeDefaultTuningConfig()
@@ -59,7 +60,10 @@ public class RealtimeTuningConfig implements TuningConfig
         defaultRejectionPolicyFactory,
         defaultMaxPendingPersists,
         defaultShardSpec,
-        defaultIndexSpec
+        defaultIndexSpec,
+        defaultBuildV9Directly,
+        0,
+        0
     );
   }
 
@@ -72,6 +76,9 @@ public class RealtimeTuningConfig implements TuningConfig
   private final int maxPendingPersists;
   private final ShardSpec shardSpec;
   private final IndexSpec indexSpec;
+  private final Boolean buildV9Directly;
+  private final int persistThreadPriority;
+  private final int mergeThreadPriority;
 
   @JsonCreator
   public RealtimeTuningConfig(
@@ -83,7 +90,10 @@ public class RealtimeTuningConfig implements TuningConfig
       @JsonProperty("rejectionPolicy") RejectionPolicyFactory rejectionPolicyFactory,
       @JsonProperty("maxPendingPersists") Integer maxPendingPersists,
       @JsonProperty("shardSpec") ShardSpec shardSpec,
-      @JsonProperty("indexSpec") IndexSpec indexSpec
+      @JsonProperty("indexSpec") IndexSpec indexSpec,
+      @JsonProperty("buildV9Directly") Boolean buildV9Directly,
+      @JsonProperty("persistThreadPriority") int persistThreadPriority,
+      @JsonProperty("mergeThreadPriority") int mergeThreadPriority
   )
   {
     this.maxRowsInMemory = maxRowsInMemory == null ? defaultMaxRowsInMemory : maxRowsInMemory;
@@ -99,6 +109,9 @@ public class RealtimeTuningConfig implements TuningConfig
     this.maxPendingPersists = maxPendingPersists == null ? defaultMaxPendingPersists : maxPendingPersists;
     this.shardSpec = shardSpec == null ? defaultShardSpec : shardSpec;
     this.indexSpec = indexSpec == null ? defaultIndexSpec : indexSpec;
+    this.buildV9Directly = buildV9Directly == null ? defaultBuildV9Directly : buildV9Directly;
+    this.mergeThreadPriority = mergeThreadPriority;
+    this.persistThreadPriority = persistThreadPriority;
   }
 
   @JsonProperty
@@ -155,6 +168,23 @@ public class RealtimeTuningConfig implements TuningConfig
     return indexSpec;
   }
 
+  @JsonProperty
+  public Boolean getBuildV9Directly()
+  {
+    return buildV9Directly;
+  }
+
+  public int getPersistThreadPriority()
+  {
+    return this.persistThreadPriority;
+  }
+
+  @JsonProperty
+  public int getMergeThreadPriority()
+  {
+    return this.mergeThreadPriority;
+  }
+
   public RealtimeTuningConfig withVersioningPolicy(VersioningPolicy policy)
   {
     return new RealtimeTuningConfig(
@@ -166,7 +196,10 @@ public class RealtimeTuningConfig implements TuningConfig
         rejectionPolicyFactory,
         maxPendingPersists,
         shardSpec,
-        indexSpec
+        indexSpec,
+        buildV9Directly,
+        persistThreadPriority,
+        mergeThreadPriority
     );
   }
 
@@ -181,7 +214,10 @@ public class RealtimeTuningConfig implements TuningConfig
         rejectionPolicyFactory,
         maxPendingPersists,
         shardSpec,
-        indexSpec
+        indexSpec,
+        buildV9Directly,
+        persistThreadPriority,
+        mergeThreadPriority
     );
   }
 }

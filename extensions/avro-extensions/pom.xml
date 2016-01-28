@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  ~ Druid - a distributed column store.
+  ~ Copyright 2012 - 2015 Metamarkets Group Inc.
+  ~
+  ~ Licensed under the Apache License, Version 2.0 (the "License");
+  ~ you may not use this file except in compliance with the License.
+  ~ You may obtain a copy of the License at
+  ~
+  ~     http://www.apache.org/licenses/LICENSE-2.0
+  ~
+  ~ Unless required by applicable law or agreed to in writing, software
+  ~ distributed under the License is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+  ~ See the License for the specific language governing permissions and
+  ~ limitations under the License.
+  -->
+
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>io.druid.extensions</groupId>
+  <artifactId>druid-avro-extensions</artifactId>
+  <name>druid-avro-extensions</name>
+  <description>druid-avro-extensions</description>
+
+  <parent>
+    <groupId>io.druid</groupId>
+    <artifactId>druid</artifactId>
+    <version>0.9.0-SNAPSHOT</version>
+    <relativePath>../../pom.xml</relativePath>
+  </parent>
+
+  <properties>
+    <schemarepo.version>0.1.3</schemarepo.version>
+    <avro.version>1.7.7</avro.version>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.apache.avro</groupId>
+      <artifactId>avro-mapred</artifactId>
+      <classifier>hadoop2</classifier>
+      <version>${avro.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>io.druid</groupId>
+      <artifactId>druid-api</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.schemarepo</groupId>
+      <artifactId>schema-repo-api</artifactId>
+      <version>${schemarepo.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.schemarepo</groupId>
+      <artifactId>schema-repo-client</artifactId>
+      <version>${schemarepo.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.schemarepo</groupId>
+      <artifactId>schema-repo-avro</artifactId>
+      <version>${schemarepo.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hadoop</groupId>
+      <artifactId>hadoop-client</artifactId>
+    </dependency>
+    <!-- Tests -->
+    <dependency>
+      <groupId>junit</groupId>
+      <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.pig</groupId>
+      <artifactId>pig</artifactId>
+      <version>0.15.0</version>
+      <classifier>h2</classifier>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.pig</groupId>
+      <artifactId>piggybank</artifactId>
+      <version>0.15.0</version>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.avro</groupId>
+        <artifactId>avro-maven-plugin</artifactId>
+        <version>${avro.version}</version>
+        <executions>
+          <execution>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>schema</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+    </plugins>
+  </build>
+</project>

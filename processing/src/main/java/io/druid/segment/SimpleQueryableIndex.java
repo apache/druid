@@ -39,7 +39,7 @@ public class SimpleQueryableIndex implements QueryableIndex
   private final BitmapFactory bitmapFactory;
   private final Map<String, Column> columns;
   private final SmooshedFileMapper fileMapper;
-  private final Map<String, Object> metadata;
+  private final Metadata metadata;
 
   public SimpleQueryableIndex(
       Interval dataInterval,
@@ -48,7 +48,7 @@ public class SimpleQueryableIndex implements QueryableIndex
       BitmapFactory bitmapFactory,
       Map<String, Column> columns,
       SmooshedFileMapper fileMapper,
-      Map<String, Object> metadata
+      Metadata metadata
   )
   {
     Preconditions.checkNotNull(columns.get(Column.TIME_COLUMN_NAME));
@@ -104,7 +104,7 @@ public class SimpleQueryableIndex implements QueryableIndex
   }
 
   @Override
-  public Map<String, Object> getMetaData()
+  public Metadata getMetadata()
   {
     return metadata;
   }

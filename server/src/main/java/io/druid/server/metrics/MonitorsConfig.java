@@ -24,7 +24,10 @@ import com.google.common.collect.Lists;
 import com.metamx.metrics.Monitor;
 
 import javax.validation.constraints.NotNull;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Properties;
 
 /**
  */
@@ -47,5 +50,22 @@ public class MonitorsConfig
     return "MonitorsConfig{" +
            "monitors=" + monitors +
            '}';
+  }
+
+  public static Map<String, String[]> extractDimensions(Properties props, List<String> dimensions)
+  {
+    Map<String, String[]> dimensionsMap = new HashMap<>();
+    for (String property : props.stringPropertyNames()) {
+      if (property.startsWith(MonitorsConfig.METRIC_DIMENSION_PREFIX)) {
+        String dimension = property.substring(MonitorsConfig.METRIC_DIMENSION_PREFIX.length());
+        if (dimensions.contains(dimension)) {
+          dimensionsMap.put(
+              dimension,
+              new String[]{props.getProperty(property)}
+          );
+        }
+      }
+    }
+    return dimensionsMap;
   }
 }

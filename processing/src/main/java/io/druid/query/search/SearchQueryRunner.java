@@ -88,6 +88,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     final List<DimensionSpec> dimensions = query.getDimensions();
     final SearchQuerySpec searchQuerySpec = query.getQuery();
     final int limit = query.getLimit();
+    final boolean descending = query.isDescending();
 
     // Closing this will cause segfaults in unit tests.
     final QueryableIndex index = segment.asQueryableIndex();
@@ -121,7 +122,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
         final BitmapIndex bitmapIndex = column.getBitmapIndex();
         ExtractionFn extractionFn = dimension.getExtractionFn();
         if (extractionFn == null) {
-          extractionFn = new IdentityExtractionFn();
+          extractionFn = IdentityExtractionFn.getInstance();
         }
         if (bitmapIndex != null) {
           for (int i = 0; i < bitmapIndex.getCardinality(); ++i) {
@@ -158,7 +159,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
       dimsToSearch = dimensions;
     }
 
-    final Sequence<Cursor> cursors = adapter.makeCursors(filter, segment.getDataInterval(), QueryGranularity.ALL);
+    final Sequence<Cursor> cursors = adapter.makeCursors(filter, segment.getDataInterval(), QueryGranularity.ALL, descending);
 
     final TreeSet<SearchHit> retVal = cursors.accumulate(
         Sets.newTreeSet(query.getSort().getComparator()),
@@ -175,7 +176,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
             for (DimensionSpec dim : dimsToSearch) {
               dimSelectors.put(
                   dim.getOutputName(),
-                  cursor.makeDimensionSelector(dim.getDimension(), dim.getExtractionFn())
+                  cursor.makeDimensionSelector(dim)
               );
             }
 

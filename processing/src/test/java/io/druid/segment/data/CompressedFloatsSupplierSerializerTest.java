@@ -79,6 +79,8 @@ public class CompressedFloatsSupplierSerializerTest extends CompressionStrategyT
         }
     );
 
+    Assert.assertEquals(baos.size(), serializer.getSerializedSize());
+
     IndexedFloats floats = CompressedFloatsIndexedSupplier
         .fromByteBuffer(ByteBuffer.wrap(baos.toByteArray()), order)
         .get();
@@ -90,4 +92,45 @@ public class CompressedFloatsSupplierSerializerTest extends CompressionStrategyT
 
     floats.close();
   }
+
+  @Test
+  public void testEmpty() throws Exception
+  {
+    final ByteOrder order = ByteOrder.nativeOrder();
+    final int sizePer = 999;
+    CompressedFloatsSupplierSerializer serializer = new CompressedFloatsSupplierSerializer(
+        sizePer,
+        new GenericIndexedWriter<ResourceHolder<FloatBuffer>>(
+            new IOPeonForTesting(),
+            "test",
+            CompressedFloatBufferObjectStrategy.getBufferForOrder(
+                order,
+                compressionStrategy,
+                sizePer
+            )
+        ),
+        compressionStrategy
+    );
+    serializer.open();
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    serializer.closeAndConsolidate(
+        new OutputSupplier<OutputStream>()
+        {
+          @Override
+          public OutputStream getOutput() throws IOException
+          {
+            return baos;
+          }
+        }
+    );
+
+    Assert.assertEquals(baos.size(), serializer.getSerializedSize());
+    IndexedFloats floats = CompressedFloatsIndexedSupplier
+        .fromByteBuffer(ByteBuffer.wrap(baos.toByteArray()), order)
+        .get();
+
+    Assert.assertEquals(0, floats.size());
+    floats.close();
+  }
+
 }

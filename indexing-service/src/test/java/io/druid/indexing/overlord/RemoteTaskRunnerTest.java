@@ -41,6 +41,9 @@ import io.druid.indexing.common.TestRealtimeTask;
 import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
+import io.druid.indexing.overlord.autoscaling.NoopResourceManagementStrategy;
+import io.druid.indexing.overlord.autoscaling.ResourceManagementStrategy;
+import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.worker.TaskAnnouncement;
@@ -72,7 +75,7 @@ public class RemoteTaskRunnerTest
   private static final String announcementsPath = String.format("%s/indexer/announcements/worker", basePath);
   private static final String tasksPath = String.format("%s/indexer/tasks/worker", basePath);
   private static final String statusPath = String.format("%s/indexer/status/worker", basePath);
-  private static final int TIMEOUT_SECONDS = 5;
+  private static final int TIMEOUT_SECONDS = 20;
 
   private ObjectMapper jsonMapper;
 
@@ -453,7 +456,7 @@ public class RemoteTaskRunnerTest
   private void doSetup() throws Exception
   {
     makeWorker();
-    makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(new Period("PT1S")));
+    makeRemoteTaskRunner(new TestRemoteTaskRunnerConfig(new Period("PT5S")));
   }
 
   private void makeRemoteTaskRunner(RemoteTaskRunnerConfig config) throws Exception
@@ -475,7 +478,8 @@ public class RemoteTaskRunnerTest
         new SimplePathChildrenCacheFactory.Builder().build(),
         null,
         DSuppliers.of(new AtomicReference<>(WorkerBehaviorConfig.defaultConfig())),
-        ScheduledExecutors.fixed(1, "Remote-Task-Runner-Cleanup--%d")
+        ScheduledExecutors.fixed(1, "Remote-Task-Runner-Cleanup--%d"),
+        new NoopResourceManagementStrategy<RemoteTaskRunner>()
     );
 
     remoteTaskRunner.start();

@@ -50,7 +50,7 @@ import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.extraction.DimExtractionFn;
 import io.druid.query.extraction.ExtractionFn;
-import io.druid.query.extraction.JavascriptExtractionFn;
+import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.extraction.LookupExtractionFn;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.extraction.RegexDimExtractionFn;
@@ -1460,7 +1460,7 @@ public class TopNQueryRunnerTest
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.marketDimension,
                 QueryRunnerTestHelper.marketDimension,
-                new JavascriptExtractionFn("function(f) { return \"POTATO\"; }", false),
+                new JavaScriptExtractionFn("function(f) { return \"POTATO\"; }", false),
                 null
             )
         )
@@ -1495,7 +1495,7 @@ public class TopNQueryRunnerTest
                         "index", 503332.5071372986D,
                         QueryRunnerTestHelper.marketDimension, "POTATO",
                         "uniques", QueryRunnerTestHelper.UNIQUES_9,
-                        "rows", 1209l
+                        "rows", 1209L
                     )
                 )
             )
@@ -1630,7 +1630,8 @@ public class TopNQueryRunnerTest
                             "total_market", "1total_market0",
                             "upfront", "3upfront0"
                         )
-                    ), false, "MISSING", true
+                    ), false, "MISSING", true,
+                    false
                 ),
                 null
             )
@@ -1693,7 +1694,8 @@ public class TopNQueryRunnerTest
                             "total_market", "1total_market0",
                             "upfront", "3upfront0"
                         )
-                    ), false, "MISSING", false
+                    ), false, "MISSING", false,
+                    false
                 ),
                 null
             )
@@ -1757,7 +1759,8 @@ public class TopNQueryRunnerTest
                             "total_market", "1total_market0",
                             "upfront", "3upfront0"
                         )
-                    ), true, null, true
+                    ), true, null, true,
+                    false
                 ),
                 null
             )
@@ -1823,7 +1826,8 @@ public class TopNQueryRunnerTest
                             "upfront",
                             "upfront0"
                         )
-                    ), true, null, false
+                    ), true, null, false,
+                    false
                 ),
                 null
             )
@@ -1888,7 +1892,8 @@ public class TopNQueryRunnerTest
                             "upfront",
                             "1upfront"
                         )
-                    ), true, null, true
+                    ), true, null, true,
+                    false
                 ),
                 null
             )
@@ -1953,7 +1958,8 @@ public class TopNQueryRunnerTest
                             "upfront",
                             "1upfront"
                         )
-                    ), true, null, false
+                    ), true, null, false,
+                    false
                 ),
                 null
             )
@@ -2019,7 +2025,8 @@ public class TopNQueryRunnerTest
                             "upfront",
                             "1upfront"
                         )
-                    ), true, null, true
+                    ), true, null, true,
+                    false
                 ),
                 null
             )
@@ -3159,7 +3166,7 @@ public class TopNQueryRunnerTest
     Map<String, String> extractionMap = new HashMap<>();
     extractionMap.put("spot", "spot0");
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap);
-    LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true);
+    LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, false);
 
     TopNQuery query = new TopNQueryBuilder().dataSource(QueryRunnerTestHelper.dataSource)
                                             .granularity(QueryRunnerTestHelper.allGran)
@@ -3197,6 +3204,9 @@ public class TopNQueryRunnerTest
     );
 
     assertExpectedResults(expectedResults, query);
+    // Assert the optimization path as well
+    final Sequence<Result<TopNResultValue>> retval = runWithPreMergeAndMerge(query);
+    TestHelper.assertExpectedResults(expectedResults, retval);
   }
 
   @Test
@@ -3206,7 +3216,7 @@ public class TopNQueryRunnerTest
     extractionMap.put("", "NULL");
 
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap);
-    LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true);
+    LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, false);
     DimFilter extractionFilter = new ExtractionDimFilter("null_column", "NULL", lookupExtractionFn, null);
     TopNQueryBuilder topNQueryBuilder = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
@@ -3254,4 +3264,67 @@ public class TopNQueryRunnerTest
     assertExpectedResults(expectedResults, topNQueryWithNULLValueExtraction);
   }
 
+  private Sequence<Result<TopNResultValue>> runWithPreMergeAndMerge(TopNQuery query){
+    return runWithPreMergeAndMerge(query, ImmutableMap.<String, Object>of());
+  }
+
+  private Sequence<Result<TopNResultValue>> runWithPreMergeAndMerge(TopNQuery query, Map<String, Object> context)
+  {
+    final TopNQueryQueryToolChest chest = new TopNQueryQueryToolChest(
+        new TopNQueryConfig(),
+        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+    );
+    final QueryRunner<Result<TopNResultValue>> Runner = chest.mergeResults(chest.preMergeQueryDecoration(runner));
+    return Runner.run(query, context);
+  }
+
+  @Test
+  public void testTopNWithExtractionFilterNoExistingValue()
+  {
+    Map<String, String> extractionMap = new HashMap<>();
+    extractionMap.put("","NULL");
+
+    MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap);
+    LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, true);
+    DimFilter extractionFilter = new ExtractionDimFilter("null_column", "NULL", lookupExtractionFn, null);
+    TopNQueryBuilder topNQueryBuilder = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension("null_column")
+        .metric(QueryRunnerTestHelper.indexMetric)
+        .threshold(4)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(Lists.newArrayList(Iterables.concat(QueryRunnerTestHelper.commonAggregators, Lists.newArrayList(
+            new FilteredAggregatorFactory(new DoubleMaxAggregatorFactory("maxIndex", "index"),
+                                          extractionFilter),
+            //new DoubleMaxAggregatorFactory("maxIndex", "index"),
+            new DoubleMinAggregatorFactory("minIndex", "index")))))
+        .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant));
+    TopNQuery topNQueryWithNULLValueExtraction = topNQueryBuilder
+        .filters(extractionFilter)
+        .build();
+
+    Map<String, Object> map = Maps.newHashMap();
+    map.put("null_column", null);
+    map.put("rows", 1209L);
+    map.put("index", 503332.5071372986D);
+    map.put("addRowsIndexConstant", 504542.5071372986D);
+    map.put("uniques", QueryRunnerTestHelper.UNIQUES_9);
+    map.put("maxIndex", 1870.06103515625D);
+    map.put("minIndex", 59.02102279663086D);
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.asList(
+                    map
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, topNQueryWithNULLValueExtraction);
+    // Assert the optimization path as well
+    final Sequence<Result<TopNResultValue>> retval = runWithPreMergeAndMerge(topNQueryWithNULLValueExtraction);
+    TestHelper.assertExpectedResults(expectedResults, retval);
+  }
 }

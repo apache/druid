@@ -91,7 +91,7 @@ public class TaskSerdeTest
                 jsonMapper
             ),
             new IndexTask.IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null)),
-            new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec)
+            new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec, null)
         ),
         jsonMapper,
         null
@@ -132,7 +132,7 @@ public class TaskSerdeTest
                 jsonMapper
             ),
             new IndexTask.IndexIOConfig(new LocalFirehoseFactory(new File("lol"), "rofl", null)),
-            new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec)
+            new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec, null)
         ),
         jsonMapper,
         null
@@ -332,7 +332,10 @@ public class TaskSerdeTest
                 null,
                 1,
                 new NoneShardSpec(),
-                indexSpec
+                indexSpec,
+                null,
+                0,
+                0
             )
         ),
         null
@@ -390,6 +393,9 @@ public class TaskSerdeTest
         null,
         "foo",
         segments,
+        ImmutableList.<AggregatorFactory>of(
+            new CountAggregatorFactory("cnt")
+        ),
         indexSpec,
         null
     );
@@ -416,6 +422,7 @@ public class TaskSerdeTest
     Assert.assertEquals("foo", task3.getDataSource());
     Assert.assertEquals(new Interval("2010-01-01/P2D"), task3.getInterval());
     Assert.assertEquals(task3.getSegments(), segments);
+    Assert.assertEquals(task.getAggregators(), task2.getAggregators());
   }
 
   @Test

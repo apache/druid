@@ -24,13 +24,22 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
+
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
+
+import org.apache.curator.framework.api.ACLProvider;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
+import org.apache.curator.framework.imps.DefaultACLProvider;
 import org.apache.curator.retry.BoundedExponentialBackoffRetry;
 
 import java.io.IOException;
+
+import java.util.List;
+
+import org.apache.zookeeper.ZooDefs;
+import org.apache.zookeeper.data.ACL;
 
 /**
  */
@@ -43,19 +52,22 @@ public class CuratorModule implements Module
   {
     JsonConfigProvider.bind(
         binder, "druid.zk.service",
-        CuratorConfig.class);
+        CuratorConfig.class
+    );
   }
 
-  @Provides @LazySingleton
+  @Provides
+  @LazySingleton
   public CuratorFramework makeCurator(CuratorConfig config, Lifecycle lifecycle) throws IOException
   {
     final CuratorFramework framework =
         CuratorFrameworkFactory.builder()
                                .connectString(config.getZkHosts())
                                .sessionTimeoutMs(config.getZkSessionTimeoutMs())
-            .retryPolicy(new BoundedExponentialBackoffRetry(1000, 45000, 30))
-            .compressionProvider(new PotentiallyGzippedCompressionProvider(config.getEnableCompression()))
-            .build();
+                               .retryPolicy(new BoundedExponentialBackoffRetry(1000, 45000, 30))
+                               .compressionProvider(new PotentiallyGzippedCompressionProvider(config.getEnableCompression()))
+                               .aclProvider(config.getEnableAcl() ? new SecuredACLProvider() : new DefaultACLProvider())
+                               .build();
 
     lifecycle.addHandler(
         new Lifecycle.Handler()
@@ -77,5 +89,20 @@ public class CuratorModule implements Module
     );
 
     return framework;
+  }
+
+  class SecuredACLProvider implements ACLProvider
+  {
+    @Override
+    public List<ACL> getDefaultAcl()
+    {
+      return ZooDefs.Ids.CREATOR_ALL_ACL;
+    }
+
+    @Override
+    public List<ACL> getAclForPath(String path)
+    {
+      return ZooDefs.Ids.CREATOR_ALL_ACL;
+    }
   }
 }

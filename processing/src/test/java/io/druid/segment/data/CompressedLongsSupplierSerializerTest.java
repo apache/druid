@@ -75,6 +75,8 @@ public class CompressedLongsSupplierSerializerTest extends CompressionStrategyTe
         }
     );
 
+    Assert.assertEquals(baos.size(), serializer.getSerializedSize());
+
     IndexedLongs longs = CompressedLongsIndexedSupplier
         .fromByteBuffer(ByteBuffer.wrap(baos.toByteArray()), order)
         .get();
@@ -83,6 +85,42 @@ public class CompressedLongsSupplierSerializerTest extends CompressionStrategyTe
     for (int i = 0; i < numElements; ++i) {
       Assert.assertEquals((long) i, longs.get(i), 0.0f);
     }
+    longs.close();
+  }
+
+  @Test
+  public void testEmpty() throws Exception
+  {
+    final ByteOrder order = ByteOrder.nativeOrder();
+    final int sizePer = 999;
+    CompressedLongsSupplierSerializer serializer = new CompressedLongsSupplierSerializer(
+        sizePer,
+        new GenericIndexedWriter<ResourceHolder<LongBuffer>>(
+            new IOPeonForTesting(),
+            "test",
+            CompressedLongBufferObjectStrategy.getBufferForOrder(order, compressionStrategy, sizePer)
+        ),
+        compressionStrategy
+    );
+    serializer.open();
+    final ByteArrayOutputStream baos = new ByteArrayOutputStream();
+    serializer.closeAndConsolidate(
+        new OutputSupplier<OutputStream>()
+        {
+          @Override
+          public OutputStream getOutput() throws IOException
+          {
+            return baos;
+          }
+        }
+    );
+    Assert.assertEquals(baos.size(), serializer.getSerializedSize());
+
+    IndexedLongs longs = CompressedLongsIndexedSupplier
+        .fromByteBuffer(ByteBuffer.wrap(baos.toByteArray()), order)
+        .get();
+
+    Assert.assertEquals(0, longs.size());
     longs.close();
   }
 }

@@ -109,15 +109,20 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.Executor;
 
+@RunWith(Parameterized.class)
 public class RealtimeIndexTaskTest
 {
   private static final Logger log = new Logger(RealtimeIndexTaskTest.class);
@@ -143,10 +148,25 @@ public class RealtimeIndexTaskTest
   @Rule
   public final TemporaryFolder tempFolder = new TemporaryFolder();
 
+  private final boolean buildV9Directly;
+
   private DateTime now;
   private ListeningExecutorService taskExec;
   private Map<SegmentDescriptor, Pair<Executor, Runnable>> handOffCallbacks;
-  private SegmentHandoffNotifierFactory handoffNotifierFactory;
+
+  @Parameterized.Parameters(name = "buildV9Directly = {0}")
+  public static Collection<?> constructorFeeder() throws IOException
+  {
+    return ImmutableList.of(
+        new Object[]{true},
+        new Object[]{false}
+    );
+  }
+
+  public RealtimeIndexTaskTest(boolean buildV9Directly)
+  {
+    this.buildV9Directly = buildV9Directly;
+  }
 
   @Before
   public void setUp()
@@ -571,7 +591,9 @@ public class RealtimeIndexTaskTest
         null,
         null,
         null,
-        null
+        null,
+        buildV9Directly,
+        0, 0
     );
     return new RealtimeIndexTask(
         taskId,
@@ -649,7 +671,7 @@ public class RealtimeIndexTaskTest
         )
     );
     handOffCallbacks = Maps.newConcurrentMap();
-    handoffNotifierFactory = new SegmentHandoffNotifierFactory()
+    final SegmentHandoffNotifierFactory handoffNotifierFactory = new SegmentHandoffNotifierFactory()
     {
       @Override
       public SegmentHandoffNotifier createSegmentHandoffNotifier(String dataSource)
@@ -715,7 +737,8 @@ public class RealtimeIndexTaskTest
         testUtils.getTestIndexMerger(),
         testUtils.getTestIndexIO(),
         MapCache.create(1024),
-        new CacheConfig()
+        new CacheConfig(),
+        testUtils.getTestIndexMergerV9()
     );
 
     return toolboxFactory.build(task);

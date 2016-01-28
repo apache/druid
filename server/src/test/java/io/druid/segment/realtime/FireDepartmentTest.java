@@ -107,6 +107,7 @@ public class FireDepartmentTest
                 null,
                 null,
                 TestHelper.getTestIndexMerger(),
+                TestHelper.getTestIndexMergerV9(),
                 TestHelper.getTestIndexIO(),
                 MapCache.create(0),
                 NO_CACHE_CONFIG,
@@ -116,7 +117,7 @@ public class FireDepartmentTest
             null
         ),
         new RealtimeTuningConfig(
-            null, null, null, null, null, null, null, null, null
+            null, null, null, null, null, null, null, null, null, null, 0, 0
         )
     );
 

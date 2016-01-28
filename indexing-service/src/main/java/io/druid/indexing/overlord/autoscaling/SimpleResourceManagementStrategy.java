@@ -29,24 +29,33 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
+import com.metamx.common.concurrent.ScheduledExecutorFactory;
+import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.granularity.PeriodGranularity;
 import io.druid.indexing.overlord.RemoteTaskRunner;
-import io.druid.indexing.overlord.RemoteTaskRunnerWorkItem;
 import io.druid.indexing.overlord.TaskRunnerWorkItem;
 import io.druid.indexing.overlord.ZkWorker;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import org.joda.time.DateTime;
 import org.joda.time.Duration;
+import org.joda.time.Period;
 
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ScheduledExecutorService;
 
 /**
  */
-public class SimpleResourceManagementStrategy implements ResourceManagementStrategy
+public class SimpleResourceManagementStrategy implements ResourceManagementStrategy<RemoteTaskRunner>
 {
   private static final EmittingLogger log = new EmittingLogger(SimpleResourceManagementStrategy.class);
+
+  private final ResourceManagementSchedulerConfig resourceManagementSchedulerConfig;
+  private final ScheduledExecutorService exec;
+
+  private volatile boolean started = false;
 
   private final SimpleResourceManagementConfig config;
   private final Supplier<WorkerBehaviorConfig> workerConfigRef;
@@ -63,19 +72,37 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   @Inject
   public SimpleResourceManagementStrategy(
       SimpleResourceManagementConfig config,
-      Supplier<WorkerBehaviorConfig> workerConfigRef
+      Supplier<WorkerBehaviorConfig> workerConfigRef,
+      ResourceManagementSchedulerConfig resourceManagementSchedulerConfig,
+      ScheduledExecutorFactory factory
+  )
+  {
+    this(
+        config,
+        workerConfigRef,
+        resourceManagementSchedulerConfig,
+        factory.create(1, "SimpleResourceManagement-manager--%d")
+    );
+  }
+
+  public SimpleResourceManagementStrategy(
+      SimpleResourceManagementConfig config,
+      Supplier<WorkerBehaviorConfig> workerConfigRef,
+      ResourceManagementSchedulerConfig resourceManagementSchedulerConfig,
+      ScheduledExecutorService exec
   )
   {
     this.config = config;
     this.workerConfigRef = workerConfigRef;
     this.scalingStats = new ScalingStats(config.getNumEventsToTrack());
+    this.resourceManagementSchedulerConfig = resourceManagementSchedulerConfig;
+    this.exec = exec;
   }
 
-  @Override
-  public boolean doProvision(RemoteTaskRunner runner)
+  boolean doProvision(RemoteTaskRunner runner)
   {
-    Collection<RemoteTaskRunnerWorkItem> pendingTasks = runner.getPendingTasks();
-    Collection<ZkWorker> zkWorkers = runner.getWorkers();
+    Collection<? extends TaskRunnerWorkItem> pendingTasks = runner.getPendingTasks();
+    Collection<ZkWorker> zkWorkers = getWorkers(runner);
     synchronized (lock) {
       boolean didProvision = false;
       final WorkerBehaviorConfig workerConfig = workerConfigRef.get();
@@ -140,10 +167,9 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
     }
   }
 
-  @Override
-  public boolean doTerminate(RemoteTaskRunner runner)
+  boolean doTerminate(RemoteTaskRunner runner)
   {
-    Collection<RemoteTaskRunnerWorkItem> pendingTasks = runner.getPendingTasks();
+    Collection<? extends TaskRunnerWorkItem> pendingTasks = runner.getPendingTasks();
     synchronized (lock) {
       final WorkerBehaviorConfig workerConfig = workerConfigRef.get();
       if (workerConfig == null) {
@@ -179,7 +205,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
       currentlyTerminating.clear();
       currentlyTerminating.addAll(stillExisting);
 
-      Collection<ZkWorker> workers = runner.getWorkers();
+      Collection<ZkWorker> workers = getWorkers(runner);
       updateTargetWorkerCount(workerConfig, pendingTasks, workers);
 
       if (currentlyTerminating.isEmpty()) {
@@ -238,6 +264,70 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   }
 
   @Override
+  public void startManagement(final RemoteTaskRunner runner)
+  {
+    synchronized (lock) {
+      if (started) {
+        return;
+      }
+
+      log.info("Started Resource Management Scheduler");
+
+      ScheduledExecutors.scheduleAtFixedRate(
+          exec,
+          resourceManagementSchedulerConfig.getProvisionPeriod().toStandardDuration(),
+          new Runnable()
+          {
+            @Override
+            public void run()
+            {
+              doProvision(runner);
+            }
+          }
+      );
+
+      // Schedule termination of worker nodes periodically
+      Period period = resourceManagementSchedulerConfig.getTerminatePeriod();
+      PeriodGranularity granularity = new PeriodGranularity(
+          period,
+          resourceManagementSchedulerConfig.getOriginTime(),
+          null
+      );
+      final long startTime = granularity.next(granularity.truncate(new DateTime().getMillis()));
+
+      ScheduledExecutors.scheduleAtFixedRate(
+          exec,
+          new Duration(System.currentTimeMillis(), startTime),
+          resourceManagementSchedulerConfig.getTerminatePeriod().toStandardDuration(),
+          new Runnable()
+          {
+            @Override
+            public void run()
+            {
+              doTerminate(runner);
+            }
+          }
+      );
+
+      started = true;
+
+    }
+  }
+
+  @Override
+  public void stopManagement()
+  {
+    synchronized (lock) {
+      if (!started) {
+        return;
+      }
+      log.info("Stopping Resource Management Scheduler");
+      exec.shutdown();
+      started = false;
+    }
+  }
+
+  @Override
   public ScalingStats getStats()
   {
     return scalingStats;
@@ -281,7 +371,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
 
   private void updateTargetWorkerCount(
       final WorkerBehaviorConfig workerConfig,
-      final Collection<RemoteTaskRunnerWorkItem> pendingTasks,
+      final Collection<? extends TaskRunnerWorkItem> pendingTasks,
       final Collection<ZkWorker> zkWorkers
   )
   {
@@ -358,7 +448,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
     }
   }
 
-  private boolean hasTaskPendingBeyondThreshold(Collection<RemoteTaskRunnerWorkItem> pendingTasks)
+  private boolean hasTaskPendingBeyondThreshold(Collection<? extends TaskRunnerWorkItem> pendingTasks)
   {
     synchronized (lock) {
       long now = System.currentTimeMillis();
@@ -371,5 +461,10 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
       }
       return false;
     }
+  }
+
+  public Collection<ZkWorker> getWorkers(RemoteTaskRunner runner)
+  {
+    return runner.getWorkers();
   }
 }

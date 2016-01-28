@@ -28,6 +28,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import io.druid.indexing.common.TaskToolbox;
+import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.IndexableAdapter;
 import io.druid.segment.QueryableIndexIndexableAdapter;
@@ -50,18 +51,21 @@ public class AppendTask extends MergeTaskBase
 {
 
   private final IndexSpec indexSpec;
+  private final List<AggregatorFactory> aggregators;
 
   @JsonCreator
   public AppendTask(
       @JsonProperty("id") String id,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("segments") List<DataSegment> segments,
+      @JsonProperty("aggregations") List<AggregatorFactory> aggregators,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
       @JsonProperty("context") Map<String, Object> context
   )
   {
     super(id, dataSource, segments, context);
     this.indexSpec = indexSpec == null ? new IndexSpec() : indexSpec;
+    this.aggregators = aggregators;
   }
 
   @Override
@@ -109,7 +113,6 @@ public class AppendTask extends MergeTaskBase
     );
 
     List<IndexableAdapter> adapters = Lists.newArrayList();
-
     for (final SegmentToMergeHolder holder : segmentsToMerge) {
       adapters.add(
           new RowboatFilteringIndexAdapter(
@@ -128,13 +131,24 @@ public class AppendTask extends MergeTaskBase
       );
     }
 
-    return toolbox.getIndexMerger().append(adapters, outDir, indexSpec);
+    return toolbox.getIndexMerger().append(
+        adapters,
+        aggregators == null ? null : aggregators.toArray(new AggregatorFactory[aggregators.size()]),
+        outDir,
+        indexSpec
+    );
   }
 
   @Override
   public String getType()
   {
     return "append";
+  }
+
+  @JsonProperty("aggregations")
+  public List<AggregatorFactory> getAggregators()
+  {
+    return aggregators;
   }
 
   private static class SegmentToMergeHolder

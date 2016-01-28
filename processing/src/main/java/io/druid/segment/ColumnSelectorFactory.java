@@ -19,16 +19,14 @@
 
 package io.druid.segment;
 
-import io.druid.query.extraction.ExtractionFn;
-
-import javax.annotation.Nullable;
+import io.druid.query.dimension.DimensionSpec;
 
 /**
  * Factory class for MetricSelectors
  */
 public interface ColumnSelectorFactory
 {
-  public DimensionSelector makeDimensionSelector(String dimensionName, @Nullable ExtractionFn extractionFn);
+  public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec);
   public FloatColumnSelector makeFloatColumnSelector(String columnName);
   public LongColumnSelector makeLongColumnSelector(String columnName);
   public ObjectColumnSelector makeObjectColumnSelector(String columnName);

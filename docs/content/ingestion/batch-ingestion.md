@@ -104,7 +104,8 @@ The spec\_file is a path to a file that contains JSON and an example looks like:
     "ignoreInvalidRows" : false,
     "jobProperties" : { },
     "combineText" : false,        
-    "rowFlushBoundary" : 300000
+    "rowFlushBoundary" : 300000,
+    "buildV9Directly" : false
   }
 }
 ```
@@ -137,6 +138,7 @@ Is a type of inputSpec where a static path to where the data files are located i
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
 |paths|Array of String|A String of input paths indicating where the raw data is located.|yes|
+|inputFormat|String|The input format of the data files. Default is `org.apache.hadoop.mapreduce.lib.input.TextInputFormat`, or `org.apache.hadoop.mapreduce.lib.input.CombineTextInputFormat` if `combineText` in tuningConfig is `true`.|no|
 
 For example, using the static input paths:
 
@@ -150,10 +152,11 @@ Is a type of inputSpec that expects data to be laid out in a specific path forma
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
-|dataGranularity|Object|specifies the granularity to expect the data at, e.g. hour means to expect directories `y=XXXX/m=XX/d=XX/H=XX`.|yes|
+|dataGranularity|String|specifies the granularity to expect the data at, e.g. hour means to expect directories `y=XXXX/m=XX/d=XX/H=XX`.|yes|
 |inputPath|String|Base path to append the expected time path to.|yes|
 |filePattern|String|Pattern that files should match to be included.|yes|
 |pathFormat|String|Joda date-time format for each directory. Default value is `"'y'=yyyy/'m'=MM/'d'=dd/'H'=HH"`, or see [Joda documentation](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html)|no|
+|inputFormat|String|The input format of the data files. Default is `org.apache.hadoop.mapreduce.lib.input.TextInputFormat`, or `org.apache.hadoop.mapreduce.lib.input.CombineTextInputFormat` if `combineText` in tuningConfig is `true`.|no|
 
 For example, if the sample config were run with the interval 2012-06-01/2012-06-02, it would expect data at the paths
 
@@ -163,63 +166,14 @@ s3n://billy-bucket/the/data/is/here/y=2012/m=06/d=01/H=01
 ...
 s3n://billy-bucket/the/data/is/here/y=2012/m=06/d=01/H=23
 ```
+
 ##### `dataSource`
 
-It is a type of inputSpec that reads data already stored inside druid. It is useful for doing "re-indexing". A usecase would be that you ingested some data in some interval and at a later time you wanted to change granularity of rows or remove some columns from the data stored in druid.
-
-|Field|Type|Description|Required|
-|-----|----|-----------|--------|
-|ingestionSpec|Json Object|Specification of druid segments to be loaded. See below.|yes|
-|maxSplitSize|Number|Enables combining multiple segments into single Hadoop InputSplit according to size of segments. Default is none. |no|
-
-Here is what goes inside "ingestionSpec"
-
-|Field|Type|Description|Required|
-|-----|----|-----------|--------|
-|dataSource|String|Druid dataSource name from which you are loading the data.|yes|
-|interval|String|This is deprecated, please use intervals.|no|
-|intervals|List|A list of strings representing ISO-8601 Intervals.|yes|
-|granularity|String|Defines the granularity of the query while loading data. Default value is "none".See [Granularities](../querying/granularities.html).|no|
-|filter|Json|See [Filters](../querying/filters.html)|no|
-|dimensions|Array of String|Name of dimension columns to load. By default, the list will be constructed from parseSpec. If parseSpec does not have explicit list of dimensions then all the dimension columns present in stored data will be read.|no|
-|metrics|Array of String|Name of metric columns to load. By default, the list will be constructed from the "name" of all the configured aggregators.|no|
-
-For example
-
-```
-"ingestionSpec" :
-    {
-        "dataSource": "wikipedia",
-        "intervals": ["2014-10-20T00:00:00Z/P2W"]
-    }
-```
+Read Druid segments. See [here](../ingestion/update-existing-data.html) for more information.
 
 ##### `multi`
 
-It is a composing inputSpec to combine two other input specs. It is useful for doing "delta ingestion". A usecase would be that you ingested some data in some interval and at a later time you wanted to "append" more data to that interval. You can use this inputSpec to combine `dataSource` and `static` (or others) input specs to add more data to an already indexed interval.
-
-|Field|Type|Description|Required|
-|-----|----|-----------|--------|
-|children|Array of Json Objects|List of json objects containing other inputSpecs |yes|
-
-For example
-
-```
-"children": [
-    {
-        "type" : "dataSource",
-        "ingestionSpec" : {
-            "dataSource": "wikipedia",
-            "intervals": ["2014-10-20T00:00:00Z/P2W"]
-        }
-    },
-    {
-        "type" : "static",
-        "paths": "/path/to/more/wikipedia/data/"
-    }
-]
-```
-
+Read multiple sources of data. See [here](../ingestion/update-existing-data.html) for more information.
 
 #### Metadata Update Job Spec
 
@@ -252,6 +206,8 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |ignoreInvalidRows|Boolean|Ignore rows found to have problems.|no (default == false)|
 |useCombiner|Boolean|Use hadoop combiner to merge rows at mapper if possible.|no (default == false)|
 |jobProperties|Object|a map of properties to add to the Hadoop job configuration.|no (default == null)|
+|buildV9Directly|Boolean|Whether to build v9 index directly instead of building v8 index and convert it to v9 format|no (default = false)|
+|numBackgroundPersistThreads|Integer|The number of new background threads to use for incremental persists. Using this feature causes a notable increase in memory pressure and cpu usage, but will make the job finish more quickly. If changing from the default of 0 (use current thread for persists), we recommend setting it to 1.|no (default == 0)|
 
 ### Partitioning specification
 

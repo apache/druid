@@ -155,6 +155,10 @@ Returns a map of segment intervals contained within the specified interval to a 
 
 Returns a map of segment intervals contained within the specified interval to a map of segment metadata to a set of server names that contain the segment for an interval.
 
+* `/druid/coordinator/v1/datasources/{dataSourceName}/intervals/{interval}/serverview`
+
+Returns a map of segment intervals contained within the specified interval to information about the servers that contain the segment for an interval.
+
 * `/druid/coordinator/v1/datasources/{dataSourceName}/segments`
 
 Returns a list of all segments for a datasource in the cluster.

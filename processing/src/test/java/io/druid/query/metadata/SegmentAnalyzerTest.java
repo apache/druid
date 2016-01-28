@@ -59,7 +59,7 @@ public class SegmentAnalyzerTest
   private void testIncrementalWorksHelper(EnumSet<SegmentMetadataQuery.AnalysisType> analyses) throws Exception
   {
     final List<SegmentAnalysis> results = getSegmentAnalysises(
-        new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(false), null),
+        new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), null),
         analyses
     );
 
@@ -171,7 +171,7 @@ public class SegmentAnalyzerTest
     );
 
     final SegmentMetadataQuery query = new SegmentMetadataQuery(
-        new LegacyDataSource("test"), QuerySegmentSpecs.create("2011/2012"), null, null, null, analyses, false
+        new LegacyDataSource("test"), QuerySegmentSpecs.create("2011/2012"), null, null, null, analyses, false, false
     );
     HashMap<String, Object> context = new HashMap<String, Object>();
     return Sequences.toList(query.run(runner, context), Lists.<SegmentAnalysis>newArrayList());

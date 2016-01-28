@@ -21,6 +21,7 @@ package io.druid.query;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
+import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 
@@ -29,15 +30,12 @@ import java.util.Map;
 public class UnionQueryRunner<T> implements QueryRunner<T>
 {
   private final QueryRunner<T> baseRunner;
-  private final QueryToolChest<T, Query<T>> toolChest;
 
   public UnionQueryRunner(
-      QueryRunner<T> baseRunner,
-      QueryToolChest<T, Query<T>> toolChest
+      QueryRunner<T> baseRunner
   )
   {
     this.baseRunner = baseRunner;
-    this.toolChest = toolChest;
   }
 
   @Override
@@ -45,7 +43,9 @@ public class UnionQueryRunner<T> implements QueryRunner<T>
   {
     DataSource dataSource = query.getDataSource();
     if (dataSource instanceof UnionDataSource) {
-      return toolChest.mergeSequencesUnordered(
+
+      return new MergeSequence<>(
+          query.getResultOrdering(),
           Sequences.simple(
               Lists.transform(
                   ((UnionDataSource) dataSource).getDataSources(),

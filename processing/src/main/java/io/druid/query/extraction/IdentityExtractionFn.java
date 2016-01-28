@@ -23,11 +23,17 @@ import com.google.common.base.Strings;
 
 public class IdentityExtractionFn implements ExtractionFn
 {
-  private static final byte CACHE_TYPE_ID = 0x6;
+  private static final IdentityExtractionFn instance = new IdentityExtractionFn();
+
+  private IdentityExtractionFn()
+  {
+
+  }
+
   @Override
   public byte[] getCacheKey()
   {
-    return new byte[]{CACHE_TYPE_ID};
+    return new byte[]{ExtractionCacheHelper.CACHE_TYPE_ID_IDENTITY};
   }
 
   @Override
@@ -58,5 +64,22 @@ public class IdentityExtractionFn implements ExtractionFn
   public ExtractionType getExtractionType()
   {
     return ExtractionType.ONE_TO_ONE;
+  }
+
+  @Override
+  public String toString()
+  {
+     return "Identity";
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+     return o != null && o instanceof IdentityExtractionFn;
+  }
+
+  public static final IdentityExtractionFn getInstance()
+  {
+    return instance;
   }
 }

@@ -19,7 +19,8 @@
 
 package io.druid.segment;
 
-import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
@@ -255,8 +256,7 @@ public class IndexIO
       IndexSpec indexSpec,
       boolean forceIfCurrent,
       boolean validate
-  )
-  throws IOException
+  ) throws IOException
   {
     final int version = SegmentUtils.getVersionFromDir(toConvert);
     switch (version) {
@@ -272,8 +272,10 @@ public class IndexIO
       case 6:
       case 7:
         log.info("Old version, re-persisting.");
+        QueryableIndex segmentToConvert = loadIndex(toConvert);
         new IndexMerger(mapper, this).append(
-            Arrays.<IndexableAdapter>asList(new QueryableIndexIndexableAdapter(loadIndex(toConvert))),
+            Arrays.<IndexableAdapter>asList(new QueryableIndexIndexableAdapter(segmentToConvert)),
+            null,
             converted,
             indexSpec
         );
@@ -608,6 +610,7 @@ public class IndexIO
             continue;
           }
 
+          int emptyStrIdx = dictionary.indexOf("");
           List<Integer> singleValCol = null;
           VSizeIndexed multiValCol = VSizeIndexed.readFromByteBuffer(dimBuffer.asReadOnlyBuffer());
           GenericIndexed<ImmutableBitmap> bitmaps = bitmapIndexes.get(dimension);
@@ -624,7 +627,7 @@ public class IndexIO
             if (rowValue.size() > 1) {
               onlyOneValue = false;
             }
-            if (rowValue.size() == 0) {
+            if (rowValue.size() == 0 || rowValue.get(0) == emptyStrIdx) {
               if (nullsSet == null) {
                 nullsSet = bitmapFactory.makeEmptyMutableBitmap();
               }
@@ -695,8 +698,8 @@ public class IndexIO
 
           final CompressedObjectStrategy.CompressionStrategy compressionStrategy = indexSpec.getDimensionCompressionStrategy();
 
-          final DictionaryEncodedColumnPartSerde.Builder columnPartBuilder = DictionaryEncodedColumnPartSerde
-              .builder()
+          final DictionaryEncodedColumnPartSerde.LegacySerializerBuilder columnPartBuilder = DictionaryEncodedColumnPartSerde
+              .legacySerializerBuilder()
               .withDictionary(dictionary)
               .withBitmapSerdeFactory(bitmapSerdeFactory)
               .withBitmaps(bitmaps)
@@ -758,11 +761,21 @@ public class IndexIO
           switch (holder.getType()) {
             case LONG:
               builder.setValueType(ValueType.LONG);
-              builder.addSerde(new LongGenericColumnPartSerde(holder.longType, BYTE_ORDER));
+              builder.addSerde(
+                  LongGenericColumnPartSerde.legacySerializerBuilder()
+                                            .withByteOrder(BYTE_ORDER)
+                                            .withDelegate(holder.longType)
+                                            .build()
+              );
               break;
             case FLOAT:
               builder.setValueType(ValueType.FLOAT);
-              builder.addSerde(new FloatGenericColumnPartSerde(holder.floatType, BYTE_ORDER));
+              builder.addSerde(
+                  FloatGenericColumnPartSerde.legacySerializerBuilder()
+                                             .withByteOrder(BYTE_ORDER)
+                                             .withDelegate(holder.floatType)
+                                             .build()
+              );
               break;
             case COMPLEX:
               if (!(holder.complexType instanceof GenericIndexed)) {
@@ -770,9 +783,12 @@ public class IndexIO
               }
               final GenericIndexed column = (GenericIndexed) holder.complexType;
               final String complexType = holder.getTypeName();
-
               builder.setValueType(ValueType.COMPLEX);
-              builder.addSerde(new ComplexColumnPartSerde(column, complexType));
+              builder.addSerde(
+                  ComplexColumnPartSerde.legacySerializerBuilder()
+                                        .withTypeName(complexType)
+                                        .withDelegate(column).build()
+              );
               break;
             default:
               throw new ISE("Unknown type[%s]", holder.getType());
@@ -797,8 +813,12 @@ public class IndexIO
 
           final ColumnDescriptor.Builder builder = ColumnDescriptor.builder();
           builder.setValueType(ValueType.LONG);
-          builder.addSerde(new LongGenericColumnPartSerde(timestamps, BYTE_ORDER));
-
+          builder.addSerde(
+              LongGenericColumnPartSerde.legacySerializerBuilder()
+                                        .withByteOrder(BYTE_ORDER)
+                                        .withDelegate(timestamps)
+                                        .build()
+          );
           final ColumnDescriptor serdeficator = builder.build();
 
           ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -1024,16 +1044,19 @@ public class IndexIO
         segmentBitmapSerdeFactory = new BitmapSerde.LegacyBitmapSerdeFactory();
       }
 
-      Map<String, Object> metadata = null;
+      Metadata metadata = null;
       ByteBuffer metadataBB = smooshedFiles.mapFile("metadata.drd");
       if (metadataBB != null) {
         try {
           metadata = mapper.readValue(
               serializerUtils.readBytes(metadataBB, metadataBB.remaining()),
-              new TypeReference<Map<String, Object>>()
-              {
-              }
+              Metadata.class
           );
+        }
+        catch (JsonParseException | JsonMappingException ex) {
+          // Any jackson deserialization errors are ignored e.g. if metadata contains some aggregator which
+          // is no longer supported then it is OK to not use the metadata instead of failing segment loading
+          log.warn(ex, "Failed to load metadata for segment [%s]", inDir);
         }
         catch (IOException ex) {
           throw new IOException("Failed to read metadata", ex);

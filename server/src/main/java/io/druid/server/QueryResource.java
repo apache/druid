@@ -194,7 +194,8 @@ public class QueryResource
                     final long queryTime = System.currentTimeMillis() - start;
                     emitter.emit(
                         DruidMetrics.makeQueryTimeMetric(jsonMapper, theQuery, req.getRemoteAddr())
-                                       .build("query/time", queryTime)
+                                    .setDimension("success", "true")
+                                    .build("query/time", queryTime)
                     );
                     emitter.emit(
                         DruidMetrics.makeQueryTimeMetric(jsonMapper, theQuery, req.getRemoteAddr())
@@ -236,6 +237,12 @@ public class QueryResource
     catch (QueryInterruptedException e) {
       try {
         log.info("%s [%s]", e.getMessage(), queryId);
+        final long queryTime = System.currentTimeMillis() - start;
+        emitter.emit(
+            DruidMetrics.makeQueryTimeMetric(jsonMapper, query, req.getRemoteAddr())
+                        .setDimension("success", "false")
+                        .build("query/time", queryTime)
+        );
         requestLogger.log(
             new RequestLogLine(
                 new DateTime(),
@@ -243,6 +250,8 @@ public class QueryResource
                 query,
                 new QueryStats(
                     ImmutableMap.<String, Object>of(
+                        "query/time",
+                        queryTime,
                         "success",
                         false,
                         "interrupted",
@@ -275,12 +284,25 @@ public class QueryResource
       log.warn(e, "Exception occurred on request [%s]", queryString);
 
       try {
+        final long queryTime = System.currentTimeMillis() - start;
+        emitter.emit(
+            DruidMetrics.makeQueryTimeMetric(jsonMapper, query, req.getRemoteAddr())
+                        .setDimension("success", "false")
+                        .build("query/time", queryTime)
+        );
         requestLogger.log(
             new RequestLogLine(
                 new DateTime(),
                 req.getRemoteAddr(),
                 query,
-                new QueryStats(ImmutableMap.<String, Object>of("success", false, "exception", e.toString()))
+                new QueryStats(ImmutableMap.<String, Object>of(
+                    "query/time",
+                    queryTime,
+                    "success",
+                    false,
+                    "exception",
+                    e.toString()
+                ))
             )
         );
       }

@@ -36,6 +36,7 @@ import com.metamx.common.Granularity;
 import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.concurrent.ScheduledExecutors;
+import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -48,6 +49,7 @@ import io.druid.common.guava.ThreadRenamingRunnable;
 import io.druid.common.utils.VMUtils;
 import io.druid.concurrent.Execs;
 import io.druid.data.input.Committer;
+import io.druid.concurrent.TaskThreadPriority;
 import io.druid.data.input.InputRow;
 import io.druid.query.MetricsEmittingQueryRunner;
 import io.druid.query.NoopQueryRunner;
@@ -55,6 +57,7 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerFactoryConglomerate;
+import io.druid.query.QueryRunnerHelper;
 import io.druid.query.QueryToolChest;
 import io.druid.query.ReportTimelineMissingSegmentQueryRunner;
 import io.druid.query.SegmentDescriptor;
@@ -63,6 +66,7 @@ import io.druid.query.spec.SpecificSegmentSpec;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
+import io.druid.segment.Metadata;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.ReferenceCountingSegment;
@@ -86,6 +90,7 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
+import javax.ws.rs.HEAD;
 import java.io.Closeable;
 import java.io.File;
 import java.io.FilenameFilter;
@@ -325,47 +330,38 @@ public class RealtimePlumber implements Plumber
                                           @Override
                                           public QueryRunner<T> apply(FireHydrant input)
                                           {
-                                            // It is possible that we got a query for a segment, and while that query
-                                            // is in the jetty queue, the segment is abandoned. Here, we need to retry
-                                            // the query for the segment.
-                                            if (input == null || input.getSegment() == null) {
-                                              return new ReportTimelineMissingSegmentQueryRunner<T>(descriptor);
-                                            }
-
                                             if (skipIncrementalSegment && !input.hasSwapped()) {
                                               return new NoopQueryRunner<T>();
                                             }
 
-                                            // Prevent the underlying segment from closing when its being iterated
-                                            final ReferenceCountingSegment segment = input.getSegment();
-                                            final Closeable closeable = segment.increment();
+                                            // Prevent the underlying segment from swapping when its being iterated
+                                            final Pair<Segment, Closeable> segment = input.getAndIncrementSegment();
                                             try {
+                                              QueryRunner<T> baseRunner = QueryRunnerHelper.makeClosingQueryRunner(
+                                                  factory.createRunner(segment.lhs),
+                                                  segment.rhs
+                                              );
+
                                               if (input.hasSwapped() // only use caching if data is immutable
                                                   && cache.isLocal() // hydrants may not be in sync between replicas, make sure cache is local
                                                   ) {
                                                 return new CachingQueryRunner<>(
-                                                    makeHydrantIdentifier(input, segment),
+                                                    makeHydrantIdentifier(input, segment.lhs),
                                                     descriptor,
                                                     objectMapper,
                                                     cache,
                                                     toolchest,
-                                                    factory.createRunner(segment),
+                                                    baseRunner,
                                                     MoreExecutors.sameThreadExecutor(),
                                                     cacheConfig
                                                 );
                                               } else {
-                                                return factory.createRunner(input.getSegment());
+                                                return baseRunner;
                                               }
                                             }
-                                            finally {
-                                              try {
-                                                if (closeable != null) {
-                                                  closeable.close();
-                                                }
-                                              }
-                                              catch (IOException e) {
-                                                throw Throwables.propagate(e);
-                                              }
+                                            catch (RuntimeException e) {
+                                              CloseQuietly.close(segment.rhs);
+                                              throw e;
                                             }
                                           }
                                         }
@@ -383,7 +379,7 @@ public class RealtimePlumber implements Plumber
     );
   }
 
-  protected static String makeHydrantIdentifier(FireHydrant input, ReferenceCountingSegment segment)
+  protected static String makeHydrantIdentifier(FireHydrant input, Segment segment)
   {
     return segment.getIdentifier() + "_" + input.getCount();
   }
@@ -403,13 +399,13 @@ public class RealtimePlumber implements Plumber
     final Stopwatch runExecStopwatch = Stopwatch.createStarted();
     final Stopwatch persistStopwatch = Stopwatch.createStarted();
 
-    final Map<String, Object> metadata = committer.getMetadata() == null ? null :
-                                         ImmutableMap.of(
-                                             COMMIT_METADATA_KEY,
-                                             committer.getMetadata(),
-                                             COMMIT_METADATA_TIMESTAMP_KEY,
-                                             System.currentTimeMillis()
-                                         );
+    final Map<String, Object> metadataElems = committer.getMetadata() == null ? null :
+                                              ImmutableMap.of(
+                                                  COMMIT_METADATA_KEY,
+                                                  committer.getMetadata(),
+                                                  COMMIT_METADATA_TIMESTAMP_KEY,
+                                                  System.currentTimeMillis()
+                                              );
 
     persistExecutor.execute(
         new ThreadRenamingRunnable(String.format("%s-incremental-persist", schema.getDataSource()))
@@ -447,7 +443,7 @@ public class RealtimePlumber implements Plumber
               for (Pair<FireHydrant, Interval> pair : indexesToPersist) {
                 metrics.incrementRowOutputCount(
                     persistHydrant(
-                        pair.lhs, schema, pair.rhs, metadata
+                        pair.lhs, schema, pair.rhs, metadataElems
                     )
                 );
               }
@@ -592,6 +588,7 @@ public class RealtimePlumber implements Plumber
           public void run()
           {
             abandonSegment(sink.getInterval().getStartMillis(), sink);
+            metrics.incrementHandOffCount();
           }
         }
     );
@@ -660,13 +657,17 @@ public class RealtimePlumber implements Plumber
     if (persistExecutor == null) {
       // use a blocking single threaded executor to throttle the firehose when write to disk is slow
       persistExecutor = Execs.newBlockingSingleThreaded(
-          "plumber_persist_%d", maxPendingPersists
+          "plumber_persist_%d",
+          maxPendingPersists,
+          TaskThreadPriority.getThreadPriorityFromTaskPriority(config.getPersistThreadPriority())
       );
     }
     if (mergeExecutor == null) {
       // use a blocking single threaded executor to throttle the firehose when write to disk is slow
       mergeExecutor = Execs.newBlockingSingleThreaded(
-          "plumber_merge_%d", 1
+          "plumber_merge_%d",
+          1,
+          TaskThreadPriority.getThreadPriorityFromTaskPriority(config.getMergeThreadPriority())
       );
     }
 
@@ -766,7 +767,7 @@ public class RealtimePlumber implements Plumber
           //at some point.
           continue;
         }
-        Map<String, Object> segmentMetadata = queryableIndex.getMetaData();
+        Metadata segmentMetadata = queryableIndex.getMetadata();
         if (segmentMetadata != null) {
           Object timestampObj = segmentMetadata.get(COMMIT_METADATA_TIMESTAMP_KEY);
           if (timestampObj != null) {
@@ -774,10 +775,10 @@ public class RealtimePlumber implements Plumber
             if (timestamp > latestCommitTime) {
               log.info(
                   "Found metaData [%s] with latestCommitTime [%s] greater than previous recorded [%s]",
-                  queryableIndex.getMetaData(), timestamp, latestCommitTime
+                  queryableIndex.getMetadata(), timestamp, latestCommitTime
               );
               latestCommitTime = timestamp;
-              metadata = queryableIndex.getMetaData().get(COMMIT_METADATA_KEY);
+              metadata = queryableIndex.getMetadata().get(COMMIT_METADATA_KEY);
             }
           }
         }
@@ -999,7 +1000,7 @@ public class RealtimePlumber implements Plumber
       FireHydrant indexToPersist,
       DataSchema schema,
       Interval interval,
-      Map<String, Object> metaData
+      Map<String, Object> metadataElems
   )
   {
     synchronized (indexToPersist) {
@@ -1015,7 +1016,7 @@ public class RealtimePlumber implements Plumber
           "DataSource[%s], Interval[%s], Metadata [%s] persisting Hydrant[%s]",
           schema.getDataSource(),
           interval,
-          metaData,
+          metadataElems,
           indexToPersist
       );
       try {
@@ -1023,11 +1024,11 @@ public class RealtimePlumber implements Plumber
 
         final IndexSpec indexSpec = config.getIndexSpec();
 
+        indexToPersist.getIndex().getMetadata().putAll(metadataElems);
         final File persistedFile = indexMerger.persist(
             indexToPersist.getIndex(),
             interval,
             new File(computePersistDir(schema, interval), String.valueOf(indexToPersist.getCount())),
-            metaData,
             indexSpec
         );
 

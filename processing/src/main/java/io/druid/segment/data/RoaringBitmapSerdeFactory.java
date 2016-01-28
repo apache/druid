@@ -32,8 +32,8 @@ import java.nio.ByteBuffer;
  */
 public class RoaringBitmapSerdeFactory implements BitmapSerdeFactory
 {
-  private static final ObjectStrategy<ImmutableBitmap> objectStrategy = new ImmutableRoaringBitmapObjectStrategy();
-  private static final BitmapFactory bitmapFactory = new RoaringBitmapFactory();
+  public static final ObjectStrategy<ImmutableBitmap> objectStrategy = new ImmutableRoaringBitmapObjectStrategy();
+  public static final BitmapFactory bitmapFactory = new RoaringBitmapFactory();
 
   @Override
   public ObjectStrategy<ImmutableBitmap> getObjectStrategy()

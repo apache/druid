@@ -26,7 +26,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class HdfsDataSegmentPusherConfig
 {
   @JsonProperty
-  public String storageDirectory = "";
+  private String storageDirectory = "";
+
+  public void setStorageDirectory(String storageDirectory)
+  {
+    this.storageDirectory = storageDirectory;
+  }
 
   public String getStorageDirectory()
   {
