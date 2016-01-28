@@ -166,33 +166,54 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     Set<Pair<ServerSelector, SegmentDescriptor>> segments = Sets.newLinkedHashSet();
 
     List<TimelineObjectHolder<String, ServerSelector>> serversLookup = Lists.newLinkedList();
-    List<Interval> uncoveredIntervals = Lists.newLinkedList();
 
-    for (Interval interval : query.getIntervals()) {
-      Iterable<TimelineObjectHolder<String, ServerSelector>> lookup = timeline.lookup(interval);
-      long startMillis = interval.getStartMillis();
-      long endMillis = interval.getEndMillis();
-      for (TimelineObjectHolder<String, ServerSelector> holder : lookup) {
-        Interval holderInterval = holder.getInterval();
-        long intervalStart = holderInterval.getStartMillis();
-        if (startMillis != intervalStart) {
-          uncoveredIntervals.add(new Interval(startMillis, intervalStart));
+    // Note that enabling this leads to putting uncovered intervals information in the response headers
+    // and might blow up in some cases https://github.com/druid-io/druid/issues/2108
+    int uncoveredIntervalsLimit = BaseQuery.getContextUncoveredIntervalsLimit(query, 0);
+
+    if (uncoveredIntervalsLimit > 0) {
+      List<Interval> uncoveredIntervals = Lists.newArrayListWithCapacity(uncoveredIntervalsLimit);
+      boolean uncoveredIntervalsOverflowed = false;
+
+      for (Interval interval : query.getIntervals()) {
+        Iterable<TimelineObjectHolder<String, ServerSelector>> lookup = timeline.lookup(interval);
+        long startMillis = interval.getStartMillis();
+        long endMillis = interval.getEndMillis();
+        for (TimelineObjectHolder<String, ServerSelector> holder : lookup) {
+          Interval holderInterval = holder.getInterval();
+          long intervalStart = holderInterval.getStartMillis();
+          if (!uncoveredIntervalsOverflowed && startMillis != intervalStart) {
+            if (uncoveredIntervalsLimit > uncoveredIntervals.size()) {
+              uncoveredIntervals.add(new Interval(startMillis, intervalStart));
+            } else {
+              uncoveredIntervalsOverflowed = true;
+            }
+          }
+          startMillis = holderInterval.getEndMillis();
+          serversLookup.add(holder);
         }
-        startMillis = holderInterval.getEndMillis();
-        serversLookup.add(holder);
+
+        if (!uncoveredIntervalsOverflowed && startMillis < endMillis) {
+          if (uncoveredIntervalsLimit > uncoveredIntervals.size()) {
+            uncoveredIntervals.add(new Interval(startMillis, endMillis));
+          } else {
+            uncoveredIntervalsOverflowed = true;
+          }
+        }
       }
 
-      if (startMillis < endMillis) {
-        uncoveredIntervals.add(new Interval(startMillis, endMillis));
+      if (!uncoveredIntervals.isEmpty()) {
+        // This returns intervals for which NO segment is present.
+        // Which is not necessarily an indication that the data doesn't exist or is
+        // incomplete. The data could exist and just not be loaded yet.  In either
+        // case, though, this query will not include any data from the identified intervals.
+        responseContext.put("uncoveredIntervals", uncoveredIntervals);
+        responseContext.put("uncoveredIntervalsOverflowed", uncoveredIntervalsOverflowed);
       }
-    }
-
-    if (!uncoveredIntervals.isEmpty()) {
-      // This returns intervals for which NO segment is present.
-      // Which is not necessarily an indication that the data doesn't exist or is
-      // incomplete. The data could exist and just not be loaded yet.  In either
-      // case, though, this query will not include any data from the identified intervals.
-      responseContext.put("uncoveredIntervals", uncoveredIntervals);
+    } else {
+      for (Interval interval : query.getIntervals()) {
+        Iterables.addAll(serversLookup, timeline.lookup(interval));
+      }
     }
 
     // Let tool chest filter out unneeded segments

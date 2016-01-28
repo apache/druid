@@ -62,6 +62,11 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
     return parseBoolean(query, "finalize", defaultValue);
   }
 
+  public static <T> int getContextUncoveredIntervalsLimit(Query<T> query, int defaultValue)
+  {
+    return parseInt(query, "uncoveredIntervalsLimit", defaultValue);
+  }
+
   private static <T> int parseInt(Query<T> query, String key, int defaultValue)
   {
     Object val = query.getContextValue(key);
