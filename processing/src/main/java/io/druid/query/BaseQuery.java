@@ -37,6 +37,11 @@ import java.util.Map;
  */
 public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
 {
+  public static Query getFirstQuery(Query query)
+  {
+    return query instanceof UnionAllQuery ? ((UnionAllQuery<?>) query).getQueries().get(0) : query;
+  }
+
   public static <T> int getContextPriority(Query<T> query, int defaultValue)
   {
     return parseInt(query, "priority", defaultValue);
@@ -135,6 +140,7 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
   }
 
   @JsonProperty("intervals")
+  @Override
   public QuerySegmentSpec getQuerySegmentSpec()
   {
     return querySegmentSpec;

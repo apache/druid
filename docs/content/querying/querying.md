@@ -43,6 +43,10 @@ Druid has numerous query types for various use cases. Queries are composed of va
 
 * [Search](../querying/searchquery.html)
 
+### Union All Queries
+
+* [UNION_ALL](../querying/unionall.html)
+
 Which Query Should I Use?
 -------------------------
 

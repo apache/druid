@@ -47,8 +47,8 @@ import java.util.Map;
     @JsonSubTypes.Type(name = Query.SEGMENT_METADATA, value = SegmentMetadataQuery.class),
     @JsonSubTypes.Type(name = Query.SELECT, value = SelectQuery.class),
     @JsonSubTypes.Type(name = Query.TOPN, value = TopNQuery.class),
-    @JsonSubTypes.Type(name = Query.DATASOURCE_METADATA, value = DataSourceMetadataQuery.class)
-
+    @JsonSubTypes.Type(name = Query.DATASOURCE_METADATA, value = DataSourceMetadataQuery.class),
+    @JsonSubTypes.Type(name = Query.UNION_ALL, value = UnionAllQuery.class)
 })
 public interface Query<T>
 {
@@ -60,6 +60,7 @@ public interface Query<T>
   String SELECT = "select";
   String TOPN = "topN";
   String DATASOURCE_METADATA = "dataSourceMetadata";
+  String UNION_ALL = "unionAll";
 
   DataSource getDataSource();
 
@@ -72,6 +73,8 @@ public interface Query<T>
   Sequence<T> run(QueryRunner<T> runner, Map<String, Object> context);
 
   List<Interval> getIntervals();
+
+  QuerySegmentSpec getQuerySegmentSpec();
 
   Duration getDuration();
 
