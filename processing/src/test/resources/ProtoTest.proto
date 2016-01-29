@@ -1,6 +1,6 @@
 
 package prototest;
-option java_package = "io.druid.indexer.data";
+option java_package = "io.druid.data.input";
 option java_outer_classname = "ProtoTestEventWrapper";
 
 
@@ -26,6 +26,53 @@ enum EventCategory {
 	optional uint32 someIntColumn = 8;
 	optional uint64 someLongColumn = 9;
 
+
+
+}
+
+
+message ProtoTestEventWithMessages {
+	required string id = 1;
+	required string timestamp = 2;
+	optional string description = 3;
+    optional Location location = 4;
+    optional Income income = 5;
+    repeated Interest interests = 6;
+
+    message Location {
+        required string country = 1;
+        optional string state = 2;
+        optional string city = 3;
+        optional string zipcode = 4;
+    }
+
+    enum Currency {
+        BYR = 0;
+        USD = 1;
+    }
+
+    enum OccupationType {
+        SINGLE = 0;
+        MULTI = 1;
+    }
+
+    message Income {
+        required float income = 1;
+        required Currency currency = 2;
+        repeated OccupationType occupationType = 3;
+    }
+
+    message Interest {
+        required string interestName = 1;
+        required float interestRate = 2;
+
+        message InterestCode {
+            required string code = 1;
+        }
+
+        optional InterestCode interestCode = 3;
+        repeated string subInterestNames = 4;
+    }
 
 
 }
