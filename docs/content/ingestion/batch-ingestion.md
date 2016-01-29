@@ -151,16 +151,16 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
-|workingPath|String|the working path to use for intermediate results (results between Hadoop jobs).|no (default == '/tmp/druid-indexing')|
+|workingPath|String|The working path to use for intermediate results (results between Hadoop jobs).|no (default == '/tmp/druid-indexing')|
 |version|String|The version of created segments.|no (default == datetime that indexing starts at)|
-|leaveIntermediate|Boolean|leave behind files in the workingPath when job completes or fails (debugging tool).|no (default == false)|
-|partitionsSpec|Object|a specification of how to partition each time bucket into segments, absence of this property means no partitioning will occur.More details below.|no (default == 'hashed'|
+|partitionsSpec|Object|A specification of how to partition each time bucket into segments, absence of this property means no partitioning will occur.More details below.|no (default == 'hashed')|
 |maxRowsInMemory|Integer|The number of rows to aggregate before persisting. This number is the post-aggregation rows, so it is not equivalent to the number of input events, but the number of aggregated rows that those events result in. This is used to manage the required JVM heap size.|no (default == 5 million)|
-|cleanupOnFailure|Boolean|Cleans up intermediate files when the job fails as opposed to leaving them around for debugging.|no (default == true)|
+|leaveIntermediate|Boolean|Leave behind intermediate files (for debugging) in the workingPath when a job completes, whether it passes or fails.|no (default == false)|
+|cleanupOnFailure|Boolean|Clean up intermediate files when a job fails (unless leaveIntermediate is on).|no (default == true)|
 |overwriteFiles|Boolean|Override existing files found during indexing.|no (default == false)|
 |ignoreInvalidRows|Boolean|Ignore rows found to have problems.|no (default == false)|
 |useCombiner|Boolean|Use hadoop combiner to merge rows at mapper if possible.|no (default == false)|
-|jobProperties|Object|a map of properties to add to the Hadoop job configuration.|no (default == null)|
+|jobProperties|Object|A map of properties to add to the Hadoop job configuration.|no (default == null)|
 |buildV9Directly|Boolean|Whether to build v9 index directly instead of building v8 index and convert it to v9 format|no (default = false)|
 |numBackgroundPersistThreads|Integer|The number of new background threads to use for incremental persists. Using this feature causes a notable increase in memory pressure and cpu usage, but will make the job finish more quickly. If changing from the default of 0 (use current thread for persists), we recommend setting it to 1.|no (default == 0)|
 
