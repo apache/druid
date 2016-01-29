@@ -536,6 +536,22 @@ public class RealtimeIndexTaskTest
     }
   }
 
+  @Test(timeout = 10000L)
+  public void testStopBeforeStarting() throws Exception
+  {
+    final File directory = tempFolder.newFolder();
+    final RealtimeIndexTask task1 = makeRealtimeTask(null);
+
+    task1.stopGracefully();
+    final TestIndexerMetadataStorageCoordinator mdc = new TestIndexerMetadataStorageCoordinator();
+    final TaskToolbox taskToolbox = makeToolbox(task1, mdc, directory);
+    final ListenableFuture<TaskStatus> statusFuture = runTask(task1, taskToolbox);
+
+    // Wait for the task to finish.
+    final TaskStatus taskStatus = statusFuture.get();
+    Assert.assertEquals(TaskStatus.Status.SUCCESS, taskStatus.getStatusCode());
+  }
+
   private ListenableFuture<TaskStatus> runTask(final Task task, final TaskToolbox toolbox)
   {
     return taskExec.submit(
