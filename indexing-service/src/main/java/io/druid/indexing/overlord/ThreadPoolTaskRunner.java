@@ -144,7 +144,7 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
              .addData("taskId", task.getId())
              .addData("dataSource", task.getDataSource())
              .emit();
-          log.warn(e, "Graceful shutdown of task[%s] aborted with exception.");
+          log.warn(e, "Graceful shutdown of task[%s] aborted with exception.", task.getId());
           error = true;
         }
       } else {
