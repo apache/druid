@@ -325,11 +325,17 @@ public class RealtimeIndexTask extends AbstractTask
       // Delay firehose connection to avoid claiming input resources while the plumber is starting up.
       final FirehoseFactory firehoseFactory = spec.getIOConfig().getFirehoseFactory();
       final boolean firehoseDrainableByClosing = isFirehoseDrainableByClosing(firehoseFactory);
-      firehose = firehoseFactory.connect(spec.getDataSchema().getParser());
-      committerSupplier = Committers.supplierFromFirehose(firehose);
+
+      // Skip connecting firehose if we've been stopped before we got started.
+      synchronized (this) {
+        if (!gracefullyStopped) {
+          firehose = firehoseFactory.connect(spec.getDataSchema().getParser());
+          committerSupplier = Committers.supplierFromFirehose(firehose);
+        }
+      }
 
       // Time to read data!
-      while ((!gracefullyStopped || firehoseDrainableByClosing) && firehose.hasMore()) {
+      while (firehose != null && (!gracefullyStopped || firehoseDrainableByClosing) && firehose.hasMore()) {
         final InputRow inputRow;
 
         try {
@@ -366,33 +372,35 @@ public class RealtimeIndexTask extends AbstractTask
     finally {
       if (normalExit) {
         try {
-          // Always want to persist.
-          log.info("Persisting remaining data.");
+          // Persist if we had actually started.
+          if (firehose != null) {
+            log.info("Persisting remaining data.");
 
-          final Committer committer = committerSupplier.get();
-          final CountDownLatch persistLatch = new CountDownLatch(1);
-          plumber.persist(
-              new Committer()
-              {
-                @Override
-                public Object getMetadata()
+            final Committer committer = committerSupplier.get();
+            final CountDownLatch persistLatch = new CountDownLatch(1);
+            plumber.persist(
+                new Committer()
                 {
-                  return committer.getMetadata();
-                }
+                  @Override
+                  public Object getMetadata()
+                  {
+                    return committer.getMetadata();
+                  }
 
-                @Override
-                public void run()
-                {
-                  try {
-                    committer.run();
-                  }
-                  finally {
-                    persistLatch.countDown();
+                  @Override
+                  public void run()
+                  {
+                    try {
+                      committer.run();
+                    }
+                    finally {
+                      persistLatch.countDown();
+                    }
                   }
                 }
-              }
-          );
-          persistLatch.await();
+            );
+            persistLatch.await();
+          }
 
           if (gracefullyStopped) {
             log.info("Gracefully stopping.");
@@ -420,8 +428,9 @@ public class RealtimeIndexTask extends AbstractTask
           throw e;
         }
         finally {
-          // firehose will be non-null since normalExit is true
-          CloseQuietly.close(firehose);
+          if (firehose != null) {
+            CloseQuietly.close(firehose);
+          }
           toolbox.getMonitorScheduler().removeMonitor(metricsMonitor);
         }
       }
@@ -444,7 +453,9 @@ public class RealtimeIndexTask extends AbstractTask
       synchronized (this) {
         if (!gracefullyStopped) {
           gracefullyStopped = true;
-          if (finishingJob) {
+          if (firehose == null) {
+            log.info("stopGracefully: Firehose not started yet, so nothing to stop.");
+          } else if (finishingJob) {
             log.info("stopGracefully: Interrupting finishJob.");
             runThread.interrupt();
           } else if (isFirehoseDrainableByClosing(spec.getIOConfig().getFirehoseFactory())) {
