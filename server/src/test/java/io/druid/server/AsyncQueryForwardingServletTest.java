@@ -29,6 +29,7 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.servlet.GuiceFilter;
 import com.metamx.common.lifecycle.Lifecycle;
+import io.druid.common.utils.SocketUtil;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
@@ -69,6 +70,9 @@ import java.util.concurrent.CountDownLatch;
 
 public class AsyncQueryForwardingServletTest extends BaseJettyTest
 {
+  private static int port1;
+  private static int port2;
+
   @Before
   public void setup() throws Exception
   {
@@ -76,6 +80,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
     Injector injector = setupInjector();
     final DruidNode node = injector.getInstance(Key.get(DruidNode.class, Self.class));
     port = node.getPort();
+    port1 = SocketUtil.findOpenPort(port + 1);
+    port2 = SocketUtil.findOpenPort(port1 + 1);
 
     lifecycle = injector.getInstance(Lifecycle.class);
     lifecycle.start();
@@ -133,8 +139,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
   public void testDeleteBroadcast() throws Exception
   {
     CountDownLatch latch = new CountDownLatch(2);
-    makeTestDeleteServer(port + 1, latch).start();
-    makeTestDeleteServer(port + 2, latch).start();
+    makeTestDeleteServer(port1, latch).start();
+    makeTestDeleteServer(port2, latch).start();
 
     final URL url = new URL("http://localhost:" + port + "/druid/v2/abc123");
     final HttpURLConnection post = (HttpURLConnection) url.openConnection();
@@ -199,8 +205,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
         {
           return ImmutableList.of(
               "localhost:" + node.getPort(),
-              "localhost:" + (node.getPort() + 1),
-              "localhost:" + (node.getPort() + 2)
+              "localhost:" + port1,
+              "localhost:" + port2
           );
         }
       };
