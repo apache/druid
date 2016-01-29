@@ -198,7 +198,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |-----|----|-----------|--------|
 |workingPath|String|the working path to use for intermediate results (results between Hadoop jobs).|no (default == '/tmp/druid-indexing')|
 |version|String|The version of created segments.|no (default == datetime that indexing starts at)|
-|leaveIntermediate|leave behind files in the workingPath when job completes or fails (debugging tool).|no (default == false)|
+|leaveIntermediate|Boolean|leave behind files in the workingPath when job completes or fails (debugging tool).|no (default == false)|
 |partitionsSpec|Object|a specification of how to partition each time bucket into segments, absence of this property means no partitioning will occur.More details below.|no (default == 'hashed'|
 |maxRowsInMemory|Integer|The number of rows to aggregate before persisting. This number is the post-aggregation rows, so it is not equivalent to the number of input events, but the number of aggregated rows that those events result in. This is used to manage the required JVM heap size.|no (default == 5 million)|
 |cleanupOnFailure|Boolean|Cleans up intermediate files when the job fails as opposed to leaving them around for debugging.|no (default == true)|

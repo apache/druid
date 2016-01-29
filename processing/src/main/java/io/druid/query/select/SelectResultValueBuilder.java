@@ -22,6 +22,7 @@ package io.druid.query.select;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
+import com.google.common.collect.Queues;
 import com.google.common.primitives.Longs;
 import com.metamx.common.guava.Comparators;
 import io.druid.query.Result;
@@ -30,6 +31,7 @@ import org.joda.time.DateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 
 /**
  */
@@ -55,18 +57,20 @@ public class SelectResultValueBuilder
   };
 
   private final DateTime timestamp;
+  private final PagingSpec pagingSpec;
 
-  private MinMaxPriorityQueue<EventHolder> pQueue = null;
+  private Queue<EventHolder> pQueue = null;
 
   public SelectResultValueBuilder(
       DateTime timestamp,
-      int threshold,
+      PagingSpec pagingSpec,
       boolean descending
   )
   {
     this.timestamp = timestamp;
+    this.pagingSpec = pagingSpec;
 
-    instantiatePQueue(threshold, descending ? Comparators.inverse(comparator) : comparator);
+    instantiatePQueue(pagingSpec.getThreshold(), descending ? Comparators.inverse(comparator) : comparator);
   }
 
   public void addEntry(
@@ -87,6 +91,10 @@ public class SelectResultValueBuilder
       values.add(event);
     }
 
+    if (pagingIdentifiers.isEmpty()) {
+      pagingIdentifiers.putAll(pagingSpec.getPagingIdentifiers());
+    }
+
     return new Result<SelectResultValue>(
         timestamp,
         new SelectResultValue(pagingIdentifiers, values)
@@ -95,6 +103,8 @@ public class SelectResultValueBuilder
 
   private void instantiatePQueue(int threshold, final Comparator comparator)
   {
-    this.pQueue = MinMaxPriorityQueue.orderedBy(comparator).maximumSize(threshold).create();
+    this.pQueue = threshold > 0
+                  ? MinMaxPriorityQueue.orderedBy(comparator).maximumSize(threshold).create()
+                  : Queues.newArrayDeque();
   }
 }
