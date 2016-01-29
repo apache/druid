@@ -19,20 +19,23 @@
 
 package io.druid.client.cache;
 
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.RemovalListener;
+import com.google.common.cache.RemovalNotification;
+import com.google.common.cache.Weigher;
 import com.metamx.common.logger.Logger;
 
 import java.nio.ByteBuffer;
 import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.Set;
 
 /**
-*/
-class ByteCountingLRUMap extends LinkedHashMap<ByteBuffer, byte[]>
+ */
+class ByteCountingLRUMap
 {
   private static final Logger log = new Logger(ByteCountingLRUMap.class);
 
+  private final com.google.common.cache.Cache<ByteBuffer, byte[]> cache;
   private final boolean logEvictions;
   private final int logEvictionCount;
   private final long sizeInBytes;
@@ -44,22 +47,56 @@ class ByteCountingLRUMap extends LinkedHashMap<ByteBuffer, byte[]>
       final long sizeInBytes
   )
   {
-    this(16, 0, sizeInBytes);
+    this(16, 1, 0, sizeInBytes);
   }
 
   public ByteCountingLRUMap(
       final int initialSize,
+      final int concurrencyLevel,
       final int logEvictionCount,
       final long sizeInBytes
   )
   {
-    super(initialSize, 0.75f, true);
     this.logEvictionCount = logEvictionCount;
     this.sizeInBytes = sizeInBytes;
 
     logEvictions = logEvictionCount != 0;
     numBytes = 0;
     evictionCount = 0;
+
+    RemovalListener<ByteBuffer, byte[]> listener = new RemovalListener<ByteBuffer, byte[]>()
+    {
+      @Override
+      public void onRemoval(RemovalNotification<ByteBuffer, byte[]> entry)
+      {
+        ++evictionCount;
+        if (logEvictions && evictionCount % logEvictionCount == 0) {
+          log.info(
+              "Evicting %,dth element.  Size[%,d], numBytes[%,d], averageSize[%,d]",
+              evictionCount,
+              size(),
+              numBytes,
+              numBytes / size()
+          );
+        }
+        numBytes -= entry.getKey().remaining() + entry.getValue().length;
+      }
+    };
+    cache = CacheBuilder
+        .newBuilder()
+        .initialCapacity(initialSize)
+        .concurrencyLevel(concurrencyLevel)
+        .maximumWeight(sizeInBytes)
+        .removalListener(listener)
+        .weigher(new Weigher<ByteBuffer, byte[]>()
+        {
+          public int weigh(ByteBuffer key, byte[] value)
+          {
+            int weigh = key.remaining() + value.length;
+            numBytes += weigh;
+            return weigh;
+          }
+        }).build();
   }
 
   public long getNumBytes()
@@ -72,41 +109,20 @@ class ByteCountingLRUMap extends LinkedHashMap<ByteBuffer, byte[]>
     return evictionCount;
   }
 
-  @Override
-  public byte[] put(ByteBuffer key, byte[] value)
+  public byte[] get(ByteBuffer key)
   {
-    numBytes += key.remaining() + value.length;
-    return super.put(key, value);
+    return cache.getIfPresent(key);
   }
 
-  @Override
-  protected boolean removeEldestEntry(Map.Entry<ByteBuffer, byte[]> eldest)
+  public void put(ByteBuffer key, byte[] value)
   {
-    if (numBytes > sizeInBytes) {
-      ++evictionCount;
-      if (logEvictions && evictionCount % logEvictionCount == 0) {
-        log.info(
-            "Evicting %,dth element.  Size[%,d], numBytes[%,d], averageSize[%,d]",
-            evictionCount,
-            size(),
-            numBytes,
-            numBytes / size()
-        );
-      }
-
-      numBytes -= eldest.getKey().remaining() + eldest.getValue().length;
-      return true;
-    }
-    return false;
+    cache.put(key, value);
   }
 
-  @Override
   public byte[] remove(Object key)
   {
-    byte[] value = super.remove(key);
-    if(value != null) {
-      numBytes -= ((ByteBuffer)key).remaining() + value.length;
-    }
+    byte[] value = cache.getIfPresent(key);
+    cache.invalidate(key);
     return value;
   }
 
@@ -114,16 +130,18 @@ class ByteCountingLRUMap extends LinkedHashMap<ByteBuffer, byte[]>
    * Don't allow key removal using the underlying keySet iterator
    * All removal operations must use ByteCountingLRUMap.remove()
    */
-  @Override
   public Set<ByteBuffer> keySet()
   {
-    return Collections.unmodifiableSet(super.keySet());
+    return Collections.unmodifiableSet(cache.asMap().keySet());
   }
 
-  @Override
   public void clear()
   {
-    numBytes = 0;
-    super.clear();
+    cache.invalidateAll();
+  }
+
+  public long size()
+  {
+    return cache.size();
   }
 }

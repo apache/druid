@@ -25,7 +25,6 @@ import com.google.common.primitives.Ints;
 import com.metamx.emitter.service.ServiceEmitter;
 
 import java.nio.ByteBuffer;
-import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -41,7 +40,6 @@ public class MapCache implements Cache
     return new MapCache(new ByteCountingLRUMap(sizeInBytes));
   }
 
-  private final Map<ByteBuffer, byte[]> baseMap;
   private final ByteCountingLRUMap byteCountingLRUMap;
 
   private final Map<String, byte[]> namespaceId;
@@ -57,7 +55,6 @@ public class MapCache implements Cache
   )
   {
     this.byteCountingLRUMap = byteCountingLRUMap;
-    this.baseMap = Collections.synchronizedMap(byteCountingLRUMap);
 
     namespaceId = Maps.newHashMap();
     ids = new AtomicInteger();
@@ -82,7 +79,7 @@ public class MapCache implements Cache
   {
     final byte[] retVal;
     synchronized (clearLock) {
-      retVal = baseMap.get(computeKey(getNamespaceId(key.namespace), key.key));
+      retVal = byteCountingLRUMap.get(computeKey(getNamespaceId(key.namespace), key.key));
     }
     if (retVal == null) {
       missCount.incrementAndGet();
@@ -96,7 +93,7 @@ public class MapCache implements Cache
   public void put(NamedKey key, byte[] value)
   {
     synchronized (clearLock) {
-      baseMap.put(computeKey(getNamespaceId(key.namespace), key.key), value);
+      byteCountingLRUMap.put(computeKey(getNamespaceId(key.namespace), key.key), value);
     }
   }
 
@@ -126,7 +123,7 @@ public class MapCache implements Cache
       namespaceId.remove(namespace);
     }
     synchronized (clearLock) {
-      Iterator<ByteBuffer> iter = baseMap.keySet().iterator();
+      Iterator<ByteBuffer> iter = byteCountingLRUMap.keySet().iterator();
       List<ByteBuffer> toRemove = Lists.newLinkedList();
       while (iter.hasNext()) {
         ByteBuffer next = iter.next();
@@ -139,7 +136,7 @@ public class MapCache implements Cache
         }
       }
       for (ByteBuffer key : toRemove) {
-        baseMap.remove(key);
+        byteCountingLRUMap.remove(key);
       }
     }
   }

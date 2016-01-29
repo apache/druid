@@ -37,11 +37,15 @@ public class LocalCacheProvider implements CacheProvider
 
   @JsonProperty
   @Min(0)
+  private int concurrencyLevel = 4;
+
+  @JsonProperty
+  @Min(0)
   private int logEvictionCount = 0;
 
   @Override
   public Cache get()
   {
-    return new MapCache(new ByteCountingLRUMap(initialSize, logEvictionCount, sizeInBytes));
+    return new MapCache(new ByteCountingLRUMap(initialSize, concurrencyLevel, logEvictionCount, sizeInBytes));
   }
 }
