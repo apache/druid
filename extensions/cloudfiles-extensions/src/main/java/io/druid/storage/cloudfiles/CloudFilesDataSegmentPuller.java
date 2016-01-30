@@ -34,9 +34,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.Map;
 
-/**
- * A data segment puller that also handles URI data pulls.
- */
 public class CloudFilesDataSegmentPuller implements DataSegmentPuller
 {
 
