@@ -86,7 +86,7 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
           name,
           Math.max(size, castedOther.size),
           shouldFinalize,
-          true,
+          false,
           errorBoundsStdDev
       );
     } else {
