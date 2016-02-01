@@ -18,3 +18,4 @@
 #
 
 io.druid.storage.cloudfiles.CloudFilesStorageDruidModule
+io.druid.firehose.cloudfiles.CloudFilesFirehoseDruidModule
