@@ -76,7 +76,7 @@ Another workaround solution is to build a custom fat jar of Druid using [sbt](ht
 
 (2) Make a new directory named 'druid_build'.
 
-(3) Cd to 'druid_build' and create the build.sbt file with the content [here](./use_sbt_to_build_fat_jar.md).
+(3) Cd to 'druid_build' and create the build.sbt file with the content [here](./use_sbt_to_build_fat_jar.html).
 
 You can always add more building targets or remove the ones you don't need.
 
