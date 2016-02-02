@@ -106,6 +106,48 @@ Azure Blobs:
 |container|Name of the azure [container](https://azure.microsoft.com/en-us/documentation/articles/storage-dotnet-how-to-use-blobs/#create-a-container)|N/A|yes|
 |path|The path where data is located.|N/A|yes|
 
+#### StaticCloudFilesFirehose
+
+This firehose ingests events, similar to the StaticAzureBlobStoreFirehose, but from Rackspace's Cloud Files.
+
+Data is newline delimited, with one JSON object per line and parsed as per the `InputRowParser` configuration.
+
+The storage account is shared with the one used for Racksapce's Cloud Files deep storage functionality, but blobs can be in a different region and container.
+
+As with the Azure blobstore, it is assumed to be gzipped if the extension ends in .gz
+
+Sample spec:
+
+```json
+"firehose" : {
+    "type" : "static-cloudfiles",
+    "blobs": [
+        {
+          "region": "DFW"
+          "container": "container",
+          "path": "/path/to/your/file.json"
+        },
+        {
+          "region": "ORD"
+          "container": "anothercontainer",
+          "path": "/another/path.json"
+        }
+    ]
+}
+```
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|type|This should be "static-cloudfiles".|N/A|yes|
+|blobs|JSON array of Cloud Files blobs.|N/A|yes|
+
+Cloud Files Blobs:
+
+|property|description|default|required?|
+|--------|-----------|-------|---------|
+|container|Name of the Cloud Files container|N/A|yes|
+|path|The path where data is located.|N/A|yes|
+
 #### TwitterSpritzerFirehose
 
 This firehose connects directly to the twitter spritzer data stream.
@@ -154,7 +196,7 @@ A sample spec for rabbitmq firehose:
      "autoDelete": "false",
      "maxRetries": "10",
      "retryIntervalSeconds": "1",
-     "maxDurationSeconds": "300" 
+     "maxDurationSeconds": "300"
    }
 }
 ```
@@ -283,4 +325,3 @@ An example is shown below:
 |shutoffTime|time at which the firehose should shut down, in ISO8601 format|yes|
 |delegate|firehose to use|yes|
 =======
-
