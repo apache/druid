@@ -77,12 +77,16 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
     final int cardinality = params.getCardinality();
     int numProcessed = 0;
     while (numProcessed < cardinality) {
-      final int numToProcess = Math.min(params.getNumValuesPerPass(), cardinality - numProcessed);
+      final int numToProcess;
+      int maxNumToProcess = Math.min(params.getNumValuesPerPass(), cardinality - numProcessed);
 
       DimValSelector theDimValSelector;
       if (!hasDimValSelector) {
+        numToProcess = maxNumToProcess;
         theDimValSelector = makeDimValSelector(params, numProcessed, numToProcess);
       } else {
+        //skip invalid, calculate length to have enough valid value to process or hit the end.
+        numToProcess = computeNewLength(dimValSelector, numProcessed, maxNumToProcess);
         theDimValSelector = updateDimValSelector(dimValSelector, numProcessed, numToProcess);
       }
 
@@ -100,6 +104,20 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
   }
 
   protected abstract DimValSelector makeDimValSelector(Parameters params, int numProcessed, int numToProcess);
+
+  /**
+   * Skip invalid value, calculate length to have enough valid value to process or hit the end.
+   *
+   * @param dimValSelector  the dim value selector which record value is valid or invalid.
+   * @param numProcessed    the start position to process
+   * @param numToProcess    the number of valid value to process
+   *
+   * @return the length between which have enough valid value to process or hit the end.
+   */
+  protected int computeNewLength(DimValSelector dimValSelector, int numProcessed, int numToProcess)
+  {
+    return numToProcess;
+  }
 
   protected abstract DimValSelector updateDimValSelector(
       DimValSelector dimValSelector,
