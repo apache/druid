@@ -118,20 +118,6 @@
                             </descriptors>
                         </configuration>
                     </execution>
-                    <execution>
-                        <id>mysql-distro-assembly</id>
-                        <phase>install</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                        <configuration>
-                            <finalName>mysql-metadata-storage</finalName>
-                            <tarLongFileMode>posix</tarLongFileMode>
-                            <descriptors>
-                                <descriptor>src/assembly/mysql_assembly.xml</descriptor>
-                            </descriptors>
-                        </configuration>
-                    </execution>
                 </executions>
             </plugin>
             <plugin>
