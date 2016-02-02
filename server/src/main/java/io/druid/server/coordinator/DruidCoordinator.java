@@ -348,7 +348,7 @@ public class DruidCoordinator
 
   public void moveSegment(
       ImmutableDruidServer fromServer,
-      ImmutableDruidServer toServer,
+      final ImmutableDruidServer toServer,
       String segmentName,
       final LoadPeonCallback callback
   )
@@ -384,17 +384,6 @@ public class DruidCoordinator
         );
       }
 
-      final String toLoadQueueSegPath = ZKPaths.makePath(
-          ZKPaths.makePath(
-              zkPaths.getLoadQueuePath(),
-              toServer.getName()
-          ), segmentName
-      );
-      final String toServedSegPath = ZKPaths.makePath(
-          ZKPaths.makePath(serverInventoryView.getInventoryManagerConfig().getInventoryPath(), toServer.getName()),
-          segmentName
-      );
-
       loadPeon.loadSegment(
           segment,
           new LoadPeonCallback()
@@ -403,9 +392,12 @@ public class DruidCoordinator
             public void execute()
             {
               try {
-                if (curator.checkExists().forPath(toServedSegPath) != null    &&
-                    curator.checkExists().forPath(toLoadQueueSegPath) == null &&
-                    !dropPeon.getSegmentsToDrop().contains(segment)) {
+                DruidServer toLoadServer = serverInventoryView.getInventoryValue(toServer.getName());
+
+                if (toLoadServer != null // toLoadServer is still present
+                    && toLoadServer.getSegment(segment.getIdentifier()) != null // verify segment loaded on toLoadServer
+                    && !dropPeon.getSegmentsToDrop().contains(segment) // segment already in dropQueue
+                    ) {
                   dropPeon.dropSegment(segment, callback);
                 } else if (callback != null) {
                   callback.execute();
@@ -840,9 +832,8 @@ public class DruidCoordinator
                   final DruidCluster cluster = new DruidCluster();
                   for (ImmutableDruidServer server : servers) {
                     if (!loadManagementPeons.containsKey(server.getName())) {
-                      String basePath = ZKPaths.makePath(zkPaths.getLoadQueuePath(), server.getName());
-                      LoadQueuePeon loadQueuePeon = taskMaster.giveMePeon(basePath);
-                      log.info("Creating LoadQueuePeon for server[%s] at path[%s]", server.getName(), basePath);
+                      LoadQueuePeon loadQueuePeon = taskMaster.giveMePeon(server);
+                      log.info("Creating LoadQueuePeon for server[%s]", server.getName());
 
                       loadManagementPeons.put(server.getName(), loadQueuePeon);
                     }

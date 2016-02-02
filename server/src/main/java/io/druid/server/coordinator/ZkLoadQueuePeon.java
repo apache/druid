@@ -64,7 +64,6 @@ public class ZkLoadQueuePeon extends LoadQueuePeon
   @Override
   void processHolder(final SegmentHolder holder)
   {
-
     try {
       final String path = ZKPaths.makePath(basePath, holder.getSegmentIdentifier());
       final byte[] payload = jsonMapper.writeValueAsBytes(holder.getChangeRequest());

@@ -21,6 +21,7 @@ package io.druid.server.coordinator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
+import com.metamx.http.client.HttpClient;
 import io.druid.client.ImmutableDruidServer;
 import org.apache.curator.framework.CuratorFramework;
 
@@ -28,9 +29,35 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 
 /**
- * Provides LoadQueuePeons
+ * Provides HttpLoadQueuePeons
  */
-public interface LoadQueueTaskMaster
+public class HttpLoadQueueTaskMaster implements LoadQueueTaskMaster
 {
-  public LoadQueuePeon giveMePeon(ImmutableDruidServer server);
+  private final HttpClient httpClient;
+  private final ObjectMapper jsonMapper;
+  private final ScheduledExecutorService peonExec;
+  private final ExecutorService callbackExec;
+  private final DruidCoordinatorConfig config;
+
+  @Inject
+  public HttpLoadQueueTaskMaster(
+      HttpClient httpClient,
+      ObjectMapper jsonMapper,
+      ScheduledExecutorService peonExec,
+      ExecutorService callbackExec,
+      DruidCoordinatorConfig config
+  )
+  {
+    this.httpClient = httpClient;
+    this.jsonMapper = jsonMapper;
+    this.peonExec = peonExec;
+    this.callbackExec = callbackExec;
+    this.config = config;
+  }
+
+  public LoadQueuePeon giveMePeon(ImmutableDruidServer druidServer)
+  {
+    String baseUrl = String.format("http://%s/druid/historical/v1", druidServer.getHost());
+    return new HttpLoadQueuePeon(httpClient,baseUrl, jsonMapper, peonExec, callbackExec, config);
+  }
 }

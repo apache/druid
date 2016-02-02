@@ -232,22 +232,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
     loadManagementPeons.put("from", loadQueuePeon);
     loadManagementPeons.put("to", loadQueuePeon);
 
-    EasyMock.expect(serverInventoryView.getInventoryManagerConfig()).andReturn(
-        new InventoryManagerConfig()
-        {
-          @Override
-          public String getContainerPath()
-          {
-            return "";
-          }
-
-          @Override
-          public String getInventoryPath()
-          {
-            return "";
-          }
-        }
-    );
     EasyMock.replay(serverInventoryView);
 
     coordinator.moveSegment(

@@ -75,7 +75,7 @@ public abstract class DruidCoordinatorConfig
     return new Duration(15 * 60 * 1000);
   }
 
-  @Config("druid.coordinator.load.status.poll.duration")
+  @Config("druid.coordinator.load.status.pollDuration")
   public Duration getLoadStatusPollDuration()
   {
     return new Duration(1000);
