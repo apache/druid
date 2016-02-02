@@ -29,7 +29,7 @@ public class LoadQueuePeonTester extends LoadQueuePeon
 
   public LoadQueuePeonTester()
   {
-    super(null, null, null, null, null, null);
+    super(null, null, null);
   }
 
   @Override
@@ -39,6 +39,12 @@ public class LoadQueuePeonTester extends LoadQueuePeon
   )
   {
     segmentsToLoad.add(segment);
+  }
+
+  @Override
+  void processHolder(SegmentHolder holder)
+  {
+    // Nothing to do
   }
 
   public ConcurrentSkipListSet<DataSegment> getSegmentsToLoad()

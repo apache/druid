@@ -82,7 +82,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
     final AtomicInteger requestSignalIdx = new AtomicInteger(0);
     final AtomicInteger segmentSignalIdx = new AtomicInteger(0);
 
-    loadQueuePeon = new LoadQueuePeon(
+    loadQueuePeon = new ZkLoadQueuePeon(
         curator,
         LOAD_QUEUE_PATH,
         jsonMapper,
@@ -287,7 +287,7 @@ public class LoadQueuePeonTest extends CuratorTestBase
     final CountDownLatch loadRequestSignal = new CountDownLatch(1);
     final CountDownLatch segmentLoadedSignal = new CountDownLatch(1);
 
-    loadQueuePeon = new LoadQueuePeon(
+    loadQueuePeon = new ZkLoadQueuePeon(
         curator,
         LOAD_QUEUE_PATH,
         jsonMapper,
