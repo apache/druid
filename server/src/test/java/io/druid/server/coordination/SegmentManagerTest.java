@@ -69,11 +69,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  */
-public class ZkCoordinatorTest extends CuratorTestBase
+public class SegmentManagerTest extends CuratorTestBase
 {
   public static final int COUNT = 50;
 
-  private static final Logger log = new Logger(ZkCoordinatorTest.class);
+  private static final Logger log = new Logger(SegmentManagerTest.class);
 
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
   private final DruidServerMetadata me = new DruidServerMetadata(
@@ -85,7 +85,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
       0
   );
 
-  private ZkCoordinator zkCoordinator;
+  private SegmentManager segmentManager;
   private ServerManager serverManager;
   private DataSegmentAnnouncer announcer;
   private File infoDir;
@@ -101,7 +101,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
     curator.start();
     curator.blockUntilConnected();
     try {
-      infoDir = new File(File.createTempFile("blah", "blah2").getParent(), "ZkCoordinatorTest");
+      infoDir = new File(File.createTempFile("blah", "blah2").getParent(), "SegmentManagerTest");
       infoDir.mkdirs();
       for (File file : infoDir.listFiles()) {
         file.delete();
@@ -191,7 +191,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
       }
     };
 
-    zkCoordinator = new ZkCoordinator(
+    segmentManager = new SegmentManager(
         jsonMapper,
         new SegmentLoaderConfig()
         {
@@ -219,10 +219,8 @@ public class ZkCoordinatorTest extends CuratorTestBase
             return 0;
           }
         },
-        zkPaths,
         me,
         announcer,
-        curator,
         serverManager,
         new ScheduledExecutorFactory()
         {
@@ -247,8 +245,8 @@ public class ZkCoordinatorTest extends CuratorTestBase
               }
             };
           }
-        }
-    );
+        });
+
   }
 
   @After
@@ -266,11 +264,11 @@ public class ZkCoordinatorTest extends CuratorTestBase
   @Test
   public void testSegmentLoading1() throws Exception
   {
-    zkCoordinator.start();
+    segmentManager.start();
 
     final DataSegment segment = makeSegment("test", "1", new Interval("P1d/2011-04-01"));
 
-    zkCoordinator.removeSegment(segment, new DataSegmentChangeCallback()
+    segmentManager.removeSegment(segment, new DataSegmentChangeCallback()
     {
       @Override
       public void execute()
@@ -281,7 +279,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
 
     Assert.assertFalse(segmentsAnnouncedByMe.contains(segment));
 
-    zkCoordinator.addSegment(segment, new DataSegmentChangeCallback()
+    segmentManager.addSegment(segment, new DataSegmentChangeCallback()
     {
       @Override
       public void execute()
@@ -293,7 +291,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
     /*
        make sure the scheduled runnable that "deletes" segment files has been executed.
        Because another addSegment() call is executed, which removes the segment from segmentsToDelete field in
-       ZkCoordinator, the scheduled runnable will not actually delete segment files.
+       SegmentManager, the scheduled runnable will not actually delete segment files.
      */
     for (Runnable runnable : scheduledRunnable) {
       runnable.run();
@@ -302,7 +300,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
     Assert.assertTrue(segmentsAnnouncedByMe.contains(segment));
     Assert.assertFalse("segment files shouldn't be deleted", segmentLoader.getSegmentsInTrash().contains(segment));
 
-    zkCoordinator.stop();
+    segmentManager.stop();
   }
 
   /**
@@ -315,11 +313,11 @@ public class ZkCoordinatorTest extends CuratorTestBase
   @Test
   public void testSegmentLoading2() throws Exception
   {
-    zkCoordinator.start();
+    segmentManager.start();
 
     final DataSegment segment = makeSegment("test", "1", new Interval("P1d/2011-04-01"));
 
-    zkCoordinator.addSegment(segment, new DataSegmentChangeCallback()
+    segmentManager.addSegment(segment, new DataSegmentChangeCallback()
     {
       @Override
       public void execute()
@@ -330,7 +328,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
 
     Assert.assertTrue(segmentsAnnouncedByMe.contains(segment));
 
-    zkCoordinator.removeSegment(segment, new DataSegmentChangeCallback()
+    segmentManager.removeSegment(segment, new DataSegmentChangeCallback()
     {
       @Override
       public void execute()
@@ -341,7 +339,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
 
     Assert.assertFalse(segmentsAnnouncedByMe.contains(segment));
 
-    zkCoordinator.addSegment(segment, new DataSegmentChangeCallback()
+    segmentManager.addSegment(segment, new DataSegmentChangeCallback()
     {
       @Override
       public void execute()
@@ -353,7 +351,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
     /*
        make sure the scheduled runnable that "deletes" segment files has been executed.
        Because another addSegment() call is executed, which removes the segment from segmentsToDelete field in
-       ZkCoordinator, the scheduled runnable will not actually delete segment files.
+       SegmentManager, the scheduled runnable will not actually delete segment files.
      */
     for (Runnable runnable : scheduledRunnable) {
       runnable.run();
@@ -362,7 +360,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
     Assert.assertTrue(segmentsAnnouncedByMe.contains(segment));
     Assert.assertFalse("segment files shouldn't be deleted", segmentLoader.getSegmentsInTrash().contains(segment));
 
-    zkCoordinator.stop();
+    segmentManager.stop();
   }
 
   @Test
@@ -392,14 +390,14 @@ public class ZkCoordinatorTest extends CuratorTestBase
 
     checkCache(segments);
     Assert.assertTrue(serverManager.getDataSourceCounts().isEmpty());
-    zkCoordinator.start();
+    segmentManager.start();
     Assert.assertTrue(!serverManager.getDataSourceCounts().isEmpty());
     for (int i = 0; i < COUNT; ++i) {
       Assert.assertEquals(11L, serverManager.getDataSourceCounts().get("test" + i).longValue());
       Assert.assertEquals(2L, serverManager.getDataSourceCounts().get("test_two" + i).longValue());
     }
     Assert.assertEquals(13 * COUNT, announceCount.get());
-    zkCoordinator.stop();
+    segmentManager.stop();
 
     for (DataSegment segment : segments) {
       deleteSegmentFromCache(segment);
@@ -525,7 +523,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
         }
     );
 
-    ZkCoordinator zkCoordinator = injector.getInstance(ZkCoordinator.class);
+    SegmentManager segmentManager = injector.getInstance(SegmentManager.class);
 
     List<DataSegment> segments = Lists.newLinkedList();
     for (int i = 0; i < COUNT; ++i) {
@@ -544,14 +542,14 @@ public class ZkCoordinatorTest extends CuratorTestBase
     checkCache(segments);
     Assert.assertTrue(serverManager.getDataSourceCounts().isEmpty());
 
-    zkCoordinator.start();
+    segmentManager.start();
     Assert.assertTrue(!serverManager.getDataSourceCounts().isEmpty());
     for (int i = 0; i < COUNT; ++i) {
       Assert.assertEquals(3L, serverManager.getDataSourceCounts().get("test" + i).longValue());
       Assert.assertEquals(2L, serverManager.getDataSourceCounts().get("test_two" + i).longValue());
     }
     Assert.assertEquals(5 * COUNT, announceCount.get());
-    zkCoordinator.stop();
+    segmentManager.stop();
 
     for (DataSegment segment : segments) {
       deleteSegmentFromCache(segment);

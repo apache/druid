@@ -20,6 +20,7 @@
 package io.druid.server.http;
 
 import com.google.common.collect.ImmutableMap;
+import io.druid.server.coordination.SegmentManager;
 import io.druid.server.coordination.ZkCoordinator;
 
 import javax.inject.Inject;
@@ -32,14 +33,14 @@ import javax.ws.rs.core.Response;
 @Path("/druid/historical/v1")
 public class HistoricalResource
 {
-  private final ZkCoordinator coordinator;
+  private final SegmentManager segmentManager;
 
   @Inject
   public HistoricalResource(
-      ZkCoordinator coordinator
+      SegmentManager segmentManager
   )
   {
-    this.coordinator = coordinator;
+    this.segmentManager = segmentManager;
   }
 
   @GET
@@ -47,6 +48,6 @@ public class HistoricalResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getLoadStatus()
   {
-    return Response.ok(ImmutableMap.of("cacheInitialized", coordinator.isStarted())).build();
+    return Response.ok(ImmutableMap.of("cacheInitialized", segmentManager.isStarted())).build();
   }
 }

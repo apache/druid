@@ -36,6 +36,8 @@ import io.druid.guice.ManageLifecycle;
 import io.druid.guice.NodeTypeConfig;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.server.QueryResource;
+import io.druid.server.coordination.DataSegmentChangeHandler;
+import io.druid.server.coordination.SegmentManager;
 import io.druid.server.coordination.ServerManager;
 import io.druid.server.coordination.ZkCoordinator;
 import io.druid.server.http.HistoricalResource;
@@ -75,6 +77,8 @@ public class CliHistorical extends ServerRunnable
             // register Server before binding ZkCoordinator to ensure HTTP endpoints are available immediately
             LifecycleModule.register(binder, Server.class);
             binder.bind(ServerManager.class).in(LazySingleton.class);
+            binder.bind(DataSegmentChangeHandler.class).to(SegmentManager.class).in(ManageLifecycle.class);
+
             binder.bind(ZkCoordinator.class).in(ManageLifecycle.class);
             binder.bind(QuerySegmentWalker.class).to(ServerManager.class).in(LazySingleton.class);
 
