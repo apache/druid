@@ -41,7 +41,7 @@ public class UnionAllQuery<T> extends BaseQuery<Result<T>>
       @JsonProperty("context") Map<String, Object> context
   )
   {
-    super(queries.get(0).getDataSource(), queries.get(0).getQuerySegmentSpec(), false, context);
+    super(getFirstQueryWithValidation(queries), false, context);
     this.queries = queries;
     this.sortOnUnion = sortOnUnion;
 
