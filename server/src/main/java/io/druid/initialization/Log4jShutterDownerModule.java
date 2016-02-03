@@ -45,8 +45,15 @@ public class Log4jShutterDownerModule implements Module
     // This makes the shutdown run pretty darn near last.
 
     try {
+      ClassLoader loader = Thread.currentThread().getContextClassLoader();
+      if(loader == null) {
+        loader = getClass().getClassLoader();
+      }
       // Reflection to try and allow non Log4j2 stuff to run. This acts as a gateway to stop errors in the next few lines
-      final Class<?> logManagerClazz = Class.forName("org.apache.logging.log4j.LogManager");
+      // In log4j api
+      final Class<?> logManagerClazz = Class.forName("org.apache.logging.log4j.LogManager", false, loader);
+      // In log4j core
+      final Class<?> callbackRegistryClazz = Class.forName("org.apache.logging.log4j.core.util.ShutdownCallbackRegistry", false, loader);
 
       final LoggerContextFactory contextFactory = LogManager.getFactory();
       if (!(contextFactory instanceof Log4jContextFactory)) {
