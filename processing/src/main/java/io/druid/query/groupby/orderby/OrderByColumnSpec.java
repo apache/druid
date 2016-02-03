@@ -173,6 +173,33 @@ public class OrderByColumnSpec
   }
 
   @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    OrderByColumnSpec that = (OrderByColumnSpec) o;
+
+    if (!dimension.equals(that.dimension)) {
+      return false;
+    }
+    return direction == that.direction;
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = dimension.hashCode();
+    result = 31 * result + direction.hashCode();
+    return result;
+  }
+
+  @Override
   public String toString()
   {
     return "OrderByColumnSpec{" +

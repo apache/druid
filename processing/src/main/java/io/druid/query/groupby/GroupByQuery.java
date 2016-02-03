@@ -628,9 +628,6 @@ public class GroupByQuery extends BaseQuery<Row>
     if (limitSpec != null ? !limitSpec.equals(that.limitSpec) : that.limitSpec != null) {
       return false;
     }
-    if (limitFn != null ? !limitFn.equals(that.limitFn) : that.limitFn != null) {
-      return false;
-    }
     if (postAggregatorSpecs != null
         ? !postAggregatorSpecs.equals(that.postAggregatorSpecs)
         : that.postAggregatorSpecs != null) {
