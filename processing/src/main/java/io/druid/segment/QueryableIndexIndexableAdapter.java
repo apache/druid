@@ -19,6 +19,7 @@
 
 package io.druid.segment;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Lists;
@@ -294,8 +295,8 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     };
   }
 
-  @Override
-  public IndexedInts getBitmapIndex(String dimension, String value)
+  @VisibleForTesting
+  IndexedInts getBitmapIndex(String dimension, String value)
   {
     final Column column = input.getColumn(dimension);
 
