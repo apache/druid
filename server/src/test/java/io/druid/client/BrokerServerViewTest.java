@@ -333,7 +333,8 @@ public class BrokerServerViewTest extends CuratorTestBase
         EasyMock.createMock(HttpClient.class),
         baseView,
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy()),
-        new NoopServiceEmitter()
+        new NoopServiceEmitter(),
+        new BrokerSegmentWatcherConfig()
     );
 
     baseView.start();

@@ -67,6 +67,7 @@ public class BrokerServerView implements TimelineServerView
   private final ServerInventoryView baseView;
   private final TierSelectorStrategy tierSelectorStrategy;
   private final ServiceEmitter emitter;
+  private final BrokerSegmentWatcherConfig segmentWatcherConfig;
 
   private volatile boolean initialized = false;
 
@@ -78,7 +79,8 @@ public class BrokerServerView implements TimelineServerView
       @Client HttpClient httpClient,
       ServerInventoryView baseView,
       TierSelectorStrategy tierSelectorStrategy,
-      ServiceEmitter emitter
+      ServiceEmitter emitter,
+      BrokerSegmentWatcherConfig segmentWatcherConfig
   )
   {
     this.warehouse = warehouse;
@@ -88,6 +90,7 @@ public class BrokerServerView implements TimelineServerView
     this.baseView = baseView;
     this.tierSelectorStrategy = tierSelectorStrategy;
     this.emitter = emitter;
+    this.segmentWatcherConfig = segmentWatcherConfig;
 
     this.clients = Maps.newConcurrentMap();
     this.selectors = Maps.newHashMap();
@@ -188,6 +191,11 @@ public class BrokerServerView implements TimelineServerView
 
   private void serverAddedSegment(final DruidServerMetadata server, final DataSegment segment)
   {
+    if (segmentWatcherConfig.getWatchedTiers() != null && !segmentWatcherConfig.getWatchedTiers()
+                                                                               .contains(server.getTier())) {
+      return;
+    }
+
     String segmentId = segment.getIdentifier();
     synchronized (lock) {
       log.debug("Adding segment[%s] for server[%s]", segment, server);
@@ -216,6 +224,11 @@ public class BrokerServerView implements TimelineServerView
 
   private void serverRemovedSegment(DruidServerMetadata server, DataSegment segment)
   {
+    if (segmentWatcherConfig.getWatchedTiers() != null && !segmentWatcherConfig.getWatchedTiers()
+                                                                               .contains(server.getTier())) {
+      return;
+    }
+
     String segmentId = segment.getIdentifier();
     final ServerSelector selector;
 
