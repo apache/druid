@@ -351,7 +351,7 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
   @Override
   public Optional<ScalingStats> getScalingStats()
   {
-    return Optional.of(resourceManagement.getStats());
+    return Optional.fromNullable(resourceManagement.getStats());
   }
 
   public ZkWorker findWorkerRunningTask(String taskId)
