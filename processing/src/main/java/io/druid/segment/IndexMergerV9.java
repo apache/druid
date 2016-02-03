@@ -87,7 +87,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.TreeSet;
 
 public class IndexMergerV9 extends IndexMerger
 {
@@ -701,15 +700,13 @@ public class IndexMergerV9 extends IndexMerger
         dimWriters.get(i).add(dims[i]);
       }
 
-      for (Map.Entry<Integer, TreeSet<Integer>> comprisedRow : theRow.getComprisedRows().entrySet()) {
-        final IntBuffer conversionBuffer = rowNumConversions.get(comprisedRow.getKey());
-
-        for (Integer rowNum : comprisedRow.getValue()) {
-          while (conversionBuffer.position() < rowNum) {
-            conversionBuffer.put(INVALID_ROW);
-          }
-          conversionBuffer.put(rowCount);
+      final int[] comprisedRows = theRow.getComprisedRows();
+      for (int i = 0; i < comprisedRows.length; i += 2) {
+        final IntBuffer conversionBuffer = rowNumConversions.get(comprisedRows[i]);
+        while (conversionBuffer.position() < comprisedRows[i + 1]) {
+          conversionBuffer.put(INVALID_ROW);
         }
+        conversionBuffer.put(rowCount);
       }
       if ((++rowCount % 500000) == 0) {
         log.info("walked 500,000/%d rows in %,d millis.", rowCount, System.currentTimeMillis() - time);

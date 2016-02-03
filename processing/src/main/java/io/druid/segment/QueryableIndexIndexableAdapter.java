@@ -166,7 +166,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   }
 
   @Override
-  public Iterable<Rowboat> getRows()
+  public Iterable<Rowboat> getRows(final int indexId)
   {
     return new Iterable<Rowboat>()
     {
@@ -277,7 +277,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
             }
 
             final Rowboat retVal = new Rowboat(
-                timestamps.getLongSingleValueRow(currRow), dims, metricArray, currRow
+                timestamps.getLongSingleValueRow(currRow), dims, metricArray, currRow, indexId
             );
 
             ++currRow;

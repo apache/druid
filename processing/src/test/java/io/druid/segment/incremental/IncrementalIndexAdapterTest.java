@@ -73,7 +73,7 @@ public class IncrementalIndexAdapterTest
                   .getBitmapFactory()
     );
 
-    Iterable<Rowboat> boats = incrementalAdapter.getRows();
+    Iterable<Rowboat> boats = incrementalAdapter.getRows(-1);
     List<Rowboat> boatList = new ArrayList<>();
     for (Rowboat boat : boats) {
       boatList.add(boat);

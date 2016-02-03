@@ -19,15 +19,11 @@
 
 package io.druid.segment;
 
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import org.joda.time.DateTime;
 
 import java.util.Arrays;
-import java.util.Map;
-import java.util.TreeSet;
 
 public class Rowboat implements Comparable<Rowboat>
 {
@@ -35,21 +31,32 @@ public class Rowboat implements Comparable<Rowboat>
   private final int[][] dims;
   private final Object[] metrics;
   private final int rowNum;
-  private final Map<Integer, TreeSet<Integer>> comprisedRows;
+  private final int[] comprisedRows;
 
   public Rowboat(
       long timestamp,
       int[][] dims,
       Object[] metrics,
-      int rowNum
+      int rowNum,
+      int indexId
+  )
+  {
+    this(timestamp, dims, metrics, rowNum, indexId < 0 ? null : new int[]{indexId, rowNum});
+  }
+
+  private Rowboat(
+      long timestamp,
+      int[][] dims,
+      Object[] metrics,
+      int rowNum,
+      int[] comprisedRows
   )
   {
     this.timestamp = timestamp;
     this.dims = dims;
     this.metrics = metrics;
     this.rowNum = rowNum;
-
-    this.comprisedRows = Maps.newHashMap();
+    this.comprisedRows = comprisedRows;
   }
 
   public long getTimestamp()
@@ -67,17 +74,7 @@ public class Rowboat implements Comparable<Rowboat>
     return metrics;
   }
 
-  public void addRow(int indexNum, int rowNum)
-  {
-    TreeSet<Integer> rowNums = comprisedRows.get(indexNum);
-    if (rowNums == null) {
-      rowNums = Sets.newTreeSet();
-      comprisedRows.put(indexNum, rowNums);
-    }
-    rowNums.add(rowNum);
-  }
-
-  public Map<Integer, TreeSet<Integer>> getComprisedRows()
+  public int[] getComprisedRows()
   {
     return comprisedRows;
   }
@@ -133,7 +130,22 @@ public class Rowboat implements Comparable<Rowboat>
            "timestamp=" + new DateTime(timestamp).toString() +
            ", dims=" + Arrays.deepToString(dims) +
            ", metrics=" + Arrays.toString(metrics) +
-           ", comprisedRows=" + comprisedRows +
+           ", comprisedRows=" + (comprisedRows == null ? "[]" : Arrays.toString(comprisedRows)) +
            '}';
+  }
+
+  public Rowboat withColumns(int[][] newDimension, Object[] newMetric)
+  {
+    return new Rowboat(timestamp, newDimension, newMetric, rowNum, comprisedRows);
+  }
+
+  public Rowboat withDimension(int[][] newDimension)
+  {
+    return new Rowboat(timestamp, newDimension, metrics, rowNum, comprisedRows);
+  }
+
+  public Rowboat withMetric(Object[] newMetric, int[] comprisedRows)
+  {
+    return new Rowboat(timestamp, dims, newMetric, rowNum, comprisedRows);
   }
 }

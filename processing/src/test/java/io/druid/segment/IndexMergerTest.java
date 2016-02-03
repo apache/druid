@@ -225,7 +225,7 @@ public class IndexMergerTest
     assertDimCompression(index, indexSpec.getDimensionCompressionStrategy());
 
     final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(index);
-    final List<Rowboat> boatList = ImmutableList.copyOf(adapter.getRows());
+    final List<Rowboat> boatList = ImmutableList.copyOf(adapter.getRows(-1));
 
     Assert.assertEquals(2, boatList.size());
     Assert.assertArrayEquals(new int[][]{{0}, {1}}, boatList.get(0).getDims());
@@ -849,7 +849,7 @@ public class IndexMergerTest
     );
 
     final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
-    final List<Rowboat> boatList = ImmutableList.copyOf(adapter.getRows());
+    final List<Rowboat> boatList = ImmutableList.copyOf(adapter.getRows(-1));
 
     Assert.assertEquals(ImmutableList.of("d3", "d1", "d2"), ImmutableList.copyOf(adapter.getDimensionNames()));
     Assert.assertEquals(3, boatList.size());
@@ -948,7 +948,7 @@ public class IndexMergerTest
     );
 
     final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
-    final List<Rowboat> boatList = ImmutableList.copyOf(adapter.getRows());
+    final List<Rowboat> boatList = ImmutableList.copyOf(adapter.getRows(-1));
 
     Assert.assertEquals(ImmutableList.of("dimA", "dimC"), ImmutableList.copyOf(adapter.getDimensionNames()));
     Assert.assertEquals(4, boatList.size());
@@ -1039,10 +1039,10 @@ public class IndexMergerTest
     );
 
     final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
-    final List<Rowboat> boatList = ImmutableList.copyOf(adapter.getRows());
+    final List<Rowboat> boatList = ImmutableList.copyOf(adapter.getRows(-1));
 
     final QueryableIndexIndexableAdapter adapter2 = new QueryableIndexIndexableAdapter(merged2);
-    final List<Rowboat> boatList2 = ImmutableList.copyOf(adapter2.getRows());
+    final List<Rowboat> boatList2 = ImmutableList.copyOf(adapter2.getRows(-1));
 
     Assert.assertEquals(ImmutableList.of("dimA", "dimB"), ImmutableList.copyOf(adapter.getDimensionNames()));
     Assert.assertEquals(5, boatList.size());
@@ -1186,7 +1186,7 @@ public class IndexMergerTest
     );
 
     final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
-    final List<Rowboat> boatList = ImmutableList.copyOf(adapter.getRows());
+    final List<Rowboat> boatList = ImmutableList.copyOf(adapter.getRows(-1));
 
     Assert.assertEquals(
         ImmutableList.of("d2", "d3", "d5", "d6", "d7", "d8", "d9"),
@@ -1354,10 +1354,10 @@ public class IndexMergerTest
     );
 
     final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(merged);
-    final List<Rowboat> boatList = ImmutableList.copyOf(adapter.getRows());
+    final List<Rowboat> boatList = ImmutableList.copyOf(adapter.getRows(-1));
 
     final QueryableIndexIndexableAdapter adapter2 = new QueryableIndexIndexableAdapter(merged2);
-    final List<Rowboat> boatList2 = ImmutableList.copyOf(adapter2.getRows());
+    final List<Rowboat> boatList2 = ImmutableList.copyOf(adapter2.getRows(-1));
 
     Assert.assertEquals(ImmutableList.of("dimB", "dimA"), ImmutableList.copyOf(adapter.getDimensionNames()));
     Assert.assertEquals(5, boatList.size());

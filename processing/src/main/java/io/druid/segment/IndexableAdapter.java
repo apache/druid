@@ -39,7 +39,7 @@ public interface IndexableAdapter
 
   Indexed<String> getDimValueLookup(String dimension);
 
-  Iterable<Rowboat> getRows();
+  Iterable<Rowboat> getRows(int indexId);
 
   IndexedInts getBitmapIndex(String dimension, int dictId);
 

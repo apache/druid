@@ -19,6 +19,9 @@
 
 package io.druid.segment.filter;
 
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.LongSumAggregatorFactory;
+import io.druid.segment.IndexMerger;
 import io.druid.segment.Rowboat;
 import org.junit.Assert;
 import org.junit.Test;
@@ -31,11 +34,11 @@ public class RowboatTest
   @Test
   public void testRowboatCompare()
   {
-    Rowboat rb1 = new Rowboat(12345L, new int[][]{new int[]{1}, new int[]{2}}, new Object[]{new Integer(7)}, 5);
-    Rowboat rb2 = new Rowboat(12345L, new int[][]{new int[]{1}, new int[]{2}}, new Object[]{new Integer(7)}, 5);
+    Rowboat rb1 = new Rowboat(12345L, new int[][]{new int[]{1}, new int[]{2}}, new Object[]{7}, 5, -1);
+    Rowboat rb2 = new Rowboat(12345L, new int[][]{new int[]{1}, new int[]{2}}, new Object[]{7}, 5, -1);
     Assert.assertEquals(0, rb1.compareTo(rb2));
 
-    Rowboat rb3 = new Rowboat(12345L, new int[][]{new int[]{3}, new int[]{2}}, new Object[]{new Integer(7)}, 5);
+    Rowboat rb3 = new Rowboat(12345L, new int[][]{new int[]{3}, new int[]{2}}, new Object[]{7}, 5, -1);
     Assert.assertNotEquals(0, rb1.compareTo(rb3));
   }
 
@@ -62,7 +65,7 @@ public class RowboatTest
             new int[]{0}
         },
         new Object[]{1.0, 47.0, "someMetric"},
-        0
+        0, -1
     );
 
     Rowboat rb2 = new Rowboat(
@@ -84,7 +87,7 @@ public class RowboatTest
             new int[]{0}
         },
         new Object[]{1.0, 47.0, "someMetric"},
-        0
+        0, -1
     );
 
     Assert.assertNotEquals(0, rb1.compareTo(rb2));
@@ -94,8 +97,8 @@ public class RowboatTest
   public void testToString()
   {
     Assert.assertEquals(
-        "Rowboat{timestamp=1970-01-01T00:00:00.000Z, dims=[[1], [2]], metrics=[someMetric], comprisedRows={}}",
-        new Rowboat(0, new int[][]{new int[]{1}, new int[]{2}}, new Object[]{"someMetric"}, 5).toString()
+        "Rowboat{timestamp=1970-01-01T00:00:00.000Z, dims=[[1], [2]], metrics=[someMetric], comprisedRows=[]}",
+        new Rowboat(0, new int[][]{new int[]{1}, new int[]{2}}, new Object[]{"someMetric"}, 5, -1).toString()
     );
   }
 
@@ -103,8 +106,25 @@ public class RowboatTest
   public void testLotsONullString()
   {
     Assert.assertEquals(
-        "Rowboat{timestamp=1970-01-01T00:00:00.000Z, dims=null, metrics=null, comprisedRows={}}",
-        new Rowboat(0, null, null, 5).toString()
+        "Rowboat{timestamp=1970-01-01T00:00:00.000Z, dims=null, metrics=null, comprisedRows=[]}",
+        new Rowboat(0, null, null, 5, -1).toString()
+    );
+  }
+
+  @Test
+  public void testComprisedRowBoat()
+  {
+    Rowboat rb1 = new Rowboat(12345L, new int[][]{new int[]{1}, new int[]{2}}, new Object[]{7}, 5, 0);
+    Rowboat rb2 = new Rowboat(12345L, new int[][]{new int[]{1}, new int[]{2}}, new Object[]{7}, 10, 2);
+
+    IndexMerger.RowboatMergeFunction merger = new IndexMerger.RowboatMergeFunction(
+        new AggregatorFactory[]{new LongSumAggregatorFactory("sum", "sum")}
+    );
+
+    Rowboat merged = merger.apply(rb1, rb2);
+    Assert.assertEquals(
+        "Rowboat{timestamp=1970-01-01T00:00:12.345Z, dims=[[1], [2]], metrics=[14], comprisedRows=[0, 5, 2, 10]}",
+        merged.toString()
     );
   }
 }

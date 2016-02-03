@@ -71,7 +71,6 @@ import io.druid.segment.data.GenericIndexedWriter;
 import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
-import io.druid.segment.data.IndexedIterable;
 import io.druid.segment.data.IndexedRTree;
 import io.druid.segment.data.ListIndexed;
 import io.druid.segment.data.TmpFileIOPeon;
@@ -103,7 +102,6 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.PriorityQueue;
 import java.util.Set;
-import java.util.TreeSet;
 
 /**
  */
@@ -839,15 +837,13 @@ public class IndexMerger
           }
         }
 
-        for (Map.Entry<Integer, TreeSet<Integer>> comprisedRow : theRow.getComprisedRows().entrySet()) {
-          final IntBuffer conversionBuffer = rowNumConversions.get(comprisedRow.getKey());
-
-          for (Integer rowNum : comprisedRow.getValue()) {
-            while (conversionBuffer.position() < rowNum) {
-              conversionBuffer.put(INVALID_ROW);
-            }
-            conversionBuffer.put(rowCount);
+        final int[] comprisedRows = theRow.getComprisedRows();
+        for (int i = 0; i < comprisedRows.length; i += 2) {
+          final IntBuffer conversionBuffer = rowNumConversions.get(comprisedRows[i]);
+          while (conversionBuffer.position() < comprisedRows[i + 1]) {
+            conversionBuffer.put(INVALID_ROW);
           }
+          conversionBuffer.put(rowCount);
         }
 
         if ((++rowCount % 500000) == 0) {
@@ -1069,7 +1065,7 @@ public class IndexMerger
       final int[] dimLookup = toLookupMap(adapter.getDimensionNames(), mergedDimensions);
       final int[] metricLookup = toLookupMap(adapter.getMetricNames(), mergedMetrics);
 
-      Iterable<Rowboat> target = indexes.get(i).getRows();
+      Iterable<Rowboat> target = indexes.get(i).getRows(i);
       if (dimLookup != null || metricLookup != null) {
         // resize/reorder index table if needed
         target = Iterables.transform(
@@ -1099,24 +1095,21 @@ public class IndexMerger
                   }
                 }
 
-                return new Rowboat(
-                    input.getTimestamp(),
-                    newDims,
-                    newMetrics,
-                    input.getRowNum()
-                );
+                return input.withColumns(newDims, newMetrics);
               }
             }
         );
       }
-      boats.add(
-          new MMappedIndexRowIterable(
-              target, mergedDimensions, dimConversions.get(i), i, convertMissingDimsFlags
-          )
-      );
+      final Map<String, IntBuffer> converters = dimConversions.get(i);
+      if (!converters.isEmpty() || !convertMissingDimsFlags.isEmpty()) {
+        target = new MMappedIndexRowIterable(
+            target, mergedDimensions, converters, i, convertMissingDimsFlags
+        );
+      }
+      boats.add(target);
     }
 
-    return rowMergerFn.apply(boats);
+    return boats.size() == 1 ? boats.get(0) : rowMergerFn.apply(boats);
   }
 
   private int[] toLookupMap(Indexed<String> indexed, List<String> values)
@@ -1313,7 +1306,7 @@ public class IndexMerger
           new Function<Integer, Integer>()
           {
             @Override
-            public Integer apply(@Nullable Integer input)
+            public Integer apply(Integer input)
             {
               return conversionBuffer.get(input);
             }
@@ -1371,7 +1364,7 @@ public class IndexMerger
           new Function<Rowboat, Rowboat>()
           {
             @Override
-            public Rowboat apply(@Nullable Rowboat input)
+            public Rowboat apply(Rowboat input)
             {
               int[][] dims = input.getDims();
               int[][] newDims = new int[convertedDims.size()][];
@@ -1398,56 +1391,12 @@ public class IndexMerger
                 }
               }
 
-              final Rowboat retVal = new Rowboat(
-                  input.getTimestamp(),
-                  newDims,
-                  input.getMetrics(),
-                  input.getRowNum()
-              );
-
-              retVal.addRow(indexNumber, input.getRowNum());
+              final Rowboat retVal = input.withDimension(newDims);
 
               return retVal;
             }
           }
       );
-    }
-  }
-
-  public static class AggFactoryStringIndexed implements Indexed<String>
-  {
-    private final AggregatorFactory[] metricAggs;
-
-    public AggFactoryStringIndexed(AggregatorFactory[] metricAggs) {this.metricAggs = metricAggs;}
-
-    @Override
-    public Class<? extends String> getClazz()
-    {
-      return String.class;
-    }
-
-    @Override
-    public int size()
-    {
-      return metricAggs.length;
-    }
-
-    @Override
-    public String get(int index)
-    {
-      return metricAggs[index].getName();
-    }
-
-    @Override
-    public int indexOf(String value)
-    {
-      throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public Iterator<String> iterator()
-    {
-      return IndexedIterable.create(this).iterator();
     }
   }
 
@@ -1486,22 +1435,7 @@ public class IndexMerger
         }
       }
 
-      final Rowboat retVal = new Rowboat(
-          lhs.getTimestamp(),
-          lhs.getDims(),
-          metrics,
-          lhs.getRowNum()
-      );
-
-      for (Rowboat rowboat : Arrays.asList(lhs, rhs)) {
-        for (Map.Entry<Integer, TreeSet<Integer>> entry : rowboat.getComprisedRows().entrySet()) {
-          for (Integer rowNum : entry.getValue()) {
-            retVal.addRow(entry.getKey(), rowNum);
-          }
-        }
-      }
-
-      return retVal;
+      return lhs.withMetric(metrics, Ints.concat(lhs.getComprisedRows(), rhs.getComprisedRows()));
     }
   }
 
