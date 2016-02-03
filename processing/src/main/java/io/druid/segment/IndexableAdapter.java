@@ -41,8 +41,6 @@ public interface IndexableAdapter
 
   Iterable<Rowboat> getRows();
 
-  IndexedInts getBitmapIndex(String dimension, String value);
-
   IndexedInts getBitmapIndex(String dimension, int dictId);
 
   String getMetricType(String metric);
