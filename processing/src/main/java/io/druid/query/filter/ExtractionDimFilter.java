@@ -82,7 +82,7 @@ public class ExtractionDimFilter implements DimFilter
   public byte[] getCacheKey()
   {
     byte[] dimensionBytes = StringUtils.toUtf8(dimension);
-    byte[] valueBytes = StringUtils.toUtf8(value);
+    byte[] valueBytes = value == null ? new byte[0] : StringUtils.toUtf8(value);
     byte[] extractionFnBytes = extractionFn.getCacheKey();
     return ByteBuffer.allocate(3 + dimensionBytes.length + valueBytes.length + extractionFnBytes.length)
                      .put(DimFilterCacheHelper.EXTRACTION_CACHE_ID)
