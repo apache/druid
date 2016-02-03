@@ -42,16 +42,8 @@
 
     <developers>
         <developer>
-            <name>Fangjin Yang</name>
-            <url>https://github.com/fjy</url>
-        </developer>
-        <developer>
-            <name>Eric Tschetter</name>
-            <url>https://github.com/cheddar</url>
-        </developer>
-        <developer>
-            <name>Xavier Léauté</name>
-            <url>https://github.com/xvrl</url>
+            <name>Druid Committers</name>
+            <url>http://druid.io/community/index.html#committers</url>
         </developer>
     </developers>
 
