@@ -129,4 +129,4 @@ The interval of a segment will be compared against the specified period. The per
 # Permanently Deleting Data
  
  Druid can fully drop data from the cluster, wipe the metadata store entry, and remove the data from deep storage for any segments that are 
- marked as unused (segments dropped from the cluster via rules are always marked as unused). You can submit a [kill task](../misc/tasks.html) to the [indexing service](../design/indexing-service.html) to do this.
+ marked as unused (segments dropped from the cluster via rules are always marked as unused). You can submit a [kill task](../ingestion/tasks.html) to the [indexing service](../design/indexing-service.html) to do this.

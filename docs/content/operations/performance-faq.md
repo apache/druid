@@ -2,10 +2,14 @@
 layout: doc_page
 ---
 
+# Performance FAQ
+
 ## I can't match your benchmarked results
+
 Improper configuration is by far the largest problem we see people trying to deploy Druid. The example configurations listed in the tutorials are designed for a small volume of data where all nodes are on a single machine. The configs are extremely poor for actual production use.
 
 ## What should I set my JVM heap?
+
 The size of the JVM heap really depends on the type of Druid node you are running. Below are a few considerations.
 
 [Broker nodes](../design/broker.html) uses the JVM heap mainly to merge results from historicals and real-times. Brokers also use off-heap memory and processing threads for groupBy queries. We recommend 20G-30G of heap here.

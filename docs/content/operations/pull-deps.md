@@ -68,8 +68,8 @@ extensions
 ```
 
 ```
-tree hadoop_dependencies
-hadoop_dependencies/
+tree hadoop-dependencies
+hadoop-dependencies/
 └── hadoop-client
     ├── 2.3.0
     │   ├── activation-1.1.jar

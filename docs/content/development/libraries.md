@@ -2,6 +2,9 @@
 layout: doc_page
 ---
 
+Query Libraries
+---------------
+
 #### Python
 
 * [druid-io/pydruid](https://github.com/druid-io/pydruid) - A python client for Druid
@@ -18,7 +21,7 @@ Some great folks have written their own libraries to interact with Druid
 
 #### JavaScript
 
-* [facetjs/facetjs](https://github.com/facetjs/facetjs) - A general query planner for Druid written in JavaScript
+* [implydata/plywood](https://github.com/implydata/plywood) - A higher level API for Druid. An extension of the work that was started in facet.js.
 
 #### Node.js
 
@@ -35,12 +38,8 @@ Some great folks have written their own libraries to interact with Druid
 
 #### SQL
 
+* [implydata/plyql](https://github.com/implydata/plyql) - A command line interface for issuing SQL queries to Druid via [plywood](https://github.com/implydata/plywood)
 * [srikalyc/Sql4D](https://github.com/srikalyc/Sql4D) - A SQL client for Druid. Used in production at Yahoo.
-* [facetjs/facet-cli](https://github.com/facetjs/facet-cli) - A command line interface for issuing SQL queries to Druid via [facetjs](https://github.com/facetjs/facetjs)
-
-#### TypeScript
-
-* [facetjs/typescript-druid](https://github.com/facetjs/typescript-druid) - TypeScript declarations for the Druid API
 
 
 Community Helper Libraries
@@ -50,6 +49,15 @@ Community Helper Libraries
 * [housejester/druid-test-harness](https://github.com/housejester/druid-test-harness) - A set of scripts to simplify standing up some servers and seeing how things work
 * [mingfang/docker-druid](https://github.com/mingfang/docker-druid) - A Dockerfile to run the entire Druid cluster
 
+Other Druid Distributions
+-------------------------
+
+* [Imply Analytics Platform](http://imply.io/download) - The Imply Analytics platform repackages Druid, all its dependencies, and an UI and SQL layer.
+
+Tools
+---
+
+* [Insert Segments](../../operations/insert-segment-to-db.html) - A tool that can insert segments' metadata into Druid metadata storage.
 
 UIs
 ---
@@ -64,8 +72,8 @@ Tools
 
 * [Insert Segments](../../operations/insert-segment-to-db.html) - A tool that can insert segments' metadata into Druid metadata storage.
 
-Community Extensions
---------------------
+Other Community Extensions
+--------------------------
 
 These are extensions from the community. (If you would like yours listed please speak up!)
 
