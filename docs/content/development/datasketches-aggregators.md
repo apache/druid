@@ -46,6 +46,7 @@ Note that you can use `thetaSketch` aggregator on columns which were not ingeste
 ```
 
 #### Sketch Operations
+
 ```json
 {
   "type"  : "thetaSketchSetOp",
