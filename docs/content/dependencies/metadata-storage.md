@@ -154,14 +154,16 @@ an issue).
 
 The `payload` column stores a JSON blob that has all of the metadata for the segment (some of the data stored in this payload is redundant with some of the columns in the table, that is intentional). This looks something like
 
-```
+```json
 {
  "dataSource":"wikipedia",
  "interval":"2012-05-23T00:00:00.000Z/2012-05-24T00:00:00.000Z",
  "version":"2012-05-24T00:10:00.046Z",
- "loadSpec":{"type":"s3_zip",
-             "bucket":"bucket_for_segment",
-             "key":"path/to/segment/on/s3"},
+ "loadSpec":{
+    "type":"s3_zip",
+    "bucket":"bucket_for_segment",
+    "key":"path/to/segment/on/s3"
+ },
  "dimensions":"comma-delimited-list-of-dimension-names",
  "metrics":"comma-delimited-list-of-metric-names",
  "shardSpec":{"type":"none"},
@@ -197,13 +199,12 @@ The Audit table is used to store the audit history for configuration changes
 e.g rule changes done by [Coordinator](../design/coordinator.html) and other
 config changes.
 
-+
-+##Accessed By: ##
-+
-+The Metadata Storage is accessed only by:
-+
-+1. Realtime Nodes
- 2. Indexing Service Nodes (if any)
-+3. Coordinator Nodes
-+
-+Thus you need to give permissions (eg in AWS Security Groups)  only for these machines to access the Metadata storage.
+##Accessed By: ##
+
+The Metadata Storage is accessed only by:
+
+1. Indexing Service Nodes (if any)
+2. Realtime Nodes (if any)
+3. Coordinator Nodes
+
+Thus you need to give permissions (eg in AWS Security Groups)  only for these machines to access the Metadata storage.

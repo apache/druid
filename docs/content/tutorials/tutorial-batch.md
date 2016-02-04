@@ -2,25 +2,36 @@
 layout: doc_page
 ---
 
-## Load your own batch data
+# Tutorial: Load your own batch data
 
-Before you get started with loading your own batch data, you should have first completed the [quickstart](quickstart.html).
+## Getting started
 
-You can easily load any timestamped dataset into Druid. For Druid batch loads, the most important 
-questions are:
+This tutorial shows you how to load your own data files into Druid.
+
+For this tutorial, we'll assume you've already downloaded Druid as described in 
+the [single-machine quickstart](quickstart.html) and have it running on your local machine. You 
+don't need to have loaded any data yet.
+
+Once that's complete, you can load your own dataset by writing a custom ingestion spec.
+
+## Writing an ingestion spec
+
+When loading files into Druid, you will use Druid's [batch loading](ingestion-batch.html) process. 
+There's an example batch ingestion spec in `quickstart/wikiticker-index.json` that you can modify 
+for your own needs.
+
+The most important questions are:
 
   * What should the dataset be called? This is the "dataSource" field of the "dataSchema".
-  * Where is the dataset located? The file paths belong in the "paths" of the "inputSpec". If you
+  * Where is the dataset located? The file paths belong in the "paths" of the "inputSpec". If you 
 want to load multiple files, you can provide them as a comma-separated string.
   * Which field should be treated as a timestamp? This belongs in the "column" of the "timestampSpec".
   * Which fields should be treated as dimensions? This belongs in the "dimensions" of the "dimensionsSpec".
   * Which fields should be treated as metrics? This belongs in the "metricsSpec".
   * What time ranges (intervals) are being loaded? This belongs in the "intervals" of the "granularitySpec".
 
-```note-info
 If your data does not have a natural sense of time, you can tag each row with the current time. 
 You can also tag all rows with a fixed timestamp, like "2000-01-01T00:00:00.000Z".
-```
 
 Let's use this pageviews dataset as an example. Druid supports TSV, CSV, and JSON out of the box. 
 Note that nested JSON objects are not supported, so if you do use JSON, you should provide a file 
@@ -90,19 +101,39 @@ And modify it by altering these sections:
 }
 ```
 
-Finally, fire off the task and indexing will proceed!
+## Running the task
+
+To actually run this task, first make sure that the indexing task can read *pageviews.json*:
+
+- If you're running locally (no configuration for connecting to Hadoop; this is the default) then 
+place it in the root of the Druid distribution.
+- If you configured Druid to connect to a Hadoop cluster, upload 
+the pageviews.json file to HDFS. You may need to adjust the `paths` in the ingestion spec.
+
+To kick off the indexing process, POST your indexing task to the Druid Overlord. In a standard Druid 
+install, the URL is `http://OVERLORD_IP:8090/druid/indexer/v1/task`.
 
 ```bash
-curl -X 'POST' -H 'Content-Type:application/json' -d @quickstart/pageviews-index.json localhost:8090/druid/indexer/v1/task
+curl -X 'POST' -H 'Content-Type:application/json' -d @my-index-task.json OVERLORD_IP:8090/druid/indexer/v1/task
 ```
 
-If anything goes wrong with this task (e.g. it finishes with status FAILED), you can troubleshoot  
+If you're running everything on a single machine, you can use localhost:
+
+```bash
+curl -X 'POST' -H 'Content-Type:application/json' -d @my-index-task.json localhost:8090/druid/indexer/v1/task
+```
+
+If anything goes wrong with this task (e.g. it finishes with status FAILED), you can troubleshoot 
 by visiting the "Task log" on the [overlord console](http://localhost:8090/console.html).
 
-```note-info
-Druid supports a wide variety of data formats, ingestion options, and configurations not 
-discussed here. For a full explanation of all available features, see the ingestion sections of the Druid 
-documentation.
-```
+## Querying your data
+
+Your data should become fully available within a minute or two. You can monitor this process on 
+your Coordinator console at [http://localhost:8081/#/](http://localhost:8081/#/).
+
+Once your data is fully available, you can query it using any of the 
+[supported query methods](../querying/querying.html).
+
+## Further reading
 
 For more information on loading batch data, please see [the batch ingestion documentation](../ingestion/batch-ingestion.html).
