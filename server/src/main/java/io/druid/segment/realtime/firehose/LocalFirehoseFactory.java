@@ -21,8 +21,10 @@ package io.druid.segment.realtime.firehose;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
+import com.metamx.common.CompressionUtils;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.emitter.EmittingLogger;
@@ -31,12 +33,18 @@ import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.impl.FileIteratingFirehose;
 import io.druid.data.input.impl.StringInputRowParser;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
 import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -117,14 +125,39 @@ public class LocalFirehoseFactory implements FirehoseFactory<StringInputRowParse
           @Override
           public LineIterator next()
           {
-            try {
-              return FileUtils.lineIterator(files.poll());
-            }
-            catch (Exception e) {
-              throw Throwables.propagate(e);
-            }
+          	final File f = files.poll();
+          	InputStream rawInputStream = null;
+          	try
+						{
+							rawInputStream = new FileInputStream(f);
+							final InputStream inputStream;
+							String logMessage;
+							if (CompressionUtils.isGz(f.getName())) {
+								logMessage = "Reading gzipped file [%s]";
+								inputStream = CompressionUtils.gzipInputStream(rawInputStream);
+							} else {
+								logMessage = "Reading file [%s]";
+								inputStream = rawInputStream;
+							}
+							
+							log.info(logMessage, f.getName());
+								
+							return IOUtils.lineIterator(
+									new BufferedReader(
+											new InputStreamReader(inputStream, Charsets.UTF_8)));
+    				}	catch(Exception e) {
+    	        log.warn(e, "Failed to read file [%s]", f.getName());    					
+    					if (rawInputStream != null) {
+    						try {
+									rawInputStream.close();
+								} catch (IOException ioe) {
+									Throwables.propagate(ioe);
+								}
+    					}
+    					throw Throwables.propagate(e);
+    				}
           }
-
+          
           @Override
           public void remove()
           {
