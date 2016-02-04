@@ -36,6 +36,7 @@ import io.druid.data.input.Row;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.ordering.StringComparators.StringComparator;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -139,7 +140,7 @@ public class DefaultLimitSpec implements LimitSpec
       } else if (aggregatorsMap.containsKey(columnName)) {
         nextOrdering = metricOrdering(columnName, aggregatorsMap.get(columnName).getComparator());
       } else if (dimensionsMap.containsKey(columnName)) {
-        nextOrdering = dimensionOrdering(columnName);
+        nextOrdering = dimensionOrdering(columnName, columnSpec.getDimensionComparator());
       }
 
       if (nextOrdering == null) {
@@ -170,9 +171,9 @@ public class DefaultLimitSpec implements LimitSpec
     };
   }
 
-  private Ordering<Row> dimensionOrdering(final String dimension)
+  private Ordering<Row> dimensionOrdering(final String dimension, final StringComparator comparator)
   {
-    return Ordering.natural()
+    return Ordering.from(comparator)
                    .nullsFirst()
                    .onResultOf(
                        new Function<Row, String>()

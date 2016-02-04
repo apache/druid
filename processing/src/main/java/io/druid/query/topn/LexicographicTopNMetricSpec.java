@@ -26,6 +26,8 @@ import com.metamx.common.StringUtils;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.ordering.StringComparators;
+
 import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;
@@ -38,29 +40,7 @@ public class LexicographicTopNMetricSpec implements TopNMetricSpec
 {
   private static final byte CACHE_TYPE_ID = 0x1;
 
-  private static Comparator<String> comparator = new Comparator<String>()
-  {
-    @Override
-    public int compare(String s, String s2)
-    {
-      // Avoid conversion to bytes for equal references
-      if(s == s2){
-        return 0;
-      }
-      // null first
-      if (s == null) {
-        return -1;
-      }
-      if (s2 == null) {
-        return 1;
-      }
-
-      return UnsignedBytes.lexicographicalComparator().compare(
-          StringUtils.toUtf8(s),
-          StringUtils.toUtf8(s2)
-      );
-    }
-  };
+  private static Comparator<String> comparator = StringComparators.LEXICOGRAPHIC;
 
   private final String previousStop;
 
