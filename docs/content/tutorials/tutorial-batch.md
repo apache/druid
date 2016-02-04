@@ -56,7 +56,7 @@ sum when we load the data will allow us to compute an average at query time as w
 You can copy the existing `quickstart/wikiticker-index.json` indexing task to a new file:
 
 ```bash
-cp quickstart/wikiticker-index.json quickstart/pageviews-index.json
+cp quickstart/wikiticker-index.json my-index-task.json
 ```
 
 And modify it by altering these sections:
