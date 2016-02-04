@@ -33,6 +33,8 @@ import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
+import io.druid.query.ordering.StringComparators;
+
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -61,7 +63,7 @@ public class GroupByQueryTest
         .setPostAggregatorSpecs(ImmutableList.<PostAggregator>of(new FieldAccessPostAggregator("x", "idx")))
         .setLimitSpec(
             new DefaultLimitSpec(
-                ImmutableList.of(new OrderByColumnSpec("alias", OrderByColumnSpec.Direction.ASCENDING)),
+                ImmutableList.of(new OrderByColumnSpec("alias", OrderByColumnSpec.Direction.ASCENDING, StringComparators.LEXICOGRAPHIC)),
                 100
             )
         )
@@ -69,6 +71,8 @@ public class GroupByQueryTest
 
     String json = jsonMapper.writeValueAsString(query);
     Query serdeQuery = jsonMapper.readValue(json, Query.class);
+    
+    System.out.println(json);
 
     Assert.assertEquals(query, serdeQuery);
   }
