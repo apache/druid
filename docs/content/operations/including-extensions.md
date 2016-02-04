@@ -25,21 +25,12 @@ To let Druid load your extensions, follow the steps below
 
 Example:
 
-Suppose you specify `druid.extensions.directory=/usr/local/druid/extensions`, and want Druid to load normal extensions ```druid-examples```, ```druid-kafka-eight``` and ```mysql-metadata-storage```.
+Suppose you specify `druid.extensions.directory=/usr/local/druid/extensions`, and want Druid to load normal extensions ```druid-kafka-eight``` and ```mysql-metadata-storage```.
 
 Then under ```extensions```, it should look like this,
 
 ```
 extensions/
-├── druid-examples
-│   ├── commons-beanutils-1.8.3.jar
-│   ├── commons-digester-1.8.jar
-│   ├── commons-logging-1.1.1.jar
-│   ├── commons-validator-1.4.0.jar
-│   ├── druid-examples-0.8.0-rc1.jar
-│   ├── twitter4j-async-3.0.3.jar
-│   ├── twitter4j-core-3.0.3.jar
-│   └── twitter4j-stream-3.0.3.jar
 ├── druid-kafka-eight
 │   ├── druid-kafka-eight-0.7.3.jar
 │   ├── jline-0.9.94.jar
@@ -61,7 +52,7 @@ extensions/
     └── mysql-metadata-storage-0.8.0-rc1.jar
 ```
 
-As you can see, under ```extensions``` there are three sub-directories ```druid-examples```, ```druid-kafka-eight``` and ```mysql-metadata-storage```, each sub-directory denotes an extension that Druid might load.
+As you can see, under ```extensions``` there are two sub-directories ```druid-kafka-eight``` and ```mysql-metadata-storage```, each sub-directory denotes an extension that Druid might load.
 
 3) To have Druid load a specific list of extensions present under the root extension directory, set `druid.extensions.loadList` to the list of extensions to load. Using the example above, if you want Druid to load ```druid-kafka-eight``` and ```mysql-metadata-storage```, you can specify `druid.extensions.loadList=["druid-kafka-eight", "mysql-metadata-storage"]`.
 

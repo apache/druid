@@ -70,7 +70,8 @@ of a Druid [overlord](../design/indexing-service.html). A sample task is shown b
     "tuningConfig" : {
       "type": "hadoop"
     }
-  }
+  },
+  "hadoopDependencyCoordinates": <my_hadoop_version>
 }
 ```
 
@@ -261,7 +262,7 @@ with Amazon-specific features such as S3 encryption and consistent views. If you
 features, you will need to make the Amazon EMR Hadoop JARs available to Druid through one of the
 mechanisms described in the [Using other Hadoop distributions](#using-other-hadoop-distributions) section.
 
-### Using other Hadoop distributions
+## Using other Hadoop distributions
 
 Druid works out of the box with many Hadoop distributions.
 
