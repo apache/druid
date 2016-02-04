@@ -15,17 +15,17 @@ You will need:
   * 8G of RAM
   * 2 vCPUs
 
-On Mac OS X, you can use [Oracle's JDK 
-8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) to install 
+On Mac OS X, you can use [Oracle's JDK
+8](http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html) to install
 Java.
 
 On Linux, your OS package manager should be able to help for Java. If your Ubuntu-
-based OS does not have a recent enough version of Java, WebUpd8 offers [packages for those 
+based OS does not have a recent enough version of Java, WebUpd8 offers [packages for those
 OSes](http://www.webupd8.org/2012/09/install-oracle-java-8-in-ubuntu-via-ppa.html).
 
 ## Getting started
 
-To install Druid, issue the following commands in your terminal: 
+To install Druid, issue the following commands in your terminal:
 
 ```bash
 curl -O http://static.druid.io/artifacts/releases/druid-0.9.0-bin.tar.gz
@@ -46,7 +46,7 @@ In the package, you should find:
 
 ## Start up Zookeeper
 
-Druid currently has a dependency on [Apache ZooKeeper](http://zookeeper.apache.org/) for distributed coordination. You'll 
+Druid currently has a dependency on [Apache ZooKeeper](http://zookeeper.apache.org/) for distributed coordination. You'll
 need to download and run Zookeeper.
 
 ```bash
@@ -65,8 +65,9 @@ With Zookeeper running, return to the druid-0.9.0 directory. In that directory, 
 bin/init
 ```
 
-Next, you can start up the Druid processes in different terminal windows. This tutorial runs every Druid process on the same system. In production, 
-many of these Druid processes can be colocated even in a distributed cluster.
+This will setup up some directories for you. Next, you can start up the Druid processes in different terminal windows.
+This tutorial runs every Druid process on the same system. In a large distributed production cluster,
+many of these Druid processes can still be co-located together.
 
 ```bash
 java `cat conf-quickstart/druid/historical/jvm.config | xargs` -cp conf-quickstart/druid/_common:conf-quickstart/druid/historical:lib/* io.druid.cli.Main server historical
@@ -78,7 +79,7 @@ java `cat conf-quickstart/druid/middleManager/jvm.config | xargs` -cp conf-quick
 
 You should see a log message printed out for each service that starts up.
 
-Later on, if you'd like to stop the services, CTRL-C to exit from the running java processes. If you 
+Later on, if you'd like to stop the services, CTRL-C to exit from the running java processes. If you
 want a clean start after stopping the services, delete the `var` directory and run the `init` script again.
 
 Once every service has started, you are now ready to load data.
@@ -87,13 +88,13 @@ Once every service has started, you are now ready to load data.
 
 We've included a sample of Wikipedia edits from September 12, 2015 to get you started.
 
-```note-info
-This section shows you how to load data in batches, but you can skip ahead to learn how to [load 
-streams in real-time](quickstart.html#load-streaming-data). Druid's streaming ingestion can load data 
+<div class="note info">
+This section shows you how to load data in batches, but you can skip ahead to learn how to <a href="quickstart.html#load-streaming-data">load
+streams in real-time</a>. Druid's streaming ingestion can load data
 with virtually no delay between events occurring and being available for queries.
-```
+</div>
 
-The [dimensions](https://en.wikipedia.org/wiki/Dimension_%28data_warehouse%29) (attributes you can 
+The [dimensions](https://en.wikipedia.org/wiki/Dimension_%28data_warehouse%29) (attributes you can
 filter and split on) in the Wikipedia dataset, other than time, are:
 
   * channel
@@ -113,7 +114,7 @@ filter and split on) in the Wikipedia dataset, other than time, are:
   * regionName
   * user
 
-The [measures](https://en.wikipedia.org/wiki/Measure_%28data_warehouse%29), or *metrics* as they are known in Druid (values you can aggregate)  
+The [measures](https://en.wikipedia.org/wiki/Measure_%28data_warehouse%29), or *metrics* as they are known in Druid (values you can aggregate)
 in the Wikipedia dataset are:
 
   * count
@@ -122,8 +123,8 @@ in the Wikipedia dataset are:
   * delta
   * user_unique
 
-To load this data into Druid, you can submit an *ingestion task* pointing to the file. We've included 
-a task that loads the `wikiticker-2015-09-12-sampled.json` file included in the archive. To submit 
+To load this data into Druid, you can submit an *ingestion task* pointing to the file. We've included
+a task that loads the `wikiticker-2015-09-12-sampled.json` file included in the archive. To submit
 this task, POST it to Druid in a new terminal window from the druid-0.9.0 directory:
 
 ```bash
@@ -132,27 +133,27 @@ curl -X 'POST' -H 'Content-Type:application/json' -d @quickstart/wikiticker-inde
 
 Which will print the ID of the task if the submission was successful:
 
-```base
+```bash
 {"task":"index_hadoop_wikipedia_2013-10-09T21:30:32.802Z"}
 ```
 
-To view the status of your ingestion task, go to your overlord console: 
-[http://localhost:8090/console.html](http://localhost:8090/console.html). You can refresh the console periodically, and after  
+To view the status of your ingestion task, go to your overlord console:
+[http://localhost:8090/console.html](http://localhost:8090/console.html). You can refresh the console periodically, and after
 the task is successful, you should see a "SUCCESS" status for the task.
 
-After your ingestion task finishes, the data will be loaded by historical nodes and available for 
-querying within a minute or two. You can monitor the progress of loading your data in the 
-coordinator console, by checking whether there is a datasource "wikiticker" with a blue circle 
+After your ingestion task finishes, the data will be loaded by historical nodes and available for
+querying within a minute or two. You can monitor the progress of loading your data in the
+coordinator console, by checking whether there is a datasource "wikiticker" with a blue circle
 indicating "fully available": [http://localhost:8081/#/](http://localhost:8081/#/).
 
-Once the data is fully available, you can immediately query it&mdash; to see how, skip to the [Query 
+Once the data is fully available, you can immediately query it&mdash; to see how, skip to the [Query
 data](#query-data) section below. Or, continue to the [Load your own data](#load-your-own-data)
 section if you'd like to load a different dataset.
 
 ## Load streaming data
 
-To load streaming data, we are going to push events into Druid 
-over a simple HTTP API. We will do this use [Tranquility], a high level data producer 
+To load streaming data, we are going to push events into Druid
+over a simple HTTP API. We will do this use [Tranquility], a high level data producer
 library for Druid.
 
 To download Tranquility, issue the following commands in your terminal:
@@ -163,19 +164,19 @@ tar -xzf tranquility-distribution-0.7.2.tgz
 cd tranquility-distribution-0.7.2
 ```
 
-We've included a configuration file in `conf-quickstart/tranquility/server.json` as part of the Druid distribution 
-for a *metrics* datasource. We're going to start the Tranquility server process, which can be used to push events 
+We've included a configuration file in `conf-quickstart/tranquility/server.json` as part of the Druid distribution
+for a *metrics* datasource. We're going to start the Tranquility server process, which can be used to push events
 directly to Druid.
 
 ``` bash
 bin/tranquility server -configFile <path_to_druid_distro>/conf-quickstart/tranquility/server.json
 ```
 
-```note-info
+<div class="note info">
 This section shows you how to load data using Tranquility Server, but Druid also supports a wide
-variety of [other streaming ingestion options](ingestion-streams.html#stream-push), including from
+variety of <a href="ingestion-streams.html#stream-push">other streaming ingestion options</a>, including from
 popular streaming systems like Kafka, Storm, Samza, and Spark Streaming.
-```
+</div>
 
 The [dimensions](https://en.wikipedia.org/wiki/Dimension_%28data_warehouse%29) (attributes you can
 filter and split on) for this datasource are flexible. It's configured for *schemaless dimensions*,
@@ -223,17 +224,17 @@ curl -L -H'Content-Type: application/json' -XPOST --data-binary @quickstart/wiki
 
 ## Visualizing data
 
-Druid is ideal for power user-facing analytic applications. There are a number of different open source applications to 
-visualize and explore data in Druid. We recommend trying [Pivot](https://github.com/implydata/pivot), 
-[Panoramix](https://github.com/mistercrunch/panoramix), or [Metabase](https://github.com/metabase/metabase) to start 
+Druid is ideal for power user-facing analytic applications. There are a number of different open source applications to
+visualize and explore data in Druid. We recommend trying [Pivot](https://github.com/implydata/pivot),
+[Panoramix](https://github.com/mistercrunch/panoramix), or [Metabase](https://github.com/metabase/metabase) to start
 visualizing the data you just ingested.
 
 If you installed Pivot for example, you should be able to view your data in your browser at [localhost:9090](localhost:9090).
 
 ### SQL and other query libraries
 
-There are many more query tools for Druid than we've included here, including SQL 
-engines, and libraries for various languages like Python and Ruby. Please see [the list of 
+There are many more query tools for Druid than we've included here, including SQL
+engines, and libraries for various languages like Python and Ruby. Please see [the list of
 libraries](../development/libraries.html) for more information.
 
 ## Clustered setup

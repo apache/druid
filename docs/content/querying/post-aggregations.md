@@ -103,7 +103,7 @@ It can be used in a sample calculation as so:
   }]
 ```
 
-#### Example Usage
+## Example Usage
 
 In this example, let’s calculate a simple percentage using post aggregators. Let’s imagine our data set has a metric called "total".
 

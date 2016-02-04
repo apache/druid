@@ -9,15 +9,15 @@ layout: doc_page
 Druid supports streaming (real-time) and file-based (batch) ingestion methods. The most 
 popular configurations are:
 
-- [Files](batch-ingestion.html) - Load data from HDFS, S3, local files, or any supported Hadoop 
+- [Files](../ingestion/batch-ingestion.html) - Load data from HDFS, S3, local files, or any supported Hadoop 
 filesystem in batches. We recommend this method if your dataset is already in flat files.
 
-- [Stream push](stream-ingestion.html#stream-push) - Push a data stream into Druid in real-time 
+- [Stream push](../ingestion/stream-ingestion.html#stream-push) - Push a data stream into Druid in real-time 
 using [Tranquility](http://github.com/druid-io/tranquility), a client library for sending streams 
 to Druid. We recommend this method if your dataset originates in a streaming system like Kafka, 
 Storm, Spark Streaming, or your own system.
 
-- [Stream pull](stream-ingestion.html#stream-pull) - Pull a data stream directly from an external 
+- [Stream pull](../ingestion/stream-ingestion.html#stream-pull) - Pull a data stream directly from an external 
 data source into Druid using Realtime Nodes.
 
 ## Getting started
