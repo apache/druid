@@ -19,6 +19,7 @@
 
 package io.druid.server;
 
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
@@ -76,6 +77,7 @@ public class QueryResource
 
   private final ServerConfig config;
   private final ObjectMapper jsonMapper;
+  private final ObjectMapper asciiSafeJsonMapper;
   private final ObjectMapper smileMapper;
   private final QuerySegmentWalker texasRanger;
   private final ServiceEmitter emitter;
@@ -95,11 +97,13 @@ public class QueryResource
   {
     this.config = config;
     this.jsonMapper = jsonMapper;
+    this.asciiSafeJsonMapper = jsonMapper.copy().configure(JsonGenerator.Feature.ESCAPE_NON_ASCII, true);
     this.smileMapper = smileMapper;
     this.texasRanger = texasRanger;
     this.emitter = emitter;
     this.requestLogger = requestLogger;
     this.queryManager = queryManager;
+
   }
 
   @DELETE
@@ -224,10 +228,10 @@ public class QueryResource
             )
             .header("X-Druid-Query-Id", queryId);
 
-        //Limit the response-context header, see https://github.com/druid-io/druid/issues/2331
-        //Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()
-        //and encodes the string using ASCII, so 1 char is = 1 byte
-        String responseCtxString = jsonMapper.writeValueAsString(responseContext);
+        // Limit the response-context header, see https://github.com/druid-io/druid/issues/2331
+        // Escape non-ascii strings so the JSON doesn't get mangled in the response header.
+        // This also ensures string length matches the number of bytes.
+        String responseCtxString = asciiSafeJsonMapper.writeValueAsString(responseContext);
         if (responseCtxString.length() > RESPONSE_CTX_HEADER_LEN_LIMIT) {
           log.warn("Response Context truncated for id [%s] . Full context is [%s].", queryId, responseCtxString);
           responseCtxString = responseCtxString.substring(0, RESPONSE_CTX_HEADER_LEN_LIMIT);
