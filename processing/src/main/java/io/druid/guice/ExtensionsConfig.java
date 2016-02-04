@@ -36,7 +36,7 @@ public class ExtensionsConfig
   private String directory = "extensions";
 
   @JsonProperty
-  private String hadoopDependenciesDir = "hadoop_dependencies";
+  private String hadoopDependenciesDir = "hadoop-dependencies";
 
   @JsonProperty
   private List<String> loadList;
