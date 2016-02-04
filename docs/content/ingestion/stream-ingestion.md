@@ -4,7 +4,7 @@ layout: doc_page
 
 # Loading streams
 
-Streams can be ingested in Druid using either [Tranquility](https://github.com/druid-io/tranquility (a Druid-aware 
+Streams can be ingested in Druid using either [Tranquility](https://github.com/druid-io/tranquility) (a Druid-aware 
 client) and the [indexing service](../design/indexing-service.html) or through standalone [Realtime nodes](../design/realtime.html). 
 The first approach will be more complex to set up, but also offers scalability and high availability characteristics that advanced production 
 setups may require. The second approach has some known [limitations](../ingestion/stream-pull.html#limitations).

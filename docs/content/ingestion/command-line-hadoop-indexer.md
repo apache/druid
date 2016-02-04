@@ -10,6 +10,13 @@ To run:
 java -Xmx256m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -classpath lib/*:<hadoop_config_dir> io.druid.cli.Main index hadoop <spec_file>
 ```
 
+## Options
+
+- "--coordinate" - provide a version of Hadoop to use. This property will override the default Hadoop coordinates. Once specified, Druid will look for those Hadoop dependencies from the location specified by `druid.extensions.hadoopDependenciesDir`.
+- "--no-default-hadoop" - don't pull down the default hadoop version
+
+## Spec file
+
 The spec file needs to contain a JSON object where the contents are the same as the "spec" field in the Hadoop index task. 
 In addition, the following fields need to be added to the ioConfig:
 

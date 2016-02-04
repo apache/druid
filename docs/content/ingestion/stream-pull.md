@@ -25,7 +25,6 @@ For Real-time Node Configuration, see [Realtime Configuration](../configuration/
 
 For writing your own plugins to the real-time node, see [Firehose](../ingestion/firehose.html).
 
-<a id="realtime-specfile"></a>
 ## Realtime "specFile"
 
 The property `druid.realtime.specFile` has the path of a file (absolute or relative path and file name) with realtime specifications in it. This "specFile" should be a JSON Array of JSON objects like the following:
@@ -166,7 +165,7 @@ The following policies are available:
 * `none` &ndash; All events are accepted. Never hands off data unless shutdown() is called on the configured firehose.
 
 
-####<a id="sharding"></a> Sharding
+#### Sharding
 
 Druid uses shards, or segments with partition numbers, to more efficiently handle large amounts of incoming data. In Druid, shards represent the segments that together cover a time interval based on the value of `segmentGranularity`. If, for example, `segmentGranularity` is set to "hour", then a number of shards may be used to store the data for that hour. Sharding along dimensions may also occur to optimize efficiency.
 
