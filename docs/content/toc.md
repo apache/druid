@@ -1,8 +1,6 @@
 ---
 ---
 
-<link rel="stylesheet" href="css/toc.css">
-
 ## Getting Started
   * [Concepts](../design/)
   * [Quickstart](../tutorials/quickstart.html)
