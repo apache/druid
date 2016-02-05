@@ -1,4 +1,4 @@
-/*
+/**
  * Licensed to Metamarkets Group Inc. (Metamarkets) under one
  * or more contributor license agreements. See the NOTICE file
  * distributed with this work for additional information
@@ -16,25 +16,28 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+package io.druid.query.aggregation.datasketches.theta;
 
-package io.druid.query.aggregation.datasketches.theta.oldapi;
+import org.junit.Assert;
+import org.junit.Test;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.query.aggregation.datasketches.theta.SketchMergeAggregatorFactory;
+import java.io.IOException;
 
-/**
- */
-public class OldSketchMergeAggregatorFactory extends SketchMergeAggregatorFactory
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.druid.jackson.DefaultObjectMapper;
+
+public class SketchEstimateWithErrorBoundsTest
 {
-  @JsonCreator
-  public OldSketchMergeAggregatorFactory(
-      @JsonProperty("name") String name,
-      @JsonProperty("fieldName") String fieldName,
-      @JsonProperty("size") Integer size,
-      @JsonProperty("shouldFinalize") Boolean shouldFinalize
-  )
+
+  @Test
+  public void testSerde() throws IOException
   {
-    super(name, fieldName, size, shouldFinalize, true, null);
+    ObjectMapper mapper = new DefaultObjectMapper();
+
+    SketchEstimateWithErrorBounds est = new SketchEstimateWithErrorBounds(100.0,101.5,98.5,2);
+    
+    Assert.assertEquals(est, mapper.readValue(
+            mapper.writeValueAsString(est), SketchEstimateWithErrorBounds.class));
   }
+
 }

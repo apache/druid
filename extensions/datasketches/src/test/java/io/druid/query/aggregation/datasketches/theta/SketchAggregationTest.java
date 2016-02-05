@@ -28,6 +28,7 @@ import com.metamx.common.guava.Sequences;
 import com.yahoo.sketches.theta.Sketch;
 import com.yahoo.sketches.theta.Sketches;
 import io.druid.data.input.MapBasedRow;
+import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregationTestHelper;
@@ -65,7 +66,7 @@ public class SketchAggregationTest
   @Test
   public void testSimpleDataIngestAndGpByQuery() throws Exception
   {
-    Sequence seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
         new File(this.getClass().getClassLoader().getResource("simple_test_data.tsv").getFile()),
         readFileFromClasspathAsString("simple_test_data_record_parser.json"),
         readFileFromClasspathAsString("simple_test_data_aggregators.json"),
@@ -75,7 +76,7 @@ public class SketchAggregationTest
         readFileFromClasspathAsString("simple_test_data_group_by_query.json")
     );
 
-    List results = Sequences.toList(seq, Lists.newArrayList());
+    List<Row> results = Sequences.toList(seq, Lists.<Row>newArrayList());
     Assert.assertEquals(1, results.size());
     Assert.assertEquals(
         new MapBasedRow(
@@ -123,7 +124,7 @@ public class SketchAggregationTest
   @Test
   public void testSketchDataIngestAndGpByQuery() throws Exception
   {
-    Sequence seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
         new File(SketchAggregationTest.class.getClassLoader().getResource("sketch_test_data.tsv").getFile()),
         readFileFromClasspathAsString("sketch_test_data_record_parser.json"),
         readFileFromClasspathAsString("sketch_test_data_aggregators.json"),
@@ -133,7 +134,7 @@ public class SketchAggregationTest
         readFileFromClasspathAsString("sketch_test_data_group_by_query.json")
     );
 
-    List results = Sequences.toList(seq, Lists.newArrayList());
+    List<Row> results = Sequences.toList(seq, Lists.<Row>newArrayList());
     Assert.assertEquals(1, results.size());
     Assert.assertEquals(
         new MapBasedRow(
@@ -141,7 +142,11 @@ public class SketchAggregationTest
             ImmutableMap
                 .<String, Object>builder()
                 .put("sids_sketch_count", 50.0)
+                .put("sids_sketch_count_with_err", 
+                    new SketchEstimateWithErrorBounds(50.0, 50.0, 50.0, 2))
                 .put("sketchEstimatePostAgg", 50.0)
+                .put("sketchEstimatePostAggWithErrorBounds", 
+                    new SketchEstimateWithErrorBounds(50.0, 50.0, 50.0, 2))
                 .put("sketchUnionPostAggEstimate", 50.0)
                 .put("sketchIntersectionPostAggEstimate", 50.0)
                 .put("sketchAnotBPostAggEstimate", 0.0)
@@ -155,7 +160,7 @@ public class SketchAggregationTest
   @Test
   public void testThetaCardinalityOnSimpleColumn() throws Exception
   {
-    Sequence seq = helper.createIndexAndRunQueryOnSegment(
+    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
         new File(SketchAggregationTest.class.getClassLoader().getResource("simple_test_data.tsv").getFile()),
         readFileFromClasspathAsString("simple_test_data_record_parser2.json"),
         "["
@@ -170,7 +175,7 @@ public class SketchAggregationTest
         readFileFromClasspathAsString("simple_test_data_group_by_query.json")
     );
 
-    List results = Sequences.toList(seq, Lists.newArrayList());
+    List<Row> results = Sequences.toList(seq, Lists.<Row>newArrayList());
     Assert.assertEquals(1, results.size());
     Assert.assertEquals(
         new MapBasedRow(
@@ -192,9 +197,10 @@ public class SketchAggregationTest
   @Test
   public void testSketchMergeAggregatorFactorySerde() throws Exception
   {
-    assertAggregatorFactorySerde(new SketchMergeAggregatorFactory("name", "fieldName", 16, null, null));
-    assertAggregatorFactorySerde(new SketchMergeAggregatorFactory("name", "fieldName", 16, false, true));
-    assertAggregatorFactorySerde(new SketchMergeAggregatorFactory("name", "fieldName", 16, true, false));
+    assertAggregatorFactorySerde(new SketchMergeAggregatorFactory("name", "fieldName", 16, null, null, null));
+    assertAggregatorFactorySerde(new SketchMergeAggregatorFactory("name", "fieldName", 16, false, true, null));
+    assertAggregatorFactorySerde(new SketchMergeAggregatorFactory("name", "fieldName", 16, true, false, null));
+    assertAggregatorFactorySerde(new SketchMergeAggregatorFactory("name", "fieldName", 16, true, false, 2));
   }
 
   @Test
@@ -202,14 +208,22 @@ public class SketchAggregationTest
   {
     Sketch sketch = Sketches.updateSketchBuilder().build(128);
 
-    SketchMergeAggregatorFactory agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, null, null);
+    SketchMergeAggregatorFactory agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, null, null, null);
     Assert.assertEquals(0.0, ((Double) agg.finalizeComputation(sketch)).doubleValue(), 0.0001);
 
-    agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, true, null);
+    agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, true, null, null);
     Assert.assertEquals(0.0, ((Double) agg.finalizeComputation(sketch)).doubleValue(), 0.0001);
 
-    agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, false, null);
+    agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, false, null, null);
     Assert.assertEquals(sketch, agg.finalizeComputation(sketch));
+    
+    agg = new SketchMergeAggregatorFactory("name", "fieldName", 16, true, null, 2);
+    SketchEstimateWithErrorBounds est = (SketchEstimateWithErrorBounds) agg.finalizeComputation(sketch);
+    Assert.assertEquals(0.0, est.getEstimate(), 0.0001);
+    Assert.assertEquals(0.0, est.getHighBound(), 0.0001);
+    Assert.assertEquals(0.0, est.getLowBound(), 0.0001);
+    Assert.assertEquals(2, est.getNumStdDev());
+
   }
 
   private void assertAggregatorFactorySerde(AggregatorFactory agg) throws Exception
@@ -229,7 +243,16 @@ public class SketchAggregationTest
     assertPostAggregatorSerde(
         new SketchEstimatePostAggregator(
             "name",
-            new FieldAccessPostAggregator("name", "fieldName")
+            new FieldAccessPostAggregator("name", "fieldName"),
+            null
+        )
+    );
+    
+    assertPostAggregatorSerde(
+        new SketchEstimatePostAggregator(
+            "name",
+            new FieldAccessPostAggregator("name", "fieldName"),
+            2
         )
     );
   }

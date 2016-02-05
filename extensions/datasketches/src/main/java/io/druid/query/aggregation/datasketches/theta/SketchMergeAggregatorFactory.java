@@ -35,6 +35,7 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
 
   private final boolean shouldFinalize;
   private final boolean isInputThetaSketch;
+  private final Integer errorBoundsStdDev;
 
   @JsonCreator
   public SketchMergeAggregatorFactory(
@@ -42,12 +43,14 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
       @JsonProperty("fieldName") String fieldName,
       @JsonProperty("size") Integer size,
       @JsonProperty("shouldFinalize") Boolean shouldFinalize,
-      @JsonProperty("isInputThetaSketch") Boolean isInputThetaSketch
+      @JsonProperty("isInputThetaSketch") Boolean isInputThetaSketch,
+      @JsonProperty("errorBoundsStdDev") Integer errorBoundsStdDev
   )
   {
     super(name, fieldName, size, CACHE_TYPE_ID);
     this.shouldFinalize = (shouldFinalize == null) ? true : shouldFinalize.booleanValue();
     this.isInputThetaSketch = (isInputThetaSketch == null) ? false : isInputThetaSketch.booleanValue();
+    this.errorBoundsStdDev = errorBoundsStdDev;
   }
 
   @Override
@@ -59,7 +62,8 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
             fieldName,
             size,
             shouldFinalize,
-            isInputThetaSketch
+            isInputThetaSketch,
+            errorBoundsStdDev
         )
     );
   }
@@ -67,7 +71,7 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new SketchMergeAggregatorFactory(name, name, size, shouldFinalize, false);
+    return new SketchMergeAggregatorFactory(name, name, size, shouldFinalize, false, errorBoundsStdDev);
   }
 
   @Override
@@ -81,7 +85,8 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
           name,
           Math.max(size, castedOther.size),
           shouldFinalize,
-          true
+          true,
+          errorBoundsStdDev
       );
     } else {
       throw new AggregatorFactoryNotMergeableException(this, other);
@@ -99,6 +104,12 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
   {
     return isInputThetaSketch;
   }
+  
+  @JsonProperty
+  public Integer getErrorBoundsStdDev()
+  {
+    return errorBoundsStdDev;
+  }
 
   /**
    * Finalize the computation on sketch object and returns estimate from underlying
@@ -112,7 +123,17 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
   public Object finalizeComputation(Object object)
   {
     if (shouldFinalize) {
-      return ((Sketch) object).getEstimate();
+      Sketch sketch = (Sketch) object;
+      if (errorBoundsStdDev != null) {
+        SketchEstimateWithErrorBounds result = new SketchEstimateWithErrorBounds(
+            sketch.getEstimate(), 
+            sketch.getUpperBound(errorBoundsStdDev), 
+            sketch.getLowerBound(errorBoundsStdDev), 
+            errorBoundsStdDev);
+        return result;
+      } else {
+        return sketch.getEstimate();
+      }
     } else {
       return object;
     }
@@ -146,6 +167,9 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
     if (shouldFinalize != that.shouldFinalize) {
       return false;
     }
+    if (errorBoundsStdDev != that.errorBoundsStdDev) {
+      return false;
+    }
     return isInputThetaSketch == that.isInputThetaSketch;
 
   }
@@ -156,6 +180,7 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
     int result = super.hashCode();
     result = 31 * result + (shouldFinalize ? 1 : 0);
     result = 31 * result + (isInputThetaSketch ? 1 : 0);
+    result = 31 * result + (errorBoundsStdDev != null ? errorBoundsStdDev.hashCode() : 0);
     return result;
   }
 
@@ -166,8 +191,9 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
            + "fieldName=" + fieldName
            + ", name=" + name
            + ", size=" + size
-           + ",shouldFinalize=" + shouldFinalize
+           + ", shouldFinalize=" + shouldFinalize
            + ", isInputThetaSketch=" + isInputThetaSketch
+           + ", errorBoundsStdDev=" + errorBoundsStdDev
            + "}";
   }
 }
