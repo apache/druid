@@ -53,118 +53,122 @@ import java.util.LinkedList;
  */
 public class LocalFirehoseFactory implements FirehoseFactory<StringInputRowParser>
 {
-  private static final EmittingLogger log = new EmittingLogger(LocalFirehoseFactory.class);
+	private static final EmittingLogger log = new EmittingLogger(LocalFirehoseFactory.class);
 
-  private final File baseDir;
-  private final String filter;
-  private final StringInputRowParser parser;
+	private final File baseDir;
+	private final String filter;
+	private final StringInputRowParser parser;
 
-  @JsonCreator
-  public LocalFirehoseFactory(
-      @JsonProperty("baseDir") File baseDir,
-      @JsonProperty("filter") String filter,
-      // Backwards compatible
-      @JsonProperty("parser") StringInputRowParser parser
-  )
-  {
-    this.baseDir = baseDir;
-    this.filter = filter;
-    this.parser = parser;
-  }
+	@JsonCreator
+	public LocalFirehoseFactory(
+	    @JsonProperty("baseDir") File baseDir,
+	    @JsonProperty("filter") String filter,
+	    // Backwards compatible
+	    @JsonProperty("parser") StringInputRowParser parser)
+	{
+		this.baseDir = baseDir;
+		this.filter = filter;
+		this.parser = parser;
+	}
 
-  @JsonProperty
-  public File getBaseDir()
-  {
-    return baseDir;
-  }
+	@JsonProperty
+	public File getBaseDir()
+	{
+		return baseDir;
+	}
 
-  @JsonProperty
-  public String getFilter()
-  {
-    return filter;
-  }
+	@JsonProperty
+	public String getFilter()
+	{
+		return filter;
+	}
 
-  @JsonProperty
-  public StringInputRowParser getParser()
-  {
-    return parser;
-  }
+	@JsonProperty
+	public StringInputRowParser getParser()
+	{
+		return parser;
+	}
 
-  @Override
-  public Firehose connect(StringInputRowParser firehoseParser) throws IOException
-  {
-    if (baseDir == null) {
-      throw new IAE("baseDir is null");
-    }
-    log.info("Searching for all [%s] in and beneath [%s]", filter, baseDir.getAbsoluteFile());
+	@Override
+	public Firehose connect(StringInputRowParser firehoseParser) throws IOException
+	{
+		if (baseDir == null)
+		{
+			throw new IAE("baseDir is null");
+		}
+		log.info("Searching for all [%s] in and beneath [%s]", filter, baseDir.getAbsoluteFile());
 
-    Collection<File> foundFiles = FileUtils.listFiles(
-        baseDir.getAbsoluteFile(),
-        new WildcardFileFilter(filter),
-        TrueFileFilter.INSTANCE
-    );
+		Collection<File> foundFiles = FileUtils.listFiles(
+		    baseDir.getAbsoluteFile(),
+		    new WildcardFileFilter(filter),
+		    TrueFileFilter.INSTANCE);
 
-    if (foundFiles == null || foundFiles.isEmpty()) {
-      throw new ISE("Found no files to ingest! Check your schema.");
-    }
-    log.info ("Found files: " + foundFiles);
+		if (foundFiles == null || foundFiles.isEmpty())
+		{
+			throw new ISE("Found no files to ingest! Check your schema.");
+		}
+		log.info("Found files: " + foundFiles);
 
-    final LinkedList<File> files = Lists.newLinkedList(
-        foundFiles
-    );
+		final LinkedList<File> files = Lists.newLinkedList(
+		    foundFiles);
 
-    return new FileIteratingFirehose(
-        new Iterator<LineIterator>()
-        {
-          @Override
-          public boolean hasNext()
-          {
-            return !files.isEmpty();
-          }
+		return new FileIteratingFirehose(
+		    new Iterator<LineIterator>()
+		    {
+			    @Override
+			    public boolean hasNext()
+			    {
+				    return !files.isEmpty();
+			    }
 
-          @Override
-          public LineIterator next()
-          {
-          	final File f = files.poll();
-          	InputStream rawInputStream = null;
-          	try
-						{
-							rawInputStream = new FileInputStream(f);
-							final InputStream inputStream;
-							String logMessage;
-							if (CompressionUtils.isGz(f.getName())) {
-								logMessage = "Reading gzipped file [%s]";
-								inputStream = CompressionUtils.gzipInputStream(rawInputStream);
-							} else {
-								logMessage = "Reading file [%s]";
-								inputStream = rawInputStream;
-							}
-							
-							log.info(logMessage, f.getName());
-								
-							return IOUtils.lineIterator(
-									new BufferedReader(
-											new InputStreamReader(inputStream, Charsets.UTF_8)));
-    				}	catch(Exception e) {
-    	        log.warn(e, "Failed to read file [%s]", f.getName());    					
-    					if (rawInputStream != null) {
-    						try {
-									rawInputStream.close();
-								} catch (IOException ioe) {
-									Throwables.propagate(ioe);
-								}
-    					}
-    					throw Throwables.propagate(e);
-    				}
-          }
-          
-          @Override
-          public void remove()
-          {
-            throw new UnsupportedOperationException();
-          }
-        },
-        firehoseParser
-    );
-  }
+			    @Override
+			    public LineIterator next()
+			    {
+				    final File f = files.poll();
+				    InputStream rawInputStream = null;
+				    try
+				    {
+					    rawInputStream = new FileInputStream(f);
+					    final InputStream inputStream;
+					    String logMessage;
+					    if (CompressionUtils.isGz(f.getName()))
+					    {
+						    logMessage = "Reading gzipped file [%s]";
+						    inputStream = CompressionUtils.gzipInputStream(rawInputStream);
+					    } else
+					    {
+						    logMessage = "Reading file [%s]";
+						    inputStream = rawInputStream;
+					    }
+
+					    log.info(logMessage, f.getName());
+
+					    return IOUtils.lineIterator(
+		              new BufferedReader(
+		                  new InputStreamReader(inputStream, Charsets.UTF_8)));
+				    } catch (Exception e)
+				    {
+					    log.warn(e, "Failed to read file [%s]", f.getName());
+					    if (rawInputStream != null)
+					    {
+						    try
+						    {
+							    rawInputStream.close();
+						    } catch (IOException ioe)
+						    {
+							    Throwables.propagate(ioe);
+						    }
+					    }
+					    throw Throwables.propagate(e);
+				    }
+			    }
+
+			    @Override
+			    public void remove()
+			    {
+				    throw new UnsupportedOperationException();
+			    }
+		    },
+		    firehoseParser);
+	}
 }
