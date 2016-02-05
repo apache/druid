@@ -19,6 +19,7 @@
 
 package io.druid.segment.data;
 
+import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -32,6 +33,7 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
+import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -52,19 +54,23 @@ import io.druid.query.timeseries.TimeseriesQueryEngine;
 import io.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import io.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import io.druid.query.timeseries.TimeseriesResultValue;
+import io.druid.segment.CloserRule;
 import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.Segment;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
+import io.druid.segment.incremental.OffheapIncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.joda.time.Interval;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -91,6 +97,9 @@ public class IncrementalIndexTest
   }
 
   private final IndexCreator indexCreator;
+
+  @Rule
+  public final CloserRule closer = new CloserRule(false);
 
   public IncrementalIndexTest(
       IndexCreator indexCreator
@@ -120,7 +129,19 @@ public class IncrementalIndexTest
                   @Override
                   public IncrementalIndex createIndex(AggregatorFactory[] factories)
                   {
-                    return IncrementalIndexTest.createIndex(factories);
+                    return new OffheapIncrementalIndex(
+                        0L, QueryGranularity.NONE, factories, 1000000,
+                        new StupidPool<ByteBuffer>(
+                            new Supplier<ByteBuffer>()
+                            {
+                              @Override
+                              public ByteBuffer get()
+                              {
+                                return ByteBuffer.allocate(256 * 1024);
+                              }
+                            }
+                        )
+                    );
                   }
                 }
             }
@@ -207,7 +228,8 @@ public class IncrementalIndexTest
   public void testCaseSensitivity() throws Exception
   {
     long timestamp = System.currentTimeMillis();
-    IncrementalIndex index = indexCreator.createIndex(defaultAggregatorFactories);
+    IncrementalIndex index = closer.closeLater(indexCreator.createIndex(defaultAggregatorFactories));
+
     populateIndex(timestamp, index);
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), index.getDimensionNames());
     Assert.assertEquals(2, index.size());
@@ -222,8 +244,6 @@ public class IncrementalIndexTest
     Assert.assertEquals(timestamp, row.getTimestampFromEpoch());
     Assert.assertEquals(Arrays.asList("3"), row.getDimension("dim1"));
     Assert.assertEquals(Arrays.asList("4"), row.getDimension("dim2"));
-
-    index.close();
   }
 
   @Test
@@ -247,11 +267,14 @@ public class IncrementalIndexTest
       );
     }
 
-    final IncrementalIndex index = indexCreator.createIndex(
-        ingestAggregatorFactories.toArray(
-            new AggregatorFactory[ingestAggregatorFactories.size()]
+    final IncrementalIndex index = closer.closeLater(
+        indexCreator.createIndex(
+            ingestAggregatorFactories.toArray(
+                new AggregatorFactory[ingestAggregatorFactories.size()]
+            )
         )
     );
+
     final long timestamp = System.currentTimeMillis();
 
     final int rows = 50;
@@ -320,8 +343,6 @@ public class IncrementalIndexTest
           result.getValue().getDoubleMetric(String.format("doubleSumResult%s", i)).intValue()
       );
     }
-
-    index.close();
   }
 
   @Test(timeout = 60_000L)
@@ -363,7 +384,9 @@ public class IncrementalIndexTest
     }
 
 
-    final IncrementalIndex index = indexCreator.createIndex(ingestAggregatorFactories.toArray(new AggregatorFactory[dimensionCount]));
+    final IncrementalIndex index = closer.closeLater(
+        indexCreator.createIndex(ingestAggregatorFactories.toArray(new AggregatorFactory[dimensionCount]))
+    );
     final int concurrentThreads = 2;
     final int elementsPerThread = 10_000;
     final ListeningExecutorService indexExecutor = MoreExecutors.listeningDecorator(
@@ -537,14 +560,12 @@ public class IncrementalIndexTest
         );
       }
     }
-
-    index.close();
   }
 
   @Test
   public void testConcurrentAdd() throws Exception
   {
-    final IncrementalIndex index = indexCreator.createIndex(defaultAggregatorFactories);
+    final IncrementalIndex index = closer.closeLater(indexCreator.createIndex(defaultAggregatorFactories));
     final int threadCount = 10;
     final int elementsPerThread = 200;
     final int dimensionCount = 5;
@@ -584,8 +605,6 @@ public class IncrementalIndexTest
       curr++;
     }
     Assert.assertEquals(elementsPerThread, curr);
-
-    index.close();
   }
 
   @Test
@@ -611,8 +630,8 @@ public class IncrementalIndexTest
         true,
         1000000
     );
-    Assert.assertEquals(Arrays.asList("dim0", "dim1"), incrementalIndex.getDimensionNames());
+    closer.closeLater(incrementalIndex);
 
-    incrementalIndex.close();
+    Assert.assertEquals(Arrays.asList("dim0", "dim1"), incrementalIndex.getDimensionNames());
   }
 }
