@@ -4,6 +4,7 @@ layout: doc_page
 # KafkaSimpleConsumerFirehose
 This is an experimental firehose to ingest data from kafka using kafka simple consumer api. Currently, this firehose would only work inside standalone realtime nodes.
 The configuration for KafkaSimpleConsumerFirehose is similar to the KafkaFirehose [Kafka firehose example](realtime-ingestion.html#realtime-specfile), except `firehose` should be replaced with `firehoseV2` like this:
+
 ```json
 "firehoseV2": {
 "type" : "kafka-0.8-v2",
