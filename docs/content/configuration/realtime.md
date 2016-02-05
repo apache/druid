@@ -1,4 +1,3 @@
-
 ---
 layout: doc_page
 ---
