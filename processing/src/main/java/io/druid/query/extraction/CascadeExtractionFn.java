@@ -29,19 +29,12 @@ import java.util.Arrays;
 
 public class CascadeExtractionFn implements ExtractionFn
 {
-  private final ExtractionFn extractionFns[];
-  private final ChainedExtractionFn chainedExtractionFn;
-  private final ChainedExtractionFn DEFAULT_CHAINED_EXTRACTION_FN = new ChainedExtractionFn(
+  private static final ExtractionFn DEFAULT_CHAINED_EXTRACTION_FN = new ChainedExtractionFn(
       new ExtractionFn()
       {
         public byte[] getCacheKey()
         {
           return new byte[0];
-        }
-
-        public String apply(Object value)
-        {
-          return null;
         }
 
         public String apply(String value)
@@ -72,6 +65,9 @@ public class CascadeExtractionFn implements ExtractionFn
       },
       null
   );
+
+  private final ExtractionFn extractionFns[];
+  private final ExtractionFn chainedExtractionFn;
 
   @JsonCreator
   public CascadeExtractionFn(
@@ -104,12 +100,6 @@ public class CascadeExtractionFn implements ExtractionFn
     byte[] cacheKey = new byte[]{ExtractionCacheHelper.CACHE_TYPE_ID_CASCADE};
 
     return Bytes.concat(cacheKey, chainedExtractionFn.getCacheKey());
-  }
-
-  @Override
-  public String apply(Object value)
-  {
-    return chainedExtractionFn.apply(value);
   }
 
   @Override
@@ -171,7 +161,7 @@ public class CascadeExtractionFn implements ExtractionFn
            "extractionFns=[" + chainedExtractionFn.toString() + "]}";
   }
 
-  private class ChainedExtractionFn
+  private static class ChainedExtractionFn implements ExtractionFn
   {
     private final ExtractionFn fn;
     private final ChainedExtractionFn child;
@@ -189,11 +179,6 @@ public class CascadeExtractionFn implements ExtractionFn
       return (child != null) ? Bytes.concat(fnCacheKey, child.getCacheKey()) : fnCacheKey;
     }
 
-    public String apply(Object value)
-    {
-      return fn.apply((child != null) ? child.apply(value) : value);
-    }
-
     public String apply(String value)
     {
       return fn.apply((child != null) ? child.apply(value) : value);
@@ -201,7 +186,7 @@ public class CascadeExtractionFn implements ExtractionFn
 
     public String apply(long value)
     {
-      return fn.apply((child != null) ? child.apply(value) : value);
+      return child != null ? fn.apply(child.apply(value)) : fn.apply(value);
     }
 
     public boolean preservesOrdering()
@@ -219,6 +204,7 @@ public class CascadeExtractionFn implements ExtractionFn
       }
     }
 
+    @Override
     public boolean equals(Object o)
     {
       if (this == o) {
@@ -240,6 +226,7 @@ public class CascadeExtractionFn implements ExtractionFn
       return true;
     }
 
+    @Override
     public int hashCode()
     {
       int result = fn.hashCode();
@@ -249,6 +236,7 @@ public class CascadeExtractionFn implements ExtractionFn
       return result;
     }
 
+    @Override
     public String toString()
     {
       return (child != null)

@@ -69,8 +69,6 @@ public interface ExtractionFn
    *
    * @return a value that should be used instead of the original
    */
-  public String apply(Object value);
-
   public String apply(String value);
 
   public String apply(long value);

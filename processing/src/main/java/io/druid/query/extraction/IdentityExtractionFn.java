@@ -37,12 +37,6 @@ public class IdentityExtractionFn implements ExtractionFn
   }
 
   @Override
-  public String apply(Object value)
-  {
-    return value == null ? null : Strings.emptyToNull(value.toString());
-  }
-
-  @Override
   public String apply(String value)
   {
     return Strings.emptyToNull(value);

@@ -370,7 +370,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
           Map<String, Object> event = Maps.newHashMap(preMapRow.getEvent());
           for (String dim : optimizedDims) {
             final Object eventVal = event.get(dim);
-            event.put(dim, extractionFnMap.get(dim).apply(eventVal));
+            event.put(dim, extractionFnMap.get(dim).apply((String)eventVal));
           }
           return new MapBasedRow(preMapRow.getTimestamp(), event);
         } else {

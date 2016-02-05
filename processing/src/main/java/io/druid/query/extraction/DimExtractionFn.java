@@ -22,12 +22,6 @@ package io.druid.query.extraction;
 public abstract class DimExtractionFn implements ExtractionFn
 {
   @Override
-  public String apply(Object value)
-  {
-    return apply(value == null ? null : value.toString());
-  }
-
-  @Override
   public String apply(long value)
   {
     return apply(Long.toString(value));

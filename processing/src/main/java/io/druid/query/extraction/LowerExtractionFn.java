@@ -88,10 +88,4 @@ public class LowerExtractionFn implements ExtractionFn
                      .put(localeBytes)
                      .array();
   }
-
-  @Override
-  public String apply(Object value)
-  {
-    return apply(String.valueOf(value));
-  }
 }
