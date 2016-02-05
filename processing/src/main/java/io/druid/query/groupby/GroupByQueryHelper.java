@@ -32,6 +32,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IndexSizeExceededException;
+import io.druid.segment.incremental.OffheapIncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 
 import java.nio.ByteBuffer;
@@ -45,7 +46,6 @@ public class GroupByQueryHelper
       final GroupByQuery query,
       final GroupByQueryConfig config,
       StupidPool<ByteBuffer> bufferPool
-
   )
   {
     final QueryGranularity gran = query.getGranularity();
@@ -77,15 +77,30 @@ public class GroupByQueryHelper
           }
         }
     );
-    final IncrementalIndex index = new OnheapIncrementalIndex(
-        // use granularity truncated min timestamp
-        // since incoming truncated timestamps may precede timeStart
-        granTimeStart,
-        gran,
-        aggs.toArray(new AggregatorFactory[aggs.size()]),
-        false,
-        config.getMaxResults()
-    );
+    final IncrementalIndex index;
+
+    if (query.getContextValue("useOffheap", false)) {
+      index = new OffheapIncrementalIndex(
+          // use granularity truncated min timestamp
+          // since incoming truncated timestamps may precede timeStart
+          granTimeStart,
+          gran,
+          aggs.toArray(new AggregatorFactory[aggs.size()]),
+          false,
+          config.getMaxResults(),
+          bufferPool
+      );
+    } else {
+      index = new OnheapIncrementalIndex(
+          // use granularity truncated min timestamp
+          // since incoming truncated timestamps may precede timeStart
+          granTimeStart,
+          gran,
+          aggs.toArray(new AggregatorFactory[aggs.size()]),
+          false,
+          config.getMaxResults()
+      );
+    }
 
     Accumulator<IncrementalIndex, T> accumulator = new Accumulator<IncrementalIndex, T>()
     {
