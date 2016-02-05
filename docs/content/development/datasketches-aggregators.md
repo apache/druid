@@ -37,6 +37,7 @@ Note that you can use `thetaSketch` aggregator on columns which were not ingeste
 ### Post Aggregators
 
 #### Sketch Estimator
+
 ```json
 {
   "type"  : "thetaSketchEstimate",
@@ -71,6 +72,7 @@ to answer above questions, you would index your data using following aggregator.
 ```
 
 then, sample query for, How many unique users visited product A?
+
 ```json
 {
   "queryType": "groupBy",
