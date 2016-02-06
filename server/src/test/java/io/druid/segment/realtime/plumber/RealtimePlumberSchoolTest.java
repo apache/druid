@@ -654,7 +654,7 @@ public class RealtimePlumberSchoolTest
       @Override
       public Object getRaw(String dimension)
       {
-        return null;
+        return dimVals;
       }
 
       @Override

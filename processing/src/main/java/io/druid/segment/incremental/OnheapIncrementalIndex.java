@@ -22,6 +22,7 @@ package io.druid.segment.incremental;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.metamx.common.IAE;
 import io.druid.data.input.InputRow;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.Aggregator;
@@ -32,6 +33,7 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.column.ValueType;
 
 import java.util.List;
 import java.util.Map;
@@ -272,11 +274,11 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     }
   }
 
-  static class OnHeapDimDim implements DimDim
+  static class OnHeapDimDim<T extends Comparable<? super T>> implements DimDim<T>
   {
-    private final Map<String, Integer> valueToId = Maps.newHashMap();
+    private final Map<T, Integer> valueToId = Maps.newHashMap();
 
-    private final List<String> idToValue = Lists.newArrayList();
+    private final List<T> idToValue = Lists.newArrayList();
     private final Object lock;
 
     public OnHeapDimDim(Object lock)
@@ -284,7 +286,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       this.lock = lock;
     }
 
-    public int getId(String value)
+    public int getId(T value)
     {
       synchronized (lock) {
         final Integer id = valueToId.get(value);
@@ -292,14 +294,14 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       }
     }
 
-    public String getValue(int id)
+    public T getValue(int id)
     {
       synchronized (lock) {
         return idToValue.get(id);
       }
     }
 
-    public boolean contains(String value)
+    public boolean contains(T value)
     {
       synchronized (lock) {
         return valueToId.containsKey(value);
@@ -313,7 +315,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       }
     }
 
-    public int add(String value)
+    public int add(T value)
     {
       synchronized (lock) {
         Integer prev = valueToId.get(value);
@@ -335,19 +337,19 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     }
   }
 
-  static class OnHeapDimLookup implements SortedDimLookup
+  static class OnHeapDimLookup<T extends Comparable<? super T>> implements SortedDimLookup<T>
   {
-    private final String[] sortedVals;
+    private final List<T> sortedVals;
     private final int[] idToIndex;
     private final int[] indexToId;
 
-    public OnHeapDimLookup(List<String> idToValue, int length)
+    public OnHeapDimLookup(List<T> idToValue, int length)
     {
-      Map<String, Integer> sortedMap = Maps.newTreeMap();
+      Map<T, Integer> sortedMap = Maps.newTreeMap();
       for (int id = 0; id < length; id++) {
         sortedMap.put(idToValue.get(id), id);
       }
-      this.sortedVals = sortedMap.keySet().toArray(new String[length]);
+      this.sortedVals = Lists.newArrayList(sortedMap.keySet());
       this.idToIndex = new int[length];
       this.indexToId = new int[length];
       int index = 0;
@@ -361,23 +363,23 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     @Override
     public int size()
     {
-      return sortedVals.length;
+      return sortedVals.size();
     }
 
     @Override
-    public int indexToId(int index)
+    public int getUnsortedIdFromSortedId(int index)
     {
       return indexToId[index];
     }
 
     @Override
-    public String getValue(int index)
+    public T getValueFromSortedId(int index)
     {
-      return sortedVals[index];
+      return sortedVals.get(index);
     }
 
     @Override
-    public int idToIndex(int id)
+    public int getSortedIdFromUnsortedId(int id)
     {
       return idToIndex[id];
     }
