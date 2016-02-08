@@ -56,6 +56,7 @@ import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
 import io.druid.curator.CuratorUtils;
 import io.druid.curator.cache.PathChildrenCacheFactory;
+import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.autoscaling.ResourceManagementStrategy;
@@ -91,7 +92,9 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -145,6 +148,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   // Workers that have been marked as lazy. these workers are not running any tasks and can be terminated safely by the scaling policy.
   private final ConcurrentMap<String, ZkWorker> lazyWorkers = new ConcurrentHashMap<>();
 
+  // task runner listeners
+  private final CopyOnWriteArrayList<Pair<TaskRunnerListener, Executor>> listeners = new CopyOnWriteArrayList<>();
 
   private final Object statusLock = new Object();
 
@@ -325,6 +330,24 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   public List<Pair<Task, ListenableFuture<TaskStatus>>> restore()
   {
     return ImmutableList.of();
+  }
+
+  @Override
+  public void registerListener(TaskRunnerListener listener, Executor executor)
+  {
+    final Pair<TaskRunnerListener, Executor> listenerPair = Pair.of(listener, executor);
+
+    synchronized (statusLock) {
+      for (Map.Entry<String, RemoteTaskRunnerWorkItem> entry : runningTasks.entrySet()) {
+        TaskRunnerUtils.notifyLocationChanged(
+            ImmutableList.of(listenerPair),
+            entry.getKey(),
+            entry.getValue().getLocation()
+        );
+      }
+
+      listeners.add(listenerPair);
+    }
   }
 
   @Override
@@ -517,7 +540,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   private RemoteTaskRunnerWorkItem addPendingTask(final Task task)
   {
     log.info("Added pending task %s", task.getId());
-    final RemoteTaskRunnerWorkItem taskRunnerWorkItem = new RemoteTaskRunnerWorkItem(task.getId(), null);
+    final RemoteTaskRunnerWorkItem taskRunnerWorkItem = new RemoteTaskRunnerWorkItem(task.getId(), null, null);
     pendingTaskPayloads.put(task.getId(), task);
     pendingTasks.put(task.getId(), taskRunnerWorkItem);
     runPendingTasks();
@@ -706,7 +729,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         return false;
       }
 
-      RemoteTaskRunnerWorkItem newWorkItem = workItem.withWorker(theZkWorker.getWorker());
+      RemoteTaskRunnerWorkItem newWorkItem = workItem.withWorker(theZkWorker.getWorker(), null);
       runningTasks.put(task.getId(), newWorkItem);
       log.info("Task %s switched from pending to running (on [%s])", task.getId(), newWorkItem.getWorker().getHost());
 
@@ -783,15 +806,16 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                     case CHILD_ADDED:
                     case CHILD_UPDATED:
                       taskId = ZKPaths.getNodeFromPath(event.getData().getPath());
-                      final TaskStatus taskStatus = jsonMapper.readValue(
-                          event.getData().getData(), TaskStatus.class
+                      final TaskAnnouncement announcement = jsonMapper.readValue(
+                          event.getData().getData(), TaskAnnouncement.class
                       );
 
                       log.info(
-                          "Worker[%s] wrote %s status for task: %s",
+                          "Worker[%s] wrote %s status for task [%s] on [%s]",
                           zkWorker.getWorker().getHost(),
-                          taskStatus.getStatusCode(),
-                          taskId
+                          announcement.getTaskStatus().getStatusCode(),
+                          taskId,
+                          announcement.getTaskLocation()
                       );
 
                       // Synchronizing state with ZK
@@ -803,7 +827,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                       } else {
                         final RemoteTaskRunnerWorkItem newTaskRunnerWorkItem = new RemoteTaskRunnerWorkItem(
                             taskId,
-                            zkWorker.getWorker()
+                            zkWorker.getWorker(),
+                            TaskLocation.unknown()
                         );
                         final RemoteTaskRunnerWorkItem existingItem = runningTasks.putIfAbsent(
                             taskId,
@@ -821,8 +846,13 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                         }
                       }
 
-                      if (taskStatus.isComplete()) {
-                        taskComplete(taskRunnerWorkItem, zkWorker, taskStatus);
+                      if (!announcement.getTaskLocation().equals(taskRunnerWorkItem.getLocation())) {
+                        taskRunnerWorkItem.setLocation(announcement.getTaskLocation());
+                        TaskRunnerUtils.notifyLocationChanged(listeners, taskId, announcement.getTaskLocation());
+                      }
+
+                      if (announcement.getTaskStatus().isComplete()) {
+                        taskComplete(taskRunnerWorkItem, zkWorker, announcement.getTaskStatus());
                         runPendingTasks();
                       }
                       break;

@@ -35,15 +35,14 @@ import io.druid.common.guava.DSuppliers;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.cache.SimplePathChildrenCacheFactory;
 import io.druid.indexing.common.IndexingServiceCondition;
+import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
-import io.druid.indexing.common.TestMergeTask;
 import io.druid.indexing.common.TestRealtimeTask;
+import io.druid.indexing.common.TestTasks;
 import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
 import io.druid.indexing.overlord.autoscaling.NoopResourceManagementStrategy;
-import io.druid.indexing.overlord.autoscaling.ResourceManagementStrategy;
-import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.worker.TaskAnnouncement;
@@ -77,6 +76,7 @@ public class RemoteTaskRunnerTest
   private static final String tasksPath = String.format("%s/indexer/tasks/worker", basePath);
   private static final String statusPath = String.format("%s/indexer/status/worker", basePath);
   private static final int TIMEOUT_SECONDS = 20;
+  private static final TaskLocation DUMMY_LOCATION = TaskLocation.create("dummy", 9000);
 
   private ObjectMapper jsonMapper;
 
@@ -84,7 +84,7 @@ public class RemoteTaskRunnerTest
   private CuratorFramework cf;
   private RemoteTaskRunner remoteTaskRunner;
 
-  private TestMergeTask task;
+  private Task task;
 
   private Worker worker;
 
@@ -107,7 +107,7 @@ public class RemoteTaskRunnerTest
     cf.create().creatingParentsIfNeeded().forPath(basePath);
     cf.create().creatingParentsIfNeeded().forPath(tasksPath);
 
-    task = TestMergeTask.createDummyTask("task");
+    task = TestTasks.unending("task");
   }
 
   @After
@@ -191,7 +191,7 @@ public class RemoteTaskRunnerTest
 
     doSetup();
 
-    remoteTaskRunner.run(TestMergeTask.createDummyTask(new String(new char[5000])));
+    remoteTaskRunner.run(TestTasks.unending(new String(new char[5000])));
 
     EasyMock.verify(emitter);
   }
@@ -557,7 +557,7 @@ public class RemoteTaskRunnerTest
   {
     cf.delete().forPath(joiner.join(tasksPath, task.getId()));
 
-    TaskAnnouncement taskAnnouncement = TaskAnnouncement.create(task, TaskStatus.running(task.getId()));
+    TaskAnnouncement taskAnnouncement = TaskAnnouncement.create(task, TaskStatus.running(task.getId()), DUMMY_LOCATION);
     cf.create()
       .creatingParentsIfNeeded()
       .forPath(joiner.join(statusPath, task.getId()), jsonMapper.writeValueAsBytes(taskAnnouncement));
@@ -565,7 +565,7 @@ public class RemoteTaskRunnerTest
 
   private void mockWorkerCompleteSuccessfulTask(final Task task) throws Exception
   {
-    TaskAnnouncement taskAnnouncement = TaskAnnouncement.create(task, TaskStatus.success(task.getId()));
+    TaskAnnouncement taskAnnouncement = TaskAnnouncement.create(task, TaskStatus.success(task.getId()), DUMMY_LOCATION);
     cf.setData().forPath(joiner.join(statusPath, task.getId()), jsonMapper.writeValueAsBytes(taskAnnouncement));
   }
 

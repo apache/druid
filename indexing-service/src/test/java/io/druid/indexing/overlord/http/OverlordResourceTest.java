@@ -33,6 +33,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.concurrent.Execs;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.discovery.NoopServiceAnnouncer;
+import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskStorageConfig;
@@ -43,6 +44,7 @@ import io.druid.indexing.overlord.TaskLockbox;
 import io.druid.indexing.overlord.TaskMaster;
 import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.TaskRunnerFactory;
+import io.druid.indexing.overlord.TaskRunnerListener;
 import io.druid.indexing.overlord.TaskRunnerWorkItem;
 import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.TaskStorageQueryAdapter;
@@ -73,10 +75,13 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class OverlordResourceTest
 {
+  private static final TaskLocation TASK_LOCATION = new TaskLocation("dummy", 1000);
+
   private TestingServer server;
   private Timing timing;
   private CuratorFramework curator;
@@ -234,6 +239,10 @@ public class OverlordResourceTest
     response = overlordResource.getRunningTasks();
     // 1 task that was manually inserted should be in running state
     Assert.assertEquals(1, (((List) response.getEntity()).size()));
+    final OverlordResource.TaskResponseObject taskResponseObject = ((List<OverlordResource.TaskResponseObject>) response
+        .getEntity()).get(0);
+    Assert.assertEquals(taskId_1, taskResponseObject.toJson().get("id"));
+    Assert.assertEquals(TASK_LOCATION, taskResponseObject.toJson().get("location"));
 
     // Simulate completion of task_1
     taskCompletionCountDownLatches[Integer.parseInt(taskId_1)].countDown();
@@ -291,6 +300,12 @@ public class OverlordResourceTest
       return ImmutableList.of();
     }
 
+    public void registerListener(TaskRunnerListener listener, Executor executor)
+    {
+      // Overlord doesn't call this method
+      throw new UnsupportedOperationException();
+    }
+
     @Override
     public synchronized ListenableFuture<TaskStatus> run(final Task task)
     {
@@ -319,7 +334,14 @@ public class OverlordResourceTest
             }
           }
       );
-      TaskRunnerWorkItem taskRunnerWorkItem = new TaskRunnerWorkItem(taskId, future);
+      TaskRunnerWorkItem taskRunnerWorkItem = new TaskRunnerWorkItem(taskId, future)
+      {
+        @Override
+        public TaskLocation getLocation()
+        {
+          return TASK_LOCATION;
+        }
+      };
       taskRunnerWorkItems.put(taskId, taskRunnerWorkItem);
       return future;
     }

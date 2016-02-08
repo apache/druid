@@ -167,7 +167,7 @@ public class WorkerCuratorCoordinator
     return worker;
   }
 
-  public void unannounceTask(String taskId)
+  public void removeTaskRunZnode(String taskId)
   {
     try {
       curatorFramework.delete().guaranteed().forPath(getTaskPathForId(taskId));
@@ -177,7 +177,7 @@ public class WorkerCuratorCoordinator
     }
   }
 
-  public void updateAnnouncement(TaskAnnouncement announcement)
+  public void updateTaskStatusAnnouncement(TaskAnnouncement announcement)
   {
     synchronized (lock) {
       if (!started) {

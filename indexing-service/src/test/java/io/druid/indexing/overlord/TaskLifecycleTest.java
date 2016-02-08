@@ -100,6 +100,7 @@ import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.FireDepartmentTest;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
+import io.druid.server.DruidNode;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -217,20 +218,20 @@ public class TaskLifecycleTest
 
   private static ServiceEmitter newMockEmitter()
   {
-      return new ServiceEmitter(null, null, null)
+    return new ServiceEmitter(null, null, null)
+    {
+      @Override
+      public void emit(Event event)
       {
-        @Override
-        public void emit(Event event)
-        {
 
-        }
+      }
 
-        @Override
-        public void emit(ServiceEventBuilder builder)
-        {
+      @Override
+      public void emit(ServiceEventBuilder builder)
+      {
 
-        }
-      };
+      }
+    };
   }
 
   private static InputRow IR(String dt, String dim1, String dim2, float met)
@@ -607,7 +608,12 @@ public class TaskLifecycleTest
     Preconditions.checkNotNull(taskConfig);
     Preconditions.checkNotNull(emitter);
 
-    return new ThreadPoolTaskRunner(tb, taskConfig, emitter);
+    return new ThreadPoolTaskRunner(
+        tb,
+        taskConfig,
+        emitter,
+        new DruidNode("dummy", "dummy", 10000)
+    );
   }
 
   private TaskQueue setUpTaskQueue(TaskStorage ts, TaskRunner tr) throws Exception
