@@ -53,6 +53,7 @@ import com.metamx.common.logger.Logger;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.concurrent.Execs;
 import io.druid.guice.annotations.Self;
+import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.task.Task;
@@ -81,6 +82,8 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -99,6 +102,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   private final ListeningExecutorService exec;
   private final ObjectMapper jsonMapper;
   private final PortFinder portFinder;
+  private final CopyOnWriteArrayList<Pair<TaskRunnerListener, Executor>> listeners = new CopyOnWriteArrayList<>();
 
   // Writes must be synchronized. This is only a ConcurrentMap so "informational" reads can occur without waiting.
   private final Map<String, ForkingTaskRunnerWorkItem> tasks = Maps.newConcurrentMap();
@@ -171,6 +175,19 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
     return retVal;
   }
 
+  public void registerListener(TaskRunnerListener listener, Executor executor)
+  {
+    final Pair<TaskRunnerListener, Executor> listenerPair = Pair.of(listener, executor);
+
+    synchronized (tasks) {
+      for (ForkingTaskRunnerWorkItem item : tasks.values()) {
+        TaskRunnerUtils.notifyLocationChanged(ImmutableList.of(listenerPair), item.getTaskId(), item.getLocation());
+      }
+
+      listeners.add(listenerPair);
+    }
+  }
+
   @Override
   public ListenableFuture<TaskStatus> run(final Task task)
   {
@@ -191,6 +208,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                         final File attemptDir = new File(taskDir, attemptUUID);
 
                         final ProcessHolder processHolder;
+                        final String childHost = node.getHost();
                         final int childPort;
                         final int childChatHandlerPort;
 
@@ -202,6 +220,8 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                           childPort = portFinder.findUnusedPort();
                           childChatHandlerPort = -1;
                         }
+
+                        final TaskLocation taskLocation = TaskLocation.create(childHost, childPort);
 
                         try {
                           final Closer closer = Closer.create();
@@ -235,7 +255,6 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               }
 
                               final List<String> command = Lists.newArrayList();
-                              final String childHost = node.getHost();
                               final String taskClasspath;
                               if (task.getClasspathPrefix() != null && !task.getClasspathPrefix().isEmpty()) {
                                 taskClasspath = Joiner.on(File.pathSeparator).join(
@@ -250,7 +269,10 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               command.add("-cp");
                               command.add(taskClasspath);
 
-                              Iterables.addAll(command, new QuotableWhiteSpaceSplitter(config.getJavaOpts(), jsonMapper));
+                              Iterables.addAll(
+                                  command,
+                                  new QuotableWhiteSpaceSplitter(config.getJavaOpts(), jsonMapper)
+                              );
 
                               // Override task specific javaOpts
                               Object taskJavaOpts = task.getContextValue(
@@ -333,8 +355,8 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                * Users are highly suggested to be set in druid.indexer.runner.javaOpts
                                * See io.druid.concurrent.TaskThreadPriority#getThreadPriorityFromTaskPriority(int)
                                * for more information
-                              command.add("-XX:+UseThreadPriorities");
-                              command.add("-XX:ThreadPriorityPolicy=42");
+                               command.add("-XX:+UseThreadPriorities");
+                               command.add("-XX:ThreadPriorityPolicy=42");
                                */
 
                               if (config.isSeparateIngestionEndpoint()) {
@@ -370,12 +392,15 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               taskWorkItem.processHolder = new ProcessHolder(
                                   new ProcessBuilder(ImmutableList.copyOf(command)).redirectErrorStream(true).start(),
                                   logFile,
-                                  childPort
+                                  taskLocation.getHost(),
+                                  taskLocation.getPort()
                               );
 
                               processHolder = taskWorkItem.processHolder;
                               processHolder.registerWithCloser(closer);
                             }
+
+                            TaskRunnerUtils.notifyLocationChanged(listeners, task.getId(), taskLocation);
 
                             log.info("Logging task %s output to: %s", task.getId(), logFile);
                             boolean runFailed = true;
@@ -673,18 +698,30 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
     {
       return task;
     }
+
+    @Override
+    public TaskLocation getLocation()
+    {
+      if (processHolder == null) {
+        return TaskLocation.unknown();
+      } else {
+        return TaskLocation.create(processHolder.host, processHolder.port);
+      }
+    }
   }
 
   private static class ProcessHolder
   {
     private final Process process;
     private final File logFile;
+    private final String host;
     private final int port;
 
-    private ProcessHolder(Process process, File logFile, int port)
+    private ProcessHolder(Process process, File logFile, String host, int port)
     {
       this.process = process;
       this.logFile = logFile;
+      this.host = host;
       this.port = port;
     }
 
