@@ -8,6 +8,12 @@ Druid aggregators based on [datasketches](http://datasketches.github.io/) librar
 At ingestion time, this aggregator creates the theta sketch objects which get stored in Druid segments. Logically speaking, a theta sketch object can be thought of as a Set data structure. At query time, sketches are read and aggregated(set unioned) together. In the end, by default, you receive the estimate of number of unique entries in the sketch object. Also, You can use post aggregators to do union, intersection or difference on sketch columns in the same row. 
 Note that you can use `thetaSketch` aggregator on columns which were not ingested using same, it will return estimated cardinality of the column. It is recommended to use it at ingestion time as well to make querying faster.
 
+To use the datasketch aggregators, make sure you include the extension in your config file:
+
+```
+druid.extensions.coordinates=["io.druid.extensions:druid-datasketches"]
+```
+
 ### Aggregators
 
 ```json
