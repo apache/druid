@@ -278,12 +278,14 @@ This spec is used to generate segments with arbitrary intervals (it tries to cre
 
 # IO Config
 
-Real-time Ingestion: See [Real-time ingestion](../ingestion/realtime-ingestion.html).
+Stream Push Ingestion: Stream push ingestion with Tranquility does not require an IO Config.
+Stream Pull Ingestion: See [Stream pull ingestion](../ingestion/stream-pull.html).
 Batch Ingestion: See [Batch ingestion](../ingestion/batch-ingestion.html)
 
-# Ingestion Spec
+# Tuning Config
 
-Real-time Ingestion: See [Real-time ingestion](../ingestion/realtime-ingestion.html).
+Stream Push Ingestion: See [Stream push ingestion](../ingestion/stream-push.html).
+Stream Pull Ingestion: See [Stream pull ingestion](../ingestion/stream-pull.html).
 Batch Ingestion: See [Batch ingestion](../ingestion/batch-ingestion.html)
 
 # Evaluating Timestamp, Dimensions and Metrics

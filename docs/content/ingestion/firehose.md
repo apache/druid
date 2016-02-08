@@ -9,7 +9,7 @@ Firehoses describe the data stream source. They are pluggable and thus the confi
 |-------|------|-------------|----------|
 | type | String | Specifies the type of firehose. Each value will have its own configuration schema, firehoses packaged with Druid are described below. | yes |
 
-We describe the configuration of the [Kafka firehose example](realtime-ingestion.html#realtime-specfile), but there are other types available in Druid (see below).
+We describe the configuration of the [Kafka firehose example](../ingestion/stream-pull.html#realtime-specfile), but there are other types available in Druid (see below).
 
 -   `consumerProps` is a map of properties for the Kafka consumer. The JSON object is converted into a Properties object and passed along to the Kafka consumer.
 -   `feed` is the feed that the Kafka consumer should read from.
