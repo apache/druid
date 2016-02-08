@@ -20,9 +20,11 @@
 package io.druid.query.select;
 
 import com.google.common.base.Function;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.metamx.common.ISE;
+import com.metamx.common.guava.Comparators;
 import com.metamx.common.guava.Sequence;
 import io.druid.query.QueryRunnerHelper;
 import io.druid.query.Result;
@@ -34,6 +36,7 @@ import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
@@ -112,21 +115,31 @@ public class SelectQueryEngine
               for (Map.Entry<String, DimensionSelector> dimSelector : dimSelectors.entrySet()) {
                 final String dim = dimSelector.getKey();
                 final DimensionSelector selector = dimSelector.getValue();
+                final ColumnCapabilities capabilities = adapter.getColumnCapabilities(dim);
 
                 if (selector == null) {
                   theEvent.put(dim, null);
                 } else {
-                  final IndexedInts vals = selector.getRow();
+                  if (capabilities == null || capabilities.isDictionaryEncoded()) {
+                    final IndexedInts vals = selector.getRow();
 
-                  if (vals.size() == 1) {
-                    final String dimVal = selector.lookupName(vals.get(0));
-                    theEvent.put(dim, dimVal);
-                  } else {
-                    List<String> dimVals = Lists.newArrayList();
-                    for (int i = 0; i < vals.size(); ++i) {
-                      dimVals.add(selector.lookupName(vals.get(i)));
+                    if (vals.size() == 1) {
+                      final String dimVal = selector.lookupName(vals.get(0));
+                      theEvent.put(dim, dimVal);
+                    } else {
+                      List<String> dimVals = Lists.newArrayList();
+                      for (int i = 0; i < vals.size(); ++i) {
+                        dimVals.add(selector.lookupName(vals.get(i)));
+                      }
+                      theEvent.put(dim, dimVals);
                     }
-                    theEvent.put(dim, dimVals);
+                  } else {
+                    final List<Comparable> dimVals = selector.getUnencodedRow();
+                    if (dimVals.size() == 1) {
+                      theEvent.put(dim, dimVals.get(0));
+                    } else {
+                      theEvent.put(dim, dimVals);
+                    }
                   }
                 }
               }

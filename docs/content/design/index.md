@@ -24,7 +24,7 @@ This data set is composed of three distinct components. If you are acquainted wi
 * **Timestamp column**: We treat timestamp separately because all of our queries
  center around the time axis.
 
-* **Dimension columns**: Dimensions are string attributes of an event, and the columns most commonly used in filtering the data. 
+* **Dimension columns**: Dimensions are attributes of an event, the columns most commonly used in filtering the data. 
 We have four dimensions in our example data set: publisher, advertiser, gender, and country.
 They each represent an axis of the data that we’ve chosen to slice across.
 

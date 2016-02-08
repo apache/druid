@@ -83,11 +83,16 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
   private static final Map<String, ValueType> TYPE_MAP = ImmutableMap.<String, ValueType>builder()
       .put("Long[]", ValueType.LONG)
+      .put("Float[]", ValueType.FLOAT)
       .put("Double[]", ValueType.FLOAT)
       .put("String[]", ValueType.STRING)
       .put("Long", ValueType.LONG)
+      .put("Float", ValueType.FLOAT)
       .put("Double", ValueType.FLOAT)
       .put("String", ValueType.STRING)
+      .put("LONG", ValueType.LONG)
+      .put("FLOAT", ValueType.FLOAT)
+      .put("STRING", ValueType.STRING)
       .build();
 
   private static final Function<Object, String> STRING_TRANSFORMER = new Function<Object, String>()
@@ -108,6 +113,9 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
         return null;
       }
       if (o instanceof String) {
+        if (((String) o).length() == 0) {
+          return 0L;
+        }
         try {
           return Long.valueOf((String) o);
         }
@@ -131,6 +139,9 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
         return null;
       }
       if (o instanceof String) {
+        if (((String) o).length() == 0) {
+          return 0f;
+        }
         try {
           return Float.valueOf((String) o);
         }
@@ -145,6 +156,23 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     }
   };
 
+  public static int[] castComparablesAsInts(Comparable[] vals)
+  {
+    if (vals == null) {
+      return null;
+    }
+    int[] newVals = new int[vals.length];
+    for(int i = 0; i < vals.length; i++) {
+      newVals[i] = (Integer) vals[i];
+    }
+    return newVals;
+  }
+
+  public static Map<ValueType, Function> getValueTransforms()
+  {
+    return VALUE_TRANSFORMS;
+  }
+
   private static final Map<ValueType, Function> VALUE_TRANSFORMS = ImmutableMap.<ValueType, Function>builder()
       .put(ValueType.LONG, LONG_TRANSFORMER)
       .put(ValueType.FLOAT, FLOAT_TRANSFORMER)
@@ -154,7 +182,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   public static ColumnSelectorFactory makeColumnSelectorFactory(
       final AggregatorFactory agg,
       final Supplier<InputRow> in,
-      final boolean deserializeComplexMetrics
+      final boolean deserializeComplexMetrics,
+      final Map<String, ColumnCapabilitiesImpl> columnCapabilities
   )
   {
     return new ColumnSelectorFactory()
@@ -328,6 +357,24 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
             }
             return in.get().getDimension(dimension).indexOf(name);
           }
+
+          @Override
+          public List<Comparable> getUnencodedRow()
+          {
+            throw new UnsupportedOperationException("getUnencodedRow is not supported");
+          }
+
+          @Override
+          public Comparable getExtractedValueFromUnencoded(Comparable rowVal)
+          {
+            throw new UnsupportedOperationException("getExtractedValueFromUnencoded() is not supported.");
+          }
+
+          @Override
+          public ColumnCapabilities getDimCapabilities()
+          {
+            return columnCapabilities.get(dimension);
+          }
         };
       }
     };
@@ -394,12 +441,18 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     DimensionsSpec dimensionsSpec = incrementalIndexSchema.getDimensionsSpec();
 
     this.dimensionDescs = Maps.newLinkedHashMap();
+    int dimIndex = 0;
     this.dimValues = Collections.synchronizedList(Lists.<DimDim>newArrayList());
     for (String dimension : dimensionsSpec.getDimensions()) {
+      DimensionsSpec.ValueType typeName = dimensionsSpec.getDimensionTypes().get(dimIndex);
+      ValueType type = TYPE_MAP.get(typeName.toString());
       ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
-      capabilities.setType(ValueType.STRING);
+      capabilities.setType(type);
+      capabilities.setHasBitmapIndexes(type == ValueType.STRING);
+      capabilities.setDictionaryEncoded(type == ValueType.STRING);
       addNewDimension(dimension, capabilities);
       columnCapabilities.put(dimension, capabilities);
+      dimIndex++;
     }
 
     // This should really be more generic
@@ -411,6 +464,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
       capabilities.setType(ValueType.STRING);
       capabilities.setHasSpatialIndexes(true);
+      capabilities.setHasBitmapIndexes(true);
+      capabilities.setDictionaryEncoded(true);
       columnCapabilities.put(spatialDimension.getDimName(), capabilities);
     }
   }
@@ -504,6 +559,15 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     return TYPE_MAP.get(singleVal.getClass().getSimpleName());
   }
 
+  public static Comparable transformValueByType(Comparable value, ValueType targetType)
+  {
+    if (value == null) {
+      return null;
+    }
+    final Function transformer = VALUE_TRANSFORMS.get(targetType);
+    return (Comparable) transformer.apply(value);
+  }
+
   private List<Comparable> getRowDimensionAsComparables(InputRow row, String dimension, ValueType type)
   {
     final Object dimVal = row.getRaw(dimension);
@@ -527,6 +591,10 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   public Map<String, DimensionDesc> getDimensionDescs()
   {
     return dimensionDescs;
+  }
+  public Map<String, ColumnCapabilitiesImpl> getColumnCapabilities()
+  {
+    return columnCapabilities;
   }
 
   /**
@@ -559,12 +627,12 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
     final List<String> rowDimensions = row.getDimensions();
 
-    int[][] dims;
+    Comparable[][] dims;
     ValueType[] types;
-    List<int[]> overflow = null;
+    List<Comparable[]> overflow = null;
     List<ValueType> overflowTypes = null;
     synchronized (dimensionDescs) {
-      dims = new int[dimensionDescs.size()][];
+      dims = new Comparable[dimensionDescs.size()][];
       types = new ValueType[dimensionDescs.size()];
       for (String dimension : rowDimensions) {
         List<Comparable> dimensionValues;
@@ -583,6 +651,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
             if (valType == null) {
               valType = ValueType.STRING;
             }
+            capabilities.setHasBitmapIndexes(valType == ValueType.STRING);
+            capabilities.setDictionaryEncoded(valType == ValueType.STRING);
             capabilities.setType(valType);
             columnCapabilities.put(dimension, capabilities);
           }
@@ -602,7 +672,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
             overflow = Lists.newArrayList();
             overflowTypes = Lists.newArrayList();
           }
-          overflow.add(getDimVals(desc.getValues(), dimensionValues));
+          overflow.add(getDimVals(desc.getValues(), dimensionValues, capabilities.isDictionaryEncoded()));
           overflowTypes.add(valType);
         } else if (desc.getIndex() > dims.length || dims[desc.getIndex()] != null) {
           /*
@@ -616,7 +686,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
            */
           throw new ISE("Dimension[%s] occurred more than once in InputRow", dimension);
         } else {
-          dims[desc.getIndex()] = getDimVals(desc.getValues(), dimensionValues);
+          dims[desc.getIndex()] = getDimVals(desc.getValues(), dimensionValues, capabilities.isDictionaryEncoded());
           types[desc.getIndex()] = valType;
         }
       }
@@ -624,7 +694,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
     if (overflow != null) {
       // Merge overflow and non-overflow
-      int[][] newDims = new int[dims.length + overflow.size()][];
+      Comparable[][] newDims = new Comparable[dims.length + overflow.size()][];
       ValueType[] newTypes = new ValueType[dims.length + overflow.size()];
       System.arraycopy(dims, 0, newDims, 0, dims.length);
       System.arraycopy(types, 0, newTypes, 0, dims.length);
@@ -667,7 +737,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     return getFacts().lastKey().getTimestamp();
   }
 
-  private int[] getDimVals(final DimDim dimLookup, final List<Comparable> dimValues)
+  private Comparable[] getDimVals(final DimDim dimLookup, final List<Comparable> dimValues, boolean useDictionaryEncoding)
   {
     if (dimValues.size() == 0) {
       // NULL VALUE
@@ -679,16 +749,24 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       Comparable dimVal = dimValues.get(0);
       // For Strings, return an array of dictionary-encoded IDs
       // For numerics, return the numeric values directly
-      return new int[]{dimLookup.add(dimVal)};
+      if (useDictionaryEncoding) {
+        return new Comparable[]{dimLookup.add(dimVal)};
+      } else {
+        return new Comparable[]{dimVal};
+      }
     }
 
     Comparable[] dimArray = dimValues.toArray(new Comparable[dimValues.size()]);
     Arrays.sort(dimArray);
 
-    final int[] retVal = new int[dimArray.length];
+    final Comparable[] retVal = new Comparable[dimArray.length];
 
     for (int i = 0; i < dimArray.length; i++) {
-      retVal[i] = dimLookup.add(dimArray[i]);
+      if (useDictionaryEncoding) {
+        retVal[i] = dimLookup.add(dimArray[i]);
+      } else {
+        retVal[i] = dimArray[i];
+      }
     }
 
     return retVal;
@@ -752,6 +830,12 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     return dimSpec == null ? null : dimSpec.getValues();
   }
 
+  public Integer getDimensionIndex(String dimension)
+  {
+    DimensionDesc dimSpec = getDimension(dimension);
+    return dimSpec == null ? null : dimSpec.getIndex();
+  }
+
   public List<String> getDimensionOrder()
   {
     synchronized (dimensionDescs) {
@@ -764,7 +848,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
    * Index dimension ordering could be changed to initialize from DimensionsSpec after resolution of
    * https://github.com/druid-io/druid/issues/2011
    */
-  public void loadDimensionIterable(Iterable<String> oldDimensionOrder)
+  public void loadDimensionIterable(Iterable<String> oldDimensionOrder, Map<String, ColumnCapabilitiesImpl> oldColumnCapabilities)
   {
     synchronized (dimensionDescs) {
       if (!dimensionDescs.isEmpty()) {
@@ -772,8 +856,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       }
       for (String dim : oldDimensionOrder) {
         if (dimensionDescs.get(dim) == null) {
-          ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
-          capabilities.setType(ValueType.STRING);
+          ColumnCapabilitiesImpl capabilities = oldColumnCapabilities.get(dim);
           columnCapabilities.put(dim, capabilities);
           addNewDimension(dim, capabilities);
         }
@@ -859,12 +942,12 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
                 final TimeAndDims timeAndDims = input.getKey();
                 final int rowOffset = input.getValue();
 
-                int[][] theDims = timeAndDims.getDims(); //TODO: remove dictionary encoding for numerics later
+                Comparable[][] theDims = timeAndDims.getDims();
                 ValueType[] types = timeAndDims.getTypes();
 
                 Map<String, Object> theVals = Maps.newLinkedHashMap();
                 for (int i = 0; i < theDims.length; ++i) {
-                  int[] dim = theDims[i];
+                  Comparable[] dim = theDims[i];
                   ValueType type = types[i];
                   DimensionDesc dimensionDesc = dimensions.get(i);
                   if (dimensionDesc == null) {
@@ -875,8 +958,16 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
                     theVals.put(dimensionName, null);
                     continue;
                   }
+
+                  final ColumnCapabilities capabilities = dimensionDesc.getCapabilities();
+
                   if (dim.length == 1) {
-                    Comparable val = dimensionDesc.getValues().getValue(dim[0]);
+                    Comparable val;
+                    if (capabilities.isDictionaryEncoded()) {
+                      val = dimensionDesc.getValues().getValue((Integer) dim[0]);
+                    } else {
+                      val = dim[0];
+                    }
                     if (type == ValueType.STRING) {
                       val = Strings.nullToEmpty((String) val);
                     }
@@ -884,7 +975,12 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
                   } else {
                     Comparable[] dimVals = new Comparable[dim.length];
                     for (int j = 0; j < dimVals.length; j++) {
-                      Comparable val = dimensionDesc.getValues().getValue(dim[j]);
+                      Comparable val;
+                      if (capabilities.isDictionaryEncoded()) {
+                        val = dimensionDesc.getValues().getValue((Integer) dim[j]);
+                      } else {
+                        val = dim[j];
+                      }
                       if (type == ValueType.STRING) {
                         val = Strings.nullToEmpty((String) val);
                       }
@@ -1109,18 +1205,28 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   static final class TimeAndDims
   {
     private final long timestamp;
-    private final int[][] dims;
+    private final Comparable[][] dims;
     private final ValueType[] types;
+    private final boolean[] dictionaryEncodingFlags;
 
     TimeAndDims(
         long timestamp,
-        int[][] dims,
+        Comparable[][] dims,
         ValueType[] types
     )
     {
       this.timestamp = timestamp;
       this.dims = dims;
       this.types = types;
+      if (types == null) {
+        this.dictionaryEncodingFlags = new boolean[0];
+      } else {
+        this.dictionaryEncodingFlags = new boolean[types.length];
+        for (int idx = 0; idx < types.length; idx++) {
+          // For now, all Strings are dictionary encoded, all numeric dims are not.
+          dictionaryEncodingFlags[idx] = types[idx] == ValueType.STRING;
+        }
+      }
     }
 
     long getTimestamp()
@@ -1128,7 +1234,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       return timestamp;
     }
 
-    int[][] getDims()
+    Comparable[][] getDims()
     {
       return dims;
     }
@@ -1138,16 +1244,21 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       return types;
     }
 
+    public boolean[] getDictionaryEncodingFlags()
+    {
+      return dictionaryEncodingFlags;
+    }
+
     @Override
     public String toString()
     {
       return "TimeAndDims{" +
              "timestamp=" + new DateTime(timestamp) +
              ", dims=" + Lists.transform(
-          Arrays.asList(dims), new Function<int[], Object>()
+          Arrays.asList(dims), new Function<Comparable[], Object>()
           {
             @Override
-            public Object apply(@Nullable int[] input)
+            public Object apply(@Nullable Comparable[] input)
             {
               if (input == null || input.length == 0) {
                 return Arrays.asList("null");
@@ -1202,8 +1313,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
           return retVal;
         }
 
-        final int[] lhsIdxs = lhs.dims[index];
-        final int[] rhsIdxs = rhs.dims[index];
+        final Comparable[] lhsIdxs = lhs.dims[index];
+        final Comparable[] rhsIdxs = rhs.dims[index];
 
         if (lhsIdxs == null) {
           if (rhsIdxs == null) {
@@ -1218,13 +1329,28 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
         }
 
         retVal = Ints.compare(lhsIdxs.length, rhsIdxs.length);
+        boolean[] lhsDictionaryEncodingFlags = lhs.getDictionaryEncodingFlags();
+        boolean[] rhsDictionaryEncodingFlags = rhs.getDictionaryEncodingFlags();
 
         int valsIndex = 0;
         while (retVal == 0 && valsIndex < lhsIdxs.length) {
           if (lhsIdxs[valsIndex] != rhsIdxs[valsIndex]) {
             final DimDim dimLookup = dimValues.get(index);
-            final Comparable lhsVal = dimLookup.getValue(lhsIdxs[valsIndex]);
-            final Comparable rhsVal = dimLookup.getValue(rhsIdxs[valsIndex]);
+            final Comparable lhsVal;
+            final Comparable rhsVal;
+
+            if (lhsDictionaryEncodingFlags[index]) {
+              lhsVal = dimLookup.getValue((Integer) lhsIdxs[valsIndex]);
+            } else {
+              lhsVal = lhsIdxs[valsIndex];
+            }
+
+            if (rhsDictionaryEncodingFlags[index]) {
+              rhsVal = dimLookup.getValue((Integer) rhsIdxs[valsIndex]);
+            } else {
+              rhsVal = rhsIdxs[valsIndex];
+            }
+
             if (lhsVal != null && rhsVal != null) {
               retVal = lhsVal.compareTo(rhsVal);
             } else if (lhsVal == null ^ rhsVal == null) {

@@ -21,13 +21,31 @@ package io.druid.segment;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterators;
+import com.google.common.collect.Lists;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ColumnCapabilitiesImpl;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.List;
 
 public class NullDimensionSelector implements DimensionSelector
 {
+  private final ValueType type;
+  private ColumnCapabilitiesImpl capabilities;
+
+  public NullDimensionSelector(ValueType type)
+  {
+    this.type = type;
+    this.capabilities = new ColumnCapabilitiesImpl();
+    capabilities.setType(type);
+    if (type == ValueType.STRING) {
+      capabilities.setHasBitmapIndexes(true);
+      capabilities.setDictionaryEncoded(true);
+    }
+  }
 
   private static final IndexedInts SINGLETON = new IndexedInts() {
     @Override
@@ -80,5 +98,34 @@ public class NullDimensionSelector implements DimensionSelector
   public int lookupId(String name)
   {
     return Strings.isNullOrEmpty(name) ? 0 : -1;
+  }
+
+  @Override
+  public List<Comparable> getUnencodedRow()
+  {
+    List<Comparable> rowVals = Lists.newArrayList();
+    switch(type) {
+      case LONG:
+        rowVals.add(0L);
+        break;
+      case FLOAT:
+        rowVals.add(0f);
+        break;
+      default:
+        break;
+    }
+    return rowVals;
+  }
+
+  @Override
+  public Comparable getExtractedValueFromUnencoded(Comparable rowVal)
+  {
+    return rowVal;
+  }
+
+  @Override
+  public ColumnCapabilities getDimCapabilities()
+  {
+    return capabilities;
   }
 }

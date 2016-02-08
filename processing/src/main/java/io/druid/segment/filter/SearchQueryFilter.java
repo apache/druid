@@ -38,12 +38,13 @@ public class SearchQueryFilter extends DimensionPredicateFilter
   {
     super(
         dimension,
-        new Predicate<String>()
+        new Predicate()
         {
           @Override
-          public boolean apply(@Nullable String input)
+          public boolean apply(@Nullable Object input)
           {
-            return query.accept(input);
+            String inputStr = input == null ? null : input.toString();
+            return query.accept(inputStr);
           }
         }
     );

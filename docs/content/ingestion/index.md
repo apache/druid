@@ -250,6 +250,7 @@ This is a special variation of the JSON ParseSpec that lower cases all the colum
 | dimensions | JSON String array | The names of the dimensions. If this is an empty array, Druid will treat all columns that are not timestamp or metric columns as dimension columns. | yes |
 | dimensionExclusions | JSON String array | The names of dimensions to exclude from ingestion. | no (default == [] |
 | spatialDimensions | JSON Object array | An array of [spatial dimensions](../development/geo.html) | no (default == [] |
+| dimensionTypes | JSON String array | The types of dimensions, expressed in the same order as the 'dimensions' field. Supported types are LONG, FLOAT, and STRING. | no, defaults to STRING for all dimensions |
 
 ## GranularitySpec
 

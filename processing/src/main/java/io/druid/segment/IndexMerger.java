@@ -88,10 +88,13 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.nio.MappedByteBuffer;
+import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
+import java.nio.channels.WritableByteChannel;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -587,7 +590,7 @@ public class IndexMerger
         ColumnCapabilities capabilities = adapter.getCapabilities(dimension);
         if (mergedCapabilities == null) {
           mergedCapabilities = new ColumnCapabilitiesImpl();
-          mergedCapabilities.setType(ValueType.STRING);
+          mergedCapabilities.setType(null);
         }
         columnCapabilities.put(dimension, mergedCapabilities.merge(capabilities));
       }
@@ -651,6 +654,12 @@ public class IndexMerger
     }
 
     for (String dimension : mergedDimensions) {
+      if (!columnCapabilities.get(dimension).isDictionaryEncoded()) {
+        convertMissingDimsFlags.add(false);
+        dimOuts.add(null);
+        continue;
+      }
+
       final GenericIndexedWriter<String> writer = new GenericIndexedWriter<String>(
           ioPeon, dimension, GenericIndexed.STRING_STRATEGY
       );
@@ -728,13 +737,19 @@ public class IndexMerger
     progress.progress();
     startTime = System.currentTimeMillis();
 
+    List<ColumnCapabilitiesImpl> dimCapabilities = new ArrayList<>();
+    for (String dimension : mergedDimensions) {
+      dimCapabilities.add(columnCapabilities.get(dimension));
+    }
+
     Iterable<Rowboat> theRows = makeRowIterable(
         indexes,
         mergedDimensions,
         mergedMetrics,
         dimConversions,
         convertMissingDimsFlags,
-        rowMergerFn
+        rowMergerFn,
+        dimCapabilities
     );
 
     CompressedLongsSupplierSerializer timeWriter = CompressedLongsSupplierSerializer.create(
@@ -744,10 +759,30 @@ public class IndexMerger
     timeWriter.open();
 
     ArrayList<VSizeIndexedWriter> forwardDimWriters = Lists.newArrayListWithCapacity(mergedDimensions.size());
+    ArrayList<MetricColumnSerializer> forwardNumericDimWriters = Lists.newArrayListWithCapacity(mergedDimensions.size());
     for (String dimension : mergedDimensions) {
-      VSizeIndexedWriter writer = new VSizeIndexedWriter(ioPeon, dimension, dimensionCardinalities.get(dimension));
-      writer.open();
-      forwardDimWriters.add(writer);
+      if (columnCapabilities.get(dimension).isDictionaryEncoded()) {
+        VSizeIndexedWriter writer = new VSizeIndexedWriter(ioPeon, dimension, dimensionCardinalities.get(dimension));
+        writer.open();
+        forwardDimWriters.add(writer);
+        forwardNumericDimWriters.add(null);
+      } else {
+        MetricColumnSerializer numWriter;
+        ValueType type = columnCapabilities.get(dimension).getType();
+        switch (type) {
+          case LONG:
+            numWriter = new LongMetricColumnSerializer(dimension, v8OutDir, ioPeon);
+            break;
+          case FLOAT:
+            numWriter = new FloatMetricColumnSerializer(dimension, v8OutDir, ioPeon);
+            break;
+          default:
+            throw new ISE("Unknown type[%s]", type);
+        }
+        numWriter.open();
+        forwardDimWriters.add(null);
+        forwardNumericDimWriters.add(numWriter);
+      }
     }
 
     ArrayList<MetricColumnSerializer> metWriters = Lists.newArrayListWithCapacity(mergedMetrics.size());
@@ -797,12 +832,21 @@ public class IndexMerger
         metWriters.get(i).serialize(metrics[i]);
       }
 
-      int[][] dims = theRow.getDims();
+      Comparable[][] dims = theRow.getDims();
       for (int i = 0; i < dims.length; ++i) {
-        List<Integer> listToWrite = (i >= dims.length || dims[i] == null)
+        String dimName = mergedDimensions.get(i);
+
+        List<Comparable> listToWrite = (i >= dims.length || dims[i] == null)
                                     ? null
-                                    : Ints.asList(dims[i]);
-        forwardDimWriters.get(i).write(listToWrite);
+                                    : Lists.newArrayList(dims[i]);
+
+        if (columnCapabilities.get(dimName).isDictionaryEncoded()) {
+          forwardDimWriters.get(i).add(listToWrite);
+        } else {
+          //TODO: Only single-value numerics are supported right now. Implement multi-value support.
+          forwardNumericDimWriters.get(i).serialize(dims[i][0]);
+        }
+
       }
 
       for (Map.Entry<Integer, TreeSet<Integer>> comprisedRow : theRow.getComprisedRows().entrySet()) {
@@ -835,8 +879,16 @@ public class IndexMerger
     IndexIO.checkFileSize(timeFile);
 
     for (int i = 0; i < mergedDimensions.size(); ++i) {
-      forwardDimWriters.get(i).close();
-      ByteStreams.copy(forwardDimWriters.get(i).combineStreams(), dimOuts.get(i));
+      if (forwardDimWriters.get(i) != null) {
+        forwardDimWriters.get(i).close();
+        ByteStreams.copy(forwardDimWriters.get(i).combineStreams(), dimOuts.get(i));
+      }
+
+      if (forwardNumericDimWriters.get(i) != null) {
+        forwardNumericDimWriters.get(i).close(
+            IndexIO.makeNumericDimFile(v8OutDir, mergedDimensions.get(i), IndexIO.BYTE_ORDER)
+        );
+      }
     }
 
     for (MetricColumnSerializer metWriter : metWriters) {
@@ -865,6 +917,10 @@ public class IndexMerger
     for (int i = 0; i < mergedDimensions.size(); ++i) {
       long dimStartTime = System.currentTimeMillis();
       String dimension = mergedDimensions.get(i);
+
+      if (!columnCapabilities.get(dimension).isDictionaryEncoded()) {
+        continue;
+      }
 
       File dimOutFile = dimOuts.get(i).getFile();
       final MappedByteBuffer dimValsMapped = Files.map(dimOutFile);
@@ -957,12 +1013,27 @@ public class IndexMerger
 
     log.info("outDir[%s] completed inverted.drd in %,d millis.", v8OutDir, System.currentTimeMillis() - startTime);
 
+    Function<String, String> dimFilenameFunction = new Function<String, String>()
+    {
+      @Override
+      public String apply(@Nullable String input)
+      {
+        String formatString;
+        if (columnCapabilities.get(input).isDictionaryEncoded()) {
+          formatString = "dim_%s.drd";
+        } else {
+          formatString = String.format("numeric_dim_%%s_%s.drd", IndexIO.BYTE_ORDER);
+        }
+        return GuavaUtils.formatFunction(formatString).apply(input);
+      }
+    };
+
     final ArrayList<String> expectedFiles = Lists.newArrayList(
         Iterables.concat(
             Arrays.asList(
                 "index.drd", "inverted.drd", "spatial.drd", String.format("time_%s.drd", IndexIO.BYTE_ORDER)
             ),
-            Iterables.transform(mergedDimensions, GuavaUtils.formatFunction("dim_%s.drd")),
+            Iterables.transform(mergedDimensions, dimFilenameFunction),
             Iterables.transform(
                 mergedMetrics, GuavaUtils.formatFunction(String.format("met_%%s_%s.drd", IndexIO.BYTE_ORDER))
             )
@@ -1018,7 +1089,8 @@ public class IndexMerger
       final List<String> mergedMetrics,
       ArrayList<Map<String, IntBuffer>> dimConversions,
       ArrayList<Boolean> convertMissingDimsFlags,
-      Function<ArrayList<Iterable<Rowboat>>, Iterable<Rowboat>> rowMergerFn
+      Function<ArrayList<Iterable<Rowboat>>, Iterable<Rowboat>> rowMergerFn,
+      final List<ColumnCapabilitiesImpl> dimCapabilities
   )
   {
     ArrayList<Iterable<Rowboat>> boats = Lists.newArrayListWithCapacity(indexes.size());
@@ -1026,8 +1098,8 @@ public class IndexMerger
     for (int i = 0; i < indexes.size(); ++i) {
       final IndexableAdapter adapter = indexes.get(i);
 
-      final int[] dimLookup = toLookupMap(adapter.getDimensionNames(), mergedDimensions);
-      final int[] metricLookup = toLookupMap(adapter.getMetricNames(), mergedMetrics);
+      final int[] dimLookup = getColumnIndexReorderingMap(adapter.getDimensionNames(), mergedDimensions);
+      final int[] metricLookup = getColumnIndexReorderingMap(adapter.getMetricNames(), mergedMetrics);
 
       Iterable<Rowboat> target = indexes.get(i).getRows();
       if (dimLookup != null || metricLookup != null) {
@@ -1039,14 +1111,18 @@ public class IndexMerger
               @Override
               public Rowboat apply(Rowboat input)
               {
-                int[][] newDims = input.getDims();
+                Comparable[][] newDims = new Comparable[mergedDimensions.size()][];
                 if (dimLookup != null) {
-                  newDims = new int[mergedDimensions.size()][];
+                  newDims = new Comparable[mergedDimensions.size()][];
                   int j = 0;
-                  for (int[] dim : input.getDims()) {
+                  for (Comparable[] dim : input.getDims()) {
                     newDims[dimLookup[j]] = dim;
                     j++;
                   }
+                } else {
+                  // It's possible for getColumnIndexReorderingMap to return null when
+                  // both column lists are identical. Copy the old array, no dimension reordering is needed.
+                  newDims = input.getDims();
                 }
 
                 Object[] newMetrics = input.getMetrics();
@@ -1057,6 +1133,8 @@ public class IndexMerger
                     newMetrics[metricLookup[j]] = met;
                     j++;
                   }
+                } else {
+                  newMetrics = input.getMetrics();
                 }
 
                 return new Rowboat(
@@ -1071,7 +1149,7 @@ public class IndexMerger
       }
       boats.add(
           new MMappedIndexRowIterable(
-              target, mergedDimensions, dimConversions.get(i), i, convertMissingDimsFlags
+              target, mergedDimensions, dimConversions.get(i), i, convertMissingDimsFlags, dimCapabilities
           )
       );
     }
@@ -1079,14 +1157,16 @@ public class IndexMerger
     return rowMergerFn.apply(boats);
   }
 
-  private int[] toLookupMap(Indexed<String> indexed, List<String> values)
+  // If an adapter's column list differs from the merged column list across multiple indexes,
+  // return an array that maps the adapter's column orderings to the larger, merged column ordering
+  private int[] getColumnIndexReorderingMap(Indexed<String> adapterColumnNames, List<String> mergedColumnNames)
   {
-    if (isSame(indexed, values)) {
-      return null;  // no need to convert
+    if (isSame(adapterColumnNames, mergedColumnNames)) {
+      return null;  // no need to convert if column lists are identical
     }
-    int[] dimLookup = new int[values.size()];
-    for (int i = 0; i < indexed.size(); i++) {
-      dimLookup[i] = values.indexOf(indexed.get(i));
+    int[] dimLookup = new int[mergedColumnNames.size()];
+    for (int i = 0; i < adapterColumnNames.size(); i++) {
+      dimLookup[i] = mergedColumnNames.indexOf(adapterColumnNames.get(i));
     }
     return dimLookup;
   }
@@ -1289,14 +1369,19 @@ public class IndexMerger
     private final Map<String, IntBuffer> converters;
     private final int indexNumber;
     private final ArrayList<Boolean> convertMissingDimsFlags;
-    private static final int[] EMPTY_STR_DIM = new int[]{0};
+    private final List<ColumnCapabilitiesImpl> dimCapabilities;
+    private static final Comparable[] EMPTY_STR_DIM = new Comparable[]{0};
+    private static final Comparable[] EMPTY_LONG_DIM = new Comparable[]{0L};
+    private static final Comparable[] EMPTY_FLOAT_DIM = new Comparable[]{0.0f};
+
 
     MMappedIndexRowIterable(
         Iterable<Rowboat> index,
         List<String> convertedDims,
         Map<String, IntBuffer> converters,
         int indexNumber,
-        ArrayList<Boolean> convertMissingDimsFlags
+        ArrayList<Boolean> convertMissingDimsFlags,
+        final List<ColumnCapabilitiesImpl> dimCapabilities
     )
     {
       this.index = index;
@@ -1304,6 +1389,7 @@ public class IndexMerger
       this.converters = converters;
       this.indexNumber = indexNumber;
       this.convertMissingDimsFlags = convertMissingDimsFlags;
+      this.dimCapabilities = dimCapabilities;
     }
 
     public Iterable<Rowboat> getIndex()
@@ -1333,28 +1419,49 @@ public class IndexMerger
             @Override
             public Rowboat apply(@Nullable Rowboat input)
             {
-              int[][] dims = input.getDims();
-              int[][] newDims = new int[convertedDims.size()][];
+              Comparable[][] dims = input.getDims();
+              Comparable[][] newDims = new Comparable[convertedDims.size()][];
               for (int i = 0; i < convertedDims.size(); ++i) {
+                boolean isDictionaryEncoded = dimCapabilities.get(i).isDictionaryEncoded();
                 IntBuffer converter = converterArray[i];
                 if (i >= dims.length) {
                   continue;
                 }
 
-                if (dims[i] == null && convertMissingDimsFlags.get(i)) {
-                  newDims[i] = EMPTY_STR_DIM;
-                  continue;
+                // For strings, convert missing values to null/empty if conversion flag is set
+                // But if bitmap/dictionary is not used, always convert missing to 0
+                if (dims[i] == null) {
+                  if (!isDictionaryEncoded || convertMissingDimsFlags.get(i)) {
+                    switch (dimCapabilities.get(i).getType()) {
+                      case STRING:
+                        newDims[i] = EMPTY_STR_DIM;
+                        break;
+                      case LONG:
+                        newDims[i] = EMPTY_LONG_DIM;
+                        break;
+                      case FLOAT:
+                        newDims[i] = EMPTY_FLOAT_DIM;
+                        break;
+                      default:
+                        break;
+                    }
+                    continue;
+                  }
                 }
 
-                if (converter == null) {
+                if (isDictionaryEncoded && converter == null) {
                   newDims[i] = dims[i];
                   continue;
                 }
 
-                newDims[i] = new int[dims[i].length];
+                newDims[i] = new Comparable[dims[i].length];
 
                 for (int j = 0; j < dims[i].length; ++j) {
-                  newDims[i][j] = converter.get(dims[i][j]);
+                  if (isDictionaryEncoded) {
+                    newDims[i][j] = converter.get((Integer) dims[i][j]);
+                  } else {
+                    newDims[i][j] = dims[i][j];
+                  }
                 }
               }
 

@@ -159,7 +159,8 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       ColumnSelectorFactory columnSelectorFactory = makeColumnSelectorFactory(
           agg,
           rowSupplier,
-          deserializeComplexMetrics
+          deserializeComplexMetrics,
+          getColumnCapabilities()
       );
 
       selectors.put(

@@ -19,30 +19,37 @@
 
 package io.druid.query.topn;
 
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.UnencodedDimensionSelector;
 import io.druid.segment.data.IndexedInts;
 
+import java.util.List;
 import java.util.Map;
 
 /**
  * This has to be its own strategy because the pooled topn algorithm assumes each index is unique, and cannot handle multiple index numerals referencing the same dimension value.
  */
-public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][], Map<String, Aggregator[]>, TopNParams>
+public class DimExtractionTopNAlgorithm
+    extends BaseTopNAlgorithm<Aggregator[][], Map<Comparable, Aggregator[]>, TopNParams>
 {
   private final TopNQuery query;
+  private final boolean dimHasDictionaryEncoding;
 
   public DimExtractionTopNAlgorithm(
       Capabilities capabilities,
-      TopNQuery query
+      TopNQuery query,
+      boolean dimHasDictionaryEncoding
   )
   {
     super(capabilities);
 
     this.query = query;
+    this.dimHasDictionaryEncoding = dimHasDictionaryEncoding;
   }
 
   @Override
@@ -62,6 +69,10 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
   @Override
   protected Aggregator[][] makeDimValSelector(TopNParams params, int numProcessed, int numToProcess)
   {
+    if (!dimHasDictionaryEncoding) {
+      return null;
+    }
+
     final AggregatorArrayProvider provider = new AggregatorArrayProvider(
         params.getDimSelector(),
         query,
@@ -81,7 +92,7 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
   }
 
   @Override
-  protected Map<String, Aggregator[]> makeDimValAggregateStore(TopNParams params)
+  protected Map<Comparable, Aggregator[]> makeDimValAggregateStore(TopNParams params)
   {
     return Maps.newHashMap();
   }
@@ -90,36 +101,53 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
   public void scanAndAggregate(
       TopNParams params,
       Aggregator[][] rowSelector,
-      Map<String, Aggregator[]> aggregatesStore,
+      Map<Comparable, Aggregator[]> aggregatesStore,
       int numProcessed
   )
   {
     final Cursor cursor = params.getCursor();
     final DimensionSelector dimSelector = params.getDimSelector();
 
-    while (!cursor.isDone()) {
-      final IndexedInts dimValues = dimSelector.getRow();
+    if (dimHasDictionaryEncoding) {
+      while (!cursor.isDone()) {
+        final IndexedInts dimValues = dimSelector.getRow();
+        for (int i = 0; i < dimValues.size(); ++i) {
+          final int dimIndex = dimValues.get(i);
+          Aggregator[] theAggregators = rowSelector[dimIndex];
+          if (theAggregators == null) {
+            final String key = dimSelector.lookupName(dimIndex);
+            theAggregators = aggregatesStore.get(key);
+            if (theAggregators == null) {
+              theAggregators = makeAggregators(cursor, query.getAggregatorSpecs());
+              aggregatesStore.put(key, theAggregators);
+            }
+            rowSelector[dimIndex] = theAggregators;
+          }
 
-      for (int i = 0; i < dimValues.size(); ++i) {
-
-        final int dimIndex = dimValues.get(i);
-        Aggregator[] theAggregators = rowSelector[dimIndex];
-        if (theAggregators == null) {
-          final String key = dimSelector.lookupName(dimIndex);
-          theAggregators = aggregatesStore.get(key);
+          for (Aggregator aggregator : theAggregators) {
+            aggregator.aggregate();
+          }
+        }
+        cursor.advance();
+      }
+    } else {
+      while (!cursor.isDone()) {
+        final List<Comparable> dimValues = dimSelector.getUnencodedRow();
+        // Use the aggregatesStore directly since there is no encoding
+        for (Comparable key : dimValues) {
+          key = dimSelector.getExtractedValueFromUnencoded(key);
+          Aggregator[] theAggregators = aggregatesStore.get(key);
           if (theAggregators == null) {
             theAggregators = makeAggregators(cursor, query.getAggregatorSpecs());
             aggregatesStore.put(key, theAggregators);
           }
-          rowSelector[dimIndex] = theAggregators;
+          for (Aggregator aggregator : theAggregators) {
+            aggregator.aggregate();
+          }
         }
 
-        for (Aggregator aggregator : theAggregators) {
-          aggregator.aggregate();
-        }
+        cursor.advance();
       }
-
-      cursor.advance();
     }
   }
 
@@ -127,11 +155,11 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
   protected void updateResults(
       TopNParams params,
       Aggregator[][] rowSelector,
-      Map<String, Aggregator[]> aggregatesStore,
+      Map<Comparable, Aggregator[]> aggregatesStore,
       TopNResultBuilder resultBuilder
   )
   {
-    for (Map.Entry<String, Aggregator[]> entry : aggregatesStore.entrySet()) {
+    for (Map.Entry<Comparable, Aggregator[]> entry : aggregatesStore.entrySet()) {
       Aggregator[] aggs = entry.getValue();
       if (aggs != null && aggs.length > 0) {
         Object[] vals = new Object[aggs.length];
@@ -149,7 +177,7 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
   }
 
   @Override
-  protected void closeAggregators(Map<String, Aggregator[]> stringMap)
+  protected void closeAggregators(Map<Comparable, Aggregator[]> stringMap)
   {
     for (Aggregator[] aggregators : stringMap.values()) {
       for (Aggregator agg : aggregators) {

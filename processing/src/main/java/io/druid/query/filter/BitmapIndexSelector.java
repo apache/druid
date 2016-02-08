@@ -19,15 +19,25 @@
 
 package io.druid.query.filter;
 
+import com.google.common.base.Predicate;
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.spatial.ImmutableRTree;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 
 /**
  */
 public interface BitmapIndexSelector
 {
+  public boolean hasBitmapIndexes(String dimension);
+  public ValueType getDimensionType(String dimension);
+
+  // for scans on dims that don't have bitmap indexes
+  public ImmutableBitmap getBitmapIndexFromColumnScan(String dimension, String value);
+  public ImmutableBitmap getBitmapIndexFromColumnScan(String dimension, Predicate predicate);
+
+  // for scans with bitmap indexes
   public Indexed<String> getDimensionValues(String dimension);
   public int getNumRows();
   public BitmapFactory getBitmapFactory();

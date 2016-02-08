@@ -32,13 +32,21 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ColumnCapabilitiesImpl;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.ArrayBasedIndexedInts;
 import io.druid.segment.data.IndexedInts;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class FilteredAggregatorTest
 {
+  private static final List<String> VALID_DIMENSIONS = Lists.newArrayList("dim", "dim_long", "dim_float");
+
   private void aggregate(TestFloatColumnSelector selector, FilteredAggregator agg)
   {
     agg.aggregate();
@@ -79,7 +87,7 @@ public class FilteredAggregatorTest
         final String dimensionName = dimensionSpec.getDimension();
         final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
 
-        if (dimensionName.equals("dim")) {
+        if (VALID_DIMENSIONS.contains(dimensionName)) {
           return dimensionSpec.decorate(
               new DimensionSelector()
               {
@@ -123,6 +131,59 @@ public class FilteredAggregatorTest
                     default:
                       throw new IllegalArgumentException();
                   }
+                }
+
+                @Override
+                public List<Comparable> getUnencodedRow()
+                {
+
+                  List<Comparable> ret = new ArrayList<Comparable>();
+                  if (dimensionName.equals("dim_float")) {
+                    if (selector.getIndex() % 3 == 2) {
+                      ret.add(55000.0f);
+                    } else {
+                      ret.add(140.0f);
+                    }
+                  }
+
+                  if (dimensionName.equals("dim_long")) {
+                    if (selector.getIndex() % 3 == 2) {
+                      ret.add(9001L);
+                    } else {
+                      ret.add(255L);
+                    }
+                  }
+                  return ret;
+                }
+
+                @Override
+                public Comparable getExtractedValueFromUnencoded(Comparable rowVal)
+                {
+                  return rowVal;
+                }
+
+                @Override
+                public ColumnCapabilities getDimCapabilities()
+                {
+                  ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
+                  if (dimensionName.equals("dim_float")) {
+                    capabilities.setHasBitmapIndexes(false);
+                    capabilities.setDictionaryEncoded(false);
+                    capabilities.setType(ValueType.FLOAT);
+                  }
+                  if (dimensionName.equals("dim_long")) {
+                    capabilities.setHasBitmapIndexes(false);
+                    capabilities.setDictionaryEncoded(false);
+                    capabilities.setType(ValueType.LONG);
+                  }
+                  if (dimensionName.equals("dim")) {
+                    capabilities.setHasBitmapIndexes(true);
+                    capabilities.setDictionaryEncoded(true);
+                    capabilities.setType(ValueType.STRING);
+                  }
+
+
+                  return capabilities;
                 }
               }
           );
@@ -222,6 +283,34 @@ public class FilteredAggregatorTest
     FilteredAggregatorFactory factory = new FilteredAggregatorFactory(
         new DoubleSumAggregatorFactory("billy", "value"),
         new AndDimFilter(Lists.<DimFilter>newArrayList(new NotDimFilter(new SelectorDimFilter("dim", "b")), new SelectorDimFilter("dim", "a"))));
+
+    FilteredAggregator agg = (FilteredAggregator) factory.factorize(
+        makeColumnSelector(selector)
+    );
+
+    Assert.assertEquals("billy", agg.getName());
+
+    double expectedFirst = new Float(values[0]).doubleValue();
+    double expectedSecond = new Float(values[1]).doubleValue() + expectedFirst;
+    double expectedThird = expectedSecond;
+    assertValues(agg, selector, expectedFirst, expectedSecond, expectedThird);
+  }
+
+  @Test
+  public void testAggregateWithLongAndFloatFilter()
+  {
+    final float[] values = {0.15f, 0.27f};
+    final TestFloatColumnSelector selector = new TestFloatColumnSelector(values);
+
+    FilteredAggregatorFactory factory = new FilteredAggregatorFactory(
+        new DoubleSumAggregatorFactory("billy", "value"),
+        new AndDimFilter(Lists.<DimFilter>newArrayList(
+            new NotDimFilter(new SelectorDimFilter("dim_long", "9001")),
+            new NotDimFilter(new SelectorDimFilter("dim_float", "55000.0")),
+            new SelectorDimFilter("dim_long", "255"),
+            new SelectorDimFilter("dim_float", "140.0")
+        ))
+    );
 
     FilteredAggregator agg = (FilteredAggregator) factory.factorize(
         makeColumnSelector(selector)

@@ -113,7 +113,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
 
     int rowNum = 0;
     for (IncrementalIndex.TimeAndDims timeAndDims : index.getFacts().keySet()) {
-      final int[][] dims = timeAndDims.getDims();
+      final Comparable[][] dims = timeAndDims.getDims();
 
       for (IncrementalIndex.DimensionDesc dimension : dimensions) {
         final int dimIndex = dimension.getIndex();
@@ -122,23 +122,26 @@ public class IncrementalIndexAdapter implements IndexableAdapter
           hasNullValueDimensions.add(dimension.getName());
           continue;
         }
+        final ColumnCapabilities capabilities = dimension.getCapabilities();
         final IncrementalIndex.DimDim values = dimension.getValues();
-        if (hasNullValue(values, dims[dimIndex])) {
+        if (hasNullValue(values, dims[dimIndex], capabilities.isDictionaryEncoded())) {
           hasNullValueDimensions.add(dimension.getName());
         }
 
-        final MutableBitmap[] bitmapIndexes = indexer.invertedIndexes;
+        if(capabilities.hasBitmapIndexes()) {
+          final MutableBitmap[] bitmapIndexes = indexer.invertedIndexes;
 
-        for (Comparable dimIdxComparable : dims[dimIndex]) {
-          Integer dimIdx = (Integer) dimIdxComparable;
-          if (bitmapIndexes[dimIdx] == null) {
-            bitmapIndexes[dimIdx] = bitmapFactory.makeEmptyMutableBitmap();
-          }
-          try {
-            bitmapIndexes[dimIdx].add(rowNum);
-          }
-          catch (Exception e) {
-            log.info(e.toString());
+          for (Comparable dimIdxComparable : dims[dimIndex]) {
+            Integer dimIdx = (Integer) dimIdxComparable;
+            if (bitmapIndexes[dimIdx] == null) {
+              bitmapIndexes[dimIdx] = bitmapFactory.makeEmptyMutableBitmap();
+            }
+            try {
+              bitmapIndexes[dimIdx].add(rowNum);
+            }
+            catch (Exception e) {
+              log.info(e.toString());
+            }
           }
         }
       }
@@ -229,7 +232,11 @@ public class IncrementalIndexAdapter implements IndexableAdapter
         final List<IncrementalIndex.DimensionDesc> dimensions = index.getDimensions();
         final IncrementalIndex.SortedDimLookup[] sortedDimLookups = new IncrementalIndex.SortedDimLookup[dimensions.size()];
         for (IncrementalIndex.DimensionDesc dimension : dimensions) {
-          sortedDimLookups[dimension.getIndex()] = indexers.get(dimension.getName()).getDimLookup();
+          if (dimension.getCapabilities().isDictionaryEncoded()) {
+            sortedDimLookups[dimension.getIndex()] = indexers.get(dimension.getName()).getDimLookup();
+          } else {
+            sortedDimLookups[dimension.getIndex()] = null;
+          }
         }
 
         /*
@@ -247,27 +254,32 @@ public class IncrementalIndexAdapter implements IndexableAdapter
               public Rowboat apply(Map.Entry<IncrementalIndex.TimeAndDims, Integer> input)
               {
                 final IncrementalIndex.TimeAndDims timeAndDims = input.getKey();
-                final int[][] dimValues = timeAndDims.getDims();
+                final Comparable[][] dimValues = timeAndDims.getDims();
                 final int rowOffset = input.getValue();
 
-                int[][] dims = new int[dimValues.length][];
+                Comparable[][] dims = new Comparable[dimValues.length][];
                 for (IncrementalIndex.DimensionDesc dimension : dimensions) {
                   final int dimIndex = dimension.getIndex();
+                  final ColumnCapabilities capabilities = dimension.getCapabilities();
 
                   if (dimIndex >= dimValues.length || dimValues[dimIndex] == null) {
                     continue;
                   }
 
-                  dims[dimIndex] = new int[dimValues[dimIndex].length];
+                  dims[dimIndex] = new Comparable[dimValues[dimIndex].length];
 
                   if (dimIndex >= dims.length || dims[dimIndex] == null) {
                     continue;
                   }
 
-                  for (int i = 0; i < dimValues[dimIndex].length; ++i) {
-                    dims[dimIndex][i] = sortedDimLookups[dimIndex].getSortedIdFromUnsortedId(dimValues[dimIndex][i]);
-                    //TODO: in later PR, Rowboat will use Comparable[][] instead of int[][]
-                    // Can remove dictionary encoding for numeric dims then.
+                  if (capabilities.isDictionaryEncoded()) {
+                    for (int i = 0; i < dimValues[dimIndex].length; ++i) {
+                      dims[dimIndex][i] = sortedDimLookups[dimIndex].getSortedIdFromUnsortedId((Integer) dimValues[dimIndex][i]);
+                    }
+                  } else {
+                    for (int i = 0; i < dimValues[dimIndex].length; ++i) {
+                      dims[dimIndex][i] = dimValues[dimIndex][i];
+                    }
                   }
                 }
 
@@ -324,13 +336,13 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     return index.getCapabilities(column);
   }
 
-  private boolean hasNullValue(IncrementalIndex.DimDim dimDim, int[] dimIndices)
+  private boolean hasNullValue(IncrementalIndex.DimDim dimDim, Comparable[] dimIndices, boolean useDictionaryEncoding)
   {
     if (dimIndices == null || dimIndices.length == 0) {
       return true;
     }
-    for (int dimIndex : dimIndices) {
-      Comparable val = dimDim.getValue(dimIndex);
+    for (Comparable dimIndex : dimIndices) {
+      Comparable val = useDictionaryEncoding ? dimDim.getValue((Integer) dimIndex) : dimIndex;
 
       if (val == null) {
         return true;

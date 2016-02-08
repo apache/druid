@@ -17,7 +17,13 @@
  * under the License.
  */
 
-package io.druid.segment;import io.druid.segment.data.IndexedInts;
+package io.druid.segment;
+
+import io.druid.query.extraction.ExtractionFn;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.data.IndexedInts;
+
+import java.util.List;
 
 /**
  */
@@ -79,4 +85,10 @@ public interface DimensionSelector
    * @return the id for the given field name
    */
   public int lookupId(String name);
+
+  public List<Comparable> getUnencodedRow();
+
+  public Comparable getExtractedValueFromUnencoded(Comparable rowVal);
+
+  public ColumnCapabilities getDimCapabilities();
 }

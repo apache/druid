@@ -38,10 +38,10 @@ public class LexicographicTopNMetricSpec implements TopNMetricSpec
 {
   private static final byte CACHE_TYPE_ID = 0x1;
 
-  private static Comparator<String> comparator = new Comparator<String>()
+  private static Comparator<Comparable> comparator = new Comparator<Comparable>()
   {
     @Override
-    public int compare(String s, String s2)
+    public int compare(Comparable s, Comparable s2)
     {
       // Avoid conversion to bytes for equal references
       if(s == s2){
@@ -56,8 +56,8 @@ public class LexicographicTopNMetricSpec implements TopNMetricSpec
       }
 
       return UnsignedBytes.lexicographicalComparator().compare(
-          StringUtils.toUtf8(s),
-          StringUtils.toUtf8(s2)
+          StringUtils.toUtf8(s.toString()),
+          StringUtils.toUtf8(s2.toString())
       );
     }
   };

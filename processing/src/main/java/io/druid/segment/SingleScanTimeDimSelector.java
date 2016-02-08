@@ -22,10 +22,12 @@ package io.druid.segment;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.data.IndexedInts;
 
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 public class SingleScanTimeDimSelector implements DimensionSelector
@@ -147,5 +149,23 @@ public class SingleScanTimeDimSelector implements DimensionSelector
   public int lookupId(String name)
   {
     throw new UnsupportedOperationException("time column does not support lookups");
+  }
+
+  @Override
+  public List<Comparable> getUnencodedRow()
+  {
+    throw new UnsupportedOperationException("time column does not support getUnencodedRow()");
+  }
+
+  @Override
+  public Comparable getExtractedValueFromUnencoded(Comparable rowVal)
+  {
+    throw new UnsupportedOperationException("getExtractedValueFromUnencoded() is not supported.");
+  }
+
+  @Override
+  public ColumnCapabilities getDimCapabilities()
+  {
+    throw new UnsupportedOperationException("getDimCapabilities not supprted yet");
   }
 }

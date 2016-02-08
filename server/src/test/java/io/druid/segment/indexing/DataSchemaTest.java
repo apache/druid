@@ -173,7 +173,7 @@ public class DataSchemaTest
                      + "\"parseSpec\":{"
                      + "\"format\":\"json\","
                      + "\"timestampSpec\":{\"column\":\"xXx\", \"format\": \"auto\", \"missingValue\": null},"
-                     + "\"dimensionsSpec\":{\"dimensions\":[], \"dimensionExclusions\":[], \"spatialDimensions\":[]},"
+                     + "\"dimensionsSpec\":{\"dimensions\":[], \"dimensionExclusions\":[], \"spatialDimensions\":[], \"dimensionTypes\":[]},"
                      + "\"flattenSpec\":{\"useFieldDiscovery\":true, \"fields\":[]},"
                      + "\"featureSpec\":{}},"
                      + "\"encoding\":\"UTF-8\""
