@@ -35,6 +35,7 @@ import com.metamx.common.logger.Logger;
 import io.druid.indexer.updater.HadoopDruidConverterConfig;
 import io.druid.segment.ProgressIndicator;
 import io.druid.segment.SegmentUtils;
+import io.druid.segment.loading.DataSegmentPusherUtil;
 import io.druid.timeline.DataSegment;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -48,8 +49,6 @@ import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskAttemptID;
 import org.apache.hadoop.util.Progressable;
 import org.joda.time.DateTime;
-import org.joda.time.Interval;
-import org.joda.time.format.ISODateTimeFormat;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -545,34 +544,13 @@ public class JobHelper
   public static Path makeSegmentOutputPath(
       Path basePath,
       FileSystem fileSystem,
-      String dataSource,
-      String version,
-      Interval interval,
-      int partitionNum
+      DataSegment segment
   )
   {
-    Path outputPath = new Path(prependFSIfNullScheme(fileSystem, basePath), "./" + dataSource);
-    if ("hdfs".equals(fileSystem.getScheme())) {
-      outputPath = new Path(
-          outputPath, String.format(
-          "./%s_%s",
-          interval.getStart().toString(ISODateTimeFormat.basicDateTime()),
-          interval.getEnd().toString(ISODateTimeFormat.basicDateTime())
-      )
-      );
-      outputPath = new Path(outputPath, version.replace(":", "_"));
-    } else {
-      outputPath = new Path(
-          outputPath, String.format(
-          "./%s_%s",
-          interval.getStart().toString(),
-          interval.getEnd().toString()
-      )
-      );
-      outputPath = new Path(outputPath, String.format("./%s", version));
-    }
-    outputPath = new Path(outputPath, Integer.toString(partitionNum));
-    return outputPath;
+    String segmentDir = "hdfs".equals(fileSystem.getScheme())
+                        ? DataSegmentPusherUtil.getHdfsStorageDir(segment)
+                        : DataSegmentPusherUtil.getStorageDir(segment);
+    return new Path(prependFSIfNullScheme(fileSystem, basePath), String.format("./%s", segmentDir));
   }
 
   /**

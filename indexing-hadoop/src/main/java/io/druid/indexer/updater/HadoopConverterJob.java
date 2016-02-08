@@ -539,10 +539,7 @@ public class HadoopConverterJob
           JobHelper.makeSegmentOutputPath(
               baseOutputPath,
               outputFS,
-              finalSegmentTemplate.getDataSource(),
-              finalSegmentTemplate.getVersion(),
-              finalSegmentTemplate.getInterval(),
-              finalSegmentTemplate.getShardSpec().getPartitionNum()
+              finalSegmentTemplate
           )
       );
       context.progress();

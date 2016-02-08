@@ -75,7 +75,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
-import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
@@ -689,18 +688,19 @@ public class IndexGeneratorJob implements Jobby
         }
         final FileSystem outputFS = new Path(config.getSchema().getIOConfig().getSegmentOutputPath())
             .getFileSystem(context.getConfiguration());
+        final DataSegment segmentTemplate = new DataSegment(
+            config.getDataSource(),
+            interval,
+            config.getSchema().getTuningConfig().getVersion(),
+            null,
+            ImmutableList.copyOf(allDimensionNames),
+            metricNames,
+            config.getShardSpec(bucket).getActualSpec(),
+            -1,
+            -1
+        );
         final DataSegment segment = JobHelper.serializeOutIndex(
-            new DataSegment(
-                config.getDataSource(),
-                interval,
-                config.getSchema().getTuningConfig().getVersion(),
-                null,
-                ImmutableList.copyOf(allDimensionNames),
-                metricNames,
-                config.getShardSpec(bucket).getActualSpec(),
-                -1,
-                -1
-            ),
+            segmentTemplate,
             context.getConfiguration(),
             context,
             context.getTaskAttemptID(),
@@ -708,10 +708,7 @@ public class IndexGeneratorJob implements Jobby
             JobHelper.makeSegmentOutputPath(
                 new Path(config.getSchema().getIOConfig().getSegmentOutputPath()),
                 outputFS,
-                config.getSchema().getDataSchema().getDataSource(),
-                config.getSchema().getTuningConfig().getVersion(),
-                config.getSchema().getDataSchema().getGranularitySpec().bucketInterval(bucket.time).get(),
-                bucket.partitionNum
+                segmentTemplate
             )
         );
 
