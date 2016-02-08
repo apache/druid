@@ -329,8 +329,16 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       }
     }
 
+    final String mergedId;
+
+    if (arg1.getId() != null && arg2.getId() != null && arg1.getId().equals(arg2.getId())) {
+      mergedId = arg1.getId();
+    } else {
+      mergedId = "merged";
+    }
+
     return new SegmentAnalysis(
-        "merged",
+        mergedId,
         newIntervals,
         columns,
         arg1.getSize() + arg2.getSize(),
