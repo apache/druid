@@ -134,3 +134,13 @@ at-least-once design and can lead to duplicated events.
 Under normal operation, these risks are minimal. But if you need absolute 100% fidelity for
 historical data, we recommend a [hybrid batch/streaming](../tutorials/ingestion.html#hybrid-batch-streaming)
 architecture.
+
+## Documentation
+
+Tranquility documentation be found [here](https://github.com/druid-io/tranquility/blob/master/README.md).
+
+## Configuration
+
+Tranquility configuration can be found [here](https://github.com/druid-io/tranquility/blob/master/docs/configuration.md).
+
+Tranquility's tuningConfig can be found [here](http://static.druid.io/tranquility/api/latest/#com.metamx.tranquility.druid.DruidTuning). 
