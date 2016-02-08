@@ -121,7 +121,7 @@ public class HadoopDruidIndexerConfigTest
         )
     );
     Assert.assertEquals(
-        "hdfs://server:9100/tmp/druid/datatest/source/20120710T050000.000Z_20120710T060000.000Z/some_brand_new_version/4712",
+        "hdfs://server:9100/tmp/druid/datatest/source/20120710T050000.000Z_20120710T060000.000Z_some_brand_new_version_4712",
         path.toString()
     );
   }

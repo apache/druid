@@ -54,7 +54,8 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
     try {
       if (path.getName().endsWith(".zip")) {
 
-        // path format -- > .../dataSource/interval/version/partitionNum/xxx.zip
+        // old path format -- > .../dataSource/intervalStart_intervalEnd/version/partitionNum/xxx.zip
+        // new path format -- > .../dataSource/intervalStart_intervalEnd_version_partitionNum/xxx.zip
         Path partitionNumDir = path.getParent();
         if (!fs.delete(partitionNumDir, true)) {
           throw new SegmentLoadingException(
@@ -63,8 +64,14 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
           );
         }
 
-        //try to delete other directories if possible
+        //if path is old style then try to delete interval, version and partitionNum directories as well.
         Path versionDir = partitionNumDir.getParent();
+
+        if (versionDir.getName().equals(segment.getDataSource())) {
+          //it is new style path, do not try to delete anything.
+          return;
+        }
+
         if (safeNonRecursiveDelete(fs, versionDir)) {
           Path intervalDir = versionDir.getParent();
           if (safeNonRecursiveDelete(fs, intervalDir)) {
