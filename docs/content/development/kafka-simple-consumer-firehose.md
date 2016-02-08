@@ -3,7 +3,7 @@ layout: doc_page
 ---
 # KafkaSimpleConsumerFirehose
 This is an experimental firehose to ingest data from kafka using kafka simple consumer api. Currently, this firehose would only work inside standalone realtime nodes.
-The configuration for KafkaSimpleConsumerFirehose is similar to the KafkaFirehose [Kafka firehose example](realtime-ingestion.html#realtime-specfile), except `firehose` should be replaced with `firehoseV2` like this:
+The configuration for KafkaSimpleConsumerFirehose is similar to the KafkaFirehose [Kafka firehose example](../ingestion/stream-pull.html#realtime-specfile), except `firehose` should be replaced with `firehoseV2` like this:
 
 ```json
 "firehoseV2": {
@@ -28,4 +28,3 @@ The configuration for KafkaSimpleConsumerFirehose is similar to the KafkaFirehos
 |feed|kafka topic|yes|
 
 For using this firehose at scale and possibly in production, it is recommended to set replication factor to at least three, which means at least three Kafka brokers in the `brokerList`. For a 1*10^4 events per second kafka topic, keeping one partition can work properly, but more partitions could be added if higher throughput is required.
-
