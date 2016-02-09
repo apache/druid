@@ -11,7 +11,7 @@ Note that you can use `thetaSketch` aggregator on columns which were not ingeste
 To use the datasketch aggregators, make sure you include the extension in your config file:
 
 ```
-druid.extensions.coordinates=["io.druid.extensions:druid-datasketches"]
+druid.extensions.loadList=["druid-datasketches"]
 ```
 
 ### Aggregators
