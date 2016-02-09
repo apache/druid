@@ -140,8 +140,8 @@ The Druid servers emit various metrics and alerts via something we call an Emitt
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.emitter.http.timeOut`|The timeout for data reads.|PT5M|
-|`druid.emitter.http.flushMillis`|How often to internal message buffer is flushed (data is sent).|60000|
-|`druid.emitter.http.flushCount`|How many messages can the internal message buffer hold before flushing (sending).|500|
+|`druid.emitter.http.flushMillis`|How often the internal message buffer is flushed (data is sent).|60000|
+|`druid.emitter.http.flushCount`|How many messages the internal message buffer can hold before flushing (sending).|500|
 |`druid.emitter.http.recipientBaseUrl`|The base URL to emit messages to. Druid will POST JSON to be consumed at the HTTP endpoint specified by this property.|none|
 
 #### Composing Emitter Module
