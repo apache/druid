@@ -424,22 +424,4 @@ public class DatasourcesResourceTest
     EasyMock.verify(indexingServiceClient, server);
   }
 
-  /*
-  Uncomment this unit test once the method testDeleteDataSource(string dataSourceName) is uncommented in class DatasourcesResource
-  @Test
-  public void testDeleteDataSource() throws Exception
-  {
-    MetadataSegmentManager databaseSegmentManager = EasyMock.createStrictMock(MetadataSegmentManager.class);
-    EasyMock.expect(databaseSegmentManager.removeDatasource("datasource1")).andReturn(true).atLeastOnce();
-    EasyMock.replay(server, databaseSegmentManager);
-
-    DatasourcesResource datasourcesResource = new DatasourcesResource(null, databaseSegmentManager, null);
-    Response response = datasourcesResource.deleteDataSource("datasource1");
-
-    Assert.assertEquals(200, response.getStatus());
-    Assert.assertEquals(null,response.getEntity());
-    EasyMock.verify(databaseSegmentManager, server);
-  }
-  */
-
 }

@@ -168,6 +168,7 @@ public class DatasourcesResource
   }
 
   @DELETE
+  @Deprecated
   @Path("/{dataSourceName}")
   @Produces(MediaType.APPLICATION_JSON)
   public Response deleteDataSource(
@@ -200,22 +201,6 @@ public class DatasourcesResource
 
     return Response.ok().build();
   }
-
-  /*
-  Uncomment this method once the method deleteSourceName (just above this) is deleted.
-  @DELETE
-  @Path("/{dataSourceName}")
-  @Produces(MediaType.APPLICATION_JSON)
-  public Response deleteDataSource(
-      @PathParam("dataSourceName") final String dataSourceName
-  )
-  {
-    if (!databaseSegmentManager.removeDatasource(dataSourceName)) {
-      return Response.noContent().build();
-    }
-    return Response.ok().build();
-  }
-  */
 
   @DELETE
   @Path("/{dataSourceName}/intervals/{interval}")
