@@ -29,7 +29,9 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.joda.time.Interval;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
 
@@ -37,8 +39,14 @@ import java.io.IOException;
  */
 public class HdfsDataSegmentKillerTest
 {
+
+  private static final String DATA_SOURCE = "dataSource";
+
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
   @Test
-  public void testKill() throws Exception
+  public void testKillWithOldStyleSegmentPaths() throws Exception
   {
     Configuration config = new Configuration();
     HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(config);
@@ -51,7 +59,7 @@ public class HdfsDataSegmentKillerTest
     // /tmp/dataSource/interval1/v2/0/index.zip
     // /tmp/dataSource/interval2/v1/0/index.zip
 
-    Path dataSourceDir = new Path("/tmp/dataSource");
+    Path dataSourceDir = new Path(temporaryFolder.newFolder(DATA_SOURCE).toString());
 
     Path interval1Dir = new Path(dataSourceDir, "interval1");
     Path version11Dir = new Path(interval1Dir, "v1");
@@ -95,6 +103,30 @@ public class HdfsDataSegmentKillerTest
     Assert.assertFalse(fs.exists(dataSourceDir));
   }
 
+  @Test
+  public void testKillWithNewStyleSegmentPath() throws Exception
+  {
+    Configuration config = new Configuration();
+    HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(config);
+
+    FileSystem fs = FileSystem.get(config);
+
+    // Create following segments with new storage path format and ensure that deletion of
+    // segment does not result in deletion of dataSource directory
+    // /tmp/dataSource/interval_version_20/index.zip
+
+    Path dataSourceDir = new Path(temporaryFolder.newFolder(DATA_SOURCE).toString());
+    Path newSegmentStorageDir = new Path(dataSourceDir, "interval_version_20");
+    makePartitionDirWithIndex(fs, newSegmentStorageDir);
+
+    Assert.assertTrue(fs.exists(newSegmentStorageDir));
+
+    killer.kill(getSegmentWithPath(new Path(newSegmentStorageDir, "index.zip").toString()));
+
+    Assert.assertFalse(fs.exists(newSegmentStorageDir));
+    Assert.assertTrue(fs.exists(dataSourceDir));
+  }
+
   private void makePartitionDirWithIndex(FileSystem fs, Path path) throws IOException
   {
     Assert.assertTrue(fs.mkdirs(path));
@@ -105,7 +137,7 @@ public class HdfsDataSegmentKillerTest
   private DataSegment getSegmentWithPath(String path)
   {
     return new DataSegment(
-        "dataSource",
+        DATA_SOURCE,
         Interval.parse("2000/3000"),
         "ver",
         ImmutableMap.<String, Object>of(

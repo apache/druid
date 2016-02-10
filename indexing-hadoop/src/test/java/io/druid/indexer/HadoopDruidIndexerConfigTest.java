@@ -32,7 +32,9 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
+import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
+import io.druid.timeline.partition.NumberedShardSpec;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
@@ -102,17 +104,24 @@ public class HadoopDruidIndexerConfigTest
         )
     );
 
-    Bucket bucket = new Bucket(4711, new DateTime(2012, 07, 10, 5, 30), 4712);
+    Bucket bucket = new Bucket(4712, new DateTime(2012, 07, 10, 5, 30), 4712);
     Path path = JobHelper.makeSegmentOutputPath(
         new Path(cfg.getSchema().getIOConfig().getSegmentOutputPath()),
         new DistributedFileSystem(),
-        cfg.getSchema().getDataSchema().getDataSource(),
-        cfg.getSchema().getTuningConfig().getVersion(),
-        cfg.getSchema().getDataSchema().getGranularitySpec().bucketInterval(bucket.time).get(),
-        bucket.partitionNum
+        new DataSegment(
+            cfg.getSchema().getDataSchema().getDataSource(),
+            cfg.getSchema().getDataSchema().getGranularitySpec().bucketInterval(bucket.time).get(),
+            cfg.getSchema().getTuningConfig().getVersion(),
+            null,
+            null,
+            null,
+            new NumberedShardSpec(bucket.partitionNum, 5000),
+            -1,
+            -1
+        )
     );
     Assert.assertEquals(
-        "hdfs://server:9100/tmp/druid/datatest/source/20120710T050000.000Z_20120710T060000.000Z/some_brand_new_version/4712",
+        "hdfs://server:9100/tmp/druid/datatest/source/20120710T050000.000Z_20120710T060000.000Z_some_brand_new_version_4712",
         path.toString()
     );
   }
@@ -155,14 +164,21 @@ public class HadoopDruidIndexerConfigTest
         )
     );
 
-    Bucket bucket = new Bucket(4711, new DateTime(2012, 07, 10, 5, 30), 4712);
+    Bucket bucket = new Bucket(4712, new DateTime(2012, 07, 10, 5, 30), 4712);
     Path path = JobHelper.makeSegmentOutputPath(
         new Path(cfg.getSchema().getIOConfig().getSegmentOutputPath()),
         new LocalFileSystem(),
-        cfg.getSchema().getDataSchema().getDataSource(),
-        cfg.getSchema().getTuningConfig().getVersion(),
-        cfg.getSchema().getDataSchema().getGranularitySpec().bucketInterval(bucket.time).get(),
-        bucket.partitionNum
+        new DataSegment(
+            cfg.getSchema().getDataSchema().getDataSource(),
+            cfg.getSchema().getDataSchema().getGranularitySpec().bucketInterval(bucket.time).get(),
+            cfg.getSchema().getTuningConfig().getVersion(),
+            null,
+            null,
+            null,
+            new NumberedShardSpec(bucket.partitionNum, 5000),
+            -1,
+            -1
+        )
     );
     Assert.assertEquals(
         "file:/tmp/dru:id/data:test/the:data:source/2012-07-10T05:00:00.000Z_2012-07-10T06:00:00.000Z/some:brand:new:version/4712",
