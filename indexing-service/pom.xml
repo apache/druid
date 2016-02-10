@@ -45,6 +45,10 @@
             <artifactId>druid-indexing-hadoop</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-exec</artifactId>
+        </dependency>
 
         <!-- Tests -->
         <dependency>

@@ -254,7 +254,7 @@ Middle managers pass their configurations down to their child peons. The middle 
 |`druid.indexer.runner.compressZnodes`|Indicates whether or not the middle managers should compress Znodes.|true|
 |`druid.indexer.runner.classpath`|Java classpath for the peon.|System.getProperty("java.class.path")|
 |`druid.indexer.runner.javaCommand`|Command required to execute java.|java|
-|`druid.indexer.runner.javaOpts`|-X Java options to run the peon in its own JVM.|""|
+|`druid.indexer.runner.javaOpts`|-X Java options to run the peon in its own JVM. This is parsed using [Apache commons-exec](https://commons.apache.org/proper/commons-exec/apidocs/org/apache/commons/exec/CommandLine.html)|""|
 |`druid.indexer.runner.maxZnodeBytes`|The maximum size Znode in bytes that can be created in Zookeeper.|524288|
 |`druid.indexer.runner.startPort`|The port that peons begin running on.|8100|
 |`druid.indexer.runner.separateIngestionEndpoint`|Use separate server and consequently separate jetty thread pool for ingesting events|false|

@@ -60,6 +60,7 @@ import io.druid.server.DruidNode;
 import io.druid.server.metrics.MonitorsConfig;
 import io.druid.tasklogs.TaskLogPusher;
 import io.druid.tasklogs.TaskLogStreamer;
+import org.apache.commons.exec.CommandLine;
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -68,6 +69,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
@@ -75,7 +77,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.Callable;
-import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -244,16 +245,22 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               command.add("-cp");
                               command.add(taskClasspath);
 
-                              Iterables.addAll(command, new QuotableWhiteSpaceSplitter(config.getJavaOpts()));
+
+                              if(!config.getJavaOpts().isEmpty()) {
+                                Iterables.addAll(
+                                    command,
+                                    Arrays.asList(CommandLine.parse(config.getJavaOpts()).toStrings())
+                                );
+                              }
 
                               // Override task specific javaOpts
                               Object taskJavaOpts = task.getContextValue(
                                   ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY
                               );
-                              if (taskJavaOpts != null) {
+                              if (taskJavaOpts != null && !taskJavaOpts.toString().isEmpty()) {
                                 Iterables.addAll(
                                     command,
-                                    new QuotableWhiteSpaceSplitter((String) taskJavaOpts)
+                                    Arrays.asList(CommandLine.parse(taskJavaOpts.toString()).toStrings())
                                 );
                               }
 
@@ -665,41 +672,5 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
       closer.register(process.getInputStream());
       closer.register(process.getOutputStream());
     }
-  }
-}
-
-/**
- * Make an iterable of space delimited strings... unless there are quotes, which it preserves
- */
-class QuotableWhiteSpaceSplitter implements Iterable<String>
-{
-  private final String string;
-
-  public QuotableWhiteSpaceSplitter(String string)
-  {
-    this.string = Preconditions.checkNotNull(string);
-  }
-
-  @Override
-  public Iterator<String> iterator()
-  {
-    return Splitter.on(
-        new CharMatcher()
-        {
-          private boolean inQuotes = false;
-
-          @Override
-          public boolean matches(char c)
-          {
-            if ('"' == c) {
-              inQuotes = !inQuotes;
-            }
-            if (inQuotes) {
-              return false;
-            }
-            return CharMatcher.BREAKING_WHITESPACE.matches(c);
-          }
-        }
-    ).omitEmptyStrings().split(string).iterator();
   }
 }
