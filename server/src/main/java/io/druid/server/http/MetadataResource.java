@@ -24,16 +24,20 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
 import io.druid.client.DruidDataSource;
+import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.metadata.MetadataSegmentManager;
 import io.druid.timeline.DataSegment;
+import org.joda.time.Interval;
 
 import javax.ws.rs.GET;
+import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 
@@ -43,13 +47,16 @@ import java.util.List;
 public class MetadataResource
 {
   private final MetadataSegmentManager metadataSegmentManager;
+  private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
 
   @Inject
   public MetadataResource(
-      MetadataSegmentManager metadataSegmentManager
+      MetadataSegmentManager metadataSegmentManager,
+      IndexerMetadataStorageCoordinator metadataStorageCoordinator
   )
   {
     this.metadataSegmentManager = metadataSegmentManager;
+    this.metadataStorageCoordinator = metadataStorageCoordinator;
   }
 
   @GET
@@ -123,10 +130,47 @@ public class MetadataResource
     return builder.entity(
         Iterables.transform(
             dataSource.getSegments(),
-            new Function<DataSegment, Object>()
+            new Function<DataSegment, String>()
             {
               @Override
-              public Object apply(DataSegment segment)
+              public String apply(DataSegment segment)
+              {
+                return segment.getIdentifier();
+              }
+            }
+        )
+    ).build();
+  }
+
+  @POST
+  @Path("/datasources/{dataSourceName}/segments")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getDatabaseSegmentDataSourceSegments(
+      @PathParam("dataSourceName") String dataSourceName,
+      @QueryParam("full") String full,
+      List<Interval> intervals
+  )
+  {
+    List<DataSegment> segments = null;
+    try {
+      segments = metadataStorageCoordinator.getUsedSegmentsForIntervals(dataSourceName, intervals);
+    }
+    catch (IOException ex) {
+      return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(ex.getMessage()).build();
+    }
+
+    Response.ResponseBuilder builder = Response.status(Response.Status.OK);
+    if (full != null) {
+      return builder.entity(segments).build();
+    }
+
+    return builder.entity(
+        Iterables.transform(
+            segments,
+            new Function<DataSegment, String>()
+            {
+              @Override
+              public String apply(DataSegment segment)
               {
                 return segment.getIdentifier();
               }

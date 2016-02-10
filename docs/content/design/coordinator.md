@@ -105,6 +105,14 @@ Returns a list of all segments for a datasource as stored in the metadata store.
 
 Returns a list of all segments for a datasource with the full segment metadata as stored in the metadata store.
 
+* POST `/druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments`
+
+Returns a list of all segments, overlapping with any of given intervals,  for a datasource as stored in the metadata store. Request body is array of string intervals like [interval1, interval2,...] for example ["2012-01-01T00:00:00.000/2012-01-03T00:00:00.000", "2012-01-05T00:00:00.000/2012-01-07T00:00:00.000"]
+
+* POST `/druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments?full`
+
+Returns a list of all segments, overlapping with any of given intervals, for a datasource with the full segment metadata as stored in the metadata store. Request body is array of string intervals like [interval1, interval2,...] for example ["2012-01-01T00:00:00.000/2012-01-03T00:00:00.000", "2012-01-05T00:00:00.000/2012-01-07T00:00:00.000"]
+
 * `/druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments/{segmentId}`
 
 Returns full segment metadata for a specific segment as stored in the metadata store.
