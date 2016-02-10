@@ -19,14 +19,24 @@
 
 package io.druid.indexing.overlord;
 
+import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterators;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.metamx.common.IAE;
+import org.apache.commons.exec.CommandLine;
+import org.hamcrest.BaseMatcher;
+import org.hamcrest.Description;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 public class ForkingTaskRunnerTest
 {
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
   // This tests the test to make sure the test fails when it should.
   @Test(expected = AssertionError.class)
   public void testPatternMatcherFailureForJavaOptions()
@@ -34,16 +44,52 @@ public class ForkingTaskRunnerTest
     checkValues(new String[]{"not quoted has space"});
   }
 
-  @Test(expected = AssertionError.class)
+  @Test // Command line cannot be empty
   public void testPatternMatcherFailureForSpaceOnlyJavaOptions()
   {
+    expectedException.expect(new BaseMatcher<Object>()
+    {
+      @Override
+      public boolean matches(Object o)
+      {
+        if(!(o instanceof IllegalArgumentException))
+        {
+          return false;
+        }
+        return ((IllegalArgumentException) o).getMessage().startsWith("Command line can not be empty");
+      }
+
+      @Override
+      public void describeTo(Description description)
+      {
+        description.appendText("IllegalArgumentException: Command line can not be empty");
+      }
+    });
     checkValues(new String[]{" "});
   }
 
   @Test
-  public void testPatternMatcherLeavesUnbalancedQuoteJavaOptions()
+  public void testPatternMatcherRejectsUnbalancedQuoteJavaOptions()
   {
-    Assert.assertEquals("\"", Iterators.get(new QuotableWhiteSpaceSplitter("\"").iterator(), 0));
+    expectedException.expect(new BaseMatcher<Object>()
+    {
+      @Override
+      public boolean matches(Object o)
+      {
+        if(!(o instanceof IllegalArgumentException))
+        {
+          return false;
+        }
+        return ((IllegalArgumentException) o).getMessage().startsWith("Unbalanced quotes in");
+      }
+
+      @Override
+      public void describeTo(Description description)
+      {
+        description.appendText("IllegalArgumentException: Unbalanced quotes in");
+      }
+    });
+    CommandLine.parse("\"");
   }
 
   @Test
@@ -75,7 +121,6 @@ public class ForkingTaskRunnerTest
         }
     );
     checkValues(new String[]{"\"completely quoted\""});
-    checkValues(new String[]{"\"\""});
     checkValues(new String[]{"-foo=\"\""});
     checkValues(new String[]{"-foo=\"\"suffix"});
     checkValues(new String[]{"-foo=\"\t\"suffix"});
@@ -86,38 +131,87 @@ public class ForkingTaskRunnerTest
   }
 
   @Test
-  public void testEmpty()
-  {
-    Assert.assertTrue(ImmutableList.copyOf(new QuotableWhiteSpaceSplitter("")).isEmpty());
-  }
-
-  @Test
   public void testFarApart()
   {
     Assert.assertEquals(
-        ImmutableList.of("start", "stop"), ImmutableList.copyOf(
-            new QuotableWhiteSpaceSplitter(
+        ImmutableList.of("start\t\t\t\t", "", "", "", "stop"), ImmutableList.copyOf(
+            CommandLine.parse(
                 "start\t\t\t\t \n\f\r\n \f\f \n\r\f\n\r\t stop"
-            )
+            ).toStrings()
         )
     );
   }
 
   @Test
-  public void testOmitEmpty()
+  public void testProblematicOption()
   {
-    Assert.assertTrue(
-        ImmutableList.copyOf(
-            new QuotableWhiteSpaceSplitter(" \t     \t\t\t\t \n\n \f\f \n\f\r\t")
-        ).isEmpty()
+    Assert.assertEquals(
+        ImmutableList.of("java", "-XX:OnOutOfMemoryError=kill -9 %p"),
+        ImmutableList.copyOf(CommandLine.parse("java -XX:OnOutOfMemoryError=\"kill -9 %p\"").toStrings())
     );
   }
+
+  @Test
+  public void testRejectEmpty()
+  {
+    expectedException.expect(new BaseMatcher<Object>()
+    {
+      @Override
+      public boolean matches(Object o)
+      {
+        if(!(o instanceof IllegalArgumentException))
+        {
+          return false;
+        }
+        return ((IllegalArgumentException) o).getMessage().startsWith("Command line can not be empty");
+      }
+
+      @Override
+      public void describeTo(Description description)
+      {
+        description.appendText("IllegalArgumentException: Command line can not be empty");
+      }
+    });
+    CommandLine.parse(" \t     \t\t\t\t \n\n \f\f \n\f\r\t");
+  }
+
+  final static Function<String, String> QUOTE_STRIPPER = new Function<String, String>()
+  {
+    final static String QUOTE = "\"";
+
+    @Override
+    public String apply(String input)
+    {
+      return input.replace(QUOTE, "");
+    }
+  };
+
+  final static Function<String, String> QUOTE_END_STRIPPER = new Function<String, String>()
+  {
+    final static String QUOTE = "\"";
+
+    @Override
+    public String apply(String input)
+    {
+      if(input.startsWith(QUOTE)) {
+        if(input.endsWith(QUOTE)) {
+          return input.substring(1, input.length() - 1);
+        } else {
+          throw new IAE("input [%s] should end with quote");
+        }
+      } else {
+        return input;
+      }
+    }
+  };
 
   private static void checkValues(String[] strings)
   {
     Assert.assertEquals(
-        ImmutableList.copyOf(strings),
-        ImmutableList.copyOf(new QuotableWhiteSpaceSplitter(Joiner.on(" ").join(strings)))
+        ImmutableList.copyOf(Lists.transform(ImmutableList.copyOf(strings), QUOTE_STRIPPER)),
+        ImmutableList.copyOf(Iterables.transform(ImmutableList.copyOf(
+            CommandLine.parse(Joiner.on(" ").join(strings)).toStrings()
+        ), QUOTE_END_STRIPPER))
     );
   }
 }
