@@ -31,6 +31,7 @@ import com.metamx.common.ISE;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
+import io.druid.curator.CuratorUtils;
 import io.druid.curator.announcement.Announcer;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.server.initialization.IndexerZkConfig;
@@ -94,16 +95,22 @@ public class WorkerCuratorCoordinator
         return;
       }
 
-      makePathIfNotExisting(
+      CuratorUtils.createIfNotExists(
+          curatorFramework,
           getTaskPathForWorker(),
           CreateMode.PERSISTENT,
-          ImmutableMap.of("created", new DateTime().toString())
+          jsonMapper.writeValueAsBytes(ImmutableMap.of("created", new DateTime().toString())),
+          config.getMaxZnodeBytes()
       );
-      makePathIfNotExisting(
+
+      CuratorUtils.createIfNotExists(
+          curatorFramework,
           getStatusPathForWorker(),
           CreateMode.PERSISTENT,
-          ImmutableMap.of("created", new DateTime().toString())
+          jsonMapper.writeValueAsBytes(ImmutableMap.of("created", new DateTime().toString())),
+          config.getMaxZnodeBytes()
       );
+
       announcer.start();
       announcer.announce(getAnnouncementsPathForWorker(), jsonMapper.writeValueAsBytes(worker), false);
 
@@ -122,30 +129,6 @@ public class WorkerCuratorCoordinator
       announcer.stop();
 
       started = false;
-    }
-  }
-
-  public void makePathIfNotExisting(String path, CreateMode mode, Object data) throws Exception
-  {
-    if (curatorFramework.checkExists().forPath(path) == null) {
-      try {
-        byte[] rawBytes = jsonMapper.writeValueAsBytes(data);
-        if (rawBytes.length > config.getMaxZnodeBytes()) {
-          throw new ISE(
-              "Length of raw bytes for task too large[%,d > %,d]",
-              rawBytes.length,
-              config.getMaxZnodeBytes()
-          );
-        }
-
-        curatorFramework.create()
-                        .creatingParentsIfNeeded()
-                        .withMode(mode)
-                        .forPath(path, rawBytes);
-      }
-      catch (Exception e) {
-        log.warn(e, "Could not create path[%s], perhaps it already exists?", path);
-      }
     }
   }
 
@@ -194,33 +177,6 @@ public class WorkerCuratorCoordinator
     }
   }
 
-  public void announceTaskAnnouncement(TaskAnnouncement announcement)
-  {
-    synchronized (lock) {
-      if (!started) {
-        return;
-      }
-
-      try {
-        byte[] rawBytes = jsonMapper.writeValueAsBytes(announcement);
-        if (rawBytes.length > config.getMaxZnodeBytes()) {
-          throw new ISE(
-              "Length of raw bytes for task too large[%,d > %,d]", rawBytes.length, config.getMaxZnodeBytes()
-          );
-        }
-
-        curatorFramework.create()
-                        .withMode(CreateMode.PERSISTENT)
-                        .forPath(
-                            getStatusPathForId(announcement.getTaskStatus().getId()), rawBytes
-                        );
-      }
-      catch (Exception e) {
-        throw Throwables.propagate(e);
-      }
-    }
-  }
-
   public void updateAnnouncement(TaskAnnouncement announcement)
   {
     synchronized (lock) {
@@ -229,21 +185,13 @@ public class WorkerCuratorCoordinator
       }
 
       try {
-        if (curatorFramework.checkExists().forPath(getStatusPathForId(announcement.getTaskStatus().getId())) == null) {
-          announceTaskAnnouncement(announcement);
-          return;
-        }
-        byte[] rawBytes = jsonMapper.writeValueAsBytes(announcement);
-        if (rawBytes.length > config.getMaxZnodeBytes()) {
-          throw new ISE(
-              "Length of raw bytes for task too large[%,d > %,d]", rawBytes.length, config.getMaxZnodeBytes()
-          );
-        }
-
-        curatorFramework.setData()
-                        .forPath(
-                            getStatusPathForId(announcement.getTaskStatus().getId()), rawBytes
-                        );
+        CuratorUtils.createOrSet(
+            curatorFramework,
+            getStatusPathForId(announcement.getTaskStatus().getId()),
+            CreateMode.PERSISTENT,
+            jsonMapper.writeValueAsBytes(announcement),
+            config.getMaxZnodeBytes()
+        );
       }
       catch (Exception e) {
         throw Throwables.propagate(e);
@@ -251,7 +199,8 @@ public class WorkerCuratorCoordinator
     }
   }
 
-  public List<TaskAnnouncement> getAnnouncements(){
+  public List<TaskAnnouncement> getAnnouncements()
+  {
     try {
       return Lists.transform(
           curatorFramework.getChildren().forPath(getStatusPathForWorker()), new Function<String, TaskAnnouncement>()
@@ -261,7 +210,10 @@ public class WorkerCuratorCoordinator
             public TaskAnnouncement apply(String input)
             {
               try {
-                return jsonMapper.readValue(curatorFramework.getData().forPath(getStatusPathForId(input)),TaskAnnouncement.class);
+                return jsonMapper.readValue(
+                    curatorFramework.getData().forPath(getStatusPathForId(input)),
+                    TaskAnnouncement.class
+                );
               }
               catch (Exception e) {
                 throw Throwables.propagate(e);
