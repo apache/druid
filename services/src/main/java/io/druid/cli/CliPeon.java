@@ -62,6 +62,7 @@ import io.druid.indexing.worker.executor.ExecutorLifecycle;
 import io.druid.indexing.worker.executor.ExecutorLifecycleConfig;
 import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import io.druid.query.QuerySegmentWalker;
+import io.druid.query.extraction.LookupReferencesManager;
 import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.DataSegmentMover;
@@ -190,7 +191,7 @@ public class CliPeon extends GuiceRunnable
             Jerseys.addResource(binder, QueryResource.class);
             Jerseys.addResource(binder, ChatHandlerResource.class);
             LifecycleModule.register(binder, QueryResource.class);
-
+            LifecycleModule.register(binder, LookupReferencesManager.class);
             binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig(nodeType));
 
             LifecycleModule.register(binder, Server.class);
