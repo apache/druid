@@ -777,6 +777,45 @@ public class HyperLogLogCollectorTest
   }
 
   @Test
+  public void testCompareToShouldBehaveConsistentlyWithEstimatedCardinalitiesEvenInToughCases() throws Exception {
+    // given
+    Random rand = new Random(0);
+    HyperUniquesAggregatorFactory factory = new HyperUniquesAggregatorFactory("foo", "bar");
+    Comparator comparator = factory.getComparator();
+
+    for (int i = 0; i < 1000; ++i) {
+      // given
+      HyperLogLogCollector leftCollector = HyperLogLogCollector.makeLatestCollector();
+      int j = rand.nextInt(9000) + 5000;
+      for (int l = 0; l < j; ++l) {
+        leftCollector.add(fn.hashLong(rand.nextLong()).asBytes());
+      }
+
+      HyperLogLogCollector rightCollector = HyperLogLogCollector.makeLatestCollector();
+      int k = rand.nextInt(9000) + 5000;
+      for (int l = 0; l < k; ++l) {
+        rightCollector.add(fn.hashLong(rand.nextLong()).asBytes());
+      }
+
+      // when
+      final int orderedByCardinality = Double.compare(leftCollector.estimateCardinality(),
+              rightCollector.estimateCardinality());
+      final int orderedByComparator = comparator.compare(leftCollector, rightCollector);
+
+      // then, assert hyperloglog comparator behaves consistently with estimated cardinalities
+      Assert.assertEquals(
+              String.format("orderedByComparator=%d, orderedByCardinality=%d,\n" +
+                      "Left={cardinality=%f, hll=%s},\n" +
+                      "Right={cardinality=%f, hll=%s},\n", orderedByComparator, orderedByCardinality,
+                      leftCollector.estimateCardinality(), leftCollector,
+                      rightCollector.estimateCardinality(), rightCollector),
+              orderedByCardinality,
+              orderedByComparator
+      );
+    }
+  }
+
+  @Test
   public void testMaxOverflow() {
     HyperLogLogCollector collector = HyperLogLogCollector.makeLatestCollector();
     collector.add((short)23, (byte)16);
