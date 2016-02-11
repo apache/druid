@@ -12,6 +12,13 @@
     },
     {
       "type": "thetaSketch",
+      "name": "sids_sketch_count_with_err",
+      "fieldName": "sids_sketch",
+      "size": 16384,
+      "errorBoundsStdDev": 2
+    },
+    {
+      "type": "thetaSketch",
       "name": "non_existing_col_validation",
       "fieldName": "non_existing_col",
       "size": 16384
@@ -21,6 +28,15 @@
     {
       "type": "thetaSketchEstimate",
       "name": "sketchEstimatePostAgg",
+      "field": {
+        "type": "fieldAccess",
+        "fieldName": "sids_sketch_count"
+      }
+    },
+    {
+      "type": "thetaSketchEstimate",
+      "name": "sketchEstimatePostAggWithErrorBounds",
+      "errorBoundsStdDev": 2,
       "field": {
         "type": "fieldAccess",
         "fieldName": "sids_sketch_count"
