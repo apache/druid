@@ -558,16 +558,17 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   /**
    * Adds a new row.  The row might correspond with another row that already exists, in which case this will
    * update that row instead of inserting a new one.
-   * <p>
-   * <p>
+   * <p/>
+   * <p/>
    * Calls to add() are thread safe.
-   * <p>
+   * <p/>
    *
    * @param row the row of data to add
    *
    * @return the number of rows in the data set after adding the InputRow
    */
-  public int add(InputRow row) throws IndexSizeExceededException {
+  public int add(InputRow row) throws IndexSizeExceededException
+  {
     TimeAndDims key = toTimeAndDims(row);
     final int rv = addToFacts(
         metrics,
@@ -1081,8 +1082,6 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
    */
   static class NullValueConverterDimDim implements DimDim<String>
   {
-    private static final byte NOT_DEFINED = 0x00;
-
     private final DimDim<String> delegate;
 
     private final int capacity;
@@ -1091,8 +1090,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     NullValueConverterDimDim(DimDim delegate, int cacheCapacity)
     {
       this.delegate = delegate;
-      this.capacity = Math.min(cacheCapacity, 4096);  // max 8M
-      this.cache = cacheCapacity > 0 ? new byte[cacheCapacity * (cacheCapacity - 1) / 2] : null;
+      this.capacity = Math.min(cacheCapacity, 4096);  // max 2M
+      this.cache = cacheCapacity > 0 ? new byte[(cacheCapacity * (cacheCapacity - 1) + 8) / 8] : null;
     }
 
     @Override
@@ -1142,26 +1141,60 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     {
       if (cache != null && lhsIdx < capacity && rhsIdx < capacity) {
         final boolean leftToRight = lhsIdx > rhsIdx;
-        final int cacheIndex = leftToRight ?
-                               (lhsIdx - rhsIdx - 1) + rhsIdx * (capacity - 1) - (rhsIdx * (rhsIdx - 1) / 2) :
-                               (rhsIdx - lhsIdx - 1) + lhsIdx * (capacity - 1) - (lhsIdx * (lhsIdx - 1) / 2);
-        if (cache[cacheIndex] == NOT_DEFINED) {
+        final int[] cacheIndex = toIndex(lhsIdx, rhsIdx, leftToRight);
+        byte cached = getCache(cacheIndex);
+        if (cached == 0) {
           final int compare = delegate.compare(lhsIdx, rhsIdx);
-          cache[cacheIndex] = normalize(compare, leftToRight);
+          setCache(cacheIndex, cached = normalize(compare, leftToRight));
         }
-        return leftToRight ? cache[cacheIndex] : -cache[cacheIndex];
+        return leftToRight ? cached : -cached;
       }
       return delegate.compare(lhsIdx, rhsIdx);
-    }
-
-    private byte normalize(int compare, boolean leftToRight) {
-      return leftToRight ^ compare > 0 ? (byte)-1 : (byte)1;
     }
 
     @Override
     public SortedDimLookup sort()
     {
       return new NullValueConverterDimLookup(delegate.sort());
+    }
+
+    private static final int[] MASKS = new int[]{
+        0b00000011, 0b00001100, 0b00110000, 0b11000000
+    };
+
+    private static final byte POSITIVE = (byte) 1;
+    private static final byte NEGATIVE = (byte) -1;
+
+    private static final byte ENCODED_POSITIVE = 0x01;
+    private static final byte ENCODED_NEGATIVE = 0x02;
+
+    private int[] toIndex(int lhsIdx, int rhsIdx, boolean leftToRight)
+    {
+      final int index = leftToRight ?
+                        (lhsIdx - rhsIdx - 1) + rhsIdx * (capacity - 1) - (rhsIdx * (rhsIdx - 1) / 2) :
+                        (rhsIdx - lhsIdx - 1) + lhsIdx * (capacity - 1) - (lhsIdx * (lhsIdx - 1) / 2);
+
+      return new int[]{index / 4, index % 4};
+    }
+
+    private byte getCache(int[] cacheIndex)
+    {
+      int encoded = (cache[cacheIndex[0]] & MASKS[cacheIndex[1]]) >>> (cacheIndex[1] << 1);
+      return encoded == ENCODED_POSITIVE ? POSITIVE : encoded == ENCODED_NEGATIVE ? NEGATIVE : 0;
+    }
+
+    // write once
+    private void setCache(int[] cacheIndex, byte value)
+    {
+      int encoded = value == POSITIVE ? ENCODED_POSITIVE : value == NEGATIVE ? ENCODED_NEGATIVE : 0;
+      if (encoded != 0) {
+        cache[cacheIndex[0]] |= (byte)(encoded << (cacheIndex[1] << 1));
+      }
+    }
+
+    private byte normalize(int compare, boolean leftToRight)
+    {
+      return leftToRight ^ compare > 0 ? NEGATIVE : POSITIVE;
     }
   }
 
