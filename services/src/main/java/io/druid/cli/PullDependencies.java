@@ -121,8 +121,8 @@ public class PullDependencies implements Runnable
       "com.fasterxml.jackson.core",
       "com.fasterxml.jackson.dataformat",
       "com.fasterxml.jackson.datatype",
-      "io.netty",
-      "org.roaringbitmap"
+      "org.roaringbitmap",
+      "net.java.dev.jets3t"
   );
 
   private TeslaAether aether;
