@@ -49,6 +49,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -167,6 +168,7 @@ public class DatasourcesResource
   }
 
   @DELETE
+  @Deprecated
   @Path("/{dataSourceName}")
   @Produces(MediaType.APPLICATION_JSON)
   public Response deleteDataSource(
@@ -197,6 +199,37 @@ public class DatasourcesResource
       }
     }
 
+    return Response.ok().build();
+  }
+
+  @DELETE
+  @Path("/{dataSourceName}/intervals/{interval}")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response deleteDataSourceSpecificInterval(
+      @PathParam("dataSourceName") final String dataSourceName,
+      @PathParam("interval") final String interval,
+      @QueryParam("kill") @DefaultValue("true") final String kill
+  )
+  {
+    if (indexingServiceClient == null) {
+      return Response.ok(ImmutableMap.of("error", "no indexing service found")).build();
+    }
+    final Interval theInterval = new Interval(interval.replace("_", "/"));
+    if (kill != null && Boolean.valueOf(kill)) {
+      try {
+        indexingServiceClient.killSegments(dataSourceName, new Interval(theInterval));
+      }
+      catch (Exception e) {
+        return Response.serverError()
+                       .entity(ImmutableMap.of(
+                           "error",
+                           "Exception occurred. Are you sure you have an indexing service?"
+                       ))
+                       .build();
+      }
+    } else {
+      return Response.ok(ImmutableMap.of("error", "kill is set to false")).build();
+    }
     return Response.ok().build();
   }
 

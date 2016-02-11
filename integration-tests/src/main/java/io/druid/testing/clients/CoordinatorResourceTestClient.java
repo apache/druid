@@ -74,7 +74,7 @@ public class CoordinatorResourceTestClient
 
   private String getLoadStatusURL()
   {
-      return String.format("%s%s", getCoordinatorURL(), "loadstatus");
+    return String.format("%s%s", getCoordinatorURL(), "loadstatus");
   }
 
   // return a list of the segment dates for the specified datasource
@@ -136,9 +136,9 @@ public class CoordinatorResourceTestClient
       makeRequest(
           HttpMethod.DELETE,
           String.format(
-              "%sdatasources/%s?kill=%s&interval=%s",
+              "%sdatasources/%s/intervals/%s?kill=%s",
               getCoordinatorURL(),
-              dataSource, kill, URLEncoder.encode(interval.toString(), "UTF-8")
+              dataSource, interval.toString().replace("/", "_"), kill
           )
       );
     }
