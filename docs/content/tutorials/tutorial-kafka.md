@@ -22,13 +22,13 @@ including from Hadoop, HTTP, Storm, Samza, Spark Streaming, and your own JVM app
 ## Start Kafka
 
 [Apache Kafka](http://kafka.apache.org/) is a high throughput message bus that works well with
-Druid.  For this tutorial, we will use Kafka 0.9.0.0. To download Kafka, issue the following
+Druid.  For this tutorial, we will use Kafka 0.9.0-rc1.0. To download Kafka, issue the following
 commands in your terminal:
 
 ```bash
-curl -O http://www.us.apache.org/dist/kafka/0.9.0.0/kafka_2.11-0.9.0.0.tgz
-tar -xzf kafka_2.11-0.9.0.0.tgz
-cd kafka_2.11-0.9.0.0
+curl -O http://www.us.apache.org/dist/kafka/0.9.0-rc1.0/kafka_2.11-0.9.0-rc1.0.tgz
+tar -xzf kafka_2.11-0.9.0-rc1.0.tgz
+cd kafka_2.11-0.9.0-rc1.0
 ```
 
 Start a Kafka broker by running the following command in a new terminal:
@@ -154,7 +154,7 @@ sections:
 Next, start Druid Kafka ingestion:
 
 ```bash
-bin/tranquility kafka -configFile ../druid-0.9.0-SNAPSHOT/conf-quickstart/tranquility/kafka.json
+bin/tranquility kafka -configFile ../druid-0.9.0-rc1-SNAPSHOT/conf-quickstart/tranquility/kafka.json
 ```
 
 - If your Tranquility server or Kafka is already running, stop it (CTRL-C) and
