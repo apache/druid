@@ -31,7 +31,8 @@ import io.druid.segment.DimensionSelector;
     @JsonSubTypes.Type(name = "default", value = DefaultDimensionSpec.class),
     @JsonSubTypes.Type(name = "extraction", value = ExtractionDimensionSpec.class),
     @JsonSubTypes.Type(name = "regexFiltered", value = RegexFilteredDimensionSpec.class),
-    @JsonSubTypes.Type(name = "listFiltered", value = ListFilteredDimensionSpec.class)
+    @JsonSubTypes.Type(name = "listFiltered", value = ListFilteredDimensionSpec.class),
+    @JsonSubTypes.Type(name = "lookup", value = LookupDimensionSpec.class)
 })
 public interface DimensionSpec
 {

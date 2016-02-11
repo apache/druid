@@ -252,7 +252,7 @@ It is illegal to set `retainMissingValue = true` and also specify a `replaceMiss
 
 A property of `injective` specifies if optimizations can be used which assume there is no combining of multiple names into one. For example: If ABC123 is the only key that maps to SomeCompany, that can be optimized since it is a unique lookup. But if both ABC123 and DEF456 BOTH map to SomeCompany, then that is NOT a unique lookup. Setting this value to true and setting `retainMissingValue` to FALSE (the default) may cause undesired behavior.
 
-A property `optimize` can be supplied to allow optimization of lookup based extraction filter (by default `optimize = false`). 
+A property `optimize` can be supplied to allow optimization of lookup based extraction filter (by default `optimize = true`). 
 The optimization layer will run on the broker and it will rewrite the extraction filter as clause of selector filters.
 For instance the following filter 
 
@@ -391,5 +391,43 @@ or without setting "locale" (in this case, the current value of the default loca
 ```json
 {
   "type" : "lower"
+}
+```
+
+### Lookup DimensionSpecs
+
+Lookup DimensionSpecs can be used to define directly a lookup implementation as dimension spec.
+Generally speaking there is two different kind of lookups implementations. 
+The first kind is passed at the query time like `map` implementation.
+
+```json
+{ 
+  "type":"lookup",
+  "dimension":"dimensionName",
+  "outputName":"dimensionOutputName",
+  "replaceMissingValuesWith":"missing_value",
+  "retainMissingValue":false,
+  "lookup":{"type": "map", "map":{"key":"value"}, "isOneToOne":false}
+}
+```
+
+A property of `retainMissingValue` and `replaceMissingValueWith` can be specified at query time to hint how to handle missing values. Setting `replaceMissingValueWith` to `""` has the same effect as setting it to `null` or omitting the property. 
+Setting `retainMissingValue` to true will use the dimension's original value if it is not found in the lookup. 
+The default values are `replaceMissingValueWith = null` and `retainMissingValue = false` which causes missing values to be treated as missing.
+ 
+It is illegal to set `retainMissingValue = true` and also specify a `replaceMissingValueWith`.
+
+A property of `injective` specifies if optimizations can be used which assume there is no combining of multiple names into one. For example: If ABC123 is the only key that maps to SomeCompany, that can be optimized since it is a unique lookup. But if both ABC123 and DEF456 BOTH map to SomeCompany, then that is NOT a unique lookup. Setting this value to true and setting `retainMissingValue` to FALSE (the default) may cause undesired behavior.
+
+A property `optimize` can be supplied to allow optimization of lookup based extraction filter (by default `optimize = true`).
+
+The second kind where it is not possible to pass at query time due to their size, will be based on an external lookup table or resource that is already registered via configuration file or/and coordinator.
+
+```json
+{ 
+  "type":"lookup"
+  "dimension":"dimensionName"
+  "outputName":"dimensionOutputName"
+  "name":"lookupName"
 }
 ```

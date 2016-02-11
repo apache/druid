@@ -38,10 +38,12 @@ import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
+import io.druid.guice.ManageLifecycle;
 import io.druid.query.MapQueryToolChestWarehouse;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.RetryQueryRunnerConfig;
+import io.druid.query.extraction.LookupReferencesManager;
 import io.druid.server.ClientInfoResource;
 import io.druid.server.ClientQuerySegmentWalker;
 import io.druid.server.QueryResource;
@@ -105,6 +107,7 @@ public class CliBroker extends ServerRunnable
             Jerseys.addResource(binder, ClientInfoResource.class);
             LifecycleModule.register(binder, QueryResource.class);
             LifecycleModule.register(binder, DruidBroker.class);
+            LifecycleModule.register(binder, LookupReferencesManager.class);
 
             MetricsModule.register(binder, CacheMonitor.class);
 

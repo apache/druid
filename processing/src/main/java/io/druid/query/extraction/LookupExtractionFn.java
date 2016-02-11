@@ -60,7 +60,7 @@ public class LookupExtractionFn extends FunctionalExtraction
         injective
     );
     this.lookup = lookup;
-    this.optimize = optimize == null ? false : optimize;
+    this.optimize = optimize == null ? true : optimize;
   }
 
 

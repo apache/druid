@@ -1629,7 +1629,8 @@ public class TopNQueryRunnerTest
                             "spot", "2spot0",
                             "total_market", "1total_market0",
                             "upfront", "3upfront0"
-                        )
+                        ),
+                        false
                     ), false, "MISSING", true,
                     false
                 ),
@@ -1693,7 +1694,8 @@ public class TopNQueryRunnerTest
                             "spot", "2spot0",
                             "total_market", "1total_market0",
                             "upfront", "3upfront0"
-                        )
+                        ),
+                        false
                     ), false, "MISSING", false,
                     false
                 ),
@@ -1758,7 +1760,8 @@ public class TopNQueryRunnerTest
                             "spot", "2spot0",
                             "total_market", "1total_market0",
                             "upfront", "3upfront0"
-                        )
+                        ),
+                        false
                     ), true, null, true,
                     false
                 ),
@@ -1825,7 +1828,8 @@ public class TopNQueryRunnerTest
                             "total_market0",
                             "upfront",
                             "upfront0"
-                        )
+                        ),
+                        false
                     ), true, null, false,
                     false
                 ),
@@ -1891,7 +1895,8 @@ public class TopNQueryRunnerTest
                             "3total_market",
                             "upfront",
                             "1upfront"
-                        )
+                        ),
+                        false
                     ), true, null, true,
                     false
                 ),
@@ -1957,7 +1962,8 @@ public class TopNQueryRunnerTest
                             "3total_market",
                             "upfront",
                             "1upfront"
-                        )
+                        ),
+                        false
                     ), true, null, false,
                     false
                 ),
@@ -2024,7 +2030,8 @@ public class TopNQueryRunnerTest
                             "3total_market",
                             "upfront",
                             "1upfront"
-                        )
+                        ),
+                        false
                     ), true, null, true,
                     false
                 ),
@@ -3165,7 +3172,7 @@ public class TopNQueryRunnerTest
   {
     Map<String, String> extractionMap = new HashMap<>();
     extractionMap.put("spot", "spot0");
-    MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap);
+    MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
     LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, false);
 
     TopNQuery query = new TopNQueryBuilder().dataSource(QueryRunnerTestHelper.dataSource)
@@ -3215,7 +3222,7 @@ public class TopNQueryRunnerTest
     Map<String, String> extractionMap = new HashMap<>();
     extractionMap.put("", "NULL");
 
-    MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap);
+    MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
     LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, false);
     DimFilter extractionFilter = new ExtractionDimFilter("null_column", "NULL", lookupExtractionFn, null);
     TopNQueryBuilder topNQueryBuilder = new TopNQueryBuilder()
@@ -3284,7 +3291,7 @@ public class TopNQueryRunnerTest
     Map<String, String> extractionMap = new HashMap<>();
     extractionMap.put("","NULL");
 
-    MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap);
+    MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
     LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, true);
     DimFilter extractionFilter = new ExtractionDimFilter("null_column", "NULL", lookupExtractionFn, null);
     TopNQueryBuilder topNQueryBuilder = new TopNQueryBuilder()
