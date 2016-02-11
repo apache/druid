@@ -54,6 +54,7 @@ import com.metamx.http.client.response.InputStreamResponseHandler;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
 import io.druid.concurrent.Execs;
+import io.druid.curator.CuratorUtils;
 import io.druid.curator.cache.PathChildrenCacheFactory;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
@@ -681,20 +682,13 @@ public class RemoteTaskRunner implements TaskRunner, TaskLogStreamer
       }
       log.info("Coordinator asking Worker[%s] to add task[%s]", worker, task.getId());
 
-      byte[] rawBytes = jsonMapper.writeValueAsBytes(task);
-      if (rawBytes.length > config.getMaxZnodeBytes()) {
-        throw new ISE("Length of raw bytes for task too large[%,d > %,d]", rawBytes.length, config.getMaxZnodeBytes());
-      }
-
-      String taskPath = JOINER.join(indexerZkConfig.getTasksPath(), worker, task.getId());
-
-      if (cf.checkExists().forPath(taskPath) == null) {
-        cf.create()
-          .withMode(CreateMode.EPHEMERAL)
-          .forPath(
-              taskPath, rawBytes
-          );
-      }
+      CuratorUtils.createIfNotExists(
+          cf,
+          JOINER.join(indexerZkConfig.getTasksPath(), worker, task.getId()),
+          CreateMode.EPHEMERAL,
+          jsonMapper.writeValueAsBytes(task),
+          config.getMaxZnodeBytes()
+      );
 
       RemoteTaskRunnerWorkItem workItem = pendingTasks.remove(task.getId());
       if (workItem == null) {

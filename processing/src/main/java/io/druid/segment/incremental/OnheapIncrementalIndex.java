@@ -272,7 +272,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     }
   }
 
-  private static class OnHeapDimDim implements DimDim
+  static class OnHeapDimDim implements DimDim
   {
     private final Map<String, Integer> valueToId = Maps.newHashMap();
 
@@ -335,7 +335,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     }
   }
 
-  private static class OnHeapDimLookup implements SortedDimLookup
+  static class OnHeapDimLookup implements SortedDimLookup
   {
     private final String[] sortedVals;
     private final int[] idToIndex;
@@ -386,7 +386,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   // Caches references to selector objects for each column instead of creating a new object each time in order to save heap space.
   // In general the selectorFactory need not to thread-safe.
   // here its made thread safe to support the special case of groupBy where the multiple threads can add concurrently to the IncrementalIndex.
-  private static class ObjectCachingColumnSelectorFactory implements ColumnSelectorFactory
+  static class ObjectCachingColumnSelectorFactory implements ColumnSelectorFactory
   {
     private final ConcurrentMap<String, LongColumnSelector> longColumnSelectorMap = Maps.newConcurrentMap();
     private final ConcurrentMap<String, FloatColumnSelector> floatColumnSelectorMap = Maps.newConcurrentMap();

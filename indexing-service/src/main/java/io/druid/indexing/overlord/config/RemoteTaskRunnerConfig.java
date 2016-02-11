@@ -20,6 +20,7 @@
 package io.druid.indexing.overlord.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.curator.CuratorUtils;
 import org.joda.time.Period;
 
 import javax.validation.constraints.Min;
@@ -42,7 +43,7 @@ public class RemoteTaskRunnerConfig
 
   @JsonProperty
   @Min(10 * 1024)
-  private long maxZnodeBytes = 512 * 1024;
+  private int maxZnodeBytes = CuratorUtils.DEFAULT_MAX_ZNODE_BYTES;
 
   @JsonProperty
   private Period taskShutdownLinkTimeout = new Period("PT1M");
@@ -62,7 +63,7 @@ public class RemoteTaskRunnerConfig
     return minWorkerVersion;
   }
 
-  public long getMaxZnodeBytes()
+  public int getMaxZnodeBytes()
   {
     return maxZnodeBytes;
   }
