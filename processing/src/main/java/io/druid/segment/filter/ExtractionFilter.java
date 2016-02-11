@@ -99,6 +99,22 @@ public class ExtractionFilter implements Filter
   @Override
   public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector)
   {
+    if (!selector.hasBitmapIndexes(dimension)) {
+      Predicate predicate = new Predicate()
+      {
+        @Override
+        public boolean apply(Object input)
+        {
+          if (input instanceof String) {
+            input = Strings.emptyToNull((String) input);
+          }
+          // Assuming that a null/absent/empty dimension are equivalent from the druid perspective
+          return value.equals(Strings.nullToEmpty(fn.apply(input)));
+        }
+      };
+      return selector.getBitmapIndexFromColumnScan(dimension, predicate);
+    }
+
     final List<Filter> filters = makeFilters(selector);
     if (filters.isEmpty()) {
       return selector.getBitmapFactory().makeEmptyImmutableBitmap();
@@ -110,13 +126,16 @@ public class ExtractionFilter implements Filter
   public ValueMatcher makeMatcher(ValueMatcherFactory factory)
   {
     return factory.makeValueMatcher(
-        dimension, new Predicate<String>()
+        dimension, new Predicate()
         {
           @Override
-          public boolean apply(String input)
+          public boolean apply(Object input)
           {
+            if (input instanceof String) {
+              input = Strings.emptyToNull((String) input);
+            }
             // Assuming that a null/absent/empty dimension are equivalent from the druid perspective
-            return value.equals(Strings.nullToEmpty(fn.apply(Strings.emptyToNull(input))));
+            return value.equals(Strings.nullToEmpty(fn.apply(input)));
           }
         }
     );
@@ -131,6 +150,26 @@ public class ExtractionFilter implements Filter
     if (dimensionSelector == null) {
       return new BooleanValueMatcher(value.equals(Strings.nullToEmpty(fn.apply(null))));
     } else {
+      if (!dimensionSelector.getDimCapabilities().isDictionaryEncoded()) {
+        return new ValueMatcher()
+        {
+          @Override
+          public boolean matches()
+          {
+            final List<Comparable> unencodedRow = dimensionSelector.getUnencodedRow();
+            for (Comparable rowVal : unencodedRow) {
+              if (rowVal instanceof String) {
+                rowVal = Strings.emptyToNull((String) rowVal);
+              }
+              if (value.equals(Strings.nullToEmpty(fn.apply(rowVal)))) {
+                return true;
+              }
+            }
+            return false;
+          }
+        };
+      }
+
       final BitSet bitSetOfIds = new BitSet(dimensionSelector.getValueCardinality());
       for (int i = 0; i < dimensionSelector.getValueCardinality(); i++) {
         if (value.equals(Strings.nullToEmpty(fn.apply(dimensionSelector.lookupName(i))))) {

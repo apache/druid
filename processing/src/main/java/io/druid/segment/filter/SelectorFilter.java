@@ -30,6 +30,8 @@ import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.data.IndexedInts;
 
+import java.util.List;
+
 /**
  */
 public class SelectorFilter implements Filter
@@ -49,7 +51,11 @@ public class SelectorFilter implements Filter
   @Override
   public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector)
   {
-    return selector.getBitmapIndex(dimension, value);
+    if (selector.hasBitmapIndexes(dimension)) {
+      return selector.getBitmapIndex(dimension, value);
+    } else {
+      return selector.getBitmapIndexFromColumnScan(dimension, value);
+    }
   }
 
   @Override
@@ -69,6 +75,35 @@ public class SelectorFilter implements Filter
     if (dimensionSelector == null) {
       return new BooleanValueMatcher(Strings.isNullOrEmpty(value));
     } else {
+      if (!dimensionSelector.getDimCapabilities().isDictionaryEncoded()) {
+        final Comparable parsedValue;
+        switch (dimensionSelector.getDimCapabilities().getType()) {
+          case LONG:
+            parsedValue = Long.parseLong(value);
+            break;
+          case FLOAT:
+            parsedValue = Float.parseFloat(value);
+            break;
+          default:
+            throw new UnsupportedOperationException("Invalid type: " + dimensionSelector.getDimCapabilities().getType());
+        }
+        return new ValueMatcher()
+        {
+          @Override
+          public boolean matches()
+          {
+            final List<Comparable> unencodedRow = dimensionSelector.getUnencodedRow();
+            for (Comparable rowVal : unencodedRow) {
+              if (parsedValue.equals(rowVal)) {
+                return true;
+              }
+            }
+            return false;
+          }
+        };
+      }
+
+
       final int valueId = dimensionSelector.lookupId(value);
       return new ValueMatcher()
       {

@@ -33,7 +33,32 @@ public class AlphaNumericTopNMetricSpec extends LexicographicTopNMetricSpec
 {
   private static final byte CACHE_TYPE_ID = 0x2;
 
-  protected static Comparator<String> comparator = new Comparator<String>()
+  protected static Comparator<Comparable> comparator = new Comparator<Comparable>()
+  {
+    @Override
+    public int compare(Comparable o1, Comparable o2)
+    {
+      if (o1 == null) {
+        if (o2 == null) {
+          return 0;
+        } else {
+          return -1;
+        }
+      }
+
+      if (o2 == null) {
+        return 1;
+      }
+
+      if (o1 instanceof String) {
+        return stringComparator.compare((String) o1, (String) o2);
+      } else {
+        return o1.compareTo(o2);
+      }
+    }
+  };
+
+  protected static Comparator<String> stringComparator = new Comparator<String>()
   {
     // This code is based on https://github.com/amjjd/java-alphanum, see NOTICE file for more information
     public int compare(String str1, String str2)

@@ -21,6 +21,7 @@ package io.druid.query.metadata;
 
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequences;
+import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.query.LegacyDataSource;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
@@ -75,16 +76,22 @@ public class SegmentAnalyzerTest
         columns.size()
     ); // All columns including time and empty/null column
 
+    int dimIndex = 0;
     for (String dimension : TestIndex.DIMENSIONS) {
       final ColumnAnalysis columnAnalysis = columns.get(dimension);
-
-      Assert.assertEquals(dimension, ValueType.STRING.name(), columnAnalysis.getType());
+      String typeName = TestIndex.DIMENSION_TYPES[dimIndex].toString();
+      Assert.assertEquals(dimension, typeName, columnAnalysis.getType());
       if (analyses == null) {
-        Assert.assertTrue(dimension, columnAnalysis.getCardinality() > 0);
+        if (typeName.equals(ValueType.STRING.name())) {
+          Assert.assertTrue(dimension, columnAnalysis.getCardinality() > 0);
+        }
       } else {
-        Assert.assertEquals(dimension, 0, columnAnalysis.getCardinality().longValue());
+        if (typeName.equals(ValueType.STRING.name())) {
+          Assert.assertEquals(dimension, 0, columnAnalysis.getCardinality().longValue());
+        }
         Assert.assertEquals(dimension, 0, columnAnalysis.getSize());
       }
+      dimIndex++;
     }
 
     for (String metric : TestIndex.METRICS) {
@@ -125,20 +132,27 @@ public class SegmentAnalyzerTest
         columns.size()
     ); // All columns including time and excluding empty/null column
 
+    int dimIndex = 0;
     for (String dimension : TestIndex.DIMENSIONS) {
       final ColumnAnalysis columnAnalysis = columns.get(dimension);
       if (dimension.equals("null_column")) {
         Assert.assertNull(columnAnalysis);
       } else {
-        Assert.assertEquals(dimension, ValueType.STRING.name(), columnAnalysis.getType());
+        String typeName = TestIndex.DIMENSION_TYPES[dimIndex].toString();
+        Assert.assertEquals(dimension, typeName, columnAnalysis.getType());
         if (analyses == null) {
           Assert.assertTrue(dimension, columnAnalysis.getSize() > 0);
-          Assert.assertTrue(dimension, columnAnalysis.getCardinality() > 0);
+          if (typeName.equals(ValueType.STRING.name())) {
+            Assert.assertTrue(dimension, columnAnalysis.getCardinality() > 0);
+          }
         } else {
-          Assert.assertEquals(dimension, 0, columnAnalysis.getCardinality().longValue());
+          if (typeName.equals(ValueType.STRING.name())) {
+            Assert.assertEquals(dimension, 0, columnAnalysis.getCardinality().longValue());
+          }
           Assert.assertEquals(dimension, 0, columnAnalysis.getSize());
         }
       }
+      dimIndex++;
     }
 
     for (String metric : TestIndex.METRICS) {

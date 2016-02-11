@@ -55,7 +55,7 @@ In this case, queries may hit a mixture of `v1` and `v2` segments.
 
 ## Different Schemas Among Segments
 
-Druid segments for the same datasource may have different schemas. If a string column (dimension) exists in one segment but not 
+Druid segments for the same datasource may have different schemas. If a dimension exists in one segment but not 
 another, queries that involve both segments still work. Queries for the segment missing the dimension will behave as if the dimension has only null values. 
-Similarly, if one segment has a numeric column (metric) but another does not, queries on the segment missing the 
+Similarly, if one segment has a metric but another does not, queries on the segment missing the 
 metric will generally "do the right thing". Aggregations over this missing metric behave as if the metric were missing.

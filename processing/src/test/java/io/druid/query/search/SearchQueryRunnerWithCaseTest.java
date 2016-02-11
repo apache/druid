@@ -77,10 +77,10 @@ public class SearchQueryRunnerWithCaseTest
     );
 
     CharSource input = CharSource.wrap(
-        "2011-01-12T00:00:00.000Z\tspot\tAutoMotive\tPREFERRED\ta\u0001preferred\t100.000000\n" +
-        "2011-01-12T00:00:00.000Z\tSPot\tbusiness\tpreferred\tb\u0001Preferred\t100.000000\n" +
-        "2011-01-12T00:00:00.000Z\tspot\tentertainment\tPREFERRed\te\u0001preferred\t100.000000\n" +
-        "2011-01-13T00:00:00.000Z\tspot\tautomotive\tpreferred\ta\u0001preferred\t94.874713"
+        "2011-01-12T00:00:00.000Z\tspot\t11\t11.0\tAutoMotive\t111\t111.0\tPREFERRED\ta\u0001preferred\t100.000000\n" +
+        "2011-01-12T00:00:00.000Z\tSPot\t11\t11.0\tbusiness\t222\t222.0\tpreferred\tb\u0001Preferred\t100.000000\n" +
+        "2011-01-12T00:00:00.000Z\tspot\t11\t11.0\tentertainment\t333\t333.0\tPREFERRed\te\u0001preferred\t100.000000\n" +
+        "2011-01-13T00:00:00.000Z\tspot\t11\t11.0\tautomotive\t111\t111.0\tpreferred\ta\u0001preferred\t94.874713"
     );
 
     IncrementalIndex index1 = TestIndex.makeRealtimeIndex(input);

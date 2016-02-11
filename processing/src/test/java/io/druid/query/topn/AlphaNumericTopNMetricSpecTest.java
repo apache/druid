@@ -37,7 +37,7 @@ public class AlphaNumericTopNMetricSpecTest
   @Test
   public void testComparator() throws Exception
   {
-    final Comparator<String> comparator = AlphaNumericTopNMetricSpec.comparator;
+    final Comparator<Comparable> comparator = AlphaNumericTopNMetricSpec.comparator;
 
     // equality
     Assert.assertEquals(0, comparator.compare("", ""));

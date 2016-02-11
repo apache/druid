@@ -27,6 +27,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+import com.metamx.common.IAE;
 import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
@@ -50,13 +51,14 @@ import org.joda.time.Interval;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 /**
  */
 public class QueryableIndexStorageAdapter implements StorageAdapter
 {
-  private static final NullDimensionSelector NULL_DIMENSION_SELECTOR = new NullDimensionSelector();
+  private static final NullDimensionSelector NULL_DIMENSION_SELECTOR = new NullDimensionSelector(ValueType.STRING);
 
   private final QueryableIndex index;
 
@@ -149,7 +151,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {
-    return index.getColumn(column).getCapabilities();
+    Column retColumn = index.getColumn(column);
+    return retColumn == null ? null : retColumn.getCapabilities();
   }
 
   @Override
@@ -292,7 +295,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                                             timestamps,
                                             timeStart,
                                             minDataTimestamp >= timeStart
-                                        ) :
+                                        )          :
                                         new AscendingTimestampCheckingOffset(
                                             baseOffset,
                                             timestamps,
@@ -358,17 +361,47 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                       final String dimension = dimensionSpec.getDimension();
                       final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
 
-                      final Column columnDesc = index.getColumn(dimension);
-                      if (columnDesc == null) {
-                        return NULL_DIMENSION_SELECTOR;
-                      }
-
                       if (dimension.equals(Column.TIME_COLUMN_NAME)) {
                         return new SingleScanTimeDimSelector(
                             makeLongColumnSelector(dimension),
                             extractionFn,
                             descending
                         );
+                      }
+
+                      final Column columnDesc = index.getColumn(dimension);
+                      if (columnDesc == null) {
+                        return NULL_DIMENSION_SELECTOR;
+                      }
+
+                      // See if this is a dim. Why not use index.getAvailableDimensions().indexOf(dimension)?
+                      // The GenericIndexed returned by getAvailableDimensions() does not always
+                      // support allowReverseLookup since the dim list is not necessarily lexicographically sorted
+                      boolean dimfound = false;
+                      for (String dim : ((QueryableIndex) index).getAvailableDimensions()) {
+                        if (dim.equals(dimension)) {
+                          dimfound = true;
+                          break;
+                        }
+                      }
+                      if (!dimfound) {
+                        return NULL_DIMENSION_SELECTOR;
+                      }
+
+                      final ColumnCapabilities capabilities = columnDesc.getCapabilities();
+                      if (!capabilities.isDictionaryEncoded()) {
+                        Object dimSelector = null;
+                        switch (capabilities.getType()) {
+                          case LONG:
+                            dimSelector = makeLongColumnSelector(dimension);
+                            break;
+                          case FLOAT:
+                            dimSelector = makeFloatColumnSelector(dimension);
+                            break;
+                          default:
+                            throw new IAE("Invalid type: " + capabilities.getType());
+                        }
+                        return new UnencodedDimensionSelector(dimSelector, extractionFn, capabilities);
                       }
 
                       DictionaryEncodedColumn cachedColumn = dictionaryColumnCache.get(dimension);
@@ -400,7 +433,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                           public String lookupName(int id)
                           {
                             final String value = column.lookupName(id);
-                            return extractionFn == null ?
+                            return extractionFn == null       ?
                                    Strings.nullToEmpty(value) :
                                    extractionFn.apply(Strings.nullToEmpty(value));
                           }
@@ -414,6 +447,24 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                               );
                             }
                             return column.lookupId(name);
+                          }
+
+                          @Override
+                          public List<Comparable> getUnencodedRow()
+                          {
+                            throw new UnsupportedOperationException("getUnencodedRow() is not supported");
+                          }
+
+                          @Override
+                          public Comparable getExtractedValueFromUnencoded(Comparable rowVal)
+                          {
+                            throw new UnsupportedOperationException("getExtractedValueFromUnencoded() is not supported.");
+                          }
+
+                          @Override
+                          public ColumnCapabilities getDimCapabilities()
+                          {
+                            return capabilities;
                           }
                         };
                       } else {
@@ -479,6 +530,26 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                               );
                             }
                             return column.lookupId(name);
+                          }
+
+                          @Override
+                          public List<Comparable> getUnencodedRow()
+                          {
+                            throw new UnsupportedOperationException(
+                                "getUnencodedRow() is not supported"
+                            );
+                          }
+
+                          @Override
+                          public Comparable getExtractedValueFromUnencoded(Comparable rowVal)
+                          {
+                            throw new UnsupportedOperationException("getExtractedValueFromUnencoded() is not supported.");
+                          }
+
+                          @Override
+                          public ColumnCapabilities getDimCapabilities()
+                          {
+                            return capabilities;
                           }
                         };
                       }
@@ -785,7 +856,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
 
     @Override
-    public Offset clone() {
+    public Offset clone()
+    {
       throw new IllegalStateException("clone");
     }
   }

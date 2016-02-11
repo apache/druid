@@ -70,6 +70,12 @@ public class FloatMetricColumnSerializer implements MetricColumnSerializer
   public void close() throws IOException
   {
     final File outFile = IndexIO.makeMetricFile(outDir, metricName, IndexIO.BYTE_ORDER);
+    close(outFile);
+  }
+
+  @Override
+  public void close(File outFile) throws IOException
+  {
     outFile.delete();
     MetricHolder.writeFloatMetric(
         Files.newOutputStreamSupplier(outFile, true), metricName, writer

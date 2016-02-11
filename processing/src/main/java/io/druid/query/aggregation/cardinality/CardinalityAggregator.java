@@ -25,9 +25,12 @@ import com.google.common.hash.Hashing;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.UnencodedDimensionSelector;
+import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.IndexedInts;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 
 public class CardinalityAggregator implements Aggregator
@@ -49,25 +52,53 @@ public class CardinalityAggregator implements Aggregator
         hasher.putByte((byte) 0);
       }
       final DimensionSelector selector = selectorList.get(k);
-      final IndexedInts row = selector.getRow();
-      final int size = row.size();
-      // nothing to add to hasher if size == 0, only handle size == 1 and size != 0 cases.
-      if (size == 1) {
-        final String value = selector.lookupName(row.get(0));
-        hasher.putUnencodedChars(value != null ? value : NULL_STRING);
-      } else if (size != 0) {
-        final String[] values = new String[size];
-        for (int i = 0; i < size; ++i) {
-          final String value = selector.lookupName(row.get(i));
-          values[i] = value != null ? value : NULL_STRING;
-        }
-        // Values need to be sorted to ensure consistent multi-value ordering across different segments
-        Arrays.sort(values);
-        for (int i = 0; i < size; ++i) {
-          if (i != 0) {
-            hasher.putChar(SEPARATOR);
+      if (selector.getDimCapabilities().hasBitmapIndexes()) {
+        final IndexedInts row = selector.getRow();
+        final int size = row.size();
+        // nothing to add to hasher if size == 0, only handle size == 1 and size != 0 cases.
+        if (size == 1) {
+          final String value = selector.lookupName(row.get(0));
+          hasher.putUnencodedChars(value != null ? value : NULL_STRING);
+        } else if (size != 0) {
+          final String[] values = new String[size];
+          for (int i = 0; i < size; ++i) {
+            final String value = selector.lookupName(row.get(i));
+            values[i] = value != null ? value : NULL_STRING;
           }
-          hasher.putUnencodedChars(values[i]);
+          // Values need to be sorted to ensure consistent multi-value ordering across different segments
+          Arrays.sort(values);
+          for (int i = 0; i < size; ++i) {
+            if (i != 0) {
+              hasher.putChar(SEPARATOR);
+            }
+            hasher.putUnencodedChars(values[i]);
+          }
+        }
+      } else {
+        final List<Comparable> row = selector.getUnencodedRow();
+        final int size = row.size();
+        if (size == 1) {
+          Comparable value = row.get(0);
+          switch (selector.getDimCapabilities().getType()) {
+            case LONG:
+              hasher.putLong((Long)value);
+          }
+          value = selector.getExtractedValueFromUnencoded(value);
+          hasher.putUnencodedChars(value != null ? value.toString() : NULL_STRING);
+        } else {
+          final String[] values = new String[size];
+          for (int i = 0; i < size; ++i) {
+            Comparable value = row.get(0);
+            value = selector.getExtractedValueFromUnencoded(value);
+            values[i] = value != null ? value.toString() : NULL_STRING;
+          }
+          Arrays.sort(values);
+          for (int i = 0; i < size; ++i) {
+            if (i != 0) {
+              hasher.putChar(SEPARATOR);
+            }
+            hasher.putUnencodedChars(values[i]);
+          }
         }
       }
     }
@@ -77,9 +108,16 @@ public class CardinalityAggregator implements Aggregator
   protected static void hashValues(final List<DimensionSelector> selectors, HyperLogLogCollector collector)
   {
     for (final DimensionSelector selector : selectors) {
-      for (final Integer index : selector.getRow()) {
-        final String value = selector.lookupName(index);
-        collector.add(hashFn.hashUnencodedChars(value == null ? NULL_STRING : value).asBytes());
+      if (selector.getDimCapabilities().hasBitmapIndexes()) {
+        for (final Integer index : selector.getRow()) {
+          final String value = selector.lookupName(index);
+          collector.add(hashFn.hashUnencodedChars(value == null ? NULL_STRING : value).asBytes());
+        }
+      } else {
+        for (Comparable rowVal : selector.getUnencodedRow()) {
+          rowVal = selector.getExtractedValueFromUnencoded(rowVal);
+          collector.add(hashFn.hashUnencodedChars(rowVal == null ? NULL_STRING : rowVal.toString()).asBytes());
+        }
       }
     }
   }

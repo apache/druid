@@ -169,7 +169,10 @@ public class QueryRunnerTestHelper
   public static ArithmeticPostAggregator hyperUniqueFinalizingPostAgg = new ArithmeticPostAggregator(
       hyperUniqueFinalizingPostAggMetric,
       "+",
-      Lists.newArrayList(new HyperUniqueFinalizingPostAggregator(uniqueMetric, uniqueMetric), new ConstantPostAggregator(null, 1))
+      Lists.newArrayList(
+          new HyperUniqueFinalizingPostAggregator(uniqueMetric, uniqueMetric),
+          new ConstantPostAggregator(null, 1)
+      )
   );
 
   public static final List<AggregatorFactory> commonAggregators = Arrays.asList(
@@ -414,7 +417,7 @@ public class QueryRunnerTestHelper
             segmentId, adapter.getDataInterval().getStart(),
             factory.createRunner(adapter)
         ),
-        (QueryToolChest<T, Query<T>>)factory.getToolchest()
+        (QueryToolChest<T, Query<T>>) factory.getToolchest()
     );
   }
 
@@ -440,11 +443,16 @@ public class QueryRunnerTestHelper
 
   public static IntervalChunkingQueryRunnerDecorator NoopIntervalChunkingQueryRunnerDecorator()
   {
-    return new IntervalChunkingQueryRunnerDecorator(null, null, null) {
+    return new IntervalChunkingQueryRunnerDecorator(null, null, null)
+    {
       @Override
-      public <T> QueryRunner<T> decorate(final QueryRunner<T> delegate,
-          QueryToolChest<T, ? extends Query<T>> toolChest) {
-        return new QueryRunner<T>() {
+      public <T> QueryRunner<T> decorate(
+          final QueryRunner<T> delegate,
+          QueryToolChest<T, ? extends Query<T>> toolChest
+      )
+      {
+        return new QueryRunner<T>()
+        {
           @Override
           public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
           {

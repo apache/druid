@@ -128,17 +128,27 @@ public class IngestSegmentFirehose implements Firehose
                                         for (Map.Entry<String, DimensionSelector> dimSelector : dimSelectors.entrySet()) {
                                           final String dim = dimSelector.getKey();
                                           final DimensionSelector selector = dimSelector.getValue();
-                                          final IndexedInts vals = selector.getRow();
 
-                                          if (vals.size() == 1) {
-                                            final String dimVal = selector.lookupName(vals.get(0));
-                                            theEvent.put(dim, dimVal);
-                                          } else {
-                                            List<String> dimVals = Lists.newArrayList();
-                                            for (int i = 0; i < vals.size(); ++i) {
-                                              dimVals.add(selector.lookupName(vals.get(i)));
+                                          if (selector.getDimCapabilities().isDictionaryEncoded()) {
+                                            final IndexedInts vals = selector.getRow();
+
+                                            if (vals.size() == 1) {
+                                              final String dimVal = selector.lookupName(vals.get(0));
+                                              theEvent.put(dim, dimVal);
+                                            } else {
+                                              List<String> dimVals = Lists.newArrayList();
+                                              for (int i = 0; i < vals.size(); ++i) {
+                                                dimVals.add(selector.lookupName(vals.get(i)));
+                                              }
+                                              theEvent.put(dim, dimVals);
                                             }
-                                            theEvent.put(dim, dimVals);
+                                          } else {
+                                            final List<Comparable> dimVals = selector.getUnencodedRow();
+                                            if (dimVals.size() == 1) {
+                                              theEvent.put(dim, dimVals.get(0));
+                                            } else {
+                                              theEvent.put(dim, dimVals);
+                                            }
                                           }
                                         }
 

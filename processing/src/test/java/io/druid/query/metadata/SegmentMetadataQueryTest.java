@@ -171,7 +171,7 @@ public class SegmentMetadataQueryTest
                 null,
                 null
             )
-        ), mmap1 ? 71982 : 32643,
+        ), mmap1 ? 115506 : 76167,
         1209,
         null
     );
@@ -205,7 +205,7 @@ public class SegmentMetadataQueryTest
                 null,
                 null
             )
-        ), mmap2 ? 71982 : 32643,
+        ), mmap2 ? 115506 : 76167,
         1209,
         null
     );

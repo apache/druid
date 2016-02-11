@@ -28,6 +28,7 @@ import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.extraction.LookupExtractionFn;
 import io.druid.query.extraction.MapLookupExtractor;
@@ -44,6 +45,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -450,6 +452,81 @@ public class SearchQueryRunnerTest
               .intervals(QueryRunnerTestHelper.fullOnInterval)
               .dimensions("does_not_exist")
               .query("a")
+              .build(),
+        expectedResults
+    );
+  }
+
+
+  @Test
+  public void testSearchLongFloatInMultiDims()
+  {
+    SearchQuery searchQuery = Druids.newSearchQueryBuilder()
+                                    .dataSource(QueryRunnerTestHelper.dataSource)
+                                    .granularity(QueryRunnerTestHelper.allGran)
+                                    .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                    .dimensions(
+                                        Arrays.asList(
+                                            "quality_long",
+                                            "quality_float",
+                                            "market_long",
+                                            "market_float"
+                                        )
+                                    )
+                                    .query("22")
+                                    .build();
+
+    Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
+    expectedResults.put("quality_long", Sets.newHashSet("2222"));
+    expectedResults.put("quality_float", Sets.newHashSet("222.222"));
+    expectedResults.put("market_long", Sets.newHashSet("2222"));
+    expectedResults.put("market_float", Sets.newHashSet("222.222"));
+
+    checkSearchQuery(searchQuery, expectedResults);
+  }
+
+  @Test
+  public void testSearchLongFloatWithExtractionFilter1()
+  {
+    final String automotiveSnowman = "automotive☃";
+    Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
+    expectedResults.put(
+        "quality_long", new HashSet<String>(Arrays.asList(automotiveSnowman))
+    );
+    expectedResults.put(
+        "quality_float", new HashSet<String>(Arrays.asList(automotiveSnowman))
+    );
+
+    final LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(
+        new MapLookupExtractor(ImmutableMap.of("1111", automotiveSnowman,
+                                               "111.111", automotiveSnowman)),
+        true,
+        null,
+        true,
+        false
+    );
+
+    DimFilter filter = Druids.newAndDimFilterBuilder()
+                             .fields(
+                                 Arrays.<DimFilter>asList(
+                                     new ExtractionDimFilter("quality_long", automotiveSnowman, lookupExtractionFn, null),
+                                     new ExtractionDimFilter("quality_float", automotiveSnowman, lookupExtractionFn, null)
+                                     )
+                             )
+                             .build();
+
+    List<DimensionSpec> dimensionSpecs = new ArrayList<>();
+    dimensionSpecs.add(new ExtractionDimensionSpec("quality_long", null, lookupExtractionFn, null));
+    dimensionSpecs.add(new ExtractionDimensionSpec("quality_float", null, lookupExtractionFn, null));
+
+    checkSearchQuery(
+        Druids.newSearchQueryBuilder()
+              .dataSource(QueryRunnerTestHelper.dataSource)
+              .granularity(QueryRunnerTestHelper.allGran)
+              .filters(filter)
+              .intervals(QueryRunnerTestHelper.fullOnInterval)
+              .dimensions(dimensionSpecs)
+              .query("☃")
               .build(),
         expectedResults
     );

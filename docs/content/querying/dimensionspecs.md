@@ -35,13 +35,14 @@ Returns dimension values transformed using the given [extraction function](#extr
 
 Extraction functions define the transformation applied to each dimension value.
 
-Transformations can be applied to both regular (string) dimensions, as well
+Transformations can be applied to both regular (Long, Float, String) dimensions, as well
 as the special `__time` dimension, which represents the current time bucket
 according to the query [aggregation granularity](../querying/granularities.html).
 
 **Note**: for functions taking string values (such as regular expressions),
 `__time` dimension values will be formatted in [ISO-8601 format](https://en.wikipedia.org/wiki/ISO_8601)
-before getting passed to the extraction function.
+before getting passed to the extraction function. Long and Float dimension values will be converted to Strings
+for these extraction functions.
 
 ### Regular Expression Extraction Function
 

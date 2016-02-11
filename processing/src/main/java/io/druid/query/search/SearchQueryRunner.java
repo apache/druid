@@ -19,6 +19,7 @@
 
 package io.druid.query.search;
 
+import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
@@ -51,11 +52,13 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
+import io.druid.segment.UnencodedDimensionSelector;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
 
+import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -103,44 +106,61 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
         dimsToSearch = dimensions;
       }
 
-      final BitmapFactory bitmapFactory = index.getBitmapFactoryForDimensions();
 
-      final ImmutableBitmap baseFilter;
-      if (filter == null) {
-        baseFilter = bitmapFactory.complement(bitmapFactory.makeEmptyImmutableBitmap(), index.getNumRows());
-      } else {
-        final ColumnSelectorBitmapIndexSelector selector = new ColumnSelectorBitmapIndexSelector(bitmapFactory, index);
-        baseFilter = filter.getBitmapIndex(selector);
-      }
-
+      boolean useStorageAdapter = false;
       for (DimensionSpec dimension : dimsToSearch) {
         final Column column = index.getColumn(dimension.getDimension());
         if (column == null) {
           continue;
         }
-
-        final BitmapIndex bitmapIndex = column.getBitmapIndex();
-        ExtractionFn extractionFn = dimension.getExtractionFn();
-        if (extractionFn == null) {
-          extractionFn = IdentityExtractionFn.getInstance();
+        if (!column.getCapabilities().hasBitmapIndexes()) {
+          // If one of the columns has no bitmap indexes, fallback to using StorageAdapter
+          // and do a per-row scan.
+          // TODO: Could optimize this by using bitmaps when available, full scan otherwise
+          useStorageAdapter = true;
+          break;
         }
-        if (bitmapIndex != null) {
-          for (int i = 0; i < bitmapIndex.getCardinality(); ++i) {
-            String dimVal = Strings.nullToEmpty(extractionFn.apply(bitmapIndex.getValue(i)));
-            if (searchQuerySpec.accept(dimVal) &&
-                bitmapFactory.intersection(Arrays.asList(baseFilter, bitmapIndex.getBitmap(i))).size() > 0) {
-              retVal.add(new SearchHit(dimension.getOutputName(), dimVal));
-              if (retVal.size() >= limit) {
-                return makeReturnResult(limit, retVal);
+      }
+
+      if (!useStorageAdapter) {
+        final BitmapFactory bitmapFactory = index.getBitmapFactoryForDimensions();
+
+        final ImmutableBitmap baseFilter;
+        final ColumnSelectorBitmapIndexSelector selector = new ColumnSelectorBitmapIndexSelector(bitmapFactory, index);
+        if (filter == null) {
+          baseFilter = bitmapFactory.complement(bitmapFactory.makeEmptyImmutableBitmap(), index.getNumRows());
+        } else {
+          baseFilter = filter.getBitmapIndex(selector);
+        }
+
+        for (DimensionSpec dimension : dimsToSearch) {
+          final Column column = index.getColumn(dimension.getDimension());
+          if (column == null) {
+            continue;
+          }
+
+          final BitmapIndex bitmapIndex = column.getBitmapIndex();
+          ExtractionFn extractionFn = dimension.getExtractionFn();
+          if (extractionFn == null) {
+            extractionFn = IdentityExtractionFn.getInstance();
+          }
+          if (bitmapIndex != null) {
+            for (int i = 0; i < bitmapIndex.getCardinality(); ++i) {
+              String dimVal = Strings.nullToEmpty(extractionFn.apply(bitmapIndex.getValue(i)));
+              if (searchQuerySpec.accept(dimVal) &&
+                  bitmapFactory.intersection(Arrays.asList(baseFilter, bitmapIndex.getBitmap(i))).size() > 0) {
+                retVal.add(new SearchHit(dimension.getOutputName(), dimVal));
+                if (retVal.size() >= limit) {
+                  return makeReturnResult(limit, retVal);
+                }
               }
             }
           }
         }
+
+        return makeReturnResult(limit, retVal);
       }
-
-      return makeReturnResult(limit, retVal);
     }
-
     final StorageAdapter adapter = segment.asStorageAdapter();
 
     if (adapter == null) {
@@ -185,13 +205,27 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
                 final DimensionSelector selector = entry.getValue();
 
                 if (selector != null) {
-                  final IndexedInts vals = selector.getRow();
-                  for (int i = 0; i < vals.size(); ++i) {
-                    final String dimVal = selector.lookupName(vals.get(i));
-                    if (searchQuerySpec.accept(dimVal)) {
-                      set.add(new SearchHit(entry.getKey(), dimVal));
-                      if (set.size() >= limit) {
-                        return set;
+                  if (!selector.getDimCapabilities().isDictionaryEncoded()) {
+                    List<Comparable> rowVals = selector.getUnencodedRow();
+                    for (Comparable rowVal : rowVals) {
+                      rowVal = selector.getExtractedValueFromUnencoded(rowVal);
+                      String rowValStr = rowVal == null ? null : rowVal.toString();
+                      if (searchQuerySpec.accept(rowValStr)) {
+                        set.add(new SearchHit(entry.getKey(), rowValStr));
+                        if (set.size() >= limit) {
+                          return set;
+                        }
+                      }
+                    }
+                  } else {
+                    final IndexedInts vals = selector.getRow();
+                    for (int i = 0; i < vals.size(); ++i) {
+                      final String dimVal = selector.lookupName(vals.get(i));
+                      if (searchQuerySpec.accept(dimVal)) {
+                        set.add(new SearchHit(entry.getKey(), dimVal));
+                        if (set.size() >= limit) {
+                          return set;
+                        }
                       }
                     }
                   }

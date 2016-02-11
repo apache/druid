@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.ListBasedIndexedInts;
 
@@ -117,6 +118,25 @@ public abstract class BaseFilteredDimensionSpec implements DimensionSpec
       {
         return forwardMapping.get(selector.lookupId(name));
       }
+
+      @Override
+      public List<Comparable> getUnencodedRow()
+      {
+        throw new UnsupportedOperationException("getUnencodedRow() is not supported.");
+      }
+
+      @Override
+      public Comparable getExtractedValueFromUnencoded(Comparable rowVal)
+      {
+        throw new UnsupportedOperationException("getExtractedValueFromUnencoded() is not supported.");
+      }
+
+      @Override
+      public ColumnCapabilities getDimCapabilities()
+      {
+        throw new UnsupportedOperationException("getDimCapabilities not supprted yet");
+      }
+
     };
   }
 }

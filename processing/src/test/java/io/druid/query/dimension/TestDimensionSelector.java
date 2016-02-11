@@ -20,8 +20,11 @@
 package io.druid.query.dimension;
 
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.data.ArrayBasedIndexedInts;
 import io.druid.segment.data.IndexedInts;
+
+import java.util.List;
 
 /**
  * Test dimension selector that has cardinality=26
@@ -59,6 +62,24 @@ class TestDimensionSelector implements DimensionSelector
   public int lookupId(String name)
   {
     return name.charAt(0) - 'a';
+  }
+
+  @Override
+  public List<Comparable> getUnencodedRow()
+  {
+    throw new UnsupportedOperationException("getUnencodedRow() is not supported");
+  }
+
+  @Override
+  public Comparable getExtractedValueFromUnencoded(Comparable rowVal)
+  {
+    throw new UnsupportedOperationException("getExtractedValueFromUnencoded() is not supported.");
+  }
+
+  @Override
+  public ColumnCapabilities getDimCapabilities()
+  {
+    throw new UnsupportedOperationException("getDimCapabilities not supprted yet");
   }
 
 }

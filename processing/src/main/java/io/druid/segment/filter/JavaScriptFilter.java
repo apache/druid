@@ -28,6 +28,7 @@ import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.column.GenericColumn;
 import io.druid.segment.data.Indexed;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
@@ -51,6 +52,22 @@ public class JavaScriptFilter implements Filter
   {
     final Context cx = Context.enter();
     try {
+      if (!selector.hasBitmapIndexes(dimension)) {
+        Predicate predicateInContext = new Predicate()
+        {
+          @Override
+          public boolean apply(@Nullable Object input)
+          {
+            //TODO: Can existing JavascriptFilters handle Object inputs?
+            //TODO: If this doesn't break backwards compability, don't convert input to String
+            String inputStr = input == null ? null : input.toString();
+            return predicate.applyInContext(cx, inputStr);
+          }
+        };
+
+        return selector.getBitmapIndexFromColumnScan(dimension, predicateInContext);
+      }
+
       final Indexed<String> dimValues = selector.getDimensionValues(dimension);
       ImmutableBitmap bitmap;
       if (dimValues == null) {
@@ -94,7 +111,7 @@ public class JavaScriptFilter implements Filter
     return factory.makeValueMatcher(dimension, predicate);
   }
 
-  static class JavaScriptPredicate implements Predicate<String>
+  static class JavaScriptPredicate implements Predicate
   {
     final ScriptableObject scope;
     final Function fnApply;
@@ -118,12 +135,13 @@ public class JavaScriptFilter implements Filter
     }
 
     @Override
-    public boolean apply(final String input)
+    public boolean apply(final Object input)
     {
+      String inputStr = input == null ? null : input.toString();
       // one and only one context per thread
       final Context cx = Context.enter();
       try {
-        return applyInContext(cx, input);
+        return applyInContext(cx, inputStr);
       }
       finally {
         Context.exit();

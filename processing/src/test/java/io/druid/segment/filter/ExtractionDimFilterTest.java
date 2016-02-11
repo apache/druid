@@ -19,6 +19,7 @@
 
 package io.druid.segment.filter;
 
+import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.collections.bitmap.BitmapFactory;
@@ -32,6 +33,7 @@ import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.DimFilters;
 import io.druid.query.filter.ExtractionDimFilter;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.ArrayIndexed;
 import io.druid.segment.data.Indexed;
 import org.junit.Assert;
@@ -109,7 +111,29 @@ public class ExtractionDimFilterTest
     {
       return null;
     }
+
+    @Override
+    public boolean hasBitmapIndexes(String dimension) {
+      return true;
+    }
+
+    @Override
+    public ImmutableBitmap getBitmapIndexFromColumnScan(String dimension, String value) {
+      return getBitmapIndex(dimension, value);
+    }
+
+    @Override
+    public ImmutableBitmap getBitmapIndexFromColumnScan(String dimension, Predicate predicate) {
+      return null;
+    }
+
+    @Override
+    public ValueType getDimensionType(String dimension)
+    {
+      return ValueType.STRING;
+    }
   };
+
   private static final ExtractionFn DIM_EXTRACTION_FN = new DimExtractionFn()
   {
     @Override
