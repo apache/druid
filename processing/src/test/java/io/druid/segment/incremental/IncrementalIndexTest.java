@@ -29,6 +29,8 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.CloserRule;
+import io.druid.query.aggregation.FilteredAggregatorFactory;
+import io.druid.query.filter.SelectorDimFilter;
 import org.joda.time.DateTime;
 import org.junit.Rule;
 import org.junit.Test;
@@ -73,7 +75,15 @@ public class IncrementalIndexTest
                   public IncrementalIndex createIndex()
                   {
                     return new OnheapIncrementalIndex(
-                        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}, 1000
+                        0,
+                        QueryGranularity.MINUTE,
+                        new AggregatorFactory[]{
+                            new FilteredAggregatorFactory(
+                                new CountAggregatorFactory("cnt"),
+                                new SelectorDimFilter("billy", "A")
+                            )
+                        },
+                        1000
                     );
                   }
                 }
@@ -88,7 +98,12 @@ public class IncrementalIndexTest
                     return new OffheapIncrementalIndex(
                         0L,
                         QueryGranularity.NONE,
-                        new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
+                        new AggregatorFactory[]{
+                            new FilteredAggregatorFactory(
+                                new CountAggregatorFactory("cnt"),
+                                new SelectorDimFilter("billy", "A")
+                            )
+                        },
                         1000000,
                         new StupidPool<ByteBuffer>(
                             new Supplier<ByteBuffer>()
@@ -104,7 +119,6 @@ public class IncrementalIndexTest
                   }
                 }
             }
-
         }
     );
   }
@@ -151,6 +165,13 @@ public class IncrementalIndexTest
             new DateTime().minus(1).getMillis(),
             Lists.newArrayList("billy", "joe"),
             ImmutableMap.<String, Object>of("billy", "A", "joe", "B")
+        )
+    );
+    index.add(
+        new MapBasedInputRow(
+            new DateTime().minus(1).getMillis(),
+            Lists.newArrayList("billy", "joe"),
+            ImmutableMap.<String, Object>of("billy", "C", "joe", "B")
         )
     );
     index.add(

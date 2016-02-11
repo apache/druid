@@ -151,8 +151,6 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
     selectors = Maps.newHashMap();
     aggOffsetInBuffer = new int[metrics.length];
 
-    BufferAggregator[] aggregators = new BufferAggregator[metrics.length];
-
     for (int i = 0; i < metrics.length; i++) {
       AggregatorFactory agg = metrics[i];
 
@@ -167,7 +165,6 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
           new OnheapIncrementalIndex.ObjectCachingColumnSelectorFactory(columnSelectorFactory)
       );
 
-      aggregators[i] = agg.factorizeBuffered(columnSelectorFactory);
       if (i == 0) {
         aggOffsetInBuffer[i] = 0;
       } else {
@@ -177,7 +174,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
 
     aggsTotalSize = aggOffsetInBuffer[metrics.length - 1] + metrics[metrics.length - 1].getMaxIntermediateSize();
 
-    return aggregators;
+    return new BufferAggregator[metrics.length];
   }
 
   @Override
@@ -203,6 +200,15 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
         bufferOffset = indexAndOffset[1];
         aggBuffer = aggBuffers.get(bufferIndex).get();
       } else {
+        rowContainer.set(row);
+        for (int i = 0; i < metrics.length; i++) {
+          final AggregatorFactory agg = metrics[i];
+          getAggs()[i] = agg.factorizeBuffered(
+              makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics)
+          );
+        }
+        rowContainer.set(null);
+
         bufferIndex = aggBuffers.size() - 1;
         ByteBuffer lastBuffer = aggBuffers.isEmpty() ? null : aggBuffers.get(aggBuffers.size() - 1).get();
         int[] lastAggregatorsIndexAndOffset = indexAndOffsets.isEmpty()
