@@ -40,6 +40,7 @@ import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
+import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
@@ -424,7 +425,10 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       if (dimSchema.getTypeName().equals(DimensionSchema.SPATIAL_TYPE_NAME)) {
         capabilities.setHasSpatialIndexes(true);
       } else {
-        addNewDimension(dimSchema.getName(), capabilities);
+        int compareCacheSize = dimSchema instanceof StringDimensionSchema
+                               ? ((StringDimensionSchema) dimSchema).getCompareCacheSize()
+                               : -1;
+        addNewDimension(dimSchema.getName(), compareCacheSize, capabilities);
       }
       columnCapabilities.put(dimSchema.getName(), capabilities);
     }
@@ -436,7 +440,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     }
   }
 
-  private DimDim newDimDim(String dimension, ValueType type) {
+  private DimDim newDimDim(String dimension, ValueType type, int compareCacheSize) {
     DimDim newDimDim;
     switch (type) {
       case LONG:
@@ -446,7 +450,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
         newDimDim = makeDimDim(dimension, getDimensionDescs());
         break;
       case STRING:
-        newDimDim = new NullValueConverterDimDim(makeDimDim(dimension, getDimensionDescs()));
+        newDimDim = new NullValueConverterDimDim(makeDimDim(dimension, getDimensionDescs()), compareCacheSize);
         break;
       default:
         throw new IAE("Invalid column type: " + type);
@@ -808,10 +812,16 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     }
   }
 
-  @GuardedBy("dimensionDescs")
   private DimensionDesc addNewDimension(String dim, ColumnCapabilitiesImpl capabilities)
   {
-    DimensionDesc desc = new DimensionDesc(dimensionDescs.size(), dim, newDimDim(dim, capabilities.getType()), capabilities);
+    return addNewDimension(dim, -1, capabilities);
+  }
+
+  @GuardedBy("dimensionDescs")
+  private DimensionDesc addNewDimension(String dim, int compareCacheSize, ColumnCapabilitiesImpl capabilities)
+  {
+    DimDim values = newDimDim(dim, capabilities.getType(), compareCacheSize);
+    DimensionDesc desc = new DimensionDesc(dimensionDescs.size(), dim, values, capabilities);
     if (dimValues.size() != desc.getIndex()) {
       throw new ISE("dimensionDescs and dimValues for [%s] is out of sync!!", dim);
     }
@@ -1050,6 +1060,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
     public int add(T value);
 
+    public int compare(int index1, int index2);
+
     public SortedDimLookup sort();
   }
 
@@ -1069,11 +1081,18 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
    */
   static class NullValueConverterDimDim implements DimDim<String>
   {
+    private static final byte NOT_DEFINED = 0x00;
+
     private final DimDim<String> delegate;
 
-    NullValueConverterDimDim(DimDim delegate)
+    private final int capacity;
+    private final byte[] cache;
+
+    NullValueConverterDimDim(DimDim delegate, int cacheCapacity)
     {
       this.delegate = delegate;
+      this.capacity = Math.min(cacheCapacity, 4096);  // max 8M
+      this.cache = cacheCapacity > 0 ? new byte[cacheCapacity * (cacheCapacity - 1) / 2] : null;
     }
 
     @Override
@@ -1116,6 +1135,27 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     public int add(String value)
     {
       return delegate.add(Strings.nullToEmpty(value));
+    }
+
+    @Override
+    public int compare(int lhsIdx, int rhsIdx)
+    {
+      if (cache != null && lhsIdx < capacity && rhsIdx < capacity) {
+        final boolean leftToRight = lhsIdx > rhsIdx;
+        final int cacheIndex = leftToRight ?
+                               (lhsIdx - rhsIdx - 1) + rhsIdx * (capacity - 1) - (rhsIdx * (rhsIdx - 1) / 2) :
+                               (rhsIdx - lhsIdx - 1) + lhsIdx * (capacity - 1) - (lhsIdx * (lhsIdx - 1) / 2);
+        if (cache[cacheIndex] == NOT_DEFINED) {
+          final int compare = delegate.compare(lhsIdx, rhsIdx);
+          cache[cacheIndex] = normalize(compare, leftToRight);
+        }
+        return leftToRight ? cache[cacheIndex] : -cache[cacheIndex];
+      }
+      return delegate.compare(lhsIdx, rhsIdx);
+    }
+
+    private byte normalize(int compare, boolean leftToRight) {
+      return leftToRight ^ compare > 0 ? (byte)-1 : (byte)1;
     }
 
     @Override
@@ -1284,13 +1324,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
         while (retVal == 0 && valsIndex < lhsIdxs.length) {
           if (lhsIdxs[valsIndex] != rhsIdxs[valsIndex]) {
             final DimDim dimLookup = dimValues.get(index);
-            final Comparable lhsVal = dimLookup.getValue(lhsIdxs[valsIndex]);
-            final Comparable rhsVal = dimLookup.getValue(rhsIdxs[valsIndex]);
-            if (lhsVal != null && rhsVal != null) {
-              retVal = lhsVal.compareTo(rhsVal);
-            } else if (lhsVal == null ^ rhsVal == null) {
-              retVal = lhsVal == null ? -1 : 1;
-            }
+            retVal = dimLookup.compare(lhsIdxs[valsIndex], rhsIdxs[valsIndex]);
           }
           ++valsIndex;
         }
