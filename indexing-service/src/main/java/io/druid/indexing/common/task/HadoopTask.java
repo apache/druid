@@ -87,7 +87,7 @@ public abstract class HadoopTask extends AbstractTask
           return false;
         }
         final String fName = Paths.get(input.toURI()).getFileName().toString();
-        return fName.startsWith("druid") && fName.endsWith(".jar");
+        return fName.startsWith("druid") && fName.endsWith(".jar") && !fName.endsWith("selfcontained.jar");
       }
       catch (URISyntaxException e) {
         throw Throwables.propagate(e);
