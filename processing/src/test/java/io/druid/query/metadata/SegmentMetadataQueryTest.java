@@ -153,14 +153,18 @@ public class SegmentMetadataQueryTest
                 false,
                 12090,
                 null,
+                null,
+                null,
                 null
             ),
             "placement",
             new ColumnAnalysis(
                 ValueType.STRING.toString(),
                 false,
-                mmap1 ? 10881 : 0,
+                mmap1 ? 10881 : 10764,
                 1,
+                "preferred",
+                "preferred",
                 null
             ),
             "index",
@@ -169,9 +173,11 @@ public class SegmentMetadataQueryTest
                 false,
                 9672,
                 null,
+                null,
+                null,
                 null
             )
-        ), mmap1 ? 71982 : 32643,
+        ), mmap1 ? 71982 : 72755,
         1209,
         null
     );
@@ -187,6 +193,8 @@ public class SegmentMetadataQueryTest
                 false,
                 12090,
                 null,
+                null,
+                null,
                 null
             ),
             "placement",
@@ -195,6 +203,8 @@ public class SegmentMetadataQueryTest
                 false,
                 mmap2 ? 10881 : 0,
                 1,
+                null,
+                null,
                 null
             ),
             "index",
@@ -203,9 +213,12 @@ public class SegmentMetadataQueryTest
                 false,
                 9672,
                 null,
+                null,
+                null,
                 null
             )
-        ), mmap2 ? 71982 : 32643,
+        // null_column will be included only for incremental index, which makes a little bigger result than expected
+        ), mmap2 ? 71982 : 72755,
         1209,
         null
     );
@@ -236,6 +249,8 @@ public class SegmentMetadataQueryTest
                 false,
                 0,
                 1,
+                null,
+                null,
                 null
             ),
             "placementish",
@@ -244,6 +259,8 @@ public class SegmentMetadataQueryTest
                 true,
                 0,
                 9,
+                null,
+                null,
                 null
             )
         ),
@@ -298,6 +315,8 @@ public class SegmentMetadataQueryTest
                 false,
                 0,
                 1,
+                null,
+                null,
                 null
             ),
             "quality_uniques",
@@ -305,6 +324,8 @@ public class SegmentMetadataQueryTest
                 "hyperUnique",
                 false,
                 0,
+                null,
+                null,
                 null,
                 null
             )
@@ -350,6 +371,53 @@ public class SegmentMetadataQueryTest
   @Test
   public void testSegmentMetadataQueryWithDefaultAnalysisMerge()
   {
+    ColumnAnalysis analysis = new ColumnAnalysis(
+        ValueType.STRING.toString(),
+        false,
+        (mmap1 ? 10881 : 10764) + (mmap2 ? 10881 : 10764),
+        1,
+        "preferred",
+        "preferred",
+        null
+    );
+    testSegmentMetadataQueryWithDefaultAnalysisMerge("placement", analysis);
+  }
+
+  @Test
+  public void testSegmentMetadataQueryWithDefaultAnalysisMerge2()
+  {
+    ColumnAnalysis analysis = new ColumnAnalysis(
+        ValueType.STRING.toString(),
+        false,
+        (mmap1 ? 6882 : 6808) + (mmap2 ? 6882 : 6808),
+        3,
+        "spot",
+        "upfront",
+        null
+    );
+    testSegmentMetadataQueryWithDefaultAnalysisMerge("market", analysis);
+  }
+
+  @Test
+  public void testSegmentMetadataQueryWithDefaultAnalysisMerge3()
+  {
+    ColumnAnalysis analysis = new ColumnAnalysis(
+        ValueType.STRING.toString(),
+        false,
+        (mmap1 ? 9765 : 9660) + (mmap2 ? 9765 : 9660),
+        9,
+        "automotive",
+        "travel",
+        null
+    );
+    testSegmentMetadataQueryWithDefaultAnalysisMerge("quality", analysis);
+  }
+
+  private void testSegmentMetadataQueryWithDefaultAnalysisMerge(
+      String column,
+      ColumnAnalysis analysis
+  )
+  {
     SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
         differentIds ? "merged" : "testSegment",
         ImmutableList.of(expectedSegmentAnalysis1.getIntervals().get(0)),
@@ -360,14 +428,8 @@ public class SegmentMetadataQueryTest
                 false,
                 12090 * 2,
                 null,
-                null
-            ),
-            "placement",
-            new ColumnAnalysis(
-                ValueType.STRING.toString(),
-                false,
-                10881 * ((mmap1 ? 1 : 0) + (mmap2 ? 1 : 0)),
-                1,
+                null,
+                null,
                 null
             ),
             "index",
@@ -376,8 +438,12 @@ public class SegmentMetadataQueryTest
                 false,
                 9672 * 2,
                 null,
+                null,
+                null,
                 null
-            )
+            ),
+            column,
+            analysis
         ),
         expectedSegmentAnalysis1.getSize() + expectedSegmentAnalysis2.getSize(),
         expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
@@ -400,12 +466,11 @@ public class SegmentMetadataQueryTest
         toolChest
     );
 
+    Query query = testQuery.withColumns(new ListColumnIncluderator(Arrays.asList("__time", "index", column)));
+
     TestHelper.assertExpectedObjects(
         ImmutableList.of(mergedSegmentAnalysis),
-        myRunner.run(
-            testQuery,
-            Maps.newHashMap()
-        ),
+        myRunner.run(query, Maps.newHashMap()),
         "failed SegmentMetadata merging query"
     );
     exec.shutdownNow();
@@ -424,6 +489,8 @@ public class SegmentMetadataQueryTest
                 false,
                 0,
                 0,
+                null,
+                null,
                 null
             )
         ),
@@ -482,6 +549,8 @@ public class SegmentMetadataQueryTest
                 false,
                 0,
                 0,
+                null,
+                null,
                 null
             )
         ),

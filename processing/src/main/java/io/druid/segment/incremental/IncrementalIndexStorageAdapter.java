@@ -137,6 +137,20 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
+  public Comparable getMinValue(String column)
+  {
+    IncrementalIndex.DimDim dimDim = index.getDimensionValues(column);
+    return dimDim == null ? null : dimDim.getMinValue();
+  }
+
+  @Override
+  public Comparable getMaxValue(String column)
+  {
+    IncrementalIndex.DimDim dimDim = index.getDimensionValues(column);
+    return dimDim == null ? null : dimDim.getMaxValue();
+  }
+
+  @Override
   public Capabilities getCapabilities()
   {
     return Capabilities.builder().dimensionValuesSorted(false).build();
