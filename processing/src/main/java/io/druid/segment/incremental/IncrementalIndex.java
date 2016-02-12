@@ -51,6 +51,7 @@ import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
+import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.serde.ComplexMetricExtractor;
 import io.druid.segment.serde.ComplexMetricSerde;
@@ -847,6 +848,10 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
     public int size();
 
+    public String getMinValue();
+
+    public String getMaxValue();
+
     public int add(String value);
 
     public SortedDimLookup sort();
@@ -897,6 +902,18 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     public int size()
     {
       return delegate.size();
+    }
+
+    @Override
+    public String getMinValue()
+    {
+      return Strings.nullToEmpty(delegate.getMinValue());
+    }
+
+    @Override
+    public String getMaxValue()
+    {
+      return Strings.nullToEmpty(delegate.getMaxValue());
     }
 
     @Override
