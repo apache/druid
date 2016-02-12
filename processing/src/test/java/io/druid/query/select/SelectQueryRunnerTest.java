@@ -32,6 +32,11 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
 import io.druid.query.TableDataSource;
+import io.druid.query.dimension.DefaultDimensionSpec;
+import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.dimension.ExtractionDimensionSpec;
+import io.druid.query.extraction.LookupExtractionFn;
+import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.SelectorDimFilter;
@@ -130,7 +135,7 @@ public class SelectQueryRunnerTest
         descending,
         null,
         QueryRunnerTestHelper.allGran,
-        Arrays.<String>asList(),
+        DefaultDimensionSpec.toSpec(Arrays.<String>asList()),
         Arrays.<String>asList(),
         new PagingSpec(null, 3),
         null
@@ -151,6 +156,134 @@ public class SelectQueryRunnerTest
   }
 
   @Test
+  public void testFullOnSelectWithDimensionSpec()
+  {
+    Map<String, String> map = new HashMap<>();
+    map.put("automotive", "automotive0");
+    map.put("business", "business0");
+    map.put("entertainment", "entertainment0");
+    map.put("health", "health0");
+    map.put("mezzanine", "mezzanine0");
+    map.put("news", "news0");
+    map.put("premium", "premium0");
+    map.put("technology", "technology0");
+    map.put("travel", "travel0");
+
+    SelectQuery query = new SelectQuery(
+        new TableDataSource(QueryRunnerTestHelper.dataSource),
+        QueryRunnerTestHelper.fullOnInterval,
+        descending,
+        null,
+        QueryRunnerTestHelper.allGran,
+        Arrays.<DimensionSpec>asList(
+            new DefaultDimensionSpec(QueryRunnerTestHelper.marketDimension, "mar"),
+            new ExtractionDimensionSpec(
+                QueryRunnerTestHelper.qualityDimension,
+                "qual",
+                new LookupExtractionFn(new MapLookupExtractor(map, true), false, null, true, false)
+            ),
+            new DefaultDimensionSpec(QueryRunnerTestHelper.placementDimension, "place")
+        ), Lists.<String>newArrayList(), new PagingSpec(null, 3),
+        null
+    );
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    Iterable<Result<SelectResultValue>> results = Sequences.toList(
+        runner.run(query, context),
+        Lists.<Result<SelectResultValue>>newArrayList()
+    );
+
+    List<Result<SelectResultValue>> expectedResultsAsc = Arrays.asList(
+        new Result<SelectResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new SelectResultValue(
+                ImmutableMap.of(QueryRunnerTestHelper.segmentId, 2),
+                Arrays.asList(
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        0,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-01-12T00:00:00.000Z"))
+                            .put("mar", "spot")
+                            .put("qual", "automotive0")
+                            .put("place", "preferred")
+                            .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
+                            .build()
+                    ),
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        1,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-01-12T00:00:00.000Z"))
+                            .put("mar", "spot")
+                            .put("qual", "business0")
+                            .put("place", "preferred")
+                            .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
+                            .build()
+                    ),
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        2,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-01-12T00:00:00.000Z"))
+                            .put("mar", "spot")
+                            .put("qual", "entertainment0")
+                            .put("place", "preferred")
+                            .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
+                            .build()
+                    )
+                )
+            )
+        )
+    );
+
+    List<Result<SelectResultValue>> expectedResultsDsc = Arrays.asList(
+        new Result<SelectResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new SelectResultValue(
+                ImmutableMap.of(QueryRunnerTestHelper.segmentId, -3),
+                Arrays.asList(
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        -1,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-04-15T00:00:00.000Z"))
+                            .put("mar", "upfront")
+                            .put("qual", "premium0")
+                            .put("place", "preferred")
+                            .put(QueryRunnerTestHelper.indexMetric, 780.27197265625F)
+                            .build()
+                    ),
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        -2,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-04-15T00:00:00.000Z"))
+                            .put("mar", "upfront")
+                            .put("qual", "mezzanine0")
+                            .put("place", "preferred")
+                            .put(QueryRunnerTestHelper.indexMetric, 962.731201171875F)
+                            .build()
+                    ),
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        -3,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-04-15T00:00:00.000Z"))
+                            .put("mar", "total_market")
+                            .put("qual", "premium0")
+                            .put("place", "preferred")
+                            .put(QueryRunnerTestHelper.indexMetric, 1029.0570068359375F)
+                            .build()
+                    )
+                )
+            )
+        )
+    );
+
+    verify(descending ? expectedResultsDsc : expectedResultsAsc, results);
+  }
+
+  @Test
   public void testSelectWithDimsAndMets()
   {
     SelectQuery query = new SelectQuery(
@@ -159,7 +292,7 @@ public class SelectQueryRunnerTest
         descending,
         null,
         QueryRunnerTestHelper.allGran,
-        Arrays.asList(QueryRunnerTestHelper.marketDimension),
+        DefaultDimensionSpec.toSpec(Arrays.asList(QueryRunnerTestHelper.marketDimension)),
         Arrays.asList(QueryRunnerTestHelper.indexMetric),
         new PagingSpec(null, 3),
         null
@@ -198,7 +331,7 @@ public class SelectQueryRunnerTest
         descending,
         null,
         QueryRunnerTestHelper.allGran,
-        Arrays.asList(QueryRunnerTestHelper.qualityDimension),
+        DefaultDimensionSpec.toSpec(Arrays.asList(QueryRunnerTestHelper.qualityDimension)),
         Arrays.asList(QueryRunnerTestHelper.indexMetric),
         new PagingSpec(toPagingIdentifier(3, descending), 3),
         null
@@ -236,7 +369,7 @@ public class SelectQueryRunnerTest
           descending,
           new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "spot"),
           QueryRunnerTestHelper.dayGran,
-          Lists.<String>newArrayList(QueryRunnerTestHelper.qualityDimension),
+          DefaultDimensionSpec.toSpec(Lists.<String>newArrayList(QueryRunnerTestHelper.qualityDimension)),
           Lists.<String>newArrayList(QueryRunnerTestHelper.indexMetric),
           new PagingSpec(toPagingIdentifier(param[0], descending), param[1]),
           null
@@ -299,15 +432,13 @@ public class SelectQueryRunnerTest
         I_0112_0114,
         descending,
         new AndDimFilter(
-            Arrays.<DimFilter>asList(
-                new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "spot"),
-                new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "foo")
-            )
-        ),
+                Arrays.<DimFilter>asList(
+                    new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "spot"),
+                    new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "foo")
+                )
+            ),
         QueryRunnerTestHelper.allGran,
-        Lists.<String>newArrayList(),
-        Lists.<String>newArrayList(),
-        new PagingSpec(null, 3),
+        DefaultDimensionSpec.toSpec(Lists.<String>newArrayList()), Lists.<String>newArrayList(), new PagingSpec(null, 3),
         null
     );
 
@@ -338,7 +469,7 @@ public class SelectQueryRunnerTest
         descending,
         null,
         QueryRunnerTestHelper.allGran,
-        Lists.<String>newArrayList("foo"),
+        DefaultDimensionSpec.toSpec(Lists.<String>newArrayList("foo")),
         Lists.<String>newArrayList("foo2"),
         new PagingSpec(null, 3),
         null

@@ -28,6 +28,7 @@ import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Query;
 import io.druid.query.Result;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.spec.QuerySegmentSpec;
 
@@ -41,7 +42,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
 {
   private final DimFilter dimFilter;
   private final QueryGranularity granularity;
-  private final List<String> dimensions;
+  private final List<DimensionSpec> dimensions;
   private final List<String> metrics;
   private final PagingSpec pagingSpec;
 
@@ -52,7 +53,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
       @JsonProperty("descending") boolean descending,
       @JsonProperty("filter") DimFilter dimFilter,
       @JsonProperty("granularity") QueryGranularity granularity,
-      @JsonProperty("dimensions") List<String> dimensions,
+      @JsonProperty("dimensions") List<DimensionSpec> dimensions,
       @JsonProperty("metrics") List<String> metrics,
       @JsonProperty("pagingSpec") PagingSpec pagingSpec,
       @JsonProperty("context") Map<String, Object> context
@@ -104,7 +105,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
   }
 
   @JsonProperty
-  public List<String> getDimensions()
+  public List<DimensionSpec> getDimensions()
   {
     return dimensions;
   }
