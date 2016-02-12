@@ -87,16 +87,6 @@ public class PropertiesModule implements Module
       }
     }
 
-    log.info(
-        "Loaded properties into JVM with processors[%,d], memory[%,d].",
-        Runtime.getRuntime().availableProcessors(),
-        Runtime.getRuntime().totalMemory()
-    );
-
-    for (String propertyName : Ordering.natural().sortedCopy(props.stringPropertyNames())) {
-      log.info("* %s: %s", propertyName, props.getProperty(propertyName));
-    }
-
     binder.bind(Properties.class).toInstance(props);
   }
 }
