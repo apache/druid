@@ -169,6 +169,6 @@ public class JDBCExtractionNamespaceCacheFactory
         }
     );
     return update.getTime();
-  }
 
+  }
 }
