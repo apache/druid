@@ -175,7 +175,7 @@ public class YeOldePlumberSchool implements PlumberSchool
 
         try {
           // User should have persisted everything by now.
-          Preconditions.checkState(!theSink.swappable(), "All data must be persisted before fininshing the job!");
+          Preconditions.checkState(!theSink.swappable(), "All data must be persisted before finishing the job!");
 
           if (spilled.size() == 0) {
             throw new IllegalStateException("Nothing indexed?");
@@ -225,8 +225,8 @@ public class YeOldePlumberSchool implements PlumberSchool
 
       private void spillIfSwappable()
       {
-        if (theSink.swappable()) {
-          final FireHydrant indexToPersist = theSink.swap();
+        final FireHydrant indexToPersist = theSink.swap();
+        if (indexToPersist != null) {
           final int rowsToPersist = indexToPersist.getIndex().size();
           final File dirToPersist = getSpillDir(indexToPersist.getCount());
 

@@ -181,4 +181,13 @@ public class ReferenceCountingSegment extends AbstractSegment
       baseSegment.close();
     }
   }
+
+  @Override
+  public String toString()
+  {
+    return "ReferenceCountingSegment{" +
+           "baseSegment=" + baseSegment.getIdentifier() +
+           ", numReferences=" + numReferences +
+           '}';
+  }
 }

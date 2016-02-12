@@ -61,14 +61,30 @@ public class FireHydrant
     this.count = count;
   }
 
+  public int indexSize() {
+    synchronized (swapLock) {
+      return index == null ? 0 : index.size();
+    }
+  }
+
+  public boolean canAppendRow() {
+    synchronized (swapLock) {
+      return index != null && index.canAppendRow();
+    }
+  }
+
   public IncrementalIndex getIndex()
   {
-    return index;
+    synchronized (swapLock) {
+      return index;
+    }
   }
 
   public Segment getSegment()
   {
-    return adapter;
+    synchronized (swapLock) {
+      return adapter;
+    }
   }
 
   public int getCount()
@@ -78,7 +94,9 @@ public class FireHydrant
 
   public boolean hasSwapped()
   {
-    return index == null;
+    synchronized (swapLock) {
+      return index == null;
+    }
   }
 
   public void swapSegment(Segment newAdapter)

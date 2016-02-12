@@ -93,6 +93,7 @@ public class RealtimePlumber implements Plumber
 {
   private static final EmittingLogger log = new EmittingLogger(RealtimePlumber.class);
   private static final int WARN_DELAY = 1000;
+  private static final int CHECK_INTERNAL_COUNT = 100000;
 
   private final DataSchema schema;
   private final RealtimeTuningConfig config;
@@ -123,6 +124,8 @@ public class RealtimePlumber implements Plumber
 
   private static final String COMMIT_METADATA_KEY = "%commitMetadata%";
   private static final String COMMIT_METADATA_TIMESTAMP_KEY = "%commitMetadataTimestamp%";
+
+  private int counter;
 
   public RealtimePlumber(
       DataSchema schema,
@@ -215,6 +218,16 @@ public class RealtimePlumber implements Plumber
       persist(committerSupplier.get());
     }
 
+    if (++counter % CHECK_INTERNAL_COUNT == 0) {
+      int size = 0;
+      for (Sink aSink : sinks.values()) {
+        size += aSink.sizeInMemory();
+      }
+      if (size > config.getMaxRowsInMemory()) {
+        persistOldest(committerSupplier.get());
+      }
+    }
+
     return numRows;
   }
 
@@ -264,11 +277,35 @@ public class RealtimePlumber implements Plumber
   {
     final List<Pair<FireHydrant, Interval>> indexesToPersist = Lists.newArrayList();
     for (Sink sink : sinks.values()) {
-      if (sink.swappable()) {
-        indexesToPersist.add(Pair.of(sink.swap(), sink.getInterval()));
+      FireHydrant hydrant = sink.swap();
+      if (hydrant != null) {
+        indexesToPersist.add(Pair.of(hydrant, sink.getInterval()));
       }
     }
+    persist(committer, indexesToPersist);
+  }
 
+  public void persistOldest(final Committer committer)
+  {
+    Sink oldestSink = null;
+    long oldestAccessTime = -1;
+    for (Sink sink : sinks.values()) {
+      if (sink.swappable()) {
+        long lastAccessTime = sink.getLastAccessTime();
+        if (oldestAccessTime < 0 || lastAccessTime < oldestAccessTime) {
+          oldestAccessTime = lastAccessTime;
+          oldestSink = sink;
+        }
+      }
+    }
+    FireHydrant hydrant = oldestSink == null ? null : oldestSink.swap();
+    if (hydrant != null) {
+      persist(committer, Arrays.asList(Pair.of(hydrant, oldestSink.getInterval())));
+    }
+  }
+
+  private void persist(final Committer committer, final List<Pair<FireHydrant, Interval>> indexesToPersist)
+  {
     log.info("Submitting persist runnable for dataSource[%s]", schema.getDataSource());
 
     final Stopwatch runExecStopwatch = Stopwatch.createStarted();

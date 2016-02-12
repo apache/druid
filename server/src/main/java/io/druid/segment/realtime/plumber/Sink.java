@@ -25,7 +25,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
-import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import io.druid.data.input.InputRow;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -41,6 +40,7 @@ import io.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import javax.annotation.concurrent.GuardedBy;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
@@ -62,8 +62,14 @@ public class Sink implements Iterable<FireHydrant>
   private final CopyOnWriteArrayList<FireHydrant> hydrants = new CopyOnWriteArrayList<FireHydrant>();
   private final LinkedHashSet<String> dimOrder = Sets.newLinkedHashSet();
   private final AtomicInteger numRowsExcludingCurrIndex = new AtomicInteger();
-  private volatile FireHydrant currHydrant;
-  private volatile boolean writable = true;
+
+  @GuardedBy("hydrantLock")
+  private boolean writable = true;
+
+  @GuardedBy("hydrantLock")
+  private FireHydrant currHydrant;  // cannot be null after object init
+
+  private long lastAccessTime = 0;
 
   public Sink(
       Interval interval,
@@ -127,14 +133,19 @@ public class Sink implements Iterable<FireHydrant>
 
   public FireHydrant getCurrHydrant()
   {
-    return currHydrant;
+    synchronized (hydrantLock) {
+      return currHydrant;
+    }
+  }
+
+  public long getLastAccessTime()
+  {
+    return lastAccessTime;
   }
 
   public int add(InputRow row) throws IndexSizeExceededException
   {
-    if (currHydrant == null) {
-      throw new IAE("No currHydrant but given row[%s]", row);
-    }
+    lastAccessTime = System.currentTimeMillis();
 
     synchronized (hydrantLock) {
       if (!writable) {
@@ -152,26 +163,35 @@ public class Sink implements Iterable<FireHydrant>
   public boolean canAppendRow()
   {
     synchronized (hydrantLock) {
-      return writable && currHydrant != null && currHydrant.getIndex().canAppendRow();
+      return writable && currHydrant.canAppendRow();
     }
   }
 
-  public boolean isEmpty()
+  public int sizeInMemory()
   {
     synchronized (hydrantLock) {
-      return hydrants.size() == 1 && currHydrant.getIndex().isEmpty();
+      return currHydrant.indexSize();
     }
   }
 
   public boolean isWritable()
   {
-    return writable;
+    synchronized (hydrantLock) {
+      return writable;
+    }
+  }
+
+  public void finishWriting()
+  {
+    synchronized (hydrantLock) {
+      writable = false;
+    }
   }
 
   /**
    * If currHydrant is A, creates a new index B, sets currHydrant to B and returns A.
    *
-   * @return the current index after swapping in a new one
+   * @return the current index after swapping in a new one. can be null
    */
   public FireHydrant swap()
   {
@@ -181,19 +201,7 @@ public class Sink implements Iterable<FireHydrant>
   public boolean swappable()
   {
     synchronized (hydrantLock) {
-      return writable && currHydrant.getIndex() != null && currHydrant.getIndex().size() != 0;
-    }
-  }
-
-  public boolean finished()
-  {
-    return !writable;
-  }
-
-  public void finishWriting()
-  {
-    synchronized (hydrantLock) {
-      writable = false;
+      return writable && currHydrant.indexSize() > 0;
     }
   }
 
@@ -224,7 +232,7 @@ public class Sink implements Iterable<FireHydrant>
   public int getNumRows()
   {
     synchronized (hydrantLock) {
-      return numRowsExcludingCurrIndex.get() + currHydrant.getIndex().size();
+      return numRowsExcludingCurrIndex.get() + currHydrant.indexSize();
     }
   }
 
@@ -237,40 +245,42 @@ public class Sink implements Iterable<FireHydrant>
         .withDimensionsSpec(schema.getParser())
         .withMetrics(schema.getAggregators())
         .build();
-    final IncrementalIndex newIndex = new OnheapIncrementalIndex(indexSchema, reportParseExceptions, maxRowsInMemory);
 
     final FireHydrant old;
     synchronized (hydrantLock) {
-      if (writable) {
-        old = currHydrant;
-        int newCount = 0;
-        int numHydrants = hydrants.size();
-        if (numHydrants > 0) {
-          FireHydrant lastHydrant = hydrants.get(numHydrants - 1);
-          newCount = lastHydrant.getCount() + 1;
-          if (!indexSchema.getDimensionsSpec().hasCustomDimensions()) {
-            if (lastHydrant.hasSwapped()) {
-              QueryableIndex oldIndex = lastHydrant.getSegment().asQueryableIndex();
-              for (String dim : oldIndex.getAvailableDimensions()) {
-                dimOrder.add(dim);
-              }
-            } else {
-              IncrementalIndex oldIndex = lastHydrant.getIndex();
-              dimOrder.addAll(oldIndex.getDimensionOrder());
-            }
-            newIndex.loadDimensionIterable(dimOrder);
-          }
-        }
-        currHydrant = new FireHydrant(newIndex, newCount, getSegment().getIdentifier());
-        if (old != null) {
-          numRowsExcludingCurrIndex.addAndGet(old.getIndex().size());
-        }
-        hydrants.add(currHydrant);
-      } else {
+      if (!writable) {
         // Oops, someone called finishWriting while we were making this new index.
-        newIndex.close();
         throw new ISE("finishWriting() called during swap");
       }
+
+      old = currHydrant;
+      if (old != null && old.indexSize() == 0) {
+        return null;
+      }
+
+      final IncrementalIndex newIndex = new OnheapIncrementalIndex(
+          indexSchema, reportParseExceptions, maxRowsInMemory
+      );
+
+      int newCount = 0;
+      if (old != null) {
+        newCount = old.getCount() + 1;
+        if (!indexSchema.getDimensionsSpec().hasCustomDimensions()) {
+          IncrementalIndex oldIndex = old.getIndex();
+          if (oldIndex == null) {
+            QueryableIndex storedIndex = old.getSegment().asQueryableIndex();
+            for (String dim : storedIndex.getAvailableDimensions()) {
+              dimOrder.add(dim);
+            }
+          } else {
+            dimOrder.addAll(oldIndex.getDimensionOrder());
+          }
+          newIndex.loadDimensionIterable(dimOrder);
+        }
+        numRowsExcludingCurrIndex.addAndGet(old.indexSize());
+      }
+      currHydrant = new FireHydrant(newIndex, newCount, getSegment().getIdentifier());
+      hydrants.add(currHydrant);
     }
 
     return old;

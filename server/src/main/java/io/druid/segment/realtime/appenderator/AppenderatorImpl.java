@@ -346,8 +346,9 @@ public class AppenderatorImpl implements Appenderator
         }
       }
 
-      if (sink.swappable()) {
-        indexesToPersist.add(Pair.of(sink.swap(), identifier));
+      FireHydrant swap = sink.swap();
+      if (swap != null) {
+        indexesToPersist.add(Pair.of(swap, identifier));
       }
     }
 
@@ -503,15 +504,15 @@ public class AppenderatorImpl implements Appenderator
 
     // Sanity checks
     for (FireHydrant hydrant : sink) {
-      if (sink.isWritable()) {
-        throw new ISE("WTF?! Expected sink to be no longer writable before mergeAndPush. Segment[%s].", identifier);
-      }
-
       synchronized (hydrant) {
         if (!hydrant.hasSwapped()) {
           throw new ISE("WTF?! Expected sink to be fully persisted before mergeAndPush. Segment[%s].", identifier);
         }
       }
+    }
+
+    if (sink.isWritable()) {
+      throw new ISE("WTF?! Expected sink to be no longer writable before mergeAndPush. Segment[%s].", identifier);
     }
 
     try {
