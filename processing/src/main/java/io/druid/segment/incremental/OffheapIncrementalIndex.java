@@ -235,10 +235,13 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
         }
 
         final Integer rowIndex = indexIncrement.getAndIncrement();
+
+        // note that indexAndOffsets must be updated before facts, because as soon as we update facts
+        // concurrent readers get hold of it and might ask for newly added row
+        indexAndOffsets.add(new int[]{bufferIndex, bufferOffset});
         final Integer prev = facts.putIfAbsent(key, rowIndex);
         if (null == prev) {
           numEntries.incrementAndGet();
-          indexAndOffsets.add(new int[]{bufferIndex, bufferOffset});
         } else {
           throw new ISE("WTF! we are in sychronized block.");
         }
