@@ -80,10 +80,10 @@ druid.cache.maxOperationQueueSize=1073741824
 druid.cache.readBufferSize=10485760
 
 # Indexing Service Service Discovery
-druid.selectors.indexing.serviceName=druid:overlord
+druid.selectors.indexing.serviceName=druid/overlord
 
 # Coordinator Service Discovery
-druid.selectors.coordinator.serviceName=druid:prod:coordinator
+druid.selectors.coordinator.serviceName=druid/prod/coordinator
 ```
 
 ### Overlord Node
