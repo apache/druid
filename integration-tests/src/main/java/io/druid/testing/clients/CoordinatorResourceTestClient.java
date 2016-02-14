@@ -122,23 +122,30 @@ public class CoordinatorResourceTestClient
 
   public void unloadSegmentsForDataSource(String dataSource, Interval interval)
   {
-    killDataSource(dataSource, false, interval);
+    try {
+      makeRequest(
+          HttpMethod.DELETE,
+          String.format(
+              "%sdatasources/%s",
+              getCoordinatorURL(),
+              dataSource
+          )
+      );
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
   }
 
   public void deleteSegmentsDataSource(String dataSource, Interval interval)
-  {
-    killDataSource(dataSource, true, interval);
-  }
-
-  private void killDataSource(String dataSource, boolean kill, Interval interval)
   {
     try {
       makeRequest(
           HttpMethod.DELETE,
           String.format(
-              "%sdatasources/%s?kill=%s&interval=%s",
+              "%sdatasources/%s/intervals/%s?kill=true",
               getCoordinatorURL(),
-              dataSource, kill, URLEncoder.encode(interval.toString(), "UTF-8")
+              dataSource, interval.toString().replace("/", "_")
           )
       );
     }
