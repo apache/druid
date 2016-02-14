@@ -74,6 +74,16 @@ The following path is used for service discovery. It is **not** affected by `dru
 |--------|-----------|-------|
 |`druid.discovery.curator.path`|Services announce themselves under this ZooKeeper path.|`/druid/discovery`|
 
+### Startup Logging
+
+All nodes can log debugging information on startup.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.startup.logging.logProperties`|Log all properties on startup (from common.runtime.properties, runtime.properties, and the JVM command line).|false|
+
+Note that some sensitive information may be logged if these settings are enabled.
+
 ### Request Logging
 
 All nodes that can serve queries can also log the query requests they see.
