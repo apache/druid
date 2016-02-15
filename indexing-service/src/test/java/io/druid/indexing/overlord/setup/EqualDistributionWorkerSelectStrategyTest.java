@@ -63,4 +63,70 @@ public class EqualDistributionWorkerSelectStrategyTest
     ImmutableZkWorker worker = optional.get();
     Assert.assertEquals("lhost", worker.getWorker().getHost());
   }
+
+  @Test
+  public void testOneDisableWorkerDifferentUsedCapacity() throws Exception
+  {
+    String DISABLED_VERSION = "";
+    final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy();
+
+    Optional<ImmutableZkWorker> optional = strategy.findWorkerForTask(
+        new RemoteTaskRunnerConfig(),
+        ImmutableMap.of(
+                      "lhost",
+                      new ImmutableZkWorker(
+                              new Worker("disableHost", "disableHost", 10, DISABLED_VERSION), 2,
+                              Sets.<String>newHashSet()
+                      ),
+                      "localhost",
+                      new ImmutableZkWorker(
+                              new Worker("enableHost", "enableHost", 10, "v1"), 5,
+                              Sets.<String>newHashSet()
+                      )
+        ),
+        new NoopTask(null, 1, 0, null, null, null)
+        {
+          @Override
+          public String getDataSource()
+                  {
+                      return "foo";
+                  }
+        }
+    );
+    ImmutableZkWorker worker = optional.get();
+    Assert.assertEquals("enableHost", worker.getWorker().getHost());
+  }
+
+  @Test
+  public void testOneDisableWorkerSameUsedCapacity() throws Exception
+  {
+    String DISABLED_VERSION = "";
+    final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy();
+
+    Optional<ImmutableZkWorker> optional = strategy.findWorkerForTask(
+            new RemoteTaskRunnerConfig(),
+            ImmutableMap.of(
+                    "lhost",
+                    new ImmutableZkWorker(
+                            new Worker("disableHost", "disableHost", 10, DISABLED_VERSION), 5,
+                            Sets.<String>newHashSet()
+                    ),
+                    "localhost",
+                    new ImmutableZkWorker(
+                            new Worker("enableHost", "enableHost", 10, "v1"), 5,
+                            Sets.<String>newHashSet()
+                    )
+            ),
+            new NoopTask(null, 1, 0, null, null, null)
+            {
+                @Override
+                public String getDataSource()
+                {
+                    return "foo";
+                }
+            }
+    );
+    ImmutableZkWorker worker = optional.get();
+    Assert.assertEquals("enableHost", worker.getWorker().getHost());
+  }
 }
