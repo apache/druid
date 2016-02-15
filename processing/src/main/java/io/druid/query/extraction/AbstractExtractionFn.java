@@ -19,55 +19,29 @@
 
 package io.druid.query.extraction;
 
-import com.google.common.base.Strings;
+import io.druid.segment.column.ValueAccessor;
 
-public class IdentityExtractionFn extends AbstractExtractionFn
+/**
+ */
+public abstract class AbstractExtractionFn implements ExtractionFn
 {
-  private static final IdentityExtractionFn instance = new IdentityExtractionFn();
-
-  private IdentityExtractionFn()
-  {
-
-  }
+  protected transient ValueAccessor accessor = ValueAccessor.STRING;
 
   @Override
-  public byte[] getCacheKey()
+  public void init(ValueAccessor accessor)
   {
-    return new byte[]{ExtractionCacheHelper.CACHE_TYPE_ID_IDENTITY};
-  }
-
-  @Override
-  public String apply(Object value)
-  {
-    return value == null ? null : Strings.emptyToNull(value.toString());
+    this.accessor = accessor;
   }
 
   @Override
   public boolean preservesOrdering()
   {
-    return true;
+    return false;
   }
 
   @Override
   public ExtractionType getExtractionType()
   {
-    return ExtractionType.ONE_TO_ONE;
-  }
-
-  @Override
-  public String toString()
-  {
-     return "Identity";
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-     return o != null && o instanceof IdentityExtractionFn;
-  }
-
-  public static IdentityExtractionFn getInstance()
-  {
-    return instance;
+    return ExtractionType.MANY_TO_ONE;
   }
 }

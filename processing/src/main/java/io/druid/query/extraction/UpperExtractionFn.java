@@ -31,7 +31,7 @@ import java.nio.ByteBuffer;
 import java.util.Locale;
 
 @JsonTypeName("upper")
-public class UpperExtractionFn extends DimExtractionFn
+public class UpperExtractionFn extends AbstractExtractionFn
 {
   private final Locale locale;
 
@@ -51,24 +51,10 @@ public class UpperExtractionFn extends DimExtractionFn
    */
   @Nullable
   @Override
-  public String apply(String key)
+  public String apply(Object key)
   {
-    if (Strings.isNullOrEmpty(key)) {
-      return null;
-    }
-    return key.toUpperCase(locale);
-  }
-
-  @Override
-  public boolean preservesOrdering()
-  {
-    return false;
-  }
-
-  @Override
-  public ExtractionType getExtractionType()
-  {
-    return ExtractionType.MANY_TO_ONE;
+    final String value = accessor.getString(key, false);
+    return Strings.isNullOrEmpty(value) ? null : value.toUpperCase(locale);
   }
 
   @Override

@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.segment.column.ValueAccessor;
 
 import javax.annotation.Nullable;
 
@@ -100,19 +101,13 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
   }
 
   @Override
+  public void init(ValueAccessor accessor)
+  {
+    delegate.init(accessor);
+  }
+
+  @Override
   public String apply(Object value)
-  {
-    return delegate.apply(value);
-  }
-
-  @Override
-  public String apply(String value)
-  {
-    return delegate.apply(value);
-  }
-
-  @Override
-  public String apply(long value)
   {
     return delegate.apply(value);
   }

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.lookup.RegisteredLookupExtractionFn;
+import io.druid.segment.column.ValueAccessor;
 
 /**
  */
@@ -60,6 +61,8 @@ public interface ExtractionFn
    */
   public byte[] getCacheKey();
 
+  public void init(ValueAccessor accessor);
+
   /**
    * The "extraction" function.  This should map an Object into some String value.
    * <p>
@@ -75,32 +78,8 @@ public interface ExtractionFn
   public String apply(Object value);
 
   /**
-   * The "extraction" function.  This should map a String value into some other String value.
-   * <p>
-   * Like {@link #apply(Object)}, the empty string is considered invalid output for this method and it should
-   * instead return null.
-   *
-   * @param value the original value of the dimension
-   *
-   * @return a value that should be used instead of the original
-   */
-  public String apply(String value);
-
-  /**
-   * The "extraction" function.  This should map a long value into some String value.
-   * <p>
-   * Like {@link #apply(Object)}, the empty string is considered invalid output for this method and it should
-   * instead return null.
-   *
-   * @param value the original value of the dimension
-   *
-   * @return a value that should be used instead of the original
-   */
-  public String apply(long value);
-
-  /**
    * Offers information on whether the extraction will preserve the original ordering of the values.
-   * <p>
+   * <p/>
    * Some optimizations of queries is possible if ordering is preserved.  Null values *do* count towards
    * ordering.
    *

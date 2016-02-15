@@ -22,6 +22,7 @@ package io.druid.query.extraction;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.metamx.common.StringUtils;
+import io.druid.segment.column.ValueType;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
@@ -30,7 +31,7 @@ import org.joda.time.format.DateTimeFormatter;
 import java.nio.ByteBuffer;
 import java.util.Locale;
 
-public class TimeFormatExtractionFn implements ExtractionFn
+public class TimeFormatExtractionFn extends AbstractExtractionFn
 {
   private final DateTimeZone tz;
   private final String pattern;
@@ -86,33 +87,12 @@ public class TimeFormatExtractionFn implements ExtractionFn
   }
 
   @Override
-  public String apply(long value)
-  {
-    return formatter.print(value);
-  }
-
-  @Override
   public String apply(Object value)
   {
+    if (accessor.type() == ValueType.LONG) {
+      return formatter.print(accessor.getLong(value));
+    }
     return formatter.print(new DateTime(value));
-  }
-
-  @Override
-  public String apply(String value)
-  {
-    return apply((Object) value);
-  }
-
-  @Override
-  public boolean preservesOrdering()
-  {
-    return false;
-  }
-
-  @Override
-  public ExtractionType getExtractionType()
-  {
-    return ExtractionType.MANY_TO_ONE;
   }
 
   @Override

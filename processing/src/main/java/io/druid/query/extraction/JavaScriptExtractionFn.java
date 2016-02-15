@@ -31,7 +31,7 @@ import org.mozilla.javascript.ScriptableObject;
 
 import java.nio.ByteBuffer;
 
-public class JavaScriptExtractionFn implements ExtractionFn
+public class JavaScriptExtractionFn extends AbstractExtractionFn
 {
   private static Function<Object, String> compile(String function)
   {
@@ -104,18 +104,6 @@ public class JavaScriptExtractionFn implements ExtractionFn
   public String apply(Object value)
   {
     return Strings.emptyToNull(fn.apply(value));
-  }
-
-  @Override
-  public String apply(String value)
-  {
-    return this.apply((Object) Strings.emptyToNull(value));
-  }
-
-  @Override
-  public String apply(long value)
-  {
-    return this.apply((Long) value);
   }
 
   @Override

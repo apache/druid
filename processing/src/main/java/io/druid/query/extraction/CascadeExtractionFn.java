@@ -24,44 +24,27 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.primitives.Bytes;
+import io.druid.segment.column.ValueAccessor;
 
 import java.util.Arrays;
 
-public class CascadeExtractionFn implements ExtractionFn
+public class CascadeExtractionFn extends AbstractExtractionFn
 {
   private final ExtractionFn extractionFns[];
   private final ChainedExtractionFn chainedExtractionFn;
   private final ChainedExtractionFn DEFAULT_CHAINED_EXTRACTION_FN = new ChainedExtractionFn(
-      new ExtractionFn()
+      new AbstractExtractionFn()
       {
+        @Override
         public byte[] getCacheKey()
         {
           return new byte[0];
         }
 
+        @Override
         public String apply(Object value)
         {
           return null;
-        }
-
-        public String apply(String value)
-        {
-          return null;
-        }
-
-        public String apply(long value)
-        {
-          return null;
-        }
-
-        public boolean preservesOrdering()
-        {
-          return false;
-        }
-
-        public ExtractionType getExtractionType()
-        {
-          return ExtractionType.MANY_TO_ONE;
         }
 
         @Override
@@ -99,6 +82,12 @@ public class CascadeExtractionFn implements ExtractionFn
   }
 
   @Override
+  public void init(ValueAccessor accessor)
+  {
+    chainedExtractionFn.init(accessor);
+  }
+
+  @Override
   public byte[] getCacheKey()
   {
     byte[] cacheKey = new byte[]{ExtractionCacheHelper.CACHE_TYPE_ID_CASCADE};
@@ -108,18 +97,6 @@ public class CascadeExtractionFn implements ExtractionFn
 
   @Override
   public String apply(Object value)
-  {
-    return chainedExtractionFn.apply(value);
-  }
-
-  @Override
-  public String apply(String value)
-  {
-    return chainedExtractionFn.apply(value);
-  }
-
-  @Override
-  public String apply(long value)
   {
     return chainedExtractionFn.apply(value);
   }
@@ -171,7 +148,7 @@ public class CascadeExtractionFn implements ExtractionFn
            "extractionFns=[" + chainedExtractionFn.toString() + "]}";
   }
 
-  private class ChainedExtractionFn
+  private class ChainedExtractionFn implements ExtractionFn
   {
     private final ExtractionFn fn;
     private final ChainedExtractionFn child;
@@ -189,17 +166,16 @@ public class CascadeExtractionFn implements ExtractionFn
       return (child != null) ? Bytes.concat(fnCacheKey, child.getCacheKey()) : fnCacheKey;
     }
 
+    @Override
+    public void init(ValueAccessor accessor)
+    {
+      fn.init(accessor);
+      if (child != null) {
+        child.init(accessor);
+      }
+    }
+
     public String apply(Object value)
-    {
-      return fn.apply((child != null) ? child.apply(value) : value);
-    }
-
-    public String apply(String value)
-    {
-      return fn.apply((child != null) ? child.apply(value) : value);
-    }
-
-    public String apply(long value)
     {
       return fn.apply((child != null) ? child.apply(value) : value);
     }

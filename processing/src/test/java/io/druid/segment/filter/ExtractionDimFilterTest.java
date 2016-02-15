@@ -145,18 +145,6 @@ public class ExtractionDimFilterTest
       final String retval = EXTRACTION_VALUES.get(dimValue);
       return retval == null ? dimValue : retval;
     }
-
-    @Override
-    public boolean preservesOrdering()
-    {
-      return false;
-    }
-
-    @Override
-    public ExtractionType getExtractionType()
-    {
-      return ExtractionType.MANY_TO_ONE;
-    }
   };
 
   @Test

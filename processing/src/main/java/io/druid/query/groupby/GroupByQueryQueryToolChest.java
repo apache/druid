@@ -65,6 +65,7 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
+import io.druid.segment.column.ValueAccessor;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 import org.joda.time.DateTime;
@@ -382,7 +383,9 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
     for (DimensionSpec dimensionSpec : query.getDimensions()) {
       final String dimension = dimensionSpec.getOutputName();
       if (optimizedDims.contains(dimension)) {
-        extractionFnMap.put(dimension, dimensionSpec.getExtractionFn());
+        final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
+        extractionFn.init(ValueAccessor.STRING);  // use accessor for the dimension type
+        extractionFnMap.put(dimension, extractionFn);
       }
     }
 

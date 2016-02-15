@@ -49,6 +49,7 @@ import io.druid.segment.SingleScanTimeDimSelector;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ValueAccessor;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.ListIndexed;
@@ -348,6 +349,10 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 final IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimension);
                 if (dimensionDesc == null) {
                   return NULL_DIMENSION_SELECTOR;
+                }
+
+                if (extractionFn != null) {
+                  extractionFn.init(ValueAccessor.STRING);  // use accessor for the dimension type
                 }
 
                 final int dimIndex = dimensionDesc.getIndex();
