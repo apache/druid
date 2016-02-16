@@ -29,6 +29,9 @@ import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.StringUtils;
 
+import io.druid.query.ordering.StringComparators;
+import io.druid.query.ordering.StringComparators.StringComparator;
+
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -44,6 +47,8 @@ public class OrderByColumnSpec
     ASCENDING,
     DESCENDING
   }
+
+  public static final StringComparator DEFAULT_DIMENSION_ORDER = StringComparators.LEXICOGRAPHIC;
 
   /**
    * Maintain a map of the enum values so that we can just do a lookup and get a null if it doesn't exist instead
@@ -61,6 +66,7 @@ public class OrderByColumnSpec
 
   private final String dimension;
   private final Direction direction;
+  private final StringComparator dimensionComparator;
 
   @JsonCreator
   public static OrderByColumnSpec create(Object obj)
@@ -68,14 +74,15 @@ public class OrderByColumnSpec
     Preconditions.checkNotNull(obj, "Cannot build an OrderByColumnSpec from a null object.");
 
     if (obj instanceof String) {
-      return new OrderByColumnSpec(obj.toString(), null);
+      return new OrderByColumnSpec(obj.toString(), null, null);
     } else if (obj instanceof Map) {
       final Map map = (Map) obj;
 
       final String dimension = map.get("dimension").toString();
       final Direction direction = determineDirection(map.get("direction"));
+      final StringComparator dimensionComparator = determinDimensionComparator(map.get("dimensionOrder"));
 
-      return new OrderByColumnSpec(dimension, direction);
+      return new OrderByColumnSpec(dimension, direction, dimensionComparator);
     } else {
       throw new ISE("Cannot build an OrderByColumnSpec from a %s", obj.getClass());
     }
@@ -83,7 +90,7 @@ public class OrderByColumnSpec
 
   public static OrderByColumnSpec asc(String dimension)
   {
-    return new OrderByColumnSpec(dimension, Direction.ASCENDING);
+    return new OrderByColumnSpec(dimension, Direction.ASCENDING, null);
   }
 
   public static List<OrderByColumnSpec> ascending(String... dimension)
@@ -103,7 +110,7 @@ public class OrderByColumnSpec
 
   public static OrderByColumnSpec desc(String dimension)
   {
-    return new OrderByColumnSpec(dimension, Direction.DESCENDING);
+    return new OrderByColumnSpec(dimension, Direction.DESCENDING, null);
   }
 
   public static List<OrderByColumnSpec> descending(String... dimension)
@@ -126,8 +133,18 @@ public class OrderByColumnSpec
       Direction direction
   )
   {
+    this(dimension, direction, null);
+  }
+
+  public OrderByColumnSpec(
+      String dimension,
+      Direction direction,
+      StringComparator dimensionComparator
+  )
+  {
     this.dimension = dimension;
     this.direction = direction == null ? Direction.ASCENDING : direction;
+    this.dimensionComparator = dimensionComparator == null ? DEFAULT_DIMENSION_ORDER : dimensionComparator;
   }
 
   @JsonProperty
@@ -140,6 +157,12 @@ public class OrderByColumnSpec
   public Direction getDirection()
   {
     return direction;
+  }
+
+  @JsonProperty
+  public StringComparator getDimensionComparator()
+  {
+    return dimensionComparator;
   }
 
   public static Direction determineDirection(Object directionObj)
@@ -172,6 +195,16 @@ public class OrderByColumnSpec
     return direction;
   }
 
+  private static StringComparator determinDimensionComparator(Object dimensionOrderObj)
+  {
+    if (dimensionOrderObj == null) {
+      return DEFAULT_DIMENSION_ORDER;
+    }
+
+    String dimensionOrderString = dimensionOrderObj.toString().toLowerCase();
+    return StringComparators.makeComparator(dimensionOrderString);
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -187,6 +220,9 @@ public class OrderByColumnSpec
     if (!dimension.equals(that.dimension)) {
       return false;
     }
+    if (!dimensionComparator.equals(that.dimensionComparator)) {
+      return false;
+    }
     return direction == that.direction;
 
   }
@@ -196,6 +232,7 @@ public class OrderByColumnSpec
   {
     int result = dimension.hashCode();
     result = 31 * result + direction.hashCode();
+    result = 31 * result + dimensionComparator.hashCode();
     return result;
   }
 
@@ -204,7 +241,8 @@ public class OrderByColumnSpec
   {
     return "OrderByColumnSpec{" +
            "dimension='" + dimension + '\'' +
-           ", direction=" + direction +
+           ", direction=" + direction + '\'' +
+           ", dimensionComparator='" + dimensionComparator + '\'' +
            '}';
   }
 
