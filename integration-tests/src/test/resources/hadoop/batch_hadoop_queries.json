@@ -1,0 +1,793 @@
+[
+  {
+    "description": "segmentMetadata_query",
+    "query": {
+      "queryType": "segmentMetadata",
+      "dataSource": "batchHadoop",
+      "merge": "true",
+      "intervals": "2014-10/2014-12"
+    },
+    "expectedResults": [
+      {
+        "intervals": [
+          "2014-10-20T00:00:00.000Z/2014-11-03T00:00:00.000Z"
+        ],
+        "id": "merged",
+        "columns": {
+          "m2222222_2222_22222": {
+            "type": "LONG",
+            "size": 26880,
+            "hasMultipleValues":false,
+            "minValue":null,
+            "maxValue":null,
+            "cardinality": null,
+            "errorMessage": null
+          },
+          "dim9": {
+            "type": "STRING",
+            "size": 46402,
+            "hasMultipleValues":false,
+            "minValue":"dim_9999999_1",
+            "maxValue":"dim_9999999_9",
+            "cardinality": 50,
+            "errorMessage": null
+          },
+          "dim1": {
+            "type": "STRING",
+            "size": 41759,
+            "hasMultipleValues":false,
+            "minValue":"dim_111111_1",
+            "maxValue":"dim_111111_9",
+            "cardinality": 16,
+            "errorMessage": null
+          },
+          "dim3": {
+            "type": "STRING",
+            "size": 33600,
+            "hasMultipleValues":false,
+            "minValue":"dim33333_1",
+            "maxValue":"dim33333_5",
+            "cardinality": 5,
+            "errorMessage": null
+          },
+          "dim8": {
+            "type": "STRING",
+            "size": 40320,
+            "hasMultipleValues":false,
+            "minValue":"dim8_88888_1",
+            "maxValue":"dim8_88888_4",
+            "cardinality": 4,
+            "errorMessage": null
+          },
+          "m666_666666": {
+            "type": "thetaSketch",
+            "size": 0,
+            "hasMultipleValues":false,
+            "minValue":null,
+            "maxValue":null,
+            "cardinality": null,
+            "errorMessage": null
+          },
+          "m1111_1111_11111": {
+            "type": "LONG",
+            "size": 26880,
+            "hasMultipleValues":false,
+            "minValue":null,
+            "maxValue":null,
+            "cardinality": null,
+            "errorMessage": null
+          },
+          "m444444_4444_4444_444444": {
+            "type": "thetaSketch",
+            "size": 0,
+            "hasMultipleValues":false,
+            "minValue":null,
+            "maxValue":null,
+            "cardinality": null,
+            "errorMessage": null
+          },
+          "dimB": {
+            "type": "STRING",
+            "size": 49784,
+            "hasMultipleValues":false,
+            "minValue":"dimB_BBBBBBB_1",
+            "maxValue":"dimB_BBBBBBB_9",
+            "cardinality": 50,
+            "errorMessage": null
+          },
+          "m555_555555": {
+            "type": "thetaSketch",
+            "size": 0,
+            "hasMultipleValues":false,
+            "minValue":null,
+            "maxValue":null,
+            "cardinality": null,
+            "errorMessage": null
+          },
+          "dim4": {
+            "type": "STRING",
+            "size": 62341,
+            "hasMultipleValues":false,
+            "minValue":"dim44444_4444444_1",
+            "maxValue":"dim44444_4444444_9",
+            "cardinality": 20,
+            "errorMessage": null
+          },
+          "m333333_33_3333_333333": {
+            "type": "thetaSketch",
+            "size": 0,
+            "hasMultipleValues":false,
+            "minValue":null,
+            "maxValue":null,
+            "cardinality": null,
+            "errorMessage": null
+          },
+          "__time": {
+            "type": "LONG",
+            "size": 33600,
+            "hasMultipleValues":false,
+            "minValue":null,
+            "maxValue":null,
+            "cardinality": null,
+            "errorMessage": null
+          },
+          "dimA": {
+            "type": "STRING",
+            "size": 43043,
+            "hasMultipleValues":false,
+            "minValue":"dim_AAA_AA_1",
+            "maxValue":"dim_AAA_AA_9",
+            "cardinality": 50,
+            "errorMessage": null
+          },
+          "dimC": {
+            "type": "STRING",
+            "size": 60824,
+            "hasMultipleValues":false,
+            "minValue":"dimC_CCCCCC_CCCC_1",
+            "maxValue":"dimC_CCCCCC_CCCC_9",
+            "cardinality": 10,
+            "errorMessage": null
+          },
+          "dim5": {
+            "type": "STRING",
+            "size": 50400,
+            "hasMultipleValues":false,
+            "minValue":"dim55555_5555_1",
+            "maxValue":"dim55555_5555_5",
+            "cardinality": 5,
+            "errorMessage": null
+          },
+          "dim2": {
+            "type": "STRING",
+            "size": 54097,
+            "hasMultipleValues":false,
+            "minValue":"dim222_2222_22_1",
+            "maxValue":"dim222_2222_22_9",
+            "cardinality": 10,
+            "errorMessage": null
+          },
+          "dim6": {
+            "type": "STRING",
+            "size": 31582,
+            "hasMultipleValues":false,
+            "minValue":"dim6666_1",
+            "maxValue":"dim6666_9",
+            "cardinality": 15,
+            "errorMessage": null
+          },
+          "dimD": {
+            "type": "STRING",
+            "size": 13440,
+            "hasMultipleValues":false,
+            "minValue":"DD_1",
+            "maxValue":"DD_5",
+            "cardinality": 5,
+            "errorMessage": null
+          },
+          "dim7": {
+            "type": "STRING",
+            "size": 53760,
+            "hasMultipleValues":false,
+            "minValue":"dim7777_777777_1",
+            "maxValue":"dim7777_777777_5",
+            "cardinality": 5,
+            "errorMessage": null
+          },
+          "m00000000": {
+            "type": "LONG",
+            "size": 26880,
+            "hasMultipleValues":false,
+            "minValue":null,
+            "maxValue":null,
+            "cardinality": null,
+            "errorMessage": null
+          }
+        },
+        "size": 766152,
+        "numRows": 3360,
+        "aggregators": null
+      }
+    ]
+  },
+  {
+    "description": "sketchCountReaggregationDayToDay_query",
+    "query": {
+      "queryType": "groupBy",
+      "dataSource": {
+        "query": {
+          "queryType": "groupBy",
+          "dataSource": {
+            "name": "batchHadoop",
+            "type": "table"
+          },
+          "dimensions": [],
+          "filter": null,
+          "aggregations": [
+            {
+              "name": "m555_555555",
+              "fieldName": "m555_555555",
+              "size": 16384,
+              "type": "sketchMerge"
+            },
+            {
+              "name": "m1Name",
+              "fieldName": "m1111_1111_11111",
+              "type": "longSum"
+            }
+          ],
+          "postAggregations": [],
+          "intervals": [
+            "2014-10-19T00:00:00.000Z/2014-11-05T00:00:00.000Z"
+          ],
+          "granularity": {
+            "period": "P1D",
+            "type": "period"
+          }
+        },
+        "type": "query"
+      },
+      "dimensions": [],
+      "aggregations": [
+        {
+          "name": "m555_555555",
+          "fieldName": "m555_555555",
+          "size": 16384,
+          "type": "sketchMerge"
+        },
+        {
+          "name": "m1Name",
+          "fieldName": "m1Name",
+          "type": "longSum"
+        }
+      ],
+      "postAggregations": [],
+      "intervals": [
+        "2014-10-19T00:00:00.000Z/2014-11-05T00:00:00.000Z"
+      ],
+      "granularity": {
+        "period": "P1D",
+        "type": "period"
+      }
+    },
+    "expectedResults": [
+      {
+        "event": {
+          "m1Name": 1484,
+          "m555_555555": 237.0
+        },
+        "timestamp": "2014-10-20T00:00:00.000Z",
+        "version": "v1"
+      },
+      {
+        "event": {
+          "m1Name": 1432,
+          "m555_555555": 238.0
+        },
+        "timestamp": "2014-10-21T00:00:00.000Z",
+        "version": "v1"
+      },
+      {
+        "event": {
+          "m1Name": 1431,
+          "m555_555555": 238.0
+        },
+        "timestamp": "2014-10-22T00:00:00.000Z",
+        "version": "v1"
+      },
+      {
+        "event": {
+          "m1Name": 1452,
+          "m555_555555": 239.0
+        },
+        "timestamp": "2014-10-23T00:00:00.000Z",
+        "version": "v1"
+      },
+      {
+        "event": {
+          "m1Name": 1390,
+          "m555_555555": 235.0
+        },
+        "timestamp": "2014-10-24T00:00:00.000Z",
+        "version": "v1"
+      },
+      {
+        "event": {
+          "m1Name": 1501,
+          "m555_555555": 237.0
+        },
+        "timestamp": "2014-10-25T00:00:00.000Z",
+        "version": "v1"
+      },
+      {
+        "event": {
+          "m1Name": 1451,
+          "m555_555555": 235.0
+        },
+        "timestamp": "2014-10-26T00:00:00.000Z",
+        "version": "v1"
+      },
+      {
+        "event": {
+          "m1Name": 1393,
+          "m555_555555": 238.0
+        },
+        "timestamp": "2014-10-27T00:00:00.000Z",
+        "version": "v1"
+      },
+      {
+        "event": {
+          "m1Name": 1433,
+          "m555_555555": 237.0
+        },
+        "timestamp": "2014-10-28T00:00:00.000Z",
+        "version": "v1"
+      },
+      {
+        "event": {
+          "m1Name": 1431,
+          "m555_555555": 236.0
+        },
+        "timestamp": "2014-10-29T00:00:00.000Z",
+        "version": "v1"
+      },
+      {
+        "event": {
+          "m1Name": 1455,
+          "m555_555555": 236.0
+        },
+        "timestamp": "2014-10-30T00:00:00.000Z",
+        "version": "v1"
+      },
+      {
+        "event": {
+          "m1Name": 1512,
+          "m555_555555": 236.0
+        },
+        "timestamp": "2014-10-31T00:00:00.000Z",
+        "version": "v1"
+      },
+      {
+        "event": {
+          "m1Name": 1442,
+          "m555_555555": 237.0
+        },
+        "timestamp": "2014-11-01T00:00:00.000Z",
+        "version": "v1"
+      },
+      {
+        "event": {
+          "m1Name": 1488,
+          "m555_555555": 239.0
+        },
+        "timestamp": "2014-11-02T00:00:00.000Z",
+        "version": "v1"
+      }
+    ]
+  },
+  {
+    "description": "sketchCountReaggregationDayToWeek_query",
+    "query": {
+      "queryType": "groupBy",
+      "dataSource": {
+        "query": {
+          "queryType": "groupBy",
+          "dataSource": {
+            "name": "batchHadoop",
+            "type": "table"
+          },
+          "dimensions": [],
+          "filter": null,
+          "aggregations": [
+            {
+              "name": "m555_555555",
+              "fieldName": "m555_555555",
+              "size": 16384,
+              "type": "sketchMerge"
+            },
+            {
+              "name": "m1Name",
+              "fieldName": "m1111_1111_11111",
+              "type": "longSum"
+            }
+          ],
+          "postAggregations": [],
+          "intervals": [
+            "2014-10-19T00:00:00.000Z/2014-11-05T00:00:00.000Z"
+          ],
+          "granularity": {
+            "period": "P1D",
+            "type": "period"
+          }
+        },
+        "type": "query"
+      },
+      "dimensions": [],
+      "aggregations": [
+        {
+          "name": "m555_555555",
+          "fieldName": "m555_555555",
+          "size": 16384,
+          "type": "sketchMerge"
+        },
+        {
+          "name": "m1Name",
+          "fieldName": "m1Name",
+          "type": "longSum"
+        }
+      ],
+      "postAggregations": [],
+      "intervals": [
+        "2014-10-19T00:00:00.000Z/2014-11-05T00:00:00.000Z"
+      ],
+      "granularity": {
+        "period": "P1W",
+        "type": "period"
+      }
+    },
+    "expectedResults": [
+      {
+        "event": {
+          "m1Name": 10141,
+          "m555_555555": 1538.0
+        },
+        "timestamp": "2014-10-20T00:00:00.000Z",
+        "version": "v1"
+      },
+      {
+        "event": {
+          "m1Name": 10154,
+          "m555_555555": 1555.0
+        },
+        "timestamp": "2014-10-27T00:00:00.000Z",
+        "version": "v1"
+      }
+    ]
+  },
+  {
+    "description": "time_boundary_query",
+    "query": {
+      "queryType": "timeBoundary",
+      "dataSource": "batchHadoop"
+    },
+    "expectedResults": [
+      {
+        "result": {
+          "maxTime": "2014-11-02T00:00:00.000Z",
+          "minTime": "2014-10-20T00:00:00.000Z"
+        },
+        "timestamp": "2014-10-20T00:00:00.000Z"
+      }
+    ]
+  },
+  {
+    "description": "unique_identifiers_query",
+    "query": {
+      "queryType": "groupBy",
+      "dataSource": {
+        "query": {
+          "aggregations": [
+            {
+              "fieldName": "m1111_1111_11111",
+              "name": "m1Name",
+              "type": "longSum"
+            },
+            {
+              "fieldName": "m555_555555",
+              "name": "unique1",
+              "size": 16384,
+              "type": "sketchMerge"
+            },
+            {
+              "fieldName": "m333333_33_3333_333333",
+              "name": "m333333_33_3333_333333",
+              "size": 16384,
+              "type": "sketchMerge"
+            },
+            {
+              "fieldName": "m444444_4444_4444_444444",
+              "name": "m444444_4444_4444_444444",
+              "size": 16384,
+              "type": "sketchMerge"
+            }
+          ],
+          "dataSource": {
+            "name": "batchHadoop",
+            "type": "table"
+          },
+          "dimensions": [],
+          "granularity": {
+            "period": "P1D",
+            "type": "period"
+          },
+          "intervals": [
+            "2014-10-19T00:00:00.000Z/2014-11-05T00:00:00.000Z"
+          ],
+          "postAggregations": [
+            {
+              "fields": [
+                {
+                  "field": {
+                    "fieldName": "unique1",
+                    "type": "fieldAccess"
+                  },
+                  "name": "unique1_estimate",
+                  "type": "sketchEstimate"
+                },
+                {
+                  "field": {
+                    "fields": [
+                      {
+                        "fieldName": "m333333_33_3333_333333",
+                        "type": "fieldAccess"
+                      },
+                      {
+                        "fieldName": "m444444_4444_4444_444444",
+                        "type": "fieldAccess"
+                      }
+                    ],
+                    "func": "NOT",
+                    "name": "unique4",
+                    "type": "sketchSetOper"
+                  },
+                  "name": "unique4",
+                  "type": "sketchEstimate"
+                }
+              ],
+              "fn": "+",
+              "name": "unique3",
+              "type": "arithmetic"
+            },
+            {
+              "name": "one",
+              "type": "constant",
+              "value": 1
+            },
+            {
+              "field": {
+                "fieldName": "unique1",
+                "type": "fieldAccess"
+              },
+              "name": "unique1_estimate",
+              "type": "sketchEstimate"
+            },
+            {
+              "field": {
+                "fields": [
+                  {
+                    "fieldName": "m333333_33_3333_333333",
+                    "type": "fieldAccess"
+                  },
+                  {
+                    "fieldName": "m444444_4444_4444_444444",
+                    "type": "fieldAccess"
+                  }
+                ],
+                "func": "NOT",
+                "name": "unique4",
+                "type": "sketchSetOper"
+              },
+              "name": "unique4",
+              "type": "sketchEstimate"
+            }
+          ],
+          "queryType": "groupBy"
+        },
+        "type": "query"
+      },
+      "dimensions": [],
+      "granularity": {
+        "period": "P1W",
+        "type": "period"
+      },
+      "intervals": [
+        "2014-10-19T00:00:00.000Z/2014-11-05T00:00:00.000Z"
+      ],
+      "aggregations": [
+        {
+          "fieldName": "m1Name",
+          "name": "m1Name",
+          "type": "longSum"
+        },
+        {
+          "fieldName": "unique1",
+          "name": "unique1",
+          "size": 16384,
+          "type": "sketchMerge"
+        },
+        {
+          "fieldName": "m333333_33_3333_333333",
+          "name": "m333333_33_3333_333333",
+          "size": 16384,
+          "type": "sketchMerge"
+        },
+        {
+          "fieldName": "m444444_4444_4444_444444",
+          "name": "m444444_4444_4444_444444",
+          "size": 16384,
+          "type": "sketchMerge"
+        },
+        {
+          "fieldName": "one",
+          "name": "count",
+          "type": "longSum"
+        },
+        {
+          "fieldName": "unique3",
+          "name": "unique3_sum",
+          "type": "doubleSum"
+        },
+        {
+          "fieldName": "unique1_estimate",
+          "name": "unique2",
+          "type": "doubleSum"
+        },
+        {
+          "fieldName": "unique4",
+          "name": "unique4_sum",
+          "type": "doubleSum"
+        }
+      ],
+      "postAggregations": [
+        {
+          "fields": [
+            {
+              "field": {
+                "fieldName": "unique1",
+                "type": "fieldAccess"
+              },
+              "name": "unique1_estimate",
+              "type": "sketchEstimate"
+            },
+            {
+              "field": {
+                "fields": [
+                  {
+                    "fieldName": "m333333_33_3333_333333",
+                    "type": "fieldAccess"
+                  },
+                  {
+                    "fieldName": "m444444_4444_4444_444444",
+                    "type": "fieldAccess"
+                  }
+                ],
+                "func": "NOT",
+                "name": "unique4",
+                "type": "sketchSetOper"
+              },
+              "name": "unique4",
+              "type": "sketchEstimate"
+            }
+          ],
+          "fn": "+",
+          "name": "unique3",
+          "type": "arithmetic"
+        },
+        {
+          "fields": [
+            {
+              "fieldName": "unique3_sum",
+              "type": "fieldAccess"
+            },
+            {
+              "fieldName": "count",
+              "type": "fieldAccess"
+            }
+          ],
+          "fn": "/",
+          "name": "uniqueAvg2",
+          "type": "arithmetic"
+        },
+        {
+          "fields": [
+            {
+              "fieldName": "unique2",
+              "type": "fieldAccess"
+            },
+            {
+              "fieldName": "count",
+              "type": "fieldAccess"
+            }
+          ],
+          "fn": "/",
+          "name": "uniqueAvg1",
+          "type": "arithmetic"
+        },
+        {
+          "field": {
+            "fields": [
+              {
+                "fieldName": "m333333_33_3333_333333",
+                "type": "fieldAccess"
+              },
+              {
+                "fieldName": "m444444_4444_4444_444444",
+                "type": "fieldAccess"
+              }
+            ],
+            "func": "NOT",
+            "name": "unique4",
+            "type": "sketchSetOper"
+          },
+          "name": "unique4",
+          "type": "sketchEstimate"
+        },
+        {
+          "fields": [
+            {
+              "fieldName": "unique4_sum",
+              "type": "fieldAccess"
+            },
+            {
+              "fieldName": "count",
+              "type": "fieldAccess"
+            }
+          ],
+          "fn": "/",
+          "name": "uniqueAvg3",
+          "type": "arithmetic"
+        }
+      ]
+    },
+    "expectedResults": [
+      {
+        "event": {
+          "m333333_33_3333_333333": 100.0,
+          "m444444_4444_4444_444444": 50.0,
+          "count": 7,
+          "uniqueAvg1": 237.0,
+          "uniqueAvg2": 326.7142857142857,
+          "uniqueAvg3": 89.71428571428571,
+          "m1Name": 10141,
+          "unique1": 1538.0,
+          "unique2": 1659.0,
+          "unique3": 1638.0,
+          "unique3_sum": 2287.0,
+          "unique4": 100.0,
+          "unique4_sum": 628.0
+        },
+        "timestamp": "2014-10-20T00:00:00.000Z",
+        "version": "v1"
+      },
+      {
+        "event": {
+          "m333333_33_3333_333333": 100.0,
+          "m444444_4444_4444_444444": 50.0,
+          "count": 7,
+          "uniqueAvg1": 237.0,
+          "uniqueAvg2": 328.7142857142857,
+          "uniqueAvg3": 91.71428571428571,
+          "m1Name": 10154,
+          "unique1": 1555.0,
+          "unique2": 1659.0,
+          "unique3": 1655.0,
+          "unique3_sum": 2301.0,
+          "unique4": 100.0,
+          "unique4_sum": 642.0
+        },
+        "timestamp": "2014-10-27T00:00:00.000Z",
+        "version": "v1"
+      }
+    ]
+  }
+]
