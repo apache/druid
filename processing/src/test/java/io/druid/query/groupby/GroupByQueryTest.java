@@ -72,8 +72,6 @@ public class GroupByQueryTest
     String json = jsonMapper.writeValueAsString(query);
     Query serdeQuery = jsonMapper.readValue(json, Query.class);
     
-    System.out.println(json);
-
     Assert.assertEquals(query, serdeQuery);
   }
 
