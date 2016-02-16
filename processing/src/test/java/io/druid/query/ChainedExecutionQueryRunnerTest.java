@@ -343,7 +343,7 @@ public class ChainedExecutionQueryRunnerTest
           interrupted = true;
           interruptedRunners.offer(this);
           stop.countDown();
-          throw new QueryInterruptedException("I got killed");
+          throw new QueryInterruptedException(e);
         }
       }
 
