@@ -30,8 +30,8 @@ import java.nio.ByteBuffer;
  */
 public class SelectorDimFilter implements DimFilter
 {
-  private final String dimension;
-  private final String value;
+  protected final String dimension;
+  protected final String value;
 
   @JsonCreator
   public SelectorDimFilter(
@@ -83,7 +83,7 @@ public class SelectorDimFilter implements DimFilter
     if (this == o) {
       return true;
     }
-    if (o == null || getClass() != o.getClass()) {
+    if (!(o instanceof SelectorDimFilter)) {
       return false;
     }
 

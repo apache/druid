@@ -24,6 +24,7 @@ import com.google.common.collect.Lists;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.DimFilterExtension;
 import io.druid.query.filter.ExtractionDimFilter;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.InDimFilter;
@@ -61,6 +62,10 @@ public class Filters
   {
     if (dimFilter == null) {
       return null;
+    }
+
+    if (dimFilter instanceof DimFilterExtension) {
+      return ((DimFilterExtension) dimFilter).toFilter();
     }
 
     Filter filter = null;

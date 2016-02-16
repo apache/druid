@@ -17,54 +17,11 @@
  * under the License.
  */
 
-package io.druid.segment.data;
-
-import java.util.Arrays;
-import java.util.Iterator;
+package io.druid.query.filter;
 
 /**
  */
-public class ArrayIndexed<T> implements Indexed<T>
+public interface DimFilterExtension extends DimFilter
 {
-  private final T[] baseArray;
-  private final Class<? extends T> clazz;
-
-  public ArrayIndexed(
-      T[] baseArray,
-      Class<? extends T> clazz
-  )
-  {
-    this.baseArray = baseArray;
-    this.clazz = clazz;
-  }
-
-  @Override
-  public Class<? extends T> getClazz()
-  {
-    return clazz;
-  }
-
-  @Override
-  public int size()
-  {
-    return baseArray.length;
-  }
-
-  @Override
-  public T get(int index)
-  {
-    return baseArray[index];
-  }
-
-  @Override
-  public int indexOf(T value)
-  {
-    return Arrays.binarySearch(baseArray, value);
-  }
-
-  @Override
-  public Iterator<T> iterator()
-  {
-    return Arrays.asList(baseArray).iterator();
-  }
+  Filter toFilter();
 }
