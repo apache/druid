@@ -58,6 +58,7 @@ import org.junit.runners.Parameterized;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -2140,6 +2141,62 @@ public class TimeseriesQueryRunnerTest
     );
 
     assertExpectedResults(expectedResults, actualResults);
+  }
+
+  @Test
+  public void testTimeSeriesWithFilteredAggWithSelectDimFilter()
+  {
+    Druids.TimeseriesQueryBuilder builder =
+        Druids.newTimeseriesQueryBuilder()
+              .dataSource(QueryRunnerTestHelper.dataSource)
+              .granularity(QueryRunnerTestHelper.allGran)
+              .intervals(QueryRunnerTestHelper.firstToThird)
+              .descending(descending);
+
+    // existing
+    validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, ">", "entertainment", 20);
+    validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, ">=", "entertainment", 22);
+    validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, "<", "entertainment", 4);
+    validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, "<=", "entertainment", 6);
+    validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, "==", "entertainment", 2);
+    validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, "<>", "entertainment", 24);
+
+    // non-existing
+    validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, ">", "financial", 20);
+    validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, ">=", "financial", 20);
+    validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, "<", "financial", 6);
+    validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, "<=", "financial", 6);
+    validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, "==", "financial", 0);
+    validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, "<>", "financial", 26);
+
+    // null
+    validateSelectDimFilter(builder, "partial_null_column", "==", "", 22);
+    validateSelectDimFilter(builder, "partial_null_column", "<>", "", 4);
+  }
+
+  private void validateSelectDimFilter(
+      Druids.TimeseriesQueryBuilder builder,
+      String dimension,
+      String operation,
+      String value,
+      long expected
+  )
+  {
+    builder.aggregators(
+        Arrays.<AggregatorFactory>asList(
+            new FilteredAggregatorFactory(new CountAggregatorFactory("filteredAgg"),
+                                          new SelectorDimFilter(dimension, value, operation)
+            )
+        )
+    );
+    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
+        runner.run(builder.build(), ImmutableMap.of()),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+    Iterator<Result<TimeseriesResultValue>> iterator = results.iterator();
+    Assert.assertTrue(iterator.hasNext());
+    Assert.assertEquals(expected, iterator.next().getValue().getLongMetric("filteredAgg").longValue());
+    Assert.assertFalse(iterator.hasNext());
   }
 
   @Test

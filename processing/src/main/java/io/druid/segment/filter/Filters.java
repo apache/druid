@@ -72,8 +72,11 @@ public class Filters
       filter = new NotFilter(convertDimensionFilters(((NotDimFilter) dimFilter).getField()));
     } else if (dimFilter instanceof SelectorDimFilter) {
       final SelectorDimFilter selectorDimFilter = (SelectorDimFilter) dimFilter;
-
-      filter = new SelectorFilter(selectorDimFilter.getDimension(), selectorDimFilter.getValue());
+      filter = new SelectorFilter(
+          selectorDimFilter.getDimension(),
+          selectorDimFilter.getValue(),
+          selectorDimFilter.getOperator()
+      );
     } else if (dimFilter instanceof ExtractionDimFilter) {
       final ExtractionDimFilter extractionDimFilter = (ExtractionDimFilter) dimFilter;
 
