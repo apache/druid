@@ -316,7 +316,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     public void advance()
                     {
                       if (Thread.interrupted()) {
-                        throw new QueryInterruptedException();
+                        throw new QueryInterruptedException(new InterruptedException());
                       }
                       cursorOffset.increment();
                     }
