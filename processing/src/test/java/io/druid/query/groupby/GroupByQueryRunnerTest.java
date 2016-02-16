@@ -1671,7 +1671,7 @@ public class GroupByQueryRunnerTest
         .setDimensions(
             Lists.<DimensionSpec>newArrayList(
                 new ExtractionDimensionSpec(
-                    "quality", "alias", new LookupExtractionFn(new MapLookupExtractor(map), false, null, false, false), null
+                    "quality", "alias", new LookupExtractionFn(new MapLookupExtractor(map, false), false, null, false, false), null
                 )
             )
         )
