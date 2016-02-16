@@ -20,6 +20,7 @@
 package io.druid.cli;
 
 import com.google.common.base.Throwables;
+import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;
@@ -27,8 +28,10 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import io.druid.initialization.Initialization;
 import io.druid.initialization.LogLevelAdjuster;
+import io.druid.server.log.StartupLoggingConfig;
 
 import java.util.List;
+import java.util.Properties;
 
 /**
  */
@@ -68,6 +71,21 @@ public abstract class GuiceRunnable implements Runnable
     try {
       LogLevelAdjuster.register();
       final Lifecycle lifecycle = injector.getInstance(Lifecycle.class);
+      final StartupLoggingConfig startupLoggingConfig = injector.getInstance(StartupLoggingConfig.class);
+
+      log.info(
+          "Starting up with processors[%,d], memory[%,d].",
+          Runtime.getRuntime().availableProcessors(),
+          Runtime.getRuntime().totalMemory()
+      );
+
+      if (startupLoggingConfig.isLogProperties()) {
+        final Properties props = injector.getInstance(Properties.class);
+
+        for (String propertyName : Ordering.natural().sortedCopy(props.stringPropertyNames())) {
+          log.info("* %s: %s", propertyName, props.getProperty(propertyName));
+        }
+      }
 
       try {
         lifecycle.start();

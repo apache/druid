@@ -35,15 +35,18 @@ public class SketchEstimatePostAggregator implements PostAggregator
 
   private final String name;
   private final PostAggregator field;
+  private final Integer errorBoundsStdDev;
 
   @JsonCreator
   public SketchEstimatePostAggregator(
       @JsonProperty("name") String name,
-      @JsonProperty("field") PostAggregator field
+      @JsonProperty("field") PostAggregator field,
+      @JsonProperty("errorBoundsStdDev") Integer errorBoundsStdDev
   )
   {
     this.name = Preconditions.checkNotNull(name, "name is null");
     this.field = Preconditions.checkNotNull(field, "field is null");
+    this.errorBoundsStdDev = errorBoundsStdDev;
   }
 
   @Override
@@ -64,7 +67,16 @@ public class SketchEstimatePostAggregator implements PostAggregator
   public Object compute(Map<String, Object> combinedAggregators)
   {
     Sketch sketch = (Sketch) field.compute(combinedAggregators);
-    return sketch.getEstimate();
+    if (errorBoundsStdDev != null) {
+      SketchEstimateWithErrorBounds result = new SketchEstimateWithErrorBounds(
+          sketch.getEstimate(),
+          sketch.getUpperBound(errorBoundsStdDev),
+          sketch.getLowerBound(errorBoundsStdDev),
+          errorBoundsStdDev);
+      return result;
+    } else {
+      return sketch.getEstimate();
+    }
   }
 
   @Override
@@ -80,13 +92,20 @@ public class SketchEstimatePostAggregator implements PostAggregator
     return field;
   }
 
+  @JsonProperty
+  public Integer getErrorBoundsStdDev()
+  {
+    return errorBoundsStdDev;
+  }
+
   @Override
   public String toString()
   {
     return "SketchEstimatePostAggregator{" +
-           "name='" + name + '\'' +
-           ", field=" + field +
-           "}";
+        "name='" + name + '\'' +
+        ", field=" + field +
+        ", errorBoundsStdDev=" + errorBoundsStdDev +
+        "}";
   }
 
   @Override
@@ -104,6 +123,9 @@ public class SketchEstimatePostAggregator implements PostAggregator
     if (!name.equals(that.name)) {
       return false;
     }
+    if (errorBoundsStdDev != that.errorBoundsStdDev) {
+      return false;
+    }
     return field.equals(that.field);
 
   }
@@ -113,6 +135,7 @@ public class SketchEstimatePostAggregator implements PostAggregator
   {
     int result = name.hashCode();
     result = 31 * result + field.hashCode();
+    result = 31 * result + (errorBoundsStdDev != null ? errorBoundsStdDev.hashCode() : 0);
     return result;
   }
 }

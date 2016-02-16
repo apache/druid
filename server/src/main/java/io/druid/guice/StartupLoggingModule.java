@@ -17,24 +17,17 @@
  * under the License.
  */
 
-package io.druid.query.aggregation.datasketches.theta.oldapi;
+package io.druid.guice;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import io.druid.query.aggregation.datasketches.theta.SketchMergeAggregatorFactory;
+import com.google.inject.Binder;
+import com.google.inject.Module;
+import io.druid.server.log.StartupLoggingConfig;
 
-/**
- */
-public class OldSketchMergeAggregatorFactory extends SketchMergeAggregatorFactory
+public class StartupLoggingModule implements Module
 {
-  @JsonCreator
-  public OldSketchMergeAggregatorFactory(
-      @JsonProperty("name") String name,
-      @JsonProperty("fieldName") String fieldName,
-      @JsonProperty("size") Integer size,
-      @JsonProperty("shouldFinalize") Boolean shouldFinalize
-  )
+  @Override
+  public void configure(Binder binder)
   {
-    super(name, fieldName, size, shouldFinalize, true, null);
+    JsonConfigProvider.bind(binder, "druid.startup.logging", StartupLoggingConfig.class);
   }
 }

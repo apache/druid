@@ -21,6 +21,7 @@ package io.druid.query.metadata.metadata;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 import java.util.Objects;
 
@@ -32,13 +33,15 @@ public class ColumnAnalysis
 
   public static ColumnAnalysis error(String reason)
   {
-    return new ColumnAnalysis("STRING", false, -1, null, ERROR_PREFIX + reason);
+    return new ColumnAnalysis("STRING", false, -1, null, null, null, ERROR_PREFIX + reason);
   }
 
   private final String type;
   private final boolean hasMultipleValues;
   private final long size;
   private final Integer cardinality;
+  private final Comparable minValue;
+  private final Comparable maxValue;
   private final String errorMessage;
 
   @JsonCreator
@@ -47,6 +50,8 @@ public class ColumnAnalysis
       @JsonProperty("hasMultipleValues") boolean hasMultipleValues,
       @JsonProperty("size") long size,
       @JsonProperty("cardinality") Integer cardinality,
+      @JsonProperty("minValue") Comparable minValue,
+      @JsonProperty("maxValue") Comparable maxValue,
       @JsonProperty("errorMessage") String errorMessage
   )
   {
@@ -54,6 +59,8 @@ public class ColumnAnalysis
     this.hasMultipleValues = hasMultipleValues;
     this.size = size;
     this.cardinality = cardinality;
+    this.minValue = minValue;
+    this.maxValue = maxValue;
     this.errorMessage = errorMessage;
   }
 
@@ -79,6 +86,20 @@ public class ColumnAnalysis
   public Integer getCardinality()
   {
     return cardinality;
+  }
+
+  @JsonTypeInfo(use = JsonTypeInfo.Id.NAME)
+  @JsonProperty
+  public Comparable getMinValue()
+  {
+    return minValue;
+  }
+
+  @JsonTypeInfo(use = JsonTypeInfo.Id.NAME)
+  @JsonProperty
+  public Comparable getMaxValue()
+  {
+    return maxValue;
   }
 
   @JsonProperty
@@ -113,21 +134,29 @@ public class ColumnAnalysis
     Integer cardinality = getCardinality();
     final Integer rhsCardinality = rhs.getCardinality();
     if (cardinality == null) {
-
       cardinality = rhsCardinality;
-    } else {
-      if (rhsCardinality != null) {
-        cardinality = Math.max(cardinality, rhsCardinality);
-      }
+    } else if (rhsCardinality != null) {
+      cardinality = Math.max(cardinality, rhsCardinality);
     }
 
-    return new ColumnAnalysis(
-        type,
-        hasMultipleValues || rhs.isHasMultipleValues(),
-        size + rhs.getSize(),
-        cardinality,
-        null
-    );
+    final boolean multipleValues = hasMultipleValues || rhs.isHasMultipleValues();
+
+    Comparable newMin = choose(minValue, rhs.minValue, false);
+    Comparable newMax = choose(maxValue, rhs.maxValue, true);
+
+    return new ColumnAnalysis(type, multipleValues, size + rhs.getSize(), cardinality, newMin, newMax, null);
+  }
+
+  private <T extends Comparable> T choose(T obj1, T obj2, boolean max)
+  {
+    if (obj1 == null) {
+      return max ? obj2 : null;
+    }
+    if (obj2 == null) {
+      return max ? obj1 : null;
+    }
+    int compare = max ? obj1.compareTo(obj2) : obj2.compareTo(obj1);
+    return compare > 0 ? obj1 : obj2;
   }
 
   @Override
@@ -138,6 +167,8 @@ public class ColumnAnalysis
            ", hasMultipleValues=" + hasMultipleValues +
            ", size=" + size +
            ", cardinality=" + cardinality +
+           ", minValue=" + minValue +
+           ", maxValue=" + maxValue +
            ", errorMessage='" + errorMessage + '\'' +
            '}';
   }
@@ -156,12 +187,14 @@ public class ColumnAnalysis
            size == that.size &&
            Objects.equals(type, that.type) &&
            Objects.equals(cardinality, that.cardinality) &&
+           Objects.equals(minValue, that.minValue) &&
+           Objects.equals(maxValue, that.maxValue) &&
            Objects.equals(errorMessage, that.errorMessage);
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hash(type, hasMultipleValues, size, cardinality, errorMessage);
+    return Objects.hash(type, hasMultipleValues, size, cardinality, minValue, maxValue, errorMessage);
   }
 }

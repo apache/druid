@@ -151,8 +151,6 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
     selectors = Maps.newHashMap();
     aggOffsetInBuffer = new int[metrics.length];
 
-    BufferAggregator[] aggregators = new BufferAggregator[metrics.length];
-
     for (int i = 0; i < metrics.length; i++) {
       AggregatorFactory agg = metrics[i];
 
@@ -167,7 +165,6 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
           new OnheapIncrementalIndex.ObjectCachingColumnSelectorFactory(columnSelectorFactory)
       );
 
-      aggregators[i] = agg.factorizeBuffered(columnSelectorFactory);
       if (i == 0) {
         aggOffsetInBuffer[i] = 0;
       } else {
@@ -177,7 +174,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
 
     aggsTotalSize = aggOffsetInBuffer[metrics.length - 1] + metrics[metrics.length - 1].getMaxIntermediateSize();
 
-    return aggregators;
+    return new BufferAggregator[metrics.length];
   }
 
   @Override
@@ -203,6 +200,19 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
         bufferOffset = indexAndOffset[1];
         aggBuffer = aggBuffers.get(bufferIndex).get();
       } else {
+        if (metrics.length > 0 && getAggs()[0] == null) {
+          // note: creation of Aggregators is done lazily when at least one row from input is available
+          // so that FilteredAggregators could be initialized correctly.
+          rowContainer.set(row);
+          for (int i = 0; i < metrics.length; i++) {
+            final AggregatorFactory agg = metrics[i];
+            getAggs()[i] = agg.factorizeBuffered(
+                makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics)
+            );
+          }
+          rowContainer.set(null);
+        }
+
         bufferIndex = aggBuffers.size() - 1;
         ByteBuffer lastBuffer = aggBuffers.isEmpty() ? null : aggBuffers.get(aggBuffers.size() - 1).get();
         int[] lastAggregatorsIndexAndOffset = indexAndOffsets.isEmpty()
@@ -235,10 +245,13 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
         }
 
         final Integer rowIndex = indexIncrement.getAndIncrement();
+
+        // note that indexAndOffsets must be updated before facts, because as soon as we update facts
+        // concurrent readers get hold of it and might ask for newly added row
+        indexAndOffsets.add(new int[]{bufferIndex, bufferOffset});
         final Integer prev = facts.putIfAbsent(key, rowIndex);
         if (null == prev) {
           numEntries.incrementAndGet();
-          indexAndOffsets.add(new int[]{bufferIndex, bufferOffset});
         } else {
           throw new ISE("WTF! we are in sychronized block.");
         }
