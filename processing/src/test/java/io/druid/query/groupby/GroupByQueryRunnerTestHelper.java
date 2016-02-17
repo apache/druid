@@ -27,6 +27,7 @@ import com.metamx.common.guava.Sequences;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.query.FinalizeResultsQueryRunner;
+import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
@@ -38,17 +39,17 @@ import java.util.Map;
  */
 public class GroupByQueryRunnerTestHelper
 {
-  public static Iterable<Row> runQuery(QueryRunnerFactory factory, QueryRunner runner, GroupByQuery query)
+  public static <T> Iterable<T> runQuery(QueryRunnerFactory factory, QueryRunner runner, Query<T> query)
   {
 
     QueryToolChest toolChest = factory.getToolchest();
-    QueryRunner theRunner = new FinalizeResultsQueryRunner<>(
+    QueryRunner<T> theRunner = new FinalizeResultsQueryRunner<>(
         toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)),
         toolChest
     );
 
-    Sequence<Row> queryResult = theRunner.run(query, Maps.newHashMap());
-    return Sequences.toList(queryResult, Lists.<Row>newArrayList());
+    Sequence<T> queryResult = theRunner.run(query, Maps.<String, Object>newHashMap());
+    return Sequences.toList(queryResult, Lists.<T>newArrayList());
   }
 
   public static Row createExpectedRow(final String timestamp, Object... vals)

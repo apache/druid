@@ -105,6 +105,7 @@ public class SelectQueryEngine
 
             cursor.advanceTo(offset.startDelta());
 
+            int lastOffset = offset.startOffset();
             for (; !cursor.isDone() && offset.hasNext(); cursor.advance(), offset.next()) {
               final Map<String, Object> theEvent = Maps.newLinkedHashMap();
               theEvent.put(EventHolder.timestampKey, new DateTime(timestampColumnSelector.get()));
@@ -145,11 +146,13 @@ public class SelectQueryEngine
               builder.addEntry(
                   new EventHolder(
                       segment.getIdentifier(),
-                      offset.current(),
+                      lastOffset = offset.current(),
                       theEvent
                   )
               );
             }
+
+            builder.finished(segment.getIdentifier(), lastOffset);
 
             return builder.build();
           }

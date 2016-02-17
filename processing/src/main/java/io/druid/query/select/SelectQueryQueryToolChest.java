@@ -23,8 +23,11 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
+import com.google.common.primitives.Longs;
 import com.google.inject.Inject;
 import com.metamx.common.StringUtils;
 import com.metamx.common.guava.nary.BinaryFn;
@@ -42,11 +45,15 @@ import io.druid.query.ResultMergeQueryRunner;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
+import io.druid.segment.SegmentDesc;
+import io.druid.timeline.LogicalSegment;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -256,5 +263,53 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
   public QueryRunner<Result<SelectResultValue>> preMergeQueryDecoration(QueryRunner<Result<SelectResultValue>> runner)
   {
     return intervalChunkingQueryRunnerDecorator.decorate(runner, this);
+  }
+
+  @Override
+  public <T extends LogicalSegment> List<T> filterSegments(SelectQuery query, List<T> segments)
+  {
+    PagingSpec pagingSpec = query.getPagingSpec();
+    Map<String, Integer> paging = pagingSpec.getPagingIdentifiers();
+    if (paging == null || paging.isEmpty()) {
+      return segments;
+    }
+    List<Interval> intervals = Lists.newArrayList(
+        Iterables.transform(
+            paging.keySet(),
+            SegmentDesc.INTERVAL_EXTRACTOR
+        )
+    );
+    Collections.sort(
+        intervals, new Comparator<Interval>()
+        {
+          @Override
+          public int compare(Interval o1, Interval o2)
+          {
+            return Longs.compare(o1.getStartMillis(), o2.getStartMillis());
+          }
+        }
+    );
+
+    List<T> queryIntervals = Lists.newArrayList(segments);
+
+    Iterator<T> it = queryIntervals.iterator();
+    if (query.isDescending()) {
+      final long lastEnd = intervals.get(intervals.size() - 1).getEndMillis();
+      while (it.hasNext()) {
+        T segment = it.next();
+        if (segment.getInterval().getStartMillis() > lastEnd) {
+          it.remove();
+        }
+      }
+    } else {
+      final long firstStart = intervals.get(0).getStartMillis();
+      while (it.hasNext()) {
+        T segment = it.next();
+        if (segment.getInterval().getEndMillis() < firstStart) {
+          it.remove();
+        }
+      }
+    }
+    return queryIntervals;
   }
 }

@@ -173,6 +173,21 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
     );
   }
 
+  public SelectQuery withPagingSpec(PagingSpec pagingSpec)
+  {
+    return new SelectQuery(
+        getDataSource(),
+        getQuerySegmentSpec(),
+        isDescending(),
+        dimFilter,
+        granularity,
+        dimensions,
+        metrics,
+        pagingSpec,
+        getContext()
+    );
+  }
+
   @Override
   public String toString()
   {
