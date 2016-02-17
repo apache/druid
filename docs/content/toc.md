@@ -19,6 +19,7 @@
   * [Stream Ingestion](../ingestion/stream-ingestion.html)
     * [Stream Push](../ingestion/stream-push.html)
     * [Stream Pull](../ingestion/stream-pull.html)
+  * [Kafka Ingestion](../ingestion/kafka-ingestion.html)
   * [Updating Existing Data](../ingestion/update-existing-data.html)
   * [FAQ](../ingestion/faq.html)
 

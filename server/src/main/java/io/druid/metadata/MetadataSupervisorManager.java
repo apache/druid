@@ -19,38 +19,19 @@
 
 package io.druid.metadata;
 
-/**
- */
-public interface MetadataStorageConnector
+import io.druid.indexing.overlord.supervisor.SupervisorSpec;
+import io.druid.indexing.overlord.supervisor.VersionedSupervisorSpec;
+
+import java.util.List;
+import java.util.Map;
+
+public interface MetadataSupervisorManager
 {
-  Void insertOrUpdate(
-      final String tableName,
-      final String keyColumn,
-      final String valueColumn,
-      final String key,
-      final byte[] value
-  ) throws Exception;
+  void start();
 
-  byte[] lookup(
-      final String tableName,
-      final String keyColumn,
-      final String valueColumn,
-      final String key
-  );
+  void insert(String id, SupervisorSpec spec);
 
-  void createDataSourceTable();
+  Map<String, List<VersionedSupervisorSpec>> getAll();
 
-  void createPendingSegmentsTable();
-
-  void createSegmentTable();
-
-  void createRulesTable();
-
-  void createConfigTable();
-
-  void createTaskTables();
-
-  void createAuditTable();
-
-  void createSupervisorsTable();
+  Map<String, SupervisorSpec> getLatest();
 }

@@ -17,40 +17,12 @@
  * under the License.
  */
 
-package io.druid.metadata;
+package io.druid.indexing.overlord.supervisor;
 
-/**
- */
-public interface MetadataStorageConnector
+public interface Supervisor
 {
-  Void insertOrUpdate(
-      final String tableName,
-      final String keyColumn,
-      final String valueColumn,
-      final String key,
-      final byte[] value
-  ) throws Exception;
+  void start();
+  void stop(boolean stopGracefully);
 
-  byte[] lookup(
-      final String tableName,
-      final String keyColumn,
-      final String valueColumn,
-      final String key
-  );
-
-  void createDataSourceTable();
-
-  void createPendingSegmentsTable();
-
-  void createSegmentTable();
-
-  void createRulesTable();
-
-  void createConfigTable();
-
-  void createTaskTables();
-
-  void createAuditTable();
-
-  void createSupervisorsTable();
+  SupervisorReport getStatus();
 }
