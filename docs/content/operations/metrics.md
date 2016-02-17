@@ -92,7 +92,7 @@ These metrics are only available if the RealtimeMetricsMonitor is included in th
 |------|-----------|----------|------------|
 |`ingest/events/thrownAway`|Number of events rejected because they are outside the windowPeriod.|dataSource.|0|
 |`ingest/events/unparseable`|Number of events rejected because the events are unparseable.|dataSource.|0|
-|`ingest/events/processed`|Number of events successfully processed.|dataSource.|Equal to your # of events.|
+|`ingest/events/processed`|Number of events successfully processed per monitoring period (period of 1 minute by default).|dataSource.|Equal to your # of events per monitoring period.|
 |`ingest/rows/output`|Number of Druid rows persisted.|dataSource.|Your # of events with rollup.|
 |`ingest/persists/count`|Number of times persist occurred.|dataSource.|Depends on configuration.|
 |`ingest/persists/time`|Milliseconds spent doing intermediate persist.|dataSource.|Depends on configuration. Generally a few minutes at most.|
