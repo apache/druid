@@ -37,8 +37,8 @@ public class FireHydrant
   private final int count;
   private final Object swapLock = new Object();
 
-  private volatile IncrementalIndex index;
-  private volatile ReferenceCountingSegment adapter;
+  private IncrementalIndex index;
+  private ReferenceCountingSegment adapter;
 
   public FireHydrant(
       IncrementalIndex index,

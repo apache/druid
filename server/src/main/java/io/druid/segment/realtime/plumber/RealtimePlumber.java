@@ -93,7 +93,7 @@ public class RealtimePlumber implements Plumber
 {
   private static final EmittingLogger log = new EmittingLogger(RealtimePlumber.class);
   private static final int WARN_DELAY = 1000;
-  private static final int CHECK_INTERNAL_COUNT = 100000;
+  private static final int MAX_ROW_EXCEED_CHECK_COUNT = 100000;
 
   private final DataSchema schema;
   private final RealtimeTuningConfig config;
@@ -218,7 +218,7 @@ public class RealtimePlumber implements Plumber
       persist(committerSupplier.get());
     }
 
-    if (++counter % CHECK_INTERNAL_COUNT == 0) {
+    if (++counter % MAX_ROW_EXCEED_CHECK_COUNT == 0) {
       int size = 0;
       for (Sink aSink : sinks.values()) {
         size += aSink.sizeInMemory();
