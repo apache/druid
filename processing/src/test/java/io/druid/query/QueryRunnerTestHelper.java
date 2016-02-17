@@ -25,7 +25,9 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.metamx.common.UOE;
+import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
+import com.metamx.common.guava.Sequences;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -46,6 +48,7 @@ import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
 import io.druid.segment.TestIndex;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.timeline.LogicalSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -436,6 +439,80 @@ public class QueryRunnerTestHelper
         ),
         factory.getToolchest()
     );
+  }
+
+  public static <T> QueryRunner<T> makeFilteringQueryRunner(
+      final List<Segment> segments,
+      final QueryRunnerFactory<T, Query<T>> factory
+  )
+  {
+    return makeQueryRunner(
+        Lists.transform(
+            segments, new Function<Segment, LogicalWrapper>()
+            {
+              @Override
+              public LogicalWrapper apply(Segment segment)
+              {
+                return new LogicalWrapper(segment);
+              }
+            }
+        ), factory
+    );
+  }
+
+  private static <T> QueryRunner<T> makeQueryRunner(
+      final List<LogicalWrapper> segments,
+      final QueryRunnerFactory<T, Query<T>> factory
+  )
+  {
+    final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
+    return new FinalizeResultsQueryRunner(
+        toolChest.postMergeQueryDecoration(
+            toolChest.mergeResults(
+                toolChest.preMergeQueryDecoration(
+                    new QueryRunner<T>()
+                    {
+                      @Override
+                      public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
+                      {
+                        List<Sequence<T>> sequences = Lists.newArrayList();
+                        for (LogicalWrapper segment : toolChest.filterSegments(query, segments)) {
+                          sequences.add(factory.createRunner(segment.segment).run(query, responseContext));
+                        }
+                        return new MergeSequence<>(
+                            query.getResultOrdering(),
+                            Sequences.simple(sequences)
+                        );
+                      }
+                    }
+                )
+            )
+        ),
+        toolChest
+    );
+  }
+
+  // wish Segment implements LogicalSegment
+  private static class LogicalWrapper implements LogicalSegment
+  {
+    private final Segment segment;
+
+    private LogicalWrapper(Segment segment)
+    {
+      this.segment = segment;
+    }
+
+    @Override
+    public Interval getInterval()
+    {
+      return segment.getDataInterval();
+    }
+
+    @Override
+    public String toString()
+    {
+      return segment.getIdentifier();
+    }
   }
 
   public static IntervalChunkingQueryRunnerDecorator NoopIntervalChunkingQueryRunnerDecorator()
