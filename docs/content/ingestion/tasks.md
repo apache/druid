@@ -124,7 +124,7 @@ The indexSpec is optional and default parameters will be used if not specified.
 |property|description|possible values|default|required?|
 |--------|-----------|---------------|-------|---------|
 |bitmap|type of bitmap compression to use for inverted indices.|`"concise"`, `"roaring"`|`"concise"`|no|
-|dimensionCompression|compression format for dimension columns (currently only affects single-value dimensions, multi-value dimensions are always uncompressed)|`"uncompressed"`, `"lz4"`, `"lzf"`|`"lz4"`|no|
+|dimensionCompression|compression format for dimension columns|`"uncompressed"`, `"lz4"`, `"lzf"`|`"lz4"`|no|
 |metricCompression|compression format for metric columns, defaults to LZ4|`"lz4"`, `"lzf"`|`"lz4"`|no|
 
 Segment Merging Tasks
