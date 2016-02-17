@@ -396,6 +396,10 @@ or without setting "locale" (in this case, the current value of the default loca
 
 ### Lookup DimensionSpecs
 
+<div class="note caution">
+Lookups are an <a href="../development/experimental.html">experimental</a> feature.
+</div>
+
 Lookup DimensionSpecs can be used to define directly a lookup implementation as dimension spec.
 Generally speaking there is two different kind of lookups implementations. 
 The first kind is passed at the query time like `map` implementation.

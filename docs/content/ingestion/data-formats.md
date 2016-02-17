@@ -9,7 +9,7 @@ We welcome any contributions to new formats.
 
 ## Formatting the Data
 
-The following are some samples of the data used in the [Wikipedia example](../tutorials/tutorial-loading-streaming-data.html).
+The following are some samples of the data used in the [Wikipedia example](../tutorials/quickstart.html).
 
 _JSON_
 

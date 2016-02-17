@@ -1,9 +1,9 @@
 ---
 layout: doc_page
 ---
-# Work with different versions of Hadoop
+# Working with different versions of Hadoop
 
-## Include Hadoop dependencies
+## Including Hadoop dependencies
 
 There are two different ways to let Druid pick up your Hadoop version, choose the one that fits your need.
 
@@ -13,15 +13,22 @@ You can create a Hadoop dependency directory and tell Druid to load your Hadoop 
 
 To make this work, follow the steps below
 
-(1) Specify `druid.extensions.hadoopDependenciesDir` (root directory for Hadoop related dependencies). If you don't specify it, Druid will use its default value, see [Configuration](../configuration/index.html).
+(1) Specify `druid.extensions.hadoopDependenciesDir` (root directory for Hadoop related dependencies) in your `common.runtime.properties` file. If you don't 
+specify it, Druid will use a default value. See [Configuration](../configuration/index.html) for more details.
 
-(2) Set-up Hadoop dependencies directories under root Hadoop dependency directory. Under the root directory, you should create sub-directories for each Hadoop dependencies.  Inside each sub-directory, created a sub-sub-directory whose name is the version of Hadoop it contains, and inside that sub-sub-directory, put Hadoop jars in it. This file structure is almost same as normal Druid extensions described in [Including-Extensions](../including-extensions.html), except that there is an extra layer of folder that specifies the version of Hadoop. (If you don't want to manually setup this directory, Druid also provides a [pull-deps](../pull-deps.html) tool that can help you generate these directories automatically)
+(2) Set up the Hadoop dependencies directories under root Hadoop dependency directory. Under the root directory, you should 
+create sub-directories for each Hadoop dependencies.  Inside each sub-directory, created a sub-sub-directory whose name 
+is the version of Hadoop it contains, and inside that sub-sub-directory, put Hadoop jars in it. This file structure is 
+almost same as normal Druid extensions described in [Including Extensions](../operations/including-extensions.html), 
+except that there is an extra layer of folder that specifies the version of Hadoop. (If you don't want to manually setup 
+this directory, Druid also provides a [pull-deps](../operations/pull-deps.html) tool that can help you generate these 
+directories automatically).
 
 Example:
 
 Suppose you specify `druid.extensions.hadoopDependenciesDir=/usr/local/druid/hadoop-dependencies`, and you want to prepare both `hadoop-client` 2.3.0 and 2.4.0 for Druid,
 
-Then you can either use [pull-deps](../pull-deps.html) or manually set up Hadoop dependencies directories such that under ```hadoop-dependencies```, it looks like this,
+Then you can either use [pull-deps](../operations/pull-deps.html) or manually set up Hadoop dependencies directories such that under ```hadoop-dependencies```, it looks like this:
 
 ```
 hadoop-dependencies/
@@ -44,7 +51,7 @@ hadoop-dependencies/
     ..... lots of jars
 ```
 
-As you can see, under ```hadoop-client```, there are two sub-directories, each denotes a version of ```hadoop-client```. During runtime, Druid will look for these directories and load appropriate ```hadoop-client``` based on `hadoopDependencyCoordinates` passed to [Hadoop Index Task](../ingestion/tasks.html).
+As you can see, under ```hadoop-client```, there are two sub-directories, each denotes a version of ```hadoop-client```. During runtime, Druid will look for these directories and load appropriate ```hadoop-client``` based on `hadoopDependencyCoordinates` passed to the [Hadoop Index Task](../ingestion/tasks.html).
 
 ### Append your Hadoop jars to the Druid classpath
 
@@ -54,17 +61,17 @@ If you really don't like the way above, and you just want to use one specific Ha
 
 (2) Append your Hadoop jars to the classpath, Druid will load them into the system. This mechanism is relatively easy to reason about, but it also means that you have to ensure that all dependency jars on the classpath are compatible. That is, Druid makes no provisions while using this method to maintain class loader isolation so you must make sure that the jars on your classpath are mutually compatible.
 
-## Working with Hadoop 2.x
+#### Hadoop 2.x
 
 The default version of Hadoop bundled with Druid is 2.3.
 
-To override the default Hadoop version, both the Hadoop Index Task and the standalone Hadoop indexer support the parameter `hadoopDependencyCoordinates`(See [Index Hadoop Task](../ingestion/tasks.html). You can pass another set of Hadoop coordinates through this parameter (e.g. You can specify coordinates for Hadoop 2.4.0 as `["org.apache.hadoop:hadoop-client:2.4.0"]`), which will overwrite the default Hadoop coordinates Druid uses.
+To override the default Hadoop version, both the Hadoop Index Task and the standalone Hadoop indexer support the parameter `hadoopDependencyCoordinates`(See [Index Hadoop Task](../ingestion/tasks.html)). You can pass another set of Hadoop coordinates through this parameter (e.g. You can specify coordinates for Hadoop 2.4.0 as `["org.apache.hadoop:hadoop-client:2.4.0"]`), which will overwrite the default Hadoop coordinates Druid uses.
 
 The Hadoop Index Task takes this parameter has part of the task JSON and the standalone Hadoop indexer takes this parameter as a command line argument.
 
 If you are still having problems, include all relevant hadoop jars at the beginning of the classpath of your indexing or historical nodes.
 
-## Working with CDH
+#### CDH
 
 Members of the community have reported dependency conflicts between the version of Jackson used in CDH and Druid. Currently, our best workaround is to edit Druid's pom.xml dependencies to match the version of Jackson in your Hadoop version and recompile Druid.
 
