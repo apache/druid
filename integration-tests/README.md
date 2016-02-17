@@ -3,7 +3,7 @@ Integration Testing
 
 ## Installing Docker
 
-Please refer to instructions at [https://github.com/druid-io/docker-druid/blob/master/docker-install.md]()
+Please refer to instructions at [https://github.com/druid-io/docker-druid/blob/master/docker-install.md](https://github.com/druid-io/docker-druid/blob/master/docker-install.md).
 
 ## Creating the Docker VM
 
