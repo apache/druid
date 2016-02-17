@@ -70,7 +70,7 @@ public class TimeseriesQueryRunnerTest
 
   public static final Map<String, Object> CONTEXT = ImmutableMap.of();
 
-  @Parameterized.Parameters(name="{0}:descending={1}")
+  @Parameterized.Parameters(name = "{0}:descending={1}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
     return QueryRunnerTestHelper.cartesian(
@@ -2161,13 +2161,29 @@ public class TimeseriesQueryRunnerTest
     validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, "==", "entertainment", 2);
     validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, "<>", "entertainment", 24);
 
-    // non-existing
+    // non-existing (between)
     validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, ">", "financial", 20);
     validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, ">=", "financial", 20);
     validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, "<", "financial", 6);
     validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, "<=", "financial", 6);
     validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, "==", "financial", 0);
     validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, "<>", "financial", 26);
+
+    // non-existing (smaller than min)
+    validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, ">", "abcb", 26);
+    validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, ">=", "abcb", 26);
+    validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, "<", "abcb", 0);
+    validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, "<=", "abcb", 0);
+    validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, "==", "abcb", 0);
+    validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, "<>", "abcb", 26);
+
+    // non-existing (bigger than max)
+    validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, ">", "zztop", 0);
+    validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, ">=", "zztop", 0);
+    validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, "<", "zztop", 26);
+    validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, "<=", "zztop", 26);
+    validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, "==", "zztop", 0);
+    validateSelectDimFilter(builder, QueryRunnerTestHelper.qualityDimension, "<>", "zztop", 26);
 
     // null
     validateSelectDimFilter(builder, "partial_null_column", "==", "", 22);
@@ -2184,8 +2200,9 @@ public class TimeseriesQueryRunnerTest
   {
     builder.aggregators(
         Arrays.<AggregatorFactory>asList(
-            new FilteredAggregatorFactory(new CountAggregatorFactory("filteredAgg"),
-                                          new SelectorDimFilter(dimension, value, operation)
+            new FilteredAggregatorFactory(
+                new CountAggregatorFactory("filteredAgg"),
+                new SelectorDimFilter(dimension, value, operation)
             )
         )
     );

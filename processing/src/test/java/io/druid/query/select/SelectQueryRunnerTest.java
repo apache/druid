@@ -329,7 +329,7 @@ public class SelectQueryRunnerTest
         new JavaScriptDimFilter(QueryRunnerTestHelper.qualityDimension, "function(dim){ return dim != 'entertainment'; }")
     );
 
-    // non-existing
+    // non-existing (between)
     validateSelectDimFilter(
         builder,
         new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "financial", "GT"),
@@ -359,6 +359,70 @@ public class SelectQueryRunnerTest
         builder,
         new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "financial", "NE"),
         new JavaScriptDimFilter(QueryRunnerTestHelper.qualityDimension, "function(dim){ return dim != 'financial'; }")
+    );
+
+    // non-existing (smaller than min)
+    validateSelectDimFilter(
+        builder,
+        new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "abcb", "GT"),
+        new JavaScriptDimFilter(QueryRunnerTestHelper.qualityDimension, "function(dim){ return dim > 'abcb'; }")
+    );
+    validateSelectDimFilter(
+        builder,
+        new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "abcb", "GTE"),
+        new JavaScriptDimFilter(QueryRunnerTestHelper.qualityDimension, "function(dim){ return dim >= 'abcb'; }")
+    );
+    validateSelectDimFilter(
+        builder,
+        new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "abcb", "LT"),
+        new JavaScriptDimFilter(QueryRunnerTestHelper.qualityDimension, "function(dim){ return dim < 'abcb'; }")
+    );
+    validateSelectDimFilter(
+        builder,
+        new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "abcb", "LTE"),
+        new JavaScriptDimFilter(QueryRunnerTestHelper.qualityDimension, "function(dim){ return dim <= 'abcb'; }")
+    );
+    validateSelectDimFilter(
+        builder,
+        new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "abcb", "EQ"),
+        new JavaScriptDimFilter(QueryRunnerTestHelper.qualityDimension, "function(dim){ return dim === 'abcb'; }")
+    );
+    validateSelectDimFilter(
+        builder,
+        new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "abcb", "NE"),
+        new JavaScriptDimFilter(QueryRunnerTestHelper.qualityDimension, "function(dim){ return dim != 'abcb'; }")
+    );
+
+    // non-existing (bigger than max)
+    validateSelectDimFilter(
+        builder,
+        new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "zztop", "GT"),
+        new JavaScriptDimFilter(QueryRunnerTestHelper.qualityDimension, "function(dim){ return dim > 'zztop'; }")
+    );
+    validateSelectDimFilter(
+        builder,
+        new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "zztop", "GTE"),
+        new JavaScriptDimFilter(QueryRunnerTestHelper.qualityDimension, "function(dim){ return dim >= 'zztop'; }")
+    );
+    validateSelectDimFilter(
+        builder,
+        new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "zztop", "LT"),
+        new JavaScriptDimFilter(QueryRunnerTestHelper.qualityDimension, "function(dim){ return dim < 'zztop'; }")
+    );
+    validateSelectDimFilter(
+        builder,
+        new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "zztop", "LTE"),
+        new JavaScriptDimFilter(QueryRunnerTestHelper.qualityDimension, "function(dim){ return dim <= 'zztop'; }")
+    );
+    validateSelectDimFilter(
+        builder,
+        new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "zztop", "EQ"),
+        new JavaScriptDimFilter(QueryRunnerTestHelper.qualityDimension, "function(dim){ return dim === 'zztop'; }")
+    );
+    validateSelectDimFilter(
+        builder,
+        new SelectorDimFilter(QueryRunnerTestHelper.qualityDimension, "zztop", "NE"),
+        new JavaScriptDimFilter(QueryRunnerTestHelper.qualityDimension, "function(dim){ return dim != 'zztop'; }")
     );
 
     // null

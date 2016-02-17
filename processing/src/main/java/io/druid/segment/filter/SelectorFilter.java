@@ -109,7 +109,6 @@ public class SelectorFilter implements Filter
         new DefaultDimensionSpec(dimension, dimension)
     );
 
-    // Missing columns match a null or empty string value and don't match anything else
     if (operator == BinaryOperator.EQ || operator == BinaryOperator.NE) {
       final ValueMatcher matcher = toValueMatcher(dimensionSelector);
       return operator == BinaryOperator.EQ ? matcher : new RevertedMatcher(matcher);
@@ -136,6 +135,7 @@ public class SelectorFilter implements Filter
   private ValueMatcher toValueMatcher(final DimensionSelector dimensionSelector)
   {
     if (dimensionSelector == null) {
+      // Missing columns match a null or empty string value and don't match anything else
       return new BooleanValueMatcher(Strings.isNullOrEmpty(value));
     }
     final int valueId = dimensionSelector.lookupId(value);
