@@ -17,7 +17,7 @@ To do so, run these commands:
 ```
 git clone git@github.com:druid-io/druid.git
 cd druid
-mvn clean install
+mvn clean package
 ```
 
 This will compile the project and create the Druid binary distribution tar under
