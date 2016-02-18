@@ -22,6 +22,7 @@ package io.druid.query.aggregation.hyperloglog;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import io.druid.query.aggregation.PostAggregator;
 
@@ -33,6 +34,15 @@ import java.util.Set;
  */
 public class HyperUniqueFinalizingPostAggregator implements PostAggregator
 {
+  private static final Comparator<Double> DOUBLE_COMPARATOR = Ordering.from(new Comparator<Double>()
+  {
+    @Override
+    public int compare(Double lhs, Double rhs)
+    {
+      return Double.compare(lhs, rhs);
+    }
+  }).nullsFirst();
+
   private final String name;
   private final String fieldName;
 
@@ -56,9 +66,9 @@ public class HyperUniqueFinalizingPostAggregator implements PostAggregator
   }
 
   @Override
-  public Comparator getComparator()
+  public Comparator<Double> getComparator()
   {
-    throw new UnsupportedOperationException();
+    return DOUBLE_COMPARATOR;
   }
 
   @Override
