@@ -40,6 +40,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -116,9 +117,8 @@ public abstract class HadoopTask extends AbstractTask
     final List<URL> nonHadoopNotDruidURLs = Lists.newArrayList(nonHadoopURLs);
     nonHadoopNotDruidURLs.removeAll(druidURLs);
 
-    // Start from a fresh slate
-    ClassLoader classLoader = null;
-    classLoader = new URLClassLoader(nonHadoopNotDruidURLs.toArray(new URL[nonHadoopNotDruidURLs.size()]), classLoader);
+    final List<URL> localClassLoaderURLs = new ArrayList<>();
+    localClassLoaderURLs.addAll(nonHadoopNotDruidURLs);
 
     // hadoop dependencies come before druid classes because some extensions depend on them
     for (final File hadoopDependency :
@@ -127,11 +127,12 @@ public abstract class HadoopTask extends AbstractTask
             extensionsConfig
         )) {
       final ClassLoader hadoopLoader = Initialization.getClassLoaderForExtension(hadoopDependency);
-      classLoader = new URLClassLoader(((URLClassLoader) hadoopLoader).getURLs(), classLoader);
+      localClassLoaderURLs.addAll(Arrays.asList(((URLClassLoader) hadoopLoader).getURLs()));
     }
 
-    classLoader = new URLClassLoader(druidURLs.toArray(new URL[druidURLs.size()]), classLoader);
-    classLoader = new URLClassLoader(extensionURLs.toArray(new URL[extensionURLs.size()]), classLoader);
+    localClassLoaderURLs.addAll(druidURLs);
+    localClassLoaderURLs.addAll(extensionURLs);
+    final ClassLoader classLoader = new URLClassLoader(localClassLoaderURLs.toArray(new URL[localClassLoaderURLs.size()]), null);
 
     final List<URL> jobUrls = Lists.newArrayList();
     jobUrls.addAll(nonHadoopURLs);
