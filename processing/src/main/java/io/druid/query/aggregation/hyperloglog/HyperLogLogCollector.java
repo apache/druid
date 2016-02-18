@@ -681,21 +681,6 @@ public abstract class HyperLogLogCollector implements Comparable<HyperLogLogColl
   @Override
   public int compareTo(HyperLogLogCollector other)
   {
-    final int lhsOffset = (int) this.getRegisterOffset() & 0xffff;
-    final int rhsOffset = (int) other.getRegisterOffset() & 0xffff;
-
-    if (lhsOffset == rhsOffset) {
-      final int lhsNumNonZero = (int) this.getNumNonZeroRegisters() & 0xff;
-      final int rhsNumNonZero = (int) this.getNumNonZeroRegisters() & 0xff;
-      int retVal = Double.compare(lhsNumNonZero, rhsNumNonZero);
-
-      if (retVal == 0) {
-        retVal = Double.compare(this.estimateCardinality(), other.estimateCardinality());
-      }
-
-      return retVal;
-    } else {
-      return Double.compare(lhsOffset, rhsOffset);
-    }
+    return Double.compare(this.estimateCardinality(), other.estimateCardinality());
   }
 }

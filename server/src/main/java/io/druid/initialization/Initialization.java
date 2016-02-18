@@ -50,6 +50,7 @@ import io.druid.guice.QueryRunnerFactoryModule;
 import io.druid.guice.QueryableModule;
 import io.druid.guice.ServerModule;
 import io.druid.guice.ServerViewModule;
+import io.druid.guice.StartupLoggingModule;
 import io.druid.guice.StorageNodeModule;
 import io.druid.guice.annotations.Client;
 import io.druid.guice.annotations.Json;
@@ -302,7 +303,8 @@ public class Initialization
         new CoordinatorDiscoveryModule(),
         new LocalDataStorageDruidModule(),
         new FirehoseModule(),
-        new ParsersModule()
+        new ParsersModule(),
+        new StartupLoggingModule()
     );
 
     ModuleList actualModules = new ModuleList(baseInjector);
