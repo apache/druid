@@ -8,8 +8,8 @@ A Druid ingestion spec consists of 3 components:
 
 ```json
 {
-  "dataSchema" : {...}
-  "ioConfig" : {...}
+  "dataSchema" : {...},
+  "ioConfig" : {...},
   "tuningConfig" : {...}
 }
 ```
@@ -93,7 +93,7 @@ If `type` is not included, the parser defaults to `string`.
 
 ### Avro Stream Parser
 
-This is for realtime ingestion. Make sure to include "io.druid.extensions:druid-avro-extensions" as an extension.
+This is for realtime ingestion. Make sure to include `druid-avro-extensions` as an extension.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
