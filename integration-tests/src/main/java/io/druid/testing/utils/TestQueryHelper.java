@@ -96,8 +96,9 @@ public class TestQueryHelper
         List<Map<String, Object>> result = queryClient.query(url, queryWithResult.getQuery());
         if (!QueryResultVerifier.compareResults(result, queryWithResult.getExpectedResults())) {
           LOG.error(
-              "Failed while executing %s actualResults : %s",
-              queryWithResult,
+              "Failed while executing query %s \n expectedResults: %s \n actualResults : %s",
+              queryWithResult.getQuery(),
+              jsonMapper.writeValueAsString(queryWithResult.getExpectedResults()),
               jsonMapper.writeValueAsString(result)
           );
           failed = true;
