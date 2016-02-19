@@ -199,6 +199,7 @@ public class Sink implements Iterable<FireHydrant>
         .build();
     final IncrementalIndex newIndex = new OnheapIncrementalIndex(
         indexSchema,
+        config.isReportParseExceptions(),
         config.getMaxRowsInMemory()
     );
 

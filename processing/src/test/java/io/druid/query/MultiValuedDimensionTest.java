@@ -98,6 +98,7 @@ public class MultiValuedDimensionTest
             new CountAggregatorFactory("count")
         },
         true,
+        true,
         5000
     );
 

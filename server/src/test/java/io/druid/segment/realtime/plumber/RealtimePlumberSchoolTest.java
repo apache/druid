@@ -195,7 +195,9 @@ public class RealtimePlumberSchoolTest
         null,
         null,
         buildV9Directly,
-        0, 0
+        0,
+        0,
+        false
     );
 
     realtimePlumberSchool = new RealtimePlumberSchool(

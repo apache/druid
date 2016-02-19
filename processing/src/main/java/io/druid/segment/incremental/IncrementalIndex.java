@@ -51,7 +51,6 @@ import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
-import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.serde.ComplexMetricExtractor;
 import io.druid.segment.serde.ComplexMetricSerde;
@@ -268,6 +267,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   private final AggregatorFactory[] metrics;
   private final AggregatorType[] aggs;
   private final boolean deserializeComplexMetrics;
+  private final boolean reportParseExceptions;
   private final Metadata metadata;
 
   private final Map<String, MetricDesc> metricDescs;
@@ -295,10 +295,13 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
    * @param incrementalIndexSchema    the schema to use for incremental index
    * @param deserializeComplexMetrics flag whether or not to call ComplexMetricExtractor.extractValue() on the input
    *                                  value for aggregators that return metrics other than float.
+   * @param reportParseExceptions     flag whether or not to report ParseExceptions that occur while extracting values
+   *                                  from input rows
    */
   public IncrementalIndex(
       final IncrementalIndexSchema incrementalIndexSchema,
-      final boolean deserializeComplexMetrics
+      final boolean deserializeComplexMetrics,
+      final boolean reportParseExceptions
   )
   {
     this.minTimestamp = incrementalIndexSchema.getMinTimestamp();
@@ -306,6 +309,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     this.metrics = incrementalIndexSchema.getMetrics();
     this.rowTransformers = new CopyOnWriteArrayList<>();
     this.deserializeComplexMetrics = deserializeComplexMetrics;
+    this.reportParseExceptions = reportParseExceptions;
 
     this.metadata = new Metadata().setAggregators(getCombiningAggregators(metrics));
 
@@ -367,6 +371,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   protected abstract Integer addToFacts(
       AggregatorFactory[] metrics,
       boolean deserializeComplexMetrics,
+      boolean reportParseExceptions,
       InputRow row,
       AtomicInteger numEntries,
       TimeAndDims key,
@@ -416,7 +421,16 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
    */
   public int add(InputRow row) throws IndexSizeExceededException {
     TimeAndDims key = toTimeAndDims(row);
-    final int rv = addToFacts(metrics, deserializeComplexMetrics, row, numEntries, key, in, rowSupplier);
+    final int rv = addToFacts(
+        metrics,
+        deserializeComplexMetrics,
+        reportParseExceptions,
+        row,
+        numEntries,
+        key,
+        in,
+        rowSupplier
+    );
     updateMaxIngestedTime(row.getTimestamp());
     return rv;
   }

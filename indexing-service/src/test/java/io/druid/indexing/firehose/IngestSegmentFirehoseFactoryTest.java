@@ -144,6 +144,7 @@ public class IngestSegmentFirehoseFactoryTest
         .build();
     final OnheapIncrementalIndex index = new OnheapIncrementalIndex(
         schema,
+        true,
         MAX_ROWS * MAX_SHARD_NUMBER
     );
 

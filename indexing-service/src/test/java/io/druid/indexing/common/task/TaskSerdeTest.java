@@ -335,7 +335,8 @@ public class TaskSerdeTest
                 indexSpec,
                 null,
                 0,
-                0
+                0,
+                true
             )
         ),
         null
@@ -358,6 +359,7 @@ public class TaskSerdeTest
         Granularity.HOUR,
         task.getRealtimeIngestionSchema().getDataSchema().getGranularitySpec().getSegmentGranularity()
     );
+    Assert.assertTrue(task.getRealtimeIngestionSchema().getTuningConfig().isReportParseExceptions());
 
     Assert.assertEquals(task.getId(), task2.getId());
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
