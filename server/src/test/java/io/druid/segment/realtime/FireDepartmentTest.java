@@ -116,9 +116,7 @@ public class FireDepartmentTest
             ),
             null
         ),
-        new RealtimeTuningConfig(
-            null, null, null, null, null, null, null, null, null, null, 0, 0
-        )
+        RealtimeTuningConfig.makeDefaultTuningConfig()
     );
 
     String json = jsonMapper.writeValueAsString(schema);

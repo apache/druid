@@ -882,9 +882,9 @@ public class IndexMergerTest
         .build();
 
 
-    IncrementalIndex toPersist1 = new OnheapIncrementalIndex(schema, 1000);
-    IncrementalIndex toPersist2 = new OnheapIncrementalIndex(schema, 1000);
-    IncrementalIndex toPersist3 = new OnheapIncrementalIndex(schema, 1000);
+    IncrementalIndex toPersist1 = new OnheapIncrementalIndex(schema, true, 1000);
+    IncrementalIndex toPersist2 = new OnheapIncrementalIndex(schema, true, 1000);
+    IncrementalIndex toPersist3 = new OnheapIncrementalIndex(schema, true, 1000);
 
     addDimValuesToIndex(toPersist1, "dimA", Arrays.asList("1", "2"));
     addDimValuesToIndex(toPersist2, "dimA", Arrays.asList("1", "2"));
@@ -1626,10 +1626,7 @@ public class IndexMergerTest
         new AggregatorFactory[]{new CountAggregatorFactory("count")}
     );
 
-    return new OnheapIncrementalIndex(
-        schema,
-        1000
-    );
+    return new OnheapIncrementalIndex(schema, true, 1000);
   }
 
   private AggregatorFactory[] getCombiningAggregators(AggregatorFactory[] aggregators)

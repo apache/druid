@@ -218,7 +218,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
             }
         )
         .build();
-    final OnheapIncrementalIndex index = new OnheapIncrementalIndex(schema, rows.length);
+    final OnheapIncrementalIndex index = new OnheapIncrementalIndex(schema, true, rows.length);
 
     for (InputRow row : rows) {
       try {

@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
+import com.metamx.common.parsers.ParseException;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.InputRow;
@@ -69,11 +70,12 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   public OffheapIncrementalIndex(
       IncrementalIndexSchema incrementalIndexSchema,
       boolean deserializeComplexMetrics,
+      boolean reportParseExceptions,
       int maxRowCount,
       StupidPool<ByteBuffer> bufferPool
   )
   {
-    super(incrementalIndexSchema, deserializeComplexMetrics);
+    super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions);
     this.maxRowCount = maxRowCount;
     this.bufferPool = bufferPool;
     this.facts = new ConcurrentSkipListMap<>(dimsComparator());
@@ -97,6 +99,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       QueryGranularity gran,
       final AggregatorFactory[] metrics,
       boolean deserializeComplexMetrics,
+      boolean reportParseExceptions,
       int maxRowCount,
       StupidPool<ByteBuffer> bufferPool
   )
@@ -107,6 +110,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
                                             .withMetrics(metrics)
                                             .build(),
         deserializeComplexMetrics,
+        reportParseExceptions,
         maxRowCount,
         bufferPool
     );
@@ -125,6 +129,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
                                             .withQueryGranularity(gran)
                                             .withMetrics(metrics)
                                             .build(),
+        true,
         true,
         maxRowCount,
         bufferPool
@@ -184,6 +189,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   protected Integer addToFacts(
       AggregatorFactory[] metrics,
       boolean deserializeComplexMetrics,
+      boolean reportParseExceptions,
       InputRow row,
       AtomicInteger numEntries,
       TimeAndDims key,
@@ -254,7 +260,14 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       final BufferAggregator agg = getAggs()[i];
 
       synchronized (agg) {
-        agg.aggregate(aggBuffer, bufferOffset + aggOffsetInBuffer[i]);
+        try {
+          agg.aggregate(aggBuffer, bufferOffset + aggOffsetInBuffer[i]);
+        } catch (ParseException e) {
+          // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
+          if (reportParseExceptions) {
+            throw e;
+          }
+        }
       }
     }
     rowContainer.set(null);

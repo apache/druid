@@ -87,6 +87,7 @@ public class GroupByQueryHelper
           gran,
           aggs.toArray(new AggregatorFactory[aggs.size()]),
           false,
+          true,
           config.getMaxResults(),
           bufferPool
       );
@@ -98,6 +99,7 @@ public class GroupByQueryHelper
           gran,
           aggs.toArray(new AggregatorFactory[aggs.size()]),
           false,
+          true,
           config.getMaxResults()
       );
     }

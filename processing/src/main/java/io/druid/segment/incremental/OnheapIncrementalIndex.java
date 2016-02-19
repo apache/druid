@@ -22,6 +22,7 @@ package io.druid.segment.incremental;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.metamx.common.parsers.ParseException;
 import io.druid.data.input.InputRow;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.Aggregator;
@@ -56,10 +57,11 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   public OnheapIncrementalIndex(
       IncrementalIndexSchema incrementalIndexSchema,
       boolean deserializeComplexMetrics,
+      boolean reportParseExceptions,
       int maxRowCount
   )
   {
-    super(incrementalIndexSchema, deserializeComplexMetrics);
+    super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions);
     this.maxRowCount = maxRowCount;
     this.facts = new ConcurrentSkipListMap<>(dimsComparator());
   }
@@ -69,6 +71,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       QueryGranularity gran,
       final AggregatorFactory[] metrics,
       boolean deserializeComplexMetrics,
+      boolean reportParseExceptions,
       int maxRowCount
   )
   {
@@ -78,6 +81,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
                                             .withMetrics(metrics)
                                             .build(),
         deserializeComplexMetrics,
+        reportParseExceptions,
         maxRowCount
     );
   }
@@ -95,16 +99,18 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
                                             .withMetrics(metrics)
                                             .build(),
         true,
+        true,
         maxRowCount
     );
   }
 
   public OnheapIncrementalIndex(
       IncrementalIndexSchema incrementalIndexSchema,
+      boolean reportParseExceptions,
       int maxRowCount
   )
   {
-    this(incrementalIndexSchema, true, maxRowCount);
+    this(incrementalIndexSchema, true, reportParseExceptions, maxRowCount);
   }
 
   @Override
@@ -139,6 +145,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   protected Integer addToFacts(
       AggregatorFactory[] metrics,
       boolean deserializeComplexMetrics,
+      boolean reportParseExceptions,
       InputRow row,
       AtomicInteger numEntries,
       TimeAndDims key,
@@ -185,7 +192,14 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 
     for (Aggregator agg : aggs) {
       synchronized (agg) {
-        agg.aggregate();
+        try {
+          agg.aggregate();
+        } catch (ParseException e) {
+          // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
+          if (reportParseExceptions) {
+            throw e;
+          }
+        }
       }
     }
 
