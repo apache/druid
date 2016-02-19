@@ -59,6 +59,7 @@ import io.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 import io.druid.segment.realtime.plumber.Committers;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.PlumberSchool;
+import io.druid.segment.realtime.plumber.Plumbers;
 import io.druid.segment.realtime.plumber.RealtimePlumberSchool;
 import io.druid.segment.realtime.plumber.VersioningPolicy;
 import io.druid.server.coordination.DataSegmentAnnouncer;
@@ -336,31 +337,7 @@ public class RealtimeIndexTask extends AbstractTask
 
       // Time to read data!
       while (firehose != null && (!gracefullyStopped || firehoseDrainableByClosing) && firehose.hasMore()) {
-        final InputRow inputRow;
-
-        try {
-          inputRow = firehose.nextRow();
-
-          if (inputRow == null) {
-            log.debug("thrown away null input row, considering unparseable");
-            fireDepartment.getMetrics().incrementUnparseable();
-            continue;
-          }
-        }
-        catch (ParseException e) {
-          log.debug(e, "thrown away line due to exception, considering unparseable");
-          fireDepartment.getMetrics().incrementUnparseable();
-          continue;
-        }
-
-        int numRows = plumber.add(inputRow, committerSupplier);
-        if (numRows == -1) {
-          fireDepartment.getMetrics().incrementThrownAway();
-          log.debug("Throwing away event[%s]", inputRow);
-          continue;
-        }
-
-        fireDepartment.getMetrics().incrementProcessed();
+        Plumbers.addNextRow(committerSupplier, firehose, plumber, fireDepartment.getMetrics());
       }
     }
     catch (Throwable e) {
