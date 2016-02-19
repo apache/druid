@@ -27,11 +27,13 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
+import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.annotations.RemoteChatHandler;
 import io.druid.guice.annotations.Self;
+import io.druid.segment.realtime.firehose.ChatHandlerResource;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.ServerConfig;
 import org.eclipse.jetty.server.Server;
@@ -43,6 +45,8 @@ import java.util.Properties;
 public class ChatHandlerServerModule implements Module
 {
   private static final Logger log = new Logger(ChatHandlerServerModule.class);
+  private static final String MAX_CHAT_REQUESTS_PROPERTY = "druid.indexer.server.maxChatRequests";
+  private static final String CHAT_PORT_PROPERTY = "druid.indexer.task.chathandler.port";
 
   @Inject
   private Properties properties;
@@ -50,15 +54,28 @@ public class ChatHandlerServerModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    /** If "druid.indexer.task.chathandler.port" property is set then we assume that a
-     * separate Jetty Server with it's own {@link ServerConfig} is required for ingestion apart from the query server
-     * otherwise we bind {@link DruidNode} annotated with {@link RemoteChatHandler} to {@literal @}{@link Self} {@link DruidNode}
-     * so that same Jetty Server is used for querying as well as ingestion
+    Jerseys.addResource(binder, ChatHandlerResource.class);
+
+    if (properties.containsKey(MAX_CHAT_REQUESTS_PROPERTY)) {
+      final int maxRequests = Integer.parseInt(MAX_CHAT_REQUESTS_PROPERTY);
+      JettyBindings.addQosFilter(binder, "/druid/worker/v1/chat/*", maxRequests);
+    }
+
+    /**
+     * If "druid.indexer.task.chathandler.port" property is set then we assume that a separate Jetty Server with its
+     * own {@link ServerConfig} is required for ingestion apart from the query server otherwise we bind
+     * {@link DruidNode} annotated with {@link RemoteChatHandler} to {@literal @}{@link Self} {@link DruidNode}
+     * so that same Jetty Server is used for querying as well as ingestion.
      */
-    if (properties.containsKey("druid.indexer.task.chathandler.port")) {
-      log.info("Spawning separate ingestion server at port [%s]", properties.get("druid.indexer.task.chathandler.port"));
+    if (properties.containsKey(CHAT_PORT_PROPERTY)) {
+      log.info("Spawning separate ingestion server at port [%s]", properties.getProperty(CHAT_PORT_PROPERTY));
       JsonConfigProvider.bind(binder, "druid.indexer.task.chathandler", DruidNode.class, RemoteChatHandler.class);
-      JsonConfigProvider.bind(binder, "druid.indexer.server.chathandler.http", ServerConfig.class, RemoteChatHandler.class);
+      JsonConfigProvider.bind(
+          binder,
+          "druid.indexer.server.chathandler.http",
+          ServerConfig.class,
+          RemoteChatHandler.class
+      );
       LifecycleModule.register(binder, Server.class, RemoteChatHandler.class);
     } else {
       binder.bind(DruidNode.class).annotatedWith(RemoteChatHandler.class).to(Key.get(DruidNode.class, Self.class));
@@ -69,7 +86,12 @@ public class ChatHandlerServerModule implements Module
   @Provides
   @LazySingleton
   @RemoteChatHandler
-  public Server getServer(Injector injector, Lifecycle lifecycle, @RemoteChatHandler DruidNode node, @RemoteChatHandler ServerConfig config)
+  public Server getServer(
+      Injector injector,
+      Lifecycle lifecycle,
+      @RemoteChatHandler DruidNode node,
+      @RemoteChatHandler ServerConfig config
+  )
   {
     final Server server = JettyServerModule.makeJettyServer(node, config);
     JettyServerModule.initializeServer(injector, lifecycle, server);
