@@ -5,8 +5,7 @@ jdk:
   - oraclejdk8
 
 script:
-  - mvn test -B
-  - mvn clean -Pstrict compile test-compile -B
+  - mvn test -B && mvn clean -Pstrict compile test-compile -B
 
 after_success:
   - mvn clean cobertura:cobertura coveralls:report -pl '!benchmarks,!distribution'
