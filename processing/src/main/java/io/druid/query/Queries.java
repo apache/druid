@@ -55,7 +55,7 @@ public class Queries
             missing.isEmpty(),
             "Missing fields [%s] for postAggregator [%s]", missing, postAgg.getName()
         );
-        Preconditions.checkArgument(combinedAggNames.add(postAgg.getName()), "[%s] already defined");
+        Preconditions.checkArgument(combinedAggNames.add(postAgg.getName()), "[%s] already defined", postAgg.getName());
       }
     }
   }
