@@ -42,6 +42,7 @@ public class Plumbers
       final Supplier<Committer> committerSupplier,
       final Firehose firehose,
       final Plumber plumber,
+      final boolean reportParseExceptions,
       final FireDepartmentMetrics metrics
   )
   {
@@ -49,9 +50,13 @@ public class Plumbers
       final InputRow inputRow = firehose.nextRow();
 
       if (inputRow == null) {
-        log.debug("Discarded null input row, considering unparseable.");
-        metrics.incrementUnparseable();
-        return;
+        if (reportParseExceptions) {
+          throw new ParseException("null input row");
+        } else {
+          log.debug("Discarded null input row, considering unparseable.");
+          metrics.incrementUnparseable();
+          return;
+        }
       }
 
       // Included in ParseException try/catch, as additional parsing can be done during indexing.
@@ -66,8 +71,12 @@ public class Plumbers
       metrics.incrementProcessed();
     }
     catch (ParseException e) {
-      log.debug(e, "Discarded row due to exception, considering unparseable.");
-      metrics.incrementUnparseable();
+      if (reportParseExceptions) {
+        throw e;
+      } else {
+        log.debug(e, "Discarded row due to exception, considering unparseable.");
+        metrics.incrementUnparseable();
+      }
     }
     catch (IndexSizeExceededException e) {
       // Shouldn't happen if this is only being called by a single thread.

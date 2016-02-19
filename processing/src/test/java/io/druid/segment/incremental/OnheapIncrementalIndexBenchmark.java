@@ -32,6 +32,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.common.guava.Sequences;
+import com.metamx.common.parsers.ParseException;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.granularity.QueryGranularity;
@@ -135,6 +136,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     protected Integer addToFacts(
         AggregatorFactory[] metrics,
         boolean deserializeComplexMetrics,
+        boolean reportParseExceptions,
         InputRow row,
         AtomicInteger numEntries,
         TimeAndDims key,
@@ -185,7 +187,15 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
 
       for (Aggregator agg : aggs) {
         synchronized (agg) {
-          agg.aggregate();
+          try {
+            agg.aggregate();
+          }
+          catch (ParseException e) {
+            // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
+            if (reportParseExceptions) {
+              throw e;
+            }
+          }
         }
       }
 
@@ -225,7 +235,8 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     return new MapBasedInputRow(timestamp, dimensionList, builder.build());
   }
 
-  @Ignore @Test
+  @Ignore
+  @Test
   @BenchmarkOptions(callgc = true, clock = Clock.REAL_TIME, warmupRounds = 10, benchmarkRounds = 20)
   public void testConcurrentAddRead()
       throws InterruptedException, ExecutionException, NoSuchMethodException, IllegalAccessException,

@@ -143,7 +143,8 @@ public class IndexTask extends AbstractFixedIntervalTask
         indexSpec,
         buildV9Directly,
         0,
-        0
+        0,
+        true
     );
   }
 
