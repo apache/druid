@@ -36,6 +36,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -96,7 +97,36 @@ public abstract class HadoopTask extends AbstractTask
     }
   };
 
-  protected ClassLoader buildClassLoader(final TaskToolbox toolbox) throws Exception
+  /**
+   * This makes an isolated classloader that has classes loaded in the "proper" priority.
+   *
+   * This isolation is *only* for the part of the HadoopTask that calls runTask in an isolated manner.
+   *
+   * Jars for the job are the same jars as for the classloader EXCEPT the hadoopDependencyCoordinates, which are not used in the job jars.
+   *
+   * The URLs in the resultant classloader are loaded in this priority:
+   *
+   * 1. Non-Druid jars (see IS_DRUID_URL) found in the ClassLoader for HadoopIndexTask.class. This will probably be the ApplicationClassLoader
+   * 2. Hadoop jars found in the hadoop dependency coordinates directory, loaded in the order they are specified in
+   * 3. Druid jars (see IS_DRUID_URL) found in the ClassLoader for HadoopIndexTask.class
+   * 4. Extension URLs maintaining the order specified in the extensions list in the extensions config
+   *
+   * At one point I tried making each one of these steps a URLClassLoader, but it is not easy to make a properly
+   * predictive IS_DRUID_URL that captures all things which reference druid classes. This lead to a case where the
+   * class loader isolation worked great for stock druid, but failed in many common use cases including extension
+   * jars on the classpath which were not listed in the extensions list.
+   *
+   * As such, the current approach is to make a list of URLs for a URLClassLoader based on the priority above, and use
+   * THAT ClassLoader with a null parent as the isolated loader for running hadoop or hadoop-like driver tasks.
+   * Such an approach combined with reasonable exclusions in io.druid.cli.PullDependencies#exclusions tries to maintain
+   * sanity in a ClassLoader where all jars (which are isolated by extension ClassLoaders in the Druid framework) are
+   * jumbled together into one ClassLoader for Hadoop and Hadoop-like tasks (Spark for example).
+   *
+   * @param toolbox The toolbox to pull the default coordinates from if not present in the task
+   * @return An isolated URLClassLoader not tied by parent chain to the ApplicationClassLoader
+   * @throws MalformedURLException from Initialization.getClassLoaderForExtension
+   */
+  protected ClassLoader buildClassLoader(final TaskToolbox toolbox) throws MalformedURLException
   {
     final List<String> finalHadoopDependencyCoordinates = hadoopDependencyCoordinates != null
                                                           ? hadoopDependencyCoordinates
