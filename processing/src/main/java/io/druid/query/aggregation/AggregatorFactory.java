@@ -19,13 +19,10 @@
 
 package io.druid.query.aggregation;
 
-import com.metamx.common.logger.Logger;
 import io.druid.segment.ColumnSelectorFactory;
 
 import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Processing related interface
@@ -37,15 +34,18 @@ import java.util.Map;
  * provided to the Aggregator through the MetricSelector object, so whatever creates that object gets to choose how
  * the data is actually stored and accessed.
  */
-public abstract class AggregatorFactory
+public interface AggregatorFactory
 {
-  private static final Logger log = new Logger(AggregatorFactory.class);
+  Aggregator factorize(ColumnSelectorFactory metricFactory);
 
-  public abstract Aggregator factorize(ColumnSelectorFactory metricFactory);
+  BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory);
 
-  public abstract BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory);
-
-  public abstract Comparator getComparator();
+  /**
+   * Returns comparator for outputs of the getIntermediate() method from the Aggregator
+   *
+   * @return comparator
+   */
+  Comparator getComparator();
 
   /**
    * A method that knows how to combine the outputs of the getIntermediate() method from the Aggregators
@@ -58,7 +58,7 @@ public abstract class AggregatorFactory
    *
    * @return an object representing the combination of lhs and rhs, this can be a new object or a mutation of the inputs
    */
-  public abstract Object combine(Object lhs, Object rhs);
+  Object combine(Object lhs, Object rhs);
 
   /**
    * Returns an AggregatorFactory that can be used to combine the output of aggregators from this factory.  This
@@ -67,26 +67,14 @@ public abstract class AggregatorFactory
    *
    * @return a new Factory that can be used for operations on top of data output from the current factory.
    */
-  public abstract AggregatorFactory getCombiningFactory();
-
-  /**
-   * Returns an AggregatorFactory that can be used to merge the output of aggregators from this factory and
-   * other factory.
-   * This method is relevant only for AggregatorFactory which can be used at ingestion time.
-   *
-   * @return a new Factory that can be used for merging the output of aggregators from this factory and other.
-   */
-  public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
-  {
-    throw new UnsupportedOperationException(String.format("[%s] does not implement getMergingFactory(..)", this.getClass().getName()));
-  }
+  AggregatorFactory getCombiningFactory();
 
   /**
    * Gets a list of all columns that this AggregatorFactory will scan
    *
    * @return AggregatorFactories for the columns to scan of the parent AggregatorFactory
    */
-  public abstract List<AggregatorFactory> getRequiredColumns();
+  List<AggregatorFactory> getRequiredColumns();
 
   /**
    * A method that knows how to "deserialize" the object from whatever form it might have been put into
@@ -96,7 +84,7 @@ public abstract class AggregatorFactory
    *
    * @return the deserialized object
    */
-  public abstract Object deserialize(Object object);
+  Object deserialize(Object object);
 
   /**
    * "Finalizes" the computation of an object.  Primarily useful for complex types that have a different mergeable
@@ -106,76 +94,37 @@ public abstract class AggregatorFactory
    *
    * @return the finalized value that should be returned for the initial query
    */
-  public abstract Object finalizeComputation(Object object);
+  Object finalizeComputation(Object object);
 
-  public abstract String getName();
+  /**
+   * Returns name of AggregatorFactory
+   *
+   * @return name of AggregatorFactory
+   */
+  String getName();
 
-  public abstract List<String> requiredFields();
+  /**
+   * Returns required field names to be used
+   *
+   * @return list of field names
+   */
+  List<String> requiredFields();
 
-  public abstract byte[] getCacheKey();
+  byte[] getCacheKey();
 
-  public abstract String getTypeName();
+  String getTypeName();
 
   /**
    * Returns the maximum size that this aggregator will require in bytes for intermediate storage of results.
    *
    * @return the maximum number of bytes that an aggregator of this type will require for intermediate result storage.
    */
-  public abstract int getMaxIntermediateSize();
+  int getMaxIntermediateSize();
 
   /**
    * Returns the starting value for a corresponding aggregator. For example, 0 for sums, - Infinity for max, an empty mogrifier
    *
    * @return the starting value for a corresponding aggregator.
    */
-  public abstract Object getAggregatorStartValue();
-
-  /**
-   * Merges the list of AggregatorFactory[] (presumable from metadata of some segments being merged) and
-   * returns merged AggregatorFactory[] (for the metadata for merged segment).
-   * Null is returned if it is not possible to do the merging for any of the following reason.
-   * - one of the element in input list is null i.e. aggregators for one the segments being merged is unknown
-   * - AggregatorFactory of same name can not be merged if they are not compatible
-   *
-   * @param aggregatorsList
-   *
-   * @return merged AggregatorFactory[] or Null if merging is not possible.
-   */
-  public static AggregatorFactory[] mergeAggregators(List<AggregatorFactory[]> aggregatorsList)
-  {
-    if (aggregatorsList == null || aggregatorsList.isEmpty()) {
-      return null;
-    }
-
-    Map<String, AggregatorFactory> mergedAggregators = new LinkedHashMap<>();
-
-    for (AggregatorFactory[] aggregators : aggregatorsList) {
-
-      if (aggregators != null) {
-        for (AggregatorFactory aggregator : aggregators) {
-          String name = aggregator.getName();
-          if (mergedAggregators.containsKey(name)) {
-            AggregatorFactory other = mergedAggregators.get(name);
-            try {
-              mergedAggregators.put(name, other.getMergingFactory(aggregator));
-            }
-            catch (AggregatorFactoryNotMergeableException ex) {
-              log.warn(ex, "failed to merge aggregator factories");
-              mergedAggregators = null;
-              break;
-            }
-          } else {
-            mergedAggregators.put(name, aggregator);
-          }
-        }
-      } else {
-        mergedAggregators = null;
-        break;
-      }
-    }
-
-    return mergedAggregators == null
-           ? null
-           : mergedAggregators.values().toArray(new AggregatorFactory[mergedAggregators.size()]);
-  }
+  Object getAggregatorStartValue();
 }

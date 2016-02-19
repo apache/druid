@@ -24,7 +24,6 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -44,7 +43,7 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.ResultMergeQueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
+import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.metadata.metadata.ColumnAnalysis;
 import io.druid.query.metadata.metadata.SegmentAnalysis;
@@ -288,46 +287,11 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       columns.put(columnName, rightColumns.get(columnName));
     }
 
-    final Map<String, AggregatorFactory> aggregators = Maps.newHashMap();
-
-    if (lenientAggregatorMerge) {
-      // Merge each aggregator individually, ignoring nulls
-      for (SegmentAnalysis analysis : ImmutableList.of(arg1, arg2)) {
-        if (analysis.getAggregators() != null) {
-          for (AggregatorFactory aggregator : analysis.getAggregators().values()) {
-            AggregatorFactory merged = aggregators.get(aggregator.getName());
-            if (merged != null) {
-              try {
-                merged = merged.getMergingFactory(aggregator);
-              }
-              catch (AggregatorFactoryNotMergeableException e) {
-                merged = null;
-              }
-            } else {
-              merged = aggregator;
-            }
-            aggregators.put(aggregator.getName(), merged);
-          }
-        }
-      }
-    } else {
-      final AggregatorFactory[] aggs1 = arg1.getAggregators() != null
-                                        ? arg1.getAggregators()
-                                              .values()
-                                              .toArray(new AggregatorFactory[arg1.getAggregators().size()])
-                                        : null;
-      final AggregatorFactory[] aggs2 = arg2.getAggregators() != null
-                                        ? arg2.getAggregators()
-                                              .values()
-                                              .toArray(new AggregatorFactory[arg2.getAggregators().size()])
-                                        : null;
-      final AggregatorFactory[] merged = AggregatorFactory.mergeAggregators(Arrays.asList(aggs1, aggs2));
-      if (merged != null) {
-        for (AggregatorFactory aggregator : merged) {
-          aggregators.put(aggregator.getName(), aggregator);
-        }
-      }
-    }
+    final Map<String, AggregatorFactory> aggregators =
+        AggregatorUtil.mergeAggregatorMaps(
+            Arrays.asList(arg1.getAggregators(), arg2.getAggregators()),
+            !lenientAggregatorMerge
+        );
 
     final String mergedId;
 
@@ -343,7 +307,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
         columns,
         arg1.getSize() + arg2.getSize(),
         arg1.getNumRows() + arg2.getNumRows(),
-        aggregators.isEmpty() ? null : aggregators
+        aggregators == null || aggregators.isEmpty() ? null : aggregators
     );
   }
 

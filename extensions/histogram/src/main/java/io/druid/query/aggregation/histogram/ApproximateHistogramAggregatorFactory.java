@@ -29,8 +29,8 @@ import com.google.common.primitives.Ints;
 import com.metamx.common.StringUtils;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.aggregation.MergeableAggregatorFactory;
 import io.druid.segment.ColumnSelectorFactory;
 import org.apache.commons.codec.binary.Base64;
 
@@ -40,7 +40,7 @@ import java.util.Comparator;
 import java.util.List;
 
 @JsonTypeName("approxHistogram")
-public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
+public class ApproximateHistogramAggregatorFactory implements MergeableAggregatorFactory
 {
   private static final byte CACHE_TYPE_ID = 0x8;
 
@@ -118,7 +118,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
+  public AggregatorFactory getMergingFactory(AggregatorFactory other)
   {
     if (other.getName().equals(this.getName()) && other instanceof ApproximateHistogramAggregatorFactory) {
       ApproximateHistogramAggregatorFactory castedOther = (ApproximateHistogramAggregatorFactory) other;
@@ -133,7 +133,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
       );
 
     } else {
-      throw new AggregatorFactoryNotMergeableException(this, other);
+      return null;
     }
   }
 

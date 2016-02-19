@@ -30,7 +30,7 @@ import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.List;
 
-public class FilteredAggregatorFactory extends AggregatorFactory
+public class FilteredAggregatorFactory implements AggregatorFactory
 {
   private static final byte CACHE_TYPE_ID = 0x9;
 

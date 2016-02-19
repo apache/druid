@@ -32,7 +32,7 @@ import java.util.List;
 
 /**
  */
-public class CountAggregatorFactory extends AggregatorFactory
+public class CountAggregatorFactory implements AggregatorFactory
 {
   private static final byte[] CACHE_KEY = new byte[]{0x0};
   private final String name;

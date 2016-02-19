@@ -3324,7 +3324,7 @@ public class GroupByQueryRunnerTest
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("alias", "alias")))
         .setAggregatorSpecs(
-            Arrays.asList(
+            Arrays.<AggregatorFactory>asList(
                 new LongSumAggregatorFactory("rows", "rows"),
                 new LongSumAggregatorFactory("idx", "idx_subpostagg"),
                 new DoubleSumAggregatorFactory("js_outer_agg", "js_agg")
@@ -3452,7 +3452,7 @@ public class GroupByQueryRunnerTest
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("alias", "alias")))
         .setAggregatorSpecs(
-            Arrays.asList(
+            Arrays.<AggregatorFactory>asList(
                 new LongSumAggregatorFactory("rows", "rows"),
                 new LongSumAggregatorFactory("idx", "idx"),
                 new HyperUniquesAggregatorFactory("uniq", "quality_uniques")
@@ -3597,7 +3597,7 @@ public class GroupByQueryRunnerTest
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(Lists.<DimensionSpec>newArrayList())
         .setAggregatorSpecs(
-            Arrays.asList(
+            Arrays.<AggregatorFactory>asList(
                 new LongSumAggregatorFactory("rows", "rows"),
                 new LongSumAggregatorFactory("idx", "idx"),
                 new HyperUniquesAggregatorFactory("quality_uniques_outer", "quality_uniques_inner_post")

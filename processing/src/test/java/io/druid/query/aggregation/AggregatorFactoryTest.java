@@ -30,28 +30,31 @@ import java.util.List;
  */
 public class AggregatorFactoryTest
 {
-
   @Test
   public void testMergeAggregators()
   {
-    Assert.assertNull(AggregatorFactory.mergeAggregators(null));
-    Assert.assertNull(AggregatorFactory.mergeAggregators(ImmutableList.<AggregatorFactory[]>of()));
+    Assert.assertNull(AggregatorUtil.mergeAggregators(null, true));
+    Assert.assertNull(AggregatorUtil.mergeAggregatorMaps(null, true));
+    Assert.assertNull(AggregatorUtil.mergeAggregators(ImmutableList.<AggregatorFactory[]>of(), true));
 
     List<AggregatorFactory[]> aggregatorsToBeMerged = new ArrayList<>();
 
     aggregatorsToBeMerged.add(null);
-    Assert.assertNull(AggregatorFactory.mergeAggregators(aggregatorsToBeMerged));
+    Assert.assertNull(AggregatorUtil.mergeAggregators(aggregatorsToBeMerged, true));
 
     AggregatorFactory[] emptyAggFactory = new AggregatorFactory[0];
 
     aggregatorsToBeMerged.clear();
     aggregatorsToBeMerged.add(emptyAggFactory);
-    Assert.assertArrayEquals(emptyAggFactory, AggregatorFactory.mergeAggregators(aggregatorsToBeMerged));
+    Assert.assertArrayEquals(
+        emptyAggFactory,
+        AggregatorUtil.toArray(AggregatorUtil.mergeAggregators(aggregatorsToBeMerged, true))
+    );
 
     aggregatorsToBeMerged.clear();
     aggregatorsToBeMerged.add(emptyAggFactory);
     aggregatorsToBeMerged.add(null);
-    Assert.assertNull(AggregatorFactory.mergeAggregators(aggregatorsToBeMerged));
+    Assert.assertNull(AggregatorUtil.mergeAggregators(aggregatorsToBeMerged, true));
 
     aggregatorsToBeMerged.clear();
     AggregatorFactory[] af1 = new AggregatorFactory[]{
@@ -64,7 +67,7 @@ public class AggregatorFactoryTest
         new AggregatorFactory[]{
             new LongMaxAggregatorFactory("name", "name")
         },
-        AggregatorFactory.mergeAggregators(ImmutableList.of(af1, af2))
+        AggregatorUtil.toArray(AggregatorUtil.mergeAggregators(ImmutableList.of(af1, af2), true))
     );
 
     aggregatorsToBeMerged.clear();
@@ -74,7 +77,8 @@ public class AggregatorFactoryTest
     af2 = new AggregatorFactory[]{
         new DoubleMaxAggregatorFactory("name", "fieldName2")
     };
-    Assert.assertNull(AggregatorFactory.mergeAggregators(ImmutableList.of(af1, af2))
+    Assert.assertNull(
+        AggregatorUtil.mergeAggregators(ImmutableList.of(af1, af2), true)
     );
   }
 }

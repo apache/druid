@@ -42,7 +42,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Comparator;
 import java.util.List;
 
-public class JavaScriptAggregatorFactory extends AggregatorFactory
+public class JavaScriptAggregatorFactory implements MergeableAggregatorFactory
 {
   private static final byte CACHE_TYPE_ID = 0x6;
 
@@ -138,7 +138,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
+  public AggregatorFactory getMergingFactory(AggregatorFactory other)
   {
     if (other.getName().equals(this.getName()) && other.getClass() == this.getClass()) {
       JavaScriptAggregatorFactory castedOther = (JavaScriptAggregatorFactory) other;
@@ -146,7 +146,7 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
         return getCombiningFactory();
       }
     }
-    throw new AggregatorFactoryNotMergeableException(this, other);
+    return null;
   }
 
   @Override

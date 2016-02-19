@@ -19,12 +19,16 @@
 
 package io.druid.query.aggregation;
 
+import com.google.common.base.Function;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.metamx.common.Pair;
 
+import javax.annotation.Nullable;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public class AggregatorUtil
@@ -82,4 +86,86 @@ public class AggregatorUtil
     }
     return new Pair(condensedAggs, condensedPostAggs);
   }
+
+  /**
+   * Merges the list of AggregatorFactory[] (presumable from metadata of some segments being merged) and
+   * returns merged AggregatorFactory[] (for the metadata for merged segment).
+   * Null is returned if it is not possible to do the merging for any of the following reason.
+   * - one of the element in input list is null i.e. aggregatorsList for one the segments being merged is unknown
+   * - AggregatorFactory of same name can not be merged if they are not compatible
+   *
+   * @param aggregatorsList list of aggregator factories to be merged
+   *
+   * @return merged AggregatorFactory[] or Null if merging is not possible.
+   */
+  public static Map<String, AggregatorFactory> mergeAggregators(
+      @Nullable List<AggregatorFactory[]> aggregatorsList,
+      boolean strict
+  )
+  {
+    if (aggregatorsList == null || aggregatorsList.isEmpty()) {
+      return null;
+    }
+    final Map<String, AggregatorFactory> result = Maps.newLinkedHashMap();
+    // Merge each aggregator individually, ignoring nulls
+    for (AggregatorFactory[] aggregators : aggregatorsList) {
+      if (strict && aggregators == null) {
+        return null;
+      }
+      if (aggregators != null) {
+        for (AggregatorFactory aggregator : aggregators) {
+          AggregatorFactory merged = tryMerge(result.get(aggregator.getName()), aggregator);
+          if (strict && merged == null) {
+            return null;
+          }
+          result.put(aggregator.getName(), merged);
+        }
+      }
+    }
+    return result;
+  }
+
+  public static Map<String, AggregatorFactory> mergeAggregatorMaps(
+      @Nullable List<Map<String, AggregatorFactory>> aggregatorMaps,
+      boolean strict
+  )
+  {
+    return aggregatorMaps == null ? null : mergeAggregators(Lists.transform(aggregatorMaps, TO_ARRAY), strict);
+  }
+
+  private static AggregatorFactory tryMerge(@Nullable AggregatorFactory factory1, @Nullable AggregatorFactory factory2)
+  {
+    if (factory1 == null) {
+      return factory2;
+    }
+    if (factory2 == null) {
+      return factory1;
+    }
+    if (factory1 instanceof MergeableAggregatorFactory) {
+      AggregatorFactory merged = ((MergeableAggregatorFactory) factory1).getMergingFactory(factory2);
+      if (merged != null) {
+        return merged;
+      }
+    }
+    if (factory2 instanceof MergeableAggregatorFactory) {
+      return ((MergeableAggregatorFactory) factory2).getMergingFactory(factory1);
+    }
+    return null;
+  }
+
+  public static AggregatorFactory[] toArray(@Nullable Map<String, AggregatorFactory> aggregatorMap)
+  {
+    return TO_ARRAY.apply(aggregatorMap);
+  }
+
+  private static final Function<Map<String, AggregatorFactory>, AggregatorFactory[]> TO_ARRAY =
+      new Function<Map<String, AggregatorFactory>, AggregatorFactory[]>()
+      {
+        @Nullable
+        @Override
+        public AggregatorFactory[] apply(Map<String, AggregatorFactory> input)
+        {
+          return input == null ? null : input.values().toArray(new AggregatorFactory[0]);
+        }
+      };
 }

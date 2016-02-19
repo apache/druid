@@ -142,5 +142,5 @@ with unknown aggregators, or any conflicts of any kind, the merged aggregators l
 merging, segments with unknown aggregators will be ignored, and conflicts between aggregators will only null out
 the aggregator for that particular column.
 
-In particular, with lenient merging, it is possible for an invidiual column's aggregator to be `null`. This will not
+In particular, with lenient merging, it is possible for an individual column's aggregator to be `null`. This will not
 occur with strict merging.

@@ -25,9 +25,9 @@ import com.metamx.common.IAE;
 import com.metamx.common.StringUtils;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import io.druid.query.aggregation.Aggregators;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.aggregation.MergeableAggregatorFactory;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ObjectColumnSelector;
 import org.apache.commons.codec.binary.Base64;
@@ -39,7 +39,7 @@ import java.util.List;
 
 /**
  */
-public class HyperUniquesAggregatorFactory extends AggregatorFactory
+public class HyperUniquesAggregatorFactory implements MergeableAggregatorFactory
 {
   public static Object estimateCardinality(Object object)
   {
@@ -141,12 +141,12 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
+  public AggregatorFactory getMergingFactory(AggregatorFactory other)
   {
     if (other.getName().equals(this.getName()) && this.getClass() == other.getClass()) {
       return getCombiningFactory();
     } else {
-      throw new AggregatorFactoryNotMergeableException(this, other);
+      return null;
     }
   }
 

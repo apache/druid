@@ -34,7 +34,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 
-public class HistogramAggregatorFactory extends AggregatorFactory
+public class HistogramAggregatorFactory implements AggregatorFactory
 {
   private static final byte CACHE_TYPE_ID = 0x7;
 

@@ -110,7 +110,7 @@ public class SegmentMetadataQueryQueryToolChestTest
         Maps.<String, ColumnAnalysis>newHashMap(),
         0,
         0,
-        ImmutableMap.of(
+        ImmutableMap.<String, AggregatorFactory>of(
             "foo", new LongSumAggregatorFactory("foo", "foo"),
             "baz", new DoubleSumAggregatorFactory("baz", "baz")
         )
@@ -121,14 +121,14 @@ public class SegmentMetadataQueryQueryToolChestTest
         Maps.<String, ColumnAnalysis>newHashMap(),
         0,
         0,
-        ImmutableMap.of(
+        ImmutableMap.<String, AggregatorFactory>of(
             "foo", new LongSumAggregatorFactory("foo", "foo"),
             "bar", new DoubleSumAggregatorFactory("bar", "bar")
         )
     );
 
     Assert.assertEquals(
-        ImmutableMap.of(
+        ImmutableMap.<String, AggregatorFactory>of(
             "foo", new LongSumAggregatorFactory("foo", "foo"),
             "bar", new DoubleSumAggregatorFactory("bar", "bar"),
             "baz", new DoubleSumAggregatorFactory("baz", "baz")
@@ -136,7 +136,7 @@ public class SegmentMetadataQueryQueryToolChestTest
         mergeStrict(analysis1, analysis2).getAggregators()
     );
     Assert.assertEquals(
-        ImmutableMap.of(
+        ImmutableMap.<String, AggregatorFactory>of(
             "foo", new LongSumAggregatorFactory("foo", "foo"),
             "bar", new DoubleSumAggregatorFactory("bar", "bar"),
             "baz", new DoubleSumAggregatorFactory("baz", "baz")
@@ -162,7 +162,7 @@ public class SegmentMetadataQueryQueryToolChestTest
         Maps.<String, ColumnAnalysis>newHashMap(),
         0,
         0,
-        ImmutableMap.of(
+        ImmutableMap.<String, AggregatorFactory>of(
             "foo", new LongSumAggregatorFactory("foo", "foo"),
             "bar", new DoubleSumAggregatorFactory("bar", "bar")
         )
@@ -170,7 +170,7 @@ public class SegmentMetadataQueryQueryToolChestTest
 
     Assert.assertNull(mergeStrict(analysis1, analysis2).getAggregators());
     Assert.assertEquals(
-        ImmutableMap.of(
+        ImmutableMap.<String, AggregatorFactory>of(
             "foo", new LongSumAggregatorFactory("foo", "foo"),
             "bar", new DoubleSumAggregatorFactory("bar", "bar")
         ),
@@ -211,7 +211,7 @@ public class SegmentMetadataQueryQueryToolChestTest
         Maps.<String, ColumnAnalysis>newHashMap(),
         0,
         0,
-        ImmutableMap.of(
+        ImmutableMap.<String, AggregatorFactory>of(
             "foo", new LongSumAggregatorFactory("foo", "foo"),
             "bar", new DoubleSumAggregatorFactory("bar", "bar")
         )
@@ -222,7 +222,7 @@ public class SegmentMetadataQueryQueryToolChestTest
         Maps.<String, ColumnAnalysis>newHashMap(),
         0,
         0,
-        ImmutableMap.of(
+        ImmutableMap.<String, AggregatorFactory>of(
             "foo", new LongSumAggregatorFactory("foo", "foo"),
             "bar", new DoubleMaxAggregatorFactory("bar", "bar"),
             "baz", new LongMaxAggregatorFactory("baz", "baz")

@@ -21,6 +21,7 @@ package io.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.AggregatorUtil;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -116,7 +117,7 @@ public class Metadata
 
     Metadata result = new Metadata();
     if (aggregatorsToMerge != null) {
-      result.setAggregators(AggregatorFactory.mergeAggregators(aggregatorsToMerge));
+      result.setAggregators(AggregatorUtil.toArray(AggregatorUtil.mergeAggregators(aggregatorsToMerge, true)));
     } else {
       result.setAggregators(overrideMergedAggregators);
     }

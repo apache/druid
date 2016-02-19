@@ -33,7 +33,7 @@ import java.util.List;
 
 /**
  */
-public class LongSumAggregatorFactory extends AggregatorFactory
+public class LongSumAggregatorFactory implements MergeableAggregatorFactory
 {
   private static final byte CACHE_TYPE_ID = 0x1;
 
@@ -87,12 +87,12 @@ public class LongSumAggregatorFactory extends AggregatorFactory
   }
 
   @Override
-  public AggregatorFactory getMergingFactory(AggregatorFactory other) throws AggregatorFactoryNotMergeableException
+  public AggregatorFactory getMergingFactory(AggregatorFactory other)
   {
     if (other.getName().equals(this.getName()) && this.getClass() == other.getClass()) {
       return getCombiningFactory();
     } else {
-      throw new AggregatorFactoryNotMergeableException(this, other);
+      return null;
     }
   }
 

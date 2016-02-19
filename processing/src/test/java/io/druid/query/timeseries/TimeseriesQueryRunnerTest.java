@@ -188,7 +188,7 @@ public class TimeseriesQueryRunnerTest
                                   .granularity(QueryGranularity.ALL)
                                   .intervals(QueryRunnerTestHelper.fullOnInterval)
                                   .aggregators(
-                                      Arrays.asList(
+                                      Arrays.<AggregatorFactory>asList(
                                           new DoubleMaxAggregatorFactory("maxIndex", "index"),
                                           new DoubleMinAggregatorFactory("minIndex", "index")
                                       )
@@ -1617,7 +1617,7 @@ public class TimeseriesQueryRunnerTest
                                   .granularity(QueryRunnerTestHelper.allGran)
                                   .intervals(QueryRunnerTestHelper.firstToThird)
                                   .aggregators(
-                                      ImmutableList.of(
+                                      ImmutableList.<AggregatorFactory>of(
                                           QueryRunnerTestHelper.indexDoubleSum,
                                           QueryRunnerTestHelper.jsIndexSumIfPlacementishA,
                                           QueryRunnerTestHelper.jsPlacementishCount
@@ -1659,7 +1659,7 @@ public class TimeseriesQueryRunnerTest
                                   .filters(QueryRunnerTestHelper.placementishDimension, "a")
                                   .intervals(QueryRunnerTestHelper.firstToThird)
                                   .aggregators(
-                                      ImmutableList.of(
+                                      ImmutableList.<AggregatorFactory>of(
                                           QueryRunnerTestHelper.indexDoubleSum,
                                           QueryRunnerTestHelper.jsIndexSumIfPlacementishA,
                                           QueryRunnerTestHelper.jsPlacementishCount
