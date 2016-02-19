@@ -50,6 +50,7 @@ import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.plumber.Committers;
 import io.druid.segment.realtime.plumber.Plumber;
+import io.druid.segment.realtime.plumber.Plumbers;
 import org.joda.time.Interval;
 
 import java.io.Closeable;
@@ -339,42 +340,7 @@ public class RealtimeManager implements QuerySegmentWalker
     {
       final Supplier<Committer> committerSupplier = Committers.supplierFromFirehose(firehose);
       while (firehose.hasMore()) {
-        final InputRow inputRow;
-        try {
-          inputRow = firehose.nextRow();
-
-          if (inputRow == null) {
-            log.debug("thrown away null input row, considering unparseable");
-            metrics.incrementUnparseable();
-            continue;
-          }
-        }
-        catch (ParseException e) {
-          log.debug(e, "thrown away line due to exception, considering unparseable");
-          metrics.incrementUnparseable();
-          continue;
-        }
-
-        boolean lateEvent = false;
-        boolean indexLimitExceeded = false;
-        try {
-          lateEvent = plumber.add(inputRow, committerSupplier) == -1;
-        }
-        catch (IndexSizeExceededException e) {
-          log.info("Index limit exceeded: %s", e.getMessage());
-          indexLimitExceeded = true;
-        }
-        if (indexLimitExceeded || lateEvent) {
-          metrics.incrementThrownAway();
-          log.debug("Throwing away event[%s]", inputRow);
-
-          if (indexLimitExceeded) {
-            plumber.persist(committerSupplier.get());
-          }
-
-          continue;
-        }
-        metrics.incrementProcessed();
+        Plumbers.addNextRow(committerSupplier, firehose, plumber, metrics);
       }
     }
 
