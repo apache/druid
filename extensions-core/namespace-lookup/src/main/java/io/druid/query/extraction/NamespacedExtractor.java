@@ -27,6 +27,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.inject.name.Named;
 import com.metamx.common.StringUtils;
+import io.druid.query.lookup.LookupExtractor;
 
 import javax.validation.constraints.NotNull;
 import java.nio.ByteBuffer;
