@@ -238,8 +238,8 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       @Override
       public Result<TimeseriesResultValue> apply(Result<TimeseriesResultValue> result)
       {
-        final Map<String, Object> values = Maps.newHashMap();
         final TimeseriesResultValue holder = result.getValue();
+        final Map<String, Object> values = Maps.newHashMap(holder.getBaseObject());
         if (calculatePostAggs) {
           // put non finalized aggregators for calculating dependent post Aggregators
           for (AggregatorFactory agg : query.getAggregatorSpecs()) {
