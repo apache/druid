@@ -17,26 +17,22 @@
  * under the License.
  */
 
-package io.druid.segment.column;
+package io.druid.segment;
+
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 /**
-*/
-public enum ValueType
+ */
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "map", value = MapVirtualColumn.class)
+})
+public interface VirtualColumn
 {
-  FLOAT,
-  LONG,
-  STRING,
-  COMPLEX;
+  String getOutputName();
 
-  public static ValueType typeFor(Class clazz)
-  {
-    if (clazz == String.class) {
-      return STRING;
-    } else if (clazz == float.class || clazz == Float.TYPE) {
-      return FLOAT;
-    } else if (clazz == long.class || clazz == Long.TYPE) {
-      return LONG;
-    }
-    return COMPLEX;
-  }
+  ObjectColumnSelector init(String dimension, ColumnSelectorFactory factory);
+
+  byte[] getCacheKey();
 }

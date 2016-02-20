@@ -39,6 +39,7 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
+import io.druid.segment.VirtualColumns;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
@@ -248,7 +249,13 @@ public class SegmentAnalyzer
       final long end = storageAdapter.getMaxTime().getMillis();
 
       final Sequence<Cursor> cursors =
-          storageAdapter.makeCursors(null, new Interval(start, end), QueryGranularities.ALL, false);
+          storageAdapter.makeCursors(
+              null,
+              new Interval(start, end),
+              VirtualColumns.EMPTY,
+              QueryGranularities.ALL,
+              false
+          );
 
       size = cursors.accumulate(
           0L,

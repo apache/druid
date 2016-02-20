@@ -45,6 +45,7 @@ import io.druid.query.ordering.StringComparators;
 import io.druid.query.search.search.ContainsSearchQuerySpec;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.VirtualColumns;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
@@ -143,7 +144,7 @@ public class IncrementalIndexReadBenchmark
   public void read(Blackhole blackhole) throws Exception
   {
     IncrementalIndexStorageAdapter sa = new IncrementalIndexStorageAdapter(incIndex);
-    Sequence<Cursor> cursors = sa.makeCursors(null, schemaInfo.getDataInterval(), QueryGranularities.ALL, false);
+    Sequence<Cursor> cursors = makeCursors(sa, null);
     Cursor cursor = Sequences.toList(Sequences.limit(cursors, 1), Lists.<Cursor>newArrayList()).get(0);
 
     List<DimensionSelector> selectors = new ArrayList<>();
@@ -178,7 +179,7 @@ public class IncrementalIndexReadBenchmark
     );
 
     IncrementalIndexStorageAdapter sa = new IncrementalIndexStorageAdapter(incIndex);
-    Sequence<Cursor> cursors = sa.makeCursors(filter.toFilter(), schemaInfo.getDataInterval(), QueryGranularities.ALL, false);
+    Sequence<Cursor> cursors = makeCursors(sa, filter);
     Cursor cursor = Sequences.toList(Sequences.limit(cursors, 1), Lists.<Cursor>newArrayList()).get(0);
 
     List<DimensionSelector> selectors = new ArrayList<>();
@@ -195,5 +196,16 @@ public class IncrementalIndexReadBenchmark
       }
       cursor.advance();
     }
+  }
+
+  private Sequence<Cursor> makeCursors(IncrementalIndexStorageAdapter sa, DimFilter filter)
+  {
+    return sa.makeCursors(
+        filter.toFilter(),
+        schemaInfo.getDataInterval(),
+        VirtualColumns.EMPTY,
+        QueryGranularities.ALL,
+        false
+    );
   }
 }
