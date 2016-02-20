@@ -17,11 +17,12 @@
  * under the License.
  */
 
-package io.druid.query.extraction;
+package io.druid.query.lookup;
 
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.druid.query.extraction.MapLookupExtractor;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;

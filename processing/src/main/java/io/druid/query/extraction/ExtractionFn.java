@@ -21,6 +21,7 @@ package io.druid.query.extraction;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.druid.query.lookup.LookupExtractionFn;
 
 /**
  */

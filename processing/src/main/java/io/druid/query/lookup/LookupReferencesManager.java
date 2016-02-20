@@ -17,18 +17,26 @@
  * under the License.
  */
 
-package io.druid.query.extraction;
+package io.druid.query.lookup;
 
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Function;
+import com.google.common.base.Strings;
+import com.google.common.collect.Collections2;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import io.druid.guice.ManageLifecycle;
+import io.druid.guice.annotations.Json;
 
 import javax.annotation.Nullable;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -39,6 +47,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * It allows basic operations fetching, listing, adding and deleting of {@link LookupExtractor} objects
  * It is be used by queries to fetch the lookup reference.
  * It is used by Lookup configuration manager to add/remove or list lookups configuration via HTTP or other protocols.
+ * It does periodic snap shot of the list of lookup in order to bootstrap nodes after restart.
  */
 
 @ManageLifecycle
@@ -49,11 +58,29 @@ public class LookupReferencesManager
   private final Object lock = new Object();
   private final AtomicBoolean started = new AtomicBoolean(false);
 
+  private final LookupSnapshotTaker lookupSnapshotTaker;
+
+  @Inject
+  public LookupReferencesManager(LookupConfig lookupConfig, final @Json ObjectMapper objectMapper)
+  {
+    if (Strings.isNullOrEmpty(lookupConfig.getSnapshotWorkingDir())) {
+      this.lookupSnapshotTaker = null;
+    } else {
+      this.lookupSnapshotTaker = new LookupSnapshotTaker(objectMapper, lookupConfig.getSnapshotWorkingDir());
+    }
+  }
+
   @LifecycleStart
   public void start()
   {
     synchronized (lock) {
       if (!started.getAndSet(true)) {
+        if (lookupSnapshotTaker != null) {
+          final List<LookupBean> lookupBeanList = lookupSnapshotTaker.pullExistingSnapshot();
+          for (LookupBean lookupBean : lookupBeanList) {
+            this.put(lookupBean.name, lookupBean.factory);
+          }
+        }
         LOGGER.info("Started lookup factory references manager");
       }
     }
@@ -64,9 +91,12 @@ public class LookupReferencesManager
   {
     synchronized (lock) {
       if (started.getAndSet(false)) {
-        LOGGER.info("Stopped lookup factory references manager");
+        if (lookupSnapshotTaker != null) {
+          lookupSnapshotTaker.takeSnapshot(getAllAsList());
+        }
+        LOGGER.info("Stopping lookup factory references manager");
         for (String lookupName : lookupMap.keySet()) {
-          remove(lookupName);
+          lookupMap.remove(lookupName).close();
         }
       }
     }
@@ -91,7 +121,12 @@ public class LookupReferencesManager
       if (!lookupExtractorFactory.start()) {
         throw new ISE("start method returned false for lookup [%s]", lookupName);
       }
-      return (null == lookupMap.putIfAbsent(lookupName, lookupExtractorFactory));
+
+      boolean isAdded = (null == lookupMap.putIfAbsent(lookupName, lookupExtractorFactory));
+      if (isAdded && lookupSnapshotTaker != null) {
+        lookupSnapshotTaker.takeSnapshot(getAllAsList());
+      }
+      return isAdded;
     }
   }
 
@@ -102,7 +137,7 @@ public class LookupReferencesManager
    */
   public void put(Map<String, LookupExtractorFactory> lookups)
   {
-    Map<String, LookupExtractorFactory> faildExtractorFactoryMap = new HashMap<>();
+    Map<String, LookupExtractorFactory> failedExtractorFactoryMap = new HashMap<>();
     synchronized (lock) {
       assertStarted();
       for (Map.Entry<String, LookupExtractorFactory> entry : lookups.entrySet()) {
@@ -113,15 +148,18 @@ public class LookupReferencesManager
           continue;
         }
         if (!lookupExtractorFactory.start()) {
-          faildExtractorFactoryMap.put(lookupName, lookupExtractorFactory);
+          failedExtractorFactoryMap.put(lookupName, lookupExtractorFactory);
           continue;
         }
         lookupMap.put(lookupName, lookupExtractorFactory);
+        if (lookupSnapshotTaker != null) {
+          lookupSnapshotTaker.takeSnapshot(getAllAsList());
+        }
       }
-      if (!faildExtractorFactoryMap.isEmpty()) {
+      if (!failedExtractorFactoryMap.isEmpty()) {
         throw new ISE(
             "was not able to start the following lookup(s) [%s]",
-            faildExtractorFactoryMap.keySet().toString()
+            failedExtractorFactoryMap.keySet().toString()
         );
       }
     }
@@ -135,10 +173,15 @@ public class LookupReferencesManager
    */
   public boolean remove(String lookupName)
   {
-    final LookupExtractorFactory lookupExtractorFactory = lookupMap.remove(lookupName);
-    if (lookupExtractorFactory != null) {
-      LOGGER.debug("Removing lookup [%s]", lookupName);
-      return lookupExtractorFactory.close();
+    synchronized (lock) {
+      final LookupExtractorFactory lookupExtractorFactory = lookupMap.remove(lookupName);
+      if (lookupExtractorFactory != null) {
+        LOGGER.debug("Removed lookup [%s]", lookupName);
+        if (lookupSnapshotTaker != null) {
+          lookupSnapshotTaker.takeSnapshot(getAllAsList());
+        }
+        return lookupExtractorFactory.close();
+      }
     }
     return false;
   }
@@ -179,5 +222,28 @@ public class LookupReferencesManager
   public boolean isClosed()
   {
     return !started.get();
+  }
+
+  private List<LookupBean> getAllAsList()
+  {
+    return Lists.newArrayList(
+        Collections2.transform(
+            lookupMap.entrySet(),
+            new Function<Map.Entry<String, LookupExtractorFactory>, LookupBean>()
+            {
+              @Nullable
+              @Override
+              public LookupBean apply(
+                  @Nullable
+                  Map.Entry<String, LookupExtractorFactory> input
+              )
+              {
+                final LookupBean lookupBean = new LookupBean();
+                lookupBean.factory = input.getValue();
+                lookupBean.name = input.getKey();
+                return lookupBean;
+              }
+            }
+        ));
   }
 }
