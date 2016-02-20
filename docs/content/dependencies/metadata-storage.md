@@ -208,3 +208,35 @@ The Metadata Storage is accessed only by:
 3. Coordinator Nodes
 
 Thus you need to give permissions (eg in AWS Security Groups)  only for these machines to access the Metadata storage.
+
+##Migrating Database Servers##
+
+It is possible that at some point, you may want to migrate the sql database to a different set of physical servers.
+Example scenarios include:
+
+-  Moving from AWS RDS to custom managed boxes (or vice versa)
+-  Changing database type, eg from MySQL to Postgres
+
+In order to do the migration in a running druid installation:
+
+1. Stop database mutation.First thing we need to no is ensure the database doenst get modified while we are in the process of moving it.
+Use the firewall rules on the database server to block access from the rest of the druid cluster (eg from coordinator & realtime indexing nodes).
+
+2. Copy data over to new database server
+You can use the database's export/import functionality or any other custom procedure to move the data over to the new database server
+
+3. Ensure new database server has firewall rules to allow druid nodes
+
+4. Update the runtime.properties file in each druid node to point to the location and credentials of the new database server.
+
+5. Do a rolling restart of the druid cluster
+
+What happens to my data during the migration?
+
+During the migration, since the metadata storage cannot be read/written to, the realtime nodes and indexing service will not persist their data and will hold on to it themselves.
+However, once the nodes are restarted pointing to the new database, they will go ahead and persist it.
+
+Will any data loss occur?
+No data loss shall occur. The realtime and indexing nodes will hold on to the data that they cannot persist. Upon reboot they will simply hand over the data as normal.
+
+
