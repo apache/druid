@@ -386,6 +386,22 @@ public class GroupByQuery extends BaseQuery<Row>
     );
   }
 
+  public GroupByQuery withLimitSpec(final LimitSpec limitSpec)
+  {
+    return new GroupByQuery(
+        getDataSource(),
+        getQuerySegmentSpec(),
+        getDimFilter(),
+        getGranularity(),
+        getDimensions(),
+        getAggregatorSpecs(),
+        getPostAggregatorSpecs(),
+        getHavingSpec(),
+        limitSpec,
+        getContext()
+    );
+  }
+
   public static class Builder
   {
     private DataSource dataSource;

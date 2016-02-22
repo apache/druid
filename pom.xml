@@ -86,6 +86,7 @@
         <module>extensions-core/datasketches</module>
         <module>extensions-core/hdfs-storage</module>
         <module>extensions-core/histogram</module>
+        <module>extensions-core/stats</module>
         <module>extensions-core/kafka-eight</module>
         <module>extensions-core/kafka-extraction-namespace</module>
         <module>extensions-core/kafka-indexing-service</module>

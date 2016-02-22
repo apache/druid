@@ -758,6 +758,22 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     return metricDesc != null ? metricDesc.getType() : null;
   }
 
+  public Class getMetricClass(String metric)
+  {
+    MetricDesc metricDesc = metricDescs.get(metric);
+    switch (metricDesc.getCapabilities().getType()) {
+      case COMPLEX:
+        return ComplexMetrics.getSerdeForType(metricDesc.getType()).getObjectStrategy().getClazz();
+      case FLOAT:
+        return Float.TYPE;
+      case LONG:
+        return Long.TYPE;
+      case STRING:
+        return String.class;
+    }
+    return null;
+  }
+
   public Interval getInterval()
   {
     return new Interval(minTimestamp, isEmpty() ? minTimestamp : gran.next(getMaxTimeMillis()));

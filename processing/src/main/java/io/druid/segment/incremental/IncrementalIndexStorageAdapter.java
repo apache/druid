@@ -21,7 +21,6 @@ package io.druid.segment.incremental;
 
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
@@ -52,8 +51,6 @@ import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.ListIndexed;
 import io.druid.segment.filter.BooleanValueMatcher;
-import io.druid.segment.serde.ComplexMetricSerde;
-import io.druid.segment.serde.ComplexMetrics;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -70,7 +67,6 @@ import java.util.concurrent.ConcurrentNavigableMap;
  */
 public class IncrementalIndexStorageAdapter implements StorageAdapter
 {
-  private static final Splitter SPLITTER = Splitter.on(",");
   private static final NullDimensionSelector NULL_DIMENSION_SELECTOR = new NullDimensionSelector();
 
   private final IncrementalIndex index;
@@ -307,7 +303,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 }
 
                 if (Thread.interrupted()) {
-                  throw new QueryInterruptedException( new InterruptedException());
+                  throw new QueryInterruptedException(new InterruptedException());
                 }
 
                 boolean foundMatched = false;
@@ -532,14 +528,13 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 final Integer metricIndexInt = index.getMetricIndex(column);
                 if (metricIndexInt != null) {
                   final int metricIndex = metricIndexInt;
-
-                  final ComplexMetricSerde serde = ComplexMetrics.getSerdeForType(index.getMetricType(column));
+                  final Class classOfObject = index.getMetricClass(column);
                   return new ObjectColumnSelector()
                   {
                     @Override
                     public Class classOfObject()
                     {
-                      return serde.getObjectStrategy().getClazz();
+                      return classOfObject;
                     }
 
                     @Override
