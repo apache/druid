@@ -151,17 +151,17 @@ public class GroupByParallelQueryRunner<T> implements QueryRunner<T>
       log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
       futures.cancel(true);
       indexAccumulatorPair.lhs.close();
-      throw new QueryInterruptedException("Query interrupted");
+      throw new QueryInterruptedException(e);
     }
     catch (CancellationException e) {
       indexAccumulatorPair.lhs.close();
-      throw new QueryInterruptedException("Query cancelled");
+      throw new QueryInterruptedException(e);
     }
     catch (TimeoutException e) {
       indexAccumulatorPair.lhs.close();
       log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
       futures.cancel(true);
-      throw new QueryInterruptedException("Query timeout");
+      throw new QueryInterruptedException(e);
     }
     catch (ExecutionException e) {
       indexAccumulatorPair.lhs.close();
