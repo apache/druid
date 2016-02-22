@@ -43,6 +43,7 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.Map;
 
 /**
@@ -91,7 +92,7 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
     PathSpec pathSpec = new DatasourcePathSpec(
         jsonMapper,
         null,
-        new DatasourceIngestionSpec(testDatasource, testDatasourceInterval, null, null, null, null, null, false),
+        new DatasourceIngestionSpec(testDatasource, testDatasourceInterval, null, null, null, null, null, null, false),
         null
     );
     HadoopDruidIndexerConfig config = testRunUpdateSegmentListIfDatasourcePathSpecIsUsed(
@@ -105,13 +106,77 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
   }
 
   @Test
+  public void testupdateSegmentListIfDatasourcePathSpecWithMatchingUserSegments() throws Exception
+  {
+    PathSpec pathSpec = new DatasourcePathSpec(
+        jsonMapper,
+        null,
+        new DatasourceIngestionSpec(
+            testDatasource,
+            testDatasourceInterval,
+            null,
+            ImmutableList.<DataSegment>of(SEGMENT),
+            null,
+            null,
+            null,
+            null,
+            false
+        ),
+        null
+    );
+    HadoopDruidIndexerConfig config = testRunUpdateSegmentListIfDatasourcePathSpecIsUsed(
+        pathSpec,
+        testDatasourceInterval
+    );
+    Assert.assertEquals(
+        ImmutableList.of(WindowedDataSegment.of(SEGMENT)),
+        ((DatasourcePathSpec) config.getPathSpec()).getSegments()
+    );
+  }
+
+  @Test(expected = IOException.class)
+  public void testupdateSegmentListThrowsExceptionWithUserSegmentsMismatch() throws Exception
+  {
+    PathSpec pathSpec = new DatasourcePathSpec(
+        jsonMapper,
+        null,
+        new DatasourceIngestionSpec(
+            testDatasource,
+            testDatasourceInterval,
+            null,
+            ImmutableList.<DataSegment>of(SEGMENT.withVersion("v2")),
+            null,
+            null,
+            null,
+            null,
+            false
+        ),
+        null
+    );
+    testRunUpdateSegmentListIfDatasourcePathSpecIsUsed(
+        pathSpec,
+        testDatasourceInterval
+    );
+  }
+
+  @Test
   public void testupdateSegmentListIfDatasourcePathSpecIsUsedWithJustDatasourcePathSpecAndPartialInterval()
       throws Exception
   {
     PathSpec pathSpec = new DatasourcePathSpec(
         jsonMapper,
         null,
-        new DatasourceIngestionSpec(testDatasource, testDatasourceIntervalPartial, null, null, null, null, null, false),
+        new DatasourceIngestionSpec(
+            testDatasource,
+            testDatasourceIntervalPartial,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            false
+        ),
         null
     );
     HadoopDruidIndexerConfig config = testRunUpdateSegmentListIfDatasourcePathSpecIsUsed(
@@ -133,7 +198,17 @@ public class HadoopIngestionSpecUpdateDatasourcePathSpecSegmentsTest
             new DatasourcePathSpec(
                 jsonMapper,
                 null,
-                new DatasourceIngestionSpec(testDatasource, testDatasourceInterval, null, null, null, null, null, false),
+                new DatasourceIngestionSpec(
+                    testDatasource,
+                    testDatasourceInterval,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    false
+                ),
                 null
             )
         )

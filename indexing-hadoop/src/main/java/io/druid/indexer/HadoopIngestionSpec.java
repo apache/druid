@@ -37,8 +37,10 @@ import io.druid.timeline.partition.PartitionChunk;
 import org.joda.time.Interval;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  */
@@ -168,10 +170,32 @@ public class HadoopIngestionSpec extends IngestionSpec<HadoopIOConfig, HadoopTun
           ingestionSpecMap,
           DatasourceIngestionSpec.class
       );
+
       List<DataSegment> segmentsList = segmentLister.getUsedSegmentsForIntervals(
           ingestionSpecObj.getDataSource(),
           ingestionSpecObj.getIntervals()
       );
+
+      if (ingestionSpecObj.getSegments() != null) {
+        //ensure that user supplied segment list matches with the segmentsList obtained from db
+        //this safety check lets users do test-n-set kind of batch delta ingestion where the delta
+        //ingestion task would only run if current state of the system is same as when they submitted
+        //the task.
+        List<DataSegment> userSuppliedSegmentsList = ingestionSpecObj.getSegments();
+
+        if (segmentsList.size() == userSuppliedSegmentsList.size()) {
+          Set<DataSegment> segmentsSet = new HashSet<>(segmentsList);
+
+          for (DataSegment userSegment : userSuppliedSegmentsList) {
+            if (!segmentsSet.contains(userSegment)) {
+              throw new IOException("user supplied segments list did not match with segments list obtained from db");
+            }
+          }
+        } else {
+          throw new IOException("user supplied segments list did not match with segments list obtained from db");
+        }
+      }
+
       VersionedIntervalTimeline<String, DataSegment> timeline = new VersionedIntervalTimeline<>(Ordering.natural());
       for (DataSegment segment : segmentsList) {
         timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
