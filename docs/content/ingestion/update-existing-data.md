@@ -51,6 +51,7 @@ Here is what goes inside `ingestionSpec`:
 |-----|----|-----------|--------|
 |dataSource|String|Druid dataSource name from which you are loading the data.|yes|
 |intervals|List|A list of strings representing ISO-8601 Intervals.|yes|
+|segments|List|List of segments from which to read data from, by default it is obtained automatically. You can obtain list of segments to put here by making a POST query to coordinator at url /druid/coordinator/v1/metadata/datasources/segments?full with list of intervals specified in the request paylod e.g. ["2012-01-01T00:00:00.000/2012-01-03T00:00:00.000", "2012-01-05T00:00:00.000/2012-01-07T00:00:00.000"]. You may want to provide this list manually in order to ensure that segments read are exactly same as they were at the time of task submission, task would fail if the list provided by the user does not match with state of database when the task actually runs.|no|
 |granularity|String|Defines the granularity of the query while loading data. Default value is "none". See [Granularities](../querying/granularities.html).|no|
 |filter|JSON|See [Filters](../querying/filters.html)|no|
 |dimensions|Array of String|Name of dimension columns to load. By default, the list will be constructed from parseSpec. If parseSpec does not have an explicit list of dimensions then all the dimension columns present in stored data will be read.|no|
@@ -75,8 +76,7 @@ For example
 
 #### `multi`
 
-This is a composing inputSpec to combine other inputSpecs. This inputSpec is used for delta ingestion. 
-Please note that delta ingestion is not an idempotent operation. We may add change things in future to make it idempotent.
+This is a composing inputSpec to combine other inputSpecs. This inputSpec is used for delta ingestion. Please note that you can have only one `dataSource` as child of `multi` inputSpec.
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
@@ -94,7 +94,26 @@ For example:
         "type" : "dataSource",
         "ingestionSpec" : {
           "dataSource": "wikipedia",
-          "intervals": ["2014-10-20T00:00:00Z/P2W"]
+          "intervals": ["2012-01-01T00:00:00.000/2012-01-03T00:00:00.000", "2012-01-05T00:00:00.000/2012-01-07T00:00:00.000"],
+          "segments": [
+            {
+              "dataSource": "test1",
+              "interval": "2012-01-01T00:00:00.000/2012-01-03T00:00:00.000",
+              "version": "v2",
+              "loadSpec": {
+                "type": "local",
+                "path": "/tmp/index1.zip"
+              },
+              "dimensions": "host",
+              "metrics": "visited_sum,unique_hosts",
+              "shardSpec": {
+                "type": "none"
+              },
+              "binaryVersion": 9,
+              "size": 2,
+              "identifier": "test1_2000-01-01T00:00:00.000Z_3000-01-01T00:00:00.000Z_v2"
+            }
+          ]
         }
       },
       {
@@ -106,6 +125,11 @@ For example:
   ...
 }
 ```
+
+It is STRONGLY RECOMMENDED to provide list of segments in `dataSource` inputSpec explicitly so that your delta ingestion task is idempotent. You can obtain that list of segments by making following call to the coordinator.
+POST `/druid/coordinator/v1/metadata/datasources/{dataSourceName}/segments?full`
+Request Body: [interval1, interval2,...] for example ["2012-01-01T00:00:00.000/2012-01-03T00:00:00.000", "2012-01-05T00:00:00.000/2012-01-07T00:00:00.000"]
+
 
 ### Reindexing without Hadoop Batch Ingestion
 
