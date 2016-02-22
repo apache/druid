@@ -273,7 +273,7 @@ public class ITKafkaTest extends AbstractIndexerTest
   }
 
   @AfterClass
-  public void afterClass() throws Exception
+  public void afterClass()
   {
     LOG.info("teardown");
 
@@ -285,7 +285,12 @@ public class ITKafkaTest extends AbstractIndexerTest
 
     // remove segments
     if (segmentsExist) {
+      try {
         unloadAndKillData(DATASOURCE);
+      }
+      catch (Exception e) {
+        LOG.warn("exception while removing segments: [%s]", e.getMessage());
+      }
     }
   }
 }
