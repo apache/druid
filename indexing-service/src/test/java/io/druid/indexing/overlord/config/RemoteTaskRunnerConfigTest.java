@@ -35,6 +35,7 @@ public class RemoteTaskRunnerConfigTest
   private static final Period DEFAULT_TIMEOUT = Period.ZERO;
   private static final String DEFAULT_VERSION = "";
   private static final long DEFAULT_MAX_ZNODE = 10 * 1024;
+  private static final int DEFAULT_PENDING_TASKS_RUNNER_NUM_THREADS = 5;
 
   @Test
   public void testGetTaskAssignmentTimeout() throws Exception
@@ -47,24 +48,26 @@ public class RemoteTaskRunnerConfigTest
             DEFAULT_TIMEOUT,
             DEFAULT_VERSION,
             DEFAULT_MAX_ZNODE,
-            DEFAULT_TIMEOUT
+            DEFAULT_TIMEOUT,
+            DEFAULT_PENDING_TASKS_RUNNER_NUM_THREADS
         )).getTaskAssignmentTimeout()
     );
   }
 
   @Test
-  public void testGetTaskCleanupTimeout() throws Exception
+  public void testGetPendingTasksRunnerNumThreads() throws Exception
   {
-    final Period timeout = Period.hours(1);
+    final int pendingTasksRunnerNumThreads = 20;
     Assert.assertEquals(
-        timeout,
+        pendingTasksRunnerNumThreads,
         reflect(generateRemoteTaskRunnerConfig(
             DEFAULT_TIMEOUT,
-            timeout,
+            DEFAULT_TIMEOUT,
             DEFAULT_VERSION,
             DEFAULT_MAX_ZNODE,
-            DEFAULT_TIMEOUT
-        )).getTaskCleanupTimeout()
+            DEFAULT_TIMEOUT,
+            pendingTasksRunnerNumThreads
+        )).getPendingTasksRunnerNumThreads()
     );
   }
 
@@ -79,7 +82,8 @@ public class RemoteTaskRunnerConfigTest
             DEFAULT_TIMEOUT,
             version,
             DEFAULT_MAX_ZNODE,
-            DEFAULT_TIMEOUT
+            DEFAULT_TIMEOUT,
+            DEFAULT_PENDING_TASKS_RUNNER_NUM_THREADS
         )).getMinWorkerVersion()
     );
   }
@@ -95,7 +99,8 @@ public class RemoteTaskRunnerConfigTest
             DEFAULT_TIMEOUT,
             DEFAULT_VERSION,
             max,
-            DEFAULT_TIMEOUT
+            DEFAULT_TIMEOUT,
+            DEFAULT_PENDING_TASKS_RUNNER_NUM_THREADS
         )).getMaxZnodeBytes()
     );
   }
@@ -111,8 +116,26 @@ public class RemoteTaskRunnerConfigTest
             DEFAULT_TIMEOUT,
             DEFAULT_VERSION,
             DEFAULT_MAX_ZNODE,
-            timeout
+            timeout,
+            DEFAULT_PENDING_TASKS_RUNNER_NUM_THREADS
         )).getTaskShutdownLinkTimeout()
+    );
+  }
+
+  @Test
+  public void testGetTaskCleanupTimeout() throws Exception
+  {
+    final Period timeout = Period.hours(1);
+    Assert.assertEquals(
+        timeout,
+        reflect(generateRemoteTaskRunnerConfig(
+                    DEFAULT_TIMEOUT,
+                    timeout,
+                    DEFAULT_VERSION,
+                    DEFAULT_MAX_ZNODE,
+                    DEFAULT_TIMEOUT,
+                    DEFAULT_PENDING_TASKS_RUNNER_NUM_THREADS
+                )).getTaskCleanupTimeout()
     );
   }
 
@@ -125,33 +148,38 @@ public class RemoteTaskRunnerConfigTest
             DEFAULT_TIMEOUT,
             DEFAULT_VERSION,
             DEFAULT_MAX_ZNODE,
-            DEFAULT_TIMEOUT
+            DEFAULT_TIMEOUT,
+            DEFAULT_PENDING_TASKS_RUNNER_NUM_THREADS
         )),
         reflect(generateRemoteTaskRunnerConfig(
             DEFAULT_TIMEOUT,
             DEFAULT_TIMEOUT,
             DEFAULT_VERSION,
             DEFAULT_MAX_ZNODE,
-            DEFAULT_TIMEOUT
+            DEFAULT_TIMEOUT,
+            DEFAULT_PENDING_TASKS_RUNNER_NUM_THREADS
         ))
     );
     final Period timeout = Period.years(999);
     final String version = "someVersion";
     final long max = 20 * 1024;
+    final int pendingTasksRunnerNumThreads = 20;
     Assert.assertEquals(
         reflect(generateRemoteTaskRunnerConfig(
             timeout,
             timeout,
             version,
             max,
-            timeout
+            timeout,
+            pendingTasksRunnerNumThreads
         )),
         reflect(generateRemoteTaskRunnerConfig(
             timeout,
             timeout,
             version,
             max,
-            timeout
+            timeout,
+            pendingTasksRunnerNumThreads
         ))
     );
     Assert.assertNotEquals(
@@ -160,14 +188,16 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             version,
             max,
-            timeout
+            timeout,
+            pendingTasksRunnerNumThreads
         )),
         reflect(generateRemoteTaskRunnerConfig(
             DEFAULT_TIMEOUT,
             timeout,
             version,
             max,
-            timeout
+            timeout,
+            pendingTasksRunnerNumThreads
         ))
     );
     Assert.assertNotEquals(
@@ -176,14 +206,16 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             version,
             max,
-            timeout
+            timeout,
+            pendingTasksRunnerNumThreads
         )),
         reflect(generateRemoteTaskRunnerConfig(
             timeout,
             DEFAULT_TIMEOUT,
             version,
             max,
-            timeout
+            timeout,
+            pendingTasksRunnerNumThreads
         ))
     );
     Assert.assertNotEquals(
@@ -192,14 +224,16 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             version,
             max,
-            timeout
+            timeout,
+            pendingTasksRunnerNumThreads
         )),
         reflect(generateRemoteTaskRunnerConfig(
             timeout,
             timeout,
             DEFAULT_VERSION,
             max,
-            timeout
+            timeout,
+            pendingTasksRunnerNumThreads
         ))
     );
 
@@ -209,14 +243,16 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             version,
             max,
-            timeout
+            timeout,
+            pendingTasksRunnerNumThreads
         )),
         reflect(generateRemoteTaskRunnerConfig(
             timeout,
             timeout,
             version,
             DEFAULT_MAX_ZNODE,
-            timeout
+            timeout,
+            pendingTasksRunnerNumThreads
         ))
     );
 
@@ -227,15 +263,36 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             version,
             max,
-            timeout
+            timeout,
+            pendingTasksRunnerNumThreads
         )),
         reflect(generateRemoteTaskRunnerConfig(
             timeout,
             timeout,
             version,
             max,
-            DEFAULT_TIMEOUT
+            DEFAULT_TIMEOUT,
+            pendingTasksRunnerNumThreads
         ))
+    );
+
+    Assert.assertNotEquals(
+        reflect(generateRemoteTaskRunnerConfig(
+                    timeout,
+                    timeout,
+                    version,
+                    max,
+                    timeout,
+                    pendingTasksRunnerNumThreads
+                )),
+        reflect(generateRemoteTaskRunnerConfig(
+                    timeout,
+                    timeout,
+                    version,
+                    max,
+                    timeout,
+                    DEFAULT_PENDING_TASKS_RUNNER_NUM_THREADS
+                ))
     );
   }
 
@@ -248,33 +305,38 @@ public class RemoteTaskRunnerConfigTest
             DEFAULT_TIMEOUT,
             DEFAULT_VERSION,
             DEFAULT_MAX_ZNODE,
-            DEFAULT_TIMEOUT
+            DEFAULT_TIMEOUT,
+            DEFAULT_PENDING_TASKS_RUNNER_NUM_THREADS
         )).hashCode(),
         reflect(generateRemoteTaskRunnerConfig(
             DEFAULT_TIMEOUT,
             DEFAULT_TIMEOUT,
             DEFAULT_VERSION,
             DEFAULT_MAX_ZNODE,
-            DEFAULT_TIMEOUT
+            DEFAULT_TIMEOUT,
+            DEFAULT_PENDING_TASKS_RUNNER_NUM_THREADS
         )).hashCode()
     );
     final Period timeout = Period.years(999);
     final String version = "someVersion";
     final long max = 20 * 1024;
+    final int pendingTasksRunnerNumThreads = 20;
     Assert.assertEquals(
         reflect(generateRemoteTaskRunnerConfig(
             timeout,
             timeout,
             version,
             max,
-            timeout
+            timeout,
+            pendingTasksRunnerNumThreads
         )).hashCode(),
         reflect(generateRemoteTaskRunnerConfig(
             timeout,
             timeout,
             version,
             max,
-            timeout
+            timeout,
+            pendingTasksRunnerNumThreads
         )).hashCode()
     );
     Assert.assertNotEquals(
@@ -283,14 +345,16 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             version,
             max,
-            timeout
+            timeout,
+            pendingTasksRunnerNumThreads
         )).hashCode(),
         reflect(generateRemoteTaskRunnerConfig(
             DEFAULT_TIMEOUT,
             timeout,
             version,
             max,
-            timeout
+            timeout,
+            pendingTasksRunnerNumThreads
         )).hashCode()
     );
     Assert.assertNotEquals(
@@ -299,14 +363,16 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             version,
             max,
-            timeout
+            timeout,
+            pendingTasksRunnerNumThreads
         )).hashCode(),
         reflect(generateRemoteTaskRunnerConfig(
             timeout,
             DEFAULT_TIMEOUT,
             version,
             max,
-            timeout
+            timeout,
+            pendingTasksRunnerNumThreads
         )).hashCode()
     );
     Assert.assertNotEquals(
@@ -315,14 +381,16 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             version,
             max,
-            timeout
+            timeout,
+            pendingTasksRunnerNumThreads
         )).hashCode(),
         reflect(generateRemoteTaskRunnerConfig(
             timeout,
             timeout,
             DEFAULT_VERSION,
             max,
-            timeout
+            timeout,
+            pendingTasksRunnerNumThreads
         )).hashCode()
     );
 
@@ -332,14 +400,16 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             version,
             max,
-            timeout
+            timeout,
+            pendingTasksRunnerNumThreads
         )).hashCode(),
         reflect(generateRemoteTaskRunnerConfig(
             timeout,
             timeout,
             version,
             DEFAULT_MAX_ZNODE,
-            timeout
+            timeout,
+            pendingTasksRunnerNumThreads
         )).hashCode()
     );
 
@@ -350,15 +420,36 @@ public class RemoteTaskRunnerConfigTest
             timeout,
             version,
             max,
-            timeout
+            timeout,
+            pendingTasksRunnerNumThreads
         )).hashCode(),
         reflect(generateRemoteTaskRunnerConfig(
             timeout,
             timeout,
             version,
             max,
-            DEFAULT_TIMEOUT
+            DEFAULT_TIMEOUT,
+            pendingTasksRunnerNumThreads
         )).hashCode()
+    );
+
+    Assert.assertNotEquals(
+        reflect(generateRemoteTaskRunnerConfig(
+                    timeout,
+                    timeout,
+                    version,
+                    max,
+                    timeout,
+                    pendingTasksRunnerNumThreads
+                )).hashCode(),
+        reflect(generateRemoteTaskRunnerConfig(
+                    timeout,
+                    timeout,
+                    version,
+                    max,
+                    timeout,
+                    DEFAULT_PENDING_TASKS_RUNNER_NUM_THREADS
+                )).hashCode()
     );
   }
 
@@ -372,7 +463,8 @@ public class RemoteTaskRunnerConfigTest
       Period taskCleanupTimeout,
       String minWorkerVersion,
       long maxZnodeBytes,
-      Period taskShutdownLinkTimeout
+      Period taskShutdownLinkTimeout,
+      int pendingTasksRunnerNumThreads
   )
   {
     final Map<String, Object> objectMap = new HashMap<>();
@@ -381,6 +473,7 @@ public class RemoteTaskRunnerConfigTest
     objectMap.put("minWorkerVersion", minWorkerVersion);
     objectMap.put("maxZnodeBytes", maxZnodeBytes);
     objectMap.put("taskShutdownLinkTimeout", taskShutdownLinkTimeout);
+    objectMap.put("pendingTasksRunnerNumThreads", pendingTasksRunnerNumThreads);
     return mapper.convertValue(objectMap, RemoteTaskRunnerConfig.class);
   }
 }
