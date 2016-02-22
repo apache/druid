@@ -99,6 +99,9 @@ The property `druid.realtime.specFile` has the path of a file (absolute or relat
       "basePersistDirectory": "\/tmp\/realtime\/basePersist",
       "rejectionPolicy": {
         "type": "serverTime"
+      },
+      "indexSpec": {
+         "bitmap":"roaring"
       }
     }
   }
@@ -149,10 +152,11 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |versioningPolicy|Object|How to version segments.|no (default == based on segment start time)|
 |rejectionPolicy|Object|Controls how data sets the data acceptance policy for creating and handing off segments. More on this below.|no (default=='serverTime')|
 |maxPendingPersists|Integer|Maximum number of persists that can be pending, but not started. If this limit would be exceeded by a new intermediate persist, ingestion will block until the currently-running persist finishes. Maximum heap memory usage for indexing scales with maxRowsInMemory * (2 + maxPendingPersists).|no (default == 0; meaning one persist can be running concurrently with ingestion, and none can be queued up)|
-|shardSpec|Object|This describes the shard that is represented by this server. This must be specified properly in order to have multiple realtime nodes indexing the same data stream in a [sharded fashion](#sharding).|no (default == 'NoneShardSpec'|
+|shardSpec|Object|This describes the shard that is represented by this server. This must be specified properly in order to have multiple realtime nodes indexing the same data stream in a [sharded fashion](#sharding).|no (default == 'NoneShardSpec')|
 |buildV9Directly|Boolean|Whether to build v9 index directly instead of building v8 index and convert it to v9 format|no (default = false)|
 |persistThreadPriority|int|If `-XX:+UseThreadPriorities` is properly enabled, this will set the thread priority of the persisting thread to `Thread.NORM_PRIORITY` plus this value within the bounds of `Thread.MIN_PRIORITY` and `Thread.MAX_PRIORITY`. A value of 0 indicates to not change the thread priority.|no (default = 0; inherit and do not override)|
 |mergeThreadPriority|int|If `-XX:+UseThreadPriorities` is properly enabled, this will set the thread priority of the merging thread to `Thread.NORM_PRIORITY` plus this value within the bounds of `Thread.MIN_PRIORITY` and `Thread.MAX_PRIORITY`. A value of 0 indicates to not change the thread priority.|no (default = 0; inherit and do not override)|
+|indexSpec|Object|Tune how data is indexed.|no|
 
 Before enabling thread priority settings, users are highly encouraged to read the [original pull request](https://github.com/druid-io/druid/pull/984) and other documentation about proper use of `-XX:+UseThreadPriorities`. 
 
@@ -251,6 +255,12 @@ then two realtime nodes can store segments with the same datasource, version, ti
 then it can store segments with the same datasource, time interval, and version as in the first two nodes, but with a different partition number. Brokers that query for data in such segments will assume that a segment from RealTimeNode3 holds *different* data, and the query will target it along with a segment from the first two nodes.
 
 You can use type `numbered` similarly. Note that type `none` is essentially type `linear` with all shards having a fixed `partitionNum` of 0.
+
+#### IndexSpec
+
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|bitmap|String|Set to `roaring` to use Roaring Bitmaps. Set to `concise` to use Concise bitmaps.|no (default = concise)|
 
 ## Constraints
 
