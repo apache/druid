@@ -264,7 +264,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
                 while (baseIter.hasNext()) {
                   if (Thread.interrupted()) {
-                    throw new QueryInterruptedException();
+                    throw new QueryInterruptedException(new InterruptedException());
                   }
 
                   currEntry.set(baseIter.next());
@@ -307,7 +307,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 }
 
                 if (Thread.interrupted()) {
-                  throw new QueryInterruptedException();
+                  throw new QueryInterruptedException( new InterruptedException());
                 }
 
                 boolean foundMatched = false;
