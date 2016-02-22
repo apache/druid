@@ -21,28 +21,88 @@ package io.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableSet;
+
+import java.util.Set;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.TimeoutException;
 
 public class QueryInterruptedException extends RuntimeException
 {
-  public QueryInterruptedException() {
-    super();
-  }
+  public static final String QUERY_INTERRUPTED = "Query interrupted";
+  public static final String QUERY_TIMEOUT = "Query timeout";
+  public static final String QUERY_CANCELLED = "Query cancelled";
+  public static final String UNKNOWN_EXCEPTION = "Unknown exception";
+
+  private static final Set<String> listKnownException = ImmutableSet.of(
+      QUERY_CANCELLED,
+      QUERY_INTERRUPTED,
+      QUERY_TIMEOUT,
+      UNKNOWN_EXCEPTION
+  );
+
+  @JsonProperty
+  private final String causeMessage;
+  @JsonProperty
+  private final String host;
 
   @JsonCreator
-  public QueryInterruptedException(@JsonProperty("error") String message)
+  public QueryInterruptedException(
+      @JsonProperty("error") String message,
+      @JsonProperty("causeMessage") String causeMessage,
+      @JsonProperty("host") String host
+  )
   {
     super(message);
+    this.causeMessage = causeMessage;
+    this.host = host;
   }
 
   public QueryInterruptedException(Throwable cause)
   {
-    super(cause);
+    this(cause, null);
+  }
+
+  public QueryInterruptedException(Throwable e, String host)
+  {
+    super(e);
+    this.host = host;
+    causeMessage = e.getMessage();
   }
 
   @JsonProperty("error")
   @Override
   public String getMessage()
   {
-    return super.getMessage();
+    if (this.getCause() == null) {
+      return super.getMessage();
+    } else if (this.getCause() instanceof QueryInterruptedException) {
+      return getCause().getMessage();
+    } else if (this.getCause() instanceof InterruptedException) {
+      return QUERY_INTERRUPTED;
+    } else if (this.getCause() instanceof CancellationException) {
+      return QUERY_CANCELLED;
+    } else if (this.getCause() instanceof TimeoutException) {
+      return QUERY_TIMEOUT;
+    } else {
+      return UNKNOWN_EXCEPTION;
+    }
+  }
+
+  @JsonProperty("causeMessage")
+  public String getCauseMessage()
+  {
+    return causeMessage;
+  }
+
+  @JsonProperty("host")
+  public String getHost()
+  {
+    return host;
+  }
+
+  public boolean isNotKnown()
+  {
+    return !listKnownException.contains(getMessage());
   }
 }

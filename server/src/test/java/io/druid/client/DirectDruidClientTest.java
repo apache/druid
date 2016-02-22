@@ -19,6 +19,8 @@
 
 package io.druid.client;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Futures;
@@ -257,6 +259,75 @@ public class DirectDruidClientTest
     }
     Assert.assertNotNull(exception);
 
+    EasyMock.verify(httpClient);
+  }
+
+  @Test
+  public void testQueryInterruptionExceptionLogMessage() throws JsonProcessingException
+  {
+    HttpClient httpClient = EasyMock.createMock(HttpClient.class);
+    SettableFuture<Object> interruptionFuture = SettableFuture.create();
+    Capture<Request> capturedRequest = EasyMock.newCapture();
+    String hostName = "localhost:8080";
+    EasyMock.expect(
+        httpClient.go(
+            EasyMock.capture(capturedRequest),
+            EasyMock.<HttpResponseHandler>anyObject()
+        )
+    )
+            .andReturn(interruptionFuture)
+            .anyTimes();
+
+    EasyMock.replay(httpClient);
+
+    DataSegment dataSegment = new DataSegment(
+        "test",
+        new Interval("2013-01-01/2013-01-02"),
+        new DateTime("2013-01-01").toString(),
+        Maps.<String, Object>newHashMap(),
+        Lists.<String>newArrayList(),
+        Lists.<String>newArrayList(),
+        new NoneShardSpec(),
+        0,
+        0L
+    );
+    final ServerSelector serverSelector = new ServerSelector( dataSegment
+        ,
+        new HighestPriorityTierSelectorStrategy(new ConnectionCountServerSelectorStrategy())
+    );
+
+    DirectDruidClient client1 = new DirectDruidClient(
+        new ReflectionQueryToolChestWarehouse(),
+        QueryRunnerTestHelper.NOOP_QUERYWATCHER,
+        new DefaultObjectMapper(),
+        httpClient,
+        hostName,
+        new NoopServiceEmitter()
+    );
+
+    QueryableDruidServer queryableDruidServer = new QueryableDruidServer(
+        new DruidServer("test1", hostName, 0, "historical", DruidServer.DEFAULT_TIER, 0),
+        client1
+    );
+
+    serverSelector.addServerAndUpdateSegment(queryableDruidServer, dataSegment);
+
+    TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder().dataSource("test").build();
+    HashMap<String, List> context = Maps.newHashMap();
+    interruptionFuture.set(new ByteArrayInputStream("{\"error\":\"testing\"}".getBytes()));
+    Sequence results = client1.run(query, context);
+
+    QueryInterruptedException actualException = null;
+    try {
+      Sequences.toList(results, Lists.newArrayList());
+    }
+    catch (QueryInterruptedException e) {
+      actualException = e;
+    }
+    Assert.assertNotNull(actualException);
+    Assert.assertEquals(actualException.getMessage(), QueryInterruptedException.UNKNOWN_EXCEPTION);
+    Assert.assertEquals(actualException.getCauseMessage(), "testing");
+    Assert.assertEquals(actualException.getHost(), hostName);
     EasyMock.verify(httpClient);
   }
 }
