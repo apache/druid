@@ -695,7 +695,7 @@ public class SelectQueryRunnerTest
           if (acHolder.getEvent().get(ex.getKey()) instanceof Double) {
             actVal = ((Double) actVal).floatValue();
           }
-          Assert.assertEquals(ex.getValue(), actVal);
+          Assert.assertEquals("invalid value for " + ex.getKey(), ex.getValue(), actVal);
         }
       }
 

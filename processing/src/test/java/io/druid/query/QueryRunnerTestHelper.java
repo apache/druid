@@ -21,6 +21,7 @@ package io.druid.query;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -100,6 +101,7 @@ public class QueryRunnerTestHelper
 
   public static final QueryGranularity dayGran = QueryGranularities.DAY;
   public static final QueryGranularity allGran = QueryGranularities.ALL;
+  public static final String timeDimension = "__time";
   public static final String marketDimension = "market";
   public static final String qualityDimension = "quality";
   public static final String placementDimension = "placement";
@@ -119,9 +121,9 @@ public class QueryRunnerTestHelper
 
   public static String dependentPostAggMetric = "dependentPostAgg";
   public static final CountAggregatorFactory rowsCount = new CountAggregatorFactory("rows");
-  public static final LongSumAggregatorFactory indexLongSum = new LongSumAggregatorFactory("index", "index");
-  public static final LongSumAggregatorFactory __timeLongSum = new LongSumAggregatorFactory("sumtime", "__time");
-  public static final DoubleSumAggregatorFactory indexDoubleSum = new DoubleSumAggregatorFactory("index", "index");
+  public static final LongSumAggregatorFactory indexLongSum = new LongSumAggregatorFactory("index", indexMetric);
+  public static final LongSumAggregatorFactory __timeLongSum = new LongSumAggregatorFactory("sumtime", timeDimension);
+  public static final DoubleSumAggregatorFactory indexDoubleSum = new DoubleSumAggregatorFactory("index", indexMetric);
   public static final String JS_COMBINE_A_PLUS_B = "function combine(a, b) { return a + b; }";
   public static final String JS_RESET_0 = "function reset() { return 0; }";
   public static final JavaScriptAggregatorFactory jsIndexSumIfPlacementishA = new JavaScriptAggregatorFactory(
@@ -514,5 +516,14 @@ public class QueryRunnerTestHelper
         };
       }
     };
+  }
+
+  public static Map<String, Object> of(Object... keyvalues)
+  {
+    ImmutableMap.Builder<String, Object> builder = ImmutableMap.builder();
+    for (int i = 0; i < keyvalues.length; i += 2) {
+      builder.put(String.valueOf(keyvalues[i]), keyvalues[i + 1]);
+    }
+    return builder.build();
   }
 }
