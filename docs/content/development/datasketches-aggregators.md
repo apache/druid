@@ -42,7 +42,7 @@ Note that you can use `thetaSketch` aggregator on columns which were not ingeste
 {
   "type"  : "thetaSketchEstimate",
   "name": <output name>,
-  "fieldName"  : <the name field value of the thetaSketch aggregator>
+  "field"  : <post aggregator of type fieldAccess that refers to a thetaSketch aggregator or that of type thetaSketchSetOp>
 }
 ```
 
