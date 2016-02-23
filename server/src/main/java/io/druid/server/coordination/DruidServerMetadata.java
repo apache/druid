@@ -32,6 +32,9 @@ public class DruidServerMetadata
   private final String tier;
   private final String type;
   private final int priority;
+  private final String service;
+  private final String hostText;
+  private final int port;
 
   @JsonCreator
   public DruidServerMetadata(
@@ -40,7 +43,10 @@ public class DruidServerMetadata
       @JsonProperty("maxSize") long maxSize,
       @JsonProperty("type") String type,
       @JsonProperty("tier") String tier,
-      @JsonProperty("priority") int priority
+      @JsonProperty("priority") int priority,
+      @JsonProperty("service") String service,
+      @JsonProperty("hostText") String hostText,
+      @JsonProperty("port") int port
   )
   {
     this.name = name;
@@ -49,6 +55,9 @@ public class DruidServerMetadata
     this.tier = tier;
     this.type = type;
     this.priority = priority;
+    this.service = service;
+    this.hostText = hostText;
+    this.port = port;
   }
 
   @JsonProperty
@@ -87,9 +96,27 @@ public class DruidServerMetadata
     return priority;
   }
 
+  @JsonProperty
+  public String getService()
+  {
+    return service;
+  }
+
+  @JsonProperty
+  public String getHostText()
+  {
+    return hostText;
+  }
+
+  @JsonProperty
+  public int getPort()
+  {
+    return port;
+  }
+
   public boolean isAssignable()
   {
-    return getType().equalsIgnoreCase("historical") || getType().equalsIgnoreCase("bridge");
+    return type.equalsIgnoreCase("historical");
   }
 
   @Override
@@ -102,28 +129,34 @@ public class DruidServerMetadata
       return false;
     }
 
-    DruidServerMetadata metadata = (DruidServerMetadata) o;
+    DruidServerMetadata that = (DruidServerMetadata) o;
 
-    if (maxSize != metadata.maxSize) {
+    if (maxSize != that.maxSize) {
       return false;
     }
-    if (priority != metadata.priority) {
+    if (priority != that.priority) {
       return false;
     }
-    if (host != null ? !host.equals(metadata.host) : metadata.host != null) {
+    if (port != that.port) {
       return false;
     }
-    if (name != null ? !name.equals(metadata.name) : metadata.name != null) {
+    if (name != null ? !name.equals(that.name) : that.name != null) {
       return false;
     }
-    if (tier != null ? !tier.equals(metadata.tier) : metadata.tier != null) {
+    if (host != null ? !host.equals(that.host) : that.host != null) {
       return false;
     }
-    if (type != null ? !type.equals(metadata.type) : metadata.type != null) {
+    if (tier != null ? !tier.equals(that.tier) : that.tier != null) {
       return false;
     }
+    if (type != null ? !type.equals(that.type) : that.type != null) {
+      return false;
+    }
+    if (service != null ? !service.equals(that.service) : that.service != null) {
+      return false;
+    }
+    return hostText != null ? hostText.equals(that.hostText) : that.hostText == null;
 
-    return true;
   }
 
   @Override
@@ -135,6 +168,9 @@ public class DruidServerMetadata
     result = 31 * result + (tier != null ? tier.hashCode() : 0);
     result = 31 * result + (type != null ? type.hashCode() : 0);
     result = 31 * result + priority;
+    result = 31 * result + (service != null ? service.hashCode() : 0);
+    result = 31 * result + (hostText != null ? hostText.hashCode() : 0);
+    result = 31 * result + port;
     return result;
   }
 
@@ -147,7 +183,10 @@ public class DruidServerMetadata
            ", maxSize=" + maxSize +
            ", tier='" + tier + '\'' +
            ", type='" + type + '\'' +
-           ", priority='" + priority + '\'' +
+           ", priority=" + priority +
+           ", service='" + service + '\'' +
+           ", hostText='" + hostText + '\'' +
+           ", port=" + port +
            '}';
   }
 }

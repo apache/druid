@@ -19,48 +19,69 @@
 
 package io.druid.curator.discovery;
 
+import com.google.common.base.Function;
+import com.google.common.base.Throwables;
+import com.google.common.collect.Lists;
+import com.google.common.net.HostAndPort;
+import com.metamx.common.ISE;
+import io.druid.client.DruidServerDiscovery;
 import io.druid.client.selector.Server;
-import org.apache.curator.x.discovery.ServiceInstance;
-import org.apache.curator.x.discovery.ServiceProvider;
+import io.druid.server.coordination.DruidServerMetadata;
 import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.io.IOException;
 import java.net.URI;
+import java.util.List;
 
 public class ServerDiscoverySelectorTest
 {
 
-  private ServiceProvider serviceProvider;
-  private ServerDiscoverySelector serverDiscoverySelector;
-  private ServiceInstance instance;
   private static final int PORT = 8080;
   private static final String ADDRESS = "localhost";
 
+  private ServerDiscoverySelector serverDiscoverySelector;
+  private DruidServerDiscovery discovery;
+
   @Before
-  public void setUp()
+  public void setUp() throws Exception
   {
-    serviceProvider = EasyMock.createMock(ServiceProvider.class);
-    instance = EasyMock.createMock(ServiceInstance.class);
-    serverDiscoverySelector = new ServerDiscoverySelector(serviceProvider);
+    discovery = EasyMock.createMock(DruidServerDiscovery.class);
+    serverDiscoverySelector = new ServerDiscoverySelector(
+        discovery,
+        new Function<DruidServerDiscovery, List<DruidServerMetadata>>()
+        {
+          @Override
+          public List<DruidServerMetadata> apply(DruidServerDiscovery discovery)
+          {
+            try {
+              return Lists.newArrayList(discovery.getLeaderForType("coordinator"));
+            }
+            catch (Exception e) {
+              throw Throwables.propagate(e);
+            }
+          }
+        }
+    );
   }
 
   @Test
-  public void testPick() throws Exception
+  public void testPickCoordinator() throws Exception
   {
-    EasyMock.expect(serviceProvider.getInstance()).andReturn(instance).anyTimes();
-    EasyMock.expect(instance.getAddress()).andReturn(ADDRESS).anyTimes();
-    EasyMock.expect(instance.getPort()).andReturn(PORT).anyTimes();
-    EasyMock.replay(instance, serviceProvider);
+    EasyMock.expect(discovery.getLeaderForType("coordinator"))
+            .andReturn(new DruidServerMetadata("coor", ADDRESS + ":" + PORT, 0, "coordinator", "t1", 0, "service",
+                                               ADDRESS,
+                                               PORT))
+            .once();
+    EasyMock.replay(discovery);
     Server server = serverDiscoverySelector.pick();
+    EasyMock.verify(discovery);
     Assert.assertEquals(PORT, server.getPort());
     Assert.assertEquals(ADDRESS, server.getAddress());
     Assert.assertTrue(server.getHost().contains(Integer.toString(PORT)));
     Assert.assertTrue(server.getHost().contains(ADDRESS));
     Assert.assertEquals("http", server.getScheme());
-    EasyMock.verify(instance, serviceProvider);
     final URI uri = new URI(
         server.getScheme(),
         null,
@@ -74,23 +95,24 @@ public class ServerDiscoverySelectorTest
     Assert.assertEquals(ADDRESS, uri.getHost());
     Assert.assertEquals("http", uri.getScheme());
   }
-
 
   @Test
   public void testPickIPv6() throws Exception
   {
-    final String ADDRESS = "2001:0db8:0000:0000:0000:ff00:0042:8329";
-    EasyMock.expect(serviceProvider.getInstance()).andReturn(instance).anyTimes();
-    EasyMock.expect(instance.getAddress()).andReturn(ADDRESS).anyTimes();
-    EasyMock.expect(instance.getPort()).andReturn(PORT).anyTimes();
-    EasyMock.replay(instance, serviceProvider);
+    final String address = "2001:0db8:0000:0000:0000:ff00:0042:8329";
+    EasyMock.expect(discovery.getLeaderForType("coordinator"))
+            .andReturn(new DruidServerMetadata("coor", address + ":" + PORT, 0, "coordinator", "t1", 0, "service",
+                                               address,
+                                               PORT))
+            .once();
+    EasyMock.replay(discovery);
     Server server = serverDiscoverySelector.pick();
     Assert.assertEquals(PORT, server.getPort());
-    Assert.assertEquals(ADDRESS, server.getAddress());
+    Assert.assertEquals(address, server.getAddress());
     Assert.assertTrue(server.getHost().contains(Integer.toString(PORT)));
-    Assert.assertTrue(server.getHost().contains(ADDRESS));
+    Assert.assertTrue(server.getHost().contains(address));
     Assert.assertEquals("http", server.getScheme());
-    EasyMock.verify(instance, serviceProvider);
+    EasyMock.verify(discovery);
     final URI uri = new URI(
         server.getScheme(),
         null,
@@ -101,26 +123,27 @@ public class ServerDiscoverySelectorTest
         null
     );
     Assert.assertEquals(PORT, uri.getPort());
-    Assert.assertEquals(String.format("[%s]", ADDRESS), uri.getHost());
+    Assert.assertEquals(String.format("[%s]", address), uri.getHost());
     Assert.assertEquals("http", uri.getScheme());
   }
-
 
   @Test
   public void testPickIPv6Bracket() throws Exception
   {
-    final String ADDRESS = "[2001:0db8:0000:0000:0000:ff00:0042:8329]";
-    EasyMock.expect(serviceProvider.getInstance()).andReturn(instance).anyTimes();
-    EasyMock.expect(instance.getAddress()).andReturn(ADDRESS).anyTimes();
-    EasyMock.expect(instance.getPort()).andReturn(PORT).anyTimes();
-    EasyMock.replay(instance, serviceProvider);
+    final String address = "[2001:0db8:0000:0000:0000:ff00:0042:8329]";
+    EasyMock.expect(discovery.getLeaderForType("coordinator"))
+            .andReturn(new DruidServerMetadata("coor", address + ":" + PORT, 0, "coordinator", "t1", 0, "service",
+                                               address,
+                                               PORT))
+            .once();
+    EasyMock.replay(discovery);
     Server server = serverDiscoverySelector.pick();
     Assert.assertEquals(PORT, server.getPort());
-    Assert.assertEquals(ADDRESS, server.getAddress());
+    Assert.assertEquals(address, server.getAddress());
     Assert.assertTrue(server.getHost().contains(Integer.toString(PORT)));
-    Assert.assertTrue(server.getHost().contains(ADDRESS));
+    Assert.assertTrue(server.getHost().contains(address));
     Assert.assertEquals("http", server.getScheme());
-    EasyMock.verify(instance, serviceProvider);
+    EasyMock.verify(discovery);
     final URI uri = new URI(
         server.getScheme(),
         null,
@@ -131,45 +154,36 @@ public class ServerDiscoverySelectorTest
         null
     );
     Assert.assertEquals(PORT, uri.getPort());
-    Assert.assertEquals(ADDRESS, uri.getHost());
+    Assert.assertEquals(address, uri.getHost());
     Assert.assertEquals("http", uri.getScheme());
   }
 
   @Test
   public void testPickWithNullInstance() throws Exception
   {
-    EasyMock.expect(serviceProvider.getInstance()).andReturn(null).anyTimes();
-    EasyMock.replay(serviceProvider);
+    EasyMock.expect(discovery.getLeaderForType("coordinator"))
+            .andReturn(null)
+            .once();
+    EasyMock.replay(discovery);
     Server server = serverDiscoverySelector.pick();
     Assert.assertNull(server);
-    EasyMock.verify(serviceProvider);
+    EasyMock.verify(discovery);
   }
 
   @Test
   public void testPickWithException() throws Exception
   {
-    EasyMock.expect(serviceProvider.getInstance()).andThrow(new Exception()).anyTimes();
-    EasyMock.replay(serviceProvider);
+    EasyMock.expect(discovery.getLeaderForType("coordinator")).andThrow(new ISE("ise")).once();
+    EasyMock.replay(discovery);
     Server server = serverDiscoverySelector.pick();
     Assert.assertNull(server);
-    EasyMock.verify(serviceProvider);
+    EasyMock.verify(discovery);
   }
 
   @Test
-  public void testStart() throws Exception
+  public void testName() throws Exception
   {
-    serviceProvider.start();
-    EasyMock.replay(serviceProvider);
-    serverDiscoverySelector.start();
-    EasyMock.verify(serviceProvider);
+    System.out.println(HostAndPort.fromString("[2001:0db8:0000:0000:0000:ff00:0042:8329]:80"));
   }
 
-  @Test
-  public void testStop() throws IOException
-  {
-    serviceProvider.close();
-    EasyMock.replay(serviceProvider);
-    serverDiscoverySelector.stop();
-    EasyMock.verify(serviceProvider);
-  }
 }

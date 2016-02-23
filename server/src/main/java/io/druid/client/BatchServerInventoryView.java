@@ -52,7 +52,7 @@ public class BatchServerInventoryView extends ServerInventoryView<Set<DataSegmen
   {
     super(
         log,
-        zkPaths.getAnnouncementsPath(),
+        zkPaths.getCapabilityPathFor("segmentServer"),
         zkPaths.getLiveSegmentsPath(),
         curator,
         jsonMapper,

@@ -31,11 +31,15 @@ import com.google.inject.TypeLiteral;
 import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import com.metamx.common.lifecycle.Lifecycle;
+import io.druid.client.DruidServerDiscovery;
+import io.druid.client.ZookeeperDruidServerDiscovery;
 import io.druid.guice.DruidBinders;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.KeyHolder;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
+import io.druid.guice.annotations.External;
+import io.druid.guice.annotations.Internal;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.CuratorDiscoveryConfig;
 import org.apache.curator.framework.CuratorFramework;
@@ -70,7 +74,7 @@ import java.util.concurrent.ThreadFactory;
  */
 public class DiscoveryModule implements Module
 {
-  private static final String NAME = "DiscoveryModule:internal";
+  private static final String NAME = "DiscoveryModule:external";
 
   /**
    * Requests that the un-annotated DruidNode instance be injected and published as part of the lifecycle.
@@ -140,10 +144,11 @@ public class DiscoveryModule implements Module
 
     // Build the binder so that it will at a minimum inject an empty set.
     DruidBinders.discoveryAnnouncementBinder(binder);
-
     binder.bind(ServiceAnnouncer.class)
           .to(Key.get(CuratorServiceAnnouncer.class, Names.named(NAME)))
           .in(LazySingleton.class);
+
+    binder.bind(DruidServerDiscovery.class).to(ZookeeperDruidServerDiscovery.class);
   }
 
   @Provides
@@ -195,7 +200,7 @@ public class DiscoveryModule implements Module
   @Provides
   @LazySingleton
   public ServiceDiscovery<Void> getServiceDiscovery(
-      CuratorFramework curator,
+      @External CuratorFramework curator,
       CuratorDiscoveryConfig config,
       Lifecycle lifecycle
   ) throws Exception
@@ -238,10 +243,11 @@ public class DiscoveryModule implements Module
   @Provides
   @LazySingleton
   public ServerDiscoveryFactory getServerDiscoveryFactory(
-      ServiceDiscovery<Void> serviceDiscovery
+      ServiceDiscovery<Void> serviceDiscovery,
+      DruidServerDiscovery serverDiscovery
   )
   {
-    return new ServerDiscoveryFactory(serviceDiscovery);
+    return new ServerDiscoveryFactory(serverDiscovery, serviceDiscovery);
   }
 
   private static class NoopServiceDiscovery<T> implements ServiceDiscovery<T>

@@ -22,6 +22,7 @@ package io.druid.client.client;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.Futures;
@@ -36,6 +37,8 @@ import io.druid.curator.announcement.Announcer;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.server.coordination.BatchDataSegmentAnnouncer;
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.coordination.ServerAnnouncer;
+import io.druid.server.coordination.ZooKeeperServerAnnouncer;
 import io.druid.server.initialization.BatchDataSegmentAnnouncerConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.DataSegment;
@@ -54,6 +57,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -79,6 +83,10 @@ public class BatchServerInventoryViewTest
   private Set<DataSegment> testSegments;
   private BatchServerInventoryView batchServerInventoryView;
   private BatchServerInventoryView filteredBatchServerInventoryView;
+  private DruidServerMetadata server;
+  private ZooKeeperServerAnnouncer serverAnnouncer;
+  private ZkPathsConfig zkPathsConfig;
+
   private final AtomicInteger inventoryUpdateCounter = new AtomicInteger();
 
   @Rule
@@ -107,15 +115,36 @@ public class BatchServerInventoryViewTest
     );
     announcer.start();
 
+    zkPathsConfig = new ZkPathsConfig()
+    {
+      @Override
+      public String getBase()
+      {
+        return testBasePath;
+      }
+    };
+
+    server = new DruidServerMetadata(
+        "id",
+        "host",
+        Long.MAX_VALUE,
+        "historical",
+        "tier",
+        0,
+        "service",
+        "hostText", -1
+    );
+
+    serverAnnouncer = new ZooKeeperServerAnnouncer(
+        server,
+        jsonMapper,
+        zkPathsConfig,
+        announcer,
+        ImmutableSet.of("segmentServer")
+    );
+
     segmentAnnouncer = new BatchDataSegmentAnnouncer(
-        new DruidServerMetadata(
-            "id",
-            "host",
-            Long.MAX_VALUE,
-            "type",
-            "tier",
-            0
-        ),
+        server,
         new BatchDataSegmentAnnouncerConfig()
         {
           @Override
@@ -124,17 +153,12 @@ public class BatchServerInventoryViewTest
             return 50;
           }
         },
-        new ZkPathsConfig()
-        {
-          @Override
-          public String getBase()
-          {
-            return testBasePath;
-          }
-        },
+        zkPathsConfig,
         announcer,
         jsonMapper
     );
+
+    serverAnnouncer.start();
     segmentAnnouncer.start();
 
     testSegments = Sets.newConcurrentHashSet();
@@ -307,7 +331,9 @@ public class BatchServerInventoryViewTest
                           Long.MAX_VALUE,
                           "type",
                           "tier",
-                          0
+                          0,
+                          "service",
+                          "hostText", -1
                       ),
                       new BatchDataSegmentAnnouncerConfig()
                       {

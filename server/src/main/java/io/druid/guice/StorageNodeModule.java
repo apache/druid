@@ -71,7 +71,10 @@ public class StorageNodeModule implements Module
         config.getMaxSize(),
         nodeType.getNodeType(),
         config.getTier(),
-        config.getPriority()
+        config.getPriority(),
+        node.getServiceName(),
+        node.getHost(),
+        node.getPort()
     );
   }
 }

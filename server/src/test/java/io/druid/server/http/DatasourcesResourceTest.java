@@ -25,9 +25,7 @@ import com.google.common.collect.ImmutableSet;
 import io.druid.client.CoordinatorServerView;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
-import io.druid.client.InventoryView;
 import io.druid.client.indexing.IndexingServiceClient;
-import io.druid.metadata.MetadataSegmentManager;
 import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
@@ -272,7 +270,7 @@ public class DatasourcesResourceTest
   @Test
   public void testGetSegmentDataSourceIntervals()
   {
-    server = new DruidServer("who", "host", 1234, "historical", "tier1", 0);
+    server = new DruidServer("who", "host", 1234, "historical", "tier1", 0, "service", "hostText", -1);
     server.addDataSegment(dataSegmentList.get(0).getIdentifier(), dataSegmentList.get(0));
     server.addDataSegment(dataSegmentList.get(1).getIdentifier(), dataSegmentList.get(1));
     server.addDataSegment(dataSegmentList.get(2).getIdentifier(), dataSegmentList.get(2));
@@ -322,7 +320,7 @@ public class DatasourcesResourceTest
   @Test
   public void testGetSegmentDataSourceSpecificInterval()
   {
-    server = new DruidServer("who", "host", 1234, "historical", "tier1", 0);
+    server = new DruidServer("who", "host", 1234, "historical", "tier1", 0, "service", "hostText", -1);
     server.addDataSegment(dataSegmentList.get(0).getIdentifier(), dataSegmentList.get(0));
     server.addDataSegment(dataSegmentList.get(1).getIdentifier(), dataSegmentList.get(1));
     server.addDataSegment(dataSegmentList.get(2).getIdentifier(), dataSegmentList.get(2));

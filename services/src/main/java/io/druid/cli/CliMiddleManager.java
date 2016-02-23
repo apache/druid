@@ -35,6 +35,7 @@ import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
+import io.druid.guice.NodeTypeConfig;
 import io.druid.guice.annotations.Self;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.overlord.ForkingTaskRunner;
@@ -77,6 +78,7 @@ public class CliMiddleManager extends ServerRunnable
           {
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/middlemanager");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8091);
+            binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig("middleManager"));
 
             IndexingServiceModuleHelper.configureTaskRunnerConfigs(binder);
 

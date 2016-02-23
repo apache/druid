@@ -57,6 +57,7 @@ import io.druid.metadata.MetadataRuleManager;
 import io.druid.metadata.MetadataSegmentManager;
 import io.druid.segment.IndexIO;
 import io.druid.server.DruidNode;
+import io.druid.server.coordination.ServerAnnouncer;
 import io.druid.server.coordinator.helper.DruidCoordinatorBalancer;
 import io.druid.server.coordinator.helper.DruidCoordinatorCleanupOvershadowed;
 import io.druid.server.coordinator.helper.DruidCoordinatorCleanupUnneeded;
@@ -111,6 +112,7 @@ public class DruidCoordinator
                                                                      .reverse();
 
   private static final EmittingLogger log = new EmittingLogger(DruidCoordinator.class);
+
   private final Object lock = new Object();
   private final DruidCoordinatorConfig config;
   private final ZkPathsConfig zkPaths;
@@ -127,6 +129,8 @@ public class DruidCoordinator
   private final AtomicReference<LeaderLatch> leaderLatch;
   private final ServiceAnnouncer serviceAnnouncer;
   private final DruidNode self;
+  private final ServerAnnouncer serverAnnouncer;
+
   private volatile boolean started = false;
   private volatile int leaderCounter = 0;
   private volatile boolean leader = false;
@@ -147,7 +151,8 @@ public class DruidCoordinator
       IndexingServiceClient indexingServiceClient,
       LoadQueueTaskMaster taskMaster,
       ServiceAnnouncer serviceAnnouncer,
-      @Self DruidNode self
+      @Self DruidNode self,
+      ServerAnnouncer serverAnnouncer
   )
   {
     this(
@@ -164,7 +169,8 @@ public class DruidCoordinator
         taskMaster,
         serviceAnnouncer,
         self,
-        Maps.<String, LoadQueuePeon>newConcurrentMap()
+        Maps.<String, LoadQueuePeon>newConcurrentMap(),
+        serverAnnouncer
     );
   }
 
@@ -182,7 +188,8 @@ public class DruidCoordinator
       LoadQueueTaskMaster taskMaster,
       ServiceAnnouncer serviceAnnouncer,
       DruidNode self,
-      ConcurrentMap<String, LoadQueuePeon> loadQueuePeonMap
+      ConcurrentMap<String, LoadQueuePeon> loadQueuePeonMap,
+      ServerAnnouncer serverAnnouncer
   )
   {
     this.config = config;
@@ -198,6 +205,7 @@ public class DruidCoordinator
     this.taskMaster = taskMaster;
     this.serviceAnnouncer = serviceAnnouncer;
     this.self = self;
+    this.serverAnnouncer = serverAnnouncer;
 
     this.exec = scheduledExecutorFactory.create(1, "Coordinator-Exec--%d");
 
@@ -546,6 +554,7 @@ public class DruidCoordinator
         metadataRuleManager.start();
         serverInventoryView.start();
         serviceAnnouncer.announce(self);
+        serverAnnouncer.announceLeadership();
         final int startingLeaderCounter = leaderCounter;
 
         final List<Pair<? extends CoordinatorRunnable, Duration>> coordinatorRunnables = Lists.newArrayList();
@@ -631,6 +640,7 @@ public class DruidCoordinator
         loadManagementPeons.clear();
 
         serviceAnnouncer.unannounce(self);
+        serverAnnouncer.unannounceLeadership();
         serverInventoryView.stop();
         metadataRuleManager.stop();
         metadataSegmentManager.stop();

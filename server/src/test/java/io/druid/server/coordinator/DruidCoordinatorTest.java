@@ -43,6 +43,8 @@ import io.druid.metadata.MetadataRuleManager;
 import io.druid.metadata.MetadataSegmentManager;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.server.coordination.ServerAnnouncer;
+import io.druid.server.coordination.ZooKeeperServerAnnouncer;
 import io.druid.server.coordinator.rules.ForeverLoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import io.druid.server.initialization.ZkPathsConfig;
@@ -186,7 +188,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
           }
         },
         druidNode,
-        loadManagementPeons
+        loadManagementPeons,
+        EasyMock.createMock(ServerAnnouncer.class)
     );
   }
 
@@ -210,7 +213,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock.replay(metadataRuleManager);
     EasyMock.expect(druidServer.toImmutableDruidServer()).andReturn(
         new ImmutableDruidServer(
-            new DruidServerMetadata("from", null, 5L, null, null, 0),
+            new DruidServerMetadata("from", null, 5L, null, null, 0, "service", "hostText", -1),
             1L,
             null,
             ImmutableMap.of("dummySegment", segment)
@@ -221,7 +224,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     druidServer2 = EasyMock.createMock(DruidServer.class);
     EasyMock.expect(druidServer2.toImmutableDruidServer()).andReturn(
         new ImmutableDruidServer(
-            new DruidServerMetadata("to", null, 5L, null, null, 0),
+            new DruidServerMetadata("to", null, 5L, null, null, 0, "service", "hostText", -1),
             1L,
             null,
             ImmutableMap.of("dummySegment2", segment)
@@ -295,7 +298,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
     EasyMock.replay(immutableDruidDataSource);
 
     // Setup ServerInventoryView
-    druidServer = new DruidServer("server1", "localhost", 5L, "historical", tier, 0);
+    druidServer = new DruidServer("server1", "localhost", 5L, "historical", tier, 0, "service", "hostText", -1);
     loadManagementPeons.put("server1", loadQueuePeon);
     EasyMock.expect(serverInventoryView.getInventory()).andReturn(
         ImmutableList.of(druidServer)

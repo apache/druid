@@ -19,39 +19,18 @@
 
 package io.druid.server.coordination;
 
-import com.metamx.common.lifecycle.LifecycleStart;
-import com.metamx.common.lifecycle.LifecycleStop;
-
 /**
+ * ServerAnnouncer is bound to each Druid server. When the lifecycle starts, ServerAnnouncer will make an announcement
+ * to indicate the existence of the Druid server to which it belongs.
  */
-public abstract class AbstractDataSegmentAnnouncer implements DataSegmentAnnouncer
+public interface ServerAnnouncer
 {
-  private final Object lock = new Object();
 
-  private volatile boolean started = false;
+  void announceSelf();
 
-  @LifecycleStart
-  public void start()
-  {
-    synchronized (lock) {
-      if (started) {
-        return;
-      }
+  void unannounceSelf();
 
-      started = true;
-    }
-  }
+  void announceLeadership();
 
-  @LifecycleStop
-  public void stop()
-  {
-    synchronized (lock) {
-      if (!started) {
-        return;
-      }
-
-      started = false;
-    }
-  }
-
+  void unannounceLeadership();
 }

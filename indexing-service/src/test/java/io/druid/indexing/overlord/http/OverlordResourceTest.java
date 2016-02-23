@@ -49,6 +49,7 @@ import io.druid.indexing.overlord.TaskStorageQueryAdapter;
 import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.server.DruidNode;
+import io.druid.server.coordination.ServerAnnouncer;
 import io.druid.server.initialization.IndexerZkConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.metrics.NoopServiceEmitter;
@@ -170,7 +171,8 @@ public class OverlordResourceTest
             announcementLatch.countDown();
           }
         },
-        serviceEmitter
+        serviceEmitter,
+        EasyMock.createMock(ServerAnnouncer.class)
     );
     EmittingLogger.registerEmitter(serviceEmitter);
   }

@@ -22,53 +22,48 @@ package io.druid.curator.discovery;
 import com.google.common.base.Function;
 import com.google.common.collect.Collections2;
 import com.google.common.net.HostAndPort;
+import com.metamx.common.lifecycle.LifecycleStart;
+import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
-import io.druid.client.DruidServerDiscovery;
 import io.druid.client.selector.DiscoverySelector;
 import io.druid.client.selector.Server;
-import io.druid.server.coordination.DruidServerMetadata;
+import org.apache.curator.x.discovery.ServiceInstance;
+import org.apache.curator.x.discovery.ServiceProvider;
 
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  */
-public class ServerDiscoverySelector implements DiscoverySelector<Server>
+public class ExternalServerDiscoverySelector implements DiscoverySelector<Server>
 {
   private static final Logger log = new Logger(ServerDiscoverySelector.class);
-  private final DruidServerDiscovery druidServerDiscovery;
-  private final Function<DruidServerDiscovery, List<DruidServerMetadata>> selectFunction;
-  private final AtomicInteger roundRobinIdx;
 
-  public ServerDiscoverySelector(
-      DruidServerDiscovery druidServerDiscovery,
-      Function<DruidServerDiscovery, List<DruidServerMetadata>> selectFunction
-  )
+  private final ServiceProvider serviceProvider;
+
+  public ExternalServerDiscoverySelector(ServiceProvider serviceProvider)
   {
-    this.roundRobinIdx = new AtomicInteger(0);
-    this.druidServerDiscovery = druidServerDiscovery;
-    this.selectFunction = selectFunction == null ? new NoopSelectFunction() : selectFunction;
+    this.serviceProvider = serviceProvider;
   }
 
-  private static final Function<DruidServerMetadata, Server> TO_SERVER = new Function<DruidServerMetadata, Server>()
+  private static final Function<ServiceInstance, Server> TO_SERVER = new Function<ServiceInstance, Server>()
   {
     @Override
-    public Server apply(final DruidServerMetadata instance)
+    public Server apply(final ServiceInstance instance)
     {
       return new Server()
       {
         @Override
         public String getHost()
         {
-          return HostAndPort.fromParts(instance.getHostText(), instance.getPort()).toString();
+          return HostAndPort.fromParts(getAddress(), getPort()).toString();
         }
 
         @Override
         public String getAddress()
         {
-          return instance.getHostText();
+          return instance.getAddress();
         }
 
         @Override
@@ -89,13 +84,9 @@ public class ServerDiscoverySelector implements DiscoverySelector<Server>
   @Override
   public Server pick()
   {
-    final DruidServerMetadata instance;
+    final ServiceInstance instance;
     try {
-      final List<DruidServerMetadata> candidates = selectFunction.apply(druidServerDiscovery);
-      if (candidates == null || candidates.isEmpty()) {
-        return null;
-      }
-      instance = roundRobinPick(candidates);
+      instance = serviceProvider.getInstance();
     }
     catch (Exception e) {
       log.info(e, "Exception getting instance");
@@ -110,15 +101,10 @@ public class ServerDiscoverySelector implements DiscoverySelector<Server>
     return TO_SERVER.apply(instance);
   }
 
-  private DruidServerMetadata roundRobinPick(List<DruidServerMetadata> candidates)
-  {
-    return candidates.get(roundRobinIdx.getAndIncrement() % candidates.size());
-  }
-
   public Collection<Server> getAll()
   {
     try {
-      return Collections2.transform(selectFunction.apply(druidServerDiscovery), TO_SERVER);
+      return Collections2.transform(serviceProvider.getAllInstances(), TO_SERVER);
     }
     catch (Exception e) {
       log.info(e, "Unable to get all instances");
@@ -126,12 +112,15 @@ public class ServerDiscoverySelector implements DiscoverySelector<Server>
     }
   }
 
-  private static class NoopSelectFunction implements Function<DruidServerDiscovery, List<DruidServerMetadata>>
+  @LifecycleStart
+  public void start() throws Exception
   {
-    @Override
-    public List<DruidServerMetadata> apply(DruidServerDiscovery input)
-    {
-      return Collections.emptyList();
-    }
+    serviceProvider.start();
+  }
+
+  @LifecycleStop
+  public void stop() throws IOException
+  {
+    serviceProvider.close();
   }
 }

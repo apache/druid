@@ -35,11 +35,14 @@ import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
+import io.druid.guice.NodeTypeConfig;
 import io.druid.guice.annotations.Self;
 import io.druid.guice.annotations.Smile;
 import io.druid.guice.http.DruidHttpClientConfig;
 import io.druid.initialization.Initialization;
 import io.druid.query.Query;
+import io.druid.server.coordination.NoopServerAnnouncer;
+import io.druid.server.coordination.ServerAnnouncer;
 import io.druid.server.initialization.BaseJettyTest;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
@@ -102,6 +105,8 @@ public class AsyncQueryForwardingServletTest extends BaseJettyTest
                 JsonConfigProvider.bindInstance(
                     binder, Key.get(DruidNode.class, Self.class), new DruidNode("test", "localhost", null)
                 );
+                binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig("nodeType"));
+                binder.bind(ServerAnnouncer.class).to(NoopServerAnnouncer.class);
                 binder.bind(JettyServerInitializer.class).to(ProxyJettyServerInit.class).in(LazySingleton.class);
                 Jerseys.addResource(binder, SlowResource.class);
                 Jerseys.addResource(binder, ExceptionResource.class);

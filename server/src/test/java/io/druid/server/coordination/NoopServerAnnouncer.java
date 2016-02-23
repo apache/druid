@@ -19,39 +19,31 @@
 
 package io.druid.server.coordination;
 
-import com.metamx.common.lifecycle.LifecycleStart;
-import com.metamx.common.lifecycle.LifecycleStop;
-
 /**
  */
-public abstract class AbstractDataSegmentAnnouncer implements DataSegmentAnnouncer
+public class NoopServerAnnouncer implements ServerAnnouncer
 {
-  private final Object lock = new Object();
-
-  private volatile boolean started = false;
-
-  @LifecycleStart
-  public void start()
+  @Override
+  public void announceSelf()
   {
-    synchronized (lock) {
-      if (started) {
-        return;
-      }
 
-      started = true;
-    }
   }
 
-  @LifecycleStop
-  public void stop()
+  @Override
+  public void unannounceSelf()
   {
-    synchronized (lock) {
-      if (!started) {
-        return;
-      }
 
-      started = false;
-    }
   }
 
+  @Override
+  public void announceLeadership()
+  {
+
+  }
+
+  @Override
+  public void unannounceLeadership()
+  {
+
+  }
 }

@@ -61,7 +61,7 @@ public class CuratorTestBase
 
   protected void setupZNodeForServer(DruidServer server, ZkPathsConfig zkPathsConfig, ObjectMapper jsonMapper)
   {
-    final String announcementsPath = zkPathsConfig.getAnnouncementsPath();
+    final String announcementsPath = zkPathsConfig.getCapabilityPathFor("segmentServer");
     final String inventoryPath = zkPathsConfig.getLiveSegmentsPath();
 
     try {
@@ -163,5 +163,3 @@ public class CuratorTestBase
   }
 
 }
-
-//Build at Tue Dec 22 21:30:00 CST 2015

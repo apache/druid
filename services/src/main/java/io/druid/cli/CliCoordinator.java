@@ -37,6 +37,7 @@ import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
+import io.druid.guice.NodeTypeConfig;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.metadata.MetadataRuleManagerConfig;
 import io.druid.metadata.MetadataRuleManagerProvider;
@@ -49,6 +50,7 @@ import io.druid.server.audit.AuditManagerProvider;
 import io.druid.server.coordinator.DruidCoordinator;
 import io.druid.server.coordinator.DruidCoordinatorConfig;
 import io.druid.server.coordinator.LoadQueueTaskMaster;
+import io.druid.server.http.ClusterInfoResource;
 import io.druid.server.http.CoordinatorDynamicConfigsResource;
 import io.druid.server.http.CoordinatorRedirectInfo;
 import io.druid.server.http.CoordinatorResource;
@@ -92,8 +94,11 @@ public class CliCoordinator extends ServerRunnable
           @Override
           public void configure(Binder binder)
           {
-            binder.bindConstant().annotatedWith(Names.named("serviceName")).to(TieredBrokerConfig.DEFAULT_COORDINATOR_SERVICE_NAME);
+            binder.bindConstant()
+                  .annotatedWith(Names.named("serviceName"))
+                  .to(TieredBrokerConfig.DEFAULT_COORDINATOR_SERVICE_NAME);
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8081);
+            binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig("coordinator"));
 
             ConfigProvider.bind(binder, DruidCoordinatorConfig.class);
 
@@ -138,6 +143,7 @@ public class CliCoordinator extends ServerRunnable
             Jerseys.addResource(binder, DatasourcesResource.class);
             Jerseys.addResource(binder, MetadataResource.class);
             Jerseys.addResource(binder, IntervalsResource.class);
+            Jerseys.addResource(binder, ClusterInfoResource.class);
 
             LifecycleModule.register(binder, Server.class);
             LifecycleModule.register(binder, DatasourcesResource.class);

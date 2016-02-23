@@ -21,6 +21,7 @@ package io.druid.testing.utils;
 
 import com.metamx.common.logger.Logger;
 import io.druid.client.selector.Server;
+import io.druid.curator.discovery.ExternalServerDiscoverySelector;
 import io.druid.curator.discovery.ServerDiscoverySelector;
 
 import java.util.concurrent.Callable;
@@ -30,7 +31,7 @@ public class ServerDiscoveryUtil
 
   private static final Logger LOG = new Logger(ServerDiscoveryUtil.class);
 
-  public static boolean isInstanceReady(ServerDiscoverySelector serviceProvider)
+  public static boolean isInstanceReady(ExternalServerDiscoverySelector serviceProvider)
   {
     try {
       Server instance = serviceProvider.pick();
@@ -46,7 +47,7 @@ public class ServerDiscoveryUtil
     return true;
   }
 
-  public static void waitUntilInstanceReady(final ServerDiscoverySelector serviceProvider, String instanceType)
+  public static void waitUntilInstanceReady(final ExternalServerDiscoverySelector serviceProvider, String instanceType)
   {
     RetryUtil.retryUntilTrue(
         new Callable<Boolean>()

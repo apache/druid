@@ -20,6 +20,7 @@
 package io.druid.curator;
 
 import com.google.inject.Binder;
+import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.metamx.common.lifecycle.Lifecycle;
@@ -28,6 +29,8 @@ import com.metamx.common.logger.Logger;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 
+import io.druid.guice.annotations.External;
+import io.druid.guice.annotations.Internal;
 import org.apache.curator.framework.api.ACLProvider;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory;
@@ -54,15 +57,54 @@ public class CuratorModule implements Module
         binder, "druid.zk.service",
         CuratorConfig.class
     );
+
+    binder.bind(CuratorFramework.class).to(Key.get(CuratorFramework.class, Internal.class));
   }
 
   @Provides
+  @Internal
   @LazySingleton
   public CuratorFramework makeCurator(CuratorConfig config, Lifecycle lifecycle) throws IOException
   {
     final CuratorFramework framework =
         CuratorFrameworkFactory.builder()
                                .connectString(config.getZkHosts())
+                               .sessionTimeoutMs(config.getZkSessionTimeoutMs())
+                               .retryPolicy(new BoundedExponentialBackoffRetry(1000, 45000, 30))
+                               .compressionProvider(new PotentiallyGzippedCompressionProvider(config.getEnableCompression()))
+                               .aclProvider(config.getEnableAcl() ? new SecuredACLProvider() : new DefaultACLProvider())
+                               .build();
+
+    lifecycle.addHandler(
+        new Lifecycle.Handler()
+        {
+          @Override
+          public void start() throws Exception
+          {
+            log.info("Starting Curator");
+            framework.start();
+          }
+
+          @Override
+          public void stop()
+          {
+            log.info("Stopping Curator");
+            framework.close();
+          }
+        }
+    );
+
+    return framework;
+  }
+
+  @Provides
+  @External
+  @LazySingleton
+  public CuratorFramework makeExternalCurator(CuratorConfig config, Lifecycle lifecycle) throws IOException
+  {
+    final CuratorFramework framework =
+        CuratorFrameworkFactory.builder()
+                               .connectString(config.getExternalZkHosts())
                                .sessionTimeoutMs(config.getZkSessionTimeoutMs())
                                .retryPolicy(new BoundedExponentialBackoffRetry(1000, 45000, 30))
                                .compressionProvider(new PotentiallyGzippedCompressionProvider(config.getEnableCompression()))

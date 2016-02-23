@@ -33,6 +33,7 @@ import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.response.FullResponseHandler;
 import com.metamx.http.client.response.FullResponseHolder;
+import io.druid.client.coordinator.Coordinator;
 import io.druid.client.selector.Server;
 import io.druid.concurrent.Execs;
 import io.druid.curator.discovery.ServerDiscoverySelector;
@@ -79,7 +80,7 @@ public class CoordinatorRuleManager
       @Global HttpClient httpClient,
       @Json ObjectMapper jsonMapper,
       Supplier<TieredBrokerConfig> config,
-      ServerDiscoverySelector selector
+      @Coordinator ServerDiscoverySelector selector
   )
   {
     this.httpClient = httpClient;
@@ -206,7 +207,7 @@ public class CoordinatorRuleManager
     Server server = selector.pick();
 
     if (server == null) {
-      log.error("No instances found for [%s]!", config.get().getCoordinatorServiceName());
+      log.error("No instances found for Coordinator!");
       return null;
     }
 

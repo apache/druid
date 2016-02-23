@@ -19,13 +19,20 @@
 
 package io.druid.guice;
 
+import com.google.common.base.Function;
+import com.google.common.base.Throwables;
+import com.google.common.collect.Lists;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import io.druid.client.DruidServerDiscovery;
 import io.druid.client.indexing.IndexingService;
 import io.druid.client.indexing.IndexingServiceSelectorConfig;
 import io.druid.curator.discovery.ServerDiscoveryFactory;
 import io.druid.curator.discovery.ServerDiscoverySelector;
+import io.druid.server.coordination.DruidServerMetadata;
+
+import java.util.List;
 
 /**
  */
@@ -34,17 +41,29 @@ public class IndexingServiceDiscoveryModule implements Module
   @Override
   public void configure(Binder binder)
   {
-    JsonConfigProvider.bind(binder, "druid.selectors.indexing", IndexingServiceSelectorConfig.class);
   }
 
   @Provides
   @IndexingService
-  @ManageLifecycle
   public ServerDiscoverySelector getServiceProvider(
       IndexingServiceSelectorConfig config,
       ServerDiscoveryFactory serverDiscoveryFactory
   )
   {
-    return serverDiscoveryFactory.createSelector(config.getServiceName());
+    return serverDiscoveryFactory.createSelector(new Function<DruidServerDiscovery, List<DruidServerMetadata>>()
+    {
+      @Override
+      public List<DruidServerMetadata> apply(DruidServerDiscovery discovery)
+      {
+        final DruidServerMetadata leader;
+        try {
+          leader = discovery.getLeaderForType("overlord");
+          return leader == null ? null : Lists.newArrayList(leader);
+        }
+        catch (Exception e) {
+          throw Throwables.propagate(e);
+        }
+      }
+    });
   }
 }

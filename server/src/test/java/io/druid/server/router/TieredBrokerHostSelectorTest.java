@@ -20,6 +20,7 @@
 package io.druid.server.router;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.http.client.HttpClient;
@@ -84,13 +85,8 @@ public class TieredBrokerHostSelectorTest
         factory,
         Arrays.asList(new TimeBoundaryTieredBrokerSelectorStrategy(), new PriorityTieredBrokerSelectorStrategy(0, 1))
     );
-    EasyMock.expect(factory.createSelector(EasyMock.<String>anyObject())).andReturn(selector).atLeastOnce();
+    EasyMock.expect(factory.createSelector(EasyMock.<Function>anyObject())).andReturn(selector).atLeastOnce();
     EasyMock.replay(factory);
-
-    selector.start();
-    EasyMock.expectLastCall().atLeastOnce();
-    selector.stop();
-    EasyMock.expectLastCall().atLeastOnce();
     EasyMock.replay(selector);
 
     brokerSelector.start();

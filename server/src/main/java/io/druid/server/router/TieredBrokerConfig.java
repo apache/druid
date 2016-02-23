@@ -52,6 +52,7 @@ public class TieredBrokerConfig
   @NotNull
   private String rulesEndpoint = "/druid/coordinator/v1/rules";
 
+  @Deprecated
   @JsonProperty
   @NotNull
   private String coordinatorServiceName = DEFAULT_COORDINATOR_SERVICE_NAME;
@@ -92,6 +93,7 @@ public class TieredBrokerConfig
     return rulesEndpoint;
   }
 
+  @Deprecated
   public String getCoordinatorServiceName()
   {
     return coordinatorServiceName;
