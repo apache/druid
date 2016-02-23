@@ -47,6 +47,7 @@ public class RealtimeTuningConfig implements TuningConfig
   private static final ShardSpec defaultShardSpec = new NoneShardSpec();
   private static final IndexSpec defaultIndexSpec = new IndexSpec();
   private static final Boolean defaultBuildV9Directly = Boolean.FALSE;
+  private static final Boolean defaultReportParseExceptions = Boolean.FALSE;
 
   // Might make sense for this to be a builder
   public static RealtimeTuningConfig makeDefaultTuningConfig()
@@ -63,7 +64,8 @@ public class RealtimeTuningConfig implements TuningConfig
         defaultIndexSpec,
         defaultBuildV9Directly,
         0,
-        0
+        0,
+        defaultReportParseExceptions
     );
   }
 
@@ -76,9 +78,10 @@ public class RealtimeTuningConfig implements TuningConfig
   private final int maxPendingPersists;
   private final ShardSpec shardSpec;
   private final IndexSpec indexSpec;
-  private final Boolean buildV9Directly;
+  private final boolean buildV9Directly;
   private final int persistThreadPriority;
   private final int mergeThreadPriority;
+  private final boolean reportParseExceptions;
 
   @JsonCreator
   public RealtimeTuningConfig(
@@ -93,7 +96,8 @@ public class RealtimeTuningConfig implements TuningConfig
       @JsonProperty("indexSpec") IndexSpec indexSpec,
       @JsonProperty("buildV9Directly") Boolean buildV9Directly,
       @JsonProperty("persistThreadPriority") int persistThreadPriority,
-      @JsonProperty("mergeThreadPriority") int mergeThreadPriority
+      @JsonProperty("mergeThreadPriority") int mergeThreadPriority,
+      @JsonProperty("reportParseExceptions") Boolean reportParseExceptions
   )
   {
     this.maxRowsInMemory = maxRowsInMemory == null ? defaultMaxRowsInMemory : maxRowsInMemory;
@@ -112,6 +116,9 @@ public class RealtimeTuningConfig implements TuningConfig
     this.buildV9Directly = buildV9Directly == null ? defaultBuildV9Directly : buildV9Directly;
     this.mergeThreadPriority = mergeThreadPriority;
     this.persistThreadPriority = persistThreadPriority;
+    this.reportParseExceptions = reportParseExceptions == null
+                                 ? defaultReportParseExceptions
+                                 : reportParseExceptions;
   }
 
   @JsonProperty
@@ -174,6 +181,7 @@ public class RealtimeTuningConfig implements TuningConfig
     return buildV9Directly;
   }
 
+  @JsonProperty
   public int getPersistThreadPriority()
   {
     return this.persistThreadPriority;
@@ -183,6 +191,12 @@ public class RealtimeTuningConfig implements TuningConfig
   public int getMergeThreadPriority()
   {
     return this.mergeThreadPriority;
+  }
+
+  @JsonProperty
+  public boolean isReportParseExceptions()
+  {
+    return reportParseExceptions;
   }
 
   public RealtimeTuningConfig withVersioningPolicy(VersioningPolicy policy)
@@ -199,7 +213,8 @@ public class RealtimeTuningConfig implements TuningConfig
         indexSpec,
         buildV9Directly,
         persistThreadPriority,
-        mergeThreadPriority
+        mergeThreadPriority,
+        reportParseExceptions
     );
   }
 
@@ -217,7 +232,8 @@ public class RealtimeTuningConfig implements TuningConfig
         indexSpec,
         buildV9Directly,
         persistThreadPriority,
-        mergeThreadPriority
+        mergeThreadPriority,
+        reportParseExceptions
     );
   }
 }
