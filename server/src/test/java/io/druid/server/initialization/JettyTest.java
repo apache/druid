@@ -20,17 +20,36 @@
 package io.druid.server.initialization;
 
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.inject.Binder;
+import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.Module;
+import com.google.inject.multibindings.Multibinder;
 import com.metamx.http.client.Request;
 import com.metamx.http.client.response.InputStreamResponseHandler;
 import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
+import io.druid.guice.GuiceInjectors;
+import io.druid.guice.Jerseys;
+import io.druid.guice.JsonConfigProvider;
+import io.druid.guice.LazySingleton;
+import io.druid.guice.LifecycleModule;
+import io.druid.guice.annotations.Self;
+import io.druid.initialization.Initialization;
+import io.druid.server.DruidNode;
+import io.druid.server.initialization.jetty.JettyServerInitializer;
+import io.druid.server.initialization.jetty.ServletFilterHolder;
 import org.apache.commons.io.IOUtils;
+import org.eclipse.jetty.server.Server;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.junit.Assert;
 import org.junit.Ignore;
 import org.junit.Test;
 
+import javax.servlet.DispatcherType;
+import javax.servlet.Filter;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
@@ -38,6 +57,8 @@ import java.io.StringWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.Charset;
+import java.util.EnumSet;
+import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -46,6 +67,72 @@ import java.util.concurrent.atomic.AtomicLong;
 
 public class JettyTest extends BaseJettyTest
 {
+  @Override
+  protected Injector setupInjector()
+  {
+    return Initialization.makeInjectorWithModules(
+        GuiceInjectors.makeStartupInjector(),
+        ImmutableList.<Module>of(
+            new Module()
+            {
+              @Override
+              public void configure(Binder binder)
+              {
+                JsonConfigProvider.bindInstance(
+                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test", "localhost", null)
+                );
+                binder.bind(JettyServerInitializer.class).to(JettyServerInit.class).in(LazySingleton.class);
+
+                Multibinder<ServletFilterHolder> multibinder = Multibinder.newSetBinder(
+                    binder,
+                    ServletFilterHolder.class
+                );
+
+                multibinder.addBinding().toInstance(
+                    new ServletFilterHolder()
+                    {
+
+                      @Override
+                      public String getPath()
+                      {
+                        return "/*";
+                      }
+
+                      @Override
+                      public Map<String, String> getInitParameters()
+                      {
+                        return null;
+                      }
+
+                      @Override
+                      public Class<? extends Filter> getFilterClass()
+                      {
+                        return DummyAuthFilter.class;
+                      }
+
+                      @Override
+                      public Filter getFilter()
+                      {
+                        return null;
+                      }
+
+                      @Override
+                      public EnumSet<DispatcherType> getDispatcherType()
+                      {
+                        return null;
+                      }
+                    });
+
+                Jerseys.addResource(binder, SlowResource.class);
+                Jerseys.addResource(binder, ExceptionResource.class);
+                Jerseys.addResource(binder, DefaultResource.class);
+                LifecycleModule.register(binder, Server.class);
+              }
+            }
+        )
+    );
+
+  }
 
   @Test
   @Ignore // this test will deadlock if it hits an issue, so ignored by default
