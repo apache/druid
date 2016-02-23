@@ -59,7 +59,7 @@ druid.extensions.loadList=["druid-datasketches"]
   "type"  : "thetaSketchSetOp",
   "name": <output name>,
   "func": <UNION|INTERSECT|NOT>,
-  "fields"  : <the name field value of the thetaSketch aggregators or other thetaSketchSetOp post aggregators to allow arbitrary combination of set operations>,
+  "fields"  : <array of fieldAccess type post aggregators to access the thetaSketch aggregators or thetaSketchSetOp type post aggregators to allow arbitrary combination of set operations>,
   "size": <16384 by default, must be max of size from sketches in fields input>
 }
 ```
