@@ -20,28 +20,17 @@
 package io.druid.server.initialization;
 
 import com.google.common.base.Throwables;
-import com.google.common.collect.ImmutableList;
-import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
-import com.google.inject.Module;
-import com.google.inject.multibindings.Multibinder;
 import com.google.inject.servlet.GuiceFilter;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.http.client.HttpClient;
 import com.metamx.http.client.HttpClientConfig;
 import com.metamx.http.client.HttpClientInit;
-import io.druid.guice.GuiceInjectors;
-import io.druid.guice.Jerseys;
-import io.druid.guice.JsonConfigProvider;
-import io.druid.guice.LazySingleton;
-import io.druid.guice.LifecycleModule;
 import io.druid.guice.annotations.Self;
-import io.druid.initialization.Initialization;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
-import io.druid.server.initialization.jetty.ServletFilterHolder;
 import org.eclipse.jetty.server.Handler;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
@@ -53,7 +42,6 @@ import org.junit.After;
 import org.junit.Before;
 
 import javax.net.ssl.SSLContext;
-import javax.servlet.DispatcherType;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
@@ -72,15 +60,14 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
-import java.util.EnumSet;
-import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-public class BaseJettyTest
+public abstract class BaseJettyTest
 {
   protected Lifecycle lifecycle;
   protected HttpClient client;
+  protected Server server;
   protected int port = -1;
 
   public static void setProperties()
@@ -100,69 +87,11 @@ public class BaseJettyTest
     lifecycle = injector.getInstance(Lifecycle.class);
     lifecycle.start();
     ClientHolder holder = injector.getInstance(ClientHolder.class);
+    server = injector.getInstance(Server.class);
     client = holder.getClient();
   }
 
-  protected Injector setupInjector()
-  {
-    return Initialization.makeInjectorWithModules(
-        GuiceInjectors.makeStartupInjector(), ImmutableList.<Module>of(
-            new Module()
-            {
-              @Override
-              public void configure(Binder binder)
-              {
-                JsonConfigProvider.bindInstance(
-                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test", "localhost", null)
-                );
-                binder.bind(JettyServerInitializer.class).to(JettyServerInit.class).in(LazySingleton.class);
-                
-                Multibinder<ServletFilterHolder> multibinder = Multibinder.newSetBinder(binder, ServletFilterHolder.class);
-                multibinder.addBinding().toInstance(
-                    new ServletFilterHolder()
-                    {
-                      
-                      @Override
-                      public String getPath()
-                      {
-                        return "/*";
-                      }
-                      
-                      @Override
-                      public Map<String, String> getInitParameters()
-                      {
-                        return null;
-                      }
-                      
-                      @Override
-                      public Class<? extends Filter> getFilterClass()
-                      {
-                        return DummyAuthFilter.class;
-                      }
-                      
-                      @Override
-                      public Filter getFilter()
-                      {
-                        return null;
-                      }
-                      
-                      @Override
-                      public EnumSet<DispatcherType> getDispatcherType()
-                      {
-                        // TODO Auto-generated method stub
-                        return null;
-                      }
-                    });
-
-                Jerseys.addResource(binder, SlowResource.class);
-                Jerseys.addResource(binder, ExceptionResource.class);
-                Jerseys.addResource(binder, DefaultResource.class);
-                LifecycleModule.register(binder, Server.class);
-              }
-            }
-        )
-    );
-  }
+  protected abstract Injector setupInjector();
 
   @After
   public void teardown()
@@ -176,9 +105,14 @@ public class BaseJettyTest
 
     ClientHolder()
     {
+      this(1);
+    }
+
+    ClientHolder(int maxClientConnections)
+    {
       try {
         this.client = HttpClientInit.createClient(
-            new HttpClientConfig(1, SSLContext.getDefault(), Duration.ZERO),
+            new HttpClientConfig(maxClientConnections, SSLContext.getDefault(), Duration.ZERO),
             new Lifecycle()
         );
       }
@@ -224,7 +158,7 @@ public class BaseJettyTest
     public Response hello()
     {
       try {
-        TimeUnit.MILLISECONDS.sleep(100 + random.nextInt(2000));
+        TimeUnit.MILLISECONDS.sleep(500 + random.nextInt(1600));
       }
       catch (InterruptedException e) {
         //
@@ -282,7 +216,8 @@ public class BaseJettyTest
     }
   }
 
-  public static class DummyAuthFilter implements Filter {
+  public static class DummyAuthFilter implements Filter
+  {
 
     public static final String AUTH_HDR = "secretUser";
     public static final String SECRET_USER = "bob";
@@ -294,10 +229,10 @@ public class BaseJettyTest
 
     @Override
     public void doFilter(ServletRequest req, ServletResponse resp, FilterChain chain) throws IOException,
-        ServletException
+                                                                                             ServletException
     {
       HttpServletRequest request = (HttpServletRequest) req;
-      if(request.getHeader(AUTH_HDR) == null || request.getHeader(AUTH_HDR).equals(SECRET_USER)) {
+      if (request.getHeader(AUTH_HDR) == null || request.getHeader(AUTH_HDR).equals(SECRET_USER)) {
         chain.doFilter(req, resp);
       } else {
         HttpServletResponse response = (HttpServletResponse) resp;
