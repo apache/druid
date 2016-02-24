@@ -26,6 +26,7 @@ import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.overlord.ImmutableZkWorker;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.worker.Worker;
+import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -42,12 +43,12 @@ public class EqualDistributionWorkerSelectStrategyTest
         ImmutableMap.of(
             "lhost",
             new ImmutableZkWorker(
-                new Worker("lhost", "lhost", 1, "v1"), 0,
+                new Worker("lhost", "lhost", 1, "v1", DateTime.now()), 0,
                 Sets.<String>newHashSet()
             ),
             "localhost",
             new ImmutableZkWorker(
-                new Worker("localhost", "localhost", 1, "v1"), 1,
+                new Worker("localhost", "localhost", 1, "v1", DateTime.now()), 1,
                 Sets.<String>newHashSet()
             )
         ),
@@ -75,12 +76,12 @@ public class EqualDistributionWorkerSelectStrategyTest
         ImmutableMap.of(
                       "lhost",
                       new ImmutableZkWorker(
-                              new Worker("disableHost", "disableHost", 10, DISABLED_VERSION), 2,
+                              new Worker("disableHost", "disableHost", 10, DISABLED_VERSION, DateTime.now()), 2,
                               Sets.<String>newHashSet()
                       ),
                       "localhost",
                       new ImmutableZkWorker(
-                              new Worker("enableHost", "enableHost", 10, "v1"), 5,
+                              new Worker("enableHost", "enableHost", 10, "v1", DateTime.now()), 5,
                               Sets.<String>newHashSet()
                       )
         ),
@@ -108,12 +109,12 @@ public class EqualDistributionWorkerSelectStrategyTest
             ImmutableMap.of(
                     "lhost",
                     new ImmutableZkWorker(
-                            new Worker("disableHost", "disableHost", 10, DISABLED_VERSION), 5,
+                            new Worker("disableHost", "disableHost", 10, DISABLED_VERSION, DateTime.now()), 5,
                             Sets.<String>newHashSet()
                     ),
                     "localhost",
                     new ImmutableZkWorker(
-                            new Worker("enableHost", "enableHost", 10, "v1"), 5,
+                            new Worker("enableHost", "enableHost", 10, "v1", DateTime.now()), 5,
                             Sets.<String>newHashSet()
                     )
             ),
