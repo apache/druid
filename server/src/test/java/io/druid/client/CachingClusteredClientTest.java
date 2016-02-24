@@ -693,6 +693,119 @@ public class CachingClusteredClientTest
   }
 
   @Test
+  public void testTimeseriesZerofillingOnUncoveredIntervals() throws Exception
+  {
+    final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
+        .dataSource(DATA_SOURCE)
+        .intervals(SEG_SPEC)
+        .filters(DIM_FILTER)
+        .granularity(GRANULARITY)
+        .aggregators(AGGS)
+        .postAggregators(POST_AGGS)
+        .context(ImmutableMap.<String, Object>of("skipEmptyBuckets", "false"
+                                                ,"uncoveredIntervalsLimit", 10));
+
+
+    final QueryRunner runner = new FinalizeResultsQueryRunner(
+        client, new TimeseriesQueryQueryToolChest(
+        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        )
+    );
+
+    timeline = new VersionedIntervalTimeline<>(Ordering.natural());
+
+    Map<Interval, Iterable<Result<TimeseriesResultValue>>> mockResults = Maps.newHashMap();
+    mockResults.put(new Interval("2015-01-01/2015-01-03"), makeTimeResults(
+        new DateTime("2015-01-01T00"), 50, 5000,
+        new DateTime("2015-01-02T00"), 30, 6000
+    ));
+    mockResults.put(new Interval("2015-01-06/2015-01-08"), makeTimeResults(
+        new DateTime("2015-01-06T00"), 50, 5000,
+        new DateTime("2015-01-07T00"), 30, 6000
+    ));
+    mockResults.put(new Interval("2015-01-08/2015-01-11"), makeTimeResults(
+        new DateTime("2015-01-08T00"), 50, 5000,
+        new DateTime("2015-01-09T00"), 30, 6000,
+        new DateTime("2015-01-10T00"), 50, 5000
+    ));
+
+    final Iterable<Result<TimeseriesResultValue>> exResults = makeTimeResults(
+        new DateTime("2014-12-29T00"), 0, 0,
+        new DateTime("2014-12-30T00"), 0, 0,
+        new DateTime("2014-12-31T00"), 0, 0,
+        new DateTime("2015-01-01T00"), 50, 5000,
+        new DateTime("2015-01-02T00"), 30, 6000,
+        new DateTime("2015-01-03T00"), 0, 0,
+        new DateTime("2015-01-04T00"), 0, 0,
+        new DateTime("2015-01-05T00"), 0, 0,
+        new DateTime("2015-01-06T00"), 50, 5000,
+        new DateTime("2015-01-07T00"), 30, 6000,
+        new DateTime("2015-01-08T00"), 50, 5000,
+        new DateTime("2015-01-09T00"), 30, 6000,
+        new DateTime("2015-01-10T00"), 50, 5000,
+        new DateTime("2015-01-11T00"), 0, 0,
+        new DateTime("2015-01-12T00"), 0, 0
+    );
+
+    List<Object> mocks = Lists.newArrayList();
+    mocks.add(serverView);
+
+    int i = 0;
+    for (Map.Entry<Interval, Iterable<Result<TimeseriesResultValue>>> entry : mockResults.entrySet()) {
+
+      ServerExpectation<TimeseriesResultValue> expectation = new ServerExpectation(
+          String.format("%s", entry.getKey()),
+          entry.getKey(),
+          makeMock(mocks, DataSegment.class),
+          entry.getValue()
+      );
+
+      DruidServer druidServer = servers[i++];
+      DataSegment dataSegment = makeMock(mocks, DataSegment.class);
+      ServerSelector selector = new ServerSelector(
+          expectation.getSegment(),
+          new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
+      );
+      selector.addServerAndUpdateSegment(new QueryableDruidServer(druidServer, null), selector.getSegment());
+      timeline.add(expectation.getInterval(), "0", new SingleElementPartitionChunk<ServerSelector>(selector));
+
+      QueryRunner queryable = makeMock(mocks, QueryRunner.class);
+      EasyMock.expect(queryable.run(EasyMock.anyObject(Query.class), EasyMock.anyObject(Map.class)))
+        .andReturn(toQueryableTimeseriesResults(
+            true,
+            ImmutableList.<String>of(expectation.getSegmentId()),
+            ImmutableList.<Interval>of(expectation.getInterval()),
+            ImmutableList.<Iterable<Result<TimeseriesResultValue>>>of(expectation.getResults())))
+        .once();
+
+      EasyMock.expect(serverView.getQueryRunner(druidServer))
+        .andReturn(queryable)
+        .once();
+    }
+
+    final TimeseriesQuery query = builder.build();
+    runWithMocks(
+        new Runnable()
+        {
+          @Override
+          public void run()
+          {
+            Map<String, List> context = Maps.newHashMap();
+            Sequence<Result<TimeseriesResultValue>> acResults = runner.run(
+                query.withQuerySegmentSpec(
+                    new MultipleIntervalSegmentSpec(
+                        ImmutableList.of(new Interval("2014-12-29/2015-01-13")))),
+                context);
+            TestHelper.assertExpectedResults(exResults, acResults);
+          }
+        },
+        mocks.toArray()
+    );
+
+
+  }
+
+  @Test
   public void testDisableUseCache() throws Exception
   {
     final Druids.TimeseriesQueryBuilder builder = Druids.newTimeseriesQueryBuilder()
@@ -925,7 +1038,7 @@ public class CachingClusteredClientTest
             new DateTime("2011-01-09"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983,
             new DateTime("2011-01-09T01"), "a", 50, 4985, "b", 50, 4984, "c", 50, 4983
         ),
-        client.mergeCachedAndUncachedSequences(
+        client.mergeResultSequences(
             new TopNQueryBuilder()
                 .dataSource("test")
                 .intervals("2011-01-06/2011-01-10")
@@ -1962,7 +2075,8 @@ public class CachingClusteredClientTest
 
     List<Result<TimeseriesResultValue>> retVal = Lists.newArrayListWithCapacity(objects.length / 3);
     for (int i = 0; i < objects.length; i += 3) {
-      double avg_impr = ((Number) objects[i + 2]).doubleValue() / ((Number) objects[i + 1]).doubleValue();
+      double rows = ((Number) objects[i + 1]).doubleValue();
+      double avg_impr = (rows == 0) ? 0 : ((Number) objects[i + 2]).doubleValue() / rows;
       retVal.add(
           new Result<>(
               (DateTime) objects[i],
@@ -1972,8 +2086,8 @@ public class CachingClusteredClientTest
                               .put("imps", objects[i + 2])
                               .put("impers", objects[i + 2])
                               .put("avg_imps_per_row", avg_impr)
-                              .put("avg_imps_per_row_half", avg_impr / 2)
-                              .put("avg_imps_per_row_double", avg_impr * 2)
+                              .put("avg_imps_per_row_half", avg_impr == 0 ? 0 : avg_impr / 2)
+                              .put("avg_imps_per_row_double", avg_impr == 0 ? 0 : avg_impr * 2)
                               .build()
               )
           )
