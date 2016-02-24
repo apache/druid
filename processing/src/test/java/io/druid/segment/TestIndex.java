@@ -181,10 +181,7 @@ public class TestIndex
         .withQueryGranularity(QueryGranularity.NONE)
         .withMetrics(METRIC_AGGS)
         .build();
-    final IncrementalIndex retVal = new OnheapIncrementalIndex(
-        schema,
-        10000
-    );
+    final IncrementalIndex retVal = new OnheapIncrementalIndex(schema, true, 10000);
 
     final AtomicLong startTime = new AtomicLong();
     int lineCount;

@@ -229,6 +229,7 @@ public class IndexGeneratorJob implements Jobby
 
     OnheapIncrementalIndex newIndex = new OnheapIncrementalIndex(
         indexSchema,
+        !tuningConfig.isIgnoreInvalidRows(),
         tuningConfig.getRowFlushBoundary()
     );
 

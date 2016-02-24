@@ -28,12 +28,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
 import com.metamx.common.guava.CloseQuietly;
-import com.metamx.common.parsers.ParseException;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
-import io.druid.data.input.InputRow;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
@@ -51,6 +49,7 @@ import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeIOConfig;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.FireDepartment;
+import io.druid.segment.realtime.FireDepartmentMetrics;
 import io.druid.segment.realtime.RealtimeMetricsMonitor;
 import io.druid.segment.realtime.SegmentPublisher;
 import io.druid.segment.realtime.firehose.ClippedFirehoseFactory;
@@ -59,6 +58,7 @@ import io.druid.segment.realtime.firehose.TimedShutoffFirehoseFactory;
 import io.druid.segment.realtime.plumber.Committers;
 import io.druid.segment.realtime.plumber.Plumber;
 import io.druid.segment.realtime.plumber.PlumberSchool;
+import io.druid.segment.realtime.plumber.Plumbers;
 import io.druid.segment.realtime.plumber.RealtimePlumberSchool;
 import io.druid.segment.realtime.plumber.VersioningPolicy;
 import io.druid.server.coordination.DataSegmentAnnouncer;
@@ -115,6 +115,9 @@ public class RealtimeIndexTask extends AbstractTask
 
   @JsonIgnore
   private volatile Firehose firehose = null;
+
+  @JsonIgnore
+  private volatile FireDepartmentMetrics metrics = null;
 
   @JsonIgnore
   private volatile boolean gracefullyStopped = false;
@@ -284,6 +287,7 @@ public class RealtimeIndexTask extends AbstractTask
         realtimeIOConfig,
         tuningConfig
     );
+    this.metrics = fireDepartment.getMetrics();
     final RealtimeMetricsMonitor metricsMonitor = new RealtimeMetricsMonitor(
         ImmutableList.of(fireDepartment),
         ImmutableMap.of(
@@ -312,7 +316,7 @@ public class RealtimeIndexTask extends AbstractTask
         toolbox.getObjectMapper()
     );
 
-    this.plumber = plumberSchool.findPlumber(dataSchema, tuningConfig, fireDepartment.getMetrics());
+    this.plumber = plumberSchool.findPlumber(dataSchema, tuningConfig, metrics);
 
     Supplier<Committer> committerSupplier = null;
 
@@ -336,31 +340,13 @@ public class RealtimeIndexTask extends AbstractTask
 
       // Time to read data!
       while (firehose != null && (!gracefullyStopped || firehoseDrainableByClosing) && firehose.hasMore()) {
-        final InputRow inputRow;
-
-        try {
-          inputRow = firehose.nextRow();
-
-          if (inputRow == null) {
-            log.debug("thrown away null input row, considering unparseable");
-            fireDepartment.getMetrics().incrementUnparseable();
-            continue;
-          }
-        }
-        catch (ParseException e) {
-          log.debug(e, "thrown away line due to exception, considering unparseable");
-          fireDepartment.getMetrics().incrementUnparseable();
-          continue;
-        }
-
-        int numRows = plumber.add(inputRow, committerSupplier);
-        if (numRows == -1) {
-          fireDepartment.getMetrics().incrementThrownAway();
-          log.debug("Throwing away event[%s]", inputRow);
-          continue;
-        }
-
-        fireDepartment.getMetrics().incrementProcessed();
+        Plumbers.addNextRow(
+            committerSupplier,
+            firehose,
+            plumber,
+            tuningConfig.isReportParseExceptions(),
+            metrics
+        );
       }
     }
     catch (Throwable e) {
@@ -482,6 +468,15 @@ public class RealtimeIndexTask extends AbstractTask
     return firehose;
   }
 
+  /**
+   * Public for tests.
+   */
+  @JsonIgnore
+  public FireDepartmentMetrics getMetrics()
+  {
+    return metrics;
+  }
+
   @JsonProperty("spec")
   public FireDepartment getRealtimeIngestionSchema()
   {
@@ -491,10 +486,12 @@ public class RealtimeIndexTask extends AbstractTask
   /**
    * Is a firehose from this factory drainable by closing it? If so, we should drain on stopGracefully rather than
    * abruptly stopping.
-   * <p>
+   *
    * This is a hack to get around the fact that the Firehose and FirehoseFactory interfaces do not help us do this.
+   *
+   * Protected for tests.
    */
-  private static boolean isFirehoseDrainableByClosing(FirehoseFactory firehoseFactory)
+  protected boolean isFirehoseDrainableByClosing(FirehoseFactory firehoseFactory)
   {
     return firehoseFactory instanceof EventReceiverFirehoseFactory
            || (firehoseFactory instanceof TimedShutoffFirehoseFactory
