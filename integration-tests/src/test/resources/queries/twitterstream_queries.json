@@ -597,8 +597,6 @@
                         "hasMultipleValues": false,
                         "size": 7773438,
                         "cardinality": 2,
-                        "minValue":"No",
-                        "maxValue":"Yes",
                         "errorMessage": null
                     }
                 },
@@ -615,8 +613,6 @@
                         "hasMultipleValues": false,
                         "size": 7901000,
                         "cardinality": 2,
-                        "minValue":"No",
-                        "maxValue":"Yes",
                         "errorMessage": null
                     }
                 },
@@ -633,8 +629,6 @@
                         "hasMultipleValues": false,
                         "size": 7405654,
                         "cardinality": 2,
-                        "minValue":"No",
-                        "maxValue":"Yes",
                         "errorMessage": null
                     }
                 },

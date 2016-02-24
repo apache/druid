@@ -1048,8 +1048,6 @@
                         "hasMultipleValues": false,
                         "size": 41922148,
                         "cardinality": 208,
-                        "minValue":"",
-                        "maxValue":"mmx._unknown",
                         "errorMessage": null
                     },
                     "language": {
@@ -1057,8 +1055,6 @@
                         "hasMultipleValues": false,
                         "size": 8924222,
                         "cardinality": 36,
-                        "minValue":"ar",
-                        "maxValue":"zh",
                         "errorMessage": null
                     }
                 },
