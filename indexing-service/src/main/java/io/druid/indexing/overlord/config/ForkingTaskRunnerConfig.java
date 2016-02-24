@@ -20,6 +20,7 @@
 package io.druid.indexing.overlord.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import io.druid.guice.IndexingServiceModuleHelper;
 
@@ -32,6 +33,8 @@ public class ForkingTaskRunnerConfig
 {
   public static final String JAVA_OPTS_PROPERTY = IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX
                                                   + ".javaOpts";
+  public static final String JAVA_OPTS_ARRAY_PROPERTY = IndexingServiceModuleHelper.INDEXER_RUNNER_PROPERTY_PREFIX
+                                                  + ".javaOptsArray";
 
   @JsonProperty
   @NotNull
@@ -45,6 +48,10 @@ public class ForkingTaskRunnerConfig
   @JsonProperty
   @NotNull
   private String javaOpts = "";
+
+  @JsonProperty
+  @NotNull
+  private List<String> javaOptsArray = ImmutableList.of();
 
   @JsonProperty
   @NotNull
@@ -70,7 +77,8 @@ public class ForkingTaskRunnerConfig
   @JsonProperty
   private boolean separateIngestionEndpoint = false;
 
-  public boolean isSeparateIngestionEndpoint() {
+  public boolean isSeparateIngestionEndpoint()
+  {
     return separateIngestionEndpoint;
   }
 
@@ -82,6 +90,11 @@ public class ForkingTaskRunnerConfig
   public String getJavaOpts()
   {
     return javaOpts;
+  }
+
+  public List<String> getJavaOptsArray()
+  {
+    return javaOptsArray;
   }
 
   public String getClasspath()
