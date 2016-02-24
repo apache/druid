@@ -269,10 +269,8 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               command.add("-cp");
                               command.add(taskClasspath);
 
-                              Iterables.addAll(
-                                  command,
-                                  new QuotableWhiteSpaceSplitter(config.getJavaOpts(), jsonMapper)
-                              );
+                              Iterables.addAll(command, new QuotableWhiteSpaceSplitter(config.getJavaOpts()));
+                              Iterables.addAll(command, config.getJavaOptsArray());
 
                               // Override task specific javaOpts
                               Object taskJavaOpts = task.getContextValue(
@@ -281,7 +279,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               if (taskJavaOpts != null) {
                                 Iterables.addAll(
                                     command,
-                                    new QuotableWhiteSpaceSplitter((String) taskJavaOpts, jsonMapper)
+                                    new QuotableWhiteSpaceSplitter((String) taskJavaOpts)
                                 );
                               }
 
@@ -289,7 +287,9 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                 for (String allowedPrefix : config.getAllowedPrefixes()) {
                                   // See https://github.com/druid-io/druid/issues/1841
                                   if (propName.startsWith(allowedPrefix)
-                                      && !ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY.equals(propName)) {
+                                      && !ForkingTaskRunnerConfig.JAVA_OPTS_PROPERTY.equals(propName)
+                                      && !ForkingTaskRunnerConfig.JAVA_OPTS_ARRAY_PROPERTY.equals(propName)
+                                      ) {
                                     command.add(
                                         String.format(
                                             "-D%s=%s",
@@ -741,29 +741,15 @@ class QuotableWhiteSpaceSplitter implements Iterable<String>
 {
   private static final Logger LOG = new Logger(QuotableWhiteSpaceSplitter.class);
   private final String string;
-  private final ObjectMapper mapper;
 
-  public QuotableWhiteSpaceSplitter(String string, ObjectMapper jsonMapper)
+  public QuotableWhiteSpaceSplitter(String string)
   {
     this.string = Preconditions.checkNotNull(string);
-    this.mapper = jsonMapper;
   }
 
   @Override
   public Iterator<String> iterator()
   {
-    try (JsonParser parser = mapper.getFactory().createParser(string)) {
-      final JsonToken token = parser.nextToken();
-      if (JsonToken.START_ARRAY.equals(token)) {
-        return mapper.<List<String>>readValue(string, new TypeReference<List<String>>()
-        {
-        }).iterator();
-      }
-    }
-    catch (IOException e) {
-      LOG.debug(e, "Could not parse %s", string);
-    }
-    LOG.debug("Not json, hoping it is a good string : %s", string);
     return Splitter.on(
         new CharMatcher()
         {

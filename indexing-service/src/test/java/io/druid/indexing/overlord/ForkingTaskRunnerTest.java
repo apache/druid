@@ -34,7 +34,6 @@ import java.util.List;
 
 public class ForkingTaskRunnerTest
 {
-  private static final ObjectMapper mapper = new DefaultObjectMapper();
   // This tests the test to make sure the test fails when it should.
   @Test(expected = AssertionError.class)
   public void testPatternMatcherFailureForJavaOptions()
@@ -51,7 +50,7 @@ public class ForkingTaskRunnerTest
   @Test
   public void testPatternMatcherLeavesUnbalancedQuoteJavaOptions()
   {
-    Assert.assertEquals("\"", Iterators.get(new QuotableWhiteSpaceSplitter("\"", mapper).iterator(), 0));
+    Assert.assertEquals("\"", Iterators.get(new QuotableWhiteSpaceSplitter("\"").iterator(), 0));
   }
 
   @Test
@@ -79,7 +78,8 @@ public class ForkingTaskRunnerTest
             "some\"strange looking\"option",
             "andOtherOptions",
             "\"\"",
-            "AndMaybeEmptyQuotes"
+            "AndMaybeEmptyQuotes",
+            "keep me around"
         }
     );
     checkValues(new String[]{"\"completely quoted\""});
@@ -96,7 +96,7 @@ public class ForkingTaskRunnerTest
   @Test
   public void testEmpty()
   {
-    Assert.assertTrue(ImmutableList.copyOf(new QuotableWhiteSpaceSplitter("", mapper)).isEmpty());
+    Assert.assertTrue(ImmutableList.copyOf(new QuotableWhiteSpaceSplitter("")).isEmpty());
   }
 
   @Test
@@ -105,8 +105,7 @@ public class ForkingTaskRunnerTest
     Assert.assertEquals(
         ImmutableList.of("start", "stop"), ImmutableList.copyOf(
             new QuotableWhiteSpaceSplitter(
-                "start\t\t\t\t \n\f\r\n \f\f \n\r\f\n\r\t stop",
-                mapper
+                "start\t\t\t\t \n\f\r\n \f\f \n\r\f\n\r\t stop"
             )
         )
     );
@@ -117,26 +116,16 @@ public class ForkingTaskRunnerTest
   {
     Assert.assertTrue(
         ImmutableList.copyOf(
-            new QuotableWhiteSpaceSplitter(" \t     \t\t\t\t \n\n \f\f \n\f\r\t", mapper)
+            new QuotableWhiteSpaceSplitter(" \t     \t\t\t\t \n\n \f\f \n\f\r\t")
         ).isEmpty()
     );
   }
 
   private static void checkValues(String[] strings)
   {
-
-    try {
-      Assert.assertEquals(
-          ImmutableList.copyOf(strings),
-          ImmutableList.copyOf(new QuotableWhiteSpaceSplitter(mapper.writeValueAsString(Arrays.asList(strings)), mapper))
-      );
-    }
-    catch (JsonProcessingException e) {
-      throw Throwables.propagate(e);
-    }
     Assert.assertEquals(
         ImmutableList.copyOf(strings),
-        ImmutableList.copyOf(new QuotableWhiteSpaceSplitter(Joiner.on(" ").join(strings), mapper))
+        ImmutableList.copyOf(new QuotableWhiteSpaceSplitter(Joiner.on(" ").join(strings)))
     );
   }
 }
