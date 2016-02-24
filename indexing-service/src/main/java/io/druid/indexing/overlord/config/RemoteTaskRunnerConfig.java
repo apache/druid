@@ -72,4 +72,43 @@ public class RemoteTaskRunnerConfig
   {
     return taskShutdownLinkTimeout;
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    RemoteTaskRunnerConfig that = (RemoteTaskRunnerConfig) o;
+
+    if (getMaxZnodeBytes() != that.getMaxZnodeBytes()) {
+      return false;
+    }
+    if (!getTaskAssignmentTimeout().equals(that.getTaskAssignmentTimeout())) {
+      return false;
+    }
+    if (!getTaskCleanupTimeout().equals(that.getTaskCleanupTimeout())) {
+      return false;
+    }
+    if (!getMinWorkerVersion().equals(that.getMinWorkerVersion())) {
+      return false;
+    }
+    return getTaskShutdownLinkTimeout().equals(that.getTaskShutdownLinkTimeout());
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = getTaskAssignmentTimeout().hashCode();
+    result = 31 * result + getTaskCleanupTimeout().hashCode();
+    result = 31 * result + getMinWorkerVersion().hashCode();
+    result = 31 * result + getMaxZnodeBytes();
+    result = 31 * result + getTaskShutdownLinkTimeout().hashCode();
+    return result;
+  }
 }

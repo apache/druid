@@ -142,8 +142,8 @@ public class SimpleResourceManagementStrategyTest
         )
     );
     EasyMock.expect(runner.getWorkers()).andReturn(
-        Collections.<ZkWorker>singletonList(
-            new TestZkWorker(testTask)
+        Collections.singletonList(
+            new TestZkWorker(testTask).getWorker()
         )
     );
     EasyMock.replay(runner);
@@ -178,8 +178,8 @@ public class SimpleResourceManagementStrategyTest
         )
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(
-        Collections.<ZkWorker>singletonList(
-            new TestZkWorker(testTask)
+        Collections.singletonList(
+            new TestZkWorker(testTask).getWorker()
         )
     ).times(2);
     EasyMock.replay(runner);
@@ -235,8 +235,8 @@ public class SimpleResourceManagementStrategyTest
         )
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(
-        Collections.<ZkWorker>singletonList(
-            new TestZkWorker(testTask)
+        Collections.singletonList(
+            new TestZkWorker(testTask).getWorker()
         )
     ).times(2);
     EasyMock.replay(runner);
@@ -286,16 +286,16 @@ public class SimpleResourceManagementStrategyTest
         )
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(
-        Collections.<ZkWorker>singletonList(
-            new TestZkWorker(testTask)
+        Collections.singletonList(
+            new TestZkWorker(testTask).getWorker()
         )
     ).times(2);
-    EasyMock.expect(runner.markWorkersLazy(EasyMock.<Predicate<ZkWorker>>anyObject(), EasyMock.anyInt())).andReturn(
-        Collections.<ZkWorker>singletonList(
-            new TestZkWorker(testTask)
+    EasyMock.expect(runner.markWorkersLazy(EasyMock.<Predicate<Worker>>anyObject(), EasyMock.anyInt())).andReturn(
+        Collections.<Worker>singletonList(
+            new TestZkWorker(testTask).getWorker()
         )
     );
-    EasyMock.expect(runner.getLazyWorkers()).andReturn(Lists.<ZkWorker>newArrayList());
+    EasyMock.expect(runner.getLazyWorkers()).andReturn(Lists.<Worker>newArrayList());
     EasyMock.replay(runner);
 
     boolean terminatedSomething = simpleResourceManagementStrategy.doTerminate(runner);
@@ -328,14 +328,14 @@ public class SimpleResourceManagementStrategyTest
         )
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(
-        Collections.<ZkWorker>singletonList(
-            new TestZkWorker(testTask)
+        Collections.singletonList(
+            new TestZkWorker(testTask).getWorker()
         )
     ).times(2);
-    EasyMock.expect(runner.getLazyWorkers()).andReturn(Lists.<ZkWorker>newArrayList()).times(2);
-    EasyMock.expect(runner.markWorkersLazy(EasyMock.<Predicate<ZkWorker>>anyObject(), EasyMock.anyInt())).andReturn(
-        Collections.<ZkWorker>singletonList(
-            new TestZkWorker(testTask)
+    EasyMock.expect(runner.getLazyWorkers()).andReturn(Lists.<Worker>newArrayList()).times(2);
+    EasyMock.expect(runner.markWorkersLazy(EasyMock.<Predicate<Worker>>anyObject(), EasyMock.anyInt())).andReturn(
+        Collections.singletonList(
+            new TestZkWorker(testTask).getWorker()
         )
     );
     EasyMock.replay(runner);
@@ -377,14 +377,14 @@ public class SimpleResourceManagementStrategyTest
         )
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(
-        Arrays.<ZkWorker>asList(
-            new TestZkWorker(NoopTask.create()),
-            new TestZkWorker(NoopTask.create())
+        Arrays.asList(
+            new TestZkWorker(NoopTask.create()).getWorker(),
+            new TestZkWorker(NoopTask.create()).getWorker()
         )
     ).times(2);
-    EasyMock.expect(runner.getLazyWorkers()).andReturn(Lists.<ZkWorker>newArrayList());
-    EasyMock.expect(runner.markWorkersLazy(EasyMock.<Predicate<ZkWorker>>anyObject(), EasyMock.anyInt())).andReturn(
-        Collections.<ZkWorker>emptyList()
+    EasyMock.expect(runner.getLazyWorkers()).andReturn(Lists.<Worker>newArrayList());
+    EasyMock.expect(runner.markWorkersLazy(EasyMock.<Predicate<Worker>>anyObject(), EasyMock.anyInt())).andReturn(
+        Collections.<Worker>emptyList()
     );
     EasyMock.replay(runner);
 
@@ -422,13 +422,13 @@ public class SimpleResourceManagementStrategyTest
         Collections.<RemoteTaskRunnerWorkItem>emptyList()
     ).times(3);
     EasyMock.expect(runner.getWorkers()).andReturn(
-        Collections.<ZkWorker>singletonList(
-            new TestZkWorker(NoopTask.create(), "h1", "i1", "0")
+        Collections.<Worker>singletonList(
+            new TestZkWorker(NoopTask.create(), "h1", "i1", "0").getWorker()
         )
     ).times(3);
-    EasyMock.expect(runner.getLazyWorkers()).andReturn(Lists.<ZkWorker>newArrayList());
-    EasyMock.expect(runner.markWorkersLazy(EasyMock.<Predicate<ZkWorker>>anyObject(), EasyMock.anyInt())).andReturn(
-        Collections.<ZkWorker>emptyList()
+    EasyMock.expect(runner.getLazyWorkers()).andReturn(Lists.<Worker>newArrayList());
+    EasyMock.expect(runner.markWorkersLazy(EasyMock.<Predicate<Worker>>anyObject(), EasyMock.anyInt())).andReturn(
+        Collections.<Worker>emptyList()
     );
     EasyMock.replay(runner);
 
@@ -486,8 +486,8 @@ public class SimpleResourceManagementStrategyTest
         )
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(
-        Collections.<ZkWorker>singletonList(
-            new TestZkWorker(null)
+        Collections.<Worker>singletonList(
+            new TestZkWorker(null).getWorker()
         )
     ).times(1);
     EasyMock.replay(runner);
@@ -525,7 +525,7 @@ public class SimpleResourceManagementStrategyTest
         String version
     )
     {
-      super(new Worker(host, ip, 3, version), null, new DefaultObjectMapper());
+      super(new Worker(host, ip, 3, version, DateTime.now()), null, new DefaultObjectMapper());
 
       this.testTask = testTask;
     }

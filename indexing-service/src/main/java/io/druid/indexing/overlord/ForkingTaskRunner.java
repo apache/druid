@@ -579,6 +579,12 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
   }
 
   @Override
+  public void start()
+  {
+    // No state setup required
+  }
+
+  @Override
   public Optional<ByteSource> streamTaskLog(final String taskid, final long offset)
   {
     final ProcessHolder processHolder;

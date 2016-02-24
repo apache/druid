@@ -50,7 +50,6 @@ public class ZkWorker implements Closeable
   private final Function<ChildData, TaskAnnouncement> cacheConverter;
 
   private AtomicReference<Worker> worker;
-  private AtomicReference<DateTime> lastCompletedTaskTime = new AtomicReference<DateTime>(new DateTime());
 
   public ZkWorker(Worker worker, PathChildrenCache statusCache, final ObjectMapper jsonMapper)
   {
@@ -129,7 +128,7 @@ public class ZkWorker implements Closeable
   @JsonProperty
   public DateTime getLastCompletedTaskTime()
   {
-    return lastCompletedTaskTime.get();
+    return worker.get().getLastCompletedTaskTime();
   }
 
   public boolean isRunningTask(String taskId)
@@ -139,7 +138,7 @@ public class ZkWorker implements Closeable
 
   public boolean isValidVersion(String minVersion)
   {
-    return worker.get().getVersion().compareTo(minVersion) >= 0;
+    return worker.get().isValidVersion(minVersion);
   }
 
   public void setWorker(Worker newWorker)
@@ -153,7 +152,7 @@ public class ZkWorker implements Closeable
 
   public void setLastCompletedTaskTime(DateTime completedTaskTime)
   {
-    lastCompletedTaskTime.set(completedTaskTime);
+    worker.get().setLastCompletedTaskTime(completedTaskTime);
   }
 
   public ImmutableZkWorker toImmutable()
@@ -172,7 +171,6 @@ public class ZkWorker implements Closeable
   {
     return "ZkWorker{" +
            "worker=" + worker +
-           ", lastCompletedTaskTime=" + lastCompletedTaskTime +
            '}';
   }
 }

@@ -31,6 +31,7 @@ import java.util.List;
 
 /**
  * Interface for handing off tasks. Managed by a {@link io.druid.indexing.overlord.TaskQueue}.
+ * Holds state
  */
 public interface TaskRunner
 {
@@ -75,4 +76,9 @@ public interface TaskRunner
    * @return ScalingStats if the runner has an underlying resource which can scale, Optional.absent() otherwise
    */
   Optional<ScalingStats> getScalingStats();
+
+  /**
+   * Start the state of the runner
+   */
+  void start();
 }
