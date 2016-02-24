@@ -36,9 +36,8 @@ import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Interval;
 
 import java.net.URL;
-import java.net.URLEncoder;
-import java.util.Map;
 import java.util.ArrayList;
+import java.util.Map;
 
 public class CoordinatorResourceTestClient
 {
@@ -143,7 +142,7 @@ public class CoordinatorResourceTestClient
       makeRequest(
           HttpMethod.DELETE,
           String.format(
-              "%sdatasources/%s/intervals/%s?kill=true",
+              "%sdatasources/%s/intervals/%s",
               getCoordinatorURL(),
               dataSource, interval.toString().replace("/", "_")
           )
