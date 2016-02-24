@@ -20,7 +20,6 @@
 package io.druid.segment.incremental;
 
 import com.google.common.base.Function;
-import com.google.common.base.Strings;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -130,7 +129,8 @@ public class IncrementalIndexAdapter implements IndexableAdapter
 
         final MutableBitmap[] bitmapIndexes = indexer.invertedIndexes;
 
-        for (int dimIdx : dims[dimIndex]) {
+        for (Comparable dimIdxComparable : dims[dimIndex]) {
+          Integer dimIdx = (Integer) dimIdxComparable;
           if (bitmapIndexes[dimIdx] == null) {
             bitmapIndexes[dimIdx] = bitmapFactory.makeEmptyMutableBitmap();
           }
@@ -198,14 +198,16 @@ public class IncrementalIndexAdapter implements IndexableAdapter
       @Override
       public String get(int index)
       {
-        return dimLookup.getValue(index);
+        Comparable val = dimLookup.getValueFromSortedId(index);
+        String strVal = val != null ? val.toString() : null;
+        return strVal;
       }
 
       @Override
       public int indexOf(String value)
       {
         int id = dimDim.getId(value);
-        return id < 0 ? -1 : dimLookup.idToIndex(id);
+        return id < 0 ? -1 : dimLookup.getSortedIdFromUnsortedId(id);
       }
 
       @Override
@@ -225,9 +227,9 @@ public class IncrementalIndexAdapter implements IndexableAdapter
       public Iterator<Rowboat> iterator()
       {
         final List<IncrementalIndex.DimensionDesc> dimensions = index.getDimensions();
-        final IncrementalIndex.SortedDimLookup[] dimLookups = new IncrementalIndex.SortedDimLookup[dimensions.size()];
+        final IncrementalIndex.SortedDimLookup[] sortedDimLookups = new IncrementalIndex.SortedDimLookup[dimensions.size()];
         for (IncrementalIndex.DimensionDesc dimension : dimensions) {
-          dimLookups[dimension.getIndex()] = indexers.get(dimension.getName()).getDimLookup();
+          sortedDimLookups[dimension.getIndex()] = indexers.get(dimension.getName()).getDimLookup();
         }
 
         /*
@@ -263,7 +265,9 @@ public class IncrementalIndexAdapter implements IndexableAdapter
                   }
 
                   for (int i = 0; i < dimValues[dimIndex].length; ++i) {
-                    dims[dimIndex][i] = dimLookups[dimIndex].idToIndex(dimValues[dimIndex][i]);
+                    dims[dimIndex][i] = sortedDimLookups[dimIndex].getSortedIdFromUnsortedId(dimValues[dimIndex][i]);
+                    //TODO: in later PR, Rowboat will use Comparable[][] instead of int[][]
+                    // Can remove dictionary encoding for numeric dims then.
                   }
                 }
 
@@ -294,7 +298,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     }
 
     IncrementalIndex.SortedDimLookup dimLookup = accessor.getDimLookup();
-    final int id = dimLookup.indexToId(index);
+    final int id = dimLookup.getUnsortedIdFromSortedId(index);
     if (id < 0 || id >= dimLookup.size()) {
       return EmptyIndexedInts.EMPTY_INDEXED_INTS;
     }
@@ -326,8 +330,16 @@ public class IncrementalIndexAdapter implements IndexableAdapter
       return true;
     }
     for (int dimIndex : dimIndices) {
-      if (Strings.isNullOrEmpty(dimDim.getValue(dimIndex))) {
+      Comparable val = dimDim.getValue(dimIndex);
+
+      if (val == null) {
         return true;
+      }
+
+      if (val instanceof String) {
+        if (((String) val).length() == 0) {
+          return true;
+        }
       }
     }
     return false;
