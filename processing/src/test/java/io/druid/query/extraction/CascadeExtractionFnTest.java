@@ -47,7 +47,7 @@ public class CascadeExtractionFnTest {
   private final JavaScriptExtractionFn javascriptExtractionFn = new JavaScriptExtractionFn(function, true);
   private final SubstringDimExtractionFn substringDimExtractionFn = new SubstringDimExtractionFn(0, 7);
   private final String regexDimExtractionFnJson = "{ \"type\" : \"regex\", \"expr\" : \"/([^/]+)/\" , " +
-      "\"replaceMissingValues\": false, \"replaceMissingValuesWith\": null}";
+      "\"replaceMissingValue\": false, \"replaceMissingValueWith\": null}";
   private final String javascriptExtractionFnJson =
       "{ \"type\" : \"javascript\", \"function\" : \"function(str) { return \\\"the \\\".concat(str) }\" }";
   private final String substringDimExtractionFnJson = "{ \"type\" : \"substring\", \"index\" : 0, \"length\" : 7 }";
