@@ -51,17 +51,17 @@ If there is no match, it returns the dimension value as is.
 ```json
 {
   "type" : "regex", "expr" : <regular_expression>,
-  "replaceMissingValues" : true,
-  "replaceMissingValuesWith" : "foobar"
+  "replaceMissingValue" : true,
+  "replaceMissingValueWith" : "foobar"
 }
 ```
 
 For example, using `"expr" : "(\\w\\w\\w).*"` will transform
 `'Monday'`, `'Tuesday'`, `'Wednesday'` into `'Mon'`, `'Tue'`, `'Wed'`.
 
-If the `replaceMissingValues` property is true, the extraction function will transform dimension values that do not match the regex pattern to a user-specified String. Default value is `false`.
+If the `replaceMissingValue` property is true, the extraction function will transform dimension values that do not match the regex pattern to a user-specified String. Default value is `false`.
 
-The `replaceMissingValuesWith` property sets the String that unmatched dimension values will be replaced with, if `replaceMissingValues` is true. If `replaceMissingValuesWith` is not specified, unmatched dimension values will be replaced with nulls.
+The `replaceMissingValueWith` property sets the String that unmatched dimension values will be replaced with, if `replaceMissingValue` is true. If `replaceMissingValueWith` is not specified, unmatched dimension values will be replaced with nulls.
 
 For example, if `expr` is `"(a\w+)"` in the example JSON above, a regex that matches words starting with the letter `a`, the extraction function will convert a dimension value like `banana` to `foobar`.
 
@@ -323,8 +323,8 @@ Example for chaining [regular expression extraction function](#regular-expressio
     { 
       "type" : "regex", 
       "expr" : "/([^/]+)/", 
-      "replaceMissingValues": false, 
-      "replaceMissingValuesWith": null
+      "replaceMissingValue": false,
+      "replaceMissingValueWith": null
     },
     { 
       "type" : "javascript", 
@@ -409,7 +409,7 @@ The first kind is passed at the query time like `map` implementation.
   "type":"lookup",
   "dimension":"dimensionName",
   "outputName":"dimensionOutputName",
-  "replaceMissingValuesWith":"missing_value",
+  "replaceMissingValueWith":"missing_value",
   "retainMissingValue":false,
   "lookup":{"type": "map", "map":{"key":"value"}, "isOneToOne":false}
 }

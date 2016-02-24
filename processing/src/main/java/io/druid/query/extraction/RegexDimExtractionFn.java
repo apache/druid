@@ -37,34 +37,34 @@ public class RegexDimExtractionFn extends DimExtractionFn
 
   private final String expr;
   private final Pattern pattern;
-  private final boolean replaceMissingValues;
-  private final String replaceMissingValuesWith;
+  private final boolean replaceMissingValue;
+  private final String replaceMissingValueWith;
 
   @JsonCreator
   public RegexDimExtractionFn(
       @JsonProperty("expr") String expr,
-      @JsonProperty("replaceMissingValues") Boolean replaceMissingValues,
-      @JsonProperty("replaceMissingValuesWith") String replaceMissingValuesWith
+      @JsonProperty("replaceMissingValue") Boolean replaceMissingValue,
+      @JsonProperty("replaceMissingValueWith") String replaceMissingValueWith
   )
   {
     Preconditions.checkNotNull(expr, "expr must not be null");
 
     this.expr = expr;
     this.pattern = Pattern.compile(expr);
-    this.replaceMissingValues = replaceMissingValues == null ? false : replaceMissingValues;
-    this.replaceMissingValuesWith = replaceMissingValuesWith;
+    this.replaceMissingValue = replaceMissingValue == null ? false : replaceMissingValue;
+    this.replaceMissingValueWith = replaceMissingValueWith;
   }
 
   @Override
   public byte[] getCacheKey()
   {
     byte[] exprBytes = StringUtils.toUtf8(expr);
-    byte[] replaceBytes = replaceMissingValues ? new byte[]{1} : new byte[]{0};
+    byte[] replaceBytes = replaceMissingValue ? new byte[]{1} : new byte[]{0};
     byte[] replaceStrBytes;
-    if (replaceMissingValuesWith == null) {
+    if (replaceMissingValueWith == null) {
       replaceStrBytes = new byte[]{};
     } else {
-      replaceStrBytes = StringUtils.toUtf8(replaceMissingValuesWith);
+      replaceStrBytes = StringUtils.toUtf8(replaceMissingValueWith);
     }
 
     int totalLen = 1
@@ -94,7 +94,7 @@ public class RegexDimExtractionFn extends DimExtractionFn
     if (matcher.find()) {
       retVal = matcher.group(1);
     } else {
-      retVal = replaceMissingValues ? replaceMissingValuesWith : dimValue;
+      retVal = replaceMissingValue ? replaceMissingValueWith : dimValue;
     }
     return Strings.emptyToNull(retVal);
   }
@@ -105,16 +105,16 @@ public class RegexDimExtractionFn extends DimExtractionFn
     return expr;
   }
 
-  @JsonProperty("replaceMissingValues")
-  public boolean isReplaceMissingValues()
+  @JsonProperty("replaceMissingValue")
+  public boolean isReplaceMissingValue()
   {
-    return replaceMissingValues;
+    return replaceMissingValue;
   }
 
-  @JsonProperty("replaceMissingValuesWith")
-  public String getReplaceMissingValuesWith()
+  @JsonProperty("replaceMissingValueWith")
+  public String getReplaceMissingValueWith()
   {
-    return replaceMissingValuesWith;
+    return replaceMissingValueWith;
   }
 
   @Override
