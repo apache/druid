@@ -25,6 +25,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.metamx.common.Pair;
+import com.metamx.common.logger.Logger;
 import io.druid.common.utils.JodaUtils;
 import io.druid.query.extraction.namespace.ExtractionNamespaceFunctionFactory;
 import io.druid.query.extraction.namespace.JDBCExtractionNamespace;
@@ -51,6 +52,7 @@ import java.util.concurrent.ConcurrentMap;
 public class JDBCExtractionNamespaceFunctionFactory
     implements ExtractionNamespaceFunctionFactory<JDBCExtractionNamespace>
 {
+  private static final Logger LOG = new Logger(JDBCExtractionNamespaceFunctionFactory.class);
   private final ConcurrentMap<String, DBI> dbiCache = new ConcurrentHashMap<>();
 
   @Override
@@ -121,6 +123,7 @@ public class JDBCExtractionNamespaceFunctionFactory
         final String valueColumn = namespace.getValueColumn();
         final String keyColumn = namespace.getKeyColumn();
 
+        LOG.debug("Updating [%s]", namespace.getNamespace());
         final List<Pair<String, String>> pairs = dbi.withHandle(
             new HandleCallback<List<Pair<String, String>>>()
             {
@@ -158,6 +161,7 @@ public class JDBCExtractionNamespaceFunctionFactory
         for (Pair<String, String> pair : pairs) {
           cache.put(pair.lhs, pair.rhs);
         }
+        LOG.info("Finished loading %d values for namespace[%s]", cache.size(), namespace.getNamespace());
         return String.format("%d", System.currentTimeMillis());
       }
     };
