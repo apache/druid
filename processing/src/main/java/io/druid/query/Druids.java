@@ -244,29 +244,38 @@ public class Druids
   public static class SelectorDimFilterBuilder
   {
     private String dimension;
+    private String operation;
     private String value;
 
     public SelectorDimFilterBuilder()
     {
       dimension = "";
+      operation = "";
       value = "";
     }
 
     public SelectorDimFilter build()
     {
-      return new SelectorDimFilter(dimension, value);
+      return new SelectorDimFilter(dimension, value, operation);
     }
 
     public SelectorDimFilterBuilder copy(SelectorDimFilterBuilder builder)
     {
       return new SelectorDimFilterBuilder()
           .dimension(builder.dimension)
+          .operation(builder.operation)
           .value(builder.value);
     }
 
     public SelectorDimFilterBuilder dimension(String d)
     {
       dimension = d;
+      return this;
+    }
+
+    public SelectorDimFilterBuilder operation(String op)
+    {
+      operation = op;
       return this;
     }
 

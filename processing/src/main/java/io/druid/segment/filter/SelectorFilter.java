@@ -19,15 +19,19 @@
 
 package io.druid.segment.filter;
 
+import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import io.druid.query.dimension.DefaultDimensionSpec;
+import io.druid.query.filter.BinaryOperator;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 
 /**
@@ -36,26 +40,66 @@ public class SelectorFilter implements Filter
 {
   private final String dimension;
   private final String value;
+  private final BinaryOperator operator;
 
   public SelectorFilter(
       String dimension,
-      String value
+      String value,
+      String operator
   )
   {
     this.dimension = dimension;
     this.value = value;
+    this.operator = BinaryOperator.get(operator);
+  }
+
+  public SelectorFilter(String dimension, String value)
+  {
+    this(dimension, value, null);
   }
 
   @Override
   public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector)
   {
-    return selector.getBitmapIndex(dimension, value);
+    final BitmapFactory factory = selector.getBitmapFactory();
+    final Indexed<String> values = selector.getDimensionValues(dimension);
+    switch (operator) {
+      case GT:
+      case GTE: {
+        int index = values.indexOf(value);
+        int start = index < 0 ? -index - 1 : operator == BinaryOperator.GT ? index + 1: index;
+        ImmutableBitmap bitmap = factory.makeEmptyImmutableBitmap();
+        for (int cursor = start; cursor < values.size(); cursor++) {
+          bitmap = bitmap.union(selector.getBitmapIndex(dimension, values.get(cursor)));
+        }
+        return bitmap;
+      }
+      case LT:
+      case LTE: {
+        int index = values.indexOf(value);
+        int limit = index < 0 ? -index - 2 : operator == BinaryOperator.LT ? index - 1: index;
+        ImmutableBitmap bitmap = factory.makeEmptyImmutableBitmap();
+        for (int cursor = 0; cursor <= limit; cursor++) {
+          bitmap = bitmap.union(selector.getBitmapIndex(dimension, values.get(cursor)));
+        }
+        return bitmap;
+      }
+      case EQ:
+        return selector.getBitmapIndex(dimension, value);
+      case NE:
+        return factory.complement(selector.getBitmapIndex(dimension, value), selector.getNumRows());
+    }
+    throw new IllegalArgumentException("Not supported operator " + operator);
   }
 
   @Override
   public ValueMatcher makeMatcher(ValueMatcherFactory factory)
   {
-    return factory.makeValueMatcher(dimension, value);
+    if (operator == BinaryOperator.EQ || operator == BinaryOperator.NE) {
+      final ValueMatcher matcher = factory.makeValueMatcher(dimension, value);
+      return operator == BinaryOperator.EQ ? matcher : new RevertedMatcher(matcher);
+    }
+    return factory.makeValueMatcher(dimension, operator.toPredicate(value));
   }
 
   @Override
@@ -65,28 +109,64 @@ public class SelectorFilter implements Filter
         new DefaultDimensionSpec(dimension, dimension)
     );
 
-    // Missing columns match a null or empty string value and don't match anything else
-    if (dimensionSelector == null) {
-      return new BooleanValueMatcher(Strings.isNullOrEmpty(value));
-    } else {
-      final int valueId = dimensionSelector.lookupId(value);
-      return new ValueMatcher()
-      {
-        @Override
-        public boolean matches()
-        {
-          final IndexedInts row = dimensionSelector.getRow();
-          final int size = row.size();
-          for (int i = 0; i < size; ++i) {
-            if (row.get(i) == valueId) {
-              return true;
-            }
-          }
-          return false;
-        }
-      };
+    if (operator == BinaryOperator.EQ || operator == BinaryOperator.NE) {
+      final ValueMatcher matcher = toValueMatcher(dimensionSelector);
+      return operator == BinaryOperator.EQ ? matcher : new RevertedMatcher(matcher);
     }
+
+    final Predicate<String> predicate = operator.toPredicate(value);
+    return new ValueMatcher()
+    {
+      @Override
+      public boolean matches()
+      {
+        final IndexedInts row = dimensionSelector.getRow();
+        final int size = row.size();
+        for (int i = 0; i < size; ++i) {
+          if (predicate.apply(dimensionSelector.lookupName(row.get(i)))) {
+            return true;
+          }
+        }
+        return false;
+      }
+    };
   }
 
+  private ValueMatcher toValueMatcher(final DimensionSelector dimensionSelector)
+  {
+    if (dimensionSelector == null) {
+      // Missing columns match a null or empty string value and don't match anything else
+      return new BooleanValueMatcher(Strings.isNullOrEmpty(value));
+    }
+    final int valueId = dimensionSelector.lookupId(value);
+    return new ValueMatcher()
+    {
+      @Override
+      public boolean matches()
+      {
+        final IndexedInts row = dimensionSelector.getRow();
+        final int size = row.size();
+        for (int i = 0; i < size; ++i) {
+          if (row.get(i) == valueId) {
+            return true;
+          }
+        }
+        return false;
+      }
+    };
+  }
 
+  // for NE
+  private static class RevertedMatcher implements ValueMatcher
+  {
+    private final ValueMatcher matcher;
+
+    private RevertedMatcher(ValueMatcher matcher) {this.matcher = matcher;}
+
+    @Override
+    public boolean matches()
+    {
+      return !matcher.matches();
+    }
+  }
 }

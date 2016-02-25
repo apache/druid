@@ -11,10 +11,12 @@ The simplest filter is a selector filter. The selector filter will match a speci
 The grammar for a SELECTOR filter is as follows:
 
 ``` json
-"filter": { "type": "selector", "dimension": <dimension_string>, "value": <dimension_value_string> }
+"filter": { "type": "selector", "dimension": <dimension_string>, "value": <dimension_value_string>, "operator": <operator> }
 ```
 
-This is the equivalent of `WHERE <dimension_string> = '<dimension_value_string>'`.
+When `operator` is not specified it will be translated to `EQUAL` operator.
+`operator` can be one of `GT`, `GreaterThan`, `>=`, `GTE`, `GreaterThanOrEqualTo`, `>`, `LT`, `LessThan`, `<`, `LTE`, `LessThanOrEqualTo`, `<=`, `EQ`, `Equals`, `==`, `NE`, `NotEquals`, `!=`, `<>`. Except `EQUAL` and `NOT_EQUAL` operator, null or empty value cannot be used.
+This is the equivalent of `WHERE <dimension_string> <operator> '<dimension_value_string>'`.
 
 ### Regular expression filter
 

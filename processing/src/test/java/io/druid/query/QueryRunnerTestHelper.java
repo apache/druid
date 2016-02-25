@@ -314,9 +314,9 @@ public class QueryRunnerTestHelper
     final QueryableIndex mMappedTestIndex = TestIndex.getMMappedTestIndex();
     final QueryableIndex mergedRealtimeIndex = TestIndex.mergedRealtimeIndex();
     return ImmutableList.of(
-        makeQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId)),
-        makeQueryRunner(factory, new QueryableIndexSegment(segmentId, mMappedTestIndex)),
-        makeQueryRunner(factory, new QueryableIndexSegment(segmentId, mergedRealtimeIndex))
+        makeQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId), "incremental"),
+        makeQueryRunner(factory, new QueryableIndexSegment(segmentId, mMappedTestIndex), "mmapped"),
+        makeQueryRunner(factory, new QueryableIndexSegment(segmentId, mergedRealtimeIndex), "merged")
     );
   }
 
@@ -398,15 +398,32 @@ public class QueryRunnerTestHelper
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, QueryType> factory,
       Segment adapter
+  ) {
+    return makeQueryRunner(factory, adapter, null);
+  }
+
+  public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
+      QueryRunnerFactory<T, QueryType> factory,
+      Segment adapter,
+      String name
   )
   {
-    return makeQueryRunner(factory, segmentId, adapter);
+    return makeQueryRunner(factory, segmentId, adapter, name);
   }
 
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, QueryType> factory,
       String segmentId,
-      Segment adapter
+      final Segment adapter
+  ) {
+    return makeQueryRunner(factory, segmentId, adapter, null);
+  }
+
+  public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
+      QueryRunnerFactory<T, QueryType> factory,
+      String segmentId,
+      final Segment adapter,
+      final String name
   )
   {
     return new FinalizeResultsQueryRunner<T>(
@@ -415,7 +432,12 @@ public class QueryRunnerTestHelper
             factory.createRunner(adapter)
         ),
         (QueryToolChest<T, Query<T>>)factory.getToolchest()
-    );
+    ) {
+      @Override
+      public String toString() {
+        return name != null ? name : super.toString();
+      }
+    };
   }
 
   public static <T> QueryRunner<T> makeUnionQueryRunner(

@@ -59,7 +59,7 @@ public class ArrayIndexed<T> implements Indexed<T>
   @Override
   public int indexOf(T value)
   {
-    return Arrays.asList(baseArray).indexOf(value);
+    return Arrays.binarySearch(baseArray, value);
   }
 
   @Override
