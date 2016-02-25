@@ -37,7 +37,7 @@ import java.io.File;
  */
 public class RealtimeTuningConfig implements TuningConfig
 {
-  private static final int defaultMaxRowsInMemory = 500000;
+  private static final int defaultMaxRowsInMemory = 75000;
   private static final Period defaultIntermediatePersistPeriod = new Period("PT10M");
   private static final Period defaultWindowPeriod = new Period("PT10M");
   private static final File defaultBasePersistDirectory = Files.createTempDir();
