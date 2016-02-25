@@ -403,4 +403,17 @@ public class DatasourcesResourceTest
     EasyMock.verify(indexingServiceClient, server);
   }
 
+  @Test
+  public void testDeleteDataSource() {
+    IndexingServiceClient indexingServiceClient = EasyMock.createStrictMock(IndexingServiceClient.class);
+    EasyMock.replay(indexingServiceClient, server);
+    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, indexingServiceClient);
+    Response response = datasourcesResource.deleteDataSource("datasource", "true", "???");
+    Assert.assertEquals(400, response.getStatus());
+    Assert.assertNotNull(response.getEntity());
+    Assert.assertTrue(response.getEntity().toString().contains("java.lang.IllegalArgumentException"));
+
+    EasyMock.verify(indexingServiceClient, server);
+  }
+
 }
