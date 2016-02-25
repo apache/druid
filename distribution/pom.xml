@@ -46,6 +46,7 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <executions>
                     <execution>
+                        <id>pull-deps</id>
                         <phase>package</phase>
                         <goals>
                             <goal>exec</goal>
@@ -97,6 +98,23 @@
                             </arguments>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>mysql-tarball</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>tar</executable>
+                            <arguments>
+                                <argument>-C</argument>
+                                <argument>${project.build.directory}/extensions</argument>
+                                <argument>-czvf</argument>
+                                <argument>${project.build.directory}/mysql-metadata-storage-${project.parent.version}.tar.gz</argument>
+                                <argument>mysql-metadata-storage</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
             <plugin>
@@ -115,21 +133,6 @@
                             <descriptors>
                                 <descriptor>src/assembly/assembly.xml</descriptor>
                             </descriptors>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>mysql-distro-assembly</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                        <configuration>
-                            <finalName>mysql-metadata-storage</finalName>
-                            <tarLongFileMode>posix</tarLongFileMode>
-                            <descriptors>
-                                <descriptor>src/assembly/mysql_assembly.xml</descriptor>
-                            </descriptors>
-                            <attach>false</attach>
                         </configuration>
                     </execution>
                 </executions>
