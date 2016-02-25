@@ -20,6 +20,7 @@
 package io.druid.indexing.overlord.autoscaling;
 
 import com.amazonaws.services.ec2.AmazonEC2Client;
+import com.amazonaws.services.ec2.model.CreateTagsRequest;
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
 import com.amazonaws.services.ec2.model.DescribeInstancesResult;
 import com.amazonaws.services.ec2.model.Filter;
@@ -27,6 +28,7 @@ import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.RunInstancesRequest;
 import com.amazonaws.services.ec2.model.RunInstancesResult;
+import com.amazonaws.services.ec2.model.Tag;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.google.common.base.Functions;
 import com.google.common.collect.ContiguousSet;
@@ -47,7 +49,9 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  */
@@ -55,9 +59,24 @@ public class EC2AutoScalerTest
 {
   private static final String AMI_ID = "dummy";
   private static final String INSTANCE_ID = "theInstance";
+  private static final Map<String, String> TAGS = new HashMap<>();
+  static
+  {
+    TAGS.put("role", "production");
+  }
   public static final EC2EnvironmentConfig ENV_CONFIG = new EC2EnvironmentConfig(
       "us-east-1a",
-      new EC2NodeData(AMI_ID, INSTANCE_ID, 1, 1, Lists.<String>newArrayList(), "foo", "mySubnet", null, null),
+      new EC2NodeData(
+          AMI_ID,
+          INSTANCE_ID,
+          1,
+          1,
+          Lists.<String>newArrayList(),
+          "foo",
+          "mySubnet",
+          null,
+          null,
+          TAGS),
       new GalaxyEC2UserData(new DefaultObjectMapper(), "env", "version", "type")
   );
   private static final String IP = "dummyIP";
@@ -96,6 +115,10 @@ public class EC2AutoScalerTest
   public void testScale()
   {
     RunInstancesResult runInstancesResult = EasyMock.createMock(RunInstancesResult.class);
+    CreateTagsRequest createTagsRequest = new CreateTagsRequest(
+        Collections.singletonList("theInstance"),
+        Collections.singletonList(new Tag("role", "production"))
+    );
 
     EC2AutoScaler autoScaler = new EC2AutoScaler(
         0,
@@ -108,6 +131,8 @@ public class EC2AutoScalerTest
     EasyMock.expect(amazonEC2Client.runInstances(EasyMock.anyObject(RunInstancesRequest.class))).andReturn(
         runInstancesResult
     );
+    amazonEC2Client.createTags(createTagsRequest);
+    EasyMock.expectLastCall().once();
     EasyMock.expect(amazonEC2Client.describeInstances(EasyMock.anyObject(DescribeInstancesRequest.class)))
             .andReturn(describeInstancesResult);
     EasyMock.expect(amazonEC2Client.terminateInstances(EasyMock.anyObject(TerminateInstancesRequest.class)))

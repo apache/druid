@@ -31,6 +31,9 @@ import io.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class EC2AutoScalerSerdeTest
 {
   final String json = "{\n"
@@ -44,7 +47,11 @@ public class EC2AutoScalerSerdeTest
                       + "         \"minInstances\" : 1,\n"
                       + "         \"securityGroupIds\" : [\"kingsguard\"],\n"
                       + "         \"subnetId\" : \"redkeep\",\n"
-                      + "         \"iamProfile\" : {\"name\": \"foo\", \"arn\": \"bar\"}\n"
+                      + "         \"iamProfile\" : {\"name\": \"foo\", \"arn\": \"bar\"},\n"
+                      + "         \"tags\" : {\n"
+                      + "           \"name\": \"joffrey\",\n"
+                      + "           \"role\": \"production\"\n"
+                      + "         }\n"
                       + "      },\n"
                       + "      \"userData\" : {\n"
                       + "         \"data\" : \"VERSION=:VERSION:\\n\","
@@ -82,6 +89,12 @@ public class EC2AutoScalerSerdeTest
         EC2AutoScaler.class
     );
     verifyAutoScaler(roundTripAutoScaler);
+    Map<String, String> expectedTags = new HashMap<>();
+    expectedTags.put("name", "joffrey");
+    expectedTags.put("role", "production");
+    Assert.assertEquals(
+        true,
+        expectedTags.equals(autoScaler.getEnvConfig().getNodeData().getTags()));
 
     Assert.assertEquals("Round trip equals", autoScaler, roundTripAutoScaler);
   }

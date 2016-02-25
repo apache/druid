@@ -33,9 +33,17 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 
 public class WorkerBehaviorConfigTest
 {
+  private static final Map<String, String> TAGS = new HashMap<>();
+  static
+  {
+    TAGS.put("role", "production");
+  }
+  
   @Test
   public void testSerde() throws Exception
   {
@@ -59,7 +67,8 @@ public class WorkerBehaviorConfigTest
                     "keyNames",
                     "subnetId",
                     null,
-                    null
+                    null,
+                    TAGS
                 ),
                 new StringEC2UserData(
                     "availZone",

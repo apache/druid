@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  */
@@ -37,6 +38,7 @@ public class EC2NodeData
   private final String subnetId;
   private final EC2IamProfileData iamProfile;
   private final Boolean associatePublicIpAddress;
+  private final Map<String, String> tags;
 
   @JsonCreator
   public EC2NodeData(
@@ -48,7 +50,8 @@ public class EC2NodeData
       @JsonProperty("keyName") String keyName,
       @JsonProperty("subnetId") String subnetId,
       @JsonProperty("iamProfile") EC2IamProfileData iamProfile,
-      @JsonProperty("associatePublicIpAddress") Boolean associatePublicIpAddress
+      @JsonProperty("associatePublicIpAddress") Boolean associatePublicIpAddress,
+      @JsonProperty("tags") Map<String, String> tags
   )
   {
     this.amiId = amiId;
@@ -60,6 +63,7 @@ public class EC2NodeData
     this.subnetId = subnetId;
     this.iamProfile = iamProfile;
     this.associatePublicIpAddress = associatePublicIpAddress;
+    this.tags = tags;
   }
 
   @JsonProperty
@@ -116,6 +120,12 @@ public class EC2NodeData
     return associatePublicIpAddress;
   }
 
+  @JsonProperty
+  public Map<String, String> getTags()
+  {
+    return tags;
+  }
+
   @Override
   public String toString()
   {
@@ -127,7 +137,8 @@ public class EC2NodeData
            ", securityGroupIds=" + securityGroupIds +
            ", keyName='" + keyName + '\'' +
            ", subnetId='" + subnetId + '\'' +
-           ", iamProfile=" + iamProfile +
+           ", iamProfile='" + iamProfile + '\'' +
+           ", tags=" + tags +
            '}';
   }
 
@@ -167,6 +178,9 @@ public class EC2NodeData
     if (subnetId != null ? !subnetId.equals(that.subnetId) : that.subnetId != null) {
       return false;
     }
+    if (tags != null ? !tags.equals(that.tags) : that.tags != null) {
+      return false;
+    }
 
     return true;
   }
@@ -182,6 +196,7 @@ public class EC2NodeData
     result = 31 * result + (keyName != null ? keyName.hashCode() : 0);
     result = 31 * result + (subnetId != null ? subnetId.hashCode() : 0);
     result = 31 * result + (iamProfile != null ? iamProfile.hashCode() : 0);
+    result = 31 * result + (tags != null ? tags.hashCode() : 0);
     return result;
   }
 }

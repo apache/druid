@@ -147,6 +147,10 @@ A sample worker config spec is shown below:
         "iamProfile": {
           "name": "${IAM_PROFILE_NAME}",
           "arn": "${IAM_PROFILE_INSTANCE_PROFILE_ARN}"
+        },
+        "tags": {
+          "key1": "value1",
+          "key2": "value2"
         }
       },
       "userData": {
