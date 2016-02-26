@@ -64,8 +64,7 @@ public class PullDependencies implements Runnable
   private static final Logger log = new Logger(PullDependencies.class);
 
   private static final Set<String> exclusions = Sets.newHashSet(
-      "io.druid",
-      "com.metamx.druid",
+      /*
 
       // It is possible that extensions will pull down a lot of jars that are either
       // duplicates OR conflict with druid jars. In that case, there are two problems that arise
@@ -94,6 +93,14 @@ public class PullDependencies implements Runnable
       // Different tasks which are classloader sensitive attempt to maintain a sane order for loading libraries in the
       // classloader, but it is always possible that something didn't load in the right order. Also we don't want to be
       // throwing around a ton of jars we don't need to.
+      //
+      // Here is a list of dependencies extensions should probably exclude.
+      //
+      // Conflicts can be discovered using the following command on the distribution tarball:
+      //    `find lib -iname *.jar | cut -d / -f 2 | sed -e 's/-[0-9]\.[0-9]/@/' | cut -f 1 -d @ | sort | uniq | xargs -I {} find extensions -name "*{}*.jar" | sort`
+
+      "io.druid",
+      "com.metamx.druid",
       "asm",
       "org.ow2.asm",
       "org.jboss.netty",
@@ -123,6 +130,7 @@ public class PullDependencies implements Runnable
       "com.fasterxml.jackson.datatype",
       "org.roaringbitmap",
       "net.java.dev.jets3t"
+      */
   );
 
   private TeslaAether aether;
@@ -294,6 +302,19 @@ public class PullDependencies implements Runnable
               @Override
               public boolean accept(DependencyNode node, List<DependencyNode> parents)
               {
+                String scope = node.getDependency().getScope();
+                if(scope != null) {
+                  scope = scope.toLowerCase();
+                  if(scope.equals("provided")) {
+                    return false;
+                  }
+                  if(scope.equals("test")) {
+                    return false;
+                  }
+                  if(scope.equals("system")) {
+                    return false;
+                  }
+                }
                 if (accept(node.getArtifact())) {
                   return false;
                 }
