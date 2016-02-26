@@ -20,6 +20,7 @@
 package io.druid.indexing.worker;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.task.RealtimeIndexTask;
@@ -77,7 +78,7 @@ public class TaskAnnouncementTest
         null
     );
     final TaskStatus status = TaskStatus.running(task.getId());
-    final TaskAnnouncement announcement = TaskAnnouncement.create(task, status);
+    final TaskAnnouncement announcement = TaskAnnouncement.create(task, status, TaskLocation.unknown());
 
     final String statusJson = jsonMapper.writeValueAsString(status);
     final String announcementJson = jsonMapper.writeValueAsString(announcement);

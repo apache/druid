@@ -28,6 +28,7 @@ import io.druid.indexing.overlord.autoscaling.ScalingStats;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.concurrent.Executor;
 
 /**
  * Interface for handing off tasks. Managed by a {@link io.druid.indexing.overlord.TaskQueue}.
@@ -39,7 +40,21 @@ public interface TaskRunner
    * Some task runners can restart previously-running tasks after being bounced. This method does that, and returns
    * the list of tasks (and status futures).
    */
-  public List<Pair<Task, ListenableFuture<TaskStatus>>> restore();
+  List<Pair<Task, ListenableFuture<TaskStatus>>> restore();
+
+  /**
+   * Register a listener with this task runner. On registration, the listener will get events corresponding to the
+   * current state of known tasks.
+   *
+   * Listener notifications are submitted to the executor in the order they occur, but it is up to the executor
+   * to decide when to actually run the notifications. If your listeners will not block, feel free to use a
+   * same-thread executor. Listeners that may block should use a separate executor, generally a single-threaded
+   * one with a fifo queue so the order of notifications is retained.
+   *
+   * @param listener the listener
+   * @param executor executor to run callbacks in
+   */
+  void registerListener(TaskRunnerListener listener, Executor executor);
 
   /**
    * Run a task. The returned status should be some kind of completed status.
