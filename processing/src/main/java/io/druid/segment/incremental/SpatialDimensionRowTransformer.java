@@ -126,7 +126,8 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
       @Override
       public Object getRaw(String dimension)
       {
-        return row.getRaw(dimension);
+        List<String> retVal = spatialLookup.get(dimension);
+        return (retVal == null) ? row.getRaw(dimension) : retVal;
       }
 
       @Override
