@@ -20,6 +20,7 @@ package io.druid.storage.hdfs.tasklog;
 
 import com.google.common.base.Optional;
 import com.google.common.io.ByteSource;
+import com.google.common.io.ByteStreams;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import io.druid.tasklogs.TaskLogs;
@@ -27,12 +28,13 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 
 /**
  * Indexer hdfs task logs, to support storing hdfs tasks to hdfs.
@@ -57,8 +59,13 @@ public class HdfsTaskLogs implements TaskLogs
     final Path path = getTaskLogFileFromId(taskId);
     log.info("Writing task log to: %s", path);
     final FileSystem fs = path.getFileSystem(hadoopConfig);
-    FileUtil.copy(logFile, fs, path, false, hadoopConfig);
-    log.info("Wrote task log to: %s", path);
+    try (
+        final InputStream in = new FileInputStream(logFile);
+        final OutputStream out = fs.create(path, true)
+    ) {
+      ByteStreams.copy(in, out);
+      log.info("Wrote task log to: %s", path);
+    }
   }
 
   @Override
