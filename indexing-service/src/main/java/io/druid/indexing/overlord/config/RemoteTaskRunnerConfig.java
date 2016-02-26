@@ -48,6 +48,10 @@ public class RemoteTaskRunnerConfig
   @JsonProperty
   private Period taskShutdownLinkTimeout = new Period("PT1M");
 
+  @JsonProperty
+  @Min(1)
+  private int pendingTasksRunnerNumThreads = 3;
+
   public Period getTaskAssignmentTimeout()
   {
     return taskAssignmentTimeout;
@@ -73,6 +77,12 @@ public class RemoteTaskRunnerConfig
     return taskShutdownLinkTimeout;
   }
 
+
+  public int getPendingTasksRunnerNumThreads()
+  {
+    return pendingTasksRunnerNumThreads;
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -85,30 +95,47 @@ public class RemoteTaskRunnerConfig
 
     RemoteTaskRunnerConfig that = (RemoteTaskRunnerConfig) o;
 
-    if (getMaxZnodeBytes() != that.getMaxZnodeBytes()) {
+    if (maxZnodeBytes != that.maxZnodeBytes) {
       return false;
     }
-    if (!getTaskAssignmentTimeout().equals(that.getTaskAssignmentTimeout())) {
+    if (pendingTasksRunnerNumThreads != that.pendingTasksRunnerNumThreads) {
       return false;
     }
-    if (!getTaskCleanupTimeout().equals(that.getTaskCleanupTimeout())) {
+    if (!taskAssignmentTimeout.equals(that.taskAssignmentTimeout)) {
       return false;
     }
-    if (!getMinWorkerVersion().equals(that.getMinWorkerVersion())) {
+    if (!taskCleanupTimeout.equals(that.taskCleanupTimeout)) {
       return false;
     }
-    return getTaskShutdownLinkTimeout().equals(that.getTaskShutdownLinkTimeout());
+    if (!minWorkerVersion.equals(that.minWorkerVersion)) {
+      return false;
+    }
+    return taskShutdownLinkTimeout.equals(that.taskShutdownLinkTimeout);
 
   }
 
   @Override
   public int hashCode()
   {
-    int result = getTaskAssignmentTimeout().hashCode();
-    result = 31 * result + getTaskCleanupTimeout().hashCode();
-    result = 31 * result + getMinWorkerVersion().hashCode();
-    result = 31 * result + getMaxZnodeBytes();
-    result = 31 * result + getTaskShutdownLinkTimeout().hashCode();
+    int result = taskAssignmentTimeout.hashCode();
+    result = 31 * result + taskCleanupTimeout.hashCode();
+    result = 31 * result + minWorkerVersion.hashCode();
+    result = 31 * result + maxZnodeBytes;
+    result = 31 * result + taskShutdownLinkTimeout.hashCode();
+    result = 31 * result + pendingTasksRunnerNumThreads;
     return result;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "RemoteTaskRunnerConfig{" +
+           "taskAssignmentTimeout=" + taskAssignmentTimeout +
+           ", taskCleanupTimeout=" + taskCleanupTimeout +
+           ", minWorkerVersion='" + minWorkerVersion + '\'' +
+           ", maxZnodeBytes=" + maxZnodeBytes +
+           ", taskShutdownLinkTimeout=" + taskShutdownLinkTimeout +
+           ", pendingTasksRunnerNumThreads=" + pendingTasksRunnerNumThreads +
+           '}';
   }
 }
