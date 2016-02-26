@@ -17,16 +17,49 @@
  * under the License.
  */
 
-package io.druid.query.filter;
+package io.druid.firehose.cloudfiles;
 
-import com.google.common.base.Predicate;
-import com.metamx.collections.spatial.search.Bound;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-/**
- */
-public interface ValueMatcherFactory
+import javax.validation.constraints.NotNull;
+
+public class CloudFilesBlob
 {
-  public ValueMatcher makeValueMatcher(String dimension, Comparable value);
-  public ValueMatcher makeValueMatcher(String dimension, Predicate value);
-  public ValueMatcher makeValueMatcher(String dimension, Bound bound);
+	@JsonProperty
+	@NotNull
+	private String container = null;
+
+	@JsonProperty
+	@NotNull
+	private String path = null;
+
+	@JsonProperty
+	@NotNull
+	private String region = null;
+
+	public CloudFilesBlob()
+	{
+	}
+
+	public CloudFilesBlob(String container, String path, String region)
+	{
+		this.container = container;
+		this.path = path;
+		this.region = region;
+	}
+
+	public String getContainer()
+	{
+		return container;
+	}
+
+	public String getPath()
+	{
+		return path;
+	}
+
+	public String getRegion()
+	{
+		return region;
+	}
 }

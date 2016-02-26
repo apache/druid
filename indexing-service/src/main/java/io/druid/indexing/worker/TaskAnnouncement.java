@@ -22,6 +22,7 @@ package io.druid.indexing.worker;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
@@ -33,16 +34,17 @@ public class TaskAnnouncement
 {
   private final TaskStatus taskStatus;
   private final TaskResource taskResource;
+  private final TaskLocation taskLocation;
 
-  public static TaskAnnouncement create(Task task, TaskStatus status)
+  public static TaskAnnouncement create(Task task, TaskStatus status, TaskLocation location)
   {
-    return create(task.getId(), task.getTaskResource(), status);
+    return create(task.getId(), task.getTaskResource(), status, location);
   }
 
-  public static TaskAnnouncement create(String taskId, TaskResource resource, TaskStatus status)
+  public static TaskAnnouncement create(String taskId, TaskResource resource, TaskStatus status, TaskLocation location)
   {
     Preconditions.checkArgument(status.getId().equals(taskId), "task id == status id");
-    return new TaskAnnouncement(null, null, status, resource);
+    return new TaskAnnouncement(null, null, status, resource, location);
   }
 
   @JsonCreator
@@ -50,7 +52,8 @@ public class TaskAnnouncement
       @JsonProperty("id") String taskId,
       @JsonProperty("status") TaskStatus.Status status,
       @JsonProperty("taskStatus") TaskStatus taskStatus,
-      @JsonProperty("taskResource") TaskResource taskResource
+      @JsonProperty("taskResource") TaskResource taskResource,
+      @JsonProperty("taskLocation") TaskLocation taskLocation
   )
   {
     if (taskStatus != null) {
@@ -60,6 +63,7 @@ public class TaskAnnouncement
       this.taskStatus = TaskStatus.fromCode(taskId, status);
     }
     this.taskResource = taskResource == null ? new TaskResource(this.taskStatus.getId(), 1) : taskResource;
+    this.taskLocation = taskLocation == null ? TaskLocation.unknown() : taskLocation;
   }
 
   // Can be removed when backwards compat is no longer needed
@@ -88,5 +92,11 @@ public class TaskAnnouncement
   public TaskResource getTaskResource()
   {
     return taskResource;
+  }
+
+  @JsonProperty("taskLocation")
+  public TaskLocation getTaskLocation()
+  {
+    return taskLocation;
   }
 }

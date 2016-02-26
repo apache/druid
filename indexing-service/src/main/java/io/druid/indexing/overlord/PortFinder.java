@@ -95,7 +95,8 @@ public class PortFinder
 
   private int chooseNext(int start)
   {
-    for (int i = start; i < Integer.MAX_VALUE; i++) {
+    // up to unsigned short max (65535)
+    for (int i = start; i <= 0xFFFF; i++) {
       if (!usedPorts.contains(i)) {
         return i;
       }

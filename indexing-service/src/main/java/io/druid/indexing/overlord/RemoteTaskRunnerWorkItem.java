@@ -20,6 +20,7 @@
 package io.druid.indexing.overlord;
 
 import com.google.common.util.concurrent.SettableFuture;
+import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.worker.Worker;
 import org.joda.time.DateTime;
@@ -30,34 +31,39 @@ public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
 {
   private final SettableFuture<TaskStatus> result;
   private final Worker worker;
+  private TaskLocation location;
 
   public RemoteTaskRunnerWorkItem(
       String taskId,
-      Worker worker
+      Worker worker,
+      TaskLocation location
   )
   {
-    this(taskId, SettableFuture.<TaskStatus>create(), worker);
+    this(taskId, SettableFuture.<TaskStatus>create(), worker, location);
   }
 
   public RemoteTaskRunnerWorkItem(
       String taskId,
       DateTime createdTime,
       DateTime queueInsertionTime,
-      Worker worker
+      Worker worker,
+      TaskLocation location
   )
   {
-    this(taskId, SettableFuture.<TaskStatus>create(), createdTime, queueInsertionTime, worker);
+    this(taskId, SettableFuture.<TaskStatus>create(), createdTime, queueInsertionTime, worker, location);
   }
 
   private RemoteTaskRunnerWorkItem(
       String taskId,
       SettableFuture<TaskStatus> result,
-      Worker worker
+      Worker worker,
+      TaskLocation location
   )
   {
     super(taskId, result);
     this.result = result;
     this.worker = worker;
+    this.location = location == null ? TaskLocation.unknown() : location;
   }
 
   private RemoteTaskRunnerWorkItem(
@@ -65,12 +71,25 @@ public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
       SettableFuture<TaskStatus> result,
       DateTime createdTime,
       DateTime queueInsertionTime,
-      Worker worker
+      Worker worker,
+      TaskLocation location
   )
   {
     super(taskId, result, createdTime, queueInsertionTime);
     this.result = result;
     this.worker = worker;
+    this.location = location == null ? TaskLocation.unknown() : location;
+  }
+
+  public void setLocation(TaskLocation location)
+  {
+    this.location = location;
+  }
+
+  @Override
+  public TaskLocation getLocation()
+  {
+    return location;
   }
 
   public Worker getWorker()
@@ -83,14 +102,20 @@ public class RemoteTaskRunnerWorkItem extends TaskRunnerWorkItem
     result.set(status);
   }
 
-  @Override
   public RemoteTaskRunnerWorkItem withQueueInsertionTime(DateTime time)
   {
-    return new RemoteTaskRunnerWorkItem(getTaskId(), result, getCreatedTime(), time, worker);
+    return new RemoteTaskRunnerWorkItem(getTaskId(), result, getCreatedTime(), time, worker, location);
   }
 
-  public RemoteTaskRunnerWorkItem withWorker(Worker theWorker)
+  public RemoteTaskRunnerWorkItem withWorker(Worker theWorker, TaskLocation location)
   {
-    return new RemoteTaskRunnerWorkItem(getTaskId(), result, getCreatedTime(), getQueueInsertionTime(), theWorker);
+    return new RemoteTaskRunnerWorkItem(
+        getTaskId(),
+        result,
+        getCreatedTime(),
+        getQueueInsertionTime(),
+        theWorker,
+        location
+    );
   }
 }

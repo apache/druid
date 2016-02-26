@@ -28,8 +28,9 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceEventBuilder;
 import io.druid.common.guava.DSuppliers;
 import io.druid.concurrent.Execs;
+import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
-import io.druid.indexing.common.TestMergeTask;
+import io.druid.indexing.common.TestTasks;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.RemoteTaskRunner;
@@ -39,12 +40,8 @@ import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.segment.IndexSpec;
-import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
-import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -72,28 +69,7 @@ public class SimpleResourceManagementStrategyTest
   public void setUp() throws Exception
   {
     autoScaler = EasyMock.createMock(AutoScaler.class);
-
-    final IndexSpec indexSpec = new IndexSpec();
-
-    testTask = new TestMergeTask(
-        "task1",
-        "dummyDs",
-        Lists.newArrayList(
-            new DataSegment(
-                "dummyDs",
-                new Interval("2012-01-01/2012-01-02"),
-                new DateTime().toString(),
-                null,
-                null,
-                null,
-                null,
-                0,
-                0
-            )
-        ),
-        Lists.<AggregatorFactory>newArrayList(),
-        indexSpec
-    );
+    testTask = TestTasks.immediateSuccess("task1");
 
     final SimpleResourceManagementConfig simpleResourceManagementConfig = new SimpleResourceManagementConfig()
         .setWorkerIdleTimeout(new Period(0))
@@ -138,7 +114,7 @@ public class SimpleResourceManagementStrategyTest
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     EasyMock.expect(runner.getPendingTasks()).andReturn(
         Collections.singletonList(
-            new RemoteTaskRunnerWorkItem(testTask.getId(), null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
         )
     );
     EasyMock.expect(runner.getWorkers()).andReturn(
@@ -174,7 +150,7 @@ public class SimpleResourceManagementStrategyTest
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     EasyMock.expect(runner.getPendingTasks()).andReturn(
         Collections.singletonList(
-            new RemoteTaskRunnerWorkItem(testTask.getId(), null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
         )
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(
@@ -231,7 +207,7 @@ public class SimpleResourceManagementStrategyTest
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     EasyMock.expect(runner.getPendingTasks()).andReturn(
         Collections.singletonList(
-            new RemoteTaskRunnerWorkItem(testTask.getId(), null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
         )
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(
@@ -282,7 +258,7 @@ public class SimpleResourceManagementStrategyTest
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     EasyMock.expect(runner.getPendingTasks()).andReturn(
         Collections.singletonList(
-            new RemoteTaskRunnerWorkItem(testTask.getId(), null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
         )
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(
@@ -324,7 +300,7 @@ public class SimpleResourceManagementStrategyTest
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     EasyMock.expect(runner.getPendingTasks()).andReturn(
         Collections.singletonList(
-            new RemoteTaskRunnerWorkItem(testTask.getId(), null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
         )
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(
@@ -373,7 +349,7 @@ public class SimpleResourceManagementStrategyTest
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     EasyMock.expect(runner.getPendingTasks()).andReturn(
         Collections.singletonList(
-            new RemoteTaskRunnerWorkItem(testTask.getId(), null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
         )
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(
@@ -482,7 +458,7 @@ public class SimpleResourceManagementStrategyTest
     RemoteTaskRunner runner = EasyMock.createMock(RemoteTaskRunner.class);
     EasyMock.expect(runner.getPendingTasks()).andReturn(
         Collections.singletonList(
-            new RemoteTaskRunnerWorkItem(testTask.getId(), null).withQueueInsertionTime(new DateTime())
+            new RemoteTaskRunnerWorkItem(testTask.getId(), null, null).withQueueInsertionTime(new DateTime())
         )
     ).times(2);
     EasyMock.expect(runner.getWorkers()).andReturn(
@@ -536,7 +512,14 @@ public class SimpleResourceManagementStrategyTest
       if (testTask == null) {
         return Maps.newHashMap();
       }
-      return ImmutableMap.of(testTask.getId(), TaskAnnouncement.create(testTask, TaskStatus.running(testTask.getId())));
+      return ImmutableMap.of(
+          testTask.getId(),
+          TaskAnnouncement.create(
+              testTask,
+              TaskStatus.running(testTask.getId()),
+              TaskLocation.unknown()
+          )
+      );
     }
   }
 }

@@ -17,16 +17,20 @@
  * under the License.
  */
 
-package io.druid.query.filter;
+package io.druid.indexing.overlord;
 
-import com.google.common.base.Predicate;
-import com.metamx.collections.spatial.search.Bound;
+import io.druid.indexing.common.TaskLocation;
+
+import java.util.concurrent.Executor;
 
 /**
+ * Listener to be registered with {@link TaskRunner#registerListener(TaskRunnerListener, Executor)}.
  */
-public interface ValueMatcherFactory
+public interface TaskRunnerListener
 {
-  public ValueMatcher makeValueMatcher(String dimension, Comparable value);
-  public ValueMatcher makeValueMatcher(String dimension, Predicate value);
-  public ValueMatcher makeValueMatcher(String dimension, Bound bound);
+  /**
+   * Called when the location of a task has changed. The task may not actually be done starting up when
+   * this notification arrives, so it may not be listening at this location yet.
+   */
+  void locationChanged(String taskId, TaskLocation newLocation);
 }

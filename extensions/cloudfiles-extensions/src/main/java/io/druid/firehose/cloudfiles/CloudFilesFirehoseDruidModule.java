@@ -17,16 +17,33 @@
  * under the License.
  */
 
-package io.druid.query.filter;
+package io.druid.firehose.cloudfiles;
 
-import com.google.common.base.Predicate;
-import com.metamx.collections.spatial.search.Bound;
+import java.util.List;
 
-/**
- */
-public interface ValueMatcherFactory
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.jsontype.NamedType;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.collect.ImmutableList;
+import com.google.inject.Binder;
+
+import io.druid.initialization.DruidModule;
+
+public class CloudFilesFirehoseDruidModule implements DruidModule
 {
-  public ValueMatcher makeValueMatcher(String dimension, Comparable value);
-  public ValueMatcher makeValueMatcher(String dimension, Predicate value);
-  public ValueMatcher makeValueMatcher(String dimension, Bound bound);
+
+	@Override
+	public List<? extends Module> getJacksonModules()
+	{
+		return ImmutableList.of(
+		    new SimpleModule().registerSubtypes(
+		        new NamedType(StaticCloudFilesFirehoseFactory.class, "static-cloudfiles")));
+	}
+
+	@Override
+	public void configure(Binder arg0)
+	{
+
+	}
+
 }
