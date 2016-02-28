@@ -203,8 +203,8 @@ Example for the `__time` dimension:
 ### Lookup Extraction Function
 
 Lookups are a concept in Druid where dimension values are (optionally) replaced with new values. 
-For more documentation on using lookups, please see [here](../querying/lookups.html). 
-Explicit lookups allow you to specify a set of keys and values to use when performing the extraction.
+A lookup can be of type `namespace` or `map`. A `map` lookup is passed as part of the query. 
+A `namespace` lookup, usually to big to be passed as a part of the query, is populated on all the nodes which handle queries as per [lookups](../querying/lookups.html)
 
 ```json
 {
@@ -254,9 +254,6 @@ Explicit lookups allow you to specify a set of keys and values to use when perfo
   "injective":false
 }
 ```
-
-A lookup can be of type `namespace` or `map`. A `map` lookup is passed as part of the query. 
-A `namespace` lookup is populated on all the nodes which handle queries as per [lookups](../querying/lookups.html)
 
 A property of `retainMissingValue` and `replaceMissingValueWith` can be specified at query time to hint how to handle missing values. Setting `replaceMissingValueWith` to `""` has the same effect as setting it to `null` or omitting the property. Setting `retainMissingValue` to true will use the dimension's original value if it is not found in the lookup. The default values are `replaceMissingValueWith = null` and `retainMissingValue = false` which causes missing values to be treated as missing.
  
