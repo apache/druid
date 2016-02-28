@@ -15,7 +15,11 @@ The following JSON fields can be used in a query to operate on dimension values.
 Returns dimension values as is and optionally renames the dimension.
 
 ```json
-{ "type" : "default", "dimension" : <dimension>, "outputName": <output_name> }
+{ 
+  "type" : "default",
+  "dimension" : <dimension>, 
+  "outputName": <output_name> 
+}
 ```
 
 ### Extraction DimensionSpec
@@ -119,7 +123,8 @@ For a regular dimension, it assumes the string is formatted in
 { "type" : "timeFormat",
   "format" : <output_format>,
   "timeZone" : <time_zone> (optional),
-  "locale" : <locale> (optional) }
+  "locale" : <locale> (optional) 
+}
 ```
 
 For example, the following dimension spec returns the day of the week for Montréal in French:
@@ -153,7 +158,8 @@ Time formats are described in the
 ```json
 { "type" : "time",
   "timeFormat" : <input_format>,
-  "resultFormat" : <output_format> }
+  "resultFormat" : <output_format> 
+}
 ```
 
 
@@ -194,7 +200,7 @@ Example for the `__time` dimension:
 }
 ```
 
-### Lookup extraction function
+### Lookup Extraction Function
 
 Lookups are a concept in Druid where dimension values are (optionally) replaced with new values. 
 For more documentation on using lookups, please see [here](../querying/lookups.html). 
@@ -228,7 +234,10 @@ Explicit lookups allow you to specify a set of keys and values to use when perfo
 ```json
 {
   "type":"lookup",
-  "lookup":{"type":"namespace","namespace":"some_lookup"},
+  "lookup":{
+    "type":"namespace",
+    "namespace":"some_lookup"
+  },
   "replaceMissingValueWith":"Unknown",
   "injective":false
 }
@@ -237,7 +246,10 @@ Explicit lookups allow you to specify a set of keys and values to use when perfo
 ```json
 {
   "type":"lookup",
-  "lookup":{"type":"namespace","namespace":"some_lookup"},
+  "lookup":{
+    "type":"namespace",
+    "namespace":"some_lookup"
+  },
   "retainMissingValue":true,
   "injective":false
 }

@@ -14,7 +14,7 @@ So if you wanted to rename `appid-12345` to `Super Mega Awesome App` then the ke
 would be `Super Mega Awesome App`. 
 
 It is worth noting that lookups support use cases where keys map to unique values (injective) such as a country code and 
-a country name, and also supports use cases where multiple IDs map to the same value, e.g. multiple app-ids belonging to 
+a country name, and also support use cases where multiple IDs map to the same value, e.g. multiple app-ids belonging to 
 a single account manager.
 
 Lookups do not have history. They always use the current data. This means that if the chief account manager for a 
@@ -27,9 +27,9 @@ and such data belongs in the raw denormalized data for use in Druid.
 Very small lookups (count of keys on the order of a few dozen to a few hundred) can be passed at query time as a "map" 
 lookup as per [dimension specs](../querying/dimensionspecs.html).
 
-Namespaced lookups are appropriate for lookups which are not possible to pass at query time due to their size, 
+Namespace lookups are appropriate for lookups which are not possible to pass at query time due to their size, 
 or are not desired to be passed at query time because the data is to reside in and be handled by the Druid servers. 
-Namespaced lookups can be specified as part of the runtime properties file. The property is a list of the namespaces 
+Namespace lookups can be specified as part of the runtime properties file. The property is a list of the namespaces 
 described as per the sections on this page. For example:
 
  ```json
@@ -65,7 +65,7 @@ described as per the sections on this page. For example:
    ]
  ```
 
-Proper functionality of Namespaced lookups requires the following extension to be loaded on the broker, peon, and historical nodes: 
+Proper functionality of Namespace lookups requires the following extension to be loaded on the broker, peon, and historical nodes: 
 `druid-namespace-lookup`
 
 ## Cache Settings
@@ -83,7 +83,7 @@ is the Kafka namespace lookup, defined below.
 
 ## URI namespace update
 
-The remapping values for each namespaced lookup can be specified by json as per
+The remapping values for each Namespace lookup can be specified by json as per
 
 ```json
 {
@@ -215,7 +215,7 @@ The `simpleJson` lookupParseSpec does not take any parameters. It is simply a li
 }
 ```
 
-## JDBC namespaced lookup
+## JDBC Namespace lookup
 
 The JDBC lookups will poll a database to populate its local cache. If the `tsColumn` is set it must be able to accept comparisons in the format `'2015-01-01 00:00:00'`. For example, the following must be valid sql for the table `SELECT * FROM some_lookup_table WHERE timestamp_column >  '2015-01-01 00:00:00'`. If `tsColumn` is set, the caching service will attempt to only poll values that were written *after* the last sync. If `tsColumn` is not set, the entire table is pulled every time.
 
@@ -247,7 +247,7 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
 }
 ```
 
-# Kafka namespaced lookup
+# Kafka Namespace lookup
 
 If you need updates to populate as promptly as possible, it is possible to plug into a kafka topic whose key is the old value and message is the desired new value (both in UTF-8). This requires the following extension: "io.druid.extensions:kafka-extraction-namespace"
 
