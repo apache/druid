@@ -19,6 +19,7 @@
 
 package io.druid.indexing.overlord.autoscaling;
 
+import com.amazonaws.services.ec2.model.IamInstanceProfileSpecification;
 import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.InjectableValues;
@@ -27,6 +28,7 @@ import com.google.common.base.Charsets;
 import com.google.common.collect.Lists;
 import com.google.common.io.BaseEncoding;
 import io.druid.indexing.overlord.autoscaling.ec2.EC2AutoScaler;
+import io.druid.indexing.overlord.autoscaling.ec2.EC2IamProfileData;
 import io.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
@@ -103,22 +105,15 @@ public class EC2AutoScalerSerdeTest
         autoScaler.getEnvConfig().getNodeData().getSecurityGroupIds()
     );
     Assert.assertEquals("redkeep", autoScaler.getEnvConfig().getNodeData().getSubnetId());
-    Assert.assertEquals(
-        "foo",
-        autoScaler.getEnvConfig()
-                  .getNodeData()
-                  .getIamProfile()
-                  .toIamInstanceProfileSpecification()
-                  .getName()
-    );
-    Assert.assertEquals(
-        "bar",
-        autoScaler.getEnvConfig()
-                  .getNodeData()
-                  .getIamProfile()
-                  .toIamInstanceProfileSpecification()
-                  .getArn()
-    );
+
+    EC2IamProfileData iamProfile = autoScaler.getEnvConfig().getNodeData().getIamProfile();
+    Assert.assertEquals("foo", iamProfile.getName());
+    Assert.assertEquals("bar", iamProfile.getArn());
+
+    IamInstanceProfileSpecification iamInstanceProfileSpecification = iamProfile
+        .toIamInstanceProfileSpecification();
+    Assert.assertEquals(null, iamInstanceProfileSpecification.getName());
+    Assert.assertEquals("bar", iamInstanceProfileSpecification.getArn());
 
     // userData
     Assert.assertEquals(

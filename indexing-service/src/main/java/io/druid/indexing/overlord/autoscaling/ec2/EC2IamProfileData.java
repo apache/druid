@@ -51,8 +51,12 @@ public class EC2IamProfileData
   public IamInstanceProfileSpecification toIamInstanceProfileSpecification()
   {
     final IamInstanceProfileSpecification spec = new IamInstanceProfileSpecification();
-    spec.setName(name);
+
+    // Set one or the other, AWS errors out if both are provided.
     spec.setArn(arn);
+    if (arn == null) {
+      spec.setName(name);
+    }
     return spec;
   }
 
