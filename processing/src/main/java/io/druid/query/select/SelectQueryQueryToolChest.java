@@ -25,11 +25,12 @@ import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
-import com.google.common.primitives.Longs;
 import com.google.inject.Inject;
 import com.metamx.common.StringUtils;
+import com.metamx.common.guava.Comparators;
 import com.metamx.common.guava.nary.BinaryFn;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.granularity.QueryGranularity;
@@ -53,11 +54,11 @@ import org.joda.time.Interval;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 
 /**
  */
@@ -273,39 +274,50 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
     if (paging == null || paging.isEmpty()) {
       return segments;
     }
+
+    final QueryGranularity granularity = query.getGranularity();
+
     List<Interval> intervals = Lists.newArrayList(
-        Iterables.transform(
-            paging.keySet(),
-            SegmentDesc.INTERVAL_EXTRACTOR
-        )
+        Iterables.transform(paging.keySet(), SegmentDesc.INTERVAL_EXTRACTOR)
     );
     Collections.sort(
-        intervals, new Comparator<Interval>()
-        {
-          @Override
-          public int compare(Interval o1, Interval o2)
-          {
-            return Longs.compare(o1.getStartMillis(), o2.getStartMillis());
-          }
-        }
+        intervals, query.isDescending() ? Comparators.intervalsByEndThenStart()
+                                        : Comparators.intervalsByStartThenEnd()
     );
+
+    TreeMap<Long, Long> granularThresholds = Maps.newTreeMap();
+    for (Interval interval : intervals) {
+      if (query.isDescending()) {
+        long granularEnd = granularity.truncate(interval.getEndMillis());
+        Long currentEnd = granularThresholds.get(granularEnd);
+        if (currentEnd == null || interval.getEndMillis() > currentEnd) {
+          granularThresholds.put(granularEnd, interval.getEndMillis());
+        }
+      } else {
+        long granularStart = granularity.truncate(interval.getStartMillis());
+        Long currentStart = granularThresholds.get(granularStart);
+        if (currentStart == null || interval.getStartMillis() < currentStart) {
+          granularThresholds.put(granularStart, interval.getStartMillis());
+        }
+      }
+    }
 
     List<T> queryIntervals = Lists.newArrayList(segments);
 
     Iterator<T> it = queryIntervals.iterator();
     if (query.isDescending()) {
-      final long lastEnd = intervals.get(intervals.size() - 1).getEndMillis();
       while (it.hasNext()) {
-        T segment = it.next();
-        if (segment.getInterval().getStartMillis() > lastEnd) {
+        Interval interval = it.next().getInterval();
+        Map.Entry<Long, Long> ceiling = granularThresholds.ceilingEntry(granularity.truncate(interval.getEndMillis()));
+        if (ceiling == null || interval.getStartMillis() >= ceiling.getValue()) {
           it.remove();
         }
       }
     } else {
-      final long firstStart = intervals.get(0).getStartMillis();
       while (it.hasNext()) {
-        T segment = it.next();
-        if (segment.getInterval().getEndMillis() < firstStart) {
+        Interval interval = it.next().getInterval();
+        Map.Entry<Long, Long> floor = granularThresholds.floorEntry(granularity.truncate(interval.getStartMillis()));
+        if (floor == null || interval.getEndMillis() <= floor.getValue()) {
           it.remove();
         }
       }
