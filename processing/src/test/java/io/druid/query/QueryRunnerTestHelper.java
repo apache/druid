@@ -42,13 +42,15 @@ import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
+import io.druid.query.spec.SpecificSegmentSpec;
 import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
 import io.druid.segment.TestIndex;
 import io.druid.segment.incremental.IncrementalIndex;
-import io.druid.timeline.LogicalSegment;
+import io.druid.timeline.TimelineObjectHolder;
+import io.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -442,29 +444,9 @@ public class QueryRunnerTestHelper
   }
 
   public static <T> QueryRunner<T> makeFilteringQueryRunner(
-      final List<Segment> segments,
-      final QueryRunnerFactory<T, Query<T>> factory
-  )
-  {
-    return makeQueryRunner(
-        Lists.transform(
-            segments, new Function<Segment, LogicalWrapper>()
-            {
-              @Override
-              public LogicalWrapper apply(Segment segment)
-              {
-                return new LogicalWrapper(segment);
-              }
-            }
-        ), factory
-    );
-  }
+      final VersionedIntervalTimeline<String, Segment> timeline,
+      final QueryRunnerFactory<T, Query<T>> factory) {
 
-  private static <T> QueryRunner<T> makeQueryRunner(
-      final List<LogicalWrapper> segments,
-      final QueryRunnerFactory<T, Query<T>> factory
-  )
-  {
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
     return new FinalizeResultsQueryRunner(
         toolChest.postMergeQueryDecoration(
@@ -475,14 +457,25 @@ public class QueryRunnerTestHelper
                       @Override
                       public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
                       {
-                        List<Sequence<T>> sequences = Lists.newArrayList();
-                        for (LogicalWrapper segment : toolChest.filterSegments(query, segments)) {
-                          sequences.add(factory.createRunner(segment.segment).run(query, responseContext));
+                        List<TimelineObjectHolder> segments = Lists.newArrayList();
+                        for (Interval interval : query.getIntervals()) {
+                          segments.addAll(timeline.lookup(interval));
                         }
-                        return new MergeSequence<>(
-                            query.getResultOrdering(),
-                            Sequences.simple(sequences)
-                        );
+                        List<Sequence<T>> sequences = Lists.newArrayList();
+                        for (TimelineObjectHolder<String, Segment> holder : toolChest.filterSegments(query, segments)) {
+                          Segment segment = holder.getObject().getChunk(0).getObject();
+                          Query running = query.withQuerySegmentSpec(
+                              new SpecificSegmentSpec(
+                                  new SegmentDescriptor(
+                                      holder.getInterval(),
+                                      holder.getVersion(),
+                                      0
+                                  )
+                              )
+                          );
+                          sequences.add(factory.createRunner(segment).run(running, responseContext));
+                        }
+                        return new MergeSequence<>(query.getResultOrdering(), Sequences.simple(sequences));
                       }
                     }
                 )
@@ -490,29 +483,6 @@ public class QueryRunnerTestHelper
         ),
         toolChest
     );
-  }
-
-  // wish Segment implements LogicalSegment
-  private static class LogicalWrapper implements LogicalSegment
-  {
-    private final Segment segment;
-
-    private LogicalWrapper(Segment segment)
-    {
-      this.segment = segment;
-    }
-
-    @Override
-    public Interval getInterval()
-    {
-      return segment.getDataInterval();
-    }
-
-    @Override
-    public String toString()
-    {
-      return segment.getIdentifier();
-    }
   }
 
   public static IntervalChunkingQueryRunnerDecorator NoopIntervalChunkingQueryRunnerDecorator()

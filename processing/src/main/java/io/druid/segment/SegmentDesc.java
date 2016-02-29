@@ -20,6 +20,7 @@
 package io.druid.segment;
 
 import com.google.common.base.Function;
+import com.metamx.common.logger.Logger;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -29,6 +30,8 @@ import org.joda.time.Interval;
  */
 public class SegmentDesc
 {
+  private static final Logger LOGGER = new Logger(SegmentDesc.class);
+
   public static Function<String, Interval> INTERVAL_EXTRACTOR = new Function<String, Interval>()
   {
     @Override
@@ -55,6 +58,26 @@ public class SegmentDesc
         new Interval(start.getMillis(), end.getMillis()),
         version
     );
+  }
+
+  public static String withInterval(final String identifier, Interval newInterval)
+  {
+    String[] splits = identifier.split(DataSegment.delimiter);
+    if (splits.length < 4) {
+      // happens for test segments which has invalid segment id.. ignore for now
+      LOGGER.warn("Invalid segment identifier " + identifier);
+      return identifier;
+    }
+    StringBuilder builder = new StringBuilder();
+    builder.append(splits[0]).append(DataSegment.delimiter);
+    builder.append(newInterval.getStart()).append(DataSegment.delimiter);
+    builder.append(newInterval.getEnd()).append(DataSegment.delimiter);
+    for (int i = 3; i < splits.length - 1; i++) {
+      builder.append(splits[i]).append(DataSegment.delimiter);
+    }
+    builder.append(splits[splits.length - 1]);
+
+    return builder.toString();
   }
 
   private final String dataSource;
