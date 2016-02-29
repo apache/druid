@@ -34,35 +34,51 @@ public class BoundFilter extends DimensionPredicateFilter
     super(
         boundDimFilter.getDimension(), new Predicate<String>()
         {
+          private volatile Predicate<String> predicate;
+
           @Override
           public boolean apply(String input)
           {
-            if (input == null) {
-              return false;
-            }
-            Comparator<String> comparator;
-            if (boundDimFilter.isAlphaNumeric()) {
-              comparator = new AlphaNumericTopNMetricSpec(null).getComparator(null, null);
-            } else {
-              comparator = new LexicographicTopNMetricSpec(null).getComparator(null, null);
-            }
+            return function().apply(input);
+          }
 
-            int lowerComparing = 1;
-            int upperComparing = 1;
-            if (boundDimFilter.getLower() != null) {
-              lowerComparing = comparator.compare(input, boundDimFilter.getLower());
+          private Predicate<String> function()
+          {
+            if (predicate == null) {
+              final Comparator<String> comparator;
+              if (boundDimFilter.isAlphaNumeric()) {
+                comparator = new AlphaNumericTopNMetricSpec(null).getComparator(null, null);
+              } else {
+                comparator = new LexicographicTopNMetricSpec(null).getComparator(null, null);
+              }
+              predicate = new Predicate<String>()
+              {
+                @Override
+                public boolean apply(String input)
+                {
+                  if (input == null) {
+                    return false;
+                  }
+                  int lowerComparing = 1;
+                  int upperComparing = 1;
+                  if (boundDimFilter.getLower() != null) {
+                    lowerComparing = comparator.compare(input, boundDimFilter.getLower());
+                  }
+                  if (boundDimFilter.getUpper() != null) {
+                    upperComparing = comparator.compare(boundDimFilter.getUpper(), input);
+                  }
+                  if (boundDimFilter.isLowerStrict() && boundDimFilter.isUpperStrict()) {
+                    return ((lowerComparing > 0)) && (upperComparing > 0);
+                  } else if (boundDimFilter.isLowerStrict()) {
+                    return (lowerComparing > 0) && (upperComparing >= 0);
+                  } else if (boundDimFilter.isUpperStrict()) {
+                    return (lowerComparing >= 0) && (upperComparing > 0);
+                  }
+                  return (lowerComparing >= 0) && (upperComparing >= 0);
+                }
+              };
             }
-            if (boundDimFilter.getUpper() != null) {
-              upperComparing = comparator.compare(boundDimFilter.getUpper(), input);
-            }
-            if (boundDimFilter.isLowerStrict() && boundDimFilter.isUpperStrict()) {
-              return ((lowerComparing > 0)) && ( upperComparing > 0);
-            } else if (boundDimFilter.isLowerStrict()) {
-              return (lowerComparing > 0) && (upperComparing >= 0);
-            } else if (boundDimFilter.isUpperStrict()) {
-              return (lowerComparing >= 0) && (upperComparing > 0);
-            }
-            return (lowerComparing >= 0) && (upperComparing >= 0);
+            return predicate;
           }
         }
     );
