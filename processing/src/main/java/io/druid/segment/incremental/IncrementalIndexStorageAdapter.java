@@ -225,8 +225,8 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
             return new Cursor()
             {
-              private Iterator<Map.Entry<IncrementalIndex.TimeAndDims, Integer>> baseIter;
-              private ConcurrentNavigableMap<IncrementalIndex.TimeAndDims, Integer> cursorMap;
+              private Iterator<Map.Entry<IncrementalIndex.TimeAndDims, Object>> baseIter;
+              private ConcurrentNavigableMap<IncrementalIndex.TimeAndDims, Object> cursorMap;
               final DateTime time;
               int numAdvanced = -1;
               boolean done;
@@ -613,14 +613,14 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
   private static class EntryHolder
   {
-    Map.Entry<IncrementalIndex.TimeAndDims, Integer> currEntry = null;
+    Map.Entry<IncrementalIndex.TimeAndDims, Object> currEntry = null;
 
-    public Map.Entry<IncrementalIndex.TimeAndDims, Integer> get()
+    public Map.Entry<IncrementalIndex.TimeAndDims, Object> get()
     {
       return currEntry;
     }
 
-    public void set(Map.Entry<IncrementalIndex.TimeAndDims, Integer> currEntry)
+    public void set(Map.Entry<IncrementalIndex.TimeAndDims, Object> currEntry)
     {
       this.currEntry = currEntry;
     }
@@ -630,7 +630,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       return currEntry.getKey();
     }
 
-    public Integer getValue()
+    public Object getValue()
     {
       return currEntry.getValue();
     }

@@ -106,7 +106,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
         TestCases.rtIndex,
         QueryRunnerTestHelper.makeQueryRunner(
             factory,
-            new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), segmentId)
+            new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(false), segmentId)
         )
     );
     testCaseMap.put(

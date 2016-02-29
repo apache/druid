@@ -22,7 +22,6 @@ package io.druid.segment.incremental;
 import com.carrotsearch.junitbenchmarks.AbstractBenchmark;
 import com.carrotsearch.junitbenchmarks.BenchmarkOptions;
 import com.carrotsearch.junitbenchmarks.Clock;
-import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -32,8 +31,6 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.common.guava.Sequences;
-import com.metamx.common.parsers.ParseException;
-import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Druids;
@@ -42,7 +39,6 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
-import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -68,7 +64,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -104,114 +99,11 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     factories = ingestAggregatorFactories.toArray(new AggregatorFactory[0]);
   }
 
-  private static final class MapIncrementalIndex extends OnheapIncrementalIndex
-  {
-    private final AtomicInteger indexIncrement = new AtomicInteger(0);
-    ConcurrentHashMap<Integer, Aggregator[]> indexedMap = new ConcurrentHashMap<Integer, Aggregator[]>();
-
-    public MapIncrementalIndex(
-        long minTimestamp,
-        QueryGranularity gran,
-        AggregatorFactory[] metrics,
-        int maxRowCount
-    )
-    {
-      super(minTimestamp, gran, metrics, maxRowCount);
-    }
-
-    @Override
-    protected Aggregator[] concurrentGet(int offset)
-    {
-      // All get operations should be fine
-      return indexedMap.get(offset);
-    }
-
-    @Override
-    protected void concurrentSet(int offset, Aggregator[] value)
-    {
-      indexedMap.put(offset, value);
-    }
-
-    @Override
-    protected Integer addToFacts(
-        AggregatorFactory[] metrics,
-        boolean deserializeComplexMetrics,
-        boolean reportParseExceptions,
-        InputRow row,
-        AtomicInteger numEntries,
-        TimeAndDims key,
-        ThreadLocal<InputRow> rowContainer,
-        Supplier<InputRow> rowSupplier
-    ) throws IndexSizeExceededException
-    {
-
-      final Integer priorIdex = getFacts().get(key);
-
-      Aggregator[] aggs;
-
-      if (null != priorIdex) {
-        aggs = indexedMap.get(priorIdex);
-      } else {
-        aggs = new Aggregator[metrics.length];
-
-        for (int i = 0; i < metrics.length; i++) {
-          final AggregatorFactory agg = metrics[i];
-          aggs[i] = agg.factorize(
-              makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics)
-          );
-        }
-        Integer rowIndex;
-
-        do {
-          rowIndex = indexIncrement.incrementAndGet();
-        } while (null != indexedMap.putIfAbsent(rowIndex, aggs));
-
-
-        // Last ditch sanity checks
-        if (numEntries.get() >= maxRowCount && !getFacts().containsKey(key)) {
-          throw new IndexSizeExceededException("Maximum number of rows reached");
-        }
-        final Integer prev = getFacts().putIfAbsent(key, rowIndex);
-        if (null == prev) {
-          numEntries.incrementAndGet();
-        } else {
-          // We lost a race
-          aggs = indexedMap.get(prev);
-          // Free up the misfire
-          indexedMap.remove(rowIndex);
-          // This is expected to occur ~80% of the time in the worst scenarios
-        }
-      }
-
-      rowContainer.set(row);
-
-      for (Aggregator agg : aggs) {
-        synchronized (agg) {
-          try {
-            agg.aggregate();
-          }
-          catch (ParseException e) {
-            // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
-            if (reportParseExceptions) {
-              throw e;
-            }
-          }
-        }
-      }
-
-      rowContainer.set(null);
-
-
-      return numEntries.get();
-    }
-  }
-
   @Parameterized.Parameters
   public static Collection<Object[]> getParameters()
   {
     return ImmutableList.<Object[]>of(
-        new Object[]{OnheapIncrementalIndex.class},
-        new Object[]{MapIncrementalIndex.class}
+        new Object[]{OnheapIncrementalIndex.class}
     );
   }
 

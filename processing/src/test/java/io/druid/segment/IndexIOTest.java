@@ -261,7 +261,7 @@ public class IndexIOTest
     this.exception = exception;
   }
 
-  final IncrementalIndex<Aggregator> incrementalIndex1 = new OnheapIncrementalIndex(
+  final IncrementalIndex incrementalIndex1 = new OnheapIncrementalIndex(
       new IncrementalIndexSchema.Builder().withMinTimestamp(DEFAULT_INTERVAL.getStart().getMillis())
                                           .withQueryGranularity(QueryGranularity.NONE)
                                           .withMetrics(
@@ -283,7 +283,7 @@ public class IndexIOTest
       1000000
   );
 
-  final IncrementalIndex<Aggregator> incrementalIndex2 = new OnheapIncrementalIndex(
+  final IncrementalIndex incrementalIndex2 = new OnheapIncrementalIndex(
       new IncrementalIndexSchema.Builder().withMinTimestamp(DEFAULT_INTERVAL.getStart().getMillis())
                                           .withQueryGranularity(QueryGranularity.NONE)
                                           .withMetrics(
