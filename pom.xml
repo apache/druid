@@ -16,7 +16,8 @@
   ~ limitations under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
@@ -80,29 +81,27 @@
         <module>integration-tests</module>
         <module>benchmarks</module>
         <module>aws-common</module>
-        <!-- Non-default modules -->
-        <module>extensions/cassandra-storage</module>
-        <module>extensions/hdfs-storage</module>
-        <module>extensions/s3-extensions</module>
-        <module>extensions/graphite-emitter</module>
-        <!-- kafka-seven extension is not built by default since
-             Kafka 0.7 is not available in Maven Central -->
-        <!-- <module>extensions/kafka&#45;seven</module> -->
-        <module>extensions/kafka-eight</module>
-        <module>extensions/kafka-eight-simpleConsumer</module>
-        <module>extensions/rabbitmq</module>
-        <module>extensions/histogram</module>
-        <module>extensions/mysql-metadata-storage</module>
-        <module>extensions/postgresql-metadata-storage</module>
-        <module>extensions/azure-extensions</module>
-        <module>extensions/namespace-lookup</module>
-        <module>extensions/kafka-extraction-namespace</module>
-        <module>extensions/cloudfiles-extensions</module>
-        <module>extensions/datasketches</module>
-        <module>extensions/avro-extensions</module>
+        <!-- Core extensions -->
+        <module>extensions-core/avro-extensions</module>
+        <module>extensions-core/datasketches</module>
+        <module>extensions-core/hdfs-storage</module>
+        <module>extensions-core/histogram</module>
+        <module>extensions-core/kafka-eight</module>
+        <module>extensions-core/kafka-extraction-namespace</module>
+        <module>extensions-core/mysql-metadata-storage</module>
+        <module>extensions-core/postgresql-metadata-storage</module>
+        <module>extensions-core/namespace-lookup</module>
+        <module>extensions-core/s3-extensions</module>
+        <!-- Community extensions -->
+        <module>extensions-contrib/azure-extensions</module>
+        <module>extensions-contrib/cassandra-storage</module>
+        <module>extensions-contrib/cloudfiles-extensions</module>
+        <module>extensions-contrib/graphite-emitter</module>
+        <module>extensions-contrib/kafka-eight-simpleConsumer</module>
+        <module>extensions-contrib/rabbitmq</module>
+
         <!-- distribution packaging -->
         <module>distribution</module>
-
     </modules>
 
     <dependencyManagement>
@@ -416,15 +415,15 @@
                 <version>${log4j.version}</version>
             </dependency>
             <dependency>
-              <!-- This is not slf4j's version because of performance concerns
-              http://www.slf4j.org/api/org/slf4j/bridge/SLF4JBridgeHandler.html
-              Please make sure to do performance tests before switching this to slf4j
-              Users wishing to use slf4j's solution are encouraged to also use
-              Logback
-              More info at
-              http://logback.qos.ch/manual/configuration.html#LevelChangePropagator
-              http://www.slf4j.org/legacy.html#jul-to-slf4j
-              -->
+                <!-- This is not slf4j's version because of performance concerns
+                http://www.slf4j.org/api/org/slf4j/bridge/SLF4JBridgeHandler.html
+                Please make sure to do performance tests before switching this to slf4j
+                Users wishing to use slf4j's solution are encouraged to also use
+                Logback
+                More info at
+                http://logback.qos.ch/manual/configuration.html#LevelChangePropagator
+                http://www.slf4j.org/legacy.html#jul-to-slf4j
+                -->
                 <groupId>org.apache.logging.log4j</groupId>
                 <artifactId>log4j-jul</artifactId>
                 <version>${log4j.version}</version>
@@ -658,7 +657,9 @@
                     <configuration>
                         <!-- locale settings must be set on the command line before startup -->
                         <!-- set heap size to work around https://github.com/travis-ci/travis-ci/issues/3396 -->
-                        <argLine>-Xmx1024m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8 -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager</argLine>
+                        <argLine>-Xmx1024m -Duser.language=en -Duser.country=US -Dfile.encoding=UTF-8
+                            -Djava.util.logging.manager=org.apache.logging.log4j.jul.LogManager
+                        </argLine>
                         <!-- our tests are very verbose, let's keep the volume down -->
                         <redirectTestOutputToFile>true</redirectTestOutputToFile>
                     </configuration>

@@ -68,10 +68,6 @@
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-examples</argument>
                                 <argument>-c</argument>
-                                <argument>io.druid.extensions:druid-azure-extensions</argument>
-                                <argument>-c</argument>
-                                <argument>io.druid.extensions:druid-cassandra-storage</argument>
-                                <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-datasketches</argument>
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-hdfs-storage</argument>
@@ -79,8 +75,6 @@
                                 <argument>io.druid.extensions:druid-histogram</argument>
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-kafka-eight</argument>
-                                <argument>-c</argument>
-                                <argument>io.druid.extensions:druid-kafka-eight-simple-consumer</argument>
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-kafka-extraction-namespace</argument>
                                 <argument>-c</argument>
@@ -90,11 +84,7 @@
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:postgresql-metadata-storage</argument>
                                 <argument>-c</argument>
-                                <argument>io.druid.extensions:druid-rabbitmq</argument>
-                                <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-s3-extensions</argument>
-                                <argument>-c</argument>
-                                <argument>io.druid.extensions:druid-cloudfiles-extensions</argument>
                             </arguments>
                         </configuration>
                     </execution>

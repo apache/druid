@@ -1,19 +1,23 @@
 ---
 layout: doc_page
 ---
-# KafkaSimpleConsumerFirehose
+
+# Kafka Simple Consumer
+
+## Firehose
+
 This is an experimental firehose to ingest data from kafka using kafka simple consumer api. Currently, this firehose would only work inside standalone realtime nodes.
-The configuration for KafkaSimpleConsumerFirehose is similar to the KafkaFirehose [Kafka firehose example](../ingestion/stream-pull.html#realtime-specfile), except `firehose` should be replaced with `firehoseV2` like this:
+The configuration for KafkaSimpleConsumerFirehose is similar to the Kafka Eight Firehose , except `firehose` should be replaced with `firehoseV2` like this:
 
 ```json
 "firehoseV2": {
-"type" : "kafka-0.8-v2",
-"brokerList" :  ["localhost:4443"],
-"queueBufferLength":10001,
-"resetOffsetToEarliest":"true",
-"partitionIdList" : ["0"],
-"clientId" : "localclient",
-"feed": "wikipedia"
+  "type" : "kafka-0.8-v2",
+  "brokerList" :  ["localhost:4443"],
+  "queueBufferLength":10001,
+  "resetOffsetToEarliest":"true",
+  "partitionIdList" : ["0"],
+  "clientId" : "localclient",
+  "feed": "wikipedia"
 }
 ```
 
