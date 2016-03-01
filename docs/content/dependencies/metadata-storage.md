@@ -219,17 +219,21 @@ Example scenarios include:
 
 In order to do the migration in a running druid installation:
 
-1. Stop database mutation.First thing we need to no is ensure the database doenst get modified while we are in the process of moving it.
+1. Stop database mutation.First thing we need to do is ensure the database doesnt get modified while we are in the process of moving it.
 Use the firewall rules on the database server to block access from the rest of the druid cluster (eg from coordinator & realtime indexing nodes).
 
-2. Copy data over to new database server
-You can use the database's export/import functionality or any other custom procedure to move the data over to the new database server
+2. Copy data over to new database server.  
+You can use the database's export/import functionality or any other custom procedure to move the data over to the new database server. 
+Druid comes with a tool to init the database schema. Particularly useful when migrating to a different database engine, eg from MySQL to Postgres. Here is an example of how to use it:
+```
+java '-Ddruid.metadata.storage.type=postgresql'  -cp "lib/*"  io.druid.cli.Main tools metadata-init --connectURI="jdbc:postgresql://db-server-ip:5432/druid" --user=username --password=passwd
+```
 
-3. Ensure new database server has firewall rules to allow druid nodes
+3.Ensure new database server has firewall rules to allow druid nodes
 
-4. Update the runtime.properties file in each druid node to point to the location and credentials of the new database server.
+4.Update the runtime.properties file in each druid node to point to the location and credentials of the new database server.
 
-5. Do a rolling restart of the druid cluster
+5.Do a rolling restart of the druid cluster
 
 What happens to my data during the migration?
 
