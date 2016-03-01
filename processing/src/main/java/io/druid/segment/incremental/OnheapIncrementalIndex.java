@@ -33,13 +33,11 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
-import io.druid.segment.column.ValueType;
 
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -48,7 +46,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 {
   private final ConcurrentHashMap<Integer, Aggregator[]> aggregators = new ConcurrentHashMap<>();
-  private final ConcurrentNavigableMap<TimeAndDims, Integer> facts;
+  private final ConcurrentMap<TimeAndDims, Integer> facts;
   private final AtomicInteger indexIncrement = new AtomicInteger(0);
   protected final int maxRowCount;
   private volatile Map<String, ColumnSelectorFactory> selectors;
@@ -59,12 +57,18 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       IncrementalIndexSchema incrementalIndexSchema,
       boolean deserializeComplexMetrics,
       boolean reportParseExceptions,
+      boolean sortFacts,
       int maxRowCount
   )
   {
-    super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions);
+    super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions, sortFacts);
     this.maxRowCount = maxRowCount;
-    this.facts = new ConcurrentSkipListMap<>(dimsComparator());
+
+    if (sortFacts) {
+      this.facts = new ConcurrentSkipListMap<>(dimsComparator());
+    } else {
+      this.facts = new ConcurrentHashMap<>();
+    }
   }
 
   public OnheapIncrementalIndex(
@@ -73,6 +77,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       final AggregatorFactory[] metrics,
       boolean deserializeComplexMetrics,
       boolean reportParseExceptions,
+      boolean sortFacts,
       int maxRowCount
   )
   {
@@ -83,6 +88,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
                                             .build(),
         deserializeComplexMetrics,
         reportParseExceptions,
+        sortFacts,
         maxRowCount
     );
   }
@@ -99,6 +105,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
                                             .withQueryGranularity(gran)
                                             .withMetrics(metrics)
                                             .build(),
+        true,
         true,
         true,
         maxRowCount
@@ -111,11 +118,11 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       int maxRowCount
   )
   {
-    this(incrementalIndexSchema, true, reportParseExceptions, maxRowCount);
+    this(incrementalIndexSchema, true, reportParseExceptions, true, maxRowCount);
   }
 
   @Override
-  public ConcurrentNavigableMap<TimeAndDims, Integer> getFacts()
+  public ConcurrentMap<TimeAndDims, Integer> getFacts()
   {
     return facts;
   }

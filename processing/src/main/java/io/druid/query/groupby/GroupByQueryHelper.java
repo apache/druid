@@ -90,6 +90,7 @@ public class GroupByQueryHelper
           aggs.toArray(new AggregatorFactory[aggs.size()]),
           false,
           true,
+          true,
           Math.min(query.getContextValue(CTX_KEY_MAX_RESULTS, config.getMaxResults()), config.getMaxResults()),
           bufferPool
       );
@@ -101,6 +102,7 @@ public class GroupByQueryHelper
           gran,
           aggs.toArray(new AggregatorFactory[aggs.size()]),
           false,
+          true,
           true,
           Math.min(query.getContextValue(CTX_KEY_MAX_RESULTS, config.getMaxResults()), config.getMaxResults())
       );
