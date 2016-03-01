@@ -110,7 +110,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |--------|-----------|-------|---------|
 |type|The task type, this should always be "index".|None.|yes|
 |targetPartitionSize|Used in sharding. Determines how many rows are in each segment. Set this to -1 to use numShards instead for sharding.|5000000|no|
-|rowFlushBoundary|Used in determining when intermediate persist should occur to disk.|500000|no|
+|rowFlushBoundary|Used in determining when intermediate persist should occur to disk.|75000|no|
 |numShards|Directly specify the number of shards to create. You can skip the intermediate persist step if you specify the number of shards you want and set targetPartitionSize=-1.|null|no|
 |indexSpec|defines segment storage format options to be used at indexing time, see [IndexSpec](#indexspec)|null|no|
 
