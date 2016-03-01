@@ -25,7 +25,9 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.metamx.common.UOE;
+import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
+import com.metamx.common.guava.Sequences;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -40,12 +42,15 @@ import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
+import io.druid.query.spec.SpecificSegmentSpec;
 import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
 import io.druid.segment.TestIndex;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.timeline.TimelineObjectHolder;
+import io.druid.timeline.VersionedIntervalTimeline;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -435,6 +440,48 @@ public class QueryRunnerTestHelper
             )
         ),
         factory.getToolchest()
+    );
+  }
+
+  public static <T> QueryRunner<T> makeFilteringQueryRunner(
+      final VersionedIntervalTimeline<String, Segment> timeline,
+      final QueryRunnerFactory<T, Query<T>> factory) {
+
+    final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
+    return new FinalizeResultsQueryRunner(
+        toolChest.postMergeQueryDecoration(
+            toolChest.mergeResults(
+                toolChest.preMergeQueryDecoration(
+                    new QueryRunner<T>()
+                    {
+                      @Override
+                      public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
+                      {
+                        List<TimelineObjectHolder> segments = Lists.newArrayList();
+                        for (Interval interval : query.getIntervals()) {
+                          segments.addAll(timeline.lookup(interval));
+                        }
+                        List<Sequence<T>> sequences = Lists.newArrayList();
+                        for (TimelineObjectHolder<String, Segment> holder : toolChest.filterSegments(query, segments)) {
+                          Segment segment = holder.getObject().getChunk(0).getObject();
+                          Query running = query.withQuerySegmentSpec(
+                              new SpecificSegmentSpec(
+                                  new SegmentDescriptor(
+                                      holder.getInterval(),
+                                      holder.getVersion(),
+                                      0
+                                  )
+                              )
+                          );
+                          sequences.add(factory.createRunner(segment).run(running, responseContext));
+                        }
+                        return new MergeSequence<>(query.getResultOrdering(), Sequences.simple(sequences));
+                      }
+                    }
+                )
+            )
+        ),
+        toolChest
     );
   }
 
