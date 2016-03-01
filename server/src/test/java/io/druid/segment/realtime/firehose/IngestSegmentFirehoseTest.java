@@ -120,7 +120,7 @@ public class IngestSegmentFirehoseTest
 
     IncrementalIndex index = null;
     try {
-      index = new OnheapIncrementalIndex(0, QueryGranularity.NONE, aggregators, true, true, 5000);
+      index = new OnheapIncrementalIndex(0, QueryGranularity.NONE, aggregators, true, true, true, 5000);
       for (String line : rows) {
         index.add(parser.parse(line));
       }
