@@ -3,7 +3,8 @@ layout: doc_page
 ---
 # Including Extensions
 
-Druid uses a module system that allows for the addition of extensions at runtime. To instruct Druid to load extensions, follow the steps below.
+Druid uses a module system that allows for the addition of extensions at runtime. Core extensions are bundled with the Druid tarball. 
+Community extensions be download locally via the [pull-deps](../operations/pull-deps.html) tool. 
 
 ## Download extensions
 
