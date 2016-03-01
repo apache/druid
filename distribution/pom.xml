@@ -66,6 +66,8 @@
                                 <argument>--clean</argument>
                                 <argument>--defaultVersion</argument>
                                 <argument>${project.parent.version}</argument>
+                                <argument>-l</argument>
+                                <argument>${settings.localRepository}</argument>
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-examples</argument>
                                 <argument>-c</argument>
