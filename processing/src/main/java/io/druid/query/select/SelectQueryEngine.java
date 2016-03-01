@@ -20,6 +20,7 @@
 package io.druid.query.select;
 
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.metamx.common.ISE;
@@ -33,11 +34,13 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.Segment;
+import io.druid.segment.SegmentDesc;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.Column;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
 import java.util.List;
 import java.util.Map;
@@ -69,6 +72,11 @@ public class SelectQueryEngine
     } else {
       metrics = query.getMetrics();
     }
+    List<Interval> intervals = query.getQuerySegmentSpec().getIntervals();
+    Preconditions.checkArgument(intervals.size() == 1, "Can only handle a single interval, got[%s]", intervals);
+
+    // should be rewritten with given interval
+    final String segmentId = SegmentDesc.withInterval(segment.getIdentifier(), intervals.get(0));
 
     return QueryRunnerHelper.makeCursorBasedQuery(
         adapter,
@@ -101,10 +109,11 @@ public class SelectQueryEngine
               metSelectors.put(metric, metricSelector);
             }
 
-            final PagingOffset offset = query.getPagingOffset(segment.getIdentifier());
+            final PagingOffset offset = query.getPagingOffset(segmentId);
 
             cursor.advanceTo(offset.startDelta());
 
+            int lastOffset = offset.startOffset();
             for (; !cursor.isDone() && offset.hasNext(); cursor.advance(), offset.next()) {
               final Map<String, Object> theEvent = Maps.newLinkedHashMap();
               theEvent.put(EventHolder.timestampKey, new DateTime(timestampColumnSelector.get()));
@@ -144,12 +153,14 @@ public class SelectQueryEngine
 
               builder.addEntry(
                   new EventHolder(
-                      segment.getIdentifier(),
-                      offset.current(),
+                      segmentId,
+                      lastOffset = offset.current(),
                       theEvent
                   )
               );
             }
+
+            builder.finished(segmentId, lastOffset);
 
             return builder.build();
           }
