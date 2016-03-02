@@ -24,14 +24,14 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.metamx.common.StringUtils;
-import io.druid.segment.filter.OrFilter;
-import io.druid.segment.filter.SelectorFilter;
+import io.druid.segment.filter.InFilter;
 
 import java.nio.ByteBuffer;
-import java.util.Collections;
 import java.util.List;
 
 public class InDimFilter implements DimFilter
@@ -43,7 +43,20 @@ public class InDimFilter implements DimFilter
   public InDimFilter(@JsonProperty("dimension") String dimension, @JsonProperty("values") List<String> values)
   {
     Preconditions.checkNotNull(dimension, "dimension can not be null");
-    this.values = (values == null) ? Collections.<String>emptyList() : values;
+    Preconditions.checkArgument(values != null && !values.isEmpty(), "values can not be null or empty");
+    this.values = Lists.newArrayList(
+        Iterables.transform(
+            values, new Function<String, String>()
+            {
+              @Override
+              public String apply(String input)
+              {
+                return Strings.nullToEmpty(input);
+              }
+
+            }
+        )
+    );
     this.dimension = dimension;
   }
 
@@ -92,21 +105,7 @@ public class InDimFilter implements DimFilter
   @Override
   public Filter toFilter()
   {
-    final List<Filter> selectorFilters = ImmutableList.copyOf(
-        Iterables.transform(
-            values,
-            new Function<String, Filter>()
-            {
-              @Override
-              public Filter apply(String input)
-              {
-                return new SelectorFilter(dimension, input);
-              }
-            }
-        )
-    );
-
-    return new OrFilter(selectorFilters);
+    return new InFilter(dimension, ImmutableSet.copyOf(values));
   }
 
   @Override
