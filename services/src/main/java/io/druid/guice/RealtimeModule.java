@@ -106,6 +106,7 @@ public class RealtimeModule implements Module
     Jerseys.addResource(binder, QueryResource.class);
     Jerseys.addResource(binder, ChatHandlerResource.class);
     LifecycleModule.register(binder, QueryResource.class);
+    LifecycleModule.register(binder, ChatHandlerResource.class);
     LifecycleModule.register(binder, Server.class);
   }
 }

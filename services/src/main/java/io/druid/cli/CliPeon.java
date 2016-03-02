@@ -156,6 +156,7 @@ public class CliPeon extends GuiceRunnable
             binder.bind(DataSegmentArchiver.class).to(OmniDataSegmentArchiver.class).in(LazySingleton.class);
 
             binder.bind(ExecutorLifecycle.class).in(ManageLifecycle.class);
+            LifecycleModule.register(binder, ExecutorLifecycle.class);
             binder.bind(ExecutorLifecycleConfig.class).toInstance(
                 new ExecutorLifecycleConfig()
                     .setTaskFile(new File(taskAndStatusFile.get(0)))
@@ -190,6 +191,7 @@ public class CliPeon extends GuiceRunnable
             Jerseys.addResource(binder, QueryResource.class);
             Jerseys.addResource(binder, ChatHandlerResource.class);
             LifecycleModule.register(binder, QueryResource.class);
+            LifecycleModule.register(binder, ChatHandlerResource.class);
 
             binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig(nodeType));
 
