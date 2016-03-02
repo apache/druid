@@ -42,6 +42,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class GroupByQueryHelper
 {
+  private static final String CTX_KEY_MAX_RESULTS = "maxResults";
+
   public static <T> Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> createIndexAccumulatorPair(
       final GroupByQuery query,
       final GroupByQueryConfig config,
@@ -88,7 +90,7 @@ public class GroupByQueryHelper
           aggs.toArray(new AggregatorFactory[aggs.size()]),
           false,
           true,
-          config.getMaxResults(),
+          query.getContextValue(CTX_KEY_MAX_RESULTS, config.getMaxResults()),
           bufferPool
       );
     } else {
@@ -100,7 +102,7 @@ public class GroupByQueryHelper
           aggs.toArray(new AggregatorFactory[aggs.size()]),
           false,
           true,
-          config.getMaxResults()
+          query.getContextValue(CTX_KEY_MAX_RESULTS, config.getMaxResults())
       );
     }
 
