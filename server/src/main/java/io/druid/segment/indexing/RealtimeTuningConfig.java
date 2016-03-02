@@ -40,7 +40,6 @@ public class RealtimeTuningConfig implements TuningConfig
   private static final int defaultMaxRowsInMemory = 75000;
   private static final Period defaultIntermediatePersistPeriod = new Period("PT10M");
   private static final Period defaultWindowPeriod = new Period("PT10M");
-  private static final File defaultBasePersistDirectory = Files.createTempDir();
   private static final VersioningPolicy defaultVersioningPolicy = new IntervalStartVersioningPolicy();
   private static final RejectionPolicyFactory defaultRejectionPolicyFactory = new ServerTimeRejectionPolicyFactory();
   private static final int defaultMaxPendingPersists = 0;
@@ -49,14 +48,19 @@ public class RealtimeTuningConfig implements TuningConfig
   private static final Boolean defaultBuildV9Directly = Boolean.FALSE;
   private static final Boolean defaultReportParseExceptions = Boolean.FALSE;
 
+  private static File createNewBasePersistDirectory()
+  {
+    return Files.createTempDir();
+  }
+
   // Might make sense for this to be a builder
-  public static RealtimeTuningConfig makeDefaultTuningConfig()
+  public static RealtimeTuningConfig makeDefaultTuningConfig(final File basePersistDirectory)
   {
     return new RealtimeTuningConfig(
         defaultMaxRowsInMemory,
         defaultIntermediatePersistPeriod,
         defaultWindowPeriod,
-        defaultBasePersistDirectory,
+        basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory,
         defaultVersioningPolicy,
         defaultRejectionPolicyFactory,
         defaultMaxPendingPersists,
@@ -105,7 +109,7 @@ public class RealtimeTuningConfig implements TuningConfig
                                      ? defaultIntermediatePersistPeriod
                                      : intermediatePersistPeriod;
     this.windowPeriod = windowPeriod == null ? defaultWindowPeriod : windowPeriod;
-    this.basePersistDirectory = basePersistDirectory == null ? defaultBasePersistDirectory : basePersistDirectory;
+    this.basePersistDirectory = basePersistDirectory == null ? createNewBasePersistDirectory() : basePersistDirectory;
     this.versioningPolicy = versioningPolicy == null ? defaultVersioningPolicy : versioningPolicy;
     this.rejectionPolicyFactory = rejectionPolicyFactory == null
                                   ? defaultRejectionPolicyFactory
