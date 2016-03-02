@@ -59,7 +59,7 @@ public class FireDepartment extends IngestionSpec<RealtimeIOConfig, RealtimeTuni
 
     this.dataSchema = dataSchema;
     this.ioConfig = ioConfig;
-    this.tuningConfig = tuningConfig == null ? RealtimeTuningConfig.makeDefaultTuningConfig() : tuningConfig;
+    this.tuningConfig = tuningConfig == null ? RealtimeTuningConfig.makeDefaultTuningConfig(null) : tuningConfig;
 
   }
 
