@@ -72,7 +72,6 @@ import io.druid.segment.loading.OmniDataSegmentMover;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
-import io.druid.segment.realtime.firehose.ChatHandlerResource;
 import io.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import io.druid.segment.realtime.firehose.ServiceAnnouncingChatHandlerProvider;
 import io.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierConfig;
@@ -157,6 +156,7 @@ public class CliPeon extends GuiceRunnable
             binder.bind(DataSegmentArchiver.class).to(OmniDataSegmentArchiver.class).in(LazySingleton.class);
 
             binder.bind(ExecutorLifecycle.class).in(ManageLifecycle.class);
+            LifecycleModule.register(binder, ExecutorLifecycle.class);
             binder.bind(ExecutorLifecycleConfig.class).toInstance(
                 new ExecutorLifecycleConfig()
                     .setTaskFile(new File(taskAndStatusFile.get(0)))
