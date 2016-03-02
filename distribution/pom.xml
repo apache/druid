@@ -81,6 +81,8 @@
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-kafka-extraction-namespace</argument>
                                 <argument>-c</argument>
+                                <argument>io.druid.extensions:druid-kafka-indexing-service</argument>
+                                <argument>-c</argument>
                                 <argument>io.druid.extensions:mysql-metadata-storage</argument>
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-namespace-lookup</argument>
