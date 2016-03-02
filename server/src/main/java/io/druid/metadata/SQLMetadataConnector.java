@@ -50,6 +50,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   private static final Logger log = new Logger(SQLMetadataConnector.class);
   private static final String PAYLOAD_TYPE = "BLOB";
 
+  public static final int DEFAULT_MAX_TRIES = 10;
+
   private final Supplier<MetadataStorageConnectorConfig> config;
   private final Supplier<MetadataStorageTablesConfig> tablesConfigSupplier;
   private final Predicate<Throwable> shouldRetry;
@@ -113,9 +115,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
         return getDBI().withHandle(callback);
       }
     };
-    final int maxTries = 10;
     try {
-      return RetryUtils.retry(call, myShouldRetry, maxTries);
+      return RetryUtils.retry(call, myShouldRetry, DEFAULT_MAX_TRIES);
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
@@ -127,7 +128,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     return retryWithHandle(callback, shouldRetry);
   }
 
-  public <T> T retryTransaction(final TransactionCallback<T> callback)
+  public <T> T retryTransaction(final TransactionCallback<T> callback, final int quietTries, final int maxTries)
   {
     final Callable<T> call = new Callable<T>()
     {
@@ -137,9 +138,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
         return getDBI().inTransaction(callback);
       }
     };
-    final int maxTries = 10;
     try {
-      return RetryUtils.retry(call, shouldRetry, maxTries);
+      return RetryUtils.retry(call, shouldRetry, quietTries, maxTries);
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
@@ -443,7 +443,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   )
   {
     final String selectStatement = String.format("SELECT %s FROM %s WHERE %s = :key", valueColumn,
-                                                 tableName, keyColumn);
+                                                 tableName, keyColumn
+    );
 
     return getDBI().withHandle(
         new HandleCallback<byte[]>()
@@ -512,6 +513,7 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
         )
     );
   }
+
   @Override
   public void createAuditTable()
   {

@@ -72,6 +72,8 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 {
   private static final Logger log = new Logger(IndexerSQLMetadataStorageCoordinator.class);
 
+  private static int ALLOCATE_SEGMENT_QUIET_TRIES = 3;
+
   private final ObjectMapper jsonMapper;
   private final MetadataStorageTablesConfig dbTables;
   private final SQLMetadataConnector connector;
@@ -490,7 +492,9 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
 
             return newIdentifier;
           }
-        }
+        },
+        ALLOCATE_SEGMENT_QUIET_TRIES,
+        SQLMetadataConnector.DEFAULT_MAX_TRIES
     );
   }
 
