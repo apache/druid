@@ -39,9 +39,7 @@ import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.Comparators;
 import com.metamx.emitter.EmittingLogger;
-import com.metamx.emitter.core.Event;
 import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceEventBuilder;
 import com.metamx.metrics.Monitor;
 import com.metamx.metrics.MonitorScheduler;
 import io.druid.client.cache.MapCache;
@@ -102,6 +100,7 @@ import io.druid.segment.realtime.plumber.SegmentHandoffNotifier;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.DruidNode;
 import io.druid.server.coordination.DataSegmentAnnouncer;
+import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.easymock.EasyMock;
@@ -218,20 +217,7 @@ public class TaskLifecycleTest
 
   private static ServiceEmitter newMockEmitter()
   {
-    return new ServiceEmitter(null, null, null)
-    {
-      @Override
-      public void emit(Event event)
-      {
-
-      }
-
-      @Override
-      public void emit(ServiceEventBuilder builder)
-      {
-
-      }
-    };
+    return new NoopServiceEmitter();
   }
 
   private static InputRow IR(String dt, String dim1, String dim2, float met)

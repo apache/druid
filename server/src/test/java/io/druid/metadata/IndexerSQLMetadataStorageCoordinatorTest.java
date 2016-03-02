@@ -23,6 +23,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import io.druid.indexing.overlord.ObjectMetadata;
+import io.druid.indexing.overlord.SegmentPublishResult;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
@@ -32,6 +34,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 
@@ -42,9 +45,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+
   private final ObjectMapper mapper = new DefaultObjectMapper();
   private final DataSegment defaultSegment = new DataSegment(
-      "dataSource",
+      "fooDataSource",
       Interval.parse("2015-01-01T00Z/2015-01-02T00Z"),
       "version",
       ImmutableMap.<String, Object>of(),
@@ -56,7 +60,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   );
 
   private final DataSegment defaultSegment2 = new DataSegment(
-      "dataSource",
+      "fooDataSource",
       Interval.parse("2015-01-01T00Z/2015-01-02T00Z"),
       "version",
       ImmutableMap.<String, Object>of(),
@@ -68,7 +72,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   );
 
   private final DataSegment defaultSegment3 = new DataSegment(
-      "dataSource",
+      "fooDataSource",
       Interval.parse("2015-01-03T00Z/2015-01-04T00Z"),
       "version",
       ImmutableMap.<String, Object>of(),
@@ -88,6 +92,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
   {
     derbyConnector = derbyConnectorRule.getConnector();
     mapper.registerSubtypes(LinearShardSpec.class);
+    derbyConnector.createDataSourceTable();
     derbyConnector.createTaskTables();
     derbyConnector.createSegmentTable();
     coordinator = new IndexerSQLMetadataStorageCoordinator(
@@ -133,6 +138,99 @@ public class IndexerSQLMetadataStorageCoordinatorTest
             defaultSegment.getIdentifier()
         )
     );
+  }
+
+  @Test
+  public void testTransactionalAnnounceSuccess() throws IOException
+  {
+    // Insert first segment.
+    final SegmentPublishResult result1 = coordinator.announceHistoricalSegments(
+        ImmutableSet.of(defaultSegment),
+        new ObjectMetadata(null),
+        new ObjectMetadata(ImmutableMap.of("foo", "bar"))
+    );
+    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(defaultSegment), true), result1);
+
+    Assert.assertArrayEquals(
+        mapper.writeValueAsString(defaultSegment).getBytes("UTF-8"),
+        derbyConnector.lookup(
+            derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
+            "id",
+            "payload",
+            defaultSegment.getIdentifier()
+        )
+    );
+
+    // Insert second segment.
+    final SegmentPublishResult result2 = coordinator.announceHistoricalSegments(
+        ImmutableSet.of(defaultSegment2),
+        new ObjectMetadata(ImmutableMap.of("foo", "bar")),
+        new ObjectMetadata(ImmutableMap.of("foo", "baz"))
+    );
+    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(defaultSegment2), true), result2);
+
+    Assert.assertArrayEquals(
+        mapper.writeValueAsString(defaultSegment2).getBytes("UTF-8"),
+        derbyConnector.lookup(
+            derbyConnectorRule.metadataTablesConfigSupplier().get().getSegmentsTable(),
+            "id",
+            "payload",
+            defaultSegment2.getIdentifier()
+        )
+    );
+
+    // Examine metadata.
+    Assert.assertEquals(
+        new ObjectMetadata(ImmutableMap.of("foo", "baz")),
+        coordinator.getDataSourceMetadata("fooDataSource")
+    );
+  }
+
+  @Test
+  public void testTransactionalAnnounceFailDbNullWantNotNull() throws IOException
+  {
+    final SegmentPublishResult result1 = coordinator.announceHistoricalSegments(
+        ImmutableSet.of(defaultSegment),
+        new ObjectMetadata(ImmutableMap.of("foo", "bar")),
+        new ObjectMetadata(ImmutableMap.of("foo", "baz"))
+    );
+    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.<DataSegment>of(), false), result1);
+  }
+
+  @Test
+  public void testTransactionalAnnounceFailDbNotNullWantNull() throws IOException
+  {
+    final SegmentPublishResult result1 = coordinator.announceHistoricalSegments(
+        ImmutableSet.of(defaultSegment),
+        new ObjectMetadata(null),
+        new ObjectMetadata(ImmutableMap.of("foo", "baz"))
+    );
+    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(defaultSegment), true), result1);
+
+    final SegmentPublishResult result2 = coordinator.announceHistoricalSegments(
+        ImmutableSet.of(defaultSegment2),
+        new ObjectMetadata(null),
+        new ObjectMetadata(ImmutableMap.of("foo", "baz"))
+    );
+    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.<DataSegment>of(), false), result2);
+  }
+
+  @Test
+  public void testTransactionalAnnounceFailDbNotNullWantDifferent() throws IOException
+  {
+    final SegmentPublishResult result1 = coordinator.announceHistoricalSegments(
+        ImmutableSet.of(defaultSegment),
+        new ObjectMetadata(null),
+        new ObjectMetadata(ImmutableMap.of("foo", "baz"))
+    );
+    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(defaultSegment), true), result1);
+
+    final SegmentPublishResult result2 = coordinator.announceHistoricalSegments(
+        ImmutableSet.of(defaultSegment2),
+        new ObjectMetadata(ImmutableMap.of("foo", "qux")),
+        new ObjectMetadata(ImmutableMap.of("foo", "baz"))
+    );
+    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.<DataSegment>of(), false), result2);
   }
 
   @Test
@@ -191,7 +289,10 @@ public class IndexerSQLMetadataStorageCoordinatorTest
         ImmutableList.of(defaultSegment3),
         coordinator.getUsedSegmentsForIntervals(
             defaultSegment.getDataSource(),
-            ImmutableList.of(Interval.parse("2015-01-03T00Z/2015-01-03T05Z"), Interval.parse("2015-01-03T09Z/2015-01-04T00Z"))
+            ImmutableList.of(
+                Interval.parse("2015-01-03T00Z/2015-01-03T05Z"),
+                Interval.parse("2015-01-03T09Z/2015-01-04T00Z")
+            )
         )
     );
   }

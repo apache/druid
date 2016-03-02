@@ -209,6 +209,7 @@ public class HadoopConverterJobTest
     );
     metadataStorageTablesConfigSupplier = derbyConnectorRule.metadataTablesConfigSupplier();
     connector = derbyConnectorRule.getConnector();
+
     try {
       connector.getDBI().withHandle(
           new HandleCallback<Void>()

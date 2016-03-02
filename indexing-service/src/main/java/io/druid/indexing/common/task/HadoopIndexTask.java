@@ -222,7 +222,7 @@ public class HadoopIndexTask extends HadoopTask
           }
       );
 
-      toolbox.pushSegments(publishedSegments);
+      toolbox.publishSegments(publishedSegments);
       return TaskStatus.success(getId());
     } else {
       return TaskStatus.failure(getId());
