@@ -22,6 +22,7 @@ package io.druid.metadata;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
+import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -114,6 +115,17 @@ public class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, Loc
                     .bind("status_payload", jsonMapper.writeValueAsBytes(status))
                     .execute();
               return null;
+            }
+          },
+          new Predicate<Throwable>()
+          {
+            @Override
+            public boolean apply(Throwable e)
+            {
+              final boolean isStatementException = e instanceof StatementException ||
+                                                   (e instanceof CallbackFailedException
+                                                    && e.getCause() instanceof StatementException);
+              return connector.isTransientException(e) && !(isStatementException && getEntry(id).isPresent());
             }
           }
       );
