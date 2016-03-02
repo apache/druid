@@ -41,6 +41,7 @@ import io.druid.segment.realtime.plumber.RealtimePlumberSchool;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.Map;
 
@@ -116,7 +117,7 @@ public class FireDepartmentTest
             ),
             null
         ),
-        RealtimeTuningConfig.makeDefaultTuningConfig()
+        RealtimeTuningConfig.makeDefaultTuningConfig(new File("/tmp/nonexistent"))
     );
 
     String json = jsonMapper.writeValueAsString(schema);
@@ -124,5 +125,6 @@ public class FireDepartmentTest
     FireDepartment newSchema = jsonMapper.readValue(json, FireDepartment.class);
 
     Assert.assertEquals(schema.getDataSchema().getDataSource(), newSchema.getDataSchema().getDataSource());
+    Assert.assertEquals("/tmp/nonexistent", schema.getTuningConfig().getBasePersistDirectory().toString());
   }
 }
