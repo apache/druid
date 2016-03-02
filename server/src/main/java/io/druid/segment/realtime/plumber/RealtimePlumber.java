@@ -363,7 +363,9 @@ public class RealtimePlumber implements Plumber
                                           }
                                         }
                                     )
-                                )
+                                ),
+                                "query/segmentAndCache/time",
+                                ImmutableMap.of("segment", theSink.getSegment().getIdentifier())
                             ).withWaitMeasuredFromNow(),
                             new SpecificSegmentSpec(
                                 descriptor
