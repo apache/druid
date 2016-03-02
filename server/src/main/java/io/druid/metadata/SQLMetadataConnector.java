@@ -100,7 +100,10 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   public abstract boolean tableExists(Handle handle, final String tableName);
 
-  public <T> T retryWithHandle(final HandleCallback<T> callback)
+  public <T> T retryWithHandle(
+      final HandleCallback<T> callback,
+      final Predicate<Throwable> myShouldRetry
+  )
   {
     final Callable<T> call = new Callable<T>()
     {
@@ -112,11 +115,16 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     };
     final int maxTries = 10;
     try {
-      return RetryUtils.retry(call, shouldRetry, maxTries);
+      return RetryUtils.retry(call, myShouldRetry, maxTries);
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
     }
+  }
+
+  public <T> T retryWithHandle(final HandleCallback<T> callback)
+  {
+    return retryWithHandle(callback, shouldRetry);
   }
 
   public <T> T retryTransaction(final TransactionCallback<T> callback)
@@ -399,21 +407,24 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   }
 
   @Override
-  public void createRulesTable() {
+  public void createRulesTable()
+  {
     if (config.get().isCreateTables()) {
       createRulesTable(tablesConfigSupplier.get().getRulesTable());
     }
   }
 
   @Override
-  public void createConfigTable() {
+  public void createConfigTable()
+  {
     if (config.get().isCreateTables()) {
       createConfigTable(tablesConfigSupplier.get().getConfigTable());
     }
   }
 
   @Override
-  public void createTaskTables() {
+  public void createTaskTables()
+  {
     if (config.get().isCreateTables()) {
       final MetadataStorageTablesConfig tablesConfig = tablesConfigSupplier.get();
       final String entryType = tablesConfig.getTaskEntryType();
@@ -502,7 +513,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     );
   }
   @Override
-  public void createAuditTable() {
+  public void createAuditTable()
+  {
     if (config.get().isCreateTables()) {
       createAuditTable(tablesConfigSupplier.get().getAuditTable());
     }
