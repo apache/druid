@@ -56,19 +56,25 @@ public abstract class AbstractTask implements Task
 
   protected AbstractTask(String id, String dataSource, Map<String, Object> context)
   {
-    this(id, id, new TaskResource(id, 1), dataSource, context);
+    this(id, null, null, dataSource, context);
   }
 
   protected AbstractTask(String id, String groupId, String dataSource, Map<String, Object> context)
   {
-    this(id, groupId, new TaskResource(id, 1), dataSource, context);
+    this(id, groupId, null, dataSource, context);
   }
 
-  protected AbstractTask(String id, String groupId, TaskResource taskResource, String dataSource, Map<String, Object> context)
+  protected AbstractTask(
+      String id,
+      String groupId,
+      TaskResource taskResource,
+      String dataSource,
+      Map<String, Object> context
+  )
   {
     this.id = Preconditions.checkNotNull(id, "id");
-    this.groupId = Preconditions.checkNotNull(groupId, "groupId");
-    this.taskResource = Preconditions.checkNotNull(taskResource, "resource");
+    this.groupId = groupId == null ? id : groupId;
+    this.taskResource = taskResource == null ? new TaskResource(id, 1) : taskResource;
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
     this.context = context;
   }
