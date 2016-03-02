@@ -82,4 +82,13 @@ public class TaskLocation
   {
     return Objects.hash(host, port);
   }
+
+  @Override
+  public String toString()
+  {
+    return "TaskLocation{" +
+           "host='" + host + '\'' +
+           ", port=" + port +
+           '}';
+  }
 }
