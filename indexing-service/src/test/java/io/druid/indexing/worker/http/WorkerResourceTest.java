@@ -74,8 +74,7 @@ public class WorkerResourceTest
         "host",
         "ip",
         3,
-        "v1",
-        DateTime.now()
+        "v1"
     );
 
     curatorCoordinator = new WorkerCuratorCoordinator(

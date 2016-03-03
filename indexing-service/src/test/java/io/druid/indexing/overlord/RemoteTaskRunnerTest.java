@@ -55,7 +55,6 @@ import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingCluster;
 import org.apache.zookeeper.CreateMode;
 import org.easymock.EasyMock;
-import org.joda.time.DateTime;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -359,8 +358,8 @@ public class RemoteTaskRunnerTest
     doSetup();
 
     final Set<String> existingTasks = Sets.newHashSet();
-    for (ZkWorker zkWorker : remoteTaskRunner.getZkWorkers()) {
-      existingTasks.addAll(zkWorker.getRunningTasks().keySet());
+    for (ImmutableWorkerInfo workerInfo : remoteTaskRunner.getWorkers()) {
+      existingTasks.addAll(workerInfo.getRunningTasks());
     }
     Assert.assertEquals("existingTasks", ImmutableSet.of("first", "second"), existingTasks);
 
@@ -451,7 +450,7 @@ public class RemoteTaskRunnerTest
     Assert.assertEquals(TaskStatus.Status.SUCCESS, result.get().getStatusCode());
 
     // Confirm RTR thinks the worker is disabled.
-    Assert.assertEquals("", Iterables.getOnlyElement(remoteTaskRunner.getWorkers()).getVersion());
+    Assert.assertEquals("", Iterables.getOnlyElement(remoteTaskRunner.getWorkers()).getWorker().getVersion());
   }
 
   private void doSetup() throws Exception
@@ -492,8 +491,7 @@ public class RemoteTaskRunnerTest
         "worker",
         "localhost",
         3,
-        "0",
-        DateTime.now()
+        "0"
     );
 
     cf.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(
@@ -506,7 +504,7 @@ public class RemoteTaskRunnerTest
   {
     cf.setData().forPath(
         announcementsPath,
-        jsonMapper.writeValueAsBytes(new Worker(worker.getHost(), worker.getIp(), worker.getCapacity(), "", DateTime.now()))
+        jsonMapper.writeValueAsBytes(new Worker(worker.getHost(), worker.getIp(), worker.getCapacity(), ""))
     );
   }
 
@@ -578,10 +576,10 @@ public class RemoteTaskRunnerTest
     Assert.assertTrue(taskAnnounced(task.getId()));
     mockWorkerRunningTask(task);
     Collection<Worker> lazyworkers = remoteTaskRunner.markWorkersLazy(
-        new Predicate<Worker>()
+        new Predicate<ImmutableWorkerInfo>()
         {
           @Override
-          public boolean apply(Worker input)
+          public boolean apply(ImmutableWorkerInfo input)
           {
             return true;
           }
@@ -599,10 +597,10 @@ public class RemoteTaskRunnerTest
     remoteTaskRunner.run(task);
     Assert.assertTrue(taskAnnounced(task.getId()));
     Collection<Worker> lazyworkers = remoteTaskRunner.markWorkersLazy(
-        new Predicate<Worker>()
+        new Predicate<ImmutableWorkerInfo>()
         {
           @Override
-          public boolean apply(Worker input)
+          public boolean apply(ImmutableWorkerInfo input)
           {
             return true;
           }
@@ -618,10 +616,10 @@ public class RemoteTaskRunnerTest
   {
     doSetup();
     Collection<Worker> lazyworkers = remoteTaskRunner.markWorkersLazy(
-        new Predicate<Worker>()
+        new Predicate<ImmutableWorkerInfo>()
         {
           @Override
-          public boolean apply(Worker input)
+          public boolean apply(ImmutableWorkerInfo input)
           {
             return true;
           }
