@@ -80,8 +80,7 @@ public class WorkerResource
           enabledWorker.getHost(),
           enabledWorker.getIp(),
           enabledWorker.getCapacity(),
-          DISABLED_VERSION,
-          enabledWorker.getLastCompletedTaskTime()
+          DISABLED_VERSION
       );
       curatorCoordinator.updateWorkerAnnouncement(disabledWorker);
       return Response.ok(ImmutableMap.of(disabledWorker.getHost(), "disabled")).build();

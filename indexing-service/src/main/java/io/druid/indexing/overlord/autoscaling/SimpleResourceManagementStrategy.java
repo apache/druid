@@ -34,8 +34,9 @@ import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.granularity.PeriodGranularity;
-import io.druid.indexing.overlord.WorkerTaskRunner;
+import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.TaskRunnerWorkItem;
+import io.druid.indexing.overlord.WorkerTaskRunner;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.worker.Worker;
 import org.joda.time.DateTime;
@@ -103,7 +104,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   boolean doProvision(WorkerTaskRunner runner)
   {
     Collection<? extends TaskRunnerWorkItem> pendingTasks = runner.getPendingTasks();
-    Collection<Worker> workers = getWorkers(runner);
+    Collection<ImmutableWorkerInfo> workers = getWorkers(runner);
     synchronized (lock) {
       boolean didProvision = false;
       final WorkerBehaviorConfig workerConfig = workerConfigRef.get();
@@ -111,19 +112,19 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
         log.warn("No workerConfig available, cannot provision new workers.");
         return false;
       }
-      final Predicate<Worker> isValidWorker = createValidWorkerPredicate(config);
+      final Predicate<ImmutableWorkerInfo> isValidWorker = createValidWorkerPredicate(config);
       final int currValidWorkers = Collections2.filter(workers, isValidWorker).size();
 
       final List<String> workerNodeIds = workerConfig.getAutoScaler().ipToIdLookup(
           Lists.newArrayList(
               Iterables.transform(
                   workers,
-                  new Function<Worker, String>()
+                  new Function<ImmutableWorkerInfo, String>()
                   {
                     @Override
-                    public String apply(Worker input)
+                    public String apply(ImmutableWorkerInfo input)
                     {
-                      return input.getIp();
+                      return input.getWorker().getIp();
                     }
                   }
               )
@@ -206,14 +207,14 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
       currentlyTerminating.clear();
       currentlyTerminating.addAll(stillExisting);
 
-      Collection<Worker> workers = getWorkers(runner);
+      Collection<ImmutableWorkerInfo> workers = getWorkers(runner);
       updateTargetWorkerCount(workerConfig, pendingTasks, workers);
 
       if (currentlyTerminating.isEmpty()) {
 
         final int excessWorkers = (workers.size() + currentlyProvisioning.size()) - targetWorkerCount;
         if (excessWorkers > 0) {
-          final Predicate<Worker> isLazyWorker = createLazyWorkerPredicate(config);
+          final Predicate<ImmutableWorkerInfo> isLazyWorker = createLazyWorkerPredicate(config);
           final Collection<String> laziestWorkerIps =
               Collections2.transform(
                   runner.markWorkersLazy(isLazyWorker, excessWorkers),
@@ -334,16 +335,16 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
     return scalingStats;
   }
 
-  private static Predicate<Worker> createLazyWorkerPredicate(
+  private static Predicate<ImmutableWorkerInfo> createLazyWorkerPredicate(
       final SimpleResourceManagementConfig config
   )
   {
-    final Predicate<Worker> isValidWorker = createValidWorkerPredicate(config);
+    final Predicate<ImmutableWorkerInfo> isValidWorker = createValidWorkerPredicate(config);
 
-    return new Predicate<Worker>()
+    return new Predicate<ImmutableWorkerInfo>()
     {
       @Override
-      public boolean apply(Worker worker)
+      public boolean apply(ImmutableWorkerInfo worker)
       {
         final boolean itHasBeenAWhile = System.currentTimeMillis() - worker.getLastCompletedTaskTime().getMillis()
                                         >= config.getWorkerIdleTimeout().toStandardDuration().getMillis();
@@ -352,14 +353,14 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
     };
   }
 
-  private static Predicate<Worker> createValidWorkerPredicate(
+  private static Predicate<ImmutableWorkerInfo> createValidWorkerPredicate(
       final SimpleResourceManagementConfig config
   )
   {
-    return new Predicate<Worker>()
+    return new Predicate<ImmutableWorkerInfo>()
     {
       @Override
-      public boolean apply(Worker worker)
+      public boolean apply(ImmutableWorkerInfo worker)
       {
         final String minVersion = config.getWorkerVersion();
         if (minVersion == null) {
@@ -373,15 +374,15 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
   private void updateTargetWorkerCount(
       final WorkerBehaviorConfig workerConfig,
       final Collection<? extends TaskRunnerWorkItem> pendingTasks,
-      final Collection<Worker> zkWorkers
+      final Collection<ImmutableWorkerInfo> zkWorkers
   )
   {
     synchronized (lock) {
-      final Collection<Worker> validWorkers = Collections2.filter(
+      final Collection<ImmutableWorkerInfo> validWorkers = Collections2.filter(
           zkWorkers,
           createValidWorkerPredicate(config)
       );
-      final Predicate<Worker> isLazyWorker = createLazyWorkerPredicate(config);
+      final Predicate<ImmutableWorkerInfo> isLazyWorker = createLazyWorkerPredicate(config);
       final int minWorkerCount = workerConfig.getAutoScaler().getMinNumWorkers();
       final int maxWorkerCount = workerConfig.getAutoScaler().getMaxNumWorkers();
 
@@ -464,7 +465,7 @@ public class SimpleResourceManagementStrategy implements ResourceManagementStrat
     }
   }
 
-  public Collection<Worker> getWorkers(WorkerTaskRunner runner)
+  public Collection<ImmutableWorkerInfo> getWorkers(WorkerTaskRunner runner)
   {
     return runner.getWorkers();
   }
