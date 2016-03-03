@@ -163,7 +163,7 @@ public class TestIndex
     }
   }
 
-  private static IncrementalIndex makeRealtimeIndex(final String resourceFilename)
+  public static IncrementalIndex makeRealtimeIndex(final String resourceFilename)
   {
     final URL resource = TestIndex.class.getClassLoader().getResource(resourceFilename);
     if (resource == null) {
