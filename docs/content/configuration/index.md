@@ -242,7 +242,7 @@ You can enable caching of results at the broker, historical, or realtime level u
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.cache.type`|`local`, `memcached`|The type of cache to use for queries.|`local`|
+|`druid.cache.type`|`local`, `memcached`, `redis`|The type of cache to use for queries.|`local`|
 |`druid.(broker|historical|realtime).cache.unCacheable`|All druid query types|All query types to not cache.|["groupBy", "select"]|
 |`druid.(broker|historical|realtime).cache.useCache`|Whether to use cache for getting query results.|false|
 |`druid.(broker|historical|realtime).cache.populateCache`|Whether to populate cache.|false|
@@ -264,6 +264,16 @@ You can enable caching of results at the broker, historical, or realtime level u
 |`druid.cache.hosts`|Command separated list of Memcached hosts `<host:port>`.|none|
 |`druid.cache.maxObjectSize`|Maximum object size in bytes for a Memcached object.|52428800 (50 MB)|
 |`druid.cache.memcachedPrefix`|Key prefix for all keys in Memcached.|druid|
+
+#### Redis
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.cache.hosts`|Redis hosts|["127.0.0.1:6379"]|
+|`druid.cache.timeout`|Connection / operations timeout|30000|
+|`druid.cache.prefix`|Key prefix|druid|
+|`druid.cache.expiration`|Redis key expiration time|-1 (no expiration)|
+|`druid.cache.poolSize`|Size of Redis connections pool|1|
 
 ### Indexing Service Discovery
 
