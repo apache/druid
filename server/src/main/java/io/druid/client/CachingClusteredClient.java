@@ -170,9 +170,9 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     // Note that enabling this leads to putting uncovered intervals information in the response headers
     // and might blow up in some cases https://github.com/druid-io/druid/issues/2108
     int uncoveredIntervalsLimit = BaseQuery.getContextUncoveredIntervalsLimit(query, 0);
+    final List<Interval> uncoveredIntervals = Lists.newArrayListWithCapacity(uncoveredIntervalsLimit);
 
     if (uncoveredIntervalsLimit > 0) {
-      List<Interval> uncoveredIntervals = Lists.newArrayListWithCapacity(uncoveredIntervalsLimit);
       boolean uncoveredIntervalsOverflowed = false;
 
       for (Interval interval : query.getIntervals()) {
@@ -314,8 +314,9 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
             ArrayList<Sequence<T>> sequencesByInterval = Lists.newArrayList();
             addSequencesFromCache(sequencesByInterval);
             addSequencesFromServer(sequencesByInterval);
+            addSequencesFromUncoveredIntervals(sequencesByInterval);
 
-            return mergeCachedAndUncachedSequences(query, sequencesByInterval);
+            return mergeResultSequences(query, sequencesByInterval);
           }
 
           private void addSequencesFromCache(ArrayList<Sequence<T>> listOfSequences)
@@ -523,11 +524,20 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
               listOfSequences.add(resultSeqToAdd);
             }
           }
+          
+          private void addSequencesFromUncoveredIntervals(ArrayList<Sequence<T>> listOfSequences)
+          {
+            final Function<Interval, Sequence<T>> fillZerosFunction = toolChest.makeFillZerosFn(query);
+            if (fillZerosFunction != null)
+            {
+              listOfSequences.addAll(Lists.transform(uncoveredIntervals, fillZerosFunction));
+            }
+          }
         }// End of Supplier
     );
   }
 
-  protected Sequence<T> mergeCachedAndUncachedSequences(
+  protected Sequence<T> mergeResultSequences(
       Query<T> query,
       List<Sequence<T>> sequencesByInterval
   )

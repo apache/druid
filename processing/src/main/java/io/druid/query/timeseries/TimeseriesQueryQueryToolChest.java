@@ -25,6 +25,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
+import com.metamx.common.guava.Sequence;
+import com.metamx.common.guava.Sequences;
 import com.metamx.common.guava.nary.BinaryFn;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.granularity.QueryGranularity;
@@ -43,6 +45,7 @@ import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.filter.DimFilter;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -207,6 +210,47 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
     };
   }
 
+  @Override
+  public Function<Interval, Sequence<Result<TimeseriesResultValue>>> makeFillZerosFn(final TimeseriesQuery query)
+  {
+    if (query.isSkipEmptyBuckets())
+    {
+      return null;
+    }
+
+    return new Function<Interval, Sequence<Result<TimeseriesResultValue>>>()
+    {
+      @Override
+      public Sequence<Result<TimeseriesResultValue>> apply(Interval interval)
+      {
+        final QueryGranularity granularity = query.getGranularity();
+        final List<AggregatorFactory> aggs = query.getAggregatorSpecs();
+
+        return Sequences.map(
+            Sequences.simple(granularity.iterable(interval.getStartMillis(), interval.getEndMillis())),
+            new Function<Long, Result<TimeseriesResultValue>>()
+        {
+          @Override
+          public Result<TimeseriesResultValue> apply(Long timestamp)
+          {
+            Iterator<AggregatorFactory> aggsIter = aggs.iterator();
+            Map<String, Object> retVal = Maps.newLinkedHashMap();
+
+            while (aggsIter.hasNext())
+            {
+              final AggregatorFactory factory = aggsIter.next();
+              retVal.put(factory.getName(), 0);
+            }
+
+            return new Result<TimeseriesResultValue>(
+                granularity.toDateTime(timestamp),
+                new TimeseriesResultValue(retVal));
+          }
+        });
+      }
+    };
+  }
+  
   @Override
   public QueryRunner<Result<TimeseriesResultValue>> preMergeQueryDecoration(QueryRunner<Result<TimeseriesResultValue>> runner)
   {

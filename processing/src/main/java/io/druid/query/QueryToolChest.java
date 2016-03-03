@@ -21,11 +21,13 @@ package io.druid.query;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
+import com.metamx.common.guava.Sequence;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.timeline.LogicalSegment;
 
 import java.util.List;
+import org.joda.time.Interval;
 
 /**
  * The broker-side (also used by server in some cases) API for a specific Query type.  This API is still undergoing
@@ -116,6 +118,22 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   {
     return null;
   }
+  
+  /**
+   * Creates a Function that can take in a ResultType and return a new sequence of ResultType having filled out
+   * time points where are absent in the query result between valid data intervals with zeros.
+   *
+   * This exists because a client wants to have a query result whose time continuum is without any holes.
+   *
+   * This function is called when merging sequences from caches or servers on the Broker.
+   *
+   * @param query The Query that is currently being processed
+   * @return A function that will fill out all metrics with zeros on absent data intervals.
+   */
+  public Function<Interval, Sequence<ResultType>> makeFillZerosFn(final QueryType query)
+  {
+    return null;
+  } 
 
   /**
    * Wraps a QueryRunner.  The input QueryRunner is the QueryRunner as it exists *before* being passed to
