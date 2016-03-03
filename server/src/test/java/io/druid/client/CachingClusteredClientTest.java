@@ -22,6 +22,7 @@ package io.druid.client;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
+import com.google.api.client.util.Sets;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
@@ -2434,11 +2435,12 @@ public class CachingClusteredClientTest
       DateTime timestamp = (DateTime) objects[index++];
 
       List<EventHolder> values = Lists.newArrayList();
+
       while (index < objects.length && !(objects[index] instanceof DateTime)) {
         values.add(new EventHolder(null, 0, (Map) objects[index++]));
       }
 
-      retVal.add(new Result<>(timestamp, new SelectResultValue(null, values)));
+      retVal.add(new Result<>(timestamp, new SelectResultValue(null, Sets.<String>newHashSet(), Sets.<String>newHashSet(), values)));
     }
     return retVal;
   }
