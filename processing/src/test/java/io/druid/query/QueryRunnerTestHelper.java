@@ -402,6 +402,18 @@ public class QueryRunnerTestHelper
 
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, QueryType> factory,
+      String resourceFileName
+  )
+  {
+    return makeQueryRunner(
+        factory,
+        segmentId,
+        new IncrementalIndexSegment(TestIndex.makeRealtimeIndex(resourceFileName), segmentId)
+    );
+  }
+
+  public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
+      QueryRunnerFactory<T, QueryType> factory,
       Segment adapter
   )
   {

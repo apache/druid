@@ -44,6 +44,7 @@ import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SegmentDescriptor;
+import io.druid.query.spec.SpecificSegmentSpec;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.plumber.Committers;
@@ -192,7 +193,9 @@ public class RealtimeManager implements QuerySegmentWalker
                          public QueryRunner<T> apply(SegmentDescriptor spec)
                          {
                            final FireChief retVal = partitionChiefs.get(spec.getPartitionNumber());
-                           return retVal == null ? new NoopQueryRunner<T>() : retVal.getQueryRunner(query);
+                           return retVal == null
+                                  ? new NoopQueryRunner<T>()
+                                  : retVal.getQueryRunner(query.withQuerySegmentSpec(new SpecificSegmentSpec(spec)));
                          }
                        }
                    )
