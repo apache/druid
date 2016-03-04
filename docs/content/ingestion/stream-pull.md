@@ -295,6 +295,8 @@ Otherwise, you can run real-time nodes without replication.
 There is now also an [experimental low level Kafka firehose](../development/kafka-simple-consumer-firehose.html) which 
 solves the issues described above with using the high level Kafka consumer.
 
+Please note that druid will skip over event that failed its checksum and it is corrupt.
+
 ### Locking
 
 Using stream pull ingestion with Realtime nodes together batch ingestion may introduce data override issues. For example, if you 
