@@ -60,6 +60,8 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -347,34 +349,43 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                     final int[][] dims = currEntry.getKey().getDims();
 
                     int[] indices = dimIndex < dims.length ? dims[dimIndex] : null;
-                    if (indices == null) {
-                      indices = new int[0];
-                    }
-                    // check for null entry
-                    if (indices.length == 0 && dimValLookup.contains(null)) {
-                      indices = new int[] { dimValLookup.getId(null) };
+
+                    List<Integer> valsTmp = null;
+                    if ((indices == null || indices.length == 0) && dimValLookup.contains(null)) {
+                      int id = dimValLookup.getId(null);
+                      if (id < maxId) {
+                        valsTmp = new ArrayList<>(1);
+                        valsTmp.add(id);
+                      }
+                    } else if (indices != null && indices.length > 0) {
+                      valsTmp = new ArrayList<>(indices.length);
+                      for (int i = 0; i < indices.length; i++) {
+                        int id = indices[i];
+                        if (id < maxId) {
+                          valsTmp.add(id);
+                        }
+                      }
                     }
 
-                    final int[] vals = indices;
-
+                    final List<Integer> vals = valsTmp == null ? Collections.EMPTY_LIST : valsTmp;
                     return new IndexedInts()
                     {
                       @Override
                       public int size()
                       {
-                        return vals.length;
+                        return vals.size();
                       }
 
                       @Override
                       public int get(int index)
                       {
-                        return vals[index];
+                        return vals.get(index);
                       }
 
                       @Override
                       public Iterator<Integer> iterator()
                       {
-                        return Ints.asList(vals).iterator();
+                        return vals.iterator();
                       }
 
                       @Override
