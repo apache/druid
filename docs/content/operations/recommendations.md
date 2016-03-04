@@ -7,15 +7,11 @@ Recommendations
 
 # Use UTC Timezone
 
-We recommend using UTC timezone for all your events and across on your nodes, not just for Druid, but for all data infrastructure. This can greatly mitigate potential query problems with inconsistent timezones.
+We recommend using UTC timezone for all your events and across on your nodes, not just for Druid, but for all data infrastructure. This can greatly mitigate potential query problems with inconsistent timezones. To query in a non-UTC timezone see [query granularities](../querying/granularities.html#period-granularities)
 
 # SSDs
 
 SSDs are highly recommended for historical and real-time nodes if you are not running a cluster that is entirely in memory. SSDs can greatly mitigate the time required to page data in and out of memory.
-
-# Provide Columns Names in Lexicographic Order
-
-Although Druid supports schema-less ingestion of dimensions, because of [https://github.com/druid-io/druid/issues/658](https://github.com/druid-io/druid/issues/658), you may sometimes get bigger segments than necessary. To ensure segments are as compact as possible, providing dimension names in lexicographic order is recommended.
 
 # Use Timeseries and TopN Queries Instead of GroupBy Where Possible
 

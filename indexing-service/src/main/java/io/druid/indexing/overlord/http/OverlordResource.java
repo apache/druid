@@ -31,10 +31,10 @@ import com.google.common.io.ByteSource;
 import com.google.common.util.concurrent.SettableFuture;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
-
 import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
 import io.druid.common.config.JacksonConfigManager;
+import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionHolder;
@@ -45,12 +45,12 @@ import io.druid.indexing.overlord.TaskQueue;
 import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.TaskRunnerWorkItem;
 import io.druid.indexing.overlord.TaskStorageQueryAdapter;
+import io.druid.indexing.overlord.WorkerTaskRunner;
 import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.metadata.EntryExistsException;
 import io.druid.tasklogs.TaskLogStreamer;
 import io.druid.timeline.DataSegment;
-
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -67,8 +67,6 @@ import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.Status;
-
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
@@ -330,6 +328,13 @@ public class OverlordResource
                         new DateTime(0),
                         new DateTime(0)
                     )
+                    {
+                      @Override
+                      public TaskLocation getLocation()
+                      {
+                        return TaskLocation.unknown();
+                      }
+                    }
                 );
               }
             }
@@ -390,7 +395,8 @@ public class OverlordResource
                 taskStatus.getId(),
                 new DateTime(0),
                 new DateTime(0),
-                Optional.of(taskStatus)
+                Optional.of(taskStatus),
+                TaskLocation.unknown()
             );
           }
         }
@@ -411,7 +417,10 @@ public class OverlordResource
           public Response apply(TaskRunner taskRunner)
           {
             if (taskRunner instanceof RemoteTaskRunner) {
-              return Response.ok(((RemoteTaskRunner) taskRunner).getWorkers()).build();
+              // Use getZkWorkers instead of getWorkers, as they return richer details (like the list of running tasks)
+              return Response.ok(((RemoteTaskRunner) taskRunner).getZkWorkers()).build();
+            } else if (taskRunner instanceof WorkerTaskRunner) {
+              return Response.ok(((WorkerTaskRunner) taskRunner).getWorkers()).build();
             } else {
               log.debug(
                   "Task runner [%s] of type [%s] does not support listing workers",
@@ -489,7 +498,8 @@ public class OverlordResource
                             workItem.getTaskId(),
                             workItem.getCreatedTime(),
                             workItem.getQueueInsertionTime(),
-                            Optional.<TaskStatus>absent()
+                            Optional.<TaskStatus>absent(),
+                            workItem.getLocation()
                         );
                       }
                     }
@@ -522,44 +532,27 @@ public class OverlordResource
     }
   }
 
-  private static class TaskResponseObject
+  static class TaskResponseObject
   {
     private final String id;
     private final DateTime createdTime;
     private final DateTime queueInsertionTime;
     private final Optional<TaskStatus> status;
+    private final TaskLocation location;
 
     private TaskResponseObject(
         String id,
         DateTime createdTime,
         DateTime queueInsertionTime,
-        Optional<TaskStatus> status
+        Optional<TaskStatus> status,
+        TaskLocation location
     )
     {
       this.id = id;
       this.createdTime = createdTime;
       this.queueInsertionTime = queueInsertionTime;
       this.status = status;
-    }
-
-    public String getId()
-    {
-      return id;
-    }
-
-    public DateTime getCreatedTime()
-    {
-      return createdTime;
-    }
-
-    public DateTime getQueueInsertionTime()
-    {
-      return queueInsertionTime;
-    }
-
-    public Optional<TaskStatus> getStatus()
-    {
-      return status;
+      this.location = location;
     }
 
     @JsonValue
@@ -578,6 +571,9 @@ public class OverlordResource
         if (status.get().isComplete()) {
           data.put("duration", status.get().getDuration());
         }
+      }
+      if (location != null) {
+        data.put("location", location);
       }
       return data;
     }

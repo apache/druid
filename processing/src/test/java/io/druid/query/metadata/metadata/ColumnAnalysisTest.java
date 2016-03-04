@@ -19,75 +19,149 @@
 
 package io.druid.query.metadata.metadata;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Test;
 
 public class ColumnAnalysisTest
 {
-  @Test
-  public void testFoldStringColumns()
+  private final ObjectMapper MAPPER = TestHelper.getObjectMapper();
+
+  private void assertSerDe(ColumnAnalysis analysis) throws Exception
   {
-    final ColumnAnalysis analysis1 = new ColumnAnalysis("STRING", false, 1L, 2, null);
-    final ColumnAnalysis analysis2 = new ColumnAnalysis("STRING", true, 3L, 4, null);
-    final ColumnAnalysis expected = new ColumnAnalysis("STRING", true, 4L, 4, null);
-    Assert.assertEquals(expected, analysis1.fold(analysis2));
-    Assert.assertEquals(expected, analysis2.fold(analysis1));
+    Assert.assertEquals(analysis, MAPPER.readValue(MAPPER.writeValueAsString(analysis), ColumnAnalysis.class));
   }
 
   @Test
-  public void testFoldWithNull()
+  public void testFoldStringColumns() throws Exception
   {
-    final ColumnAnalysis analysis1 = new ColumnAnalysis("STRING", false, 1L, 2, null);
+    final ColumnAnalysis analysis1 = new ColumnAnalysis("STRING", false, 1L, 2, "aaA", "Zzz", null);
+    final ColumnAnalysis analysis2 = new ColumnAnalysis("STRING", true, 3L, 4, "aAA", "ZZz", null);
+
+    assertSerDe(analysis1);
+    assertSerDe(analysis2);
+
+    final ColumnAnalysis expected = new ColumnAnalysis("STRING", true, 4L, 4, "aAA", "Zzz", null);
+
+    ColumnAnalysis fold1 = analysis1.fold(analysis2);
+    ColumnAnalysis fold2 = analysis2.fold(analysis1);
+    Assert.assertEquals(expected, fold1);
+    Assert.assertEquals(expected, fold2);
+
+    assertSerDe(fold1);
+    assertSerDe(fold2);
+  }
+
+  @Test
+  public void testFoldWithNull() throws Exception
+  {
+    final ColumnAnalysis analysis1 = new ColumnAnalysis("STRING", false, 1L, 2, null, null, null);
     Assert.assertEquals(analysis1, analysis1.fold(null));
+    assertSerDe(analysis1);
   }
 
   @Test
-  public void testFoldComplexColumns()
+  public void testFoldComplexColumns() throws Exception
   {
-    final ColumnAnalysis analysis1 = new ColumnAnalysis("hyperUnique", false, 0L, null, null);
-    final ColumnAnalysis analysis2 = new ColumnAnalysis("hyperUnique", false, 0L, null, null);
-    final ColumnAnalysis expected = new ColumnAnalysis("hyperUnique", false, 0L, null, null);
-    Assert.assertEquals(expected, analysis1.fold(analysis2));
-    Assert.assertEquals(expected, analysis2.fold(analysis1));
+    final ColumnAnalysis analysis1 = new ColumnAnalysis("hyperUnique", false, 0L, null, null, null, null);
+    final ColumnAnalysis analysis2 = new ColumnAnalysis("hyperUnique", false, 0L, null, null, null, null);
+
+    assertSerDe(analysis1);
+    assertSerDe(analysis2);
+
+    final ColumnAnalysis expected = new ColumnAnalysis("hyperUnique", false, 0L, null, null, null, null);
+
+    ColumnAnalysis fold1 = analysis1.fold(analysis2);
+    ColumnAnalysis fold2 = analysis2.fold(analysis1);
+    Assert.assertEquals(expected, fold1);
+    Assert.assertEquals(expected, fold2);
+
+    assertSerDe(fold1);
+    assertSerDe(fold2);
   }
 
   @Test
-  public void testFoldDifferentTypes()
+  public void testFoldDifferentTypes() throws Exception
   {
-    final ColumnAnalysis analysis1 = new ColumnAnalysis("hyperUnique", false, 1L, 1, null);
-    final ColumnAnalysis analysis2 = new ColumnAnalysis("COMPLEX", false, 2L, 2, null);
-    final ColumnAnalysis expected = new ColumnAnalysis("STRING", false, -1L, null, "error:cannot_merge_diff_types");
-    Assert.assertEquals(expected, analysis1.fold(analysis2));
-    Assert.assertEquals(expected, analysis2.fold(analysis1));
+    final ColumnAnalysis analysis1 = new ColumnAnalysis("hyperUnique", false, 1L, 1, null, null, null);
+    final ColumnAnalysis analysis2 = new ColumnAnalysis("COMPLEX", false, 2L, 2, null, null, null);
+
+    assertSerDe(analysis1);
+    assertSerDe(analysis2);
+
+    final ColumnAnalysis expected = new ColumnAnalysis(
+        "STRING",
+        false,
+        -1L,
+        null,
+        null,
+        null,
+        "error:cannot_merge_diff_types"
+    );
+    ColumnAnalysis fold1 = analysis1.fold(analysis2);
+    ColumnAnalysis fold2 = analysis2.fold(analysis1);
+    Assert.assertEquals(expected, fold1);
+    Assert.assertEquals(expected, fold2);
+
+    assertSerDe(fold1);
+    assertSerDe(fold2);
   }
 
   @Test
-  public void testFoldSameErrors()
+  public void testFoldSameErrors() throws Exception
   {
     final ColumnAnalysis analysis1 = ColumnAnalysis.error("foo");
     final ColumnAnalysis analysis2 = ColumnAnalysis.error("foo");
-    final ColumnAnalysis expected = new ColumnAnalysis("STRING", false, -1L, null, "error:foo");
-    Assert.assertEquals(expected, analysis1.fold(analysis2));
-    Assert.assertEquals(expected, analysis2.fold(analysis1));
+
+    assertSerDe(analysis1);
+    assertSerDe(analysis2);
+
+    final ColumnAnalysis expected = new ColumnAnalysis("STRING", false, -1L, null, null, null, "error:foo");
+    ColumnAnalysis fold1 = analysis1.fold(analysis2);
+    ColumnAnalysis fold2 = analysis2.fold(analysis1);
+    Assert.assertEquals(expected, fold1);
+    Assert.assertEquals(expected, fold2);
+
+    assertSerDe(fold1);
+    assertSerDe(fold2);
   }
 
   @Test
-  public void testFoldErrorAndNoError()
+  public void testFoldErrorAndNoError() throws Exception
   {
     final ColumnAnalysis analysis1 = ColumnAnalysis.error("foo");
-    final ColumnAnalysis analysis2 = new ColumnAnalysis("STRING", false, 2L, 2, null);
-    final ColumnAnalysis expected = new ColumnAnalysis("STRING", false, -1L, null, "error:foo");
-    Assert.assertEquals(expected, analysis1.fold(analysis2));
-    Assert.assertEquals(expected, analysis2.fold(analysis1));
+    final ColumnAnalysis analysis2 = new ColumnAnalysis("STRING", false, 2L, 2, "a", "z", null);
+
+    assertSerDe(analysis1);
+    assertSerDe(analysis2);
+
+    final ColumnAnalysis expected = new ColumnAnalysis("STRING", false, -1L, null, null, null, "error:foo");
+    ColumnAnalysis fold1 = analysis1.fold(analysis2);
+    ColumnAnalysis fold2 = analysis2.fold(analysis1);
+    Assert.assertEquals(expected, fold1);
+    Assert.assertEquals(expected, fold2);
+
+    assertSerDe(fold1);
+    assertSerDe(fold2);
   }
 
   @Test
-  public void testFoldDifferentErrors()
+  public void testFoldDifferentErrors() throws Exception
   {
     final ColumnAnalysis analysis1 = ColumnAnalysis.error("foo");
     final ColumnAnalysis analysis2 = ColumnAnalysis.error("bar");
-    final ColumnAnalysis expected = new ColumnAnalysis("STRING", false, -1L, null, "error:multiple_errors");
-    Assert.assertEquals(expected, analysis1.fold(analysis2));
-    Assert.assertEquals(expected, analysis2.fold(analysis1));
+
+    assertSerDe(analysis1);
+    assertSerDe(analysis2);
+
+    final ColumnAnalysis expected = new ColumnAnalysis("STRING", false, -1L, null, null, null, "error:multiple_errors");
+    ColumnAnalysis fold1 = analysis1.fold(analysis2);
+    ColumnAnalysis fold2 = analysis2.fold(analysis1);
+    Assert.assertEquals(expected, fold1);
+    Assert.assertEquals(expected, fold2);
+
+    assertSerDe(fold1);
+    assertSerDe(fold2);
   }
 }

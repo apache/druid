@@ -125,7 +125,7 @@ public class DruidProcessingModule implements Module
       log.info(e.getMessage());
     }
 
-    return new OffheapBufferPool(config.intermediateComputeSizeBytes());
+    return new OffheapBufferPool(config.intermediateComputeSizeBytes(), config.poolCacheMaxCount());
   }
 
 

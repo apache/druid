@@ -36,6 +36,7 @@ import io.druid.data.input.Row;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.ordering.StringComparators.StringComparator;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -115,24 +116,32 @@ public class DefaultLimitSpec implements LimitSpec
       }
     };
 
-    Map<String, Ordering<Row>> possibleOrderings = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
+    Map<String, DimensionSpec> dimensionsMap = Maps.newHashMap();
     for (DimensionSpec spec : dimensions) {
-      final String dimension = spec.getOutputName();
-      possibleOrderings.put(dimension, dimensionOrdering(dimension));
+      dimensionsMap.put(spec.getOutputName(), spec);
     }
 
+    Map<String, AggregatorFactory> aggregatorsMap = Maps.newHashMap();
     for (final AggregatorFactory agg : aggs) {
-      final String column = agg.getName();
-      possibleOrderings.put(column, metricOrdering(column, agg.getComparator()));
+      aggregatorsMap.put(agg.getName(), agg);
     }
 
+    Map<String, PostAggregator> postAggregatorsMap = Maps.newHashMap();
     for (PostAggregator postAgg : postAggs) {
-      final String column = postAgg.getName();
-      possibleOrderings.put(column, metricOrdering(column, postAgg.getComparator()));
+      postAggregatorsMap.put(postAgg.getName(), postAgg);
     }
 
     for (OrderByColumnSpec columnSpec : columns) {
-      Ordering<Row> nextOrdering = possibleOrderings.get(columnSpec.getDimension());
+      String columnName = columnSpec.getDimension();
+      Ordering<Row> nextOrdering = null;
+
+      if (postAggregatorsMap.containsKey(columnName)) {
+        nextOrdering = metricOrdering(columnName, postAggregatorsMap.get(columnName).getComparator());
+      } else if (aggregatorsMap.containsKey(columnName)) {
+        nextOrdering = metricOrdering(columnName, aggregatorsMap.get(columnName).getComparator());
+      } else if (dimensionsMap.containsKey(columnName)) {
+        nextOrdering = dimensionOrdering(columnName, columnSpec.getDimensionComparator());
+      }
 
       if (nextOrdering == null) {
         throw new ISE("Unknown column in order clause[%s]", columnSpec);
@@ -162,9 +171,9 @@ public class DefaultLimitSpec implements LimitSpec
     };
   }
 
-  private Ordering<Row> dimensionOrdering(final String dimension)
+  private Ordering<Row> dimensionOrdering(final String dimension, final StringComparator comparator)
   {
-    return Ordering.natural()
+    return Ordering.from(comparator)
                    .nullsFirst()
                    .onResultOf(
                        new Function<Row, String>()

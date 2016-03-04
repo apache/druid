@@ -34,6 +34,6 @@ public class OldSketchEstimatePostAggregator extends SketchEstimatePostAggregato
       @JsonProperty("field") PostAggregator field
   )
   {
-    super(name, field);
+    super(name, field, null);
   }
 }

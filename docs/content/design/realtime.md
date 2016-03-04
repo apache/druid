@@ -1,11 +1,13 @@
 ---
 layout: doc_page
 ---
+
 Real-time Node
 ==============
+
 For Real-time Node Configuration, see [Realtime Configuration](../configuration/realtime.html).
 
-For Real-time Ingestion, see [Realtime Ingestion](../ingestion/realtime-ingestion.html).
+For Real-time Ingestion, see [Realtime Ingestion](../ingestion/stream-ingestion.html).
 
 Realtime nodes provide a realtime index. Data indexed via these nodes is immediately available for querying. Realtime nodes will periodically build segments representing the data they’ve collected over some span of time and transfer these segments off to [Historical](../design/historical.html) nodes. They use ZooKeeper to monitor the transfer and the metadata storage to store metadata about the transferred segment. Once transfered, segments are forgotten by the Realtime nodes.
 

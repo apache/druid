@@ -20,6 +20,7 @@
 package io.druid.indexing.overlord.config;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.curator.CuratorUtils;
 import org.joda.time.Period;
 
 import javax.validation.constraints.Min;
@@ -42,10 +43,14 @@ public class RemoteTaskRunnerConfig
 
   @JsonProperty
   @Min(10 * 1024)
-  private long maxZnodeBytes = 512 * 1024;
+  private int maxZnodeBytes = CuratorUtils.DEFAULT_MAX_ZNODE_BYTES;
 
   @JsonProperty
   private Period taskShutdownLinkTimeout = new Period("PT1M");
+
+  @JsonProperty
+  @Min(1)
+  private int pendingTasksRunnerNumThreads = 3;
 
   public Period getTaskAssignmentTimeout()
   {
@@ -62,7 +67,7 @@ public class RemoteTaskRunnerConfig
     return minWorkerVersion;
   }
 
-  public long getMaxZnodeBytes()
+  public int getMaxZnodeBytes()
   {
     return maxZnodeBytes;
   }
@@ -70,5 +75,67 @@ public class RemoteTaskRunnerConfig
   public Period getTaskShutdownLinkTimeout()
   {
     return taskShutdownLinkTimeout;
+  }
+
+
+  public int getPendingTasksRunnerNumThreads()
+  {
+    return pendingTasksRunnerNumThreads;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    RemoteTaskRunnerConfig that = (RemoteTaskRunnerConfig) o;
+
+    if (maxZnodeBytes != that.maxZnodeBytes) {
+      return false;
+    }
+    if (pendingTasksRunnerNumThreads != that.pendingTasksRunnerNumThreads) {
+      return false;
+    }
+    if (!taskAssignmentTimeout.equals(that.taskAssignmentTimeout)) {
+      return false;
+    }
+    if (!taskCleanupTimeout.equals(that.taskCleanupTimeout)) {
+      return false;
+    }
+    if (!minWorkerVersion.equals(that.minWorkerVersion)) {
+      return false;
+    }
+    return taskShutdownLinkTimeout.equals(that.taskShutdownLinkTimeout);
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = taskAssignmentTimeout.hashCode();
+    result = 31 * result + taskCleanupTimeout.hashCode();
+    result = 31 * result + minWorkerVersion.hashCode();
+    result = 31 * result + maxZnodeBytes;
+    result = 31 * result + taskShutdownLinkTimeout.hashCode();
+    result = 31 * result + pendingTasksRunnerNumThreads;
+    return result;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "RemoteTaskRunnerConfig{" +
+           "taskAssignmentTimeout=" + taskAssignmentTimeout +
+           ", taskCleanupTimeout=" + taskCleanupTimeout +
+           ", minWorkerVersion='" + minWorkerVersion + '\'' +
+           ", maxZnodeBytes=" + maxZnodeBytes +
+           ", taskShutdownLinkTimeout=" + taskShutdownLinkTimeout +
+           ", pendingTasksRunnerNumThreads=" + pendingTasksRunnerNumThreads +
+           '}';
   }
 }

@@ -44,6 +44,8 @@ public interface StorageAdapter extends CursorFactory
   public int getDimensionCardinality(String column);
   public DateTime getMinTime();
   public DateTime getMaxTime();
+  public Comparable getMinValue(String column);
+  public Comparable getMaxValue(String column);
   public Capabilities getCapabilities();
   public ColumnCapabilities getColumnCapabilities(String column);
 

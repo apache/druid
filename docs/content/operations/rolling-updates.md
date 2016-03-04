@@ -2,45 +2,79 @@
 layout: doc_page
 ---
 
-
 Rolling Updates
 ===============
 
-For rolling Druid cluster updates with no downtime, we recommend updating Druid nodes in the following order:
+For rolling Druid cluster updates with no downtime, we recommend updating Druid nodes in the
+following order:
 
-1. Historical Nodes
-2. Indexing Service/Real-time Nodes
-3. Broker Nodes
-4. Coordinator Nodes
+1. Historical
+2. Overlord (if any)
+3. Middle Manager (if any)
+4. Standalone Real-time (if any)
+5. Broker
+6. Coordinator
 
-## Historical Nodes
+## Historical
 
-Historical nodes can be updated one at a time. Each historical node has a startup time to memory map all the segments it was serving before the update. The startup time typically takes a few seconds to a few minutes, depending on the hardware of the node. As long as each historical node is updated with a sufficient delay (greater than the time required to start a single node), you can rolling update the entire historical cluster.
+Historical nodes can be updated one at a time. Each Historical node has a startup time to memory map
+all the segments it was serving before the update. The startup time typically takes a few seconds to
+a few minutes, depending on the hardware of the node. As long as each Historical node is updated
+with a sufficient delay (greater than the time required to start a single node), you can rolling
+update the entire Historical cluster.
 
-## Standalone Real-time nodes
+## Overlord
 
-Standalone real-time nodes can be updated one at a time in a rolling fashion.
+Overlord nodes can be updated one at a time in a rolling fashion.
 
-## Indexing Service
+## Middle Managers
 
-### With Autoscaling
+Middle Managers run both batch and real-time indexing tasks. Generally you want to update Middle
+Managers in such a way that real-time indexing tasks do not fail. There are three strategies for
+doing that.
 
-Overlord nodes will try to launch new middle manager nodes and terminate old ones without dropping data. This process is based on the configuration `druid.indexer.runner.minWorkerVersion=#{VERSION}`. Each time you update your overlord node, the `VERSION` value should be increased.
+### Rolling restart (restore-based)
+
+Middle Managers can be updated one at a time in a rolling fashion when you set
+`druid.indexer.task.restoreTasksOnRestart=true`. In this case, indexing tasks that support restoring
+will restore their state on Middle Manager restart, and will not fail.
+
+Currently, only realtime tasks support restoring, so non-realtime indexing tasks will fail and will
+need to be resubmitted.
+
+### Rolling restart (graceful-termination-based)
+
+Middle Managers can be gracefully terminated using the "disable" API. This works for all task types,
+even tasks that are not restorable.
+
+To prepare a Middle Manager for update, send a POST request to
+`<MiddleManager_IP:PORT>/druid/worker/v1/disable`. The Overlord will now no longer send tasks to
+this Middle Manager. Tasks that have already started will run to completion.
+
+To view all existing tasks, send a GET request to `<MiddleManager_IP:PORT>/druid/worker/v1/tasks`.
+When this list is empty, you can safely update the Middle Manager. After the Middle Manager starts
+back up, it is automatically enabled again. You can also manually enable Middle Managers by POSTing
+to `<MiddleManager_IP:PORT>/druid/worker/v1/enable`.
+
+### Autoscaling-based replacement
+
+If autoscaling is enabled on your Overlord, then Overlord nodes can launch new Middle Manager nodes
+en masse and then gracefully terminate old ones as their tasks finish. This process is configured by
+setting `druid.indexer.runner.minWorkerVersion=#{VERSION}`. Each time you update your overlord node,
+the `VERSION` value should be increased, which will trigger a mass launch of new Middle Managers.
 
 The config `druid.indexer.autoscale.workerVersion=#{VERSION}` also needs to be set.
 
-### Without Autoscaling
+## Standalone Real-time
 
-Middle managers can be updated in a rolling fashion based on API.
+Standalone real-time nodes can be updated one at a time in a rolling fashion.
 
-To prepare a middle manager for update, send a POST request to `<MiddleManager_IP:PORT>/druid/worker/v1/disable`. The overlord will now no longer send tasks to this middle manager.
+## Broker
 
-Current tasks will still try to complete. To view all existing tasks, send a GET request to `<MiddleManager_IP:PORT>/druid/worker/v1/tasks`. When this list is empty, the middle manager can be updated. After the middle manager is updated, it is automatically enabled again. You can also manually enable middle managers POSTing to `<MiddleManager_IP:PORT>/druid/worker/v1/enable`.
+Broker nodes can be updated one at a time in a rolling fashion. There needs to be some delay between
+updating each node as brokers must load the entire state of the cluster before they return valid
+results.
 
-## Broker Nodes
+## Coordinator
 
-Broker nodes can be updated one at a time in a rolling fashion. There needs to be some delay between updating each node as brokers must load the entire state of the cluster before they return valid results.
-
-## Coordinator Nodes
-
-Coordinator nodes can be updated in a rolling fashion.
+Coordinator nodes can be updated one at a time in a rolling fashion.

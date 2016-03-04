@@ -20,6 +20,7 @@
 package io.druid.query.select;
 
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.metamx.common.ISE;
@@ -27,16 +28,19 @@ import com.metamx.common.guava.Sequence;
 import io.druid.query.QueryRunnerHelper;
 import io.druid.query.Result;
 import io.druid.query.dimension.DefaultDimensionSpec;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.Segment;
+import io.druid.segment.SegmentDesc;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.Column;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
+import org.joda.time.Interval;
 
 import java.util.List;
 import java.util.Map;
@@ -55,9 +59,9 @@ public class SelectQueryEngine
       );
     }
 
-    final Iterable<String> dims;
+    final Iterable<DimensionSpec> dims;
     if (query.getDimensions() == null || query.getDimensions().isEmpty()) {
-      dims = adapter.getAvailableDimensions();
+      dims = DefaultDimensionSpec.toSpec(adapter.getAvailableDimensions());
     } else {
       dims = query.getDimensions();
     }
@@ -68,6 +72,11 @@ public class SelectQueryEngine
     } else {
       metrics = query.getMetrics();
     }
+    List<Interval> intervals = query.getQuerySegmentSpec().getIntervals();
+    Preconditions.checkArgument(intervals.size() == 1, "Can only handle a single interval, got[%s]", intervals);
+
+    // should be rewritten with given interval
+    final String segmentId = SegmentDesc.withInterval(segment.getIdentifier(), intervals.get(0));
 
     return QueryRunnerHelper.makeCursorBasedQuery(
         adapter,
@@ -82,18 +91,16 @@ public class SelectQueryEngine
           {
             final SelectResultValueBuilder builder = new SelectResultValueBuilder(
                 cursor.getTime(),
-                query.getPagingSpec()
-                     .getThreshold(),
+                query.getPagingSpec(),
                 query.isDescending()
             );
 
             final LongColumnSelector timestampColumnSelector = cursor.makeLongColumnSelector(Column.TIME_COLUMN_NAME);
 
             final Map<String, DimensionSelector> dimSelectors = Maps.newHashMap();
-            for (String dim : dims) {
-              // switching to using DimensionSpec for select would allow the use of extractionFn here.
-              final DimensionSelector dimSelector = cursor.makeDimensionSelector(new DefaultDimensionSpec(dim, dim));
-              dimSelectors.put(dim, dimSelector);
+            for (DimensionSpec dim : dims) {
+              final DimensionSelector dimSelector = cursor.makeDimensionSelector(dim);
+              dimSelectors.put(dim.getOutputName(), dimSelector);
             }
 
             final Map<String, ObjectColumnSelector> metSelectors = Maps.newHashMap();
@@ -102,18 +109,12 @@ public class SelectQueryEngine
               metSelectors.put(metric, metricSelector);
             }
 
-            int startOffset;
-            if (query.getPagingSpec().getPagingIdentifiers() == null) {
-              startOffset = 0;
-            } else {
-              Integer offset = query.getPagingSpec().getPagingIdentifiers().get(segment.getIdentifier());
-              startOffset = (offset == null) ? 0 : offset;
-            }
+            final PagingOffset offset = query.getPagingOffset(segmentId);
 
-            cursor.advanceTo(startOffset);
+            cursor.advanceTo(offset.startDelta());
 
-            int offset = 0;
-            while (!cursor.isDone() && offset < query.getPagingSpec().getThreshold()) {
+            int lastOffset = offset.startOffset();
+            for (; !cursor.isDone() && offset.hasNext(); cursor.advance(), offset.next()) {
               final Map<String, Object> theEvent = Maps.newLinkedHashMap();
               theEvent.put(EventHolder.timestampKey, new DateTime(timestampColumnSelector.get()));
 
@@ -152,14 +153,14 @@ public class SelectQueryEngine
 
               builder.addEntry(
                   new EventHolder(
-                      segment.getIdentifier(),
-                      startOffset + offset,
+                      segmentId,
+                      lastOffset = offset.current(),
                       theEvent
                   )
               );
-              cursor.advance();
-              offset++;
             }
+
+            builder.finished(segmentId, lastOffset);
 
             return builder.build();
           }

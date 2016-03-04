@@ -19,9 +19,12 @@
 
 package io.druid.query.select;
 
+import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.ObjectArrays;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequences;
 import io.druid.jackson.DefaultObjectMapper;
@@ -29,10 +32,16 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
 import io.druid.query.TableDataSource;
+import io.druid.query.dimension.DefaultDimensionSpec;
+import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.dimension.ExtractionDimensionSpec;
+import io.druid.query.extraction.LookupExtractionFn;
+import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.spec.LegacySegmentSpec;
+import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -44,6 +53,7 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -52,10 +62,47 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class SelectQueryRunnerTest
 {
-  @Parameterized.Parameters
+  // copied from druid.sample.tsv
+  public static final String[] V_0112 = {
+      "2011-01-12T00:00:00.000Z	spot	automotive	preferred	apreferred	100.000000",
+      "2011-01-12T00:00:00.000Z	spot	business	preferred	bpreferred	100.000000",
+      "2011-01-12T00:00:00.000Z	spot	entertainment	preferred	epreferred	100.000000",
+      "2011-01-12T00:00:00.000Z	spot	health	preferred	hpreferred	100.000000",
+      "2011-01-12T00:00:00.000Z	spot	mezzanine	preferred	mpreferred	100.000000",
+      "2011-01-12T00:00:00.000Z	spot	news	preferred	npreferred	100.000000",
+      "2011-01-12T00:00:00.000Z	spot	premium	preferred	ppreferred	100.000000",
+      "2011-01-12T00:00:00.000Z	spot	technology	preferred	tpreferred	100.000000",
+      "2011-01-12T00:00:00.000Z	spot	travel	preferred	tpreferred	100.000000",
+      "2011-01-12T00:00:00.000Z	total_market	mezzanine	preferred	mpreferred	1000.000000",
+      "2011-01-12T00:00:00.000Z	total_market	premium	preferred	ppreferred	1000.000000",
+      "2011-01-12T00:00:00.000Z	upfront	mezzanine	preferred	mpreferred	800.000000	value",
+      "2011-01-12T00:00:00.000Z	upfront	premium	preferred	ppreferred	800.000000	value"
+  };
+  public static final String[] V_0113 = {
+      "2011-01-13T00:00:00.000Z	spot	automotive	preferred	apreferred	94.874713",
+      "2011-01-13T00:00:00.000Z	spot	business	preferred	bpreferred	103.629399",
+      "2011-01-13T00:00:00.000Z	spot	entertainment	preferred	epreferred	110.087299",
+      "2011-01-13T00:00:00.000Z	spot	health	preferred	hpreferred	114.947403",
+      "2011-01-13T00:00:00.000Z	spot	mezzanine	preferred	mpreferred	104.465767",
+      "2011-01-13T00:00:00.000Z	spot	news	preferred	npreferred	102.851683",
+      "2011-01-13T00:00:00.000Z	spot	premium	preferred	ppreferred	108.863011",
+      "2011-01-13T00:00:00.000Z	spot	technology	preferred	tpreferred	111.356672",
+      "2011-01-13T00:00:00.000Z	spot	travel	preferred	tpreferred	106.236928",
+      "2011-01-13T00:00:00.000Z	total_market	mezzanine	preferred	mpreferred	1040.945505",
+      "2011-01-13T00:00:00.000Z	total_market	premium	preferred	ppreferred	1689.012875",
+      "2011-01-13T00:00:00.000Z	upfront	mezzanine	preferred	mpreferred	826.060182	value",
+      "2011-01-13T00:00:00.000Z	upfront	premium	preferred	ppreferred	1564.617729	value"
+  };
+
+  public static final QuerySegmentSpec I_0112_0114 = new LegacySegmentSpec(
+      new Interval("2011-01-12/2011-01-14")
+  );
+  public static final String[] V_0112_0114 = ObjectArrays.concat(V_0112, V_0113, String.class);
+
+  @Parameterized.Parameters(name = "{0}:descending={1}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
-    return QueryRunnerTestHelper.transformToConstructionFeeder(
+    return QueryRunnerTestHelper.cartesian(
         QueryRunnerTestHelper.makeQueryRunners(
             new SelectQueryRunnerFactory(
                 new SelectQueryQueryToolChest(
@@ -65,19 +112,18 @@ public class SelectQueryRunnerTest
                 new SelectQueryEngine(),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
             )
-        )
+        ),
+        Arrays.asList(false, true)
     );
   }
 
-  private static final String providerLowercase = "market";
-
   private final QueryRunner runner;
+  private final boolean descending;
 
-  public SelectQueryRunnerTest(
-      QueryRunner runner
-  )
+  public SelectQueryRunnerTest(QueryRunner runner, boolean descending)
   {
     this.runner = runner;
+    this.descending = descending;
   }
 
   @Test
@@ -85,21 +131,68 @@ public class SelectQueryRunnerTest
   {
     SelectQuery query = new SelectQuery(
         new TableDataSource(QueryRunnerTestHelper.dataSource),
-        QueryRunnerTestHelper.fullOnInterval,
+        I_0112_0114,
+        descending,
         null,
         QueryRunnerTestHelper.allGran,
-        Lists.<String>newArrayList(),
-        Lists.<String>newArrayList(),
+        DefaultDimensionSpec.toSpec(Arrays.<String>asList()),
+        Arrays.<String>asList(),
         new PagingSpec(null, 3),
         null
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<SelectResultValue>> results = Sequences.toList(
         runner.run(query, context),
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 
-    List<Result<SelectResultValue>> expectedResults = Arrays.asList(
+    PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
+    List<Result<SelectResultValue>> expectedResults = toExpected(
+        toEvents(new String[]{EventHolder.timestampKey + ":TIME"}, V_0112_0114),
+        offset.startOffset(),
+        offset.threshold()
+    );
+    verify(expectedResults, results);
+  }
+
+  @Test
+  public void testFullOnSelectWithDimensionSpec()
+  {
+    Map<String, String> map = new HashMap<>();
+    map.put("automotive", "automotive0");
+    map.put("business", "business0");
+    map.put("entertainment", "entertainment0");
+    map.put("health", "health0");
+    map.put("mezzanine", "mezzanine0");
+    map.put("news", "news0");
+    map.put("premium", "premium0");
+    map.put("technology", "technology0");
+    map.put("travel", "travel0");
+
+    SelectQuery query = new SelectQuery(
+        new TableDataSource(QueryRunnerTestHelper.dataSource),
+        QueryRunnerTestHelper.fullOnInterval,
+        descending,
+        null,
+        QueryRunnerTestHelper.allGran,
+        Arrays.<DimensionSpec>asList(
+            new DefaultDimensionSpec(QueryRunnerTestHelper.marketDimension, "mar"),
+            new ExtractionDimensionSpec(
+                QueryRunnerTestHelper.qualityDimension,
+                "qual",
+                new LookupExtractionFn(new MapLookupExtractor(map, true), false, null, true, false)
+            ),
+            new DefaultDimensionSpec(QueryRunnerTestHelper.placementDimension, "place")
+        ), Lists.<String>newArrayList(), new PagingSpec(null, 3),
+        null
+    );
+    HashMap<String, Object> context = new HashMap<String, Object>();
+    Iterable<Result<SelectResultValue>> results = Sequences.toList(
+        runner.run(query, context),
+        Lists.<Result<SelectResultValue>>newArrayList()
+    );
+
+    List<Result<SelectResultValue>> expectedResultsAsc = Arrays.asList(
         new Result<SelectResultValue>(
             new DateTime("2011-01-12T00:00:00.000Z"),
             new SelectResultValue(
@@ -110,10 +203,9 @@ public class SelectQueryRunnerTest
                         0,
                         new ImmutableMap.Builder<String, Object>()
                             .put(EventHolder.timestampKey, new DateTime("2011-01-12T00:00:00.000Z"))
-                            .put(providerLowercase, "spot")
-                            .put(QueryRunnerTestHelper.qualityDimension, "automotive")
-                            .put(QueryRunnerTestHelper.placementDimension, "preferred")
-                            .put(QueryRunnerTestHelper.placementishDimension, Lists.newArrayList("a", "preferred"))
+                            .put("mar", "spot")
+                            .put("qual", "automotive0")
+                            .put("place", "preferred")
                             .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
                             .build()
                     ),
@@ -122,10 +214,9 @@ public class SelectQueryRunnerTest
                         1,
                         new ImmutableMap.Builder<String, Object>()
                             .put(EventHolder.timestampKey, new DateTime("2011-01-12T00:00:00.000Z"))
-                            .put(providerLowercase, "spot")
-                            .put(QueryRunnerTestHelper.qualityDimension, "business")
-                            .put(QueryRunnerTestHelper.placementDimension, "preferred")
-                            .put(QueryRunnerTestHelper.placementishDimension, Lists.newArrayList("b", "preferred"))
+                            .put("mar", "spot")
+                            .put("qual", "business0")
+                            .put("place", "preferred")
                             .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
                             .build()
                     ),
@@ -134,10 +225,9 @@ public class SelectQueryRunnerTest
                         2,
                         new ImmutableMap.Builder<String, Object>()
                             .put(EventHolder.timestampKey, new DateTime("2011-01-12T00:00:00.000Z"))
-                            .put(providerLowercase, "spot")
-                            .put(QueryRunnerTestHelper.qualityDimension, "entertainment")
-                            .put(QueryRunnerTestHelper.placementDimension, "preferred")
-                            .put(QueryRunnerTestHelper.placementishDimension, Lists.newArrayList("e", "preferred"))
+                            .put("mar", "spot")
+                            .put("qual", "entertainment0")
+                            .put("place", "preferred")
                             .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
                             .build()
                     )
@@ -146,7 +236,51 @@ public class SelectQueryRunnerTest
         )
     );
 
-    verify(expectedResults, results);
+    List<Result<SelectResultValue>> expectedResultsDsc = Arrays.asList(
+        new Result<SelectResultValue>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new SelectResultValue(
+                ImmutableMap.of(QueryRunnerTestHelper.segmentId, -3),
+                Arrays.asList(
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        -1,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-04-15T00:00:00.000Z"))
+                            .put("mar", "upfront")
+                            .put("qual", "premium0")
+                            .put("place", "preferred")
+                            .put(QueryRunnerTestHelper.indexMetric, 780.27197265625F)
+                            .build()
+                    ),
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        -2,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-04-15T00:00:00.000Z"))
+                            .put("mar", "upfront")
+                            .put("qual", "mezzanine0")
+                            .put("place", "preferred")
+                            .put(QueryRunnerTestHelper.indexMetric, 962.731201171875F)
+                            .build()
+                    ),
+                    new EventHolder(
+                        QueryRunnerTestHelper.segmentId,
+                        -3,
+                        new ImmutableMap.Builder<String, Object>()
+                            .put(EventHolder.timestampKey, new DateTime("2011-04-15T00:00:00.000Z"))
+                            .put("mar", "total_market")
+                            .put("qual", "premium0")
+                            .put("place", "preferred")
+                            .put(QueryRunnerTestHelper.indexMetric, 1029.0570068359375F)
+                            .build()
+                    )
+                )
+            )
+        )
+    );
+
+    verify(descending ? expectedResultsDsc : expectedResultsAsc, results);
   }
 
   @Test
@@ -154,58 +288,37 @@ public class SelectQueryRunnerTest
   {
     SelectQuery query = new SelectQuery(
         new TableDataSource(QueryRunnerTestHelper.dataSource),
-        QueryRunnerTestHelper.fullOnInterval,
+        I_0112_0114,
+        descending,
         null,
         QueryRunnerTestHelper.allGran,
-        Lists.<String>newArrayList(providerLowercase),
-        Lists.<String>newArrayList(QueryRunnerTestHelper.indexMetric),
+        DefaultDimensionSpec.toSpec(Arrays.asList(QueryRunnerTestHelper.marketDimension)),
+        Arrays.asList(QueryRunnerTestHelper.indexMetric),
         new PagingSpec(null, 3),
         null
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+    HashMap<String, Object> context = new HashMap<String, Object>();
     Iterable<Result<SelectResultValue>> results = Sequences.toList(
         runner.run(query, context),
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 
-    List<Result<SelectResultValue>> expectedResults = Arrays.asList(
-        new Result<SelectResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
-            new SelectResultValue(
-                ImmutableMap.of(QueryRunnerTestHelper.segmentId, 2),
-                Arrays.asList(
-                    new EventHolder(
-                        QueryRunnerTestHelper.segmentId,
-                        0,
-                        new ImmutableMap.Builder<String, Object>()
-                            .put(EventHolder.timestampKey, new DateTime("2011-01-12T00:00:00.000Z"))
-                            .put(providerLowercase, "spot")
-                            .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
-                            .build()
-                    ),
-                    new EventHolder(
-                        QueryRunnerTestHelper.segmentId,
-                        1,
-                        new ImmutableMap.Builder<String, Object>()
-                            .put(EventHolder.timestampKey, new DateTime("2011-01-12T00:00:00.000Z"))
-                            .put(providerLowercase, "spot")
-                            .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
-                            .build()
-                    ),
-                    new EventHolder(
-                        QueryRunnerTestHelper.segmentId,
-                        2,
-                        new ImmutableMap.Builder<String, Object>()
-                            .put(EventHolder.timestampKey, new DateTime("2011-01-12T00:00:00.000Z"))
-                            .put(providerLowercase, "spot")
-                            .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
-                            .build()
-                    )
-                )
-            )
-        )
+    PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
+    List<Result<SelectResultValue>> expectedResults = toExpected(
+        toEvents(
+            new String[]{
+                EventHolder.timestampKey + ":TIME",
+                QueryRunnerTestHelper.marketDimension + ":STRING",
+                null,
+                null,
+                null,
+                QueryRunnerTestHelper.indexMetric + ":FLOAT"
+            },
+            V_0112_0114
+        ),
+        offset.startOffset(),
+        offset.threshold()
     );
-
     verify(expectedResults, results);
   }
 
@@ -214,154 +327,101 @@ public class SelectQueryRunnerTest
   {
     SelectQuery query = new SelectQuery(
         new TableDataSource(QueryRunnerTestHelper.dataSource),
-        QueryRunnerTestHelper.fullOnInterval,
+        I_0112_0114,
+        descending,
         null,
         QueryRunnerTestHelper.allGran,
-        Lists.<String>newArrayList(QueryRunnerTestHelper.qualityDimension),
-        Lists.<String>newArrayList(QueryRunnerTestHelper.indexMetric),
-        new PagingSpec(Maps.newLinkedHashMap(ImmutableMap.of(QueryRunnerTestHelper.segmentId, 3)), 3),
+        DefaultDimensionSpec.toSpec(Arrays.asList(QueryRunnerTestHelper.qualityDimension)),
+        Arrays.asList(QueryRunnerTestHelper.indexMetric),
+        new PagingSpec(toPagingIdentifier(3, descending), 3),
         null
     );
-    HashMap<String,Object> context = new HashMap<String, Object>();
+
     Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(query, context),
+        runner.run(query, Maps.newHashMap()),
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 
-    List<Result<SelectResultValue>> expectedResults = Arrays.asList(
-        new Result<SelectResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
-            new SelectResultValue(
-                ImmutableMap.of(QueryRunnerTestHelper.segmentId, 5),
-                Arrays.asList(
-                    new EventHolder(
-                        QueryRunnerTestHelper.segmentId,
-                        3,
-                        new ImmutableMap.Builder<String, Object>()
-                            .put(EventHolder.timestampKey, new DateTime("2011-01-12T00:00:00.000Z"))
-                            .put(QueryRunnerTestHelper.qualityDimension, "health")
-                            .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
-                            .build()
-                    ),
-                    new EventHolder(
-                        QueryRunnerTestHelper.segmentId,
-                        4,
-                        new ImmutableMap.Builder<String, Object>()
-                            .put(EventHolder.timestampKey, new DateTime("2011-01-12T00:00:00.000Z"))
-                            .put(QueryRunnerTestHelper.qualityDimension, "mezzanine")
-                            .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
-                            .build()
-                    ),
-                    new EventHolder(
-                        QueryRunnerTestHelper.segmentId,
-                        5,
-                        new ImmutableMap.Builder<String, Object>()
-                            .put(EventHolder.timestampKey, new DateTime("2011-01-12T00:00:00.000Z"))
-                            .put(QueryRunnerTestHelper.qualityDimension, "news")
-                            .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
-                            .build()
-                    )
-                )
-            )
-        )
+    PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
+    List<Result<SelectResultValue>> expectedResults = toExpected(
+        toEvents(
+            new String[]{
+                EventHolder.timestampKey + ":TIME",
+                "foo:NULL",
+                "foo2:NULL"
+            },
+            V_0112_0114
+        ),
+        offset.startOffset(),
+        offset.threshold()
     );
-
     verify(expectedResults, results);
   }
 
   @Test
   public void testFullOnSelectWithFilter()
   {
-    SelectQuery query = new SelectQuery(
-        new TableDataSource(QueryRunnerTestHelper.dataSource),
-        new LegacySegmentSpec(new Interval("2011-01-12/2011-01-14")),
-        new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "spot"),
-        QueryRunnerTestHelper.dayGran,
-        Lists.<String>newArrayList(QueryRunnerTestHelper.qualityDimension),
-        Lists.<String>newArrayList(QueryRunnerTestHelper.indexMetric),
-        new PagingSpec(Maps.newLinkedHashMap(ImmutableMap.of(QueryRunnerTestHelper.segmentId, 3)), 3),
-        null
-    );
-    HashMap<String,Object> context = new HashMap<String, Object>();
-    Iterable<Result<SelectResultValue>> results = Sequences.toList(
-        runner.run(query, context),
-        Lists.<Result<SelectResultValue>>newArrayList()
-    );
+    // startDelta + threshold pairs
+    for (int[] param : new int[][]{{3, 3}, {0, 1}, {5, 5}, {2, 7}, {3, 0}}) {
+      SelectQuery query = new SelectQuery(
+          new TableDataSource(QueryRunnerTestHelper.dataSource),
+          I_0112_0114,
+          descending,
+          new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "spot"),
+          QueryRunnerTestHelper.dayGran,
+          DefaultDimensionSpec.toSpec(Lists.<String>newArrayList(QueryRunnerTestHelper.qualityDimension)),
+          Lists.<String>newArrayList(QueryRunnerTestHelper.indexMetric),
+          new PagingSpec(toPagingIdentifier(param[0], descending), param[1]),
+          null
+      );
+      HashMap<String, Object> context = new HashMap<String, Object>();
+      Iterable<Result<SelectResultValue>> results = Sequences.toList(
+          runner.run(query, context),
+          Lists.<Result<SelectResultValue>>newArrayList()
+      );
 
-    List<Result<SelectResultValue>> expectedResults = Arrays.asList(
-        new Result<SelectResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
-            new SelectResultValue(
-                ImmutableMap.of(QueryRunnerTestHelper.segmentId, 5),
-                Arrays.asList(
-                    new EventHolder(
-                        QueryRunnerTestHelper.segmentId,
-                        3,
-                        new ImmutableMap.Builder<String, Object>()
-                            .put(EventHolder.timestampKey, new DateTime("2011-01-12T00:00:00.000Z"))
-                            .put(QueryRunnerTestHelper.qualityDimension, "health")
-                            .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
-                            .build()
-                    ),
-                    new EventHolder(
-                        QueryRunnerTestHelper.segmentId,
-                        4,
-                        new ImmutableMap.Builder<String, Object>()
-                            .put(EventHolder.timestampKey, new DateTime("2011-01-12T00:00:00.000Z"))
-                            .put(QueryRunnerTestHelper.qualityDimension, "mezzanine")
-                            .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
-                            .build()
-                    ),
-                    new EventHolder(
-                        QueryRunnerTestHelper.segmentId,
-                        5,
-                        new ImmutableMap.Builder<String, Object>()
-                            .put(EventHolder.timestampKey, new DateTime("2011-01-12T00:00:00.000Z"))
-                            .put(QueryRunnerTestHelper.qualityDimension, "news")
-                            .put(QueryRunnerTestHelper.indexMetric, 100.000000F)
-                            .build()
-                    )
-                )
-            )
-        ),
-        new Result<SelectResultValue>(
-            new DateTime("2011-01-13T00:00:00.000Z"),
-            new SelectResultValue(
-                ImmutableMap.of(QueryRunnerTestHelper.segmentId, 5),
-                Arrays.asList(
-                    new EventHolder(
-                        QueryRunnerTestHelper.segmentId,
-                        3,
-                        new ImmutableMap.Builder<String, Object>()
-                            .put(EventHolder.timestampKey, new DateTime("2011-01-13T00:00:00.000Z"))
-                            .put(QueryRunnerTestHelper.qualityDimension, "health")
-                            .put(QueryRunnerTestHelper.indexMetric, 114.947403F)
-                            .build()
-                    ),
-                    new EventHolder(
-                        QueryRunnerTestHelper.segmentId,
-                        4,
-                        new ImmutableMap.Builder<String, Object>()
-                            .put(EventHolder.timestampKey, new DateTime("2011-01-13T00:00:00.000Z"))
-                            .put(QueryRunnerTestHelper.qualityDimension, "mezzanine")
-                            .put(QueryRunnerTestHelper.indexMetric, 104.465767F)
-                            .build()
-                    ),
-                    new EventHolder(
-                        QueryRunnerTestHelper.segmentId,
-                        5,
-                        new ImmutableMap.Builder<String, Object>()
-                            .put(EventHolder.timestampKey, new DateTime("2011-01-13T00:00:00.000Z"))
-                            .put(QueryRunnerTestHelper.qualityDimension, "news")
-                            .put(QueryRunnerTestHelper.indexMetric, 102.851683F)
-                            .build()
-                    )
-                )
-            )
-        )
-    );
+      final List<List<Map<String, Object>>> events = toEvents(
+          new String[]{
+              EventHolder.timestampKey + ":TIME",
+              null,
+              QueryRunnerTestHelper.qualityDimension + ":STRING",
+              null,
+              null,
+              QueryRunnerTestHelper.indexMetric + ":FLOAT"
+          },
+          // filtered values with day granularity
+          new String[]{
+              "2011-01-12T00:00:00.000Z	spot	automotive	preferred	apreferred	100.000000",
+              "2011-01-12T00:00:00.000Z	spot	business	preferred	bpreferred	100.000000",
+              "2011-01-12T00:00:00.000Z	spot	entertainment	preferred	epreferred	100.000000",
+              "2011-01-12T00:00:00.000Z	spot	health	preferred	hpreferred	100.000000",
+              "2011-01-12T00:00:00.000Z	spot	mezzanine	preferred	mpreferred	100.000000",
+              "2011-01-12T00:00:00.000Z	spot	news	preferred	npreferred	100.000000",
+              "2011-01-12T00:00:00.000Z	spot	premium	preferred	ppreferred	100.000000",
+              "2011-01-12T00:00:00.000Z	spot	technology	preferred	tpreferred	100.000000",
+              "2011-01-12T00:00:00.000Z	spot	travel	preferred	tpreferred	100.000000"
+          },
+          new String[]{
+              "2011-01-13T00:00:00.000Z	spot	automotive	preferred	apreferred	94.874713",
+              "2011-01-13T00:00:00.000Z	spot	business	preferred	bpreferred	103.629399",
+              "2011-01-13T00:00:00.000Z	spot	entertainment	preferred	epreferred	110.087299",
+              "2011-01-13T00:00:00.000Z	spot	health	preferred	hpreferred	114.947403",
+              "2011-01-13T00:00:00.000Z	spot	mezzanine	preferred	mpreferred	104.465767",
+              "2011-01-13T00:00:00.000Z	spot	news	preferred	npreferred	102.851683",
+              "2011-01-13T00:00:00.000Z	spot	premium	preferred	ppreferred	108.863011",
+              "2011-01-13T00:00:00.000Z	spot	technology	preferred	tpreferred	111.356672",
+              "2011-01-13T00:00:00.000Z	spot	travel	preferred	tpreferred	106.236928"
+          }
+      );
 
-    verify(expectedResults, results);
+      PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
+      List<Result<SelectResultValue>> expectedResults = toExpected(
+          events,
+          offset.startOffset(),
+          offset.threshold()
+      );
+      verify(expectedResults, results);
+    }
   }
 
   @Test
@@ -369,17 +429,16 @@ public class SelectQueryRunnerTest
   {
     SelectQuery query = new SelectQuery(
         new TableDataSource(QueryRunnerTestHelper.dataSource),
-        new LegacySegmentSpec(new Interval("2011-01-12/2011-01-14")),
+        I_0112_0114,
+        descending,
         new AndDimFilter(
-            Arrays.<DimFilter>asList(
-                new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "spot"),
-                new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "foo")
-            )
-        ),
+                Arrays.<DimFilter>asList(
+                    new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "spot"),
+                    new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "foo")
+                )
+            ),
         QueryRunnerTestHelper.allGran,
-        Lists.<String>newArrayList(),
-        Lists.<String>newArrayList(),
-        new PagingSpec(null, 3),
+        DefaultDimensionSpec.toSpec(Lists.<String>newArrayList()), Lists.<String>newArrayList(), new PagingSpec(null, 3),
         null
     );
 
@@ -401,16 +460,16 @@ public class SelectQueryRunnerTest
     verify(expectedResults, results);
   }
 
-
   @Test
   public void testFullSelectNoDimensionAndMetric()
   {
     SelectQuery query = new SelectQuery(
         new TableDataSource(QueryRunnerTestHelper.dataSource),
-        new LegacySegmentSpec(new Interval("2011-01-12/2011-01-14")),
+        I_0112_0114,
+        descending,
         null,
         QueryRunnerTestHelper.allGran,
-        Lists.<String>newArrayList("foo"),
+        DefaultDimensionSpec.toSpec(Lists.<String>newArrayList("foo")),
         Lists.<String>newArrayList("foo2"),
         new PagingSpec(null, 3),
         null
@@ -421,38 +480,107 @@ public class SelectQueryRunnerTest
         Lists.<Result<SelectResultValue>>newArrayList()
     );
 
-    Map<String, Object> res = Maps.newHashMap();
-    res.put("timestamp", new DateTime("2011-01-12T00:00:00.000Z"));
-    res.put("foo", null);
-    res.put("foo2", null);
-
-    List<Result<SelectResultValue>> expectedResults = Arrays.asList(
-        new Result<SelectResultValue>(
-            new DateTime("2011-01-12T00:00:00.000Z"),
-            new SelectResultValue(
-                ImmutableMap.of(QueryRunnerTestHelper.segmentId, 2),
-                Arrays.asList(
-                    new EventHolder(
-                        QueryRunnerTestHelper.segmentId,
-                        0,
-                        res
-                    ),
-                    new EventHolder(
-                        QueryRunnerTestHelper.segmentId,
-                        1,
-                        res
-                    ),
-                    new EventHolder(
-                        QueryRunnerTestHelper.segmentId,
-                        2,
-                        res
-                    )
-                )
-            )
-        )
+    final List<List<Map<String, Object>>> events = toEvents(
+        new String[]{
+            EventHolder.timestampKey + ":TIME",
+            "foo:NULL",
+            "foo2:NULL"
+        },
+        V_0112_0114
     );
 
+    PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
+    List<Result<SelectResultValue>> expectedResults = toExpected(
+        events,
+        offset.startOffset(),
+        offset.threshold()
+    );
     verify(expectedResults, results);
+  }
+
+  private LinkedHashMap<String, Integer> toPagingIdentifier(int startDelta, boolean descending)
+  {
+    return Maps.newLinkedHashMap(
+        ImmutableMap.of(
+            QueryRunnerTestHelper.segmentId,
+            PagingOffset.toOffset(startDelta, descending)
+        )
+    );
+  }
+
+  private List<List<Map<String, Object>>> toEvents(final String[] dimSpecs, final String[]... valueSet)
+  {
+    List<List<Map<String, Object>>> events = Lists.newArrayList();
+    for (String[] values : valueSet) {
+      events.add(
+          Lists.newArrayList(
+              Iterables.transform(
+                  Arrays.asList(values), new Function<String, Map<String, Object>>()
+                  {
+                    @Override
+                    public Map<String, Object> apply(String input)
+                    {
+                      Map<String, Object> event = Maps.newHashMap();
+                      String[] values = input.split("\\t");
+                      for (int i = 0; i < dimSpecs.length; i++) {
+                        if (dimSpecs[i] == null || i >= dimSpecs.length) {
+                          continue;
+                        }
+                        String[] specs = dimSpecs[i].split(":");
+                        event.put(
+                            specs[0],
+                            specs[1].equals("TIME") ? new DateTime(values[i]) :
+                            specs[1].equals("FLOAT") ? Float.valueOf(values[i]) :
+                            specs[1].equals("DOUBLE") ? Double.valueOf(values[i]) :
+                            specs[1].equals("LONG") ? Long.valueOf(values[i]) :
+                            specs[1].equals("NULL") ? null :
+                            values[i]
+                        );
+                      }
+                      return event;
+                    }
+                  }
+              )
+          )
+      );
+    }
+    return events;
+  }
+
+  private List<Result<SelectResultValue>> toExpected(
+      List<List<Map<String, Object>>> targets,
+      final int offset,
+      final int threshold
+  )
+  {
+    if (offset < 0) {
+      targets = Lists.reverse(targets);
+    }
+    List<Result<SelectResultValue>> expected = Lists.newArrayListWithExpectedSize(targets.size());
+    for (List<Map<String, Object>> group : targets) {
+      List<EventHolder> holders = Lists.newArrayListWithExpectedSize(threshold);
+      int newOffset = offset;
+      if (offset < 0) {
+        int start = group.size() + offset;
+        int end = Math.max(-1, start - threshold);
+        for (int i = start; i > end; i--) {
+          holders.add(new EventHolder(QueryRunnerTestHelper.segmentId, newOffset--, group.get(i)));
+        }
+      } else {
+        int end = Math.min(group.size(), offset + threshold);
+        for (int i = offset; i < end; i++) {
+          holders.add(new EventHolder(QueryRunnerTestHelper.segmentId, newOffset++, group.get(i)));
+        }
+      }
+      int lastOffset = holders.isEmpty() ? offset : holders.get(holders.size() - 1).getOffset();
+      expected.add(
+          new Result(
+              new DateTime(group.get(0).get(EventHolder.timestampKey)),
+              new SelectResultValue(ImmutableMap.of(QueryRunnerTestHelper.segmentId, lastOffset), holders)
+          )
+      );
+    }
+    return expected;
   }
 
   private static void verify(

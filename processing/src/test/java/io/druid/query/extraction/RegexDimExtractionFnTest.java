@@ -158,12 +158,12 @@ public class RegexDimExtractionFnTest
   {
     final ObjectMapper objectMapper = new DefaultObjectMapper();
     final String json = "{ \"type\" : \"regex\", \"expr\" : \".(...)?\" , " +
-                        "\"replaceMissingValues\": true, \"replaceMissingValuesWith\":\"foobar\"}";
+                        "\"replaceMissingValue\": true, \"replaceMissingValueWith\":\"foobar\"}";
     RegexDimExtractionFn extractionFn = (RegexDimExtractionFn) objectMapper.readValue(json, ExtractionFn.class);
 
     Assert.assertEquals(".(...)?", extractionFn.getExpr());
-    Assert.assertTrue(extractionFn.isReplaceMissingValues());
-    Assert.assertEquals("foobar", extractionFn.getReplaceMissingValuesWith());
+    Assert.assertTrue(extractionFn.isReplaceMissingValue());
+    Assert.assertEquals("foobar", extractionFn.getReplaceMissingValueWith());
 
     // round trip
     Assert.assertEquals(

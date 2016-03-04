@@ -254,7 +254,7 @@ public class SearchQueryRunnerTest
 
 
     final LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(
-      new MapLookupExtractor(ImmutableMap.of("automotive", automotiveSnowman)),
+      new MapLookupExtractor(ImmutableMap.of("automotive", automotiveSnowman), false),
       true,
       null,
       true,

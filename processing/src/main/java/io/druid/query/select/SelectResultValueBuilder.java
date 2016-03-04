@@ -22,6 +22,7 @@ package io.druid.query.select;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.MinMaxPriorityQueue;
+import com.google.common.collect.Queues;
 import com.google.common.primitives.Longs;
 import com.metamx.common.guava.Comparators;
 import io.druid.query.Result;
@@ -30,6 +31,7 @@ import org.joda.time.DateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 
 /**
  */
@@ -54,47 +56,76 @@ public class SelectResultValueBuilder
     }
   };
 
-  private final DateTime timestamp;
+  protected final DateTime timestamp;
+  protected final PagingSpec pagingSpec;
+  protected final boolean descending;
 
-  private MinMaxPriorityQueue<EventHolder> pQueue = null;
+  protected final Queue<EventHolder> pQueue;
+  protected final Map<String, Integer> pagingIdentifiers;
 
-  public SelectResultValueBuilder(
-      DateTime timestamp,
-      int threshold,
-      boolean descending
-  )
+  public SelectResultValueBuilder(DateTime timestamp, PagingSpec pagingSpec, boolean descending)
   {
     this.timestamp = timestamp;
-
-    instantiatePQueue(threshold, descending ? Comparators.inverse(comparator) : comparator);
+    this.pagingSpec = pagingSpec;
+    this.descending = descending;
+    this.pagingIdentifiers = Maps.newLinkedHashMap();
+    this.pQueue = instantiatePQueue();
   }
 
-  public void addEntry(
-      EventHolder event
-  )
+  public void addEntry(EventHolder event)
   {
     pQueue.add(event);
   }
 
+  public void finished(String segmentId, int lastOffset)
+  {
+    pagingIdentifiers.put(segmentId, lastOffset);
+  }
+
   public Result<SelectResultValue> build()
   {
-    // Pull out top aggregated values
-    List<EventHolder> values = Lists.newArrayListWithCapacity(pQueue.size());
-    Map<String, Integer> pagingIdentifiers = Maps.newLinkedHashMap();
-    while (!pQueue.isEmpty()) {
-      EventHolder event = pQueue.remove();
-      pagingIdentifiers.put(event.getSegmentId(), event.getOffset());
-      values.add(event);
-    }
-
     return new Result<SelectResultValue>(
         timestamp,
-        new SelectResultValue(pagingIdentifiers, values)
+        new SelectResultValue(pagingIdentifiers, getEventHolders())
     );
   }
 
-  private void instantiatePQueue(int threshold, final Comparator comparator)
+  protected List<EventHolder> getEventHolders()
   {
-    this.pQueue = MinMaxPriorityQueue.orderedBy(comparator).maximumSize(threshold).create();
+    return Lists.newArrayList(pQueue);
+  }
+
+  protected Queue<EventHolder> instantiatePQueue()
+  {
+    return Queues.newArrayDeque();
+  }
+
+  public static class MergeBuilder extends SelectResultValueBuilder
+  {
+    public MergeBuilder(DateTime timestamp, PagingSpec pagingSpec, boolean descending)
+    {
+      super(timestamp, pagingSpec, descending);
+    }
+
+    @Override
+    protected Queue<EventHolder> instantiatePQueue()
+    {
+      int threshold = pagingSpec.getThreshold();
+      return MinMaxPriorityQueue.orderedBy(descending ? Comparators.inverse(comparator) : comparator)
+                                .maximumSize(threshold > 0 ? threshold : Integer.MAX_VALUE)
+                                .create();
+    }
+
+    @Override
+    protected List<EventHolder> getEventHolders()
+    {
+      final List<EventHolder> values = Lists.newArrayListWithCapacity(pQueue.size());
+      while (!pQueue.isEmpty()) {
+        EventHolder event = pQueue.remove();
+        pagingIdentifiers.put(event.getSegmentId(), event.getOffset());
+        values.add(event);
+      }
+      return values;
+    }
   }
 }

@@ -34,6 +34,6 @@ public class OldSketchBuildAggregatorFactory extends SketchMergeAggregatorFactor
       @JsonProperty("size") Integer size
   )
   {
-    super(name, fieldName, size, true, false);
+    super(name, fieldName, size, true, false, null);
   }
 }

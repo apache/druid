@@ -82,6 +82,9 @@ Computes an arbitrary JavaScript function over a set of columns (both metrics an
 
 All JavaScript functions must return numerical values.
 
+JavaScript aggregators are much slower than native Java aggregators and if performance is critical, you should implement 
+your functionality as a native Java aggregator.
+
 ```json
 { "type": "javascript",
   "name": "<output_name>",
@@ -111,9 +114,14 @@ All JavaScript functions must return numerical values.
 The javascript aggregator is recommended for rapidly prototyping features. This aggregator will be much slower in production 
 use than a native Java aggregator.
 
+## Approximate Aggregations
+
 ### Cardinality aggregator
 
-Computes the cardinality of a set of Druid dimensions, using HyperLogLog to estimate the cardinality.
+Computes the cardinality of a set of Druid dimensions, using HyperLogLog to estimate the cardinality. Please note that this 
+aggregator will be much slower than indexing a column with the hyperUnique aggregator. This aggregator also runs over a dimension column, which 
+means the string dimension cannot be removed from the dataset to improve rollup. In general, we strongly recommend using the hyperUnique aggregator 
+instead of the cardinality aggregator if you do not care about the individual values of a dimension.
 
 ```json
 {
@@ -178,10 +186,6 @@ Determine the number of distinct people (i.e. combinations of first and last nam
 }
 ```
 
-## Complex Aggregations
-
-Druid supports complex aggregations such as various types of approximate sketches. 
-
 ### HyperUnique aggregator
 
 Uses [HyperLogLog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf) to compute the estimated cardinality of a dimension that has been aggregated as a "hyperUnique" metric at indexing time.
@@ -189,6 +193,8 @@ Uses [HyperLogLog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf) to
 ```json
 { "type" : "hyperUnique", "name" : <output_name>, "fieldName" : <metric_name> }
 ```
+
+For more approximate aggregators, please see [theta sketches](../development/datasketches-aggregators.html).
 
 ## Miscellaneous Aggregations
 

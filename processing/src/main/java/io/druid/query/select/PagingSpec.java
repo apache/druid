@@ -91,6 +91,36 @@ public class PagingSpec
   }
 
   @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof PagingSpec)) {
+      return false;
+    }
+
+    PagingSpec that = (PagingSpec) o;
+
+    if (threshold != that.threshold) {
+      return false;
+    }
+    if (!pagingIdentifiers.equals(that.pagingIdentifiers)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = pagingIdentifiers.hashCode();
+    result = 31 * result + threshold;
+    return result;
+  }
+
+  @Override
   public String toString()
   {
     return "PagingSpec{" +
@@ -98,4 +128,14 @@ public class PagingSpec
            ", threshold=" + threshold +
            '}';
   }
+
+  public PagingOffset getOffset(String identifier, boolean descending)
+  {
+    Integer offset = pagingIdentifiers.get(identifier);
+    if (offset == null) {
+      offset = PagingOffset.toOffset(0, descending);
+    }
+    return PagingOffset.of(offset, threshold);
+  }
+
 }

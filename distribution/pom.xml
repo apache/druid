@@ -47,7 +47,8 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <executions>
                     <execution>
-                        <phase>install</phase>
+                        <id>pull-deps</id>
+                        <phase>package</phase>
                         <goals>
                             <goal>exec</goal>
                         </goals>
@@ -58,13 +59,15 @@
                                 <classpath/>
                                 <argument>-Ddruid.extensions.loadList=[]</argument>
                                 <argument>-Ddruid.extensions.directory=${project.build.directory}/extensions</argument>
-                                <argument>-Ddruid.extensions.hadoopDependenciesDir=${project.build.directory}/hadoop_dependencies</argument>
+                                <argument>-Ddruid.extensions.hadoopDependenciesDir=${project.build.directory}/hadoop-dependencies</argument>
                                 <argument>io.druid.cli.Main</argument>
                                 <argument>tools</argument>
                                 <argument>pull-deps</argument>
                                 <argument>--clean</argument>
                                 <argument>--defaultVersion</argument>
                                 <argument>${project.parent.version}</argument>
+                                <argument>-l</argument>
+                                <argument>${settings.localRepository}</argument>
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-examples</argument>
                                 <argument>-c</argument>
@@ -98,6 +101,23 @@
                             </arguments>
                         </configuration>
                     </execution>
+                    <execution>
+                        <id>mysql-tarball</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <executable>tar</executable>
+                            <arguments>
+                                <argument>-C</argument>
+                                <argument>${project.build.directory}/extensions</argument>
+                                <argument>-czvf</argument>
+                                <argument>${project.build.directory}/mysql-metadata-storage-${project.parent.version}.tar.gz</argument>
+                                <argument>mysql-metadata-storage</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
             <plugin>
@@ -106,7 +126,7 @@
                 <executions>
                     <execution>
                         <id>distro-assembly</id>
-                        <phase>install</phase>
+                        <phase>package</phase>
                         <goals>
                             <goal>single</goal>
                         </goals>
@@ -115,20 +135,6 @@
                             <tarLongFileMode>posix</tarLongFileMode>
                             <descriptors>
                                 <descriptor>src/assembly/assembly.xml</descriptor>
-                            </descriptors>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>mysql-distro-assembly</id>
-                        <phase>install</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                        <configuration>
-                            <finalName>mysql-metadata-storage</finalName>
-                            <tarLongFileMode>posix</tarLongFileMode>
-                            <descriptors>
-                                <descriptor>src/assembly/mysql_assembly.xml</descriptor>
                             </descriptors>
                         </configuration>
                     </execution>

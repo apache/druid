@@ -57,6 +57,11 @@ public class ExtractionDimensionSpec implements DimensionSpec
     this.outputName = outputName == null ? dimension : outputName;
   }
 
+  public ExtractionDimensionSpec(String dimension, String outputName, ExtractionFn extractionFn)
+  {
+    this(dimension, outputName, extractionFn, null);
+  }
+
   @Override
   @JsonProperty
   public String getDimension()

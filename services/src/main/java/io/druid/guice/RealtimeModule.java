@@ -29,6 +29,7 @@ import io.druid.client.cache.CacheConfig;
 import io.druid.client.coordinator.CoordinatorClient;
 import io.druid.metadata.MetadataSegmentPublisher;
 import io.druid.query.QuerySegmentWalker;
+import io.druid.query.extraction.LookupReferencesManager;
 import io.druid.segment.realtime.FireDepartment;
 import io.druid.segment.realtime.NoopSegmentPublisher;
 import io.druid.segment.realtime.RealtimeManager;
@@ -104,8 +105,8 @@ public class RealtimeModule implements Module
     binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig("realtime"));
     binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
     Jerseys.addResource(binder, QueryResource.class);
-    Jerseys.addResource(binder, ChatHandlerResource.class);
     LifecycleModule.register(binder, QueryResource.class);
+    LifecycleModule.register(binder, LookupReferencesManager.class);
     LifecycleModule.register(binder, Server.class);
   }
 }

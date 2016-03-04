@@ -87,14 +87,14 @@ public class LookupExtractionFnTest
       return;
     }
     final LookupExtractionFn lookupExtractionFn1 = new LookupExtractionFn(
-        new MapLookupExtractor(ImmutableMap.of("foo", "bar")),
+        new MapLookupExtractor(ImmutableMap.of("foo", "bar"), false),
         retainMissing,
         replaceMissing,
         injective,
         false
     );
     final LookupExtractionFn lookupExtractionFn2 = new LookupExtractionFn(
-        new MapLookupExtractor(ImmutableMap.of("foo", "bar")),
+        new MapLookupExtractor(ImmutableMap.of("foo", "bar"), false),
         retainMissing,
         replaceMissing,
         injective,
@@ -103,7 +103,7 @@ public class LookupExtractionFnTest
 
 
     final LookupExtractionFn lookupExtractionFn3 = new LookupExtractionFn(
-        new MapLookupExtractor(ImmutableMap.of("foo", "bar2")),
+        new MapLookupExtractor(ImmutableMap.of("foo", "bar2"), false),
         retainMissing,
         replaceMissing,
         injective,
@@ -124,7 +124,7 @@ public class LookupExtractionFnTest
       return;
     }
     final LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(
-        new MapLookupExtractor(ImmutableMap.of("foo", "bar")),
+        new MapLookupExtractor(ImmutableMap.of("foo", "bar"), false),
         retainMissing,
         replaceMissing,
         injective,
@@ -151,7 +151,7 @@ public class LookupExtractionFnTest
   {
     if (retainMissing && !Strings.isNullOrEmpty(replaceMissing)) {
       final LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(
-          new MapLookupExtractor(ImmutableMap.of("foo", "bar")),
+          new MapLookupExtractor(ImmutableMap.of("foo", "bar"), false),
           retainMissing,
           Strings.emptyToNull(replaceMissing),
           injective,
@@ -173,7 +173,7 @@ public class LookupExtractionFnTest
     weirdMap.put("foobar", null);
 
     final LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(
-        new MapLookupExtractor(ImmutableMap.of("foo", "bar")),
+        new MapLookupExtractor(ImmutableMap.of("foo", "bar"), false),
         retainMissing,
         replaceMissing,
         injective,
@@ -210,7 +210,7 @@ public class LookupExtractionFnTest
         Arrays.equals(
             lookupExtractionFn.getCacheKey(),
             new LookupExtractionFn(
-                new MapLookupExtractor(weirdMap),
+                new MapLookupExtractor(weirdMap, false),
                 lookupExtractionFn.isRetainMissingValue(),
                 lookupExtractionFn.getReplaceMissingValueWith(),
                 lookupExtractionFn.isInjective(),

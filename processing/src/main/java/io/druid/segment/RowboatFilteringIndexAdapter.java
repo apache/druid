@@ -76,12 +76,6 @@ public class RowboatFilteringIndexAdapter implements IndexableAdapter
   }
 
   @Override
-  public IndexedInts getBitmapIndex(String dimension, String value)
-  {
-    return baseAdapter.getBitmapIndex(dimension, value);
-  }
-
-  @Override
   public String getMetricType(String metric)
   {
     return baseAdapter.getMetricType(metric);

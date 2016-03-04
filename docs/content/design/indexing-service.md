@@ -3,9 +3,10 @@ layout: doc_page
 ---
 Indexing Service
 ================
+
 For Indexing Service Configuration, see [Indexing Service Configuration](../configuration/indexing-service.html).
 
-The indexing service is a highly-available, distributed service that runs indexing related tasks. Indexing service [tasks](../misc/tasks.html) create (and sometimes destroy) Druid [segments](../design/segments.html). The indexing service has a master/slave like architecture.
+The indexing service is a highly-available, distributed service that runs indexing related tasks. Indexing service [tasks](../ingestion/tasks.html) create (and sometimes destroy) Druid [segments](../design/segments.html). The indexing service has a master/slave like architecture.
 
 The indexing service is composed of three main components: a peon component that can run a single task, a [Middle Manager](../design/middlemanager.html) component that manages peons, and an overlord component that manages task distribution to middle managers.
 Overlords and middle managers may run on the same node or across multiple nodes while middle managers and [Peons](../design/peons.html) always run on the same node.
@@ -86,7 +87,7 @@ See [Peon](../design/peons.html).
 Tasks
 -----
 
-See [Tasks](../misc/tasks.html).
+See [Tasks](../ingestion/tasks.html).
 
 HTTP Endpoints
 --------------
@@ -96,4 +97,3 @@ HTTP Endpoints
 * `/status`
 
 Returns the Druid version, loaded extensions, memory used, total memory and other useful information about the node.
-

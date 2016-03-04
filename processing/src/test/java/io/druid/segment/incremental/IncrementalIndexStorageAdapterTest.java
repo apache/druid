@@ -19,6 +19,7 @@
 
 package io.druid.segment.incremental;
 
+import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableMap;
@@ -46,6 +47,8 @@ import io.druid.query.topn.TopNQueryEngine;
 import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.StorageAdapter;
+import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.SelectorFilter;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -54,6 +57,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -375,5 +379,77 @@ public class IncrementalIndexStorageAdapterTest
 
     MapBasedRow row = (MapBasedRow) results.get(0);
     Assert.assertEquals(ImmutableMap.of("billy", "hi", "cnt", 1L), row.getEvent());
+  }
+
+  @Test
+  public void testCursoringAndIndexUpdationInterleaving() throws Exception
+  {
+    final IncrementalIndex index = indexCreator.createIndex();
+    final long timestamp = System.currentTimeMillis();
+
+    for (int i = 0; i < 2; i++) {
+      index.add(
+          new MapBasedInputRow(
+              timestamp,
+              Lists.newArrayList("billy"),
+              ImmutableMap.<String, Object>of("billy", "v1" + i)
+          )
+      );
+    }
+
+    final StorageAdapter sa = new IncrementalIndexStorageAdapter(index);
+
+    Sequence<Cursor> cursors = sa.makeCursors(
+        null, new Interval(timestamp - 60_000, timestamp + 60_000), QueryGranularity.ALL, false
+    );
+
+    Sequences.toList(
+        Sequences.map(
+            cursors,
+            new Function<Cursor, Object>()
+            {
+              @Nullable
+              @Override
+              public Object apply(Cursor cursor)
+              {
+                DimensionSelector dimSelector = cursor.makeDimensionSelector(
+                    new DefaultDimensionSpec(
+                        "billy",
+                        "billy"
+                    )
+                );
+                int cardinality = dimSelector.getValueCardinality();
+
+                //index gets more rows at this point, while other thread is iterating over the cursor
+                try {
+                  for (int i = 0; i < 1; i++) {
+                    index.add(
+                        new MapBasedInputRow(
+                            timestamp,
+                            Lists.newArrayList("billy"),
+                            ImmutableMap.<String, Object>of("billy", "v2" + i)
+                        )
+                    );
+                  }
+                }
+                catch (Exception ex) {
+                  throw new RuntimeException(ex);
+                }
+
+                // and then, cursoring continues in the other thread
+                while (!cursor.isDone()) {
+                  IndexedInts row = dimSelector.getRow();
+                  for (int i : row) {
+                    Assert.assertTrue(i < cardinality);
+                  }
+                  cursor.advance();
+                }
+
+                return null;
+              }
+            }
+        ),
+        new ArrayList<>()
+    );
   }
 }

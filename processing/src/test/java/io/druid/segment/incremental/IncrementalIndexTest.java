@@ -19,20 +19,26 @@
 
 package io.druid.segment.incremental;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
+import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.granularity.QueryGranularity;
-import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
+import io.druid.segment.CloserRule;
+import io.druid.query.aggregation.FilteredAggregatorFactory;
+import io.druid.query.filter.SelectorDimFilter;
 import org.joda.time.DateTime;
+import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
 
@@ -46,6 +52,9 @@ public class IncrementalIndexTest
   {
     IncrementalIndex createIndex();
   }
+
+  @Rule
+  public final CloserRule closer = new CloserRule(false);
 
   private final IndexCreator indexCreator;
 
@@ -66,7 +75,15 @@ public class IncrementalIndexTest
                   public IncrementalIndex createIndex()
                   {
                     return new OnheapIncrementalIndex(
-                        0, QueryGranularity.MINUTE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}, 1000
+                        0,
+                        QueryGranularity.MINUTE,
+                        new AggregatorFactory[]{
+                            new FilteredAggregatorFactory(
+                                new CountAggregatorFactory("cnt"),
+                                new SelectorDimFilter("billy", "A")
+                            )
+                        },
+                        1000
                     );
                   }
                 }
@@ -79,17 +96,29 @@ public class IncrementalIndexTest
                   public IncrementalIndex createIndex()
                   {
                     return new OffheapIncrementalIndex(
-                        0,
-                        QueryGranularity.MINUTE,
-                        new AggregatorFactory[]{new CountAggregatorFactory("cnt")},
-                        TestQueryRunners.pool,
-                        true,
-                        100 * 1024 * 1024
+                        0L,
+                        QueryGranularity.NONE,
+                        new AggregatorFactory[]{
+                            new FilteredAggregatorFactory(
+                                new CountAggregatorFactory("cnt"),
+                                new SelectorDimFilter("billy", "A")
+                            )
+                        },
+                        1000000,
+                        new StupidPool<ByteBuffer>(
+                            new Supplier<ByteBuffer>()
+                            {
+                              @Override
+                              public ByteBuffer get()
+                              {
+                                return ByteBuffer.allocate(256 * 1024);
+                              }
+                            }
+                        )
                     );
                   }
                 }
             }
-
         }
     );
   }
@@ -97,7 +126,7 @@ public class IncrementalIndexTest
   @Test(expected = ISE.class)
   public void testDuplicateDimensions() throws IndexSizeExceededException
   {
-    IncrementalIndex index = indexCreator.createIndex();
+    IncrementalIndex index = closer.closeLater(indexCreator.createIndex());
     index.add(
         new MapBasedInputRow(
             new DateTime().minus(1).getMillis(),
@@ -117,7 +146,7 @@ public class IncrementalIndexTest
   @Test(expected = ISE.class)
   public void testDuplicateDimensionsFirstOccurance() throws IndexSizeExceededException
   {
-    IncrementalIndex index = indexCreator.createIndex();
+    IncrementalIndex index = closer.closeLater(indexCreator.createIndex());
     index.add(
         new MapBasedInputRow(
             new DateTime().minus(1).getMillis(),
@@ -130,12 +159,19 @@ public class IncrementalIndexTest
   @Test
   public void controlTest() throws IndexSizeExceededException
   {
-    IncrementalIndex index = indexCreator.createIndex();
+    IncrementalIndex index = closer.closeLater(indexCreator.createIndex());
     index.add(
         new MapBasedInputRow(
             new DateTime().minus(1).getMillis(),
             Lists.newArrayList("billy", "joe"),
             ImmutableMap.<String, Object>of("billy", "A", "joe", "B")
+        )
+    );
+    index.add(
+        new MapBasedInputRow(
+            new DateTime().minus(1).getMillis(),
+            Lists.newArrayList("billy", "joe"),
+            ImmutableMap.<String, Object>of("billy", "C", "joe", "B")
         )
     );
     index.add(

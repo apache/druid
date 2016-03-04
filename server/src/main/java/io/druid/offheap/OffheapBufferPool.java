@@ -31,7 +31,7 @@ public class OffheapBufferPool extends StupidPool<ByteBuffer>
 {
   private static final Logger log = new Logger(OffheapBufferPool.class);
 
-  public OffheapBufferPool(final int computationBufferSize)
+  public OffheapBufferPool(final int computationBufferSize, final int cacheMaxCount)
   {
     super(
         new Supplier<ByteBuffer>()
@@ -47,7 +47,8 @@ public class OffheapBufferPool extends StupidPool<ByteBuffer>
             );
             return ByteBuffer.allocateDirect(computationBufferSize);
           }
-        }
+        },
+        cacheMaxCount
     );
   }
 }

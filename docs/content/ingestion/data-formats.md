@@ -9,7 +9,7 @@ We welcome any contributions to new formats.
 
 ## Formatting the Data
 
-The following are some samples of the data used in the [Wikipedia example](../tutorials/tutorial-loading-streaming-data.html).
+The following are some samples of the data used in the [Wikipedia example](../tutorials/quickstart.html).
 
 _JSON_
 
@@ -65,6 +65,8 @@ All forms of Druid ingestion require some form of schema object. The format of t
     }
   }
 ```
+
+If you have nested JSON, [Druid can automatically flatten it for you](flatten-json.html).
 
 ### CSV
 

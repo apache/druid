@@ -35,15 +35,14 @@ import io.druid.common.guava.DSuppliers;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.cache.SimplePathChildrenCacheFactory;
 import io.druid.indexing.common.IndexingServiceCondition;
+import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
-import io.druid.indexing.common.TestMergeTask;
 import io.druid.indexing.common.TestRealtimeTask;
+import io.druid.indexing.common.TestTasks;
 import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
 import io.druid.indexing.overlord.autoscaling.NoopResourceManagementStrategy;
-import io.druid.indexing.overlord.autoscaling.ResourceManagementStrategy;
-import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.indexing.worker.TaskAnnouncement;
@@ -56,6 +55,7 @@ import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingCluster;
 import org.apache.zookeeper.CreateMode;
 import org.easymock.EasyMock;
+import org.joda.time.DateTime;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -76,6 +76,7 @@ public class RemoteTaskRunnerTest
   private static final String tasksPath = String.format("%s/indexer/tasks/worker", basePath);
   private static final String statusPath = String.format("%s/indexer/status/worker", basePath);
   private static final int TIMEOUT_SECONDS = 20;
+  private static final TaskLocation DUMMY_LOCATION = TaskLocation.create("dummy", 9000);
 
   private ObjectMapper jsonMapper;
 
@@ -83,7 +84,7 @@ public class RemoteTaskRunnerTest
   private CuratorFramework cf;
   private RemoteTaskRunner remoteTaskRunner;
 
-  private TestMergeTask task;
+  private Task task;
 
   private Worker worker;
 
@@ -106,7 +107,7 @@ public class RemoteTaskRunnerTest
     cf.create().creatingParentsIfNeeded().forPath(basePath);
     cf.create().creatingParentsIfNeeded().forPath(tasksPath);
 
-    task = TestMergeTask.createDummyTask("task");
+    task = TestTasks.unending("task");
   }
 
   @After
@@ -190,7 +191,7 @@ public class RemoteTaskRunnerTest
 
     doSetup();
 
-    remoteTaskRunner.run(TestMergeTask.createDummyTask(new String(new char[5000])));
+    remoteTaskRunner.run(TestTasks.unending(new String(new char[5000])));
 
     EasyMock.verify(emitter);
   }
@@ -358,7 +359,7 @@ public class RemoteTaskRunnerTest
     doSetup();
 
     final Set<String> existingTasks = Sets.newHashSet();
-    for (ZkWorker zkWorker : remoteTaskRunner.getWorkers()) {
+    for (ZkWorker zkWorker : remoteTaskRunner.getZkWorkers()) {
       existingTasks.addAll(zkWorker.getRunningTasks().keySet());
     }
     Assert.assertEquals("existingTasks", ImmutableSet.of("first", "second"), existingTasks);
@@ -450,7 +451,7 @@ public class RemoteTaskRunnerTest
     Assert.assertEquals(TaskStatus.Status.SUCCESS, result.get().getStatusCode());
 
     // Confirm RTR thinks the worker is disabled.
-    Assert.assertEquals("", Iterables.getOnlyElement(remoteTaskRunner.getWorkers()).getWorker().getVersion());
+    Assert.assertEquals("", Iterables.getOnlyElement(remoteTaskRunner.getWorkers()).getVersion());
   }
 
   private void doSetup() throws Exception
@@ -479,7 +480,7 @@ public class RemoteTaskRunnerTest
         null,
         DSuppliers.of(new AtomicReference<>(WorkerBehaviorConfig.defaultConfig())),
         ScheduledExecutors.fixed(1, "Remote-Task-Runner-Cleanup--%d"),
-        new NoopResourceManagementStrategy<RemoteTaskRunner>()
+        new NoopResourceManagementStrategy<WorkerTaskRunner>()
     );
 
     remoteTaskRunner.start();
@@ -491,7 +492,8 @@ public class RemoteTaskRunnerTest
         "worker",
         "localhost",
         3,
-        "0"
+        "0",
+        DateTime.now()
     );
 
     cf.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(
@@ -504,7 +506,7 @@ public class RemoteTaskRunnerTest
   {
     cf.setData().forPath(
         announcementsPath,
-        jsonMapper.writeValueAsBytes(new Worker(worker.getHost(), worker.getIp(), worker.getCapacity(), ""))
+        jsonMapper.writeValueAsBytes(new Worker(worker.getHost(), worker.getIp(), worker.getCapacity(), "", DateTime.now()))
     );
   }
 
@@ -555,7 +557,7 @@ public class RemoteTaskRunnerTest
   {
     cf.delete().forPath(joiner.join(tasksPath, task.getId()));
 
-    TaskAnnouncement taskAnnouncement = TaskAnnouncement.create(task, TaskStatus.running(task.getId()));
+    TaskAnnouncement taskAnnouncement = TaskAnnouncement.create(task, TaskStatus.running(task.getId()), DUMMY_LOCATION);
     cf.create()
       .creatingParentsIfNeeded()
       .forPath(joiner.join(statusPath, task.getId()), jsonMapper.writeValueAsBytes(taskAnnouncement));
@@ -563,7 +565,7 @@ public class RemoteTaskRunnerTest
 
   private void mockWorkerCompleteSuccessfulTask(final Task task) throws Exception
   {
-    TaskAnnouncement taskAnnouncement = TaskAnnouncement.create(task, TaskStatus.success(task.getId()));
+    TaskAnnouncement taskAnnouncement = TaskAnnouncement.create(task, TaskStatus.success(task.getId()), DUMMY_LOCATION);
     cf.setData().forPath(joiner.join(statusPath, task.getId()), jsonMapper.writeValueAsBytes(taskAnnouncement));
   }
 
@@ -575,11 +577,11 @@ public class RemoteTaskRunnerTest
     remoteTaskRunner.run(task);
     Assert.assertTrue(taskAnnounced(task.getId()));
     mockWorkerRunningTask(task);
-    Collection<ZkWorker> lazyworkers = remoteTaskRunner.markWorkersLazy(
-        new Predicate<ZkWorker>()
+    Collection<Worker> lazyworkers = remoteTaskRunner.markWorkersLazy(
+        new Predicate<Worker>()
         {
           @Override
-          public boolean apply(ZkWorker input)
+          public boolean apply(Worker input)
           {
             return true;
           }
@@ -596,11 +598,11 @@ public class RemoteTaskRunnerTest
     doSetup();
     remoteTaskRunner.run(task);
     Assert.assertTrue(taskAnnounced(task.getId()));
-    Collection<ZkWorker> lazyworkers = remoteTaskRunner.markWorkersLazy(
-        new Predicate<ZkWorker>()
+    Collection<Worker> lazyworkers = remoteTaskRunner.markWorkersLazy(
+        new Predicate<Worker>()
         {
           @Override
-          public boolean apply(ZkWorker input)
+          public boolean apply(Worker input)
           {
             return true;
           }
@@ -615,11 +617,11 @@ public class RemoteTaskRunnerTest
   public void testFindLazyWorkerNotRunningAnyTask() throws Exception
   {
     doSetup();
-    Collection<ZkWorker> lazyworkers = remoteTaskRunner.markWorkersLazy(
-        new Predicate<ZkWorker>()
+    Collection<Worker> lazyworkers = remoteTaskRunner.markWorkersLazy(
+        new Predicate<Worker>()
         {
           @Override
-          public boolean apply(ZkWorker input)
+          public boolean apply(Worker input)
           {
             return true;
           }

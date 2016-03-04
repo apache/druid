@@ -23,7 +23,7 @@ More information about Druid can be found on <http://www.druid.io>.
 
 ### Documentation
 
-You can find the [latest Druid Documentation](http://druid.io/docs/latest/) on
+You can find the [documentation for the latest Druid release](http://druid.io/docs/latest/) on
 the [project website](http://druid.io/docs/latest/).
 
 If you would like to contribute documentation, please do so under
@@ -33,7 +33,7 @@ If you would like to contribute documentation, please do so under
 
 We have a series of tutorials to get started with Druid.  If you are just
 getting started, we suggest going over the [first Druid
-tutorial](http://druid.io/docs/latest/Tutorial:-A-First-Look-at-Druid.html).
+tutorial](http://druid.io/docs/latest/tutorials/tutorial-a-first-look-at-druid.html).
 
 ### Reporting Issues
 

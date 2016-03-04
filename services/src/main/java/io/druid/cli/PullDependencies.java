@@ -57,7 +57,7 @@ import java.util.Set;
 
 @Command(
     name = "pull-deps",
-    description = "Pull down dependencies to the local repository specified by druid.extensions.localRepository, extensions directory specified by druid.extensions.extensionsDir and hadoop depenencies directory specified by druid.extensions.hadoopDependenciesDir"
+    description = "Pull down dependencies to the local repository specified by druid.extensions.localRepository, extensions directory specified by druid.extensions.extensionsDir and hadoop dependencies directory specified by druid.extensions.hadoopDependenciesDir"
 )
 public class PullDependencies implements Runnable
 {
@@ -65,7 +65,64 @@ public class PullDependencies implements Runnable
 
   private static final Set<String> exclusions = Sets.newHashSet(
       "io.druid",
-      "com.metamx.druid"
+      "com.metamx.druid",
+
+      // It is possible that extensions will pull down a lot of jars that are either
+      // duplicates OR conflict with druid jars. In that case, there are two problems that arise
+      //
+      // 1. Large quantity of jars are passed around to things like hadoop when they are not needed (and should not be included)
+      // 2. Classpath priority becomes "mostly correct" and attempted to enforced correctly, but not fully tested
+      //
+      // These jar groups should be included by druid and *not* pulled down in extensions
+      // Note to future developers: This list is hand-crafted and will probably be out of date in the future
+      // A good way to know where to look for errant dependencies is to compare the lib/ directory in the distribution
+      // tarball with the jars included in the extension directories.
+      //
+      // This list is best-effort, and might still pull down more than desired.
+      //
+      // A simple example is that if an extension's dependency uses some-library-123.jar,
+      // druid uses some-library-456.jar, and hadoop uses some-library-666.jar, then we probably want to use some-library-456.jar,
+      // so don't pull down some-library-123.jar, and ask hadoop to load some-library-456.jar.
+      //
+      // In the case where some-library is NOT on this list, both some-library-456.jar and some-library-123.jar will be
+      // on the class path and propagated around the system. Most places TRY to make sure some-library-456.jar has
+      // precedence, but it is easy for this assumption to be violated and for the precedence of some-library-456.jar,
+      // some-library-123.jar and some-library-456.jar to not be properly defined.
+      //
+      // As of this writing there are no special unit tests for classloader issues and library version conflicts.
+      //
+      // Different tasks which are classloader sensitive attempt to maintain a sane order for loading libraries in the
+      // classloader, but it is always possible that something didn't load in the right order. Also we don't want to be
+      // throwing around a ton of jars we don't need to.
+      "asm",
+      "org.ow2.asm",
+      "org.jboss.netty",
+      "com.google.guava",
+      "com.google.code.findbugs",
+      "com.google.protobuf",
+      "com.esotericsoftware.minlog",
+      "log4j",
+      "org.slf4j",
+      "commons-logging",
+      "org.eclipse.jetty",
+      "org.mortbay.jetty",
+      "com.sun.jersey",
+      "com.sun.jersey.contribs",
+      "common-beanutils",
+      "commons-codec",
+      "commons-lang",
+      "commons-cli",
+      "commons-io",
+      "javax.activation",
+      "org.apache.httpcomponents",
+      "org.apache.zookeeper",
+      "org.codehaus.jackson",
+      "com.fasterxml.jackson",
+      "com.fasterxml.jackson.core",
+      "com.fasterxml.jackson.dataformat",
+      "com.fasterxml.jackson.datatype",
+      "org.roaringbitmap",
+      "net.java.dev.jets3t"
   );
 
   private TeslaAether aether;

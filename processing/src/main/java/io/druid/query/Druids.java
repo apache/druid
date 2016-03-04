@@ -1073,10 +1073,11 @@ public class Druids
   {
     private DataSource dataSource;
     private QuerySegmentSpec querySegmentSpec;
+    private boolean descending;
     private Map<String, Object> context;
     private DimFilter dimFilter;
     private QueryGranularity granularity;
-    private List<String> dimensions;
+    private List<DimensionSpec> dimensions;
     private List<String> metrics;
     private PagingSpec pagingSpec;
 
@@ -1097,11 +1098,10 @@ public class Druids
       return new SelectQuery(
           dataSource,
           querySegmentSpec,
+          descending,
           dimFilter,
           granularity,
-          dimensions,
-          metrics,
-          pagingSpec,
+          dimensions, metrics, pagingSpec,
           context
       );
     }
@@ -1141,6 +1141,12 @@ public class Druids
     public SelectQueryBuilder intervals(List<Interval> l)
     {
       querySegmentSpec = new LegacySegmentSpec(l);
+      return this;
+    }
+
+    public SelectQueryBuilder descending(boolean descending)
+    {
+      this.descending = descending;
       return this;
     }
 
@@ -1184,9 +1190,15 @@ public class Druids
       return this;
     }
 
-    public SelectQueryBuilder dimensions(List<String> d)
+    public SelectQueryBuilder dimensionSpecs(List<DimensionSpec> d)
     {
       dimensions = d;
+      return this;
+    }
+
+    public SelectQueryBuilder dimensions(List<String> d)
+    {
+      dimensions = DefaultDimensionSpec.toSpec(d);
       return this;
     }
 

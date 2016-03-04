@@ -34,6 +34,7 @@ import kafka.consumer.ConsumerConfig;
 import kafka.consumer.ConsumerIterator;
 import kafka.consumer.KafkaStream;
 import kafka.javaapi.consumer.ConsumerConnector;
+import kafka.message.InvalidMessageException;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -111,13 +112,24 @@ public class KafkaEightFirehoseFactory implements FirehoseFactory<ByteBufferInpu
       @Override
       public InputRow nextRow()
       {
-        final byte[] message = iter.next().message();
+        try {
+          final byte[] message = iter.next().message();
 
-        if (message == null) {
+          if (message == null) {
+            return null;
+          }
+
+          return theParser.parse(ByteBuffer.wrap(message));
+
+        }
+        catch (InvalidMessageException e) {
+          /*
+          IF the CRC is caused within the wire transfer, this is not the best way to handel CRC.
+          Probably it is better to shutdown the fireHose without commit and start it again.
+           */
+          log.error(e,"Message failed its checksum and it is corrupt, will skip it");
           return null;
         }
-
-        return theParser.parse(ByteBuffer.wrap(message));
       }
 
       @Override

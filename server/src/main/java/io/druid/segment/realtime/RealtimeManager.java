@@ -30,7 +30,6 @@ import com.google.inject.Inject;
 import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.common.parsers.ParseException;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
@@ -45,16 +44,17 @@ import io.druid.query.QueryRunnerFactoryConglomerate;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SegmentDescriptor;
-import io.druid.segment.incremental.IndexSizeExceededException;
+import io.druid.query.spec.SpecificSegmentSpec;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.realtime.plumber.Committers;
 import io.druid.segment.realtime.plumber.Plumber;
+import io.druid.segment.realtime.plumber.Plumbers;
 import org.joda.time.Interval;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -68,9 +68,9 @@ public class RealtimeManager implements QuerySegmentWalker
   private final QueryRunnerFactoryConglomerate conglomerate;
 
   /**
-   * key=data source name,value=FireChiefs of all partition of that data source
+   * key=data source name,value=mappings of partition number to FireChief
    */
-  private final Map<String, List<FireChief>> chiefs;
+  private final Map<String, Map<Integer, FireChief>> chiefs;
 
   @Inject
   public RealtimeManager(
@@ -84,19 +84,30 @@ public class RealtimeManager implements QuerySegmentWalker
     this.chiefs = Maps.newHashMap();
   }
 
+  RealtimeManager(
+      List<FireDepartment> fireDepartments,
+      QueryRunnerFactoryConglomerate conglomerate,
+      Map<String, Map<Integer, FireChief>> chiefs
+  )
+  {
+    this.fireDepartments = fireDepartments;
+    this.conglomerate = conglomerate;
+    this.chiefs = chiefs;
+  }
+
   @LifecycleStart
   public void start() throws IOException
   {
     for (final FireDepartment fireDepartment : fireDepartments) {
-      DataSchema schema = fireDepartment.getDataSchema();
+      final DataSchema schema = fireDepartment.getDataSchema();
 
-      final FireChief chief = new FireChief(fireDepartment);
-      List<FireChief> chiefs = this.chiefs.get(schema.getDataSource());
-      if (chiefs == null) {
-        chiefs = new ArrayList<FireChief>();
-        this.chiefs.put(schema.getDataSource(), chiefs);
+      final FireChief chief = new FireChief(fireDepartment, conglomerate);
+      Map<Integer, FireChief> partitionChiefs = chiefs.get(schema.getDataSource());
+      if (partitionChiefs == null) {
+        partitionChiefs = new HashMap<>();
+        chiefs.put(schema.getDataSource(), partitionChiefs);
       }
-      chiefs.add(chief);
+      partitionChiefs.put(fireDepartment.getTuningConfig().getShardSpec().getPartitionNum(), chief);
 
       chief.setName(
           String.format(
@@ -113,8 +124,8 @@ public class RealtimeManager implements QuerySegmentWalker
   @LifecycleStop
   public void stop()
   {
-    for (Iterable<FireChief> chiefs : this.chiefs.values()) {
-      for (FireChief chief : chiefs) {
+    for (Map<Integer, FireChief> chiefs : this.chiefs.values()) {
+      for (FireChief chief : chiefs.values()) {
         CloseQuietly.close(chief);
       }
     }
@@ -122,12 +133,12 @@ public class RealtimeManager implements QuerySegmentWalker
 
   public FireDepartmentMetrics getMetrics(String datasource)
   {
-    List<FireChief> chiefs = this.chiefs.get(datasource);
+    Map<Integer, FireChief> chiefs = this.chiefs.get(datasource);
     if (chiefs == null) {
       return null;
     }
     FireDepartmentMetrics snapshot = null;
-    for (FireChief chief : chiefs) {
+    for (FireChief chief : chiefs.values()) {
       if (snapshot == null) {
         snapshot = chief.getMetrics().snapshot();
       } else {
@@ -140,26 +151,21 @@ public class RealtimeManager implements QuerySegmentWalker
   @Override
   public <T> QueryRunner<T> getQueryRunnerForIntervals(final Query<T> query, Iterable<Interval> intervals)
   {
-    return getQueryRunnerForSegments(query, null);
-  }
-
-  @Override
-  public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, Iterable<SegmentDescriptor> specs)
-  {
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
+    final Map<Integer, FireChief> partitionChiefs = chiefs.get(Iterables.getOnlyElement(query.getDataSource()
+                                                                                             .getNames()));
 
-    Iterable<FireChief> chiefsOfDataSource = chiefs.get(Iterables.getOnlyElement(query.getDataSource().getNames()));
-    return chiefsOfDataSource == null ? new NoopQueryRunner() : factory.getToolchest().mergeResults(
+    return partitionChiefs == null ? new NoopQueryRunner<T>() : factory.getToolchest().mergeResults(
         factory.mergeRunners(
             MoreExecutors.sameThreadExecutor(),
             // Chaining query runners which wait on submitted chain query runners can make executor pools deadlock
             Iterables.transform(
-                chiefsOfDataSource, new Function<FireChief, QueryRunner<T>>()
+                partitionChiefs.values(), new Function<FireChief, QueryRunner<T>>()
                 {
                   @Override
-                  public QueryRunner<T> apply(FireChief input)
+                  public QueryRunner<T> apply(FireChief fireChief)
                   {
-                    return input.getQueryRunner(query);
+                    return fireChief.getQueryRunner(query);
                   }
                 }
             )
@@ -167,22 +173,52 @@ public class RealtimeManager implements QuerySegmentWalker
     );
   }
 
-  private class FireChief extends Thread implements Closeable
+  @Override
+  public <T> QueryRunner<T> getQueryRunnerForSegments(final Query<T> query, final Iterable<SegmentDescriptor> specs)
+  {
+    final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
+    final Map<Integer, FireChief> partitionChiefs = chiefs.get(Iterables.getOnlyElement(query.getDataSource()
+                                                                                             .getNames()));
+
+    return partitionChiefs == null
+           ? new NoopQueryRunner<T>()
+           : factory.getToolchest().mergeResults(
+               factory.mergeRunners(
+                   MoreExecutors.sameThreadExecutor(),
+                   Iterables.transform(
+                       specs,
+                       new Function<SegmentDescriptor, QueryRunner<T>>()
+                       {
+                         @Override
+                         public QueryRunner<T> apply(SegmentDescriptor spec)
+                         {
+                           final FireChief retVal = partitionChiefs.get(spec.getPartitionNumber());
+                           return retVal == null
+                                  ? new NoopQueryRunner<T>()
+                                  : retVal.getQueryRunner(query.withQuerySegmentSpec(new SpecificSegmentSpec(spec)));
+                         }
+                       }
+                   )
+               )
+           );
+  }
+
+  static class FireChief extends Thread implements Closeable
   {
     private final FireDepartment fireDepartment;
     private final FireDepartmentMetrics metrics;
     private final RealtimeTuningConfig config;
+    private final QueryRunnerFactoryConglomerate conglomerate;
 
     private volatile Firehose firehose = null;
     private volatile FirehoseV2 firehoseV2 = null;
     private volatile Plumber plumber = null;
     private volatile boolean normalExit = true;
 
-    public FireChief(
-        FireDepartment fireDepartment
-    )
+    public FireChief(FireDepartment fireDepartment, QueryRunnerFactoryConglomerate conglomerate)
     {
       this.fireDepartment = fireDepartment;
+      this.conglomerate = conglomerate;
       this.config = fireDepartment.getTuningConfig();
       this.metrics = fireDepartment.getMetrics();
     }
@@ -339,42 +375,7 @@ public class RealtimeManager implements QuerySegmentWalker
     {
       final Supplier<Committer> committerSupplier = Committers.supplierFromFirehose(firehose);
       while (firehose.hasMore()) {
-        final InputRow inputRow;
-        try {
-          inputRow = firehose.nextRow();
-
-          if (inputRow == null) {
-            log.debug("thrown away null input row, considering unparseable");
-            metrics.incrementUnparseable();
-            continue;
-          }
-        }
-        catch (ParseException e) {
-          log.debug(e, "thrown away line due to exception, considering unparseable");
-          metrics.incrementUnparseable();
-          continue;
-        }
-
-        boolean lateEvent = false;
-        boolean indexLimitExceeded = false;
-        try {
-          lateEvent = plumber.add(inputRow, committerSupplier) == -1;
-        }
-        catch (IndexSizeExceededException e) {
-          log.info("Index limit exceeded: %s", e.getMessage());
-          indexLimitExceeded = true;
-        }
-        if (indexLimitExceeded || lateEvent) {
-          metrics.incrementThrownAway();
-          log.debug("Throwing away event[%s]", inputRow);
-
-          if (indexLimitExceeded) {
-            plumber.persist(committerSupplier.get());
-          }
-
-          continue;
-        }
-        metrics.incrementProcessed();
+        Plumbers.addNextRow(committerSupplier, firehose, plumber, config.isReportParseExceptions(), metrics);
       }
     }
 

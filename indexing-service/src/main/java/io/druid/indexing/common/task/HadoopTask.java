@@ -20,7 +20,9 @@
 package io.druid.indexing.common.task;
 
 import com.google.common.base.Joiner;
+import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.inject.Injector;
@@ -30,11 +32,16 @@ import io.druid.guice.GuiceInjectors;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.initialization.Initialization;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -69,7 +76,57 @@ public abstract class HadoopTask extends AbstractTask
     return hadoopDependencyCoordinates == null ? null : ImmutableList.copyOf(hadoopDependencyCoordinates);
   }
 
-  protected ClassLoader buildClassLoader(final TaskToolbox toolbox) throws Exception
+  // This could stand to have a more robust detection methodology.
+  // Right now it just looks for `druid.*\.jar`
+  // This is only used for classpath isolation in the runTask isolation stuff, so it shooouuullldddd be ok.
+  protected static final Predicate<URL> IS_DRUID_URL = new Predicate<URL>()
+  {
+    @Override
+    public boolean apply(@Nullable URL input)
+    {
+      try {
+        if (input == null) {
+          return false;
+        }
+        final String fName = Paths.get(input.toURI()).getFileName().toString();
+        return fName.startsWith("druid") && fName.endsWith(".jar") && !fName.endsWith("selfcontained.jar");
+      }
+      catch (URISyntaxException e) {
+        throw Throwables.propagate(e);
+      }
+    }
+  };
+
+  /**
+   * This makes an isolated classloader that has classes loaded in the "proper" priority.
+   *
+   * This isolation is *only* for the part of the HadoopTask that calls runTask in an isolated manner.
+   *
+   * Jars for the job are the same jars as for the classloader EXCEPT the hadoopDependencyCoordinates, which are not used in the job jars.
+   *
+   * The URLs in the resultant classloader are loaded in this priority:
+   *
+   * 1. Non-Druid jars (see IS_DRUID_URL) found in the ClassLoader for HadoopIndexTask.class. This will probably be the ApplicationClassLoader
+   * 2. Hadoop jars found in the hadoop dependency coordinates directory, loaded in the order they are specified in
+   * 3. Druid jars (see IS_DRUID_URL) found in the ClassLoader for HadoopIndexTask.class
+   * 4. Extension URLs maintaining the order specified in the extensions list in the extensions config
+   *
+   * At one point I tried making each one of these steps a URLClassLoader, but it is not easy to make a properly
+   * predictive IS_DRUID_URL that captures all things which reference druid classes. This lead to a case where the
+   * class loader isolation worked great for stock druid, but failed in many common use cases including extension
+   * jars on the classpath which were not listed in the extensions list.
+   *
+   * As such, the current approach is to make a list of URLs for a URLClassLoader based on the priority above, and use
+   * THAT ClassLoader with a null parent as the isolated loader for running hadoop or hadoop-like driver tasks.
+   * Such an approach combined with reasonable exclusions in io.druid.cli.PullDependencies#exclusions tries to maintain
+   * sanity in a ClassLoader where all jars (which are isolated by extension ClassLoaders in the Druid framework) are
+   * jumbled together into one ClassLoader for Hadoop and Hadoop-like tasks (Spark for example).
+   *
+   * @param toolbox The toolbox to pull the default coordinates from if not present in the task
+   * @return An isolated URLClassLoader not tied by parent chain to the ApplicationClassLoader
+   * @throws MalformedURLException from Initialization.getClassLoaderForExtension
+   */
+  protected ClassLoader buildClassLoader(final TaskToolbox toolbox) throws MalformedURLException
   {
     final List<String> finalHadoopDependencyCoordinates = hadoopDependencyCoordinates != null
                                                           ? hadoopDependencyCoordinates
@@ -84,27 +141,35 @@ public abstract class HadoopTask extends AbstractTask
     final List<URL> nonHadoopURLs = Lists.newArrayList();
     nonHadoopURLs.addAll(Arrays.asList(((URLClassLoader) HadoopIndexTask.class.getClassLoader()).getURLs()));
 
-    final List<URL> driverURLs = Lists.newArrayList();
-    driverURLs.addAll(nonHadoopURLs);
+    final List<URL> druidURLs = ImmutableList.copyOf(
+        Collections2.filter(nonHadoopURLs, IS_DRUID_URL)
+    );
+    final List<URL> nonHadoopNotDruidURLs = Lists.newArrayList(nonHadoopURLs);
+    nonHadoopNotDruidURLs.removeAll(druidURLs);
 
-    // put hadoop dependencies last to avoid jets3t & apache.httpcore version conflicts
+    final List<URL> localClassLoaderURLs = new ArrayList<>();
+    localClassLoaderURLs.addAll(nonHadoopNotDruidURLs);
+
+    // hadoop dependencies come before druid classes because some extensions depend on them
     for (final File hadoopDependency :
         Initialization.getHadoopDependencyFilesToLoad(
             finalHadoopDependencyCoordinates,
             extensionsConfig
         )) {
       final ClassLoader hadoopLoader = Initialization.getClassLoaderForExtension(hadoopDependency);
-      driverURLs.addAll(Arrays.asList(((URLClassLoader) hadoopLoader).getURLs()));
+      localClassLoaderURLs.addAll(Arrays.asList(((URLClassLoader) hadoopLoader).getURLs()));
     }
 
-    final URLClassLoader loader = new URLClassLoader(driverURLs.toArray(new URL[driverURLs.size()]), null);
+    localClassLoaderURLs.addAll(druidURLs);
+    localClassLoaderURLs.addAll(extensionURLs);
+    final ClassLoader classLoader = new URLClassLoader(localClassLoaderURLs.toArray(new URL[localClassLoaderURLs.size()]), null);
 
     final List<URL> jobUrls = Lists.newArrayList();
     jobUrls.addAll(nonHadoopURLs);
     jobUrls.addAll(extensionURLs);
 
     System.setProperty("druid.hadoop.internal.classpath", Joiner.on(File.pathSeparator).join(jobUrls));
-    return loader;
+    return classLoader;
   }
 
   /**

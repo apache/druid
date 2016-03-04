@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 import io.druid.common.utils.JodaUtils;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.filter.DimFilter;
+import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 import java.util.List;
@@ -34,6 +35,7 @@ public class DatasourceIngestionSpec
 {
   private final String dataSource;
   private final List<Interval> intervals;
+  private final List<DataSegment> segments;
   private final DimFilter filter;
   private final QueryGranularity granularity;
   private final List<String> dimensions;
@@ -45,6 +47,7 @@ public class DatasourceIngestionSpec
       @JsonProperty("dataSource") String dataSource,
       @Deprecated @JsonProperty("interval") Interval interval,
       @JsonProperty("intervals") List<Interval> intervals,
+      @JsonProperty("segments") List<DataSegment> segments,
       @JsonProperty("filter") DimFilter filter,
       @JsonProperty("granularity") QueryGranularity granularity,
       @JsonProperty("dimensions") List<String> dimensions,
@@ -67,6 +70,11 @@ public class DatasourceIngestionSpec
     }
     this.intervals = Preconditions.checkNotNull(theIntervals, "no intervals found");
 
+    // note that it is important to have intervals even if user explicitly specifies the list of
+    // segments, because segment list's min/max boundaries might not align the intended interval
+    // to read in all cases.
+    this.segments = segments;
+
     this.filter = filter;
     this.granularity = granularity == null ? QueryGranularity.NONE : granularity;
 
@@ -86,6 +94,12 @@ public class DatasourceIngestionSpec
   public List<Interval> getIntervals()
   {
     return intervals;
+  }
+
+  @JsonProperty
+  public List<DataSegment> getSegments()
+  {
+    return segments;
   }
 
   @JsonProperty
@@ -124,6 +138,7 @@ public class DatasourceIngestionSpec
         dataSource,
         null,
         intervals,
+        segments,
         filter,
         granularity,
         dimensions,
@@ -138,6 +153,7 @@ public class DatasourceIngestionSpec
         dataSource,
         null,
         intervals,
+        segments,
         filter,
         granularity,
         dimensions,
@@ -152,6 +168,7 @@ public class DatasourceIngestionSpec
         dataSource,
         null,
         intervals,
+        segments,
         filter,
         granularity,
         dimensions,
@@ -166,6 +183,7 @@ public class DatasourceIngestionSpec
         dataSource,
         null,
         intervals,
+        segments,
         filter,
         granularity,
         dimensions,
@@ -195,6 +213,9 @@ public class DatasourceIngestionSpec
     if (!intervals.equals(that.intervals)) {
       return false;
     }
+    if (segments != null ? !segments.equals(that.segments) : that.segments != null) {
+      return false;
+    }
     if (filter != null ? !filter.equals(that.filter) : that.filter != null) {
       return false;
     }
@@ -213,6 +234,7 @@ public class DatasourceIngestionSpec
   {
     int result = dataSource.hashCode();
     result = 31 * result + intervals.hashCode();
+    result = 31 * result + (segments != null ? segments.hashCode() : 0);
     result = 31 * result + (filter != null ? filter.hashCode() : 0);
     result = 31 * result + granularity.hashCode();
     result = 31 * result + (dimensions != null ? dimensions.hashCode() : 0);
@@ -227,6 +249,7 @@ public class DatasourceIngestionSpec
     return "DatasourceIngestionSpec{" +
            "dataSource='" + dataSource + '\'' +
            ", intervals=" + intervals +
+           ", segments=" + segments +
            ", filter=" + filter +
            ", granularity=" + granularity +
            ", dimensions=" + dimensions +

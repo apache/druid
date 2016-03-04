@@ -50,6 +50,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   private static final Logger log = new Logger(SQLMetadataConnector.class);
   private static final String PAYLOAD_TYPE = "BLOB";
 
+  public static final int DEFAULT_MAX_TRIES = 10;
+
   private final Supplier<MetadataStorageConnectorConfig> config;
   private final Supplier<MetadataStorageTablesConfig> tablesConfigSupplier;
   private final Predicate<Throwable> shouldRetry;
@@ -100,7 +102,10 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   public abstract boolean tableExists(Handle handle, final String tableName);
 
-  public <T> T retryWithHandle(final HandleCallback<T> callback)
+  public <T> T retryWithHandle(
+      final HandleCallback<T> callback,
+      final Predicate<Throwable> myShouldRetry
+  )
   {
     final Callable<T> call = new Callable<T>()
     {
@@ -110,16 +115,20 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
         return getDBI().withHandle(callback);
       }
     };
-    final int maxTries = 10;
     try {
-      return RetryUtils.retry(call, shouldRetry, maxTries);
+      return RetryUtils.retry(call, myShouldRetry, DEFAULT_MAX_TRIES);
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
     }
   }
 
-  public <T> T retryTransaction(final TransactionCallback<T> callback)
+  public <T> T retryWithHandle(final HandleCallback<T> callback)
+  {
+    return retryWithHandle(callback, shouldRetry);
+  }
+
+  public <T> T retryTransaction(final TransactionCallback<T> callback, final int quietTries, final int maxTries)
   {
     final Callable<T> call = new Callable<T>()
     {
@@ -129,9 +138,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
         return getDBI().inTransaction(callback);
       }
     };
-    final int maxTries = 10;
     try {
-      return RetryUtils.retry(call, shouldRetry, maxTries);
+      return RetryUtils.retry(call, shouldRetry, quietTries, maxTries);
     }
     catch (Exception e) {
       throw Throwables.propagate(e);
@@ -399,21 +407,24 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   }
 
   @Override
-  public void createRulesTable() {
+  public void createRulesTable()
+  {
     if (config.get().isCreateTables()) {
       createRulesTable(tablesConfigSupplier.get().getRulesTable());
     }
   }
 
   @Override
-  public void createConfigTable() {
+  public void createConfigTable()
+  {
     if (config.get().isCreateTables()) {
       createConfigTable(tablesConfigSupplier.get().getConfigTable());
     }
   }
 
   @Override
-  public void createTaskTables() {
+  public void createTaskTables()
+  {
     if (config.get().isCreateTables()) {
       final MetadataStorageTablesConfig tablesConfig = tablesConfigSupplier.get();
       final String entryType = tablesConfig.getTaskEntryType();
@@ -432,7 +443,8 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
   )
   {
     final String selectStatement = String.format("SELECT %s FROM %s WHERE %s = :key", valueColumn,
-                                                 tableName, keyColumn);
+                                                 tableName, keyColumn
+    );
 
     return getDBI().withHandle(
         new HandleCallback<byte[]>()
@@ -501,8 +513,10 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
         )
     );
   }
+
   @Override
-  public void createAuditTable() {
+  public void createAuditTable()
+  {
     if (config.get().isCreateTables()) {
       createAuditTable(tablesConfigSupplier.get().getAuditTable());
     }

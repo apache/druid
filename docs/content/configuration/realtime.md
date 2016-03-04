@@ -1,6 +1,7 @@
 ---
 layout: doc_page
 ---
+
 Realtime Node Configuration
 ==============================
 For general Realtime Node information, see [here](../design/realtime.html).

@@ -8,8 +8,8 @@ A Druid ingestion spec consists of 3 components:
 
 ```json
 {
-  "dataSchema" : {...}
-  "ioConfig" : {...}
+  "dataSchema" : {...},
+  "ioConfig" : {...},
   "tuningConfig" : {...}
 }
 ```
@@ -93,7 +93,7 @@ If `type` is not included, the parser defaults to `string`.
 
 ### Avro Stream Parser
 
-This is for realtime ingestion.
+This is for realtime ingestion. Make sure to include `druid-avro-extensions` as an extension.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
@@ -102,6 +102,7 @@ This is for realtime ingestion.
 | parseSpec | JSON Object | Specifies the format of the data. | yes |
 
 For example, using Avro stream parser with schema repo Avro bytes decoder:
+
 ```json
 "parser" : {
   "type" : "avro_stream",
@@ -116,11 +117,7 @@ For example, using Avro stream parser with schema repo Avro bytes decoder:
       "url" : "${YOUR_SCHEMA_REPO_END_POINT}",
     }
   },
-  "parsSpec" : {
-    "format" : "timeAndDims",
-    "timestampSpec" : {},
-    "dimensionsSpec" : {}
-  }
+  "parseSpec" : <standard_druid_parseSpec>
 }
 ```
 
@@ -155,7 +152,7 @@ This Avro bytes decoder first extract `subject` and `id` from input message byte
 
 ### Avro Hadoop Parser
 
-This is for batch ingestion using the HadoopDruidIndexer. The `inputFormat` of `inputSpec` in `ioConfig` must be set to `"io.druid.data.input.avro.AvroValueInputFormat"`. You may want to set Avro reader's schema in `jobProperties` in `tuningConfig`, eg: `"avro.schema.path.input.value": "/path/to/your/schema.avsc"` or `"avro.schema.input.value": "your_schema_JSON_object"`, if reader's schema is not set, the schema in Avro object container file will be used, see [Avro specification](http://avro.apache.org/docs/1.7.7/spec.html#Schema+Resolution).
+This is for batch ingestion using the HadoopDruidIndexer. The `inputFormat` of `inputSpec` in `ioConfig` must be set to `"io.druid.data.input.avro.AvroValueInputFormat"`. You may want to set Avro reader's schema in `jobProperties` in `tuningConfig`, eg: `"avro.schema.path.input.value": "/path/to/your/schema.avsc"` or `"avro.schema.input.value": "your_schema_JSON_object"`, if reader's schema is not set, the schema in Avro object container file will be used, see [Avro specification](http://avro.apache.org/docs/1.7.7/spec.html#Schema+Resolution). Make sure to include "io.druid.extensions:druid-avro-extensions" as an extension.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
@@ -164,20 +161,16 @@ This is for batch ingestion using the HadoopDruidIndexer. The `inputFormat` of `
 | fromPigAvroStorage | Boolean | Specifies whether the data file is stored using AvroStorage. | no(default == false) |
 
 For example, using Avro Hadoop parser with custom reader's schema file:
+
 ```json
 {
-  "type" : "index_hadoop",
-  "hadoopDependencyCoordinates" : ["io.druid.extensions:druid-avro-extensions"],
+  "type" : "index_hadoop",  
   "spec" : {
     "dataSchema" : {
       "dataSource" : "",
       "parser" : {
         "type" : "avro_hadoop",
-        "parsSpec" : {
-          "format" : "timeAndDims",
-          "timestampSpec" : {},
-          "dimensionsSpec" : {}
-        }
+        "parseSpec" : <standard_druid_parseSpec>
       }
     },
     "ioConfig" : {
@@ -285,12 +278,14 @@ This spec is used to generate segments with arbitrary intervals (it tries to cre
 
 # IO Config
 
-Real-time Ingestion: See [Real-time ingestion](../ingestion/realtime-ingestion.html).
+Stream Push Ingestion: Stream push ingestion with Tranquility does not require an IO Config.
+Stream Pull Ingestion: See [Stream pull ingestion](../ingestion/stream-pull.html).
 Batch Ingestion: See [Batch ingestion](../ingestion/batch-ingestion.html)
 
-# Ingestion Spec
+# Tuning Config
 
-Real-time Ingestion: See [Real-time ingestion](../ingestion/realtime-ingestion.html).
+Stream Push Ingestion: See [Stream push ingestion](../ingestion/stream-push.html).
+Stream Pull Ingestion: See [Stream pull ingestion](../ingestion/stream-pull.html).
 Batch Ingestion: See [Batch ingestion](../ingestion/batch-ingestion.html)
 
 # Evaluating Timestamp, Dimensions and Metrics

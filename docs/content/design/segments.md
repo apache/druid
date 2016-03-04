@@ -4,7 +4,6 @@ layout: doc_page
 Segments
 ========
 
-
 Druid stores its index in *segment files*, which are partitioned by
 time. In a basic setup, one segment file is created for each time
 interval, where the time inteval is configurable in the
@@ -169,12 +168,18 @@ A ColumnDescriptor is essentially an object that allows us to use jackson’s po
 Sharding Data to Create Segments
 --------------------------------
 
-### Sharding Data by Dimension
+### Sharding
 
-If the cumulative total number of rows for the different values of a
-given column exceed some configurable threshold, multiple segments
-representing the same time interval for the same datasource may be
-created. These segments will contain some partition number as part of
-their identifier. Sharding by dimension reduces some of the the costs
-associated with operations over high cardinality dimensions. For more
-information on sharding, see the ingestion documentation.
+Multiple segments may exist for the same interval of time for the same datasource. These segments form a `block` for an interval.
+Depending on the type of `shardSpec` that is used to shard the data, Druid queries may only complete if a `block` is complete. That is to say, if a block consists of 3 segments, such as:
+
+`sampleData_2011-01-01T02:00:00:00Z_2011-01-01T03:00:00:00Z_v1_0`
+
+`sampleData_2011-01-01T02:00:00:00Z_2011-01-01T03:00:00:00Z_v1_1`
+
+`sampleData_2011-01-01T02:00:00:00Z_2011-01-01T03:00:00:00Z_v1_2`
+
+All 3 segments must be loaded before a query for the interval `2011-01-01T02:00:00:00Z_2011-01-01T03:00:00:00Z` completes.
+
+The exception to this rule is with using linear shard specs. Linear shard specs do not force 'completeness' and queries can complete even if shards are not loaded in the system.
+For example, if your real-time ingestion creates 3 segments that were sharded with linear shard spec, and only two of the segments were loaded in the system, queries would return results only for those 2 segments.

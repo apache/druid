@@ -51,17 +51,17 @@ If there is no match, it returns the dimension value as is.
 ```json
 {
   "type" : "regex", "expr" : <regular_expression>,
-  "replaceMissingValues" : true,
-  "replaceMissingValuesWith" : "foobar"
+  "replaceMissingValue" : true,
+  "replaceMissingValueWith" : "foobar"
 }
 ```
 
 For example, using `"expr" : "(\\w\\w\\w).*"` will transform
 `'Monday'`, `'Tuesday'`, `'Wednesday'` into `'Mon'`, `'Tue'`, `'Wed'`.
 
-If the `replaceMissingValues` property is true, the extraction function will transform dimension values that do not match the regex pattern to a user-specified String. Default value is `false`.
+If the `replaceMissingValue` property is true, the extraction function will transform dimension values that do not match the regex pattern to a user-specified String. Default value is `false`.
 
-The `replaceMissingValuesWith` property sets the String that unmatched dimension values will be replaced with, if `replaceMissingValues` is true. If `replaceMissingValuesWith` is not specified, unmatched dimension values will be replaced with nulls.
+The `replaceMissingValueWith` property sets the String that unmatched dimension values will be replaced with, if `replaceMissingValue` is true. If `replaceMissingValueWith` is not specified, unmatched dimension values will be replaced with nulls.
 
 For example, if `expr` is `"(a\w+)"` in the example JSON above, a regex that matches words starting with the letter `a`, the extraction function will convert a dimension value like `banana` to `foobar`.
 
@@ -252,7 +252,7 @@ It is illegal to set `retainMissingValue = true` and also specify a `replaceMiss
 
 A property of `injective` specifies if optimizations can be used which assume there is no combining of multiple names into one. For example: If ABC123 is the only key that maps to SomeCompany, that can be optimized since it is a unique lookup. But if both ABC123 and DEF456 BOTH map to SomeCompany, then that is NOT a unique lookup. Setting this value to true and setting `retainMissingValue` to FALSE (the default) may cause undesired behavior.
 
-A property `optimize` can be supplied to allow optimization of lookup based extraction filter (by default `optimize = false`). 
+A property `optimize` can be supplied to allow optimization of lookup based extraction filter (by default `optimize = true`). 
 The optimization layer will run on the broker and it will rewrite the extraction filter as clause of selector filters.
 For instance the following filter 
 
@@ -323,8 +323,8 @@ Example for chaining [regular expression extraction function](#regular-expressio
     { 
       "type" : "regex", 
       "expr" : "/([^/]+)/", 
-      "replaceMissingValues": false, 
-      "replaceMissingValuesWith": null
+      "replaceMissingValue": false,
+      "replaceMissingValueWith": null
     },
     { 
       "type" : "javascript", 
@@ -361,11 +361,13 @@ Then groupBy/topN processing pipeline "explodes" all multi-valued dimensions res
 In addition to "query filter" which efficiently selects the rows to be processed, you can use the filtering dimension spec to filter for specific values within the values of a multi-valued dimension. These dimensionSpecs take a delegate DimensionSpec and a filtering criteria. From the "exploded" rows, only rows matching the given filtering criteria are returned in the query result.
 
 The following filtered dimension spec acts as a whitelist or blacklist for values as per the "isWhitelist" attribute value.
+
 ```json
 { "type" : "listFiltered", "delegate" : <dimensionSpec>, "values": <array of strings>, "isWhitelist": <optional attribute for true/false, default is true> }
 ```
 
 Following filtered dimension spec retains only the values matching regex. Note that `listFiltered` is faster than this and one should use that for whitelist or blacklist usecase.
+
 ```json
 { "type" : "regexFiltered", "delegate" : <dimensionSpec>, "pattern": <java regex pattern> }
 ```
@@ -389,5 +391,47 @@ or without setting "locale" (in this case, the current value of the default loca
 ```json
 {
   "type" : "lower"
+}
+```
+
+### Lookup DimensionSpecs
+
+<div class="note caution">
+Lookups are an <a href="../development/experimental.html">experimental</a> feature.
+</div>
+
+Lookup DimensionSpecs can be used to define directly a lookup implementation as dimension spec.
+Generally speaking there is two different kind of lookups implementations. 
+The first kind is passed at the query time like `map` implementation.
+
+```json
+{ 
+  "type":"lookup",
+  "dimension":"dimensionName",
+  "outputName":"dimensionOutputName",
+  "replaceMissingValueWith":"missing_value",
+  "retainMissingValue":false,
+  "lookup":{"type": "map", "map":{"key":"value"}, "isOneToOne":false}
+}
+```
+
+A property of `retainMissingValue` and `replaceMissingValueWith` can be specified at query time to hint how to handle missing values. Setting `replaceMissingValueWith` to `""` has the same effect as setting it to `null` or omitting the property. 
+Setting `retainMissingValue` to true will use the dimension's original value if it is not found in the lookup. 
+The default values are `replaceMissingValueWith = null` and `retainMissingValue = false` which causes missing values to be treated as missing.
+ 
+It is illegal to set `retainMissingValue = true` and also specify a `replaceMissingValueWith`.
+
+A property of `injective` specifies if optimizations can be used which assume there is no combining of multiple names into one. For example: If ABC123 is the only key that maps to SomeCompany, that can be optimized since it is a unique lookup. But if both ABC123 and DEF456 BOTH map to SomeCompany, then that is NOT a unique lookup. Setting this value to true and setting `retainMissingValue` to FALSE (the default) may cause undesired behavior.
+
+A property `optimize` can be supplied to allow optimization of lookup based extraction filter (by default `optimize = true`).
+
+The second kind where it is not possible to pass at query time due to their size, will be based on an external lookup table or resource that is already registered via configuration file or/and coordinator.
+
+```json
+{ 
+  "type":"lookup"
+  "dimension":"dimensionName"
+  "outputName":"dimensionOutputName"
+  "name":"lookupName"
 }
 ```

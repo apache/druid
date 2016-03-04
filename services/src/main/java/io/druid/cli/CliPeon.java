@@ -62,6 +62,7 @@ import io.druid.indexing.worker.executor.ExecutorLifecycle;
 import io.druid.indexing.worker.executor.ExecutorLifecycleConfig;
 import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import io.druid.query.QuerySegmentWalker;
+import io.druid.query.extraction.LookupReferencesManager;
 import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.DataSegmentMover;
@@ -71,7 +72,6 @@ import io.druid.segment.loading.OmniDataSegmentMover;
 import io.druid.segment.loading.SegmentLoaderConfig;
 import io.druid.segment.loading.StorageLocationConfig;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
-import io.druid.segment.realtime.firehose.ChatHandlerResource;
 import io.druid.segment.realtime.firehose.NoopChatHandlerProvider;
 import io.druid.segment.realtime.firehose.ServiceAnnouncingChatHandlerProvider;
 import io.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierConfig;
@@ -156,6 +156,7 @@ public class CliPeon extends GuiceRunnable
             binder.bind(DataSegmentArchiver.class).to(OmniDataSegmentArchiver.class).in(LazySingleton.class);
 
             binder.bind(ExecutorLifecycle.class).in(ManageLifecycle.class);
+            LifecycleModule.register(binder, ExecutorLifecycle.class);
             binder.bind(ExecutorLifecycleConfig.class).toInstance(
                 new ExecutorLifecycleConfig()
                     .setTaskFile(new File(taskAndStatusFile.get(0)))
@@ -188,9 +189,8 @@ public class CliPeon extends GuiceRunnable
 
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class);
             Jerseys.addResource(binder, QueryResource.class);
-            Jerseys.addResource(binder, ChatHandlerResource.class);
             LifecycleModule.register(binder, QueryResource.class);
-
+            LifecycleModule.register(binder, LookupReferencesManager.class);
             binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig(nodeType));
 
             LifecycleModule.register(binder, Server.class);

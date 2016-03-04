@@ -20,7 +20,6 @@
 package io.druid.segment.incremental;
 
 import com.google.common.base.Function;
-import com.google.common.base.Strings;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -39,7 +38,6 @@ import io.druid.segment.data.ListIndexed;
 import org.joda.time.Interval;
 import org.roaringbitmap.IntIterator;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.List;
@@ -53,9 +51,40 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   private static final Logger log = new Logger(IncrementalIndexAdapter.class);
   private final Interval dataInterval;
   private final IncrementalIndex<?> index;
-  private final Map<String, Map<String, MutableBitmap>> invertedIndexes;
   private final Set<String> hasNullValueDimensions;
-  private final Metadata metadata;
+
+  private final Map<String, DimensionIndexer> indexers;
+
+  private class DimensionIndexer
+  {
+    private final IncrementalIndex.DimensionDesc dimensionDesc;
+    private final MutableBitmap[] invertedIndexes;
+
+    private IncrementalIndex.SortedDimLookup dimLookup;
+
+    public DimensionIndexer(IncrementalIndex.DimensionDesc dimensionDesc)
+    {
+      this.dimensionDesc = dimensionDesc;
+      this.invertedIndexes = new MutableBitmap[dimensionDesc.getValues().size() + 1];
+    }
+
+    private IncrementalIndex.DimDim getDimValues()
+    {
+      return dimensionDesc.getValues();
+    }
+
+    private IncrementalIndex.SortedDimLookup getDimLookup()
+    {
+      if (dimLookup == null) {
+        final IncrementalIndex.DimDim dimDim = dimensionDesc.getValues();
+        if (hasNullValueDimensions.contains(dimensionDesc.getName()) && !dimDim.contains(null)) {
+          dimDim.add(null);
+        }
+        dimLookup = dimDim.sort();
+      }
+      return dimLookup;
+    }
+  }
 
   public IncrementalIndexAdapter(
       Interval dataInterval, IncrementalIndex<?> index, BitmapFactory bitmapFactory
@@ -63,9 +92,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   {
     this.dataInterval = dataInterval;
     this.index = index;
-    this.metadata = index.getMetadata();
 
-    this.invertedIndexes = Maps.newHashMap();
     /* Sometimes it's hard to tell whether one dimension contains a null value or not.
      * If one dimension had show a null or empty value explicitly, then yes, it contains
      * null value. But if one dimension's values are all non-null, it still early to say
@@ -79,40 +106,36 @@ public class IncrementalIndexAdapter implements IndexableAdapter
 
     final List<IncrementalIndex.DimensionDesc> dimensions = index.getDimensions();
 
+    indexers = Maps.newHashMapWithExpectedSize(dimensions.size());
     for (IncrementalIndex.DimensionDesc dimension : dimensions) {
-      invertedIndexes.put(dimension.getName(), Maps.<String, MutableBitmap>newHashMap());
+      indexers.put(dimension.getName(), new DimensionIndexer(dimension));
     }
 
     int rowNum = 0;
     for (IncrementalIndex.TimeAndDims timeAndDims : index.getFacts().keySet()) {
-      final String[][] dims = timeAndDims.getDims();
+      final int[][] dims = timeAndDims.getDims();
 
       for (IncrementalIndex.DimensionDesc dimension : dimensions) {
         final int dimIndex = dimension.getIndex();
-        final Map<String, MutableBitmap> bitmapIndexes = invertedIndexes.get(dimension.getName());
-
-        if (bitmapIndexes == null || dims == null) {
-          log.error("bitmapIndexes and dims are null!");
-          continue;
-        }
+        DimensionIndexer indexer = indexers.get(dimension.getName());
         if (dimIndex >= dims.length || dims[dimIndex] == null) {
           hasNullValueDimensions.add(dimension.getName());
           continue;
         }
-        if (hasNullValue(dims[dimIndex])) {
+        final IncrementalIndex.DimDim values = dimension.getValues();
+        if (hasNullValue(values, dims[dimIndex])) {
           hasNullValueDimensions.add(dimension.getName());
         }
 
-        for (String dimValue : dims[dimIndex]) {
-          MutableBitmap mutableBitmap = bitmapIndexes.get(dimValue);
+        final MutableBitmap[] bitmapIndexes = indexer.invertedIndexes;
 
-          if (mutableBitmap == null) {
-            mutableBitmap = bitmapFactory.makeEmptyMutableBitmap();
-            bitmapIndexes.put(dimValue, mutableBitmap);
+        for (Comparable dimIdxComparable : dims[dimIndex]) {
+          Integer dimIdx = (Integer) dimIdxComparable;
+          if (bitmapIndexes[dimIdx] == null) {
+            bitmapIndexes[dimIdx] = bitmapFactory.makeEmptyMutableBitmap();
           }
-
           try {
-            mutableBitmap.add(rowNum);
+            bitmapIndexes[dimIdx].add(rowNum);
           }
           catch (Exception e) {
             log.info(e.toString());
@@ -151,51 +174,48 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   @Override
   public Indexed<String> getDimValueLookup(String dimension)
   {
-    final IncrementalIndex.DimDim dimDim = index.getDimensionValues(dimension);
-
-    if (dimDim != null) {
-      if (hasNullValueDimensions.contains(dimension)
-          && !dimDim.contains(null))
-      {
-        dimDim.add(null);
-      }
-      dimDim.sort();
-
-      return new Indexed<String>()
-      {
-        @Override
-        public Class<? extends String> getClazz()
-        {
-          return String.class;
-        }
-
-        @Override
-        public int size()
-        {
-          return dimDim.size();
-        }
-
-        @Override
-        public String get(int index)
-        {
-          return dimDim.getSortedValue(index);
-        }
-
-        @Override
-        public int indexOf(String value)
-        {
-          return dimDim.getSortedId(value);
-        }
-
-        @Override
-        public Iterator<String> iterator()
-        {
-          return IndexedIterable.create(this).iterator();
-        }
-      };
-    } else {
+    final DimensionIndexer indexer = indexers.get(dimension);
+    if (indexer == null) {
       return null;
     }
+    final IncrementalIndex.DimDim dimDim = indexer.getDimValues();
+    final IncrementalIndex.SortedDimLookup dimLookup = indexer.getDimLookup();
+
+    return new Indexed<String>()
+    {
+      @Override
+      public Class<? extends String> getClazz()
+      {
+        return String.class;
+      }
+
+      @Override
+      public int size()
+      {
+        return dimLookup.size();
+      }
+
+      @Override
+      public String get(int index)
+      {
+        Comparable val = dimLookup.getValueFromSortedId(index);
+        String strVal = val != null ? val.toString() : null;
+        return strVal;
+      }
+
+      @Override
+      public int indexOf(String value)
+      {
+        int id = dimDim.getId(value);
+        return id < 0 ? -1 : dimLookup.getSortedIdFromUnsortedId(id);
+      }
+
+      @Override
+      public Iterator<String> iterator()
+      {
+        return IndexedIterable.create(this).iterator();
+      }
+    };
   }
 
   @Override
@@ -207,31 +227,32 @@ public class IncrementalIndexAdapter implements IndexableAdapter
       public Iterator<Rowboat> iterator()
       {
         final List<IncrementalIndex.DimensionDesc> dimensions = index.getDimensions();
+        final IncrementalIndex.SortedDimLookup[] sortedDimLookups = new IncrementalIndex.SortedDimLookup[dimensions.size()];
+        for (IncrementalIndex.DimensionDesc dimension : dimensions) {
+          sortedDimLookups[dimension.getIndex()] = indexers.get(dimension.getName()).getDimLookup();
+        }
+
         /*
          * Note that the transform function increments a counter to determine the rowNum of
          * the iterated Rowboats. We need to return a new iterator on each
          * iterator() call to ensure the counter starts at 0.
          */
-        return (Iterators.transform(
+        return Iterators.transform(
             index.getFacts().entrySet().iterator(),
             new Function<Map.Entry<IncrementalIndex.TimeAndDims, Integer>, Rowboat>()
             {
               int count = 0;
 
               @Override
-              public Rowboat apply(
-                  @Nullable Map.Entry<IncrementalIndex.TimeAndDims, Integer> input
-              )
+              public Rowboat apply(Map.Entry<IncrementalIndex.TimeAndDims, Integer> input)
               {
                 final IncrementalIndex.TimeAndDims timeAndDims = input.getKey();
-                final String[][] dimValues = timeAndDims.getDims();
+                final int[][] dimValues = timeAndDims.getDims();
                 final int rowOffset = input.getValue();
 
                 int[][] dims = new int[dimValues.length][];
                 for (IncrementalIndex.DimensionDesc dimension : dimensions) {
                   final int dimIndex = dimension.getIndex();
-                  final IncrementalIndex.DimDim dimDim = dimension.getValues();
-                  dimDim.sort();
 
                   if (dimIndex >= dimValues.length || dimValues[dimIndex] == null) {
                     continue;
@@ -244,7 +265,9 @@ public class IncrementalIndexAdapter implements IndexableAdapter
                   }
 
                   for (int i = 0; i < dimValues[dimIndex].length; ++i) {
-                    dims[dimIndex][i] = dimDim.getSortedId(dimValues[dimIndex][i]);
+                    dims[dimIndex][i] = sortedDimLookups[dimIndex].getSortedIdFromUnsortedId(dimValues[dimIndex][i]);
+                    //TODO: in later PR, Rowboat will use Comparable[][] instead of int[][]
+                    // Can remove dictionary encoding for numeric dims then.
                   }
                 }
 
@@ -261,21 +284,26 @@ public class IncrementalIndexAdapter implements IndexableAdapter
                 );
               }
             }
-        ));
+        );
       }
     };
   }
 
   @Override
-  public IndexedInts getBitmapIndex(String dimension, String value)
+  public IndexedInts getBitmapIndex(String dimension, int index)
   {
-    Map<String, MutableBitmap> dimInverted = invertedIndexes.get(dimension);
-
-    if (dimInverted == null) {
+    DimensionIndexer accessor = indexers.get(dimension);
+    if (accessor == null) {
       return EmptyIndexedInts.EMPTY_INDEXED_INTS;
     }
 
-    final MutableBitmap bitmapIndex = dimInverted.get(value);
+    IncrementalIndex.SortedDimLookup dimLookup = accessor.getDimLookup();
+    final int id = dimLookup.getUnsortedIdFromSortedId(index);
+    if (id < 0 || id >= dimLookup.size()) {
+      return EmptyIndexedInts.EMPTY_INDEXED_INTS;
+    }
+
+    MutableBitmap bitmapIndex = accessor.invertedIndexes[id];
 
     if (bitmapIndex == null) {
       return EmptyIndexedInts.EMPTY_INDEXED_INTS;
@@ -296,28 +324,22 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     return index.getCapabilities(column);
   }
 
-  @Override
-  public IndexedInts getBitmapIndex(String dimension, int dictId)
+  private boolean hasNullValue(IncrementalIndex.DimDim dimDim, int[] dimIndices)
   {
-    if (dictId >= 0) {
-      final Indexed<String> dimValues = getDimValueLookup(dimension);
-      //NullValueConverterDimDim will convert empty to null, we need convert it back to the actual values,
-      //because getBitmapIndex relies on the actual values stored in DimDim.
-      String value = Strings.nullToEmpty(dimValues.get(dictId));
-      return getBitmapIndex(dimension, value);
-    } else {
-      return EmptyIndexedInts.EMPTY_INDEXED_INTS;
-    }
-  }
-
-  private boolean hasNullValue(String[] dimValues)
-  {
-    if (dimValues == null || dimValues.length == 0) {
+    if (dimIndices == null || dimIndices.length == 0) {
       return true;
     }
-    for (String dimVal : dimValues) {
-      if (Strings.isNullOrEmpty(dimVal)) {
+    for (int dimIndex : dimIndices) {
+      Comparable val = dimDim.getValue(dimIndex);
+
+      if (val == null) {
         return true;
+      }
+
+      if (val instanceof String) {
+        if (((String) val).length() == 0) {
+          return true;
+        }
       }
     }
     return false;
@@ -382,13 +404,12 @@ public class IncrementalIndexAdapter implements IndexableAdapter
     @Override
     public void close() throws IOException
     {
-
     }
   }
 
   @Override
   public Metadata getMetadata()
   {
-    return metadata;
+    return index.getMetadata();
   }
 }
