@@ -19,43 +19,54 @@
 
 package io.druid.query.search.search;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+
 import io.druid.query.ordering.StringComparators;
 
 import java.util.Comparator;
 
 /**
  */
-public class StrlenSearchSortSpec implements SearchSortSpec
+public class AlphanumericSearchSortSpec implements SearchSortSpec
 {
-  public StrlenSearchSortSpec()
+  @JsonCreator
+  public AlphanumericSearchSortSpec(
+  )
   {
   }
 
   @Override
   public Comparator<SearchHit> getComparator()
   {
-    return new Comparator<SearchHit>() {
+    return new Comparator<SearchHit>()
+    {
       @Override
-      public int compare(SearchHit s, SearchHit s1)
+      public int compare(SearchHit searchHit1, SearchHit searchHit2)
       {
-        int res = StringComparators.STRLEN.compare(s.getValue(), s1.getValue());
-        if (res == 0) {
-          res = StringComparators.LEXICOGRAPHIC.compare(
-              s.getDimension(), s1.getDimension());
+        int retVal = StringComparators.ALPHANUMERIC.compare(
+            searchHit1.getValue(), searchHit2.getValue());
+        if (retVal == 0) {
+          retVal = StringComparators.LEXICOGRAPHIC.compare(
+              searchHit1.getDimension(), searchHit2.getDimension());
         }
-        return res;
+        return retVal;
       }
     };
+  }
+
+  public String toString()
+  {
+    return "alphanumericSort";
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    return (other instanceof AlphanumericSearchSortSpec);
   }
 
   @Override
   public byte[] getCacheKey()
   {
     return toString().getBytes();
-  }
-
-  public String toString()
-  {
-    return "stringLengthSort";
   }
 }

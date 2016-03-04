@@ -17,45 +17,30 @@
  * under the License.
  */
 
-package io.druid.query.search.search;
+package io.druid.query.search;
 
-import io.druid.query.ordering.StringComparators;
-
-import java.util.Comparator;
+import io.druid.query.search.search.AlphanumericSearchSortSpec;
+import io.druid.query.search.search.SearchHit;
+import io.druid.query.search.search.SearchSortSpec;
+import io.druid.query.search.search.StrlenSearchSortSpec;
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
  */
-public class StrlenSearchSortSpec implements SearchSortSpec
+public class AlphanumericSearchSortSpecTest
 {
-  public StrlenSearchSortSpec()
+  @Test
+  public void testComparator()
   {
-  }
+    SearchSortSpec spec = new AlphanumericSearchSortSpec();
 
-  @Override
-  public Comparator<SearchHit> getComparator()
-  {
-    return new Comparator<SearchHit>() {
-      @Override
-      public int compare(SearchHit s, SearchHit s1)
-      {
-        int res = StringComparators.STRLEN.compare(s.getValue(), s1.getValue());
-        if (res == 0) {
-          res = StringComparators.LEXICOGRAPHIC.compare(
-              s.getDimension(), s1.getDimension());
-        }
-        return res;
-      }
-    };
-  }
+    SearchHit hit1 = new SearchHit("test", "a100");
+    SearchHit hit2 = new SearchHit("test", "a9");
+    SearchHit hit3 = new SearchHit("test", "b0");
 
-  @Override
-  public byte[] getCacheKey()
-  {
-    return toString().getBytes();
-  }
-
-  public String toString()
-  {
-    return "stringLengthSort";
+    Assert.assertTrue(spec.getComparator().compare(hit1, hit2) > 0);
+    Assert.assertTrue(spec.getComparator().compare(hit3, hit1) > 0);
+    Assert.assertTrue(spec.getComparator().compare(hit3, hit2) > 0);
   }
 }
