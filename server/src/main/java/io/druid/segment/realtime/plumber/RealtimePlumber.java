@@ -606,6 +606,7 @@ public class RealtimePlumber implements Plumber
       persistAndMerge(entry.getKey(), entry.getValue());
     }
 
+    final long forceEndWaitTime = System.currentTimeMillis() + config.getHandoffConditionTimeout();
     while (!sinks.isEmpty()) {
       try {
         log.info(
@@ -627,7 +628,19 @@ public class RealtimePlumber implements Plumber
 
         synchronized (handoffCondition) {
           while (!sinks.isEmpty()) {
-            handoffCondition.wait();
+            if (config.getHandoffConditionTimeout() == 0) {
+              handoffCondition.wait();
+            } else {
+              long curr = System.currentTimeMillis();
+              if (forceEndWaitTime - curr > 0) {
+                handoffCondition.wait(forceEndWaitTime - curr);
+              } else {
+                throw new ISE(
+                    "Segment handoff wait timeout. [%s] segments might not have completed handoff.",
+                    sinks.size()
+                );
+              }
+            }
           }
         }
       }
