@@ -20,6 +20,8 @@
 package io.druid.guice;
 
 import com.amazonaws.auth.AWSCredentialsProvider;
+import com.amazonaws.regions.Region;
+import com.amazonaws.regions.Regions;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.google.inject.Binder;
@@ -27,6 +29,7 @@ import com.google.inject.Module;
 import com.google.inject.Provides;
 import io.druid.common.aws.AWSCredentialsConfig;
 import io.druid.common.aws.AWSCredentialsUtils;
+import io.druid.indexing.overlord.autoscaling.ResourceManagementSchedulerConfig;
 
 /**
  */
@@ -47,8 +50,17 @@ public class AWSModule implements Module
 
   @Provides
   @LazySingleton
-  public AmazonEC2 getEc2Client(AWSCredentialsProvider credentials)
+  public AmazonEC2 getEc2Client(
+      AWSCredentialsProvider credentials,
+      ResourceManagementSchedulerConfig resourceManagementSchedulerConfig)
   {
-    return new AmazonEC2Client(credentials);
+    final AmazonEC2Client amazonEC2Client = new AmazonEC2Client(credentials);
+    final String region = resourceManagementSchedulerConfig.getRegion();
+    if (region != null) {
+      try {
+        amazonEC2Client.setRegion(Region.getRegion(Regions.fromName(region)));
+      } catch (IllegalArgumentException ignored) {}
+    }
+    return amazonEC2Client;
   }
 }

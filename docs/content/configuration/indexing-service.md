@@ -89,6 +89,7 @@ There are additional configs for autoscaling (if it is enabled):
 |--------|-----------|-------|
 |`druid.indexer.autoscale.strategy`|Choices are "noop" or "ec2". Sets the strategy to run when autoscaling is required.|noop|
 |`druid.indexer.autoscale.doAutoscale`|If set to "true" autoscaling will be enabled.|false|
+|`druid.indexer.autoscale.region`|The EC2 region in which to autoscale.|us-east-1|
 |`druid.indexer.autoscale.provisionPeriod`|How often to check whether or not new middle managers should be added.|PT1M|
 |`druid.indexer.autoscale.terminatePeriod`|How often to check when middle managers should be removed.|PT5M|
 |`druid.indexer.autoscale.originTime`|The starting reference timestamp that the terminate period increments upon.|2012-01-01T00:55:00.000Z|
@@ -141,7 +142,12 @@ A sample worker config spec is shown below:
         "minInstances": 1,
         "maxInstances": 1,
         "securityGroupIds": ["${IDs}"],
-        "keyName": ${KEY_NAME}
+        "keyName": "${KEY_NAME}",
+        "subnetId": "${SUBNET_ID}",
+        "iamProfile": {
+          "name": "${IAM_PROFILE_NAME}",
+          "arn": "${IAM_PROFILE_INSTANCE_PROFILE_ARN}"
+        }
       },
       "userData": {
         "impl": "string",

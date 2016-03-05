@@ -28,6 +28,9 @@ import org.joda.time.Period;
 public class ResourceManagementSchedulerConfig
 {
   @JsonProperty
+  private String region = "us-east-1";
+
+  @JsonProperty
   private boolean doAutoscale = false;
 
   @JsonProperty
@@ -38,6 +41,11 @@ public class ResourceManagementSchedulerConfig
 
   @JsonProperty
   private DateTime originTime = new DateTime("2012-01-01T00:55:00.000Z");
+
+  public String getRegion()
+  {
+    return region;
+  }
 
   public boolean isDoAutoscale()
   {
