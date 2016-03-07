@@ -95,6 +95,14 @@ public class HdfsDataSegmentKillerTest
     Assert.assertFalse(fs.exists(dataSourceDir));
   }
 
+  @Test
+  public void testKillNonExistingSegment() throws Exception
+  {
+    Configuration config = new Configuration();
+    HdfsDataSegmentKiller killer = new HdfsDataSegmentKiller(config);
+    killer.kill(getSegmentWithPath(new Path("/xxx/", "index.zip").toString()));
+  }
+
   private void makePartitionDirWithIndex(FileSystem fs, Path path) throws IOException
   {
     Assert.assertTrue(fs.mkdirs(path));
