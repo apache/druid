@@ -68,6 +68,12 @@ public class LexicographicSearchSortSpec implements SearchSortSpec
 
   @Override
   public boolean equals(Object other) {
-    return (other instanceof LexicographicSearchSortSpec);
+    return this == other || other instanceof LexicographicSearchSortSpec;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return 0;
   }
 }

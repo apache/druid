@@ -58,4 +58,15 @@ public class StrlenSearchSortSpec implements SearchSortSpec
   {
     return "stringLengthSort";
   }
+
+  @Override
+  public boolean equals(Object other) {
+    return this == other || other instanceof StrlenSearchSortSpec;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return 0;
+  }
 }

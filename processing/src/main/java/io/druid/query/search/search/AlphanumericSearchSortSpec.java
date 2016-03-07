@@ -61,7 +61,13 @@ public class AlphanumericSearchSortSpec implements SearchSortSpec
 
   @Override
   public boolean equals(Object other) {
-    return (other instanceof AlphanumericSearchSortSpec);
+    return this == other || other instanceof AlphanumericSearchSortSpec;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return 0;
   }
 
   @Override
