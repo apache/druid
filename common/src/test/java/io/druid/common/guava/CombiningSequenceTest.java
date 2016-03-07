@@ -20,6 +20,8 @@
 package io.druid.common.guava;
 
 import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -36,6 +38,7 @@ import org.junit.runners.Parameterized;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
@@ -270,5 +273,84 @@ public class CombiningSequenceTest
     Assert.assertTrue(yielder.isDone());
     Assert.assertFalse(expectedVals.hasNext());
     yielder.close();
+  }
+
+  @Test
+  public void testComplexSequence()
+  {
+    List<Integer> combined = Sequences.toList(getComplexSequence(), new ArrayList<Integer>());
+    Assert.assertEquals(8, Iterables.getOnlyElement(combined).intValue());
+
+    Yielder<Integer> yielder = getComplexSequence().toYielder(
+        null,
+        new YieldingAccumulator<Integer, Integer>()
+        {
+          @Override
+          public Integer accumulate(Integer accumulated, Integer in)
+          {
+            yield();
+            return in;
+          }
+        }
+    );
+
+    List<Integer> combinedByYielder = new ArrayList<>();
+    while (!yielder.isDone()) {
+      combinedByYielder.add(yielder.get());
+      yielder = yielder.next(null);
+    }
+
+    Assert.assertEquals(8, Iterables.getOnlyElement(combinedByYielder).intValue());
+  }
+
+  private Sequence<Integer> getComplexSequence()
+  {
+    Ordering<Integer> alwaysSame = new Ordering<Integer>()
+    {
+      @Override
+      public int compare(Integer left, Integer right)
+      {
+        return 0;
+      }
+    };
+
+    BinaryFn<Integer, Integer, Integer> plus = new BinaryFn<Integer, Integer, Integer>()
+    {
+      @Override
+      public Integer apply(Integer arg1, Integer arg2)
+      {
+        if (arg1 == null) {
+          return arg2;
+        }
+
+        if (arg2 == null) {
+          return arg1;
+        }
+
+        return arg1 + arg2;
+      }
+    };
+
+    return CombiningSequence.create(
+        Sequences.concat(
+            ImmutableList.<Sequence<Integer>>of(
+                CombiningSequence.create(
+                    Sequences.simple(ImmutableList.<Integer>of(3))
+                    ,
+                    alwaysSame,
+                    plus
+                )
+                ,
+                CombiningSequence.create(
+                    Sequences.simple(ImmutableList.of(5))
+                    ,
+                    alwaysSame,
+                    plus
+                )
+            )
+        ),
+        alwaysSame,
+        plus
+    );
   }
 }
