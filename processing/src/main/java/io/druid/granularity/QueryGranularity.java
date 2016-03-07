@@ -20,9 +20,13 @@
 package io.druid.granularity;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.google.common.collect.ImmutableMap;
 import com.metamx.common.IAE;
 import org.joda.time.DateTime;
+import org.joda.time.Period;
 import org.joda.time.ReadableDuration;
+
+import java.util.Map;
 
 public abstract class QueryGranularity
 {
@@ -39,10 +43,22 @@ public abstract class QueryGranularity
   public static final QueryGranularity ALL = new AllGranularity();
   public static final QueryGranularity NONE = new NoneGranularity();
 
+  private static final Map<String, PeriodGranularity> CALENDRIC_GRANULARITIES = ImmutableMap.of(
+      "YEAR", new PeriodGranularity(new Period("P1Y"), null, null),
+      "MONTH", new PeriodGranularity(new Period("P1M"), null, null),
+      "QUARTER", new PeriodGranularity(new Period("P3M"), null, null),
+      "WEEK", new PeriodGranularity(new Period("P1W"), null, null)
+  );
+
   public static final QueryGranularity MINUTE = fromString("MINUTE");
   public static final QueryGranularity HOUR   = fromString("HOUR");
   public static final QueryGranularity DAY    = fromString("DAY");
   public static final QueryGranularity SECOND = fromString("SECOND");
+
+  public static final QueryGranularity WEEK     = fromString("WEEK");
+  public static final QueryGranularity MONTH    = fromString("MONTH");
+  public static final QueryGranularity QUARTER  = fromString("QUARTER");
+  public static final QueryGranularity YEAR     = fromString("YEAR");
 
   @JsonCreator
   public static QueryGranularity fromString(String str)
@@ -55,6 +71,10 @@ public abstract class QueryGranularity
     else if(name.equals("NONE"))
     {
       return QueryGranularity.NONE;
+    }
+    else if(CALENDRIC_GRANULARITIES.containsKey(name))
+    {
+      return CALENDRIC_GRANULARITIES.get(name);
     }
     return new DurationGranularity(convertValue(str), 0);
   }
