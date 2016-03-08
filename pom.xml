@@ -84,7 +84,8 @@
         <module>extensions/cassandra-storage</module>
         <module>extensions/hdfs-storage</module>
         <module>extensions/s3-extensions</module>
-        <module>extensions/graphite-emitter</module>
+	<module>extensions/graphite-emitter</module>
+	<module>extensions/ganglia-emitter</module>
         <!-- kafka-seven extension is not built by default since
              Kafka 0.7 is not available in Maven Central -->
         <!-- <module>extensions/kafka&#45;seven</module> -->
