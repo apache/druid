@@ -20,8 +20,10 @@
 package io.druid.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Predicates;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -431,7 +433,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
 
       log.debug("Starting polling of segment table");
 
-      List<DataSegment> segments = dbi.withHandle(
+      final List<DataSegment> segments = dbi.withHandle(
           new HandleCallback<List<DataSegment>>()
           {
             @Override
@@ -451,7 +453,8 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
                                      return jsonMapper.readValue(r.getBytes("payload"), DataSegment.class);
                                    }
                                    catch (IOException e) {
-                                     throw new SQLException(e);
+                                     log.makeAlert(e, "Failed to read segment from db.");
+                                     return null;
                                    }
                                  }
                                }
@@ -466,9 +469,13 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
         return;
       }
 
+      final Collection<DataSegment> segmentsFinal = Collections2.filter(
+          segments, Predicates.notNull()
+      );
+
       log.info("Polled and found %,d segments in the database", segments.size());
 
-      for (final DataSegment segment : segments) {
+      for (final DataSegment segment : segmentsFinal) {
         String datasourceName = segment.getDataSource();
 
         DruidDataSource dataSource = newDataSources.get(datasourceName);

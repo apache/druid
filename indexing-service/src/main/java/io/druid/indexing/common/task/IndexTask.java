@@ -48,7 +48,6 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.index.YeOldePlumberSchool;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
-import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.IOConfig;
@@ -144,7 +143,8 @@ public class IndexTask extends AbstractFixedIntervalTask
         buildV9Directly,
         0,
         0,
-        true
+        true,
+        null
     );
   }
 

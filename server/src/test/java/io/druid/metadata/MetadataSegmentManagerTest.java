@@ -24,7 +24,10 @@ import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.metamx.emitter.EmittingLogger;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
 import org.joda.time.Interval;
@@ -40,6 +43,7 @@ public class MetadataSegmentManagerTest
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
   private SQLMetadataSegmentManager manager;
+  private SQLMetadataSegmentPublisher publisher;
   private final ObjectMapper jsonMapper = new DefaultObjectMapper();
 
   private final DataSegment segment1 = new DataSegment(
@@ -78,7 +82,6 @@ public class MetadataSegmentManagerTest
   public void setUp() throws Exception
   {
     TestDerbyConnector connector = derbyConnectorRule.getConnector();
-
     manager = new SQLMetadataSegmentManager(
         jsonMapper,
         Suppliers.ofInstance(new MetadataSegmentManagerConfig()),
@@ -86,7 +89,7 @@ public class MetadataSegmentManagerTest
         connector
     );
 
-    SQLMetadataSegmentPublisher publisher = new SQLMetadataSegmentPublisher(
+    publisher = new SQLMetadataSegmentPublisher(
         jsonMapper,
         derbyConnectorRule.metadataTablesConfigSupplier().get(),
         connector
@@ -112,6 +115,33 @@ public class MetadataSegmentManagerTest
         manager.getInventoryValue("wikipedia").getSegments()
     );
     manager.stop();
+  }
+
+  @Test
+  public void testPollWithCurroptedSegment()
+  {
+    //create a corrupted segment entry in segments table, which tests
+    //that overall loading of segments from database continues to work
+    //even in one of the entries are corrupted.
+    publisher.publishSegment(
+        "corrupt-segment-id",
+        "corrupt-datasource",
+        "corrupt-create-date",
+        "corrupt-start-date",
+        "corrupt-end-date",
+        true,
+        "corrupt-version",
+        true,
+        "corrupt-payload".getBytes()
+    );
+
+    EmittingLogger.registerEmitter(new NoopServiceEmitter());
+    manager.start();
+    manager.poll();
+
+    Assert.assertEquals(
+        "wikipedia", Iterables.getOnlyElement(manager.getInventory()).getName()
+    );
   }
 
   @Test

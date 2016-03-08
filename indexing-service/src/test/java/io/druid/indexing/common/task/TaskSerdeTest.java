@@ -336,7 +336,8 @@ public class TaskSerdeTest
                 null,
                 0,
                 0,
-                true
+                true,
+                null
             )
         ),
         null

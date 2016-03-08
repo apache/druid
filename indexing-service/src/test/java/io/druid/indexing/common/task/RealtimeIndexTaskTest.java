@@ -281,6 +281,48 @@ public class RealtimeIndexTaskTest
     Assert.assertEquals(task.getId(), task.getTaskResource().getAvailabilityGroup());
   }
 
+
+  @Test(timeout = 60_000L, expected = ExecutionException.class)
+  public void testHandoffTimeout() throws Exception
+  {
+    final TestIndexerMetadataStorageCoordinator mdc = new TestIndexerMetadataStorageCoordinator();
+    final RealtimeIndexTask task = makeRealtimeTask(null, true, 100L);
+    final TaskToolbox taskToolbox = makeToolbox(task, mdc, tempFolder.newFolder());
+    final ListenableFuture<TaskStatus> statusFuture = runTask(task, taskToolbox);
+
+    // Wait for firehose to show up, it starts off null.
+    while (task.getFirehose() == null) {
+      Thread.sleep(50);
+    }
+
+    final TestFirehose firehose = (TestFirehose) task.getFirehose();
+
+    firehose.addRows(
+        ImmutableList.<InputRow>of(
+            new MapBasedInputRow(
+                now,
+                ImmutableList.of("dim1"),
+                ImmutableMap.<String, Object>of("dim1", "foo", "met1", "1")
+            )
+        )
+    );
+
+    // Stop the firehose, this will drain out existing events.
+    firehose.close();
+
+    // Wait for publish.
+    while (mdc.getPublished().isEmpty()) {
+      Thread.sleep(50);
+    }
+
+    Assert.assertEquals(1, task.getMetrics().processed());
+    Assert.assertNotNull(Iterables.getOnlyElement(mdc.getPublished()));
+
+
+    // handoff would timeout, resulting in exception
+    statusFuture.get();
+  }
+
   @Test(timeout = 60_000L)
   public void testBasics() throws Exception
   {
@@ -818,10 +860,15 @@ public class RealtimeIndexTaskTest
 
   private RealtimeIndexTask makeRealtimeTask(final String taskId)
   {
-    return makeRealtimeTask(taskId, true);
+    return makeRealtimeTask(taskId, true, 0);
   }
 
   private RealtimeIndexTask makeRealtimeTask(final String taskId, boolean reportParseExceptions)
+  {
+    return makeRealtimeTask(taskId, reportParseExceptions, 0);
+  }
+
+  private RealtimeIndexTask makeRealtimeTask(final String taskId, boolean reportParseExceptions, long handoffTimeout)
   {
     ObjectMapper objectMapper = new DefaultObjectMapper();
     DataSchema dataSchema = new DataSchema(
@@ -849,7 +896,8 @@ public class RealtimeIndexTaskTest
         buildV9Directly,
         0,
         0,
-        reportParseExceptions
+        reportParseExceptions,
+        handoffTimeout
     );
     return new RealtimeIndexTask(
         taskId,
