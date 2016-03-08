@@ -50,9 +50,15 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
     final Path path = getPath(segment);
     log.info("killing segment[%s] mapped to path[%s]", segment.getIdentifier(), path);
 
-    final FileSystem fs = checkPathAndGetFilesystem(path);
     try {
       if (path.getName().endsWith(".zip")) {
+
+        final FileSystem fs = path.getFileSystem(config);
+
+        if (!fs.exists(path)) {
+          log.warn("Segment Path [%s] does not exist. It appears to have been deleted already.", path);
+          return ;
+        }
 
         // path format -- > .../dataSource/interval/version/partitionNum/xxx.zip
         Path partitionNumDir = path.getParent();
@@ -94,22 +100,5 @@ public class HdfsDataSegmentKiller implements DataSegmentKiller
   private Path getPath(DataSegment segment)
   {
     return new Path(String.valueOf(segment.getLoadSpec().get(PATH_KEY)));
-  }
-
-  private FileSystem checkPathAndGetFilesystem(Path path) throws SegmentLoadingException
-  {
-    FileSystem fs;
-    try {
-      fs = path.getFileSystem(config);
-
-      if (!fs.exists(path)) {
-        throw new SegmentLoadingException("Path[%s] doesn't exist.", path);
-      }
-
-      return fs;
-    }
-    catch (IOException e) {
-      throw new SegmentLoadingException(e, "Problems interacting with filesystem[%s].", path);
-    }
   }
 }
