@@ -335,7 +335,8 @@ public class IndexMergerV9 extends IndexMerger
 
     long startTime = System.currentTimeMillis();
     final BitmapSerdeFactory bitmapSerdeFactory = indexSpec.getBitmapSerdeFactory();
-    final CompressedObjectStrategy.CompressionStrategy compressionStrategy = indexSpec.getDimensionCompressionStrategy();
+    final boolean compressed =
+        indexSpec.getDimensionCompressionStrategy() != CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED;
     for (int i = 0; i < mergedDimensions.size(); ++i) {
       long dimStartTime = System.currentTimeMillis();
       final String dim = mergedDimensions.get(i);
@@ -360,7 +361,7 @@ public class IndexMergerV9 extends IndexMerger
       final DictionaryEncodedColumnPartSerde.SerializerBuilder partBuilder = DictionaryEncodedColumnPartSerde
           .serializerBuilder()
           .withDictionary(dimValueWriters.get(i))
-          .withValue(dimWriters.get(i), hasMultiValue, compressionStrategy != null)
+          .withValue(dimWriters.get(i), hasMultiValue, compressed)
           .withBitmapSerdeFactory(bitmapSerdeFactory)
           .withBitmapIndex(bitmapIndexWriters.get(i))
           .withSpatialIndex(spatialIndexWriters.get(i))
@@ -369,7 +370,10 @@ public class IndexMergerV9 extends IndexMerger
           .addSerde(partBuilder.build())
           .build();
       makeColumn(v9Smoosher, dim, serdeficator);
-      log.info("Completed dimension column[%s] in %,d millis.", dim, System.currentTimeMillis() - dimStartTime);
+      log.info(
+          "Completed dimension column[%s] of size %s in %,d millis.",
+          dim, FileUtils.byteCountToDisplaySize(serdeficator.numBytes()), System.currentTimeMillis() - dimStartTime
+      );
     }
     log.info("Completed dimension columns in %,d millis.", System.currentTimeMillis() - startTime);
     progress.stopSection(section);
@@ -767,11 +771,11 @@ public class IndexMergerV9 extends IndexMerger
       String filenameBase = String.format("%s.forward_dim", dim);
       IndexedIntsWriter writer;
       if (capabilities.hasMultipleValues()) {
-        writer = (dimCompression != null)
+        writer = (dimCompression != CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED)
                  ? CompressedVSizeIndexedV3Writer.create(ioPeon, filenameBase, cardinality, dimCompression)
                  : new VSizeIndexedWriter(ioPeon, filenameBase, cardinality);
       } else {
-        writer = (dimCompression != null)
+        writer = (dimCompression != CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED)
                  ? CompressedVSizeIntsIndexedWriter.create(ioPeon, filenameBase, cardinality, dimCompression)
                  : new VSizeIndexedIntsWriter(ioPeon, filenameBase, cardinality);
       }
