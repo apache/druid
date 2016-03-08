@@ -66,8 +66,8 @@ Druid uses Jetty to serve HTTP requests.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.query.groupBy.singleThreaded`|Run single threaded group By queries.|false|
-|`druid.query.groupBy.maxIntermediateRows`|Maximum number of intermediate rows. This can be overriden at query time by `maxIntermediateRows` attribute in query context.|50000|
-|`druid.query.groupBy.maxResults`|Maximum number of results.  This can be overriden at query time by `maxResults` attribute in query context.|500000|
+|`druid.query.groupBy.maxIntermediateRows`|Maximum number of intermediate rows. This can be lowered at query time by `maxIntermediateRows` attribute in query context.|50000|
+|`druid.query.groupBy.maxResults`|Maximum number of results.  This can be lowered at query time by `maxResults` attribute in query context.|500000|
 
 ##### Search Query Config
 

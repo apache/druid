@@ -90,7 +90,7 @@ public class GroupByQueryHelper
           aggs.toArray(new AggregatorFactory[aggs.size()]),
           false,
           true,
-          query.getContextValue(CTX_KEY_MAX_RESULTS, config.getMaxResults()),
+          Math.min(query.getContextValue(CTX_KEY_MAX_RESULTS, config.getMaxResults()), config.getMaxResults()),
           bufferPool
       );
     } else {
@@ -102,7 +102,7 @@ public class GroupByQueryHelper
           aggs.toArray(new AggregatorFactory[aggs.size()]),
           false,
           true,
-          query.getContextValue(CTX_KEY_MAX_RESULTS, config.getMaxResults())
+          Math.min(query.getContextValue(CTX_KEY_MAX_RESULTS, config.getMaxResults()), config.getMaxResults())
       );
     }
 
