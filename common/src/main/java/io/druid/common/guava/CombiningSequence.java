@@ -123,6 +123,7 @@ public class CombiningSequence<T> implements Sequence<T>
       @Override
       public Yielder<OutType> next(OutType initValue)
       {
+        combiningAccumulator.reset();
         return makeYielder(finalYielder, combiningAccumulator, finalFinalValue);
       }
 
