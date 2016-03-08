@@ -392,6 +392,7 @@ public class JobHelper
     // TODO: Make this a part of Pushers or Pullers
     switch (outputFS.getScheme()) {
       case "hdfs":
+      case "viewfs":
         loadSpec = ImmutableMap.<String, Object>of(
             "type", "hdfs",
             "path", indexOutURI.toString()
@@ -547,7 +548,7 @@ public class JobHelper
       DataSegment segment
   )
   {
-    String segmentDir = "hdfs".equals(fileSystem.getScheme())
+    String segmentDir = "hdfs".equals(fileSystem.getScheme()) || "viewfs".equals(fileSystem.getScheme())
                         ? DataSegmentPusherUtil.getHdfsStorageDir(segment)
                         : DataSegmentPusherUtil.getStorageDir(segment);
     return new Path(prependFSIfNullScheme(fileSystem, basePath), String.format("./%s", segmentDir));
