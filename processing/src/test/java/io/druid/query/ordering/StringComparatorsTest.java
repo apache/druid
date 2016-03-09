@@ -40,7 +40,7 @@ public class StringComparatorsTest
   // See
   // https://docs.oracle.com/javase/tutorial/i18n/text/locale.html
 
-  final static List<String> STRINGS = new ArrayList<>(Arrays.asList(
+  public final static List<String> STRINGS = new ArrayList<>(Arrays.asList(
       "peach",
       "péché",
       "pêche",

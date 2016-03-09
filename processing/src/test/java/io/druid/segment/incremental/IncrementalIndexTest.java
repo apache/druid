@@ -48,7 +48,7 @@ import java.util.Collection;
 public class IncrementalIndexTest
 {
 
-  interface IndexCreator
+  public interface IndexCreator
   {
     IncrementalIndex createIndex();
   }
