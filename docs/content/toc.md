@@ -85,8 +85,9 @@
 
 ## Development
   * [Overview](../development/overview.html)
-  * [Libraries](../development/libraries.html)
+  * [Libraries](../development/libraries.html)  
   * [Extending Druid](../development/modules.html)
+  * [Available Modules](../development/extensions.html)
   * [Build From Source](../development/build.html)
   * [Versioning](../development/versioning.html)
   * [Integration](../development/integrating-druid-with-other-technologies.html)
@@ -95,8 +96,7 @@
     * [Geographic Queries](../development/geo.html)
     * [Approximate Histograms and Quantiles](../development/approximate-histograms.html)
     * [Datasketches](../development/datasketches-aggregators.html)
-    * [Router](../development/router.html)
-    * [Kafka Simple Consumer Firehose](../development/kafka-simple-consumer-firehose.html)
+    * [Router](../development/router.html)    
 
 ## Misc
   * [Papers & Talks](../misc/papers-and-talks.html)
