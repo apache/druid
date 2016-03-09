@@ -633,7 +633,7 @@ public class IndexGeneratorJob implements Jobby
                           persist(persistIndex, interval, file, progressIndicator);
                         }
                         catch (Exception e) {
-                          log.error("persist index error", e);
+                          log.error(e, "persist index error");
                           throw Throwables.propagate(e);
                         }
                         finally {
