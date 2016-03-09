@@ -81,6 +81,8 @@ public interface Query<T>
 
   <ContextType> ContextType getContextValue(String key, ContextType defaultValue);
 
+  boolean getContextBoolean(String key, boolean defaultValue);
+
   boolean isDescending();
 
   Ordering<T> getResultOrdering();
