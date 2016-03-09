@@ -81,7 +81,7 @@ public class GroupByQueryHelper
     );
     final IncrementalIndex index;
 
-    if (query.getContextValue("useOffheap", false)) {
+    if (query.getContextBoolean("useOffheap", false)) {
       index = new OffheapIncrementalIndex(
           // use granularity truncated min timestamp
           // since incoming truncated timestamps may precede timeStart
