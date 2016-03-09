@@ -144,7 +144,8 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
   };
 
   @VisibleForTesting
-  DatasourceInputFormat setSupplier(Supplier<org.apache.hadoop.mapred.InputFormat> supplier) {
+  DatasourceInputFormat setSupplier(Supplier<org.apache.hadoop.mapred.InputFormat> supplier)
+  {
     this.supplier = supplier;
     return this;
   }
@@ -160,7 +161,7 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
       locations = getFrequentLocations(segments, fio, conf);
     }
     catch (Exception e) {
-      logger.error("Exception thrown finding location of splits", e);
+      logger.error(e, "Exception thrown finding location of splits");
     }
     return new DatasourceInputSplit(segments, locations);
   }
@@ -181,7 +182,8 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
     return getFrequentLocations(locations);
   }
 
-  private static String[] getFrequentLocations(Iterable<String> hosts) {
+  private static String[] getFrequentLocations(Iterable<String> hosts)
+  {
 
     final CountingMap<String> counter = new CountingMap<>();
     for (String location : hosts) {
