@@ -35,6 +35,7 @@
             <groupId>io.druid</groupId>
             <artifactId>druid-processing</artifactId>
             <version>${project.parent.version}</version>
+            <scope>provided</scope>
         </dependency>
 
         <!-- Tests -->

@@ -22,7 +22,6 @@ package io.druid.indexing.common.task;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.inject.Injector;
@@ -102,23 +101,16 @@ public abstract class HadoopTask extends AbstractTask
                                                           ? hadoopDependencyCoordinates
                                                           : toolbox.getConfig().getDefaultHadoopCoordinates();
 
-    final List<URL> extensionURLs = Lists.newArrayList();
+    final List<URL> jobURLs = Lists.newArrayList(
+        Arrays.asList(((URLClassLoader) HadoopIndexTask.class.getClassLoader()).getURLs())
+    );
+
     for (final File extension : Initialization.getExtensionFilesToLoad(extensionsConfig)) {
       final ClassLoader extensionLoader = Initialization.getClassLoaderForExtension(extension);
-      extensionURLs.addAll(Arrays.asList(((URLClassLoader) extensionLoader).getURLs()));
+      jobURLs.addAll(Arrays.asList(((URLClassLoader) extensionLoader).getURLs()));
     }
 
-    final List<URL> nonHadoopURLs = Lists.newArrayList();
-    nonHadoopURLs.addAll(Arrays.asList(((URLClassLoader) HadoopIndexTask.class.getClassLoader()).getURLs()));
-
-    final List<URL> druidURLs = ImmutableList.copyOf(
-        Collections2.filter(nonHadoopURLs, IS_DRUID_URL)
-    );
-    final List<URL> nonHadoopNotDruidURLs = Lists.newArrayList(nonHadoopURLs);
-    nonHadoopNotDruidURLs.removeAll(druidURLs);
-
-    final List<URL> localClassLoaderURLs = new ArrayList<>();
-    localClassLoaderURLs.addAll(nonHadoopNotDruidURLs);
+    final List<URL> localClassLoaderURLs = new ArrayList<>(jobURLs);
 
     // hadoop dependencies come before druid classes because some extensions depend on them
     for (final File hadoopDependency :
@@ -130,15 +122,12 @@ public abstract class HadoopTask extends AbstractTask
       localClassLoaderURLs.addAll(Arrays.asList(((URLClassLoader) hadoopLoader).getURLs()));
     }
 
-    localClassLoaderURLs.addAll(druidURLs);
-    localClassLoaderURLs.addAll(extensionURLs);
-    final ClassLoader classLoader = new URLClassLoader(localClassLoaderURLs.toArray(new URL[localClassLoaderURLs.size()]), null);
+    final ClassLoader classLoader = new URLClassLoader(
+        localClassLoaderURLs.toArray(new URL[localClassLoaderURLs.size()]),
+        null
+    );
 
-    final List<URL> jobUrls = Lists.newArrayList();
-    jobUrls.addAll(nonHadoopURLs);
-    jobUrls.addAll(extensionURLs);
-
-    System.setProperty("druid.hadoop.internal.classpath", Joiner.on(File.pathSeparator).join(jobUrls));
+    System.setProperty("druid.hadoop.internal.classpath", Joiner.on(File.pathSeparator).join(jobURLs));
     return classLoader;
   }
 

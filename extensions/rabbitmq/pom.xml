@@ -35,6 +35,7 @@
         <dependency>
             <groupId>io.druid</groupId>
             <artifactId>druid-api</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.rabbitmq</groupId>
@@ -45,6 +46,12 @@
             <groupId>net.jodah</groupId>
             <artifactId>lyra</artifactId>
             <version>0.3.1</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.slf4j</groupId>
+                    <artifactId>slf4j-api</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <!-- Tests -->
