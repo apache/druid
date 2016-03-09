@@ -106,7 +106,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
 
   public boolean isSkipEmptyBuckets()
   {
-    return Boolean.parseBoolean(getContextValue("skipEmptyBuckets", "false"));
+    return getContextBoolean("skipEmptyBuckets", false);
   }
 
   public TimeseriesQuery withQuerySegmentSpec(QuerySegmentSpec querySegmentSpec)

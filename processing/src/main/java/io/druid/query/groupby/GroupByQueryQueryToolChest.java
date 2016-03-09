@@ -130,7 +130,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
           return runner.run(query, responseContext);
         }
 
-        if (Boolean.valueOf(query.getContextValue(GROUP_BY_MERGE_KEY, "true"))) {
+        if (query.getContextBoolean(GROUP_BY_MERGE_KEY, true)) {
           return mergeGroupByResults(
               (GroupByQuery) query,
               runner,
