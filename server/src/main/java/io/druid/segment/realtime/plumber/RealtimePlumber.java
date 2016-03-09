@@ -266,7 +266,7 @@ public class RealtimePlumber implements Plumber
   @Override
   public <T> QueryRunner<T> getQueryRunner(final Query<T> query)
   {
-    final boolean skipIncrementalSegment = query.getContextValue(SKIP_INCREMENTAL_SEGMENT, false);
+    final boolean skipIncrementalSegment = query.getContextBoolean(SKIP_INCREMENTAL_SEGMENT, false);
     final QueryRunnerFactory<T, Query<T>> factory = conglomerate.findFactory(query);
     final QueryToolChest<T, Query<T>> toolchest = factory.getToolchest();
 
