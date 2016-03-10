@@ -145,6 +145,21 @@
             <groupId>com.lmax</groupId>
             <artifactId>disruptor</artifactId>
         </dependency>
+        <!--
+            Druid doesn't ACTUALLY depend on jets3t in its core, but quite a few of the extensions do. This leads to a nasty ClassLoader problem
+            There's a bug in
+            https://github.com/apache/httpclient/blob/4.5.2/httpclient/src/main/java-deprecated/org/apache/http/impl/client/AbstractHttpClient.java#L332
+            Where httpclient does not care what your context classloader is when looking for the connection manager factories. See https://issues.apache.org/jira/browse/HTTPCLIENT-1727
+            A few extensions depend on jets3t, so we include it explicitly here to make sure it can load up its
+            org.jets3t.service.utils.RestUtils$ConnManagerFactory
+            properly
+            Future releases which include HTTPCLIENT-1727 should probably set the context loader whenever jets3t calls are used
+        -->
+        <dependency>
+            <groupId>net.java.dev.jets3t</groupId>
+            <artifactId>jets3t</artifactId>
+            <version>0.9.4</version>
+        </dependency>
 
         <!-- Tests -->
         <dependency>
