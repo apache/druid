@@ -81,15 +81,15 @@ If `type` is not included, the parser defaults to `string`.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | This should say `string`. | no |
-| parseSpec | JSON Object | Specifies the format of the data. | yes |
+| type | String | This should say `string` in general, or `hadoopyString` when used in a Hadoop indexing job. | no |
+| parseSpec | JSON Object | Specifies the format, timestamp, and dimensions of the data. | yes |
 
 ### Protobuf Parser
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | type | String | This should say `protobuf`. | no |
-| parseSpec | JSON Object | Specifies the format of the data. | yes |
+| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Should be a timeAndDims parseSpec. | yes |
 
 ### Avro Stream Parser
 
@@ -99,7 +99,7 @@ This is for realtime ingestion. Make sure to include `druid-avro-extensions` as 
 |-------|------|-------------|----------|
 | type | String | This should say `avro_stream`. | no |
 | avroBytesDecoder | JSON Object | Specifies how to decode bytes to Avro record. | yes |
-| parseSpec | JSON Object | Specifies the format of the data. | yes |
+| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Should be a timeAndDims parseSpec. | yes |
 
 For example, using Avro stream parser with schema repo Avro bytes decoder:
 
@@ -117,7 +117,11 @@ For example, using Avro stream parser with schema repo Avro bytes decoder:
       "url" : "${YOUR_SCHEMA_REPO_END_POINT}",
     }
   },
-  "parseSpec" : <standard_druid_parseSpec>
+  "parseSpec" : {
+    "type": "timeAndDims",
+    "timestampSpec": <standard timestampSpec>,
+    "dimensionsSpec": <standard dimensionsSpec>
+  }
 }
 ```
 
@@ -157,7 +161,7 @@ This is for batch ingestion using the HadoopDruidIndexer. The `inputFormat` of `
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | type | String | This should say `avro_hadoop`. | no |
-| parseSpec | JSON Object | Specifies the format of the data. | yes |
+| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Should be a timeAndDims parseSpec. | yes |
 | fromPigAvroStorage | Boolean | Specifies whether the data file is stored using AvroStorage. | no(default == false) |
 
 For example, using Avro Hadoop parser with custom reader's schema file:
@@ -170,7 +174,11 @@ For example, using Avro Hadoop parser with custom reader's schema file:
       "dataSource" : "",
       "parser" : {
         "type" : "avro_hadoop",
-        "parseSpec" : <standard_druid_parseSpec>
+        "parseSpec" : {
+          "type": "timeAndDims",
+          "timestampSpec": <standard timestampSpec>,
+          "dimensionsSpec": <standard dimensionsSpec>
+        }
       }
     },
     "ioConfig" : {
@@ -192,9 +200,16 @@ For example, using Avro Hadoop parser with custom reader's schema file:
 
 ### ParseSpec
 
+ParseSpecs serve two purposes:
+
+- The String Parser use them to determine the format (i.e. JSON, CSV, TSV) of incoming rows.
+- All Parsers use them to determine the timestamp and dimensions of incoming rows.
+
 If `format` is not included, the parseSpec defaults to `tsv`.
 
 #### JSON ParseSpec
+
+Use this with the String Parser to load JSON.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
@@ -202,8 +217,7 @@ If `format` is not included, the parseSpec defaults to `tsv`.
 | timestampSpec | JSON Object | Specifies the column and format of the timestamp. | yes |
 | dimensionsSpec | JSON Object | Specifies the dimensions of the data. | yes |
 | flattenSpec | JSON Object | Specifies flattening configuration for nested JSON data. See [Flattening JSON](./flatten-json.html) for more info. | no |
-  
-  
+
 #### JSON Lowercase ParseSpec
 
 This is a special variation of the JSON ParseSpec that lower cases all the column names in the incoming JSON data. This parseSpec is required if you are updating to Druid 0.7.x from Druid 0.6.x, are directly ingesting JSON with mixed case column names, do not have any ETL in place to lower case those column names, and would like to make queries that include the data you created using 0.6.x and 0.7.x.
@@ -214,8 +228,9 @@ This is a special variation of the JSON ParseSpec that lower cases all the colum
 | timestampSpec | JSON Object | Specifies the column and format of the timestamp. | yes |
 | dimensionsSpec | JSON Object | Specifies the dimensions of the data. | yes |
 
-
 #### CSV ParseSpec
+
+Use this with the String Parser to load CSV. Strings are parsed using the net.sf.opencsv library.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
@@ -225,7 +240,10 @@ This is a special variation of the JSON ParseSpec that lower cases all the colum
 | listDelimiter | String | A custom delimiter for multi-value dimensions. | no (default == ctrl+A) |
 | columns | JSON array | Specifies the columns of the data. | yes |
 
-#### TSV ParseSpec
+#### TSV / Delimited ParseSpec
+
+Use this with the String Parser to load any delimited text that does not require special escaping. By default,
+the delimiter is a tab, so this will load TSV.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
@@ -236,7 +254,18 @@ This is a special variation of the JSON ParseSpec that lower cases all the colum
 | listDelimiter | String | A custom delimiter for multi-value dimensions. | no (default == ctrl+A) |
 | columns | JSON String array | Specifies the columns of the data. | yes |
 
-### Timestamp Spec
+#### TimeAndDims ParseSpec
+
+Use this with non-String Parsers to provide them with timestamp and dimensions information. Non-String Parsers
+handle all formatting decisions on their own, without using the ParseSpec.
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| format | String | This should say `timeAndDims`. | yes |
+| timestampSpec | JSON Object | Specifies the column and format of the timestamp. | yes |
+| dimensionsSpec | JSON Object | Specifies the dimensions of the data. | yes |
+
+### TimestampSpec
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
