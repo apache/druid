@@ -128,6 +128,12 @@
                 <groupId>com.metamx</groupId>
                 <artifactId>java-util</artifactId>
                 <version>${metamx.java-util.version}</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.slf4j</groupId>
+                        <artifactId>slf4j-api</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -201,6 +207,12 @@
                 <groupId>org.skife.config</groupId>
                 <artifactId>config-magic</artifactId>
                 <version>0.9</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.slf4j</groupId>
+                        <artifactId>slf4j-api</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.apache.curator</groupId>
@@ -466,6 +478,12 @@
                 <groupId>io.tesla.aether</groupId>
                 <artifactId>tesla-aether</artifactId>
                 <version>0.0.5</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.slf4j</groupId>
+                        <artifactId>slf4j-api</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>org.eclipse.aether</groupId>
@@ -476,6 +494,32 @@
                 <groupId>net.java.dev.jets3t</groupId>
                 <artifactId>jets3t</artifactId>
                 <version>0.9.4</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>commons-codec</groupId>
+                        <artifactId>commons-codec</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>commons-logging</groupId>
+                        <artifactId>commons-logging</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.apache.httpcomponents</groupId>
+                        <artifactId>httpclient</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.apache.httpcomponents</groupId>
+                        <artifactId>httpcore</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.codehaus.jackson</groupId>
+                        <artifactId>jackson-core-asl</artifactId>
+                    </exclusion>
+                    <exclusion>
+                        <groupId>org.codehaus.jackson</groupId>
+                        <artifactId>jackson-mapper-asl</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <!-- The htttpcomponents artifacts have non-matching release cadence -->
             <dependency>
@@ -558,6 +602,12 @@
                 <groupId>com.ircclouds.irc</groupId>
                 <artifactId>irc-api</artifactId>
                 <version>1.0-0014</version>
+                <exclusions>
+                    <exclusion>
+                        <groupId>org.slf4j</groupId>
+                        <artifactId>slf4j-api</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
             <dependency>
                 <groupId>com.maxmind.geoip2</groupId>
