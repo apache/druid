@@ -310,7 +310,12 @@ public class GroupByQueryEngine
       this.cursor = cursor;
       this.metricsBuffer = metricsBuffer;
 
-      this.maxIntermediateRows = query.getContextValue(CTX_KEY_MAX_INTERMEDIATE_ROWS, config.getMaxIntermediateRows());
+      this.maxIntermediateRows = Math.min(
+          query.getContextValue(
+              CTX_KEY_MAX_INTERMEDIATE_ROWS,
+              config.getMaxIntermediateRows()
+          ), config.getMaxIntermediateRows()
+      );
 
       unprocessedKeys = null;
       delegate = Iterators.emptyIterator();
