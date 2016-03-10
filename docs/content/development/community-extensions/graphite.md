@@ -1,9 +1,15 @@
-## introduction
+---
+layout: doc_page
+---
+
+# Graphite Emitter
+
+## Introduction
 
 This extension emits druid metrics to a graphite carbon server.
 Events are sent after been [pickled](http://graphite.readthedocs.org/en/latest/feeding-carbon.html#the-pickle-protocol); the size of the batch is configurable. 
 
-## configuration
+## Configuration
 
 All the configuration parameters for graphite emitter are under `druid.emitter.graphite`.
 
