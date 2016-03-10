@@ -22,6 +22,7 @@ package io.druid.indexing.common.task;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.annotations.VisibleForTesting;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.FirehoseFactory;
@@ -83,6 +84,21 @@ public class NoopTask extends AbstractTask
                          ? defaultIsReadyResult
                          : IsReadyResult.valueOf(isReadyResult.toUpperCase());
     this.firehoseFactory = firehoseFactory;
+  }
+
+  @VisibleForTesting
+  public NoopTask(String id, String groupId)
+  {
+    super(
+        id == null ? String.format("noop_%s_%s", new DateTime(), UUID.randomUUID().toString()) : id,
+        groupId == null ? String.format("noop_%s_%s", new DateTime(), UUID.randomUUID().toString()) : groupId,
+        "none",
+        null
+    );
+    runTime = defaultRunTime;
+    isReadyTime = defaultIsReadyTime;
+    isReadyResult = defaultIsReadyResult;
+    firehoseFactory = null;
   }
 
   @Override

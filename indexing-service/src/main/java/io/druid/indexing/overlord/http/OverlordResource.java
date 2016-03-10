@@ -40,10 +40,15 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
 import io.druid.common.config.JacksonConfigManager;
+import io.druid.common.utils.JodaUtils;
 import io.druid.indexing.common.TaskLocation;
+import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionHolder;
+import io.druid.indexing.common.task.HadoopIndexTask;
+import io.druid.indexing.common.task.IndexTask;
+import io.druid.indexing.common.task.RealtimeIndexTask;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.TaskMaster;
 import io.druid.indexing.overlord.TaskQueue;
@@ -195,7 +200,19 @@ public class OverlordResource
   @ResourceFilters(TaskResourceFilter.class)
   public Response getTaskStatus(@PathParam("taskid") String taskid)
   {
-    return optionalTaskResponse(taskid, "status", taskStorageQueryAdapter.getStatus(taskid));
+    Optional<Task> task = taskStorageQueryAdapter.getTask(taskid);
+    Optional<TaskStatus> status = taskStorageQueryAdapter.getStatus(taskid);
+    Optional<TaskRunner> taskRunner = taskMaster.getTaskRunner();
+    if (taskRunner.isPresent() && task.isPresent() &&
+        status.isPresent() && status.get().getStatusCode() == TaskStatus.Status.RUNNING) {
+      Map<String, Object> results = Maps.newHashMapWithExpectedSize(3);
+      results.put("task", taskid);
+      results.put("status", status.get());
+      results.put("statusDetail", getRunningStatusDetail(taskid, task.get(), taskRunner.get()));
+
+      return Response.status(Response.Status.OK).entity(results).build();
+    }
+    return optionalTaskResponse(taskid, "status", status);
   }
 
   @GET
@@ -746,5 +763,32 @@ public class OverlordResource
       }
       return data;
     }
+  }
+
+  private String getRunningStatusDetail(String taskId, Task task, TaskRunner taskRunner)
+  {
+    if (isPendingTask(taskId, taskRunner)) {
+      return "PENDING";   // in queue
+    }
+    if (task instanceof IndexTask || task instanceof RealtimeIndexTask || task instanceof HadoopIndexTask) {
+      List<TaskLock> locks = taskStorageQueryAdapter.getLocks(taskId);
+      if (locks.isEmpty()) {
+        return "INITIALIZING";
+      }
+      if (locks.size() == 1 && locks.get(0).getInterval().getEndMillis() == JodaUtils.MAX_INSTANT) {
+        return "READY";   // ready to get events (RealtimeIndexTask only)
+      }
+    }
+    return "RUNNING";
+  }
+
+  private boolean isPendingTask(String taskId, TaskRunner taskRunner)
+  {
+    for (TaskRunnerWorkItem workItem : taskRunner.getPendingTasks()) {
+      if (taskId.equals(workItem.getTaskId())) {
+        return true;
+      }
+    }
+    return false;
   }
 }

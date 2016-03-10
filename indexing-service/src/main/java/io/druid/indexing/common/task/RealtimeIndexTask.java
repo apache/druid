@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
 import com.metamx.common.guava.CloseQuietly;
 import com.metamx.emitter.EmittingLogger;
+import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
@@ -74,6 +75,9 @@ import java.util.concurrent.CountDownLatch;
 
 public class RealtimeIndexTask extends AbstractTask
 {
+  // to notify ready signal to overlord
+  private static final Interval READY = new Interval(JodaUtils.MAX_INSTANT, JodaUtils.MAX_INSTANT);
+
   private static final EmittingLogger log = new EmittingLogger(RealtimeIndexTask.class);
   private final static Random random = new Random();
 
@@ -337,6 +341,9 @@ public class RealtimeIndexTask extends AbstractTask
           committerSupplier = Committers.supplierFromFirehose(firehose);
         }
       }
+
+      // notify ready
+      toolbox.getTaskActionClient().submit(new LockAcquireAction(READY));
 
       // Time to read data!
       while (firehose != null && (!gracefullyStopped || firehoseDrainableByClosing) && firehose.hasMore()) {

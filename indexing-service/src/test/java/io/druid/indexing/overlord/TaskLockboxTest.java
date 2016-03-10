@@ -21,6 +21,7 @@ package io.druid.indexing.overlord;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import io.druid.common.utils.JodaUtils;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.NoopTask;
@@ -29,8 +30,6 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.util.List;
 
 public class TaskLockboxTest
 {
@@ -126,5 +125,22 @@ public class TaskLockboxTest
     Assert.assertFalse(lockbox.tryLock(task, new Interval("2015-01-01/2015-01-02")).isPresent());
   }
 
+  @Test
+  public void testDummyLock() throws InterruptedException
+  {
+    Interval dummyInterval = new Interval(JodaUtils.MAX_INSTANT, JodaUtils.MAX_INSTANT);
+
+    Task task1 = new NoopTask("id1", "gp1");
+    lockbox.add(task1);
+    Assert.assertTrue(lockbox.tryLock(task1, dummyInterval).isPresent());
+
+    Task task2 = new NoopTask("id2", "gp2");
+    lockbox.add(task2);
+    Assert.assertTrue(lockbox.tryLock(task2, dummyInterval).isPresent());
+
+    Task task3 = new NoopTask("id3", "gp3");
+    lockbox.add(task3);
+    Assert.assertTrue(lockbox.tryLock(task3, dummyInterval).isPresent());
+  }
 
 }

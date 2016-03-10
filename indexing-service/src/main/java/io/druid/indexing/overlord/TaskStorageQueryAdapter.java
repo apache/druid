@@ -22,6 +22,7 @@ package io.druid.indexing.overlord;
 import com.google.common.base.Optional;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
+import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.TaskAction;
@@ -57,6 +58,11 @@ public class TaskStorageQueryAdapter
   public Optional<Task> getTask(final String taskid)
   {
     return storage.getTask(taskid);
+  }
+
+  public List<TaskLock> getLocks(String taskid)
+  {
+    return storage.getLocks(taskid);
   }
 
   public Optional<TaskStatus> getStatus(final String taskid)

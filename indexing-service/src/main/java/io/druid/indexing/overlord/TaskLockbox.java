@@ -228,7 +228,9 @@ public class TaskLockbox
       if(!activeTasks.contains(task.getId())){
         throw new ISE("Unable to grant lock to inactive Task [%s]", task.getId());
       }
-      Preconditions.checkArgument(interval.toDurationMillis() > 0, "interval empty");
+      Preconditions.checkArgument(
+          interval.getStartMillis() == JodaUtils.MAX_INSTANT || interval.toDurationMillis() > 0, "interval empty");
+
       final String dataSource = task.getDataSource();
       final List<TaskLockPosse> foundPosses = findLockPossesForInterval(dataSource, interval);
       final TaskLockPosse posseToUse;
