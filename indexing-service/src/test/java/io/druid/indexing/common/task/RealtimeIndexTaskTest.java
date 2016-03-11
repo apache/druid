@@ -111,6 +111,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableCauseMatcher;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
@@ -446,7 +447,19 @@ public class RealtimeIndexTaskTest
     expectedException.expectCause(CoreMatchers.<Throwable>instanceOf(ParseException.class));
     expectedException.expectCause(
         ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.containsString("Unable to parse metrics[met1], value[foo]")
+            CoreMatchers.containsString("Encountered parse error for aggregator[met1]")
+        )
+    );
+    expectedException.expect(
+        ThrowableCauseMatcher.hasCause(
+            ThrowableCauseMatcher.hasCause(
+                CoreMatchers.allOf(
+                    CoreMatchers.<Throwable>instanceOf(ParseException.class),
+                    ThrowableMessageMatcher.hasMessage(
+                        CoreMatchers.containsString("Unable to parse metrics[met1], value[foo]")
+                    )
+                )
+            )
         )
     );
     statusFuture.get();
