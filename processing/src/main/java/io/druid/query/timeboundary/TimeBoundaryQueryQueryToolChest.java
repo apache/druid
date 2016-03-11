@@ -65,8 +65,8 @@ public class TimeBoundaryQueryQueryToolChest
       return segments;
     }
 
-    final T min = segments.get(0);
-    final T max = segments.get(segments.size() - 1);
+    final T min = query.isMaxTime() ? null : segments.get(0);
+    final T max = query.isMinTime() ? null : segments.get(segments.size() - 1);
 
     return Lists.newArrayList(
         Iterables.filter(

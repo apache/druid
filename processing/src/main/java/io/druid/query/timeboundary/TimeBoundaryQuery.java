@@ -176,11 +176,11 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
     final DateTime minTime;
     final DateTime maxTime;
 
-    if (bound.equalsIgnoreCase(MIN_TIME)) {
+    if (isMinTime()) {
       ts = min;
       minTime = min;
       maxTime = null;
-    } else if (bound.equalsIgnoreCase(MAX_TIME)) {
+    } else if (isMaxTime()) {
       ts = max;
       minTime = null;
       maxTime = max;
@@ -191,6 +191,16 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
     }
 
     return buildResult(ts, minTime, maxTime);
+  }
+
+  boolean isMinTime()
+  {
+    return bound.equalsIgnoreCase(MIN_TIME);
+  }
+
+  boolean isMaxTime()
+  {
+    return bound.equalsIgnoreCase(MAX_TIME);
   }
 
   @Override
