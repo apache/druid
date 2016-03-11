@@ -112,6 +112,8 @@ public class RealtimePlumber implements Plumber
 
   private final Cache cache;
 
+  private final int maxRowExceedCheckCount;
+
   private volatile long nextFlush = 0;
   private volatile boolean shuttingDown = false;
   private volatile boolean stopped = false;
@@ -166,6 +168,11 @@ public class RealtimePlumber implements Plumber
         cache,
         cacheConfig
     );
+    this.maxRowExceedCheckCount = Math.min(config.getMaxRowsInMemory() >> 2, MAX_ROW_EXCEED_CHECK_COUNT);
+
+    if (!cache.isLocal()) {
+      log.error("Configured cache is not local, caching will not be enabled");
+    }
 
     log.info("Creating plumber using rejectionPolicy[%s]", getRejectionPolicy());
   }
@@ -218,7 +225,7 @@ public class RealtimePlumber implements Plumber
       persist(committerSupplier.get());
     }
 
-    if (++counter % MAX_ROW_EXCEED_CHECK_COUNT == 0) {
+    if (maxRowExceedCheckCount > 0 && ++counter % maxRowExceedCheckCount == 0) {
       int size = 0;
       for (Sink aSink : sinks.values()) {
         size += aSink.sizeInMemory();

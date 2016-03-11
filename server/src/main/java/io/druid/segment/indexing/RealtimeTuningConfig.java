@@ -134,6 +134,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
                                    ? defaultHandoffConditionTimeout
                                    : handoffConditionTimeout;
     Preconditions.checkArgument(this.handoffConditionTimeout >= 0, "handoffConditionTimeout must be >= 0");
+    Preconditions.checkArgument(this.maxRowsInMemory > 0, "maxRowsInMemory must be > 0");
   }
 
   @JsonProperty
