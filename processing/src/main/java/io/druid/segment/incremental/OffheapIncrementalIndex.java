@@ -24,6 +24,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
+import com.metamx.common.logger.Logger;
 import com.metamx.common.parsers.ParseException;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidPool;
@@ -47,6 +48,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
 {
+  private static final Logger log = new Logger(OffheapIncrementalIndex.class);
+
   private final StupidPool<ByteBuffer> bufferPool;
 
   private final List<ResourceHolder<ByteBuffer>> aggBuffers = new ArrayList<>();
@@ -285,7 +288,9 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
         } catch (ParseException e) {
           // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
           if (reportParseExceptions) {
-            throw e;
+            throw new ParseException(e, "Encountered parse error for aggregator[%s]", getMetricAggs()[i].getName());
+          } else {
+            log.debug(e, "Encountered parse error, skipping aggregator[%s].", getMetricAggs()[i].getName());
           }
         }
       }
