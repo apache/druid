@@ -22,6 +22,7 @@ package io.druid.segment.incremental;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.metamx.common.logger.Logger;
 import com.metamx.common.parsers.ParseException;
 import io.druid.data.input.InputRow;
 import io.druid.granularity.QueryGranularity;
@@ -33,7 +34,6 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
-import io.druid.segment.column.ValueType;
 
 import java.util.List;
 import java.util.Map;
@@ -47,6 +47,8 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 {
+  private static final Logger log = new Logger(OnheapIncrementalIndex.class);
+
   private final ConcurrentHashMap<Integer, Aggregator[]> aggregators = new ConcurrentHashMap<>();
   private final ConcurrentNavigableMap<TimeAndDims, Integer> facts;
   private final AtomicInteger indexIncrement = new AtomicInteger(0);
@@ -198,10 +200,13 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       synchronized (agg) {
         try {
           agg.aggregate();
-        } catch (ParseException e) {
+        }
+        catch (ParseException e) {
           // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
           if (reportParseExceptions) {
-            throw e;
+            throw new ParseException(e, "Encountered parse error for aggregator[%s]", agg.getName());
+          } else {
+            log.debug(e, "Encountered parse error, skipping aggregator[%s].", agg.getName());
           }
         }
       }
