@@ -24,11 +24,15 @@ import com.google.common.base.Strings;
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import io.druid.query.dimension.DefaultDimensionSpec;
+import io.druid.query.ordering.StringComparators;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.data.ArrayIndexed;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.BooleanValueMatcher;
+
+import java.util.Arrays;
 
 /**
  */
@@ -37,33 +41,36 @@ public class SelectorFilterExtension implements Filter
   private final String dimension;
   private final String value;
   private final BinaryOperator operator;
+  private final StringComparators.StringComparator comparator;
 
   public SelectorFilterExtension(
       String dimension,
       String value,
+      String compareType,
       BinaryOperator operator
   )
   {
     this.dimension = dimension;
     this.value = value;
+    this.comparator = StringComparators.makeComparator(compareType);
     this.operator = operator;
   }
 
   public SelectorFilterExtension(String dimension, String value)
   {
-    this(dimension, value, null);
+    this(dimension, value, StringComparators.LEXICOGRAPHIC_NAME, null);
   }
 
   @Override
   public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector)
   {
     final BitmapFactory factory = selector.getBitmapFactory();
-    final Indexed<String> values = selector.getDimensionValues(dimension);
+    final Indexed<String> values = sortValues(selector.getDimensionValues(dimension));
     switch (operator) {
       case GT:
       case GTE: {
         int index = values.indexOf(value);
-        int start = index < 0 ? -index - 1 : operator == BinaryOperator.GT ? index + 1: index;
+        int start = index < 0 ? -index - 1 : operator == BinaryOperator.GT ? index + 1 : index;
         ImmutableBitmap bitmap = factory.makeEmptyImmutableBitmap();
         for (int cursor = start; cursor < values.size(); cursor++) {
           bitmap = bitmap.union(selector.getBitmapIndex(dimension, values.get(cursor)));
@@ -73,7 +80,7 @@ public class SelectorFilterExtension implements Filter
       case LT:
       case LTE: {
         int index = values.indexOf(value);
-        int limit = index < 0 ? -index - 2 : operator == BinaryOperator.LT ? index - 1: index;
+        int limit = index < 0 ? -index - 2 : operator == BinaryOperator.LT ? index - 1 : index;
         ImmutableBitmap bitmap = factory.makeEmptyImmutableBitmap();
         for (int cursor = 0; cursor <= limit; cursor++) {
           bitmap = bitmap.union(selector.getBitmapIndex(dimension, values.get(cursor)));
@@ -88,6 +95,19 @@ public class SelectorFilterExtension implements Filter
     throw new IllegalArgumentException("Not supported operator " + operator);
   }
 
+  private Indexed<String> sortValues(Indexed<String> values)
+  {
+    if (comparator instanceof StringComparators.LexicographicComparator) {
+      return values;
+    }
+    String[] valueArray = new String[values.size()];
+    for (int i = 0; i < valueArray.length; i++) {
+      valueArray[i] = values.get(i);
+    }
+    Arrays.sort(valueArray, comparator);
+    return new ArrayIndexed<>(valueArray, comparator, String.class);
+  }
+
   @Override
   public ValueMatcher makeMatcher(ValueMatcherFactory factory)
   {
@@ -95,7 +115,7 @@ public class SelectorFilterExtension implements Filter
       final ValueMatcher matcher = factory.makeValueMatcher(dimension, value);
       return operator == BinaryOperator.EQ ? matcher : new RevertedMatcher(matcher);
     }
-    return factory.makeValueMatcher(dimension, operator.toPredicate(value));
+    return factory.makeValueMatcher(dimension, operator.toPredicate(comparator, value));
   }
 
   @Override
@@ -110,7 +130,7 @@ public class SelectorFilterExtension implements Filter
       return operator == BinaryOperator.EQ ? matcher : new RevertedMatcher(matcher);
     }
 
-    final Predicate<String> predicate = operator.toPredicate(value);
+    final Predicate<String> predicate = operator.toPredicate(comparator, value);
     return new ValueMatcher()
     {
       @Override

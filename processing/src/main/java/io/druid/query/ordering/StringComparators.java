@@ -19,34 +19,47 @@
 
 package io.druid.query.ordering;
 
-import java.util.Comparator;
-
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.As;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
+import com.google.common.base.Strings;
+import com.google.common.primitives.Doubles;
 import com.google.common.primitives.UnsignedBytes;
 import com.metamx.common.IAE;
 import com.metamx.common.StringUtils;
+
+import java.util.Comparator;
 
 
 public class StringComparators
 {
   public static final String LEXICOGRAPHIC_NAME = "lexicographic";
   public static final String ALPHANUMERIC_NAME = "alphanumeric";
-  
+  public static final String NUMERIC_NAME = "numeric";
+
   public static final LexicographicComparator LEXICOGRAPHIC = new LexicographicComparator();
   public static final AlphanumericComparator ALPHANUMERIC = new AlphanumericComparator();
-    
+  public static final NumberComparator NUMERIC = new NumberComparator();
+
+  public static boolean validate(String compareType)
+  {
+    return compareType != null && (
+        compareType.equals(LEXICOGRAPHIC_NAME) ||
+        compareType.equals(ALPHANUMERIC_NAME) ||
+        compareType.equals(NUMERIC_NAME));
+  }
+
   @JsonTypeInfo(use=Id.NAME, include=As.PROPERTY, property="type", defaultImpl = LexicographicComparator.class)
   @JsonSubTypes(value = {
       @JsonSubTypes.Type(name = StringComparators.LEXICOGRAPHIC_NAME, value = LexicographicComparator.class),
-      @JsonSubTypes.Type(name = StringComparators.ALPHANUMERIC_NAME, value = AlphanumericComparator.class)
+      @JsonSubTypes.Type(name = StringComparators.ALPHANUMERIC_NAME, value = AlphanumericComparator.class),
+      @JsonSubTypes.Type(name = StringComparators.NUMERIC_NAME, value = NumberComparator.class)
   })
   public static interface StringComparator extends Comparator<String>
   {
   }
-  
+
   public static class LexicographicComparator implements StringComparator
   {
     @Override
@@ -69,7 +82,7 @@ public class StringComparators
           StringUtils.toUtf8(s2)
       );
     }
-    
+
     @Override
     public boolean equals(Object o)
     {
@@ -79,17 +92,17 @@ public class StringComparators
       if (o == null || getClass() != o.getClass()) {
         return false;
       }
-      
+
       return true;
     }
-    
+
     @Override
     public String toString()
     {
       return StringComparators.LEXICOGRAPHIC_NAME;
     }
   }
-  
+
   public static class AlphanumericComparator implements StringComparator
   {
     // This code is based on https://github.com/amjjd/java-alphanum, see
@@ -272,7 +285,7 @@ public class StringComparators
       // compare the substrings
       return String.CASE_INSENSITIVE_ORDER.compare(str0.substring(start0, pos[0]), str1.substring(start1, pos[1]));
     }
-    
+
     @Override
     public boolean equals(Object o)
     {
@@ -282,10 +295,10 @@ public class StringComparators
       if (o == null || getClass() != o.getClass()) {
         return false;
       }
-      
+
       return true;
     }
-    
+
     @Override
     public String toString()
     {
@@ -293,14 +306,64 @@ public class StringComparators
     }
   }
 
+  public static class NumberComparator implements StringComparator {
+
+    @Override
+    public String toString()
+    {
+      return StringComparators.ALPHANUMERIC_NAME;
+    }
+
+    @Override
+    public int compare(String o1, String o2)
+    {
+      boolean n1 = Strings.isNullOrEmpty(o1);
+      boolean n2 = Strings.isNullOrEmpty(o2);
+      if (n1 && n2) {
+        return 0;
+      }
+      if (!n1 && n2) {
+        return 1;
+      }
+      if (n1 && !n2) {
+        return -1;
+      }
+      boolean m1 = o1.charAt(0) == '-';
+      boolean m2 = o2.charAt(0) == '-';
+      if (!m1 && m2) {
+        return 1;
+      }
+      if (m1 && !m2) {
+        return -1;
+      }
+      return Doubles.compare(Double.valueOf(o1), Double.valueOf(o2));
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      return true;
+    }
+  }
+
   public static StringComparator makeComparator(String type)
   {
-    if (type.equals(StringComparators.LEXICOGRAPHIC_NAME)) {
-      return LEXICOGRAPHIC;
-    } else if (type.equals(StringComparators.ALPHANUMERIC_NAME)) {
-      return ALPHANUMERIC;
-    } else {
-      throw new IAE("Unknown string comparator[%s]", type);
+    switch (type) {
+      case StringComparators.LEXICOGRAPHIC_NAME:
+        return LEXICOGRAPHIC;
+      case StringComparators.ALPHANUMERIC_NAME:
+        return ALPHANUMERIC;
+      case StringComparators.NUMERIC_NAME:
+        return NUMERIC;
+      default:
+        throw new IAE("Unknown string comparator[%s]", type);
     }
   }
 }

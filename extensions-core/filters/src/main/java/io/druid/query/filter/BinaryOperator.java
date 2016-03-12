@@ -22,96 +22,98 @@ package io.druid.query.filter;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 
+import java.util.Comparator;
+
 /**
  */
 public enum BinaryOperator
 {
   GT {
     @Override
-    public Predicate<String> toPredicate(final String value)
+    public Predicate<String> toPredicate(final Comparator<String> comparator, final String value)
     {
       return new Predicate<String>()
       {
         @Override
         public boolean apply(String input)
         {
-          return input.compareTo(value) > 0;
+          return comparator.compare(input, value) > 0;
         }
       };
     }
   },
   GTE {
     @Override
-    public Predicate<String> toPredicate(final String value)
+    public Predicate<String> toPredicate(final Comparator<String> comparator, final String value)
     {
       return new Predicate<String>()
       {
         @Override
         public boolean apply(String input)
         {
-          return input.compareTo(value) >= 0;
+          return comparator.compare(input, value) >= 0;
         }
       };
     }
   },
   LT {
     @Override
-    public Predicate<String> toPredicate(final String value)
+    public Predicate<String> toPredicate(final Comparator<String> comparator, final String value)
     {
       return new Predicate<String>()
       {
         @Override
         public boolean apply(String input)
         {
-          return input.compareTo(value) < 0;
+          return comparator.compare(input, value) < 0;
         }
       };
     }
   },
   LTE {
     @Override
-    public Predicate<String> toPredicate(final String value)
+    public Predicate<String> toPredicate(final Comparator<String> comparator, final String value)
     {
       return new Predicate<String>()
       {
         @Override
         public boolean apply(String input)
         {
-          return input.compareTo(value) <= 0;
+          return comparator.compare(input, value) <= 0;
         }
       };
     }
   },
   EQ {
     @Override
-    public Predicate<String> toPredicate(final String value)
+    public Predicate<String> toPredicate(final Comparator<String> comparator, final String value)
     {
       return new Predicate<String>()
       {
         @Override
         public boolean apply(String input)
         {
-          return input.equals(value);
+          return comparator.compare(input, value) == 0;
         }
       };
     }
   },
   NE {
     @Override
-    public Predicate<String> toPredicate(final String value)
+    public Predicate<String> toPredicate(final Comparator<String> comparator, final String value)
     {
       return new Predicate<String>()
       {
         @Override
         public boolean apply(String input)
         {
-          return !input.equals(value);
+          return comparator.compare(input, value) != 0;
         }
       };
     }
   };
 
-  public abstract Predicate<String> toPredicate(final String value);
+  public abstract Predicate<String> toPredicate(Comparator<String> comparator, final String value);
 
   public static BinaryOperator get(String value)
   {
