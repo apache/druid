@@ -393,6 +393,7 @@ public class JobHelper
     switch (outputFS.getScheme()) {
       case "hdfs":
       case "viewfs":
+      case "gs":
         loadSpec = ImmutableMap.<String, Object>of(
             "type", "hdfs",
             "path", indexOutURI.toString()
