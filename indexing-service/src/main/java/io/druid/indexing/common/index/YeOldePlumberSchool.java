@@ -102,7 +102,14 @@ public class YeOldePlumberSchool implements PlumberSchool
   )
   {
     // There can be only one.
-    final Sink theSink = new Sink(interval, schema, config, version);
+    final Sink theSink = new Sink(
+        interval,
+        schema,
+        config.getShardSpec(),
+        version,
+        config.getMaxRowsInMemory(),
+        config.isReportParseExceptions()
+    );
 
     // Temporary directory to hold spilled segments.
     final File persistDir = new File(tmpSegmentDir, theSink.getSegment().getIdentifier());

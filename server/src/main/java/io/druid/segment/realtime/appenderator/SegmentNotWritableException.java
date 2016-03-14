@@ -17,13 +17,12 @@
  * under the License.
  */
 
-package io.druid.indexing.common;
+package io.druid.segment.realtime.appenderator;
 
-import io.druid.indexing.common.task.Task;
-
-/**
- */
-public interface TestTask extends Task
+public class SegmentNotWritableException extends Exception
 {
-  public TaskStatus getStatus();
+  public SegmentNotWritableException(String message, Object... messageArgs)
+  {
+    super(String.format(message, messageArgs));
+  }
 }

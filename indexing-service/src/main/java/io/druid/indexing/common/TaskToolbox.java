@@ -206,7 +206,7 @@ public class TaskToolbox
     return retVal;
   }
 
-  public void pushSegments(Iterable<DataSegment> segments) throws IOException
+  public void publishSegments(Iterable<DataSegment> segments) throws IOException
   {
     // Request segment pushes for each set
     final Multimap<Interval, DataSegment> segmentMultimap = Multimaps.index(
@@ -223,7 +223,6 @@ public class TaskToolbox
     for (final Collection<DataSegment> segmentCollection : segmentMultimap.asMap().values()) {
       getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.copyOf(segmentCollection)));
     }
-
   }
 
   public File getTaskWorkDir()

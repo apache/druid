@@ -108,6 +108,7 @@ public class CreateTables extends GuiceRunnable
   {
     final Injector injector = makeInjector();
     MetadataStorageConnector dbConnector = injector.getInstance(MetadataStorageConnector.class);
+    dbConnector.createDataSourceTable();
     dbConnector.createPendingSegmentsTable();
     dbConnector.createSegmentTable();
     dbConnector.createRulesTable();

@@ -23,7 +23,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
+import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import io.druid.indexing.overlord.SegmentPublishResult;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -41,6 +43,12 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   public TestIndexerMetadataStorageCoordinator()
   {
     unusedSegments = Lists.newArrayList();
+  }
+
+  @Override
+  public DataSourceMetadata getDataSourceMetadata(String dataSource)
+  {
+    throw new UnsupportedOperationException();
   }
 
   @Override
@@ -75,6 +83,17 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
       }
     }
     return ImmutableSet.copyOf(added);
+  }
+
+  @Override
+  public SegmentPublishResult announceHistoricalSegments(
+      Set<DataSegment> segments,
+      DataSourceMetadata oldCommitMetadata,
+      DataSourceMetadata newCommitMetadata
+  ) throws IOException
+  {
+    // Don't actually compare metadata, just do it!
+    return new SegmentPublishResult(announceHistoricalSegments(segments), true);
   }
 
   @Override
