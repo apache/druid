@@ -52,6 +52,12 @@ public class StrlenSearchSortSpec implements SearchSortSpec
     };
   }
 
+  @Override
+  public byte[] getCacheKey()
+  {
+    return toString().getBytes();
+  }
+
   public String toString()
   {
     return "stringLengthSort";

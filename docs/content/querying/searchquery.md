@@ -39,6 +39,7 @@ There are several main parts to a search query:
 |searchDimensions|The dimensions to run the search over. Excluding this means the search is run over all dimensions.|no|
 |query|See [SearchQuerySpec](../querying/searchqueryspec.html).|yes|
 |sort|An object specifying how the results of the search should be sorted. Two possible types here are "lexicographic" (the default sort) and "strlen".|no|
+|computeCount|Include appearance count of each value in result. False by default.|no|
 |context|See [Context](../querying/query-context.html)|no|
 
 The format of the result is:
