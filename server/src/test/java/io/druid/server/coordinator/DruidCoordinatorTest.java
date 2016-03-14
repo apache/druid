@@ -131,7 +131,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
         false
     );
     pathChildrenCache = new PathChildrenCache(curator, LOADPATH, true, true, Execs.singleThreaded("coordinator_test_path_children_cache-%d"));
-    loadQueuePeon = new LoadQueuePeon(
+    loadQueuePeon = new ZkLoadQueuePeon(
       curator,
       LOADPATH,
       objectMapper,
@@ -232,22 +232,6 @@ public class DruidCoordinatorTest extends CuratorTestBase
     loadManagementPeons.put("from", loadQueuePeon);
     loadManagementPeons.put("to", loadQueuePeon);
 
-    EasyMock.expect(serverInventoryView.getInventoryManagerConfig()).andReturn(
-        new InventoryManagerConfig()
-        {
-          @Override
-          public String getContainerPath()
-          {
-            return "";
-          }
-
-          @Override
-          public String getInventoryPath()
-          {
-            return "";
-          }
-        }
-    );
     EasyMock.replay(serverInventoryView);
 
     coordinator.moveSegment(
