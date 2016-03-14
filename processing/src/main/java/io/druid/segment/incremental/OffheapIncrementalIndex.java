@@ -39,7 +39,8 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentNavigableMap;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -54,7 +55,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   private final List<ResourceHolder<ByteBuffer>> aggBuffers = new ArrayList<>();
   private final List<int[]> indexAndOffsets = new ArrayList<>();
 
-  private final ConcurrentNavigableMap<TimeAndDims, Integer> facts;
+  private final ConcurrentMap<TimeAndDims, Integer> facts;
 
   private final AtomicInteger indexIncrement = new AtomicInteger(0);
 
@@ -74,14 +75,20 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       IncrementalIndexSchema incrementalIndexSchema,
       boolean deserializeComplexMetrics,
       boolean reportParseExceptions,
+      boolean sortFacts,
       int maxRowCount,
       StupidPool<ByteBuffer> bufferPool
   )
   {
-    super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions);
+    super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions, sortFacts);
     this.maxRowCount = maxRowCount;
     this.bufferPool = bufferPool;
-    this.facts = new ConcurrentSkipListMap<>(dimsComparator());
+
+    if (sortFacts) {
+      this.facts = new ConcurrentSkipListMap<>(dimsComparator());
+    } else {
+      this.facts = new ConcurrentHashMap<>();
+    }
 
     //check that stupid pool gives buffers that can hold at least one row's aggregators
     ResourceHolder<ByteBuffer> bb = bufferPool.take();
@@ -103,6 +110,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       final AggregatorFactory[] metrics,
       boolean deserializeComplexMetrics,
       boolean reportParseExceptions,
+      boolean sortFacts,
       int maxRowCount,
       StupidPool<ByteBuffer> bufferPool
   )
@@ -114,6 +122,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
                                             .build(),
         deserializeComplexMetrics,
         reportParseExceptions,
+        sortFacts,
         maxRowCount,
         bufferPool
     );
@@ -134,13 +143,14 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
                                             .build(),
         true,
         true,
+        true,
         maxRowCount,
         bufferPool
     );
   }
 
   @Override
-  public ConcurrentNavigableMap<TimeAndDims, Integer> getFacts()
+  public ConcurrentMap<TimeAndDims, Integer> getFacts()
   {
     return facts;
   }

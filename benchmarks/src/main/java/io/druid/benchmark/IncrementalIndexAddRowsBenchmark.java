@@ -126,6 +126,7 @@ public class IncrementalIndexAddRowsBenchmark
         aggs,
         false,
         false,
+        true,
         maxRows
     );
   }

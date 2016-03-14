@@ -71,6 +71,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -340,6 +341,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   private final AggregatorType[] aggs;
   private final boolean deserializeComplexMetrics;
   private final boolean reportParseExceptions;
+  private final boolean sortFacts;
   private final Metadata metadata;
 
   private final Map<String, MetricDesc> metricDescs;
@@ -374,7 +376,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   public IncrementalIndex(
       final IncrementalIndexSchema incrementalIndexSchema,
       final boolean deserializeComplexMetrics,
-      final boolean reportParseExceptions
+      final boolean reportParseExceptions,
+      final boolean sortFacts
   )
   {
     this.minTimestamp = incrementalIndexSchema.getMinTimestamp();
@@ -383,6 +386,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     this.rowTransformers = new CopyOnWriteArrayList<>();
     this.deserializeComplexMetrics = deserializeComplexMetrics;
     this.reportParseExceptions = reportParseExceptions;
+    this.sortFacts = sortFacts;
 
     this.metadata = new Metadata().setAggregators(getCombiningAggregators(metrics));
 
@@ -441,7 +445,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   // use newDimDim() to create a DimDim, makeDimDim() provides the subclass-specific implementation
   protected abstract DimDim makeDimDim(String dimension, Object lock);
 
-  public abstract ConcurrentNavigableMap<TimeAndDims, Integer> getFacts();
+  public abstract ConcurrentMap<TimeAndDims, Integer> getFacts();
 
   public abstract boolean canAppendRow();
 
@@ -673,12 +677,20 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
   private long getMinTimeMillis()
   {
-    return getFacts().firstKey().getTimestamp();
+    if (sortFacts) {
+      return ((ConcurrentNavigableMap<TimeAndDims, Integer>) getFacts()).firstKey().getTimestamp();
+    } else {
+      throw new UnsupportedOperationException("can't get minTime from unsorted facts data.");
+    }
   }
 
   private long getMaxTimeMillis()
   {
-    return getFacts().lastKey().getTimestamp();
+    if (sortFacts) {
+      return ((ConcurrentNavigableMap<TimeAndDims, Integer>) getFacts()).lastKey().getTimestamp();
+    } else {
+      throw new UnsupportedOperationException("can't get maxTime from unsorted facts data.");
+    }
   }
 
   private int[] getDimVals(final DimDim dimLookup, final List<Comparable> dimValues)
@@ -831,7 +843,11 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
   public ConcurrentNavigableMap<TimeAndDims, Integer> getSubMap(TimeAndDims start, TimeAndDims end)
   {
-    return getFacts().subMap(start, end);
+    if (sortFacts) {
+      return ((ConcurrentNavigableMap<TimeAndDims, Integer>) getFacts()).subMap(start, end);
+    } else {
+      throw new UnsupportedOperationException("can't get subMap from unsorted facts data.");
+    }
   }
 
   public Metadata getMetadata()
@@ -862,7 +878,14 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       public Iterator<Row> iterator()
       {
         final List<DimensionDesc> dimensions = getDimensions();
-        final ConcurrentNavigableMap<TimeAndDims, Integer> facts = descending ? getFacts().descendingMap() : getFacts();
+
+        Map<TimeAndDims, Integer> facts = null;
+        if (descending && sortFacts) {
+          facts = ((ConcurrentNavigableMap<TimeAndDims, Integer>) getFacts()).descendingMap();
+        } else {
+          facts = getFacts();
+        }
+
         return Iterators.transform(
             facts.entrySet().iterator(),
             new Function<Map.Entry<TimeAndDims, Integer>, Row>()

@@ -43,6 +43,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class GroupByQueryHelper
 {
   private static final String CTX_KEY_MAX_RESULTS = "maxResults";
+  public final static String CTX_KEY_SORT_RESULTS = "sortResults";
 
   public static <T> Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> createIndexAccumulatorPair(
       final GroupByQuery query,
@@ -81,7 +82,9 @@ public class GroupByQueryHelper
     );
     final IncrementalIndex index;
 
-    if (query.getContextBoolean("useOffheap", false)) {
+    final boolean sortResults = query.getContextValue(CTX_KEY_SORT_RESULTS, true);
+
+    if (query.getContextValue("useOffheap", false)) {
       index = new OffheapIncrementalIndex(
           // use granularity truncated min timestamp
           // since incoming truncated timestamps may precede timeStart
@@ -90,6 +93,7 @@ public class GroupByQueryHelper
           aggs.toArray(new AggregatorFactory[aggs.size()]),
           false,
           true,
+          sortResults,
           Math.min(query.getContextValue(CTX_KEY_MAX_RESULTS, config.getMaxResults()), config.getMaxResults()),
           bufferPool
       );
@@ -102,6 +106,7 @@ public class GroupByQueryHelper
           aggs.toArray(new AggregatorFactory[aggs.size()]),
           false,
           true,
+          sortResults,
           Math.min(query.getContextValue(CTX_KEY_MAX_RESULTS, config.getMaxResults()), config.getMaxResults())
       );
     }
