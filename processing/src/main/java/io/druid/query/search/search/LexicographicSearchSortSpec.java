@@ -50,6 +50,12 @@ public class LexicographicSearchSortSpec implements SearchSortSpec
     };
   }
 
+  @Override
+  public byte[] getCacheKey()
+  {
+    return toString().getBytes();
+  }
+
   public String toString()
   {
     return "lexicographicSort";

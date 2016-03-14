@@ -33,5 +33,7 @@ import java.util.Comparator;
 })
 public interface SearchSortSpec
 {
-  public Comparator<SearchHit> getComparator();
+  Comparator<SearchHit> getComparator();
+
+  byte[] getCacheKey();
 }
