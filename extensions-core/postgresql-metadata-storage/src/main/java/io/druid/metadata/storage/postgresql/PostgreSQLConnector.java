@@ -72,7 +72,7 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   public boolean tableExists(final Handle handle, final String tableName)
   {
     return !handle.createQuery(
-        "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public' AND tablename LIKE :tableName"
+        "SELECT tablename FROM pg_catalog.pg_tables WHERE schemaname = 'public' AND tablename ILIKE :tableName"
     )
                  .bind("tableName", tableName)
                  .map(StringMapper.FIRST)
