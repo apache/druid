@@ -49,7 +49,6 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
-import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -167,6 +166,12 @@ public class DatasourcesResource
     return Response.ok().build();
   }
 
+  /* When this method is removed, a new method needs to be introduced corresponding to
+    the end point "DELETE /druid/coordinator/v1/datasources/{dataSourceName}" (with no query parameters).
+    Ultimately we want to have no method with kill parameter -
+    DELETE `{dataSourceName}` will be used to disable datasource and
+    DELETE `{dataSourceName}/intervals/{interval}` will be used to nuke segments
+  */
   @DELETE
   @Deprecated
   @Path("/{dataSourceName}")
@@ -180,15 +185,30 @@ public class DatasourcesResource
     if (indexingServiceClient == null) {
       return Response.ok(ImmutableMap.of("error", "no indexing service found")).build();
     }
+
     if (kill != null && Boolean.valueOf(kill)) {
       try {
         indexingServiceClient.killSegments(dataSourceName, new Interval(interval));
+      }
+      catch (IllegalArgumentException e) {
+        return Response.status(Response.Status.BAD_REQUEST)
+                       .entity(
+                           ImmutableMap.of(
+                               "error",
+                               "Exception occurred. Probably the interval is invalid",
+                               "message",
+                               e.toString()
+                           )
+                       )
+                       .build();
       }
       catch (Exception e) {
         return Response.serverError().entity(
             ImmutableMap.of(
                 "error",
-                "Exception occurred. Are you sure you have an indexing service?"
+                "Exception occurred. Are you sure you have an indexing service?",
+                "message",
+                e.toString()
             )
         )
                        .build();
@@ -207,28 +227,25 @@ public class DatasourcesResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response deleteDataSourceSpecificInterval(
       @PathParam("dataSourceName") final String dataSourceName,
-      @PathParam("interval") final String interval,
-      @QueryParam("kill") @DefaultValue("true") final String kill
+      @PathParam("interval") final String interval
   )
   {
     if (indexingServiceClient == null) {
       return Response.ok(ImmutableMap.of("error", "no indexing service found")).build();
     }
     final Interval theInterval = new Interval(interval.replace("_", "/"));
-    if (kill != null && Boolean.valueOf(kill)) {
-      try {
-        indexingServiceClient.killSegments(dataSourceName, new Interval(theInterval));
-      }
-      catch (Exception e) {
-        return Response.serverError()
-                       .entity(ImmutableMap.of(
-                           "error",
-                           "Exception occurred. Are you sure you have an indexing service?"
-                       ))
-                       .build();
-      }
-    } else {
-      return Response.ok(ImmutableMap.of("error", "kill is set to false")).build();
+    try {
+      indexingServiceClient.killSegments(dataSourceName, new Interval(theInterval));
+    }
+    catch (Exception e) {
+      return Response.serverError()
+                     .entity(ImmutableMap.of(
+                         "error",
+                         "Exception occurred. Are you sure you have an indexing service?",
+                         "message",
+                         e.toString()
+                     ))
+                     .build();
     }
     return Response.ok().build();
   }
