@@ -25,6 +25,7 @@ import com.metamx.common.logger.Logger;
 import com.metamx.common.parsers.ParseException;
 import io.druid.data.input.Committer;
 import io.druid.data.input.Firehose;
+import io.druid.data.input.FirehoseV2;
 import io.druid.data.input.InputRow;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.realtime.FireDepartmentMetrics;
@@ -38,6 +39,27 @@ public class Plumbers
     // No instantiation
   }
 
+  public static void addNextRowV2(
+      final Supplier<Committer> committerSupplier,
+      final FirehoseV2 firehose,
+      final Plumber plumber,
+      final boolean reportParseExceptions,
+      final FireDepartmentMetrics metrics
+  )
+  {
+    try {
+      InputRow inputRow = firehose.currRow();
+      addRow(committerSupplier, inputRow, plumber, reportParseExceptions, metrics);
+    } catch (ParseException e) {
+      if (reportParseExceptions) {
+        throw e;
+      } else {
+        log.debug(e, "Discarded row due to exception, considering unparseable.");
+        metrics.incrementUnparseable();
+      }
+    }
+  }
+
   public static void addNextRow(
       final Supplier<Committer> committerSupplier,
       final Firehose firehose,
@@ -46,20 +68,27 @@ public class Plumbers
       final FireDepartmentMetrics metrics
   )
   {
-    final InputRow inputRow;
     try {
-      inputRow = firehose.nextRow();
-    }
-    catch (ParseException e) {
+      InputRow inputRow = firehose.nextRow();
+      addRow(committerSupplier, inputRow, plumber, reportParseExceptions, metrics);
+    } catch (ParseException e) {
       if (reportParseExceptions) {
         throw e;
       } else {
         log.debug(e, "Discarded row due to exception, considering unparseable.");
         metrics.incrementUnparseable();
-        return;
       }
     }
+  }
 
+  private static void addRow(
+      final Supplier<Committer> committerSupplier,
+      final InputRow inputRow,
+      final Plumber plumber,
+      final boolean reportParseExceptions,
+      final FireDepartmentMetrics metrics
+  )
+  {
     if (inputRow == null) {
       if (reportParseExceptions) {
         throw new ParseException("null input row");
@@ -70,22 +99,29 @@ public class Plumbers
       }
     }
 
-    final int numRows;
     try {
-      numRows = plumber.add(inputRow, committerSupplier);
-    }
-    catch (IndexSizeExceededException e) {
+      // Included in ParseException try/catch, as additional parsing can be done during indexing.
+      int numRows = plumber.add(inputRow, committerSupplier);
+
+      if (numRows == -1) {
+        metrics.incrementThrownAway();
+        log.debug("Discarded row[%s], considering thrownAway.", inputRow);
+        return;
+      }
+
+      metrics.incrementProcessed();
+    } catch (ParseException e) {
+      if (reportParseExceptions) {
+        throw e;
+      } else {
+        log.debug(e, "Discarded row due to exception, considering unparseable.");
+        metrics.incrementUnparseable();
+        return;
+      }
+    } catch (IndexSizeExceededException e) {
       // Shouldn't happen if this is only being called by a single thread.
       // plumber.add should be swapping out indexes before they fill up.
       throw new ISE(e, "WTF?! Index size exceeded, this shouldn't happen. Bad Plumber!");
     }
-
-    if (numRows == -1) {
-      metrics.incrementThrownAway();
-      log.debug("Discarded row[%s], considering thrownAway.", inputRow);
-      return;
-    }
-
-    metrics.incrementProcessed();
   }
 }
