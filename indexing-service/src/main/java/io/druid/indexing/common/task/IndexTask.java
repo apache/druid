@@ -228,7 +228,7 @@ public class IndexTask extends AbstractFixedIntervalTask
         segments.add(segment);
       }
     }
-    toolbox.pushSegments(segments);
+    toolbox.publishSegments(segments);
     return TaskStatus.success(getId());
   }
 

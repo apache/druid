@@ -255,7 +255,14 @@ public class RealtimePlumber implements Plumber
           segmentGranularity.increment(new DateTime(truncatedTime))
       );
 
-      retVal = new Sink(sinkInterval, schema, config, versioningPolicy.getVersion(sinkInterval));
+      retVal = new Sink(
+          sinkInterval,
+          schema,
+          config.getShardSpec(),
+          versioningPolicy.getVersion(sinkInterval),
+          config.getMaxRowsInMemory(),
+          config.isReportParseExceptions()
+      );
       addSink(retVal);
 
     }
@@ -651,7 +658,7 @@ public class RealtimePlumber implements Plumber
       }
     }
 
-    handoffNotifier.stop();
+    handoffNotifier.close();
     shutdownExecutors();
 
     stopped = true;
@@ -822,7 +829,15 @@ public class RealtimePlumber implements Plumber
         );
         continue;
       }
-      final Sink currSink = new Sink(sinkInterval, schema, config, versioningPolicy.getVersion(sinkInterval), hydrants);
+      final Sink currSink = new Sink(
+          sinkInterval,
+          schema,
+          config.getShardSpec(),
+          versioningPolicy.getVersion(sinkInterval),
+          config.getMaxRowsInMemory(),
+          config.isReportParseExceptions(),
+          hydrants
+      );
       addSink(currSink);
     }
     return metadata;
