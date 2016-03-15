@@ -98,17 +98,6 @@ public abstract class ServerInventoryView<InventoryType> implements ServerView, 
           }
 
           @Override
-          public byte[] serializeContainer(DruidServer container)
-          {
-            try {
-              return jsonMapper.writeValueAsBytes(container);
-            }
-            catch (JsonProcessingException e) {
-              throw Throwables.propagate(e);
-            }
-          }
-
-          @Override
           public InventoryType deserializeInventory(byte[] bytes)
           {
             try {
@@ -118,17 +107,6 @@ public abstract class ServerInventoryView<InventoryType> implements ServerView, 
               CharBuffer.wrap(StringUtils.fromUtf8(bytes).toCharArray());
               CharBuffer charBuffer = Charsets.UTF_8.decode(ByteBuffer.wrap(bytes));
               log.error(e, "Could not parse json: %s", charBuffer.toString());
-              throw Throwables.propagate(e);
-            }
-          }
-
-          @Override
-          public byte[] serializeInventory(InventoryType inventory)
-          {
-            try {
-              return jsonMapper.writeValueAsBytes(inventory);
-            }
-            catch (JsonProcessingException e) {
               throw Throwables.propagate(e);
             }
           }
