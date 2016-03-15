@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import io.druid.indexing.common.task.Task;
-import io.druid.indexing.overlord.ImmutableZkWorker;
+import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.TestRemoteTaskRunnerConfig;
 import io.druid.jackson.DefaultObjectMapper;
 import org.easymock.EasyMock;
@@ -79,14 +79,14 @@ public class JavaScriptWorkerSelectStrategyTest
   @Test
   public void testFindWorkerForTask()
   {
-    ImmutableZkWorker worker1 = createMockWorker(1, true, true);
-    ImmutableZkWorker worker2 = createMockWorker(1, true, true);
-    ImmutableMap<String, ImmutableZkWorker> workerMap = ImmutableMap.of(
+    ImmutableWorkerInfo worker1 = createMockWorker(1, true, true);
+    ImmutableWorkerInfo worker2 = createMockWorker(1, true, true);
+    ImmutableMap<String, ImmutableWorkerInfo> workerMap = ImmutableMap.of(
         "10.0.0.1", worker1,
         "10.0.0.3", worker2
     );
 
-    ImmutableZkWorker workerForBatchTask = strategy.findWorkerForTask(
+    ImmutableWorkerInfo workerForBatchTask = strategy.findWorkerForTask(
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         workerMap,
         createMockTask("index_hadoop")
@@ -94,7 +94,7 @@ public class JavaScriptWorkerSelectStrategyTest
     // batch tasks should be sent to worker1
     Assert.assertEquals(worker1, workerForBatchTask);
 
-    ImmutableZkWorker workerForOtherTask = strategy.findWorkerForTask(
+    ImmutableWorkerInfo workerForOtherTask = strategy.findWorkerForTask(
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         workerMap,
         createMockTask("other_type")
@@ -106,11 +106,11 @@ public class JavaScriptWorkerSelectStrategyTest
   @Test
   public void testIsolationOfBatchWorker()
   {
-    ImmutableMap<String, ImmutableZkWorker> workerMap = ImmutableMap.of(
+    ImmutableMap<String, ImmutableWorkerInfo> workerMap = ImmutableMap.of(
         "10.0.0.1", createMockWorker(1, true, true),
         "10.0.0.2", createMockWorker(1, true, true)
     );
-    Optional<ImmutableZkWorker> workerForOtherTask = strategy.findWorkerForTask(
+    Optional<ImmutableWorkerInfo> workerForOtherTask = strategy.findWorkerForTask(
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         workerMap,
         createMockTask("other_type")
@@ -121,18 +121,18 @@ public class JavaScriptWorkerSelectStrategyTest
   @Test
   public void testNoValidWorker()
   {
-    ImmutableMap<String, ImmutableZkWorker> workerMap = ImmutableMap.of(
+    ImmutableMap<String, ImmutableWorkerInfo> workerMap = ImmutableMap.of(
         "10.0.0.1", createMockWorker(1, true, false),
         "10.0.0.4", createMockWorker(1, true, false)
     );
-    Optional<ImmutableZkWorker> workerForBatchTask = strategy.findWorkerForTask(
+    Optional<ImmutableWorkerInfo> workerForBatchTask = strategy.findWorkerForTask(
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         workerMap,
         createMockTask("index_hadoop")
     );
     Assert.assertFalse(workerForBatchTask.isPresent());
 
-    Optional<ImmutableZkWorker> workerForOtherTask = strategy.findWorkerForTask(
+    Optional<ImmutableWorkerInfo> workerForOtherTask = strategy.findWorkerForTask(
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         workerMap,
         createMockTask("otherTask")
@@ -144,18 +144,18 @@ public class JavaScriptWorkerSelectStrategyTest
   @Test
   public void testNoWorkerCanRunTask()
   {
-    ImmutableMap<String, ImmutableZkWorker> workerMap = ImmutableMap.of(
+    ImmutableMap<String, ImmutableWorkerInfo> workerMap = ImmutableMap.of(
         "10.0.0.1", createMockWorker(1, false, true),
         "10.0.0.4", createMockWorker(1, false, true)
     );
-    Optional<ImmutableZkWorker> workerForBatchTask = strategy.findWorkerForTask(
+    Optional<ImmutableWorkerInfo> workerForBatchTask = strategy.findWorkerForTask(
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         workerMap,
         createMockTask("index_hadoop")
     );
     Assert.assertFalse(workerForBatchTask.isPresent());
 
-    Optional<ImmutableZkWorker> workerForOtherTask = strategy.findWorkerForTask(
+    Optional<ImmutableWorkerInfo> workerForOtherTask = strategy.findWorkerForTask(
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         workerMap,
         createMockTask("otherTask")
@@ -168,11 +168,11 @@ public class JavaScriptWorkerSelectStrategyTest
   public void testFillWorkerCapacity()
   {
     // tasks shoudl be assigned to the worker with maximum currCapacity used until its full
-    ImmutableMap<String, ImmutableZkWorker> workerMap = ImmutableMap.of(
+    ImmutableMap<String, ImmutableWorkerInfo> workerMap = ImmutableMap.of(
         "10.0.0.1", createMockWorker(1, true, true),
         "10.0.0.2", createMockWorker(5, true, true)
     );
-    Optional<ImmutableZkWorker> workerForBatchTask = strategy.findWorkerForTask(
+    Optional<ImmutableWorkerInfo> workerForBatchTask = strategy.findWorkerForTask(
         new TestRemoteTaskRunnerConfig(new Period("PT1S")),
         workerMap,
         createMockTask("index_hadoop")
@@ -189,9 +189,9 @@ public class JavaScriptWorkerSelectStrategyTest
     return mock;
   }
 
-  private ImmutableZkWorker createMockWorker(int currCapacityUsed, boolean canRunTask, boolean isValidVersion)
+  private ImmutableWorkerInfo createMockWorker(int currCapacityUsed, boolean canRunTask, boolean isValidVersion)
   {
-    ImmutableZkWorker worker = EasyMock.createMock(ImmutableZkWorker.class);
+    ImmutableWorkerInfo worker = EasyMock.createMock(ImmutableWorkerInfo.class);
     EasyMock.expect(worker.canRunTask(EasyMock.anyObject(Task.class))).andReturn(canRunTask).anyTimes();
     EasyMock.expect(worker.getCurrCapacityUsed()).andReturn(currCapacityUsed).anyTimes();
     EasyMock.expect(worker.isValidVersion(EasyMock.anyString())).andReturn(isValidVersion).anyTimes();

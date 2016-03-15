@@ -107,13 +107,13 @@ import java.util.concurrent.TimeUnit;
  * creating ephemeral nodes in ZK that workers must remove. Workers announce the statuses of the tasks they are running.
  * Once a task completes, it is up to the RTR to remove the task status and run any necessary cleanup.
  * The RemoteTaskRunner is event driven and updates state according to ephemeral node changes in ZK.
- * <p/>
+ * <p>
  * The RemoteTaskRunner will assign tasks to a node until the node hits capacity. At that point, task assignment will
  * fail. The RemoteTaskRunner depends on another component to create additional worker resources.
- * <p/>
+ * <p>
  * If a worker node becomes inexplicably disconnected from Zk, the RemoteTaskRunner will fail any tasks associated with the
  * worker after waiting for RemoteTaskRunnerConfig.taskCleanupTimeout for the worker to show up.
- * <p/>
+ * <p>
  * The RemoteTaskRunner uses ZK for job management and assignment and http for IPC messages.
  */
 public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
@@ -365,14 +365,9 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
-  public Collection<Worker> getWorkers()
+  public Collection<ImmutableWorkerInfo> getWorkers()
   {
-    return ImmutableList.copyOf(getWorkerFromZK(zkWorkers.values()));
-  }
-
-  public Collection<ZkWorker> getZkWorkers()
-  {
-    return ImmutableList.copyOf(zkWorkers.values());
+    return getImmutableWorkerFromZK(zkWorkers.values());
   }
 
   @Override
@@ -672,7 +667,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
       ZkWorker assignedWorker = null;
       try {
-        final Optional<ImmutableZkWorker> immutableZkWorker = strategy.findWorkerForTask(
+        final Optional<ImmutableWorkerInfo> immutableZkWorker = strategy.findWorkerForTask(
             config,
             ImmutableMap.copyOf(
                 Maps.transformEntries(
@@ -687,10 +682,10 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                           }
                         }
                     ),
-                    new Maps.EntryTransformer<String, ZkWorker, ImmutableZkWorker>()
+                    new Maps.EntryTransformer<String, ZkWorker, ImmutableWorkerInfo>()
                     {
                       @Override
-                      public ImmutableZkWorker transformEntry(
+                      public ImmutableWorkerInfo transformEntry(
                           String key, ZkWorker value
                       )
                       {
@@ -712,7 +707,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
         log.debug("Worker nodes %s do not have capacity to run any more tasks!", zkWorkers.values());
         return false;
-      } finally {
+      }
+      finally {
         if (assignedWorker != null) {
           workersWithUnacknowledgedTask.remove(assignedWorker.getWorker().getHost());
           // note that this is essential as a task might not get a worker because a worker was assigned another task.
@@ -1092,7 +1088,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   }
 
   @Override
-  public Collection<Worker> markWorkersLazy(Predicate<Worker> isLazyWorker, int maxWorkers)
+  public Collection<Worker> markWorkersLazy(Predicate<ImmutableWorkerInfo> isLazyWorker, int maxWorkers)
   {
     // status lock is used to prevent any tasks being assigned to the worker while we mark it lazy
     synchronized (statusLock) {
@@ -1101,7 +1097,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         String worker = iterator.next();
         ZkWorker zkWorker = zkWorkers.get(worker);
         try {
-          if (getAssignedTasks(zkWorker.getWorker()).isEmpty() && isLazyWorker.apply(zkWorker.getWorker())) {
+          if (getAssignedTasks(zkWorker.getWorker()).isEmpty() && isLazyWorker.apply(zkWorker.toImmutable())) {
             log.info("Adding Worker[%s] to lazySet!", zkWorker.getWorker().getHost());
             lazyWorkers.put(worker, zkWorker);
             if (lazyWorkers.size() == maxWorkers) {
@@ -1144,6 +1140,23 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   public Collection<Worker> getLazyWorkers()
   {
     return ImmutableList.copyOf(getWorkerFromZK(lazyWorkers.values()));
+  }
+
+  private static ImmutableList<ImmutableWorkerInfo> getImmutableWorkerFromZK(Collection<ZkWorker> workers)
+  {
+    return ImmutableList.copyOf(
+        Collections2.transform(
+            workers,
+            new Function<ZkWorker, ImmutableWorkerInfo>()
+            {
+              @Override
+              public ImmutableWorkerInfo apply(ZkWorker input)
+              {
+                return input.toImmutable();
+              }
+            }
+        )
+    );
   }
 
   public static Collection<Worker> getWorkerFromZK(Collection<ZkWorker> workers)

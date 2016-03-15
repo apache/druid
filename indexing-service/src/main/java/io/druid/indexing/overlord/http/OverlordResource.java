@@ -416,10 +416,7 @@ public class OverlordResource
           @Override
           public Response apply(TaskRunner taskRunner)
           {
-            if (taskRunner instanceof RemoteTaskRunner) {
-              // Use getZkWorkers instead of getWorkers, as they return richer details (like the list of running tasks)
-              return Response.ok(((RemoteTaskRunner) taskRunner).getZkWorkers()).build();
-            } else if (taskRunner instanceof WorkerTaskRunner) {
+            if (taskRunner instanceof WorkerTaskRunner) {
               return Response.ok(((WorkerTaskRunner) taskRunner).getWorkers()).build();
             } else {
               log.debug(
