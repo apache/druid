@@ -32,17 +32,17 @@ public class BoundFilter extends DimensionPredicateFilter
   public BoundFilter(final BoundDimFilter boundDimFilter)
   {
     super(
-        boundDimFilter.getDimension(), new Predicate<String>()
+        boundDimFilter.getDimension(), new Predicate()
         {
-          private volatile Predicate<String> predicate;
+          private volatile Predicate predicate;
 
           @Override
-          public boolean apply(String input)
+          public boolean apply(Object input)
           {
             return function().apply(input);
           }
 
-          private Predicate<String> function()
+          private Predicate function()
           {
             if (predicate == null) {
               final Comparator<String> comparator;
@@ -51,11 +51,12 @@ public class BoundFilter extends DimensionPredicateFilter
               } else {
                 comparator = new LexicographicTopNMetricSpec(null).getComparator(null, null);
               }
-              predicate = new Predicate<String>()
+              predicate = new Predicate()
               {
                 @Override
-                public boolean apply(String input)
+                public boolean apply(Object inputObj)
                 {
+                  String input = inputObj == null ? null : inputObj.toString();
                   if (input == null) {
                     return false;
                   }

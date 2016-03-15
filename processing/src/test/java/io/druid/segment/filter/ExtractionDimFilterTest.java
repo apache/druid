@@ -19,6 +19,7 @@
 
 package io.druid.segment.filter;
 
+import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.collections.bitmap.BitmapFactory;
@@ -106,6 +107,12 @@ public class ExtractionDimFilterTest
 
     @Override
     public ImmutableRTree getSpatialIndex(String dimension)
+    {
+      return null;
+    }
+
+    @Override
+    public ImmutableBitmap getBitmapIndexFromColumnScan(String dimension, Predicate predicate)
     {
       return null;
     }

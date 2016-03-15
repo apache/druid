@@ -23,6 +23,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.metamx.collections.bitmap.ImmutableBitmap;
+import com.metamx.common.ISE;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
@@ -31,6 +32,7 @@ import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.column.Column;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 
@@ -99,6 +101,21 @@ public class ExtractionFilter implements Filter
   @Override
   public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector)
   {
+    if (dimension.equals(Column.TIME_COLUMN_NAME)) {
+      Predicate predicate = new Predicate()
+      {
+        @Override
+        public boolean apply(Object input)
+        {
+          if (!(input instanceof Long)) {
+            throw new ISE("Time column must have long values!");
+          }
+          return value.equals(Strings.nullToEmpty(fn.apply(input)));
+        }
+      };
+      return selector.getBitmapIndexFromColumnScan(dimension, predicate);
+    }
+
     final List<Filter> filters = makeFilters(selector);
     if (filters.isEmpty()) {
       return selector.getBitmapFactory().makeEmptyImmutableBitmap();
@@ -110,13 +127,16 @@ public class ExtractionFilter implements Filter
   public ValueMatcher makeMatcher(ValueMatcherFactory factory)
   {
     return factory.makeValueMatcher(
-        dimension, new Predicate<String>()
+        dimension, new Predicate()
         {
           @Override
-          public boolean apply(String input)
+          public boolean apply(Object input)
           {
+            if (input instanceof String) {
+              input = Strings.emptyToNull((String) input);
+            }
             // Assuming that a null/absent/empty dimension are equivalent from the druid perspective
-            return value.equals(Strings.nullToEmpty(fn.apply(Strings.emptyToNull(input))));
+            return value.equals(Strings.nullToEmpty(fn.apply(input)));
           }
         }
     );

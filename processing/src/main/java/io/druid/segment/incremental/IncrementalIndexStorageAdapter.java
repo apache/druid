@@ -30,6 +30,7 @@ import com.google.common.primitives.Ints;
 import com.metamx.collections.spatial.search.Bound;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
+import com.metamx.common.parsers.ParseException;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.dimension.DimensionSpec;
@@ -661,6 +662,23 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     @Override
     public ValueMatcher makeValueMatcher(String dimension, final Comparable value)
     {
+      if (dimension.equals(Column.TIME_COLUMN_NAME)) {
+        try {
+          final long parsedMatchValue = Long.parseLong(value.toString());
+          return new ValueMatcher()
+          {
+            @Override
+            public boolean matches()
+            {
+              long timestamp = holder.getKey().getTimestamp();
+              return timestamp == parsedMatchValue;
+            }
+          };
+        } catch (NumberFormatException nfe) {
+          throw new ParseException(nfe, "Unable to parse selector filter value[%s] as long", value);
+        }
+      }
+
       IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimension);
       if (dimensionDesc == null) {
         return new BooleanValueMatcher(isComparableNullOrEmpty(value));
@@ -705,6 +723,18 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     @Override
     public ValueMatcher makeValueMatcher(String dimension, final Predicate predicate)
     {
+      if (dimension.equals(Column.TIME_COLUMN_NAME)) {
+        return new ValueMatcher()
+        {
+          @Override
+          public boolean matches()
+          {
+            long timestamp = holder.getKey().getTimestamp();
+            return predicate.apply(timestamp);
+          }
+        };
+      }
+
       IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimension);
       if (dimensionDesc == null) {
         return new BooleanValueMatcher(false);

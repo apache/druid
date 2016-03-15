@@ -28,6 +28,7 @@ import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.column.Column;
 import io.druid.segment.data.Indexed;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
@@ -51,6 +52,18 @@ public class JavaScriptFilter implements Filter
   {
     final Context cx = Context.enter();
     try {
+      if (dimension.equals(Column.TIME_COLUMN_NAME)) {
+        Predicate predicateInContext = new Predicate()
+        {
+          @Override
+          public boolean apply(@Nullable Object input)
+          {
+            return predicate.applyInContext(cx, input);
+          }
+        };
+        return selector.getBitmapIndexFromColumnScan(dimension, predicateInContext);
+      }
+
       final Indexed<String> dimValues = selector.getDimensionValues(dimension);
       ImmutableBitmap bitmap;
       if (dimValues == null) {
@@ -94,7 +107,7 @@ public class JavaScriptFilter implements Filter
     return factory.makeValueMatcher(dimension, predicate);
   }
 
-  static class JavaScriptPredicate implements Predicate<String>
+  static class JavaScriptPredicate implements Predicate
   {
     final ScriptableObject scope;
     final Function fnApply;
@@ -118,7 +131,7 @@ public class JavaScriptFilter implements Filter
     }
 
     @Override
-    public boolean apply(final String input)
+    public boolean apply(final Object input)
     {
       // one and only one context per thread
       final Context cx = Context.enter();
@@ -131,9 +144,9 @@ public class JavaScriptFilter implements Filter
 
     }
 
-    public boolean applyInContext(Context cx, String input)
+    public boolean applyInContext(Context cx, Object input)
     {
-      return Context.toBoolean(fnApply.call(cx, scope, scope, new String[]{input}));
+      return Context.toBoolean(fnApply.call(cx, scope, scope, new Object[]{input}));
     }
 
     @Override

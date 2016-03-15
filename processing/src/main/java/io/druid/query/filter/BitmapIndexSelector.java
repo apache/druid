@@ -19,6 +19,7 @@
 
 package io.druid.query.filter;
 
+import com.google.common.base.Predicate;
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.spatial.ImmutableRTree;
@@ -33,4 +34,7 @@ public interface BitmapIndexSelector
   public BitmapFactory getBitmapFactory();
   public ImmutableBitmap getBitmapIndex(String dimension, String value);
   public ImmutableRTree getSpatialIndex(String dimension);
+
+  // for scans on dims that don't have bitmap indexes
+  public ImmutableBitmap getBitmapIndexFromColumnScan(String dimension, Predicate predicate);
 }

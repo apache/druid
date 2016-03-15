@@ -19,8 +19,11 @@
 
 package io.druid.segment.filter;
 
+import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.metamx.collections.bitmap.ImmutableBitmap;
+import com.metamx.common.ISE;
+import com.metamx.common.parsers.ParseException;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
@@ -28,6 +31,7 @@ import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.column.Column;
 import io.druid.segment.data.IndexedInts;
 
 /**
@@ -49,6 +53,25 @@ public class SelectorFilter implements Filter
   @Override
   public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector)
   {
+    if (dimension.equals(Column.TIME_COLUMN_NAME)) {
+      try {
+        final long parsedMatchValue = Long.parseLong(value.toString());
+        Predicate predicate = new Predicate()
+        {
+          @Override
+          public boolean apply(Object input)
+          {
+            if (!(input instanceof Long)) {
+              throw new ISE("Time column must have long values!");
+            }
+            return parsedMatchValue == ((Long) input).longValue();
+          }
+        };
+        return selector.getBitmapIndexFromColumnScan(dimension, predicate);
+      } catch (NumberFormatException nfe) {
+        throw new ParseException(nfe, "Unable to parse selector filter value[%s] as long", value);
+      }
+    }
     return selector.getBitmapIndex(dimension, value);
   }
 
