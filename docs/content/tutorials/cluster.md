@@ -268,8 +268,10 @@ inbound connections on the following:
 - 8081 (Coordinator)
 - 8082 (Broker)
 - 8083 (Historical)
+- 8084 (Standalone Realtime, if used)
+- 8088 (Router, if used)
 - 8090 (Overlord)
-- 8091, 8100&ndash;8199 (Druid Middle Manager)
+- 8091, 8100&ndash;8199 (Druid Middle Manager; you may need higher than port 8199 if you have a very high `druid.worker.capacity`)
 - 8200 (Tranquility Server, if used)
 
 <div class="note caution">
