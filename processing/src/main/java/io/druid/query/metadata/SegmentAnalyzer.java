@@ -26,10 +26,10 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
-import com.metamx.common.StringUtils;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.logger.Logger;
+import io.druid.common.utils.StringUtils;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.metadata.metadata.ColumnAnalysis;
@@ -206,7 +206,7 @@ public class SegmentAnalyzer
       for (int i = 0; i < cardinality; ++i) {
         String value = bitmapIndex.getValue(i);
         if (value != null) {
-          size += StringUtils.toUtf8(value).length * bitmapIndex.getBitmap(bitmapIndex.getIndex(value)).size();
+          size += StringUtils.estimatedBinaryLengthAsUTF8(value) * bitmapIndex.getBitmap(bitmapIndex.getIndex(value)).size();
         }
       }
     }
@@ -272,7 +272,7 @@ public class SegmentAnalyzer
                 for (int i = 0; i < vals.size(); ++i) {
                   final String dimVal = selector.lookupName(vals.get(i));
                   if (dimVal != null && !dimVal.isEmpty()) {
-                    current += StringUtils.toUtf8(dimVal).length;
+                    current += StringUtils.estimatedBinaryLengthAsUTF8(dimVal);
                   }
                 }
                 cursor.advance();
