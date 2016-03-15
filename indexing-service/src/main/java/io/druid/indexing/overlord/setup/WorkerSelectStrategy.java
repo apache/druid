@@ -24,7 +24,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import io.druid.indexing.common.task.Task;
-import io.druid.indexing.overlord.ImmutableZkWorker;
+import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 
 /**
@@ -46,11 +46,11 @@ public interface WorkerSelectStrategy
    * @param zkWorkers An immutable map of workers to choose from.
    * @param task      The task to assign.
    *
-   * @return A {@link io.druid.indexing.overlord.ImmutableZkWorker} to run the task if one is available.
+   * @return A {@link io.druid.indexing.overlord.ImmutableWorkerInfo} to run the task if one is available.
    */
-  Optional<ImmutableZkWorker> findWorkerForTask(
+  Optional<ImmutableWorkerInfo> findWorkerForTask(
       final RemoteTaskRunnerConfig config,
-      final ImmutableMap<String, ImmutableZkWorker> zkWorkers,
+      final ImmutableMap<String, ImmutableWorkerInfo> zkWorkers,
       final Task task
   );
 }
