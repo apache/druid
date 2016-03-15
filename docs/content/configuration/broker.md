@@ -95,3 +95,10 @@ You can optionally only configure caching to be enabled on the broker by setting
 |`druid.broker.cache.cacheBulkMergeLimit`|positive integer or 0|Queries with more segments than this number will not attempt to fetch from cache at the broker level, leaving potential caching fetches (and cache result merging) to the historicals|`Integer.MAX_VALUE`|
 
 See [cache configuration](caching.html) for how to configure cache settings.
+
+### Others
+
+|Property|Possible Values|Description|Default|
+|--------|---------------|-----------|-------|
+|`druid.broker.segment.watchedTiers`|List of strings|Broker watches the segment announcements from nodes serving segments to build cache of which node is serving which segments, this configuration allows to only consider segments being served from a whitelist of tiers. By default, Broker would consider all. This can be used to partition your dataSources in specific historical tiers and configure brokers in partitions so that they are only queryable for specific dataSources.|none|
+
