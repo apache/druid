@@ -20,6 +20,7 @@
 package io.druid.segment.realtime.firehose;
 
 import com.google.common.base.Predicate;
+import com.metamx.common.logger.Logger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.InputRow;
 
@@ -31,6 +32,10 @@ import java.io.IOException;
  */
 public class PredicateFirehose implements Firehose
 {
+  private static final Logger log = new Logger(PredicateFirehose.class);
+  private static final int IGNORE_THRESHOLD = 5000;
+  private long ignored = 0;
+
   private final Firehose firehose;
   private final Predicate<InputRow> predicate;
 
@@ -55,6 +60,11 @@ public class PredicateFirehose implements Firehose
         savedInputRow = row;
         return true;
       }
+      // Do not silently discard the rows
+      if (ignored % IGNORE_THRESHOLD == 0) {
+        log.warn("[%,d] InputRow(s) ignored as they do not satisfy the predicate", ignored);
+      }
+      ignored++;
     }
 
     return false;
