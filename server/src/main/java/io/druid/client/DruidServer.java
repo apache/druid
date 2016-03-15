@@ -95,31 +95,26 @@ public class DruidServer implements Comparable
     return metadata;
   }
 
-  @JsonProperty
   public String getHost()
   {
     return metadata.getHost();
   }
 
-  @JsonProperty
   public long getCurrSize()
   {
     return currSize;
   }
 
-  @JsonProperty
   public long getMaxSize()
   {
     return metadata.getMaxSize();
   }
 
-  @JsonProperty
   public String getType()
   {
     return metadata.getType();
   }
 
-  @JsonProperty
   public String getTier()
   {
     return metadata.getTier();
@@ -130,13 +125,11 @@ public class DruidServer implements Comparable
     return metadata.isAssignable();
   }
 
-  @JsonProperty
   public int getPriority()
   {
     return metadata.getPriority();
   }
 
-  @JsonProperty
   public Map<String, DataSegment> getSegments()
   {
     // Copying the map slows things down a lot here, don't use Immutable Map here
