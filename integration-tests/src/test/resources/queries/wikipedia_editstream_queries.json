@@ -997,11 +997,13 @@
                 "result": [
                     {
                         "dimension": "page",
-                        "value": "League_of_Legends"
+                        "value": "League_of_Legends",
+			"count":31
                     },
                     {
                         "dimension": "page",
-                        "value": "The_best_ADs_in_The_League_of_legends"
+                        "value": "The_best_ADs_in_The_League_of_legends",
+			"count":2
                     }
                 ]
             }
