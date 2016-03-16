@@ -59,6 +59,7 @@ public class SinkTest
     final String version = new DateTime().toString();
     RealtimeTuningConfig tuningConfig = new RealtimeTuningConfig(
         100,
+        null,
         new Period("P1Y"),
         null,
         null,

@@ -226,16 +226,31 @@ public class RealtimePlumber implements Plumber
     }
 
     if (maxRowExceedCheckCount > 0 && ++counter % maxRowExceedCheckCount == 0) {
-      int size = 0;
-      for (Sink aSink : sinks.values()) {
-        size += aSink.sizeInMemory();
-      }
-      if (size > config.getMaxRowsInMemory()) {
+      if (rowCountInMemory() > config.getMaxRowsInMemory() ||
+          occupationInMemory() > config.getMaxOccupationInMemory()) {
         persistOldest(committerSupplier.get());
       }
     }
 
     return numRows;
+  }
+
+  private int rowCountInMemory()
+  {
+    int size = 0;
+    for (Sink aSink : sinks.values()) {
+      size += aSink.rowCountInMemory();
+    }
+    return size;
+  }
+
+  private int occupationInMemory()
+  {
+    int size = 0;
+    for (Sink aSink : sinks.values()) {
+      size += aSink.occupationInMemory();
+    }
+    return size;
   }
 
   private Sink getSink(long timestamp)

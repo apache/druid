@@ -167,10 +167,17 @@ public class Sink implements Iterable<FireHydrant>
     }
   }
 
-  public int sizeInMemory()
+  public int rowCountInMemory()
   {
     synchronized (hydrantLock) {
-      return currHydrant.indexSize();
+      return currHydrant.rowCount();
+    }
+  }
+
+  public int occupationInMemory()
+  {
+    synchronized (hydrantLock) {
+      return currHydrant.estimatedOccupation();
     }
   }
 
@@ -201,7 +208,7 @@ public class Sink implements Iterable<FireHydrant>
   public boolean swappable()
   {
     synchronized (hydrantLock) {
-      return writable && currHydrant.indexSize() > 0;
+      return writable && currHydrant.rowCount() > 0;
     }
   }
 
@@ -232,7 +239,7 @@ public class Sink implements Iterable<FireHydrant>
   public int getNumRows()
   {
     synchronized (hydrantLock) {
-      return numRowsExcludingCurrIndex.get() + currHydrant.indexSize();
+      return numRowsExcludingCurrIndex.get() + currHydrant.rowCount();
     }
   }
 
@@ -254,7 +261,7 @@ public class Sink implements Iterable<FireHydrant>
       }
 
       old = currHydrant;
-      if (old != null && old.indexSize() == 0) {
+      if (old != null && old.rowCount() == 0) {
         return null;
       }
 
@@ -277,7 +284,7 @@ public class Sink implements Iterable<FireHydrant>
           }
           newIndex.loadDimensionIterable(dimOrder);
         }
-        numRowsExcludingCurrIndex.addAndGet(old.indexSize());
+        numRowsExcludingCurrIndex.addAndGet(old.rowCount());
       }
       currHydrant = new FireHydrant(newIndex, newCount, getSegment().getIdentifier());
       hydrants.add(currHydrant);

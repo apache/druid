@@ -34,6 +34,7 @@ import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.parsers.ParseException;
+import io.druid.common.utils.StringUtils;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
@@ -356,6 +357,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   private final List<Function<InputRow, InputRow>> rowTransformers;
   private final AggregatorFactory[] metrics;
   private final AggregatorType[] aggs;
+  private final int maxLengthForAggregators;
   private final boolean deserializeComplexMetrics;
   private final boolean reportParseExceptions;
   private final boolean sortFacts;
@@ -450,19 +452,24 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     if (!spatialDimensions.isEmpty()) {
       this.rowTransformers.add(new SpatialDimensionRowTransformer(spatialDimensions));
     }
+    int length = 0;
+    for (AggregatorFactory factory : metrics) {
+      length += factory.getMaxIntermediateSize();
+    }
+    this.maxLengthForAggregators = length;
   }
 
   private DimDim newDimDim(String dimension, ValueType type) {
     DimDim newDimDim;
     switch (type) {
       case LONG:
-        newDimDim = makeDimDim(dimension, getDimensionDescs());
+        newDimDim = makeDimDim(dimension, SizeEstimator.LONG, getDimensionDescs());
         break;
       case FLOAT:
-        newDimDim = makeDimDim(dimension, getDimensionDescs());
+        newDimDim = makeDimDim(dimension, SizeEstimator.FLOAT, getDimensionDescs());
         break;
       case STRING:
-        newDimDim = new NullValueConverterDimDim(makeDimDim(dimension, getDimensionDescs()));
+        newDimDim = new NullValueConverterDimDim(makeDimDim(dimension, SizeEstimator.STRING, getDimensionDescs()));
         break;
       default:
         throw new IAE("Invalid column type: " + type);
@@ -471,7 +478,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   }
 
   // use newDimDim() to create a DimDim, makeDimDim() provides the subclass-specific implementation
-  protected abstract DimDim makeDimDim(String dimension, Object lock);
+  protected abstract DimDim makeDimDim(String dimension, SizeEstimator estimator, Object lock);
 
   public abstract ConcurrentMap<TimeAndDims, Integer> getFacts();
 
@@ -690,6 +697,15 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   public int size()
   {
     return numEntries.get();
+  }
+
+  public int estimatedOccupation()
+  {
+    int occupation = maxLengthForAggregators * getFacts().size();
+    for (DimensionDesc dimensionDesc : dimensionDescs.values()) {
+      occupation += dimensionDesc.getValues().estimatedSize();
+    }
+    return occupation;
   }
 
   private long getMinTimeMillis()
@@ -1050,6 +1066,36 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     }
   }
 
+  static interface SizeEstimator<T> {
+
+    int estimate(T object);
+
+    SizeEstimator<String> STRING = new SizeEstimator<String>()
+    {
+      @Override
+      public int estimate(String object)
+      {
+        return object == null ? 0 : StringUtils.estimatedBinaryLengthAsUTF8(object);
+      }
+    };
+    SizeEstimator<Float> FLOAT = new SizeEstimator<Float>()
+    {
+      @Override
+      public int estimate(Float object)
+      {
+        return object == null ? 0 : 4;
+      }
+    };
+    SizeEstimator<Long> LONG = new SizeEstimator<Long>()
+    {
+      @Override
+      public int estimate(Long object)
+      {
+        return object == null ? 0 : 8;
+      }
+    };
+  }
+
   static interface DimDim<T extends Comparable<? super T>>
   {
     public int getId(T value);
@@ -1063,6 +1109,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     public T getMinValue();
 
     public T getMaxValue();
+
+    public int estimatedSize();
 
     public int add(T value);
 
@@ -1126,6 +1174,12 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     public String getMaxValue()
     {
       return Strings.nullToEmpty(delegate.getMaxValue());
+    }
+
+    @Override
+    public int estimatedSize()
+    {
+      return delegate.estimatedSize();
     }
 
     @Override

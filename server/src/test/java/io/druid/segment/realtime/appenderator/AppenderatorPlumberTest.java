@@ -71,6 +71,7 @@ public class AppenderatorPlumberTest
         null,
         null,
         null,
+        null,
         new IntervalStartVersioningPolicy(),
         new NoopRejectionPolicyFactory(),
         null,

@@ -151,9 +151,9 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   }
 
   @Override
-  protected DimDim makeDimDim(String dimension, Object lock)
+  protected DimDim makeDimDim(String dimension, SizeEstimator estimator, Object lock)
   {
-    return new OnheapIncrementalIndex.OnHeapDimDim(lock);
+    return new OnheapIncrementalIndex.OnHeapDimDim(estimator, lock);
   }
 
   @Override

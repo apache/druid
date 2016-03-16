@@ -125,6 +125,7 @@ public class AppenderatorTester implements AutoCloseable
         maxRowsInMemory,
         null,
         null,
+        null,
         basePersistDirectory,
         null,
         null,

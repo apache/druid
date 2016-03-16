@@ -61,9 +61,15 @@ public class FireHydrant
     this.count = count;
   }
 
-  public int indexSize() {
+  public int rowCount() {
     synchronized (swapLock) {
       return index == null ? 0 : index.size();
+    }
+  }
+
+  public int estimatedOccupation() {
+    synchronized (swapLock) {
+      return index == null ? 0 : index.estimatedOccupation();
     }
   }
 

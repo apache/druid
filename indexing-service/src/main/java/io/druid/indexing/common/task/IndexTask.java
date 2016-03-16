@@ -138,6 +138,7 @@ public class IndexTask extends AbstractFixedIntervalTask
         null,
         null,
         null,
+        null,
         shardSpec,
         indexSpec,
         buildV9Directly,
