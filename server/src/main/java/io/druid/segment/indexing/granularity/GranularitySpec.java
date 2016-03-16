@@ -55,6 +55,8 @@ public interface GranularitySpec
    * */
   public Optional<Interval> bucketInterval(DateTime dt);
 
+  public Optional<Interval> bucketInterval(long millis);
+
   public Granularity getSegmentGranularity();
 
   public QueryGranularity getQueryGranularity();

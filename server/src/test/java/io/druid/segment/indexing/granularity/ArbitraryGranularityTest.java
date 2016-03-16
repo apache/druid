@@ -92,14 +92,56 @@ public class ArbitraryGranularityTest
 
     Assert.assertEquals(
         "2012-01-04T00Z",
-        Optional.absent(),
+        Optional.<Interval>absent(),
         spec.bucketInterval(new DateTime("2012-01-04T00Z"))
     );
 
     Assert.assertEquals(
         "2012-01-05T00Z",
-        Optional.absent(),
+        Optional.<Interval>absent(),
         spec.bucketInterval(new DateTime("2012-01-05T00Z"))
+    );
+
+    Assert.assertEquals(
+        "2012-01-03T00Z",
+        Optional.of(new Interval("2012-01-03T00Z/2012-01-04T00Z")),
+        spec.bucketInterval(new DateTime("2012-01-03T00Z").getMillis())
+    );
+
+    Assert.assertEquals(
+        "2012-01-03T01Z",
+        Optional.of(new Interval("2012-01-03T00Z/2012-01-04T00Z")),
+        spec.bucketInterval(new DateTime("2012-01-03T01Z").getMillis())
+    );
+
+    Assert.assertEquals(
+        "2012-01-04T01Z",
+        Optional.<Interval>absent(),
+        spec.bucketInterval(new DateTime("2012-01-04T01Z").getMillis())
+    );
+
+    Assert.assertEquals(
+        "2012-01-07T23:59:59.999Z",
+        Optional.of(new Interval("2012-01-07T00Z/2012-01-08T00Z")),
+        spec.bucketInterval(new DateTime("2012-01-07T23:59:59.999Z").getMillis())
+    );
+
+    Assert.assertEquals(
+        "2012-01-08T01Z",
+        Optional.of(new Interval("2012-01-08T00Z/2012-01-11T00Z")),
+        spec.bucketInterval(new DateTime("2012-01-08T01Z").getMillis())
+    );
+
+    Assert.assertEquals(
+        "2012-01-04T00Z",
+        Optional.<Interval>absent(),
+        spec.bucketInterval(new DateTime("2012-01-04T00Z").getMillis())
+    );
+
+    Assert.assertEquals(
+        "2012-01-05T00Z",
+        Optional.<Interval>absent(),
+        spec.bucketInterval(new DateTime("2012-01-05T00Z").getMillis())
     );
   }
 

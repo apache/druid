@@ -19,6 +19,8 @@
 
 package io.druid.indexer;
 
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.metamx.common.RE;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
@@ -27,7 +29,6 @@ import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.joda.time.DateTime;
 
 import java.io.IOException;
 
@@ -39,6 +40,7 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
   private InputRowParser parser;
   protected GranularitySpec granularitySpec;
 
+  protected Predicate<InputRow> predicate;
   @Override
   protected void setup(Context context)
       throws IOException, InterruptedException
@@ -46,6 +48,22 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
     config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
     parser = config.getParser();
     granularitySpec = config.getGranularitySpec();
+    predicate = toPredicate(granularitySpec);
+  }
+
+  private Predicate<InputRow> toPredicate(final GranularitySpec granularitySpec)
+  {
+    if (granularitySpec.bucketIntervals().isPresent()) {
+      return new Predicate<InputRow>()
+      {
+        @Override
+        public boolean apply(InputRow input)
+        {
+          return granularitySpec.bucketInterval(input.getTimestampFromEpoch()).isPresent();
+        }
+      };
+    }
+    return Predicates.alwaysTrue();
   }
 
   public HadoopDruidIndexerConfig getConfig()
@@ -78,9 +96,7 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
         }
       }
 
-      if (!granularitySpec.bucketIntervals().isPresent()
-          || granularitySpec.bucketInterval(new DateTime(inputRow.getTimestampFromEpoch()))
-                            .isPresent()) {
+      if (predicate.apply(inputRow)) {
         innerMap(inputRow, value, context);
       }
     }

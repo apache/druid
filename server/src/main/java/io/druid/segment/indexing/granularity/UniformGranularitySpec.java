@@ -85,6 +85,12 @@ public class UniformGranularitySpec implements GranularitySpec
   }
 
   @Override
+  public Optional<Interval> bucketInterval(long millis)
+  {
+    return wrappedSpec.bucketInterval(millis);
+  }
+
+  @Override
   @JsonProperty("segmentGranularity")
   public Granularity getSegmentGranularity()
   {

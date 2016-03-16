@@ -25,6 +25,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
@@ -39,6 +40,7 @@ import com.metamx.common.logger.Logger;
 import io.druid.common.guava.ThreadRenamingRunnable;
 import io.druid.concurrent.Execs;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.Rows;
 import io.druid.indexer.hadoop.SegmentInputRow;
@@ -77,6 +79,7 @@ import java.nio.ByteBuffer;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
@@ -123,9 +126,8 @@ public class IndexGeneratorJob implements Jobby
     catch (IOException e) {
       throw Throwables.propagate(e);
     }
-    List<DataSegment> publishedSegments = publishedSegmentsBuilder.build();
 
-    return publishedSegments;
+    return publishedSegmentsBuilder.build();
   }
 
   private final HadoopDruidIndexerConfig config;
@@ -219,9 +221,19 @@ public class IndexGeneratorJob implements Jobby
       Iterable<String> oldDimOrder
   )
   {
+    return makeIncrementalIndex(theBucket.time.getMillis(), aggs, config, oldDimOrder);
+  }
+
+  private static IncrementalIndex makeIncrementalIndex(
+      long minTimestamp,
+      AggregatorFactory[] aggs,
+      HadoopDruidIndexerConfig config,
+      Iterable<String> oldDimOrder
+  )
+  {
     final HadoopTuningConfig tuningConfig = config.getSchema().getTuningConfig();
     final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
-        .withMinTimestamp(theBucket.time.getMillis())
+        .withMinTimestamp(minTimestamp)
         .withDimensionsSpec(config.getSchema().getDataSchema().getParser())
         .withQueryGranularity(config.getSchema().getDataSchema().getGranularitySpec().getQueryGranularity())
         .withMetrics(aggs)
@@ -231,7 +243,14 @@ public class IndexGeneratorJob implements Jobby
         indexSchema,
         !tuningConfig.isIgnoreInvalidRows(),
         tuningConfig.getRowFlushBoundary()
-    );
+    )
+    {
+      @Override
+      protected Row makeRow(long timestamp, List<String> dimensionNames, Map<String, Object> theVals)
+      {
+        return new MapBasedInputRow(timestamp, dimensionNames, theVals);
+      }
+    };
 
     if (oldDimOrder != null && !indexSchema.getDimensionsSpec().hasCustomDimensions()) {
       newIndex.loadDimensionIterable(oldDimOrder);
@@ -360,19 +379,17 @@ public class IndexGeneratorJob implements Jobby
       }
     }
 
-    private void flushIndexToContextAndClose(BytesWritable key, IncrementalIndex index, Context context)
+    private void flushIndexToContextAndClose(BytesWritable key, IncrementalIndex<?> index, Context context)
         throws IOException, InterruptedException
     {
       final List<String> dimensions = index.getDimensionNames();
-      Iterator<Row> rows = index.iterator();
-      while (rows.hasNext()) {
-        context.progress();
-        Row row = rows.next();
+      for (Row row : index) {
         InputRow inputRow = getInputRowFromRow(row, dimensions);
         context.write(
             key,
             new BytesWritable(InputRowSerde.toBytes(inputRow, combiningAggs))
         );
+        context.progress();
       }
       index.close();
     }
@@ -771,6 +788,125 @@ public class IndexGeneratorJob implements Jobby
     public void setInvalidRowCount(long invalidRowCount)
     {
       this.invalidRowCount = invalidRowCount;
+    }
+  }
+
+  public static class CombiningIndexGeneratorMapper extends HadoopDruidIndexerMapper<BytesWritable, BytesWritable>
+  {
+    private static final HashFunction hashFunction = Hashing.murmur3_128();
+
+    private AggregatorFactory[] aggregators;
+    private AggregatorFactory[] combiningAggs;
+
+    private Map<Long, IncrementalIndex> combiners = Maps.newHashMap();
+
+    private int counter;
+    private int checkInterval = 20000;
+    private int maxRowsInMemory = 500000;
+
+    @Override
+    protected void setup(Context context) throws IOException, InterruptedException
+    {
+      super.setup(context);
+      aggregators = config.getSchema().getDataSchema().getAggregators();
+      combiningAggs = new AggregatorFactory[aggregators.length];
+      for (int i = 0; i < aggregators.length; ++i) {
+        combiningAggs[i] = aggregators[i].getCombiningFactory();
+      }
+    }
+
+    @Override
+    protected void cleanup(Context context) throws IOException, InterruptedException
+    {
+      for (IncrementalIndex index : combiners.values()) {
+        flush(context, index);
+      }
+      combiners.clear();
+    }
+
+    @Override
+    protected void innerMap(InputRow inputRow, Object value, Context context)
+        throws IOException, InterruptedException
+    {
+      final long timestamp = granularitySpec.getQueryGranularity().truncate(inputRow.getTimestampFromEpoch());
+
+      IncrementalIndex target = combiners.get(timestamp);
+      if (target == null) {
+        combiners.put(timestamp, target = makeIncrementalIndex(timestamp, aggregators, config, null));
+      }
+
+      if (!target.canAppendRow()) {
+        flush(context, target);
+        combiners.put(timestamp, target = makeIncrementalIndex(timestamp, aggregators, config, null));
+      }
+      target.add(inputRow);
+
+      if (++counter % checkInterval == 0) {
+        flushOldestIfNeeded(context);
+      }
+    }
+
+    private void flushOldestIfNeeded(Context context) throws IOException, InterruptedException
+    {
+      while (totalRowsInMemory() > maxRowsInMemory) {
+        IncrementalIndex oldest = null;
+        for (IncrementalIndex index : combiners.values()) {
+          if (oldest == null || index.getLastAccessTime() < oldest.getLastAccessTime()) {
+            oldest = index;
+          }
+        }
+        if (oldest != null) {
+          flush(context, oldest);
+          combiners.remove(oldest.getInterval().getStartMillis());
+        }
+      }
+    }
+
+    private void flush(Context context, IncrementalIndex index) throws IOException, InterruptedException
+    {
+      for (Object row : index) {
+
+        InputRow inputRow = (InputRow) row;
+        // Group by bucket, sort by timestamp
+        final Optional<Bucket> bucket = getConfig().getBucket(inputRow);
+
+        if (!bucket.isPresent()) {
+          throw new ISE("WTF?! No bucket found for row: %s", inputRow);
+        }
+
+        final byte[] hashedDimensions = hashFunction.hashBytes(
+            HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsBytes(
+                Rows.toGroupKey(
+                    inputRow.getTimestampFromEpoch(),
+                    inputRow
+                )
+            )
+        ).asBytes();
+
+        byte[] serializedInputRow = InputRowSerde.toBytes(inputRow, combiningAggs);
+
+        context.write(
+            new SortableBytes(
+                bucket.get().toGroupKey(),
+                // sort rows by truncated timestamp and hashed dimensions to help reduce spilling on the reducer side
+                ByteBuffer.allocate(Longs.BYTES + hashedDimensions.length)
+                          .putLong(inputRow.getTimestampFromEpoch())
+                          .put(hashedDimensions)
+                          .array()
+            ).toBytesWritable(),
+            new BytesWritable(serializedInputRow)
+        );
+      }
+      index.close();
+    }
+
+    private int totalRowsInMemory()
+    {
+      int rows = 0;
+      for (IncrementalIndex index : combiners.values()) {
+        rows += index.size();
+      }
+      return rows;
     }
   }
 }

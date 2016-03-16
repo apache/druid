@@ -373,6 +373,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     }
   };
 
+  private long lastAccessTime;
+
   /**
    * Setting deserializeComplexMetrics to false is necessary for intermediate aggregation such as groupBy that
    * should not deserialize input columns using ComplexMetricSerde for aggregators that return complex metrics.
@@ -434,6 +436,13 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     if (!spatialDimensions.isEmpty()) {
       this.rowTransformers.add(new SpatialDimensionRowTransformer(spatialDimensions));
     }
+    for (SpatialDimensionSchema spatialDimension : spatialDimensions) {
+      ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
+      capabilities.setType(ValueType.STRING);
+      capabilities.setHasSpatialIndexes(true);
+      columnCapabilities.put(spatialDimension.getDimName(), capabilities);
+    }
+    lastAccessTime = System.currentTimeMillis();
   }
 
   private DimDim newDimDim(String dimension, ValueType type) {
@@ -664,6 +673,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     if (maxIngestedEventTime == null || maxIngestedEventTime.isBefore(eventTime)) {
       maxIngestedEventTime = eventTime;
     }
+    lastAccessTime = System.currentTimeMillis();
   }
 
   public boolean isEmpty()
@@ -878,6 +888,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       @Override
       public Iterator<Row> iterator()
       {
+        final List<String> dimensionNames = getDimensionNames();
         final List<DimensionDesc> dimensions = getDimensions();
 
         Map<TimeAndDims, Integer> facts = null;
@@ -942,7 +953,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
                   }
                 }
 
-                return new MapBasedRow(timeAndDims.getTimestamp(), theVals);
+                return makeRow(timeAndDims.getTimestamp(), dimensionNames, theVals);
               }
             }
         );
@@ -950,9 +961,19 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     };
   }
 
+  protected Row makeRow(long timestamp, List<String> dimensionNames, Map<String, Object> theVals)
+  {
+    return new MapBasedRow(timestamp, theVals);
+  }
+
   public DateTime getMaxIngestedEventTime()
   {
     return maxIngestedEventTime;
+  }
+
+  public long getLastAccessTime()
+  {
+    return lastAccessTime;
   }
 
   public static final class DimensionDesc
