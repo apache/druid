@@ -484,15 +484,18 @@
                 "result": [
                     {
                         "dimension": "user_name",
-                        "value": "1011Sports"
+                        "value": "1011Sports",
+			"count":1
                     },
                     {
                         "dimension": "user_name",
-                        "value": "11AliveSports"
+                        "value": "11AliveSports",
+			"count":1
                     },
                     {
                         "dimension": "user_name",
-                        "value": "1World_Sports"
+                        "value": "1World_Sports",
+			"count":1
                     }
                 ]
             }
