@@ -10,12 +10,19 @@ if [ $# -lt 1 ]; then
 fi
 
 VERSION=$1
-TAR=druid-$VERSION-bin.tar.gz
+DRUID_TAR=druid-$VERSION-bin.tar.gz
+MYSQL_TAR=mysql-metadata-storage-$VERSION.tar.gz
 S3PATH=s3://static.druid.io/artifacts/releases
 
-if [ ! -z "`s3cmd ls "$S3PATH/$TAR"`" ]; then
-  echo "ERROR: Refusing to overwrite $S3PATH/$TAR" >&2
+if [ ! -z "`s3cmd ls "$S3PATH/$DRUID_TAR"`" ]; then
+  echo "ERROR: Refusing to overwrite $S3PATH/$DRUID_TAR" >&2
   exit 2
 fi
 
-s3cmd put distribution/target/$TAR $S3PATH/$TAR
+if [ ! -z "`s3cmd ls "$S3PATH/$MYSQL_TAR"`" ]; then
+  echo "ERROR: Refusing to overwrite $S3PATH/$MYSQL_TAR" >&2
+  exit 2
+fi
+
+s3cmd put distribution/target/$DRUID_TAR $S3PATH/$DRUID_TAR
+s3cmd put distribution/target/$MYSQL_TAR $S3PATH/$MYSQL_TAR
