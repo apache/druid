@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.query.extraction;
+package io.druid.query.lookup;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Supplier;

@@ -26,8 +26,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.metamx.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
-import io.druid.query.extraction.LookupExtractionFn;
-import io.druid.query.extraction.LookupExtractor;
+import io.druid.query.lookup.LookupExtractionFn;
+import io.druid.query.lookup.LookupExtractor;
 
 import java.nio.ByteBuffer;
 import java.util.List;

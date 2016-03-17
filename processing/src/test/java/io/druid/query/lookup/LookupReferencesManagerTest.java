@@ -17,29 +17,41 @@
  * under the License.
  */
 
-package io.druid.query.extraction;
+package io.druid.query.lookup;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.io.Files;
 import com.metamx.common.ISE;
+import io.druid.jackson.DefaultObjectMapper;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.IOException;
 
 public class LookupReferencesManagerTest
 {
   LookupReferencesManager lookupReferencesManager;
+  @Rule
+  public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  ObjectMapper mapper = new DefaultObjectMapper();
 
   @Before
-  public void setUp()
+  public void setUp() throws IOException
   {
-    lookupReferencesManager = new LookupReferencesManager();
+    lookupReferencesManager = new LookupReferencesManager(new LookupConfig(Files.createTempDir().getAbsolutePath()), mapper);
     Assert.assertTrue("must be closed before start call", lookupReferencesManager.isClosed());
     lookupReferencesManager.start();
     Assert.assertFalse("must start after start call", lookupReferencesManager.isClosed());
+    mapper.registerSubtypes(LookupExtractorFactoryMock.class);
   }
 
   @After
@@ -168,5 +180,75 @@ public class LookupReferencesManagerTest
         lookupExtractorFactory
     );
     lookupReferencesManager.put(extractorImmutableMap);
+  }
+
+  @Test
+  public void testBootstrapFromFile() throws IOException
+  {
+    LookupExtractorFactory lookupExtractorFactory = new LookupExtractorFactoryMock("data");
+    lookupReferencesManager.put("testMockForBootstrap",lookupExtractorFactory);
+    lookupReferencesManager.stop();
+    lookupReferencesManager.start();
+    Assert.assertEquals(lookupExtractorFactory, lookupReferencesManager.get("testMockForBootstrap"));
+
+  }
+
+  @JsonTypeName("mockTest")
+  private static class LookupExtractorFactoryMock implements LookupExtractorFactory
+  {
+    @JsonProperty
+    public String getData()
+    {
+      return dataString;
+    }
+
+    @JsonProperty
+    private final String dataString;
+
+    @JsonCreator
+    public LookupExtractorFactoryMock(@JsonProperty("dataString") String dataString)
+    {
+      this.dataString = dataString;
+    }
+
+    @Override
+    public boolean start()
+    {
+      return true;
+    }
+
+    @Override
+    public boolean close()
+    {
+      return true;
+    }
+
+    @Override
+    public LookupExtractor get()
+    {
+      return null;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return dataString != null ? dataString.hashCode() : 0;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (!(o instanceof LookupExtractorFactoryMock)) {
+        return false;
+      }
+
+      LookupExtractorFactoryMock that = (LookupExtractorFactoryMock) o;
+
+      return getData().equals(that.getData());
+
+    }
   }
 }
