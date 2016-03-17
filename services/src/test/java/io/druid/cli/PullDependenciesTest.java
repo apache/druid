@@ -19,7 +19,7 @@
 
 package io.druid.cli;
 
-import com.google.api.client.repackaged.com.google.common.base.Throwables;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
