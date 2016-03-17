@@ -91,6 +91,7 @@
   * [Build From Source](../development/build.html)
   * [Versioning](../development/versioning.html)
   * [Integration](../development/integrating-druid-with-other-technologies.html)
+  * [Benchmarks](../development/benchmarks.html)
   * Experimental Features
     * [Overview](../development/experimental.html)
     * [Geographic Queries](../development/geo.html)
