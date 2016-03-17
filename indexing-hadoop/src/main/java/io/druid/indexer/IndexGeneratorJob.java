@@ -225,14 +225,15 @@ public class IndexGeneratorJob implements Jobby
       Iterable<String> oldDimOrder
   )
   {
-    return makeIncrementalIndex(theBucket.time.getMillis(), aggs, config, oldDimOrder);
+    return makeIncrementalIndex(theBucket.time.getMillis(), aggs, config, oldDimOrder, true);
   }
 
   private static IncrementalIndex makeIncrementalIndex(
       long minTimestamp,
       AggregatorFactory[] aggs,
       HadoopDruidIndexerConfig config,
-      Iterable<String> oldDimOrder
+      Iterable<String> oldDimOrder,
+      boolean sortFacts
   )
   {
     final HadoopTuningConfig tuningConfig = config.getSchema().getTuningConfig();
@@ -246,6 +247,8 @@ public class IndexGeneratorJob implements Jobby
     OnheapIncrementalIndex newIndex = new OnheapIncrementalIndex(
         indexSchema,
         !tuningConfig.isIgnoreInvalidRows(),
+        true,
+        sortFacts,
         tuningConfig.getRowFlushBoundary()
     )
     {
@@ -840,12 +843,12 @@ public class IndexGeneratorJob implements Jobby
 
       IncrementalIndex target = combiners.get(timestamp);
       if (target == null) {
-        combiners.put(timestamp, target = makeIncrementalIndex(timestamp, aggregators, config, null));
+        combiners.put(timestamp, target = makeIncrementalIndex(timestamp, aggregators, config, null, false));
       }
 
       if (!target.canAppendRow()) {
         flush(context, target);
-        combiners.put(timestamp, target = makeIncrementalIndex(timestamp, aggregators, config, null));
+        combiners.put(timestamp, target = makeIncrementalIndex(timestamp, aggregators, config, null, false));
       }
       target.add(inputRow);
 
