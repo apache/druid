@@ -1005,33 +1005,34 @@ public class DruidCoordinatorHadoopSegmentMergerTest
         whitelistRef,
         scanFromOldToNew
     );
-    final DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams.newBuilder()
-                                                                              .withAvailableSegments(
-                                                                                  ImmutableSet.copyOf(
-                                                                                      segments
-                                                                                  )
-                                                                              )
-                                                                              .withDynamicConfigs(
-                                                                                  new CoordinatorDynamicConfig.Builder()
-                                                                                      .withMergeBytesLimit(
-                                                                                          mergeBytesLimit
-                                                                                      )
-                                                                                      .withhadoopMergeConfig(
-                                                                                          new DruidCoordinatorHadoopMergeConfig(
-                                                                                              keepSegmentGapDuringMerge,
-                                                                                              null,
-                                                                                              null,
-                                                                                              ImmutableList.<CoordinatorHadoopMergeSpec>of(
-                                                                                                  new CoordinatorHadoopMergeSpec(
-                                                                                                      "foo",
-                                                                                                      null,
-                                                                                                      null,
-                                                                                                      null
-                                                                                                  ))
-                                                                                          ))
-                                                                                      .build()
-                                                                              )
-                                                                              .build();
+    final DruidCoordinatorRuntimeParams params =
+        DruidCoordinatorRuntimeParams.newBuilder()
+                                     .withAvailableSegments(
+                                         ImmutableSet.copyOf(
+                                             segments
+                                         )
+                                     )
+                                     .withDynamicConfigs(
+                                         new CoordinatorDynamicConfig.Builder()
+                                             .withMergeBytesLimit(
+                                                 mergeBytesLimit
+                                             )
+                                             .withhadoopMergeConfig(
+                                                 new DruidCoordinatorHadoopMergeConfig(
+                                                     keepSegmentGapDuringMerge,
+                                                     null,
+                                                     null,
+                                                     ImmutableList.<CoordinatorHadoopMergeSpec>of(
+                                                         new CoordinatorHadoopMergeSpec(
+                                                             "foo",
+                                                             null,
+                                                             null,
+                                                             null
+                                                         ))
+                                                 ))
+                                             .build()
+                                     )
+                                     .build();
     merger.run(params);
     return retVal;
   }
