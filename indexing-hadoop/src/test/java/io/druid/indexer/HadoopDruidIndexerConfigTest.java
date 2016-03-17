@@ -210,24 +210,8 @@ public class HadoopDruidIndexerConfigTest
             jsonMapper
         ),
         new HadoopIOConfig(ImmutableMap.<String, Object>of("paths", "bar", "type", "static"), null, null),
-        new HadoopTuningConfig(
-            null,
-            null,
-            null,
-            ImmutableMap.of(new DateTime("2010-01-01T01:00:00"), specs),
-            null,
-            null,
-            false,
-            false,
-            false,
-            false,
-            null,
-            false,
-            false,
-            null,
-            null,
-            null
-        )
+        HadoopTuningConfig.makeDefaultTuningConfig()
+                          .withShardSpecs(ImmutableMap.of(new DateTime("2010-01-01T01:00:00"), specs))
     );
     HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(spec);
     final List<String> dims = Arrays.asList("diM1", "dIM2");

@@ -367,24 +367,7 @@ public class BatchDeltaIngestionTest
                 null,
                 tmpDir.getCanonicalPath()
             ),
-            new HadoopTuningConfig(
-                tmpDir.getCanonicalPath(),
-                null,
-                null,
-                null,
-                null,
-                null,
-                false,
-                false,
-                false,
-                false,
-                null,
-                false,
-                false,
-                null,
-                null,
-                null
-            )
+            HadoopTuningConfig.makeDefaultTuningConfig().withWorkingPath(tmpDir.getCanonicalPath())
         )
     );
 

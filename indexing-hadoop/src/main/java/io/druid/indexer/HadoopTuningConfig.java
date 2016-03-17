@@ -62,6 +62,7 @@ public class HadoopTuningConfig implements TuningConfig
         null,
         false,
         false,
+        false,
         null,
         DEFAULT_BUILD_V9_DIRECTLY,
         DEFAULT_NUM_BACKGROUND_PERSIST_THREADS
@@ -81,6 +82,7 @@ public class HadoopTuningConfig implements TuningConfig
   private final Map<String, String> jobProperties;
   private final boolean combineText;
   private final boolean useCombiner;
+  private final boolean useMapAggregation;
   private final Boolean buildV9Directly;
   private final int numBackgroundPersistThreads;
 
@@ -99,6 +101,7 @@ public class HadoopTuningConfig implements TuningConfig
       final @JsonProperty("jobProperties") Map<String, String> jobProperties,
       final @JsonProperty("combineText") boolean combineText,
       final @JsonProperty("useCombiner") Boolean useCombiner,
+      final @JsonProperty("useMapAggregation") Boolean useMapAggregation,
       // See https://github.com/druid-io/druid/pull/1922
       final @JsonProperty("rowFlushBoundary") Integer maxRowsInMemoryCOMPAT,
       final @JsonProperty("buildV9Directly") Boolean buildV9Directly,
@@ -120,6 +123,7 @@ public class HadoopTuningConfig implements TuningConfig
                           : ImmutableMap.copyOf(jobProperties));
     this.combineText = combineText;
     this.useCombiner = useCombiner == null ? DEFAULT_USE_COMBINER : useCombiner.booleanValue();
+    this.useMapAggregation = useMapAggregation == null ? DEFAULT_USE_COMBINER : useMapAggregation.booleanValue();
     this.buildV9Directly = buildV9Directly == null ? DEFAULT_BUILD_V9_DIRECTLY : buildV9Directly;
     this.numBackgroundPersistThreads = numBackgroundPersistThreads == null ? DEFAULT_NUM_BACKGROUND_PERSIST_THREADS : numBackgroundPersistThreads;
     Preconditions.checkArgument(this.numBackgroundPersistThreads >= 0, "Not support persistBackgroundCount < 0");
@@ -204,6 +208,12 @@ public class HadoopTuningConfig implements TuningConfig
   }
 
   @JsonProperty
+  public boolean getUseMapAggregation()
+  {
+    return useMapAggregation;
+  }
+
+  @JsonProperty
   public Boolean getBuildV9Directly() {
     return buildV9Directly;
   }
@@ -230,6 +240,7 @@ public class HadoopTuningConfig implements TuningConfig
         jobProperties,
         combineText,
         useCombiner,
+        useMapAggregation,
         null,
         buildV9Directly,
         numBackgroundPersistThreads
@@ -252,6 +263,30 @@ public class HadoopTuningConfig implements TuningConfig
         jobProperties,
         combineText,
         useCombiner,
+        useMapAggregation,
+        null,
+        buildV9Directly,
+        numBackgroundPersistThreads
+    );
+  }
+
+  public HadoopTuningConfig withPartitionsSpec(PartitionsSpec partitionsSpec)
+  {
+    return new HadoopTuningConfig(
+        workingPath,
+        version,
+        partitionsSpec,
+        shardSpecs,
+        indexSpec,
+        rowFlushBoundary,
+        leaveIntermediate,
+        cleanupOnFailure,
+        overwriteFiles,
+        ignoreInvalidRows,
+        jobProperties,
+        combineText,
+        useCombiner,
+        useMapAggregation,
         null,
         buildV9Directly,
         numBackgroundPersistThreads
@@ -274,6 +309,7 @@ public class HadoopTuningConfig implements TuningConfig
         jobProperties,
         combineText,
         useCombiner,
+        useMapAggregation,
         null,
         buildV9Directly,
         numBackgroundPersistThreads

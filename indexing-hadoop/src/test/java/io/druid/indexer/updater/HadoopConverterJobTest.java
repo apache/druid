@@ -187,23 +187,8 @@ public class HadoopConverterJobTest
                 metadataStorageUpdaterJobSpec,
                 tmpSegmentDir.getAbsolutePath()
             ),
-            new HadoopTuningConfig(
-                scratchFileDir.getAbsolutePath(),
-                null,
-                null,
-                null,
-                null,
-                null,
-                false,
-                false,
-                false,
-                false,
-                null,
-                false,
-                false,
-                null,
-                null,
-                null
+            HadoopTuningConfig.makeDefaultTuningConfig().withWorkingPath(
+                scratchFileDir.getAbsolutePath()
             )
         )
     );

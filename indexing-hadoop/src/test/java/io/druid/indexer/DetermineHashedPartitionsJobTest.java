@@ -146,24 +146,9 @@ public class DetermineHashedPartitionsJobTest
                 "static"
             ), null, tmpDir.getAbsolutePath()
         ),
-        new HadoopTuningConfig(
-            tmpDir.getAbsolutePath(),
-            null,
-            new HashedPartitionsSpec(targetPartitionSize, null, true, null, null),
-            null,
-            null,
-            null,
-            false,
-            false,
-            false,
-            false,
-            null,
-            false,
-            false,
-            null,
-            null,
-            null
-        )
+        HadoopTuningConfig.makeDefaultTuningConfig()
+                          .withWorkingPath(tmpDir.getCanonicalPath())
+                          .withPartitionsSpec(new HashedPartitionsSpec(targetPartitionSize, null, true, null, null))
     );
     this.indexerConfig = new HadoopDruidIndexerConfig(ingestionSpec);
   }

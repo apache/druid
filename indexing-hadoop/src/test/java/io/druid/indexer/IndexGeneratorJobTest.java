@@ -89,7 +89,7 @@ public class IndexGeneratorJobTest
 
   @Parameterized.Parameters(name = "useCombiner={0}, partitionType={1}, interval={2}, shardInfoForEachSegment={3}, " +
                                    "data={4}, inputFormatName={5}, inputRowParser={6}, maxRowsInMemory={7}, " +
-                                   "aggs={8}, datasourceName={9}, buildV9Directly={10}")
+                                   "aggs={8}, datasourceName={9}, buildV9Directly={10}, mapAggregation={11}")
   public static Collection<Object[]> constructFeed()
   {
     final List<Object[]> baseConstructors = Arrays.asList(
@@ -356,19 +356,24 @@ public class IndexGeneratorJobTest
     );
 
     // Run each baseConstructor with/without buildV9Directly.
-    final List<Object[]> constructors = Lists.newArrayList();
-    for (Object[] baseConstructor : baseConstructors) {
-      final Object[] c1 = new Object[baseConstructor.length + 1];
-      final Object[] c2 = new Object[baseConstructor.length + 1];
-      System.arraycopy(baseConstructor, 0, c1, 0, baseConstructor.length);
-      System.arraycopy(baseConstructor, 0, c2, 0, baseConstructor.length);
-      c1[c1.length - 1] = true;
-      c2[c2.length - 1] = false;
-      constructors.add(c1);
-      constructors.add(c2);
-    }
+    List<Object[]> constructors = cartesian(baseConstructors, new Object[]{false, true});
+
+    // Run each baseConstructor with/without map aggregation.
+    constructors = cartesian(constructors, new Object[]{false, true});
 
     return constructors;
+  }
+
+  private static List<Object[]> cartesian(List<Object[]> baseObjects, Object[] appending) {
+    List<Object[]> result = Lists.newArrayList();
+    for (Object appender : appending) {
+      for (Object[] baseObject : baseObjects) {
+        Object[] appended = Arrays.copyOf(baseObject, baseObject.length + 1);
+        appended[baseObject.length] = appender;
+        result.add(appended);
+      }
+    }
+    return result;
   }
 
   @Rule
@@ -385,6 +390,7 @@ public class IndexGeneratorJobTest
   private final AggregatorFactory[] aggs;
   private final String datasourceName;
   private final boolean buildV9Directly;
+  private final boolean useMapAggregation;
 
   private ObjectMapper mapper;
   private HadoopDruidIndexerConfig config;
@@ -402,7 +408,8 @@ public class IndexGeneratorJobTest
       Integer maxRowsInMemory,
       AggregatorFactory[] aggs,
       String datasourceName,
-      boolean buildV9Directly
+      boolean buildV9Directly,
+      boolean useMapAggregation
       ) throws IOException
   {
     this.useCombiner = useCombiner;
@@ -416,6 +423,7 @@ public class IndexGeneratorJobTest
     this.aggs = aggs;
     this.datasourceName = datasourceName;
     this.buildV9Directly = buildV9Directly;
+    this.useMapAggregation = useMapAggregation;
   }
 
   private void writeDataToLocalSequenceFile(File outputFile, List<String> data) throws IOException
@@ -501,6 +509,7 @@ public class IndexGeneratorJobTest
                 ImmutableMap.of(JobContext.NUM_REDUCES, "0"), //verifies that set num reducers is ignored
                 false,
                 useCombiner,
+                useMapAggregation,
                 null,
                 buildV9Directly,
                 null

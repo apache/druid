@@ -164,7 +164,11 @@ public class IndexGeneratorJob implements Jobby
       JobHelper.injectSystemProperties(job);
       config.addJobProperties(job);
 
-      job.setMapperClass(IndexGeneratorMapper.class);
+      if (config.getSchema().getTuningConfig().getUseMapAggregation()) {
+        job.setMapperClass(IndexGeneratorAggregatingMapper.class);
+      } else {
+        job.setMapperClass(IndexGeneratorMapper.class);
+      }
       job.setMapOutputValueClass(BytesWritable.class);
 
       SortableBytes.useSortableBytesAsMapOutputKey(job);
@@ -261,10 +265,10 @@ public class IndexGeneratorJob implements Jobby
 
   public static class IndexGeneratorMapper extends HadoopDruidIndexerMapper<BytesWritable, BytesWritable>
   {
-    private static final HashFunction hashFunction = Hashing.murmur3_128();
+    protected static final HashFunction hashFunction = Hashing.murmur3_128();
 
-    private AggregatorFactory[] aggregators;
-    private AggregatorFactory[] combiningAggs;
+    protected AggregatorFactory[] aggregators;
+    protected AggregatorFactory[] combiningAggs;
 
     @Override
     protected void setup(Context context)
@@ -285,6 +289,12 @@ public class IndexGeneratorJob implements Jobby
         Context context
     ) throws IOException, InterruptedException
     {
+      writeRow(inputRow, true, context);
+    }
+
+    protected void writeRow(InputRow inputRow, boolean truncateTime, Context context)
+        throws IOException, InterruptedException
+    {
       // Group by bucket, sort by timestamp
       final Optional<Bucket> bucket = getConfig().getBucket(inputRow);
 
@@ -292,11 +302,14 @@ public class IndexGeneratorJob implements Jobby
         throw new ISE("WTF?! No bucket found for row: %s", inputRow);
       }
 
-      final long truncatedTimestamp = granularitySpec.getQueryGranularity().truncate(inputRow.getTimestampFromEpoch());
+      long timestampFromEpoch = inputRow.getTimestampFromEpoch();
+      if (truncateTime) {
+        timestampFromEpoch = granularitySpec.getQueryGranularity().truncate(timestampFromEpoch);
+      }
       final byte[] hashedDimensions = hashFunction.hashBytes(
           HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsBytes(
               Rows.toGroupKey(
-                  truncatedTimestamp,
+                  timestampFromEpoch,
                   inputRow
               )
           )
@@ -315,7 +328,7 @@ public class IndexGeneratorJob implements Jobby
               bucket.get().toGroupKey(),
               // sort rows by truncated timestamp and hashed dimensions to help reduce spilling on the reducer side
               ByteBuffer.allocate(Longs.BYTES + hashedDimensions.length)
-                        .putLong(truncatedTimestamp)
+                        .putLong(timestampFromEpoch)
                         .put(hashedDimensions)
                         .array()
           ).toBytesWritable(),
@@ -791,33 +804,28 @@ public class IndexGeneratorJob implements Jobby
     }
   }
 
-  public static class CombiningIndexGeneratorMapper extends HadoopDruidIndexerMapper<BytesWritable, BytesWritable>
+  public static class IndexGeneratorAggregatingMapper extends IndexGeneratorMapper
   {
-    private static final HashFunction hashFunction = Hashing.murmur3_128();
+    private static final int MIN_CHECK_INTERVAL = 1024;
 
-    private AggregatorFactory[] aggregators;
-    private AggregatorFactory[] combiningAggs;
-
-    private Map<Long, IncrementalIndex> combiners = Maps.newHashMap();
+    private final Map<Long, IncrementalIndex> combiners = Maps.newHashMap();
 
     private int counter;
-    private int checkInterval = 20000;
-    private int maxRowsInMemory = 500000;
+    private int checkInterval;
+    private int maxRowsInMemory;
 
     @Override
     protected void setup(Context context) throws IOException, InterruptedException
     {
       super.setup(context);
-      aggregators = config.getSchema().getDataSchema().getAggregators();
-      combiningAggs = new AggregatorFactory[aggregators.length];
-      for (int i = 0; i < aggregators.length; ++i) {
-        combiningAggs[i] = aggregators[i].getCombiningFactory();
-      }
+      maxRowsInMemory = config.getSchema().getTuningConfig().getRowFlushBoundary();
+      checkInterval = Math.max(maxRowsInMemory >> 3, MIN_CHECK_INTERVAL);
     }
 
     @Override
     protected void cleanup(Context context) throws IOException, InterruptedException
     {
+      super.cleanup(context);
       for (IncrementalIndex index : combiners.values()) {
         flush(context, index);
       }
@@ -862,44 +870,6 @@ public class IndexGeneratorJob implements Jobby
       }
     }
 
-    private void flush(Context context, IncrementalIndex index) throws IOException, InterruptedException
-    {
-      for (Object row : index) {
-
-        InputRow inputRow = (InputRow) row;
-        // Group by bucket, sort by timestamp
-        final Optional<Bucket> bucket = getConfig().getBucket(inputRow);
-
-        if (!bucket.isPresent()) {
-          throw new ISE("WTF?! No bucket found for row: %s", inputRow);
-        }
-
-        final byte[] hashedDimensions = hashFunction.hashBytes(
-            HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsBytes(
-                Rows.toGroupKey(
-                    inputRow.getTimestampFromEpoch(),
-                    inputRow
-                )
-            )
-        ).asBytes();
-
-        byte[] serializedInputRow = InputRowSerde.toBytes(inputRow, combiningAggs);
-
-        context.write(
-            new SortableBytes(
-                bucket.get().toGroupKey(),
-                // sort rows by truncated timestamp and hashed dimensions to help reduce spilling on the reducer side
-                ByteBuffer.allocate(Longs.BYTES + hashedDimensions.length)
-                          .putLong(inputRow.getTimestampFromEpoch())
-                          .put(hashedDimensions)
-                          .array()
-            ).toBytesWritable(),
-            new BytesWritable(serializedInputRow)
-        );
-      }
-      index.close();
-    }
-
     private int totalRowsInMemory()
     {
       int rows = 0;
@@ -907,6 +877,14 @@ public class IndexGeneratorJob implements Jobby
         rows += index.size();
       }
       return rows;
+    }
+
+    private void flush(Context context, IncrementalIndex index) throws IOException, InterruptedException
+    {
+      for (Object row : index) {
+        writeRow((InputRow) row, false, context);
+      }
+      index.close();
     }
   }
 }

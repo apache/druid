@@ -53,6 +53,7 @@ public class HadoopTuningConfigTest
         null,
         true,
         true,
+        true,
         null,
         null,
         null
@@ -73,6 +74,7 @@ public class HadoopTuningConfigTest
     Assert.assertEquals(ImmutableMap.<String, String>of(), actual.getJobProperties());
     Assert.assertEquals(true, actual.isCombineText());
     Assert.assertEquals(true, actual.getUseCombiner());
+    Assert.assertEquals(true, actual.getUseMapAggregation());
     Assert.assertEquals(0, actual.getNumBackgroundPersistThreads());
 
   }
