@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.query.extraction;
+package io.druid.query.lookup;
 
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -26,6 +26,8 @@ import com.google.common.base.Function;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.metamx.common.StringUtils;
+import io.druid.query.extraction.ExtractionCacheHelper;
+import io.druid.query.extraction.FunctionalExtraction;
 
 import javax.annotation.Nullable;
 import java.io.ByteArrayOutputStream;

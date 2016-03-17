@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.query.extraction.extraction;
+package io.druid.query.lookup;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
@@ -30,7 +30,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.metamx.common.IAE;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.query.extraction.LookupExtractionFn;
+import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.extraction.MapLookupExtractor;
 import org.junit.Assert;
 import org.junit.Test;
