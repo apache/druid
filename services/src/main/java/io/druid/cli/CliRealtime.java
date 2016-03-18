@@ -19,12 +19,14 @@
 
 package io.druid.cli;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
 import com.metamx.common.logger.Logger;
 import io.airlift.airline.Command;
+import io.druid.guice.PropertiesModule;
 import io.druid.guice.RealtimeModule;
 import io.druid.query.lookup.LookupModule;
 import io.druid.server.initialization.jetty.ChatHandlerServerModule;
@@ -63,5 +65,11 @@ public class CliRealtime extends ServerRunnable
         new ChatHandlerServerModule(),
         new LookupModule()
     );
+  }
+
+  @Override
+  protected Optional<PropertiesModule> getPropertiesModules()
+  {
+    return Optional.of(new PropertiesModule("realtime/runtime.properties"));
   }
 }

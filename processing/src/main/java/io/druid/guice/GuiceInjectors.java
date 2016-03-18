@@ -27,7 +27,6 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import io.druid.jackson.JacksonModule;
 
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 
@@ -35,12 +34,12 @@ import java.util.List;
  */
 public class GuiceInjectors
 {
-  public static Collection<Module> makeDefaultStartupModules()
+  public static Collection<Module> makeDefaultStartupModules(String... propertiesLocations)
   {
     return ImmutableList.<Module>of(
         new DruidGuiceExtensions(),
         new JacksonModule(),
-        new PropertiesModule(Arrays.asList("common.runtime.properties", "runtime.properties")),
+        new PropertiesModule(propertiesLocations),
         new ConfigModule(),
         new Module()
         {
@@ -54,9 +53,9 @@ public class GuiceInjectors
     );
   }
 
-  public static Injector makeStartupInjector()
+  public static Injector makeStartupInjector(String... propertiesLocations)
   {
-    return Guice.createInjector(makeDefaultStartupModules());
+    return Guice.createInjector(makeDefaultStartupModules(propertiesLocations));
   }
 
   public static Injector makeStartupInjectorWithModules(Iterable<? extends Module> modules)

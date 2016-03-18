@@ -19,6 +19,7 @@
 
 package io.druid.cli;
 
+import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
@@ -26,6 +27,7 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
+import io.druid.guice.PropertiesModule;
 import io.druid.initialization.Initialization;
 import io.druid.initialization.LogLevelAdjuster;
 import io.druid.server.log.StartupLoggingConfig;
@@ -54,11 +56,15 @@ public abstract class GuiceRunnable implements Runnable
 
   protected abstract List<? extends Module> getModules();
 
+  protected Optional<PropertiesModule> getPropertiesModules() {
+    return Optional.absent();
+  }
+
   public Injector makeInjector()
   {
     try {
       return Initialization.makeInjectorWithModules(
-          baseInjector, getModules()
+          baseInjector, getPropertiesModules(), getModules()
       );
     }
     catch (Exception e) {

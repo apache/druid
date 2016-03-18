@@ -20,6 +20,7 @@
 package io.druid.initialization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -46,6 +47,7 @@ import io.druid.guice.LifecycleModule;
 import io.druid.guice.LocalDataStorageDruidModule;
 import io.druid.guice.MetadataConfigModule;
 import io.druid.guice.ParsersModule;
+import io.druid.guice.PropertiesModule;
 import io.druid.guice.QueryRunnerFactoryModule;
 import io.druid.guice.QueryableModule;
 import io.druid.guice.ServerModule;
@@ -277,6 +279,15 @@ public class Initialization
 
   public static Injector makeInjectorWithModules(final Injector baseInjector, Iterable<? extends Module> modules)
   {
+    return makeInjectorWithModules(baseInjector, Optional.<PropertiesModule>absent(), modules);
+  }
+
+  public static Injector makeInjectorWithModules(
+      final Injector baseInjector,
+      Optional<PropertiesModule> propertiesModule,
+      Iterable<? extends Module> modules
+  )
+  {
     final ModuleList defaultModules = new ModuleList(baseInjector);
     defaultModules.addModules(
         new Log4jShutterDownerModule(),
@@ -308,6 +319,9 @@ public class Initialization
     );
 
     ModuleList actualModules = new ModuleList(baseInjector);
+    if (propertiesModule.isPresent()) {
+      actualModules.addModule(propertiesModule.get());
+    }
     actualModules.addModule(DruidSecondaryModule.class);
     for (Object module : modules) {
       actualModules.addModule(module);

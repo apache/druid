@@ -19,6 +19,7 @@
 
 package io.druid.cli;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Module;
@@ -39,6 +40,7 @@ import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
+import io.druid.guice.PropertiesModule;
 import io.druid.query.MapQueryToolChestWarehouse;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChestWarehouse;
@@ -54,6 +56,7 @@ import io.druid.server.metrics.MetricsModule;
 import io.druid.server.router.TieredBrokerConfig;
 import org.eclipse.jetty.server.Server;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -116,5 +119,11 @@ public class CliBroker extends ServerRunnable
         },
         new LookupModule()
     );
+  }
+
+  @Override
+  protected Optional<PropertiesModule> getPropertiesModules()
+  {
+    return Optional.of(new PropertiesModule("broker/runtime.properties"));
   }
 }
