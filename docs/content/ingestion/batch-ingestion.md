@@ -82,6 +82,8 @@ instance of a Druid [overlord](../design/indexing-service.html). A sample task i
 |hadoopDependencyCoordinates|A JSON array of Hadoop dependency coordinates that Druid will use, this property will override the default Hadoop coordinates. Once specified, Druid will look for those Hadoop dependencies from the location specified by `druid.extensions.hadoopDependenciesDir`|no|
 |classpathPrefix|Classpath that will be pre-appended for the peon process.|no|
 
+also note that, druid automatically computes the classpath for hadoop job containers that run in hadoop cluster. But, in case of conflicts between hadoop and druid's dependencies, you can manually specify the classpath by setting `druid.extensions.hadoopContainerDruidClasspath` property. See the extensions config in [base druid configuration](../configuration/index.html).
+
 ### DataSchema
 
 This field is required. See [Ingestion](../ingestion/index.html).
