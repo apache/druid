@@ -19,14 +19,22 @@
 
 package io.druid.query.lookup;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Supplier;
+import io.druid.query.extraction.MapLookupExtractorFactory;
+
+import javax.annotation.Nullable;
 
 /**
  * Users of Lookup Extraction need to implement a {@link LookupExtractorFactory} supplier of type {@link LookupExtractor}.
  * Such factory will manage the state and life cycle of an given lookup.
+ * If a LookupExtractorFactory wishes to support idempotent updates, it needs to implement the  `replaces` method
  */
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "map", value = MapLookupExtractorFactory.class)
+})
 public interface LookupExtractorFactory extends Supplier<LookupExtractor>
 {
   /**
@@ -47,4 +55,12 @@ public interface LookupExtractorFactory extends Supplier<LookupExtractor>
    * @return true if successfully closed the {@link LookupExtractor}
    */
   public boolean close();
+
+  /**
+   * Determine if this LookupExtractorFactory should replace some other LookupExtractorFactory.
+   * This is used to implement no-down-time
+   * @param other Some other LookupExtractorFactory which might need replaced
+   * @return `true` if the other should be replaced by this one. `false` if this one should not replace the other factory
+   */
+  boolean replaces(@Nullable LookupExtractorFactory other);
 }

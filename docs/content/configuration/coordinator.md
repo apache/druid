@@ -102,3 +102,16 @@ To view last <n> entries of the audit history of coordinator dynamic config issu
 ```
 http://<COORDINATOR_IP>:<PORT>/druid/coordinator/v1/config/history?count=<n>
 ```
+
+
+# Lookups Dynamic Config (EXPERIMENTAL)
+These configuration options control the behavior of the Lookup dynamic configuration described in the [lookups page](../querying/lookups.html)
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.manager.lookups.hostDeleteTimeout`|How long to wait for a `DELETE` request to a particular node before considering the `DELETE` a failure|PT1s|
+|`druid.manager.lookups.hostUpdateTimeout`|How long to wait for a `POST` request to a particular node before considering the `POST` a failure|PT10s|
+|`druid.manager.lookups.deleteAllTimeout`|How long to wait for all `DELETE` requests to finish before considering the delete attempt a failure|PT10s|
+|`druid.manager.lookups.updateAllTimeout`|How long to wait for all `POST` requests to finish before considering the attempt a failure|PT60s|
+|`druid.manager.lookups.threadPoolSize`|How many nodes can be managed concurrently (concurrent POST and DELETE requests). Requests this limit will wait in a queue until a slot becomes available.|10|
+|`druid.manager.lookups.period`|How many milliseconds between checks for configuration changes|30_000|

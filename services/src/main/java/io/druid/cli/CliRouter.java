@@ -67,7 +67,7 @@ public class CliRouter extends ServerRunnable
   @Override
   protected List<? extends Module> getModules()
   {
-    return ImmutableList.<Module>of(
+    return ImmutableList.of(
         new JettyHttpClientModule("druid.router.http", Router.class),
         new Module()
         {
