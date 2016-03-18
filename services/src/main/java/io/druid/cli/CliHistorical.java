@@ -64,7 +64,7 @@ public class CliHistorical extends ServerRunnable
   @Override
   protected List<? extends Module> getModules()
   {
-    return ImmutableList.<Module>of(
+    return ImmutableList.of(
         new Module()
         {
           @Override

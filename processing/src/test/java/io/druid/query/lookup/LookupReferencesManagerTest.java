@@ -35,6 +35,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 
 public class LookupReferencesManagerTest
@@ -183,6 +184,77 @@ public class LookupReferencesManagerTest
   }
 
   @Test
+  public void testUpdateIfNewOnlyIfIsNew()
+  {
+    final String lookupName = "some lookup";
+    LookupExtractorFactory oldFactory = EasyMock.createStrictMock(LookupExtractorFactory.class);
+    LookupExtractorFactory newFactory = EasyMock.createStrictMock(LookupExtractorFactory.class);
+
+    EasyMock.expect(oldFactory.replaces(EasyMock.<LookupExtractorFactory>isNull())).andReturn(true).once();
+    EasyMock.expect(oldFactory.start()).andReturn(true).once();
+    EasyMock.expect(oldFactory.replaces(EasyMock.eq(oldFactory))).andReturn(false).once();
+    // Add new
+
+    EasyMock.expect(newFactory.replaces(EasyMock.eq(oldFactory))).andReturn(true).once();
+    EasyMock.expect(newFactory.start()).andReturn(true).once();
+    EasyMock.expect(oldFactory.close()).andReturn(true).once();
+    EasyMock.expect(newFactory.close()).andReturn(true).once();
+
+    EasyMock.replay(oldFactory, newFactory);
+
+    Assert.assertTrue(lookupReferencesManager.updateIfNew(lookupName, oldFactory));
+    Assert.assertFalse(lookupReferencesManager.updateIfNew(lookupName, oldFactory));
+    Assert.assertTrue(lookupReferencesManager.updateIfNew(lookupName, newFactory));
+
+    // Remove now or else EasyMock gets confused on lazy lookup manager stop handling
+    lookupReferencesManager.remove(lookupName);
+
+    EasyMock.verify(oldFactory, newFactory);
+  }
+
+  @Test(expected = ISE.class)
+  public void testUpdateIfNewExceptional()
+  {
+    final String lookupName = "some lookup";
+    LookupExtractorFactory newFactory = EasyMock.createStrictMock(LookupExtractorFactory.class);
+    EasyMock.expect(newFactory.replaces(EasyMock.<LookupExtractorFactory>isNull())).andReturn(true).once();
+    EasyMock.expect(newFactory.start()).andReturn(false).once();
+    EasyMock.replay(newFactory);
+    try {
+      lookupReferencesManager.updateIfNew(lookupName, newFactory);
+    }
+    finally {
+      EasyMock.verify(newFactory);
+    }
+  }
+
+  @Test
+  public void testUpdateIfNewSuppressOldCloseProblem()
+  {
+    final String lookupName = "some lookup";
+    LookupExtractorFactory oldFactory = EasyMock.createStrictMock(LookupExtractorFactory.class);
+    LookupExtractorFactory newFactory = EasyMock.createStrictMock(LookupExtractorFactory.class);
+
+    EasyMock.expect(oldFactory.replaces(EasyMock.<LookupExtractorFactory>isNull())).andReturn(true).once();
+    EasyMock.expect(oldFactory.start()).andReturn(true).once();
+    // Add new
+    EasyMock.expect(newFactory.replaces(EasyMock.eq(oldFactory))).andReturn(true).once();
+    EasyMock.expect(newFactory.start()).andReturn(true).once();
+    EasyMock.expect(oldFactory.close()).andReturn(false).once();
+    EasyMock.expect(newFactory.close()).andReturn(true).once();
+
+    EasyMock.replay(oldFactory, newFactory);
+
+    lookupReferencesManager.updateIfNew(lookupName, oldFactory);
+    lookupReferencesManager.updateIfNew(lookupName, newFactory);
+
+    // Remove now or else EasyMock gets confused on lazy lookup manager stop handling
+    lookupReferencesManager.remove(lookupName);
+
+    EasyMock.verify(oldFactory, newFactory);
+  }
+
+  @Test
   public void testBootstrapFromFile() throws IOException
   {
     LookupExtractorFactory lookupExtractorFactory = new LookupExtractorFactoryMock("data");
@@ -221,6 +293,12 @@ public class LookupReferencesManagerTest
     public boolean close()
     {
       return true;
+    }
+
+    @Override
+    public boolean replaces(@Nullable LookupExtractorFactory other)
+    {
+      return false;
     }
 
     @Override
