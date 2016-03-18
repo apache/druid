@@ -30,6 +30,7 @@ import io.druid.client.InventoryView;
 import io.druid.client.ServerView;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.RealtimeModule;
+import io.druid.query.lookup.LookupModule;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.server.coordination.DataSegmentAnnouncer;
 import io.druid.server.initialization.jetty.ChatHandlerServerModule;
@@ -58,7 +59,7 @@ public class CliRealtimeExample extends ServerRunnable
   @Override
   protected List<? extends Module> getModules()
   {
-    return ImmutableList.<Module>of(
+    return ImmutableList.of(
         new RealtimeModule(),
         new Module()
         {
@@ -74,7 +75,8 @@ public class CliRealtimeExample extends ServerRunnable
             binder.bind(ServerView.class).to(NoopServerView.class).in(LazySingleton.class);
           }
         },
-        new ChatHandlerServerModule()
+        new ChatHandlerServerModule(),
+        new LookupModule()
     );
   }
 
