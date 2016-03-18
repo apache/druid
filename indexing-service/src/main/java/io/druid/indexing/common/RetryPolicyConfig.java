@@ -27,13 +27,13 @@ import org.joda.time.Period;
 public class RetryPolicyConfig
 {
   @JsonProperty
-  private Period minWait = new Period("PT1M");
+  private Period minWait = new Period("PT5S");
 
   @JsonProperty
-  private Period maxWait = new Period("PT10M");
+  private Period maxWait = new Period("PT1M");
 
   @JsonProperty
-  private long maxRetryCount = 10;
+  private long maxRetryCount = 60;
 
   public Period getMinWait()
   {
