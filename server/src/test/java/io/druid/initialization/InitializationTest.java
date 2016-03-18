@@ -387,6 +387,46 @@ public class InitializationTest
     Assert.assertArrayEquals(expectedFileList, actualFileList);
   }
 
+  @Test
+  public void testGetURLsForClasspath() throws Exception
+  {
+    File tmpDir1 = temporaryFolder.newFolder();
+    File tmpDir2 = temporaryFolder.newFolder();
+    File tmpDir3 = temporaryFolder.newFolder();
+
+    File tmpDir1a = new File(tmpDir1, "a.jar");
+    tmpDir1a.createNewFile();
+    File tmpDir1b = new File(tmpDir1, "b.jar");
+    tmpDir1b.createNewFile();
+    new File(tmpDir1, "note1.txt").createNewFile();
+
+    File tmpDir2c = new File(tmpDir2, "c.jar");
+    tmpDir2c.createNewFile();
+    File tmpDir2d = new File(tmpDir2, "d.jar");
+    tmpDir2d.createNewFile();
+    File tmpDir2e = new File(tmpDir2, "e.JAR");
+    tmpDir2e.createNewFile();
+    new File(tmpDir2, "note2.txt").createNewFile();
+
+    String cp = tmpDir1.getAbsolutePath() + File.separator + "*"
+                + File.pathSeparator
+                + tmpDir3.getAbsolutePath()
+                + File.pathSeparator
+                + tmpDir2.getAbsolutePath() + File.separator + "*";
+
+    List<URL> expected = ImmutableList.<URL>builder()
+                                      .add(tmpDir1a.toURI().toURL())
+                                      .add(tmpDir1b.toURI().toURL())
+                                      .add(tmpDir3.toURI().toURL())
+                                      .add(tmpDir2c.toURI().toURL())
+                                      .add(tmpDir2d.toURI().toURL())
+                                      .add(tmpDir2e.toURI().toURL())
+                                      .build();
+
+
+    Assert.assertEquals(expected, Initialization.getURLsForClasspath(cp));
+  }
+
   public static class TestDruidModule implements DruidModule
   {
     @Override
