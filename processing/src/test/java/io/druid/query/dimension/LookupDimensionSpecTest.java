@@ -36,6 +36,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
@@ -60,6 +61,12 @@ public class LookupDimensionSpecTest
 
       @Override
       public boolean close()
+      {
+        return true;
+      }
+
+      @Override
+      public boolean replaces(@Nullable LookupExtractorFactory other)
       {
         return true;
       }

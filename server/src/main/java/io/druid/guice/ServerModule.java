@@ -42,10 +42,12 @@ import java.util.List;
  */
 public class ServerModule implements DruidModule
 {
+  public static final String ZK_PATHS_PROPERTY_BASE = "druid.zk.paths";
+
   @Override
   public void configure(Binder binder)
   {
-    JsonConfigProvider.bind(binder, "druid.zk.paths", ZkPathsConfig.class);
+    JsonConfigProvider.bind(binder, ZK_PATHS_PROPERTY_BASE, ZkPathsConfig.class);
     JsonConfigProvider.bind(binder, "druid", DruidNode.class, Self.class);
   }
 

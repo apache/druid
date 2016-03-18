@@ -121,12 +121,17 @@ public class LookupReferencesManager
       if (!lookupExtractorFactory.start()) {
         throw new ISE("start method returned false for lookup [%s]", lookupName);
       }
-
-      boolean isAdded = (null == lookupMap.putIfAbsent(lookupName, lookupExtractorFactory));
-      if (isAdded && lookupSnapshotTaker != null) {
-        lookupSnapshotTaker.takeSnapshot(getAllAsList());
+      final boolean noPrior = null == lookupMap.putIfAbsent(lookupName, lookupExtractorFactory);
+      if (noPrior) {
+        if(lookupSnapshotTaker != null) {
+          lookupSnapshotTaker.takeSnapshot(getAllAsList());
+        }
+      } else {
+        if (!lookupExtractorFactory.close()) {
+          throw new ISE("Error closing [%s] on race condition", lookupName);
+        }
       }
-      return isAdded;
+      return noPrior;
     }
   }
 
@@ -163,6 +168,38 @@ public class LookupReferencesManager
         );
       }
     }
+  }
+
+  /**
+   * Add or update a lookup factory
+   *
+   * @param lookupName             The name of the lookup
+   * @param lookupExtractorFactory The factory of the lookup
+   *
+   * @return True if the lookup was updated, false otherwise
+   *
+   * @throws IllegalStateException if start of the factory fails
+   */
+  public boolean updateIfNew(String lookupName, final LookupExtractorFactory lookupExtractorFactory)
+  {
+    final boolean update;
+    synchronized (lock) {
+      assertStarted();
+      final LookupExtractorFactory prior = lookupMap.get(lookupName);
+      update = lookupExtractorFactory.replaces(prior);
+      if (update) {
+        if (!lookupExtractorFactory.start()) {
+          throw new ISE("Could not start [%s]", lookupName);
+        }
+        lookupMap.put(lookupName, lookupExtractorFactory);
+        if (prior != null) {
+          if (!prior.close()) {
+            LOGGER.error("Error closing [%s]:[%s]", lookupName, lookupExtractorFactory);
+          }
+        }
+      }
+    }
+    return update;
   }
 
   /**

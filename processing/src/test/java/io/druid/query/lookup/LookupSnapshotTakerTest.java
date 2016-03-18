@@ -33,6 +33,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collections;
@@ -132,6 +133,12 @@ public class LookupSnapshotTakerTest
     public boolean close()
     {
       return true;
+    }
+
+    @Override
+    public boolean replaces(@Nullable LookupExtractorFactory other)
+    {
+      return false;
     }
 
     @Override
