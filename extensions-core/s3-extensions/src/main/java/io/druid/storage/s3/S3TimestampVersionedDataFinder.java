@@ -26,8 +26,8 @@ import io.druid.data.SearchableVersionedDataFinder;
 import org.jets3t.service.impl.rest.httpclient.RestS3Service;
 import org.jets3t.service.model.S3Object;
 
+import javax.annotation.Nullable;
 import java.net.URI;
-import java.nio.file.Paths;
 import java.util.concurrent.Callable;
 import java.util.regex.Pattern;
 
@@ -48,13 +48,14 @@ public class S3TimestampVersionedDataFinder extends S3DataSegmentPuller implemen
    * delimited paths. If the uri path ends with '/', the path is assumed to be the parent.
    *
    * @param uri     The URI of interest whose "parent" will be searched as a key prefix for the latest version
-   * @param pattern The pattern matcher to determine if a *key* is of interest. This will match against the entire key,
-   *                not just the equivalent "filename" like some other implementations. A null value matches everything
+   * @param pattern The pattern matcher to determine if a *key* is of interest. This will match against the portion of the key that is beyond the URI path,
+   *                not just the equivalent "filename" like some other implementations. A null value matches everything.
+   *                If there is a "/" delimiter between the uri path and the file match, it is ignore. Patterns should **not** account for a leading "/" unless there's a double "/" for some reason
    *
    * @return A URI to the most recently modified object which matched the pattern.
    */
   @Override
-  public URI getLatestVersion(final URI uri, final Pattern pattern)
+  public URI getLatestVersion(final URI uri, final @Nullable Pattern pattern)
   {
     try {
       return RetryUtils.retry(
@@ -66,19 +67,13 @@ public class S3TimestampVersionedDataFinder extends S3DataSegmentPuller implemen
               final S3Coords coords = new S3Coords(checkURI(uri));
               long mostRecent = Long.MIN_VALUE;
               URI latest = null;
-              String parentPath = coords.path.endsWith("/")
-                                  ? coords.path
-                                  : Paths.get(coords.path).getParent().toString();
-              if (!parentPath.endsWith("/")) {
-                parentPath = parentPath + "/";
-              }
-              S3Object[] objects = s3Client.listObjects(coords.bucket, parentPath, "/");
+              S3Object[] objects = s3Client.listObjects(coords.bucket, coords.path, "/");
               if (objects == null) {
                 return null;
               }
               for (S3Object storageObject : objects) {
                 storageObject.closeDataInputStream();
-                String keyString = storageObject.getKey().substring(parentPath.length());
+                String keyString = storageObject.getKey().substring(coords.path.length());
                 if (keyString.startsWith("/")) {
                   keyString = keyString.substring(1);
                 }

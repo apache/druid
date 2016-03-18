@@ -75,32 +75,46 @@ For additional lookups, please see our [extensions list](../development/extensio
 
 ## URI namespace update
 
-The remapping values for each namespaced lookup can be specified by json as per
+The remapping values for each namespaced lookup can be specified by a json object as per the following examples:
 
 ```json
 {
   "type":"uri",
   "namespace":"some_lookup",
-  "uri": "s3://bucket/some/key/prefix/",
+  "uri": "s3://bucket/some/key/prefix/renames-0003.gz",
   "namespaceParseSpec":{
     "format":"csv",
     "columns":["key","value"]
   },
   "pollPeriod":"PT5M",
-  "versionRegex": "renames-[0-9]*\\.gz"
 }
 ```
 
+```json
+{
+  "type":"uri",
+  "namespace":"some_lookup",
+  "uriPrefix": "s3://bucket/some/key/prefix/",
+  "fileRegex":"renames-[0-9]*\\.gz",
+  "namespaceParseSpec":{
+    "format":"csv",
+    "columns":["key","value"]
+  },
+  "pollPeriod":"PT5M",
+}
+```
 |Property|Description|Required|Default|
 |--------|-----------|--------|-------|
 |`namespace`|The namespace to define|Yes||
 |`pollPeriod`|Period between polling for updates|No|0 (only once)|
-|`versionRegex`|Regex to help find newer versions of the namespace data|Yes||
+|`uri`|URI for the file of interest|No|Use `uriPrefix`|
+|`uriPrefix`|A URI which specifies a directory (or other searchable resource) in which to search for files|No|Use `uri`|
+|`fileRegex`|Optional regex for matching the file name under `uriPrefix`. Only used if `uriPrefix` is used|No|`".*"`|
 |`namespaceParseSpec`|How to interpret the data at the URI|Yes||
 
-The `pollPeriod` value specifies the period in ISO 8601 format between checks for updates. If the source of the lookup is capable of providing a timestamp, the lookup will only be updated if it has changed since the prior tick of `pollPeriod`. A value of 0, an absent parameter, or `null` all mean populate once and do not attempt to update. Whenever an update occurs, the updating system will look for a file with the most recent timestamp and assume that one with the most recent data.
+One of either `uri` xor `uriPrefix` must be specified.
 
-The `versionRegex` value specifies a regex to use to determine if a filename in the parent path of the uri should be considered when trying to find the latest version. Omitting this setting or setting it equal to `null` will match to all files it can find (equivalent to using `".*"`). The search occurs in the most significant "directory" of the uri.
+The `pollPeriod` value specifies the period in ISO 8601 format between checks for updates. If the source of the lookup is capable of providing a timestamp, the lookup will only be updated if it has changed since the prior tick of `pollPeriod`. A value of 0, an absent parameter, or `null` all mean populate once and do not attempt to update. Whenever an update occurs, the updating system will look for a file with the most recent timestamp and assume that one with the most recent data.
 
 The `namespaceParseSpec` can be one of a number of values. Each of the examples below would rename foo to bar, baz to bat, and buck to truck. All parseSpec types assumes each input is delimited by a new line. See below for the types of parseSpec supported.
 

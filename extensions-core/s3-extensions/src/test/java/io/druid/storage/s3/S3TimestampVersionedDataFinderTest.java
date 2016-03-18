@@ -60,7 +60,7 @@ public class S3TimestampVersionedDataFinderTest
     EasyMock.replay(s3Client);
 
 
-    URI latest = finder.getLatestVersion(URI.create(String.format("s3://%s/%s", bucket, object0.getKey())), pattern);
+    URI latest = finder.getLatestVersion(URI.create(String.format("s3://%s/%s", bucket, keyPrefix)), pattern);
 
     EasyMock.verify(s3Client);
 
@@ -96,7 +96,7 @@ public class S3TimestampVersionedDataFinderTest
     EasyMock.replay(s3Client);
 
 
-    URI latest = finder.getLatestVersion(URI.create(String.format("s3://%s/%s", bucket, object0.getKey())), pattern);
+    URI latest = finder.getLatestVersion(URI.create(String.format("s3://%s/%s", bucket, keyPrefix)), pattern);
 
     EasyMock.verify(s3Client);
 
@@ -126,7 +126,7 @@ public class S3TimestampVersionedDataFinderTest
     EasyMock.replay(s3Client);
 
 
-    URI latest = finder.getLatestVersion(URI.create(String.format("s3://%s/%s", bucket, object0.getKey())), pattern);
+    URI latest = finder.getLatestVersion(URI.create(String.format("s3://%s/%s", bucket, keyPrefix)), pattern);
 
     EasyMock.verify(s3Client);
 
@@ -135,4 +135,34 @@ public class S3TimestampVersionedDataFinderTest
     Assert.assertEquals(expected, latest);
   }
 
+  @Test
+  public void testFindExact() throws S3ServiceException
+  {
+    String bucket = "bucket";
+    String keyPrefix = "prefix/dir/0";
+    RestS3Service s3Client = EasyMock.createStrictMock(RestS3Service.class);
+
+    S3Object object0 = new S3Object();
+
+    object0.setBucketName(bucket);
+    object0.setKey(keyPrefix + "/renames-0.gz");
+    object0.setLastModifiedDate(new Date(0));
+
+    EasyMock.expect(s3Client.listObjects(EasyMock.eq(bucket), EasyMock.anyString(), EasyMock.eq("/"))).andReturn(
+        new S3Object[]{object0}
+    ).once();
+    S3TimestampVersionedDataFinder finder = new S3TimestampVersionedDataFinder(s3Client);
+
+
+    EasyMock.replay(s3Client);
+
+
+    URI latest = finder.getLatestVersion(URI.create(String.format("s3://%s/%s", bucket, object0.getKey())), null);
+
+    EasyMock.verify(s3Client);
+
+    URI expected = URI.create(String.format("s3://%s/%s", bucket, object0.getKey()));
+
+    Assert.assertEquals(expected, latest);
+  }
 }

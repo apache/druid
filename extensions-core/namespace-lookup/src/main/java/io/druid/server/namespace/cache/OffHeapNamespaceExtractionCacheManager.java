@@ -119,6 +119,7 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
 
       final String priorCache = currentNamespaceCache.put(namespaceKey, swapCacheKey);
       if (priorCache != null) {
+        // TODO: resolve what happens here if query is actively going on
         mmapDB.delete(priorCache);
         dataSize.set(tmpFile.length());
         return true;
