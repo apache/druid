@@ -21,12 +21,13 @@ package io.druid.server.coordinator.helper;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.common.utils.JodaUtils;
 import io.druid.metadata.MetadataSegmentManager;
+import io.druid.server.coordinator.DruidCoordinatorConfig;
 import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import org.joda.time.Duration;
 import org.joda.time.Interval;
 
 import java.util.List;
@@ -47,21 +48,23 @@ public class DruidCoordinatorSegmentKiller implements DruidCoordinatorHelper
   private final MetadataSegmentManager segmentManager;
   private final IndexingServiceClient indexingServiceClient;
 
+  @Inject
   public DruidCoordinatorSegmentKiller(
       MetadataSegmentManager segmentManager,
       IndexingServiceClient indexingServiceClient,
-      Duration retainDuration,
-      Duration period,
-      int maxSegmentsToKill
+      DruidCoordinatorConfig config
   )
   {
-    this.period = period.getMillis();
-    Preconditions.checkArgument(this.period > 0, "coordinator kill period must be > 0");
+    this.period = config.getCoordinatorKillPeriod().getMillis();
+    Preconditions.checkArgument(
+        this.period > config.getCoordinatorIndexingPeriod().getMillis(),
+        "coordinator kill period must be greater than druid.coordinator.period.indexingPeriod"
+    );
 
-    this.retainDuration = retainDuration.getMillis();
+    this.retainDuration = config.getCoordinatorKillDurationToRetain().getMillis();
     Preconditions.checkArgument(this.retainDuration >= 0, "coordinator kill retainDuration must be >= 0");
 
-    this.maxSegmentsToKill = maxSegmentsToKill;
+    this.maxSegmentsToKill = config.getCoordinatorKillMaxSegments();
     Preconditions.checkArgument(this.maxSegmentsToKill > 0, "coordinator kill maxSegments must be > 0");
 
     log.info(

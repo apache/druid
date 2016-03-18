@@ -22,6 +22,7 @@ package io.druid.server.coordinator.helper;
 import com.google.common.collect.ImmutableList;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.metadata.MetadataSegmentManager;
+import io.druid.server.coordinator.TestDruidCoordinatorConfig;
 import org.easymock.EasyMock;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
@@ -100,9 +101,18 @@ public class DruidCoordinatorSegmentKillerTest
     DruidCoordinatorSegmentKiller coordinatorSegmentKiller = new DruidCoordinatorSegmentKiller(
         segmentManager,
         indexingServiceClient,
-        Duration.parse("PT86400S"),
-        Duration.parse("PT86400S"),
-        1000
+        new TestDruidCoordinatorConfig(
+            null,
+            null,
+            Duration.parse("PT76400S"),
+            new Duration(1),
+            Duration.parse("PT86400S"),
+            Duration.parse("PT86400S"),
+            1000,
+            null,
+            false,
+            false
+        )
     );
 
     Assert.assertEquals(

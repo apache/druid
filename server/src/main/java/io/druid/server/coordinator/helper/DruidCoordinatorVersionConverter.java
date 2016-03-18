@@ -19,8 +19,10 @@
 
 package io.druid.server.coordinator.helper;
 
+import com.google.inject.Inject;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.client.indexing.IndexingServiceClient;
+import io.druid.common.config.JacksonConfigManager;
 import io.druid.segment.IndexIO;
 import io.druid.server.coordinator.DatasourceWhitelist;
 import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
@@ -32,17 +34,17 @@ public class DruidCoordinatorVersionConverter implements DruidCoordinatorHelper
 {
   private static final EmittingLogger log = new EmittingLogger(DruidCoordinatorVersionConverter.class);
 
-
   private final IndexingServiceClient indexingServiceClient;
   private final AtomicReference<DatasourceWhitelist> whitelistRef;
 
+  @Inject
   public DruidCoordinatorVersionConverter(
       IndexingServiceClient indexingServiceClient,
-      AtomicReference<DatasourceWhitelist> whitelistRef
+      JacksonConfigManager configManager
   )
   {
     this.indexingServiceClient = indexingServiceClient;
-    this.whitelistRef = whitelistRef;
+    this.whitelistRef = configManager.watch(DatasourceWhitelist.CONFIG_KEY, DatasourceWhitelist.class);
   }
 
   @Override
