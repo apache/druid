@@ -22,10 +22,13 @@ package io.druid.server.coordinator;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.indexing.IndexingServiceClient;
+import io.druid.common.config.JacksonConfigManager;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
+import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -446,6 +449,11 @@ public class DruidCoordinatorSegmentMergerTest
    */
   private static List<List<DataSegment>> merge(final Collection<DataSegment> segments)
   {
+    final JacksonConfigManager configManager = EasyMock.createMock(JacksonConfigManager.class);
+    EasyMock.expect(configManager.watch(DatasourceWhitelist.CONFIG_KEY, DatasourceWhitelist.class))
+            .andReturn(new AtomicReference<DatasourceWhitelist>(null)).anyTimes();
+    EasyMock.replay(configManager);
+
     final List<List<DataSegment>> retVal = Lists.newArrayList();
     final IndexingServiceClient indexingServiceClient = new IndexingServiceClient(null, null, null)
     {
@@ -456,19 +464,17 @@ public class DruidCoordinatorSegmentMergerTest
       }
     };
 
-    final AtomicReference<DatasourceWhitelist> whitelistRef = new AtomicReference<DatasourceWhitelist>(null);
-    final DruidCoordinatorSegmentMerger merger = new DruidCoordinatorSegmentMerger(indexingServiceClient, whitelistRef);
-    final DruidCoordinatorRuntimeParams params = DruidCoordinatorRuntimeParams.newBuilder()
-                                                                    .withAvailableSegments(ImmutableSet.copyOf(segments))
-                                                                    .withDynamicConfigs(
-                                                                        new CoordinatorDynamicConfig.Builder().withMergeBytesLimit(
-                                                                            mergeBytesLimit
-                                                                        ).withMergeSegmentsLimit(
-                                                                            mergeSegmentsLimit
-                                                                        )
-                                                                                                         .build()
-                                                                    )
-                                                                    .build();
+    final DruidCoordinatorSegmentMerger merger = new DruidCoordinatorSegmentMerger(
+        indexingServiceClient,
+        configManager
+    );
+    final DruidCoordinatorRuntimeParams params =
+        DruidCoordinatorRuntimeParams.newBuilder()
+                                     .withAvailableSegments(ImmutableSet.copyOf(segments))
+                                     .withDynamicConfigs(new CoordinatorDynamicConfig.Builder().withMergeBytesLimit(
+                                         mergeBytesLimit).withMergeSegmentsLimit(mergeSegmentsLimit).build())
+                                     .withEmitter(EasyMock.createMock(ServiceEmitter.class))
+                                     .build();
     merger.run(params);
     return retVal;
   }
