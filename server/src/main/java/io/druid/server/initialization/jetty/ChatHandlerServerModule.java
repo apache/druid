@@ -20,7 +20,6 @@
 package io.druid.server.initialization.jetty;
 
 import com.google.inject.Binder;
-import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
@@ -48,8 +47,11 @@ public class ChatHandlerServerModule implements Module
   private static final String MAX_CHAT_REQUESTS_PROPERTY = "druid.indexer.server.maxChatRequests";
   private static final String CHAT_PORT_PROPERTY = "druid.indexer.task.chathandler.port";
 
-  @Inject
-  private Properties properties;
+  private final Properties properties;
+
+  public ChatHandlerServerModule(Properties properties) {
+    this.properties = properties;
+  }
 
   @Override
   public void configure(Binder binder)
