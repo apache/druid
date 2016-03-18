@@ -120,6 +120,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
   @Override
   public void init() throws ServletException
   {
+    super.init();
+
     // separate client with more aggressive connection timeouts
     // to prevent cancellations requests from blocking queries
     broadcastClient = httpClientProvider.get();
@@ -131,7 +133,17 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
     } catch(Exception e) {
       throw new ServletException(e);
     }
-    super.init();
+  }
+
+  @Override
+  public void destroy()
+  {
+    super.destroy();
+    try {
+      broadcastClient.stop();
+    } catch(Exception e) {
+      log.warn(e, "Error stopping servlet");
+    }
   }
 
   @Override
