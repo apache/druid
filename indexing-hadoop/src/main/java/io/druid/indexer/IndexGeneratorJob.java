@@ -288,6 +288,7 @@ public class IndexGeneratorJob implements Jobby
     @Override
     protected void innerMap(
         InputRow inputRow,
+        long groupTimestamp,
         Object value,
         Context context
     ) throws IOException, InterruptedException
@@ -836,11 +837,9 @@ public class IndexGeneratorJob implements Jobby
     }
 
     @Override
-    protected void innerMap(InputRow inputRow, Object value, Context context)
+    protected void innerMap(InputRow inputRow, long timestamp, Object value, Context context)
         throws IOException, InterruptedException
     {
-      final long timestamp = granularitySpec.getQueryGranularity().truncate(inputRow.getTimestampFromEpoch());
-
       IncrementalIndex target = combiners.get(timestamp);
       if (target == null) {
         combiners.put(timestamp, target = makeIncrementalIndex(timestamp, aggregators, config, null, false));
