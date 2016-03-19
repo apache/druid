@@ -19,6 +19,7 @@
 
 package io.druid.cli;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Module;
@@ -35,6 +36,7 @@ import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
+import io.druid.guice.PropertiesModule;
 import io.druid.guice.annotations.Self;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.overlord.ForkingTaskRunner;
@@ -48,7 +50,6 @@ import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import org.eclipse.jetty.server.Server;
-import org.joda.time.DateTime;
 
 import java.util.List;
 
@@ -114,5 +115,11 @@ public class CliMiddleManager extends ServerRunnable
         new IndexingServiceFirehoseModule(),
         new IndexingServiceTaskLogsModule()
     );
+  }
+
+  @Override
+  protected Optional<PropertiesModule> getPropertiesModules()
+  {
+    return Optional.of(new PropertiesModule("middleManager/runtime.properties"));
   }
 }

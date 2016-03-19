@@ -19,6 +19,7 @@
 
 package io.druid.cli;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
@@ -44,6 +45,7 @@ import io.druid.guice.LifecycleModule;
 import io.druid.guice.ListProvider;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.PolyBind;
+import io.druid.guice.PropertiesModule;
 import io.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
@@ -217,6 +219,13 @@ public class CliOverlord extends ServerRunnable
         new IndexingServiceFirehoseModule(),
         new IndexingServiceTaskLogsModule()
     );
+  }
+
+
+  @Override
+  protected Optional<PropertiesModule> getPropertiesModules()
+  {
+    return Optional.of(new PropertiesModule("overlord/runtime.properties"));
   }
 
   /**

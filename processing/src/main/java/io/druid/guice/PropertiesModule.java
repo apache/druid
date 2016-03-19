@@ -21,7 +21,7 @@ package io.druid.guice;
 
 import com.google.common.base.Charsets;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Ordering;
+import com.google.common.collect.Lists;
 import com.google.inject.Binder;
 import com.google.inject.Module;
 import com.metamx.common.guava.CloseQuietly;
@@ -34,6 +34,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 
@@ -41,13 +42,15 @@ import java.util.Properties;
  */
 public class PropertiesModule implements Module
 {
+  private static final String DEFAULT_PROPERTIES_LOC = "_common/common.runtime.properties";
   private static final Logger log = new Logger(PropertiesModule.class);
 
   private final List<String> propertiesFiles;
 
-  public PropertiesModule(List<String> propertiesFiles)
+  public PropertiesModule(String... propertiesFiles)
   {
-    this.propertiesFiles = propertiesFiles;
+    this.propertiesFiles = Lists.newArrayList(DEFAULT_PROPERTIES_LOC);
+    this.propertiesFiles.addAll(Arrays.asList(propertiesFiles));
   }
 
   @Override
@@ -69,14 +72,16 @@ public class PropertiesModule implements Module
           }
         }
 
-        if (stream != null) {
-          log.info("Loading properties from %s", propertiesFile);
-          try {
-            fileProps.load(new InputStreamReader(stream, Charsets.UTF_8));
-          }
-          catch (IOException e) {
-            throw Throwables.propagate(e);
-          }
+        if (stream == null) {
+          log.info("Failed to find properties file %s.. skipping", propertiesFile);
+          continue;
+        }
+        log.info("Loading properties from %s (%s)", propertiesFile, ClassLoader.getSystemResource(propertiesFile));
+        try {
+          fileProps.load(new InputStreamReader(stream, Charsets.UTF_8));
+        }
+        catch (IOException e) {
+          throw Throwables.propagate(e);
         }
       }
       catch (FileNotFoundException e) {
