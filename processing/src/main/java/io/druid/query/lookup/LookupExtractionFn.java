@@ -37,6 +37,10 @@ public class LookupExtractionFn extends FunctionalExtraction
 {
   private final LookupExtractor lookup;
   private final boolean optimize;
+  // Thes are retained for auto generated hashCode and Equals
+  private final boolean retainMissingValue;
+  private final String replaceMissingValueWith;
+  private final boolean injective;
 
   @JsonCreator
   public LookupExtractionFn(
@@ -63,6 +67,9 @@ public class LookupExtractionFn extends FunctionalExtraction
     );
     this.lookup = lookup;
     this.optimize = optimize == null ? true : optimize;
+    this.retainMissingValue = retainMissingValue;
+    this.injective = injective;
+    this.replaceMissingValueWith = replaceMissingValueWith;
   }
 
 
@@ -121,7 +128,7 @@ public class LookupExtractionFn extends FunctionalExtraction
     if (this == o) {
       return true;
     }
-    if (!(o instanceof LookupExtractionFn)) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
 
@@ -130,15 +137,29 @@ public class LookupExtractionFn extends FunctionalExtraction
     if (isOptimize() != that.isOptimize()) {
       return false;
     }
-    return getLookup().equals(that.getLookup());
+    if (isRetainMissingValue() != that.isRetainMissingValue()) {
+      return false;
+    }
+    if (isInjective() != that.isInjective()) {
+      return false;
+    }
+    if (getLookup() != null ? !getLookup().equals(that.getLookup()) : that.getLookup() != null) {
+      return false;
+    }
+    return getReplaceMissingValueWith() != null
+           ? getReplaceMissingValueWith().equals(that.getReplaceMissingValueWith())
+           : that.getReplaceMissingValueWith() == null;
 
   }
 
   @Override
   public int hashCode()
   {
-    int result = getLookup().hashCode();
+    int result = getLookup() != null ? getLookup().hashCode() : 0;
     result = 31 * result + (isOptimize() ? 1 : 0);
+    result = 31 * result + (isRetainMissingValue() ? 1 : 0);
+    result = 31 * result + (getReplaceMissingValueWith() != null ? getReplaceMissingValueWith().hashCode() : 0);
+    result = 31 * result + (isInjective() ? 1 : 0);
     return result;
   }
 }
