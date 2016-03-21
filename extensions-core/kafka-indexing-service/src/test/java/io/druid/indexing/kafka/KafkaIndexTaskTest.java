@@ -182,7 +182,7 @@ public class KafkaIndexTaskTest
                 new JSONParseSpec(
                     new TimestampSpec("timestamp", "iso", null),
                     new DimensionsSpec(
-                        ImmutableList.<String>of("dim1", "dim2"),
+                        DimensionsSpec.getDefaultSchemas(ImmutableList.<String>of("dim1", "dim2")),
                         null,
                         null
                     ),

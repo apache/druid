@@ -111,7 +111,7 @@ public class IndexTaskTest
                                 null
                             ),
                             new DimensionsSpec(
-                                Arrays.asList("ts"),
+                                DimensionsSpec.getDefaultSchemas(Arrays.asList("ts")),
                                 Lists.<String>newArrayList(),
                                 Lists.<SpatialDimensionSchema>newArrayList()
                             ),
@@ -183,7 +183,7 @@ public class IndexTaskTest
                                 null
                             ),
                             new DimensionsSpec(
-                                Arrays.asList("ts"),
+                                DimensionsSpec.getDefaultSchemas(Arrays.asList("ts")),
                                 Lists.<String>newArrayList(),
                                 Lists.<SpatialDimensionSchema>newArrayList()
                             ),
@@ -289,7 +289,7 @@ public class IndexTaskTest
                                 null
                             ),
                             new DimensionsSpec(
-                                Arrays.asList("dim"),
+                                DimensionsSpec.getDefaultSchemas(Arrays.asList("dim")),
                                 Lists.<String>newArrayList(),
                                 Lists.<SpatialDimensionSchema>newArrayList()
                             ),

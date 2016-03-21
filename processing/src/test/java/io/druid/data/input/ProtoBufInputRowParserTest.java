@@ -59,7 +59,7 @@ public class ProtoBufInputRowParserTest
     ProtoBufInputRowParser parser = new ProtoBufInputRowParser(
         new TimeAndDimsParseSpec(
             new TimestampSpec("timestamp", "iso", null),
-            new DimensionsSpec(Arrays.asList(DIMENSIONS), Arrays.<String>asList(), null)
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList(DIMENSIONS)), Arrays.<String>asList(), null)
         ),
         "prototest.desc"
     );

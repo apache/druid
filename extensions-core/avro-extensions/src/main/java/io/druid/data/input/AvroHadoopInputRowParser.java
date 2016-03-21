@@ -39,7 +39,7 @@ public class AvroHadoopInputRowParser implements InputRowParser<GenericRecord>
   )
   {
     this.parseSpec = parseSpec;
-    this.dimensions = parseSpec.getDimensionsSpec().getDimensions();
+    this.dimensions = parseSpec.getDimensionsSpec().getDimensionNames();
     this.fromPigAvroStorage = fromPigAvroStorage == null ? false : fromPigAvroStorage;
   }
 
