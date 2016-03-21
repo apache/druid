@@ -122,7 +122,7 @@ public class DataSchema
         for (AggregatorFactory aggregator : aggregators) {
           metSet.add(aggregator.getName());
         }
-        final Set<String> dimSet = Sets.newHashSet(dimensionsSpec.getDimensions());
+        final Set<String> dimSet = Sets.newHashSet(dimensionsSpec.getDimensionNames());
         final Set<String> overlap = Sets.intersection(metSet, dimSet);
         if (!overlap.isEmpty()) {
           throw new IAE(

@@ -79,7 +79,7 @@ public class AvroStreamInputRowParserTest
   public static final List<String> DIMENSIONS = Arrays.asList(EVENT_TYPE, ID, SOME_OTHER_ID, IS_VALID);
   public static final TimeAndDimsParseSpec PARSE_SPEC = new TimeAndDimsParseSpec(
       new TimestampSpec("timestamp", "millis", null),
-      new DimensionsSpec(DIMENSIONS, Collections.<String>emptyList(), null)
+      new DimensionsSpec(DimensionsSpec.getDefaultSchemas(DIMENSIONS), Collections.<String>emptyList(), null)
   );
   public static final MyFixed SOME_FIXED_VALUE = new MyFixed(ByteBuffer.allocate(16).array());
   private static final long SUB_LONG_VALUE = 1543698L;

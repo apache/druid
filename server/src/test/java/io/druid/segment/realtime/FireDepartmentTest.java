@@ -83,7 +83,7 @@ public class FireDepartmentTest
                             null
                         ),
                         new DimensionsSpec(
-                            Arrays.asList("dim1", "dim2"),
+                            DimensionsSpec.getDefaultSchemas(Arrays.asList("dim1", "dim2")),
                             null,
                             null
                         )

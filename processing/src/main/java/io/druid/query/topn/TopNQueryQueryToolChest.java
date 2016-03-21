@@ -352,7 +352,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
             retVal.add(input.getTimestamp().getMillis());
             for (DimensionAndMetricValueExtractor result : results) {
               List<Object> vals = Lists.newArrayListWithCapacity(aggFactoryNames.length + 2);
-              vals.add(result.getStringDimensionValue(query.getDimensionSpec().getOutputName()));
+              vals.add(result.getDimensionValue(query.getDimensionSpec().getOutputName()));
               for (String aggName : aggFactoryNames) {
                 vals.add(result.getMetric(aggName));
               }
@@ -488,7 +488,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                                 )
                                 {
                                   String dimOutputName = topNQuery.getDimensionSpec().getOutputName();
-                                  String dimValue = input.getStringDimensionValue(dimOutputName);
+                                  Object dimValue = input.getDimensionValue(dimOutputName);
                                   Map<String, Object> map = input.getBaseObject();
                                   map.put(
                                       dimOutputName,
