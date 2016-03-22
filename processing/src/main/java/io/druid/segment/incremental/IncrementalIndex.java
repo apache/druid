@@ -36,7 +36,9 @@ import com.metamx.common.parsers.ParseException;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
+import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.data.input.impl.NewSpatialDimensionSchema;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -82,13 +84,16 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 {
   private volatile DateTime maxIngestedEventTime;
 
-  private static final Map<String, ValueType> TYPE_MAP = ImmutableMap.<String, ValueType>builder()
-      .put("Long[]", ValueType.LONG)
-      .put("Double[]", ValueType.FLOAT)
-      .put("String[]", ValueType.STRING)
-      .put("Long", ValueType.LONG)
-      .put("Double", ValueType.FLOAT)
-      .put("String", ValueType.STRING)
+  // Used to discover ValueType based on the class of values in a row
+  // Also used to convert between the duplicate ValueType enums in DimensionSchema (druid-api) and main druid.
+  private static final Map<Object, ValueType> TYPE_MAP = ImmutableMap.<Object, ValueType>builder()
+      .put(Long.class, ValueType.LONG)
+      .put(Double.class, ValueType.FLOAT)
+      .put(Float.class, ValueType.FLOAT)
+      .put(String.class, ValueType.STRING)
+      .put(DimensionSchema.ValueType.LONG, ValueType.LONG)
+      .put(DimensionSchema.ValueType.FLOAT, ValueType.FLOAT)
+      .put(DimensionSchema.ValueType.STRING, ValueType.STRING)
       .build();
 
   private static final Function<Object, String> STRING_TRANSFORMER = new Function<Object, String>()
@@ -404,23 +409,23 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
     this.dimensionDescs = Maps.newLinkedHashMap();
     this.dimValues = Collections.synchronizedList(Lists.<DimDim>newArrayList());
-    for (String dimension : dimensionsSpec.getDimensions()) {
+
+    for (DimensionSchema dimSchema : dimensionsSpec.getDimensions()) {
       ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
-      capabilities.setType(ValueType.STRING);
-      addNewDimension(dimension, capabilities);
-      columnCapabilities.put(dimension, capabilities);
+      ValueType type = TYPE_MAP.get(dimSchema.getValueType());
+      capabilities.setType(type);
+      if (dimSchema.getTypeName().equals(DimensionSchema.SPATIAL_TYPE_NAME)) {
+        capabilities.setHasSpatialIndexes(true);
+      } else {
+        addNewDimension(dimSchema.getName(), capabilities);
+      }
+      columnCapabilities.put(dimSchema.getName(), capabilities);
     }
 
     // This should really be more generic
     List<SpatialDimensionSchema> spatialDimensions = dimensionsSpec.getSpatialDimensions();
     if (!spatialDimensions.isEmpty()) {
       this.rowTransformers.add(new SpatialDimensionRowTransformer(spatialDimensions));
-    }
-    for (SpatialDimensionSchema spatialDimension : spatialDimensions) {
-      ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
-      capabilities.setType(ValueType.STRING);
-      capabilities.setHasSpatialIndexes(true);
-      columnCapabilities.put(spatialDimension.getDimName(), capabilities);
     }
   }
 
@@ -511,7 +516,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       return null;
     }
 
-    return TYPE_MAP.get(singleVal.getClass().getSimpleName());
+    return TYPE_MAP.get(singleVal.getClass());
   }
 
   private List<Comparable> getRowDimensionAsComparables(InputRow row, String dimension, ValueType type)
@@ -596,7 +601,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
           capabilities = columnCapabilities.get(dimension);
           if (capabilities == null) {
             capabilities = new ColumnCapabilitiesImpl();
-            // TODO: For schemaless type discovery, assume everything is a String for now, can change later.
+            // For schemaless type discovery, assume everything is a String for now, can change later.
             //valType = getTypeFromDimVal(row.getRaw(dimension));
             if (valType == null) {
               valType = ValueType.STRING;

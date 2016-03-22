@@ -21,6 +21,7 @@ package io.druid.indexer.partitions;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import io.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
 import org.junit.Test;
@@ -68,6 +69,12 @@ public class HashedPartitionsSpecTest
           150
       );
 
+      Assert.assertEquals(
+          "getPartitionDimensions",
+          partitionsSpec.getPartitionDimensions(),
+          ImmutableList.of()
+      );
+
       Assert.assertTrue("partitionsSpec", partitionsSpec instanceof HashedPartitionsSpec);
     }
   }
@@ -112,6 +119,12 @@ public class HashedPartitionsSpecTest
         "shardCount",
         partitionsSpec.getNumShards(),
         2
+    );
+
+    Assert.assertEquals(
+        "getPartitionDimensions",
+        partitionsSpec.getPartitionDimensions(),
+        ImmutableList.of()
     );
 
     Assert.assertTrue("partitionsSpec", partitionsSpec instanceof HashedPartitionsSpec);

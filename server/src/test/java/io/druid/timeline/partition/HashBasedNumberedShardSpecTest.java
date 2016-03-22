@@ -17,18 +17,17 @@
  * under the License.
  */
 
-package io.druid.server.shard;
+package io.druid.timeline.partition;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
 import io.druid.TestUtil;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
-import io.druid.timeline.partition.HashBasedNumberedShardSpec;
-import io.druid.timeline.partition.PartitionChunk;
-import io.druid.timeline.partition.ShardSpec;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
@@ -43,11 +42,12 @@ public class HashBasedNumberedShardSpecTest
   {
 
     final ShardSpec spec = TestUtil.MAPPER.readValue(
-        TestUtil.MAPPER.writeValueAsBytes(new HashBasedNumberedShardSpec(1, 2, TestUtil.MAPPER)),
+        TestUtil.MAPPER.writeValueAsBytes(new HashBasedNumberedShardSpec(1, 2, ImmutableList.of("visitor_id"), TestUtil.MAPPER)),
         ShardSpec.class
     );
     Assert.assertEquals(1, spec.getPartitionNum());
     Assert.assertEquals(2, ((HashBasedNumberedShardSpec) spec).getPartitions());
+    Assert.assertEquals(ImmutableList.of("visitor_id"), ((HashBasedNumberedShardSpec) spec).getPartitionDimensions());
   }
 
   @Test
@@ -59,15 +59,23 @@ public class HashBasedNumberedShardSpecTest
     );
     Assert.assertEquals(1, spec.getPartitionNum());
     Assert.assertEquals(2, ((HashBasedNumberedShardSpec) spec).getPartitions());
+
+    final ShardSpec specWithPartitionDimensions = TestUtil.MAPPER.readValue(
+        "{\"type\": \"hashed\", \"partitions\": 2, \"partitionNum\": 1, \"partitionDimensions\":[\"visitor_id\"]}",
+        ShardSpec.class
+    );
+    Assert.assertEquals(1, specWithPartitionDimensions.getPartitionNum());
+    Assert.assertEquals(2, ((HashBasedNumberedShardSpec) specWithPartitionDimensions).getPartitions());
+    Assert.assertEquals(ImmutableList.of("visitor_id"), ((HashBasedNumberedShardSpec) specWithPartitionDimensions).getPartitionDimensions());
   }
 
   @Test
   public void testPartitionChunks()
   {
     final List<ShardSpec> specs = ImmutableList.<ShardSpec>of(
-        new HashBasedNumberedShardSpec(0, 3, TestUtil.MAPPER),
-        new HashBasedNumberedShardSpec(1, 3, TestUtil.MAPPER),
-        new HashBasedNumberedShardSpec(2, 3, TestUtil.MAPPER)
+        new HashBasedNumberedShardSpec(0, 3, null, TestUtil.MAPPER),
+        new HashBasedNumberedShardSpec(1, 3, null, TestUtil.MAPPER),
+        new HashBasedNumberedShardSpec(2, 3, null, TestUtil.MAPPER)
     );
 
     final List<PartitionChunk<String>> chunks = Lists.transform(
@@ -124,6 +132,35 @@ public class HashBasedNumberedShardSpecTest
 
   }
 
+  @Test
+  public void testGetGroupKey() throws Exception
+  {
+    final HashBasedNumberedShardSpec shardSpec1 = new HashBasedNumberedShardSpec(
+        1,
+        2,
+        ImmutableList.of("visitor_id"),
+        TestUtil.MAPPER
+    );
+    final DateTime time = new DateTime();
+    final InputRow inputRow = new MapBasedInputRow(
+        time,
+        ImmutableList.of("visitor_id", "cnt"),
+        ImmutableMap.<String, Object>of("visitor_id", "v1", "cnt", 10)
+    );
+    Assert.assertEquals(ImmutableList.of(Lists.newArrayList("v1")), shardSpec1.getGroupKey(time.getMillis(), inputRow));
+
+    final HashBasedNumberedShardSpec shardSpec2 = new HashBasedNumberedShardSpec(1, 2, null, TestUtil.MAPPER);
+    Assert.assertEquals(ImmutableList.of(
+        time.getMillis(),
+        ImmutableMap.of(
+            "cnt",
+            Lists.newArrayList(10),
+            "visitor_id",
+            Lists.newArrayList("v1")
+        )
+    ).toString(), shardSpec2.getGroupKey(time.getMillis(), inputRow).toString());
+  }
+
   public boolean assertExistsInOneSpec(List<ShardSpec> specs, InputRow row)
   {
     for (ShardSpec spec : specs) {
@@ -141,7 +178,7 @@ public class HashBasedNumberedShardSpecTest
         int partitions
     )
     {
-      super(partitionNum, partitions, TestUtil.MAPPER);
+      super(partitionNum, partitions, null, TestUtil.MAPPER);
     }
 
     @Override

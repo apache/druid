@@ -151,7 +151,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
       if (dimensions != null) {
         dims = dimensions;
       } else if (inputRowParser.getParseSpec().getDimensionsSpec().hasCustomDimensions()) {
-        dims = inputRowParser.getParseSpec().getDimensionsSpec().getDimensions();
+        dims = inputRowParser.getParseSpec().getDimensionsSpec().getDimensionNames();
       } else {
         Set<String> dimSet = Sets.newHashSet(
             Iterables.concat(
