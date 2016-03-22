@@ -211,7 +211,7 @@ public class IndexTask extends AbstractFixedIntervalTask
         if (numShards > 0) {
           shardSpecs = Lists.newArrayList();
           for (int i = 0; i < numShards; i++) {
-            shardSpecs.add(new HashBasedNumberedShardSpec(i, numShards, jsonMapper));
+            shardSpecs.add(new HashBasedNumberedShardSpec(i, numShards, null, jsonMapper));
           }
         } else {
           shardSpecs = ImmutableList.<ShardSpec>of(new NoneShardSpec());
@@ -304,7 +304,7 @@ public class IndexTask extends AbstractFixedIntervalTask
       shardSpecs.add(new NoneShardSpec());
     } else {
       for (int i = 0; i < numberOfShards; ++i) {
-        shardSpecs.add(new HashBasedNumberedShardSpec(i, numberOfShards, jsonMapper));
+        shardSpecs.add(new HashBasedNumberedShardSpec(i, numberOfShards, null, jsonMapper));
       }
     }
 

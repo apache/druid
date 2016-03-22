@@ -517,7 +517,7 @@ public class IndexGeneratorJobTest
     List<ShardSpec> specs = Lists.newArrayList();
     if (partitionType.equals("hashed")) {
       for (Integer[] shardInfo : (Integer[][]) shardInfoForEachShard) {
-        specs.add(new HashBasedNumberedShardSpec(shardInfo[0], shardInfo[1], HadoopDruidIndexerConfig.JSON_MAPPER));
+        specs.add(new HashBasedNumberedShardSpec(shardInfo[0], shardInfo[1], null, HadoopDruidIndexerConfig.JSON_MAPPER));
       }
     } else if (partitionType.equals("single")) {
       int partitionNum = 0;

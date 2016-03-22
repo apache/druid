@@ -149,7 +149,7 @@ public class DetermineHashedPartitionsJobTest
         new HadoopTuningConfig(
             tmpDir.getAbsolutePath(),
             null,
-            new HashedPartitionsSpec(targetPartitionSize, null, true, null),
+            new HashedPartitionsSpec(targetPartitionSize, null, true, null, null),
             null,
             null,
             null,
