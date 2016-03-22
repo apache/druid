@@ -163,7 +163,7 @@ Each column is stored as two parts:
 1.  A Jackson-serialized ColumnDescriptor
 2.  The rest of the binary for the column
 
-A ColumnDescriptor is essentially an object that allows us to use jackson’s polymorphic deserialization to add new and interesting methods of serialization with minimal impact to the code. It consists of some metadata about the column (what type is it, is it multi-valued, etc.) and then a list of serde logic that can deserialize the rest of the binary.
+A ColumnDescriptor is essentially an object that allows us to use jackson’s polymorphic deserialization to add new and interesting methods of serialization with minimal impact to the code. It consists of some metadata about the column (what type is it, is it multi-value, etc.) and then a list of serde logic that can deserialize the rest of the binary.
 
 Sharding Data to Create Segments
 --------------------------------
