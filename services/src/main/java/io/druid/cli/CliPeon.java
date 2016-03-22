@@ -22,6 +22,7 @@ package io.druid.cli;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
@@ -85,6 +86,7 @@ import org.eclipse.jetty.server.Server;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 import java.util.Set;
 
 /**
@@ -103,6 +105,9 @@ public class CliPeon extends GuiceRunnable
   public String nodeType = "indexer-executor";
 
   private static final Logger log = new Logger(CliPeon.class);
+
+  @Inject
+  private Properties properties;
 
   public CliPeon()
   {
@@ -220,7 +225,7 @@ public class CliPeon extends GuiceRunnable
           }
         },
         new IndexingServiceFirehoseModule(),
-        new ChatHandlerServerModule(),
+        new ChatHandlerServerModule(properties),
         new LookupModule()
     );
   }

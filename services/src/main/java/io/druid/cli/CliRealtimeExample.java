@@ -21,6 +21,7 @@ package io.druid.cli;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
 import com.metamx.common.logger.Logger;
@@ -39,6 +40,7 @@ import io.druid.timeline.DataSegment;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.Executor;
 
 /**
@@ -50,6 +52,9 @@ import java.util.concurrent.Executor;
 public class CliRealtimeExample extends ServerRunnable
 {
   private static final Logger log = new Logger(CliBroker.class);
+
+  @Inject
+  private Properties properties;
 
   public CliRealtimeExample()
   {
@@ -75,7 +80,7 @@ public class CliRealtimeExample extends ServerRunnable
             binder.bind(ServerView.class).to(NoopServerView.class).in(LazySingleton.class);
           }
         },
-        new ChatHandlerServerModule(),
+        new ChatHandlerServerModule(properties),
         new LookupModule()
     );
   }
