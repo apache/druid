@@ -4,67 +4,17 @@ layout: doc_page
 
 # Druid Firehoses
 
-Firehoses describe the data stream source. They are pluggable and thus the configuration schema can and will vary based on the `type` of the firehose.
+Firehoses are used in the [stream-pull](../ingestion/stream-pull.html) ingestion model. They are pluggable and thus the configuration schema can and will vary based on the `type` of the firehose.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | type | String | Specifies the type of firehose. Each value will have its own configuration schema, firehoses packaged with Druid are described below. | yes |
 
-We describe the configuration of the [Kafka firehose example](../ingestion/stream-pull.html#realtime-specfile), but there are other types available in Druid (see below).
-
--   `consumerProps` is a map of properties for the Kafka consumer. The JSON object is converted into a Properties object and passed along to the Kafka consumer.
--   `feed` is the feed that the Kafka consumer should read from.
-
-## Available Firehoses
+## Additional Firehoses
 
 There are several firehoses readily available in Druid, some are meant for examples, others can be used directly in a production environment.
 
-#### KafkaEightFirehose
-
-Please note that the [druid-kafka-eight module](../operations/including-extensions.html) is required for this firehose. This firehose acts as a Kafka 0.8.x consumer and ingests data from Kafka.
-
-Sample spec:
-
-```json
-"firehose": {
-  "type": "kafka-0.8",
-  "consumerProps": {
-    "zookeeper.connect": "localhost:2181",
-    "zookeeper.connection.timeout.ms" : "15000",
-    "zookeeper.session.timeout.ms" : "15000",
-    "zookeeper.sync.time.ms" : "5000",
-    "group.id": "druid-example",
-    "fetch.message.max.bytes" : "1048586",
-    "auto.offset.reset": "largest",
-    "auto.commit.enable": "false"
-  },
-  "feed": "wikipedia"
-}
-```
-
-|property|description|required?|
-|--------|-----------|---------|
-|type|This should be "kafka-0.8"|yes|
-|consumerProps|The full list of consumer configs can be [here](https://kafka.apache.org/08/configuration.html).|yes|
-|feed|Kafka maintains feeds of messages in categories called topics. This is the topic name.|yes|
-
-#### StaticS3Firehose
-
-This firehose ingests events from a predefined list of S3 objects.
-
-Sample spec:
-
-```json
-"firehose" : {
-    "type" : "static-s3",
-    "uris": ["s3://foo/bar/file.gz", "s3://bar/foo/file2.gz"]
-}
-```
-
-|property|description|default|required?|
-|--------|-----------|-------|---------|
-|type|This should be "static-s3"|N/A|yes|
-|uris|JSON array of URIs where s3 files to be ingested are located.|N/A|yes|
+For additional firehoses, please see our [extensions list](../development/extensions.html).
 
 #### LocalFirehose
 
@@ -169,23 +119,3 @@ An example is shown below:
 |type|This should be "timed"|yes|
 |shutoffTime|time at which the firehose should shut down, in ISO8601 format|yes|
 |delegate|firehose to use|yes|
-
-#### TwitterSpritzerFirehose
-
-This firehose connects directly to the twitter spritzer data stream.
-
-Sample spec:
-
-```json
-"firehose" : {
-    "type" : "twitzer",
-    "maxEventCount": -1,
-    "maxRunMinutes": 0
-}
-```
-
-|property|description|default|required?|
-|--------|-----------|-------|---------|
-|type|This should be "twitzer"|N/A|yes|
-|maxEventCount|max events to receive, -1 is infinite, 0 means nothing is delivered; use this to prevent infinite space consumption or to prevent getting throttled at an inconvenient time.|N/A|yes|
-|maxRunMinutes|maximum number of minutes to fetch Twitter events.  Use this to prevent getting throttled at an inconvenient time. If zero or less, no time limit for run.|N/A|yes|

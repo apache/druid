@@ -21,16 +21,16 @@ Core extensions are maintained by Druid committers.
 
 |Name|Description|Docs|
 |----|-----------|----|
-|druid-avro-extensions|Support for data in Apache Avro data format.|[link](../ingestion/index.html)|
-|druid-datasketches|Support for approximate counts and set operations with [DataSketches](http://datasketches.github.io/).|[link](../development/datasketches-aggregators.html)|
-|druid-hdfs-storage|Support for data in Apache Avro data format.|[link](../ingestion/index.html)|
-|druid-histogram|HDFS deep storage.|[link](../dependencies/deep-storage.html#hdfs)|
-|druid-kafka-eight|Kafka ingest firehose (high level consumer).|[link](../ingestion/firehose.html#kafkaeightfirehose)|
-|druid-kafka-extraction-namespace|Kafka namespaced lookup.|[link](../querying/lookups.html#kafka-namespaced-lookup)|
-|druid-namespace-lookup|Namespaced lookups.|[link](../querying/lookups.html)|
-|druid-s3-extensions|S3 deep storage.|[link](../dependencies/deep-storage.html#s3-compatible/)|
-|mysql-metadata-storage|MySQL metadata store.|[link](../dependencies/metadata-storage.html#setting-up-mysql)|
-|postgresql-metadata-storage|PostgreSQL metadata store.|[link](../dependencies/metadata-storage.html#setting-up-postgresql)|
+|druid-avro-extensions|Support for data in Apache Avro data format.|[link](../development/extensions-core/avro.html)|
+|druid-datasketches|Support for approximate counts and set operations with [DataSketches](http://datasketches.github.io/).|[link](../development/extensions-core/datasketches-aggregators.html)|
+|druid-hdfs-storage|HDFS deep storage.|[link](../development/extensions-core/hdfs.html)|
+|druid-histogram|Approximate histograms and quantiles aggregator.|[link](../development/extensions-core/approximate-histograms.html)|
+|druid-kafka-eight|Kafka ingest firehose (high level consumer).|[link](../development/extensions-core/kafka-eight-firehose.html)|
+|druid-kafka-extraction-namespace|Kafka-based namespaced lookup. Requires namespace lookup extension.|[link](../development/extensions-core/kafka-extraction-namespace.html)|
+|druid-namespace-lookup|Required module for [lookups](../querying/lookups.html).|[link](../development/extensions-core/namespaced-lookup.html)|
+|druid-s3-extensions|Interfacing with data in AWS S3, and using S3 as deep storage.|[link](../development/extensions-core/s3.html)|
+|mysql-metadata-storage|MySQL metadata store.|[link](../development/extensions-core/mysql.html)|
+|postgresql-metadata-storage|PostgreSQL metadata store.|[link](../development/extensions-core/postgresql.html)|
 
 # Community Extensions
 
@@ -40,12 +40,12 @@ If you'd like to take on maintenance for a community extension, please post on [
 
 |Name|Description|Docs|
 |----|-----------|----|
-|druid-azure-extensions|Microsoft Azure deep storage.|[link](../development/community-extensions/azure.html)|
-|druid-cassandra-storage|Apache Cassandra deep storage.|[link](../development/community-extensions/cassandra.html)|
-|druid-cloudfiles-extensions|Rackspace Cloudfiles deep storage and firehose.|[link](../development/community-extensions/cloudfiles.html)|
-|druid-kafka-eight-simpleConsumer|Kafka ingest firehose (low level consumer).|[link](../development/community-extensions/kafka-simple.html)|
-|druid-rabbitmq|RabbitMQ firehose.|[link](../development/community-extensions/rabbitmq.html)|
-|graphite-emitter|Graphite metrics emitter|[link](../development/community-extensions/graphite.html)|
+|druid-azure-extensions|Microsoft Azure deep storage.|[link](../development/extensions-contrib/azure.html)|
+|druid-cassandra-storage|Apache Cassandra deep storage.|[link](../development/extensions-contrib/cassandra.html)|
+|druid-cloudfiles-extensions|Rackspace Cloudfiles deep storage and firehose.|[link](../development/extensions-contrib/cloudfiles.html)|
+|druid-kafka-eight-simpleConsumer|Kafka ingest firehose (low level consumer).|[link](../development/extensions-contrib/kafka-simple.html)|
+|druid-rabbitmq|RabbitMQ firehose.|[link](../development/extensions-contrib/rabbitmq.html)|
+|graphite-emitter|Graphite metrics emitter|[link](../development/extensions-contrib/graphite.html)|
 
 ## Promoting Community Extension to Core Extension
 
