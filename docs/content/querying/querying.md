@@ -8,7 +8,12 @@ Querying
 Queries are made using an HTTP REST style request to queryable nodes ([Broker](../design/broker.html),
 [Historical](../design/historical.html), or [Realtime](../design/realtime.html)). The
 query is expressed in JSON and each of these node types expose the same
-REST query interface. For normal Druid operations, queries should be issued to the broker nodes.
+REST query interface. For normal Druid operations, queries should be issued to the broker nodes. Queries can be posted
+to the queryable nodes like this -
+
+ ```bash
+ curl -X POST '<queryable_host>:<port>/druid/v2/?pretty' -H 'Content-Type:application/json' -d @<query_json_file>
+ ```
  
 Druid's native query language is JSON over HTTP, although many members of the community have contributed different 
 [client libraries](../development/libraries.html) in other languages to query Druid. 
