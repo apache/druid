@@ -29,12 +29,15 @@ import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.TimelineServerView;
 import io.druid.client.selector.ServerSelector;
+import io.druid.common.utils.JodaUtils;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
+import io.druid.query.DataSource;
 import io.druid.query.LocatedSegmentDescriptor;
 import io.druid.query.Query;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.SegmentDescriptor;
+import io.druid.query.TableDataSource;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.RequestLogger;
@@ -45,6 +48,7 @@ import org.joda.time.Interval;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -54,6 +58,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -101,22 +106,9 @@ public class BrokerQueryResource extends QueryResource
 
     try {
       Query<?> query = objectMapper.readValue(in, Query.class);
-      TimelineLookup<String, ServerSelector> timeline = brokerServerView.getTimeline(query.getDataSource());
-      if (timeline == null) {
+      List<LocatedSegmentDescriptor> located = getTargetLocations(query.getDataSource(), query.getIntervals());
+      if (located == null || located.isEmpty()) {
         return Response.ok(Sequences.empty()).build();
-      }
-      List<LocatedSegmentDescriptor> located = Lists.newArrayList();
-      for (Interval interval : query.getIntervals()) {
-        for (TimelineObjectHolder<String, ServerSelector> holder : timeline.lookup(interval)) {
-          for (PartitionChunk<ServerSelector> chunk : holder.getObject()) {
-            ServerSelector selector = chunk.getObject();
-            final SegmentDescriptor descriptor = new SegmentDescriptor(
-                holder.getInterval(), holder.getVersion(), chunk.getChunkNumber()
-            );
-            List<DruidServerMetadata> candidates = selector.getCandidates();
-            located.add(new LocatedSegmentDescriptor(descriptor, candidates));
-          }
-        }
       }
       return Response.ok(jsonWriter.writeValueAsString(located), contentType).build();
     }
@@ -129,5 +121,46 @@ public class BrokerQueryResource extends QueryResource
           )
       ).build();
     }
+  }
+
+  @GET
+  @Path("/candidates")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getQueryTargets(
+      @QueryParam("datasource") String datasource,
+      @QueryParam("intervals") String intervals
+  ) throws IOException
+  {
+    List<Interval> intervalList = Lists.newArrayList();
+    for (String interval : intervals.split(",")) {
+      intervalList.add(Interval.parse(interval.trim()));
+    }
+    List<LocatedSegmentDescriptor> located = getTargetLocations(
+        new TableDataSource(datasource),
+        JodaUtils.condenseIntervals(intervalList)
+    );
+    return Response.ok(located).build();
+  }
+
+  private List<LocatedSegmentDescriptor> getTargetLocations(DataSource datasource, List<Interval> intervals)
+  {
+    TimelineLookup<String, ServerSelector> timeline = brokerServerView.getTimeline(datasource);
+    if (timeline == null) {
+      return Collections.emptyList();
+    }
+    List<LocatedSegmentDescriptor> located = Lists.newArrayList();
+    for (Interval interval : intervals) {
+      for (TimelineObjectHolder<String, ServerSelector> holder : timeline.lookup(interval)) {
+        for (PartitionChunk<ServerSelector> chunk : holder.getObject()) {
+          ServerSelector selector = chunk.getObject();
+          final SegmentDescriptor descriptor = new SegmentDescriptor(
+              holder.getInterval(), holder.getVersion(), chunk.getChunkNumber()
+          );
+          List<DruidServerMetadata> candidates = selector.getCandidates();
+          located.add(new LocatedSegmentDescriptor(descriptor, candidates));
+        }
+      }
+    }
+    return located;
   }
 }

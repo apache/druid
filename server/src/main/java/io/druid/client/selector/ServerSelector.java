@@ -19,7 +19,7 @@
 
 package io.druid.client.selector;
 
-import com.google.api.client.util.Lists;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.client.DruidServer;

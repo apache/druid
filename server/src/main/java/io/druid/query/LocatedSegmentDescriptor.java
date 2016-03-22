@@ -21,8 +21,8 @@ package io.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.api.client.util.Sets;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Sets;
 import io.druid.server.coordination.DruidServerMetadata;
 import org.joda.time.Interval;
 
