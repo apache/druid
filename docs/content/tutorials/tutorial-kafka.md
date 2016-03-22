@@ -45,7 +45,7 @@ Run this command to create a Kafka topic called *metrics*, to which we'll send d
 
 ## Enable Druid Kafka ingestion
 
-Druid includes configs for [Tranquility Kafka](ingestion-streams.md#kafka) to support loading data from Kafka.
+Druid includes configs for [Tranquility Kafka](../ingestion/stream-pull.html#kafka) to support loading data from Kafka.
 To enable this in the quickstart-based configuration:
 
 - Stop your Tranquility command (CTRL-C) and then start it up again.

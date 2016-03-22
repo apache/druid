@@ -17,13 +17,13 @@ Derby is not suitable for production use as a metadata store. Use MySQL or Postg
 
 ## Using derby
 
-  Add the following to your Druid configuration.
+Add the following to your Druid configuration.
 
-  ```properties
-  druid.metadata.storage.type=derby
-  druid.metadata.storage.connector.connectURI=jdbc:derby://localhost:1527//home/y/var/druid_state/derby;create=true
-  ```
-  
+```properties
+druid.metadata.storage.type=derby
+druid.metadata.storage.connector.connectURI=jdbc:derby://localhost:1527//opt/var/druid_state/derby;create=true
+```
+
 ## MySQL
   
 See [mysql-metadata-storage extension documentation](../development/extensions-core/mysql.html).  

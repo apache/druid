@@ -293,9 +293,6 @@ results.
 Is this always a problem? No. If your data is small enough to fit on a single Kafka partition, you can replicate without issues. 
 Otherwise, you can run real-time nodes without replication.
 
-There is now also an [experimental low level Kafka firehose](../development/kafka-simple-consumer-firehose.html) which 
-solves the issues described above with using the high level Kafka consumer.
-
 Please note that druid will skip over event that failed its checksum and it is corrupt.
 
 ### Locking
