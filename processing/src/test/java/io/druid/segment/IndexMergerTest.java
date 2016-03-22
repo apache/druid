@@ -875,7 +875,7 @@ public class IndexMergerTest
   public void testMergeWithDimensionsList() throws Exception
   {
     IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-        .withDimensionsSpec(new DimensionsSpec(Arrays.asList("dimA", "dimB", "dimC"), null, null))
+        .withDimensionsSpec(new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("dimA", "dimB", "dimC")), null, null))
         .withMinTimestamp(0L)
         .withQueryGranularity(QueryGranularity.NONE)
         .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("count")})
@@ -1622,7 +1622,7 @@ public class IndexMergerTest
     IncrementalIndexSchema schema = new IncrementalIndexSchema(
         0L,
         QueryGranularity.NONE,
-        new DimensionsSpec(dims, null, null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(dims), null, null),
         new AggregatorFactory[]{new CountAggregatorFactory("count")}
     );
 

@@ -57,7 +57,7 @@ public class DataSchemaTest
         new StringInputRowParser(
             new JSONParseSpec(
                 new TimestampSpec("time", "auto", null),
-                new DimensionsSpec(ImmutableList.of("dimB", "dimA"), null, null)
+                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dimB", "dimA")), null, null)
             )
         ), new TypeReference<Map<String, Object>>() {}
     );
@@ -86,7 +86,7 @@ public class DataSchemaTest
         new StringInputRowParser(
             new JSONParseSpec(
                 new TimestampSpec("time", "auto", null),
-                new DimensionsSpec(ImmutableList.of("time", "dimA", "dimB", "col2"), ImmutableList.of("dimC"), null)
+                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("time", "dimA", "dimB", "col2")), ImmutableList.of("dimC"), null)
             )
         ), new TypeReference<Map<String, Object>>() {}
     );
@@ -115,7 +115,7 @@ public class DataSchemaTest
         new StringInputRowParser(
             new JSONParseSpec(
                 new TimestampSpec("time", "auto", null),
-                new DimensionsSpec(ImmutableList.of("time", "dimA", "dimB", "metric1"), ImmutableList.of("dimC"), null)
+                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("time", "dimA", "dimB", "metric1")), ImmutableList.of("dimC"), null)
             )
         ), new TypeReference<Map<String, Object>>() {}
     );
@@ -173,7 +173,7 @@ public class DataSchemaTest
                      + "\"parseSpec\":{"
                      + "\"format\":\"json\","
                      + "\"timestampSpec\":{\"column\":\"xXx\", \"format\": \"auto\", \"missingValue\": null},"
-                     + "\"dimensionsSpec\":{\"dimensions\":[], \"dimensionExclusions\":[], \"spatialDimensions\":[]},"
+                     + "\"dimensionsSpec\":{\"dimensions\":[], \"dimensionExclusions\":[]},"
                      + "\"flattenSpec\":{\"useFieldDiscovery\":true, \"fields\":[]},"
                      + "\"featureSpec\":{}},"
                      + "\"encoding\":\"UTF-8\""

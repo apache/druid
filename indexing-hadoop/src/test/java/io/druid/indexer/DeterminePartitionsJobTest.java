@@ -227,7 +227,7 @@ public class DeterminePartitionsJobTest
                     new StringInputRowParser(
                         new CSVParseSpec(
                             new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                            new DimensionsSpec(ImmutableList.of("host", "country"), null, null),
+                            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host", "country")), null, null),
                             null,
                             ImmutableList.of("timestamp", "host", "country", "visited_num")
                         )
