@@ -66,6 +66,7 @@ import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentInfoLoader;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
+import io.druid.server.coordinator.helper.DruidCoordinatorVersionConverter;
 import io.druid.server.coordinator.rules.LoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import io.druid.server.initialization.ZkPathsConfig;
@@ -689,40 +690,6 @@ public class DruidCoordinator
     }
 
     return ImmutableList.copyOf(helpers);
-  }
-
-  public static class DruidCoordinatorVersionConverter implements DruidCoordinatorHelper
-  {
-    private final IndexingServiceClient indexingServiceClient;
-    private final AtomicReference<DatasourceWhitelist> whitelistRef;
-
-    public DruidCoordinatorVersionConverter(
-        IndexingServiceClient indexingServiceClient,
-        AtomicReference<DatasourceWhitelist> whitelistRef
-    )
-    {
-      this.indexingServiceClient = indexingServiceClient;
-      this.whitelistRef = whitelistRef;
-    }
-
-    @Override
-    public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
-    {
-      DatasourceWhitelist whitelist = whitelistRef.get();
-
-      for (DataSegment dataSegment : params.getAvailableSegments()) {
-        if (whitelist == null || whitelist.contains(dataSegment.getDataSource())) {
-          final Integer binaryVersion = dataSegment.getBinaryVersion();
-
-          if (binaryVersion == null || binaryVersion < IndexIO.CURRENT_VERSION_ID) {
-            log.info("Upgrading version on segment[%s]", dataSegment.getIdentifier());
-            indexingServiceClient.upgradeSegment(dataSegment);
-          }
-        }
-      }
-
-      return params;
-    }
   }
 
   public abstract class CoordinatorRunnable implements Runnable
