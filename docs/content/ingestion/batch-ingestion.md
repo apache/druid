@@ -238,7 +238,7 @@ classification=yarn-site,properties=[mapreduce.reduce.memory.mb=6144,mapreduce.r
 ```
 
 - Follow the instructions under "[Configure Hadoop for data
-loads](cluster.html#configure-cluster-for-hadoop-data-loads)" using the XML files from
+loads](../tutorials/cluster.html#configure-cluster-for-hadoop-data-loads)" using the XML files from
 `/etc/hadoop/conf` on your EMR master.
 
 #### Loading from S3 with EMR
@@ -268,7 +268,7 @@ Druid works out of the box with many Hadoop distributions.
 
 If you are having dependency conflicts between Druid and your version of Hadoop, you can try
 searching for a solution in the [Druid user groups](https://groups.google.com/forum/#!forum/druid-
-user), or reading the Druid [Different Hadoop Versions](..//operations/other-hadoop.html) documentation.
+user), or reading the Druid [Different Hadoop Versions](../operations/other-hadoop.html) documentation.
 
 ## Command Line Hadoop Indexer
 

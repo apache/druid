@@ -292,9 +292,6 @@ results.
 Is this always a problem? No. If your data is small enough to fit on a single Kafka partition, you can replicate without issues. 
 Otherwise, you can run real-time nodes without replication.
 
-There is now also an [experimental low level Kafka firehose](../development/kafka-simple-consumer-firehose.html) which 
-solves the issues described above with using the high level Kafka consumer.
-
 ### Locking
 
 Using stream pull ingestion with Realtime nodes together batch ingestion may introduce data override issues. For example, if you 

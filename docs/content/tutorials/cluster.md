@@ -68,13 +68,13 @@ In this package, you'll find:
 
 
 * `LICENSE` - the license files.
-* `bin/` - scripts related to the [single-machine quickstart](quickstart.md).
+* `bin/` - scripts related to the [single-machine quickstart](quickstart.html).
 * `conf/*` - template configurations for a clustered setup.
-* `conf-quickstart/*` - configurations for the [single-machine quickstart](quickstart.md).
+* `conf-quickstart/*` - configurations for the [single-machine quickstart](quickstart.html).
 * `extensions/*` - all Druid extensions.
 * `hadoop-dependencies/*` - Druid Hadoop dependencies.
 * `lib/*` - all included software packages for core Druid.
-* `quickstart/*` - files related to the [single-machine quickstart](quickstart.md).
+* `quickstart/*` - files related to the [single-machine quickstart](quickstart.html).
 
 We'll be editing the files in `conf/` in order to get things running.
 
