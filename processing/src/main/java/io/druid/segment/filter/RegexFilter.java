@@ -34,14 +34,14 @@ public class RegexFilter extends DimensionPredicateFilter
   {
     super(
         dimension,
-        new Predicate<String>()
+        new Predicate()
         {
           Pattern compiled = Pattern.compile(pattern);
 
           @Override
-          public boolean apply(String input)
+          public boolean apply(Object input)
           {
-            return (input != null) && compiled.matcher(input).find();
+            return (input != null) && compiled.matcher(input.toString()).find();
           }
         }
     );

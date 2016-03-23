@@ -19,9 +19,11 @@
 
 package io.druid.segment;
 
+import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
+import com.metamx.collections.bitmap.MutableBitmap;
 import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.common.guava.CloseQuietly;
 import io.druid.query.filter.BitmapIndexSelector;
@@ -127,6 +129,36 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
     }
 
     return column.getBitmapIndex().getBitmap(value);
+  }
+
+  @Override
+  public ImmutableBitmap getBitmapIndexFromColumnScan(String dimension, Predicate predicate)
+  {
+    // NOTE: only used for __time column
+    final Column column = index.getColumn(dimension);
+    if (column == null) {
+      return bitmapFactory.makeEmptyImmutableBitmap();
+    }
+
+    final MutableBitmap bitmap = bitmapFactory.makeEmptyMutableBitmap();
+    final GenericColumn genericColumn = column.getGenericColumn();
+
+    Long prevVal = null;
+    boolean initDone = false;
+    boolean cachedResult = false;
+    Long longVal;
+    for (int rowIdx = 0; rowIdx < column.getLength(); rowIdx++) {
+      longVal = genericColumn.getLongSingleValueRow(rowIdx);
+      if (!initDone || !longVal.equals(prevVal)) {
+        cachedResult = predicate.apply(longVal);
+        prevVal = longVal;
+        initDone = true;
+      }
+      if (cachedResult) {
+        bitmap.add(rowIdx);
+      }
+    }
+    return bitmapFactory.makeImmutableBitmap(bitmap);
   }
 
   @Override

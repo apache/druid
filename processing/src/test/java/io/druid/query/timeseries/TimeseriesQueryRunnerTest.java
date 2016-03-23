@@ -27,6 +27,7 @@ import com.metamx.common.guava.Sequences;
 import io.druid.granularity.PeriodGranularity;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Druids;
+import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
@@ -37,15 +38,21 @@ import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.extraction.TimeFormatExtractionFn;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.ExtractionDimFilter;
 import io.druid.query.filter.InDimFilter;
+import io.druid.query.filter.JavaScriptDimFilter;
 import io.druid.query.filter.NotDimFilter;
 import io.druid.query.filter.RegexDimFilter;
+import io.druid.query.filter.SearchQueryDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
+import io.druid.query.search.search.ContainsSearchQuerySpec;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.segment.TestHelper;
+import io.druid.segment.column.Column;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.Interval;
@@ -2261,4 +2268,105 @@ public class TimeseriesQueryRunnerTest
     );
     TestHelper.assertExpectedResults(expectedResults, results);
   }
+
+  @Test
+  public void testFullOnTimeseriesWithExtractionFilterOnTime()
+  {
+    ExtractionDimFilter dayFilter = new ExtractionDimFilter(
+        Column.TIME_COLUMN_NAME,
+        "Thursday",
+        new TimeFormatExtractionFn("EEEE", null, null),
+        null
+    );
+
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.dataSource)
+                                  .granularity(QueryRunnerTestHelper.allGran)
+                                  .filters(dayFilter)
+                                  .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                  .aggregators(
+                                      Arrays.<AggregatorFactory>asList(
+                                          QueryRunnerTestHelper.rowsCount,
+                                          QueryRunnerTestHelper.qualityUniques
+                                      )
+                                  )
+                                  .descending(descending)
+                                  .build();
+
+
+    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
+        runner.run(query, CONTEXT),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+
+    for (Result<TimeseriesResultValue> result : results) {
+      TimeseriesResultValue resultVal = result.getValue();
+      Assert.assertEquals(182L, resultVal.getMetric("rows"));
+      Assert.assertEquals(9.019833517963864d, resultVal.getDoubleMetric("uniques"), 0.05d);
+    }
+  }
+
+
+  private void testFullOnTimeseriesWithFiltersOnTimeValidationHelper(Query query)
+  {
+    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
+        runner.run(query, CONTEXT),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+
+    for (Result<TimeseriesResultValue> result : results) {
+      TimeseriesResultValue resultVal = result.getValue();
+      Assert.assertEquals(13L, resultVal.getMetric("rows"));
+      Assert.assertEquals(9.019833517963864d, resultVal.getDoubleMetric("uniques"), 0.05d);
+    }
+  }
+
+  @Test
+  public void testFullOnTimeseriesWithFiltersOnTime()
+  {
+    //these filters are equivalent to limiting interval to QueryRunnerTestHelper.secondOnly
+    DateTime dt = new DateTime("2011-04-02T00:00:00.000Z");
+    String dtMilliStr = String.valueOf(dt.getMillis());
+    SelectorDimFilter selFilter = new SelectorDimFilter(Column.TIME_COLUMN_NAME, dtMilliStr);
+
+    RegexDimFilter regexFilter = new RegexDimFilter(Column.TIME_COLUMN_NAME, dtMilliStr);
+
+    String jsFn = "function(x) { return(x === " + dtMilliStr + ") }";
+    JavaScriptDimFilter jsFilter = new JavaScriptDimFilter(Column.TIME_COLUMN_NAME, jsFn);
+
+    SearchQueryDimFilter searchFilter = new SearchQueryDimFilter(Column.TIME_COLUMN_NAME,
+                                                                 new ContainsSearchQuerySpec(dtMilliStr, false));
+
+    BoundDimFilter boundFilter = new BoundDimFilter(Column.TIME_COLUMN_NAME,
+                                                    dtMilliStr, dtMilliStr,
+                                                    false, false,
+                                                    true);
+
+
+    Druids.TimeseriesQueryBuilder baseBuilder = Druids.newTimeseriesQueryBuilder()
+                                                     .dataSource(QueryRunnerTestHelper.dataSource)
+                                                     .granularity(QueryRunnerTestHelper.allGran)
+                                                     .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                                     .aggregators(
+                                                         Arrays.<AggregatorFactory>asList(
+                                                             QueryRunnerTestHelper.rowsCount,
+                                                             QueryRunnerTestHelper.qualityUniques
+                                                         )
+                                                     )
+                                                     .descending(descending);
+
+    TimeseriesQuery selectorQuery = baseBuilder.filters(selFilter).build();
+    TimeseriesQuery regexQuery = baseBuilder.filters(regexFilter).build();
+    TimeseriesQuery jsQuery = baseBuilder.filters(jsFilter).build();
+    TimeseriesQuery searchQuery = baseBuilder.filters(searchFilter).build();
+    TimeseriesQuery boundQuery = baseBuilder.filters(boundFilter).build();
+
+    testFullOnTimeseriesWithFiltersOnTimeValidationHelper(selectorQuery);
+    testFullOnTimeseriesWithFiltersOnTimeValidationHelper(regexQuery);
+    testFullOnTimeseriesWithFiltersOnTimeValidationHelper(jsQuery);
+    testFullOnTimeseriesWithFiltersOnTimeValidationHelper(searchQuery);
+    testFullOnTimeseriesWithFiltersOnTimeValidationHelper(boundQuery);
+  }
+
+
 }

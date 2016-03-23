@@ -28,6 +28,7 @@ import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.column.Column;
 import io.druid.segment.data.Indexed;
 
 import javax.annotation.Nullable;
@@ -37,11 +38,11 @@ import javax.annotation.Nullable;
 class DimensionPredicateFilter implements Filter
 {
   private final String dimension;
-  private final Predicate<String> predicate;
+  private final Predicate predicate;
 
   public DimensionPredicateFilter(
       String dimension,
-      Predicate<String> predicate
+      Predicate predicate
   )
   {
     this.dimension = dimension;
@@ -51,8 +52,16 @@ class DimensionPredicateFilter implements Filter
   @Override
   public ImmutableBitmap getBitmapIndex(final BitmapIndexSelector selector)
   {
+    if (predicate == null) {
+      return selector.getBitmapFactory().makeEmptyImmutableBitmap();
+    }
+
+    if (dimension.equals(Column.TIME_COLUMN_NAME)) {
+      return selector.getBitmapIndexFromColumnScan(dimension, predicate);
+    }
+
     Indexed<String> dimValues = selector.getDimensionValues(dimension);
-    if (dimValues == null || dimValues.size() == 0 || predicate == null) {
+    if (dimValues == null || dimValues.size() == 0) {
       return selector.getBitmapFactory().makeEmptyImmutableBitmap();
     }
 
