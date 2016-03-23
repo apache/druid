@@ -22,6 +22,7 @@ package io.druid.server.coordinator.helper;
 import com.google.api.client.util.Maps;
 import com.google.common.collect.Ordering;
 import com.metamx.common.logger.Logger;
+import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.server.coordinator.CoordinatorHadoopMergeSpec;
 import io.druid.server.coordinator.CoordinatorStats;
@@ -179,6 +180,13 @@ public class DruidCoordinatorHadoopSegmentMerger implements DruidCoordinatorHelp
       scanFromOldToNew = !scanFromOldToNew;
     }
 
+    log.info("Issued merge requests for [%s] dataSource", stats.getGlobalStats().get("hadoopMergeCount").get());
+
+    params.getEmitter().emit(
+        new ServiceMetricEvent.Builder().build(
+            "coordinator/hadoopMerge/count", stats.getGlobalStats().get("hadoopMergeCount")
+        )
+    );
     return params.buildFromExisting().withCoordinatorStats(stats).build();
   }
 

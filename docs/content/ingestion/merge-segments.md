@@ -30,7 +30,7 @@ Here is what goes inside `hadoopMergeConfig`,
 
 |Field|Type|Description|Default|Required|
 |-----|----|-----------|-------|--------|
-|keepGap|Boolean.|Indicate whether Druid should merge segments that are non-contiguous.|false|no|
+|keepGap|Boolean.|Indicate whether Druid should merge segments whose intervals are non-contiguous. For example, segment A has interval `2016-03-22/2016-03-23`, segment B has interval `2016-03-24/2016-03-25`. If `keepGap` is true, Druid will not merge A and B.|false|no|
 |hadoopDependencyCoordinates|Array of String.|A list of Hadoop dependency coordinates that Druid will use, this property will override the default Hadoop coordinates. Once specified, Druid will look for those Hadoop dependencies from the location specified by `druid.extensions.hadoopDependenciesDir`|null|no|
 |tuningConfig|JSON Object.|This is exactly same as the tuningConfig specified in Hadoop Index Task. See [TuningConfig](../ingestion/batch-ingestion.html#tuningconfig).|null|no|
 |hadoopMergeSpecs|Array of HadoopMergeSpec.|A list of HadoopMergeSpec. Each data source will have its own HadoopMergeSpec. See below.|null|no|
@@ -89,5 +89,5 @@ Example:
 
 With this configuration posted to [Coordinator Dynamic Configuration end point]("../configuration/coordinator.html#dynamic-configuration"), 
 Coordinator will automatically merge imbalanced segments whose data sources are "wikipedia". Once it finds enough small segments whose total
-size is greater equal than `mergeBytesLimit`(500MB in the example), it will submit a Hadoop Index Task to reindex intervals covered by those imbalanced segments, 
-using the dimensions specified in `dimensions` and aggregators specified in `metricsSpec`. 
+size is greater or equal than `mergeBytesLimit`(in the example, it is configured to 500MB on-disk size), it will submit a Hadoop Index Task to reindex intervals
+covered by those imbalanced segments, using the dimensions specified in `dimensions` (if not specified, it will use the `dimensions` in the existing segments) and aggregators specified in `metricsSpec`.

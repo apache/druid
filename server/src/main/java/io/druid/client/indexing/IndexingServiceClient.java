@@ -86,7 +86,7 @@ public class IndexingServiceClient
       }
     }
 
-    runQuery(new ClientAppendQuery(dataSource, segments));
+    postTask(new ClientAppendQuery(dataSource, segments));
   }
 
   public String hadoopMergeSegments(
@@ -99,7 +99,7 @@ public class IndexingServiceClient
       List<String> hadoopCoordinates
   )
   {
-    final InputStream queryResponse = runQuery(
+    final InputStream queryResponse = postTask(
         new ClientHadoopIndexQuery(
             String.format(
                 "%s_%s_%s",
@@ -135,22 +135,22 @@ public class IndexingServiceClient
 
   public void killSegments(String dataSource, Interval interval)
   {
-    runQuery(new ClientKillQuery(dataSource, interval));
+    postTask(new ClientKillQuery(dataSource, interval));
   }
 
   public void upgradeSegment(DataSegment dataSegment)
   {
-    runQuery(new ClientConversionQuery(dataSegment));
+    postTask(new ClientConversionQuery(dataSegment));
   }
 
   public void upgradeSegments(String dataSource, Interval interval)
   {
-    runQuery(new ClientConversionQuery(dataSource, interval));
+    postTask(new ClientConversionQuery(dataSource, interval));
   }
 
   public Map<String, Object> getSegmentMetadata(String dataSource, List<Interval> intervals)
   {
-    runQuery(new ClientSegmentMetadataQuery(dataSource, intervals));
+    postTask(new ClientSegmentMetadataQuery(dataSource, intervals));
     return null;
   }
 
@@ -185,10 +185,9 @@ public class IndexingServiceClient
     }
   }
 
-  private InputStream runQuery(Object queryObject)
+  private InputStream postTask(Object queryObject)
   {
     try {
-      System.out.println("query json : " + jsonMapper.writeValueAsString(queryObject));
       return client.go(
           new Request(
               HttpMethod.POST,
