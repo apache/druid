@@ -23,9 +23,6 @@ import org.joda.time.Duration;
 import org.skife.config.Config;
 import org.skife.config.Default;
 
-import java.util.HashMap;
-import java.util.Map;
-
 /**
  */
 public abstract class DruidCoordinatorConfig

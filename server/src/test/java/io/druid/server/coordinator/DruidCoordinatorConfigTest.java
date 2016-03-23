@@ -43,6 +43,7 @@ public class DruidCoordinatorConfigTest
     Assert.assertEquals(new Duration("PT60s"), config.getCoordinatorPeriod());
     Assert.assertEquals(new Duration("PT1800s"), config.getCoordinatorIndexingPeriod());
     Assert.assertFalse(config.isConvertSegments());
+    Assert.assertNull(config.getMergeStrategy());
     Assert.assertFalse(config.isKillSegments());
     Assert.assertEquals(86400000, config.getCoordinatorKillPeriod().getMillis());
     Assert.assertEquals(-1000, config.getCoordinatorKillDurationToRetain().getMillis());
@@ -55,7 +56,7 @@ public class DruidCoordinatorConfigTest
     props.setProperty("druid.coordinator.startDelay", "PT1s");
     props.setProperty("druid.coordinator.period", "PT1s");
     props.setProperty("druid.coordinator.period.indexingPeriod", "PT1s");
-    props.setProperty("druid.coordinator.merge.on", "true");
+    props.setProperty("druid.coordinator.merge.strategy", "hadoop");
     props.setProperty("druid.coordinator.conversion.on", "true");
     props.setProperty("druid.coordinator.kill.on", "true");
     props.setProperty("druid.coordinator.kill.period", "PT1s");
@@ -72,6 +73,7 @@ public class DruidCoordinatorConfigTest
     Assert.assertEquals(new Duration("PT1s"), config.getCoordinatorIndexingPeriod());
     Assert.assertTrue(config.isConvertSegments());
     Assert.assertTrue(config.isKillSegments());
+    Assert.assertEquals("hadoop", config.getMergeStrategy());
     Assert.assertEquals(new Duration("PT1s"), config.getCoordinatorKillPeriod());
     Assert.assertEquals(new Duration("PT1s"), config.getCoordinatorKillDurationToRetain());
     Assert.assertEquals(10000, config.getCoordinatorKillMaxSegments());

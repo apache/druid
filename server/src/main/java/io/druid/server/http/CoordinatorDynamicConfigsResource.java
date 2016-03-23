@@ -86,7 +86,7 @@ public class CoordinatorDynamicConfigsResource
         CoordinatorDynamicConfig.CONFIG_KEY,
         dynamicConfig,
         new AuditInfo(author, comment, req.getRemoteAddr())
-    ) ? Response.ok().build() : Response.status(Response.Status.BAD_REQUEST).build();
+    ) ? Response.ok().build() : Response.status(Response.Status.INTERNAL_SERVER_ERROR).build();
   }
 
   @GET
