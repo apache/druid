@@ -27,6 +27,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.common.io.ByteStreams;
+import com.google.common.io.Closer;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
@@ -74,6 +75,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.io.ByteArrayOutputStream;
+import java.io.Closeable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -144,102 +146,121 @@ public class IndexMergerV9 extends IndexMerger
       );
     }
 
+    Closer closer = Closer.create();
     final IOPeon ioPeon = new TmpFileIOPeon(false);
+    closer.register(new Closeable()
+    {
+      @Override
+      public void close() throws IOException
+      {
+        ioPeon.cleanup();
+      }
+    });
     final FileSmoosher v9Smoosher = new FileSmoosher(outDir);
     final File v9TmpDir = new File(outDir, "v9-tmp");
     v9TmpDir.mkdirs();
+    closer.register(new Closeable()
+    {
+      @Override
+      public void close() throws IOException
+      {
+        FileUtils.deleteDirectory(v9TmpDir);
+      }
+    });
     log.info("Start making v9 index files, outDir:%s", outDir);
+    try {
+      long startTime = System.currentTimeMillis();
+      ByteStreams.write(
+          Ints.toByteArray(IndexIO.V9_VERSION),
+          Files.newOutputStreamSupplier(new File(outDir, "version.bin"))
+      );
+      log.info("Completed version.bin in %,d millis.", System.currentTimeMillis() - startTime);
 
-    long startTime = System.currentTimeMillis();
-    ByteStreams.write(
-        Ints.toByteArray(IndexIO.V9_VERSION),
-        Files.newOutputStreamSupplier(new File(outDir, "version.bin"))
-    );
-    log.info("Completed version.bin in %,d millis.", System.currentTimeMillis() - startTime);
+      progress.progress();
+      final Map<String, ValueType> metricsValueTypes = Maps.newTreeMap(Ordering.<String>natural().nullsFirst());
+      final Map<String, String> metricTypeNames = Maps.newTreeMap(Ordering.<String>natural().nullsFirst());
+      final List<ColumnCapabilitiesImpl> dimCapabilities = Lists.newArrayListWithCapacity(mergedDimensions.size());
+      mergeCapabilities(adapters, mergedDimensions, metricsValueTypes, metricTypeNames, dimCapabilities);
 
-    progress.progress();
-    final Map<String, ValueType> metricsValueTypes = Maps.newTreeMap(Ordering.<String>natural().nullsFirst());
-    final Map<String, String> metricTypeNames = Maps.newTreeMap(Ordering.<String>natural().nullsFirst());
-    final List<ColumnCapabilitiesImpl> dimCapabilities = Lists.newArrayListWithCapacity(mergedDimensions.size());
-    mergeCapabilities(adapters, mergedDimensions, metricsValueTypes, metricTypeNames, dimCapabilities);
+      /************* Setup Dim Conversions **************/
+      progress.progress();
+      startTime = System.currentTimeMillis();
+      final Map<String, Integer> dimCardinalities = Maps.newHashMap();
+      final ArrayList<GenericIndexedWriter<String>> dimValueWriters = setupDimValueWriters(ioPeon, mergedDimensions);
+      final ArrayList<Map<String, IntBuffer>> dimConversions = Lists.newArrayListWithCapacity(adapters.size());
+      final ArrayList<Boolean> dimensionSkipFlag = Lists.newArrayListWithCapacity(mergedDimensions.size());
+      final ArrayList<Boolean> dimHasNullFlags = Lists.newArrayListWithCapacity(mergedDimensions.size());
+      final ArrayList<Boolean> convertMissingDimsFlags = Lists.newArrayListWithCapacity(mergedDimensions.size());
+      writeDimValueAndSetupDimConversion(
+          adapters, progress, mergedDimensions, dimCardinalities, dimValueWriters, dimensionSkipFlag, dimConversions,
+          convertMissingDimsFlags, dimHasNullFlags
+      );
+      log.info("Completed dim conversions in %,d millis.", System.currentTimeMillis() - startTime);
 
-    /************* Setup Dim Conversions **************/
-    progress.progress();
-    startTime = System.currentTimeMillis();
-    final Map<String, Integer> dimCardinalities = Maps.newHashMap();
-    final ArrayList<GenericIndexedWriter<String>> dimValueWriters = setupDimValueWriters(ioPeon, mergedDimensions);
-    final ArrayList<Map<String, IntBuffer>> dimConversions = Lists.newArrayListWithCapacity(adapters.size());
-    final ArrayList<Boolean> dimensionSkipFlag = Lists.newArrayListWithCapacity(mergedDimensions.size());
-    final ArrayList<Boolean> dimHasNullFlags = Lists.newArrayListWithCapacity(mergedDimensions.size());
-    final ArrayList<Boolean> convertMissingDimsFlags = Lists.newArrayListWithCapacity(mergedDimensions.size());
-    writeDimValueAndSetupDimConversion(
-        adapters, progress, mergedDimensions, dimCardinalities, dimValueWriters, dimensionSkipFlag, dimConversions,
-        convertMissingDimsFlags, dimHasNullFlags
-    );
-    log.info("Completed dim conversions in %,d millis.", System.currentTimeMillis() - startTime);
+      /************* Walk through data sets, merge them, and write merged columns *************/
+      progress.progress();
+      final Iterable<Rowboat> theRows = makeRowIterable(
+          adapters,
+          mergedDimensions,
+          mergedMetrics,
+          dimConversions,
+          convertMissingDimsFlags,
+          rowMergerFn
+      );
+      final LongColumnSerializer timeWriter = setupTimeWriter(ioPeon);
+      final ArrayList<IndexedIntsWriter> dimWriters = setupDimensionWriters(
+          ioPeon, mergedDimensions, dimCapabilities, dimCardinalities, indexSpec
+      );
+      final ArrayList<GenericColumnSerializer> metWriters = setupMetricsWriters(
+          ioPeon, mergedMetrics, metricsValueTypes, metricTypeNames, indexSpec
+      );
+      final List<IntBuffer> rowNumConversions = Lists.newArrayListWithCapacity(adapters.size());
+      final ArrayList<MutableBitmap> nullRowsList = Lists.newArrayListWithCapacity(mergedDimensions.size());
+      for (int i = 0; i < mergedDimensions.size(); ++i) {
+        nullRowsList.add(indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap());
+      }
+      mergeIndexesAndWriteColumns(
+          adapters, progress, theRows, timeWriter, dimWriters, metWriters,
+          dimensionSkipFlag, rowNumConversions, nullRowsList, dimHasNullFlags
+      );
 
-    /************* Walk through data sets, merge them, and write merged columns *************/
-    progress.progress();
-    final Iterable<Rowboat> theRows = makeRowIterable(
-        adapters,
-        mergedDimensions,
-        mergedMetrics,
-        dimConversions,
-        convertMissingDimsFlags,
-        rowMergerFn
-    );
-    final LongColumnSerializer timeWriter = setupTimeWriter(ioPeon);
-    final ArrayList<IndexedIntsWriter> dimWriters = setupDimensionWriters(
-        ioPeon, mergedDimensions, dimCapabilities, dimCardinalities, indexSpec
-    );
-    final ArrayList<GenericColumnSerializer> metWriters = setupMetricsWriters(
-        ioPeon, mergedMetrics, metricsValueTypes, metricTypeNames, indexSpec
-    );
-    final List<IntBuffer> rowNumConversions = Lists.newArrayListWithCapacity(adapters.size());
-    final ArrayList<MutableBitmap> nullRowsList = Lists.newArrayListWithCapacity(mergedDimensions.size());
-    for (int i = 0; i < mergedDimensions.size(); ++i) {
-      nullRowsList.add(indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap());
+      /************ Create Inverted Indexes *************/
+      progress.progress();
+      final ArrayList<GenericIndexedWriter<ImmutableBitmap>> bitmapIndexWriters = setupBitmapIndexWriters(
+          ioPeon, mergedDimensions, indexSpec
+      );
+      final ArrayList<ByteBufferWriter<ImmutableRTree>> spatialIndexWriters = setupSpatialIndexWriters(
+          ioPeon, mergedDimensions, indexSpec, dimCapabilities
+      );
+      makeInvertedIndexes(
+          adapters, progress, mergedDimensions, indexSpec, v9TmpDir, rowNumConversions,
+          nullRowsList, dimValueWriters, bitmapIndexWriters, spatialIndexWriters, dimConversions
+      );
+
+      /************ Finalize Build Columns *************/
+      progress.progress();
+      makeTimeColumn(v9Smoosher, progress, timeWriter);
+      makeMetricsColumns(v9Smoosher, progress, mergedMetrics, metricsValueTypes, metricTypeNames, metWriters);
+      makeDimensionColumns(
+          v9Smoosher, progress, indexSpec, mergedDimensions, dimensionSkipFlag, dimCapabilities,
+          dimValueWriters, dimWriters, bitmapIndexWriters, spatialIndexWriters
+      );
+
+      /************* Make index.drd & metadata.drd files **************/
+      progress.progress();
+      makeIndexBinary(
+          v9Smoosher, adapters, outDir, mergedDimensions, dimensionSkipFlag, mergedMetrics, progress, indexSpec
+      );
+      makeMetadataBinary(v9Smoosher, progress, segmentMetadata);
+
+      v9Smoosher.close();
+      progress.stop();
+
+      return outDir;
     }
-    mergeIndexesAndWriteColumns(
-        adapters, progress, theRows, timeWriter, dimWriters, metWriters,
-        dimensionSkipFlag, rowNumConversions, nullRowsList, dimHasNullFlags
-    );
-
-    /************ Create Inverted Indexes *************/
-    progress.progress();
-    final ArrayList<GenericIndexedWriter<ImmutableBitmap>> bitmapIndexWriters = setupBitmapIndexWriters(
-        ioPeon, mergedDimensions, indexSpec
-    );
-    final ArrayList<ByteBufferWriter<ImmutableRTree>> spatialIndexWriters = setupSpatialIndexWriters(
-        ioPeon, mergedDimensions, indexSpec, dimCapabilities
-    );
-    makeInvertedIndexes(
-        adapters, progress, mergedDimensions, indexSpec, v9TmpDir, rowNumConversions,
-        nullRowsList, dimValueWriters, bitmapIndexWriters, spatialIndexWriters, dimConversions
-    );
-
-    /************ Finalize Build Columns *************/
-    progress.progress();
-    makeTimeColumn(v9Smoosher, progress, timeWriter);
-    makeMetricsColumns(v9Smoosher, progress, mergedMetrics, metricsValueTypes, metricTypeNames, metWriters);
-    makeDimensionColumns(
-        v9Smoosher, progress, indexSpec, mergedDimensions, dimensionSkipFlag, dimCapabilities,
-        dimValueWriters, dimWriters, bitmapIndexWriters, spatialIndexWriters
-    );
-
-    /************* Make index.drd & metadata.drd files **************/
-    progress.progress();
-    makeIndexBinary(
-        v9Smoosher, adapters, outDir, mergedDimensions, dimensionSkipFlag, mergedMetrics, progress, indexSpec
-    );
-    makeMetadataBinary(v9Smoosher, progress, segmentMetadata);
-
-    v9Smoosher.close();
-    ioPeon.cleanup();
-    FileUtils.deleteDirectory(v9TmpDir);
-    progress.stop();
-
-    return outDir;
+    finally {
+      closer.close();
+    }
   }
 
   private void makeMetadataBinary(
