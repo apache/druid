@@ -204,8 +204,6 @@ A filtered aggregator wraps any given aggregator, but only aggregates the values
 
 This makes it possible to compute the results of a filtered and an unfiltered aggregation simultaneously, without having to issue multiple queries, and use both results as part of post-aggregations.
 
-*Limitations:* The filtered aggregator currently only supports 'or', 'and', 'selector', 'not' and 'Extraction' filters, i.e. matching one or multiple dimensions against a single value.
-
 *Note:* If only the filtered results are required, consider putting the filter on the query itself, which will be much faster since it does not require scanning all the data.
 
 ```json
