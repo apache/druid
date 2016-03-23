@@ -174,7 +174,7 @@ bin/tranquility server -configFile <path_to_druid_distro>/conf-quickstart/tranqu
 
 <div class="note info">
 This section shows you how to load data using Tranquility Server, but Druid also supports a wide
-variety of <a href="ingestion-streams.html#stream-push">other streaming ingestion options</a>, including from
+variety of <a href="../ingestion/stream-ingestion.html#stream-push">other streaming ingestion options</a>, including from
 popular streaming systems like Kafka, Storm, Samza, and Spark Streaming.
 </div>
 
@@ -229,7 +229,7 @@ visualize and explore data in Druid. We recommend trying [Pivot](https://github.
 [Panoramix](https://github.com/mistercrunch/panoramix), or [Metabase](https://github.com/metabase/metabase) to start
 visualizing the data you just ingested.
 
-If you installed Pivot for example, you should be able to view your data in your browser at [localhost:9090](localhost:9090).
+If you installed Pivot for example, you should be able to view your data in your browser at [localhost:9090](http://localhost:9090/).
 
 ### SQL and other query libraries
 
