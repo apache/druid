@@ -23,18 +23,13 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.metamx.collections.bitmap.ImmutableBitmap;
-import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
-import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.DimensionSelector;
 import io.druid.segment.data.Indexed;
-import io.druid.segment.data.IndexedInts;
 
-import java.util.BitSet;
 import java.util.Iterator;
 import java.util.List;
 
@@ -121,38 +116,4 @@ public class ExtractionFilter implements Filter
         }
     );
   }
-
-  @Override
-  public ValueMatcher makeMatcher(ColumnSelectorFactory columnSelectorFactory)
-  {
-    final DimensionSelector dimensionSelector = columnSelectorFactory.makeDimensionSelector(
-        new DefaultDimensionSpec(dimension, dimension)
-    );
-    if (dimensionSelector == null) {
-      return new BooleanValueMatcher(value.equals(Strings.nullToEmpty(fn.apply(null))));
-    } else {
-      final BitSet bitSetOfIds = new BitSet(dimensionSelector.getValueCardinality());
-      for (int i = 0; i < dimensionSelector.getValueCardinality(); i++) {
-        if (value.equals(Strings.nullToEmpty(fn.apply(dimensionSelector.lookupName(i))))) {
-          bitSetOfIds.set(i);
-        }
-      }
-      return new ValueMatcher()
-      {
-        @Override
-        public boolean matches()
-        {
-          final IndexedInts row = dimensionSelector.getRow();
-          final int size = row.size();
-          for (int i = 0; i < size; ++i) {
-            if (bitSetOfIds.get(row.get(i))) {
-              return true;
-            }
-          }
-          return false;
-        }
-      };
-    }
-  }
-
 }
