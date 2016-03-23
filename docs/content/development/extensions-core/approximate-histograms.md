@@ -2,7 +2,9 @@
 layout: doc_page
 ---
 
-### Approximate Histogram aggregator
+# Approximate Histogram aggregator
+
+Make sure to [include](../../operations/including-extensions.html) `druid-histogram` as an extension.
 
 This aggregator is based on
 [http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf](http://jmlr.org/papers/volume11/ben-haim10a/ben-haim10a.pdf)
