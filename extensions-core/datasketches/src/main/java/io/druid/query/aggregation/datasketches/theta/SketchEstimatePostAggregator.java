@@ -22,7 +22,9 @@ package io.druid.query.aggregation.datasketches.theta;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
+import com.google.common.primitives.Doubles;
 import com.yahoo.sketches.theta.Sketch;
 import io.druid.query.aggregation.PostAggregator;
 
@@ -58,9 +60,23 @@ public class SketchEstimatePostAggregator implements PostAggregator
   }
 
   @Override
-  public Comparator<Sketch> getComparator()
+  public Comparator getComparator()
   {
-    return SketchAggregatorFactory.COMPARATOR;
+    if (errorBoundsStdDev == null) {
+      return Ordering.natural();
+    } else {
+      return new Comparator()
+      {
+        @Override
+        public int compare(Object o1, Object o2)
+        {
+          return Doubles.compare(
+              ((SketchEstimateWithErrorBounds) o1).getEstimate(),
+              ((SketchEstimateWithErrorBounds) o2).getEstimate()
+          );
+        }
+      };
+    }
   }
 
   @Override
