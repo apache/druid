@@ -33,6 +33,7 @@ import java.util.Set;
  */
 public class LocatedSegmentDescriptor extends SegmentDescriptor
 {
+  private final long size;
   private final List<DruidServerMetadata> locations;
 
   @JsonCreator
@@ -40,16 +41,24 @@ public class LocatedSegmentDescriptor extends SegmentDescriptor
       @JsonProperty("itvl") Interval interval,
       @JsonProperty("ver") String version,
       @JsonProperty("part") int partitionNumber,
+      @JsonProperty("size") long size,
       @JsonProperty("locations") List<DruidServerMetadata> locations
   )
   {
     super(interval, version, partitionNumber);
+    this.size = size;
     this.locations = locations == null ? ImmutableList.<DruidServerMetadata>of() : locations;
   }
 
-  public LocatedSegmentDescriptor(SegmentDescriptor descriptor, List<DruidServerMetadata> candidates)
+  public LocatedSegmentDescriptor(SegmentDescriptor descriptor, long size, List<DruidServerMetadata> candidates)
   {
-    this(descriptor.getInterval(), descriptor.getVersion(), descriptor.getPartitionNumber(), candidates);
+    this(descriptor.getInterval(), descriptor.getVersion(), descriptor.getPartitionNumber(), size, candidates);
+  }
+
+  @JsonProperty("size")
+  public long getSize()
+  {
+    return size;
   }
 
   @JsonProperty("locations")

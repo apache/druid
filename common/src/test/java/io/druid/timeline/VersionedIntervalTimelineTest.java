@@ -1552,7 +1552,7 @@ public class VersionedIntervalTimelineTest
 
   private void add(Interval interval, String version, PartitionChunk<Integer> value)
   {
-    timeline.add(interval, version, value);
+    timeline.add(interval, version, value, -1);
   }
 
   private void assertValues(

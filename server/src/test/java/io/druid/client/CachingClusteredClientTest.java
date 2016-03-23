@@ -559,7 +559,7 @@ public class CachingClusteredClientTest
         new HighestPriorityTierSelectorStrategy(new RandomServerSelectorStrategy())
     );
     selector.addServerAndUpdateSegment(new QueryableDruidServer(lastServer, null), dataSegment);
-    timeline.add(interval, "v", new SingleElementPartitionChunk<>(selector));
+    timeline.add(interval, "v", new SingleElementPartitionChunk<>(selector), -1);
 
     client.run(query, context);
 
@@ -1734,7 +1734,7 @@ public class CachingClusteredClientTest
           }
           chunk = new StringPartitionChunk<>(start, end, j, selector);
         }
-        timeline.add(queryIntervals.get(k), String.valueOf(k), chunk);
+        timeline.add(queryIntervals.get(k), String.valueOf(k), chunk, -1);
       }
     }
     return serverExpectationList;

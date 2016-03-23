@@ -157,7 +157,7 @@ public class BrokerQueryResource extends QueryResource
               holder.getInterval(), holder.getVersion(), chunk.getChunkNumber()
           );
           List<DruidServerMetadata> candidates = selector.getCandidates();
-          located.add(new LocatedSegmentDescriptor(descriptor, candidates));
+          located.add(new LocatedSegmentDescriptor(descriptor, holder.getApproximatedSize(), candidates));
         }
       }
     }
