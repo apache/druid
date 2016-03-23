@@ -20,13 +20,11 @@
 package io.druid.query.filter;
 
 import com.google.common.base.Predicate;
-import com.metamx.collections.spatial.search.Bound;
 
 /**
  */
 public interface ValueMatcherFactory
 {
   public ValueMatcher makeValueMatcher(String dimension, Comparable value);
-  public ValueMatcher makeValueMatcher(String dimension, Predicate value);
-  public ValueMatcher makeValueMatcher(String dimension, Bound bound);
+  public ValueMatcher makeValueMatcher(String dimension, Predicate predicate);
 }

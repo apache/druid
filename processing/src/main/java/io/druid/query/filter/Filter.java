@@ -20,7 +20,6 @@
 package io.druid.query.filter;
 
 import com.metamx.collections.bitmap.ImmutableBitmap;
-import io.druid.segment.ColumnSelectorFactory;
 
 /**
  */
@@ -28,5 +27,4 @@ public interface Filter
 {
   public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector);
   public ValueMatcher makeMatcher(ValueMatcherFactory factory);
-  public ValueMatcher makeMatcher(ColumnSelectorFactory columnSelectorFactory);
 }

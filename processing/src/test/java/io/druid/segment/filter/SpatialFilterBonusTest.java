@@ -22,6 +22,7 @@ package io.druid.segment.filter;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import com.metamx.collections.spatial.search.RadiusBound;
 import com.metamx.collections.spatial.search.RectangularBound;
 import io.druid.data.input.MapBasedInputRow;
@@ -35,6 +36,7 @@ import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
+import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.filter.SpatialDimFilter;
 import io.druid.query.timeseries.TimeseriesQuery;
@@ -66,6 +68,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Random;
+import java.util.Set;
 
 /**
  */
@@ -205,9 +208,21 @@ public class SpatialFilterBonusTest
         )
     );
 
-    // Add a bunch of random points
+    // Add a bunch of random points, without replacement
+    Set<String> alreadyChosen = Sets.newHashSet();
     Random rand = new Random();
     for (int i = 6; i < NUM_POINTS; i++) {
+      String coord = null;
+      while (coord == null) {
+        coord = String.format(
+            "%s,%s",
+            (float) (rand.nextFloat() * 10 + 10.0),
+            (float) (rand.nextFloat() * 10 + 10.0)
+        );
+        if (!alreadyChosen.add(coord)) {
+          coord = null;
+        }
+      }
       theIndex.add(
           new MapBasedInputRow(
               new DateTime("2013-01-01").getMillis(),
@@ -215,11 +230,7 @@ public class SpatialFilterBonusTest
               ImmutableMap.<String, Object>of(
                   "timestamp", new DateTime("2013-01-01").toString(),
                   "dim", "boo",
-                  "dim.geo", String.format(
-                  "%s,%s",
-                  (float) (rand.nextFloat() * 10 + 10.0),
-                  (float) (rand.nextFloat() * 10 + 10.0)
-              ),
+                  "dim.geo", coord,
                   "val", i
               )
           )
@@ -389,10 +400,10 @@ public class SpatialFilterBonusTest
                     "timestamp", new DateTime("2013-01-01").toString(),
                     "dim", "boo",
                     "dim.geo", String.format(
-                    "%s,%s",
-                    (float) (rand.nextFloat() * 10 + 10.0),
-                    (float) (rand.nextFloat() * 10 + 10.0)
-                ),
+                        "%s,%s",
+                        (float) (rand.nextFloat() * 10 + 10.0),
+                        (float) (rand.nextFloat() * 10 + 10.0)
+                    ),
                     "val", i
                 )
             )
@@ -467,9 +478,9 @@ public class SpatialFilterBonusTest
             new DateTime("2013-01-01T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 3L)
-                            .put("val", 59L)
-                            .build()
+                    .put("rows", 3L)
+                    .put("val", 59L)
+                    .build()
             )
         )
     );
@@ -485,7 +496,7 @@ public class SpatialFilterBonusTest
           factory.createRunner(segment),
           factory.getToolchest()
       );
-      HashMap<String,Object> context = new HashMap<String, Object>();
+      HashMap<String, Object> context = new HashMap<String, Object>();
       TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
     }
     catch (Exception e) {
@@ -519,45 +530,45 @@ public class SpatialFilterBonusTest
             new DateTime("2013-01-01T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 1L)
-                            .put("val", 17L)
-                            .build()
+                    .put("rows", 1L)
+                    .put("val", 17L)
+                    .build()
             )
         ),
         new Result<TimeseriesResultValue>(
             new DateTime("2013-01-02T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 1L)
-                            .put("val", 29L)
-                            .build()
+                    .put("rows", 1L)
+                    .put("val", 29L)
+                    .build()
             )
         ),
         new Result<TimeseriesResultValue>(
             new DateTime("2013-01-03T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 1L)
-                            .put("val", 13L)
-                            .build()
+                    .put("rows", 1L)
+                    .put("val", 13L)
+                    .build()
             )
         ),
         new Result<TimeseriesResultValue>(
             new DateTime("2013-01-04T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 1L)
-                            .put("val", 91L)
-                            .build()
+                    .put("rows", 1L)
+                    .put("val", 91L)
+                    .build()
             )
         ),
         new Result<TimeseriesResultValue>(
             new DateTime("2013-01-05T00:00:00.000Z"),
             new TimeseriesResultValue(
                 ImmutableMap.<String, Object>builder()
-                            .put("rows", 1L)
-                            .put("val", 47L)
-                            .build()
+                    .put("rows", 1L)
+                    .put("val", 47L)
+                    .build()
             )
         )
     );
@@ -573,7 +584,101 @@ public class SpatialFilterBonusTest
           factory.createRunner(segment),
           factory.getToolchest()
       );
-      HashMap<String,Object> context = new HashMap<String, Object>();
+      HashMap<String, Object> context = new HashMap<String, Object>();
+      TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  @Test
+  public void testSpatialQueryFilteredAggregator()
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource("test")
+                                  .granularity(QueryGranularity.DAY)
+                                  .intervals(Arrays.asList(new Interval("2013-01-01/2013-01-07")))
+                                  .aggregators(
+                                      Arrays.asList(
+                                          new CountAggregatorFactory("rows"),
+                                          new FilteredAggregatorFactory(
+                                              new LongSumAggregatorFactory("valFiltered", "val"),
+                                              new SpatialDimFilter(
+                                                  "dim.geo",
+                                                  new RectangularBound(new float[]{0.0f, 0.0f}, new float[]{9.0f, 9.0f})
+                                              )
+                                          ),
+                                          new LongSumAggregatorFactory("val", "val")
+                                      )
+                                  )
+                                  .build();
+
+    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2013-01-01T00:00:00.000Z"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>builder()
+                    .put("rows", 4995L)
+                    .put("val", 12497502L)
+                    .put("valFiltered", 17L)
+                    .build()
+            )
+        ),
+        new Result<>(
+            new DateTime("2013-01-02T00:00:00.000Z"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>builder()
+                    .put("rows", 1L)
+                    .put("val", 29L)
+                    .put("valFiltered", 29L)
+                    .build()
+            )
+        ),
+        new Result<>(
+            new DateTime("2013-01-03T00:00:00.000Z"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>builder()
+                    .put("rows", 1L)
+                    .put("val", 13L)
+                    .put("valFiltered", 13L)
+                    .build()
+            )
+        ),
+        new Result<>(
+            new DateTime("2013-01-04T00:00:00.000Z"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>builder()
+                    .put("rows", 1L)
+                    .put("val", 91L)
+                    .put("valFiltered", 91L)
+                    .build()
+            )
+        ),
+        new Result<>(
+            new DateTime("2013-01-05T00:00:00.000Z"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>builder()
+                    .put("rows", 2L)
+                    .put("val", 548L)
+                    .put("valFiltered", 47L)
+                    .build()
+            )
+        )
+    );
+    try {
+      TimeseriesQueryRunnerFactory factory = new TimeseriesQueryRunnerFactory(
+          new TimeseriesQueryQueryToolChest(
+              QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
+          new TimeseriesQueryEngine(),
+          QueryRunnerTestHelper.NOOP_QUERYWATCHER
+      );
+
+      QueryRunner runner = new FinalizeResultsQueryRunner(
+          factory.createRunner(segment),
+          factory.getToolchest()
+      );
+      HashMap<String, Object> context = new HashMap<String, Object>();
       TestHelper.assertExpectedResults(expectedResults, runner.run(query, context));
     }
     catch (Exception e) {

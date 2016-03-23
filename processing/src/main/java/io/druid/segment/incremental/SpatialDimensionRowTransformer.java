@@ -24,6 +24,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.base.Splitter;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -224,11 +225,41 @@ public class SpatialDimensionRowTransformer implements Function<InputRow, InputR
     return true;
   }
 
-  private static Float tryParseFloat(String val) {
+  private static Float tryParseFloat(String val)
+  {
     try {
       return Float.parseFloat(val);
-    } catch (NullPointerException | NumberFormatException e) {
+    }
+    catch (NullPointerException | NumberFormatException e) {
       return null;
     }
+  }
+
+  /**
+   * Decodes encodedCoordinate.
+   *
+   * @param encodedCoordinate encoded coordinate
+   *
+   * @return decoded coordinate, or null if it could not be decoded
+   */
+  public static float[] decode(final String encodedCoordinate)
+  {
+    if (encodedCoordinate == null) {
+      return null;
+    }
+
+    final ImmutableList<String> parts = ImmutableList.copyOf(SPLITTER.split(encodedCoordinate));
+    final float[] coordinate = new float[parts.size()];
+
+    for (int i = 0; i < coordinate.length; i++) {
+      final Float floatPart = tryParseFloat(parts.get(i));
+      if (floatPart == null) {
+        return null;
+      } else {
+        coordinate[i] = floatPart;
+      }
+    }
+
+    return coordinate;
   }
 }
