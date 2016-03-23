@@ -36,4 +36,10 @@ public class NoopDimFilter implements DimFilter
   {
     return this;
   }
+
+  @Override
+  public Filter toFilter()
+  {
+    return null;
+  }
 }

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.druid.query.Druids;
+import io.druid.segment.filter.NotFilter;
 
 import java.nio.ByteBuffer;
 
@@ -59,6 +60,12 @@ public class NotDimFilter implements DimFilter
   public DimFilter optimize()
   {
     return Druids.newNotDimFilterBuilder().field(this.getField().optimize()).build();
+  }
+
+  @Override
+  public Filter toFilter()
+  {
+    return new NotFilter(field.toFilter());
   }
 
   @Override

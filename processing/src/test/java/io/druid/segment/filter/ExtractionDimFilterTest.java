@@ -172,7 +172,7 @@ public class ExtractionDimFilterTest
   public void testOr()
   {
     Assert.assertEquals(
-        1, Filters.convertDimensionFilters(
+        1, Filters.toFilter(
             DimFilters.or(
                 new ExtractionDimFilter(
                     "foo",
@@ -186,7 +186,7 @@ public class ExtractionDimFilterTest
 
     Assert.assertEquals(
         1,
-        Filters.convertDimensionFilters(
+        Filters.toFilter(
             DimFilters.or(
                 new ExtractionDimFilter(
                     "foo",
@@ -209,7 +209,7 @@ public class ExtractionDimFilterTest
   public void testAnd()
   {
     Assert.assertEquals(
-        1, Filters.convertDimensionFilters(
+        1, Filters.toFilter(
             DimFilters.or(
                 new ExtractionDimFilter(
                     "foo",
@@ -223,7 +223,7 @@ public class ExtractionDimFilterTest
 
     Assert.assertEquals(
         1,
-        Filters.convertDimensionFilters(
+        Filters.toFilter(
             DimFilters.and(
                 new ExtractionDimFilter(
                     "foo",
@@ -247,7 +247,7 @@ public class ExtractionDimFilterTest
   {
 
     Assert.assertEquals(
-        1, Filters.convertDimensionFilters(
+        1, Filters.toFilter(
             DimFilters.or(
                 new ExtractionDimFilter(
                     "foo",
@@ -261,7 +261,7 @@ public class ExtractionDimFilterTest
 
     Assert.assertEquals(
         1,
-        Filters.convertDimensionFilters(
+        Filters.toFilter(
             DimFilters.not(
                 new ExtractionDimFilter(
                     "foo",
