@@ -583,7 +583,7 @@ public class SelectQueryRunnerTest
     return expected;
   }
 
-  private static void verify(
+  public static void verify(
       Iterable<Result<SelectResultValue>> expectedResults,
       Iterable<Result<SelectResultValue>> actualResults
   )
@@ -615,7 +615,7 @@ public class SelectQueryRunnerTest
           Object actVal = acHolder.getEvent().get(ex.getKey());
 
           // work around for current II limitations
-          if (acHolder.getEvent().get(ex.getKey()) instanceof Double) {
+          if (ex.getValue() instanceof Float && actVal instanceof Double) {
             actVal = ((Double) actVal).floatValue();
           }
           Assert.assertEquals(ex.getValue(), actVal);

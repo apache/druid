@@ -20,6 +20,7 @@
 package io.druid.segment.data;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Iterator;
 
 /**
@@ -27,6 +28,7 @@ import java.util.Iterator;
 public class ArrayIndexed<T> implements Indexed<T>
 {
   private final T[] baseArray;
+  private final Comparator<T> comparator;
   private final Class<? extends T> clazz;
 
   public ArrayIndexed(
@@ -35,6 +37,18 @@ public class ArrayIndexed<T> implements Indexed<T>
   )
   {
     this.baseArray = baseArray;
+    this.comparator = null;
+    this.clazz = clazz;
+  }
+
+  public ArrayIndexed(
+      T[] baseArray,
+      Comparator<T> comparator,
+      Class<? extends T> clazz
+  )
+  {
+    this.baseArray = baseArray;
+    this.comparator = comparator;
     this.clazz = clazz;
   }
 
@@ -59,7 +73,9 @@ public class ArrayIndexed<T> implements Indexed<T>
   @Override
   public int indexOf(T value)
   {
-    return Arrays.asList(baseArray).indexOf(value);
+    return comparator == null
+           ? Arrays.binarySearch(baseArray, value)
+           : Arrays.binarySearch(baseArray, value, comparator);
   }
 
   @Override
