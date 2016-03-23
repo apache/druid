@@ -138,7 +138,8 @@ public class IndexSpec
 
   private static CompressedObjectStrategy.CompressionStrategy dimensionCompressionStrategyForName(String compression)
   {
-    return compression.equals(UNCOMPRESSED) ? null :
+    return compression.equals(UNCOMPRESSED) ?
+           CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED :
            CompressedObjectStrategy.CompressionStrategy.valueOf(compression.toUpperCase());
   }
 

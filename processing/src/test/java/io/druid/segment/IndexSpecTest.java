@@ -51,7 +51,10 @@ public class IndexSpecTest
     final IndexSpec spec = objectMapper.readValue(json, IndexSpec.class);
 
     Assert.assertEquals(IndexSpec.UNCOMPRESSED, spec.getDimensionCompression());
-    Assert.assertEquals(null, spec.getDimensionCompressionStrategy());
+    Assert.assertEquals(
+        CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED,
+        spec.getDimensionCompressionStrategy()
+    );
     Assert.assertEquals(spec, objectMapper.readValue(objectMapper.writeValueAsBytes(spec), IndexSpec.class));
   }
 
@@ -61,5 +64,12 @@ public class IndexSpecTest
     final IndexSpec spec = new IndexSpec();
     Assert.assertEquals(CompressedObjectStrategy.CompressionStrategy.LZ4, spec.getDimensionCompressionStrategy());
     Assert.assertEquals(CompressedObjectStrategy.CompressionStrategy.LZ4, spec.getMetricCompressionStrategy());
+  }
+
+  @Test
+  public void testUncompressed() throws Exception
+  {
+    final IndexSpec spec = new IndexSpec(null, "uncompressed", null);
+    Assert.assertEquals(CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED, spec.getDimensionCompressionStrategy());
   }
 }
