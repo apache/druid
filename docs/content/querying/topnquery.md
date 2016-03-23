@@ -128,7 +128,20 @@ The format of the results would look like so:
   }
 ]
 ```
+
+### Behavior on multi-value dimensions
+
+topN queries can group on multi-value dimensions. When grouping on a multi-value dimension, _all_ values
+from matching rows will be used to generate one group per value. It's possible for a query to return more groups than
+there are rows. For example, a topN on the dimension `tags` with filter `"t1" OR "t3"` would match only row1, and
+generate a result with three groups: `t1`, `t2`, and `t3`. If you only need to include values that match
+your filter, you can use a [filtered dimensionSpec](dimensionspecs.html#filtered-dimensionspecs). This can also
+improve performance.
+
+See [Multi-value dimensions](multi-value-dimensions.html) for more details.
+
 ### Aliasing
+
 The current TopN algorithm is an approximate algorithm. The top 1000 local results from each segment are returned for merging to determine the global topN. As such, the topN algorithm is approximate in both rank and results. Approximate results *ONLY APPLY WHEN THERE ARE MORE THAN 1000 DIM VALUES*. A topN over a dimension with fewer than 1000 unique dimension values can be considered accurate in rank and accurate in aggregates.
 
 The threshold can be modified from it's default 1000 via the server parameter `druid.query.topN.minTopNThreshold` which need to restart servers to take effect or set `minTopNThreshold` in query context which take effect per query. 
