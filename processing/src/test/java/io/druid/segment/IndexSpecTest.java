@@ -65,4 +65,11 @@ public class IndexSpecTest
     Assert.assertEquals(CompressedObjectStrategy.CompressionStrategy.LZ4, spec.getDimensionCompressionStrategy());
     Assert.assertEquals(CompressedObjectStrategy.CompressionStrategy.LZ4, spec.getMetricCompressionStrategy());
   }
+
+  @Test
+  public void testUncompressed() throws Exception
+  {
+    final IndexSpec spec = new IndexSpec(null, "uncompressed", null);
+    Assert.assertEquals(CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED, spec.getDimensionCompressionStrategy());
+  }
 }
