@@ -24,6 +24,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import io.druid.query.Druids;
+import io.druid.segment.filter.Filters;
+import io.druid.segment.filter.OrFilter;
 
 import java.util.List;
 
@@ -62,6 +64,12 @@ public class OrDimFilter implements DimFilter
   {
     List<DimFilter> elements = DimFilters.optimize(fields);
     return elements.size() == 1 ? elements.get(0) : Druids.newOrDimFilterBuilder().fields(elements).build();
+  }
+
+  @Override
+  public Filter toFilter()
+  {
+    return new OrFilter(Filters.toFilters(fields));
   }
 
   @Override
