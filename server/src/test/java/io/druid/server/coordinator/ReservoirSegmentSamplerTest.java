@@ -61,7 +61,6 @@ public class ReservoirSegmentSamplerTest
   public void setUp() throws Exception
   {
     druidServer1 = EasyMock.createMock(ImmutableDruidServer.class);
-    druidServer1 = EasyMock.createMock(ImmutableDruidServer.class);
     druidServer2 = EasyMock.createMock(ImmutableDruidServer.class);
     druidServer3 = EasyMock.createMock(ImmutableDruidServer.class);
     druidServer4 = EasyMock.createMock(ImmutableDruidServer.class);
