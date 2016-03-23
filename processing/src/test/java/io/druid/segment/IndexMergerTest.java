@@ -37,6 +37,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.SimpleDictionaryEncodedColumn;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.CompressedObjectStrategy;
@@ -67,7 +68,6 @@ import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -1661,5 +1661,35 @@ public class IndexMergerTest
     Assert.assertEquals(-1, dictIdSeeker.seek(3));
     Assert.assertEquals(2, dictIdSeeker.seek(4));
     Assert.assertEquals(-1, dictIdSeeker.seek(5));
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testCloser() throws Exception
+  {
+    final long timestamp = System.currentTimeMillis();
+    IncrementalIndex toPersist = IncrementalIndexTest.createIndex(null);
+    IncrementalIndexTest.populateIndex(timestamp, toPersist);
+    ColumnCapabilitiesImpl capabilities = (ColumnCapabilitiesImpl) toPersist.getCapabilities("dim1");
+    capabilities.setHasSpatialIndexes(true);
+
+    final File tempDir = temporaryFolder.newFolder();
+    final File v8TmpDir = new File(tempDir, "v8-tmp");
+    final File v9TmpDir = new File(tempDir, "v9-tmp");
+
+    try {
+      INDEX_MERGER.persist(
+          toPersist,
+          tempDir,
+          indexSpec
+      );
+    }
+    finally {
+      if (v8TmpDir.exists()) {
+        Assert.fail("v8-tmp dir not clean.");
+      }
+      if (v9TmpDir.exists()) {
+        Assert.fail("v9-tmp dir not clean.");
+      }
+    }
   }
 }
