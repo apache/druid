@@ -40,9 +40,9 @@
     * [Granularities](../querying/granularities.html)
     * [DimensionSpecs](../querying/dimensionspecs.html)
     * [Context](../querying/query-context.html)
+  * [Multi-value dimensions](../querying/multi-value-dimensions.html)
   * [SQL](../querying/sql.html)
   * [Joins](../querying/joins.html)
-  * [Optimizations](../querying/optimizations.html)
   * [Multitenancy](../querying/multitenancy.html)
   * [Caching](../querying/caching.html)
 

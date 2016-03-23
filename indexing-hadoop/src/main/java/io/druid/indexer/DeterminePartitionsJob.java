@@ -601,7 +601,7 @@ public class DeterminePartitionsJob implements Jobby
 
         // Respect poisoning
         if (!currentDimSkip && dvc.numRows < 0) {
-          log.info("Cannot partition on multi-valued dimension: %s", dvc.dim);
+          log.info("Cannot partition on multi-value dimension: %s", dvc.dim);
           currentDimSkip = true;
         }
 
