@@ -288,7 +288,7 @@ public class Initialization
         File f = new File(paths[i]);
         if ("*".equals(f.getName())) {
           File parentDir = f.getParentFile();
-          if (parentDir.exists() && parentDir.isDirectory()) {
+          if (parentDir.isDirectory()) {
             File[] jars = parentDir.listFiles(
                 new FilenameFilter()
                 {
