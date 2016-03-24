@@ -3,7 +3,7 @@ layout: doc_page
 ---
 # Merge Existing Segments
 
-Druid can automatically merge small segments into a segment that has a more optimal segment size. You can turn that on by specifying a merge
+Druid can automatically merge small segments into a single segment that has a more optimal segment size. You can turn that on by specifying a merge
 strategy at `druid.coordinator.merge.strategy` (See [Coordinator Configuration](../configuration/coordinator.html)). 
 Currently there are two merge strategies you can choose for Druid.
 
@@ -88,6 +88,6 @@ Example:
 ```
 
 With this configuration posted to [Coordinator Dynamic Configuration end point]("../configuration/coordinator.html#dynamic-configuration"), 
-Coordinator will automatically merge imbalanced segments whose data sources are "wikipedia". Once it finds enough small segments whose total
-size is greater or equal than `mergeBytesLimit`(in the example, it is configured to 500MB on-disk size), it will submit a Hadoop Index Task to reindex intervals
+Coordinator will automatically merge small segments whose data sources are "wikipedia". Once it finds enough small segments whose total
+uncompressed size is greater or equal than `mergeBytesLimit`, it will submit a Hadoop Index Task to reindex intervals
 covered by those imbalanced segments, using the dimensions specified in `dimensions` (if not specified, it will use the `dimensions` in the existing segments) and aggregators specified in `metricsSpec`.
