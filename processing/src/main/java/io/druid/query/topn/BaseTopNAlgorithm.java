@@ -26,10 +26,12 @@ import io.druid.query.aggregation.BufferAggregator;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.column.ValueType;
 
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 /**
  */
@@ -80,14 +82,18 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
       final int numToProcess;
       int maxNumToProcess = Math.min(params.getNumValuesPerPass(), cardinality - numProcessed);
 
-      DimValSelector theDimValSelector;
-      if (!hasDimValSelector) {
-        numToProcess = maxNumToProcess;
-        theDimValSelector = makeDimValSelector(params, numProcessed, numToProcess);
+      DimValSelector theDimValSelector = null;
+      if (supportsDimValSelector()) {
+        if (!hasDimValSelector) {
+          numToProcess = maxNumToProcess;
+          theDimValSelector = makeDimValSelector(params, numProcessed, numToProcess);
+        } else {
+          //skip invalid, calculate length to have enough valid value to process or hit the end.
+          numToProcess = computeNewLength(dimValSelector, numProcessed, maxNumToProcess);
+          theDimValSelector = updateDimValSelector(dimValSelector, numProcessed, numToProcess);
+        }
       } else {
-        //skip invalid, calculate length to have enough valid value to process or hit the end.
-        numToProcess = computeNewLength(dimValSelector, numProcessed, maxNumToProcess);
-        theDimValSelector = updateDimValSelector(dimValSelector, numProcessed, numToProcess);
+        numToProcess = maxNumToProcess;
       }
 
       DimValAggregateStore aggregatesStore = makeDimValAggregateStore(params);
@@ -144,6 +150,8 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
   protected abstract void closeAggregators(
       DimValAggregateStore dimValAggregateStore
   );
+
+  protected abstract boolean supportsDimValSelector();
 
   protected class AggregatorArrayProvider extends BaseArrayProvider<Aggregator[][]>
   {
@@ -260,7 +268,8 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
         query.getThreshold(),
         comparator,
         query.getAggregatorSpecs(),
-        query.getPostAggregatorSpecs()
+        query.getPostAggregatorSpecs(),
+        (Map<String, ValueType>) query.getContextValue("typeHints")
     );
   }
 }

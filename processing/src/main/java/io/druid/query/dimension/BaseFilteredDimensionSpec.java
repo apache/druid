@@ -21,9 +21,13 @@ package io.druid.query.dimension;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.data.IndexedFloats;
 import io.druid.segment.data.IndexedInts;
+import io.druid.segment.data.IndexedLongs;
 import io.druid.segment.data.ListBasedIndexedInts;
 
 import java.util.ArrayList;
@@ -117,6 +121,50 @@ public abstract class BaseFilteredDimensionSpec implements DimensionSpec
       {
         return forwardMapping.get(selector.lookupId(name));
       }
+
+      @Override
+      public IndexedLongs getLongRow()
+      {
+        throw new UnsupportedOperationException("getLongRow() is not supported.");
+      }
+
+      @Override
+      public Comparable getExtractedValueLong(long val)
+      {
+        throw new UnsupportedOperationException("getExtractedValueLong() is not supported.");
+      }
+
+      @Override
+      public IndexedFloats getFloatRow()
+      {
+        throw new UnsupportedOperationException("getFloatRow() is not supported.");
+      }
+
+      @Override
+      public Comparable getExtractedValueFloat(float val)
+      {
+        throw new UnsupportedOperationException("getExtractedValueFloat() is not supported.");
+      }
+
+      @Override
+      public Comparable getComparableRow()
+      {
+        throw new UnsupportedOperationException("getComparableRow() is not supported.");
+      }
+
+      @Override
+      public Comparable getExtractedValueComparable(Comparable val)
+      {
+        throw new UnsupportedOperationException("getExtractedValueComparable() is not supported.");
+
+      }
+
+      @Override
+      public ColumnCapabilities getDimCapabilities()
+      {
+        return selector.getDimCapabilities();
+      }
+
     };
   }
 }

@@ -19,19 +19,23 @@
 
 package io.druid.segment;
 
+import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.spatial.ImmutableRTree;
+import com.metamx.collections.spatial.search.Bound;
 import com.metamx.common.guava.CloseQuietly;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.GenericColumn;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedIterable;
 
 import java.util.Iterator;
+import java.util.Map;
 
 /**
  */
@@ -39,14 +43,17 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
 {
   private final BitmapFactory bitmapFactory;
   private final ColumnSelector index;
+  private final Map<String, DimensionColumnReader> dimReaders;
 
   public ColumnSelectorBitmapIndexSelector(
       final BitmapFactory bitmapFactory,
-      final ColumnSelector index
+      final ColumnSelector index,
+      final Map<String, DimensionColumnReader> dimReaders
   )
   {
     this.bitmapFactory = bitmapFactory;
     this.index = index;
+    this.dimReaders = dimReaders;
   }
 
   @Override
@@ -122,21 +129,47 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
       }
     }
 
-    if (!column.getCapabilities().hasBitmapIndexes()) {
-      return bitmapFactory.makeEmptyImmutableBitmap();
-    }
-
-    return column.getBitmapIndex().getBitmap(value);
+    return dimReaders.get(dimension).getBitmapIndex(value, bitmapFactory, getNumRows());
   }
 
   @Override
-  public ImmutableRTree getSpatialIndex(String dimension)
+  public ImmutableBitmap getBitmapIndex(String dimension, Bound bound)
   {
     final Column column = index.getColumn(dimension);
-    if (column == null || !column.getCapabilities().hasSpatialIndexes()) {
-      return new ImmutableRTree();
+    if (column == null) {
+      return bitmapFactory.makeEmptyImmutableBitmap();
     }
 
-    return column.getSpatialIndex().getRTree();
+    DimensionColumnReader reader = dimReaders.get(dimension);
+    return reader.getBitmapIndex(bound, bitmapFactory);
   }
+
+  @Override
+  public ImmutableBitmap getBitmapIndexFromColumnScan(String dimension, Predicate predicate)
+  {
+    DimensionColumnReader reader = dimReaders.get(dimension);
+    return reader.getBitmapIndex(predicate, bitmapFactory);
+  }
+
+  @Override
+  public ValueType getDimensionType(String dimension)
+  {
+    final Column column = index.getColumn(dimension);
+    if (column == null) {
+      return null;
+    } else {
+      return column.getCapabilities().getType();
+    }
+  }
+
+  @Override
+  public boolean hasBitmapIndexes(String dimension) {
+    final Column column = index.getColumn(dimension);
+    if (column == null) {
+      // default to "has bitmap index" path for null columns
+      return true;
+    }
+    return column.getCapabilities().hasBitmapIndexes();
+  }
+
 }

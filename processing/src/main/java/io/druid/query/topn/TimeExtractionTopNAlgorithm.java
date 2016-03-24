@@ -129,6 +129,12 @@ public class TimeExtractionTopNAlgorithm extends BaseTopNAlgorithm<int[], Map<St
   }
 
   @Override
+  protected boolean supportsDimValSelector()
+  {
+    return true;
+  }
+
+  @Override
   public void cleanup(TopNParams params)
   {
 

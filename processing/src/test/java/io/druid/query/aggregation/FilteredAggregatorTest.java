@@ -32,13 +32,24 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ColumnCapabilitiesImpl;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.ArrayBasedIndexedInts;
+import io.druid.segment.data.IndexedFloats;
 import io.druid.segment.data.IndexedInts;
+import io.druid.segment.data.IndexedLongs;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+
 public class FilteredAggregatorTest
 {
+  private static final List<String> VALID_DIMENSIONS = Lists.newArrayList("dim", "dim_long", "dim_float");
+
   private void aggregate(TestFloatColumnSelector selector, FilteredAggregator agg)
   {
     agg.aggregate();
@@ -79,7 +90,7 @@ public class FilteredAggregatorTest
         final String dimensionName = dimensionSpec.getDimension();
         final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
 
-        if (dimensionName.equals("dim")) {
+        if (VALID_DIMENSIONS.contains(dimensionName)) {
           return dimensionSpec.decorate(
               new DimensionSelector()
               {
@@ -124,11 +135,152 @@ public class FilteredAggregatorTest
                       throw new IllegalArgumentException();
                   }
                 }
+
+                @Override
+                public IndexedLongs getLongRow()
+                {
+                  final long rowVal;
+                  if (selector.getIndex() % 3 == 2) {
+                    rowVal = 9001L;
+                  } else {
+                    rowVal = 255L;
+                  }
+                  return new IndexedLongs()
+                  {
+                    @Override
+                    public int size()
+                    {
+                      return 1;
+                    }
+
+                    @Override
+                    public long get(int index)
+                    {
+                      return rowVal;
+                    }
+
+                    @Override
+                    public void fill(int index, long[] toFill)
+                    {
+
+                    }
+
+                    @Override
+                    public int binarySearch(long key)
+                    {
+                      return 0;
+                    }
+
+                    @Override
+                    public int binarySearch(long key, int from, int to)
+                    {
+                      return 0;
+                    }
+
+                    @Override
+                    public void close() throws IOException
+                    {
+
+                    }
+                  };
+                }
+
+                @Override
+                public Comparable getExtractedValueLong(long val)
+                {
+                  return val;
+                }
+
+                @Override
+                public IndexedFloats getFloatRow()
+                {
+                  final float rowVal;
+                  if (selector.getIndex() % 3 == 2) {
+                    rowVal = 55000.0f;
+                  } else {
+                    rowVal = 140.0f;
+                  }
+                  return new IndexedFloats()
+                  {
+                    @Override
+                    public int size()
+                    {
+                      return 1;
+                    }
+
+                    @Override
+                    public float get(int index)
+                    {
+                      return rowVal;
+                    }
+
+                    @Override
+                    public void fill(int index, float[] toFill)
+                    {
+
+                    }
+
+                    @Override
+                    public void close() throws IOException
+                    {
+
+                    }
+                  };
+                }
+
+                @Override
+                public Comparable getExtractedValueFloat(float val)
+                {
+                  return val;
+                }
+
+                @Override
+                public Comparable getComparableRow()
+                {
+                  throw new UnsupportedOperationException("getComparableRow() is not supported.");
+                }
+
+                @Override
+                public Comparable getExtractedValueComparable(Comparable val)
+                {
+                  throw new UnsupportedOperationException("getExtractedValueComparable() is not supported.");
+
+                }
+
+                @Override
+                public ColumnCapabilities getDimCapabilities()
+                {
+                  ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
+                  if (dimensionName.equals("dim_float")) {
+                    capabilities.setHasBitmapIndexes(false);
+                    capabilities.setDictionaryEncoded(false);
+                    capabilities.setType(ValueType.FLOAT);
+                  }
+                  if (dimensionName.equals("dim_long")) {
+                    capabilities.setHasBitmapIndexes(false);
+                    capabilities.setDictionaryEncoded(false);
+                    capabilities.setType(ValueType.LONG);
+                  }
+                  if (dimensionName.equals("dim")) {
+                    capabilities.setHasBitmapIndexes(true);
+                    capabilities.setDictionaryEncoded(true);
+                    capabilities.setType(ValueType.STRING);
+                  }
+
+
+                  return capabilities;
+                }
               }
           );
         } else {
           throw new UnsupportedOperationException();
         }
+      }
+
+      @Override
+      public DimensionSelector makeDictEncodedStringDimensionSelector(DimensionSpec dimensionSpec)
+      {
+        return makeDimensionSelector(dimensionSpec);
       }
 
       @Override
@@ -222,6 +374,34 @@ public class FilteredAggregatorTest
     FilteredAggregatorFactory factory = new FilteredAggregatorFactory(
         new DoubleSumAggregatorFactory("billy", "value"),
         new AndDimFilter(Lists.<DimFilter>newArrayList(new NotDimFilter(new SelectorDimFilter("dim", "b")), new SelectorDimFilter("dim", "a"))));
+
+    FilteredAggregator agg = (FilteredAggregator) factory.factorize(
+        makeColumnSelector(selector)
+    );
+
+    Assert.assertEquals("billy", agg.getName());
+
+    double expectedFirst = new Float(values[0]).doubleValue();
+    double expectedSecond = new Float(values[1]).doubleValue() + expectedFirst;
+    double expectedThird = expectedSecond;
+    assertValues(agg, selector, expectedFirst, expectedSecond, expectedThird);
+  }
+
+  @Test
+  public void testAggregateWithLongAndFloatFilter()
+  {
+    final float[] values = {0.15f, 0.27f};
+    final TestFloatColumnSelector selector = new TestFloatColumnSelector(values);
+
+    FilteredAggregatorFactory factory = new FilteredAggregatorFactory(
+        new DoubleSumAggregatorFactory("billy", "value"),
+        new AndDimFilter(Lists.<DimFilter>newArrayList(
+            new NotDimFilter(new SelectorDimFilter("dim_long", "9001")),
+            new NotDimFilter(new SelectorDimFilter("dim_float", "55000.0")),
+            new SelectorDimFilter("dim_long", "255"),
+            new SelectorDimFilter("dim_float", "140.0")
+        ))
+    );
 
     FilteredAggregator agg = (FilteredAggregator) factory.factorize(
         makeColumnSelector(selector)

@@ -23,6 +23,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import io.druid.collections.StupidPool;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
@@ -33,6 +34,8 @@ import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.segment.TestHelper;
+import io.druid.segment.TestIndex;
+import io.druid.segment.column.ValueType;
 import org.joda.time.DateTime;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -49,17 +52,37 @@ import java.util.Map;
 public class TopNUnionQueryTest
 {
   private final QueryRunner runner;
+  private final ValueType keyType;
+  private final String marketStr;
+  private final Object spotVal;
+  private final Object totalMarketVal;
+  private final Object upfrontVal;
+  private final Map<String, Object> typeHints;
 
   public TopNUnionQueryTest(
-      QueryRunner runner
+      QueryRunner runner,
+      ValueType keyType
   )
   {
     this.runner = runner;
+    this.keyType = keyType;
+    this.marketStr = (String) getDimMapping(QueryRunnerTestHelper.marketDimension);
+    this.spotVal = getDimMapping("spot");
+    this.totalMarketVal = getDimMapping("total_market");
+    this.upfrontVal = getDimMapping("upfront");
+    typeHints = Maps.newHashMap();
+    typeHints.put(marketStr, keyType);
+  }
+
+  private Object getDimMapping(String value) {
+    return TestIndex.getDimMappingForType(keyType, value);
   }
 
   @Parameterized.Parameters
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
+    ValueType[] types = new ValueType[]{ValueType.STRING, ValueType.LONG, ValueType.FLOAT};
+
     return QueryRunnerTestHelper.cartesian(
         Iterables.concat(
             QueryRunnerTestHelper.makeUnionQueryRunners(
@@ -93,7 +116,8 @@ public class TopNUnionQueryTest
                 ),
                 QueryRunnerTestHelper.unionDataSource
             )
-        )
+        ),
+        Lists.newArrayList(types)
     );
   }
 
@@ -103,7 +127,7 @@ public class TopNUnionQueryTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.unionDataSource)
         .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(QueryRunnerTestHelper.marketDimension)
+        .dimension(marketStr)
         .metric(QueryRunnerTestHelper.dependentPostAggMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.fullOnInterval)
@@ -125,6 +149,7 @@ public class TopNUnionQueryTest
                 QueryRunnerTestHelper.hyperUniqueFinalizingPostAgg
             )
         )
+        .context(ImmutableMap.<String, Object>of("typeHints", typeHints))
         .build();
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
@@ -133,7 +158,7 @@ public class TopNUnionQueryTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put(QueryRunnerTestHelper.marketDimension, "total_market")
+                                .put(marketStr, totalMarketVal)
                                 .put("rows", 744L)
                                 .put("index", 862719.3151855469D)
                                 .put("addRowsIndexConstant", 863464.3151855469D)
@@ -147,7 +172,7 @@ public class TopNUnionQueryTest
                                 )
                                 .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put(QueryRunnerTestHelper.marketDimension, "upfront")
+                                .put(marketStr, upfrontVal)
                                 .put("rows", 744L)
                                 .put("index", 768184.4240722656D)
                                 .put("addRowsIndexConstant", 768929.4240722656D)
@@ -161,7 +186,7 @@ public class TopNUnionQueryTest
                                 )
                                 .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put(QueryRunnerTestHelper.marketDimension, "spot")
+                                .put(marketStr, spotVal)
                                 .put("rows", 3348L)
                                 .put("index", 382426.28929138184D)
                                 .put("addRowsIndexConstant", 385775.28929138184D)

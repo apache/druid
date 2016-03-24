@@ -118,11 +118,13 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
       return this;
     }
 
+    ValueType otherType = other.getType();
+
     if (type == null) {
-      type = other.getType();
+      type = otherType;
     }
 
-    if (!type.equals(other.getType())) {
+    if (otherType != null && !type.equals(other.getType())) {
       throw new ISE("Cannot merge columns of type[%s] and [%s]", type, other.getType());
     }
 

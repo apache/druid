@@ -27,6 +27,7 @@ import com.google.common.collect.Ordering;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
 import io.druid.query.spec.QuerySegmentSpec;
+import io.druid.segment.column.ValueType;
 import org.joda.time.Duration;
 import org.joda.time.Interval;
 
@@ -65,6 +66,11 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
   public static <T> int getContextUncoveredIntervalsLimit(Query<T> query, int defaultValue)
   {
     return parseInt(query, "uncoveredIntervalsLimit", defaultValue);
+  }
+
+  public static <T> Map<String, ValueType> getContextTypeHints(Query<T> query)
+  {
+    return query.getContextValue("typeHints");
   }
 
   private static <T> int parseInt(Query<T> query, String key, int defaultValue)

@@ -36,6 +36,7 @@ import io.druid.segment.Cursor;
 import io.druid.segment.SegmentMissingException;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.filter.Filters;
 import org.joda.time.Interval;
 
@@ -104,6 +105,9 @@ public class TopNQueryEngine
     final TopNAlgorithmSelector selector = new TopNAlgorithmSelector(cardinality, numBytesPerRecord);
     query.initTopNAlgorithmSelector(selector);
 
+    final ColumnCapabilities columnCapabilities = adapter.getColumnCapabilities(dimension);
+    final boolean isDictionaryEncoded = columnCapabilities == null ? true : columnCapabilities.isDictionaryEncoded();
+
     final TopNAlgorithm topNAlgorithm;
     if (
         selector.isHasExtractionFn() &&
@@ -115,8 +119,8 @@ public class TopNQueryEngine
       // A special TimeExtractionTopNAlgorithm is required, since DimExtractionTopNAlgorithm
       // currently relies on the dimension cardinality to support lexicographic sorting
       topNAlgorithm = new TimeExtractionTopNAlgorithm(capabilities, query);
-    } else if (selector.isHasExtractionFn()) {
-      topNAlgorithm = new DimExtractionTopNAlgorithm(capabilities, query);
+    } else if (selector.isHasExtractionFn() || !isDictionaryEncoded) {
+      topNAlgorithm = new DimExtractionTopNAlgorithm(capabilities, query, columnCapabilities);
     } else if (selector.isAggregateAllMetrics()) {
       topNAlgorithm = new PooledTopNAlgorithm(capabilities, query, bufferPool);
     } else if (selector.isAggregateTopNMetricFirst() || query.getContextBoolean("doAggregateTopNMetricFirst", false)) {

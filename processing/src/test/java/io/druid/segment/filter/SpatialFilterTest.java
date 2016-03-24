@@ -500,6 +500,7 @@ public class SpatialFilterTest
       );
 
       return mergedRealtime;
+
     }
     catch (IOException e) {
       throw Throwables.propagate(e);

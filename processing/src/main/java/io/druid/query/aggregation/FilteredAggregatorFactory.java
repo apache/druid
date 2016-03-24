@@ -28,7 +28,9 @@ import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.data.IndexedFloats;
 import io.druid.segment.data.IndexedInts;
+import io.druid.segment.data.IndexedLongs;
 import io.druid.segment.filter.BooleanValueMatcher;
 import io.druid.segment.filter.Filters;
 
@@ -232,23 +234,49 @@ public class FilteredAggregatorFactory extends AggregatorFactory
       if (selector == null) {
         return new BooleanValueMatcher(isNullOrEmpty);
       }
-
-      final int valueId = selector.lookupId(valueString);
-      return new ValueMatcher()
-      {
-        @Override
-        public boolean matches()
-        {
-          final IndexedInts row = selector.getRow();
-          final int size = row.size();
-          for (int i = 0; i < size; ++i) {
-            if (row.get(i) == valueId) {
-              return true;
+      switch (selector.getDimCapabilities().getType()) {
+        case STRING:
+          final int valueId = selector.lookupId(valueString);
+          return new ValueMatcher()
+          {
+            @Override
+            public boolean matches()
+            {
+              final IndexedInts row = selector.getRow();
+              final int size = row.size();
+              for (int i = 0; i < size; ++i) {
+                if (row.get(i) == valueId) {
+                  return true;
+                }
+              }
+              return false;
             }
-          }
-          return false;
-        }
-      };
+          };
+        case LONG:
+          final long parsedLong = Long.parseLong(valueString);
+          return new ValueMatcher()
+          {
+            @Override
+            public boolean matches()
+            {
+              final IndexedLongs row = selector.getLongRow();
+              return row.get(0) == parsedLong;
+            }
+          };
+        case FLOAT:
+          final float parsedFloat = Float.parseFloat(valueString);
+          return new ValueMatcher()
+          {
+            @Override
+            public boolean matches()
+            {
+              final IndexedFloats row = selector.getFloatRow();
+              return row.get(0) == parsedFloat;
+            }
+          };
+        default:
+          throw new UnsupportedOperationException("Invalid type: " + selector.getDimCapabilities().getType());
+      }
     }
 
     @Override
@@ -261,31 +289,67 @@ public class FilteredAggregatorFactory extends AggregatorFactory
       if (selector == null) {
         return new BooleanValueMatcher(predicate.apply(null));
       }
-
-      // Check every value in the dimension, as a String.
-      final int cardinality = selector.getValueCardinality();
-      final BitSet valueIds = new BitSet(cardinality);
-      for (int i = 0; i < cardinality; i++) {
-        if (predicate.apply(selector.lookupName(i))) {
-          valueIds.set(i);
-        }
-      }
-
-      return new ValueMatcher()
-      {
-        @Override
-        public boolean matches()
-        {
-          final IndexedInts row = selector.getRow();
-          final int size = row.size();
-          for (int i = 0; i < size; ++i) {
-            if (valueIds.get(row.get(i))) {
-              return true;
+      switch (selector.getDimCapabilities().getType()) {
+        case STRING:
+          // Check every value in the dimension, as a String.
+          final int cardinality = selector.getValueCardinality();
+          final BitSet valueIds = new BitSet(cardinality);
+          for (int i = 0; i < cardinality; i++) {
+            if (predicate.apply(selector.lookupName(i))) {
+              valueIds.set(i);
             }
           }
-          return false;
-        }
-      };
+
+          return new ValueMatcher()
+          {
+            @Override
+            public boolean matches()
+            {
+              final IndexedInts row = selector.getRow();
+              final int size = row.size();
+              for (int i = 0; i < size; ++i) {
+                if (valueIds.get(row.get(i))) {
+                  return true;
+                }
+              }
+              return false;
+            }
+          };
+        case LONG:
+          return new ValueMatcher()
+          {
+            @Override
+            public boolean matches()
+            {
+              final IndexedLongs row = selector.getLongRow();
+              final int size = row.size();
+              for (int i = 0; i < size; ++i) {
+                if (predicate.apply(row.get(i))) {
+                  return true;
+                }
+              }
+              return false;
+            }
+          };
+        case FLOAT:
+          return new ValueMatcher()
+          {
+            @Override
+            public boolean matches()
+            {
+              final IndexedFloats row = selector.getFloatRow();
+              final int size = row.size();
+              for (int i = 0; i < size; ++i) {
+                if (predicate.apply(row.get(i))) {
+                  return true;
+                }
+              }
+              return false;
+            }
+          };
+        default:
+          throw new UnsupportedOperationException("Invalid type: " + selector.getDimCapabilities().getType());
+      }
     }
   }
 }

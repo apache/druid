@@ -65,6 +65,11 @@ public class RegexFilteredDimensionSpec extends BaseFilteredDimensionSpec
       return selector;
     }
 
+    if (!selector.getDimCapabilities().isDictionaryEncoded()) {
+      String errmsg = "RegexFilteredDimensionSpec is not supported for non-dictionary encoded columns.";
+      throw new UnsupportedOperationException(errmsg);
+    }
+
     int count = 0;
     final Map<Integer,Integer> forwardMapping = new HashMap<>();
 

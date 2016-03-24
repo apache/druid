@@ -17,7 +17,14 @@
  * under the License.
  */
 
-package io.druid.segment;import io.druid.segment.data.IndexedInts;
+package io.druid.segment;
+
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.data.IndexedFloats;
+import io.druid.segment.data.IndexedInts;
+import io.druid.segment.data.IndexedLongs;
+
+import java.util.List;
 
 /**
  */
@@ -79,4 +86,50 @@ public interface DimensionSelector
    * @return the id for the given field name
    */
   public int lookupId(String name);
+
+  /**
+   * Get a long row
+   * @return row value
+   */
+  public IndexedLongs getLongRow();
+
+  /**
+   * Apply extraction function to a row value.
+   * @param val value to be transformed
+   * @return extracted value if extraction function is defined, return unchanged value otherwise
+   */
+  public Comparable getExtractedValueLong(long val);
+
+  /**
+   * Get a float row
+   * @return row value
+   */
+  public IndexedFloats getFloatRow();
+
+  /**
+  * Apply extraction function to a row value.
+  * @param val value to be transformed
+  * @return extracted value if extraction function is defined, return unchanged value otherwise
+  */
+  public Comparable getExtractedValueFloat(float val);
+
+  /**
+   * Get a Comparable row (e.g., ComplexColumn.getRowValue())
+   * @return row value
+   */
+  public Comparable getComparableRow();
+
+  /**
+   * Apply extraction function to a row value.
+   * @param val value to be transformed
+   * @return extracted value if extraction function is defined, return unchanged value otherwise
+   */
+  public Comparable getExtractedValueComparable(Comparable val);
+
+
+  /**
+   * Get the capabilities for this selector's dimension.
+   * @return capabilities
+   */
+  public ColumnCapabilities getDimCapabilities();
 }

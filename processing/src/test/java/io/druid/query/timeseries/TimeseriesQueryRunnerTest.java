@@ -40,6 +40,7 @@ import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.ExtractionDimFilter;
 import io.druid.query.filter.InDimFilter;
 import io.druid.query.filter.NotDimFilter;
 import io.druid.query.filter.RegexDimFilter;
@@ -2212,6 +2213,137 @@ public class TimeseriesQueryRunnerTest
                                                   QueryRunnerTestHelper.marketDimension,
                                                   "SPOT",
                                                   "spot",
+                                                  null,
+                                                  null,
+                                                  null
+                                              )
+                                          )
+                                      )
+                                  )
+                                  .intervals(QueryRunnerTestHelper.firstToThird)
+                                  .aggregators(
+                                      Arrays.<AggregatorFactory>asList(
+                                          QueryRunnerTestHelper.rowsCount,
+                                          QueryRunnerTestHelper.indexLongSum,
+                                          QueryRunnerTestHelper.qualityUniques
+                                      )
+                                  )
+                                  .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
+                                  .build();
+
+    List<Result<TimeseriesResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-04-01"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "rows", 9L,
+                    "index", 1102L,
+                    "addRowsIndexConstant", 1112.0,
+                    "uniques", QueryRunnerTestHelper.UNIQUES_9
+                )
+            )
+        ),
+        new Result<>(
+            new DateTime("2011-04-02"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "rows", 9L,
+                    "index", 1120L,
+                    "addRowsIndexConstant", 1130.0,
+                    "uniques", QueryRunnerTestHelper.UNIQUES_9
+                )
+            )
+        )
+    );
+
+    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
+        runner.run(query, CONTEXT),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+    TestHelper.assertExpectedResults(expectedResults, results);
+  }
+
+  @Test
+  public void testFullOnTimeseriesWithLongFloatFilters()
+  {
+
+    DimFilter filter = Druids.newAndDimFilterBuilder()
+                             .fields(
+                                 Arrays.<DimFilter>asList(
+                                     new SelectorDimFilter("market_long", "3333"),
+                                     new SelectorDimFilter("market_float", "333.333")
+                                     )
+                             )
+                             .build();
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.dataSource)
+                                  .granularity(QueryRunnerTestHelper.dayGran)
+                                  .filters(filter)
+                                  .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                  .aggregators(
+                                      Arrays.<AggregatorFactory>asList(
+                                          QueryRunnerTestHelper.rowsCount,
+                                          QueryRunnerTestHelper.qualityUniques
+                                      )
+                                  )
+                                  .descending(descending)
+                                  .build();
+
+    final DateTime expectedLast = descending ?
+                                  QueryRunnerTestHelper.earliest :
+                                  QueryRunnerTestHelper.last;
+
+    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
+        runner.run(query, CONTEXT),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+
+    for (Result<TimeseriesResultValue> result : results) {
+      DateTime current = result.getTimestamp();
+      Assert.assertFalse(
+          String.format("Timestamp[%s] > expectedLast[%s]", current, expectedLast),
+          descending ? current.isBefore(expectedLast) : current.isAfter(expectedLast)
+      );
+
+      final TimeseriesResultValue value = result.getValue();
+
+      Assert.assertEquals(
+          result.toString(),
+          QueryRunnerTestHelper.skippedDay.equals(result.getTimestamp()) ? 0L : 2L,
+          value.getLongMetric("rows").longValue()
+      );
+      Assert.assertEquals(
+          result.toString(),
+          QueryRunnerTestHelper.skippedDay.equals(result.getTimestamp()) ? 0.0d : 2.0d,
+          value.getDoubleMetric(
+              "uniques"
+          ),
+          0.01
+      );
+    }
+  }
+
+  @Test
+  public void testTimeseriesWithLongFloatBoundFilters()
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.dataSource)
+                                  .granularity(QueryRunnerTestHelper.dayGran)
+                                  .filters(
+                                      new AndDimFilter(
+                                          Arrays.asList(
+                                              new BoundDimFilter(
+                                                  "market_long",
+                                                  "1000",
+                                                  "2000",
+                                                  true,
+                                                  null,
+                                                  null
+                                              ),
+                                              (DimFilter) new BoundDimFilter(
+                                                  "market_float",
+                                                  "100.567",
+                                                  "200.789",
                                                   null,
                                                   null,
                                                   null

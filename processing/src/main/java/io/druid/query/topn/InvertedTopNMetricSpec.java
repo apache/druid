@@ -25,11 +25,13 @@ import com.metamx.common.guava.Comparators;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.segment.column.ValueType;
 import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 /**
  */
@@ -93,7 +95,8 @@ public class InvertedTopNMetricSpec implements TopNMetricSpec
       int threshold,
       Comparator comparator,
       List<AggregatorFactory> aggFactories,
-      List<PostAggregator> postAggs
+      List<PostAggregator> postAggs,
+      Map<String, ValueType> typeHints
   )
   {
     return delegate.getResultBuilder(
@@ -102,7 +105,8 @@ public class InvertedTopNMetricSpec implements TopNMetricSpec
         threshold,
         comparator,
         aggFactories,
-        postAggs
+        postAggs,
+        typeHints
     );
   }
 

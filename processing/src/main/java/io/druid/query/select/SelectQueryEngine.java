@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
 import io.druid.query.QueryRunnerHelper;
@@ -37,7 +38,11 @@ import io.druid.segment.Segment;
 import io.druid.segment.SegmentDesc;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ValueType;
+import io.druid.segment.data.IndexedFloats;
 import io.druid.segment.data.IndexedInts;
+import io.druid.segment.data.IndexedLongs;
 import io.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -121,22 +126,43 @@ public class SelectQueryEngine
               for (Map.Entry<String, DimensionSelector> dimSelector : dimSelectors.entrySet()) {
                 final String dim = dimSelector.getKey();
                 final DimensionSelector selector = dimSelector.getValue();
+                final ColumnCapabilities capabilities = adapter.getColumnCapabilities(dim);
 
                 if (selector == null) {
                   theEvent.put(dim, null);
                 } else {
-                  final IndexedInts vals = selector.getRow();
-
-                  if (vals.size() == 1) {
-                    final String dimVal = selector.lookupName(vals.get(0));
-                    theEvent.put(dim, dimVal);
-                  } else {
-                    List<String> dimVals = Lists.newArrayList();
-                    for (int i = 0; i < vals.size(); ++i) {
-                      dimVals.add(selector.lookupName(vals.get(i)));
-                    }
-                    theEvent.put(dim, dimVals);
+                  Object dimVals;
+                  ValueType type = capabilities == null ? ValueType.STRING : capabilities.getType();
+                  switch(type) {
+                    case STRING:
+                      final IndexedInts vals = selector.getRow();
+                      if (vals.size() == 1) {
+                        dimVals = selector.lookupName(vals.get(0));
+                      } else {
+                        List<String> strVals = Lists.newArrayList();
+                        for (int i = 0; i < vals.size(); ++i) {
+                          strVals.add(selector.lookupName(vals.get(i)));
+                        }
+                        dimVals = strVals;
+                      }
+                      break;
+                    // These types only support single values.
+                    case LONG:
+                      final IndexedLongs longVals = selector.getLongRow();
+                      dimVals = selector.getExtractedValueLong(longVals.get(0));
+                      break;
+                    case FLOAT:
+                      final IndexedFloats floatVals = selector.getFloatRow();
+                      dimVals = selector.getExtractedValueFloat(floatVals.get(0));
+                      break;
+                    case COMPLEX:
+                      final Comparable objVal = selector.getComparableRow();
+                      dimVals = selector.getExtractedValueComparable(objVal);
+                      break;
+                    default:
+                      throw new IAE("Invalid type: " + capabilities.getType());
                   }
+                  theEvent.put(dim, dimVals);
                 }
               }
 

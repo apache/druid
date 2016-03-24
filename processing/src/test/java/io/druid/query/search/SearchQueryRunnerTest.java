@@ -22,6 +22,8 @@ package io.druid.query.search;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
@@ -30,6 +32,7 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.extraction.MapLookupExtractor;
@@ -53,9 +56,12 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  */
@@ -547,6 +553,97 @@ public class SearchQueryRunnerTest
         expectedHits
     );
   }
+
+
+  @Test
+  public void testSearchLongFloatInMultiDims()
+  {
+    SearchQuery searchQuery = Druids.newSearchQueryBuilder()
+                                    .dataSource(QueryRunnerTestHelper.dataSource)
+                                    .granularity(QueryRunnerTestHelper.allGran)
+                                    .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                    .dimensions(
+                                        Arrays.asList(
+                                            "quality_long",
+                                            "quality_float",
+                                            "market_long",
+                                            "market_float"
+                                        )
+                                    )
+                                    .query("22")
+                                    .build();
+
+    List<SearchHit> expectedHits = Lists.newLinkedList();
+    expectedHits.add(new SearchHit("market_float", "222.222", 186));
+    expectedHits.add(new SearchHit("quality_float", "222.222", 93));
+    expectedHits.add(new SearchHit("market_long", "2222", 186));
+    expectedHits.add(new SearchHit("quality_long", "2222", 93));
+
+    checkSearchQuery(searchQuery, expectedHits);
+  }
+
+  @Test
+  public void testSearchLongFloatWithExtractionFilter()
+  {
+    final String automotiveSnowman = "automotive☃";
+    Map<String, Set<String>> expectedResults = Maps.newTreeMap(String.CASE_INSENSITIVE_ORDER);
+    expectedResults.put(
+        "quality_long", new HashSet<String>(Arrays.asList(automotiveSnowman))
+    );
+    expectedResults.put(
+        "quality_float", new HashSet<String>(Arrays.asList(automotiveSnowman))
+    );
+
+    List<SearchHit> expectedHits = Lists.newLinkedList();
+    expectedHits.add(new SearchHit("quality_float", automotiveSnowman, 93));
+    expectedHits.add(new SearchHit("quality_long", automotiveSnowman, 93));
+
+    final LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(
+        new MapLookupExtractor(ImmutableMap.of("1111", automotiveSnowman,
+                                               "111.111", automotiveSnowman
+        ), false),
+        true,
+        null,
+        true,
+        false
+    );
+
+    DimFilter filter = Druids.newAndDimFilterBuilder()
+                             .fields(
+                                 Arrays.<DimFilter>asList(
+                                     new ExtractionDimFilter(
+                                         "quality_long",
+                                         automotiveSnowman,
+                                         lookupExtractionFn,
+                                         null
+                                     ),
+                                     new ExtractionDimFilter(
+                                         "quality_float",
+                                         automotiveSnowman,
+                                         lookupExtractionFn,
+                                         null
+                                     )
+                                 )
+                             )
+                             .build();
+
+    List<DimensionSpec> dimensionSpecs = new ArrayList<>();
+    dimensionSpecs.add(new ExtractionDimensionSpec("quality_long", null, lookupExtractionFn, null));
+    dimensionSpecs.add(new ExtractionDimensionSpec("quality_float", null, lookupExtractionFn, null));
+
+    checkSearchQuery(
+        Druids.newSearchQueryBuilder()
+              .dataSource(QueryRunnerTestHelper.dataSource)
+              .granularity(QueryRunnerTestHelper.allGran)
+              .filters(filter)
+              .intervals(QueryRunnerTestHelper.fullOnInterval)
+              .dimensions(dimensionSpecs)
+              .query("☃")
+              .build(),
+        expectedHits
+    );
+  }
+  
 
   private void checkSearchQuery(Query searchQuery, List<SearchHit> expectedResults)
   {

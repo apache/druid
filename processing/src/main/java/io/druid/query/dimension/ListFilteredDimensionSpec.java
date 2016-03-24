@@ -74,6 +74,11 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
       return selector;
     }
 
+    if (!selector.getDimCapabilities().isDictionaryEncoded()) {
+      String errmsg = "ListFilteredDimensionSpec is not supported for non-dictionary encoded columns.";
+      throw new UnsupportedOperationException(errmsg);
+    }
+
     int selectorCardinality = selector.getValueCardinality();
     int cardinality = isWhitelist ? values.size() : selectorCardinality - values.size();
 

@@ -245,7 +245,6 @@ If dimension value starts with digit and contains a none digits comparing will b
 For instance suppose lower bound is `100` and value is `10K` the filter will match (`100 < 10K` returns `true`) since `K` is greater than any digit
 Now suppose that the lower bound is `110` the filter will not match (`110 < 10K` returns `false`)
 
-
 #### Search Query Spec
 
 ##### Insensitive Contains

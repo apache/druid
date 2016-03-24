@@ -27,6 +27,7 @@ import io.druid.query.dimension.DimensionSpec;
 public interface ColumnSelectorFactory
 {
   public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec);
+  public DimensionSelector makeDictEncodedStringDimensionSelector(DimensionSpec dimensionSpec);
   public FloatColumnSelector makeFloatColumnSelector(String columnName);
   public LongColumnSelector makeLongColumnSelector(String columnName);
   public ObjectColumnSelector makeObjectColumnSelector(String columnName);

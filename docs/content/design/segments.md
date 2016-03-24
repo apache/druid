@@ -30,16 +30,15 @@ image below:
 
 ![Druid column types](../../img/druid-column-types.png "Druid Column Types")
 
-The timestamp and metric columns are simple: behind the scenes each of
+The timestamp, numeric dimension (i.e. Long and Float), and metric columns are simple: behind the scenes each of
 these is an array of integer or floating point values compressed with
 LZ4. Once a query knows which rows it needs to select, it simply
 decompresses these, pulls out the relevant rows, and applies the
 desired aggregation operator. As with all columns, if a query doesn’t
 require a column, then that column’s data is just skipped over.
 
-Dimensions columns are different because they support filter and
-group-by operations, so each dimension requires the following
-three data structures:
+String-typed dimension columns have additional data structures for supporting filter and
+group-by operations:
 
 1. A dictionary that maps values (which are always treated as strings) to integer IDs,
 2. A list of the column’s values, encoded using the dictionary in 1, and
@@ -87,6 +86,9 @@ single bitmap that has non-zero entry. This means that high cardinality
 columns will have extremely sparse, and therefore highly compressible,
 bitmaps. Druid exploits this using compression algorithms that are
 specially suited for bitmaps, such as roaring bitmap compression.
+
+Numeric dimensions do not currently have any supporting index structures, so filtering operations
+on such dimensions require a full scan.
 
 ### Multi-value columns
 

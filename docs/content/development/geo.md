@@ -5,6 +5,10 @@ layout: doc_page
 Druid supports filtering specially spatially indexed columns based on an origin and a bound.
 
 # Spatial Indexing
+<div class="note caution">
+@Deprecated.
+In the dataSpec, the spatial dimensions should be specified within the "dimensions" list instead.
+</div>
 In any of the data specs, there is the option of providing spatial dimensions. For example, for a JSON data spec, spatial dimensions can be specified as follows:
 
 ```json
@@ -20,6 +24,8 @@ In any of the data specs, there is the option of providing spatial dimensions. F
     ]
 }
 ```
+
+
 
 |property|description|required?|
 |--------|-----------|---------|

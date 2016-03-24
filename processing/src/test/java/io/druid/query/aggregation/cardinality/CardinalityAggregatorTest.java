@@ -31,7 +31,12 @@ import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ColumnCapabilitiesImpl;
+import io.druid.segment.column.ValueType;
+import io.druid.segment.data.IndexedFloats;
 import io.druid.segment.data.IndexedInts;
+import io.druid.segment.data.IndexedLongs;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -47,52 +52,94 @@ public class CardinalityAggregatorTest
   public static class TestDimensionSelector implements DimensionSelector
   {
     private final List<Integer[]> column;
+    private final List<Comparable[]> unencodedColumn;
     private final Map<String, Integer> ids;
     private final Map<Integer, String> lookup;
+    private final ValueType type;
+    private final ColumnCapabilitiesImpl capabilities;
+    List<float[]> floatColumn;
+    List<long[]> longColumn;
 
     private int pos = 0;
 
-    public TestDimensionSelector(Iterable<String[]> values)
+    public TestDimensionSelector(ValueType type, List values)
     {
       this.lookup = Maps.newHashMap();
       this.ids = Maps.newHashMap();
+      this.capabilities = new ColumnCapabilitiesImpl();
+      this.type = type;
 
-      int index = 0;
-      for (String[] multiValue : values) {
-        for (String value : multiValue) {
-          if (!ids.containsKey(value)) {
-            ids.put(value, index);
-            lookup.put(index, value);
-            index++;
+      capabilities.setHasBitmapIndexes(type == ValueType.STRING);
+      capabilities.setDictionaryEncoded(type == ValueType.STRING);
+      capabilities.setType(type);
+
+      if(type == ValueType.STRING) {
+        this.unencodedColumn = null;
+        Iterable<String[]> strValues = (Iterable<String[]>) values;
+        int index = 0;
+        for (String[] multiValue : strValues) {
+          for (String value : multiValue) {
+            if (!ids.containsKey(value)) {
+              ids.put(value, index);
+              lookup.put(index, value);
+              index++;
+            }
+          }
+        }
+
+        this.column = Lists.newArrayList(
+            Iterables.transform(
+                strValues, new Function<String[], Integer[]>()
+                {
+                  @Nullable
+                  @Override
+                  public Integer[] apply(@Nullable String[] input)
+                  {
+                    return Iterators.toArray(
+                        Iterators.transform(
+                            Iterators.forArray(input), new Function<String, Integer>()
+                            {
+                              @Nullable
+                              @Override
+                              public Integer apply(@Nullable String input)
+                              {
+                                return ids.get(input);
+                              }
+                            }
+                        ), Integer.class
+                    );
+                  }
+                }
+            )
+        );
+      } else {
+        this.column = null;
+        this.unencodedColumn = Lists.newArrayList(values);
+        this.longColumn = Lists.newArrayList();
+        this.floatColumn = Lists.newArrayList();
+
+        if (type == ValueType.LONG) {
+          for (Object value : values) {
+            Comparable[] valArr = (Comparable[]) value;
+            long[] longs = new long[valArr.length];
+            for (int i = 0; i < valArr.length; i++) {
+              longs[i] = (Long) valArr[i];
+            }
+            longColumn.add(longs);
+          }
+        }
+
+        if (type == ValueType.FLOAT) {
+          for (Object value : values) {
+            Comparable[] valArr = (Comparable[]) value;
+            float[] floats = new float[valArr.length];
+            for (int i = 0; i < valArr.length; i++) {
+              floats[i] = (Float) valArr[i];
+            }
+            floatColumn.add(floats);
           }
         }
       }
-
-      this.column = Lists.newArrayList(
-          Iterables.transform(
-              values, new Function<String[], Integer[]>()
-              {
-                @Nullable
-                @Override
-                public Integer[] apply(@Nullable String[] input)
-                {
-                  return Iterators.toArray(
-                      Iterators.transform(
-                          Iterators.forArray(input), new Function<String, Integer>()
-                          {
-                            @Nullable
-                            @Override
-                            public Integer apply(@Nullable String input)
-                            {
-                              return ids.get(input);
-                            }
-                          }
-                      ), Integer.class
-                  );
-                }
-              }
-          )
-      );
     }
 
     public void increment()
@@ -160,6 +207,112 @@ public class CardinalityAggregatorTest
     {
       return ids.get(s);
     }
+
+    @Override
+    public IndexedLongs getLongRow()
+    {
+      final long[] longVals = longColumn.get(pos);
+      return new IndexedLongs()
+      {
+        @Override
+        public int size()
+        {
+          return longVals.length;
+        }
+
+        @Override
+        public long get(int index)
+        {
+          return longVals[index];
+        }
+
+        @Override
+        public void fill(int index, long[] toFill)
+        {
+
+        }
+
+        @Override
+        public int binarySearch(long key)
+        {
+          return 0;
+        }
+
+        @Override
+        public int binarySearch(long key, int from, int to)
+        {
+          return 0;
+        }
+
+        @Override
+        public void close() throws IOException
+        {
+
+        }
+      };
+    }
+
+    @Override
+    public Comparable getExtractedValueLong(long val)
+    {
+      return val;
+    }
+
+    @Override
+    public IndexedFloats getFloatRow()
+    {
+      final float[] floatVals = floatColumn.get(pos);
+      return new IndexedFloats()
+      {
+        @Override
+        public int size()
+        {
+          return floatVals.length;
+        }
+
+        @Override
+        public float get(int index)
+        {
+          return floatVals[index];
+        }
+
+        @Override
+        public void fill(int index, float[] toFill)
+        {
+
+        }
+
+        @Override
+        public void close() throws IOException
+        {
+
+        }
+      };
+    }
+
+    @Override
+    public Comparable getExtractedValueFloat(float val)
+    {
+      return val;
+    }
+
+    @Override
+    public Comparable getComparableRow()
+    {
+      throw new UnsupportedOperationException("getComparableRow() is not supported.");
+    }
+
+    @Override
+    public Comparable getExtractedValueComparable(Comparable val)
+    {
+      return val;
+    }
+
+    @Override
+    public ColumnCapabilities getDimCapabilities()
+    {
+      return capabilities;
+    }
   }
 
   /*
@@ -167,13 +320,32 @@ public class CardinalityAggregatorTest
     values1: 4 distinct values
     values2: 8 distinct rows
     values2: 7 distinct values
+    valuesLong: 11 distinct rows
+    valuesLong: 11 distinct values
+    valuesFloat : 11 distinct rows
+    valuesFloat : 11 distinct values
     groupBy(values1, values2): 9 distinct rows
     groupBy(values1, values2): 7 distinct values
+    groupBy(valuesLong, valuesFloat): 22 distinct rows
+    groupBy(valuesLong, valuesFloat): 22 distinct values
     combine(values1, values2): 8 distinct rows
     combine(values1, values2): 7 distinct values
+    combine(valuesLong, valuesFloat): 22 distinct rows
+    combine(valuesLong, valuesFloat): 22 distinct values
    */
   private static final List<String[]> values1 = dimensionValues(
-      "a", "b", "c", "a", "a", null, "b", "b", "b", "b", "a", "a"
+      "a",
+      "b",
+      "c",
+      "a",
+      "a",
+      null,
+      "b",
+      "b",
+      "b",
+      "b",
+      "a",
+      "a"
   );
   private static final List<String[]> values2 = dimensionValues(
       "a",
@@ -189,6 +361,37 @@ public class CardinalityAggregatorTest
       new String[]{"x", "y"},
       new String[]{"x", "y", "a"}
   );
+
+  private static final List<Comparable[]> valuesLong = Lists.newArrayList(
+      new Comparable[]{100L},
+      new Comparable[]{200L},
+      new Comparable[]{300L},
+      new Comparable[]{400L},
+      new Comparable[]{500L},
+      new Comparable[]{600L},
+      new Comparable[]{200L}, // second row is identical to seventh row
+      new Comparable[]{800L},
+      new Comparable[]{900L},
+      new Comparable[]{1000L},
+      new Comparable[]{1100L},
+      new Comparable[]{1200L}
+  );
+
+  private static final List<Comparable[]> valuesFloat = Lists.newArrayList(
+      new Comparable[]{111.0f},
+      new Comparable[]{222.0f},
+      new Comparable[]{333.0f},
+      new Comparable[]{444.0f},
+      new Comparable[]{555.0f},
+      new Comparable[]{666.0f},
+      new Comparable[]{222.0f},
+      new Comparable[]{888.0f},
+      new Comparable[]{999.0f},
+      new Comparable[]{101010.0f},
+      new Comparable[]{111111.0f},
+      new Comparable[]{121212.0f}
+  );
+
 
   private static List<String[]> dimensionValues(Object... values)
   {
@@ -237,26 +440,32 @@ public class CardinalityAggregatorTest
   CardinalityAggregatorFactory valueAggregatorFactory;
   final TestDimensionSelector dim1;
   final TestDimensionSelector dim2;
+  final TestDimensionSelector dimLong;
+  final TestDimensionSelector dimFloat;
 
   public CardinalityAggregatorTest()
   {
-    dim1 = new TestDimensionSelector(values1);
-    dim2 = new TestDimensionSelector(values2);
+    dim1 = new TestDimensionSelector(ValueType.STRING, values1);
+    dim2 = new TestDimensionSelector(ValueType.STRING, values2);
+    dimLong = new TestDimensionSelector(ValueType.LONG, valuesLong);
+    dimFloat = new TestDimensionSelector(ValueType.FLOAT, valuesFloat);
 
     selectorList = Lists.newArrayList(
         (DimensionSelector) dim1,
-        dim2
+        dim2,
+        dimLong,
+        dimFloat
     );
 
     rowAggregatorFactory = new CardinalityAggregatorFactory(
         "billy",
-        Lists.newArrayList("dim1", "dim2"),
+        Lists.newArrayList("dim1", "dim2", "dimLong", "dimFloat"),
         true
     );
 
     valueAggregatorFactory = new CardinalityAggregatorFactory(
         "billy",
-        Lists.newArrayList("dim1", "dim2"),
+        Lists.newArrayList("dim1", "dim2", "dimLong", "dimFloat"),
         true
     );
   }
@@ -274,7 +483,7 @@ public class CardinalityAggregatorTest
     for (int i = 0; i < values1.size(); ++i) {
       aggregate(selectorList, agg);
     }
-    Assert.assertEquals(9.0, (Double) rowAggregatorFactory.finalizeComputation(agg.get()), 0.05);
+    Assert.assertEquals(11.0, (Double) rowAggregatorFactory.finalizeComputation(agg.get()), 0.05);
   }
 
   @Test
@@ -289,7 +498,7 @@ public class CardinalityAggregatorTest
     for (int i = 0; i < values1.size(); ++i) {
       aggregate(selectorList, agg);
     }
-    Assert.assertEquals(7.0, (Double) valueAggregatorFactory.finalizeComputation(agg.get()), 0.05);
+    Assert.assertEquals(29.0, (Double) valueAggregatorFactory.finalizeComputation(agg.get()), 0.25);
   }
 
   @Test
@@ -310,7 +519,7 @@ public class CardinalityAggregatorTest
     for (int i = 0; i < values1.size(); ++i) {
       bufferAggregate(selectorList, agg, buf, pos);
     }
-    Assert.assertEquals(9.0, (Double) rowAggregatorFactory.finalizeComputation(agg.get(buf, pos)), 0.05);
+    Assert.assertEquals(11.0, (Double) rowAggregatorFactory.finalizeComputation(agg.get(buf, pos)), 0.05);
   }
 
   @Test
@@ -331,7 +540,7 @@ public class CardinalityAggregatorTest
     for (int i = 0; i < values1.size(); ++i) {
       bufferAggregate(selectorList, agg, buf, pos);
     }
-    Assert.assertEquals(7.0, (Double) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos)), 0.05);
+    Assert.assertEquals(29.0, (Double) valueAggregatorFactory.finalizeComputation(agg.get(buf, pos)), 0.25);
   }
 
   @Test
@@ -339,9 +548,13 @@ public class CardinalityAggregatorTest
   {
     List<DimensionSelector> selector1 = Lists.newArrayList((DimensionSelector) dim1);
     List<DimensionSelector> selector2 = Lists.newArrayList((DimensionSelector) dim2);
+    List<DimensionSelector> selectorLong = Lists.newArrayList((DimensionSelector) dimLong);
+    List<DimensionSelector> selectorFloat = Lists.newArrayList((DimensionSelector) dimFloat);
 
     CardinalityAggregator agg1 = new CardinalityAggregator("billy", selector1, true);
     CardinalityAggregator agg2 = new CardinalityAggregator("billy", selector2, true);
+    CardinalityAggregator aggLong = new CardinalityAggregator("billy", selectorLong, true);
+    CardinalityAggregator aggFloat = new CardinalityAggregator("billy", selectorFloat, true);
 
     for (int i = 0; i < values1.size(); ++i) {
       aggregate(selector1, agg1);
@@ -349,9 +562,18 @@ public class CardinalityAggregatorTest
     for (int i = 0; i < values2.size(); ++i) {
       aggregate(selector2, agg2);
     }
+    for (int i = 0; i < valuesLong.size(); ++i) {
+      aggregate(selectorLong, aggLong);
+    }
+    for (int i = 0; i < valuesFloat.size(); ++i) {
+      aggregate(selectorFloat, aggFloat);
+    }
 
     Assert.assertEquals(4.0, (Double) rowAggregatorFactory.finalizeComputation(agg1.get()), 0.05);
     Assert.assertEquals(8.0, (Double) rowAggregatorFactory.finalizeComputation(agg2.get()), 0.05);
+    Assert.assertEquals(11.0, (Double) rowAggregatorFactory.finalizeComputation(aggLong.get()), 0.05);
+    Assert.assertEquals(11.0, (Double) rowAggregatorFactory.finalizeComputation(aggFloat.get()), 0.05);
+
 
     Assert.assertEquals(
         9.0,
@@ -363,6 +585,34 @@ public class CardinalityAggregatorTest
         ),
         0.05
     );
+
+    Assert.assertEquals(
+        22.0,
+        (Double) rowAggregatorFactory.finalizeComputation(
+            rowAggregatorFactory.combine(
+                aggLong.get(),
+                aggFloat.get()
+            )
+        ),
+        0.15
+    );
+
+    Assert.assertEquals(
+        30.0,
+        (Double) valueAggregatorFactory.finalizeComputation(
+            valueAggregatorFactory.combine(
+                valueAggregatorFactory.combine(
+                    agg1.get(),
+                    agg2.get()
+                ),
+                valueAggregatorFactory.combine(
+                    aggLong.get(),
+                    aggFloat.get()
+                )
+            )
+        ),
+        1.25
+    );
   }
 
   @Test
@@ -370,9 +620,13 @@ public class CardinalityAggregatorTest
   {
     List<DimensionSelector> selector1 = Lists.newArrayList((DimensionSelector) dim1);
     List<DimensionSelector> selector2 = Lists.newArrayList((DimensionSelector) dim2);
+    List<DimensionSelector> selectorLong = Lists.newArrayList((DimensionSelector) dimLong);
+    List<DimensionSelector> selectorFloat = Lists.newArrayList((DimensionSelector) dimFloat);
 
     CardinalityAggregator agg1 = new CardinalityAggregator("billy", selector1, false);
     CardinalityAggregator agg2 = new CardinalityAggregator("billy", selector2, false);
+    CardinalityAggregator aggLong = new CardinalityAggregator("billy", selectorLong, true);
+    CardinalityAggregator aggFloat = new CardinalityAggregator("billy", selectorFloat, true);
 
     for (int i = 0; i < values1.size(); ++i) {
       aggregate(selector1, agg1);
@@ -380,19 +634,56 @@ public class CardinalityAggregatorTest
     for (int i = 0; i < values2.size(); ++i) {
       aggregate(selector2, agg2);
     }
+    for (int i = 0; i < valuesLong.size(); ++i) {
+      aggregate(selectorLong, aggLong);
+    }
+    for (int i = 0; i < valuesFloat.size(); ++i) {
+      aggregate(selectorFloat, aggFloat);
+    }
 
     Assert.assertEquals(4.0, (Double) valueAggregatorFactory.finalizeComputation(agg1.get()), 0.05);
     Assert.assertEquals(7.0, (Double) valueAggregatorFactory.finalizeComputation(agg2.get()), 0.05);
+    Assert.assertEquals(11.0, (Double) valueAggregatorFactory.finalizeComputation(aggLong.get()), 0.05);
+    Assert.assertEquals(11.0, (Double) valueAggregatorFactory.finalizeComputation(aggFloat.get()), 0.05);
+
 
     Assert.assertEquals(
         7.0,
-        (Double) rowAggregatorFactory.finalizeComputation(
-            rowAggregatorFactory.combine(
+        (Double) valueAggregatorFactory.finalizeComputation(
+            valueAggregatorFactory.combine(
                 agg1.get(),
                 agg2.get()
             )
         ),
         0.05
+    );
+
+    Assert.assertEquals(
+        22.0,
+        (Double) valueAggregatorFactory.finalizeComputation(
+            valueAggregatorFactory.combine(
+                aggLong.get(),
+                aggFloat.get()
+            )
+        ),
+        0.15
+    );
+
+    Assert.assertEquals(
+        29.0,
+        (Double) valueAggregatorFactory.finalizeComputation(
+            valueAggregatorFactory.combine(
+                valueAggregatorFactory.combine(
+                    agg1.get(),
+                    agg2.get()
+                ),
+                valueAggregatorFactory.combine(
+                  aggLong.get(),
+                  aggFloat.get()
+                )
+            )
+        ),
+        0.25
     );
   }
 
