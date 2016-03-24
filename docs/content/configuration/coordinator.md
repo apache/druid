@@ -81,7 +81,7 @@ Issuing a GET request at the same URL will return the spec that is currently in 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`millisToWaitBeforeDeleting`|How long does the coordinator need to be active before it can start removing (marking unused) segments in metadata storage.|900000 (15 mins)|
-|`mergeBytesLimit`|The maximum number of bytes to merge (for segments).|524288000L|
+|`mergeBytesLimit`|The maximum total uncompressed size in bytes of segments to merge.|524288000L|
 |`mergeSegmentsLimit`|The maximum number of segments that can be in a single [append task](../ingestion/tasks.html).|100|
 |`maxSegmentsToMove`|The maximum number of segments that can be moved at any given time.|5|
 |`replicantLifetime`|The maximum number of coordinator runs for a segment to be replicated before we start alerting.|15|
