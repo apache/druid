@@ -96,13 +96,14 @@ public class JDBCExtractionNamespaceFunctionFactory
 
   @Override
   public Callable<String> getCachePopulator(
+      final String id,
       final JDBCExtractionNamespace namespace,
       final String lastVersion,
       final Map<String, String> cache
   )
   {
     final long lastCheck = lastVersion == null ? JodaUtils.MIN_INSTANT : Long.parseLong(lastVersion);
-    final Long lastDBUpdate = lastUpdates(namespace);
+    final Long lastDBUpdate = lastUpdates(id, namespace);
     if (lastDBUpdate != null && lastDBUpdate <= lastCheck) {
       return new Callable<String>()
       {
@@ -118,12 +119,12 @@ public class JDBCExtractionNamespaceFunctionFactory
       @Override
       public String call()
       {
-        final DBI dbi = ensureDBI(namespace);
+        final DBI dbi = ensureDBI(id, namespace);
         final String table = namespace.getTable();
         final String valueColumn = namespace.getValueColumn();
         final String keyColumn = namespace.getKeyColumn();
 
-        LOG.debug("Updating [%s]", namespace.getNamespace());
+        LOG.debug("Updating [%s]", id);
         final List<Pair<String, String>> pairs = dbi.withHandle(
             new HandleCallback<List<Pair<String, String>>>()
             {
@@ -161,15 +162,15 @@ public class JDBCExtractionNamespaceFunctionFactory
         for (Pair<String, String> pair : pairs) {
           cache.put(pair.lhs, pair.rhs);
         }
-        LOG.info("Finished loading %d values for namespace[%s]", cache.size(), namespace.getNamespace());
+        LOG.info("Finished loading %d values for namespace[%s]", cache.size(), id);
         return String.format("%d", System.currentTimeMillis());
       }
     };
   }
 
-  private DBI ensureDBI(JDBCExtractionNamespace namespace)
+  private DBI ensureDBI(String id, JDBCExtractionNamespace namespace)
   {
-    final String key = namespace.getNamespace();
+    final String key = id;
     DBI dbi = null;
     if (dbiCache.containsKey(key)) {
       dbi = dbiCache.get(key);
@@ -186,9 +187,9 @@ public class JDBCExtractionNamespaceFunctionFactory
     return dbi;
   }
 
-  private Long lastUpdates(JDBCExtractionNamespace namespace)
+  private Long lastUpdates(String id, JDBCExtractionNamespace namespace)
   {
-    final DBI dbi = ensureDBI(namespace);
+    final DBI dbi = ensureDBI(id, namespace);
     final String table = namespace.getTable();
     final String tsColumn = namespace.getTsColumn();
     if (tsColumn == null) {

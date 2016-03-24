@@ -60,6 +60,7 @@ public interface ExtractionNamespaceFunctionFactory<T extends ExtractionNamespac
    * initialize resources.
    * If the result of the Callable is the same as what is passed in as lastVersion, then no swap takes place, and the swap is discarded.
    *
+   * @param id                  The ID of ExtractionNamespace
    * @param extractionNamespace The ExtractionNamespace for which to populate data.
    * @param lastVersion         The version which was last cached
    * @param swap                The temporary Map into which data may be placed and will be "swapped" with the proper
@@ -70,5 +71,5 @@ public interface ExtractionNamespaceFunctionFactory<T extends ExtractionNamespac
    * @return A callable that will be used to refresh resources of the namespace and return the version string used in
    * the populating
    */
-  Callable<String> getCachePopulator(T extractionNamespace, String lastVersion, Map<String, String> swap);
+  Callable<String> getCachePopulator(String id, T extractionNamespace, String lastVersion, Map<String, String> swap);
 }

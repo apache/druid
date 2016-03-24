@@ -28,6 +28,7 @@ import com.google.common.base.Preconditions;
 import com.google.inject.name.Named;
 import com.metamx.common.StringUtils;
 import io.druid.query.lookup.LookupExtractor;
+import io.druid.server.namespace.NamespacedExtractionModule;
 
 import javax.validation.constraints.NotNull;
 import java.nio.ByteBuffer;
@@ -48,9 +49,9 @@ public class NamespacedExtractor extends LookupExtractor
 
   @JsonCreator
   public NamespacedExtractor(
-      @NotNull @JacksonInject @Named("dimExtractionNamespace")
+      @NotNull @JacksonInject @Named(NamespacedExtractionModule.DIM_EXTRACTION_NAMESPACE)
       final Function<String, Function<String, String>> namespaces,
-      @NotNull @JacksonInject @Named("dimReverseExtractionNamespace")
+      @NotNull @JacksonInject @Named(NamespacedExtractionModule.DIM_REVERSE_EXTRACTION_NAMESPACE)
       final Function<String, Function<String, List<String>>> reverseNamespaces,
       @NotNull @JsonProperty(value = "namespace", required = true)
       final String namespace

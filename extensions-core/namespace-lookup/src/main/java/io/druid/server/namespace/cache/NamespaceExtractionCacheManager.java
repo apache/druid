@@ -160,6 +160,7 @@ public abstract class NamespaceExtractionCacheManager
 
 
   protected <T extends ExtractionNamespace> Runnable getPostRunnable(
+      final String id,
       final T namespace,
       final ExtractionNamespaceFunctionFactory<T> factory,
       final String cacheId
@@ -170,8 +171,7 @@ public abstract class NamespaceExtractionCacheManager
       @Override
       public void run()
       {
-        final String nsName = namespace.getNamespace();
-        final NamespaceImplData namespaceDatum = implData.get(nsName);
+        final NamespaceImplData namespaceDatum = implData.get(id);
         if (namespaceDatum == null) {
           // was removed
           return;
@@ -181,16 +181,16 @@ public abstract class NamespaceExtractionCacheManager
             // skip because it was disabled
             return;
           }
-          swapAndClearCache(nsName, cacheId);
-          final Function<String, String> fn = factory.buildFn(namespace, getCacheMap(nsName));
-          final Function<String, List<String>> reverseFn = factory.buildReverseFn(namespace, getCacheMap(nsName));
-          final Function<String, String> priorFn = fnCache.put(nsName, fn);
-          final Function<String, List<String>> priorReverseFn = reverseFnCache.put(nsName, reverseFn);
+          swapAndClearCache(id, cacheId);
+          final Function<String, String> fn = factory.buildFn(namespace, getCacheMap(id));
+          final Function<String, List<String>> reverseFn = factory.buildReverseFn(namespace, getCacheMap(id));
+          final Function<String, String> priorFn = fnCache.put(id, fn);
+          final Function<String, List<String>> priorReverseFn = reverseFnCache.put(id, reverseFn);
           if (priorFn != null && priorFn != namespaceDatum.fn.get()) {
-            log.warn("Replaced prior function for namespace [%s]", nsName);
+            log.warn("Replaced prior function for namespace [%s]", id);
           }
           if (priorReverseFn != null && priorReverseFn != namespaceDatum.reverseFn.get()) {
-            log.warn("Replaced prior reverse function for namespace [%s]", nsName);
+            log.warn("Replaced prior reverse function for namespace [%s]", id);
           }
           namespaceDatum.fn.set(fn);
           namespaceDatum.reverseFn.set(reverseFn);
@@ -199,64 +199,83 @@ public abstract class NamespaceExtractionCacheManager
     };
   }
 
-  public void scheduleOrUpdate(
-      final Collection<ExtractionNamespace> namespaces
+  // return value means actually delete or not
+  public boolean checkedDelete(
+      String namespaceName
   )
   {
-    Set<String> differentNamespaces = Sets.difference(
-        implData.keySet(), Sets.newHashSet(
-            Iterables.transform(
-                namespaces,
-                new Function<ExtractionNamespace, String>()
-                {
-                  @Nullable
-                  @Override
-                  public String apply(
-                      ExtractionNamespace input
-                  )
-                  {
-                    return input.getNamespace();
-                  }
-                }
-            )
-        )
-    );
-    if (log.isDebugEnabled()) {
-      log.debug("Deleting %d namespaces: %s", differentNamespaces.size(), differentNamespaces);
+    final NamespaceImplData implDatum = implData.get(namespaceName);
+    if (implDatum == null) {
+      // Delete but we don't have it?
+      log.wtf("Asked to delete something I just lost [%s]", namespaceName);
+      return false;
     }
-    for (String namespaceName : differentNamespaces) {
-      final NamespaceImplData implDatum = implData.get(namespaceName);
-      if (implDatum == null) {
-        // Delete but we don't have it?
-        log.wtf("Asked to delete something I just lost [%s]", namespaceName);
-        continue;
-      }
-      delete(namespaceName);
-    }
-    for (final ExtractionNamespace namespace : namespaces) {
-      final NamespaceImplData implDatum = implData.get(namespace.getNamespace());
-      if (implDatum == null) {
-        // New, probably
-        schedule(namespace);
-        continue;
-      }
-      if (!implDatum.enabled.get()) {
-        // Race condition. Someone else disabled it first, go ahead and reschedule
-        schedule(namespace);
-        continue;
-      }
+    return delete(namespaceName);
+  }
 
-      // Live one. Check if it needs updated
-      if (implDatum.namespace.equals(namespace)) {
-        // skip if no update
-        continue;
-      }
-      if (log.isDebugEnabled()) {
-        log.debug("Namespace [%s] needs updated to [%s]", implDatum.namespace, namespace);
-      }
-      removeNamespaceLocalMetadata(implDatum);
-      schedule(namespace);
+  // return value means actually schedule or not
+  public boolean scheduleOrUpdate(
+      final String id,
+      ExtractionNamespace namespace
+  )
+  {
+    final NamespaceImplData implDatum = implData.get(id);
+    if (implDatum == null) {
+      // New, probably
+      schedule(id, namespace);
+      return true;
     }
+    if (!implDatum.enabled.get()) {
+      // Race condition. Someone else disabled it first, go ahead and reschedule
+      schedule(id, namespace);
+      return true;
+    }
+
+    // Live one. Check if it needs updated
+    if (implDatum.namespace.equals(namespace)) {
+      // skip if no update
+      return false;
+    }
+    if (log.isDebugEnabled()) {
+      log.debug("Namespace [%s] needs updated to [%s]", implDatum.namespace, namespace);
+    }
+    removeNamespaceLocalMetadata(implDatum);
+    schedule(id, namespace);
+    return true;
+  }
+
+  public boolean scheduleAndWait(
+      final String id,
+      ExtractionNamespace namespace,
+      long waitForFirstRun
+  )
+  {
+    String oldVersion = getVersion(id);
+
+    if (scheduleOrUpdate(id, namespace))
+    {
+      // wait until the namespace registration is done
+      String newVersion = getVersion(id);
+      final long startLocking = System.currentTimeMillis();
+      final long timeout = startLocking + waitForFirstRun;
+
+      while(newVersion == null || newVersion.equals(oldVersion))
+      {
+        if (System.currentTimeMillis() > timeout) {
+          log.error("NamespaceLookupExtractorFactory[%s] - timeout during start", id);
+          return false;
+        }
+
+        try {
+          Thread.sleep(100);
+        } catch (InterruptedException e) {
+          log.error("NamespaceLookupExtractorFactory[%s] - interrupted during start", id);
+          return false;
+        }
+        newVersion = getVersion(id);
+      }
+    }
+    return true;
   }
 
   private void cancelFuture(final NamespaceImplData implDatum)
@@ -315,7 +334,7 @@ public abstract class NamespaceExtractionCacheManager
   }
 
   // Optimistic scheduling of updates to a namespace.
-  public <T extends ExtractionNamespace> ListenableFuture<?> schedule(final T namespace)
+  public <T extends ExtractionNamespace> ListenableFuture<?> schedule(final String id, final T namespace)
   {
     final ExtractionNamespaceFunctionFactory<T> factory = (ExtractionNamespaceFunctionFactory<T>)
         namespaceFunctionFactoryMap.get(namespace.getClass());
@@ -323,20 +342,20 @@ public abstract class NamespaceExtractionCacheManager
       throw new ISE("Cannot find factory for namespace [%s]", namespace);
     }
     final String cacheId = UUID.randomUUID().toString();
-    return schedule(namespace, factory, getPostRunnable(namespace, factory, cacheId), cacheId);
+    return schedule(id, namespace, factory, getPostRunnable(id, namespace, factory, cacheId), cacheId);
   }
 
   // For testing purposes this is protected
   protected <T extends ExtractionNamespace> ListenableFuture<?> schedule(
+      final String id,
       final T namespace,
       final ExtractionNamespaceFunctionFactory<T> factory,
       final Runnable postRunnable,
       final String cacheId
   )
   {
-    final String namespaceName = namespace.getNamespace();
-    log.debug("Trying to update namespace [%s]", namespaceName);
-    final NamespaceImplData implDatum = implData.get(namespaceName);
+    log.debug("Trying to update namespace [%s]", id);
+    final NamespaceImplData implDatum = implData.get(id);
     if (implDatum != null) {
       synchronized (implDatum.enabled) {
         if (implDatum.enabled.get()) {
@@ -357,8 +376,8 @@ public abstract class NamespaceExtractionCacheManager
           startLatch.await(); // wait for "election" to leadership or cancellation
           if (!Thread.currentThread().isInterrupted()) {
             final Map<String, String> cache = getCacheMap(cacheId);
-            final String preVersion = lastVersion.get(namespaceName);
-            final Callable<String> runnable = factory.getCachePopulator(namespace, preVersion, cache);
+            final String preVersion = lastVersion.get(id);
+            final Callable<String> runnable = factory.getCachePopulator(id, namespace, preVersion, cache);
 
             tasksStarted.incrementAndGet();
             final String newVersion = runnable.call();
@@ -366,16 +385,16 @@ public abstract class NamespaceExtractionCacheManager
               throw new CancellationException(String.format("Version `%s` already exists", preVersion));
             }
             if (newVersion != null) {
-              lastVersion.put(namespaceName, newVersion);
+              lastVersion.put(id, newVersion);
             }
             postRunnable.run();
-            log.debug("Namespace [%s] successfully updated", namespaceName);
+            log.debug("Namespace [%s] successfully updated", id);
           }
         }
         catch (Throwable t) {
           delete(cacheId);
           if (t instanceof CancellationException) {
-            log.debug(t, "Namespace [%s] cancelled", namespaceName);
+            log.debug(t, "Namespace [%s] cancelled", id);
           } else {
             log.error(t, "Failed update namespace [%s]", namespace);
           }
@@ -394,18 +413,18 @@ public abstract class NamespaceExtractionCacheManager
         future = listeningScheduledExecutorService.schedule(command, 0, TimeUnit.MILLISECONDS);
       }
 
-      final NamespaceImplData me = new NamespaceImplData(future, namespace, namespaceName);
-      final NamespaceImplData other = implData.putIfAbsent(namespaceName, me);
+      final NamespaceImplData me = new NamespaceImplData(future, namespace, id);
+      final NamespaceImplData other = implData.putIfAbsent(id, me);
       if (other != null) {
         if (!future.isDone() && !future.cancel(true)) {
-          log.warn("Unable to cancel future for namespace[%s] on race loss", namespaceName);
+          log.warn("Unable to cancel future for namespace[%s] on race loss", id);
         }
         throw new IAE("Namespace [%s] already exists! Leaving prior running", namespace);
       } else {
         if (!me.enabled.compareAndSet(false, true)) {
           log.wtf("How did someone enable this before ME?");
         }
-        log.debug("I own namespace [%s]", namespaceName);
+        log.debug("I own namespace [%s]", id);
         return future;
       }
     }

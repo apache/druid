@@ -100,6 +100,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     {
       @Override
       public Callable<String> getCachePopulator(
+          final String id,
           final URIExtractionNamespace extractionNamespace,
           final String lastVersion,
           final Map<String, String> cache
@@ -128,14 +129,15 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     {
       @Override
       protected <T extends ExtractionNamespace> Runnable getPostRunnable(
+          final String id,
           final T namespace,
           final ExtractionNamespaceFunctionFactory<T> factory,
           final String cacheId
       )
       {
-        final Runnable runnable = super.getPostRunnable(namespace, factory, cacheId);
-        cacheUpdateAlerts.putIfAbsent(namespace.getNamespace(), new Object());
-        final Object cacheUpdateAlerter = cacheUpdateAlerts.get(namespace.getNamespace());
+        final Runnable runnable = super.getPostRunnable(id, namespace, factory, cacheId);
+        cacheUpdateAlerts.putIfAbsent(id, new Object());
+        final Object cacheUpdateAlerter = cacheUpdateAlerts.get(id);
         return new Runnable()
         {
           @Override
@@ -174,8 +176,8 @@ public class NamespaceExtractionCacheManagerExecutorsTest
   @Test(expected = IAE.class)
   public void testDoubleSubmission()
   {
+    final String namespaceID = "ns";
     URIExtractionNamespace namespace = new URIExtractionNamespace(
-        "ns",
         tmpFile.toURI(),
         new URIExtractionNamespace.ObjectMapperFlatDataParser(
             URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
@@ -183,11 +185,11 @@ public class NamespaceExtractionCacheManagerExecutorsTest
         new Period(0),
         null
     );
-    final ListenableFuture<?> future = manager.schedule(namespace);
+    final ListenableFuture<?> future = manager.schedule(namespaceID, namespace);
     Assert.assertFalse(future.isDone());
     Assert.assertFalse(future.isCancelled());
     try {
-      manager.schedule(namespace).cancel(true);
+      manager.schedule(namespaceID, namespace).cancel(true);
     }
     finally {
       future.cancel(true);
@@ -198,8 +200,8 @@ public class NamespaceExtractionCacheManagerExecutorsTest
   @Test(timeout = 60_000)
   public void testSimpleSubmission() throws ExecutionException, InterruptedException
   {
+    final String namespaceID = "ns";
     URIExtractionNamespace namespace = new URIExtractionNamespace(
-        "ns",
         tmpFile.toURI(),
         new URIExtractionNamespace.ObjectMapperFlatDataParser(
             URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
@@ -207,7 +209,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
         new Period(0),
         null
     );
-    NamespaceExtractionCacheManagersTest.waitFor(manager.schedule(namespace));
+    NamespaceExtractionCacheManagersTest.waitFor(manager.schedule(namespaceID, namespace));
   }
 
   @Test(timeout = 60_000)
@@ -217,9 +219,9 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     final long delay = 5;
     final long totalRunCount;
     final long start;
+    final String namespaceID = "ns";
     try {
       final URIExtractionNamespace namespace = new URIExtractionNamespace(
-          "ns",
           tmpFile.toURI(),
           new URIExtractionNamespace.ObjectMapperFlatDataParser(
               URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
@@ -227,15 +229,15 @@ public class NamespaceExtractionCacheManagerExecutorsTest
           new Period(delay),
           null
       );
-      cacheUpdateAlerts.putIfAbsent(namespace.getNamespace(), new Object());
+      cacheUpdateAlerts.putIfAbsent(namespaceID, new Object());
       start = System.currentTimeMillis();
-      ListenableFuture<?> future = manager.schedule(namespace);
+      ListenableFuture<?> future = manager.schedule(namespaceID, namespace);
 
       Assert.assertFalse(future.isDone());
       Assert.assertFalse(future.isCancelled());
 
       final long preRunCount;
-      final Object cacheUpdateAlerter = cacheUpdateAlerts.get(namespace.getNamespace());
+      final Object cacheUpdateAlerter = cacheUpdateAlerts.get(namespaceID);
       synchronized (cacheUpdateAlerter) {
         preRunCount = numRuns.get();
       }
@@ -351,7 +353,6 @@ public class NamespaceExtractionCacheManagerExecutorsTest
 
     final long period = 1_000L;// Give it some time between attempts to update
     final URIExtractionNamespace namespace = new URIExtractionNamespace(
-        ns,
         tmpFile.toURI(),
         new URIExtractionNamespace.ObjectMapperFlatDataParser(
             URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
@@ -359,7 +360,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
         new Period(period),
         null
     );
-    final ListenableFuture<?> future = manager.schedule(namespace);
+    final ListenableFuture<?> future = manager.schedule(ns, namespace);
     Assert.assertFalse(future.isCancelled());
     Assert.assertFalse(future.isDone());
 
@@ -426,10 +427,10 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     final long period = 5L;
     final ListenableFuture future;
     long prior = 0;
+    final String namespaceID = "ns";
     try {
 
       final URIExtractionNamespace namespace = new URIExtractionNamespace(
-          "ns",
           tmpFile.toURI(),
           new URIExtractionNamespace.ObjectMapperFlatDataParser(
               URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
@@ -437,11 +438,11 @@ public class NamespaceExtractionCacheManagerExecutorsTest
           new Period(period),
           null
       );
-      cacheUpdateAlerts.putIfAbsent(namespace.getNamespace(), new Object());
+      cacheUpdateAlerts.putIfAbsent(namespaceID, new Object());
 
-      future = manager.schedule(namespace);
+      future = manager.schedule(namespaceID, namespace);
 
-      final Object cacheUpdateAlerter = cacheUpdateAlerts.get(namespace.getNamespace());
+      final Object cacheUpdateAlerter = cacheUpdateAlerts.get(namespaceID);
       synchronized (cacheUpdateAlerter) {
         cacheUpdateAlerter.wait();
       }
@@ -475,9 +476,9 @@ public class NamespaceExtractionCacheManagerExecutorsTest
   {
     final long numWaits = 5;
     final ListenableFuture<?> future;
+    final String namespaceID = "ns";
     try {
       final URIExtractionNamespace namespace = new URIExtractionNamespace(
-          "ns",
           tmpFile.toURI(),
           new URIExtractionNamespace.ObjectMapperFlatDataParser(
               URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
@@ -486,11 +487,11 @@ public class NamespaceExtractionCacheManagerExecutorsTest
           null
       );
 
-      cacheUpdateAlerts.putIfAbsent(namespace.getNamespace(), new Object());
-      future = manager.schedule(namespace);
+      cacheUpdateAlerts.putIfAbsent(namespaceID, new Object());
+      future = manager.schedule(namespaceID, namespace);
       Assert.assertFalse(future.isDone());
 
-      final Object cacheUpdateAlerter = cacheUpdateAlerts.get(namespace.getNamespace());
+      final Object cacheUpdateAlerter = cacheUpdateAlerts.get(namespaceID);
       for (int i = 0; i < numWaits; ++i) {
         synchronized (cacheUpdateAlerter) {
           cacheUpdateAlerter.wait();

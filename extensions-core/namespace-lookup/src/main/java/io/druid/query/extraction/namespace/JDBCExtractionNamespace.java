@@ -47,14 +47,10 @@ public class JDBCExtractionNamespace implements ExtractionNamespace
   @JsonProperty
   private final String tsColumn;
   @JsonProperty
-  private final String namespace;
-  @JsonProperty
   private final Period pollPeriod;
 
   @JsonCreator
   public JDBCExtractionNamespace(
-      @NotNull @JsonProperty(value = "namespace", required = true)
-      final String namespace,
       @NotNull @JsonProperty(value = "connectorConfig", required = true)
       final MetadataStorageConnectorConfig connectorConfig,
       @NotNull @JsonProperty(value = "table", required = true)
@@ -75,14 +71,7 @@ public class JDBCExtractionNamespace implements ExtractionNamespace
     this.keyColumn = Preconditions.checkNotNull(keyColumn, "keyColumn");
     this.valueColumn = Preconditions.checkNotNull(valueColumn, "valueColumn");
     this.tsColumn = tsColumn;
-    this.namespace = Preconditions.checkNotNull(namespace, "namespace");
     this.pollPeriod = pollPeriod == null ? new Period(0L) : pollPeriod;
-  }
-
-  @Override
-  public String getNamespace()
-  {
-    return namespace;
   }
 
   public MetadataStorageConnectorConfig getConnectorConfig()
@@ -120,8 +109,7 @@ public class JDBCExtractionNamespace implements ExtractionNamespace
   public String toString()
   {
     return String.format(
-        "JDBCExtractionNamespace = { namespace = %s, connectorConfig = { %s }, table = %s, keyColumn = %s, valueColumn = %s, tsColumn = %s, pollPeriod = %s}",
-        namespace,
+        "JDBCExtractionNamespace = { connectorConfig = { %s }, table = %s, keyColumn = %s, valueColumn = %s, tsColumn = %s, pollPeriod = %s}",
         connectorConfig.toString(),
         table,
         keyColumn,
@@ -158,9 +146,6 @@ public class JDBCExtractionNamespace implements ExtractionNamespace
     if (tsColumn != null ? !tsColumn.equals(that.tsColumn) : that.tsColumn != null) {
       return false;
     }
-    if (!namespace.equals(that.namespace)) {
-      return false;
-    }
     return pollPeriod.equals(that.pollPeriod);
 
   }
@@ -173,7 +158,6 @@ public class JDBCExtractionNamespace implements ExtractionNamespace
     result = 31 * result + keyColumn.hashCode();
     result = 31 * result + valueColumn.hashCode();
     result = 31 * result + (tsColumn != null ? tsColumn.hashCode() : 0);
-    result = 31 * result + namespace.hashCode();
     result = 31 * result + pollPeriod.hashCode();
     return result;
   }

@@ -49,10 +49,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
@@ -60,15 +57,14 @@ import java.util.regex.Pattern;
 /**
  *
  */
-@ManageLifecycle
 public class KafkaExtractionManager
 {
   private static final Logger log = new Logger(KafkaExtractionManager.class);
 
   private final Properties kafkaProperties = new Properties();
-  private final ConcurrentMap<String, String> namespaceVersionMap;
+  private final ConcurrentMap<String, String> namespaceVersionMap = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, AtomicLong> topicEvents = new ConcurrentHashMap<>();
-  private final Collection<ListenableFuture<?>> futures = new ConcurrentLinkedQueue<>();
+  private final ConcurrentMap<String, ListenableFuture<?>> futures = new ConcurrentHashMap<>();
   private final ListeningExecutorService executorService = MoreExecutors.listeningDecorator(
       Executors.newCachedThreadPool(
           new ThreadFactoryBuilder()
@@ -83,8 +79,7 @@ public class KafkaExtractionManager
   // Bindings in KafkaExtractionNamespaceModule
   @Inject
   public KafkaExtractionManager(
-      @Named("namespaceVersionMap") final ConcurrentMap<String, String> namespaceVersionMap,
-      @Named("renameKafkaProperties") final Properties kafkaProperties
+      final Properties kafkaProperties
   )
   {
     if (kafkaProperties.containsKey("group.id")) {
@@ -105,8 +100,15 @@ public class KafkaExtractionManager
     }
     // Enable publish-subscribe
     this.kafkaProperties.setProperty("auto.offset.reset", "smallest");
+  }
 
-    this.namespaceVersionMap = namespaceVersionMap;
+  boolean supports(Properties otherProperties)
+  {
+    if (otherProperties.containsKey("zookeeper.connect")) {
+      return this.kafkaProperties.getProperty("zookeeper.connect")
+          .equals(otherProperties.getProperty("zookeeper.connect"));
+    }
+    return false;
   }
 
   public long getBackgroundTaskCount()
@@ -137,10 +139,9 @@ public class KafkaExtractionManager
     }
   }
 
-  public void addListener(final KafkaExtractionNamespace kafkaNamespace, final Map<String, String> map)
+  public void addListener(final String id, final KafkaExtractionNamespace kafkaNamespace, final Map<String, String> map)
   {
     final String topic = kafkaNamespace.getKafkaTopic();
-    final String namespace = kafkaNamespace.getNamespace();
     final ListenableFuture<?> future = executorService.submit(
         new Runnable()
         {
@@ -168,11 +169,11 @@ public class KafkaExtractionManager
             backgroundTaskCount.incrementAndGet();
             final KafkaStream<String, String> kafkaStream = streams.get(0);
             final ConsumerIterator<String, String> it = kafkaStream.iterator();
-            log.info("Listening to topic [%s] for namespace [%s]", topic, namespace);
-            AtomicLong eventCounter = topicEvents.get(namespace);
+            log.info("Listening to topic [%s] for namespace [%s]", topic, id);
+            AtomicLong eventCounter = topicEvents.get(id);
             if(eventCounter == null){
-              topicEvents.putIfAbsent(namespace, new AtomicLong(0L));
-              eventCounter = topicEvents.get(namespace);
+              topicEvents.putIfAbsent(id, new AtomicLong(0L));
+              eventCounter = topicEvents.get(id);
             }
             while (it.hasNext()) {
               final MessageAndMetadata<String, String> messageAndMetadata = it.next();
@@ -183,25 +184,28 @@ public class KafkaExtractionManager
                 continue;
               }
               map.put(key, message);
-              namespaceVersionMap.put(namespace, Long.toString(eventCounter.incrementAndGet()));
+              namespaceVersionMap.put(id, Long.toString(eventCounter.incrementAndGet()));
               log.debug("Placed key[%s] val[%s]", key, message);
             }
           }
         }
     );
+    futures.putIfAbsent(id, future);
     Futures.addCallback(
         future, new FutureCallback<Object>()
         {
           @Override
           public void onSuccess(Object result)
           {
-            topicEvents.remove(namespace);
+            topicEvents.remove(id);
+            futures.remove(id);
           }
 
           @Override
           public void onFailure(Throwable t)
           {
-            topicEvents.remove(namespace);
+            topicEvents.remove(id);
+            futures.remove(id);
             if (t instanceof java.util.concurrent.CancellationException) {
               log.warn("Cancelled rename task for topic [%s]", topic);
             } else {
@@ -213,17 +217,21 @@ public class KafkaExtractionManager
     );
   }
 
-  @LifecycleStart
+  public void removeListener(final String id)
+  {
+    Future future = futures.remove(id);
+    future.cancel(true);
+  }
+
   public void start()
   {
     // NO-OP
     // all consumers are started through KafkaExtractionNamespaceFactory.getCachePopulator
   }
 
-  @LifecycleStop
   public void stop()
   {
     executorService.shutdown();
-    Futures.allAsList(futures).cancel(true);
+    Futures.allAsList(futures.values()).cancel(true);
   }
 }

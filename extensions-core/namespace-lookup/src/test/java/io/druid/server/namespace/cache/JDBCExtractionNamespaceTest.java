@@ -203,12 +203,13 @@ public class JDBCExtractionNamespaceTest
                     {
                       @Override
                       public Callable<String> getCachePopulator(
+                          final String id,
                           final JDBCExtractionNamespace namespace,
                           final String lastVersion,
                           final Map<String, String> cache
                       )
                       {
-                        final Callable<String> cachePopulator = super.getCachePopulator(namespace, lastVersion, cache);
+                        final Callable<String> cachePopulator = super.getCachePopulator(id, namespace, lastVersion, cache);
                         return new Callable<String>()
                         {
                           @Override
@@ -371,7 +372,6 @@ public class JDBCExtractionNamespaceTest
              InterruptedException, TimeoutException
   {
     final JDBCExtractionNamespace extractionNamespace = new JDBCExtractionNamespace(
-        namespace,
         derbyConnectorRule.getMetadataConnectorConfig(),
         tableName,
         keyName,
@@ -379,8 +379,8 @@ public class JDBCExtractionNamespaceTest
         tsColumn,
         new Period(0)
     );
-    NamespaceExtractionCacheManagersTest.waitFor(extractionCacheManager.schedule(extractionNamespace));
-    Function<String, String> extractionFn = fnCache.get(extractionNamespace.getNamespace());
+    NamespaceExtractionCacheManagersTest.waitFor(extractionCacheManager.schedule(namespace, extractionNamespace));
+    Function<String, String> extractionFn = fnCache.get(namespace);
 
     for (Map.Entry<String, String> entry : renames.entrySet()) {
       String key = entry.getKey();
@@ -394,7 +394,6 @@ public class JDBCExtractionNamespaceTest
   public void testReverseLookup() throws InterruptedException
   {
     final JDBCExtractionNamespace extractionNamespace = new JDBCExtractionNamespace(
-        namespace,
         derbyConnectorRule.getMetadataConnectorConfig(),
         tableName,
         keyName,
@@ -402,8 +401,8 @@ public class JDBCExtractionNamespaceTest
         tsColumn,
         new Period(0)
     );
-    NamespaceExtractionCacheManagersTest.waitFor(extractionCacheManager.schedule(extractionNamespace));
-    Function<String, List<String>> reverseExtractionFn = reverseFnCache.get(extractionNamespace.getNamespace());
+    NamespaceExtractionCacheManagersTest.waitFor(extractionCacheManager.schedule(namespace, extractionNamespace));
+    Function<String, List<String>> reverseExtractionFn = reverseFnCache.get(namespace);
     Assert.assertEquals(
         "reverse lookup should match",
         Sets.newHashSet("foo", "bad"),
@@ -437,13 +436,13 @@ public class JDBCExtractionNamespaceTest
   {
     final JDBCExtractionNamespace extractionNamespace = ensureNamespace();
 
-    assertUpdated(extractionNamespace.getNamespace(), "foo", "bar");
+    assertUpdated(namespace, "foo", "bar");
 
     if (tsColumn != null) {
       insertValues(handleRef, "foo", "baz", "1900-01-01 00:00:00");
     }
 
-    assertUpdated(extractionNamespace.getNamespace(), "foo", "bar");
+    assertUpdated(namespace, "foo", "bar");
   }
 
   @Test(timeout = 60_000L)
@@ -452,18 +451,17 @@ public class JDBCExtractionNamespaceTest
   {
     final JDBCExtractionNamespace extractionNamespace = ensureNamespace();
 
-    assertUpdated(extractionNamespace.getNamespace(), "foo", "bar");
+    assertUpdated(namespace, "foo", "bar");
 
     insertValues(handleRef, "foo", "baz", "2900-01-01 00:00:00");
 
-    assertUpdated(extractionNamespace.getNamespace(), "foo", "baz");
+    assertUpdated(namespace, "foo", "baz");
   }
 
   private JDBCExtractionNamespace ensureNamespace()
       throws NoSuchFieldException, IllegalAccessException, InterruptedException
   {
     final JDBCExtractionNamespace extractionNamespace = new JDBCExtractionNamespace(
-        namespace,
         derbyConnectorRule.getMetadataConnectorConfig(),
         tableName,
         keyName,
@@ -471,14 +469,14 @@ public class JDBCExtractionNamespaceTest
         tsColumn,
         new Period(10)
     );
-    extractionCacheManager.schedule(extractionNamespace);
+    extractionCacheManager.schedule(namespace, extractionNamespace);
 
     waitForUpdates(1_000L, 2L);
 
     Assert.assertEquals(
         "sanity check not correct",
         "bar",
-        fnCache.get(extractionNamespace.getNamespace()).apply("foo")
+        fnCache.get(namespace).apply("foo")
     );
     return extractionNamespace;
   }

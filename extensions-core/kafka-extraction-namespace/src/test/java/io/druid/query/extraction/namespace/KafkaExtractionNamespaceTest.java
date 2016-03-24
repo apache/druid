@@ -36,7 +36,7 @@ public class KafkaExtractionNamespaceTest
   {
     ObjectMapper mapper = new DefaultObjectMapper();
     mapper.registerSubtypes(KafkaExtractionNamespace.class);
-    final String val = "{\"type\":\"kafka\",\"kafkaTopic\":\"testTopic\",\"namespace\":\"testNamespace\"}";
+    final String val = "{\"type\":\"kafka\",\"kafkaTopic\":\"testTopic\",\"kafkaProperties\":null}";
     final ExtractionNamespace fn =
         mapper.reader(ExtractionNamespace.class)
               .readValue(
@@ -50,7 +50,7 @@ public class KafkaExtractionNamespaceTest
   {
     ObjectMapper mapper = new DefaultObjectMapper();
     mapper.registerSubtypes(KafkaExtractionNamespace.class);
-    final String val = "{\"type\":\"kafka\",\"namespace\":\"testNamespace\"}";
+    final String val = "{\"type\":\"kafka\" }";
     final ExtractionNamespace fn =
         mapper.reader(ExtractionNamespace.class)
               .readValue(
@@ -59,17 +59,4 @@ public class KafkaExtractionNamespaceTest
     Assert.assertEquals(val, mapper.writeValueAsString(fn));
   }
 
-  @Test(expected = com.fasterxml.jackson.databind.JsonMappingException.class)
-  public void testMissingNamespace() throws IOException
-  {
-    ObjectMapper mapper = new DefaultObjectMapper();
-    mapper.registerSubtypes(KafkaExtractionNamespace.class);
-    final String val = "{\"type\":\"kafka\",\"kafkaTopic\":\"testTopic\"}";
-    final ExtractionNamespace fn =
-        mapper.reader(ExtractionNamespace.class)
-              .readValue(
-                  val
-              );
-    Assert.assertEquals(val, mapper.writeValueAsString(fn));
-  }
 }

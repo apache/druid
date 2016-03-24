@@ -30,23 +30,18 @@ import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Named;
+import com.google.inject.name.Names;
 import com.metamx.common.IAE;
-import com.metamx.common.lifecycle.LifecycleStart;
-import com.metamx.common.lifecycle.LifecycleStop;
-import com.metamx.common.logger.Logger;
 import io.druid.guice.Jerseys;
-import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
-import io.druid.guice.LifecycleModule;
-import io.druid.guice.ManageLifecycle;
 import io.druid.guice.PolyBind;
 import io.druid.initialization.DruidModule;
+import io.druid.query.extraction.NamespaceLookupExtractorFactory;
 import io.druid.query.extraction.NamespacedExtractor;
 import io.druid.query.extraction.namespace.ExtractionNamespace;
 import io.druid.query.extraction.namespace.ExtractionNamespaceFunctionFactory;
 import io.druid.query.extraction.namespace.JDBCExtractionNamespace;
 import io.druid.query.extraction.namespace.URIExtractionNamespace;
-import io.druid.server.initialization.NamespaceLookupStaticConfig;
 import io.druid.server.namespace.cache.NamespaceExtractionCacheManager;
 import io.druid.server.namespace.cache.OffHeapNamespaceExtractionCacheManager;
 import io.druid.server.namespace.cache.OnHeapNamespaceExtractionCacheManager;
@@ -62,9 +57,16 @@ import java.util.concurrent.ConcurrentMap;
  */
 public class NamespacedExtractionModule implements DruidModule
 {
-  private static final Logger log = new Logger(NamespacedExtractionModule.class);
   private static final String TYPE_PREFIX = "druid.query.extraction.namespace.cache.type";
-  private static final String STATIC_CONFIG_PREFIX = "druid.query.extraction.namespace";
+
+  public static final String NAMESPACE_VERSION_MAP = "namespaceVersionMap";
+  public static final String NAMESPACE_EXTRACTION_FUNCTION_CACHE = "namespaceExtractionFunctionCache";
+  public static final String NAMESPACE_REVERSE_EXTRACTION_FUNCTION_CACHE = "namespaceReverseExtractionFunctionCache";
+  public static final String DIM_EXTRACTION_NAMESPACE = "dimExtractionNamespace";
+  public static final String DIM_REVERSE_EXTRACTION_NAMESPACE = "dimReverseExtractionNamespace";
+
+  public static final String EXTRACTION_CACHE_MANAGER = "DruidExtractionCacheManager";
+
   private final ConcurrentMap<String, Function<String, String>> fnCache = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, Function<String, List<String>>> reverseFnCache= new ConcurrentHashMap<>();
 
@@ -73,14 +75,9 @@ public class NamespacedExtractionModule implements DruidModule
   {
     return ImmutableList.<Module>of(
         new SimpleModule("DruidNamespacedExtractionModule")
-        {
-          @Override
-          public void setupModule(SetupContext context)
-          {
-            context.registerSubtypes(NamespacedExtractor.class);
-            context.registerSubtypes(ExtractionNamespace.class);
-          }
-        }
+            .registerSubtypes(NamespacedExtractor.class)
+            .registerSubtypes(ExtractionNamespace.class)
+            .registerSubtypes(NamespaceLookupExtractorFactory.class)
     );
   }
 
@@ -99,41 +96,9 @@ public class NamespacedExtractionModule implements DruidModule
     );
   }
 
-  @ManageLifecycle
-  public static class NamespaceStaticConfiguration
-  {
-    private NamespaceLookupStaticConfig configuration;
-    private NamespaceExtractionCacheManager manager;
-
-    @Inject
-    NamespaceStaticConfiguration(
-        final NamespaceLookupStaticConfig configuration,
-        final NamespaceExtractionCacheManager manager
-    )
-    {
-      this.configuration = configuration;
-      this.manager = manager;
-    }
-
-    @LifecycleStart
-    public void start()
-    {
-      log.info("Loading configuration as static configuration");
-      manager.scheduleOrUpdate(configuration.getNamespaces());
-      log.info("Loaded %s namespace-lookup configuration", configuration.getNamespaces().size());
-    }
-
-    @LifecycleStop
-    public void stop()
-    {
-      //NOOP
-    }
-  }
-
   @Override
   public void configure(Binder binder)
   {
-    JsonConfigProvider.bind(binder, STATIC_CONFIG_PREFIX, NamespaceLookupStaticConfig.class);
     PolyBind.createChoiceWithDefault(
         binder,
         TYPE_PREFIX,
@@ -157,13 +122,19 @@ public class NamespacedExtractionModule implements DruidModule
         .to(URIExtractionNamespaceFunctionFactory.class)
         .in(LazySingleton.class);
 
-    LifecycleModule.register(binder, NamespaceStaticConfiguration.class);
     Jerseys.addResource(binder, NamespacesCacheResource.class);
   }
 
+  @Provides
+  @Named(EXTRACTION_CACHE_MANAGER)
+  @LazySingleton
+  public NamespaceExtractionCacheManager getCacheManager(NamespaceExtractionCacheManager manager)
+  {
+    return manager;
+  }
 
   @Provides
-  @Named("namespaceVersionMap")
+  @Named(NAMESPACE_VERSION_MAP)
   @LazySingleton
   public ConcurrentMap<String, String> getVersionMap()
   {
@@ -171,24 +142,24 @@ public class NamespacedExtractionModule implements DruidModule
   }
 
   @Provides
-  @Named("namespaceExtractionFunctionCache")
+  @Named(NAMESPACE_EXTRACTION_FUNCTION_CACHE)
   public ConcurrentMap<String, Function<String, String>> getFnCache()
   {
     return fnCache;
   }
 
   @Provides
-  @Named("namespaceReverseExtractionFunctionCache")
+  @Named(NAMESPACE_REVERSE_EXTRACTION_FUNCTION_CACHE)
   public ConcurrentMap<String, Function<String, List<String>>> getReverseFnCache()
   {
     return reverseFnCache;
   }
 
   @Provides
-  @Named("dimExtractionNamespace")
+  @Named(DIM_EXTRACTION_NAMESPACE)
   @LazySingleton
   public Function<String, Function<String, String>> getFunctionMaker(
-      @Named("namespaceExtractionFunctionCache")
+      @Named(NAMESPACE_EXTRACTION_FUNCTION_CACHE)
       final ConcurrentMap<String, Function<String, String>> fnCache
   )
   {
@@ -208,10 +179,10 @@ public class NamespacedExtractionModule implements DruidModule
   }
 
   @Provides
-  @Named("dimReverseExtractionNamespace")
+  @Named(DIM_REVERSE_EXTRACTION_NAMESPACE)
   @LazySingleton
   public Function<String, Function<String, List<String>>> getReverseFunctionMaker(
-      @Named("namespaceReverseExtractionFunctionCache")
+      @Named(NAMESPACE_REVERSE_EXTRACTION_FUNCTION_CACHE)
       final ConcurrentMap<String, Function<String, List<String>>> reverseFn
   )
   {

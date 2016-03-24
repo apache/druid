@@ -27,6 +27,7 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.query.extraction.namespace.ExtractionNamespace;
 import io.druid.query.extraction.namespace.ExtractionNamespaceFunctionFactory;
+import io.druid.server.namespace.NamespacedExtractionModule;
 
 import java.util.List;
 import java.util.Map;
@@ -45,9 +46,9 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
   @Inject
   public OnHeapNamespaceExtractionCacheManager(
       final Lifecycle lifecycle,
-      @Named("namespaceExtractionFunctionCache")
+      @Named(NamespacedExtractionModule.NAMESPACE_EXTRACTION_FUNCTION_CACHE)
       final ConcurrentMap<String, Function<String, String>> fnCache,
-      @Named("namespaceReverseExtractionFunctionCache")
+      @Named(NamespacedExtractionModule.NAMESPACE_REVERSE_EXTRACTION_FUNCTION_CACHE)
       final ConcurrentMap<String, Function<String, List<String>>> reverseFnCache,
       final ServiceEmitter emitter,
       final Map<Class<? extends ExtractionNamespace>, ExtractionNamespaceFunctionFactory<?>> namespaceFunctionFactoryMap

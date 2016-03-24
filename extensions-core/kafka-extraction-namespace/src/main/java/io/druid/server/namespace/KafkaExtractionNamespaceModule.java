@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.inject.Binder;
 import com.google.inject.Provides;
 import com.google.inject.name.Named;
@@ -35,6 +36,7 @@ import io.druid.initialization.DruidModule;
 import io.druid.query.extraction.namespace.KafkaExtractionNamespace;
 
 import java.io.IOException;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -45,63 +47,26 @@ import java.util.Properties;
 public class KafkaExtractionNamespaceModule implements DruidModule
 {
   private static final String PROPERTIES_KEY = "druid.query.rename.kafka.properties";
+  private List<KafkaExtractionManager> kafkaExtractionManagers = Lists.newLinkedList();
 
   @Override
   public List<? extends Module> getJacksonModules()
   {
     return ImmutableList.<Module>of(
-        new SimpleModule("kafka-lookups"){
-          @Override
-          public void setupModule(SetupContext setupContext)
-          {
-            setupContext.registerSubtypes(KafkaExtractionNamespace.class);
-            super.setupModule(setupContext);
-          }
-        }
+        new SimpleModule("kafka-lookups").registerSubtypes(KafkaExtractionNamespace.class)
     );
   }
 
   @Provides
-  @Named("renameKafkaProperties")
-  @LazySingleton
-  public Properties getProperties(
-      @Json ObjectMapper mapper,
-      Properties systemProperties
-  )
+  @Named("kafkaManagers")
+  public List<KafkaExtractionManager> getManagers()
   {
-    String val = systemProperties.getProperty(PROPERTIES_KEY);
-    if (val == null) {
-      return new Properties();
-    }
-    try {
-      final Properties properties = new Properties();
-      properties.putAll(
-          mapper.<Map<String, String>>readValue(
-              val, new TypeReference<Map<String, String>>()
-              {
-              }
-          )
-      );
-      return properties;
-    }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
-    }
-  }
-
-  @Provides
-  @LazySingleton
-  public KafkaExtractionNamespaceFactory factoryFactory(
-      KafkaExtractionManager kafkaManager
-  )
-  {
-    return new KafkaExtractionNamespaceFactory(kafkaManager);
+    return kafkaExtractionManagers;
   }
 
   @Override
   public void configure(Binder binder)
   {
-    LifecycleModule.register(binder, KafkaExtractionManager.class);
     NamespacedExtractionModule
         .getNamespaceFactoryMapBinder(binder)
         .addBinding(KafkaExtractionNamespace.class)

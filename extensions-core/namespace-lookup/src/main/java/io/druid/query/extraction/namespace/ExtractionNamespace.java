@@ -34,11 +34,5 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
  */
 public interface ExtractionNamespace
 {
-  /**
-   * This is expected to return the namespace name. As an additional requirement, the implementation MUST supply a
-   * "namespace" field in the json representing the object which is equal to the return of this function
-   * @return The name of the namespace
-   */
-  String getNamespace();
   long getPollMs();
 }

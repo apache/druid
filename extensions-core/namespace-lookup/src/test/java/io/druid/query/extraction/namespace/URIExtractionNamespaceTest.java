@@ -328,7 +328,7 @@ public class URIExtractionNamespaceTest
   {
     final ObjectMapper mapper = registerTypes(new DefaultObjectMapper());
     URIExtractionNamespace namespace = mapper.readValue(
-        "{\"type\":\"uri\", \"uri\":\"file:/foo\", \"namespaceParseSpec\":{\"format\":\"simpleJson\"}, \"pollPeriod\":\"PT5M\", \"versionRegex\":\"a.b.c\", \"namespace\":\"testNamespace\"}",
+        "{\"type\":\"uri\", \"uri\":\"file:/foo\", \"namespaceParseSpec\":{\"format\":\"simpleJson\"}, \"pollPeriod\":\"PT5M\", \"versionRegex\":\"a.b.c\"}",
         URIExtractionNamespace.class
     );
 
@@ -337,7 +337,6 @@ public class URIExtractionNamespaceTest
         namespace.getNamespaceParseSpec().getClass().getCanonicalName()
     );
     Assert.assertEquals("file:/foo", namespace.getUri().toString());
-    Assert.assertEquals("testNamespace", namespace.getNamespace());
     Assert.assertEquals("a.b.c", namespace.getVersionRegex());
     Assert.assertEquals(5L * 60_000L, namespace.getPollMs());
   }

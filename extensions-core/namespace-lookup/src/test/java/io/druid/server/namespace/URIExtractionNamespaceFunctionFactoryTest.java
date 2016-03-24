@@ -257,6 +257,7 @@ public class URIExtractionNamespaceFunctionFactoryTest
   private File tmpFileParent;
   private URIExtractionNamespaceFunctionFactory factory;
   private URIExtractionNamespace namespace;
+  private String id;
   private ConcurrentHashMap<String, Function<String, String>> fnCache;
   private ConcurrentHashMap<String, Function<String, List<String>>> reverseFnCache;
 
@@ -286,7 +287,6 @@ public class URIExtractionNamespaceFunctionFactoryTest
         ImmutableMap.<String, SearchableVersionedDataFinder>of("file", new LocalFileTimestampVersionFinder())
     );
     namespace = new URIExtractionNamespace(
-        "ns",
         tmpFile.toURI(),
         new URIExtractionNamespace.ObjectMapperFlatDataParser(
             URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
@@ -294,6 +294,7 @@ public class URIExtractionNamespaceFunctionFactoryTest
         new Period(0),
         Pattern.quote(tmpFile.getName())
     );
+    id = "ns";
   }
 
   @After
@@ -305,9 +306,9 @@ public class URIExtractionNamespaceFunctionFactoryTest
   @Test
   public void simpleTest() throws IOException, ExecutionException, InterruptedException
   {
-    Assert.assertNull(fnCache.get(namespace.getNamespace()));
-    NamespaceExtractionCacheManagersTest.waitFor(manager.schedule(namespace));
-    Function<String, String> fn = fnCache.get(namespace.getNamespace());
+    Assert.assertNull(fnCache.get(id));
+    NamespaceExtractionCacheManagersTest.waitFor(manager.schedule(id, namespace));
+    Function<String, String> fn = fnCache.get(id);
    Assert.assertNotNull(fn);
     Assert.assertEquals("bar", fn.apply("foo"));
     Assert.assertEquals(null, fn.apply("baz"));
@@ -316,9 +317,9 @@ public class URIExtractionNamespaceFunctionFactoryTest
   @Test
   public void testReverseFunction() throws InterruptedException
   {
-    Assert.assertNull(reverseFnCache.get(namespace.getNamespace()));
-    NamespaceExtractionCacheManagersTest.waitFor(manager.schedule(namespace));
-    Function<String, List<String>> reverseFn = reverseFnCache.get(namespace.getNamespace());
+    Assert.assertNull(reverseFnCache.get(id));
+    NamespaceExtractionCacheManagersTest.waitFor(manager.schedule(id, namespace));
+    Function<String, List<String>> reverseFn = reverseFnCache.get(id);
     Assert.assertNotNull(reverseFn);
     Assert.assertEquals(Sets.newHashSet("boo", "foo"), Sets.newHashSet(reverseFn.apply("bar")));
     Assert.assertEquals(Sets.newHashSet(""), Sets.newHashSet(reverseFn.apply("MissingValue")));
@@ -332,9 +333,11 @@ public class URIExtractionNamespaceFunctionFactoryTest
   {
     final int size = 128;
     List<URIExtractionNamespace> namespaces = new ArrayList<>(size);
+    List<String> ids = new ArrayList<>(size);
     for (int i = 0; i < size; ++i) {
+      String id = String.format("%d-ns-%d", i << 10, i);
+      ids.add(id);
       URIExtractionNamespace namespace = new URIExtractionNamespace(
-          String.format("%d-ns-%d", i << 10, i),
           tmpFile.toURI(),
           new URIExtractionNamespace.ObjectMapperFlatDataParser(
               URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
@@ -345,35 +348,36 @@ public class URIExtractionNamespaceFunctionFactoryTest
 
       namespaces.add(namespace);
 
-      Assert.assertNull(fnCache.get(namespace.getNamespace()));
-      NamespaceExtractionCacheManagersTest.waitFor(manager.schedule(namespace));
+      Assert.assertNull(fnCache.get(id));
+      NamespaceExtractionCacheManagersTest.waitFor(manager.schedule(id, namespace));
     }
 
     for (int i = 0; i < size; ++i) {
       URIExtractionNamespace namespace = namespaces.get(i);
-      Function<String, String> fn = fnCache.get(namespace.getNamespace());
+      String id = ids.get(i);
+      Function<String, String> fn = fnCache.get(id);
       Assert.assertNotNull(fn);
       Assert.assertEquals("bar", fn.apply("foo"));
       Assert.assertEquals(null, fn.apply("baz"));
-      manager.delete(namespace.getNamespace());
-      Assert.assertNull(fnCache.get(namespace.getNamespace()));
+      manager.delete(id);
+      Assert.assertNull(fnCache.get(id));
     }
   }
 
   @Test
   public void testLoadOnlyOnce() throws Exception
   {
-    Assert.assertNull(fnCache.get(namespace.getNamespace()));
+    Assert.assertNull(fnCache.get(id));
 
     ConcurrentMap<String, String> map = new ConcurrentHashMap<>();
-    Callable<String> populator = factory.getCachePopulator(namespace, null, map);
+    Callable<String> populator = factory.getCachePopulator(id, namespace, null, map);
 
     String v = populator.call();
     Assert.assertEquals("bar", map.get("foo"));
     Assert.assertEquals(null, map.get("baz"));
     Assert.assertNotNull(v);
 
-    populator = factory.getCachePopulator(namespace, v, map);
+    populator = factory.getCachePopulator(id, namespace, v, map);
     String v2 = populator.call();
     Assert.assertEquals(v, v2);
     Assert.assertEquals("bar", map.get("foo"));
@@ -384,7 +388,6 @@ public class URIExtractionNamespaceFunctionFactoryTest
   public void testMissing() throws Exception
   {
     URIExtractionNamespace badNamespace = new URIExtractionNamespace(
-        namespace.getNamespace(),
         namespace.getUri(),
         namespace.getNamespaceParseSpec(),
         Period.millis((int) namespace.getPollMs()),
@@ -393,7 +396,7 @@ public class URIExtractionNamespaceFunctionFactoryTest
     );
     ConcurrentMap<String, String> map = new ConcurrentHashMap<>();
     try {
-      factory.getCachePopulator(badNamespace, null, map).call();
+      factory.getCachePopulator(id, badNamespace, null, map).call();
     }
     catch (RuntimeException e) {
       Assert.assertNotNull(e.getCause());

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import com.google.inject.Binder;
 import com.google.inject.Inject;
@@ -39,6 +40,8 @@ import com.metamx.common.logger.Logger;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.annotations.Json;
 import io.druid.initialization.Initialization;
+import io.druid.query.extraction.NamespacedExtractor;
+import io.druid.query.lookup.LookupExtractorFactory;
 import io.druid.server.namespace.KafkaExtractionManager;
 import io.druid.server.namespace.KafkaExtractionNamespaceFactory;
 import io.druid.server.namespace.KafkaExtractionNamespaceModule;
@@ -79,27 +82,28 @@ public class TestKafkaExtractionCluster
   private static final Lifecycle lifecycle = new Lifecycle();
   private static final File tmpDir = Files.createTempDir();
   private static final String topicName = "testTopic";
-  private static final String namespace = "testNamespace";
+  private static String namespace;
   private static final Properties kafkaProperties = new Properties();
 
   private KafkaServer kafkaServer;
   private KafkaConfig kafkaConfig;
   private TestingServer zkTestServer;
   private ZkClient zkClient;
-  private KafkaExtractionManager renameManager;
-  private NamespaceExtractionCacheManager extractionCacheManager;
   private Injector injector;
+  private ObjectMapper mapper;
+  private LookupExtractorFactory factory;
+  private KafkaExtractionManager renameManager;
 
   public static class KafkaFactoryProvider implements Provider<ExtractionNamespaceFunctionFactory<?>>
   {
-    private final KafkaExtractionManager kafkaExtractionManager;
+    private final List<KafkaExtractionManager> kafkaExtractionManager;
 
     @Inject
     public KafkaFactoryProvider(
         KafkaExtractionManager kafkaExtractionManager
     )
     {
-      this.kafkaExtractionManager = kafkaExtractionManager;
+      this.kafkaExtractionManager = Lists.newArrayList(kafkaExtractionManager);
     }
 
     @Override
@@ -241,37 +245,30 @@ public class TestKafkaExtractionCluster
             },
             new NamespacedExtractionModule(),
             new KafkaExtractionNamespaceModule()
-            {
-              @Override
-              public Properties getProperties(
-                  @Json ObjectMapper mapper,
-                  Properties systemProperties
-              )
-              {
-                final Properties consumerProperties = new Properties(kafkaProperties);
-                consumerProperties.put("zookeeper.connect", zkTestServer.getConnectString() + "/kafka");
-                consumerProperties.put("zookeeper.session.timeout.ms", "10000");
-                consumerProperties.put("zookeeper.sync.time.ms", "200");
-                return consumerProperties;
-              }
-            }
         )
     );
-    renameManager = injector.getInstance(KafkaExtractionManager.class);
+    mapper = injector.getInstance(ObjectMapper.class);
 
     log.info("--------------------------- placed default item via producer ---------------------------");
-    extractionCacheManager = injector.getInstance(NamespaceExtractionCacheManager.class);
-    extractionCacheManager.schedule(
-        new KafkaExtractionNamespace(topicName, namespace)
-    );
+    final Properties consumerProperties = new Properties(kafkaProperties);
+    consumerProperties.put("zookeeper.connect", zkTestServer.getConnectString() + "/kafka");
+    consumerProperties.put("zookeeper.session.timeout.ms", "10000");
+    consumerProperties.put("zookeeper.sync.time.ms", "200");
+    ExtractionNamespace extractionNamespace = new KafkaExtractionNamespace(topicName, consumerProperties);
+    String namespaceString = mapper.writeValueAsString(extractionNamespace);
+    String json = String.format("{\"type\":\"namespace\", \"extractionNamespace\":%s}", namespaceString);
+    factory = mapper.readValue(json, LookupExtractorFactory.class);
+    factory.start();
+    namespace = ((NamespacedExtractor)factory.get()).getNamespace();
+    renameManager = injector.getInstance(
+        Key.get(
+            new TypeLiteral<List<KafkaExtractionManager>>()
+            {
+            },
+            Names.named("kafkaManagers")
+        )
+    ).get(0);
 
-    long start = System.currentTimeMillis();
-    while (renameManager.getBackgroundTaskCount() < 1) {
-      Thread.sleep(100); // wait for map populator to start up
-      if (System.currentTimeMillis() > start + 60_000) {
-        throw new ISE("renameManager took too long to start");
-      }
-    }
     log.info("--------------------------- started rename manager ---------------------------");
   }
 
@@ -280,9 +277,11 @@ public class TestKafkaExtractionCluster
   {
 
     lifecycle.stop();
-    if (null != renameManager) {
+    if (renameManager != null)
+    {
       renameManager.stop();
     }
+    factory.close();
 
     if (null != kafkaServer) {
       kafkaServer.shutdown();
@@ -356,10 +355,8 @@ public class TestKafkaExtractionCluster
               )
           );
 
-      KafkaExtractionNamespace extractionNamespace = new KafkaExtractionNamespace(topicName, namespace);
-
-      assertUpdated(null, extractionNamespace.getNamespace(), "foo", fnFn);
-      assertReverseUpdated(Collections.EMPTY_LIST, extractionNamespace.getNamespace(), "foo", reverseFn);
+      assertUpdated(null, namespace, "foo", fnFn);
+      assertReverseUpdated(Collections.EMPTY_LIST, namespace, "foo", reverseFn);
 
       long events = renameManager.getNumEvents(namespace);
 
@@ -375,9 +372,9 @@ public class TestKafkaExtractionCluster
       }
 
       log.info("-------------------------     Checking foo bar     -------------------------------");
-      assertUpdated("bar", extractionNamespace.getNamespace(), "foo", fnFn);
-      assertReverseUpdated(Arrays.asList("foo"), extractionNamespace.getNamespace(), "bar", reverseFn);
-      assertUpdated(null, extractionNamespace.getNamespace(), "baz", fnFn);
+      assertUpdated("bar", namespace, "foo", fnFn);
+      assertReverseUpdated(Arrays.asList("foo"), namespace, "bar", reverseFn);
+      assertUpdated(null, namespace, "baz", fnFn);
 
       checkServer();
       events = renameManager.getNumEvents(namespace);
@@ -392,8 +389,8 @@ public class TestKafkaExtractionCluster
       }
 
       log.info("-------------------------     Checking baz bat     -------------------------------");
-      Assert.assertEquals("bat", fnFn.get(extractionNamespace.getNamespace()).apply("baz"));
-      Assert.assertEquals(Arrays.asList("baz"), reverseFn.get(extractionNamespace.getNamespace()).apply("bat"));
+      Assert.assertEquals("bat", fnFn.get(namespace).apply("baz"));
+      Assert.assertEquals(Arrays.asList("baz"), reverseFn.get(namespace).apply("bat"));
     }
     finally {
       producer.close();

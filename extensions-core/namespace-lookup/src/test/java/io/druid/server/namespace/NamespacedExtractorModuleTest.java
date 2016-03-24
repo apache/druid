@@ -107,8 +107,8 @@ public class NamespacedExtractorModuleTest
     final URIExtractionNamespaceFunctionFactory factory = new URIExtractionNamespaceFunctionFactory(
         ImmutableMap.<String, SearchableVersionedDataFinder>of("file", new LocalFileTimestampVersionFinder())
     );
+    final String namespaceID = "ns";
     final URIExtractionNamespace namespace = new URIExtractionNamespace(
-        "ns",
         tmpFile.toURI(),
         new URIExtractionNamespace.ObjectMapperFlatDataParser(
             URIExtractionNamespaceTest.registerTypes(new DefaultObjectMapper())
@@ -117,31 +117,29 @@ public class NamespacedExtractorModuleTest
         null
     );
     Map<String, String> map = new HashMap<>();
-    factory.getCachePopulator(namespace, null, map).call();
+    factory.getCachePopulator(namespaceID, namespace, null, map).call();
     Assert.assertEquals("bar", map.get("foo"));
     Assert.assertEquals(null, map.get("baz"));
+    cacheManager.delete(namespaceID);
   }
 
-  @Test(timeout = 1_000)
+  @Test
   public void testListNamespaces() throws Exception
   {
     final File tmpFile = temporaryFolder.newFile();
     try (OutputStreamWriter out = new FileWriter(tmpFile)) {
       out.write(mapper.writeValueAsString(ImmutableMap.<String, String>of("foo", "bar")));
     }
+    final String namespaceID = "ns";
     final URIExtractionNamespace namespace = new URIExtractionNamespace(
-        "ns",
         tmpFile.toURI(),
         new URIExtractionNamespace.ObjectMapperFlatDataParser(URIExtractionNamespaceTest.registerTypes(new DefaultObjectMapper())),
         new Period(0),
         null
     );
-    cacheManager.scheduleOrUpdate(ImmutableList.<ExtractionNamespace>of(namespace));
-    Collection<String> strings = cacheManager.getKnownNamespaces();
-    Assert.assertArrayEquals(new String[]{"ns"}, strings.toArray(new String[strings.size()]));
-    while (!Arrays.equals(cacheManager.getKnownNamespaces().toArray(), new Object[]{"ns"})) {
-      Thread.sleep(1);
-    }
+    Assert.assertTrue(cacheManager.scheduleAndWait(namespaceID, namespace, 1_000));
+    Assert.assertArrayEquals(cacheManager.getKnownNamespaces().toArray(), new Object[]{namespaceID});
+    Assert.assertTrue(cacheManager.delete(namespaceID));
   }
 
   private static boolean noNamespaces(NamespaceExtractionCacheManager manager)
@@ -156,8 +154,8 @@ public class NamespacedExtractorModuleTest
     try (OutputStreamWriter out = new FileWriter(tmpFile)) {
       out.write(mapper.writeValueAsString(ImmutableMap.<String, String>of("foo", "bar")));
     }
+    final String namespaceID = "ns";
     final URIExtractionNamespace namespace = new URIExtractionNamespace(
-        "ns",
         tmpFile.toURI(),
         new URIExtractionNamespace.ObjectMapperFlatDataParser(
             URIExtractionNamespaceTest.registerTypes(new DefaultObjectMapper())
@@ -165,21 +163,19 @@ public class NamespacedExtractorModuleTest
         new Period(0),
         null
     );
-    cacheManager.delete("ns");
-    while (!noNamespaces(cacheManager)) {
-      Thread.sleep(1);
-    }
+    Assert.assertTrue(cacheManager.scheduleAndWait(namespaceID, namespace, 1_000));
+    Assert.assertTrue(cacheManager.delete(namespaceID));
   }
 
-  @Test(timeout = 10_000)
+  @Test
   public void testNewUpdate() throws Exception
   {
     final File tmpFile = temporaryFolder.newFile();
     try (OutputStreamWriter out = new FileWriter(tmpFile)) {
       out.write(mapper.writeValueAsString(ImmutableMap.<String, String>of("foo", "bar")));
     }
+    final String namespaceID = "ns";
     final URIExtractionNamespace namespace = new URIExtractionNamespace(
-        "ns",
         tmpFile.toURI(),
         new URIExtractionNamespace.ObjectMapperFlatDataParser(
             URIExtractionNamespaceTest.registerTypes(new DefaultObjectMapper())
@@ -188,9 +184,9 @@ public class NamespacedExtractorModuleTest
         null
     );
     Assert.assertTrue(noNamespaces(cacheManager));
-    cacheManager.scheduleOrUpdate(ImmutableList.<ExtractionNamespace>of(namespace));
-    while (!Arrays.equals(cacheManager.getKnownNamespaces().toArray(), new Object[]{"ns"})) {
-      Thread.sleep(1);
-    }
+    Assert.assertTrue(cacheManager.scheduleAndWait(namespaceID, namespace, 10_000));
+    Assert.assertArrayEquals(cacheManager.getKnownNamespaces().toArray(), new Object[]{namespaceID});
+
+    Assert.assertTrue(cacheManager.delete(namespaceID));
   }
 }

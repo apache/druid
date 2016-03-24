@@ -109,6 +109,7 @@ public class URIExtractionNamespaceFunctionFactory implements ExtractionNamespac
 
   @Override
   public Callable<String> getCachePopulator(
+      final String id,
       final URIExtractionNamespace extractionNamespace,
       final String lastVersion,
       final Map<String, String> cache
@@ -171,7 +172,7 @@ public class URIExtractionNamespaceFunctionFactory implements ExtractionNamespac
                       log.debug(
                           "URI [%s] for namespace [%s] was las modified [%s] but was last cached [%s]. Skipping ",
                           uri.toString(),
-                          extractionNamespace.getNamespace(),
+                          id,
                           fmt.print(lastModified),
                           fmt.print(lastCached)
                       );
@@ -210,7 +211,7 @@ public class URIExtractionNamespaceFunctionFactory implements ExtractionNamespac
                   log.info(
                       "Finished loading %d lines for namespace [%s]",
                       lineCount,
-                      extractionNamespace.getNamespace()
+                      id
                   );
                   return version;
                 }

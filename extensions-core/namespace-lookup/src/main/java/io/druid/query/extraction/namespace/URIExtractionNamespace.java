@@ -60,8 +60,6 @@ import java.util.regex.PatternSyntaxException;
 public class URIExtractionNamespace implements ExtractionNamespace
 {
   @JsonProperty
-  private final String namespace;
-  @JsonProperty
   private final URI uri;
   @JsonProperty
   private final FlatDataParser namespaceParseSpec;
@@ -72,8 +70,6 @@ public class URIExtractionNamespace implements ExtractionNamespace
 
   @JsonCreator
   public URIExtractionNamespace(
-      @NotNull @JsonProperty(value = "namespace", required = true)
-      String namespace,
       @NotNull @JsonProperty(value = "uri", required = true)
       URI uri,
       @JsonProperty(value = "namespaceParseSpec", required = true)
@@ -92,18 +88,11 @@ public class URIExtractionNamespace implements ExtractionNamespace
         throw new IAE(ex, "Could not parse `versionRegex` [%s]", versionRegex);
       }
     }
-    this.namespace = Preconditions.checkNotNull(namespace, "namespace");
     this.uri = Preconditions.checkNotNull(uri, "uri");
     this.namespaceParseSpec = Preconditions.checkNotNull(namespaceParseSpec, "namespaceParseSpec");
     this.pollPeriod = pollPeriod == null ? Period.ZERO : pollPeriod;
 
     this.versionRegex = versionRegex;
-  }
-
-  @Override
-  public String getNamespace()
-  {
-    return namespace;
   }
 
   public String getVersionRegex()
@@ -131,8 +120,7 @@ public class URIExtractionNamespace implements ExtractionNamespace
   public String toString()
   {
     return String.format(
-        "URIExtractionNamespace = { namespace = %s, uri = %s, namespaceParseSpec = %s, pollPeriod = %s, versionRegex = %s }",
-        namespace,
+        "URIExtractionNamespace = { uri = %s, namespaceParseSpec = %s, pollPeriod = %s, versionRegex = %s }",
         uri.toString(),
         namespaceParseSpec.toString(),
         pollPeriod.toString(),
@@ -158,8 +146,7 @@ public class URIExtractionNamespace implements ExtractionNamespace
   @Override
   public int hashCode()
   {
-    int result = namespace.hashCode();
-    result = 31 * result + uri.hashCode();
+    int result = uri.hashCode();
     result = 31 * result + namespaceParseSpec.hashCode();
     result = 31 * result + pollPeriod.hashCode();
     result = 31 * result + (versionRegex != null ? versionRegex.hashCode() : 0);

@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 
 import javax.validation.constraints.NotNull;
+import java.util.Properties;
 
 /**
  *
@@ -34,19 +35,19 @@ public class KafkaExtractionNamespace implements ExtractionNamespace
 {
   @JsonProperty
   private final String kafkaTopic;
+
   @JsonProperty
-  private final String namespace;
+  private final Properties kafkaProperties;
 
   @JsonCreator
   public KafkaExtractionNamespace(
       @NotNull @JsonProperty(value = "kafkaTopic", required = true) final String kafkaTopic,
-      @NotNull @JsonProperty(value = "namespace", required = true) final String namespace
+      @NotNull @JsonProperty(value = "kafkaProperites", required = true) final Properties kafkaProperties
   )
   {
     Preconditions.checkNotNull(kafkaTopic, "kafkaTopic required");
-    Preconditions.checkNotNull(namespace, "namespace required");
     this.kafkaTopic = kafkaTopic;
-    this.namespace = namespace;
+    this.kafkaProperties = kafkaProperties;
   }
 
   public String getKafkaTopic()
@@ -54,10 +55,9 @@ public class KafkaExtractionNamespace implements ExtractionNamespace
     return kafkaTopic;
   }
 
-  @Override
-  public String getNamespace()
+  public Properties getKafkaProperties()
   {
-    return namespace;
+    return kafkaProperties;
   }
 
   @Override
@@ -69,6 +69,6 @@ public class KafkaExtractionNamespace implements ExtractionNamespace
   @Override
   public String toString()
   {
-    return String.format("KafkaExtractionNamespace = { kafkaTopic = '%s', namespace = '%s'", kafkaTopic, namespace);
+    return String.format("KafkaExtractionNamespace = { kafkaTopic = '%s' }", kafkaTopic);
   }
 }
