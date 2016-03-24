@@ -25,13 +25,13 @@ import org.joda.time.Interval;
 
 /**
  */
-public class ClientKillQuery
+public class ClientKillTask
 {
   private final String dataSource;
   private final Interval interval;
 
   @JsonCreator
-  public ClientKillQuery(
+  public ClientKillTask(
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval
   )

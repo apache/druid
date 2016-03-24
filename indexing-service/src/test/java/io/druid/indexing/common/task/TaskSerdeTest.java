@@ -27,10 +27,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.metamx.common.Granularity;
-import io.druid.client.indexing.ClientAppendQuery;
-import io.druid.client.indexing.ClientHadoopIndexQuery;
-import io.druid.client.indexing.ClientKillQuery;
-import io.druid.client.indexing.ClientMergeQuery;
+import io.druid.client.indexing.ClientAppendTask;
+import io.druid.client.indexing.ClientHadoopIndexTask;
+import io.druid.client.indexing.ClientKillTask;
+import io.druid.client.indexing.ClientMergeTask;
 import io.druid.granularity.QueryGranularity;
 import io.druid.guice.FirehoseModule;
 import io.druid.indexer.HadoopIOConfig;
@@ -205,7 +205,7 @@ public class TaskSerdeTest
         task2.getAggregators().get(0).getName()
     );
 
-    final MergeTask task3 = (MergeTask) jsonMapper.readValue(jsonMapper.writeValueAsString(new ClientMergeQuery(
+    final MergeTask task3 = (MergeTask) jsonMapper.readValue(jsonMapper.writeValueAsString(new ClientMergeTask(
         "foo",
         segments,
         aggregators
@@ -240,7 +240,7 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
     Assert.assertEquals(task.getInterval(), task2.getInterval());
 
-    final KillTask task3 = (KillTask) jsonMapper.readValue(jsonMapper.writeValueAsString(new ClientKillQuery(
+    final KillTask task3 = (KillTask) jsonMapper.readValue(jsonMapper.writeValueAsString(new ClientKillTask(
         "foo",
         new Interval("2010-01-01/P1D")
     )), Task.class);
@@ -424,7 +424,7 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getInterval(), task2.getInterval());
     Assert.assertEquals(task.getSegments(), task2.getSegments());
 
-    final AppendTask task3 = (AppendTask) jsonMapper.readValue(jsonMapper.writeValueAsString(new ClientAppendQuery(
+    final AppendTask task3 = (AppendTask) jsonMapper.readValue(jsonMapper.writeValueAsString(new ClientAppendTask(
         "foo",
         segments
     )), Task.class);
@@ -668,7 +668,7 @@ public class TaskSerdeTest
                                                                                 .put("rowFlushBoundary", 10000)
                                                                                 .build(), HadoopTuningConfig.class);
 
-    final ClientHadoopIndexQuery clientHadoopIndexQuery = new ClientHadoopIndexQuery(
+    final ClientHadoopIndexTask clientHadoopIndexTask = new ClientHadoopIndexTask(
         expectedTaskId,
         expectedDataSource,
         expectedIntervalList,
@@ -719,7 +719,7 @@ public class TaskSerdeTest
     ), null, null);
 
     final HadoopIndexTask hadoopIndexTask = jsonMapper.readValue(
-        jsonMapper.writeValueAsString(clientHadoopIndexQuery),
+        jsonMapper.writeValueAsString(clientHadoopIndexTask),
         HadoopIndexTask.class
     );
 

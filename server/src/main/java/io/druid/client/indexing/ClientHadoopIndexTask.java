@@ -36,13 +36,13 @@ import java.util.Map;
 
 /**
  */
-public class ClientHadoopIndexQuery
+public class ClientHadoopIndexTask
 {
   private final String id;
   private final List<String> hadoopDependencyCoordinates;
   private final ClientHadoopIngestionSpec hadoopIngestionSpec;
 
-  public ClientHadoopIndexQuery(
+  public ClientHadoopIndexTask(
       String id,
       String dataSource,
       List<Interval> intervalsToReindex,

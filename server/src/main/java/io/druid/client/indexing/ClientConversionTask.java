@@ -25,13 +25,13 @@ import org.joda.time.Interval;
 
 /**
  */
-public class ClientConversionQuery
+public class ClientConversionTask
 {
   private final String dataSource;
   private final Interval interval;
   private final DataSegment segment;
 
-  public ClientConversionQuery(
+  public ClientConversionTask(
       DataSegment segment
   )
   {
@@ -40,7 +40,7 @@ public class ClientConversionQuery
     this.segment = segment;
   }
 
-  public ClientConversionQuery(
+  public ClientConversionTask(
       String dataSource,
       Interval interval
   )

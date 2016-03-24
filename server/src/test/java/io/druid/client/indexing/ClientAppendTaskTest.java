@@ -19,46 +19,51 @@
 
 package io.druid.client.indexing;
 
+import com.google.common.collect.Lists;
+import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
-import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
-public class ClientKillQueryTest
-{
-  private static final String DATA_SOURCE = "data_source";
-  private static final Interval INTERVAL = new Interval(new DateTime(), new DateTime().plus(1));
-  private ClientKillQuery clientKillQuery;
+import java.util.List;
 
+public class ClientAppendTaskTest
+{
+  private ClientAppendTask clientAppendTask;
+  private static final String DATA_SOURCE = "data_source";
+  private List<DataSegment> segments = Lists.<DataSegment>newArrayList(
+      new DataSegment(DATA_SOURCE, new Interval(new DateTime(), new DateTime().plus(1)), new DateTime().toString(), null,
+          null, null, null, 0, 0));
   @Before
   public void setUp()
   {
-    clientKillQuery = new ClientKillQuery(DATA_SOURCE, INTERVAL);
-  }
-
-  @After
-  public void tearDown()
-  {
-    clientKillQuery = null;
+    clientAppendTask = new ClientAppendTask(DATA_SOURCE, segments);
   }
 
   @Test
   public void testGetType()
   {
-    Assert.assertEquals("kill", clientKillQuery.getType());
+    Assert.assertEquals("append", clientAppendTask.getType());
   }
 
   @Test
   public void testGetDataSource()
   {
-    Assert.assertEquals(DATA_SOURCE, clientKillQuery.getDataSource());
+    Assert.assertEquals(DATA_SOURCE, clientAppendTask.getDataSource());
   }
 
   @Test
-  public void testGetInterval()
+  public void testGetSegments()
   {
-    Assert.assertEquals(INTERVAL, clientKillQuery.getInterval());
+    Assert.assertEquals(segments, clientAppendTask.getSegments());
+  }
+
+  @Test
+  public void testToString()
+  {
+    Assert.assertTrue(clientAppendTask.toString().contains(DATA_SOURCE));
+    Assert.assertTrue(clientAppendTask.toString().contains(segments.toString()));
   }
 }

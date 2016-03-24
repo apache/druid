@@ -86,7 +86,7 @@ public class IndexingServiceClient
       }
     }
 
-    postTask(new ClientAppendQuery(dataSource, segments));
+    postTask(new ClientAppendTask(dataSource, segments));
   }
 
   public String hadoopMergeSegments(
@@ -100,7 +100,7 @@ public class IndexingServiceClient
   )
   {
     final InputStream queryResponse = postTask(
-        new ClientHadoopIndexQuery(
+        new ClientHadoopIndexTask(
             String.format(
                 "%s_%s_%s",
                 DruidCoordinatorHadoopSegmentMerger.HADOOP_REINDEX_TASK_ID_PREFIX, dataSource, new DateTime()
@@ -135,23 +135,17 @@ public class IndexingServiceClient
 
   public void killSegments(String dataSource, Interval interval)
   {
-    postTask(new ClientKillQuery(dataSource, interval));
+    postTask(new ClientKillTask(dataSource, interval));
   }
 
   public void upgradeSegment(DataSegment dataSegment)
   {
-    postTask(new ClientConversionQuery(dataSegment));
+    postTask(new ClientConversionTask(dataSegment));
   }
 
   public void upgradeSegments(String dataSource, Interval interval)
   {
-    postTask(new ClientConversionQuery(dataSource, interval));
-  }
-
-  public Map<String, Object> getSegmentMetadata(String dataSource, List<Interval> intervals)
-  {
-    postTask(new ClientSegmentMetadataQuery(dataSource, intervals));
-    return null;
+    postTask(new ClientConversionTask(dataSource, interval));
   }
 
   public List<Map<String, Object>> getIncompleteTasks()

@@ -40,7 +40,7 @@ import java.util.Map;
 
 /**
  */
-public class ClientHadoopIndexQueryTest
+public class ClientHadoopIndexTaskTest
 {
   private static final String TASK_ID = "coordinator_index_task_1234";
   private static final String DATA_SOURCE = "wikipedia";
@@ -88,7 +88,7 @@ public class ClientHadoopIndexQueryTest
   @Test
   public void testInit() throws IOException
   {
-    final ClientHadoopIndexQuery clientHadoopIndexQuery = new ClientHadoopIndexQuery(
+    final ClientHadoopIndexTask clientHadoopIndexTask = new ClientHadoopIndexTask(
         TASK_ID,
         DATA_SOURCE,
         INTERVAL_LIST,
@@ -100,14 +100,14 @@ public class ClientHadoopIndexQueryTest
         new DefaultObjectMapper()
     );
 
-    final ClientHadoopIngestionSpec hadoopIngestionSpec = clientHadoopIndexQuery.getHadoopIngestionSpec();
+    final ClientHadoopIngestionSpec hadoopIngestionSpec = clientHadoopIndexTask.getHadoopIngestionSpec();
     final DataSchema dataSchema = hadoopIngestionSpec.getDataSchema();
     final GranularitySpec granularitySpec = dataSchema.getGranularitySpec();
     final ClientHadoopIOConfig hadoopIOConfig = hadoopIngestionSpec.getIOConfig();
     final Map<String, Object> tuningConfig = hadoopIngestionSpec.getTuningConfig();
 
-    Assert.assertEquals("index_hadoop", clientHadoopIndexQuery.getType());
-    Assert.assertEquals(TASK_ID, clientHadoopIndexQuery.getId());
+    Assert.assertEquals("index_hadoop", clientHadoopIndexTask.getType());
+    Assert.assertEquals(TASK_ID, clientHadoopIndexTask.getId());
     Assert.assertEquals(DATA_SOURCE, dataSchema.getDataSource());
     Assert.assertArrayEquals(AGGREGATORS, dataSchema.getAggregators());
     Assert.assertEquals(QueryGranularity.DAY, granularitySpec.getQueryGranularity());

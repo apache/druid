@@ -25,9 +25,9 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class ClientConversionQueryTest
+public class ClientConversionTaskTest
 {
-  private ClientConversionQuery clientConversionQuery;
+  private ClientConversionTask clientConversionTask;
   private static final String DATA_SOURCE = "data_source";
   private static final Interval INTERVAL = new Interval(new DateTime(), new DateTime().plus(1));
   private static final DataSegment DATA_SEGMENT = new DataSegment(DATA_SOURCE, INTERVAL, new DateTime().toString(), null,
@@ -36,31 +36,31 @@ public class ClientConversionQueryTest
   @Test
   public void testGetType()
   {
-    clientConversionQuery = new ClientConversionQuery(DATA_SEGMENT);
-    Assert.assertEquals("version_converter", clientConversionQuery.getType());
+    clientConversionTask = new ClientConversionTask(DATA_SEGMENT);
+    Assert.assertEquals("version_converter", clientConversionTask.getType());
   }
 
   @Test
   public void testGetDataSource()
   {
-    clientConversionQuery = new ClientConversionQuery(DATA_SEGMENT);
-    Assert.assertEquals(DATA_SOURCE, clientConversionQuery.getDataSource());
+    clientConversionTask = new ClientConversionTask(DATA_SEGMENT);
+    Assert.assertEquals(DATA_SOURCE, clientConversionTask.getDataSource());
 
   }
 
   @Test
   public void testGetInterval()
   {
-    clientConversionQuery = new ClientConversionQuery(DATA_SEGMENT);
-    Assert.assertEquals(INTERVAL, clientConversionQuery.getInterval());
+    clientConversionTask = new ClientConversionTask(DATA_SEGMENT);
+    Assert.assertEquals(INTERVAL, clientConversionTask.getInterval());
   }
 
   @Test
   public void testGetSegment()
   {
-    clientConversionQuery = new ClientConversionQuery(DATA_SEGMENT);
-    Assert.assertEquals(DATA_SEGMENT, clientConversionQuery.getSegment());
-    clientConversionQuery = new ClientConversionQuery(DATA_SOURCE,INTERVAL);
-    Assert.assertNull(clientConversionQuery.getSegment());
+    clientConversionTask = new ClientConversionTask(DATA_SEGMENT);
+    Assert.assertEquals(DATA_SEGMENT, clientConversionTask.getSegment());
+    clientConversionTask = new ClientConversionTask(DATA_SOURCE, INTERVAL);
+    Assert.assertNull(clientConversionTask.getSegment());
   }
 }

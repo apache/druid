@@ -21,31 +21,36 @@ package io.druid.client.indexing;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.timeline.DataSegment;
 
 import java.util.List;
 
 /**
  */
-public class ClientAppendQuery
+public class ClientMergeTask
 {
   private final String dataSource;
   private final List<DataSegment> segments;
+  private final List<AggregatorFactory> aggregators;
 
   @JsonCreator
-  public ClientAppendQuery(
+  public ClientMergeTask(
       @JsonProperty("dataSource") String dataSource,
-      @JsonProperty("segments") List<DataSegment> segments
+      @JsonProperty("segments") List<DataSegment> segments,
+      @JsonProperty("aggregations") List<AggregatorFactory> aggregators
   )
   {
     this.dataSource = dataSource;
     this.segments = segments;
+    this.aggregators = aggregators;
+
   }
 
   @JsonProperty
   public String getType()
   {
-    return "append";
+    return "merge";
   }
 
   @JsonProperty
@@ -60,12 +65,19 @@ public class ClientAppendQuery
     return segments;
   }
 
+  @JsonProperty("aggregations")
+  public List<AggregatorFactory> getAggregators()
+  {
+    return aggregators;
+  }
+
   @Override
   public String toString()
   {
-    return "ClientAppendQuery{" +
+    return "ClientMergeQuery{" +
            "dataSource='" + dataSource + '\'' +
            ", segments=" + segments +
+           ", aggregators=" + aggregators +
            '}';
   }
 }
