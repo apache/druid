@@ -60,7 +60,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   public Aggregator factorize(ColumnSelectorFactory columnSelectorFactory)
   {
     final ValueMatcherFactory valueMatcherFactory = new FilteredAggregatorValueMatcherFactory(columnSelectorFactory);
-    final ValueMatcher valueMatcher = Filters.convertDimensionFilters(filter).makeMatcher(valueMatcherFactory);
+    final ValueMatcher valueMatcher = Filters.toFilter(filter).makeMatcher(valueMatcherFactory);
     return new FilteredAggregator(
         valueMatcher,
         delegate.factorize(columnSelectorFactory)
@@ -71,7 +71,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory columnSelectorFactory)
   {
     final ValueMatcherFactory valueMatcherFactory = new FilteredAggregatorValueMatcherFactory(columnSelectorFactory);
-    final ValueMatcher valueMatcher = Filters.convertDimensionFilters(filter).makeMatcher(valueMatcherFactory);
+    final ValueMatcher valueMatcher = Filters.toFilter(filter).makeMatcher(valueMatcherFactory);
     return new FilteredBufferAggregator(
         valueMatcher,
         delegate.factorizeBuffered(columnSelectorFactory)

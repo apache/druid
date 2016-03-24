@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.metamx.common.StringUtils;
 import io.druid.query.search.search.SearchQuerySpec;
+import io.druid.segment.filter.SearchQueryFilter;
 
 import java.nio.ByteBuffer;
 
@@ -75,6 +76,12 @@ public class SearchQueryDimFilter implements DimFilter
   public DimFilter optimize()
   {
     return this;
+  }
+
+  @Override
+  public Filter toFilter()
+  {
+    return new SearchQueryFilter(dimension, query);
   }
 
   @Override

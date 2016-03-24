@@ -26,6 +26,8 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import io.druid.query.Druids;
+import io.druid.segment.filter.Filters;
+import io.druid.segment.filter.OrFilter;
 
 import java.util.Collections;
 import java.util.List;
@@ -71,6 +73,12 @@ public class OrDimFilter implements DimFilter
         return input.optimize();
       }
     })).build();
+  }
+
+  @Override
+  public Filter toFilter()
+  {
+    return new OrFilter(Filters.toFilters(fields));
   }
 
   @Override

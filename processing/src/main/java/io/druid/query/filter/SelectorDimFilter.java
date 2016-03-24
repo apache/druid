@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.metamx.common.StringUtils;
+import io.druid.segment.filter.SelectorFilter;
 
 import java.nio.ByteBuffer;
 
@@ -63,6 +64,12 @@ public class SelectorDimFilter implements DimFilter
   public DimFilter optimize()
   {
     return this;
+  }
+
+  @Override
+  public Filter toFilter()
+  {
+    return new SelectorFilter(dimension, value);
   }
 
   @JsonProperty

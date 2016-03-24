@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.metamx.common.StringUtils;
+import io.druid.segment.filter.RegexFilter;
 
 import java.nio.ByteBuffer;
 
@@ -75,6 +76,12 @@ public class RegexDimFilter implements DimFilter
   public DimFilter optimize()
   {
     return this;
+  }
+
+  @Override
+  public Filter toFilter()
+  {
+    return new RegexFilter(dimension, pattern);
   }
 
   @Override
