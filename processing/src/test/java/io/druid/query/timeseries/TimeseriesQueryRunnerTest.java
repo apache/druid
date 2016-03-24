@@ -2184,7 +2184,7 @@ public class TimeseriesQueryRunnerTest
   }
 
   @Test
-  public void testTimeseriesWithBetweenFilter1()
+  public void testTimeseriesWithBoundFilter1()
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)

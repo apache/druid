@@ -36,9 +36,9 @@ import java.io.IOException;
 import java.util.Arrays;
 
 @RunWith(Parameterized.class)
-public class BoundDimFilterTests
+public class BoundDimFilterTest
 {
-  public BoundDimFilterTests(BoundDimFilter boundDimFilter) {this.boundDimFilter = boundDimFilter;}
+  public BoundDimFilterTest(BoundDimFilter boundDimFilter) {this.boundDimFilter = boundDimFilter;}
 
   private final BoundDimFilter boundDimFilter;
 
