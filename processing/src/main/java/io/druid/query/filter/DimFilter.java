@@ -48,4 +48,12 @@ public interface DimFilter
    * returning the same filter can be a straightforward default implementation.
    */
   public DimFilter optimize();
+
+  /**
+   * Returns a Filter that implements this DimFilter. This does not generally involve optimizing the DimFilter,
+   * so it does make sense to optimize first and then call toFilter on the resulting DimFilter.
+   *
+   * @return a Filter that implements this DimFilter, or null if this DimFilter is a no-op.
+   */
+  public Filter toFilter();
 }

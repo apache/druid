@@ -73,7 +73,7 @@ public class IngestSegmentFirehose implements Firehose
                 return Sequences.concat(
                     Sequences.map(
                         adapter.getAdapter().makeCursors(
-                            Filters.convertDimensionFilters(dimFilter),
+                            Filters.toFilter(dimFilter),
                             adapter.getInterval(),
                             granularity,
                             false

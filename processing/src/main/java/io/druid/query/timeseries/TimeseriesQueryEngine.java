@@ -47,7 +47,7 @@ public class TimeseriesQueryEngine
     return QueryRunnerHelper.makeCursorBasedQuery(
         adapter,
         query.getQuerySegmentSpec().getIntervals(),
-        Filters.convertDimensionFilters(query.getDimensionsFilter()),
+        Filters.toFilter(query.getDimensionsFilter()),
         query.isDescending(),
         query.getGranularity(),
         new Function<Cursor, Result<TimeseriesResultValue>>()
