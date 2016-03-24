@@ -47,6 +47,7 @@ If you'd like to take on maintenance for a community extension, please post on [
 |druid-rabbitmq|RabbitMQ firehose.|[link](../development/extensions-contrib/rabbitmq.html)|
 |druid-rocketmq|RocketMQ firehose.|[link](../development/extensions-contrib/rocketmq.html)|
 |graphite-emitter|Graphite metrics emitter|[link](../development/extensions-contrib/graphite.html)|
+|druid-distinctcount|DistinctCount aggregator|[link](../development/extensions-contrib/distinctcount.html)|
 
 ## Promoting Community Extension to Core Extension
 
