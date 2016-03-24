@@ -20,6 +20,7 @@
 package io.druid.server.coordinator.helper;
 
 import com.google.api.client.util.Maps;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
 import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceMetricEvent;
@@ -32,7 +33,6 @@ import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.VersionedIntervalTimeline;
-import org.apache.commons.collections4.iterators.ReverseListIterator;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -128,11 +128,11 @@ public class DruidCoordinatorHadoopSegmentMerger implements DruidCoordinatorHelp
       long currTotalSize = 0;
       Interval intervalToReindex = null;
       boolean shouldBeMerged = false;
-      Iterator<TimelineObjectHolder<String, DataSegment>> listIterator = scanFromOldToNew
-                                                                         ? timelineObjects.iterator()
-                                                                         : new ReverseListIterator<TimelineObjectHolder<String, DataSegment>>(
-                                                                             timelineObjects
-                                                                         );
+
+      final Iterator<TimelineObjectHolder<String, DataSegment>> listIterator = scanFromOldToNew
+                                                                               ? timelineObjects.iterator()
+                                                                               : Lists.reverse(timelineObjects)
+                                                                                      .iterator();
 
       while (listIterator.hasNext()) {
         TimelineObjectHolder<String, DataSegment> objectHolder = listIterator.next();

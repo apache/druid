@@ -24,6 +24,7 @@ import com.google.api.client.util.Lists;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 import com.metamx.common.Pair;
+import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.granularity.QueryGranularity;
 import io.druid.jackson.DefaultObjectMapper;
@@ -34,6 +35,7 @@ import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import io.druid.timeline.partition.LinearShardSpec;
 import io.druid.timeline.partition.NumberedShardSpec;
 import io.druid.timeline.partition.SingleDimensionShardSpec;
+import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;
@@ -1007,16 +1009,10 @@ public class DruidCoordinatorHadoopSegmentMergerTest
     );
     final DruidCoordinatorRuntimeParams params =
         DruidCoordinatorRuntimeParams.newBuilder()
-                                     .withAvailableSegments(
-                                         ImmutableSet.copyOf(
-                                             segments
-                                         )
-                                     )
+                                     .withAvailableSegments(ImmutableSet.copyOf(segments))
                                      .withDynamicConfigs(
                                          new CoordinatorDynamicConfig.Builder()
-                                             .withMergeBytesLimit(
-                                                 mergeBytesLimit
-                                             )
+                                             .withMergeBytesLimit(mergeBytesLimit)
                                              .withhadoopMergeConfig(
                                                  new DruidCoordinatorHadoopMergeConfig(
                                                      keepSegmentGapDuringMerge,
@@ -1030,8 +1026,8 @@ public class DruidCoordinatorHadoopSegmentMergerTest
                                                              null
                                                          ))
                                                  ))
-                                             .build()
-                                     )
+                                             .build())
+                                     .withEmitter(EasyMock.createMock(ServiceEmitter.class))
                                      .build();
     merger.run(params);
     return retVal;
