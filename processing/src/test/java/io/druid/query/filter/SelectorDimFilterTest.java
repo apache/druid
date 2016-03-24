@@ -33,4 +33,20 @@ public class SelectorDimFilterTest
     SelectorDimFilter selectorDimFilter2 = new SelectorDimFilter("ab", "cd");
     Assert.assertFalse(Arrays.equals(selectorDimFilter.getCacheKey(), selectorDimFilter2.getCacheKey()));
   }
+
+  @Test
+  public void testSimpleOptimize()
+  {
+    SelectorDimFilter selectorDimFilter = new SelectorDimFilter("abc", "d");
+    DimFilter filter = new AndDimFilter(
+        Arrays.<DimFilter>asList(
+            new OrDimFilter(
+                Arrays.<DimFilter>asList(
+                    new AndDimFilter(Arrays.<DimFilter>asList(selectorDimFilter, null))
+                )
+            )
+        )
+    );
+    Assert.assertEquals(selectorDimFilter, filter.optimize());
+  }
 }

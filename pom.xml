@@ -62,7 +62,6 @@
         <apache.curator.version>2.9.1</apache.curator.version>
         <jetty.version>9.2.5.v20141112</jetty.version>
         <jersey.version>1.19</jersey.version>
-        <druid.api.version>0.3.17</druid.api.version>
         <!-- Watch out for Hadoop compatibility when updating to >= 2.5; see https://github.com/druid-io/druid/pull/1669 -->
         <jackson.version>2.4.6</jackson.version>
         <log4j.version>2.5</log4j.version>
@@ -71,6 +70,7 @@
     </properties>
 
     <modules>
+        <module>api</module>
         <module>common</module>
         <module>examples</module>
         <module>indexing-hadoop</module>
@@ -108,12 +108,6 @@
 
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>io.druid</groupId>
-                <artifactId>druid-api</artifactId>
-                <version>${druid.api.version}</version>
-            </dependency>
-
             <!-- Compile Scope -->
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -574,6 +568,11 @@
                 <artifactId>junit</artifactId>
                 <version>4.11</version>
                 <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-simple</artifactId>
+                <version>${slf4j.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.carrotsearch</groupId>
