@@ -91,6 +91,16 @@ public class BoundDimFilter implements DimFilter
     return alphaNumeric;
   }
 
+  public boolean hasLowerBound()
+  {
+    return lower != null;
+  }
+
+  public boolean hasUpperBound()
+  {
+    return upper != null;
+  }
+
   @Override
   public byte[] getCacheKey()
   {
