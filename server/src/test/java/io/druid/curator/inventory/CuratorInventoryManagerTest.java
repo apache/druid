@@ -187,21 +187,9 @@ public class CuratorInventoryManagerTest extends io.druid.curator.CuratorTestBas
     }
 
     @Override
-    public byte[] serializeContainer(Map<String, Integer> container)
-    {
-      return new byte[]{};
-    }
-
-    @Override
     public Integer deserializeInventory(byte[] bytes)
     {
       return Ints.fromByteArray(bytes);
-    }
-
-    @Override
-    public byte[] serializeInventory(Integer inventory)
-    {
-      return Ints.toByteArray(inventory);
     }
 
     @Override
