@@ -19,10 +19,10 @@
 
 package io.druid.indexer.hadoop;
 
-import com.google.api.client.util.Maps;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import io.druid.indexer.JobHelper;
 import io.druid.jackson.DefaultObjectMapper;
@@ -46,7 +46,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
