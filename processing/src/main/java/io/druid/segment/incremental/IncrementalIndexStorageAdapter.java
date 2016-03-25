@@ -707,7 +707,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     {
       IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimension);
       if (dimensionDesc == null) {
-        return new BooleanValueMatcher(false);
+        return new BooleanValueMatcher(predicate.apply(null));
       }
       final int dimIndex = dimensionDesc.getIndex();
       final IncrementalIndex.DimDim dimDim = dimensionDesc.getValues();
