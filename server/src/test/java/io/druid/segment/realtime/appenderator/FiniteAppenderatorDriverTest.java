@@ -20,15 +20,15 @@
 package io.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.api.client.util.Maps;
-import com.google.api.client.util.Sets;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 import com.metamx.common.Granularity;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;

@@ -23,7 +23,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
-import com.google.api.client.http.HttpStatusCodes;
 import com.google.common.base.Function;
 import com.google.common.base.Predicates;
 import com.google.common.base.Throwables;
@@ -160,7 +159,7 @@ public class LookupCoordinatorManager
         lookupCoordinatorManagerConfig.getHostDeleteTimeout()
     ).get()) {
       // 404 is ok here, that means it was already deleted
-      if (!HttpStatusCodes.isSuccess(returnCode.get()) || HttpStatusCodes.STATUS_CODE_NOT_FOUND != returnCode.get()) {
+      if (!httpStatusIsSuccess(returnCode.get()) || !httpStatusIsNotFound(returnCode.get())) {
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try {
           StreamUtils.copyAndClose(result, baos);
@@ -210,7 +209,7 @@ public class LookupCoordinatorManager
         makeResponseHandler(returnCode, reasonString),
         lookupCoordinatorManagerConfig.getHostUpdateTimeout()
     ).get()) {
-      if (!HttpStatusCodes.isSuccess(returnCode.get())) {
+      if (!httpStatusIsSuccess(returnCode.get())) {
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try {
           StreamUtils.copyAndClose(result, baos);
@@ -613,5 +612,15 @@ public class LookupCoordinatorManager
         druidNode.getPortOrDefault(-1),
         ListenerResource.BASE_PATH + "/" + LOOKUP_LISTEN_ANNOUNCE_KEY
     );
+  }
+
+  private static boolean httpStatusIsSuccess(int statusCode)
+  {
+    return statusCode >= 200 && statusCode < 300;
+  }
+
+  private static boolean httpStatusIsNotFound(int statusCode)
+  {
+    return statusCode == 404;
   }
 }
