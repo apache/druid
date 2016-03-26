@@ -63,41 +63,41 @@ import java.util.Map;
 public class SelectQueryRunnerTest
 {
   // copied from druid.sample.tsv
-  public static final String[] V_0112 = {
-      "2011-01-12T00:00:00.000Z	spot	automotive	preferred	apreferred	100.000000",
-      "2011-01-12T00:00:00.000Z	spot	business	preferred	bpreferred	100.000000",
-      "2011-01-12T00:00:00.000Z	spot	entertainment	preferred	epreferred	100.000000",
-      "2011-01-12T00:00:00.000Z	spot	health	preferred	hpreferred	100.000000",
-      "2011-01-12T00:00:00.000Z	spot	mezzanine	preferred	mpreferred	100.000000",
-      "2011-01-12T00:00:00.000Z	spot	news	preferred	npreferred	100.000000",
-      "2011-01-12T00:00:00.000Z	spot	premium	preferred	ppreferred	100.000000",
-      "2011-01-12T00:00:00.000Z	spot	technology	preferred	tpreferred	100.000000",
-      "2011-01-12T00:00:00.000Z	spot	travel	preferred	tpreferred	100.000000",
-      "2011-01-12T00:00:00.000Z	total_market	mezzanine	preferred	mpreferred	1000.000000",
-      "2011-01-12T00:00:00.000Z	total_market	premium	preferred	ppreferred	1000.000000",
-      "2011-01-12T00:00:00.000Z	upfront	mezzanine	preferred	mpreferred	800.000000	value",
-      "2011-01-12T00:00:00.000Z	upfront	premium	preferred	ppreferred	800.000000	value"
+  public static final String[] EVENTS_0112 = {
+      "2011-01-12T00:00:00.000Z\tspot\t1111\t111.111\tautomotive\t1111\t111.111\tpreferred\tapreferred\t100.000000",
+      "2011-01-12T00:00:00.000Z\tspot\t1111\t111.111\tbusiness\t2222\t222.222\tpreferred\tbpreferred\t100.000000",
+      "2011-01-12T00:00:00.000Z\tspot\t1111\t111.111\tentertainment\t3333\t333.333\tpreferred\tepreferred\t100.000000",
+      "2011-01-12T00:00:00.000Z\tspot\t1111\t111.111\thealth\t4444\t444.444\tpreferred\thpreferred\t100.000000",
+      "2011-01-12T00:00:00.000Z\tspot\t1111\t111.111\tmezzanine\t5555\t555.555\tpreferred\tmpreferred\t100.000000",
+      "2011-01-12T00:00:00.000Z\tspot\t1111\t111.111\tnews\t6666\t666.666\tpreferred\tnpreferred\t100.000000",
+      "2011-01-12T00:00:00.000Z\tspot\t1111\t111.111\tpremium\t7777\t777.777\tpreferred\tppreferred\t100.000000",
+      "2011-01-12T00:00:00.000Z\tspot\t1111\t111.111\ttechnology\t8888\t888.888\tpreferred\ttpreferred\t100.000000",
+      "2011-01-12T00:00:00.000Z\tspot\t1111\t111.111\ttravel\t8899\t889.999\tpreferred\ttpreferred\t100.000000",
+      "2011-01-12T00:00:00.000Z\ttotal_market\t2222\t222.222\tmezzanine\t5555\t555.555\tpreferred\tmpreferred\t1000.000000",
+      "2011-01-12T00:00:00.000Z\ttotal_market\t2222\t222.222\tpremium\t7777\t777.777\tpreferred\tppreferred\t1000.000000",
+      "2011-01-12T00:00:00.000Z\tupfront\t3333\t333.333\tmezzanine\t5555\t555.555\tpreferred\tmpreferred\t800.000000\tvalue",
+      "2011-01-12T00:00:00.000Z\tupfront\t3333\t333.333\tpremium\t7777\t777.777\tpreferred\tppreferred\t800.000000\tvalue"
   };
-  public static final String[] V_0113 = {
-      "2011-01-13T00:00:00.000Z	spot	automotive	preferred	apreferred	94.874713",
-      "2011-01-13T00:00:00.000Z	spot	business	preferred	bpreferred	103.629399",
-      "2011-01-13T00:00:00.000Z	spot	entertainment	preferred	epreferred	110.087299",
-      "2011-01-13T00:00:00.000Z	spot	health	preferred	hpreferred	114.947403",
-      "2011-01-13T00:00:00.000Z	spot	mezzanine	preferred	mpreferred	104.465767",
-      "2011-01-13T00:00:00.000Z	spot	news	preferred	npreferred	102.851683",
-      "2011-01-13T00:00:00.000Z	spot	premium	preferred	ppreferred	108.863011",
-      "2011-01-13T00:00:00.000Z	spot	technology	preferred	tpreferred	111.356672",
-      "2011-01-13T00:00:00.000Z	spot	travel	preferred	tpreferred	106.236928",
-      "2011-01-13T00:00:00.000Z	total_market	mezzanine	preferred	mpreferred	1040.945505",
-      "2011-01-13T00:00:00.000Z	total_market	premium	preferred	ppreferred	1689.012875",
-      "2011-01-13T00:00:00.000Z	upfront	mezzanine	preferred	mpreferred	826.060182	value",
-      "2011-01-13T00:00:00.000Z	upfront	premium	preferred	ppreferred	1564.617729	value"
+  public static final String[] EVENTS_0113 = {
+      "2011-01-13T00:00:00.000Z\tspot\t1111\t111.111\tautomotive\t1111\t111.111\tpreferred\tapreferred\t94.874713",
+      "2011-01-13T00:00:00.000Z\tspot\t1111\t111.111\tbusiness\t2222\t222.222\tpreferred\tbpreferred\t103.629399",
+      "2011-01-13T00:00:00.000Z\tspot\t1111\t111.111\tentertainment\t3333\t333.333\tpreferred\tepreferred\t110.087299",
+      "2011-01-13T00:00:00.000Z\tspot\t1111\t111.111\thealth\t4444\t444.444\tpreferred\thpreferred\t114.947403",
+      "2011-01-13T00:00:00.000Z\tspot\t1111\t111.111\tmezzanine\t5555\t555.555\tpreferred\tmpreferred\t104.465767",
+      "2011-01-13T00:00:00.000Z\tspot\t1111\t111.111\tnews\t6666\t666.666\tpreferred\tnpreferred\t102.851683",
+      "2011-01-13T00:00:00.000Z\tspot\t1111\t111.111\tpremium\t7777\t777.777\tpreferred\tppreferred\t108.863011",
+      "2011-01-13T00:00:00.000Z\tspot\t1111\t111.111\ttechnology\t8888\t888.888\tpreferred\ttpreferred\t111.356672",
+      "2011-01-13T00:00:00.000Z\tspot\t1111\t111.111\ttravel\t8899\t889.999\tpreferred\ttpreferred\t106.236928",
+      "2011-01-13T00:00:00.000Z\ttotal_market\t2222\t222.222\tmezzanine\t5555\t555.555\tpreferred\tmpreferred\t1040.945505",
+      "2011-01-13T00:00:00.000Z\ttotal_market\t2222\t222.222\tpremium\t7777\t777.777\tpreferred\tppreferred\t1689.012875",
+      "2011-01-13T00:00:00.000Z\tupfront\t3333\t333.333\tmezzanine\t5555\t555.555\tpreferred\tmpreferred\t826.060182\tvalue",
+      "2011-01-13T00:00:00.000Z\tupfront\t3333\t333.333\tpremium\t7777\t777.777\tpreferred\tppreferred\t1564.617729\tvalue"
   };
 
-  public static final QuerySegmentSpec I_0112_0114 = new LegacySegmentSpec(
+  public static final QuerySegmentSpec INTERVAL_0112_0114 = new LegacySegmentSpec(
       new Interval("2011-01-12/2011-01-14")
   );
-  public static final String[] V_0112_0114 = ObjectArrays.concat(V_0112, V_0113, String.class);
+  public static final String[] EVENTS_0112_0114 = ObjectArrays.concat(EVENTS_0112, EVENTS_0113, String.class);
 
   @Parameterized.Parameters(name = "{0}:descending={1}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
@@ -131,7 +131,7 @@ public class SelectQueryRunnerTest
   {
     SelectQuery query = new SelectQuery(
         new TableDataSource(QueryRunnerTestHelper.dataSource),
-        I_0112_0114,
+        INTERVAL_0112_0114,
         descending,
         null,
         QueryRunnerTestHelper.allGran,
@@ -148,7 +148,7 @@ public class SelectQueryRunnerTest
 
     PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
     List<Result<SelectResultValue>> expectedResults = toExpected(
-        toEvents(new String[]{EventHolder.timestampKey + ":TIME"}, V_0112_0114),
+        toEvents(new String[]{EventHolder.timestampKey + ":TIME"}, EVENTS_0112_0114),
         offset.startOffset(),
         offset.threshold()
     );
@@ -177,11 +177,15 @@ public class SelectQueryRunnerTest
         QueryRunnerTestHelper.allGran,
         Arrays.<DimensionSpec>asList(
             new DefaultDimensionSpec(QueryRunnerTestHelper.marketDimension, "mar"),
+            new DefaultDimensionSpec("market_long", null),
+            new DefaultDimensionSpec("market_float", null),
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.qualityDimension,
                 "qual",
                 new LookupExtractionFn(new MapLookupExtractor(map, true), false, null, true, false)
             ),
+            new DefaultDimensionSpec("quality_long", null),
+            new DefaultDimensionSpec("quality_float", null),
             new DefaultDimensionSpec(QueryRunnerTestHelper.placementDimension, "place")
         ), Lists.<String>newArrayList(), new PagingSpec(null, 3),
         null
@@ -288,11 +292,12 @@ public class SelectQueryRunnerTest
   {
     SelectQuery query = new SelectQuery(
         new TableDataSource(QueryRunnerTestHelper.dataSource),
-        I_0112_0114,
+        INTERVAL_0112_0114,
         descending,
         null,
         QueryRunnerTestHelper.allGran,
-        DefaultDimensionSpec.toSpec(Arrays.asList(QueryRunnerTestHelper.marketDimension)),
+        DefaultDimensionSpec.toSpec(Arrays.asList(QueryRunnerTestHelper.marketDimension, "market_long", "market_float",
+                                                  QueryRunnerTestHelper.qualityDimension, "quality_long", "quality_float")),
         Arrays.asList(QueryRunnerTestHelper.indexMetric),
         new PagingSpec(null, 3),
         null
@@ -309,12 +314,16 @@ public class SelectQueryRunnerTest
             new String[]{
                 EventHolder.timestampKey + ":TIME",
                 QueryRunnerTestHelper.marketDimension + ":STRING",
-                null,
+                "market_long" + ":LONG",
+                "market_float" + ":FLOAT",
+                QueryRunnerTestHelper.qualityDimension + ":STRING",
+                "quality_long" + ":LONG",
+                "quality_float" + ":FLOAT",
                 null,
                 null,
                 QueryRunnerTestHelper.indexMetric + ":FLOAT"
             },
-            V_0112_0114
+            EVENTS_0112_0114
         ),
         offset.startOffset(),
         offset.threshold()
@@ -327,7 +336,7 @@ public class SelectQueryRunnerTest
   {
     SelectQuery query = new SelectQuery(
         new TableDataSource(QueryRunnerTestHelper.dataSource),
-        I_0112_0114,
+        INTERVAL_0112_0114,
         descending,
         null,
         QueryRunnerTestHelper.allGran,
@@ -350,7 +359,7 @@ public class SelectQueryRunnerTest
                 "foo:NULL",
                 "foo2:NULL"
             },
-            V_0112_0114
+            EVENTS_0112_0114
         ),
         offset.startOffset(),
         offset.threshold()
@@ -365,11 +374,18 @@ public class SelectQueryRunnerTest
     for (int[] param : new int[][]{{3, 3}, {0, 1}, {5, 5}, {2, 7}, {3, 0}}) {
       SelectQuery query = new SelectQuery(
           new TableDataSource(QueryRunnerTestHelper.dataSource),
-          I_0112_0114,
+          INTERVAL_0112_0114,
           descending,
           new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "spot"),
           QueryRunnerTestHelper.dayGran,
-          DefaultDimensionSpec.toSpec(Lists.<String>newArrayList(QueryRunnerTestHelper.qualityDimension)),
+          DefaultDimensionSpec.toSpec(Lists.<String>newArrayList(
+              QueryRunnerTestHelper.marketDimension,
+              "market_long",
+              "market_float",
+              QueryRunnerTestHelper.qualityDimension,
+              "quality_long",
+              "quality_float")
+          ),
           Lists.<String>newArrayList(QueryRunnerTestHelper.indexMetric),
           new PagingSpec(toPagingIdentifier(param[0], descending), param[1]),
           null
@@ -383,34 +399,38 @@ public class SelectQueryRunnerTest
       final List<List<Map<String, Object>>> events = toEvents(
           new String[]{
               EventHolder.timestampKey + ":TIME",
-              null,
+              QueryRunnerTestHelper.marketDimension + ":STRING",
+              "market_long" + ":LONG",
+              "market_float" + ":FLOAT",
               QueryRunnerTestHelper.qualityDimension + ":STRING",
+              "quality_long" + ":LONG",
+              "quality_float" + ":FLOAT",
               null,
               null,
               QueryRunnerTestHelper.indexMetric + ":FLOAT"
           },
           // filtered values with day granularity
           new String[]{
-              "2011-01-12T00:00:00.000Z	spot	automotive	preferred	apreferred	100.000000",
-              "2011-01-12T00:00:00.000Z	spot	business	preferred	bpreferred	100.000000",
-              "2011-01-12T00:00:00.000Z	spot	entertainment	preferred	epreferred	100.000000",
-              "2011-01-12T00:00:00.000Z	spot	health	preferred	hpreferred	100.000000",
-              "2011-01-12T00:00:00.000Z	spot	mezzanine	preferred	mpreferred	100.000000",
-              "2011-01-12T00:00:00.000Z	spot	news	preferred	npreferred	100.000000",
-              "2011-01-12T00:00:00.000Z	spot	premium	preferred	ppreferred	100.000000",
-              "2011-01-12T00:00:00.000Z	spot	technology	preferred	tpreferred	100.000000",
-              "2011-01-12T00:00:00.000Z	spot	travel	preferred	tpreferred	100.000000"
+              "2011-01-12T00:00:00.000Z\tspot\t1111\t111.111\tautomotive\t1111\t111.111\tpreferred\tapreferred\t100.000000",
+              "2011-01-12T00:00:00.000Z\tspot\t1111\t111.111\tbusiness\t2222\t222.222\tpreferred\tbpreferred\t100.000000",
+              "2011-01-12T00:00:00.000Z\tspot\t1111\t111.111\tentertainment\t3333\t333.333\tpreferred\tepreferred\t100.000000",
+              "2011-01-12T00:00:00.000Z\tspot\t1111\t111.111\thealth\t4444\t444.444\tpreferred\thpreferred\t100.000000",
+              "2011-01-12T00:00:00.000Z\tspot\t1111\t111.111\tmezzanine\t5555\t555.555\tpreferred\tmpreferred\t100.000000",
+              "2011-01-12T00:00:00.000Z\tspot\t1111\t111.111\tnews\t6666\t666.666\tpreferred\tnpreferred\t100.000000",
+              "2011-01-12T00:00:00.000Z\tspot\t1111\t111.111\tpremium\t7777\t777.777\tpreferred\tppreferred\t100.000000",
+              "2011-01-12T00:00:00.000Z\tspot\t1111\t111.111\ttechnology\t8888\t888.888\tpreferred\ttpreferred\t100.000000",
+              "2011-01-12T00:00:00.000Z\tspot\t1111\t111.111\ttravel\t8899\t889.999\tpreferred\ttpreferred\t100.000000"
           },
           new String[]{
-              "2011-01-13T00:00:00.000Z	spot	automotive	preferred	apreferred	94.874713",
-              "2011-01-13T00:00:00.000Z	spot	business	preferred	bpreferred	103.629399",
-              "2011-01-13T00:00:00.000Z	spot	entertainment	preferred	epreferred	110.087299",
-              "2011-01-13T00:00:00.000Z	spot	health	preferred	hpreferred	114.947403",
-              "2011-01-13T00:00:00.000Z	spot	mezzanine	preferred	mpreferred	104.465767",
-              "2011-01-13T00:00:00.000Z	spot	news	preferred	npreferred	102.851683",
-              "2011-01-13T00:00:00.000Z	spot	premium	preferred	ppreferred	108.863011",
-              "2011-01-13T00:00:00.000Z	spot	technology	preferred	tpreferred	111.356672",
-              "2011-01-13T00:00:00.000Z	spot	travel	preferred	tpreferred	106.236928"
+              "2011-01-13T00:00:00.000Z\tspot\t1111\t111.111\tautomotive\t1111\t111.111\tpreferred\tapreferred\t94.874713",
+              "2011-01-13T00:00:00.000Z\tspot\t1111\t111.111\tbusiness\t2222\t222.222\tpreferred\tbpreferred\t103.629399",
+              "2011-01-13T00:00:00.000Z\tspot\t1111\t111.111\tentertainment\t3333\t333.333\tpreferred\tepreferred\t110.087299",
+              "2011-01-13T00:00:00.000Z\tspot\t1111\t111.111\thealth\t4444\t444.444\tpreferred\thpreferred\t114.947403",
+              "2011-01-13T00:00:00.000Z\tspot\t1111\t111.111\tmezzanine\t5555\t555.555\tpreferred\tmpreferred\t104.465767",
+              "2011-01-13T00:00:00.000Z\tspot\t1111\t111.111\tnews\t6666\t666.666\tpreferred\tnpreferred\t102.851683",
+              "2011-01-13T00:00:00.000Z\tspot\t1111\t111.111\tpremium\t7777\t777.777\tpreferred\tppreferred\t108.863011",
+              "2011-01-13T00:00:00.000Z\tspot\t1111\t111.111\ttechnology\t8888\t888.888\tpreferred\ttpreferred\t111.356672",
+              "2011-01-13T00:00:00.000Z\tspot\t1111\t111.111\ttravel\t8899\t889.999\tpreferred\ttpreferred\t106.236928"
           }
       );
 
@@ -429,12 +449,14 @@ public class SelectQueryRunnerTest
   {
     SelectQuery query = new SelectQuery(
         new TableDataSource(QueryRunnerTestHelper.dataSource),
-        I_0112_0114,
+        INTERVAL_0112_0114,
         descending,
         new AndDimFilter(
                 Arrays.<DimFilter>asList(
                     new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "spot"),
-                    new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "foo")
+                    new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "foo"),
+                    new SelectorDimFilter("market_long", "1111"),
+                    new SelectorDimFilter("market_float", "111.111")
                 )
             ),
         QueryRunnerTestHelper.allGran,
@@ -465,7 +487,7 @@ public class SelectQueryRunnerTest
   {
     SelectQuery query = new SelectQuery(
         new TableDataSource(QueryRunnerTestHelper.dataSource),
-        I_0112_0114,
+        INTERVAL_0112_0114,
         descending,
         null,
         QueryRunnerTestHelper.allGran,
@@ -486,7 +508,7 @@ public class SelectQueryRunnerTest
             "foo:NULL",
             "foo2:NULL"
         },
-        V_0112_0114
+        EVENTS_0112_0114
     );
 
     PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
@@ -595,6 +617,7 @@ public class SelectQueryRunnerTest
       Result<SelectResultValue> expected = expectedIter.next();
       Result<SelectResultValue> actual = actualIter.next();
 
+      String resultsStr = "\nExpected: " + expected + "\nActual: " + actual + "\nField: ";
       Assert.assertEquals(expected.getTimestamp(), actual.getTimestamp());
 
       for (Map.Entry<String, Integer> entry : expected.getValue().getPagingIdentifiers().entrySet()) {
@@ -618,7 +641,7 @@ public class SelectQueryRunnerTest
           if (acHolder.getEvent().get(ex.getKey()) instanceof Double) {
             actVal = ((Double) actVal).floatValue();
           }
-          Assert.assertEquals(ex.getValue(), actVal);
+          Assert.assertEquals(resultsStr + ex.getKey(), ex.getValue(), actVal);
         }
       }
 

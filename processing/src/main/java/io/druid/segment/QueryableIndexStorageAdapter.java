@@ -43,7 +43,9 @@ import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.GenericColumn;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
+import io.druid.segment.data.IndexedFloats;
 import io.druid.segment.data.IndexedInts;
+import io.druid.segment.data.IndexedLongs;
 import io.druid.segment.data.Offset;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -51,13 +53,14 @@ import org.joda.time.Interval;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 /**
  */
 public class QueryableIndexStorageAdapter implements StorageAdapter
 {
-  private static final NullDimensionSelector NULL_DIMENSION_SELECTOR = new NullDimensionSelector();
+  private static final NullDimensionSelector NULL_DIMENSION_SELECTOR = new NullDimensionSelector(ValueType.STRING);
 
   private final QueryableIndex index;
 
@@ -144,23 +147,23 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   @Override
   public Comparable getMinValue(String dimension)
   {
-    Column column = index.getColumn(dimension);
-    if (column != null && column.getCapabilities().hasBitmapIndexes()) {
-      BitmapIndex bitmap = column.getBitmapIndex();
-      return bitmap.getCardinality() > 0 ? bitmap.getValue(0) : null;
+    DimensionColumnReader reader = index.getDimensionReaders().get(dimension);
+    if (reader == null) {
+      return null;
     }
-    return null;
+
+    return reader.getMinValue();
   }
 
   @Override
   public Comparable getMaxValue(String dimension)
   {
-    Column column = index.getColumn(dimension);
-    if (column != null && column.getCapabilities().hasBitmapIndexes()) {
-      BitmapIndex bitmap = column.getBitmapIndex();
-      return bitmap.getCardinality() > 0 ? bitmap.getValue(bitmap.getCardinality() - 1) : null;
+    DimensionColumnReader reader = index.getDimensionReaders().get(dimension);
+    if (reader == null) {
+      return null;
     }
-    return null;
+
+    return reader.getMaxValue();
   }
 
   @Override
@@ -172,7 +175,14 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   @Override
   public ColumnCapabilities getColumnCapabilities(String column)
   {
-    return index.getColumn(column).getCapabilities();
+    Column retColumn = index.getColumn(column);
+    return retColumn == null ? null : retColumn.getCapabilities();
+  }
+
+  @Override
+  public Map<String, DimensionHandler> getDimensionHandlers()
+  {
+    return index.getDimensionHandlers();
   }
 
   @Override
@@ -219,7 +229,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     } else {
       final ColumnSelectorBitmapIndexSelector selector = new ColumnSelectorBitmapIndexSelector(
           index.getBitmapFactoryForDimensions(),
-          index
+          index,
+          index.getDimensionReaders()
       );
 
       offset = new BitmapOffset(selector.getBitmapFactory(), filter.getBitmapIndex(selector), descending);
@@ -241,7 +252,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
   private static class CursorSequenceBuilder
   {
-    private final ColumnSelector index;
+    private final QueryableIndex index;
     private final Interval interval;
     private final QueryGranularity gran;
     private final Offset offset;
@@ -250,7 +261,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     private final boolean descending;
 
     public CursorSequenceBuilder(
-        ColumnSelector index,
+        QueryableIndex index,
         Interval interval,
         QueryGranularity gran,
         Offset offset,
@@ -371,10 +382,35 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         DimensionSpec dimensionSpec
                     )
                     {
-                      return dimensionSpec.decorate(makeDimensionSelectorUndecorated(dimensionSpec));
+                      final String dimension = dimensionSpec.getDimension();
+                      final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
+
+                      if (dimension.equals(Column.TIME_COLUMN_NAME)) {
+                        return new SingleScanTimeDimSelector(
+                            makeLongColumnSelector(dimension),
+                            extractionFn,
+                            descending
+                        );
+                      }
+
+                      final Column columnDesc = index.getColumn(dimension);
+                      if (columnDesc == null) {
+                        return NULL_DIMENSION_SELECTOR;
+                      }
+
+                      String dimName = dimensionSpec.getDimension();
+                      DimensionHandler handler = index.getDimensionHandlers().get(dimName);
+                      if (handler == null) {
+                        return NULL_DIMENSION_SELECTOR;
+                      }
+
+                      return dimensionSpec.decorate(handler.getDimensionSelector(this,
+                                                                                 dimensionSpec,
+                                                                                 index.getColumn(dimName).getCapabilities()));
                     }
 
-                    private DimensionSelector makeDimensionSelectorUndecorated(
+                    @Override
+                    public DimensionSelector makeDictEncodedStringDimensionSelector(
                         DimensionSpec dimensionSpec
                     )
                     {
@@ -386,14 +422,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         return NULL_DIMENSION_SELECTOR;
                       }
 
-                      if (dimension.equals(Column.TIME_COLUMN_NAME)) {
-                        return new SingleScanTimeDimSelector(
-                            makeLongColumnSelector(dimension),
-                            extractionFn,
-                            descending
-                        );
-                      }
-
+                      final ColumnCapabilities capabilities = columnDesc.getCapabilities();
                       DictionaryEncodedColumn cachedColumn = dictionaryColumnCache.get(dimension);
                       if (cachedColumn == null) {
                         cachedColumn = columnDesc.getDictionaryEncoding();
@@ -410,7 +439,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                           @Override
                           public IndexedInts getRow()
                           {
-                            return column.getMultiValueRow(cursorOffset.getOffset());
+                            IndexedInts vals = column.getMultiValueRow(cursorOffset.getOffset());
+                            return vals;
                           }
 
                           @Override
@@ -423,7 +453,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                           public String lookupName(int id)
                           {
                             final String value = column.lookupName(id);
-                            return extractionFn == null ?
+                            return extractionFn == null       ?
                                    Strings.nullToEmpty(value) :
                                    extractionFn.apply(Strings.nullToEmpty(value));
                           }
@@ -438,15 +468,60 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                             }
                             return column.lookupId(name);
                           }
+
+                          @Override
+                          public IndexedLongs getLongRow()
+                          {
+                            throw new UnsupportedOperationException("getLongRow() is not supported.");
+                          }
+
+                          @Override
+                          public Comparable getExtractedValueLong(long val)
+                          {
+                            throw new UnsupportedOperationException("getExtractedValueLong() is not supported.");
+                          }
+
+                          @Override
+                          public IndexedFloats getFloatRow()
+                          {
+                            throw new UnsupportedOperationException("getFloatRow() is not supported.");
+                          }
+
+                          @Override
+                          public Comparable getExtractedValueFloat(float val)
+                          {
+                            throw new UnsupportedOperationException("getExtractedValueFloat() is not supported.");
+                          }
+
+                          @Override
+                          public Comparable getComparableRow()
+                          {
+                            throw new UnsupportedOperationException("getComparableRow() is not supported.");
+                          }
+
+                          @Override
+                          public Comparable getExtractedValueComparable(Comparable val)
+                          {
+                            throw new UnsupportedOperationException("getExtractedValueComparable() is not supported.");
+
+                          }
+
+                          @Override
+                          public ColumnCapabilities getDimCapabilities()
+                          {
+                            return capabilities;
+                          }
                         };
                       } else {
+                        //return new DimensionSelector<Integer, String>()
                         return new DimensionSelector()
                         {
                           @Override
+                          //public DimensionSelectorRow getRow()
                           public IndexedInts getRow()
                           {
                             // using an anonymous class is faster than creating a class that stores a copy of the value
-                            return new IndexedInts()
+                            IndexedInts vals = new IndexedInts()
                             {
                               @Override
                               public int size()
@@ -478,6 +553,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
                               }
                             };
+                            //return new IndexedIntsDimensionSelectorRow(vals);
+                            return vals;
                           }
 
                           @Override
@@ -502,6 +579,49 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                               );
                             }
                             return column.lookupId(name);
+                          }
+
+                          @Override
+                          public IndexedLongs getLongRow()
+                          {
+                            throw new UnsupportedOperationException("getLongRow() is not supported.");
+                          }
+
+                          @Override
+                          public Comparable getExtractedValueLong(long val)
+                          {
+                            throw new UnsupportedOperationException("getExtractedValueLong() is not supported.");
+                          }
+
+                          @Override
+                          public IndexedFloats getFloatRow()
+                          {
+                            throw new UnsupportedOperationException("getFloatRow() is not supported.");
+                          }
+
+                          @Override
+                          public Comparable getExtractedValueFloat(float val)
+                          {
+                            throw new UnsupportedOperationException("getExtractedValueFloat() is not supported.");
+                          }
+
+                          @Override
+                          public Comparable getComparableRow()
+                          {
+                            throw new UnsupportedOperationException("getComparableRow() is not supported.");
+                          }
+
+                          @Override
+                          public Comparable getExtractedValueComparable(Comparable val)
+                          {
+                            throw new UnsupportedOperationException("getExtractedValueComparable() is not supported.");
+
+                          }
+
+                          @Override
+                          public ColumnCapabilities getDimCapabilities()
+                          {
+                            return capabilities;
                           }
                         };
                       }
@@ -808,7 +928,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
 
     @Override
-    public Offset clone() {
+    public Offset clone()
+    {
       throw new IllegalStateException("clone");
     }
   }

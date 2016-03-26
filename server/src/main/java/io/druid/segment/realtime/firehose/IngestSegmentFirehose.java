@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.metamx.common.IAE;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.guava.Yielder;
@@ -39,7 +40,9 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.Column;
+import io.druid.segment.data.IndexedFloats;
 import io.druid.segment.data.IndexedInts;
+import io.druid.segment.data.IndexedLongs;
 import io.druid.segment.filter.Filters;
 import io.druid.utils.Runnables;
 import org.joda.time.DateTime;
@@ -128,18 +131,39 @@ public class IngestSegmentFirehose implements Firehose
                                         for (Map.Entry<String, DimensionSelector> dimSelector : dimSelectors.entrySet()) {
                                           final String dim = dimSelector.getKey();
                                           final DimensionSelector selector = dimSelector.getValue();
-                                          final IndexedInts vals = selector.getRow();
 
-                                          if (vals.size() == 1) {
-                                            final String dimVal = selector.lookupName(vals.get(0));
-                                            theEvent.put(dim, dimVal);
-                                          } else {
-                                            List<String> dimVals = Lists.newArrayList();
-                                            for (int i = 0; i < vals.size(); ++i) {
-                                              dimVals.add(selector.lookupName(vals.get(i)));
-                                            }
-                                            theEvent.put(dim, dimVals);
+                                          Object dimVals;
+                                          switch (selector.getDimCapabilities().getType()) {
+                                            case STRING:
+                                              final IndexedInts vals = selector.getRow();
+
+                                              if (vals.size() == 1) {
+                                                dimVals = selector.lookupName(vals.get(0));
+                                              } else {
+                                                List<String> strVals = Lists.newArrayList();
+                                                for (int i = 0; i < vals.size(); ++i) {
+                                                  strVals.add(selector.lookupName(vals.get(i)));
+                                                }
+                                                dimVals = strVals;
+                                              }
+                                              break;
+                                            case LONG:
+                                              final IndexedLongs longVals = selector.getLongRow();
+                                              dimVals = longVals.get(0);
+                                              break;
+                                            case FLOAT:
+                                              final IndexedFloats floatVals = selector.getFloatRow();
+                                              dimVals = floatVals.get(0);
+                                              break;
+                                            case COMPLEX:
+                                              final Comparable comparableVal = selector.getComparableRow();
+                                              dimVals = comparableVal;
+                                              break;
+                                            default:
+                                              throw new IAE("Invalid type: " + selector.getDimCapabilities().getType());
                                           }
+
+                                          theEvent.put(dim, dimVals);
                                         }
 
                                         for (Map.Entry<String, ObjectColumnSelector> metSelector : metSelectors.entrySet()) {

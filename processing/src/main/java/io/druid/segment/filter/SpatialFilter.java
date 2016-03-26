@@ -49,8 +49,7 @@ public class SpatialFilter implements Filter
   @Override
   public ImmutableBitmap getBitmapIndex(final BitmapIndexSelector selector)
   {
-    Iterable<ImmutableBitmap> search = selector.getSpatialIndex(dimension).search(bound);
-    return selector.getBitmapFactory().union(search);
+    return selector.getBitmapIndex(dimension, bound);
   }
 
   @Override

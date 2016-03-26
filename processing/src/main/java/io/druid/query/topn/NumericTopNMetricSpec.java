@@ -27,11 +27,13 @@ import com.google.common.collect.Iterables;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.segment.column.ValueType;
 import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 /**
  */
@@ -122,10 +124,11 @@ public class NumericTopNMetricSpec implements TopNMetricSpec
       int threshold,
       Comparator comparator,
       List<AggregatorFactory> aggFactories,
-      List<PostAggregator> postAggs
+      List<PostAggregator> postAggs,
+      Map<String, ValueType> typeHints
   )
   {
-    return new TopNNumericResultBuilder(timestamp, dimSpec, metric, threshold, comparator, aggFactories, postAggs);
+    return new TopNNumericResultBuilder(timestamp, dimSpec, metric, threshold, comparator, aggFactories, postAggs, typeHints);
   }
 
   @Override

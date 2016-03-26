@@ -22,10 +22,17 @@ package io.druid.query.aggregation.cardinality;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
+import com.google.common.primitives.Floats;
+import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
+import com.metamx.common.IAE;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.column.ValueType;
+import io.druid.segment.data.IndexedFloats;
 import io.druid.segment.data.IndexedInts;
+import io.druid.segment.data.IndexedLongs;
 
 import java.util.Arrays;
 import java.util.List;
@@ -49,26 +56,56 @@ public class CardinalityAggregator implements Aggregator
         hasher.putByte((byte) 0);
       }
       final DimensionSelector selector = selectorList.get(k);
-      final IndexedInts row = selector.getRow();
-      final int size = row.size();
-      // nothing to add to hasher if size == 0, only handle size == 1 and size != 0 cases.
-      if (size == 1) {
-        final String value = selector.lookupName(row.get(0));
-        hasher.putUnencodedChars(value != null ? value : NULL_STRING);
-      } else if (size != 0) {
-        final String[] values = new String[size];
-        for (int i = 0; i < size; ++i) {
-          final String value = selector.lookupName(row.get(i));
-          values[i] = value != null ? value : NULL_STRING;
-        }
-        // Values need to be sorted to ensure consistent multi-value ordering across different segments
-        Arrays.sort(values);
-        for (int i = 0; i < size; ++i) {
-          if (i != 0) {
-            hasher.putChar(SEPARATOR);
+      int rowSize = 0;
+      IndexedInts intVals = null;
+      IndexedLongs longVals = null;
+      IndexedFloats floatVals = null;
+      Comparable objVal = null;
+      ValueType type = selector.getDimCapabilities().getType();
+
+      switch (type) {
+        case STRING:
+          intVals = selector.getRow();
+          rowSize = intVals.size();
+          if (rowSize == 1) {
+            final String value = selector.lookupName(intVals.get(0));
+            hasher.putUnencodedChars(value != null ? value : NULL_STRING);
+          } else if (rowSize != 0) {
+            final String[] values = new String[rowSize];
+            for (int i = 0; i < rowSize; ++i) {
+              final String value = selector.lookupName(intVals.get(i));
+              values[i] = value != null ? value : NULL_STRING;
+            }
+            // Values need to be sorted to ensure consistent multi-value ordering across different segments
+            Arrays.sort(values);
+            for (int i = 0; i < rowSize; ++i) {
+              if (i != 0) {
+                hasher.putChar(SEPARATOR);
+              }
+              hasher.putUnencodedChars(values[i]);
+            }
           }
-          hasher.putUnencodedChars(values[i]);
-        }
+          break;
+        case LONG:
+          longVals = selector.getLongRow();
+          rowSize = longVals.size();
+          if (rowSize > 0) {
+            hasher.putLong(longVals.get(0));
+          }
+          break;
+        case FLOAT:
+          floatVals = selector.getFloatRow();
+          rowSize = floatVals.size();
+          if (rowSize > 0) {
+            hasher.putFloat(floatVals.get(0));
+          }
+          break;
+        case COMPLEX:
+          objVal = selector.getComparableRow();
+          hasher.putUnencodedChars(objVal != null ? objVal.toString() : NULL_STRING);
+          break;
+        default:
+          throw new IAE("Invalid type: " + selector.getDimCapabilities().getType());
       }
     }
     collector.add(hasher.hash().asBytes());
@@ -77,9 +114,26 @@ public class CardinalityAggregator implements Aggregator
   protected static void hashValues(final List<DimensionSelector> selectors, HyperLogLogCollector collector)
   {
     for (final DimensionSelector selector : selectors) {
-      for (final Integer index : selector.getRow()) {
-        final String value = selector.lookupName(index);
-        collector.add(hashFn.hashUnencodedChars(value == null ? NULL_STRING : value).asBytes());
+      switch(selector.getDimCapabilities().getType()) {
+        case STRING:
+          for (final Integer index : selector.getRow()) {
+            final String value = selector.lookupName(index);
+            collector.add(hashFn.hashUnencodedChars(value == null ? NULL_STRING : value).asBytes());
+          }
+          break;
+        case LONG:
+          long longVal = selector.getLongRow().get(0);
+          collector.add(hashFn.hashBytes(Longs.toByteArray(longVal)).asBytes());
+          break;
+        case FLOAT:
+          float floatVal = selector.getFloatRow().get(0);
+          collector.add(hashFn.hashBytes(Ints.toByteArray(Float.floatToIntBits(floatVal))).asBytes());
+          break;
+        case COMPLEX:
+          //TODO: pass in handler and call get Bytes
+          break;
+        default:
+          break;
       }
     }
   }

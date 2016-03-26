@@ -19,35 +19,41 @@
 
 package io.druid.segment;
 
+import com.google.common.base.Objects;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
+import org.apache.commons.lang.ObjectUtils;
 import org.joda.time.DateTime;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.Map;
 import java.util.TreeSet;
 
 public class Rowboat implements Comparable<Rowboat>
 {
   private final long timestamp;
-  private final int[][] dims;
+  private final Comparable[][] dims;
   private final Object[] metrics;
   private final int rowNum;
   private final Map<Integer, TreeSet<Integer>> comprisedRows;
+  private final DimensionHandler[] handlers;
 
   public Rowboat(
       long timestamp,
-      int[][] dims,
+      Comparable[][] dims,
       Object[] metrics,
-      int rowNum
+      int rowNum,
+      DimensionHandler[] handlers
   )
   {
     this.timestamp = timestamp;
     this.dims = dims;
     this.metrics = metrics;
     this.rowNum = rowNum;
+    this.handlers = handlers;
 
     this.comprisedRows = Maps.newHashMap();
   }
@@ -57,7 +63,7 @@ public class Rowboat implements Comparable<Rowboat>
     return timestamp;
   }
 
-  public int[][] getDims()
+  public Comparable[][] getDims()
   {
     return dims;
   }
@@ -82,6 +88,11 @@ public class Rowboat implements Comparable<Rowboat>
     return comprisedRows;
   }
 
+  public DimensionHandler[] getHandlers()
+  {
+    return handlers;
+  }
+
   public int getRowNum()
   {
     return rowNum;
@@ -98,8 +109,8 @@ public class Rowboat implements Comparable<Rowboat>
 
     int index = 0;
     while (retVal == 0 && index < dims.length) {
-      int[] lhsVals = dims[index];
-      int[] rhsVals = rhs.dims[index];
+      Comparable[] lhsVals = dims[index];
+      Comparable[] rhsVals = rhs.dims[index];
 
       if (lhsVals == null) {
         if (rhsVals == null) {
@@ -116,8 +127,9 @@ public class Rowboat implements Comparable<Rowboat>
       retVal = Ints.compare(lhsVals.length, rhsVals.length);
 
       int valsIndex = 0;
+      Comparator comparator = handlers[index].getEncodedComparator();
       while (retVal == 0 && valsIndex < lhsVals.length) {
-        retVal = Ints.compare(lhsVals[valsIndex], rhsVals[valsIndex]);
+        retVal = comparator.compare(lhsVals[valsIndex], rhsVals[valsIndex]);
         ++valsIndex;
       }
       ++index;

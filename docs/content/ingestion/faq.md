@@ -16,7 +16,7 @@ If you are trying to batch load historical data but no events are being loaded, 
 
 ## What types of data does Druid support?
 
-Druid can ingest JSON, CSV, TSV and other delimited data out of the box. Druid supports single dimension values, or multiple dimension values (an array of strings). Druid supports long and float numeric columns.
+Druid can ingest JSON, CSV, TSV and other delimited data out of the box. Druid supports single dimension values, or multiple dimension values (an array of values). Druid supports long and float numeric columns.
 
 ## Not all of my events were ingested
 

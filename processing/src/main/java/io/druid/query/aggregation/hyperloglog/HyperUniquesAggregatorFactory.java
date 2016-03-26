@@ -112,7 +112,7 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
       public int compare(HyperLogLogCollector lhs, HyperLogLogCollector rhs)
       {
         if(lhs == null) {
-          return -1;
+          return rhs == null ? 0 : -1;
         }
         if(rhs == null) {
           return 1;

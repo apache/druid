@@ -191,7 +191,7 @@ public class MultiSegmentSelectQueryTest
   private final Druids.SelectQueryBuilder builder =
       Druids.newSelectQueryBuilder()
             .dataSource(new TableDataSource(QueryRunnerTestHelper.dataSource))
-            .intervals(SelectQueryRunnerTest.I_0112_0114)
+            .intervals(SelectQueryRunnerTest.INTERVAL_0112_0114)
             .granularity(QueryRunnerTestHelper.allGran)
             .dimensionSpecs(DefaultDimensionSpec.toSpec(QueryRunnerTestHelper.dimensions))
             .pagingSpec(new PagingSpec(null, 3));

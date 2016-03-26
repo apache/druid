@@ -494,6 +494,12 @@ public class PooledTopNAlgorithm
   }
 
   @Override
+  protected boolean supportsDimValSelector()
+  {
+    return true;
+  }
+
+  @Override
   public void cleanup(PooledTopNParams params)
   {
     if (params != null) {

@@ -19,6 +19,7 @@
 
 package io.druid.segment;
 
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import org.junit.Assert;
 import org.junit.Test;
@@ -27,7 +28,7 @@ import java.util.Iterator;
 
 public class NullDimensionSelectorTest {
 
-  private final NullDimensionSelector selector = new NullDimensionSelector();
+  private final NullDimensionSelector selector = new NullDimensionSelector(ValueType.STRING);
 
   @Test
   public void testGetRow() throws Exception {

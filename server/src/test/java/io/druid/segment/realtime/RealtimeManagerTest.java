@@ -605,13 +605,13 @@ public class RealtimeManagerTest
         interval_26_28,
         QueryRunnerTestHelper.makeQueryRunner(
             factory,
-            "druid.sample.tsv.top"
+            "druid.sample.numericdims.tsv.top"
         )
         ,
         interval_28_29,
         QueryRunnerTestHelper.makeQueryRunner(
             factory,
-            "druid.sample.tsv.bottom"
+            "druid.sample.numericdims.tsv.bottom"
         )
     );
     plumber.setRunners(runnerMap);

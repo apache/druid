@@ -20,8 +20,15 @@
 package io.druid.query.dimension;
 
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ColumnCapabilitiesImpl;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.ArrayBasedIndexedInts;
+import io.druid.segment.data.IndexedFloats;
 import io.druid.segment.data.IndexedInts;
+import io.druid.segment.data.IndexedLongs;
+
+import java.util.List;
 
 /**
  * Test dimension selector that has cardinality=26
@@ -59,6 +66,53 @@ class TestDimensionSelector implements DimensionSelector
   public int lookupId(String name)
   {
     return name.charAt(0) - 'a';
+  }
+
+  @Override
+  public IndexedLongs getLongRow()
+  {
+    throw new UnsupportedOperationException("getLongRow() is not supported.");
+  }
+
+  @Override
+  public Comparable getExtractedValueLong(long val)
+  {
+    throw new UnsupportedOperationException("getExtractedValueLong() is not supported.");
+  }
+
+  @Override
+  public IndexedFloats getFloatRow()
+  {
+    throw new UnsupportedOperationException("getFloatRow() is not supported.");
+  }
+
+  @Override
+  public Comparable getExtractedValueFloat(float val)
+  {
+    throw new UnsupportedOperationException("getExtractedValueFloat() is not supported.");
+  }
+
+  @Override
+  public Comparable getComparableRow()
+  {
+    throw new UnsupportedOperationException("getComparableRow() is not supported.");
+  }
+
+  @Override
+  public Comparable getExtractedValueComparable(Comparable val)
+  {
+    throw new UnsupportedOperationException("getExtractedValueComparable() is not supported.");
+
+  }
+
+  @Override
+  public ColumnCapabilities getDimCapabilities()
+  {
+    ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
+    capabilities.setDictionaryEncoded(true);
+    capabilities.setHasBitmapIndexes(true);
+    capabilities.setType(ValueType.STRING);
+    return capabilities;
   }
 
 }

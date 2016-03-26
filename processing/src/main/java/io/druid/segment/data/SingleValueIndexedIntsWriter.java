@@ -39,6 +39,13 @@ public abstract class SingleValueIndexedIntsWriter implements IndexedIntsWriter
       } else {
         addValue(vals[0]);
       }
+    } else if (obj instanceof Comparable[]) {
+      Comparable[] vals = (Comparable[]) obj;
+      if (vals.length == 0) {
+        addValue(0);
+      } else {
+        addValue((Integer) vals[0]);
+      }
     } else {
       throw new IAE("Unsupported single value type: " + obj.getClass());
     }

@@ -32,15 +32,25 @@ import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.collections.StupidPool;
+import io.druid.common.utils.JodaUtils;
+import io.druid.data.input.MapBasedInputRow;
+import io.druid.data.input.Row;
+import io.druid.data.input.impl.DimensionSchema;
+import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.data.input.impl.FloatDimensionSchema;
+import io.druid.data.input.impl.LongDimensionSchema;
+import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.BySegmentResultValue;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
+import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
 import io.druid.query.TestQueryRunners;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
@@ -62,8 +72,14 @@ import io.druid.query.filter.ExtractionDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.timeseries.TimeseriesQuery;
+import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.TestHelper;
+import io.druid.segment.TestIndex;
 import io.druid.segment.column.Column;
+import io.druid.segment.column.ValueType;
+import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.IncrementalIndexSchema;
+import io.druid.segment.incremental.OnheapIncrementalIndex;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -81,12 +97,19 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executors;
 
 /**
  */
 @RunWith(Parameterized.class)
 public class TopNQueryRunnerTest
 {
+  private final ValueType keyType;
+  private final String marketStr;
+  private final Object spotVal;
+  private final Object totalMarketVal;
+  private final Object upfrontVal;
+
   @Parameterized.Parameters
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
@@ -125,16 +148,30 @@ public class TopNQueryRunnerTest
         )
     );
 
-    return QueryRunnerTestHelper.transformToConstructionFeeder(retVal);
+    ValueType[] types = new ValueType[]{ValueType.STRING,
+                                        ValueType.LONG,
+                                        ValueType.FLOAT};
+
+    return QueryRunnerTestHelper.cartesian(retVal, Lists.newArrayList(types));
+  }
+
+  private Object getDimMapping(String value) {
+    return TestIndex.getDimMappingForType(keyType, value);
   }
 
   private final QueryRunner<Result<TopNResultValue>> runner;
 
   public TopNQueryRunnerTest(
-      QueryRunner<Result<TopNResultValue>> runner
+      QueryRunner<Result<TopNResultValue>> runner,
+      ValueType keyType
   )
   {
     this.runner = runner;
+    this.keyType = keyType;
+    this.marketStr = (String) getDimMapping(QueryRunnerTestHelper.marketDimension);
+    this.spotVal = getDimMapping("spot");
+    this.totalMarketVal = getDimMapping("total_market");
+    this.upfrontVal = getDimMapping("upfront");
   }
 
   private Sequence<Result<TopNResultValue>> assertExpectedResults(
@@ -172,7 +209,7 @@ public class TopNQueryRunnerTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(QueryRunnerTestHelper.marketDimension)
+        .dimension(marketStr)
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.fullOnInterval)
@@ -196,7 +233,7 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put(QueryRunnerTestHelper.marketDimension, "total_market")
+                                .put(marketStr, totalMarketVal)
                                 .put("rows", 186L)
                                 .put("index", 215679.82879638672D)
                                 .put("addRowsIndexConstant", 215866.82879638672D)
@@ -205,7 +242,7 @@ public class TopNQueryRunnerTest
                                 .put("minIndex", 792.3260498046875D)
                                 .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put(QueryRunnerTestHelper.marketDimension, "upfront")
+                                .put(marketStr, upfrontVal)
                                 .put("rows", 186L)
                                 .put("index", 192046.1060180664D)
                                 .put("addRowsIndexConstant", 192233.1060180664D)
@@ -214,7 +251,7 @@ public class TopNQueryRunnerTest
                                 .put("minIndex", 545.9906005859375D)
                                 .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put(QueryRunnerTestHelper.marketDimension, "spot")
+                                .put(marketStr, spotVal)
                                 .put("rows", 837L)
                                 .put("index", 95606.57232284546D)
                                 .put("addRowsIndexConstant", 96444.57232284546D)
@@ -235,7 +272,7 @@ public class TopNQueryRunnerTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(QueryRunnerTestHelper.marketDimension)
+        .dimension(marketStr)
         .metric(QueryRunnerTestHelper.addRowsIndexConstantMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.fullOnInterval)
@@ -259,7 +296,7 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put(QueryRunnerTestHelper.marketDimension, "total_market")
+                                .put(marketStr, totalMarketVal)
                                 .put("rows", 186L)
                                 .put("index", 215679.82879638672D)
                                 .put("addRowsIndexConstant", 215866.82879638672D)
@@ -268,7 +305,7 @@ public class TopNQueryRunnerTest
                                 .put("minIndex", 792.3260498046875D)
                                 .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put(QueryRunnerTestHelper.marketDimension, "upfront")
+                                .put(marketStr, upfrontVal)
                                 .put("rows", 186L)
                                 .put("index", 192046.1060180664D)
                                 .put("addRowsIndexConstant", 192233.1060180664D)
@@ -277,7 +314,7 @@ public class TopNQueryRunnerTest
                                 .put("minIndex", 545.9906005859375D)
                                 .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put(QueryRunnerTestHelper.marketDimension, "spot")
+                                .put(marketStr, spotVal)
                                 .put("rows", 837L)
                                 .put("index", 95606.57232284546D)
                                 .put("addRowsIndexConstant", 96444.57232284546D)
@@ -299,7 +336,7 @@ public class TopNQueryRunnerTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(QueryRunnerTestHelper.marketDimension)
+        .dimension(marketStr)
         .metric(QueryRunnerTestHelper.uniqueMetric)
         .threshold(3)
         .intervals(QueryRunnerTestHelper.fullOnInterval)
@@ -323,7 +360,7 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "spot")
+                                .put(marketStr, spotVal)
                                 .put("rows", 837L)
                                 .put("index", 95606.57232284546D)
                                 .put("addRowsIndexConstant", 96444.57232284546D)
@@ -332,7 +369,7 @@ public class TopNQueryRunnerTest
                                 .put("minIndex", 59.02102279663086D)
                                 .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "total_market")
+                                .put(marketStr, totalMarketVal)
                                 .put("rows", 186L)
                                 .put("index", 215679.82879638672D)
                                 .put("addRowsIndexConstant", 215866.82879638672D)
@@ -341,7 +378,7 @@ public class TopNQueryRunnerTest
                                 .put("minIndex", 792.3260498046875D)
                                 .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "upfront")
+                                .put(marketStr, upfrontVal)
                                 .put("rows", 186L)
                                 .put("index", 192046.1060180664D)
                                 .put("addRowsIndexConstant", 192233.1060180664D)
@@ -362,7 +399,7 @@ public class TopNQueryRunnerTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(QueryRunnerTestHelper.marketDimension)
+        .dimension(marketStr)
         .metric(QueryRunnerTestHelper.uniqueMetric)
         .threshold(3)
         .intervals(QueryRunnerTestHelper.fullOnInterval)
@@ -370,26 +407,26 @@ public class TopNQueryRunnerTest
             Arrays.<AggregatorFactory>asList(new HyperUniquesAggregatorFactory("uniques", "missingUniques"))
         )
         .build();
+    
+    List<Map<String, Object>> expectedList = Arrays.<Map<String, Object>>asList(
+        ImmutableMap.<String, Object>builder()
+            .put(marketStr, spotVal)
+            .put("uniques", 0)
+            .build(),
+        ImmutableMap.<String, Object>builder()
+            .put(marketStr, totalMarketVal)
+            .put("uniques", 0)
+            .build(),
+        ImmutableMap.<String, Object>builder()
+            .put(marketStr, upfrontVal)
+            .put("uniques", 0)
+            .build()
+    );
 
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
             new DateTime("2011-01-12T00:00:00.000Z"),
-            new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
-                    ImmutableMap.<String, Object>builder()
-                                .put("market", "total_market")
-                                .put("uniques", 0)
-                                .build(),
-                    ImmutableMap.<String, Object>builder()
-                                .put("market", "spot")
-                                .put("uniques", 0)
-                                .build(),
-                    ImmutableMap.<String, Object>builder()
-                                .put("market", "upfront")
-                                .put("uniques", 0)
-                                .build()
-                )
-            )
+            new TopNResultValue(expectedList)
         )
     );
     assertExpectedResults(expectedResults, query);
@@ -401,7 +438,7 @@ public class TopNQueryRunnerTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(QueryRunnerTestHelper.marketDimension)
+        .dimension(marketStr)
         .metric(QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric)
         .threshold(3)
         .intervals(QueryRunnerTestHelper.fullOnInterval)
@@ -422,17 +459,17 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                        .put("market", "spot")
+                        .put(marketStr, spotVal)
                         .put(QueryRunnerTestHelper.uniqueMetric, QueryRunnerTestHelper.UNIQUES_9)
                         .put(QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric, QueryRunnerTestHelper.UNIQUES_9)
                         .build(),
                     ImmutableMap.<String, Object>builder()
-                        .put("market", "total_market")
+                        .put(marketStr, totalMarketVal)
                         .put(QueryRunnerTestHelper.uniqueMetric, QueryRunnerTestHelper.UNIQUES_2)
                         .put(QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric, QueryRunnerTestHelper.UNIQUES_2)
                         .build(),
                     ImmutableMap.<String, Object>builder()
-                        .put("market", "upfront")
+                        .put(marketStr, upfrontVal)
                         .put(QueryRunnerTestHelper.uniqueMetric, QueryRunnerTestHelper.UNIQUES_2)
                         .put(QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric, QueryRunnerTestHelper.UNIQUES_2)
                         .build()
@@ -452,7 +489,7 @@ public class TopNQueryRunnerTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(QueryRunnerTestHelper.marketDimension)
+        .dimension(marketStr)
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
@@ -470,21 +507,21 @@ public class TopNQueryRunnerTest
                     ImmutableMap.<String, Object>of(
                         "addRowsIndexConstant", 5356.814697265625D,
                         "index", 5351.814697265625D,
-                        QueryRunnerTestHelper.marketDimension, "total_market",
+                        marketStr, totalMarketVal,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2,
                         "rows", 4L
                     ),
                     ImmutableMap.<String, Object>of(
                         "addRowsIndexConstant", 4880.669677734375D,
                         "index", 4875.669677734375D,
-                        QueryRunnerTestHelper.marketDimension, "upfront",
+                        marketStr, upfrontVal,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2,
                         "rows", 4L
                     ),
                     ImmutableMap.<String, Object>of(
                         "addRowsIndexConstant", 2250.8768157958984D,
                         "index", 2231.8768157958984D,
-                        QueryRunnerTestHelper.marketDimension, "spot",
+                        marketStr, spotVal,
                         "uniques", QueryRunnerTestHelper.UNIQUES_9,
                         "rows", 18L
                     )
@@ -558,7 +595,7 @@ public class TopNQueryRunnerTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(QueryRunnerTestHelper.marketDimension)
+        .dimension(marketStr)
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
@@ -573,21 +610,21 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "total_market",
+                        marketStr, totalMarketVal,
                         "rows", 4L,
                         "index", 5351.814697265625D,
                         "addRowsIndexConstant", 5356.814697265625D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "upfront",
+                        marketStr, upfrontVal,
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "spot",
+                        marketStr, spotVal,
                         "rows", 18L,
                         "index", 2231.8768157958984D,
                         "addRowsIndexConstant", 2250.8768157958984D,
@@ -606,7 +643,7 @@ public class TopNQueryRunnerTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(QueryRunnerTestHelper.marketDimension)
+        .dimension(marketStr)
         .metric(new NumericTopNMetricSpec("uniques"))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
@@ -621,21 +658,21 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        "market", "spot",
+                        marketStr, spotVal,
                         "rows", 18L,
                         "index", 2231.8768157958984D,
                         "addRowsIndexConstant", 2250.8768157958984D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_9
                     ),
                     ImmutableMap.<String, Object>of(
-                        "market", "total_market",
+                        marketStr, totalMarketVal,
                         "rows", 4L,
                         "index", 5351.814697265625D,
                         "addRowsIndexConstant", 5356.814697265625D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        "market", "upfront",
+                        marketStr, upfrontVal,
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
@@ -654,8 +691,8 @@ public class TopNQueryRunnerTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
-        .filters(QueryRunnerTestHelper.marketDimension, "total_market", "upfront", "spot")
-        .dimension(QueryRunnerTestHelper.marketDimension)
+        .filters(marketStr, totalMarketVal.toString(), upfrontVal.toString(), spotVal.toString())
+        .dimension(marketStr)
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
@@ -669,21 +706,21 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "total_market",
+                        marketStr, totalMarketVal,
                         "rows", 4L,
                         "index", 5351.814697265625D,
                         "addRowsIndexConstant", 5356.814697265625D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "upfront",
+                        marketStr, upfrontVal,
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "spot",
+                        marketStr, spotVal,
                         "rows", 18L,
                         "index", 2231.8768157958984D,
                         "addRowsIndexConstant", 2250.8768157958984D,
@@ -702,8 +739,8 @@ public class TopNQueryRunnerTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
-        .filters(QueryRunnerTestHelper.marketDimension, "total_market", "upfront")
-        .dimension(QueryRunnerTestHelper.marketDimension)
+        .filters(marketStr, totalMarketVal.toString(), upfrontVal.toString())
+        .dimension(marketStr)
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
@@ -717,14 +754,14 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "total_market",
+                        marketStr, totalMarketVal,
                         "rows", 4L,
                         "index", 5351.814697265625D,
                         "addRowsIndexConstant", 5356.814697265625D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "upfront",
+                        marketStr, upfrontVal,
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
@@ -743,8 +780,8 @@ public class TopNQueryRunnerTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
-        .filters(QueryRunnerTestHelper.marketDimension, "upfront")
-        .dimension(QueryRunnerTestHelper.marketDimension)
+        .filters(marketStr, upfrontVal.toString())
+        .dimension(marketStr)
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
@@ -758,7 +795,7 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "upfront",
+                        marketStr, upfrontVal,
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
@@ -778,7 +815,7 @@ public class TopNQueryRunnerTest
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
         .filters(QueryRunnerTestHelper.qualityDimension, "mezzanine")
-        .dimension(QueryRunnerTestHelper.marketDimension)
+        .dimension(marketStr)
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
@@ -792,21 +829,21 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "upfront",
+                        marketStr, upfrontVal,
                         "rows", 2L,
                         "index", 2591.68359375D,
                         "addRowsIndexConstant", 2594.68359375D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_1
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "total_market",
+                        marketStr, totalMarketVal,
                         "rows", 2L,
                         "index", 2508.39599609375D,
                         "addRowsIndexConstant", 2511.39599609375D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_1
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "spot",
+                        marketStr, spotVal,
                         "rows", 2L,
                         "index", 220.63774871826172D,
                         "addRowsIndexConstant", 223.63774871826172D,
@@ -826,7 +863,7 @@ public class TopNQueryRunnerTest
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
         .filters(QueryRunnerTestHelper.qualityDimension, "mezzanine")
-        .dimension(QueryRunnerTestHelper.marketDimension)
+        .dimension(marketStr)
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
         .intervals(
@@ -844,21 +881,21 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "upfront",
+                        marketStr, upfrontVal,
                         "rows", 1L,
                         "index", new Float(1447.341160).doubleValue(),
                         "addRowsIndexConstant", new Float(1449.341160).doubleValue(),
                         "uniques", QueryRunnerTestHelper.UNIQUES_1
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "total_market",
+                        marketStr, totalMarketVal,
                         "rows", 1L,
                         "index", new Float(1314.839715).doubleValue(),
                         "addRowsIndexConstant", new Float(1316.839715).doubleValue(),
                         "uniques", QueryRunnerTestHelper.UNIQUES_1
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "spot",
+                        marketStr, spotVal,
                         "rows", 1L,
                         "index", new Float(109.705815).doubleValue(),
                         "addRowsIndexConstant", new Float(111.705815).doubleValue(),
@@ -877,8 +914,8 @@ public class TopNQueryRunnerTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
-        .filters(QueryRunnerTestHelper.marketDimension, "total_market", "upfront", "billyblank")
-        .dimension(QueryRunnerTestHelper.marketDimension)
+        .filters(marketStr, totalMarketVal.toString(), upfrontVal.toString(), getDimMapping("billyblank").toString())
+        .dimension(marketStr)
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
@@ -892,14 +929,14 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "total_market",
+                        marketStr, totalMarketVal,
                         "rows", 4L,
                         "index", 5351.814697265625D,
                         "addRowsIndexConstant", 5356.814697265625D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "upfront",
+                        marketStr, upfrontVal,
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
@@ -918,8 +955,8 @@ public class TopNQueryRunnerTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
-        .filters(QueryRunnerTestHelper.marketDimension, "billyblank")
-        .dimension(QueryRunnerTestHelper.marketDimension)
+        .filters(marketStr, getDimMapping("billyblank").toString())
+        .dimension(marketStr)
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
@@ -944,8 +981,8 @@ public class TopNQueryRunnerTest
                                       .fields(
                                           Lists.<DimFilter>newArrayList(
                                               Druids.newSelectorDimFilterBuilder()
-                                                    .dimension(QueryRunnerTestHelper.marketDimension)
-                                                    .value("billyblank")
+                                                    .dimension(marketStr)
+                                                    .value(getDimMapping("billyblank").toString())
                                                     .build(),
                                               Druids.newSelectorDimFilterBuilder()
                                                     .dimension(QueryRunnerTestHelper.qualityDimension)
@@ -957,7 +994,7 @@ public class TopNQueryRunnerTest
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
         .filters(andDimFilter)
-        .dimension(QueryRunnerTestHelper.marketDimension)
+        .dimension(marketStr)
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
@@ -981,7 +1018,7 @@ public class TopNQueryRunnerTest
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
         .filters(QueryRunnerTestHelper.placementishDimension, "m")
-        .dimension(QueryRunnerTestHelper.marketDimension)
+        .dimension(marketStr)
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
@@ -996,7 +1033,7 @@ public class TopNQueryRunnerTest
                     .dataSource(QueryRunnerTestHelper.dataSource)
                     .granularity(QueryRunnerTestHelper.allGran)
                     .filters(QueryRunnerTestHelper.qualityDimension, "mezzanine")
-                    .dimension(QueryRunnerTestHelper.marketDimension)
+                    .dimension(marketStr)
                     .metric(QueryRunnerTestHelper.indexMetric)
                     .threshold(4)
                     .intervals(QueryRunnerTestHelper.firstToThird)
@@ -1226,7 +1263,7 @@ public class TopNQueryRunnerTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
-        .filters(QueryRunnerTestHelper.marketDimension, "upfront")
+        .filters(marketStr, upfrontVal.toString())
         .dimension("doesn't exist")
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
@@ -1296,7 +1333,7 @@ public class TopNQueryRunnerTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(QueryRunnerTestHelper.marketDimension)
+        .dimension(marketStr)
         .metric(new LexicographicTopNMetricSpec(""))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
@@ -1310,21 +1347,21 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "spot",
+                        marketStr, spotVal,
                         "rows", 18L,
                         "index", 2231.8768157958984D,
                         "addRowsIndexConstant", 2250.8768157958984D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_9
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "total_market",
+                        marketStr, totalMarketVal,
                         "rows", 4L,
                         "index", 5351.814697265625D,
                         "addRowsIndexConstant", 5356.814697265625D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "upfront",
+                        marketStr, upfrontVal,
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
@@ -1343,8 +1380,8 @@ public class TopNQueryRunnerTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(QueryRunnerTestHelper.marketDimension)
-        .metric(new LexicographicTopNMetricSpec("spot"))
+        .dimension(marketStr)
+        .metric(new LexicographicTopNMetricSpec(spotVal.toString()))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -1357,14 +1394,14 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "total_market",
+                        marketStr, totalMarketVal,
                         "rows", 4L,
                         "index", 5351.814697265625D,
                         "addRowsIndexConstant", 5356.814697265625D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "upfront",
+                        marketStr, upfrontVal,
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
@@ -1380,11 +1417,12 @@ public class TopNQueryRunnerTest
   @Test
   public void testTopNLexicographicWithNonExistingPreviousStop()
   {
+    String stopVal = keyType == ValueType.STRING ? "t" : "1112";
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(QueryRunnerTestHelper.marketDimension)
-        .metric(new LexicographicTopNMetricSpec("t"))
+        .dimension(marketStr)
+        .metric(new LexicographicTopNMetricSpec(stopVal))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -1397,14 +1435,14 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "total_market",
+                        marketStr, totalMarketVal,
                         "rows", 4L,
                         "index", 5351.814697265625D,
                         "addRowsIndexConstant", 5356.814697265625D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "upfront",
+                        marketStr, upfrontVal,
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
@@ -1423,8 +1461,8 @@ public class TopNQueryRunnerTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(QueryRunnerTestHelper.marketDimension)
-        .metric(new InvertedTopNMetricSpec(new LexicographicTopNMetricSpec("upfront")))
+        .dimension(marketStr)
+        .metric(new InvertedTopNMetricSpec(new LexicographicTopNMetricSpec(upfrontVal.toString())))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -1437,14 +1475,14 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "total_market",
+                        marketStr, totalMarketVal,
                         "rows", 4L,
                         "index", 5351.814697265625D,
                         "addRowsIndexConstant", 5356.814697265625D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "spot",
+                        marketStr, spotVal,
                         "rows", 18L,
                         "index", 2231.8768157958984D,
                         "addRowsIndexConstant", 2250.8768157958984D,
@@ -1460,11 +1498,12 @@ public class TopNQueryRunnerTest
   @Test
   public void testTopNInvertedLexicographicWithNonExistingPreviousStop()
   {
+    String stopVal = keyType == ValueType.STRING ? "u" : "333.1";
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(QueryRunnerTestHelper.marketDimension)
-        .metric(new InvertedTopNMetricSpec(new LexicographicTopNMetricSpec("u")))
+        .dimension(marketStr)
+        .metric(new InvertedTopNMetricSpec(new LexicographicTopNMetricSpec(stopVal)))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -1477,14 +1516,14 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "total_market",
+                        marketStr, totalMarketVal,
                         "rows", 4L,
                         "index", 5351.814697265625D,
                         "addRowsIndexConstant", 5356.814697265625D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "spot",
+                        marketStr, spotVal,
                         "rows", 18L,
                         "index", 2231.8768157958984D,
                         "addRowsIndexConstant", 2250.8768157958984D,
@@ -1506,8 +1545,8 @@ public class TopNQueryRunnerTest
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension(
             new ExtractionDimensionSpec(
-                QueryRunnerTestHelper.marketDimension,
-                QueryRunnerTestHelper.marketDimension,
+                marketStr,
+                marketStr,
                 new JavaScriptExtractionFn("function(f) { return \"POTATO\"; }", false),
                 null
             )
@@ -1541,7 +1580,7 @@ public class TopNQueryRunnerTest
                     ImmutableMap.<String, Object>of(
                         "addRowsIndexConstant", 504542.5071372986D,
                         "index", 503332.5071372986D,
-                        QueryRunnerTestHelper.marketDimension, "POTATO",
+                        marketStr, "POTATO",
                         "uniques", QueryRunnerTestHelper.UNIQUES_9,
                         "rows", 1209L
                     )
@@ -1614,8 +1653,8 @@ public class TopNQueryRunnerTest
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension(
             new ExtractionDimensionSpec(
-                QueryRunnerTestHelper.marketDimension,
-                QueryRunnerTestHelper.marketDimension,
+                marketStr,
+                marketStr,
                 new RegexDimExtractionFn("(.)", false, null),
                 null
             )
@@ -1633,21 +1672,21 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "s",
+                        marketStr, spotVal.toString().substring(0,1),
                         "rows", 18L,
                         "index", 2231.8768157958984D,
                         "addRowsIndexConstant", 2250.8768157958984D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_9
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "t",
+                        marketStr, totalMarketVal.toString().substring(0,1),
                         "rows", 4L,
                         "index", 5351.814697265625D,
                         "addRowsIndexConstant", 5356.814697265625D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "u",
+                        marketStr, upfrontVal.toString().substring(0,1),
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
@@ -1669,14 +1708,14 @@ public class TopNQueryRunnerTest
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension(
             new ExtractionDimensionSpec(
-                QueryRunnerTestHelper.marketDimension,
-                QueryRunnerTestHelper.marketDimension,
+                marketStr,
+                marketStr,
                 new LookupExtractionFn(
                     new MapLookupExtractor(
                         ImmutableMap.of(
-                            "spot", "2spot0",
-                            "total_market", "1total_market0",
-                            "upfront", "3upfront0"
+                            spotVal.toString(), "2spot0",
+                            totalMarketVal.toString(), "1total_market0",
+                            upfrontVal.toString(), "3upfront0"
                         ),
                         false
                     ), false, "MISSING", true,
@@ -1698,21 +1737,21 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "2spot0",
+                        marketStr, "2spot0",
                         "rows", 18L,
                         "index", 2231.8768157958984D,
                         "addRowsIndexConstant", 2250.8768157958984D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_9
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "1total_market0",
+                        marketStr, "1total_market0",
                         "rows", 4L,
                         "index", 5351.814697265625D,
                         "addRowsIndexConstant", 5356.814697265625D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "3upfront0",
+                        marketStr, "3upfront0",
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
@@ -1734,14 +1773,14 @@ public class TopNQueryRunnerTest
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension(
             new ExtractionDimensionSpec(
-                QueryRunnerTestHelper.marketDimension,
-                QueryRunnerTestHelper.marketDimension,
+                marketStr,
+                marketStr,
                 new LookupExtractionFn(
                     new MapLookupExtractor(
                         ImmutableMap.of(
-                            "spot", "2spot0",
-                            "total_market", "1total_market0",
-                            "upfront", "3upfront0"
+                            spotVal.toString(), "2spot0",
+                            totalMarketVal.toString(), "1total_market0",
+                            upfrontVal.toString(), "3upfront0"
                         ),
                         false
                     ), false, "MISSING", false,
@@ -1763,21 +1802,21 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "2spot0",
+                        marketStr, "2spot0",
                         "rows", 18L,
                         "index", 2231.8768157958984D,
                         "addRowsIndexConstant", 2250.8768157958984D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_9
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "1total_market0",
+                        marketStr, "1total_market0",
                         "rows", 4L,
                         "index", 5351.814697265625D,
                         "addRowsIndexConstant", 5356.814697265625D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "3upfront0",
+                        marketStr, "3upfront0",
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
@@ -1800,14 +1839,14 @@ public class TopNQueryRunnerTest
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension(
             new ExtractionDimensionSpec(
-                QueryRunnerTestHelper.marketDimension,
-                QueryRunnerTestHelper.marketDimension,
+                marketStr,
+                marketStr,
                 new LookupExtractionFn(
                     new MapLookupExtractor(
                         ImmutableMap.of(
-                            "spot", "2spot0",
-                            "total_market", "1total_market0",
-                            "upfront", "3upfront0"
+                            spotVal.toString(), "2spot0",
+                            totalMarketVal.toString(), "1total_market0",
+                            upfrontVal.toString(), "3upfront0"
                         ),
                         false
                     ), true, null, true,
@@ -1829,21 +1868,21 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "2spot0",
+                        marketStr, "2spot0",
                         "rows", 18L,
                         "index", 2231.8768157958984D,
                         "addRowsIndexConstant", 2250.8768157958984D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_9
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "1total_market0",
+                        marketStr, "1total_market0",
                         "rows", 4L,
                         "index", 5351.814697265625D,
                         "addRowsIndexConstant", 5356.814697265625D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "3upfront0",
+                        marketStr, "3upfront0",
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
@@ -1865,16 +1904,16 @@ public class TopNQueryRunnerTest
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension(
             new ExtractionDimensionSpec(
-                QueryRunnerTestHelper.marketDimension,
-                QueryRunnerTestHelper.marketDimension,
+                marketStr,
+                marketStr,
                 new LookupExtractionFn(
                     new MapLookupExtractor(
                         ImmutableMap.of(
-                            "spot",
+                            spotVal.toString(),
                             "spot0",
-                            "total_market",
+                            totalMarketVal.toString(),
                             "total_market0",
-                            "upfront",
+                            upfrontVal.toString(),
                             "upfront0"
                         ),
                         false
@@ -1897,21 +1936,21 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "spot0",
+                        marketStr, "spot0",
                         "rows", 18L,
                         "index", 2231.8768157958984D,
                         "addRowsIndexConstant", 2250.8768157958984D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_9
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "total_market0",
+                        marketStr, "total_market0",
                         "rows", 4L,
                         "index", 5351.814697265625D,
                         "addRowsIndexConstant", 5356.814697265625D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "upfront0",
+                        marketStr, "upfront0",
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
@@ -1932,16 +1971,16 @@ public class TopNQueryRunnerTest
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension(
             new ExtractionDimensionSpec(
-                QueryRunnerTestHelper.marketDimension,
-                QueryRunnerTestHelper.marketDimension,
+                marketStr,
+                marketStr,
                 new LookupExtractionFn(
                     new MapLookupExtractor(
                         ImmutableMap.of(
-                            "spot",
+                            spotVal.toString(),
                             "2spot",
-                            "total_market",
+                            totalMarketVal.toString(),
                             "3total_market",
-                            "upfront",
+                            upfrontVal.toString(),
                             "1upfront"
                         ),
                         false
@@ -1964,21 +2003,21 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "1upfront",
+                        marketStr, "1upfront",
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "2spot",
+                        marketStr, "2spot",
                         "rows", 18L,
                         "index", 2231.8768157958984D,
                         "addRowsIndexConstant", 2250.8768157958984D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_9
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "3total_market",
+                        marketStr, "3total_market",
                         "rows", 4L,
                         "index", 5351.814697265625D,
                         "addRowsIndexConstant", 5356.814697265625D,
@@ -1999,16 +2038,16 @@ public class TopNQueryRunnerTest
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension(
             new ExtractionDimensionSpec(
-                QueryRunnerTestHelper.marketDimension,
-                QueryRunnerTestHelper.marketDimension,
+                marketStr,
+                marketStr,
                 new LookupExtractionFn(
                     new MapLookupExtractor(
                         ImmutableMap.of(
-                            "spot",
+                            spotVal.toString(),
                             "2spot",
-                            "total_market",
+                            totalMarketVal.toString(),
                             "3total_market",
-                            "upfront",
+                            upfrontVal.toString(),
                             "1upfront"
                         ),
                         false
@@ -2031,21 +2070,21 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "1upfront",
+                        marketStr, "1upfront",
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "2spot",
+                        marketStr, "2spot",
                         "rows", 18L,
                         "index", 2231.8768157958984D,
                         "addRowsIndexConstant", 2250.8768157958984D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_9
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "3total_market",
+                        marketStr, "3total_market",
                         "rows", 4L,
                         "index", 5351.814697265625D,
                         "addRowsIndexConstant", 5356.814697265625D,
@@ -2067,16 +2106,16 @@ public class TopNQueryRunnerTest
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension(
             new ExtractionDimensionSpec(
-                QueryRunnerTestHelper.marketDimension,
-                QueryRunnerTestHelper.marketDimension,
+                marketStr,
+                marketStr,
                 new LookupExtractionFn(
                     new MapLookupExtractor(
                         ImmutableMap.of(
-                            "spot",
+                            spotVal.toString(),
                             "2spot",
-                            "total_market",
+                            totalMarketVal.toString(),
                             "3total_market",
-                            "upfront",
+                            upfrontVal.toString(),
                             "1upfront"
                         ),
                         false
@@ -2099,21 +2138,21 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "1upfront",
+                        marketStr, "1upfront",
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "2spot",
+                        marketStr, "2spot",
                         "rows", 18L,
                         "index", 2231.8768157958984D,
                         "addRowsIndexConstant", 2250.8768157958984D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_9
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "3total_market",
+                        marketStr, "3total_market",
                         "rows", 4L,
                         "index", 5351.814697265625D,
                         "addRowsIndexConstant", 5356.814697265625D,
@@ -2134,8 +2173,8 @@ public class TopNQueryRunnerTest
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension(
             new ExtractionDimensionSpec(
-                QueryRunnerTestHelper.marketDimension,
-                QueryRunnerTestHelper.marketDimension,
+                marketStr,
+                marketStr,
                 new RegexDimExtractionFn("(.)", false, null),
                 null
             )
@@ -2153,21 +2192,21 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "s",
+                        marketStr, spotVal.toString().substring(0, 1),
                         "rows", 18L,
                         "index", 2231.8768157958984D,
                         "addRowsIndexConstant", 2250.8768157958984D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_9
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "t",
+                        marketStr, totalMarketVal.toString().substring(0,1),
                         "rows", 4L,
                         "index", 5351.814697265625D,
                         "addRowsIndexConstant", 5356.814697265625D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "u",
+                        marketStr, upfrontVal.toString().substring(0,1),
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
@@ -2188,8 +2227,8 @@ public class TopNQueryRunnerTest
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension(
             new ExtractionDimensionSpec(
-                QueryRunnerTestHelper.marketDimension,
-                QueryRunnerTestHelper.marketDimension,
+                marketStr,
+                marketStr,
                 new RegexDimExtractionFn("..(.)", false, null),
                 null
             )
@@ -2201,34 +2240,61 @@ public class TopNQueryRunnerTest
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
+    List<Map<String, Object>> expectedList;
+    if (keyType == ValueType.STRING) {
+      expectedList = Arrays.<Map<String, Object>>asList(
+          ImmutableMap.<String, Object>of(
+              marketStr, "t",
+              "rows", 4L,
+              "index", 5351.814697265625D,
+              "addRowsIndexConstant", 5356.814697265625D,
+              "uniques", QueryRunnerTestHelper.UNIQUES_2
+          ),
+          ImmutableMap.<String, Object>of(
+              marketStr, "o",
+              "rows", 18L,
+              "index", 2231.8768157958984D,
+              "addRowsIndexConstant", 2250.8768157958984D,
+              "uniques", QueryRunnerTestHelper.UNIQUES_9
+          ),
+          ImmutableMap.<String, Object>of(
+              marketStr, "f",
+              "rows", 4L,
+              "index", 4875.669677734375D,
+              "addRowsIndexConstant", 4880.669677734375D,
+              "uniques", QueryRunnerTestHelper.UNIQUES_2
+          )
+      );
+    } else {
+      expectedList = Arrays.<Map<String, Object>>asList(
+          ImmutableMap.<String, Object>of(
+              marketStr, "3",
+              "rows", 4L,
+              "index", 4875.669677734375D,
+              "addRowsIndexConstant", 4880.669677734375D,
+              "uniques", QueryRunnerTestHelper.UNIQUES_2
+          ),
+          ImmutableMap.<String, Object>of(
+              marketStr, "2",
+              "rows", 4L,
+              "index", 5351.814697265625D,
+              "addRowsIndexConstant", 5356.814697265625D,
+              "uniques", QueryRunnerTestHelper.UNIQUES_2
+          ),
+          ImmutableMap.<String, Object>of(
+              marketStr, "1",
+              "rows", 18L,
+              "index", 2231.8768157958984D,
+              "addRowsIndexConstant", 2250.8768157958984D,
+              "uniques", QueryRunnerTestHelper.UNIQUES_9
+          )
+      );
+    }
+
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
             new DateTime("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
-                    ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "t",
-                        "rows", 4L,
-                        "index", 5351.814697265625D,
-                        "addRowsIndexConstant", 5356.814697265625D,
-                        "uniques", QueryRunnerTestHelper.UNIQUES_2
-                    ),
-                    ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "o",
-                        "rows", 18L,
-                        "index", 2231.8768157958984D,
-                        "addRowsIndexConstant", 2250.8768157958984D,
-                        "uniques", QueryRunnerTestHelper.UNIQUES_9
-                    ),
-                    ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "f",
-                        "rows", 4L,
-                        "index", 4875.669677734375D,
-                        "addRowsIndexConstant", 4880.669677734375D,
-                        "uniques", QueryRunnerTestHelper.UNIQUES_2
-                    )
-                )
-            )
+            new TopNResultValue(expectedList)
         )
     );
     assertExpectedResults(expectedResults, query);
@@ -2237,18 +2303,19 @@ public class TopNQueryRunnerTest
   @Test
   public void testTopNLexicographicDimExtractionWithPreviousStop()
   {
+    String stopValue = keyType == ValueType.STRING ? "s" : "1";
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension(
             new ExtractionDimensionSpec(
-                QueryRunnerTestHelper.marketDimension,
-                QueryRunnerTestHelper.marketDimension,
+                marketStr,
+                marketStr,
                 new RegexDimExtractionFn("(.)", false, null),
                 null
             )
         )
-        .metric(new LexicographicTopNMetricSpec("s"))
+        .metric(new LexicographicTopNMetricSpec(stopValue))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -2261,14 +2328,14 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "t",
+                        marketStr, totalMarketVal.toString().substring(0,1),
                         "rows", 4L,
                         "index", 5351.814697265625D,
                         "addRowsIndexConstant", 5356.814697265625D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "u",
+                        marketStr, upfrontVal.toString().substring(0,1),
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
@@ -2284,12 +2351,13 @@ public class TopNQueryRunnerTest
   @Test
   public void testTopNLexicographicDimExtractionWithSortingPreservedAndPreviousStop()
   {
+    String stopValue = keyType == ValueType.STRING ? "s" : "1";
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension(
             new ExtractionDimensionSpec(
-                QueryRunnerTestHelper.marketDimension, QueryRunnerTestHelper.marketDimension,
+                marketStr, marketStr,
                 new DimExtractionFn()
                 {
                   @Override
@@ -2318,7 +2386,7 @@ public class TopNQueryRunnerTest
                 }, null
             )
         )
-        .metric(new LexicographicTopNMetricSpec("s"))
+        .metric(new LexicographicTopNMetricSpec(stopValue))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -2331,14 +2399,14 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "t",
+                        marketStr, totalMarketVal.toString().substring(0,1),
                         "rows", 4L,
                         "index", 5351.814697265625D,
                         "addRowsIndexConstant", 5356.814697265625D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "u",
+                        marketStr, upfrontVal.toString().substring(0,1),
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
@@ -2360,8 +2428,8 @@ public class TopNQueryRunnerTest
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension(
             new ExtractionDimensionSpec(
-                QueryRunnerTestHelper.marketDimension,
-                QueryRunnerTestHelper.marketDimension,
+                marketStr,
+                marketStr,
                 new RegexDimExtractionFn("(.)", false, null),
                 null
             )
@@ -2373,27 +2441,54 @@ public class TopNQueryRunnerTest
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
+    List<Map<String, Object>> expectedList;
+    if (keyType == ValueType.STRING) {
+      expectedList = Arrays.<Map<String, Object>>asList(
+          ImmutableMap.<String, Object>of(
+              marketStr, "t",
+              "rows", 4L,
+              "index", 5351.814697265625D,
+              "addRowsIndexConstant", 5356.814697265625D,
+              "uniques", QueryRunnerTestHelper.UNIQUES_2
+          ),
+          ImmutableMap.<String, Object>of(
+              marketStr, "s",
+              "rows", 18L,
+              "index", 2231.8768157958984D,
+              "addRowsIndexConstant", 2250.8768157958984D,
+              "uniques", QueryRunnerTestHelper.UNIQUES_9
+          )
+      );
+    } else {
+      expectedList = Arrays.<Map<String, Object>>asList(
+          ImmutableMap.<String, Object>of(
+              marketStr, "3",
+              "rows", 4L,
+              "index", 4875.669677734375D,
+              "addRowsIndexConstant", 4880.669677734375D,
+              "uniques", QueryRunnerTestHelper.UNIQUES_2
+          ),
+          ImmutableMap.<String, Object>of(
+              marketStr, "2",
+              "rows", 4L,
+              "index", 5351.814697265625D,
+              "addRowsIndexConstant", 5356.814697265625D,
+              "uniques", QueryRunnerTestHelper.UNIQUES_2
+          ),
+          ImmutableMap.<String, Object>of(
+              marketStr, "1",
+              "rows", 18L,
+              "index", 2231.8768157958984D,
+              "addRowsIndexConstant", 2250.8768157958984D,
+              "uniques", QueryRunnerTestHelper.UNIQUES_9
+          )
+      );
+    }
+
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
             new DateTime("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
-                    ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "t",
-                        "rows", 4L,
-                        "index", 5351.814697265625D,
-                        "addRowsIndexConstant", 5356.814697265625D,
-                        "uniques", QueryRunnerTestHelper.UNIQUES_2
-                    ),
-                    ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "s",
-                        "rows", 18L,
-                        "index", 2231.8768157958984D,
-                        "addRowsIndexConstant", 2250.8768157958984D,
-                        "uniques", QueryRunnerTestHelper.UNIQUES_9
-                    )
-                )
-            )
+            new TopNResultValue(expectedList)
         )
     );
     assertExpectedResults(expectedResults, query);
@@ -2402,45 +2497,66 @@ public class TopNQueryRunnerTest
   @Test
   public void testInvertedTopNLexicographicDimExtractionWithPreviousStop2()
   {
+    String stopValue = keyType == ValueType.STRING ? "p" : "3";
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension(
             new ExtractionDimensionSpec(
-                QueryRunnerTestHelper.marketDimension,
-                QueryRunnerTestHelper.marketDimension,
+                marketStr,
+                marketStr,
                 new RegexDimExtractionFn("..(.)", false, null),
                 null
             )
         )
-        .metric(new InvertedTopNMetricSpec(new LexicographicTopNMetricSpec("p")))
+        .metric(new InvertedTopNMetricSpec(new LexicographicTopNMetricSpec(stopValue)))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
+    List<Map<String, Object>> expectedList;
+    if (keyType == ValueType.STRING) {
+      expectedList = Arrays.<Map<String, Object>>asList(
+          ImmutableMap.<String, Object>of(
+              marketStr, "o",
+              "rows", 18L,
+              "index", 2231.8768157958984D,
+              "addRowsIndexConstant", 2250.8768157958984D,
+              "uniques", QueryRunnerTestHelper.UNIQUES_9
+          ),
+          ImmutableMap.<String, Object>of(
+              marketStr, "f",
+              "rows", 4L,
+              "index", 4875.669677734375D,
+              "addRowsIndexConstant", 4880.669677734375D,
+              "uniques", QueryRunnerTestHelper.UNIQUES_2
+          )
+      );
+    } else {
+      expectedList = Arrays.<Map<String, Object>>asList(
+          ImmutableMap.<String, Object>of(
+              marketStr, "2",
+              "rows", 4L,
+              "index", 5351.814697265625D,
+              "addRowsIndexConstant", 5356.814697265625D,
+              "uniques", QueryRunnerTestHelper.UNIQUES_2
+          ),
+          ImmutableMap.<String, Object>of(
+              marketStr, "1",
+              "rows", 18L,
+              "index", 2231.8768157958984D,
+              "addRowsIndexConstant", 2250.8768157958984D,
+              "uniques", QueryRunnerTestHelper.UNIQUES_9
+          )
+      );
+    }
+
     List<Result<TopNResultValue>> expectedResults = Arrays.asList(
         new Result<TopNResultValue>(
             new DateTime("2011-04-01T00:00:00.000Z"),
-            new TopNResultValue(
-                Arrays.<Map<String, Object>>asList(
-                    ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "o",
-                        "rows", 18L,
-                        "index", 2231.8768157958984D,
-                        "addRowsIndexConstant", 2250.8768157958984D,
-                        "uniques", QueryRunnerTestHelper.UNIQUES_9
-                    ),
-                    ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "f",
-                        "rows", 4L,
-                        "index", 4875.669677734375D,
-                        "addRowsIndexConstant", 4880.669677734375D,
-                        "uniques", QueryRunnerTestHelper.UNIQUES_2
-                    )
-                )
-            )
+            new TopNResultValue(expectedList)
         )
     );
     assertExpectedResults(expectedResults, query);
@@ -2460,7 +2576,7 @@ public class TopNQueryRunnerTest
       @Override
       public String apply(String dimValue)
       {
-        return dimValue.equals("total_market") ? null : dimValue;
+        return dimValue.equals(totalMarketVal.toString()) ? null : dimValue;
       }
 
       @Override
@@ -2486,8 +2602,8 @@ public class TopNQueryRunnerTest
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .dimension(
             new ExtractionDimensionSpec(
-                QueryRunnerTestHelper.marketDimension,
-                QueryRunnerTestHelper.marketDimension,
+                marketStr,
+                marketStr,
                 nullStringDimExtraction,
                 null
             )
@@ -2501,7 +2617,7 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "spot",
+                        marketStr, spotVal.toString(),
                         "rows", 18L,
                         "index", 2231.8768157958984D,
                         "addRowsIndexConstant", 2250.8768157958984D,
@@ -2509,14 +2625,14 @@ public class TopNQueryRunnerTest
                     ),
                     new LinkedHashMap<String, Object>()
                     {{
-                        put(QueryRunnerTestHelper.marketDimension, null);
+                        put(marketStr, null);
                         put("rows", 4L);
                         put("index", 5351.814697265625D);
                         put("addRowsIndexConstant", 5356.814697265625D);
                         put("uniques", QueryRunnerTestHelper.UNIQUES_2);
                       }},
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "upfront",
+                        marketStr, upfrontVal.toString(),
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
@@ -2550,7 +2666,7 @@ public class TopNQueryRunnerTest
       @Override
       public String apply(String dimValue)
       {
-        return dimValue.equals("total_market") ? "" : dimValue;
+        return dimValue.equals(totalMarketVal.toString()) ? "" : dimValue;
       }
 
       @Override
@@ -2576,8 +2692,8 @@ public class TopNQueryRunnerTest
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .dimension(
             new ExtractionDimensionSpec(
-                QueryRunnerTestHelper.marketDimension,
-                QueryRunnerTestHelper.marketDimension,
+                marketStr,
+                marketStr,
                 emptyStringDimExtraction,
                 null
             )
@@ -2591,7 +2707,7 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "spot",
+                        marketStr, spotVal.toString(),
                         "rows", 18L,
                         "index", 2231.8768157958984D,
                         "addRowsIndexConstant", 2250.8768157958984D,
@@ -2599,14 +2715,14 @@ public class TopNQueryRunnerTest
                     ),
                     new LinkedHashMap<String, Object>()
                     {{
-                        put(QueryRunnerTestHelper.marketDimension, "");
+                        put(marketStr, "");
                         put("rows", 4L);
                         put("index", 5351.814697265625D);
                         put("addRowsIndexConstant", 5356.814697265625D);
                         put("uniques", QueryRunnerTestHelper.UNIQUES_2);
                       }},
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "upfront",
+                        marketStr, upfrontVal.toString(),
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
@@ -2627,7 +2743,7 @@ public class TopNQueryRunnerTest
         new TopNQueryBuilder()
             .dataSource(QueryRunnerTestHelper.dataSource)
             .granularity(QueryRunnerTestHelper.allGran)
-            .dimension(QueryRunnerTestHelper.marketDimension)
+            .dimension(marketStr)
             .metric(new InvertedTopNMetricSpec(new NumericTopNMetricSpec(QueryRunnerTestHelper.indexMetric)))
             .threshold(3)
             .intervals(QueryRunnerTestHelper.firstToThird)
@@ -2641,21 +2757,21 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "spot",
+                        marketStr, spotVal,
                         "rows", 18L,
                         "index", 2231.8768157958984D,
                         "addRowsIndexConstant", 2250.8768157958984D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_9
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "upfront",
+                        marketStr, upfrontVal,
                         "rows", 4L,
                         "index", 4875.669677734375D,
                         "addRowsIndexConstant", 4880.669677734375D,
                         "uniques", QueryRunnerTestHelper.UNIQUES_2
                     ),
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "total_market",
+                        marketStr, totalMarketVal,
                         "rows", 4L,
                         "index", 5351.814697265625D,
                         "addRowsIndexConstant", 5356.814697265625D,
@@ -2675,14 +2791,14 @@ public class TopNQueryRunnerTest
         new TopNQueryBuilder()
             .dataSource(QueryRunnerTestHelper.dataSource)
             .granularity(QueryRunnerTestHelper.allGran)
-            .dimension(QueryRunnerTestHelper.marketDimension)
+            .dimension(marketStr)
             .metric(new NumericTopNMetricSpec("numVals"))
             .threshold(10)
             .intervals(QueryRunnerTestHelper.firstToThird)
             .aggregators(
                 Lists.<AggregatorFactory>newArrayList(
                     new CardinalityAggregatorFactory(
-                        "numVals", ImmutableList.of(QueryRunnerTestHelper.marketDimension), false
+                        "numVals", ImmutableList.of(marketStr), false
                     )
                 )
             )
@@ -2694,15 +2810,15 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        "market", "spot",
+                        marketStr, spotVal,
                         "numVals", 1.0002442201269182d
                     ),
                     ImmutableMap.<String, Object>of(
-                        "market", "total_market",
+                        marketStr, totalMarketVal,
                         "numVals", 1.0002442201269182d
                     ),
                     ImmutableMap.<String, Object>of(
-                        "market", "upfront",
+                        marketStr, upfrontVal,
                         "numVals", 1.0002442201269182d
                     )
                 )
@@ -2718,7 +2834,7 @@ public class TopNQueryRunnerTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(QueryRunnerTestHelper.marketDimension)
+        .dimension(marketStr)
         .metric(QueryRunnerTestHelper.dependentPostAggMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.fullOnInterval)
@@ -2748,7 +2864,7 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put(QueryRunnerTestHelper.marketDimension, "total_market")
+                                .put(marketStr, totalMarketVal)
                                 .put("rows", 186L)
                                 .put("index", 215679.82879638672D)
                                 .put("addRowsIndexConstant", 215866.82879638672D)
@@ -2762,7 +2878,7 @@ public class TopNQueryRunnerTest
                                 )
                                 .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put(QueryRunnerTestHelper.marketDimension, "upfront")
+                                .put(marketStr, upfrontVal)
                                 .put("rows", 186L)
                                 .put("index", 192046.1060180664D)
                                 .put("addRowsIndexConstant", 192233.1060180664D)
@@ -2776,7 +2892,7 @@ public class TopNQueryRunnerTest
                                 )
                                 .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put(QueryRunnerTestHelper.marketDimension, "spot")
+                                .put(marketStr, spotVal)
                                 .put("rows", 837L)
                                 .put("index", 95606.57232284546D)
                                 .put("addRowsIndexConstant", 96444.57232284546D)
@@ -2802,7 +2918,7 @@ public class TopNQueryRunnerTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(QueryRunnerTestHelper.marketDimension)
+        .dimension(marketStr)
         .metric(QueryRunnerTestHelper.dependentPostAggMetric)
         .threshold(4)
         .intervals(QueryRunnerTestHelper.fullOnInterval)
@@ -2828,7 +2944,7 @@ public class TopNQueryRunnerTest
     TopNResultValue topNResult = new TopNResultValue(
         Arrays.<Map<String, Object>>asList(
             ImmutableMap.<String, Object>builder()
-                        .put(QueryRunnerTestHelper.marketDimension, "total_market")
+                        .put(marketStr, totalMarketVal)
                         .put("rows", 186L)
                         .put("index", 215679.82879638672D)
                         .put("addRowsIndexConstant", 215866.82879638672D)
@@ -2838,7 +2954,7 @@ public class TopNQueryRunnerTest
                         .put("minIndex", 792.3260498046875D)
                         .build(),
             ImmutableMap.<String, Object>builder()
-                        .put(QueryRunnerTestHelper.marketDimension, "upfront")
+                        .put(marketStr, upfrontVal)
                         .put("rows", 186L)
                         .put("index", 192046.1060180664D)
                         .put("addRowsIndexConstant", 192233.1060180664D)
@@ -2848,7 +2964,7 @@ public class TopNQueryRunnerTest
                         .put("minIndex", 545.9906005859375D)
                         .build(),
             ImmutableMap.<String, Object>builder()
-                        .put(QueryRunnerTestHelper.marketDimension, "spot")
+                        .put(marketStr, spotVal)
                         .put("rows", 837L)
                         .put("index", 95606.57232284546D)
                         .put("addRowsIndexConstant", 96444.57232284546D)
@@ -2877,7 +2993,7 @@ public class TopNQueryRunnerTest
     );
     Sequence<Result<TopNResultValue>> results = runWithMerge(query);
     for (Result<TopNResultValue> result : Sequences.toList(results, new ArrayList<Result<TopNResultValue>>())) {
-      Assert.assertEquals(result.getValue(), result.getValue()); // TODO: fix this test
+      Assert.assertEquals(result.getValue(), result.getValue());
     }
   }
 
@@ -2895,7 +3011,7 @@ public class TopNQueryRunnerTest
             )
         )
         .granularity(QueryRunnerTestHelper.allGran)
-        .dimension(QueryRunnerTestHelper.marketDimension)
+        .dimension(marketStr)
         .metric("ntimestamps")
         .threshold(3)
         .build();
@@ -2906,7 +3022,7 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        "market", "spot",
+                        marketStr, spotVal,
                         "rows",
                         18L,
                         "ntimestamps",
@@ -2915,7 +3031,7 @@ public class TopNQueryRunnerTest
                         23429865600000L
                     ),
                     ImmutableMap.<String, Object>of(
-                        "market", "total_market",
+                        marketStr, totalMarketVal,
                         "rows",
                         4L,
                         "ntimestamps",
@@ -2924,7 +3040,7 @@ public class TopNQueryRunnerTest
                         5206636800000L
                     ),
                     ImmutableMap.<String, Object>of(
-                        "market", "upfront",
+                        marketStr, upfrontVal,
                         "rows",
                         4L,
                         "ntimestamps",
@@ -3189,7 +3305,7 @@ public class TopNQueryRunnerTest
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryGranularity.ALL)
-        .dimension(QueryRunnerTestHelper.marketDimension)
+        .dimension(marketStr)
         .metric(new AlphaNumericTopNMetricSpec(null))
         .threshold(2)
         .intervals(QueryRunnerTestHelper.secondOnly)
@@ -3201,11 +3317,11 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.asList(
                     ImmutableMap.<String, Object>of(
-                        "market", "spot",
+                        marketStr, spotVal,
                         "rows", 9L
                     ),
                     ImmutableMap.<String, Object>of(
-                        "market", "total_market",
+                        marketStr, totalMarketVal,
                         "rows", 2L
                     )
                 )
@@ -3219,13 +3335,13 @@ public class TopNQueryRunnerTest
   public void testTopNWithExtractionFilter()
   {
     Map<String, String> extractionMap = new HashMap<>();
-    extractionMap.put("spot", "spot0");
+    extractionMap.put(spotVal.toString(), "spot0");
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
     LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, false);
 
     TopNQuery query = new TopNQueryBuilder().dataSource(QueryRunnerTestHelper.dataSource)
                                             .granularity(QueryRunnerTestHelper.allGran)
-                                            .dimension(QueryRunnerTestHelper.marketDimension)
+                                            .dimension(marketStr)
                                             .metric("rows")
                                             .threshold(3)
                                             .intervals(QueryRunnerTestHelper.firstToThird)
@@ -3233,7 +3349,7 @@ public class TopNQueryRunnerTest
                                             .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
                                             .filters(
                                                 new ExtractionDimFilter(
-                                                    QueryRunnerTestHelper.marketDimension,
+                                                    marketStr,
                                                     "spot0",
                                                     lookupExtractionFn,
                                                     null
@@ -3247,7 +3363,7 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
-                        QueryRunnerTestHelper.marketDimension, "spot",
+                        marketStr, spotVal,
                         "rows", 18L,
                         "index", 2231.8768157958984D,
                         "addRowsIndexConstant", 2250.8768157958984D,

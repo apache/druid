@@ -36,7 +36,20 @@ An example dataSchema is shown below:
         "format" : "auto"
       },
       "dimensionsSpec" : {
-        "dimensions": ["page","language","user","unpatrolled","newPage","robot","anonymous","namespace","continent","country","region","city"],
+        "dimensions": ["page","language","user","unpatrolled","newPage","robot","anonymous",
+                       "namespace","continent","country","region",
+                       {"name": "city",
+                        "type": "string"
+                       }
+                       {"name": "user_id",
+                        "type": "long"
+                       },
+                       {"name": "coordinates",
+                        "type": "spatial"
+                       },
+                       {"name": "weighting_factor",
+                        "type": "float"
+                       }],
         "dimensionExclusions" : [],
         "spatialDimensions" : []
       }
@@ -169,9 +182,35 @@ handle all formatting decisions on their own, without using the ParseSpec.
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| dimensions | JSON String array | The names of the dimensions. If this is an empty array, Druid will treat all columns that are not timestamp or metric columns as dimension columns. | yes |
+| dimensions | JSON String/Object array | An array of Strings and/or DimensionSchema objects. If this is an empty array, Druid will treat all columns that are not timestamp or metric columns as dimension columns. | yes |
 | dimensionExclusions | JSON String array | The names of dimensions to exclude from ingestion. | no (default == [] |
-| spatialDimensions | JSON Object array | An array of [spatial dimensions](../development/geo.html) | no (default == [] |
+| spatialDimensions | JSON Object array | @Deprecated, use DimensionSchema objects instead. An array of [spatial dimensions](../development/geo.html) | no (default == [] | 
+
+#### DimensionSchema
+
+A DimensionSchema defines the name, type, and additional properties of a dimension to be ingested. 
+
+There are several supported types: "string", "long", "float", and "spatial".
+
+If "type" is not specified, or a String is provided in the dimensions array instead of a DimensionSchema object, a default String DimensionSchema will be used for that dimension.
+
+##### String/Long/Float DimensionSchema
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| name | string | The name of this dimension. | yes |
+| type | string | The type of dimension | no (default == 'string') |
+
+##### Spatial DimensionSchema
+See [spatial dimensions](../development/geo.html)
+
+A spatial dimension may be constructed from multiple other dimensions or it may already exist as part of an event. If a spatial dimension already exists, it must be an array of coordinate values.
+
+| Field | Type | Description | Required |
+|-------|------|-------------|----------|
+| name | string | The name of this dimension. | yes |
+| type | string | The type of dimension | no (default == 'string') |
+| dims | string array | A list of dimension names that comprise a spatial dimension.|no|
 
 ## GranularitySpec
 

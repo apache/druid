@@ -28,6 +28,11 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.segment.DimensionHandlerUtil;
+import io.druid.segment.FloatDimensionHandler;
+import io.druid.segment.LongDimensionHandler;
+import io.druid.segment.StringDimensionHandler;
+import io.druid.segment.column.ValueType;
 import org.joda.time.DateTime;
 
 import java.util.Arrays;
@@ -50,10 +55,12 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
   private final PriorityQueue<DimValHolder> pQueue;
   private final Comparator<DimValHolder> dimValComparator;
   private final String[] aggFactoryNames;
-  private static final Comparator<String> dimNameComparator = new Comparator<String>()
+  //private final Map<String, ValueType> typeHints;
+  //private final Function valueTransformer;
+  private static final Comparator<Comparable> dimNameComparator = new Comparator<Comparable>()
   {
     @Override
-    public int compare(String o1, String o2)
+    public int compare(Comparable o1, Comparable o2)
     {
       int retval;
       if (null == o1) {
@@ -80,7 +87,8 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
       int threshold,
       final Comparator comparator,
       List<AggregatorFactory> aggFactories,
-      List<PostAggregator> postAggs
+      List<PostAggregator> postAggs,
+      Map<String, ValueType> typeHints
   )
   {
     this.timestamp = timestamp;
@@ -90,6 +98,18 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
 
     this.postAggs = AggregatorUtil.pruneDependentPostAgg(postAggs, this.metricName);
     this.threshold = threshold;
+    //this.typeHints = typeHints;
+
+    /*
+    if(this.typeHints != null) {
+      String dimName = dimSpec.getDimension();
+      ValueType dimType = this.typeHints.get(dimName);
+      valueTransformer = DimensionHandlerUtil.getTransformerForType(dimType);
+    } else {
+      valueTransformer = StringDimensionHandler.STRING_TRANSFORMER;
+    }
+    */
+
     this.metricComparator = comparator;
     this.dimValComparator = new Comparator<DimValHolder>()
     {
@@ -100,6 +120,10 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
 
         if (retVal == 0) {
           retVal = dimNameComparator.compare(d1.getDimName(), d2.getDimName());
+          /*
+          retVal = dimNameComparator.compare((Comparable) valueTransformer.apply(d1.getDimName()),
+                                             (Comparable) valueTransformer.apply(d2.getDimName()));
+          */
         }
 
         return retVal;
@@ -114,7 +138,7 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
 
   @Override
   public TopNNumericResultBuilder addEntry(
-      String dimName,
+      Comparable dimName,
       Object dimValIndex,
       Object[] metricVals
   )
@@ -194,9 +218,12 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
     final Object dimValue = dimensionAndMetricValueExtractor.getDimensionValue(metricName);
 
     if (shouldAdd(dimValue)) {
+      //Comparable transformedDimVal = (Comparable) dimensionAndMetricValueExtractor.getDimensionValue(dimSpec.getOutputName());
+      //transformedDimVal = (Comparable) valueTransformer.apply(transformedDimVal);
       final DimValHolder valHolder = new DimValHolder.Builder()
           .withTopNMetricVal(dimValue)
-          .withDimName(dimensionAndMetricValueExtractor.getStringDimensionValue(dimSpec.getOutputName()))
+          //.withDimName(transformedDimVal)
+          .withDimName((Comparable) dimensionAndMetricValueExtractor.getDimensionValue(dimSpec.getOutputName()))
           .withMetricValues(dimensionAndMetricValueExtractor.getBaseObject())
           .build();
       pQueue.add(valHolder);
@@ -228,6 +255,10 @@ public class TopNNumericResultBuilder implements TopNResultBuilder
 
             if (retVal == 0) {
               retVal = dimNameComparator.compare(d1.getDimName(), d2.getDimName());
+              /*
+              retVal = dimNameComparator.compare((Comparable) valueTransformer.apply(d1.getDimName()),
+                                                 (Comparable) valueTransformer.apply(d2.getDimName()));
+                                                 */
             }
 
             return retVal;

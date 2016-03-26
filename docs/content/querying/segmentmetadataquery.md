@@ -54,14 +54,14 @@ The format of the result is:
 } ]
 ```
 
-Dimension columns will have type `STRING`.
+Dimension columns will have type `LONG`, `FLOAT`, or `STRING`.
 Metric columns will have type `FLOAT` or `LONG` or name of the underlying complex type such as `hyperUnique` in case of COMPLEX metric.
 Timestamp column will have type `LONG`.
 
 If the `errorMessage` field is non-null, you should not trust the other fields in the response. Their contents are
 undefined.
 
-Only columns which are dimensions (ie, have type `STRING`) will have any cardinality. Rest of the columns (timestamp and metric columns) will show cardinality as `null`.
+Only columns which are dimensions with type `STRING` will have any cardinality. Rest of the columns (timestamp, numeric dimension, and metric columns) will show cardinality as `null`.
 
 ### intervals
 

@@ -75,16 +75,22 @@ public class SegmentAnalyzerTest
         columns.size()
     ); // All columns including time and empty/null column
 
+    int dimIndex = 0;
     for (String dimension : TestIndex.DIMENSIONS) {
       final ColumnAnalysis columnAnalysis = columns.get(dimension);
-
-      Assert.assertEquals(dimension, ValueType.STRING.name(), columnAnalysis.getType());
+      String typeName = TestIndex.DIMENSION_SCHEMAS[dimIndex].getValueType().toString();
+      Assert.assertEquals(dimension, typeName, columnAnalysis.getType());
       if (analyses == null) {
-        Assert.assertTrue(dimension, columnAnalysis.getCardinality() > 0);
+        if (typeName.equals(ValueType.STRING.name())) {
+          Assert.assertTrue(dimension, columnAnalysis.getCardinality() > 0);
+        }
       } else {
-        Assert.assertEquals(dimension, 0, columnAnalysis.getCardinality().longValue());
+        if (typeName.equals(ValueType.STRING.name())) {
+          Assert.assertEquals(dimension, 0, columnAnalysis.getCardinality().longValue());
+        }
         Assert.assertEquals(dimension, 0, columnAnalysis.getSize());
       }
+      dimIndex++;
     }
 
     for (String metric : TestIndex.METRICS) {
@@ -125,20 +131,27 @@ public class SegmentAnalyzerTest
         columns.size()
     ); // All columns including time and excluding empty/null column
 
+    int dimIndex = 0;
     for (String dimension : TestIndex.DIMENSIONS) {
       final ColumnAnalysis columnAnalysis = columns.get(dimension);
       if (dimension.equals("null_column")) {
         Assert.assertNull(columnAnalysis);
       } else {
-        Assert.assertEquals(dimension, ValueType.STRING.name(), columnAnalysis.getType());
+        String typeName = TestIndex.DIMENSION_SCHEMAS[dimIndex].getValueType().toString();
+        Assert.assertEquals(dimension, typeName, columnAnalysis.getType());
         if (analyses == null) {
           Assert.assertTrue(dimension, columnAnalysis.getSize() > 0);
-          Assert.assertTrue(dimension, columnAnalysis.getCardinality() > 0);
+          if (typeName.equals(ValueType.STRING.name())) {
+            Assert.assertTrue(dimension, columnAnalysis.getCardinality() > 0);
+          }
         } else {
-          Assert.assertEquals(dimension, 0, columnAnalysis.getCardinality().longValue());
+          if (typeName.equals(ValueType.STRING.name())) {
+            Assert.assertEquals(dimension, 0, columnAnalysis.getCardinality().longValue());
+          }
           Assert.assertEquals(dimension, 0, columnAnalysis.getSize());
         }
       }
+      dimIndex++;
     }
 
     for (String metric : TestIndex.METRICS) {
