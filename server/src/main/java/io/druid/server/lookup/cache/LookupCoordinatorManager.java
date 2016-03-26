@@ -159,7 +159,7 @@ public class LookupCoordinatorManager
         lookupCoordinatorManagerConfig.getHostDeleteTimeout()
     ).get()) {
       // 404 is ok here, that means it was already deleted
-      if (!httpStatusIsSuccess(returnCode.get()) || !httpStatusIsNotFound(returnCode.get())) {
+      if (!httpStatusIsSuccess(returnCode.get()) && !httpStatusIsNotFound(returnCode.get())) {
         final ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try {
           StreamUtils.copyAndClose(result, baos);
