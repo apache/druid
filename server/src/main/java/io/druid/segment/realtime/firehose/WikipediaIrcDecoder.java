@@ -24,10 +24,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.maxmind.db.CHMCache;
 import com.maxmind.geoip2.DatabaseReader;
 import com.maxmind.geoip2.exception.GeoIp2Exception;
-import com.maxmind.geoip2.model.CityResponse;
+import com.maxmind.geoip2.model.Omni;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
@@ -124,7 +123,7 @@ class WikipediaIrcDecoder implements IrcDecoder
 
   private DatabaseReader openGeoIpDb(File geoDb) {
     try {
-      DatabaseReader reader = new DatabaseReader.Builder(geoDb).withCache(new CHMCache()).build();
+      DatabaseReader reader = new DatabaseReader(geoDb);
       log.info("Using geo ip database at [%s].", geoDb);
       return reader;
     } catch (IOException e) {
@@ -197,7 +196,7 @@ class WikipediaIrcDecoder implements IrcDecoder
     if (anonymous) {
       try {
         final InetAddress ip = InetAddress.getByName(ipMatch.group());
-        final CityResponse lookup = geoLookup.city(ip);
+        final Omni lookup = geoLookup.omni(ip);
 
         dimensions.put("continent", lookup.getContinent().getName());
         dimensions.put("country", lookup.getCountry().getName());
