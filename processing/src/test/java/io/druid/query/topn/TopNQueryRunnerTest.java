@@ -377,17 +377,17 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "total_market")
-                                .put("uniques", 0)
-                                .build(),
+                        .put("market", "spot")
+                        .put("uniques", 0)
+                        .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "spot")
-                                .put("uniques", 0)
-                                .build(),
+                        .put("market", "total_market")
+                        .put("uniques", 0)
+                        .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "upfront")
-                                .put("uniques", 0)
-                                .build()
+                        .put("market", "upfront")
+                        .put("uniques", 0)
+                        .build()
                 )
             )
         )
