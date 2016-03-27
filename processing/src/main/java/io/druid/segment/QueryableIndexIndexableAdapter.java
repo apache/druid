@@ -309,7 +309,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
       return EmptyIndexedInts.EMPTY_INDEXED_INTS;
     }
 
-    return new BitmapCompressedIndexedInts(bitmaps.getBitmap(value));
+    return new BitmapCompressedIndexedInts(bitmaps.getBitmap(bitmaps.getIndex(value)));
   }
 
   @Override

@@ -32,13 +32,20 @@ import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.DimFilters;
 import io.druid.query.filter.ExtractionDimFilter;
+import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.data.ArrayIndexed;
+import io.druid.segment.data.BitmapSerdeFactory;
+import io.druid.segment.data.ConciseBitmapSerdeFactory;
+import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.Indexed;
+import io.druid.segment.data.RoaringBitmapSerdeFactory;
+import io.druid.segment.serde.BitmapIndexColumnPartSupplier;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.util.Arrays;
 import java.util.Map;
 
 /**
@@ -61,20 +68,22 @@ public class ExtractionDimFilterTest
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
-        new Object[]{new ConciseBitmapFactory()},
-        new Object[]{new RoaringBitmapFactory()}
+        new Object[]{new ConciseBitmapFactory(), new ConciseBitmapSerdeFactory()},
+        new Object[]{new RoaringBitmapFactory(), new RoaringBitmapSerdeFactory()}
     );
   }
 
-  public ExtractionDimFilterTest(BitmapFactory bitmapFactory)
+  public ExtractionDimFilterTest(BitmapFactory bitmapFactory, BitmapSerdeFactory bitmapSerdeFactory)
   {
     final MutableBitmap mutableBitmap = bitmapFactory.makeEmptyMutableBitmap();
     mutableBitmap.add(1);
     this.foo1BitMap = bitmapFactory.makeImmutableBitmap(mutableBitmap);
     this.factory = bitmapFactory;
+    this.serdeFactory = bitmapSerdeFactory;
   }
 
   private final BitmapFactory factory;
+  private final BitmapSerdeFactory serdeFactory;
   private final ImmutableBitmap foo1BitMap;
 
   private final BitmapIndexSelector BITMAP_INDEX_SELECTOR = new BitmapIndexSelector()
@@ -102,6 +111,16 @@ public class ExtractionDimFilterTest
     public ImmutableBitmap getBitmapIndex(String dimension, String value)
     {
       return "foo1".equals(value) ? foo1BitMap : null;
+    }
+
+    @Override
+    public BitmapIndex getBitmapIndex(String dimension)
+    {
+      return new BitmapIndexColumnPartSupplier(
+          factory,
+          GenericIndexed.fromIterable(Arrays.asList(foo1BitMap), serdeFactory.getObjectStrategy()),
+          GenericIndexed.fromIterable(Arrays.asList("foo1"), GenericIndexed.STRING_STRATEGY)
+      ).get();
     }
 
     @Override
