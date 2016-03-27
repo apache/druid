@@ -127,6 +127,14 @@ public class GenericIndexed<T> implements Indexed<T>
     return bufferIndexed.get(index);
   }
 
+  /**
+   * Returns the index of "value" in this GenericIndexed object, or (-(insertion point) - 1) if the value is not
+   * present, in the manner of Arrays.binarySearch. This strengthens the contract of Indexed, which only guarantees
+   * that values-not-found will return some negative number.
+   *
+   * @param value value to search for
+   * @return index of value, or negative number equal to (-(insertion point) - 1).
+   */
   @Override
   public int indexOf(T value)
   {
