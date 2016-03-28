@@ -20,8 +20,10 @@
 package io.druid.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
@@ -31,12 +33,14 @@ import io.airlift.airline.Command;
 import io.druid.audit.AuditManager;
 import io.druid.client.CoordinatorServerView;
 import io.druid.client.indexing.IndexingServiceClient;
+import io.druid.guice.ConditionalMultibind;
 import io.druid.guice.ConfigProvider;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
+import io.druid.guice.annotations.CoordinatorIndexingServiceHelper;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.metadata.MetadataRuleManagerConfig;
 import io.druid.metadata.MetadataRuleManagerProvider;
@@ -49,6 +53,10 @@ import io.druid.server.audit.AuditManagerProvider;
 import io.druid.server.coordinator.DruidCoordinator;
 import io.druid.server.coordinator.DruidCoordinatorConfig;
 import io.druid.server.coordinator.LoadQueueTaskMaster;
+import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
+import io.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller;
+import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
+import io.druid.server.coordinator.helper.DruidCoordinatorVersionConverter;
 import io.druid.server.http.CoordinatorDynamicConfigsResource;
 import io.druid.server.http.CoordinatorRedirectInfo;
 import io.druid.server.http.CoordinatorResource;
@@ -70,6 +78,7 @@ import org.apache.curator.framework.CuratorFramework;
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.Executors;
 
 /**
@@ -82,9 +91,17 @@ public class CliCoordinator extends ServerRunnable
 {
   private static final Logger log = new Logger(CliCoordinator.class);
 
+  private Properties properties;
+
   public CliCoordinator()
   {
     super(log);
+  }
+
+  @Inject
+  public void configure(Properties properties)
+  {
+    this.properties = properties;
   }
 
   @Override
@@ -154,6 +171,25 @@ public class CliCoordinator extends ServerRunnable
 
             LifecycleModule.register(binder, Server.class);
             LifecycleModule.register(binder, DatasourcesResource.class);
+
+            ConditionalMultibind.create(
+                properties,
+                binder,
+                DruidCoordinatorHelper.class,
+                CoordinatorIndexingServiceHelper.class
+            ).addConditionBinding(
+                "druid.coordinator.merge.on",
+                Predicates.equalTo("true"),
+                DruidCoordinatorSegmentMerger.class
+            ).addConditionBinding(
+                "druid.coordinator.conversion.on",
+                Predicates.equalTo("true"),
+                DruidCoordinatorVersionConverter.class
+            ).addConditionBinding(
+                "druid.coordinator.kill.on",
+                Predicates.equalTo("true"),
+                DruidCoordinatorSegmentKiller.class
+            );
 
           }
 
