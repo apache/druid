@@ -1,35 +1,40 @@
 /*
  * Licensed to Metamarkets Group Inc. (Metamarkets) under one
- * or more contributor license agreements.  See the NOTICE file
+ * or more contributor license agreements. See the NOTICE file
  * distributed with this work for additional information
- * regarding copyright ownership.  Metamarkets licenses this file
+ * regarding copyright ownership. Metamarkets licenses this file
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
+ * with the License. You may obtain a copy of the License at
  *
- *   http://www.apache.org/licenses/LICENSE-2.0
+ * http://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied.  See the License for the
+ * KIND, either express or implied. See the License for the
  * specific language governing permissions and limitations
  * under the License.
  */
 
-package io.druid.server.coordinator;
+package io.druid.server.coordinator.helper;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.api.client.util.Lists;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Lists;
 import com.metamx.common.Pair;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.indexing.IndexingServiceClient;
+import io.druid.common.config.JacksonConfigManager;
 import io.druid.granularity.QueryGranularity;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.server.coordinator.helper.DruidCoordinatorHadoopSegmentMerger;
+import io.druid.server.coordinator.CoordinatorDynamicConfig;
+import io.druid.server.coordinator.CoordinatorHadoopMergeSpec;
+import io.druid.server.coordinator.DatasourceWhitelist;
+import io.druid.server.coordinator.DruidCoordinatorHadoopMergeConfig;
+import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
 import io.druid.timeline.partition.LinearShardSpec;
@@ -38,7 +43,6 @@ import io.druid.timeline.partition.SingleDimensionShardSpec;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 
 import java.util.Collection;
@@ -51,14 +55,6 @@ import java.util.concurrent.atomic.AtomicReference;
 public class DruidCoordinatorHadoopSegmentMergerTest
 {
   private static final long mergeBytesLimit = 100;
-
-  private static DruidCoordinatorConfig config;
-
-  @Before
-  public void setUp() throws Exception
-  {
-    config = new TestDruidCoordinatorConfig();
-  }
 
   @Test
   public void testNoMerges()
@@ -1001,10 +997,14 @@ public class DruidCoordinatorHadoopSegmentMergerTest
       }
     };
 
-    final AtomicReference<DatasourceWhitelist> whitelistRef = new AtomicReference<DatasourceWhitelist>(null);
+    final JacksonConfigManager configManager = EasyMock.createMock(JacksonConfigManager.class);
+    EasyMock.expect(configManager.watch(DatasourceWhitelist.CONFIG_KEY, DatasourceWhitelist.class))
+            .andReturn(new AtomicReference<DatasourceWhitelist>(null)).anyTimes();
+    EasyMock.replay(configManager);
+
     final DruidCoordinatorHadoopSegmentMerger merger = new DruidCoordinatorHadoopSegmentMerger(
         indexingServiceClient,
-        whitelistRef,
+        configManager,
         scanFromOldToNew
     );
     final DruidCoordinatorRuntimeParams params =

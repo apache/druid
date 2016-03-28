@@ -53,6 +53,7 @@ import io.druid.server.audit.AuditManagerProvider;
 import io.druid.server.coordinator.DruidCoordinator;
 import io.druid.server.coordinator.DruidCoordinatorConfig;
 import io.druid.server.coordinator.LoadQueueTaskMaster;
+import io.druid.server.coordinator.helper.DruidCoordinatorHadoopSegmentMerger;
 import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
@@ -178,9 +179,13 @@ public class CliCoordinator extends ServerRunnable
                 DruidCoordinatorHelper.class,
                 CoordinatorIndexingServiceHelper.class
             ).addConditionBinding(
-                "druid.coordinator.merge.on",
-                Predicates.equalTo("true"),
+                "druid.coordinator.merge.strategy",
+                Predicates.equalTo("append"),
                 DruidCoordinatorSegmentMerger.class
+            ).addConditionBinding(
+                "druid.coordinator.merge.strategy",
+                Predicates.equalTo("hadoop"),
+                DruidCoordinatorHadoopSegmentMerger.class
             ).addConditionBinding(
                 "druid.coordinator.conversion.on",
                 Predicates.equalTo("true"),

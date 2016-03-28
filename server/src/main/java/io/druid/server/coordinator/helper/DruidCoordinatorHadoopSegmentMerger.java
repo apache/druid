@@ -19,12 +19,15 @@
 
 package io.druid.server.coordinator.helper;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.client.indexing.IndexingServiceClient;
+import io.druid.common.config.JacksonConfigManager;
 import io.druid.server.coordinator.CoordinatorHadoopMergeSpec;
 import io.druid.server.coordinator.CoordinatorStats;
 import io.druid.server.coordinator.DatasourceWhitelist;
@@ -55,17 +58,28 @@ public class DruidCoordinatorHadoopSegmentMerger implements DruidCoordinatorHelp
   private final IndexingServiceClient indexingServiceClient;
   private final AtomicReference<DatasourceWhitelist> whiteListRef;
 
-
   private boolean scanFromOldToNew;
 
+  @Inject
   public DruidCoordinatorHadoopSegmentMerger(
       IndexingServiceClient indexingServiceClient,
-      AtomicReference<DatasourceWhitelist> whiteListRef,
+      JacksonConfigManager configManager
+  )
+  {
+    this.indexingServiceClient = indexingServiceClient;
+    this.whiteListRef = configManager.watch(DatasourceWhitelist.CONFIG_KEY, DatasourceWhitelist.class);
+    this.scanFromOldToNew = false;
+  }
+
+  @VisibleForTesting
+  DruidCoordinatorHadoopSegmentMerger(
+      IndexingServiceClient indexingServiceClient,
+      JacksonConfigManager configManager,
       boolean scanFromOldToNew
   )
   {
     this.indexingServiceClient = indexingServiceClient;
-    this.whiteListRef = whiteListRef;
+    this.whiteListRef = configManager.watch(DatasourceWhitelist.CONFIG_KEY, DatasourceWhitelist.class);
     this.scanFromOldToNew = scanFromOldToNew;
   }
 
