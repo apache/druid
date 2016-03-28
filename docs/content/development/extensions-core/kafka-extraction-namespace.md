@@ -12,7 +12,7 @@ Make sure to [include](../../operations/including-extensions.html) `druid-namesp
 
 Note that this lookup does not employ a `pollPeriod`.
 
-If you need updates to populate as promptly as possible, it is possible to plug into a kafka topic whose key is the old value and message is the desired new value (both in UTF-8). This requires the following extension: "io.druid.extensions:kafka-extraction-namespace"
+If you need updates to populate as promptly as possible, it is possible to plug into a kafka topic whose key is the old value and message is the desired new value (both in UTF-8).
 
 ```json
 {
