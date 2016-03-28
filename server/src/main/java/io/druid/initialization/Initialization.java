@@ -64,9 +64,12 @@ import org.apache.commons.io.FileUtils;
 import org.eclipse.aether.artifact.DefaultArtifact;
 
 import java.io.File;
+import java.io.FilenameFilter;
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
@@ -273,6 +276,41 @@ public class Initialization
       loadersMap.put(extension.getName(), loader);
     }
     return loader;
+  }
+
+  public static List<URL> getURLsForClasspath(String cp)
+  {
+    try {
+      String[] paths = cp.split(File.pathSeparator);
+
+      List<URL> urls = new ArrayList<>();
+      for (int i = 0; i < paths.length; i++) {
+        File f = new File(paths[i]);
+        if ("*".equals(f.getName())) {
+          File parentDir = f.getParentFile();
+          if (parentDir.isDirectory()) {
+            File[] jars = parentDir.listFiles(
+                new FilenameFilter()
+                {
+                  @Override
+                  public boolean accept(File dir, String name)
+                  {
+                    return name != null && (name.endsWith(".jar") || name.endsWith(".JAR"));
+                  }
+                }
+            );
+            for (File jar : jars) {
+              urls.add(jar.toURI().toURL());
+            }
+          }
+        } else {
+          urls.add(new File(paths[i]).toURI().toURL());
+        }
+      }
+      return urls;
+    } catch (IOException ex) {
+      throw Throwables.propagate(ex);
+    }
   }
 
   public static Injector makeInjectorWithModules(final Injector baseInjector, Iterable<? extends Module> modules)
