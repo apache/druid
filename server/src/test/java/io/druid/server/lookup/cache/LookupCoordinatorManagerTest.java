@@ -28,6 +28,7 @@ import com.google.common.net.HostAndPort;
 import com.google.common.util.concurrent.SettableFuture;
 import com.metamx.common.ISE;
 import com.metamx.common.StringUtils;
+import com.metamx.emitter.core.Event;
 import com.metamx.emitter.core.LoggingEmitter;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.http.client.HttpClient;
@@ -40,13 +41,13 @@ import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.lookup.LookupModule;
 import io.druid.server.listener.announcer.ListenerDiscoverer;
 import io.druid.server.listener.resource.ListenerResource;
-import io.druid.server.lookup.cache.LookupCoordinatorManager;
-import io.druid.server.lookup.cache.LookupCoordinatorManagerConfig;
 import org.easymock.EasyMock;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.joda.time.Duration;
+import org.junit.After;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
@@ -62,6 +63,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class LookupCoordinatorManagerTest
@@ -89,12 +91,38 @@ public class LookupCoordinatorManagerTest
       SINGLE_LOOKUP_MAP
   );
   private static final Map<String, Map<String, Map<String, Object>>> EMPTY_TIERED_LOOKUP = (Map<String, Map<String, Map<String, Object>>>) ImmutableMap.<String, Map<String, Map<String, Object>>>of();
+  private static final AtomicLong EVENT_EMITS = new AtomicLong(0L);
+  private static ServiceEmitter SERVICE_EMITTER;
 
   @BeforeClass
   public static void setUpStatic()
   {
-    final LoggingEmitter loggingEmitter = EasyMock.createNiceMock(LoggingEmitter.class);
-    com.metamx.emitter.EmittingLogger.registerEmitter(new ServiceEmitter("", "", loggingEmitter));
+    LoggingEmitter loggingEmitter = EasyMock.createNiceMock(LoggingEmitter.class);
+    EasyMock.replay(loggingEmitter);
+    SERVICE_EMITTER = new ServiceEmitter("", "", loggingEmitter)
+    {
+      @Override
+      public void emit(Event event)
+      {
+        EVENT_EMITS.incrementAndGet();
+        super.emit(event);
+      }
+    };
+    com.metamx.emitter.EmittingLogger.registerEmitter(SERVICE_EMITTER);
+  }
+
+  @Before
+  public void setUp() throws IOException
+  {
+    SERVICE_EMITTER.flush();
+    EVENT_EMITS.set(0L);
+  }
+
+  @After
+  public void tearDown() throws IOException
+  {
+    SERVICE_EMITTER.flush();
+    Assert.assertEquals(0, EVENT_EMITS.get());
   }
 
   @Test
@@ -431,6 +459,9 @@ public class LookupCoordinatorManagerTest
     };
     // Should log and pass io exception
     manager.updateAllOnTier(LOOKUP_TIER, SINGLE_LOOKUP_MAP);
+    SERVICE_EMITTER.flush();
+    Assert.assertEquals(1, EVENT_EMITS.get());
+    EVENT_EMITS.set(0);
   }
 
   @Test
