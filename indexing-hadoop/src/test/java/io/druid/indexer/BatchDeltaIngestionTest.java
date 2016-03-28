@@ -305,8 +305,8 @@ public class BatchDeltaIngestionTest
     Assert.assertEquals("local", dataSegment.getLoadSpec().get("type"));
     Assert.assertEquals(indexZip.getCanonicalPath(), dataSegment.getLoadSpec().get("path"));
     Assert.assertEquals("host", dataSegment.getDimensions().get(0));
-    Assert.assertEquals("visited_sum", dataSegment.getMetrics().get(0));
-    Assert.assertEquals("unique_hosts", dataSegment.getMetrics().get(1));
+    Assert.assertEquals("unique_hosts", dataSegment.getMetrics().get(0));
+    Assert.assertEquals("visited_sum", dataSegment.getMetrics().get(1));
     Assert.assertEquals(Integer.valueOf(9), dataSegment.getBinaryVersion());
 
     HashBasedNumberedShardSpec spec = (HashBasedNumberedShardSpec) dataSegment.getShardSpec();

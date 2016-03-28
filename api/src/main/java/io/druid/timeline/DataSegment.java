@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
@@ -31,6 +30,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Interner;
 import com.google.common.collect.Interners;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Ordering;
 import com.metamx.common.Granularity;
 import io.druid.jackson.CommaListJoinDeserializer;
 import io.druid.jackson.CommaListJoinSerializer;
@@ -40,6 +41,7 @@ import io.druid.timeline.partition.ShardSpec;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -50,15 +52,8 @@ public class DataSegment implements Comparable<DataSegment>
 {
   public static String delimiter = "_";
   private final Integer binaryVersion;
-  private static final Interner<String> interner = Interners.newWeakInterner();
-  private static final Function<String, String> internFun = new Function<String, String>()
-  {
-    @Override
-    public String apply(String input)
-    {
-      return interner.intern(input);
-    }
-  };
+  private static final Interner<String> STRING_INTERNER = Interners.newWeakInterner();
+  private static final Interner<ImmutableList<String>> LIST_INTERNER = Interners.newWeakInterner();
 
   public static String makeDataSegmentIdentifier(
       String dataSource,
@@ -116,17 +111,19 @@ public class DataSegment implements Comparable<DataSegment>
     };
 
     // dataSource, dimensions & metrics are stored as canonical string values to decrease memory required for storing large numbers of segments.
-    this.dataSource = interner.intern(dataSource);
+    this.dataSource = STRING_INTERNER.intern(dataSource);
     this.interval = interval;
     this.loadSpec = loadSpec;
     this.version = version;
+
     this.dimensions = dimensions == null
                       ? ImmutableList.<String>of()
-                      : ImmutableList.copyOf(Iterables.transform(Iterables.filter(dimensions, nonEmpty), internFun));
+                      : LIST_INTERNER.intern(Ordering.natural()
+                                                     .immutableSortedCopy(Iterables.filter(dimensions, nonEmpty)));
     this.metrics = metrics == null
                    ? ImmutableList.<String>of()
-                   : ImmutableList.copyOf(Iterables.transform(Iterables.filter(metrics, nonEmpty), internFun));
-    this.shardSpec = (shardSpec == null) ? new NoneShardSpec() : shardSpec;
+                   : LIST_INTERNER.intern(Ordering.natural().immutableSortedCopy(Iterables.filter(metrics, nonEmpty)));
+    this.shardSpec = (shardSpec == null) ? NoneShardSpec.INSTANCE : shardSpec;
     this.binaryVersion = binaryVersion;
     this.size = size;
 
@@ -138,6 +135,7 @@ public class DataSegment implements Comparable<DataSegment>
         this.shardSpec
     );
   }
+
 
   /**
    * Get dataSource
@@ -323,7 +321,7 @@ public class DataSegment implements Comparable<DataSegment>
       this.loadSpec = ImmutableMap.of();
       this.dimensions = ImmutableList.of();
       this.metrics = ImmutableList.of();
-      this.shardSpec = new NoneShardSpec();
+      this.shardSpec = NoneShardSpec.INSTANCE;
       this.size = -1;
     }
 
