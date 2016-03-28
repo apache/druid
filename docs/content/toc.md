@@ -40,9 +40,9 @@
     * [Granularities](../querying/granularities.html)
     * [DimensionSpecs](../querying/dimensionspecs.html)
     * [Context](../querying/query-context.html)
+  * [Multi-value dimensions](../querying/multi-value-dimensions.html)
   * [SQL](../querying/sql.html)
   * [Joins](../querying/joins.html)
-  * [Optimizations](../querying/optimizations.html)
   * [Multitenancy](../querying/multitenancy.html)
   * [Caching](../querying/caching.html)
 
@@ -93,9 +93,9 @@
   * [Integration](../development/integrating-druid-with-other-technologies.html)
   * Experimental Features
     * [Overview](../development/experimental.html)
+    * [Approximate Histograms and Quantiles](../development/extensions-core/approximate-histograms.html)
+    * [Datasketches](../development/extensions-core/datasketches-aggregators.html)       
     * [Geographic Queries](../development/geo.html)
-    * [Approximate Histograms and Quantiles](../development/approximate-histograms.html)
-    * [Datasketches](../development/datasketches-aggregators.html)
     * [Router](../development/router.html)    
 
 ## Misc

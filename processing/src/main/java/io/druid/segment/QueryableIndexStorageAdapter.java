@@ -591,7 +591,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
                         if (columnVals.hasMultipleValues()) {
                           throw new UnsupportedOperationException(
-                              "makeObjectColumnSelector does not support multivalued GenericColumns"
+                              "makeObjectColumnSelector does not support multi-value GenericColumns"
                           );
                         }
 

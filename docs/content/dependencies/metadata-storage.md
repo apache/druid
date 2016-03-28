@@ -1,137 +1,36 @@
 ---
 layout: doc_page
 ---
+
 # Metadata Storage
 
 The Metadata Storage is an external dependency of Druid. Druid uses it to store
 various metadata about the system, but not to store the actual data. There are
 a number of tables used for various purposes described below.
 
-## Supported Metadata Storages
+Derby is the default metadata store for Druid, however, it is not suitable for production. 
+[MySQL](../development/extensions-core/mysql.html) and [PostgreSQL](../development/extensions-core/postgresql.html) are more production suitable metadata stores.
 
-The following metadata storage engines are supported:
-
-* Derby (default, but not suitable for production)
-* MySQL
-* PostgreSQL
-
-Even though Derby is the default, it works only if you have all Druid
-processes running on the same host, and should be used only for experimentation.
-For production, MySQL or PostgreSQL should be used.
-
-To choose the metadata storage type, set `druid.metadata.storage.type` to
-`mysql`, `postgres` or `derby`.
-Set other `druid.metadata.storage` configuration
-keywords as shown below to give Druid information about how to connect to
-the database.
-
-As discussed in [Including Extensions](../operations/including-extensions.html),
-there are two ways for giving Druid the extension files it needs for the
-database you are using.
-The first is to put the extension files in the classpath.  The second is to
-put the extension files in a subdirectory of
-`druid.extensions.directory` (by default `extensions` under the Druid working directory) and list the subdirectory name in
-`druid.extensions.loadList`.  The example properties below show the second
-way.
-
-## Setting up MySQL
-
-1. Install MySQL
-
-  Use your favorite package manager to install mysql, e.g.:
-  - on Ubuntu/Debian using apt `apt-get install mysql-server`
-  - on OS X, using [Homebrew](http://brew.sh/) `brew install mysql`
-
-  Alternatively, download and follow installation instructions for MySQL
-  Community Server here:
-  [http://dev.mysql.com/downloads/mysql/](http://dev.mysql.com/downloads/mysql/)
-
-2. Create a druid database and user
-
-  Connect to MySQL from the machine where it is installed.
-
-  ```bash
-  > mysql -u root
-  ```
-
-  Paste the following snippet into the mysql prompt:
-
-  ```sql
-  -- create a druid database, make sure to use utf8 as encoding
-  CREATE DATABASE druid DEFAULT CHARACTER SET utf8;
-
-  -- create a druid user, and grant it all permission on the database we just created
-  GRANT ALL ON druid.* TO 'druid'@'localhost' IDENTIFIED BY 'diurd';
-  ```
-
-3. Configure your Druid metadata storage extension:
-
-  Add the following parameters to your Druid configuration, replacing `<host>`
-  with the location (host name and port) of the database.
-
-  ```properties
-  druid.extensions.loadList=["mysql-metadata-storage"]
-  druid.metadata.storage.type=mysql
-  druid.metadata.storage.connector.connectURI=jdbc:mysql://<host>/druid
-  druid.metadata.storage.connector.user=druid
-  druid.metadata.storage.connector.password=diurd
-  ```
-
-  Note: the metadata storage extension is not packaged within the main Druid tarball; it is
-  packaged in a separate tarball that can be downloaded from [here](http://druid.io/downloads.html).
-  You can also get it using [pull-deps](../pull-deps.html), or you can build
-  it from source code; see [Build from Source](../development/build.html).
-
-## Setting up PostgreSQL
-
-1. Install PostgreSQL
-
-  Use your favorite package manager to install PostgreSQL, e.g.:
-  - on Ubuntu/Debian using apt `apt-get install postgresql`
-  - on OS X, using [Homebrew](http://brew.sh/) `brew install postgresql`
-
-2. Create a druid database and user
-
-  On the machine where PostgreSQL is installed, using an account with proper
-  postgresql permissions:
-
-  Create a druid user, enter `diurd` when prompted for the password.
-
-  ```bash
-  createuser druid -P
-  ```
-
-  Create a druid database owned by the user we just created
-
-  ```bash
-  createdb druid -O druid
-  ```
-
-  *Note:* On Ubuntu / Debian you may have to prefix the `createuser` and
-  `createdb` commands with `sudo -u postgres` in order to gain proper
-  permissions.
-
-3. Configure your Druid metadata storage extension:
-
-  Add the following parameters to your Druid configuration, replacing `<host>`
-  with the location (host name and port) of the database.
-
-  ```properties
-  druid.extensions.loadList=["postgresql-metadata-storage"]
-  druid.metadata.storage.type=postgresql
-  druid.metadata.storage.connector.connectURI=jdbc:postgresql://<host>/druid
-  druid.metadata.storage.connector.user=druid
-  druid.metadata.storage.connector.password=diurd
-  ```
+<div class="note caution">
+Derby is not suitable for production use as a metadata store. Use MySQL or PostgreSQL instead.
+</div>
 
 ## Using derby
 
-  Add the following to your Druid configuration.
+Add the following to your Druid configuration.
 
-  ```properties
-  druid.metadata.storage.type=derby
-  druid.metadata.storage.connector.connectURI=jdbc:derby://localhost:1527//home/y/var/druid_state/derby;create=true
-  ```
+```properties
+druid.metadata.storage.type=derby
+druid.metadata.storage.connector.connectURI=jdbc:derby://localhost:1527//opt/var/druid_state/derby;create=true
+```
+
+## MySQL
+  
+See [mysql-metadata-storage extension documentation](../development/extensions-core/mysql.html).  
+  
+## PostgreSQL 
+
+See [postgresql-metadata-storage](../development/extensions-core/postgresql.html). 
 
 ## Metadata Storage Tables
 

@@ -1,22 +1,38 @@
 ---
 layout: doc_page
 ---
+# Multi-value dimensions
 
-This document contains additional query optimizations for certain types of queries.
+Druid supports "multi-value" string dimensions. These are generated when an input field contains an array of values
+instead of a single value (e.e. JSON arrays, or a TSV field containing one or more `listDelimiter` characters).
 
-# Multi-value Dimensions
+This document describes the behavior of groupBy (topN has similar behavior) queries on multi-value dimensions when they
+are used as a dimension being grouped by. See the section on multi-value columns in
+[segments](../design/segments.html#multi-value-columns) for internal representation details.
 
-Druid supports "multi-valued" dimensions. See the section on multi-valued columns in [segments](../design/segments.html) for internal representation details. This document describes the behavior of groupBy(topN has similar behavior) queries on multi-valued dimensions when they are used as a dimension being grouped by.
+## Querying multi-value dimensions
 
-Suppose, you have a dataSource with a segment that contains following rows with a multi-valued dimension called tags.
+Suppose, you have a dataSource with a segment that contains the following rows, with a multi-value dimension
+called `tags`.
 
 ```
-2772011-01-12T00:00:00.000Z,["t1","t2","t3"],  #row1
-2782011-01-13T00:00:00.000Z,["t3","t4","t5"],  #row2
-2792011-01-14T00:00:00.000Z,["t5","t6","t7"]   #row3
+{"timestamp": "2011-01-12T00:00:00.000Z", "tags": ["t1","t2","t3"]}  #row1
+{"timestamp": "2011-01-13T00:00:00.000Z", "tags": ["t3","t4","t5"]}  #row2
+{"timestamp": "2011-01-14T00:00:00.000Z", "tags": ["t5","t6","t7"]}  #row3
 ```
 
-### Group-By query with no filtering
+All query types can filter on multi-value dimensions. Filters operate independently on each value of a multi-value
+dimension. For example, a `"t1" OR "t3"` filter would match row1 and row2 but not row3. A `"t1" AND "t3"` filter
+would only match row1.
+
+topN and groupBy queries can group on multi-value dimensions. When grouping on a multi-value dimension, _all_ values
+from matching rows will be used to generate one group per value. It's possible for a query to return more groups than
+there are rows. For example, a topN on the dimension `tags` with filter `"t1" OR "t3"` would match only row1, and
+generate a result with three groups: `t1`, `t2`, and `t3`. If you only need to include values that match
+your filter, you can use a [filtered dimensionSpec](dimensionspecs.html#filtered-dimensionspecs). This can also
+improve performance.
+
+### Example: GroupBy query with no filtering
 
 See [GroupBy querying](groupbyquery.html) for details.
 
@@ -104,7 +120,7 @@ returns following result.
 
 notice how original rows are "exploded" into multiple rows and merged.
 
-### Group-By query with a selector query filter
+### Example: GroupBy query with a selector query filter
 
 See [query filters](filters.html) for details of selector query filter.
 
@@ -181,13 +197,13 @@ returns following result.
 ]
 ```
 
-You might be surprised to see inclusion of "t1", "t2", "t4" and "t5" in the results. It happens because query filter is applied on the row before explosion. For multi-valued dimensions, selector filter for "t3" would match row1 and row2, after which exploding is done. For multi-valued dimensions, query filter matches a row if any individual value inside the multiple values matches the query filter.
+You might be surprised to see inclusion of "t1", "t2", "t4" and "t5" in the results. It happens because query filter is applied on the row before explosion. For multi-value dimensions, selector filter for "t3" would match row1 and row2, after which exploding is done. For multi-value dimensions, query filter matches a row if any individual value inside the multiple values matches the query filter.
 
-### Group-By query with a selector query filter and additional filter in "dimensions" attributes
+### Example: GroupBy query with a selector query filter and additional filter in "dimensions" attributes
 
 To solve the problem above and to get only rows for "t3" returned, you would have to use a "filtered dimension spec" as in the query below.
 
-See section on filtered dimensionSpecs in [dimensionSpecs](dimensionspecs.html) for details.
+See section on filtered dimensionSpecs in [dimensionSpecs](dimensionspecs.html#filtered-dimensionspecs) for details.
 
 ```json
 {
@@ -224,7 +240,7 @@ See section on filtered dimensionSpecs in [dimensionSpecs](dimensionspecs.html) 
 }
 ```
 
-returns following result.
+returns the following result.
 
 ```json
 [
@@ -238,5 +254,4 @@ returns following result.
 ]
 ```
 
-Note that, for groupBy queries, you could get similar result with a [having spec](having.html) but using a filtered dimensionSpec would be much more efficient because that gets applied at the lowest level in the query processing pipeline while having spec is applied at the highest level of groupBy query processing.
-
+Note that, for groupBy queries, you could get similar result with a [having spec](having.html) but using a filtered dimensionSpec is much more efficient because that gets applied at the lowest level in the query processing pipeline. Having specs are applied at the outermost level of groupBy query processing.
