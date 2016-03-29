@@ -22,6 +22,7 @@ package io.druid.query.aggregation;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.ValueMatcher;
@@ -225,12 +226,11 @@ public class FilteredAggregatorFactory extends AggregatorFactory
       );
 
       // Compare "value" as a String.
-      final String valueString = value == null ? null : value.toString();
-      final boolean isNullOrEmpty = valueString == null || valueString.isEmpty();
+      final String valueString = value == null ? null : Strings.emptyToNull(value.toString());
 
       // Missing columns match a null or empty string value, and don't match anything else.
       if (selector == null) {
-        return new BooleanValueMatcher(isNullOrEmpty);
+        return new BooleanValueMatcher(valueString == null);
       }
 
       final int valueId = selector.lookupId(valueString);
@@ -241,12 +241,17 @@ public class FilteredAggregatorFactory extends AggregatorFactory
         {
           final IndexedInts row = selector.getRow();
           final int size = row.size();
-          for (int i = 0; i < size; ++i) {
-            if (row.get(i) == valueId) {
-              return true;
+          if (size == 0) {
+            // null should match empty rows in multi-value columns
+            return valueString == null;
+          } else {
+            for (int i = 0; i < size; ++i) {
+              if (row.get(i) == valueId) {
+                return true;
+              }
             }
+            return false;
           }
-          return false;
         }
       };
     }
@@ -258,8 +263,10 @@ public class FilteredAggregatorFactory extends AggregatorFactory
           new DefaultDimensionSpec(dimension, dimension)
       );
 
+      final boolean doesMatchNull = predicate.apply(null);
+
       if (selector == null) {
-        return new BooleanValueMatcher(predicate.apply(null));
+        return new BooleanValueMatcher(doesMatchNull);
       }
 
       // Check every value in the dimension, as a String.
@@ -278,12 +285,17 @@ public class FilteredAggregatorFactory extends AggregatorFactory
         {
           final IndexedInts row = selector.getRow();
           final int size = row.size();
-          for (int i = 0; i < size; ++i) {
-            if (valueIds.get(row.get(i))) {
-              return true;
+          if (size == 0) {
+            // null should match empty rows in multi-value columns
+            return doesMatchNull;
+          } else {
+            for (int i = 0; i < size; ++i) {
+              if (valueIds.get(row.get(i))) {
+                return true;
+              }
             }
+            return false;
           }
-          return false;
         }
       };
     }

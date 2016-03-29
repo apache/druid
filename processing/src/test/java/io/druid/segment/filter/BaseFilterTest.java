@@ -21,7 +21,6 @@ package io.druid.segment.filter;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -29,11 +28,14 @@ import com.metamx.common.Pair;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.common.utils.JodaUtils;
+import io.druid.data.input.InputRow;
 import io.druid.granularity.QueryGranularity;
+import io.druid.query.aggregation.Aggregator;
+import io.druid.query.aggregation.CountAggregatorFactory;
+import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
+import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.Filter;
-import io.druid.query.filter.ValueMatcher;
-import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.IndexBuilder;
@@ -54,26 +56,57 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runners.Parameterized;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 public abstract class BaseFilterTest
 {
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
+  private final List<InputRow> rows;
+
+  protected final IndexBuilder indexBuilder;
+  protected final Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher;
   protected StorageAdapter adapter;
   protected Closeable closeable;
+
+  public BaseFilterTest(
+      List<InputRow> rows,
+      IndexBuilder indexBuilder,
+      Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher
+  )
+  {
+    this.rows = rows;
+    this.indexBuilder = indexBuilder;
+    this.finisher = finisher;
+  }
+
+  @Before
+  public void setUp() throws Exception
+  {
+    final Pair<StorageAdapter, Closeable> pair = finisher.apply(
+        indexBuilder.tmpDir(temporaryFolder.newFolder()).add(rows)
+    );
+    this.adapter = pair.lhs;
+    this.closeable = pair.rhs;
+  }
 
   @After
   public void tearDown() throws Exception
   {
     closeable.close();
+  }
+
+  @Parameterized.Parameters(name = "{0}")
+  public static Collection<Object[]> constructorFeeder() throws IOException
+  {
+    return makeConstructors();
   }
 
   public static Collection<Object[]> makeConstructors()
@@ -86,8 +119,7 @@ public abstract class BaseFilterTest
     );
 
     final Map<String, IndexMerger> indexMergers = ImmutableMap.<String, IndexMerger>of(
-        // TODO: deal with inconsistent null handling in IndexMerger
-//        "IndexMerger", TestHelper.getTestIndexMerger(),
+        "IndexMerger", TestHelper.getTestIndexMerger(),
         "IndexMergerV9", TestHelper.getTestIndexMergerV9()
     );
 
@@ -179,15 +211,9 @@ public abstract class BaseFilterTest
   /**
    * Selects elements from "selectColumn" from rows matching a filter. selectColumn must be a single valued dimension.
    */
-  protected List<String> selectUsingColumn(final Filter filter, final String selectColumn)
+  protected List<String> selectColumnValuesMatchingFilter(final DimFilter filter, final String selectColumn)
   {
-    final Sequence<Cursor> cursors = adapter.makeCursors(
-        filter,
-        new Interval(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT),
-        QueryGranularity.ALL,
-        false
-    );
-    final Cursor cursor = Iterables.getOnlyElement(Sequences.toList(cursors, Lists.<Cursor>newArrayList()));
+    final Cursor cursor = makeCursor(Filters.toFilter(filter));
     final List<String> values = Lists.newArrayList();
     final DimensionSelector selector = cursor.makeDimensionSelector(
         new DefaultDimensionSpec(selectColumn, selectColumn)
@@ -202,37 +228,29 @@ public abstract class BaseFilterTest
     return values;
   }
 
-  protected boolean applyFilterToValue(final Filter filter, final Comparable theValue)
+  protected long selectCountUsingFilteredAggregator(final DimFilter filter)
   {
-    return filter.makeMatcher(
-        new ValueMatcherFactory()
-        {
-          @Override
-          public ValueMatcher makeValueMatcher(final String dimension, final Comparable value)
-          {
-            return new ValueMatcher()
-            {
-              @Override
-              public boolean matches()
-              {
-                return Objects.equals(value, theValue);
-              }
-            };
-          }
+    final Cursor cursor = makeCursor(null);
+    final Aggregator agg = new FilteredAggregatorFactory(
+        new CountAggregatorFactory("count"),
+        filter
+    ).factorize(cursor);
 
-          @Override
-          public ValueMatcher makeValueMatcher(String dimension, final Predicate predicate)
-          {
-            return new ValueMatcher()
-            {
-              @Override
-              public boolean matches()
-              {
-                return predicate.apply(theValue);
-              }
-            };
-          }
-        }
-    ).matches();
+    for (; !cursor.isDone(); cursor.advance()) {
+      agg.aggregate();
+    }
+
+    return agg.getLong();
+  }
+
+  private Cursor makeCursor(final Filter filter)
+  {
+    final Sequence<Cursor> cursors = adapter.makeCursors(
+        filter,
+        new Interval(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT),
+        QueryGranularity.ALL,
+        false
+    );
+    return Iterables.getOnlyElement(Sequences.toList(cursors, Lists.<Cursor>newArrayList()));
   }
 }
