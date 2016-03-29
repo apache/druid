@@ -22,6 +22,7 @@ package io.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.metamx.common.StringUtils;
 
 import java.nio.ByteBuffer;
@@ -61,7 +62,7 @@ public class InDimFilter implements DimFilter
     int valuesBytesSize = 0;
     int index = 0;
     for (String value : values) {
-      valuesBytes[index] = StringUtils.toUtf8(value);
+      valuesBytes[index] = StringUtils.toUtf8(Strings.nullToEmpty(value));
       valuesBytesSize += valuesBytes[index].length + 1;
       ++index;
     }
