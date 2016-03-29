@@ -19,11 +19,72 @@ called `tags`.
 {"timestamp": "2011-01-12T00:00:00.000Z", "tags": ["t1","t2","t3"]}  #row1
 {"timestamp": "2011-01-13T00:00:00.000Z", "tags": ["t3","t4","t5"]}  #row2
 {"timestamp": "2011-01-14T00:00:00.000Z", "tags": ["t5","t6","t7"]}  #row3
+{"timestamp": "2011-01-14T00:00:00.000Z", "tags": []}                #row4
 ```
 
-All query types can filter on multi-value dimensions. Filters operate independently on each value of a multi-value
-dimension. For example, a `"t1" OR "t3"` filter would match row1 and row2 but not row3. A `"t1" AND "t3"` filter
-would only match row1.
+### Filtering
+
+All query types, as well as [filtered aggregators](aggregations.html#filtered-aggregator), can filter on multi-value
+dimensions. Filters follow these rules on multi-value dimensions:
+
+- Value filters (like "selector", "bound", and "in") match a row if any of the values of a multi-value dimension match
+  the filter.
+- Value filters that match `null` or `""` (empty string) will match empty cells in a multi-value dimension.
+- Logical expression filters behave the same way they do on single-value dimensions: "and" matches a row if all
+  underlying filters match that row; "or" matches a row if any underlying filters match that row; "not" matches a row
+  if the underlying filter does not match the row.
+
+For example, this "or" filter would match row1 and row2 of the dataset above, but not row3:
+
+```
+{
+  "type": "or",
+  "fields": [
+    {
+      "type": "selector",
+      "dimension": "tags",
+      "value": "t1"
+    },
+    {
+      "type": "selector",
+      "dimension": "tags",
+      "value": "t3"
+    }
+  ]
+}
+```
+
+This "and" filter would match only row1 of the dataset above:
+
+```
+{
+  "type": "and",
+  "fields": [
+    {
+      "type": "selector",
+      "dimension": "tags",
+      "value": "t1"
+    },
+    {
+      "type": "selector",
+      "dimension": "tags",
+      "value": "t3"
+    }
+  ]
+}
+```
+
+This "selector" filter would match row4 of the dataset above:
+
+```
+{
+  "type": "selector",
+  "dimension": "tags",
+  "value": null
+}
+```
+
+### Grouping
 
 topN and groupBy queries can group on multi-value dimensions. When grouping on a multi-value dimension, _all_ values
 from matching rows will be used to generate one group per value. It's possible for a query to return more groups than
