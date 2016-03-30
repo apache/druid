@@ -993,7 +993,7 @@ public class DruidCoordinatorHadoopSegmentMergerTest
       @Override
       public List<Map<String, Object>> getIncompleteTasks()
       {
-        return null;
+        return ImmutableList.of();
       }
     };
 

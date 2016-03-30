@@ -68,7 +68,7 @@ public class DruidCoordinatorHadoopSegmentMerger implements DruidCoordinatorHelp
   {
     this.indexingServiceClient = indexingServiceClient;
     this.whiteListRef = configManager.watch(DatasourceWhitelist.CONFIG_KEY, DatasourceWhitelist.class);
-    this.scanFromOldToNew = false;
+    this.scanFromOldToNew = true;
   }
 
   @VisibleForTesting
@@ -100,6 +100,8 @@ public class DruidCoordinatorHadoopSegmentMerger implements DruidCoordinatorHelp
       hadoopMergeSpecs.put(spec.getDataSource(), spec);
     }
 
+    final Map<String, Object> tuningConfig = hadoopMergeConfig.getTuningConfig();
+    final List<String> hadoopDependencies = hadoopMergeConfig.getHadoopDependencyCoordinates();
     final boolean keepSegmentGapDuringMerge = hadoopMergeConfig.isKeepGap();
     final DatasourceWhitelist whitelist = whiteListRef.get();
     final long segmentSizeThreshold = params.getCoordinatorDynamicConfig().getMergeBytesLimit();
@@ -125,13 +127,21 @@ public class DruidCoordinatorHadoopSegmentMerger implements DruidCoordinatorHelp
 
     for (final Map.Entry<String, VersionedIntervalTimeline<String, DataSegment>> entry : dataSources.entrySet()) {
       final String dataSource = entry.getKey();
+      if (!isPreviousTaskFinished(dataSource)) {
+        continue;
+      }
+
       final CoordinatorHadoopMergeSpec mergeSpec = hadoopMergeSpecs.get(dataSource);
       if (mergeSpec == null) {
         log.info("Didn't find CoordinatorHadoopMergeSpec for dataSource [%s], skip merging", dataSource);
         continue;
       }
 
-      log.info("Finding imbalanced segments for datasource [%s]", dataSource);
+      log.info(
+          "Finding imbalanced segments for datasource [%s], scanning from [%s]",
+          dataSource,
+          scanFromOldToNew ? "old to new" : "new to old"
+      );
 
       final VersionedIntervalTimeline<String, DataSegment> timeline = entry.getValue();
       final List<TimelineObjectHolder<String, DataSegment>> timelineObjects = timeline.lookup(
@@ -170,11 +180,17 @@ public class DruidCoordinatorHadoopSegmentMerger implements DruidCoordinatorHelp
             shouldBeMerged = true;
           }
           currTotalSize += segment.getSize();
+          log.debug(
+              "After adding segment [%s], currTotalSize [%d], target [%d]",
+              segment.getIdentifier(),
+              currTotalSize,
+              segmentSizeThreshold
+          );
         }
 
-        log.debug("currTotalSize [%d], target [%d]", currTotalSize, segmentSizeThreshold);
         if (currTotalSize >= segmentSizeThreshold) {
           if (shouldBeMerged) {
+            log.info("Adding unbalanced interval [%s]", intervalToReindex);
             unbalancedIntervals.add(intervalToReindex);
           }
           currTotalSize = 0;
@@ -185,7 +201,7 @@ public class DruidCoordinatorHadoopSegmentMerger implements DruidCoordinatorHelp
       }
 
       if (!unbalancedIntervals.isEmpty()) {
-        submitHadoopReindexTask(dataSource, unbalancedIntervals, stats, mergeSpec, hadoopMergeConfig);
+        submitHadoopReindexTask(dataSource, unbalancedIntervals, stats, mergeSpec, tuningConfig, hadoopDependencies);
       }
     }
 
@@ -216,43 +232,39 @@ public class DruidCoordinatorHadoopSegmentMerger implements DruidCoordinatorHelp
       List<Interval> intervalsToReindex,
       CoordinatorStats stats,
       CoordinatorHadoopMergeSpec mergeSpec,
-      DruidCoordinatorHadoopMergeConfig hadoopMergeConfig
+      Map<String, Object> tuningConfig,
+      List<String> hadoopDependencies
   )
   {
-    final List<Map<String, Object>> incompleteTasks = indexingServiceClient.getIncompleteTasks();
-    if (incompleteTasks == null || isPreviousTaskFinished(dataSource, incompleteTasks)) {
-
-      final String taskId = indexingServiceClient.hadoopMergeSegments(
-          dataSource,
-          intervalsToReindex,
-          mergeSpec.getMetricsSpec(),
-          mergeSpec.getQueryGranularity(),
-          mergeSpec.getDimensions(),
-          hadoopMergeConfig.getTuningConfig(),
-          hadoopMergeConfig.getHadoopDependencyCoordinates()
-      );
-      log.info(
-          "Submitted Hadoop Reindex Task for dataSource [%s] at intervals [%s]. TaskID is [%s]",
-          dataSource,
-          intervalsToReindex,
-          taskId
-      );
-      stats.addToGlobalStat("hadoopMergeCount", 1);
-
-    } else {
-      log.info(
-          "An existing Hadoop Reindex Task for dataSource [%s] at intervals [%s] is still running, skipping",
-          dataSource,
-          intervalsToReindex
-      );
-    }
+    final String taskId = indexingServiceClient.hadoopMergeSegments(
+        dataSource,
+        intervalsToReindex,
+        mergeSpec.getMetricsSpec(),
+        mergeSpec.getQueryGranularity(),
+        mergeSpec.getDimensions(),
+        tuningConfig,
+        hadoopDependencies
+    );
+    log.info(
+        "Submitted Hadoop Reindex Task for dataSource [%s] at intervals [%s]. TaskID is [%s]",
+        dataSource,
+        intervalsToReindex,
+        taskId
+    );
+    stats.addToGlobalStat("hadoopMergeCount", 1);
   }
 
-  private boolean isPreviousTaskFinished(String dataSource, List<Map<String, Object>> incompleteTasks)
+  private boolean isPreviousTaskFinished(String dataSource)
   {
+    final List<Map<String, Object>> incompleteTasks = indexingServiceClient.getIncompleteTasks();
     for (Map<String, Object> task : incompleteTasks) {
       final String taskId = (String) task.get("id");
       if (taskId != null && taskId.startsWith(HADOOP_REINDEX_TASK_ID_PREFIX + "_" + dataSource)) {
+        log.info(
+            "An existing Hadoop Reindex Task [%s] for dataSource [%s] is still running, skipping...",
+            taskId,
+            dataSource
+        );
         return false;
       }
     }
