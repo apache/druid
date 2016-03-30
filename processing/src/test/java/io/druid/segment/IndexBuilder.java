@@ -46,7 +46,7 @@ import java.util.UUID;
  */
 public class IndexBuilder
 {
-  private static final int ROWS_PER_INDEX_FOR_MERGING = 2;
+  private static final int ROWS_PER_INDEX_FOR_MERGING = 1;
   private static final int MAX_ROWS = 50_000;
 
   private IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder().withMetrics(new AggregatorFactory[]{

@@ -20,11 +20,8 @@
 package io.druid.segment.filter;
 
 import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.metamx.common.Pair;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -32,19 +29,17 @@ import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.query.filter.Filter;
+import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.IndexBuilder;
 import io.druid.segment.StorageAdapter;
 import org.joda.time.DateTime;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.Closeable;
-import java.io.IOException;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -56,21 +51,22 @@ public class SelectorFilterTest extends BaseFilterTest
   private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
       new TimeAndDimsParseSpec(
           new TimestampSpec(TIMESTAMP_COLUMN, "iso", new DateTime("2000")),
-          new DimensionsSpec(null, null, null)
+          new DimensionsSpec(
+              DimensionsSpec.getDefaultSchemas(ImmutableList.of("dim0", "dim1", "dim2", "dim3")),
+              null,
+              null
+          )
       )
   );
 
   private static final List<InputRow> ROWS = ImmutableList.of(
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "a", "dim1", "", "dim2", ImmutableList.of("a", "b"))),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "b", "dim1", "10", "dim2", ImmutableList.of())),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "c", "dim1", "2", "dim2", ImmutableList.of(""))),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "d", "dim1", "1", "dim2", ImmutableList.of("a"))),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "e", "dim1", "def", "dim2", ImmutableList.of("c"))),
-      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "f", "dim1", "abc"))
+      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "0", "dim1", "", "dim2", ImmutableList.of("a", "b"))),
+      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "1", "dim1", "10", "dim2", ImmutableList.of())),
+      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "2", "dim1", "2", "dim2", ImmutableList.of(""))),
+      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "3", "dim1", "1", "dim2", ImmutableList.of("a"))),
+      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "4", "dim1", "def", "dim2", ImmutableList.of("c"))),
+      PARSER.parse(ImmutableMap.<String, Object>of("dim0", "5", "dim1", "abc"))
   );
-
-  private final IndexBuilder indexBuilder;
-  private final Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher;
 
   public SelectorFilterTest(
       String testName,
@@ -78,84 +74,68 @@ public class SelectorFilterTest extends BaseFilterTest
       Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher
   )
   {
-    this.indexBuilder = indexBuilder;
-    this.finisher = finisher;
-  }
-
-  @Before
-  public void setUp() throws IOException
-  {
-    final Pair<StorageAdapter, Closeable> pair = finisher.apply(
-        indexBuilder.tmpDir(temporaryFolder.newFolder()).add(ROWS)
-    );
-    this.adapter = pair.lhs;
-    this.closeable = pair.rhs;
-  }
-
-  @Parameterized.Parameters(name = "{0}")
-  public static Collection<Object[]> constructorFeeder() throws IOException
-  {
-    return makeConstructors();
+    super(ROWS, indexBuilder, finisher);
   }
 
   @Test
   public void testSingleValueStringColumnWithoutNulls()
   {
-    Assert.assertEquals(ImmutableList.of(), select(new SelectorFilter("dim0", null)));
-    Assert.assertEquals(ImmutableList.of(), select(new SelectorFilter("dim0", "")));
-    Assert.assertEquals(ImmutableList.of(0), select(new SelectorFilter("dim0", "a")));
-    Assert.assertEquals(ImmutableList.of(1), select(new SelectorFilter("dim0", "b")));
+    assertFilterMatches(new SelectorDimFilter("dim0", null), ImmutableList.<String>of());
+    assertFilterMatches(new SelectorDimFilter("dim0", ""), ImmutableList.<String>of());
+    assertFilterMatches(new SelectorDimFilter("dim0", "0"), ImmutableList.of("0"));
+    assertFilterMatches(new SelectorDimFilter("dim0", "1"), ImmutableList.of("1"));
   }
 
   @Test
   public void testSingleValueStringColumnWithNulls()
   {
-    Assert.assertEquals(ImmutableList.of(0), select(new SelectorFilter("dim1", null)));
-    Assert.assertEquals(ImmutableList.of(0), select(new SelectorFilter("dim1", "")));
-    Assert.assertEquals(ImmutableList.of(1), select(new SelectorFilter("dim1", "10")));
-    Assert.assertEquals(ImmutableList.of(2), select(new SelectorFilter("dim1", "2")));
-    Assert.assertEquals(ImmutableList.of(3), select(new SelectorFilter("dim1", "1")));
-    Assert.assertEquals(ImmutableList.of(4), select(new SelectorFilter("dim1", "def")));
-    Assert.assertEquals(ImmutableList.of(5), select(new SelectorFilter("dim1", "abc")));
-    Assert.assertEquals(ImmutableList.of(), select(new SelectorFilter("dim1", "ab")));
+    assertFilterMatches(new SelectorDimFilter("dim1", null), ImmutableList.of("0"));
+    assertFilterMatches(new SelectorDimFilter("dim1", ""), ImmutableList.of("0"));
+    assertFilterMatches(new SelectorDimFilter("dim1", "10"), ImmutableList.of("1"));
+    assertFilterMatches(new SelectorDimFilter("dim1", "2"), ImmutableList.of("2"));
+    assertFilterMatches(new SelectorDimFilter("dim1", "1"), ImmutableList.of("3"));
+    assertFilterMatches(new SelectorDimFilter("dim1", "def"), ImmutableList.of("4"));
+    assertFilterMatches(new SelectorDimFilter("dim1", "abc"), ImmutableList.of("5"));
+    assertFilterMatches(new SelectorDimFilter("dim1", "ab"), ImmutableList.<String>of());
   }
 
   @Test
   public void testMultiValueStringColumn()
   {
-    Assert.assertEquals(ImmutableList.of(1, 2, 5), select(new SelectorFilter("dim2", null)));
-    Assert.assertEquals(ImmutableList.of(1, 2, 5), select(new SelectorFilter("dim2", "")));
-    Assert.assertEquals(ImmutableList.of(0, 3), select(new SelectorFilter("dim2", "a")));
-    Assert.assertEquals(ImmutableList.of(0), select(new SelectorFilter("dim2", "b")));
-    Assert.assertEquals(ImmutableList.of(4), select(new SelectorFilter("dim2", "c")));
-    Assert.assertEquals(ImmutableList.of(), select(new SelectorFilter("dim2", "d")));
+    assertFilterMatches(new SelectorDimFilter("dim2", null), ImmutableList.of("1", "2", "5"));
+    assertFilterMatches(new SelectorDimFilter("dim2", ""), ImmutableList.of("1", "2", "5"));
+    assertFilterMatches(new SelectorDimFilter("dim2", "a"), ImmutableList.of("0", "3"));
+    assertFilterMatches(new SelectorDimFilter("dim2", "b"), ImmutableList.of("0"));
+    assertFilterMatches(new SelectorDimFilter("dim2", "c"), ImmutableList.of("4"));
+    assertFilterMatches(new SelectorDimFilter("dim2", "d"), ImmutableList.<String>of());
   }
 
   @Test
-  public void testMissingColumn()
+  public void testMissingColumnSpecifiedInDimensionList()
   {
-    Assert.assertEquals(ImmutableList.of(0, 1, 2, 3, 4, 5), select(new SelectorFilter("dim3", null)));
-    Assert.assertEquals(ImmutableList.of(0, 1, 2, 3, 4, 5), select(new SelectorFilter("dim3", "")));
-    Assert.assertEquals(ImmutableList.of(), select(new SelectorFilter("dim3", "a")));
-    Assert.assertEquals(ImmutableList.of(), select(new SelectorFilter("dim3", "b")));
-    Assert.assertEquals(ImmutableList.of(), select(new SelectorFilter("dim3", "c")));
+    assertFilterMatches(new SelectorDimFilter("dim3", null), ImmutableList.of("0", "1", "2", "3", "4", "5"));
+    assertFilterMatches(new SelectorDimFilter("dim3", ""), ImmutableList.of("0", "1", "2", "3", "4", "5"));
+    assertFilterMatches(new SelectorDimFilter("dim3", "a"), ImmutableList.<String>of());
+    assertFilterMatches(new SelectorDimFilter("dim3", "b"), ImmutableList.<String>of());
+    assertFilterMatches(new SelectorDimFilter("dim3", "c"), ImmutableList.<String>of());
   }
 
-  private List<Integer> select(final Filter filter)
+  @Test
+  public void testMissingColumnNotSpecifiedInDimensionList()
   {
-    return Lists.newArrayList(
-        Iterables.transform(
-            selectUsingColumn(filter, "dim0"),
-            new Function<String, Integer>()
-            {
-              @Override
-              public Integer apply(String input)
-              {
-                Preconditions.checkArgument(input.length() == 1);
-                return ((int) input.charAt(0)) - ((int) 'a');
-              }
-            }
-        )
-    );
+    assertFilterMatches(new SelectorDimFilter("dim4", null), ImmutableList.of("0", "1", "2", "3", "4", "5"));
+    assertFilterMatches(new SelectorDimFilter("dim4", ""), ImmutableList.of("0", "1", "2", "3", "4", "5"));
+    assertFilterMatches(new SelectorDimFilter("dim4", "a"), ImmutableList.<String>of());
+    assertFilterMatches(new SelectorDimFilter("dim4", "b"), ImmutableList.<String>of());
+    assertFilterMatches(new SelectorDimFilter("dim4", "c"), ImmutableList.<String>of());
+  }
+
+  private void assertFilterMatches(
+      final DimFilter filter,
+      final List<String> expectedRows
+  )
+  {
+    Assert.assertEquals(filter.toString(), expectedRows, selectColumnValuesMatchingFilter(filter, "dim0"));
+    Assert.assertEquals(filter.toString(), expectedRows.size(), selectCountUsingFilteredAggregator(filter));
   }
 }
