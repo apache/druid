@@ -45,6 +45,7 @@ If you'd like to take on maintenance for a community extension, please post on [
 |druid-cloudfiles-extensions|Rackspace Cloudfiles deep storage and firehose.|[link](../development/extensions-contrib/cloudfiles.html)|
 |druid-distinctcount|DistinctCount aggregator|[link](../development/extensions-contrib/distinctcount.html)|
 |druid-kafka-eight-simpleConsumer|Kafka ingest firehose (low level consumer).|[link](../development/extensions-contrib/kafka-simple.html)|
+|druid-parquet-extensions|Support for data in Apache Parquet data format.|[link](../development/extensions-contrib/parquet.html)|
 |druid-rabbitmq|RabbitMQ firehose.|[link](../development/extensions-contrib/rabbitmq.html)|
 |druid-rocketmq|RocketMQ firehose.|[link](../development/extensions-contrib/rocketmq.html)|
 |graphite-emitter|Graphite metrics emitter|[link](../development/extensions-contrib/graphite.html)|
