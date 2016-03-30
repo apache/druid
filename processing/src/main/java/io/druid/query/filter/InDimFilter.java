@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.metamx.common.StringUtils;
@@ -66,7 +67,7 @@ public class InDimFilter implements DimFilter
     int valuesBytesSize = 0;
     int index = 0;
     for (String value : values) {
-      valuesBytes[index] = StringUtils.toUtf8(value);
+      valuesBytes[index] = StringUtils.toUtf8(Strings.nullToEmpty(value));
       valuesBytesSize += valuesBytes[index].length + 1;
       ++index;
     }
