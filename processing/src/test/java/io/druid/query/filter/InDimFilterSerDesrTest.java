@@ -66,4 +66,11 @@ public class InDimFilterSerDesrTest
     final InDimFilter inDimFilter_2 = new InDimFilter("dimTest", Arrays.asList("good,bad"));
     Assert.assertNotEquals(inDimFilter_1.getCacheKey(), inDimFilter_2.getCacheKey());
   }
+
+  @Test
+  public void testGetCacheKeyNullValue() throws IOException
+  {
+    InDimFilter inDimFilter = mapper.readValue("{\"type\":\"in\",\"dimension\":\"dimTest\",\"values\":[null]}", InDimFilter.class);
+    Assert.assertNotNull(inDimFilter.getCacheKey());
+  }
 }
