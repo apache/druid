@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.As;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
+import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.UnsignedBytes;
 import com.metamx.common.IAE;
@@ -53,6 +54,17 @@ public class StringComparators
   
   public static class LexicographicComparator implements StringComparator
   {
+    private static final Ordering<String> ORDERING = Ordering.from(new Comparator<String>()
+      {
+        @Override
+        public int compare(String s, String s2)
+        {
+          return UnsignedBytes.lexicographicalComparator().compare(
+              StringUtils.toUtf8(s),
+              StringUtils.toUtf8(s2));
+        }
+      }).nullsFirst();
+    
     @Override
     public int compare(String s, String s2)
     {
@@ -60,18 +72,8 @@ public class StringComparators
       if(s == s2){
         return 0;
       }
-      // null first
-      if (s == null) {
-        return -1;
-      }
-      if (s2 == null) {
-        return 1;
-      }
 
-      return UnsignedBytes.lexicographicalComparator().compare(
-          StringUtils.toUtf8(s),
-          StringUtils.toUtf8(s2)
-      );
+      return ORDERING.compare(s, s2);
     }
     
     @Override
@@ -299,25 +301,23 @@ public class StringComparators
 
   public static class StrlenComparator implements StringComparator
   {
+    private static final Ordering<String> ORDERING = Ordering.from(new Comparator<String>()
+      {
+        @Override
+        public int compare(String s, String s2)
+        {
+          return Ints.compare(s.length(), s2.length());
+        }
+      }).nullsFirst().compound(Ordering.natural());
+    
     @Override
     public int compare(String s, String s2)
     {
-      if(s == s2) {
+      if (s == s2) {
         return 0;
       }
-      // null first
-      if (s == null) {
-        return -1;
-      }
-      if (s2 == null) {
-        return 1;
-      }
       
-      int res = Ints.compare(s.length(), s2.length());
-      if (res == 0) {
-        res = s.compareTo(s2);
-      }
-      return res;
+      return ORDERING.compare(s, s2);
     }
 
     @Override
