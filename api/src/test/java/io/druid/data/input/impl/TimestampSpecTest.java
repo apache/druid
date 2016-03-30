@@ -22,6 +22,7 @@ package io.druid.data.input.impl;
 import com.google.common.collect.ImmutableMap;
 import junit.framework.Assert;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 import org.junit.Test;
 
 public class TimestampSpecTest
@@ -33,6 +34,17 @@ public class TimestampSpecTest
     Assert.assertEquals(
         new DateTime("2014-03-01"),
         spec.extractTimestamp(ImmutableMap.<String, Object>of("TIMEstamp", "2014-03-01"))
+    );
+  }
+
+  @Test
+  public void testExtractTimestampWithTimezone() throws Exception
+  {
+    DateTimeZone eventTimeZone = DateTimeZone.forID("Asia/Shanghai");
+    TimestampSpec spec = new TimestampSpec("TIMEstamp", "yyyy-MM-dd HH:mm:ss.SSS", null, eventTimeZone.toString());
+    Assert.assertEquals(
+        new DateTime("2016-04-05T10:56:36.574+08:00").getMillis(),
+        spec.extractTimestamp(ImmutableMap.<String, Object>of("TIMEstamp", "2016-04-05 10:56:36.574")).getMillis()
     );
   }
 

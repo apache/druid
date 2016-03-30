@@ -163,7 +163,20 @@ handle all formatting decisions on their own, without using the ParseSpec.
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
 | column | String | The column of the timestamp. | yes |
-| format | String | iso, millis, posix, auto or any [Joda time](http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html) format. | no (default == 'auto' |
+| format | String | iso, millis, posix, auto or any [Joda time](http://joda-time.sourceforge.net/apidocs/org/joda/time/format/DateTimeFormat.html) format. | no (default == 'auto') |
+| timeZone | String | timezone id acceptable by [DateTimeZone.forId](http://www.joda.org/joda-time/apidocs/org/joda/time/DateTimeZone.html#forID-java.lang.String-) | no (default to timezone according to `format` or server timezone if `format` doesn't have timezone information) |
+
+Note that the `timeZone` field is only needed in case your incoming data is generated in a different timezone but there is no explicit timezone information in the column's `format`. For example:
+
+```json
+"timestampSpec": {
+  "column" : "datetime",
+  "format" : "yyyy-MM-dd HH:mm:ss",
+  "timeZone" : "Asia/Shanghai"
+}
+```
+
+Don't specify `timeZone` if your timestamp column uses posix time or timestamp with timezone like 'yyyy-MM-dd HH:mm:ssZZ'. 
 
 ### DimensionsSpec
 

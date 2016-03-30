@@ -172,7 +172,7 @@ public class DataSchemaTest
                      + "\"type\":\"string\","
                      + "\"parseSpec\":{"
                      + "\"format\":\"json\","
-                     + "\"timestampSpec\":{\"column\":\"xXx\", \"format\": \"auto\", \"missingValue\": null},"
+                     + "\"timestampSpec\":{\"column\":\"xXx\", \"format\": \"auto\", \"missingValue\": null, \"timeZone\": null},"
                      + "\"dimensionsSpec\":{\"dimensions\":[], \"dimensionExclusions\":[]},"
                      + "\"flattenSpec\":{\"useFieldDiscovery\":true, \"fields\":[]},"
                      + "\"featureSpec\":{}},"
@@ -197,7 +197,7 @@ public class DataSchemaTest
             jsonMapper.<Map<String, Object>>convertValue(
                 new StringInputRowParser(
                     new JSONParseSpec(
-                        new TimestampSpec("xXx", null, null),
+                        new TimestampSpec("xXx", null, null, null),
                         new DimensionsSpec(null, null, null)
                     )
                 ), new TypeReference<Map<String, Object>>() {}

@@ -20,9 +20,9 @@ package io.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
-import com.metamx.common.parsers.ParserUtils;
 import com.metamx.common.parsers.TimestampParser;
 import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
 
 import java.util.Map;
 
@@ -39,21 +39,64 @@ public class TimestampSpec
   private final Function<Object, DateTime> timestampConverter;
   // this value should never be set for production data
   private final DateTime missingValue;
+  // when timestamp column doesn't contain timezone information, such as 'yyyy-MM-dd HH:mm:ss',
+  // user can specify it explicitly using "timeZone" argument.
+  // note that it's not needed for posix time or timestamp with timezone like 'yyyy-MM-dd HH:mm:ssZZ'
+  private final String timeZone;
+
+  private static class EnforceSourceTimeZoneConverter implements Function<Object, DateTime>
+  {
+    private final Function<Object, DateTime> wrapped;
+    private final DateTimeZone timeZone;
+
+    private EnforceSourceTimeZoneConverter(
+        Function<Object, DateTime> wrapped,
+        DateTimeZone timeZone
+    )
+    {
+      this.wrapped = wrapped;
+      this.timeZone = timeZone;
+    }
+
+    @Override
+    public DateTime apply(Object input)
+    {
+      DateTime dt = wrapped.apply(input);
+      return dt == null ? null : dt.withZoneRetainFields(timeZone);
+    }
+  }
+
+  public TimestampSpec(
+      String timestampColumn,
+      String format,
+      DateTime missingValue
+  )
+  {
+    this(timestampColumn, format, missingValue, null);
+  }
 
   @JsonCreator
   public TimestampSpec(
       @JsonProperty("column") String timestampColumn,
       @JsonProperty("format") String format,
       // this value should never be set for production data
-      @JsonProperty("missingValue") DateTime missingValue
-  )
+      @JsonProperty("missingValue") DateTime missingValue,
+      @JsonProperty("timeZone") String timeZone
+      )
   {
     this.timestampColumn = (timestampColumn == null) ? DEFAULT_COLUMN : timestampColumn;
     this.timestampFormat = format == null ? DEFAULT_FORMAT : format;
-    this.timestampConverter = TimestampParser.createObjectTimestampParser(timestampFormat);
+    this.timeZone = timeZone;
     this.missingValue = missingValue == null
-                                       ? DEFAULT_MISSING_VALUE
-                                       : missingValue;
+                        ? DEFAULT_MISSING_VALUE
+                        : missingValue;
+
+    Function<Object, DateTime> converter = TimestampParser.createObjectTimestampParser(timestampFormat);
+    if (timeZone != null) {
+      this.timestampConverter = new EnforceSourceTimeZoneConverter(converter, DateTimeZone.forID(timeZone));
+    } else {
+      this.timestampConverter = converter;
+    }
   }
 
   @JsonProperty("column")
@@ -66,6 +109,12 @@ public class TimestampSpec
   public String getTimestampFormat()
   {
     return timestampFormat;
+  }
+
+  @JsonProperty("timeZone")
+  public String getTimeZone()
+  {
+    return timeZone;
   }
 
   @JsonProperty("missingValue")
@@ -99,7 +148,10 @@ public class TimestampSpec
     if (!timestampFormat.equals(that.timestampFormat)) {
       return false;
     }
-    return !(missingValue != null ? !missingValue.equals(that.missingValue) : that.missingValue != null);
+    if (missingValue != null ? !missingValue.equals(that.missingValue) : that.missingValue != null) {
+      return false;
+    }
+    return timeZone != null ? timeZone.equals(that.timeZone) : that.timeZone == null;
 
   }
 
@@ -109,6 +161,7 @@ public class TimestampSpec
     int result = timestampColumn.hashCode();
     result = 31 * result + timestampFormat.hashCode();
     result = 31 * result + (missingValue != null ? missingValue.hashCode() : 0);
+    result = 31 * result + (timeZone != null ? timeZone.hashCode() : 0);
     return result;
   }
 }
