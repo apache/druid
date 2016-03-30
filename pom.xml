@@ -102,6 +102,7 @@
         <module>extensions-contrib/kafka-eight-simpleConsumer</module>
         <module>extensions-contrib/rabbitmq</module>
         <module>extensions-contrib/distinctcount</module>
+        <module>extensions-contrib/parquet-extensions</module>
 
         <!-- distribution packaging -->
         <module>distribution</module>
