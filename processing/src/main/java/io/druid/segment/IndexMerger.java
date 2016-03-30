@@ -659,16 +659,20 @@ public class IndexMerger
       progress.progress();
       startTime = System.currentTimeMillis();
 
-      ArrayList<FileOutputSupplier> dimOuts = Lists.newArrayListWithCapacity(mergedDimensions.size());
-      Map<String, Integer> dimensionCardinalities = Maps.newHashMap();
-      ArrayList<Map<String, IntBuffer>> dimConversions = Lists.newArrayListWithCapacity(indexes.size());
+      final ArrayList<FileOutputSupplier> dimOuts = Lists.newArrayListWithCapacity(mergedDimensions.size());
+      final Map<String, Integer> dimensionCardinalities = Maps.newHashMap();
+      final ArrayList<Map<String, IntBuffer>> dimConversions = Lists.newArrayListWithCapacity(indexes.size());
       final ArrayList<Boolean> convertMissingDimsFlags = Lists.newArrayListWithCapacity(mergedDimensions.size());
+      final ArrayList<MutableBitmap> nullRowsList = Lists.newArrayListWithCapacity(mergedDimensions.size());
+      final ArrayList<Boolean> dimHasNullFlags = Lists.newArrayListWithCapacity(mergedDimensions.size());
 
       for (int i = 0; i < indexes.size(); ++i) {
         dimConversions.add(Maps.<String, IntBuffer>newHashMap());
       }
 
       for (String dimension : mergedDimensions) {
+        nullRowsList.add(indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap());
+
         final GenericIndexedWriter<String> writer = new GenericIndexedWriter<String>(
             ioPeon, dimension, GenericIndexed.STRING_STRATEGY
         );
@@ -704,6 +708,7 @@ public class IndexMerger
        * rows from indexes with null/empty str values for that dimension.
        */
         if (convertMissingDims && !dimHasNull) {
+          dimHasNull = true;
           dimValueLookups[indexes.size()] = dimValueLookup = EMPTY_STR_DIM_VAL;
           numMergeIndex++;
         }
@@ -730,6 +735,9 @@ public class IndexMerger
         }
 
         dimensionCardinalities.put(dimension, cardinality);
+
+        // Mark if this dim has the null/empty str value in its dictionary, used for determining nullRowsList later.
+        dimHasNullFlags.add(dimHasNull);
 
         FileOutputSupplier dimOut = new FileOutputSupplier(IndexIO.makeDimFile(v8OutDir, dimension), true);
         dimOuts.add(dimOut);
@@ -821,6 +829,14 @@ public class IndexMerger
                                       ? null
                                       : Ints.asList(dims[i]);
           forwardDimWriters.get(i).write(listToWrite);
+          if (listToWrite == null || listToWrite.isEmpty()) {
+            // empty row; add to the nullRows bitmap
+            nullRowsList.get(i).add(rowCount);
+          } else if (dimHasNullFlags.get(i) && listToWrite.size() == 1 && listToWrite.get(0) == 0) {
+            // If this dimension has the null/empty str in its dictionary, a row with a single-valued dimension
+            // that matches the null/empty str's dictionary ID should also be added to nullRowsList.
+            nullRowsList.get(i).add(rowCount);
+          }
         }
 
         for (Map.Entry<Integer, TreeSet<Integer>> comprisedRow : theRow.getComprisedRows().entrySet()) {
@@ -930,6 +946,9 @@ public class IndexMerger
           }
 
           MutableBitmap bitset = bitmapSerdeFactory.getBitmapFactory().makeEmptyMutableBitmap();
+          if ((dictId == 0) && (Iterables.getFirst(dimVals, "") == null)) {
+            bitset.or(nullRowsList.get(i));
+          }
           for (Integer row : CombiningIterable.createSplatted(
               convertedInverteds,
               Ordering.<Integer>natural().nullsFirst()
