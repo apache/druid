@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation.histogram;
 
+import com.google.common.base.Throwables;
 import com.google.common.collect.Ordering;
 import io.druid.data.input.InputRow;
 import io.druid.segment.column.ColumnBuilder;
@@ -34,7 +35,7 @@ import java.util.List;
 
 public class ApproximateHistogramFoldingSerde extends ComplexMetricSerde
 {
-  private static Ordering<ApproximateHistogram> comparator = new Ordering<ApproximateHistogram>()
+  static final Ordering<ApproximateHistogram> comparator = new Ordering<ApproximateHistogram>()
   {
     @Override
     public int compare(
@@ -49,6 +50,11 @@ public class ApproximateHistogramFoldingSerde extends ComplexMetricSerde
   public String getTypeName()
   {
     return "approximateHistogram";
+  }
+
+  public Class<? extends ApproximateHistogram> getClazz()
+  {
+    return ApproximateHistogram.class;
   }
 
   @Override
@@ -105,7 +111,7 @@ public class ApproximateHistogramFoldingSerde extends ComplexMetricSerde
       @Override
       public Class<? extends ApproximateHistogram> getClazz()
       {
-        return ApproximateHistogram.class;
+        return ApproximateHistogramFoldingSerde.this.getClazz();
       }
 
       @Override
@@ -113,7 +119,12 @@ public class ApproximateHistogramFoldingSerde extends ComplexMetricSerde
       {
         final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
         readOnlyBuffer.limit(readOnlyBuffer.position() + numBytes);
-        return ApproximateHistogram.fromBytes(readOnlyBuffer);
+        try {
+          return getClazz().newInstance().fromBytes(readOnlyBuffer);
+        }
+        catch (Exception e) {
+          throw Throwables.propagate(e);
+        }
       }
 
       @Override

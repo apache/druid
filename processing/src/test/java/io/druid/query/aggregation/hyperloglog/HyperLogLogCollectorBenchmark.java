@@ -22,14 +22,11 @@ package io.druid.query.aggregation.hyperloglog;
 import com.google.caliper.Param;
 import com.google.caliper.Runner;
 import com.google.caliper.SimpleBenchmark;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
-import sun.misc.Unsafe;
+import io.druid.segment.ByteBuffers;
 
-import java.lang.reflect.Field;
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Random;
@@ -165,39 +162,5 @@ public class HyperLogLogCollectorBenchmark extends SimpleBenchmark
 
   public static void main(String[] args) throws Exception {
     Runner.main(HyperLogLogCollectorBenchmark.class, args);
-  }
-}
-
-class ByteBuffers {
-  private static final Unsafe UNSAFE;
-  private static final long ADDRESS_OFFSET;
-
-  static {
-    try {
-      Field theUnsafe = Unsafe.class.getDeclaredField("theUnsafe");
-      theUnsafe.setAccessible(true);
-      UNSAFE = (Unsafe) theUnsafe.get(null);
-      ADDRESS_OFFSET = UNSAFE.objectFieldOffset(Buffer.class.getDeclaredField("address"));
-    } catch (Exception e) {
-      throw new RuntimeException("Cannot access Unsafe methods", e);
-    }
-  }
-
-  public static long getAddress(ByteBuffer buf) {
-    return UNSAFE.getLong(buf, ADDRESS_OFFSET);
-  }
-
-  public static ByteBuffer allocateAlignedByteBuffer(int capacity, int align) {
-    Preconditions.checkArgument(Long.bitCount(align) == 1, "Alignment must be a power of 2");
-    final ByteBuffer buf = ByteBuffer.allocateDirect(capacity + align);
-    long address = getAddress(buf);
-    if ((address & (align - 1)) == 0) {
-      buf.limit(capacity);
-    } else {
-      int offset = (int) (align - (address & (align - 1)));
-      buf.position(offset);
-      buf.limit(offset + capacity);
-    }
-    return buf.slice();
   }
 }

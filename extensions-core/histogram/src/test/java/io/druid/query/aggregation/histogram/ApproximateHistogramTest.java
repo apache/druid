@@ -47,9 +47,14 @@ public class ApproximateHistogramTest
   static final float[] VALUES5 = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   static final float[] VALUES6 = {1f, 1.5f, 2f, 2.5f, 3f, 3.5f, 4f, 4.5f, 5f, 5.5f, 6f, 6.5f, 7f, 7.5f, 8f, 8.5f, 9f, 9.5f, 10f};
 
-  protected ApproximateHistogram buildHistogram(int size, float[] values)
+  protected ApproximateHistogram buildHistogram(int size)
   {
-    ApproximateHistogram h = new ApproximateHistogram(size);
+    return new ApproximateHistogram(size);
+  }
+
+  private ApproximateHistogram buildHistogram(int size, float[] values)
+  {
+    ApproximateHistogram h = buildHistogram(size);
     for (float v : values) {
       h.offer(v);
     }
@@ -63,6 +68,16 @@ public class ApproximateHistogramTest
       h.offer(v);
     }
     return h;
+  }
+
+  protected ApproximateHistogram buildHistogram(int binCount, float[] positions, long[] bins, float min, float max)
+  {
+    return new ApproximateHistogram(binCount, positions, bins, min, max);
+  }
+
+  protected ApproximateHistogram buildHistogram(byte[] buffer)
+  {
+    return new ApproximateHistogram().fromBytes(buffer);
   }
 
   @Test
@@ -90,10 +105,10 @@ public class ApproximateHistogramTest
   @Test
   public void testFold()
   {
-    ApproximateHistogram merged = new ApproximateHistogram(0);
-    ApproximateHistogram mergedFast = new ApproximateHistogram(0);
-    ApproximateHistogram h1 = new ApproximateHistogram(5);
-    ApproximateHistogram h2 = new ApproximateHistogram(10);
+    ApproximateHistogram merged = buildHistogram(0);
+    ApproximateHistogram mergedFast = buildHistogram(0);
+    ApproximateHistogram h1 = buildHistogram(5);
+    ApproximateHistogram h2 = buildHistogram(10);
 
     for (int i = 0; i < 5; ++i) {
       h1.offer(VALUES[i]);
@@ -139,7 +154,7 @@ public class ApproximateHistogramTest
     aFast.foldFast(b);
 
     Assert.assertEquals(
-        new ApproximateHistogram(
+        buildHistogram(
             6,
             new float[]{1, 2, 3, 4, 5, 6, 0, 0, 0, 0},
             new long[]{1, 1, 2, 2, 2, 2, 0, 0, 0, 0},
@@ -147,7 +162,7 @@ public class ApproximateHistogramTest
         ), a
     );
     Assert.assertEquals(
-        new ApproximateHistogram(
+        buildHistogram(
             6,
             new float[]{1, 2, 3, 4, 5, 6, 0, 0, 0, 0},
             new long[]{1, 1, 2, 2, 2, 2, 0, 0, 0, 0},
@@ -155,8 +170,8 @@ public class ApproximateHistogramTest
         ), aFast
     );
 
-    ApproximateHistogram h3 = new ApproximateHistogram(10);
-    ApproximateHistogram h4 = new ApproximateHistogram(10);
+    ApproximateHistogram h3 = buildHistogram(10);
+    ApproximateHistogram h4 = buildHistogram(10);
     for (float v : VALUES3) {
       h3.offer(v);
     }
@@ -179,8 +194,8 @@ public class ApproximateHistogramTest
   @Test
   public void testFoldNothing() throws Exception
   {
-    ApproximateHistogram h1 = new ApproximateHistogram(10);
-    ApproximateHistogram h2 = new ApproximateHistogram(10);
+    ApproximateHistogram h1 = buildHistogram(10);
+    ApproximateHistogram h2 = buildHistogram(10);
 
     h1.fold(h2);
     h1.foldFast(h2);
@@ -189,12 +204,12 @@ public class ApproximateHistogramTest
   @Test
   public void testFoldNothing2() throws Exception
   {
-    ApproximateHistogram h1 = new ApproximateHistogram(10);
-    ApproximateHistogram h1Fast = new ApproximateHistogram(10);
-    ApproximateHistogram h2 = new ApproximateHistogram(10);
-    ApproximateHistogram h3 = new ApproximateHistogram(10);
-    ApproximateHistogram h4 = new ApproximateHistogram(10);
-    ApproximateHistogram h4Fast = new ApproximateHistogram(10);
+    ApproximateHistogram h1 = buildHistogram(10);
+    ApproximateHistogram h1Fast = buildHistogram(10);
+    ApproximateHistogram h2 = buildHistogram(10);
+    ApproximateHistogram h3 = buildHistogram(10);
+    ApproximateHistogram h4 = buildHistogram(10);
+    ApproximateHistogram h4Fast = buildHistogram(10);
     for (float v : VALUES3) {
       h3.offer(v);
       h4.offer(v);
@@ -212,13 +227,13 @@ public class ApproximateHistogramTest
     Assert.assertEquals(h3, h4Fast);
   }
 
-    //@Test
+  //@Test
   public void testFoldSpeed()
   {
     final int combinedHistSize = 200;
     final int histSize = 50;
     final int numRand = 10000;
-    ApproximateHistogram h = new ApproximateHistogram(combinedHistSize);
+    ApproximateHistogram h = buildHistogram(combinedHistSize);
     Random rand = new Random(0);
     //for(int i = 0; i < 200; ++i) h.offer((float)(rand.nextGaussian() * 50.0));
     long tFold = 0;
@@ -231,10 +246,10 @@ public class ApproximateHistogramTest
     List<ApproximateHistogram> randHist = Lists.newLinkedList();
     Iterator<ApproximateHistogram> it = Iterators.cycle(randHist);
 
-    for(int k = 0; k < numRand; ++k) {
-      ApproximateHistogram tmp = new ApproximateHistogram(histSize);
+    for (int k = 0; k < numRand; ++k) {
+      ApproximateHistogram tmp = buildHistogram(histSize);
       for (int i = 0; i < 20; ++i) {
-        tmp.offer((float) (rand.nextGaussian() + (double)k));
+        tmp.offer((float) (rand.nextGaussian() + (double) k));
       }
       randHist.add(tmp);
     }
@@ -284,10 +299,10 @@ public class ApproximateHistogramTest
   public void testSerializeCompact()
   {
     ApproximateHistogram h = buildHistogram(5, VALUES);
-    Assert.assertEquals(h, ApproximateHistogram.fromBytes(h.toBytes()));
+    Assert.assertEquals(h, buildHistogram(h.toBytes()));
 
-    ApproximateHistogram h2 = new ApproximateHistogram(50).fold(h);
-    Assert.assertEquals(h2, ApproximateHistogram.fromBytes(h2.toBytes()));
+    ApproximateHistogram h2 = buildHistogram(50).fold(h);
+    Assert.assertEquals(h2, buildHistogram(h2.toBytes()));
   }
 
   @Test
@@ -296,7 +311,7 @@ public class ApproximateHistogramTest
     ApproximateHistogram h = buildHistogram(5, VALUES);
     ByteBuffer buf = ByteBuffer.allocate(h.getDenseStorageSize());
     h.toBytesDense(buf);
-    Assert.assertEquals(h, ApproximateHistogram.fromBytes(buf.array()));
+    Assert.assertEquals(h, buildHistogram(buf.array()));
   }
 
   @Test
@@ -305,27 +320,27 @@ public class ApproximateHistogramTest
     ApproximateHistogram h = buildHistogram(5, VALUES);
     ByteBuffer buf = ByteBuffer.allocate(h.getSparseStorageSize());
     h.toBytesSparse(buf);
-    Assert.assertEquals(h, ApproximateHistogram.fromBytes(buf.array()));
+    Assert.assertEquals(h, buildHistogram(buf.array()));
   }
 
   @Test
   public void testSerializeCompactExact()
   {
     ApproximateHistogram h = buildHistogram(50, new float[]{1f, 2f, 3f, 4f, 5f});
-    Assert.assertEquals(h, ApproximateHistogram.fromBytes(h.toBytes()));
+    Assert.assertEquals(h, buildHistogram(h.toBytes()));
 
     h = buildHistogram(5, new float[]{1f, 2f, 3f});
-    Assert.assertEquals(h, ApproximateHistogram.fromBytes(h.toBytes()));
+    Assert.assertEquals(h, buildHistogram(h.toBytes()));
 
-    h = new ApproximateHistogram(40).fold(h);
-    Assert.assertEquals(h, ApproximateHistogram.fromBytes(h.toBytes()));
+    h = buildHistogram(40).fold(h);
+    Assert.assertEquals(h, buildHistogram(h.toBytes()));
   }
 
   @Test
   public void testSerializeEmpty()
   {
-    ApproximateHistogram h = new ApproximateHistogram(50);
-    Assert.assertEquals(h, ApproximateHistogram.fromBytes(h.toBytes()));
+    ApproximateHistogram h = buildHistogram(50);
+    Assert.assertEquals(h, buildHistogram(h.toBytes()));
   }
 
   @Test
@@ -461,8 +476,8 @@ public class ApproximateHistogramTest
     ApproximateHistogram h = buildHistogram(15, VALUES6, lowerLimit, upperLimit);
 
     for (int i = 1; i <= 20; ++i) {
-      ApproximateHistogram hLow = new ApproximateHistogram(5);
-      ApproximateHistogram hHigh = new ApproximateHistogram(5);
+      ApproximateHistogram hLow = buildHistogram(5);
+      ApproximateHistogram hHigh = buildHistogram(5);
       hLow.offer(lowerLimit - i);
       hHigh.offer(upperLimit + i);
       h.foldFast(hLow);
@@ -536,53 +551,54 @@ public class ApproximateHistogramTest
   @Test
   public void testBuckets4()
   {
-    final float[] values = new float[]{0f, 0f, 0.01f, 0.51f, 0.6f,0.8f};
-    ApproximateHistogram h = buildHistogram(50, values, 0.5f,1f);
-    Histogram h3 = h.toHistogram(0.2f,0);
+    final float[] values = new float[]{0f, 0f, 0.01f, 0.51f, 0.6f, 0.8f};
+    ApproximateHistogram h = buildHistogram(50, values, 0.5f, 1f);
+    Histogram h3 = h.toHistogram(0.2f, 0);
 
     Assert.assertArrayEquals(
         "Expected counts match actual counts",
-        new double[]{3f,2f,1f},
+        new double[]{3f, 2f, 1f},
         h3.getCounts(),
         0.1f
     );
 
     Assert.assertArrayEquals(
         "expected breaks match actual breaks",
-        new double[]{-0.2f,0.5f,0.7f,0.9f},
+        new double[]{-0.2f, 0.5f, 0.7f, 0.9f},
         h3.getBreaks(), 0.1f
     );
   }
 
-  @Test public void testBuckets5()
+  @Test
+  public void testBuckets5()
   {
-    final float[] values = new float[]{0.1f,0.5f,0.6f};
-    ApproximateHistogram h = buildHistogram(50, values, 0f,1f);
-    Histogram h4 = h.toHistogram(0.5f,0);
+    final float[] values = new float[]{0.1f, 0.5f, 0.6f};
+    ApproximateHistogram h = buildHistogram(50, values, 0f, 1f);
+    Histogram h4 = h.toHistogram(0.5f, 0);
 
     Assert.assertArrayEquals(
         "Expected counts match actual counts",
-        new double[]{2,1},
+        new double[]{2, 1},
         h4.getCounts(),
         0.1f
     );
 
     Assert.assertArrayEquals(
         "Expected breaks match actual breaks",
-        new double[]{0f,0.5f,1f},
+        new double[]{0f, 0.5f, 1f},
         h4.getBreaks(),
         0.1f
     );
   }
 
-  @Test public void testEmptyHistogram() {
-    ApproximateHistogram h = new ApproximateHistogram(50);
+  @Test
+  public void testEmptyHistogram()
+  {
+    ApproximateHistogram h = buildHistogram(50);
     Assert.assertArrayEquals(
         new float[]{Float.NaN, Float.NaN},
         h.getQuantiles(new float[]{0.8f, 0.9f}),
         1e-9f
     );
   }
-
-
 }

@@ -57,12 +57,15 @@ public class ApproximateHistogramTopNQueryTest
   @Parameterized.Parameters
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
-    return QueryRunnerTestHelper.transformToConstructionFeeder(
+    return QueryRunnerTestHelper.cartesian(
         Iterables.concat(
             QueryRunnerTestHelper.makeQueryRunners(
                 new TopNQueryRunnerFactory(
                     TestQueryRunners.getPool(),
-                    new TopNQueryQueryToolChest(new TopNQueryConfig(), QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
+                    new TopNQueryQueryToolChest(
+                        new TopNQueryConfig(),
+                        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+                    ),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
                 )
             ),
@@ -78,21 +81,27 @@ public class ApproximateHistogramTopNQueryTest
                           }
                         }
                     ),
-                    new TopNQueryQueryToolChest(new TopNQueryConfig(), QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
+                    new TopNQueryQueryToolChest(
+                        new TopNQueryConfig(),
+                        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+                    ),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
                 )
             )
-        )
+        ),
+        Arrays.asList(false, true)
     );
   }
 
   private final QueryRunner runner;
+  private final boolean compact;
 
   public ApproximateHistogramTopNQueryTest(
-      QueryRunner runner
+      QueryRunner runner, boolean compact
   )
   {
     this.runner = runner;
+    this.compact = compact;
   }
 
   @Test
@@ -104,7 +113,8 @@ public class ApproximateHistogramTopNQueryTest
         10,
         5,
         Float.NEGATIVE_INFINITY,
-        Float.POSITIVE_INFINITY
+        Float.POSITIVE_INFINITY,
+        compact
     );
 
     TopNQuery query = new TopNQueryBuilder()

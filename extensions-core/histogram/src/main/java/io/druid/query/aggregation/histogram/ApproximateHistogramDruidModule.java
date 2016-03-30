@@ -56,5 +56,8 @@ public class ApproximateHistogramDruidModule implements DruidModule
     if (ComplexMetrics.getSerdeForType("approximateHistogram") == null) {
       ComplexMetrics.registerSerde("approximateHistogram", new ApproximateHistogramFoldingSerde());
     }
+    if (ComplexMetrics.getSerdeForType("approximateCompactHistogram") == null) {
+      ComplexMetrics.registerSerde("approximateCompactHistogram", new ApproximateHistogramCompactFoldingSerde());
+    }
   }
 }

@@ -44,7 +44,7 @@ public class ApproximateHistogramAggregatorTest
     final TestFloatColumnSelector selector = new TestFloatColumnSelector(values);
 
     ApproximateHistogramAggregatorFactory factory = new ApproximateHistogramAggregatorFactory(
-        "billy", "billy", resolution, numBuckets, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY
+        "billy", "billy", resolution, numBuckets, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY, false
     );
     ApproximateHistogramBufferAggregator agg = new ApproximateHistogramBufferAggregator(selector, resolution, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY);
 

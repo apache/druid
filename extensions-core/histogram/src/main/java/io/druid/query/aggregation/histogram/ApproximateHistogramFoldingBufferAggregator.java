@@ -67,7 +67,7 @@ public class ApproximateHistogramFoldingBufferAggregator implements BufferAggreg
     ByteBuffer mutationBuffer = buf.duplicate();
     mutationBuffer.position(position);
 
-    ApproximateHistogram h0 = ApproximateHistogram.fromBytesDense(mutationBuffer);
+    ApproximateHistogram h0 = new ApproximateHistogram().fromBytesDense(mutationBuffer);
     h0.setLowerLimit(lowerLimit);
     h0.setUpperLimit(upperLimit);
     ApproximateHistogram hNext = selector.get();
@@ -82,7 +82,7 @@ public class ApproximateHistogramFoldingBufferAggregator implements BufferAggreg
   {
     ByteBuffer mutationBuffer = buf.asReadOnlyBuffer();
     mutationBuffer.position(position);
-    return ApproximateHistogram.fromBytesDense(mutationBuffer);
+    return new ApproximateHistogram().fromBytesDense(mutationBuffer);
   }
 
   @Override

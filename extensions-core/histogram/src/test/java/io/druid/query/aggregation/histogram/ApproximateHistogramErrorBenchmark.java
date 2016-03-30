@@ -184,6 +184,18 @@ public class ApproximateHistogramErrorBenchmark
       System.out.format("Error for approximate histogram: %s \n", err1);
       System.out.format("Error for approximate histogram, ruleFold: %s \n", err2);
       System.out.format("Error ratio for AHRF: %s \n", err2 / err1);
+
+      System.out.println("Footprint 1:" + ah1.getMinStorageSize());
+      System.out.println(
+          "Footprint 2:" + new ApproximateCompactHistogram(
+              ah1.size,
+              ah1.binCount,
+              ah1.positions,
+              ah1.bins,
+              ah1.min,
+              ah1.max
+          ).toBytes().length
+      );
     }
     return new float[]{err1, err2, err2 / err1};
   }

@@ -53,6 +53,8 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   protected final float lowerLimit;
   protected final float upperLimit;
 
+  protected final boolean compact;
+
   @JsonCreator
   public ApproximateHistogramAggregatorFactory(
       @JsonProperty("name") String name,
@@ -60,7 +62,8 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
       @JsonProperty("resolution") Integer resolution,
       @JsonProperty("numBuckets") Integer numBuckets,
       @JsonProperty("lowerLimit") Float lowerLimit,
-      @JsonProperty("upperLimit") Float upperLimit
+      @JsonProperty("upperLimit") Float upperLimit,
+      @JsonProperty("compact") boolean compact
 
   )
   {
@@ -70,6 +73,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
     this.numBuckets = numBuckets == null ? ApproximateHistogram.DEFAULT_BUCKET_SIZE : numBuckets;
     this.lowerLimit = lowerLimit == null ? Float.NEGATIVE_INFINITY : lowerLimit;
     this.upperLimit = upperLimit == null ? Float.POSITIVE_INFINITY : upperLimit;
+    this.compact = compact;
 
     Preconditions.checkArgument(this.resolution > 0, "resolution must be greater than 1");
     Preconditions.checkArgument(this.numBuckets > 0, "numBuckets must be greater than 1");
@@ -147,7 +151,8 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
             resolution,
             numBuckets,
             lowerLimit,
-            upperLimit
+            upperLimit,
+            compact
         )
     );
   }
@@ -155,28 +160,23 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   @Override
   public Object deserialize(Object object)
   {
-    if (object instanceof byte[]) {
-      final ApproximateHistogram ah = ApproximateHistogram.fromBytes((byte[]) object);
-      ah.setLowerLimit(lowerLimit);
-      ah.setUpperLimit(upperLimit);
-
-      return ah;
-    } else if (object instanceof ByteBuffer) {
-      final ApproximateHistogram ah = ApproximateHistogram.fromBytes((ByteBuffer) object);
-      ah.setLowerLimit(lowerLimit);
-      ah.setUpperLimit(upperLimit);
-
-      return ah;
-    } else if (object instanceof String) {
-      byte[] bytes = Base64.decodeBase64(StringUtils.toUtf8((String) object));
-      final ApproximateHistogram ah = ApproximateHistogram.fromBytes(bytes);
-      ah.setLowerLimit(lowerLimit);
-      ah.setUpperLimit(upperLimit);
-
-      return ah;
-    } else {
+    if (object instanceof ApproximateHistogram) {
       return object;
     }
+    final ApproximateHistogram ah = compact ? new ApproximateCompactHistogram() : new ApproximateHistogram();
+    if (object instanceof byte[]) {
+      ah.fromBytes((byte[]) object);
+    } else if (object instanceof ByteBuffer) {
+      ah.fromBytes((ByteBuffer) object);
+    } else if (object instanceof String) {
+      ah.fromBytes(Base64.decodeBase64(StringUtils.toUtf8((String) object)));
+    } else {
+      throw new IllegalArgumentException("Invalid object"  + object);
+    }
+    ah.setLowerLimit(lowerLimit);
+    ah.setUpperLimit(upperLimit);
+
+    return ah;
   }
 
   @Override
@@ -232,8 +232,9 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   public byte[] getCacheKey()
   {
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
-    return ByteBuffer.allocate(1 + fieldNameBytes.length + Ints.BYTES * 2 + Floats.BYTES * 2)
+    return ByteBuffer.allocate(2 + fieldNameBytes.length + Ints.BYTES * 2 + Floats.BYTES * 2)
                      .put(CACHE_TYPE_ID)
+                     .put(compact ? (byte) 1 : 0)
                      .put(fieldNameBytes)
                      .putInt(resolution)
                      .putInt(numBuckets)
@@ -250,13 +251,17 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   @Override
   public int getMaxIntermediateSize()
   {
-    return new ApproximateHistogram(resolution).getMaxStorageSize();
+    return getEmptyHistogram().getMaxStorageSize();
   }
 
   @Override
   public Object getAggregatorStartValue()
   {
-    return new ApproximateHistogram(resolution);
+    return getEmptyHistogram();
+  }
+
+  private ApproximateHistogram getEmptyHistogram() {
+    return compact ? new ApproximateCompactHistogram(resolution) : new ApproximateHistogram(resolution);
   }
 
   @Override
@@ -271,6 +276,9 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
 
     ApproximateHistogramAggregatorFactory that = (ApproximateHistogramAggregatorFactory) o;
 
+    if (compact != that.compact) {
+      return false;
+    }
     if (Float.compare(that.lowerLimit, lowerLimit) != 0) {
       return false;
     }
@@ -297,6 +305,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   public int hashCode()
   {
     int result = name != null ? name.hashCode() : 0;
+    result = 31 * result + (compact ? 1 : 0);
     result = 31 * result + (fieldName != null ? fieldName.hashCode() : 0);
     result = 31 * result + resolution;
     result = 31 * result + numBuckets;
@@ -311,6 +320,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
     return "ApproximateHistogramAggregatorFactory{" +
            "name='" + name + '\'' +
            ", fieldName='" + fieldName + '\'' +
+           ", compact=" + compact +
            ", resolution=" + resolution +
            ", numBuckets=" + numBuckets +
            ", lowerLimit=" + lowerLimit +

@@ -62,8 +62,8 @@ public class ApproximateHistogram
   transient float upperLimit;
 
   // use sign bit to indicate approximate bin and remaining bits for bin count
-  private static final long APPROX_FLAG_BIT = Long.MIN_VALUE;
-  private static final long COUNT_BITS = Long.MAX_VALUE;
+  protected static final long APPROX_FLAG_BIT = Long.MIN_VALUE;
+  protected static final long COUNT_BITS = Long.MAX_VALUE;
 
   @Override
   public boolean equals(Object o)
@@ -71,7 +71,7 @@ public class ApproximateHistogram
     if (this == o) {
       return true;
     }
-    if (o == null || getClass() != o.getClass()) {
+    if (!(o instanceof ApproximateHistogram)) {
       return false;
     }
 
@@ -191,6 +191,34 @@ public class ApproximateHistogram
     );
   }
 
+  public ApproximateHistogram(int size, int binCount, float[] positions, long[] bins, float min, float max)
+  {
+    this(
+        size,        //size
+        positions,               //positions
+        bins,                    //bins
+        binCount,                //binCount
+        min,                     //min
+        max,                     //max
+        sumBins(bins, binCount), //count
+        Float.NEGATIVE_INFINITY, //lowerLimit
+        Float.POSITIVE_INFINITY  //upperLimit
+    );
+  }
+
+  public void reset(int size)
+  {
+    this.size = size;
+    this.binCount = 0;
+    this.positions = new float[size];
+    this.bins = new long[size];
+    this.min = Float.POSITIVE_INFINITY;
+    this.max = Float.NEGATIVE_INFINITY;
+    this.count = 0;
+    this.lowerLimit = Float.NEGATIVE_INFINITY;
+    this.upperLimit = Float.POSITIVE_INFINITY;
+  }
+
   public long count() { return count; }
 
   public float min() { return min; }
@@ -243,7 +271,7 @@ public class ApproximateHistogram
 
   public float getMax() { return this.max;}
 
-  private static long sumBins(long[] bins, int binCount)
+  static long sumBins(long[] bins, int binCount)
   {
     long count = 0;
     for (int i = 0; i < binCount; ++i) {
@@ -576,8 +604,14 @@ public class ApproximateHistogram
 
     // determine how many bins to merge
     int numMerge = mergedBinCount - this.size;
-    if (numMerge < 0) {
-      numMerge = 0;
+    if (numMerge <= 0) {
+      this.positions = mergedPositions;
+      this.bins = mergedBins;
+      this.binCount = mergedBinCount;
+      this.min = mergedMin;
+      this.max = mergedMax;
+      this.count = mergedCount;
+      return this;
     }
 
     // perform the required number of merges
@@ -1164,7 +1198,7 @@ public class ApproximateHistogram
    *
    * @return true if yes, false otherwise
    */
-  public boolean canStoreCompact()
+  private boolean canStoreCompact()
   {
     final long exactCount = getExactCount();
     return (
@@ -1179,7 +1213,7 @@ public class ApproximateHistogram
    *
    * @param buf ByteBuffer to write the ApproximateHistogram to
    */
-  public void toBytes(ByteBuffer buf)
+  private void toBytes(ByteBuffer buf)
   {
     if (canStoreCompact() && getCompactStorageSize() < getSparseStorageSize()) {
       // store compact
@@ -1285,7 +1319,7 @@ public class ApproximateHistogram
    *
    * @return ApproximateHistogram constructed from the given byte array
    */
-  public static ApproximateHistogram fromBytes(byte[] bytes)
+  public ApproximateHistogram fromBytes(byte[] bytes)
   {
     ByteBuffer buf = ByteBuffer.wrap(bytes);
     return fromBytes(buf);
@@ -1298,7 +1332,7 @@ public class ApproximateHistogram
    *
    * @return ApproximateHistogram constructed from the given ByteBuffer
    */
-  public static ApproximateHistogram fromBytesDense(ByteBuffer buf)
+  public ApproximateHistogram fromBytesDense(ByteBuffer buf)
   {
     int size = buf.getInt();
     int binCount = buf.getInt();
@@ -1314,7 +1348,17 @@ public class ApproximateHistogram
     float min = buf.getFloat();
     float max = buf.getFloat();
 
-    return new ApproximateHistogram(binCount, positions, bins, min, max);
+    this.size = size;
+    this.binCount = binCount;
+    this.positions = positions;
+    this.bins = bins;
+    this.min = min;
+    this.max = max;
+    this.count = sumBins(bins, binCount);
+    this.lowerLimit = Float.NEGATIVE_INFINITY;
+    this.upperLimit = Float.POSITIVE_INFINITY;
+
+    return this;
   }
 
   /**
@@ -1324,7 +1368,7 @@ public class ApproximateHistogram
    *
    * @return ApproximateHistogram constructed from the given ByteBuffer
    */
-  public static ApproximateHistogram fromBytesSparse(ByteBuffer buf)
+  public ApproximateHistogram fromBytesSparse(ByteBuffer buf)
   {
     int size = buf.getInt();
     int binCount = -1 * buf.getInt();
@@ -1342,7 +1386,17 @@ public class ApproximateHistogram
     float min = buf.getFloat();
     float max = buf.getFloat();
 
-    return new ApproximateHistogram(binCount, positions, bins, min, max);
+    this.size = size;
+    this.binCount = binCount;
+    this.positions = positions;
+    this.bins = bins;
+    this.min = min;
+    this.max = max;
+    this.count = sumBins(bins, binCount);
+    this.lowerLimit = Float.NEGATIVE_INFINITY;
+    this.upperLimit = Float.POSITIVE_INFINITY;
+
+    return this;
   }
 
   /**
@@ -1352,18 +1406,18 @@ public class ApproximateHistogram
    *
    * @return ApproximateHistogram constructed from the given ByteBuffer
    */
-  public static ApproximateHistogram fromBytesCompact(ByteBuffer buf)
+  public ApproximateHistogram fromBytesCompact(ByteBuffer buf)
   {
     short size = (short) (-1 * buf.getShort());
     byte count = buf.get();
 
     if (count >= 0) {
       // only exact bins
-      ApproximateHistogram histogram = new ApproximateHistogram(size);
+      reset(size);
       for (int i = 0; i < count; ++i) {
-        histogram.offer(buf.getFloat());
+        offer(buf.getFloat());
       }
-      return histogram;
+      return this;
     } else {
       byte approxCount = (byte) (-1 * count);
 
@@ -1417,7 +1471,17 @@ public class ApproximateHistogram
         }
       }
 
-      return new ApproximateHistogram(binCount, positions, bins, min, max);
+      this.size = size;
+      this.binCount = binCount;
+      this.positions = positions;
+      this.bins = bins;
+      this.min = min;
+      this.max = max;
+      this.count = sumBins(bins, binCount);
+      this.lowerLimit = Float.NEGATIVE_INFINITY;
+      this.upperLimit = Float.POSITIVE_INFINITY;
+
+      return this;
     }
   }
 
@@ -1428,7 +1492,7 @@ public class ApproximateHistogram
    *
    * @return ApproximateHistogram constructed from the given ByteBuffer
    */
-  public static ApproximateHistogram fromBytes(ByteBuffer buf)
+  public ApproximateHistogram fromBytes(ByteBuffer buf)
   {
     ByteBuffer copy = buf.asReadOnlyBuffer();
     // negative size indicates compact representation

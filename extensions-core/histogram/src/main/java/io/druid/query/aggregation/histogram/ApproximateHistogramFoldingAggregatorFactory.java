@@ -49,7 +49,7 @@ public class ApproximateHistogramFoldingAggregatorFactory extends ApproximateHis
       @JsonProperty("upperLimit") Float upperLimit
   )
   {
-    super(name, fieldName, resolution, numBuckets, lowerLimit, upperLimit);
+    super(name, fieldName, resolution, numBuckets, lowerLimit, upperLimit, false);
   }
 
   @Override
