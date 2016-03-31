@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
@@ -38,7 +39,6 @@ import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.data.input.impl.NewSpatialDimensionSchema;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -101,7 +101,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     @Override
     public String apply(final Object o)
     {
-      return String.valueOf(o);
+      return o == null ? null : String.valueOf(o);
     }
   };
 
@@ -114,8 +114,9 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
         return null;
       }
       if (o instanceof String) {
+        String s = (String) o;
         try {
-          return Long.valueOf((String) o);
+          return s.isEmpty() ? null : Long.valueOf(s);
         }
         catch (NumberFormatException nfe) {
           throw new ParseException(nfe, "Unable to parse value[%s] as long in column: ", o);
@@ -137,8 +138,9 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
         return null;
       }
       if (o instanceof String) {
+        String s = (String) o;
         try {
-          return Float.valueOf((String) o);
+          return s.isEmpty() ? null : Float.valueOf(s);
         }
         catch (NumberFormatException nfe) {
           throw new ParseException(nfe, "Unable to parse value[%s] as float in column: ", o);
@@ -354,6 +356,9 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   private final Map<String, DimensionDesc> dimensionDescs;
   private final Map<String, ColumnCapabilitiesImpl> columnCapabilities;
   private final List<DimDim> dimValues;
+
+  // looks need a configuration
+  private final Ordering<Comparable> ordering = Ordering.natural().nullsFirst();
 
   private final AtomicInteger numEntries = new AtomicInteger();
 
@@ -714,7 +719,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     }
 
     Comparable[] dimArray = dimValues.toArray(new Comparable[dimValues.size()]);
-    Arrays.sort(dimArray);
+    Arrays.sort(dimArray, ordering);
 
     final int[] retVal = new int[dimArray.length];
 
