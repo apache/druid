@@ -1240,26 +1240,6 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
       int index = 0;
       while (retVal == 0 && index < numComparisons) {
-        ValueType lhsType = lhs.types[index];
-        ValueType rhsType = rhs.types[index];
-
-        if (lhsType == null) {
-          if (rhsType == null) {
-            ++index;
-            continue;
-          }
-          return -1;
-        }
-
-        if (rhsType == null) {
-          return 1;
-        }
-
-        retVal = lhsType.compareTo(rhsType);
-        if (retVal != 0) {
-          return retVal;
-        }
-
         final int[] lhsIdxs = lhs.dims[index];
         final int[] rhsIdxs = rhs.dims[index];
 
