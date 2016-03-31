@@ -21,9 +21,7 @@ package io.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import com.metamx.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.lookup.LookupExtractionFn;
@@ -104,14 +102,7 @@ public class ExtractionDimFilter implements DimFilter
       final List<String> keys = lookup.unapply(this.getValue());
       final String dimensionName = this.getDimension();
       if (!keys.isEmpty()) {
-        return new OrDimFilter(Lists.transform(keys, new Function<String, DimFilter>()
-        {
-          @Override
-          public DimFilter apply(String input)
-          {
-            return new SelectorDimFilter(dimensionName, input);
-          }
-        }));
+        return new InDimFilter(dimensionName, keys);
       }
     }
     return this;
