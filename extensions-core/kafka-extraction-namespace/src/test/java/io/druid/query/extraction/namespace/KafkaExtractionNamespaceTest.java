@@ -25,6 +25,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.IOException;
+import java.util.Properties;
 
 /**
  *
@@ -36,7 +37,7 @@ public class KafkaExtractionNamespaceTest
   {
     ObjectMapper mapper = new DefaultObjectMapper();
     mapper.registerSubtypes(KafkaExtractionNamespace.class);
-    final String val = "{\"type\":\"kafka\",\"kafkaTopic\":\"testTopic\",\"kafkaProperties\":null}";
+    final String val = "{\"type\":\"kafka\",\"kafkaTopic\":\"testTopic\",\"kafkaProperties\":{\"zookeeper.session.timeout.ms\":\"10000\",\"zookeeper.sync.time.ms\":\"200\"}}";
     final ExtractionNamespace fn =
         mapper.reader(ExtractionNamespace.class)
               .readValue(
