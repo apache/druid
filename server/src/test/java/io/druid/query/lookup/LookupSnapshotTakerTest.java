@@ -25,7 +25,6 @@ import com.google.common.collect.Lists;
 import com.google.common.io.Files;
 import com.metamx.common.ISE;
 import com.metamx.common.StringUtils;
-import io.druid.query.extraction.MapLookupExtractorFactory;
 import io.druid.segment.TestHelper;
 import org.junit.Assert;
 import org.junit.Before;
@@ -52,6 +51,7 @@ public class LookupSnapshotTakerTest
   @Before
   public void setUp() throws IOException
   {
+    mapper.registerSubtypes(MapLookupExtractorFactory.class);
     basePersistDirectory = temporaryFolder.newFolder().getAbsolutePath();
     lookupSnapshotTaker = new LookupSnapshotTaker(mapper, basePersistDirectory);
   }
