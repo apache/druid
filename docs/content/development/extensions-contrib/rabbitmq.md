@@ -4,6 +4,8 @@ layout: doc_page
 
 # RabbitMQ
 
+To use this extension, make sure to [include](../../operations/including-extensions.html) `druid-rabbitmq` extension.
+
 ## Firehose
 
 #### RabbitMQFirehose
