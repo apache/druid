@@ -62,7 +62,7 @@ public class BucketsPostAggregator extends ApproximateHistogramPostAggregator
   @Override
   public Object compute(Map<String, Object> values)
   {
-    ApproximateHistogram ah = (ApproximateHistogram) values.get(this.getFieldName());
+    ApproximateHistogramHolder ah = (ApproximateHistogramHolder) values.get(this.getFieldName());
     return ah.toHistogram(bucketSize, offset);
   }
 

@@ -27,7 +27,7 @@ import java.util.Arrays;
 
 /**
  */
-public class ApproximateCompactHistogram extends ApproximateHistogram
+public class ApproximateCompactHistogram extends ApproximateHistogramHolder
 {
   private static final long INVERTED_FLAG_BIT = 1L;
 
@@ -52,6 +52,7 @@ public class ApproximateCompactHistogram extends ApproximateHistogram
 
   public ApproximateCompactHistogram()
   {
+    this(DEFAULT_HISTOGRAM_SIZE);
   }
 
   public ApproximateCompactHistogram(int size)
@@ -74,11 +75,11 @@ public class ApproximateCompactHistogram extends ApproximateHistogram
     super(size, binCount, positions, bins, min, max);
   }
 
-  @JsonValue
   @Override
+  @JsonValue
   public byte[] toBytes()
   {
-    ByteBuffer buf = ByteBuffer.allocate(getDenseStorageSize());
+    ByteBuffer buf = ByteBuffer.allocate(getMaxStorageSize());
     toBytes(buf);
     return Arrays.copyOfRange(buf.array(), 0, buf.position());
   }

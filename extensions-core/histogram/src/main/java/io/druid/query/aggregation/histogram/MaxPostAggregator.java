@@ -67,7 +67,7 @@ public class MaxPostAggregator extends ApproximateHistogramPostAggregator
   @Override
   public Object compute(Map<String, Object> values)
   {
-    final ApproximateHistogram ah = (ApproximateHistogram) values.get(this.getFieldName());
+    final ApproximateHistogramHolder ah = (ApproximateHistogramHolder) values.get(this.getFieldName());
     return ah.getMax();
   }
 

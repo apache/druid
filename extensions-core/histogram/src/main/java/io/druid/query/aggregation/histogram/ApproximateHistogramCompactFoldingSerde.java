@@ -30,7 +30,7 @@ public class ApproximateHistogramCompactFoldingSerde extends ApproximateHistogra
   }
 
   @Override
-  public Class<? extends ApproximateHistogram> getClazz()
+  public Class<? extends ApproximateHistogramHolder> getClazz()
   {
     return ApproximateCompactHistogram.class;
   }

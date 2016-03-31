@@ -26,15 +26,15 @@ import org.junit.Ignore;
 public class ApproximateCompactHistogramTest extends ApproximateHistogramTest
 {
   @Override
-  protected ApproximateHistogram buildHistogram(int size)
+  protected ApproximateHistogramHolder buildHistogram(int size)
   {
     return new ApproximateCompactHistogram(size);
   }
 
   @Override
-  protected ApproximateHistogram buildHistogram(int size, float[] values, float lowerLimit, float upperLimit)
+  protected ApproximateHistogramHolder buildHistogram(int size, float[] values, float lowerLimit, float upperLimit)
   {
-    ApproximateHistogram h = new ApproximateCompactHistogram(size, lowerLimit, upperLimit);
+    ApproximateHistogramHolder h = new ApproximateCompactHistogram(size, lowerLimit, upperLimit);
     for (float v : values) {
       h.offer(v);
     }
@@ -42,12 +42,12 @@ public class ApproximateCompactHistogramTest extends ApproximateHistogramTest
   }
 
   @Override
-  protected ApproximateHistogram buildHistogram(int binCount, float[] positions, long[] bins, float min, float max)
+  protected ApproximateHistogramHolder buildHistogram(int binCount, float[] positions, long[] bins, float min, float max)
   {
     return new ApproximateCompactHistogram(binCount, positions, bins, min, max);
   }
 
-  protected ApproximateHistogram buildHistogram(byte[] buffer)
+  protected ApproximateHistogramHolder buildHistogram(byte[] buffer)
   {
     return new ApproximateCompactHistogram().fromBytes(buffer);
   }

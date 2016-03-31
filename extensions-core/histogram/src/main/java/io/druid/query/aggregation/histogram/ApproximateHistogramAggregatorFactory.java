@@ -163,7 +163,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
     if (object instanceof ApproximateHistogram) {
       return object;
     }
-    final ApproximateHistogram ah = compact ? new ApproximateCompactHistogram() : new ApproximateHistogram();
+    final ApproximateHistogramHolder ah = compact ? new ApproximateCompactHistogram() : new ApproximateHistogram();
     if (object instanceof byte[]) {
       ah.fromBytes((byte[]) object);
     } else if (object instanceof ByteBuffer) {
@@ -260,7 +260,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
     return getEmptyHistogram();
   }
 
-  private ApproximateHistogram getEmptyHistogram() {
+  private ApproximateHistogramHolder getEmptyHistogram() {
     return compact ? new ApproximateCompactHistogram(resolution) : new ApproximateHistogram(resolution);
   }
 

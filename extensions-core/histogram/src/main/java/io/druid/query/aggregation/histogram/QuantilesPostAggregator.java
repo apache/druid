@@ -69,7 +69,7 @@ public class QuantilesPostAggregator extends ApproximateHistogramPostAggregator
   @Override
   public Object compute(Map<String, Object> values)
   {
-    final ApproximateHistogram ah = (ApproximateHistogram) values.get(this.getFieldName());
+    final ApproximateHistogramHolder ah = (ApproximateHistogramHolder) values.get(this.getFieldName());
 
     return new Quantiles(this.getProbabilities(), ah.getQuantiles(this.getProbabilities()), ah.getMin(), ah.getMax());
   }

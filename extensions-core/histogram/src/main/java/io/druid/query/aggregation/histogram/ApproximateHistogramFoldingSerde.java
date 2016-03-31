@@ -35,11 +35,11 @@ import java.util.List;
 
 public class ApproximateHistogramFoldingSerde extends ComplexMetricSerde
 {
-  static final Ordering<ApproximateHistogram> comparator = new Ordering<ApproximateHistogram>()
+  static final Ordering<ApproximateHistogramHolder> comparator = new Ordering<ApproximateHistogramHolder>()
   {
     @Override
     public int compare(
-        ApproximateHistogram arg1, ApproximateHistogram arg2
+        ApproximateHistogramHolder arg1, ApproximateHistogramHolder arg2
     )
     {
       return ApproximateHistogramAggregator.COMPARATOR.compare(arg1, arg2);
@@ -52,7 +52,7 @@ public class ApproximateHistogramFoldingSerde extends ComplexMetricSerde
     return "approximateHistogram";
   }
 
-  public Class<? extends ApproximateHistogram> getClazz()
+  public Class<? extends ApproximateHistogramHolder> getClazz()
   {
     return ApproximateHistogram.class;
   }
@@ -106,16 +106,16 @@ public class ApproximateHistogramFoldingSerde extends ComplexMetricSerde
 
   public ObjectStrategy getObjectStrategy()
   {
-    return new ObjectStrategy<ApproximateHistogram>()
+    return new ObjectStrategy<ApproximateHistogramHolder>()
     {
       @Override
-      public Class<? extends ApproximateHistogram> getClazz()
+      public Class<? extends ApproximateHistogramHolder> getClazz()
       {
         return ApproximateHistogramFoldingSerde.this.getClazz();
       }
 
       @Override
-      public ApproximateHistogram fromByteBuffer(ByteBuffer buffer, int numBytes)
+      public ApproximateHistogramHolder fromByteBuffer(ByteBuffer buffer, int numBytes)
       {
         final ByteBuffer readOnlyBuffer = buffer.asReadOnlyBuffer();
         readOnlyBuffer.limit(readOnlyBuffer.position() + numBytes);
@@ -128,7 +128,7 @@ public class ApproximateHistogramFoldingSerde extends ComplexMetricSerde
       }
 
       @Override
-      public byte[] toBytes(ApproximateHistogram h)
+      public byte[] toBytes(ApproximateHistogramHolder h)
       {
         if (h == null) {
           return new byte[]{};
@@ -137,7 +137,7 @@ public class ApproximateHistogramFoldingSerde extends ComplexMetricSerde
       }
 
       @Override
-      public int compare(ApproximateHistogram o1, ApproximateHistogram o2)
+      public int compare(ApproximateHistogramHolder o1, ApproximateHistogramHolder o2)
       {
         return comparator.compare(o1, o2);
       }

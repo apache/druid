@@ -32,13 +32,13 @@ public class ApproximateHistogramAggregator implements Aggregator
     @Override
     public int compare(Object o, Object o1)
     {
-      return Longs.compare(((ApproximateHistogram) o).count(), ((ApproximateHistogram) o1).count());
+      return Longs.compare(((ApproximateHistogramHolder) o).count(), ((ApproximateHistogramHolder) o1).count());
     }
   };
 
   static Object combineHistograms(Object lhs, Object rhs)
   {
-    return ((ApproximateHistogram) lhs).foldFast((ApproximateHistogram) rhs);
+    return ((ApproximateHistogramHolder) lhs).foldFast((ApproximateHistogramHolder) rhs);
   }
 
   private final String name;
