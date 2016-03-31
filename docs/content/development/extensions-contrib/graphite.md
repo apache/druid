@@ -4,6 +4,8 @@ layout: doc_page
 
 # Graphite Emitter
 
+To use this extension, make sure to [include](../../operations/including-extensions.html) `graphite-emitter` extension.
+
 ## Introduction
 
 This extension emits druid metrics to a graphite carbon server.

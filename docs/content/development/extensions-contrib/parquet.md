@@ -1,4 +1,10 @@
+---
+layout: doc_page
+---
+
 # Parquet
+
+To use this extension, make sure to [include](../../operations/including-extensions.html) `druid-avro-extensions` and `druid-parquet-extensions`.
 
 This extension enables Druid to ingest and understand the Apache Parquet data format offline.
 
