@@ -4,6 +4,8 @@ layout: doc_page
 
 # Microsoft Azure
 
+To use this extension, make sure to [include](../../operations/including-extensions.html) `druid-azure-extensions` extension.
+
 ## Deep Storage
 
 [Microsoft Azure Storage](http://azure.microsoft.com/en-us/services/storage/) is another option for deep storage. This requires some additional druid configuration.
