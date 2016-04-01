@@ -160,6 +160,14 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 
 Before enabling thread priority settings, users are highly encouraged to read the [original pull request](https://github.com/druid-io/druid/pull/984) and other documentation about proper use of `-XX:+UseThreadPriorities`. 
 
+### Index Spec
+
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|bitmap|string|type of bitmap to use (e.g. roaring or concise), null to use the default.Defaults to the bitmap type specified by the (deprecated) "druid.processing.bitmap.type" setting| No|
+|dimensionCompression|string|compression format for dimension columns. The default, null, means no compression|No|
+|metricCompression|string|compression format for metric columns, null to use the default.|No|
+
 #### Rejection Policy
 
 The following policies are available:
