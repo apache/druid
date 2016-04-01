@@ -68,10 +68,11 @@ public class NotFilterTest extends BaseFilterTest
   public NotFilterTest(
       String testName,
       IndexBuilder indexBuilder,
-      Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher
+      Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher,
+      boolean optimize
   )
   {
-    super(ROWS, indexBuilder, finisher);
+    super(ROWS, indexBuilder, finisher, optimize);
   }
 
   @Test
