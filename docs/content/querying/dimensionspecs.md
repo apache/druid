@@ -346,10 +346,10 @@ For example, `'/druid/prod/historical'` is transformed to `'the dru'` as regular
 Returns the dimension value formatted according to the given format string.
 
 ```json
-{ "type" : "stringFormat", "format" : <sprintf_expression> }
+{ "type" : "stringFormat", "format" : <sprintf_expression>, "nullHandling" : <optional attribute for handling null value> }
 ```
 
-For example if you want to concat "[" and "]" before and after the actual dimension value, you need to specify "[%s]" as format string.
+For example if you want to concat "[" and "]" before and after the actual dimension value, you need to specify "[%s]" as format string. "nullHandling" can be one of `nullString`, `emptyString` or `returnNull`. With "[%s]" format, each configuration will result `[null]`, `[]`, `null`. Default is `nullString`.
 
 ### Filtered DimensionSpecs
 
