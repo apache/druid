@@ -70,7 +70,7 @@ public class SelectQuerySpecTest
         QueryRunnerTestHelper.allGran,
         DefaultDimensionSpec.toSpec(Arrays.<String>asList("market", "quality")),
         Arrays.<String>asList("index"),
-        new PagingSpec(null, 3),
+        new PagingSpec(null, 3, false),
         null
     );
 

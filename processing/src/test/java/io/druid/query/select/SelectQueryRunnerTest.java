@@ -133,7 +133,7 @@ public class SelectQueryRunnerTest
                  .metrics(Arrays.<String>asList())
                  .intervals(QueryRunnerTestHelper.fullOnInterval)
                  .granularity(QueryRunnerTestHelper.allGran)
-                 .pagingSpec(PagingSpec.newSpec(3))
+                 .pagingSpec(PagingSpec.newSpec(3, false))
                  .descending(descending);
   }
 
@@ -180,7 +180,7 @@ public class SelectQueryRunnerTest
       Assert.assertEquals(offset, pagingIdentifiers.get(QueryRunnerTestHelper.segmentId).intValue());
 
       Map<String, Integer> next = PagingSpec.next(pagingIdentifiers, descending);
-      query = query.withPagingSpec(new PagingSpec(next, 3));
+      query = query.withPagingSpec(new PagingSpec(next, 3, false));
     }
 
     query = newTestQuery().intervals(I_0112_0114).build();
@@ -367,7 +367,7 @@ public class SelectQueryRunnerTest
         .intervals(I_0112_0114)
         .dimensionSpecs(DefaultDimensionSpec.toSpec(QueryRunnerTestHelper.qualityDimension))
         .metrics(Arrays.asList(QueryRunnerTestHelper.indexMetric))
-        .pagingSpec(new PagingSpec(toPagingIdentifier(3, descending), 3))
+        .pagingSpec(new PagingSpec(toPagingIdentifier(3, descending), 3, false))
         .build();
 
     Iterable<Result<SelectResultValue>> results = Sequences.toList(
@@ -402,7 +402,7 @@ public class SelectQueryRunnerTest
           .granularity(QueryRunnerTestHelper.dayGran)
           .dimensionSpecs(DefaultDimensionSpec.toSpec(QueryRunnerTestHelper.qualityDimension))
           .metrics(Lists.<String>newArrayList(QueryRunnerTestHelper.indexMetric))
-          .pagingSpec(new PagingSpec(toPagingIdentifier(param[0], descending), param[1]))
+          .pagingSpec(new PagingSpec(toPagingIdentifier(param[0], descending), param[1], false))
           .build();
 
       HashMap<String, Object> context = new HashMap<String, Object>();

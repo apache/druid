@@ -179,3 +179,5 @@ Note that in the second query, an offset is specified and that it is 1 greater t
     "pagingSpec":{"pagingIdentifiers": {}, "threshold":5, "fromNext": true}
   }
 ```
+
+Note that `fromNext` is enabled(true) by default from druid-0.10.0.

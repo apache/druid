@@ -32,9 +32,9 @@ import java.util.Map;
  */
 public class PagingSpec
 {
-  public static PagingSpec newSpec(int threshold)
+  public static PagingSpec newSpec(int threshold, boolean fromNext)
   {
-    return new PagingSpec(null, threshold);
+    return new PagingSpec(null, threshold, fromNext);
   }
 
   public static Map<String, Integer> merge(Iterable<Map<String, Integer>> cursors)
@@ -74,7 +74,7 @@ public class PagingSpec
 
   public PagingSpec(Map<String, Integer> pagingIdentifiers, int threshold)
   {
-    this(pagingIdentifiers, threshold, false);
+    this(pagingIdentifiers, threshold, true);
   }
 
   @JsonProperty

@@ -210,7 +210,7 @@ public class MultiSegmentSelectQueryTest
                  .intervals(SelectQueryRunnerTest.I_0112_0114)
                  .granularity(QueryRunnerTestHelper.allGran)
                  .dimensionSpecs(DefaultDimensionSpec.toSpec(QueryRunnerTestHelper.dimensions))
-                 .pagingSpec(PagingSpec.newSpec(3));
+                 .pagingSpec(PagingSpec.newSpec(3, fromNext));
   }
 
   @Test
