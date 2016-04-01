@@ -25,13 +25,19 @@ import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
+import io.druid.data.input.Row;
+import io.druid.data.input.impl.DimensionsSpec;
+import io.druid.data.input.impl.FloatDimensionSchema;
+import io.druid.data.input.impl.LongDimensionSchema;
+import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
-import io.druid.segment.CloserRule;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.filter.SelectorDimFilter;
+import io.druid.segment.CloserRule;
 import org.joda.time.DateTime;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -66,6 +72,25 @@ public class IncrementalIndexTest
   @Parameterized.Parameters
   public static Collection<?> constructorFeeder() throws IOException
   {
+    DimensionsSpec dimensions = new DimensionsSpec(
+        Arrays.asList(
+            new StringDimensionSchema("string"),
+            new FloatDimensionSchema("float"),
+            new LongDimensionSchema("long")
+        ), null, null
+    );
+    AggregatorFactory[] metrics = {
+        new FilteredAggregatorFactory(
+            new CountAggregatorFactory("cnt"),
+            new SelectorDimFilter("billy", "A")
+        )
+    };
+    final IncrementalIndexSchema schema = new IncrementalIndexSchema(
+        0,
+        QueryGranularity.MINUTE,
+        dimensions,
+        metrics
+    );
     return Arrays.asList(
         new Object[][]{
             {
@@ -74,20 +99,9 @@ public class IncrementalIndexTest
                   @Override
                   public IncrementalIndex createIndex()
                   {
-                    return new OnheapIncrementalIndex(
-                        0,
-                        QueryGranularity.MINUTE,
-                        new AggregatorFactory[]{
-                            new FilteredAggregatorFactory(
-                                new CountAggregatorFactory("cnt"),
-                                new SelectorDimFilter("billy", "A")
-                            )
-                        },
-                        1000
-                    );
+                    return new OnheapIncrementalIndex(schema, true, 1000);
                   }
                 }
-
             },
             {
                 new IndexCreator()
@@ -96,16 +110,7 @@ public class IncrementalIndexTest
                   public IncrementalIndex createIndex()
                   {
                     return new OffheapIncrementalIndex(
-                        0L,
-                        QueryGranularity.NONE,
-                        new AggregatorFactory[]{
-                            new FilteredAggregatorFactory(
-                                new CountAggregatorFactory("cnt"),
-                                new SelectorDimFilter("billy", "A")
-                            )
-                        },
-                        1000000,
-                        new StupidPool<ByteBuffer>(
+                        schema, true, true, true, 1000000, new StupidPool<ByteBuffer>(
                             new Supplier<ByteBuffer>()
                             {
                               @Override
@@ -144,7 +149,7 @@ public class IncrementalIndexTest
   }
 
   @Test(expected = ISE.class)
-  public void testDuplicateDimensionsFirstOccurance() throws IndexSizeExceededException
+  public void testDuplicateDimensionsFirstOccurrence() throws IndexSizeExceededException
   {
     IncrementalIndex index = closer.closeLater(indexCreator.createIndex());
     index.add(
@@ -181,5 +186,27 @@ public class IncrementalIndexTest
             ImmutableMap.<String, Object>of("billy", "A", "joe", "B")
         )
     );
+  }
+
+  @Test
+  public void testNullDimensionTransform() throws IndexSizeExceededException
+  {
+    IncrementalIndex<?> index = closer.closeLater(indexCreator.createIndex());
+    index.add(
+        new MapBasedInputRow(
+            new DateTime().minus(1).getMillis(),
+            Lists.newArrayList("string", "float", "long"),
+            ImmutableMap.<String, Object>of(
+                "string", Arrays.asList("A", null, ""),
+                "float", Arrays.asList(Float.MAX_VALUE, null, ""),
+                "long", Arrays.asList(Long.MIN_VALUE, null, ""))
+        )
+    );
+
+    Row row = index.iterator().next();
+
+    Assert.assertArrayEquals(new String[]{"", "", "A"}, (Object[]) row.getRaw("string"));
+    Assert.assertArrayEquals(new Float[]{null, null, Float.MAX_VALUE}, (Object[]) row.getRaw("float"));
+    Assert.assertArrayEquals(new Long[]{null, null, Long.MIN_VALUE}, (Object[]) row.getRaw("long"));
   }
 }
