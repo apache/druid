@@ -22,7 +22,6 @@ package io.druid.query.search;
 import io.druid.query.search.search.AlphanumericSearchSortSpec;
 import io.druid.query.search.search.SearchHit;
 import io.druid.query.search.search.SearchSortSpec;
-import io.druid.query.search.search.StrlenSearchSortSpec;
 import org.junit.Assert;
 import org.junit.Test;
 

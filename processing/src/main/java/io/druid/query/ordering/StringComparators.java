@@ -107,6 +107,9 @@ public class StringComparators
 
       if (str1 == null)
       {
+        if (str2 == null) {
+          return 0;
+        }
         return -1;
       } else if (str2 == null)
       {
