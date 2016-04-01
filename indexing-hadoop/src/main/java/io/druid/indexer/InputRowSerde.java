@@ -32,7 +32,7 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.IncrementalIndices;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
 import org.apache.hadoop.io.ArrayWritable;
@@ -85,7 +85,7 @@ public class InputRowSerde
         writeString(k, out);
 
         Aggregator agg = aggFactory.factorize(
-            IncrementalIndex.makeColumnSelectorFactory(
+            IncrementalIndices.makeColumnSelectorFactory(
                 aggFactory,
                 supplier,
                 true

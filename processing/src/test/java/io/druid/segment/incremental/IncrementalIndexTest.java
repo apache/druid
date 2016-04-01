@@ -26,12 +26,14 @@ import com.metamx.common.ISE;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.granularity.QueryGranularity;
+import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
-import io.druid.segment.CloserRule;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.filter.SelectorDimFilter;
+import io.druid.segment.CloserRule;
 import org.joda.time.DateTime;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -40,7 +42,6 @@ import org.junit.runners.Parameterized;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
-import java.util.Collection;
 
 /**
  */
@@ -48,9 +49,33 @@ import java.util.Collection;
 public class IncrementalIndexTest
 {
 
+  private final StupidPool<ByteBuffer> pool = new StupidPool<ByteBuffer>(
+      new Supplier<ByteBuffer>()
+      {
+        @Override
+        public ByteBuffer get()
+        {
+          return ByteBuffer.allocate(256 * 1024);
+        }
+      }
+  );
+
+  private final AggregatorFactory[] metrics = new AggregatorFactory[]{
+      new FilteredAggregatorFactory(
+          new CountAggregatorFactory("cnt"),
+          new SelectorDimFilter("billy", "A")
+      )
+  };
+
   interface IndexCreator
   {
     IncrementalIndex createIndex();
+  }
+
+  @Parameterized.Parameters(name = "offHeap={0}:sortResult={1}")
+  public static Iterable<Object[]> constructorFeeder() throws IOException
+  {
+    return QueryRunnerTestHelper.cartesian(Arrays.asList(false, true), Arrays.asList(false, true));
   }
 
   @Rule
@@ -58,69 +83,25 @@ public class IncrementalIndexTest
 
   private final IndexCreator indexCreator;
 
-  public IncrementalIndexTest(IndexCreator IndexCreator)
+  public IncrementalIndexTest(final boolean offHeap, final boolean sortResult)
   {
-    this.indexCreator = IndexCreator;
-  }
-
-  @Parameterized.Parameters
-  public static Collection<?> constructorFeeder() throws IOException
-  {
-    return Arrays.asList(
-        new Object[][]{
-            {
-                new IndexCreator()
-                {
-                  @Override
-                  public IncrementalIndex createIndex()
-                  {
-                    return new OnheapIncrementalIndex(
-                        0,
-                        QueryGranularity.MINUTE,
-                        new AggregatorFactory[]{
-                            new FilteredAggregatorFactory(
-                                new CountAggregatorFactory("cnt"),
-                                new SelectorDimFilter("billy", "A")
-                            )
-                        },
-                        1000
-                    );
-                  }
-                }
-
-            },
-            {
-                new IndexCreator()
-                {
-                  @Override
-                  public IncrementalIndex createIndex()
-                  {
-                    return new OffheapIncrementalIndex(
-                        0L,
-                        QueryGranularity.NONE,
-                        new AggregatorFactory[]{
-                            new FilteredAggregatorFactory(
-                                new CountAggregatorFactory("cnt"),
-                                new SelectorDimFilter("billy", "A")
-                            )
-                        },
-                        1000000,
-                        new StupidPool<ByteBuffer>(
-                            new Supplier<ByteBuffer>()
-                            {
-                              @Override
-                              public ByteBuffer get()
-                              {
-                                return ByteBuffer.allocate(256 * 1024);
-                              }
-                            }
-                        )
-                    );
-                  }
-                }
-            }
-        }
-    );
+    indexCreator = new IndexCreator()
+    {
+      @Override
+      public IncrementalIndex createIndex()
+      {
+        return IncrementalIndices.create(
+            offHeap ? pool : null,
+            0,
+            QueryGranularity.MINUTE,
+            metrics,
+            true,
+            true,
+            sortResult,
+            1000
+        );
+      }
+    };
   }
 
   @Test(expected = ISE.class)
@@ -181,5 +162,21 @@ public class IncrementalIndexTest
             ImmutableMap.<String, Object>of("billy", "A", "joe", "B")
         )
     );
+  }
+
+  @Test
+  public void sameRow() throws IndexSizeExceededException
+  {
+    MapBasedInputRow row = new MapBasedInputRow(
+        new DateTime().minus(1).getMillis(),
+        Lists.newArrayList("billy", "joe"),
+        ImmutableMap.<String, Object>of("billy", "A", "joe", "B")
+    );
+    IncrementalIndex index = closer.closeLater(indexCreator.createIndex());
+    index.add(row);
+    index.add(row);
+    index.add(row);
+
+    Assert.assertEquals(1, index.size());
   }
 }

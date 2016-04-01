@@ -172,7 +172,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
     for (int i = 0; i < metrics.length; i++) {
       AggregatorFactory agg = metrics[i];
 
-      ColumnSelectorFactory columnSelectorFactory = makeColumnSelectorFactory(
+      ColumnSelectorFactory columnSelectorFactory = IncrementalIndices.makeColumnSelectorFactory(
           agg,
           rowSupplier,
           deserializeComplexMetrics
@@ -226,7 +226,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
           for (int i = 0; i < metrics.length; i++) {
             final AggregatorFactory agg = metrics[i];
             getAggs()[i] = agg.factorizeBuffered(
-                makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics)
+                IncrementalIndices.makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics)
             );
           }
           rowContainer.set(null);
