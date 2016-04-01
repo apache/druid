@@ -21,6 +21,7 @@ package io.druid.segment.filter;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -75,16 +76,19 @@ public abstract class BaseFilterTest
   protected final Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher;
   protected StorageAdapter adapter;
   protected Closeable closeable;
+  protected boolean optimize;
 
   public BaseFilterTest(
       List<InputRow> rows,
       IndexBuilder indexBuilder,
-      Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher
+      Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher,
+      boolean optimize
   )
   {
     this.rows = rows;
     this.indexBuilder = indexBuilder;
     this.finisher = finisher;
+    this.optimize = optimize;
   }
 
   @Before
@@ -186,21 +190,24 @@ public abstract class BaseFilterTest
     for (Map.Entry<String, BitmapSerdeFactory> bitmapSerdeFactoryEntry : bitmapSerdeFactories.entrySet()) {
       for (Map.Entry<String, IndexMerger> indexMergerEntry : indexMergers.entrySet()) {
         for (Map.Entry<String, Function<IndexBuilder, Pair<StorageAdapter, Closeable>>> finisherEntry : finishers.entrySet()) {
-          final String testName = String.format(
-              "bitmaps[%s], indexMerger[%s], finisher[%s]",
-              bitmapSerdeFactoryEntry.getKey(),
-              indexMergerEntry.getKey(),
-              finisherEntry.getKey()
-          );
-          final IndexBuilder indexBuilder = IndexBuilder.create()
-                                                        .indexSpec(new IndexSpec(
-                                                            bitmapSerdeFactoryEntry.getValue(),
-                                                            null,
-                                                            null
-                                                        ))
-                                                        .indexMerger(indexMergerEntry.getValue());
+          for (boolean optimize : ImmutableList.of(false, true)) {
+            final String testName = String.format(
+                "bitmaps[%s], indexMerger[%s], finisher[%s], optimize[%s]",
+                bitmapSerdeFactoryEntry.getKey(),
+                indexMergerEntry.getKey(),
+                finisherEntry.getKey(),
+                optimize
+            );
+            final IndexBuilder indexBuilder = IndexBuilder.create()
+                                                          .indexSpec(new IndexSpec(
+                                                              bitmapSerdeFactoryEntry.getValue(),
+                                                              null,
+                                                              null
+                                                          ))
+                                                          .indexMerger(indexMergerEntry.getValue());
 
-          constructors.add(new Object[]{testName, indexBuilder, finisherEntry.getValue()});
+            constructors.add(new Object[]{testName, indexBuilder, finisherEntry.getValue(), optimize});
+          }
         }
       }
     }
@@ -213,7 +220,7 @@ public abstract class BaseFilterTest
    */
   protected List<String> selectColumnValuesMatchingFilter(final DimFilter filter, final String selectColumn)
   {
-    final Cursor cursor = makeCursor(Filters.toFilter(filter));
+    final Cursor cursor = makeCursor(Filters.toFilter(maybeOptimize(filter)));
     final List<String> values = Lists.newArrayList();
     final DimensionSelector selector = cursor.makeDimensionSelector(
         new DefaultDimensionSpec(selectColumn, selectColumn)
@@ -233,7 +240,7 @@ public abstract class BaseFilterTest
     final Cursor cursor = makeCursor(null);
     final Aggregator agg = new FilteredAggregatorFactory(
         new CountAggregatorFactory("count"),
-        filter
+        maybeOptimize(filter)
     ).factorize(cursor);
 
     for (; !cursor.isDone(); cursor.advance()) {
@@ -241,6 +248,14 @@ public abstract class BaseFilterTest
     }
 
     return agg.getLong();
+  }
+
+  private DimFilter maybeOptimize(final DimFilter dimFilter)
+  {
+    if (dimFilter == null) {
+      return null;
+    }
+    return optimize ? dimFilter.optimize() : dimFilter;
   }
 
   private Cursor makeCursor(final Filter filter)
