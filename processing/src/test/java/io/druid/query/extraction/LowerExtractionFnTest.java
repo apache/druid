@@ -35,6 +35,8 @@ public class LowerExtractionFnTest
     Assert.assertEquals("lower 1 string", extractionFn.apply("lOwER 1 String"));
     Assert.assertEquals(null,  extractionFn.apply(""));
     Assert.assertEquals(null, extractionFn.apply(null));
+    Assert.assertEquals(null, extractionFn.apply((Object)null));
+    Assert.assertEquals("1", extractionFn.apply(1));
   }
 
   @Test

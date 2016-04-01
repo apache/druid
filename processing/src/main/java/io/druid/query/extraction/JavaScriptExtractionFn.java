@@ -109,7 +109,7 @@ public class JavaScriptExtractionFn implements ExtractionFn
   @Override
   public String apply(String value)
   {
-    return this.apply((Object) value);
+    return this.apply((Object) Strings.emptyToNull(value));
   }
 
   @Override
