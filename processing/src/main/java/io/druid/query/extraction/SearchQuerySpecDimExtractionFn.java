@@ -22,6 +22,7 @@ package io.druid.query.extraction;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import io.druid.query.search.search.SearchQuerySpec;
 
 import java.nio.ByteBuffer;
@@ -61,7 +62,7 @@ public class SearchQuerySpecDimExtractionFn extends DimExtractionFn
   @Override
   public String apply(String dimValue)
   {
-    return searchQuerySpec.accept(dimValue) ? dimValue : null;
+    return searchQuerySpec.accept(dimValue) ? Strings.emptyToNull(dimValue) : null;
   }
 
   @Override
