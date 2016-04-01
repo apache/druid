@@ -154,7 +154,6 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
       contextBuilder.put(CacheConfig.POPULATE_CACHE, false);
       contextBuilder.put("bySegment", true);
     }
-    contextBuilder.put("intermediate", true);
 
     TimelineLookup<String, ServerSelector> timeline = serverView.getTimeline(query.getDataSource());
 
