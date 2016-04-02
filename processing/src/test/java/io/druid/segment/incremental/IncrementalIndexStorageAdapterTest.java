@@ -259,7 +259,7 @@ public class IncrementalIndexStorageAdapterTest
 
     for (boolean descending : Arrays.asList(false, true)) {
       Sequence<Cursor> cursorSequence = adapter.makeCursors(
-          new SelectorFilter("sally", "bo"),
+          new SelectorFilter("sally", "bo", null),
           interval,
           QueryGranularity.NONE,
           descending

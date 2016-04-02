@@ -19,6 +19,7 @@
 
 package io.druid.query.filter;
 
+import io.druid.query.extraction.RegexDimExtractionFn;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -30,8 +31,13 @@ public class RegexDimFilterTest
   @Test
   public void testGetCacheKey()
   {
-    RegexDimFilter regexDimFilter = new RegexDimFilter("dim", "reg");
-    RegexDimFilter regexDimFilter2 = new RegexDimFilter("di", "mreg");
+    RegexDimFilter regexDimFilter = new RegexDimFilter("dim", "reg", null);
+    RegexDimFilter regexDimFilter2 = new RegexDimFilter("di", "mreg", null);
     Assert.assertFalse(Arrays.equals(regexDimFilter.getCacheKey(), regexDimFilter2.getCacheKey()));
+
+    RegexDimExtractionFn regexFn = new RegexDimExtractionFn(".*", false, null);
+    RegexDimFilter regexDimFilter3 = new RegexDimFilter("dim", "reg", regexFn);
+    Assert.assertFalse(Arrays.equals(regexDimFilter.getCacheKey(), regexDimFilter3.getCacheKey()));
+
   }
 }

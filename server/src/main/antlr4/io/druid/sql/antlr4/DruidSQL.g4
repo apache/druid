@@ -297,9 +297,9 @@ selectorDimFilter returns [DimFilter filter]
         String dim = $dimension.text;
         String val = unescape($value.text);
         switch($op.type) {
-            case(EQ): $filter = new SelectorDimFilter(dim, val); break;
-            case(NEQ): $filter = new NotDimFilter(new SelectorDimFilter(dim, val)); break;
-            case(MATCH): $filter = new RegexDimFilter(dim, val); break;
+            case(EQ): $filter = new SelectorDimFilter(dim, val, null); break;
+            case(NEQ): $filter = new NotDimFilter(new SelectorDimFilter(dim, val, null)); break;
+            case(MATCH): $filter = new RegexDimFilter(dim, val, null); break;
         }
     }
     ;
@@ -307,7 +307,7 @@ selectorDimFilter returns [DimFilter filter]
 inListDimFilter returns [DimFilter filter]
     : dimension=IDENT 'in' (OPEN! ( (list+=QUOTED_STRING (COMMA! list+=QUOTED_STRING)*) ) CLOSE!) {
         List<DimFilter> filterList = new LinkedList<DimFilter>();
-        for(Token e : $list) filterList.add(new SelectorDimFilter($dimension.text, unescape(e.getText())));
+        for(Token e : $list) filterList.add(new SelectorDimFilter($dimension.text, unescape(e.getText()), null));
         $filter = new OrDimFilter(filterList);
     }
     ;
