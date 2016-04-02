@@ -105,6 +105,20 @@ public class JavaScriptExtractionFnTest
   }
 
   @Test
+  public void testJavascriptIsNull()
+  {
+    String function = "function(x) { if (x == null) { return 'yes'; } else { return 'no' } }";
+    ExtractionFn extractionFn = new JavaScriptExtractionFn(function, false);
+
+    Assert.assertEquals("yes", extractionFn.apply((String) null));
+    Assert.assertEquals("yes", extractionFn.apply((Object) null));
+    Assert.assertEquals("yes", extractionFn.apply(""));
+    Assert.assertEquals("no", extractionFn.apply("abc"));
+    Assert.assertEquals("no", extractionFn.apply(new Object()));
+    Assert.assertEquals("no", extractionFn.apply(1));
+  }
+
+  @Test
   public void testJavaScriptPorterStemmer()
   {
     // JavaScript porter stemmer adapted from

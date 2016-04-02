@@ -60,8 +60,13 @@ public class MatchingDimExtractionFn extends DimExtractionFn
   @Override
   public String apply(String dimValue)
   {
-    Matcher matcher = pattern.matcher(Strings.nullToEmpty(dimValue));
-    return matcher.find() ? Strings.emptyToNull(dimValue) : null;
+    if (Strings.isNullOrEmpty(dimValue)) {
+      // We'd return null whether or not the pattern matched
+      return null;
+    }
+
+    Matcher matcher = pattern.matcher(dimValue);
+    return matcher.find() ? dimValue : null;
   }
 
   @JsonProperty("expr")
