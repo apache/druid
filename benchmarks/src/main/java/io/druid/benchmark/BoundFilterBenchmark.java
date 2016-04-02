@@ -74,7 +74,8 @@ public class BoundFilterBenchmark
           String.valueOf(START_INT),
           true,
           false,
-          false
+          false,
+          null
       )
   );
 
@@ -85,7 +86,8 @@ public class BoundFilterBenchmark
           String.valueOf(END_INT),
           false,
           false,
-          false
+          false,
+          null
       )
   );
 
@@ -96,7 +98,8 @@ public class BoundFilterBenchmark
           String.valueOf(END_INT),
           false,
           false,
-          false
+          false,
+          null
       )
   );
 
@@ -107,7 +110,8 @@ public class BoundFilterBenchmark
           String.valueOf(START_INT),
           true,
           false,
-          true
+          true,
+          null
       )
   );
 
@@ -118,7 +122,8 @@ public class BoundFilterBenchmark
           String.valueOf(END_INT),
           false,
           false,
-          true
+          true,
+          null
       )
   );
 
@@ -129,7 +134,8 @@ public class BoundFilterBenchmark
           String.valueOf(END_INT),
           false,
           false,
-          true
+          true,
+          null
       )
   );
 

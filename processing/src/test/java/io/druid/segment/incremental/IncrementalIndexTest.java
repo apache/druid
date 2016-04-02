@@ -82,7 +82,7 @@ public class IncrementalIndexTest
     AggregatorFactory[] metrics = {
         new FilteredAggregatorFactory(
             new CountAggregatorFactory("cnt"),
-            new SelectorDimFilter("billy", "A")
+            new SelectorDimFilter("billy", "A", null)
         )
     };
     final IncrementalIndexSchema schema = new IncrementalIndexSchema(

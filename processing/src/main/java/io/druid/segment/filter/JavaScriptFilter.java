@@ -23,6 +23,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.common.guava.FunctionalIterable;
+import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
@@ -38,11 +39,13 @@ public class JavaScriptFilter implements Filter
 {
   private final JavaScriptPredicate predicate;
   private final String dimension;
+  private final ExtractionFn extractionFn;
 
-  public JavaScriptFilter(String dimension, final String script)
+  public JavaScriptFilter(String dimension, final String script, ExtractionFn extractionFn)
   {
     this.dimension = dimension;
-    this.predicate = new JavaScriptPredicate(script);
+    this.predicate = new JavaScriptPredicate(script, extractionFn);
+    this.extractionFn = extractionFn;
   }
 
   @Override
@@ -52,8 +55,11 @@ public class JavaScriptFilter implements Filter
     try {
       final Indexed<String> dimValues = selector.getDimensionValues(dimension);
       ImmutableBitmap bitmap;
-      if (dimValues == null) {
+      if (dimValues == null || dimValues.size() == 0) {
         bitmap = selector.getBitmapFactory().makeEmptyImmutableBitmap();
+        if (predicate.applyInContext(cx, null)) {
+          bitmap = selector.getBitmapFactory().complement(bitmap, selector.getNumRows());
+        }
       } else {
         bitmap = selector.getBitmapFactory().union(
             FunctionalIterable.create(dimValues)
@@ -98,11 +104,13 @@ public class JavaScriptFilter implements Filter
     final ScriptableObject scope;
     final Function fnApply;
     final String script;
+    final ExtractionFn extractionFn;
 
-    public JavaScriptPredicate(final String script)
+    public JavaScriptPredicate(final String script, final ExtractionFn extractionFn)
     {
       Preconditions.checkNotNull(script, "script must not be null");
       this.script = script;
+      this.extractionFn = extractionFn;
 
       final Context cx = Context.enter();
       try {
@@ -127,11 +135,13 @@ public class JavaScriptFilter implements Filter
       finally {
         Context.exit();
       }
-
     }
 
     public boolean applyInContext(Context cx, String input)
     {
+      if (extractionFn != null) {
+        input = extractionFn.apply(input);
+      }
       return Context.toBoolean(fnApply.call(cx, scope, scope, new String[]{input}));
     }
 

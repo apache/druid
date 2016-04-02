@@ -20,6 +20,7 @@
 package io.druid.query.filter;
 
 import com.metamx.common.StringUtils;
+import io.druid.query.extraction.RegexDimExtractionFn;
 import io.druid.query.search.search.SearchQuerySpec;
 import org.junit.Assert;
 import org.junit.Test;
@@ -32,35 +33,64 @@ public class SearchQueryDimFilterTest
   @Test
   public void testGetCacheKey()
   {
-    SearchQueryDimFilter searchQueryDimFilter = new SearchQueryDimFilter("dim", new SearchQuerySpec()
-    {
-      @Override
-      public boolean accept(String dimVal)
-      {
-        return false;
-      }
+    SearchQueryDimFilter searchQueryDimFilter = new SearchQueryDimFilter(
+        "dim",
+        new SearchQuerySpec()
+        {
+          @Override
+          public boolean accept(String dimVal)
+          {
+            return false;
+          }
 
-      @Override
-      public byte[] getCacheKey()
-      {
-        return StringUtils.toUtf8("value");
-      }
-    });
+          @Override
+          public byte[] getCacheKey()
+          {
+            return StringUtils.toUtf8("value");
+          }
+        },
+        null
+    );
 
-    SearchQueryDimFilter searchQueryDimFilter2 = new SearchQueryDimFilter("di", new SearchQuerySpec()
-    {
-      @Override
-      public boolean accept(String dimVal)
-      {
-        return false;
-      }
+    SearchQueryDimFilter searchQueryDimFilter2 = new SearchQueryDimFilter(
+        "di",
+        new SearchQuerySpec()
+        {
+          @Override
+          public boolean accept(String dimVal)
+          {
+            return false;
+          }
 
-      @Override
-      public byte[] getCacheKey()
-      {
-        return StringUtils.toUtf8("mvalue");
-      }
-    });
+          @Override
+          public byte[] getCacheKey()
+          {
+            return StringUtils.toUtf8("mvalue");
+          }
+        },
+        null
+    );
     Assert.assertFalse(Arrays.equals(searchQueryDimFilter.getCacheKey(), searchQueryDimFilter2.getCacheKey()));
+
+    RegexDimExtractionFn regexFn = new RegexDimExtractionFn(".*", false, null);
+    SearchQueryDimFilter searchQueryDimFilter3 = new SearchQueryDimFilter(
+        "dim",
+        new SearchQuerySpec()
+        {
+          @Override
+          public boolean accept(String dimVal)
+          {
+            return false;
+          }
+
+          @Override
+          public byte[] getCacheKey()
+          {
+            return StringUtils.toUtf8("value");
+          }
+        },
+        regexFn
+    );
+    Assert.assertFalse(Arrays.equals(searchQueryDimFilter.getCacheKey(), searchQueryDimFilter3.getCacheKey()));
   }
 }

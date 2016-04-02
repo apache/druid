@@ -79,19 +79,19 @@ public class NotFilterTest extends BaseFilterTest
   public void testNotSelector()
   {
     assertFilterMatches(
-        new NotDimFilter(new SelectorDimFilter("dim0", null)),
+        new NotDimFilter(new SelectorDimFilter("dim0", null, null)),
         ImmutableList.of("0", "1", "2", "3", "4", "5")
     );
     assertFilterMatches(
-        new NotDimFilter(new SelectorDimFilter("dim0", "")),
+        new NotDimFilter(new SelectorDimFilter("dim0", "", null)),
         ImmutableList.of("0", "1", "2", "3", "4", "5")
     );
     assertFilterMatches(
-        new NotDimFilter(new SelectorDimFilter("dim0", "0")),
+        new NotDimFilter(new SelectorDimFilter("dim0", "0", null)),
         ImmutableList.of("1", "2", "3", "4", "5")
     );
     assertFilterMatches(
-        new NotDimFilter(new SelectorDimFilter("dim0", "1")),
+        new NotDimFilter(new SelectorDimFilter("dim0", "1", null)),
         ImmutableList.of("0", "2", "3", "4", "5")
     );
   }
