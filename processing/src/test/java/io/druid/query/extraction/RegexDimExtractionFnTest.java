@@ -116,12 +116,24 @@ public class RegexDimExtractionFnTest
   }
 
   @Test
-  public void testMissingValueReplacementFromNullAndEmpty()
+  public void testMissingValueReplacementWhenPatternDoesNotMatchNull()
   {
     String regex = "(bob)";
     ExtractionFn extractionFn = new RegexDimExtractionFn(regex, true, "NO MATCH");
     Assert.assertEquals("NO MATCH", extractionFn.apply(""));
     Assert.assertEquals("NO MATCH", extractionFn.apply(null));
+    Assert.assertEquals("NO MATCH", extractionFn.apply("abc"));
+    Assert.assertEquals("bob", extractionFn.apply("bob"));
+  }
+
+  @Test
+  public void testMissingValueReplacementWhenPatternMatchesNull()
+  {
+    String regex = "^()$";
+    ExtractionFn extractionFn = new RegexDimExtractionFn(regex, true, "NO MATCH");
+    Assert.assertEquals(null, extractionFn.apply(""));
+    Assert.assertEquals(null, extractionFn.apply(null));
+    Assert.assertEquals("NO MATCH", extractionFn.apply("abc"));
   }
 
   @Test
@@ -133,6 +145,7 @@ public class RegexDimExtractionFnTest
     Assert.assertEquals(null, extractionFn.apply(""));
     Assert.assertEquals(null, extractionFn.apply("abc"));
     Assert.assertEquals(null, extractionFn.apply("123"));
+    Assert.assertEquals("bob", extractionFn.apply("bobby"));
   }
 
   @Test
