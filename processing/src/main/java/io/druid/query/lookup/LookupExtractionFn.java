@@ -90,7 +90,8 @@ public class LookupExtractionFn extends FunctionalExtraction
   @JsonProperty("optimize")
   public boolean isOptimize()
   {
-    return optimize;
+    // case retainMissingValue == true  we can not optimize need to push down the filter
+    return !isRetainMissingValue() && optimize;
   }
 
   @Override
