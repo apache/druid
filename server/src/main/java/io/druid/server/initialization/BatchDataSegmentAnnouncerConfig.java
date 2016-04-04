@@ -37,6 +37,18 @@ public class BatchDataSegmentAnnouncerConfig
   @Min(1024)
   private long maxBytesPerNode = 512 * 1024;
 
+  // Skip LoadSpec from segment announcements
+  @JsonProperty
+  private boolean skipLoadSpec = false;
+
+  // Skip dimension list from segment announcements
+  @JsonProperty
+  private boolean skipDimensions = false;
+
+  // Skip metrics list from segment announcements
+  @JsonProperty
+  private boolean skipMetrics = false;
+
   public int getSegmentsPerNode()
   {
     return segmentsPerNode;
@@ -45,5 +57,20 @@ public class BatchDataSegmentAnnouncerConfig
   public long getMaxBytesPerNode()
   {
     return maxBytesPerNode;
+  }
+
+  public boolean isSkipLoadSpec()
+  {
+    return skipLoadSpec;
+  }
+
+  public boolean isSkipDimensions()
+  {
+    return skipDimensions;
+  }
+
+  public boolean isSkipMetrics()
+  {
+    return skipMetrics;
   }
 }
