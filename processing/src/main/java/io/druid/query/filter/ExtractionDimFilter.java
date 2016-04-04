@@ -22,6 +22,7 @@ package io.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.metamx.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.lookup.LookupExtractionFn;
@@ -98,7 +99,12 @@ public class ExtractionDimFilter implements DimFilter
   {
     if (this.getExtractionFn() instanceof LookupExtractionFn
         && ((LookupExtractionFn) this.getExtractionFn()).isOptimize()) {
-      LookupExtractor lookup = ((LookupExtractionFn) this.getExtractionFn()).getLookup();
+      // case ReplaceMissingValueWith matching the value we can not optimize
+      final LookupExtractionFn lookupExtractionFn = (LookupExtractionFn) this.getExtractionFn();
+      if (Strings.emptyToNull(lookupExtractionFn.getReplaceMissingValueWith()) == Strings.emptyToNull(value)) {
+        return this;
+      }
+      final LookupExtractor lookup = lookupExtractionFn.getLookup();
       final List<String> keys = lookup.unapply(this.getValue());
       final String dimensionName = this.getDimension();
       if (!keys.isEmpty()) {
