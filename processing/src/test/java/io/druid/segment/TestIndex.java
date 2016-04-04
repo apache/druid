@@ -32,6 +32,7 @@ import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularities;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
@@ -61,7 +62,8 @@ public class TestIndex
       "index",
       "partial_null_column",
       "null_column",
-      "quality_uniques"
+      "quality_uniques",
+      "indexMin"
   };
   public static final String[] DIMENSIONS = new String[]{
       "market",
@@ -71,11 +73,12 @@ public class TestIndex
       "partial_null_column",
       "null_column",
       };
-  public static final String[] METRICS = new String[]{"index"};
+  public static final String[] METRICS = new String[]{"index", "indexMin"};
   private static final Logger log = new Logger(TestIndex.class);
   private static final Interval DATA_INTERVAL = new Interval("2011-01-12T00:00:00.000Z/2011-05-01T00:00:00.000Z");
   public static final AggregatorFactory[] METRIC_AGGS = new AggregatorFactory[]{
       new DoubleSumAggregatorFactory(METRICS[0], METRICS[0]),
+      new DoubleMinAggregatorFactory(METRICS[1], METRICS[0]),
       new HyperUniquesAggregatorFactory("quality_uniques", "quality")
   };
   private static final IndexSpec indexSpec = new IndexSpec();

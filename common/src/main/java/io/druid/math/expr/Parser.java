@@ -20,9 +20,13 @@
 package io.druid.math.expr;
 
 
+import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.metamx.common.logger.Logger;
+import com.google.common.collect.Lists;
+import io.druid.data.input.Row;
 import io.druid.math.expr.antlr.ExprLexer;
 import io.druid.math.expr.antlr.ExprParser;
 import org.antlr.v4.runtime.ANTLRInputStream;
@@ -31,6 +35,7 @@ import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
 import java.lang.reflect.Modifier;
+import java.util.List;
 import java.util.Map;
 
 public class Parser
@@ -65,5 +70,99 @@ public class Parser
     ExprListenerImpl listener = new ExprListenerImpl(parseTree);
     walker.walk(listener, parseTree);
     return listener.getAST();
+  }
+
+  public static List<String> findRequiredBindings(String in)
+  {
+    Expr parsed = parse(in);
+    return findRecursive(parsed, Lists.<String>newArrayList());
+  }
+
+  private static List<String> findRecursive(Expr expr, List<String> found)
+  {
+    if (expr instanceof IdentifierExpr) {
+      found.add(expr.toString());
+    } else if (expr instanceof BinaryOpExprBase) {
+      BinaryOpExprBase binary = (BinaryOpExprBase) expr;
+      findRecursive(binary.left, found);
+      findRecursive(binary.right, found);
+    } else if (expr instanceof UnaryMinusExpr) {
+      findRecursive(((UnaryMinusExpr) expr).expr, found);
+    } else if (expr instanceof UnaryNotExpr) {
+      findRecursive(((UnaryNotExpr) expr).expr, found);
+    } else if (expr instanceof FunctionExpr) {
+      for (Expr child : ((FunctionExpr) expr).args) {
+        findRecursive(child, found);
+      }
+    }
+    return found;
+  }
+
+  public static Expr.NumericBinding withMap(final Map<String, Number> bindings)
+  {
+    return new Expr.NumericBinding()
+    {
+      @Override
+      public Number get(String name)
+      {
+        return bindings.get(name);
+      }
+    };
+  }
+
+  public static Expr.NumericBinding withSuppliers(final Map<String, Supplier<Number>> bindings)
+  {
+    return new Expr.NumericBinding()
+    {
+      @Override
+      public Number get(String name)
+      {
+        Supplier<Number> supplier = bindings.get(name);
+        return supplier == null ? null : supplier.get();
+      }
+    };
+  }
+
+  public static Expr.NumericBinding withRow(final ThreadLocal<Row> convey)
+  {
+    return new Expr.NumericBinding()
+    {
+      @Override
+      public Number get(String name)
+      {
+        Row row = convey.get();
+        if (name.equals("__time")) {
+          return row.getTimestampFromEpoch();
+        }
+        return toNumeric(row.getRaw(name));
+      }
+    };
+  }
+
+  private static Number toNumeric(Object value)
+  {
+    if (value == null || value instanceof Number) {
+      return (Number) value;
+    }
+    String stringVal = String.valueOf(value);
+    if (Strings.isNullOrEmpty(stringVal)) {
+      return null;
+    }
+
+    final String target = stringVal.trim();
+    int i = 0;
+    char first = target.charAt(i);
+    if (!Character.isDigit(first)) {
+      if (first != '+' && first != '-') {
+        return null;
+      }
+      i++;
+    }
+    for (; i < target.length(); i++) {
+      if (!Character.isDigit(target.charAt(i))) {
+        return Double.valueOf(target);
+      }
+    }
+    return Long.valueOf(target);
   }
 }
