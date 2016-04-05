@@ -402,6 +402,23 @@ public class GroupByQuery extends BaseQuery<Row>
     );
   }
 
+  public GroupByQuery withAggregatorSpecs(final List<AggregatorFactory> aggregatorSpecs)
+  {
+    return new GroupByQuery(
+        getDataSource(),
+        getQuerySegmentSpec(),
+        getDimFilter(),
+        getGranularity(),
+        getDimensions(),
+        aggregatorSpecs,
+        getPostAggregatorSpecs(),
+        getHavingSpec(),
+        getLimitSpec(),
+        limitFn,
+        getContext()
+    );
+  }
+
   public static class Builder
   {
     private DataSource dataSource;

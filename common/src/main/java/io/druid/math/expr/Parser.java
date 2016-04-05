@@ -74,8 +74,12 @@ public class Parser
 
   public static List<String> findRequiredBindings(String in)
   {
-    Expr parsed = parse(in);
-    return findRecursive(parsed, Lists.<String>newArrayList());
+    return findRequiredBindings(parse(in));
+  }
+
+  public static List<String> findRequiredBindings(Expr parsed)
+  {
+    return findRecursive( parsed, Lists.<String>newArrayList());
   }
 
   private static List<String> findRecursive(Expr expr, List<String> found)
