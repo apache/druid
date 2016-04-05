@@ -246,13 +246,13 @@ public class TopNQueryBuilder
 
   public TopNQueryBuilder filters(String dimensionName, String value)
   {
-    dimFilter = new SelectorDimFilter(dimensionName, value);
+    dimFilter = new SelectorDimFilter(dimensionName, value, null);
     return this;
   }
 
   public TopNQueryBuilder filters(String dimensionName, String value, String... values)
   {
-    dimFilter = new InDimFilter(dimensionName, Lists.asList(value, values));
+    dimFilter = new InDimFilter(dimensionName, Lists.asList(value, values), null);
     return this;
   }
 

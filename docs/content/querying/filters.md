@@ -16,6 +16,8 @@ The grammar for a SELECTOR filter is as follows:
 
 This is the equivalent of `WHERE <dimension_string> = '<dimension_value_string>'`.
 
+The selector filter supports the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
+
 ### Regular expression filter
 
 The regular expression filter is similar to the selector filter, but using regular expressions. It matches the specified dimension with the given pattern. The pattern can be any standard [Java regular expression](http://docs.oracle.com/javase/6/docs/api/java/util/regex/Pattern.html).
@@ -23,6 +25,9 @@ The regular expression filter is similar to the selector filter, but using regul
 ``` json
 "filter": { "type": "regex", "dimension": <dimension_string>, "pattern": <pattern_string> }
 ```
+
+The regex filter supports the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
+
 
 ### Logical expression filters
 
@@ -81,11 +86,19 @@ The following matches any dimension values for the dimension `name` between `'ba
 }
 ```
 
+The JavaScript filter supports the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
+
+
 ### Extraction filter
+
+<div class="note caution">
+The extraction filter is now deprecated. The selector filter with an extraction function specified
+provides identical functionality and should be used instead.
+</div>
 
 Extraction filter matches a dimension using some specific [Extraction function](./dimensionspecs.html#extraction-functions).
 The following filter matches the values for which the extraction function has transformation entry `input_key=output_value` where
- `output_value` is equal to the filter `value` and `input_key` is present as dimension.
+`output_value` is equal to the filter `value` and `input_key` is present as dimension.
 
 **Example**
 The following matches dimension values in `[product_1, product_3, product_5]` for the column `product`
@@ -110,6 +123,7 @@ The following matches dimension values in `[product_1, product_3, product_5]` fo
     }
 }
 ```
+
 ### Search filter
 
 Search filters can be used to filter on partial string matches. 
@@ -132,6 +146,10 @@ Search filters can be used to filter on partial string matches.
 |type|This String should always be "search".|yes|
 |dimension|The dimension to perform the search over.|yes|
 |query|A JSON object for the type of search. See below for more information.|yes|
+|extractionFn|[Extraction function](#filtering-with-extraction-functions) to apply to the dimension|no|
+
+The search filter supports the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
+
 
 ### In filter
 
@@ -151,12 +169,17 @@ The grammar for a IN filter is as follows:
 }
 ```
 
+The IN filter supports the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
+
+
 ### Bound filter
 
 Bound filter can be used to filter by comparing dimension values to an upper value or/and a lower value. 
 By default Comparison is string based and **case sensitive**.
 To use numeric comparison you can set `alphaNumeric` to `true`.
 By default the bound filter is a not a strict inclusion `inputString <= upper && inputSting >= lower`.
+
+The bound filter supports the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
 
 The grammar for a bound filter is as follows:
 
@@ -246,6 +269,8 @@ For instance suppose lower bound is `100` and value is `10K` the filter will mat
 Now suppose that the lower bound is `110` the filter will not match (`110 < 10K` returns `false`)
 
 
+
+
 #### Search Query Spec
 
 ##### Insensitive Contains
@@ -270,3 +295,38 @@ Now suppose that the lower bound is `110` the filter will not match (`110 < 10K`
 |type|This String should always be "contains".|yes|
 |value|A String value to run the search over.|yes|
 |caseSensitive|Whether two string should be compared as case sensitive or not|yes|
+
+
+### Filtering with Extraction Functions
+Some filters optionally support the use of extraction functions.
+An extraction function is defined by setting the "extractionFn" field on a filter.
+See [Extraction function](./dimensionspecs.html#extraction-functions) for more details on extraction functions.
+
+If specified, the extraction function will be used to transform input values before the filter is applied.
+The example below shows a selector filter combined with an extraction function. This filter will transform input values
+according to the values defined in the lookup map; transformed values will then be matched with the string "bar_1".
+
+
+**Example**
+The following matches dimension values in `[product_1, product_3, product_5]` for the column `product`
+
+```json
+{
+    "filter": {
+        "type": "selector",
+        "dimension": "product",
+        "value": "bar_1",
+        "extractionFn": {
+            "type": "lookup",
+            "lookup": {
+                "type": "map",
+                "map": {
+                    "product_1": "bar_1",
+                    "product_5": "bar_1",
+                    "product_3": "bar_1"
+                }
+            }
+        }
+    }
+}
+```

@@ -424,8 +424,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                           {
                             final String value = column.lookupName(id);
                             return extractionFn == null ?
-                                   Strings.nullToEmpty(value) :
-                                   extractionFn.apply(Strings.nullToEmpty(value));
+                                   value :
+                                   extractionFn.apply(value);
                           }
 
                           @Override

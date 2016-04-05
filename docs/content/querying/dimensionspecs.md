@@ -259,7 +259,7 @@ For instance the following filter
 ```json
 {
     "filter": {
-        "type": "extraction",
+        "type": "selector",
         "dimension": "product",
         "value": "bar_1",
         "extractionFn": {

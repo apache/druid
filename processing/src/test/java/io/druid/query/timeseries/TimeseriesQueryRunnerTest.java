@@ -791,7 +791,7 @@ public class TimeseriesQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(QueryRunnerTestHelper.dayGran)
-        .filters(new RegexDimFilter(QueryRunnerTestHelper.marketDimension, "^.p.*$")) // spot and upfront
+        .filters(new RegexDimFilter(QueryRunnerTestHelper.marketDimension, "^.p.*$", null)) // spot and upfront
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(
             Arrays.<AggregatorFactory>asList(
@@ -1232,12 +1232,14 @@ public class TimeseriesQueryRunnerTest
                                   .granularity(QueryRunnerTestHelper.dayGran)
                                   .filters(
                                       new InDimFilter(
-                                          QueryRunnerTestHelper.marketDimension, Arrays.asList(
-                                          "spot",
-                                          "upfront",
-                                          "total_market",
-                                          "billyblank"
-                                      )
+                                          QueryRunnerTestHelper.marketDimension,
+                                          Arrays.asList(
+                                              "spot",
+                                              "upfront",
+                                              "total_market",
+                                              "billyblank"
+                                          ),
+                                          null
                                       )
                                   )
                                   .intervals(QueryRunnerTestHelper.firstToThird)
@@ -1466,7 +1468,7 @@ public class TimeseriesQueryRunnerTest
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(QueryRunnerTestHelper.dayGran)
-                                  .filters(new NotDimFilter(new SelectorDimFilter("bobby", "sally")))
+                                  .filters(new NotDimFilter(new SelectorDimFilter("bobby", "sally", null)))
                                   .intervals(QueryRunnerTestHelper.firstToThird)
                                   .aggregators(QueryRunnerTestHelper.commonAggregators)
                                   .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
@@ -2198,6 +2200,7 @@ public class TimeseriesQueryRunnerTest
                                                   "spot",
                                                   true,
                                                   null,
+                                                  null,
                                                   null
                                               ),
                                               new BoundDimFilter(
@@ -2206,12 +2209,14 @@ public class TimeseriesQueryRunnerTest
                                                   "spotify",
                                                   null,
                                                   true,
+                                                  null,
                                                   null
                                               ),
                                               (DimFilter) new BoundDimFilter(
                                                   QueryRunnerTestHelper.marketDimension,
                                                   "SPOT",
                                                   "spot",
+                                                  null,
                                                   null,
                                                   null,
                                                   null

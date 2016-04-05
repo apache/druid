@@ -32,6 +32,9 @@ import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.extraction.JavaScriptExtractionFn;
+import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.InDimFilter;
@@ -46,6 +49,7 @@ import org.junit.runners.Parameterized;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -100,63 +104,177 @@ public class InFilterTest extends BaseFilterTest
   @Test
   public void testSingleValueStringColumnWithoutNulls()
   {
-    Assert.assertEquals(ImmutableList.<Integer>of(), select(toInFilter("dim0", null)));
-    Assert.assertEquals(ImmutableList.<Integer>of(), select(toInFilter("dim0", "", "")));
-    Assert.assertEquals(ImmutableList.of(0, 2), select(toInFilter("dim0", "a", "c")));
-    Assert.assertEquals(ImmutableList.of(4), select(toInFilter("dim0", "e", "x")));
+    assertFilterMatches(
+        toInFilter("dim0", null),
+        ImmutableList.<String>of()
+    );
+
+    assertFilterMatches(
+        toInFilter("dim0", "", ""),
+        ImmutableList.<String>of()
+    );
+
+    assertFilterMatches(
+        toInFilter("dim0", "a", "c"),
+        ImmutableList.of("a", "c")
+    );
+
+    assertFilterMatches(
+        toInFilter("dim0", "e", "x"),
+        ImmutableList.of("e")
+    );
   }
 
   @Test
   public void testSingleValueStringColumnWithNulls()
   {
-    Assert.assertEquals(ImmutableList.of(0), select(toInFilter("dim1", null, "")));
-    Assert.assertEquals(ImmutableList.of(0), select(toInFilter("dim1", "")));
-    Assert.assertEquals(ImmutableList.of(0, 1, 5), select(toInFilter("dim1", null, "10", "abc")));
-    Assert.assertEquals(ImmutableList.<Integer>of(), select(toInFilter("dim1", "-1", "ab", "de")));
+    assertFilterMatches(
+        toInFilter("dim1", null, ""),
+        ImmutableList.of("a")
+    );
+
+    assertFilterMatches(
+        toInFilter("dim1", ""),
+        ImmutableList.of("a")
+    );
+
+    assertFilterMatches(
+        toInFilter("dim1", null, "10", "abc"),
+        ImmutableList.of("a", "b", "f")
+    );
+
+    assertFilterMatches(
+        toInFilter("dim1", "-1", "ab", "de"),
+        ImmutableList.<String>of()
+    );
   }
 
   @Test
   public void testMultiValueStringColumn()
   {
-    Assert.assertEquals(ImmutableList.of(1, 2, 5), select(toInFilter("dim2", null)));
-    Assert.assertEquals(ImmutableList.of(1, 2, 5), select(toInFilter("dim2", "", (String)null)));
-    Assert.assertEquals(ImmutableList.of(0, 1, 2, 3, 5), select(toInFilter("dim2", null, "a")));
-    Assert.assertEquals(ImmutableList.of(0, 1, 2, 5), select(toInFilter("dim2", null, "b")));
-    Assert.assertEquals(ImmutableList.of(4), select(toInFilter("dim2", "c")));
-    Assert.assertEquals(ImmutableList.<Integer>of(), select(toInFilter("dim2", "d")));
+    assertFilterMatches(
+        toInFilter("dim2", null),
+        ImmutableList.of("b", "c", "f")
+    );
+
+    assertFilterMatches(
+        toInFilter("dim2", "", (String)null),
+        ImmutableList.of("b", "c", "f")
+    );
+
+    assertFilterMatches(
+        toInFilter("dim2", null, "a"),
+        ImmutableList.of("a", "b", "c", "d", "f")
+
+    );
+
+    assertFilterMatches(
+        toInFilter("dim2", null, "b"),
+        ImmutableList.of("a", "b", "c", "f")
+
+    );
+
+    assertFilterMatches(
+        toInFilter("dim2", "c"),
+        ImmutableList.of("e")
+    );
+
+    assertFilterMatches(
+        toInFilter("dim2", "d"),
+        ImmutableList.<String>of()
+    );
   }
 
   @Test
   public void testMissingColumn()
   {
-    Assert.assertEquals(ImmutableList.of(0, 1, 2, 3, 4, 5), select(toInFilter("dim3", null, (String)null)));
-    Assert.assertEquals(ImmutableList.of(0, 1, 2, 3, 4, 5), select(toInFilter("dim3", "")));
-    Assert.assertEquals(ImmutableList.of(0, 1, 2, 3, 4, 5), select(toInFilter("dim3", null, "a")));
-    Assert.assertEquals(ImmutableList.<Integer>of(), select(toInFilter("dim3", "a")));
-    Assert.assertEquals(ImmutableList.<Integer>of(), select(toInFilter("dim3", "b")));
-    Assert.assertEquals(ImmutableList.<Integer>of(), select(toInFilter("dim3", "c")));
+    assertFilterMatches(
+        toInFilter("dim3", null, (String)null),
+        ImmutableList.of("a", "b", "c", "d", "e", "f")
+    );
+
+    assertFilterMatches(
+        toInFilter("dim3", ""),
+        ImmutableList.of("a", "b", "c", "d", "e", "f")
+    );
+
+    assertFilterMatches(
+        toInFilter("dim3", null, "a"),
+        ImmutableList.of("a", "b", "c", "d", "e", "f")
+    );
+
+    assertFilterMatches(
+        toInFilter("dim3", "a"),
+        ImmutableList.<String>of()
+    );
+
+    assertFilterMatches(
+        toInFilter("dim3", "b"),
+        ImmutableList.<String>of()
+    );
+
+    assertFilterMatches(
+        toInFilter("dim3", "c"),
+        ImmutableList.<String>of()
+    );
+  }
+
+  @Test
+  public void testMatchWithExtractionFn()
+  {
+    String extractionJsFn = "function(str) { return 'super-' + str; }";
+    ExtractionFn superFn = new JavaScriptExtractionFn(extractionJsFn, false);
+
+    String nullJsFn = "function(str) { if (str === null) { return 'YES'; } else { return 'NO';} }";
+    ExtractionFn yesNullFn = new JavaScriptExtractionFn(nullJsFn, false);
+
+    assertFilterMatches(
+        toInFilterWithFn("dim2", superFn, "super-null", "super-a", "super-b"),
+        ImmutableList.of("a", "b", "c", "d", "f")
+    );
+
+    assertFilterMatches(
+        toInFilterWithFn("dim2", yesNullFn, "YES"),
+        ImmutableList.of("b", "c", "f")
+    );
+
+    assertFilterMatches(
+        toInFilterWithFn("dim1", superFn, "super-null", "super-10", "super-def"),
+        ImmutableList.of("a", "b", "e")
+    );
+
+    assertFilterMatches(
+        toInFilterWithFn("dim3", yesNullFn, "NO"),
+        ImmutableList.<String>of()
+    );
+
+    assertFilterMatches(
+        toInFilterWithFn("dim3", yesNullFn, "YES"),
+        ImmutableList.of("a", "b", "c", "d", "e", "f")
+    );
+
+    assertFilterMatches(
+        toInFilterWithFn("dim1", yesNullFn, "NO"),
+        ImmutableList.of("b", "c", "d", "e", "f")
+    );
   }
 
   private DimFilter toInFilter(String dim, String value, String... values)
   {
-    return new InDimFilter(dim, Lists.asList(value, values));
+    return new InDimFilter(dim, Lists.asList(value, values), null);
   }
 
-  private List<Integer> select(final DimFilter filter)
+  private DimFilter toInFilterWithFn(String dim, ExtractionFn fn, String value, String... values)
   {
-    return Lists.newArrayList(
-        Iterables.transform(
-            selectColumnValuesMatchingFilter(filter, "dim0"),
-            new Function<String, Integer>()
-            {
-              @Override
-              public Integer apply(String input)
-              {
-                Preconditions.checkArgument(input.length() == 1);
-                return ((int) input.charAt(0)) - ((int) 'a');
-              }
-            }
-        )
-    );
+    return new InDimFilter(dim, Lists.asList(value, values), fn);
+  }
+
+  private void assertFilterMatches(
+      final DimFilter filter,
+      final List<String> expectedRows
+  )
+  {
+    Assert.assertEquals(filter.toString(), expectedRows, selectColumnValuesMatchingFilter(filter, "dim0"));
+    Assert.assertEquals(filter.toString(), expectedRows.size(), selectCountUsingFilteredAggregator(filter));
   }
 }

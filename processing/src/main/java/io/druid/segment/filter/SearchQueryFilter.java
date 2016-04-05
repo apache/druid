@@ -22,6 +22,7 @@ package io.druid.segment.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Predicate;
+import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.search.search.SearchQuerySpec;
 
 import javax.annotation.Nullable;
@@ -33,7 +34,8 @@ public class SearchQueryFilter extends DimensionPredicateFilter
   @JsonCreator
   public SearchQueryFilter(
       @JsonProperty("dimension") String dimension,
-      @JsonProperty("query") final SearchQuerySpec query
+      @JsonProperty("query") final SearchQuerySpec query,
+      @JsonProperty("extractionFn") final ExtractionFn extractionFn
   )
   {
     super(
@@ -45,7 +47,8 @@ public class SearchQueryFilter extends DimensionPredicateFilter
           {
             return query.accept(input);
           }
-        }
+        },
+        extractionFn
     );
   }
 }
