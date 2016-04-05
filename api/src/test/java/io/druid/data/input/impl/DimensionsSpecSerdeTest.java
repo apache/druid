@@ -37,8 +37,8 @@ public class DimensionsSpecSerdeTest
   {
     DimensionsSpec expected = new DimensionsSpec(
         Arrays.asList(
-            new StringDimensionSchema("AAA"),
-            new StringDimensionSchema("BBB"),
+            StringDimensionSchema.create("AAA"),
+            StringDimensionSchema.create("BBB"),
             new FloatDimensionSchema("C++"),
             new NewSpatialDimensionSchema("DDT", null),
             new LongDimensionSchema("EEE"),

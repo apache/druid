@@ -50,7 +50,7 @@ public class DimensionsSpec
           @Override
           public DimensionSchema apply(String input)
           {
-            return new StringDimensionSchema(input);
+            return StringDimensionSchema.create(input);
           }
         }
     );

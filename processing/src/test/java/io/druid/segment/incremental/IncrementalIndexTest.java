@@ -76,7 +76,7 @@ public class IncrementalIndexTest
   {
     DimensionsSpec dimensions = new DimensionsSpec(
         Arrays.asList(
-            new StringDimensionSchema("string"),
+            StringDimensionSchema.create("string"),
             new FloatDimensionSchema("float"),
             new LongDimensionSchema("long")
         ), null, null
