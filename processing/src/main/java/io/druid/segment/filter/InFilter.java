@@ -76,7 +76,6 @@ public class InFilter implements Filter
 
       List<ImmutableBitmap> bitmaps = Lists.newArrayList();
       for (String dimVal : allDimVals) {
-        System.out.println(dimVal);
         if (values.contains(Strings.nullToEmpty(extractionFn.apply(dimVal)))) {
           bitmaps.add(selector.getBitmapIndex(dimension, dimVal));
         }
