@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
  */
 @JsonTypeInfo(use=JsonTypeInfo.Id.NAME, property="type")
 @JsonSubTypes(value={
+    @JsonSubTypes.Type(name="noop", value=NoopDimFilter.class),
     @JsonSubTypes.Type(name="and", value=AndDimFilter.class),
     @JsonSubTypes.Type(name="or", value=OrDimFilter.class),
     @JsonSubTypes.Type(name="not", value=NotDimFilter.class),
