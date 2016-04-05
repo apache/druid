@@ -34,7 +34,7 @@ public class DimFilters
 {
   public static SelectorDimFilter dimEquals(String dimension, String value)
   {
-    return new SelectorDimFilter(dimension, value);
+    return new SelectorDimFilter(dimension, value, null);
   }
 
   public static AndDimFilter and(DimFilter... filters)
@@ -64,7 +64,7 @@ public class DimFilters
 
   public static RegexDimFilter regex(String dimension, String pattern)
   {
-    return new RegexDimFilter(dimension, pattern);
+    return new RegexDimFilter(dimension, pattern, null);
   }
 
   public static DimFilter dimEquals(final String dimension, String... values)

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.metamx.common.StringUtils;
+import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.filter.JavaScriptFilter;
 
 import java.nio.ByteBuffer;
@@ -31,17 +32,20 @@ public class JavaScriptDimFilter implements DimFilter
 {
   private final String dimension;
   private final String function;
+  private final ExtractionFn extractionFn;
 
   @JsonCreator
   public JavaScriptDimFilter(
       @JsonProperty("dimension") String dimension,
-      @JsonProperty("function") String function
+      @JsonProperty("function") String function,
+      @JsonProperty("extractionFn") ExtractionFn extractionFn
   )
   {
     Preconditions.checkArgument(dimension != null, "dimension must not be null");
     Preconditions.checkArgument(function != null, "function must not be null");
     this.dimension = dimension;
     this.function = function;
+    this.extractionFn = extractionFn;
   }
 
   @JsonProperty
@@ -56,17 +60,26 @@ public class JavaScriptDimFilter implements DimFilter
     return function;
   }
 
+  @JsonProperty
+  public ExtractionFn getExtractionFn()
+  {
+    return extractionFn;
+  }
+
   @Override
   public byte[] getCacheKey()
   {
     final byte[] dimensionBytes = StringUtils.toUtf8(dimension);
     final byte[] functionBytes = StringUtils.toUtf8(function);
+    byte[] extractionFnBytes = extractionFn == null ? new byte[0] : extractionFn.getCacheKey();
 
-    return ByteBuffer.allocate(2 + dimensionBytes.length + functionBytes.length)
+    return ByteBuffer.allocate(3 + dimensionBytes.length + functionBytes.length + extractionFnBytes.length)
                      .put(DimFilterCacheHelper.JAVASCRIPT_CACHE_ID)
                      .put(dimensionBytes)
                      .put(DimFilterCacheHelper.STRING_SEPARATOR)
                      .put(functionBytes)
+                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                     .put(extractionFnBytes)
                      .array();
   }
 
@@ -79,7 +92,7 @@ public class JavaScriptDimFilter implements DimFilter
   @Override
   public Filter toFilter()
   {
-    return new JavaScriptFilter(dimension, function);
+    return new JavaScriptFilter(dimension, function, extractionFn);
   }
 
   @Override
@@ -88,6 +101,7 @@ public class JavaScriptDimFilter implements DimFilter
     return "JavaScriptDimFilter{" +
            "dimension='" + dimension + '\'' +
            ", function='" + function + '\'' +
+           ", extractionFn='" + extractionFn + '\'' +
            '}';
   }
 }

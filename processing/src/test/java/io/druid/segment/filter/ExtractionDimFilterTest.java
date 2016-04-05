@@ -160,7 +160,7 @@ public class ExtractionDimFilterTest
   @Test
   public void testEmpty()
   {
-    ExtractionFilter extractionFilter = new ExtractionFilter(
+    SelectorFilter extractionFilter = new SelectorFilter(
         "foo", "NFDJUKFNDSJFNS", DIM_EXTRACTION_FN
     );
     ImmutableBitmap immutableBitmap = extractionFilter.getBitmapIndex(BITMAP_INDEX_SELECTOR);
@@ -170,7 +170,7 @@ public class ExtractionDimFilterTest
   @Test
   public void testNull()
   {
-    ExtractionFilter extractionFilter = new ExtractionFilter(
+    SelectorFilter extractionFilter = new SelectorFilter(
         "FDHJSFFHDS", "extractDimVal", DIM_EXTRACTION_FN
     );
     ImmutableBitmap immutableBitmap = extractionFilter.getBitmapIndex(BITMAP_INDEX_SELECTOR);
@@ -180,7 +180,7 @@ public class ExtractionDimFilterTest
   @Test
   public void testNormal()
   {
-    ExtractionFilter extractionFilter = new ExtractionFilter(
+    SelectorFilter extractionFilter = new SelectorFilter(
         "foo", "extractDimVal", DIM_EXTRACTION_FN
     );
     ImmutableBitmap immutableBitmap = extractionFilter.getBitmapIndex(BITMAP_INDEX_SELECTOR);

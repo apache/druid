@@ -21,6 +21,7 @@ package io.druid.segment.filter;
 
 import com.google.common.base.Predicate;
 import com.metamx.collections.bitmap.ImmutableBitmap;
+import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.Filter;
@@ -37,6 +38,7 @@ public class BoundFilter implements Filter
 {
   private final BoundDimFilter boundDimFilter;
   private final Comparator<String> comparator;
+  private final ExtractionFn extractionFn;
 
   public BoundFilter(final BoundDimFilter boundDimFilter)
   {
@@ -44,6 +46,7 @@ public class BoundFilter implements Filter
     this.comparator = boundDimFilter.isAlphaNumeric()
                       ? StringComparators.ALPHANUMERIC
                       : StringComparators.LEXICOGRAPHIC;
+    this.extractionFn = boundDimFilter.getExtractionFn();
   }
 
   @Override
@@ -60,7 +63,7 @@ public class BoundFilter implements Filter
       }
     }
 
-    if (boundDimFilter.isAlphaNumeric()) {
+    if (boundDimFilter.isAlphaNumeric() || extractionFn != null) {
       // inspect all values
 
       // will be non-null because bitmapIndex was non-null
@@ -185,6 +188,10 @@ public class BoundFilter implements Filter
 
   private boolean doesMatch(String input)
   {
+    if (extractionFn != null) {
+      input = extractionFn.apply(input);
+    }
+
     if (input == null) {
       return (!boundDimFilter.hasLowerBound()
               || (boundDimFilter.getLower().isEmpty() && !boundDimFilter.isLowerStrict())) // lower bound allows null

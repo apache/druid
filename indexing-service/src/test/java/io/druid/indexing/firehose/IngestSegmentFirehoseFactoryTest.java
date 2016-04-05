@@ -305,7 +305,7 @@ public class IngestSegmentFirehoseFactoryTest
                   new IngestSegmentFirehoseFactory(
                       DATA_SOURCE_NAME,
                       FOREVER,
-                      new SelectorDimFilter(DIM_NAME, DIM_VALUE),
+                      new SelectorDimFilter(DIM_NAME, DIM_VALUE, null),
                       dim_names,
                       metric_names,
                       Guice.createInjector(
