@@ -54,6 +54,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 /**
  */
@@ -737,8 +738,13 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     public NumericColumnSelector makeMathExpressionSelector(String expression)
                     {
                       final Expr parsed = Parser.parse(expression);
-                      final Map<String, Supplier<Number>> values = Maps.newHashMap();
+                      final Set<String> required = Sets.newHashSet(Parser.findRequiredBindings(parsed));
+
+                      final Map<String, Supplier<Number>> values = Maps.newHashMapWithExpectedSize(required.size());
                       for (String columnName : index.getColumnNames()) {
+                        if (!required.contains(columnName)) {
+                          continue;
+                        }
                         final GenericColumn column = index.getColumn(columnName).getGenericColumn();
                         if (column == null) {
                           continue;

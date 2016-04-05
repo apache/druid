@@ -27,7 +27,6 @@ import io.druid.common.utils.StringUtils;
 import io.druid.math.expr.Parser;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.LongColumnSelector;
-import io.druid.segment.NumericColumnSelector;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -53,7 +52,9 @@ public class LongSumAggregatorFactory extends AggregatorFactory
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
-    Preconditions.checkArgument(fieldName == null ^ fieldExpression == null, "Must have a valid, non-null fieldName");
+    Preconditions.checkArgument(
+        fieldName == null ^ fieldExpression == null,
+        "Must have a valid, non-null fieldName or fieldExpression");
 
     this.name = name;
     this.fieldName = fieldName;
@@ -71,29 +72,15 @@ public class LongSumAggregatorFactory extends AggregatorFactory
     return new LongSumAggregator(name, getLongColumnSelector(metricFactory));
   }
 
-  private LongColumnSelector getLongColumnSelector(ColumnSelectorFactory metricFactory)
-  {
-    LongColumnSelector selector;
-    if (fieldName != null) {
-      selector = metricFactory.makeLongColumnSelector(fieldName);
-    } else {
-      final NumericColumnSelector numeric = metricFactory.makeMathExpressionSelector(fieldExpression);
-      selector = new LongColumnSelector()
-      {
-        @Override
-        public long get()
-        {
-          return numeric.get().longValue();
-        }
-      };
-    }
-    return selector;
-  }
-
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     return new LongSumBufferAggregator(getLongColumnSelector(metricFactory));
+  }
+
+  private LongColumnSelector getLongColumnSelector(ColumnSelectorFactory metricFactory)
+  {
+    return AggregatorUtil.getLongColumnSelector(metricFactory, fieldName, fieldExpression);
   }
 
   @Override

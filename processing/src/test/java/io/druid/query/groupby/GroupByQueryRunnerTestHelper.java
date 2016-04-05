@@ -33,6 +33,8 @@ import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
 import org.joda.time.DateTime;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -68,6 +70,20 @@ public class GroupByQueryRunnerTestHelper
 
     DateTime ts = new DateTime(timestamp);
     return new MapBasedRow(ts, theVals);
+  }
+
+  public static List<Row> createExpectedRows(String[] columnNames, Iterable<Object[]> values)
+  {
+    List<Row> expected = Lists.newArrayList();
+    for (Object[] value : values) {
+      Preconditions.checkArgument(value.length == columnNames.length + 1);
+      Map<String, Object> theVals = Maps.newHashMapWithExpectedSize(value.length);
+      for (int i = 0; i < columnNames.length; i++) {
+        theVals.put(columnNames[i], value[i + 1]);
+      }
+      expected.add(new MapBasedRow(new DateTime(value[0]), theVals));
+    }
+    return expected;
   }
 
 }
