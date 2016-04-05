@@ -32,6 +32,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.util.HashSet;
 import java.util.Map;
@@ -40,6 +41,9 @@ public class SQLMetadataStorageActionHandlerTest
 {
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+
+  @Rule
+  public final ExpectedException thrown = ExpectedException.none();
 
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
   private SQLMetadataStorageActionHandler<Map<String, Integer>, Map<String, Integer>, Map<String, String>, Map<String, Integer>> handler;
@@ -174,6 +178,19 @@ public class SQLMetadataStorageActionHandlerTest
         ImmutableList.of(status1),
         handler.getInactiveStatusesSince(new DateTime("2014-01-01"))
     );
+  }
+
+  @Test(timeout = 10_000L)
+  public void testRepeatInsert() throws Exception
+  {
+    final String entryId = "abcd";
+    Map<String, Integer> entry = ImmutableMap.of("a", 1);
+    Map<String, Integer> status = ImmutableMap.of("count", 42);
+
+    handler.insert(entryId, new DateTime("2014-01-01"), "test", entry, true, status);
+
+    thrown.expect(EntryExistsException.class);
+    handler.insert(entryId, new DateTime("2014-01-01"), "test", entry, true, status);
   }
 
   @Test
