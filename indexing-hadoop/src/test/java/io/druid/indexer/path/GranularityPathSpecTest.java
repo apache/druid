@@ -21,7 +21,9 @@ package io.druid.indexer.path;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.metamx.common.Granularity;
 import io.druid.granularity.QueryGranularity;
@@ -43,6 +45,8 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
+
+import java.util.SortedSet;
 
 public class GranularityPathSpecTest
 {
@@ -152,6 +156,24 @@ public class GranularityPathSpecTest
     ));
 
     Assert.assertEquals("Did not find expected input paths", expected, actual);
+  }
+
+  @Test
+  public void testIntervalTrimming() throws Exception
+  {
+    Optional<SortedSet<Interval>> intervals = new UniformGranularitySpec(
+        Granularity.DAY,
+        QueryGranularity.ALL,
+        ImmutableList.of(new Interval("2015-01-01T01Z/2015-01-03T05Z"))
+    ).bucketIntervals();
+    Assert.assertTrue(intervals.isPresent());
+    Assert.assertEquals(
+        ImmutableSet.of(
+            new Interval("2015-01-01T01Z/2015-01-02T00Z"),
+            new Interval("2015-01-02T00Z/2015-01-03T00Z"),
+            new Interval("2015-01-03T00Z/2015-01-03T05Z")),
+        intervals.get()
+    );
   }
 
   private void testSerde(

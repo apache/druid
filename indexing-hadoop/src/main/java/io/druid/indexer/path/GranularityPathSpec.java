@@ -111,7 +111,7 @@ public class GranularityPathSpec implements PathSpec
   @Override
   public Job addInputPaths(HadoopDruidIndexerConfig config, Job job) throws IOException
   {
-    final Set<Interval> intervals = Sets.newTreeSet(Comparators.intervals());
+    final Set<Interval> intervals = Sets.newTreeSet(Comparators.intervalsByStartThenEnd());
     Optional<Set<Interval>> optionalIntervals = config.getSegmentGranularIntervals();
     if (optionalIntervals.isPresent()) {
       for (Interval segmentInterval : optionalIntervals.get()) {
