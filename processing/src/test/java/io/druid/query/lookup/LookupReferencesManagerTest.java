@@ -19,14 +19,12 @@
 
 package io.druid.query.lookup;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
 import com.metamx.common.ISE;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.query.extraction.MapLookupExtractorFactory;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
@@ -35,7 +33,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 
 public class LookupReferencesManagerTest
@@ -52,7 +49,6 @@ public class LookupReferencesManagerTest
     Assert.assertTrue("must be closed before start call", lookupReferencesManager.isClosed());
     lookupReferencesManager.start();
     Assert.assertFalse("must start after start call", lookupReferencesManager.isClosed());
-    mapper.registerSubtypes(LookupExtractorFactoryMock.class);
   }
 
   @After
@@ -257,7 +253,7 @@ public class LookupReferencesManagerTest
   @Test
   public void testBootstrapFromFile() throws IOException
   {
-    LookupExtractorFactory lookupExtractorFactory = new LookupExtractorFactoryMock("data");
+    LookupExtractorFactory lookupExtractorFactory = new MapLookupExtractorFactory(ImmutableMap.<String, String>of("key", "value"), true);
     lookupReferencesManager.put("testMockForBootstrap",lookupExtractorFactory);
     lookupReferencesManager.stop();
     lookupReferencesManager.start();
@@ -265,68 +261,4 @@ public class LookupReferencesManagerTest
 
   }
 
-  @JsonTypeName("mockTest")
-  private static class LookupExtractorFactoryMock implements LookupExtractorFactory
-  {
-    @JsonProperty
-    public String getData()
-    {
-      return dataString;
-    }
-
-    @JsonProperty
-    private final String dataString;
-
-    @JsonCreator
-    public LookupExtractorFactoryMock(@JsonProperty("dataString") String dataString)
-    {
-      this.dataString = dataString;
-    }
-
-    @Override
-    public boolean start()
-    {
-      return true;
-    }
-
-    @Override
-    public boolean close()
-    {
-      return true;
-    }
-
-    @Override
-    public boolean replaces(@Nullable LookupExtractorFactory other)
-    {
-      return false;
-    }
-
-    @Override
-    public LookupExtractor get()
-    {
-      return null;
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return dataString != null ? dataString.hashCode() : 0;
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (!(o instanceof LookupExtractorFactoryMock)) {
-        return false;
-      }
-
-      LookupExtractorFactoryMock that = (LookupExtractorFactoryMock) o;
-
-      return getData().equals(that.getData());
-
-    }
-  }
 }
