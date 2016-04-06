@@ -22,8 +22,13 @@ package io.druid.segment;
 import com.google.common.base.Function;
 import com.metamx.common.logger.Logger;
 import io.druid.timeline.DataSegment;
+import org.apache.commons.lang.StringUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.ISODateTimeFormat;
+
+import java.util.Objects;
 
 /**
  * identifier to DataSegment. wishfully included in DataSegment
@@ -44,51 +49,78 @@ public class SegmentDesc
   // ignores shard spec
   public static SegmentDesc valueOf(final String identifier)
   {
-    String[] splits = identifier.split(DataSegment.delimiter);
-    if (splits.length < 4) {
+    SegmentDesc segmentDesc = parse(identifier);
+    if (segmentDesc == null) {
       throw new IllegalArgumentException("Invalid identifier " + identifier);
     }
-    String datasource = splits[0];
-    DateTime start = new DateTime(splits[1]);
-    DateTime end = new DateTime(splits[2]);
-    String version = splits[3];
+    return segmentDesc;
+  }
+
+  private static SegmentDesc parse(String identifier)
+  {
+    String[] splits = identifier.split(DataSegment.delimiter);
+    if (splits.length < 3) {
+      return null;
+    }
+
+    DateTimeFormatter formatter = ISODateTimeFormat.dateTime();
+
+    String datasource = null;
+    DateTime start = null;
+    DateTime end = null;
+
+    int i = 1;
+    for (; i < splits.length && end == null; i++) {
+      try {
+        DateTime dateTime = formatter.parseDateTime(splits[i]);
+        if (start == null) {
+          datasource = StringUtils.join(splits, DataSegment.delimiter, 0, i);
+          start = dateTime;
+        } else if (end == null) {
+          end = dateTime;
+        }
+      }
+      catch (IllegalArgumentException e) {
+        // ignore
+      }
+    }
+    if (end == null) {
+      return null;
+    }
+
+    String version = i < splits.length ? splits[i++] : null;
+    String trail = i < splits.length ? StringUtils.join(splits, DataSegment.delimiter, i, splits.length) : null;
 
     return new SegmentDesc(
         datasource,
         new Interval(start.getMillis(), end.getMillis()),
-        version
+        version,
+        trail
     );
   }
 
   public static String withInterval(final String identifier, Interval newInterval)
   {
-    String[] splits = identifier.split(DataSegment.delimiter);
-    if (splits.length < 4) {
+    SegmentDesc segmentDesc = SegmentDesc.parse(identifier);
+    if (segmentDesc == null) {
       // happens for test segments which has invalid segment id.. ignore for now
       LOGGER.warn("Invalid segment identifier " + identifier);
       return identifier;
     }
-    StringBuilder builder = new StringBuilder();
-    builder.append(splits[0]).append(DataSegment.delimiter);
-    builder.append(newInterval.getStart()).append(DataSegment.delimiter);
-    builder.append(newInterval.getEnd()).append(DataSegment.delimiter);
-    for (int i = 3; i < splits.length - 1; i++) {
-      builder.append(splits[i]).append(DataSegment.delimiter);
-    }
-    builder.append(splits[splits.length - 1]);
-
-    return builder.toString();
+    return segmentDesc.withInterval(newInterval).toString();
   }
 
   private final String dataSource;
   private final Interval interval;
   private final String version;
+  private final String trail;
 
-  public SegmentDesc(String dataSource, Interval interval, String version)
+  public SegmentDesc(String dataSource, Interval interval, String version, String trail)
   {
     this.dataSource = dataSource;
     this.interval = interval;
     this.version = version;
+    this.trail = trail;
   }
 
   public String getDataSource()
@@ -104,5 +136,50 @@ public class SegmentDesc
   public String getVersion()
   {
     return version;
+  }
+
+  public SegmentDesc withInterval(Interval interval) {
+    return new SegmentDesc(dataSource, interval, version, trail);
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    SegmentDesc that = (SegmentDesc) o;
+
+    if (!Objects.equals(dataSource, that.dataSource)) {
+      return false;
+    }
+    if (!Objects.equals(interval, that.interval)) {
+      return false;
+    }
+    if (!Objects.equals(version, that.version)) {
+      return false;
+    }
+    if (!Objects.equals(trail, that.trail)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return Objects.hash(dataSource, interval, version, trail);
+  }
+
+  @Override
+  public String toString() {
+    return StringUtils.join(
+        new Object[] {dataSource, interval.getStart(), interval.getEnd(), version, trail},
+        DataSegment.delimiter, 0, version == null ? 3 : trail == null ? 4 : 5);
   }
 }
