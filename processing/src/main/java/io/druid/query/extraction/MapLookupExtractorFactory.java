@@ -30,7 +30,9 @@ import java.util.Map;
 
 public class MapLookupExtractorFactory implements LookupExtractorFactory
 {
+  @JsonProperty
   private final Map<String, String> map;
+  @JsonProperty
   private final boolean isOneToOne;
   private final MapLookupExtractor lookupExtractor;
 

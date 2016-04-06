@@ -19,9 +19,14 @@
 
 package io.druid.query.extraction;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import io.druid.jackson.DefaultObjectMapper;
+import io.druid.query.lookup.LookupExtractorFactory;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.io.IOException;
 
 public class MapLookupExtractorFactoryTest
 {
@@ -45,5 +50,13 @@ public class MapLookupExtractorFactoryTest
     Assert.assertTrue(factory.replaces(new MapLookupExtractorFactory(ImmutableMap.of(KEY + "1", VALUE), true)));
     Assert.assertTrue(factory.replaces(new MapLookupExtractorFactory(ImmutableMap.of(KEY, VALUE + "1"), true)));
     Assert.assertTrue(factory.replaces(null));
+  }
+
+  @Test
+  public void testSerDeserMapLookupExtractorFactory() throws IOException
+  {
+    ObjectMapper mapper = new DefaultObjectMapper();
+    LookupExtractorFactory lookupExtractorFactory = new MapLookupExtractorFactory(ImmutableMap.of("key", "value"), true);
+    Assert.assertEquals(lookupExtractorFactory, mapper.reader(LookupExtractorFactory.class).readValue(mapper.writeValueAsString(lookupExtractorFactory)));
   }
 }
