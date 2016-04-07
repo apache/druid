@@ -97,6 +97,12 @@ When using this firehose, events can be sent by submitting a POST request to the
 |serviceName|name used to announce the event receiver service endpoint|yes|
 |bufferSize| size of buffer used by firehose to store events|no default(100000)|
 
+Shut down time for EventReceiverFirehose can be specified by submitting a POST request to
+
+`http://<peonHost>:<port>/druid/worker/v1/chat/<eventReceiverServiceName>/shutdown?shutoffTime=<shutoffTime>`
+
+If shutOffTime is not specified, the firehose shuts off immediately.
+
 #### TimedShutoffFirehose
 
 This can be used to start a firehose that will shut down at a specified time.
