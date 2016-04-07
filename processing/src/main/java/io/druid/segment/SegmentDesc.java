@@ -37,71 +37,56 @@ public class SegmentDesc
 {
   private static final Logger LOGGER = new Logger(SegmentDesc.class);
 
-  public static Function<String, Interval> INTERVAL_EXTRACTOR = new Function<String, Interval>()
+  public static Function<String, Interval> INTERVAL_EXTRACTOR(final String datasource)
   {
-    @Override
-    public Interval apply(String identifier)
+    return new Function<String, Interval>()
     {
-      return valueOf(identifier).getInterval();
-    }
-  };
+      @Override
+      public Interval apply(String identifier)
+      {
+        return valueOf(datasource, identifier).getInterval();
+      }
+    };
+  }
 
   // ignores shard spec
-  public static SegmentDesc valueOf(final String identifier)
+  public static SegmentDesc valueOf(String dataSource, String identifier)
   {
-    SegmentDesc segmentDesc = parse(identifier);
+    SegmentDesc segmentDesc = parse(dataSource, identifier);
     if (segmentDesc == null) {
       throw new IllegalArgumentException("Invalid identifier " + identifier);
     }
     return segmentDesc;
   }
 
-  private static SegmentDesc parse(String identifier)
+  private static SegmentDesc parse(String dataSource, String identifier)
   {
-    String[] splits = identifier.split(DataSegment.delimiter);
-    if (splits.length < 3) {
+    if (!identifier.startsWith(dataSource + DataSegment.delimiter)) {
+      return null;
+    }
+    String remaining = identifier.substring(dataSource.length() + 1);
+    String[] splits = remaining.split(DataSegment.delimiter);
+    if (splits.length < 2) {
       return null;
     }
 
     DateTimeFormatter formatter = ISODateTimeFormat.dateTime();
-
-    String datasource = null;
-    DateTime start = null;
-    DateTime end = null;
-
-    int i = 1;
-    for (; i < splits.length && end == null; i++) {
-      try {
-        DateTime dateTime = formatter.parseDateTime(splits[i]);
-        if (start == null) {
-          datasource = StringUtils.join(splits, DataSegment.delimiter, 0, i);
-          start = dateTime;
-        } else if (end == null) {
-          end = dateTime;
-        }
-      }
-      catch (IllegalArgumentException e) {
-        // ignore
-      }
-    }
-    if (end == null) {
-      return null;
-    }
-
-    String version = i < splits.length ? splits[i++] : null;
-    String trail = i < splits.length ? StringUtils.join(splits, DataSegment.delimiter, i, splits.length) : null;
+    DateTime start = formatter.parseDateTime(splits[0]);
+    DateTime end = formatter.parseDateTime(splits[1]);
+    String version = splits.length > 2 ? splits[2] : null;
+    String trail = splits.length > 3 ? StringUtils.join(splits, DataSegment.delimiter, 3, splits.length) : null;
 
     return new SegmentDesc(
-        datasource,
+        dataSource,
         new Interval(start.getMillis(), end.getMillis()),
         version,
         trail
     );
   }
 
-  public static String withInterval(final String identifier, Interval newInterval)
+  public static String withInterval(final String dataSource, final String identifier, Interval newInterval)
   {
-    SegmentDesc segmentDesc = SegmentDesc.parse(identifier);
+    SegmentDesc segmentDesc = SegmentDesc.parse(dataSource, identifier);
     if (segmentDesc == null) {
       // happens for test segments which has invalid segment id.. ignore for now
       LOGGER.warn("Invalid segment identifier " + identifier);
@@ -138,7 +123,8 @@ public class SegmentDesc
     return version;
   }
 
-  public SegmentDesc withInterval(Interval interval) {
+  public SegmentDesc withInterval(Interval interval)
+  {
     return new SegmentDesc(dataSource, interval, version, trail);
   }
 
@@ -177,9 +163,11 @@ public class SegmentDesc
   }
 
   @Override
-  public String toString() {
+  public String toString()
+  {
     return StringUtils.join(
-        new Object[] {dataSource, interval.getStart(), interval.getEnd(), version, trail},
-        DataSegment.delimiter, 0, version == null ? 3 : trail == null ? 4 : 5);
+        new Object[]{dataSource, interval.getStart(), interval.getEnd(), version, trail},
+        DataSegment.delimiter, 0, version == null ? 3 : trail == null ? 4 : 5
+    );
   }
 }

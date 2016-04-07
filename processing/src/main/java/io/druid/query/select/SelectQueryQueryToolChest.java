@@ -269,6 +269,9 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
   @Override
   public <T extends LogicalSegment> List<T> filterSegments(SelectQuery query, List<T> segments)
   {
+    // this is safe (see ServerManager)
+    String dataSource = Iterables.getOnlyElement(query.getDataSource().getNames());
+
     PagingSpec pagingSpec = query.getPagingSpec();
     Map<String, Integer> paging = pagingSpec.getPagingIdentifiers();
     if (paging == null || paging.isEmpty()) {
@@ -278,7 +281,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
     final QueryGranularity granularity = query.getGranularity();
 
     List<Interval> intervals = Lists.newArrayList(
-        Iterables.transform(paging.keySet(), SegmentDesc.INTERVAL_EXTRACTOR)
+        Iterables.transform(paging.keySet(), SegmentDesc.INTERVAL_EXTRACTOR(dataSource))
     );
     Collections.sort(
         intervals, query.isDescending() ? Comparators.intervalsByEndThenStart()
