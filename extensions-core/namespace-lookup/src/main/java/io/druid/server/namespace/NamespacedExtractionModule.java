@@ -24,13 +24,11 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
-import com.google.inject.Inject;
 import com.google.inject.Key;
 import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
 import com.google.inject.name.Named;
-import com.google.inject.name.Names;
 import com.metamx.common.IAE;
 import io.druid.guice.Jerseys;
 import io.druid.guice.LazySingleton;
@@ -68,16 +66,18 @@ public class NamespacedExtractionModule implements DruidModule
   public static final String EXTRACTION_CACHE_MANAGER = "DruidExtractionCacheManager";
 
   private final ConcurrentMap<String, Function<String, String>> fnCache = new ConcurrentHashMap<>();
-  private final ConcurrentMap<String, Function<String, List<String>>> reverseFnCache= new ConcurrentHashMap<>();
+  private final ConcurrentMap<String, Function<String, List<String>>> reverseFnCache = new ConcurrentHashMap<>();
 
   @Override
   public List<? extends Module> getJacksonModules()
   {
     return ImmutableList.<Module>of(
         new SimpleModule("DruidNamespacedExtractionModule")
-            .registerSubtypes(NamespacedExtractor.class)
-            .registerSubtypes(ExtractionNamespace.class)
-            .registerSubtypes(NamespaceLookupExtractorFactory.class)
+            .registerSubtypes(
+                NamespacedExtractor.class,
+                ExtractionNamespace.class,
+                NamespaceLookupExtractorFactory.class
+            )
     );
   }
 
