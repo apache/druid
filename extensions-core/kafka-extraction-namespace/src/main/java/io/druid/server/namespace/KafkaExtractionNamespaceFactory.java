@@ -27,7 +27,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
-import io.druid.query.extraction.namespace.ExtractionNamespaceFunctionFactory;
+import io.druid.query.extraction.namespace.ExtractionNamespaceCacheFactory;
 import io.druid.query.extraction.namespace.KafkaExtractionNamespace;
 
 import javax.annotation.Nullable;
@@ -39,7 +39,7 @@ import java.util.concurrent.Callable;
 /**
  *
  */
-public class KafkaExtractionNamespaceFactory implements ExtractionNamespaceFunctionFactory<KafkaExtractionNamespace>
+public class KafkaExtractionNamespaceFactory implements ExtractionNamespaceCacheFactory<KafkaExtractionNamespace>
 {
   private final List<KafkaExtractionManager> kafkaExtractionManagers;
   private static final String KAFKA_VERSION = "kafka versions are updated every time a new event comes in";
@@ -50,46 +50,6 @@ public class KafkaExtractionNamespaceFactory implements ExtractionNamespaceFunct
   )
   {
     this.kafkaExtractionManagers = kafkaExtractionManagers;
-  }
-
-
-  @Override
-  public Function<String, String> buildFn(KafkaExtractionNamespace extractionNamespace, final Map<String, String> cache)
-  {
-    return new Function<String, String>()
-    {
-      @Nullable
-      @Override
-      public String apply(String input)
-      {
-        if (Strings.isNullOrEmpty(input)) {
-          return null;
-        }
-        return Strings.emptyToNull(cache.get(input));
-      }
-    };
-  }
-
-  @Override
-  public Function<String, List<String>> buildReverseFn(
-      KafkaExtractionNamespace extractionNamespace, final Map<String, String> cache
-  )
-  {
-    return new Function<String, List<String>>()
-    {
-      @Nullable
-      @Override
-      public List<String> apply(@Nullable final String value)
-      {
-        return Lists.newArrayList(Maps.filterKeys(cache, new Predicate<String>()
-        {
-          @Override public boolean apply(@Nullable String key)
-          {
-            return cache.get(key).equals(Strings.nullToEmpty(value));
-          }
-        }).keySet());
-      }
-    };
   }
 
   // This only fires ONCE when the namespace is first added. The version is updated externally as events come in

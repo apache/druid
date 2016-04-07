@@ -19,12 +19,7 @@
 
 package io.druid.server.namespace;
 
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import com.metamx.common.CompressionUtils;
@@ -34,18 +29,16 @@ import com.metamx.common.logger.Logger;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.SearchableVersionedDataFinder;
 import io.druid.data.input.MapPopulator;
-import io.druid.query.extraction.namespace.ExtractionNamespaceFunctionFactory;
+import io.druid.query.extraction.namespace.ExtractionNamespaceCacheFactory;
 import io.druid.query.extraction.namespace.URIExtractionNamespace;
 import io.druid.segment.loading.URIDataPuller;
 import org.joda.time.format.DateTimeFormatter;
 import org.joda.time.format.ISODateTimeFormat;
 
-import javax.annotation.Nullable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.regex.Pattern;
@@ -53,58 +46,18 @@ import java.util.regex.Pattern;
 /**
  *
  */
-public class URIExtractionNamespaceFunctionFactory implements ExtractionNamespaceFunctionFactory<URIExtractionNamespace>
+public class URIExtractionNamespaceCacheFactory implements ExtractionNamespaceCacheFactory<URIExtractionNamespace>
 {
   private static final int DEFAULT_NUM_RETRIES = 3;
-  private static final Logger log = new Logger(URIExtractionNamespaceFunctionFactory.class);
+  private static final Logger log = new Logger(URIExtractionNamespaceCacheFactory.class);
   private final Map<String, SearchableVersionedDataFinder> pullers;
 
   @Inject
-  public URIExtractionNamespaceFunctionFactory(
+  public URIExtractionNamespaceCacheFactory(
       Map<String, SearchableVersionedDataFinder> pullers
   )
   {
     this.pullers = pullers;
-  }
-
-  @Override
-  public Function<String, String> buildFn(URIExtractionNamespace extractionNamespace, final Map<String, String> cache)
-  {
-    return new Function<String, String>()
-    {
-      @Nullable
-      @Override
-      public String apply(String input)
-      {
-        if (Strings.isNullOrEmpty(input)) {
-          return null;
-        }
-        return Strings.emptyToNull(cache.get(input));
-      }
-    };
-  }
-
-  @Override
-  public Function<String, List<String>> buildReverseFn(
-      URIExtractionNamespace extractionNamespace, final Map<String, String> cache
-  )
-  {
-    return new Function<String, List<String>>()
-    {
-      @Nullable
-      @Override
-      public List<String> apply(@Nullable final String value)
-      {
-        return Lists.newArrayList(Maps.filterKeys(cache, new Predicate<String>()
-        {
-          @Override
-          public boolean apply(@Nullable String key)
-          {
-            return cache.get(key).equals(Strings.nullToEmpty(value));
-          }
-        }).keySet());
-      }
-    };
   }
 
   @Override

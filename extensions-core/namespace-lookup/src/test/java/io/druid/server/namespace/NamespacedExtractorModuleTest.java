@@ -21,13 +21,12 @@ package io.druid.server.namespace;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.lifecycle.Lifecycle;
 import io.druid.data.SearchableVersionedDataFinder;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.extraction.namespace.ExtractionNamespace;
-import io.druid.query.extraction.namespace.ExtractionNamespaceFunctionFactory;
+import io.druid.query.extraction.namespace.ExtractionNamespaceCacheFactory;
 import io.druid.query.extraction.namespace.JDBCExtractionNamespace;
 import io.druid.query.extraction.namespace.URIExtractionNamespace;
 import io.druid.query.extraction.namespace.URIExtractionNamespaceTest;
@@ -46,10 +45,7 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.OutputStreamWriter;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -62,7 +58,6 @@ public class NamespacedExtractorModuleTest
   private static final ObjectMapper mapper = URIExtractionNamespaceTest.registerTypes(new DefaultObjectMapper());
   private static NamespaceExtractionCacheManager cacheManager;
   private static Lifecycle lifecycle;
-  private static ConcurrentMap<String, Function<String, String>> fnCache = new ConcurrentHashMap<>();
 
   @Rule
   public final TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -70,25 +65,19 @@ public class NamespacedExtractorModuleTest
   @BeforeClass
   public static void setUpStatic() throws Exception
   {
-    final Map<Class<? extends ExtractionNamespace>, ExtractionNamespaceFunctionFactory<?>> factoryMap =
-        ImmutableMap.<Class<? extends ExtractionNamespace>, ExtractionNamespaceFunctionFactory<?>>of(
+    final Map<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>> factoryMap =
+        ImmutableMap.<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>>of(
             URIExtractionNamespace.class,
-            new URIExtractionNamespaceFunctionFactory(
+            new URIExtractionNamespaceCacheFactory(
                 ImmutableMap.<String, SearchableVersionedDataFinder>of(
                     "file",
                     new LocalFileTimestampVersionFinder()
                 )
             ),
-            JDBCExtractionNamespace.class, new JDBCExtractionNamespaceFunctionFactory()
+            JDBCExtractionNamespace.class, new JDBCExtractionNamespaceCacheFactory()
         );
     lifecycle = new Lifecycle();
-    cacheManager = new OnHeapNamespaceExtractionCacheManager(
-        lifecycle,
-        new ConcurrentHashMap<String, Function<String, String>>(),
-        new ConcurrentHashMap<String, Function<String, List<String>>>(),
-        new NoopServiceEmitter(), factoryMap
-    );
-    fnCache.clear();
+    cacheManager = new OnHeapNamespaceExtractionCacheManager(lifecycle, new NoopServiceEmitter(), factoryMap);
   }
 
   @AfterClass
@@ -104,7 +93,7 @@ public class NamespacedExtractorModuleTest
     try (OutputStreamWriter out = new FileWriter(tmpFile)) {
       out.write(mapper.writeValueAsString(ImmutableMap.<String, String>of("foo", "bar")));
     }
-    final URIExtractionNamespaceFunctionFactory factory = new URIExtractionNamespaceFunctionFactory(
+    final URIExtractionNamespaceCacheFactory factory = new URIExtractionNamespaceCacheFactory(
         ImmutableMap.<String, SearchableVersionedDataFinder>of("file", new LocalFileTimestampVersionFinder())
     );
     final String namespaceID = "ns";
@@ -138,13 +127,13 @@ public class NamespacedExtractorModuleTest
         null
     );
     Assert.assertTrue(cacheManager.scheduleAndWait(namespaceID, namespace, 1_000));
-    Assert.assertArrayEquals(cacheManager.getKnownNamespaces().toArray(), new Object[]{namespaceID});
+    Assert.assertArrayEquals(cacheManager.getKnownIDs().toArray(), new Object[]{namespaceID});
     Assert.assertTrue(cacheManager.delete(namespaceID));
   }
 
   private static boolean noNamespaces(NamespaceExtractionCacheManager manager)
   {
-    return manager.getKnownNamespaces().isEmpty();
+    return manager.getKnownIDs().isEmpty();
   }
 
   @Test//(timeout = 10_000)
@@ -185,7 +174,7 @@ public class NamespacedExtractorModuleTest
     );
     Assert.assertTrue(noNamespaces(cacheManager));
     Assert.assertTrue(cacheManager.scheduleAndWait(namespaceID, namespace, 10_000));
-    Assert.assertArrayEquals(cacheManager.getKnownNamespaces().toArray(), new Object[]{namespaceID});
+    Assert.assertArrayEquals(cacheManager.getKnownIDs().toArray(), new Object[]{namespaceID});
 
     Assert.assertTrue(cacheManager.delete(namespaceID));
   }

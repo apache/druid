@@ -35,15 +35,13 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.PolyBind;
 import io.druid.initialization.DruidModule;
 import io.druid.query.extraction.NamespaceLookupExtractorFactory;
-import io.druid.query.extraction.NamespacedExtractor;
 import io.druid.query.extraction.namespace.ExtractionNamespace;
-import io.druid.query.extraction.namespace.ExtractionNamespaceFunctionFactory;
+import io.druid.query.extraction.namespace.ExtractionNamespaceCacheFactory;
 import io.druid.query.extraction.namespace.JDBCExtractionNamespace;
 import io.druid.query.extraction.namespace.URIExtractionNamespace;
 import io.druid.server.namespace.cache.NamespaceExtractionCacheManager;
 import io.druid.server.namespace.cache.OffHeapNamespaceExtractionCacheManager;
 import io.druid.server.namespace.cache.OnHeapNamespaceExtractionCacheManager;
-import io.druid.server.namespace.http.NamespacesCacheResource;
 
 import javax.annotation.Nullable;
 import java.util.List;
@@ -74,14 +72,13 @@ public class NamespacedExtractionModule implements DruidModule
     return ImmutableList.<Module>of(
         new SimpleModule("DruidNamespacedExtractionModule")
             .registerSubtypes(
-                NamespacedExtractor.class,
                 ExtractionNamespace.class,
                 NamespaceLookupExtractorFactory.class
             )
     );
   }
 
-  public static MapBinder<Class<? extends ExtractionNamespace>, ExtractionNamespaceFunctionFactory<?>> getNamespaceFactoryMapBinder(
+  public static MapBinder<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>> getNamespaceFactoryMapBinder(
       final Binder binder
   )
   {
@@ -90,7 +87,7 @@ public class NamespacedExtractionModule implements DruidModule
         new TypeLiteral<Class<? extends ExtractionNamespace>>()
         {
         },
-        new TypeLiteral<ExtractionNamespaceFunctionFactory<?>>()
+        new TypeLiteral<ExtractionNamespaceCacheFactory<?>>()
         {
         }
     );
@@ -115,89 +112,11 @@ public class NamespacedExtractionModule implements DruidModule
 
     getNamespaceFactoryMapBinder(binder)
         .addBinding(JDBCExtractionNamespace.class)
-        .to(JDBCExtractionNamespaceFunctionFactory.class)
+        .to(JDBCExtractionNamespaceCacheFactory.class)
         .in(LazySingleton.class);
     getNamespaceFactoryMapBinder(binder)
         .addBinding(URIExtractionNamespace.class)
-        .to(URIExtractionNamespaceFunctionFactory.class)
+        .to(URIExtractionNamespaceCacheFactory.class)
         .in(LazySingleton.class);
-
-    Jerseys.addResource(binder, NamespacesCacheResource.class);
-  }
-
-  @Provides
-  @Named(EXTRACTION_CACHE_MANAGER)
-  @LazySingleton
-  public NamespaceExtractionCacheManager getCacheManager(NamespaceExtractionCacheManager manager)
-  {
-    return manager;
-  }
-
-  @Provides
-  @Named(NAMESPACE_VERSION_MAP)
-  @LazySingleton
-  public ConcurrentMap<String, String> getVersionMap()
-  {
-    return new ConcurrentHashMap<>();
-  }
-
-  @Provides
-  @Named(NAMESPACE_EXTRACTION_FUNCTION_CACHE)
-  public ConcurrentMap<String, Function<String, String>> getFnCache()
-  {
-    return fnCache;
-  }
-
-  @Provides
-  @Named(NAMESPACE_REVERSE_EXTRACTION_FUNCTION_CACHE)
-  public ConcurrentMap<String, Function<String, List<String>>> getReverseFnCache()
-  {
-    return reverseFnCache;
-  }
-
-  @Provides
-  @Named(DIM_EXTRACTION_NAMESPACE)
-  @LazySingleton
-  public Function<String, Function<String, String>> getFunctionMaker(
-      @Named(NAMESPACE_EXTRACTION_FUNCTION_CACHE)
-      final ConcurrentMap<String, Function<String, String>> fnCache
-  )
-  {
-    return new Function<String, Function<String, String>>()
-    {
-      @Nullable
-      @Override
-      public Function<String, String> apply(final String namespace)
-      {
-        Function<String, String> fn = fnCache.get(namespace);
-        if (fn == null) {
-          throw new IAE("Namespace [%s] not found", namespace);
-        }
-        return fn;
-      }
-    };
-  }
-
-  @Provides
-  @Named(DIM_REVERSE_EXTRACTION_NAMESPACE)
-  @LazySingleton
-  public Function<String, Function<String, List<String>>> getReverseFunctionMaker(
-      @Named(NAMESPACE_REVERSE_EXTRACTION_FUNCTION_CACHE)
-      final ConcurrentMap<String, Function<String, List<String>>> reverseFn
-  )
-  {
-    return new Function<String, Function<String, List<String>>>()
-    {
-      @Nullable
-      @Override
-      public Function<String, List<String>> apply(final String namespace)
-      {
-        Function<String, List<String>> fn = reverseFn.get(namespace);
-        if (fn == null) {
-          throw new IAE("Namespace reverse function [%s] not found", namespace);
-        }
-        return fn;
-      }
-    };
   }
 }
