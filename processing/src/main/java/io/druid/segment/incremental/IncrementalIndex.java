@@ -800,19 +800,25 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
    * Index dimension ordering could be changed to initialize from DimensionsSpec after resolution of
    * https://github.com/druid-io/druid/issues/2011
    */
-  public void loadDimensionIterable(Iterable<String> oldDimensionOrder)
+  public void loadDimensionIterable(Map<String, ColumnCapabilities> oldDimensionOrder)
   {
     synchronized (dimensionDescs) {
       if (!dimensionDescs.isEmpty()) {
         throw new ISE("Cannot load dimension order when existing order[%s] is not empty.", dimensionDescs.keySet());
       }
-      for (String dim : oldDimensionOrder) {
-        if (dimensionDescs.get(dim) == null) {
-          ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
-          capabilities.setType(ValueType.STRING);
-          columnCapabilities.put(dim, capabilities);
-          addNewDimension(dim, capabilities);
+      for (Map.Entry<String, ColumnCapabilities> entry : oldDimensionOrder.entrySet()) {
+        String dimension = entry.getKey();
+        ColumnCapabilities prev = entry.getValue();
+        if (dimensionDescs.get(dimension) != null) {
+          continue;
         }
+        ColumnCapabilitiesImpl capabilities = columnCapabilities.get(dimension);
+        if (capabilities == null) {
+          capabilities = (ColumnCapabilitiesImpl) prev.clone();
+          capabilities.setHasMultipleValues(false);
+        }
+        columnCapabilities.put(dimension, capabilities);
+        addNewDimension(dimension, capabilities);
       }
     }
   }

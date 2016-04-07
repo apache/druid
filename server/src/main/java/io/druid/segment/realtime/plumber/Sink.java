@@ -24,12 +24,13 @@ import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
+import com.google.common.collect.Maps;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import io.druid.data.input.InputRow;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.QueryableIndex;
+import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
@@ -43,8 +44,8 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -60,7 +61,7 @@ public class Sink implements Iterable<FireHydrant>
   private final int maxRowsInMemory;
   private final boolean reportParseExceptions;
   private final CopyOnWriteArrayList<FireHydrant> hydrants = new CopyOnWriteArrayList<FireHydrant>();
-  private final LinkedHashSet<String> dimOrder = Sets.newLinkedHashSet();
+  private final Map<String, ColumnCapabilities> dimOrder = Maps.newLinkedHashMap();
   private final AtomicInteger numRowsExcludingCurrIndex = new AtomicInteger();
   private volatile FireHydrant currHydrant;
   private volatile boolean writable = true;
@@ -251,11 +252,17 @@ public class Sink implements Iterable<FireHydrant>
             if (lastHydrant.hasSwapped()) {
               QueryableIndex oldIndex = lastHydrant.getSegment().asQueryableIndex();
               for (String dim : oldIndex.getAvailableDimensions()) {
-                dimOrder.add(dim);
+                if (!dimOrder.containsKey(dim)) {
+                  dimOrder.put(dim, oldIndex.getColumn(dim).getCapabilities());
+                }
               }
             } else {
-              IncrementalIndex oldIndex = lastHydrant.getIndex();
-              dimOrder.addAll(oldIndex.getDimensionOrder());
+              IncrementalIndex<?> oldIndex = lastHydrant.getIndex();
+              for (IncrementalIndex.DimensionDesc desc : oldIndex.getDimensions()) {
+                if (!dimOrder.containsKey(desc.getName())) {
+                  dimOrder.put(desc.getName(), desc.getCapabilities());
+                }
+              }
             }
             newIndex.loadDimensionIterable(dimOrder);
           }

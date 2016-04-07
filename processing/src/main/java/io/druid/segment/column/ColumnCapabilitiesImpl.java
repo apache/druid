@@ -105,6 +105,19 @@ public class ColumnCapabilitiesImpl implements ColumnCapabilities
     return hasMultipleValues;
   }
 
+  @Override
+  public ColumnCapabilities clone()
+  {
+    ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
+    capabilities.type = type;
+    capabilities.dictionaryEncoded = dictionaryEncoded;
+    capabilities.runLengthEncoded = runLengthEncoded;
+    capabilities.hasInvertedIndexes = hasInvertedIndexes;
+    capabilities.hasSpatialIndexes = hasSpatialIndexes;
+    capabilities.hasMultipleValues = hasMultipleValues;
+    return capabilities;
+  }
+
   public ColumnCapabilitiesImpl setHasMultipleValues(boolean hasMultipleValues)
   {
     this.hasMultipleValues = hasMultipleValues;

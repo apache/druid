@@ -25,6 +25,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
@@ -46,6 +47,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.BaseProgressIndicator;
 import io.druid.segment.ProgressIndicator;
 import io.druid.segment.QueryableIndex;
+import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
@@ -75,8 +77,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutionException;
@@ -216,7 +218,7 @@ public class IndexGeneratorJob implements Jobby
       Bucket theBucket,
       AggregatorFactory[] aggs,
       HadoopDruidIndexerConfig config,
-      Iterable<String> oldDimOrder
+      Map<String, ColumnCapabilities> oldDimOrder
   )
   {
     final HadoopTuningConfig tuningConfig = config.getSchema().getTuningConfig();
@@ -334,10 +336,10 @@ public class IndexGeneratorJob implements Jobby
       BytesWritable first = iter.next();
 
       if (iter.hasNext()) {
-        LinkedHashSet<String> dimOrder = Sets.newLinkedHashSet();
+        Map<String, ColumnCapabilities> dimOrder = Maps.newLinkedHashMap();
         SortableBytes keyBytes = SortableBytes.fromBytesWritable(key);
         Bucket bucket = Bucket.fromGroupKey(keyBytes.getGroupKey()).lhs;
-        IncrementalIndex index = makeIncrementalIndex(bucket, combiningAggs, config, null);
+        IncrementalIndex<?> index = makeIncrementalIndex(bucket, combiningAggs, config, null);
         index.add(InputRowSerde.fromBytes(first.getBytes(), aggregators));
 
         while (iter.hasNext()) {
@@ -345,7 +347,11 @@ public class IndexGeneratorJob implements Jobby
           InputRow value = InputRowSerde.fromBytes(iter.next().getBytes(), aggregators);
 
           if (!index.canAppendRow()) {
-            dimOrder.addAll(index.getDimensionOrder());
+            for (IncrementalIndex.DimensionDesc desc : index.getDimensions()) {
+              if (!dimOrder.containsKey(desc.getName())) {
+                dimOrder.put(desc.getName(), desc.getCapabilities());
+              }
+            }
             log.info("current index full due to [%s]. creating new index.", index.getOutOfRowsReason());
             flushIndexToContextAndClose(key, index, context);
             index = makeIncrementalIndex(bucket, combiningAggs, config, dimOrder);
@@ -548,7 +554,7 @@ public class IndexGeneratorJob implements Jobby
 
       ListeningExecutorService persistExecutor = null;
       List<ListenableFuture<?>> persistFutures = Lists.newArrayList();
-      IncrementalIndex index = makeIncrementalIndex(
+      IncrementalIndex<?> index = makeIncrementalIndex(
           bucket,
           combiningAggs,
           config,
@@ -565,7 +571,7 @@ public class IndexGeneratorJob implements Jobby
         int runningTotalLineCount = 0;
         long startTime = System.currentTimeMillis();
 
-        Set<String> allDimensionNames = Sets.newLinkedHashSet();
+        Map<String, ColumnCapabilities> allDimensionNames = Maps.newLinkedHashMap();
         final ProgressIndicator progressIndicator = makeProgressIndicator(context);
         int numBackgroundPersistThreads = config.getSchema().getTuningConfig().getNumBackgroundPersistThreads();
         if (numBackgroundPersistThreads > 0) {
@@ -606,7 +612,11 @@ public class IndexGeneratorJob implements Jobby
           ++lineCount;
 
           if (!index.canAppendRow()) {
-            allDimensionNames.addAll(index.getDimensionOrder());
+            for (IncrementalIndex.DimensionDesc desc : index.getDimensions()) {
+              if (!allDimensionNames.containsKey(desc.getName())) {
+                allDimensionNames.put(desc.getName(), desc.getCapabilities());
+              }
+            }
 
             log.info(index.getOutOfRowsReason());
             log.info(
@@ -656,7 +666,11 @@ public class IndexGeneratorJob implements Jobby
           }
         }
 
-        allDimensionNames.addAll(index.getDimensionOrder());
+        for (IncrementalIndex.DimensionDesc desc : index.getDimensions()) {
+          if (!allDimensionNames.containsKey(desc.getName())) {
+            allDimensionNames.put(desc.getName(), desc.getCapabilities());
+          }
+        }
 
         log.info("%,d lines completed.", lineCount);
 
@@ -694,7 +708,7 @@ public class IndexGeneratorJob implements Jobby
             interval,
             config.getSchema().getTuningConfig().getVersion(),
             null,
-            ImmutableList.copyOf(allDimensionNames),
+            ImmutableList.copyOf(allDimensionNames.keySet()),
             metricNames,
             config.getShardSpec(bucket).getActualSpec(),
             -1,

@@ -31,5 +31,7 @@ public interface ColumnCapabilities
   public boolean hasSpatialIndexes();
   public boolean hasMultipleValues();
 
+  public ColumnCapabilities clone();
+
   public ColumnCapabilitiesImpl merge(ColumnCapabilities other);
 }
