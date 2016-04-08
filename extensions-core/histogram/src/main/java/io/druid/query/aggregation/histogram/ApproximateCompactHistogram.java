@@ -20,7 +20,7 @@
 package io.druid.query.aggregation.histogram;
 
 import com.fasterxml.jackson.annotation.JsonValue;
-import io.druid.segment.ByteBuffers;
+import io.druid.segment.VLongUtils;
 
 import java.nio.ByteBuffer;
 import java.util.Arrays;
@@ -89,8 +89,8 @@ public class ApproximateCompactHistogram extends ApproximateHistogramHolder
     final long exactCount = getExactCount();
     final boolean exact = exactCount == count;
 
-    ByteBuffers.writeVLong(buf, (size << 1) + (exact ? 0 : 1));
-    ByteBuffers.writeVLong(buf, binCount);
+    VLongUtils.writeVInt(buf, (size << 1) + (exact ? 0 : 1));
+    VLongUtils.writeVInt(buf, binCount);
 
     for (int x = 0; x < binCount; ) {
       byte maker = 0;
@@ -105,7 +105,7 @@ public class ApproximateCompactHistogram extends ApproximateHistogramHolder
       for (int i = x; i < limit; i++) {
         if (bins[i] > 1) {
           boolean approximate = (bins[i] & APPROX_FLAG_BIT) != 0;
-          ByteBuffers.writeVLong(buf, (bins[i] << 1) + (approximate ? 1 : 0));
+          VLongUtils.writeVLong(buf, (bins[i] << 1) + (approximate ? 1 : 0));
         }
       }
       x = limit;
@@ -120,8 +120,8 @@ public class ApproximateCompactHistogram extends ApproximateHistogramHolder
   @Override
   public ApproximateCompactHistogram fromBytes(ByteBuffer buf)
   {
-    int size = ByteBuffers.readVInt(buf);
-    int binCount = ByteBuffers.readVInt(buf);
+    int size = VLongUtils.readVInt(buf);
+    int binCount = VLongUtils.readVInt(buf);
     if (binCount == 0) {
       reset(size >> 1);
       return this;
@@ -140,7 +140,7 @@ public class ApproximateCompactHistogram extends ApproximateHistogramHolder
           bins[i] = 1;
           continue;
         }
-        long value = ByteBuffers.readVLong(buf);
+        long value = VLongUtils.readVLong(buf);
         boolean approximate = (value & INVERTED_FLAG_BIT) != 0;
         value >>= 1;
         if (approximate) {

@@ -1,46 +1,30 @@
 package io.druid.segment;
 
-import com.google.common.base.Preconditions;
-import sun.misc.Unsafe;
-
-import java.lang.reflect.Field;
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 
 /**
+ * from org.apache.hadoop.io.WritableUtils. modified for using ByteBuffer
  */
-public class ByteBuffers
+public class VLongUtils
 {
-  private static final Unsafe UNSAFE;
-  private static final long ADDRESS_OFFSET;
-
-  static {
-    try {
-      Field theUnsafe = Unsafe.class.getDeclaredField("theUnsafe");
-      theUnsafe.setAccessible(true);
-      UNSAFE = (Unsafe) theUnsafe.get(null);
-      ADDRESS_OFFSET = UNSAFE.objectFieldOffset(Buffer.class.getDeclaredField("address"));
-    } catch (Exception e) {
-      throw new RuntimeException("Cannot access Unsafe methods", e);
-    }
-  }
-
-  public static long getAddress(ByteBuffer buf) {
-    return UNSAFE.getLong(buf, ADDRESS_OFFSET);
-  }
-
-  public static ByteBuffer allocateAlignedByteBuffer(int capacity, int align) {
-    Preconditions.checkArgument(Long.bitCount(align) == 1, "Alignment must be a power of 2");
-    final ByteBuffer buf = ByteBuffer.allocateDirect(capacity + align);
-    long address = getAddress(buf);
-    if ((address & (align - 1)) == 0) {
-      buf.limit(capacity);
-    } else {
-      int offset = (int) (align - (address & (align - 1)));
-      buf.position(offset);
-      buf.limit(offset + capacity);
-    }
-    return buf.slice();
+  /**
+   * Serializes an integer to a binary stream with zero-compressed encoding.
+   * For -120 <= i <= 127, only one byte is used with the actual value.
+   * For other values of i, the first byte value indicates whether the
+   * integer is positive or negative, and the number of bytes that follow.
+   * If the first byte value v is between -121 and -124, the following integer
+   * is positive, with number of bytes that follow are -(v+120).
+   * If the first byte value v is between -125 and -128, the following integer
+   * is negative, with number of bytes that follow are -(v+124). Bytes are
+   * stored in the high-non-zero-byte-first order.
+   *
+   * @param buf ByteBuffer output buffer
+   * @param i Integer to be serialized
+   * @throws java.io.IOException
+   */
+  public static void writeVInt(ByteBuffer buf, int i)
+  {
+    writeVLong(buf, i);
   }
 
   /**
@@ -54,7 +38,7 @@ public class ByteBuffers
    * is negative, with number of bytes that follow are -(v+120). Bytes are
    * stored in the high-non-zero-byte-first order.
    *
-   * @param buf Binary output stream
+   * @param buf ByteBuffer output buffer
    * @param i Long to be serialized
    */
   public static void writeVLong(ByteBuffer buf, long i)
@@ -88,9 +72,10 @@ public class ByteBuffers
   }
 
   /**
-   * Reads a zero-compressed encoded long from input stream and returns it.
-   * @param buf Binary input stream
-   * @return deserialized long from stream.
+   * Reads a zero-compressed encoded long from input buffer and returns it.
+   *
+   * @param buf ByteBuffer input buffer
+   * @return deserialized long from buffer.
    */
   public static long readVLong(ByteBuffer buf) {
     byte firstByte = buf.get();
@@ -108,10 +93,11 @@ public class ByteBuffers
   }
 
   /**
-   * Reads a zero-compressed encoded integer from input stream and returns it.
-   * @param buf Binary input stream
+   * Reads a zero-compressed encoded integer from input buffer and returns it.
+   *
+   * @param buf ByteBuffer input buffer
    * @throws IllegalStateException the value is not fit for int
-   * @return deserialized integer from stream.
+   * @return deserialized integer from buffer.
    */
   public static int readVInt(ByteBuffer buf)
   {

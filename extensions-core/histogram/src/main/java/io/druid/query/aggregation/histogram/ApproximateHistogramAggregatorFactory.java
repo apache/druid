@@ -160,7 +160,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   @Override
   public Object deserialize(Object object)
   {
-    if (object instanceof ApproximateHistogram) {
+    if (object instanceof ApproximateHistogramHolder) {
       return object;
     }
     final ApproximateHistogramHolder ah = compact ? new ApproximateCompactHistogram() : new ApproximateHistogram();
