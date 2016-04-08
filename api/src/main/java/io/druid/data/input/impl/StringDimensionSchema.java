@@ -30,16 +30,16 @@ public class StringDimensionSchema extends DimensionSchema
     return new StringDimensionSchema(name, -1);
   }
 
-  private final int compareCacheSize;
+  private final int compareCacheEntry;
 
   @JsonCreator
   public StringDimensionSchema(
       @JsonProperty("name") String name,
-      @JsonProperty("compareCacheSize") int compareCacheSize
+      @JsonProperty("compareCacheEntry") int compareCacheEntry
   )
   {
     super(name);
-    this.compareCacheSize = compareCacheSize;
+    this.compareCacheEntry = compareCacheEntry;
   }
 
   @Override
@@ -56,8 +56,8 @@ public class StringDimensionSchema extends DimensionSchema
   }
 
   @JsonProperty
-  public int getCompareCacheSize()
+  public int getCompareCacheEntry()
   {
-    return compareCacheSize;
+    return compareCacheEntry;
   }
 }
