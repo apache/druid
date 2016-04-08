@@ -22,74 +22,89 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.inject.name.Named;
+import com.metamx.common.ISE;
+import com.metamx.common.StringUtils;
 import com.metamx.common.logger.Logger;
 import io.druid.query.extraction.namespace.ExtractionNamespace;
 import io.druid.query.lookup.LookupExtractor;
 import io.druid.query.lookup.LookupExtractorFactory;
-import io.druid.server.namespace.NamespacedExtractionModule;
 import io.druid.server.namespace.cache.NamespaceExtractionCacheManager;
 
 import javax.annotation.Nullable;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.nio.ByteBuffer;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 @JsonTypeName("namespace")
 public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
 {
-  private static final Logger log = new Logger(NamespaceLookupExtractorFactory.class);
+  private static final Logger LOG = new Logger(NamespaceLookupExtractorFactory.class);
 
-  private static AtomicInteger numExtractor = new AtomicInteger(0);
   private static long SCHEDULE_TIMEOUT = 60_000;
 
-  final ExtractionNamespace extractionNamespace;
-  final NamespaceExtractionCacheManager manager;
-  final Function<String, Function<String, String>> fnMaker;
-  final Function<String, Function<String, List<String>>> reverseFnMaker;
-  LookupExtractor lookupExtractor;
+  private final AtomicBoolean started = new AtomicBoolean(false);
+  private final ReadWriteLock startStopSync = new ReentrantReadWriteLock();
+  private final ExtractionNamespace extractionNamespace;
+  private final NamespaceExtractionCacheManager manager;
 
   private final String extractorID;
 
   @JsonCreator
   public NamespaceLookupExtractorFactory(
-      @JsonProperty("extractionNamespace")ExtractionNamespace extractionNamespace,
-      @JacksonInject @Named(NamespacedExtractionModule.EXTRACTION_CACHE_MANAGER)
-      NamespaceExtractionCacheManager manager,
-      @JacksonInject @Named(NamespacedExtractionModule.DIM_EXTRACTION_NAMESPACE)
-      Function<String, Function<String, String>> fnMaker,
-      @JacksonInject @Named(NamespacedExtractionModule.DIM_REVERSE_EXTRACTION_NAMESPACE)
-      Function<String, Function<String, List<String>>> reverseFnMaker
-      )
+      @JsonProperty("extractionNamespace") ExtractionNamespace extractionNamespace,
+      @JacksonInject NamespaceExtractionCacheManager manager
+  )
   {
-    this.extractionNamespace = Preconditions.checkNotNull(extractionNamespace,
-        "extractionNamespace should be specified");
+    this.extractionNamespace = Preconditions.checkNotNull(
+        extractionNamespace,
+        "extractionNamespace should be specified"
+    );
     this.manager = manager;
-    this.fnMaker = fnMaker;
-    this.reverseFnMaker = reverseFnMaker;
-    this.extractorID = getID();
+    this.extractorID = buildID();
   }
 
   @Override
   public boolean start()
   {
-    if (!manager.scheduleAndWait(extractorID, extractionNamespace, SCHEDULE_TIMEOUT))
-    {
-      return false;
+    final Lock writeLock = startStopSync.writeLock();
+    writeLock.lock();
+    try {
+      if (!started.compareAndSet(false, true)) {
+        LOG.warn("Already started!");
+        return false;
+      }
+      if (!manager.scheduleAndWait(extractorID, extractionNamespace, SCHEDULE_TIMEOUT)) {
+        LOG.warn("Failed to schedule lookup [%s]", extractorID);
+        return false;
+      }
+      LOG.debug("NamespaceLookupExtractorFactory[%s] started", extractorID);
+      return true;
     }
-
-    log.debug("NamespaceLookupExtractorFactory[%s] started", extractorID);
-    this.lookupExtractor = new NamespacedExtractor(fnMaker, reverseFnMaker, extractorID);
-
-    return true;
+    finally {
+      writeLock.unlock();
+    }
   }
 
   @Override
   public boolean close()
   {
-    manager.checkedDelete(extractorID);
-    return true;
+    final Lock writeLock = startStopSync.writeLock();
+    writeLock.lock();
+    try {
+      if (!started.compareAndSet(true, false)) {
+        LOG.warn("Not started!");
+        return false;
+      }
+      return manager.checkedDelete(extractorID);
+    }
+    finally {
+      writeLock.unlock();
+    }
   }
 
   @Override
@@ -102,14 +117,62 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
     return true;
   }
 
-  private String getID()
+  @JsonProperty
+  public ExtractionNamespace getExtractionNamespace()
   {
-    return String.format("%d - %s", numExtractor.getAndIncrement(), extractionNamespace);
+    return extractionNamespace;
   }
 
+  private String buildID()
+  {
+    return UUID.randomUUID().toString();
+  }
+
+  // Grab the latest snapshot from the cache manager
   @Override
   public LookupExtractor get()
   {
-    return lookupExtractor;
+    final Lock readLock = startStopSync.readLock();
+    readLock.lock();
+    try {
+      if (!started.get()) {
+        throw new ISE("Factory [%s] not started", extractorID);
+      }
+      String preVersion = null, postVersion = null;
+      Map<String, String> map = null;
+      // Make sure we absolutely know what version of map we grabbed (for caching purposes)
+      do {
+        preVersion = manager.getVersion(extractorID);
+        if (preVersion == null) {
+          throw new ISE("Namespace vanished for [%s]", extractorID);
+        }
+        map = manager.getCacheMap(extractorID);
+        postVersion = manager.getVersion(extractorID);
+        if (postVersion == null) {
+          // We lost some horrible race... make sure we clean up
+          manager.delete(extractorID);
+          throw new ISE("Lookup [%s] is deleting", extractorID);
+        }
+      } while (!preVersion.equals(postVersion));
+      final byte[] v = StringUtils.toUtf8(postVersion);
+      final byte[] id = StringUtils.toUtf8(extractorID);
+      return new MapLookupExtractor(map, false)
+      {
+        @Override
+        public byte[] getCacheKey()
+        {
+          return ByteBuffer
+              .allocate(id.length + 1 + v.length + 1)
+              .put(id)
+              .put((byte) 0xFF)
+              .put(v)
+              .put((byte) 0xFF)
+              .array();
+        }
+      };
+    }
+    finally {
+      readLock.unlock();
+    }
   }
 }

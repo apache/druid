@@ -20,7 +20,6 @@
 package io.druid.server.namespace.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -32,12 +31,12 @@ import com.metamx.common.lifecycle.Lifecycle;
 import io.druid.concurrent.Execs;
 import io.druid.data.SearchableVersionedDataFinder;
 import io.druid.query.extraction.namespace.ExtractionNamespace;
-import io.druid.query.extraction.namespace.ExtractionNamespaceFunctionFactory;
+import io.druid.query.extraction.namespace.ExtractionNamespaceCacheFactory;
 import io.druid.query.extraction.namespace.URIExtractionNamespace;
 import io.druid.query.extraction.namespace.URIExtractionNamespaceTest;
 import io.druid.segment.loading.LocalFileTimestampVersionFinder;
 import io.druid.server.metrics.NoopServiceEmitter;
-import io.druid.server.namespace.URIExtractionNamespaceFunctionFactory;
+import io.druid.server.namespace.URIExtractionNamespaceCacheFactory;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -48,7 +47,6 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.lang.reflect.Field;
@@ -56,7 +54,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
@@ -67,7 +64,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  *
@@ -81,8 +77,6 @@ public class NamespaceExtractionCacheManagerExecutorsTest
   private Lifecycle lifecycle;
   private NamespaceExtractionCacheManager manager;
   private File tmpFile;
-  private final ConcurrentMap<String, Function<String, String>> fnCache = new ConcurrentHashMap<>();
-  private final ConcurrentMap<String, Function<String, List<String>>> reverseFnCache = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, Object> cacheUpdateAlerts = new ConcurrentHashMap<>();
 
   private final AtomicLong numRuns = new AtomicLong(0L);
@@ -94,7 +88,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     lifecycle = new Lifecycle();
     // Lifecycle stop is used to shut down executors. Start does nothing, so it's ok to call it here.
     lifecycle.start();
-    final URIExtractionNamespaceFunctionFactory factory = new URIExtractionNamespaceFunctionFactory(
+    final URIExtractionNamespaceCacheFactory factory = new URIExtractionNamespaceCacheFactory(
         ImmutableMap.<String, SearchableVersionedDataFinder>of("file", new LocalFileTimestampVersionFinder())
     )
     {
@@ -120,8 +114,8 @@ public class NamespaceExtractionCacheManagerExecutorsTest
       }
     };
     manager = new OnHeapNamespaceExtractionCacheManager(
-        lifecycle, fnCache, reverseFnCache, new NoopServiceEmitter(),
-        ImmutableMap.<Class<? extends ExtractionNamespace>, ExtractionNamespaceFunctionFactory<?>>of(
+        lifecycle, new NoopServiceEmitter(),
+        ImmutableMap.<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>>of(
             URIExtractionNamespace.class,
             factory
         )
@@ -131,7 +125,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
       protected <T extends ExtractionNamespace> Runnable getPostRunnable(
           final String id,
           final T namespace,
-          final ExtractionNamespaceFunctionFactory<T> factory,
+          final ExtractionNamespaceCacheFactory<T> factory,
           final String cacheId
       )
       {
@@ -360,7 +354,8 @@ public class NamespaceExtractionCacheManagerExecutorsTest
         new Period(period),
         null
     );
-    final ListenableFuture<?> future = manager.schedule(ns, namespace);
+    Assert.assertTrue(manager.scheduleAndWait(ns, namespace, 10_000));
+    final ListenableFuture<?> future = manager.implData.get(ns).future;
     Assert.assertFalse(future.isCancelled());
     Assert.assertFalse(future.isDone());
 
@@ -369,7 +364,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     final long timeout = 45_000L;
     do {
       synchronized (cacheUpdateAlerter) {
-        if (!fnCache.containsKey(ns)) {
+        if (!manager.implData.containsKey(ns)) {
           cacheUpdateAlerter.wait(10_000);
         }
       }
@@ -383,7 +378,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
           throw Throwables.propagate(e);
         }
       }
-      if (!fnCache.containsKey(ns) && System.currentTimeMillis() - start > timeout) {
+      if (!manager.implData.containsKey(ns) && System.currentTimeMillis() - start > timeout) {
         throw new RuntimeException(
             new TimeoutException(
                 String.format(
@@ -393,11 +388,10 @@ public class NamespaceExtractionCacheManagerExecutorsTest
             )
         );
       }
-    } while (!fnCache.containsKey(ns));
+    } while (!manager.implData.containsKey(ns) || !manager.implData.get(ns).enabled.get());
 
     Assert.assertEquals(VALUE, manager.getCacheMap(ns).get(KEY));
 
-    Assert.assertTrue(fnCache.containsKey(ns));
     Assert.assertTrue(manager.implData.containsKey(ns));
 
     Assert.assertTrue(manager.delete(ns));
@@ -415,7 +409,6 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     }
 
     Assert.assertFalse(manager.implData.containsKey(ns));
-    Assert.assertFalse(fnCache.containsKey(ns));
     Assert.assertTrue(future.isCancelled());
     Assert.assertTrue(future.isDone());
   }
