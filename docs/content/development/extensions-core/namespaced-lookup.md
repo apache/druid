@@ -12,10 +12,6 @@ Make sure to [include](../../operations/including-extensions.html) `druid-namesp
 
 ## Configuration
 
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.lookup.snapshotWorkingDir`| Working path used to store snapshot of current lookup configuration, leaving this property null will disable snapshot/bootstrap utility|null|
-
 Namespaced lookups are appropriate for lookups which are not possible to pass at query time due to their size, 
 or are not desired to be passed at query time because the data is to reside in and be handled by the Druid servers. 
 Namespaced lookups can be specified as part of the runtime properties file. The property is a list of the namespaces 
