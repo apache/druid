@@ -292,3 +292,12 @@ To configure a Broker / Router / Historical / Peon to announce itself as part of
 |Property | Description | Default |
 |---------|-------------|---------|
 |`druid.lookup.tierName`| The tier for **lookups** for this node. This is independent of other tiers.|`__default`|
+
+
+## Saving configuration across restarts
+
+It is possible to save the configuration across restarts such that a node will not have to wait for coordinator action to re-populate its lookups. To do this the following property is set:
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.lookup.snapshotWorkingDir`| Working path used to store snapshot of current lookup configuration, leaving this property null will disable snapshot/bootstrap utility|null|
