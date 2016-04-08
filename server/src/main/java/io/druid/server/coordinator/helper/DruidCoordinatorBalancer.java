@@ -120,6 +120,11 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
         continue;
       }
 
+      if (strategy.steady(serverHolderList)) {
+        log.info("Druid reach steady state and stop shuffling things around");
+        continue;
+      }
+
       for (int iter = 0; iter < maxSegmentsToMove; iter++) {
         final BalancerSegmentHolder segmentToMove = strategy.pickSegmentToMove(serverHolderList);
 
@@ -134,7 +139,6 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
       stats.addToTieredStat("movedCount", tier, currentlyMovingSegments.get(tier).size());
       if (params.getCoordinatorDynamicConfig().emitBalancingStats()) {
         strategy.emitStats(tier, stats, serverHolderList);
-
       }
       log.info(
           "[%s]: Segments Moved: [%d]", tier, currentlyMovingSegments.get(tier).size()

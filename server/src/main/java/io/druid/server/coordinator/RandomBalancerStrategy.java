@@ -68,4 +68,10 @@ public class RandomBalancerStrategy implements BalancerStrategy
   )
   {
   }
+
+  @Override
+  public boolean steady(final List<ServerHolder> serverHolders)
+  {
+    return false;
+  }
 }

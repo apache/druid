@@ -687,7 +687,10 @@ public class DruidCoordinator
         }
 
         BalancerStrategyFactory factory =
-            new CostBalancerStrategyFactory(getDynamicConfigs().getBalancerComputeThreads());
+            new CostBalancerStrategyFactory(
+                getDynamicConfigs().getBalancerComputeThreads(),
+                getDynamicConfigs().getBalancerSlop()
+            );
 
         // Do coordinator stuff.
         DruidCoordinatorRuntimeParams params =

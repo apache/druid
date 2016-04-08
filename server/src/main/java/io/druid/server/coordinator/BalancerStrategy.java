@@ -32,4 +32,6 @@ public interface BalancerStrategy
   public BalancerSegmentHolder pickSegmentToMove(final List<ServerHolder> serverHolders);
 
   public void emitStats(String tier, CoordinatorStats stats, List<ServerHolder> serverHolderList);
+
+  public boolean steady(final List<ServerHolder> serverHolders);
 }

@@ -42,11 +42,13 @@ public class CostBalancerStrategy implements BalancerStrategy
   private static final long THIRTY_DAYS_IN_MILLIS = 30 * DAY_IN_MILLIS;
   private final long referenceTimestamp;
   private final int threadCount;
+  private final double balancerSlop;
 
-  public CostBalancerStrategy(DateTime referenceTimestamp, int threadCount)
+  public CostBalancerStrategy(DateTime referenceTimestamp, int threadCount, double balancerSlop)
   {
     this.referenceTimestamp = referenceTimestamp.getMillis();
     this.threadCount = threadCount;
+    this.balancerSlop = balancerSlop;
   }
 
   @Override
@@ -134,11 +136,18 @@ public class CostBalancerStrategy implements BalancerStrategy
   {
     double cost = 0;
     for (ServerHolder server : serverHolders) {
-      DataSegment[] segments = server.getServer().getSegments().values().toArray(new DataSegment[]{});
-      for (int i = 0; i < segments.length; ++i) {
-        for (int j = i; j < segments.length; ++j) {
-          cost += computeJointSegmentCosts(segments[i], segments[j]);
-        }
+      cost += calculateServerCost(server);
+    }
+    return cost;
+  }
+
+  private double calculateServerCost(final ServerHolder server)
+  {
+    double cost = 0;
+    DataSegment[] segments = server.getServer().getSegments().values().toArray(new DataSegment[]{});
+    for (int i = 0; i < segments.length; ++i) {
+      for (int j = i; j < segments.length; ++j) {
+        cost += computeJointSegmentCosts(segments[i], segments[j]);
       }
     }
     return cost;
@@ -268,5 +277,25 @@ public class CostBalancerStrategy implements BalancerStrategy
     return bestServer;
   }
 
+  @Override
+  public boolean steady(final List<ServerHolder> serverHolders)
+  {
+    double totalCost = 0;
+    double maxCost = Double.MIN_VALUE;
+    double minCost = Double.MAX_VALUE;
+    for (ServerHolder server : serverHolders) {
+      double serverCost = calculateServerCost(server);
+      totalCost += serverCost;
+      maxCost = Math.max(maxCost, serverCost);
+      minCost = Math.min(minCost, serverCost);
+    }
+    double average = (double) totalCost / serverHolders.size();
+    double floor = (double) Math.floor(average * (1 - balancerSlop));
+    double ceiling = (double) Math.ceil(average * (1 + balancerSlop));
+    if (maxCost < ceiling && minCost > floor) {
+      return true;
+    }
+    return false;
+  }
 }
 
