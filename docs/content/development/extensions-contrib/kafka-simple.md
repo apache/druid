@@ -4,6 +4,8 @@ layout: doc_page
 
 # Kafka Simple Consumer
 
+To use this extension, make sure to [include](../../operations/including-extensions.html) `druid-kafka-eight-simpleConsumer` extension.
+
 ## Firehose
 
 This is an experimental firehose to ingest data from kafka using kafka simple consumer api. Currently, this firehose would only work inside standalone realtime nodes.

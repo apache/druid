@@ -19,11 +19,20 @@
 
 package io.druid.segment.filter;
 
+import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
+import com.google.common.collect.Lists;
 import com.metamx.collections.bitmap.ImmutableBitmap;
+import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
+import io.druid.segment.data.Indexed;
+
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
 
 /**
  */
@@ -31,25 +40,68 @@ public class SelectorFilter implements Filter
 {
   private final String dimension;
   private final String value;
+  private final ExtractionFn extractionFn;
 
   public SelectorFilter(
       String dimension,
-      String value
+      String value,
+      ExtractionFn extractionFn
   )
   {
     this.dimension = dimension;
-    this.value = value;
+    this.value = Strings.nullToEmpty(value);
+    this.extractionFn = extractionFn;
   }
 
   @Override
   public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector)
   {
-    return selector.getBitmapIndex(dimension, value);
+    if (extractionFn == null) {
+      return selector.getBitmapIndex(dimension, value);
+    } else {
+      final List<Filter> filters = makeFiltersUsingExtractionFn(selector);
+      if (filters.isEmpty()) {
+        return selector.getBitmapFactory().makeEmptyImmutableBitmap();
+      }
+      return new OrFilter(filters).getBitmapIndex(selector);
+    }
   }
 
   @Override
   public ValueMatcher makeMatcher(ValueMatcherFactory factory)
   {
-    return factory.makeValueMatcher(dimension, value);
+    if (extractionFn == null) {
+      return factory.makeValueMatcher(dimension, value);
+    } else {
+      return factory.makeValueMatcher(
+          dimension, new Predicate<String>()
+          {
+            @Override
+            public boolean apply(String input)
+            {
+              // Assuming that a null/absent/empty dimension are equivalent from the druid perspective
+              return value.equals(Strings.nullToEmpty(extractionFn.apply(input)));
+            }
+          }
+      );
+    }
+  }
+
+  private List<Filter> makeFiltersUsingExtractionFn(BitmapIndexSelector selector)
+  {
+    final List<Filter> filters = Lists.newArrayList();
+
+    Iterable<String> allDimVals = selector.getDimensionValues(dimension);
+    if (allDimVals == null) {
+      allDimVals = Lists.newArrayList((String) null);
+    }
+
+    for (String dimVal : allDimVals) {
+      if (value.equals(Strings.nullToEmpty(extractionFn.apply(dimVal)))) {
+        filters.add(new SelectorFilter(dimension, dimVal, null));
+      }
+    }
+
+    return filters;
   }
 }

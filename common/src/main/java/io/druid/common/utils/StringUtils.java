@@ -17,36 +17,31 @@
  * under the License.
  */
 
-package io.druid.segment.filter;
-
-import com.google.common.base.Predicate;
-import io.druid.query.extraction.ExtractionFn;
-
-import java.util.regex.Pattern;
+package io.druid.common.utils;
 
 /**
  */
-public class RegexFilter extends DimensionPredicateFilter
+public class StringUtils extends com.metamx.common.StringUtils
 {
-  public RegexFilter(
-      String dimension,
-      final String pattern,
-      final ExtractionFn extractionFn
-  )
+  // should be used only for estimation
+  // returns the same result with StringUtils.fromUtf8(value).length for valid string values
+  // does not check validity of format and returns over-estimated result for invalid string (see UT)
+  public static int estimatedBinaryLengthAsUTF8(String value)
   {
-    super(
-        dimension,
-        new Predicate<String>()
-        {
-          Pattern compiled = Pattern.compile(pattern);
-
-          @Override
-          public boolean apply(String input)
-          {
-            return (input != null) && compiled.matcher(input).find();
-          }
-        },
-        extractionFn
-    );
+    int length = 0;
+    for (int i = 0; i < value.length(); i++) {
+      char var10 = value.charAt(i);
+      if (var10 < 0x80) {
+        length += 1;
+      } else if (var10 < 0x800) {
+        length += 2;
+      } else if (Character.isSurrogate(var10)) {
+        length += 4;
+        i++;
+      } else {
+        length += 3;
+      }
+    }
+    return length;
   }
 }

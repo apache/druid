@@ -167,5 +167,15 @@ This can be used with the next query's pagingSpec:
    "pagingSpec":{"pagingIdentifiers": {"wikipedia_2012-12-29T00:00:00.000Z_2013-01-10T08:00:00.000Z_2013-01-10T08:13:47.830Z_v9" : 5}, "threshold":5}
       
  }
+```
 
-Note that in the second query, an offset is specified and that it is 1 greater than the largest offset found in the initial results. To return the next "page", this offset must be incremented by 1 (should be decremented by 1 for descending query), with each new query. When an empty results set is received, the very last page has been returned.
+Note that in the second query, an offset is specified and that it is 1 greater than the largest offset found in the initial results. To return the next "page", this offset must be incremented by 1 (should be decremented by 1 for descending query), with each new query, but with option `fromNext` enabled, this operation is not needed. When an empty results set is received, the very last page has been returned.
+
+`fromNext` options is in pagingSpec:
+
+```json
+  {
+    ...
+    "pagingSpec":{"pagingIdentifiers": {}, "threshold":5, "fromNext": true}
+  }
+```

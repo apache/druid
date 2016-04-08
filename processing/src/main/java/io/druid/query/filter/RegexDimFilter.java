@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.metamx.common.StringUtils;
+import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.filter.RegexFilter;
 
 import java.nio.ByteBuffer;
@@ -33,17 +34,20 @@ public class RegexDimFilter implements DimFilter
 {
   private final String dimension;
   private final String pattern;
+  private final ExtractionFn extractionFn;
 
   @JsonCreator
   public RegexDimFilter(
       @JsonProperty("dimension") String dimension,
-      @JsonProperty("pattern") String pattern
+      @JsonProperty("pattern") String pattern,
+      @JsonProperty("extractionFn") ExtractionFn extractionFn
   )
   {
     Preconditions.checkArgument(dimension != null, "dimension must not be null");
     Preconditions.checkArgument(pattern != null, "pattern must not be null");
     this.dimension = dimension;
     this.pattern = pattern;
+    this.extractionFn = extractionFn;
   }
 
   @JsonProperty
@@ -58,17 +62,26 @@ public class RegexDimFilter implements DimFilter
     return pattern;
   }
 
+  @JsonProperty
+  public ExtractionFn getExtractionFn()
+  {
+    return extractionFn;
+  }
+
   @Override
   public byte[] getCacheKey()
   {
     final byte[] dimensionBytes = StringUtils.toUtf8(dimension);
     final byte[] patternBytes = StringUtils.toUtf8(pattern);
+    byte[] extractionFnBytes = extractionFn == null ? new byte[0] : extractionFn.getCacheKey();
 
-    return ByteBuffer.allocate(2 + dimensionBytes.length + patternBytes.length)
+    return ByteBuffer.allocate(3 + dimensionBytes.length + patternBytes.length + extractionFnBytes.length)
                      .put(DimFilterCacheHelper.REGEX_CACHE_ID)
                      .put(dimensionBytes)
                      .put(DimFilterCacheHelper.STRING_SEPARATOR)
                      .put(patternBytes)
+                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                     .put(extractionFnBytes)
                      .array();
   }
 
@@ -81,7 +94,7 @@ public class RegexDimFilter implements DimFilter
   @Override
   public Filter toFilter()
   {
-    return new RegexFilter(dimension, pattern);
+    return new RegexFilter(dimension, pattern, extractionFn);
   }
 
   @Override
@@ -90,6 +103,7 @@ public class RegexDimFilter implements DimFilter
     return "RegexDimFilter{" +
            "dimension='" + dimension + '\'' +
            ", pattern='" + pattern + '\'' +
+           ", extractionFn='" + extractionFn + '\'' +
            '}';
   }
 }

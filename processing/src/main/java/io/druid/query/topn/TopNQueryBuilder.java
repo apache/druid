@@ -28,7 +28,7 @@ import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
-import io.druid.query.filter.OrDimFilter;
+import io.druid.query.filter.InDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
@@ -246,17 +246,13 @@ public class TopNQueryBuilder
 
   public TopNQueryBuilder filters(String dimensionName, String value)
   {
-    dimFilter = new SelectorDimFilter(dimensionName, value);
+    dimFilter = new SelectorDimFilter(dimensionName, value, null);
     return this;
   }
 
   public TopNQueryBuilder filters(String dimensionName, String value, String... values)
   {
-    List<DimFilter> fields = Lists.<DimFilter>newArrayList(new SelectorDimFilter(dimensionName, value));
-    for (String val : values) {
-      fields.add(new SelectorDimFilter(dimensionName, val));
-    }
-    dimFilter = new OrDimFilter(fields);
+    dimFilter = new InDimFilter(dimensionName, Lists.asList(value, values), null);
     return this;
   }
 

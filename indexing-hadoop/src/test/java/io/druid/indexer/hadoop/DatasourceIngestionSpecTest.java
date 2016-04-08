@@ -48,7 +48,7 @@ public class DatasourceIngestionSpecTest
         interval,
         null,
         null,
-        new SelectorDimFilter("dim", "value"),
+        new SelectorDimFilter("dim", "value", null),
         QueryGranularity.DAY,
         Lists.newArrayList("d1", "d2"),
         Lists.newArrayList("m1", "m2", "m3"),
@@ -132,7 +132,7 @@ public class DatasourceIngestionSpecTest
                 128
             )
         ),
-        new SelectorDimFilter("dim", "value"),
+        new SelectorDimFilter("dim", "value", null),
         QueryGranularity.DAY,
         Lists.newArrayList("d1", "d2"),
         Lists.newArrayList("m1", "m2", "m3"),
