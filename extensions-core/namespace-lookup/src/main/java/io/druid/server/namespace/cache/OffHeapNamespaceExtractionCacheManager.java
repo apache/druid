@@ -19,24 +19,20 @@
 
 package io.druid.server.namespace.cache;
 
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.Striped;
 import com.google.inject.Inject;
-import com.google.inject.name.Named;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.query.extraction.namespace.ExtractionNamespace;
-import io.druid.query.extraction.namespace.ExtractionNamespaceFunctionFactory;
-import io.druid.server.namespace.NamespacedExtractionModule;
+import io.druid.query.extraction.namespace.ExtractionNamespaceCacheFactory;
 import org.mapdb.DB;
 import org.mapdb.DBMaker;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -57,15 +53,11 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
   @Inject
   public OffHeapNamespaceExtractionCacheManager(
       Lifecycle lifecycle,
-      @Named(NamespacedExtractionModule.NAMESPACE_EXTRACTION_FUNCTION_CACHE)
-      ConcurrentMap<String, Function<String, String>> fnCache,
-      @Named(NamespacedExtractionModule.NAMESPACE_REVERSE_EXTRACTION_FUNCTION_CACHE)
-      ConcurrentMap<String, Function<String, List<String>>> reverseFnCache,
       ServiceEmitter emitter,
-      final Map<Class<? extends ExtractionNamespace>, ExtractionNamespaceFunctionFactory<?>> namespaceFunctionFactoryMap
+      final Map<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>> namespaceFunctionFactoryMap
   )
   {
-    super(lifecycle, fnCache, reverseFnCache, emitter, namespaceFunctionFactoryMap);
+    super(lifecycle, emitter, namespaceFunctionFactoryMap);
     try {
       tmpFile = File.createTempFile("druidMapDB", getClass().getCanonicalName());
       log.info("Using file [%s] for mapDB off heap namespace cache", tmpFile.getAbsolutePath());

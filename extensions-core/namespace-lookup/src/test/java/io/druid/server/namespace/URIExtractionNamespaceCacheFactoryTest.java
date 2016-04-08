@@ -24,14 +24,13 @@ import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Sets;
 import com.metamx.common.UOE;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.data.SearchableVersionedDataFinder;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.extraction.namespace.ExtractionNamespace;
-import io.druid.query.extraction.namespace.ExtractionNamespaceFunctionFactory;
+import io.druid.query.extraction.namespace.ExtractionNamespaceCacheFactory;
 import io.druid.query.extraction.namespace.URIExtractionNamespace;
 import io.druid.query.extraction.namespace.URIExtractionNamespaceTest;
 import io.druid.segment.loading.LocalFileTimestampVersionFinder;
@@ -61,7 +60,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -78,7 +76,7 @@ import java.util.zip.GZIPOutputStream;
  *
  */
 @RunWith(Parameterized.class)
-public class URIExtractionNamespaceFunctionFactoryTest
+public class URIExtractionNamespaceCacheFactoryTest
 {
   @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> getParameters() throws NoSuchMethodException
@@ -137,15 +135,11 @@ public class URIExtractionNamespaceFunctionFactoryTest
     final List<Constructor<? extends NamespaceExtractionCacheManager>> cacheConstructors = ImmutableList.<Constructor<? extends NamespaceExtractionCacheManager>>of(
         OnHeapNamespaceExtractionCacheManager.class.getConstructor(
             Lifecycle.class,
-            ConcurrentMap.class,
-            ConcurrentMap.class,
             ServiceEmitter.class,
             Map.class
         ),
         OffHeapNamespaceExtractionCacheManager.class.getConstructor(
             Lifecycle.class,
-            ConcurrentMap.class,
-            ConcurrentMap.class,
             ServiceEmitter.class,
             Map.class
         )
@@ -176,10 +170,8 @@ public class URIExtractionNamespaceFunctionFactoryTest
               try {
                 manager = constructor.newInstance(
                     new Lifecycle(),
-                    new ConcurrentHashMap<String, Function<String, String>>(),
-                    new ConcurrentHashMap<String, Function<String, String>>(),
                     new NoopServiceEmitter(),
-                    new HashMap<Class<? extends ExtractionNamespace>, ExtractionNamespaceFunctionFactory<?>>()
+                    new HashMap<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>>()
                 );
               }
               catch (Exception e) {
@@ -215,29 +207,25 @@ public class URIExtractionNamespaceFunctionFactoryTest
     };
   }
 
-  public URIExtractionNamespaceFunctionFactoryTest(
+  public URIExtractionNamespaceCacheFactoryTest(
       String friendlyName,
       String suffix,
       Function<File, OutputStream> outStreamSupplier,
       Constructor<? extends NamespaceExtractionCacheManager> cacheManagerConstructor
   ) throws IllegalAccessException, InvocationTargetException, InstantiationException
   {
-    final Map<Class<? extends ExtractionNamespace>, ExtractionNamespaceFunctionFactory<?>> namespaceFunctionFactoryMap = new HashMap<>();
+    final Map<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>> namespaceFunctionFactoryMap = new HashMap<>();
     this.suffix = suffix;
     this.outStreamSupplier = outStreamSupplier;
     this.lifecycle = new Lifecycle();
-    this.fnCache = new ConcurrentHashMap<>();
-    this.reverseFnCache = new ConcurrentHashMap<>();
     this.manager = cacheManagerConstructor.newInstance(
         lifecycle,
-        fnCache,
-        reverseFnCache,
         new NoopServiceEmitter(),
         namespaceFunctionFactoryMap
     );
     namespaceFunctionFactoryMap.put(
         URIExtractionNamespace.class,
-        new URIExtractionNamespaceFunctionFactory(
+        new URIExtractionNamespaceCacheFactory(
             ImmutableMap.<String, SearchableVersionedDataFinder>of(
                 "file",
                 new LocalFileTimestampVersionFinder()
@@ -255,17 +243,14 @@ public class URIExtractionNamespaceFunctionFactoryTest
   private NamespaceExtractionCacheManager manager;
   private File tmpFile;
   private File tmpFileParent;
-  private URIExtractionNamespaceFunctionFactory factory;
+  private URIExtractionNamespaceCacheFactory factory;
   private URIExtractionNamespace namespace;
   private String id;
-  private ConcurrentHashMap<String, Function<String, String>> fnCache;
-  private ConcurrentHashMap<String, Function<String, List<String>>> reverseFnCache;
 
   @Before
   public void setUp() throws Exception
   {
     lifecycle.start();
-    fnCache.clear();
     tmpFileParent = temporaryFolder.newFolder();
     tmpFile = Files.createTempFile(tmpFileParent.toPath(), "druidTestURIExtractionNS", suffix).toFile();
     final ObjectMapper mapper = new DefaultObjectMapper();
@@ -283,7 +268,7 @@ public class URIExtractionNamespaceFunctionFactoryTest
         )));
       }
     }
-    factory = new URIExtractionNamespaceFunctionFactory(
+    factory = new URIExtractionNamespaceCacheFactory(
         ImmutableMap.<String, SearchableVersionedDataFinder>of("file", new LocalFileTimestampVersionFinder())
     );
     namespace = new URIExtractionNamespace(
@@ -306,33 +291,17 @@ public class URIExtractionNamespaceFunctionFactoryTest
   @Test
   public void simpleTest() throws IOException, ExecutionException, InterruptedException
   {
-    Assert.assertNull(fnCache.get(id));
+    Assert.assertTrue(manager.getKnownIDs().isEmpty());
     NamespaceExtractionCacheManagersTest.waitFor(manager.schedule(id, namespace));
-    Function<String, String> fn = fnCache.get(id);
-   Assert.assertNotNull(fn);
-    Assert.assertEquals("bar", fn.apply("foo"));
-    Assert.assertEquals(null, fn.apply("baz"));
-  }
-
-  @Test
-  public void testReverseFunction() throws InterruptedException
-  {
-    Assert.assertNull(reverseFnCache.get(id));
-    NamespaceExtractionCacheManagersTest.waitFor(manager.schedule(id, namespace));
-    Function<String, List<String>> reverseFn = reverseFnCache.get(id);
-    Assert.assertNotNull(reverseFn);
-    Assert.assertEquals(Sets.newHashSet("boo", "foo"), Sets.newHashSet(reverseFn.apply("bar")));
-    Assert.assertEquals(Sets.newHashSet(""), Sets.newHashSet(reverseFn.apply("MissingValue")));
-    Assert.assertEquals(Sets.newHashSet("emptyString"), Sets.newHashSet(reverseFn.apply("")));
-    Assert.assertEquals(Sets.newHashSet("emptyString"), Sets.newHashSet(reverseFn.apply(null)));
-    Assert.assertEquals(Collections.EMPTY_LIST, reverseFn.apply("baz"));
+    Map<String, String> map = manager.getCacheMap(id);
+    Assert.assertEquals("bar", map.get("foo"));
+    Assert.assertEquals(null, map.get("baz"));
   }
 
   @Test
   public void simplePileONamespacesTest() throws InterruptedException
   {
     final int size = 128;
-    List<URIExtractionNamespace> namespaces = new ArrayList<>(size);
     List<String> ids = new ArrayList<>(size);
     for (int i = 0; i < size; ++i) {
       String id = String.format("%d-ns-%d", i << 10, i);
@@ -346,28 +315,23 @@ public class URIExtractionNamespaceFunctionFactoryTest
           Pattern.quote(tmpFile.getName())
       );
 
-      namespaces.add(namespace);
-
-      Assert.assertNull(fnCache.get(id));
+      Assert.assertFalse(manager.getKnownIDs().contains(id));
       NamespaceExtractionCacheManagersTest.waitFor(manager.schedule(id, namespace));
     }
 
-    for (int i = 0; i < size; ++i) {
-      URIExtractionNamespace namespace = namespaces.get(i);
-      String id = ids.get(i);
-      Function<String, String> fn = fnCache.get(id);
-      Assert.assertNotNull(fn);
-      Assert.assertEquals("bar", fn.apply("foo"));
-      Assert.assertEquals(null, fn.apply("baz"));
+    for (String id : ids) {
+      final Map<String, String> map = manager.getCacheMap(id);
+      Assert.assertEquals("bar", map.get("foo"));
+      Assert.assertEquals(null, map.get("baz"));
       manager.delete(id);
-      Assert.assertNull(fnCache.get(id));
     }
+    Assert.assertTrue(manager.getKnownIDs().isEmpty());
   }
 
   @Test
   public void testLoadOnlyOnce() throws Exception
   {
-    Assert.assertNull(fnCache.get(id));
+    Assert.assertTrue(manager.getKnownIDs().isEmpty());
 
     ConcurrentMap<String, String> map = new ConcurrentHashMap<>();
     Callable<String> populator = factory.getCachePopulator(id, namespace, null, map);

@@ -21,10 +21,7 @@ package io.druid.server.namespace.cache;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.common.base.Function;
 import com.google.common.base.Throwables;
-import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -39,13 +36,10 @@ import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.query.extraction.namespace.ExtractionNamespace;
-import io.druid.query.extraction.namespace.ExtractionNamespaceFunctionFactory;
+import io.druid.query.extraction.namespace.ExtractionNamespaceCacheFactory;
 
-import javax.annotation.Nullable;
 import java.util.Collection;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
@@ -56,7 +50,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  *
@@ -85,27 +78,21 @@ public abstract class NamespaceExtractionCacheManager
     final ExtractionNamespace namespace;
     final String name;
     final AtomicBoolean enabled = new AtomicBoolean(false);
-    final AtomicReference<Function<String, String>> fn = new AtomicReference<>(null);
-    final AtomicReference<Function<String, List<String>>> reverseFn = new AtomicReference<>(null);
   }
 
   private static final Logger log = new Logger(NamespaceExtractionCacheManager.class);
   private final ListeningScheduledExecutorService listeningScheduledExecutorService;
-  protected final ConcurrentMap<String, Function<String, String>> fnCache;
-  protected final ConcurrentMap<String, Function<String, List<String>>> reverseFnCache;
   protected final ConcurrentMap<String, NamespaceImplData> implData = new ConcurrentHashMap<>();
   protected final AtomicLong tasksStarted = new AtomicLong(0);
   protected final AtomicLong dataSize = new AtomicLong(0);
   protected final ServiceEmitter serviceEmitter;
   private final ConcurrentHashMap<String, String> lastVersion = new ConcurrentHashMap<>();
-  private final Map<Class<? extends ExtractionNamespace>, ExtractionNamespaceFunctionFactory<?>> namespaceFunctionFactoryMap;
+  private final Map<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>> namespaceFunctionFactoryMap;
 
   public NamespaceExtractionCacheManager(
       Lifecycle lifecycle,
-      final ConcurrentMap<String, Function<String, String>> fnCache,
-      final ConcurrentMap<String, Function<String, List<String>>> reverseFnCache,
       final ServiceEmitter serviceEmitter,
-      final Map<Class<? extends ExtractionNamespace>, ExtractionNamespaceFunctionFactory<?>> namespaceFunctionFactoryMap
+      final Map<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>> namespaceFunctionFactoryMap
   )
   {
     this.listeningScheduledExecutorService = MoreExecutors.listeningDecorator(
@@ -120,8 +107,6 @@ public abstract class NamespaceExtractionCacheManager
     );
     ExecutorServices.manageLifecycle(lifecycle, listeningScheduledExecutorService);
     this.serviceEmitter = serviceEmitter;
-    this.fnCache = fnCache;
-    this.reverseFnCache = reverseFnCache;
     this.namespaceFunctionFactoryMap = namespaceFunctionFactoryMap;
     listeningScheduledExecutorService.scheduleAtFixedRate(
         new Runnable()
@@ -134,15 +119,15 @@ public abstract class NamespaceExtractionCacheManager
             try {
               final long tasks = tasksStarted.get();
               serviceEmitter.emit(ServiceMetricEvent.builder().build("namespace/size", dataSize.get()));
-              serviceEmitter.emit(ServiceMetricEvent.builder().build("namespace/count", fnCache.size()));
               serviceEmitter.emit(
                   ServiceMetricEvent.builder()
                                     .build("namespace/deltaTasksStarted", tasks - priorTasksStarted)
               );
               priorTasksStarted = tasks;
-            }catch(Exception e){
+            }
+            catch (Exception e) {
               log.error(e, "Error emitting namespace stats");
-              if(Thread.currentThread().isInterrupted()){
+              if (Thread.currentThread().isInterrupted()) {
                 throw Throwables.propagate(e);
               }
             }
@@ -162,7 +147,7 @@ public abstract class NamespaceExtractionCacheManager
   protected <T extends ExtractionNamespace> Runnable getPostRunnable(
       final String id,
       final T namespace,
-      final ExtractionNamespaceFunctionFactory<T> factory,
+      final ExtractionNamespaceCacheFactory<T> factory,
       final String cacheId
   )
   {
@@ -182,18 +167,6 @@ public abstract class NamespaceExtractionCacheManager
             return;
           }
           swapAndClearCache(id, cacheId);
-          final Function<String, String> fn = factory.buildFn(namespace, getCacheMap(id));
-          final Function<String, List<String>> reverseFn = factory.buildReverseFn(namespace, getCacheMap(id));
-          final Function<String, String> priorFn = fnCache.put(id, fn);
-          final Function<String, List<String>> priorReverseFn = reverseFnCache.put(id, reverseFn);
-          if (priorFn != null && priorFn != namespaceDatum.fn.get()) {
-            log.warn("Replaced prior function for namespace [%s]", id);
-          }
-          if (priorReverseFn != null && priorReverseFn != namespaceDatum.reverseFn.get()) {
-            log.warn("Replaced prior reverse function for namespace [%s]", id);
-          }
-          namespaceDatum.fn.set(fn);
-          namespaceDatum.reverseFn.set(reverseFn);
         }
       }
     };
@@ -252,15 +225,13 @@ public abstract class NamespaceExtractionCacheManager
   {
     String oldVersion = getVersion(id);
 
-    if (scheduleOrUpdate(id, namespace))
-    {
+    if (scheduleOrUpdate(id, namespace)) {
       // wait until the namespace registration is done
       String newVersion = getVersion(id);
       final long startLocking = System.currentTimeMillis();
       final long timeout = startLocking + waitForFirstRun;
 
-      while(newVersion == null || newVersion.equals(oldVersion))
-      {
+      while (newVersion == null || newVersion.equals(oldVersion)) {
         if (System.currentTimeMillis() > timeout) {
           log.error("NamespaceLookupExtractorFactory[%s] - timeout during start", id);
           return false;
@@ -268,7 +239,8 @@ public abstract class NamespaceExtractionCacheManager
 
         try {
           Thread.sleep(100);
-        } catch (InterruptedException e) {
+        }
+        catch (InterruptedException e) {
           log.error("NamespaceLookupExtractorFactory[%s] - interrupted during start", id);
           return false;
         }
@@ -336,7 +308,7 @@ public abstract class NamespaceExtractionCacheManager
   // Optimistic scheduling of updates to a namespace.
   public <T extends ExtractionNamespace> ListenableFuture<?> schedule(final String id, final T namespace)
   {
-    final ExtractionNamespaceFunctionFactory<T> factory = (ExtractionNamespaceFunctionFactory<T>)
+    final ExtractionNamespaceCacheFactory<T> factory = (ExtractionNamespaceCacheFactory<T>)
         namespaceFunctionFactoryMap.get(namespace.getClass());
     if (factory == null) {
       throw new ISE("Cannot find factory for namespace [%s]", namespace);
@@ -349,7 +321,7 @@ public abstract class NamespaceExtractionCacheManager
   protected <T extends ExtractionNamespace> ListenableFuture<?> schedule(
       final String id,
       final T namespace,
-      final ExtractionNamespaceFunctionFactory<T> factory,
+      final ExtractionNamespaceCacheFactory<T> factory,
       final Runnable postRunnable,
       final String cacheId
   )
@@ -398,7 +370,7 @@ public abstract class NamespaceExtractionCacheManager
           } else {
             log.error(t, "Failed update namespace [%s]", namespace);
           }
-          if(Thread.currentThread().isInterrupted()) {
+          if (Thread.currentThread().isInterrupted()) {
             throw Throwables.propagate(t);
           }
         }
@@ -471,7 +443,6 @@ public abstract class NamespaceExtractionCacheManager
     if (deleted) {
       log.info("Deleting namespace [%s]", ns);
       lastVersion.remove(implDatum.name);
-      fnCache.remove(implDatum.name);
       return true;
     } else {
       log.debug("Did not delete namespace [%s]", ns);
@@ -488,8 +459,8 @@ public abstract class NamespaceExtractionCacheManager
     }
   }
 
-  public Collection<String> getKnownNamespaces()
+  public Collection<String> getKnownIDs()
   {
-    return fnCache.keySet();
+    return implData.keySet();
   }
 }
