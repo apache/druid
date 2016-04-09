@@ -20,6 +20,7 @@
 package io.druid.query.groupby.orderby;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.MinMaxPriorityQueue;
 import com.google.common.collect.Ordering;
 
@@ -33,6 +34,7 @@ public class TopNSorter<T>
 
   /**
    * Constructs a sorter that will sort items with given ordering.
+   *
    * @param ordering the order that this sorter instance will use for sorting
    */
   public TopNSorter(Ordering<T> ordering)
@@ -42,18 +44,23 @@ public class TopNSorter<T>
 
   /**
    * Sorts a list of rows and retain the top n items
+   *
    * @param items the collections of items to be sorted
-   * @param n the number of items to be retained
+   * @param limit the number of items to be retained
+   * @param skip  the number of items to be skipped
+   *
    * @return Top n items that are sorted in the order specified when this instance is constructed.
    */
-  public Iterable<T> toTopN(Iterable<T> items, int n)
+  public Iterable<T> toTopN(Iterable<T> items, int limit, int skip)
   {
-    if(n <= 0) {
+    if (limit <= 0) {
       return ImmutableList.of();
     }
 
-    MinMaxPriorityQueue<T> queue = MinMaxPriorityQueue.orderedBy(ordering).maximumSize(n).create(items);
-
+    MinMaxPriorityQueue<T> queue = MinMaxPriorityQueue.orderedBy(ordering).maximumSize(limit + skip).create(items);
+    if (skip > 0) {
+      return Iterables.skip(new OrderedPriorityQueueItems<T>(queue), skip);
+    }
     return new OrderedPriorityQueueItems<T>(queue);
   }
 }

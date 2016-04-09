@@ -24,14 +24,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
-import com.metamx.common.guava.Sequences;
+import io.druid.common.guava.Sequences;
 import io.druid.data.input.Row;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
@@ -40,10 +39,10 @@ import io.druid.query.ordering.StringComparators.StringComparator;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  */
@@ -53,17 +52,25 @@ public class DefaultLimitSpec implements LimitSpec
 
   private final List<OrderByColumnSpec> columns;
   private final int limit;
+  private final int skip;
 
   @JsonCreator
   public DefaultLimitSpec(
       @JsonProperty("columns") List<OrderByColumnSpec> columns,
-      @JsonProperty("limit") Integer limit
+      @JsonProperty("limit") Integer limit,
+      @JsonProperty("skip") Integer skip
   )
   {
     this.columns = (columns == null) ? ImmutableList.<OrderByColumnSpec>of() : columns;
     this.limit = (limit == null) ? Integer.MAX_VALUE : limit;
+    this.skip = (skip == null || skip < 0) ? 0 : skip;
 
     Preconditions.checkArgument(this.limit > 0, "limit[%s] must be >0", limit);
+  }
+
+  public DefaultLimitSpec(List<OrderByColumnSpec> columns, Integer limit)
+  {
+    this(columns, limit, 0);
   }
 
   @JsonProperty
@@ -78,22 +85,28 @@ public class DefaultLimitSpec implements LimitSpec
     return limit;
   }
 
+  @JsonProperty
+  public int getSkip()
+  {
+    return skip;
+  }
+
   @Override
   public Function<Sequence<Row>, Sequence<Row>> build(
       List<DimensionSpec> dimensions, List<AggregatorFactory> aggs, List<PostAggregator> postAggs
   )
   {
     if (columns.isEmpty()) {
-      return new LimitingFn(limit);
+      return new LimitingFn(limit, skip);
     }
 
     // Materialize the Comparator first for fast-fail error checking.
     final Ordering<Row> ordering = makeComparator(dimensions, aggs, postAggs);
 
     if (limit == Integer.MAX_VALUE) {
-      return new SortingFn(ordering);
+      return new SortingFn(ordering, skip);
     } else {
-      return new TopNFunction(ordering, limit);
+      return new TopNFunction(ordering, limit, skip);
     }
   }
 
@@ -195,16 +208,19 @@ public class DefaultLimitSpec implements LimitSpec
     return "DefaultLimitSpec{" +
            "columns='" + columns + '\'' +
            ", limit=" + limit +
+           (skip > 0 ? ", skip=" + skip : "") +
            '}';
   }
 
   private static class LimitingFn implements Function<Sequence<Row>, Sequence<Row>>
   {
-    private int limit;
+    private final int limit;
+    private final int skip;
 
-    public LimitingFn(int limit)
+    public LimitingFn(int limit, int skip)
     {
       this.limit = limit;
+      this.skip = skip;
     }
 
     @Override
@@ -212,6 +228,9 @@ public class DefaultLimitSpec implements LimitSpec
         Sequence<Row> input
     )
     {
+      if (skip > 0) {
+        input = Sequences.filter(input, Sequences.<Row>skipper(skip));
+      }
       return Sequences.limit(input, limit);
     }
 
@@ -230,6 +249,9 @@ public class DefaultLimitSpec implements LimitSpec
       if (limit != that.limit) {
         return false;
       }
+      if (skip != that.skip) {
+        return false;
+      }
 
       return true;
     }
@@ -237,20 +259,25 @@ public class DefaultLimitSpec implements LimitSpec
     @Override
     public int hashCode()
     {
-      return limit;
+      return Objects.hash(limit, skip);
     }
   }
 
   private static class SortingFn implements Function<Sequence<Row>, Sequence<Row>>
   {
+    private final int skip;
     private final Ordering<Row> ordering;
 
-    public SortingFn(Ordering<Row> ordering) {this.ordering = ordering;}
+    public SortingFn(Ordering<Row> ordering, int skip)
+    {
+      this.ordering = ordering;
+      this.skip = skip;
+    }
 
     @Override
     public Sequence<Row> apply(@Nullable Sequence<Row> input)
     {
-      return Sequences.sort(input, ordering);
+      return Sequences.sort(input, ordering, skip);
     }
 
     @Override
@@ -265,6 +292,9 @@ public class DefaultLimitSpec implements LimitSpec
 
       SortingFn sortingFn = (SortingFn) o;
 
+      if (skip != sortingFn.skip) {
+        return false;
+      }
       if (ordering != null ? !ordering.equals(sortingFn.ordering) : sortingFn.ordering != null) {
         return false;
       }
@@ -275,7 +305,7 @@ public class DefaultLimitSpec implements LimitSpec
     @Override
     public int hashCode()
     {
-      return ordering != null ? ordering.hashCode() : 0;
+      return Objects.hash(ordering, skip);
     }
   }
 
@@ -283,10 +313,12 @@ public class DefaultLimitSpec implements LimitSpec
   {
     private final TopNSorter<Row> sorter;
     private final int limit;
+    private final int skip;
 
-    public TopNFunction(Ordering<Row> ordering, int limit)
+    public TopNFunction(Ordering<Row> ordering, int limit, int skip)
     {
       this.limit = limit;
+      this.skip = skip;
 
       this.sorter = new TopNSorter<>(ordering);
     }
@@ -296,8 +328,8 @@ public class DefaultLimitSpec implements LimitSpec
         Sequence<Row> input
     )
     {
-      final ArrayList<Row> materializedList = Sequences.toList(input, Lists.<Row>newArrayList());
-      return Sequences.simple(sorter.toTopN(materializedList, limit));
+      Iterable<Row> rows = Sequences.toIterable(input);
+      return Sequences.simple(sorter.toTopN(rows, limit, skip));
     }
 
     @Override
@@ -315,6 +347,9 @@ public class DefaultLimitSpec implements LimitSpec
       if (limit != that.limit) {
         return false;
       }
+      if (skip != that.skip) {
+        return false;
+      }
       if (sorter != null ? !sorter.equals(that.sorter) : that.sorter != null) {
         return false;
       }
@@ -325,9 +360,7 @@ public class DefaultLimitSpec implements LimitSpec
     @Override
     public int hashCode()
     {
-      int result = sorter != null ? sorter.hashCode() : 0;
-      result = 31 * result + limit;
-      return result;
+      return Objects.hash(sorter, limit, skip);
     }
   }
 
@@ -346,6 +379,9 @@ public class DefaultLimitSpec implements LimitSpec
     if (limit != that.limit) {
       return false;
     }
+    if (skip != that.skip) {
+      return false;
+    }
     if (columns != null ? !columns.equals(that.columns) : that.columns != null) {
       return false;
     }
@@ -356,9 +392,7 @@ public class DefaultLimitSpec implements LimitSpec
   @Override
   public int hashCode()
   {
-    int result = columns != null ? columns.hashCode() : 0;
-    result = 31 * result + limit;
-    return result;
+    return Objects.hash(columns, limit, skip);
   }
 
   @Override
@@ -373,12 +407,13 @@ public class DefaultLimitSpec implements LimitSpec
       ++index;
     }
 
-    ByteBuffer buffer = ByteBuffer.allocate(1 + columnsBytesSize + 4)
+    ByteBuffer buffer = ByteBuffer.allocate(1 + columnsBytesSize + Ints.BYTES + Ints.BYTES)
                                   .put(CACHE_KEY);
     for (byte[] columnByte : columnBytes) {
       buffer.put(columnByte);
     }
     buffer.put(Ints.toByteArray(limit));
+    buffer.put(Ints.toByteArray(skip));
     return buffer.array();
   }
 }

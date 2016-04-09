@@ -91,7 +91,7 @@ public class TopNSorterTest
     List<String> inputs = Lists.newArrayList(rawInput);
     Collections.shuffle(inputs, new Random(2));
 
-    Iterable<String> result = new TopNSorter<String>(ordering).toTopN(inputs, limit);
+    Iterable<String> result = new TopNSorter<String>(ordering).toTopN(inputs, limit, 0);
 
     Assert.assertEquals(expected, Lists.newArrayList(result));
   }

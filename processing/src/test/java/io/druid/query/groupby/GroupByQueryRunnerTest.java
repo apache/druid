@@ -110,6 +110,7 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -1172,13 +1173,6 @@ public class GroupByQueryRunnerTest
   @Test
   public void testMergeResultsWithLimit()
   {
-    for (int limit = 1; limit < 20; ++limit) {
-      doTestMergeResultsWithValidLimit(limit);
-    }
-  }
-
-  private void doTestMergeResultsWithValidLimit(final int limit)
-  {
     GroupByQuery.Builder builder = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
@@ -1190,10 +1184,7 @@ public class GroupByQueryRunnerTest
                 new LongSumAggregatorFactory("idx", "index")
             )
         )
-        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
-        .setLimit(Integer.valueOf(limit));
-
-    final GroupByQuery fullQuery = builder.build();
+        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
 
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 2L, "idx", 269L),
@@ -1207,12 +1198,23 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
-    QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
+    for (int limit = 1; limit < 20; ++limit) {
+      builder.limit(limit);
+      Iterable<Row> expects = Iterables.limit(expectedResults, limit);
+      doTestMergeResultsWithValidLimit(expects, builder.build());
+    }
+    for (int skip = 0; skip < 5; ++skip) {
+      builder.limit(3).skip(skip);
+      Iterable<Row> expects = Iterables.limit(Iterables.skip(expectedResults, skip), 3);
+      doTestMergeResultsWithValidLimit(expects, builder.build());
+    }
+  }
 
-    Map<String, Object> context = Maps.newHashMap();
+  private void doTestMergeResultsWithValidLimit(Iterable<Row> expects, GroupByQuery query)
+  {
+    QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
     TestHelper.assertExpectedObjects(
-        Iterables.limit(expectedResults, limit), mergeRunner.run(fullQuery, context), String.format("limit: %d", limit)
-    );
+        expects, mergeRunner.run(query, ImmutableMap.<String, Object>of()), query.getLimitSpec().toString());
   }
 
   @Test
@@ -1464,6 +1466,14 @@ public class GroupByQueryRunnerTest
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, 5), mergeRunner.run(builder.limit(5).build(), context), "limited"
     );
+
+    builder.limit(3);
+    for (int skip : new int[] {0, 3, 9, 12}) {
+      builder.skip(skip);
+      Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, builder.build());
+      Iterable<Row> expects = Iterables.limit(Iterables.skip(expectedResults, skip), 3);
+      TestHelper.assertExpectedObjects(expects, results, "");
+    }
   }
 
   @Test
@@ -1576,6 +1586,14 @@ public class GroupByQueryRunnerTest
     TestHelper.assertExpectedObjects(
         Iterables.limit(expectedResults, 5), mergeRunner.run(builder.limit(5).build(), context), "limited"
     );
+
+    builder.limit(3);
+    for (int skip : new int[] {0, 3, 9, 12}) {
+      builder.skip(skip);
+      Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, builder.build());
+      Iterable<Row> expects = Iterables.limit(Iterables.skip(expectedResults, skip), 3);
+      TestHelper.assertExpectedObjects(expects, results, "");
+    }
   }
 
   @Test
@@ -1976,14 +1994,17 @@ public class GroupByQueryRunnerTest
     map.put("technology", "travel123");
     map.put("travel", "travel555");
 
-    GroupByQuery query = GroupByQuery
+    GroupByQuery.Builder builder = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(
             Lists.<DimensionSpec>newArrayList(
                 new ExtractionDimensionSpec(
-                    "quality", "alias", new LookupExtractionFn(new MapLookupExtractor(map, false), false, null, false, false), null
+                    "quality",
+                    "alias",
+                    new LookupExtractionFn(new MapLookupExtractor(map, false), false, null, false, false),
+                    null
                 )
             )
         )
@@ -1993,10 +2014,7 @@ public class GroupByQueryRunnerTest
                 new LongSumAggregatorFactory("idx", "index")
             )
         )
-        .setLimitSpec(new DefaultLimitSpec(Lists.<OrderByColumnSpec>newArrayList(
-                new OrderByColumnSpec("alias", null, StringComparators.ALPHANUMERIC)), null))
-        .setGranularity(QueryRunnerTestHelper.dayGran)
-        .build();
+        .setGranularity(QueryRunnerTestHelper.dayGran);
 
      List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health0000", "rows", 1L, "idx", 121L),
@@ -2019,8 +2037,19 @@ public class GroupByQueryRunnerTest
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel555", "rows", 1L, "idx", 126L)
     );
 
-    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    TestHelper.assertExpectedObjects(expectedResults, results, "");
+    List<OrderByColumnSpec> orderByColumnSpecs = Lists.<OrderByColumnSpec>newArrayList(
+        new OrderByColumnSpec("alias", null, StringComparators.ALPHANUMERIC)
+    );
+    for (int skip : new int[] {0, 10, 18, 30}) {
+      builder.setLimitSpec(new DefaultLimitSpec(orderByColumnSpecs, null, skip));
+      Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, builder.build());
+
+      List<Row> subList = Collections.emptyList();
+      if (skip < expectedResults.size()) {
+        subList = expectedResults.subList(skip, expectedResults.size());
+      }
+      TestHelper.assertExpectedObjects(subList, results, "");
+    }
   }
 
   @Ignore

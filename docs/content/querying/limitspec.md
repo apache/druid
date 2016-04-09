@@ -12,6 +12,7 @@ The default limit spec takes a limit and the list of columns to do an orderBy op
 {
     "type"    : "default",
     "limit"   : <integer_value>,
+    "skip"    : <integer_value>,
     "columns" : [list of OrderByColumnSpec],
 }
 ```

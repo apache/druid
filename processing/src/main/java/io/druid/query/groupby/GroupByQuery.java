@@ -327,6 +327,7 @@ public class GroupByQuery extends BaseQuery<Row>
     private LimitSpec limitSpec = null;
     private List<OrderByColumnSpec> orderByColumnSpecs = Lists.newArrayList();
     private int limit = Integer.MAX_VALUE;
+    private int skip;
 
     public Builder()
     {
@@ -404,6 +405,13 @@ public class GroupByQuery extends BaseQuery<Row>
     {
       ensureExplicitLimitNotSet();
       this.limit = limit;
+      return this;
+    }
+
+    public Builder skip(int skip)
+    {
+      ensureExplicitLimitNotSet();
+      this.skip = skip;
       return this;
     }
 
@@ -555,10 +563,10 @@ public class GroupByQuery extends BaseQuery<Row>
     {
       final LimitSpec theLimitSpec;
       if (limitSpec == null) {
-        if (orderByColumnSpecs.isEmpty() && limit == Integer.MAX_VALUE) {
+        if (orderByColumnSpecs.isEmpty() && limit == Integer.MAX_VALUE && skip == 0) {
           theLimitSpec = new NoopLimitSpec();
         } else {
-          theLimitSpec = new DefaultLimitSpec(orderByColumnSpecs, limit);
+          theLimitSpec = new DefaultLimitSpec(orderByColumnSpecs, limit, skip);
         }
       } else {
         theLimitSpec = limitSpec;
