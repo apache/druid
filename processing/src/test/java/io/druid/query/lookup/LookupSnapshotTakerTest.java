@@ -73,7 +73,10 @@ public class LookupSnapshotTakerTest
   public void testIOExceptionDuringLookupPersist() throws IOException
   {
     File directory = temporaryFolder.newFolder();
-    directory.setReadOnly();
+    File snapshotFile = new File(directory, LookupSnapshotTaker.PERSIST_FILE_NAME);
+    Assert.assertFalse(snapshotFile.exists());
+    Assert.assertTrue(snapshotFile.createNewFile());
+    Assert.assertTrue(snapshotFile.setReadOnly());
     LookupSnapshotTaker lookupSnapshotTaker = new LookupSnapshotTaker(mapper, directory.getAbsolutePath());
     LookupBean lookupBean = new LookupBean();
     lookupBean.name = "name";
