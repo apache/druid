@@ -25,7 +25,7 @@
 <test name="AllTests">
 <packages>
   <package name="io.druid.tests.*">
-    <exclude name="io.druid.tests.hadoop">
+    <exclude name="io.druid.tests.hadoop"/>
   </package>
 </packages>
 </test>
