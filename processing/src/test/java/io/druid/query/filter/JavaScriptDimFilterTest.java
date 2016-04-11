@@ -39,4 +39,36 @@ public class JavaScriptDimFilterTest
     JavaScriptDimFilter javaScriptDimFilter3 = new JavaScriptDimFilter("dim", "fn", regexFn);
     Assert.assertFalse(Arrays.equals(javaScriptDimFilter.getCacheKey(), javaScriptDimFilter3.getCacheKey()));
   }
+
+  @Test
+  public void testEquals()
+  {
+    JavaScriptDimFilter javaScriptDimFilter = new JavaScriptDimFilter("dim", "fn", null);
+    JavaScriptDimFilter javaScriptDimFilter2 = new JavaScriptDimFilter("di", "mfn", null);
+    JavaScriptDimFilter javaScriptDimFilter3 = new JavaScriptDimFilter("di", "mfn", null);
+    Assert.assertNotEquals(javaScriptDimFilter, javaScriptDimFilter2);
+    Assert.assertEquals(javaScriptDimFilter2, javaScriptDimFilter3);
+
+    RegexDimExtractionFn regexFn = new RegexDimExtractionFn(".*", false, null);
+    JavaScriptDimFilter javaScriptDimFilter4 = new JavaScriptDimFilter("dim", "fn", regexFn);
+    JavaScriptDimFilter javaScriptDimFilter5 = new JavaScriptDimFilter("dim", "fn", regexFn);
+    Assert.assertNotEquals(javaScriptDimFilter, javaScriptDimFilter3);
+    Assert.assertEquals(javaScriptDimFilter4, javaScriptDimFilter5);
+  }
+
+  @Test
+  public void testHashcode()
+  {
+    JavaScriptDimFilter javaScriptDimFilter = new JavaScriptDimFilter("dim", "fn", null);
+    JavaScriptDimFilter javaScriptDimFilter2 = new JavaScriptDimFilter("di", "mfn", null);
+    JavaScriptDimFilter javaScriptDimFilter3 = new JavaScriptDimFilter("di", "mfn", null);
+    Assert.assertNotEquals(javaScriptDimFilter.hashCode(), javaScriptDimFilter2.hashCode());
+    Assert.assertEquals(javaScriptDimFilter2.hashCode(), javaScriptDimFilter3.hashCode());
+
+    RegexDimExtractionFn regexFn = new RegexDimExtractionFn(".*", false, null);
+    JavaScriptDimFilter javaScriptDimFilter4 = new JavaScriptDimFilter("dim", "fn", regexFn);
+    JavaScriptDimFilter javaScriptDimFilter5 = new JavaScriptDimFilter("dim", "fn", regexFn);
+    Assert.assertNotEquals(javaScriptDimFilter.hashCode(), javaScriptDimFilter3.hashCode());
+    Assert.assertEquals(javaScriptDimFilter4.hashCode(), javaScriptDimFilter5.hashCode());
+  }
 }

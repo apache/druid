@@ -106,4 +106,35 @@ public class SearchQueryDimFilter implements DimFilter
            ", extractionFn='" + extractionFn + '\'' +
            '}';
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof SearchQueryDimFilter)) {
+      return false;
+    }
+
+    SearchQueryDimFilter that = (SearchQueryDimFilter) o;
+
+    if (!dimension.equals(that.dimension)) {
+      return false;
+    }
+    if (!query.equals(that.query)) {
+      return false;
+    }
+    return extractionFn != null ? extractionFn.equals(that.extractionFn) : that.extractionFn == null;
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = dimension.hashCode();
+    result = 31 * result + query.hashCode();
+    result = 31 * result + (extractionFn != null ? extractionFn.hashCode() : 0);
+    return result;
+  }
 }
