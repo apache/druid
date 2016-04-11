@@ -36,7 +36,7 @@ public class CoordinatorDynamicConfig
   private final int balancerComputeThreads;
   private final boolean emitBalancingStats;
   private final Set<String> killDataSourceWhitelist;
-  private final double balancerSlop;
+  private final double balancerSlope;
 
   @JsonCreator
   public CoordinatorDynamicConfig(
@@ -49,7 +49,7 @@ public class CoordinatorDynamicConfig
       @JsonProperty("balancerComputeThreads") int balancerComputeThreads,
       @JsonProperty("emitBalancingStats") boolean emitBalancingStats,
       @JsonProperty("killDataSourceWhitelist") Set<String> killDataSourceWhitelist,
-      @JsonProperty("balancerSlop") double balancerSlop
+      @JsonProperty("balancerSlope") double balancerSlope
   )
   {
     this.maxSegmentsToMove = maxSegmentsToMove;
@@ -64,7 +64,7 @@ public class CoordinatorDynamicConfig
         Math.max(Runtime.getRuntime().availableProcessors() - 1, 1)
     );
     this.killDataSourceWhitelist = killDataSourceWhitelist;
-    this.balancerSlop = balancerSlop;
+    this.balancerSlope = balancerSlope;
   }
 
   @JsonProperty
@@ -122,9 +122,9 @@ public class CoordinatorDynamicConfig
   }
 
   @JsonProperty
-  public double getBalancerSlop()
+  public double getBalancerSlope()
   {
-    return balancerSlop;
+    return balancerSlope;
   }
 
   @Override
@@ -140,7 +140,7 @@ public class CoordinatorDynamicConfig
            ", balancerComputeThreads=" + balancerComputeThreads +
            ", emitBalancingStats=" + emitBalancingStats +
            ", killDataSourceWhitelist=" + killDataSourceWhitelist +
-           ", balancerSlop=" + balancerSlop +
+           ", balancerSlope=" + balancerSlope +
            '}';
   }
 
@@ -180,7 +180,7 @@ public class CoordinatorDynamicConfig
     if (emitBalancingStats != that.emitBalancingStats) {
       return false;
     }
-    if (balancerSlop != that.balancerSlop) {
+    if (balancerSlope != that.balancerSlope) {
       return false;
     }
     return !(killDataSourceWhitelist != null
@@ -201,7 +201,7 @@ public class CoordinatorDynamicConfig
     result = 31 * result + balancerComputeThreads;
     result = 31 * result + (emitBalancingStats ? 1 : 0);
     result = 31 * result + (killDataSourceWhitelist != null ? killDataSourceWhitelist.hashCode() : 0);
-    result = 31 * result + Double.toString(balancerSlop).hashCode();
+    result = 31 * result + Double.toString(balancerSlope).hashCode();
     return result;
   }
 
@@ -216,11 +216,11 @@ public class CoordinatorDynamicConfig
     private boolean emitBalancingStats;
     private int balancerComputeThreads;
     private Set<String> killDataSourceWhitelist;
-    private double balancerSlop;
+    private double balancerSlope;
 
     public Builder()
     {
-      this(15 * 60 * 1000L, 524288000L, 100, 5, 15, 10, 1, false, null, 0.001F);
+      this(15 * 60 * 1000L, 524288000L, 100, 5, 15, 10, 1, false, null, BalancerStrategy.DEFAULT_BALANCER_SLOPE);
     }
 
     private Builder(
@@ -233,7 +233,7 @@ public class CoordinatorDynamicConfig
         int balancerComputeThreads,
         boolean emitBalancingStats,
         Set<String> killDataSourceWhitelist,
-        double balancerSlop
+        double balancerSlope
     )
     {
       this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
@@ -245,7 +245,7 @@ public class CoordinatorDynamicConfig
       this.emitBalancingStats = emitBalancingStats;
       this.balancerComputeThreads = balancerComputeThreads;
       this.killDataSourceWhitelist = killDataSourceWhitelist;
-      this.balancerSlop = balancerSlop;
+      this.balancerSlope = balancerSlope;
     }
 
     public Builder withMillisToWaitBeforeDeleting(long millisToWaitBeforeDeleting)
@@ -296,9 +296,9 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
-    public Builder withBalancerSlop(double balancerSlop)
+    public Builder withBalancerSlope(double balancerSlope)
     {
-      this.balancerSlop = balancerSlop;
+      this.balancerSlope = balancerSlope;
       return this;
     }
 
@@ -314,7 +314,7 @@ public class CoordinatorDynamicConfig
           balancerComputeThreads,
           emitBalancingStats,
           killDataSourceWhitelist,
-          balancerSlop
+          balancerSlope
       );
     }
   }

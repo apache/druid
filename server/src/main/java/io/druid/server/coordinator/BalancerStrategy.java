@@ -25,6 +25,8 @@ import java.util.List;
 
 public interface BalancerStrategy
 {
+  public static final double DEFAULT_BALANCER_SLOPE = 0;
+
   public ServerHolder findNewSegmentHomeBalancer(final DataSegment proposalSegment, final List<ServerHolder> serverHolders);
 
   public ServerHolder findNewSegmentHomeReplicator(final DataSegment proposalSegment, final List<ServerHolder> serverHolders);

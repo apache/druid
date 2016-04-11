@@ -42,13 +42,13 @@ public class CostBalancerStrategy implements BalancerStrategy
   private static final long THIRTY_DAYS_IN_MILLIS = 30 * DAY_IN_MILLIS;
   private final long referenceTimestamp;
   private final int threadCount;
-  private final double balancerSlop;
+  private final double balancerSlope;
 
-  public CostBalancerStrategy(DateTime referenceTimestamp, int threadCount, double balancerSlop)
+  public CostBalancerStrategy(DateTime referenceTimestamp, int threadCount, double balancerSlope)
   {
     this.referenceTimestamp = referenceTimestamp.getMillis();
     this.threadCount = threadCount;
-    this.balancerSlop = balancerSlop;
+    this.balancerSlope = balancerSlope;
   }
 
   @Override
@@ -280,6 +280,9 @@ public class CostBalancerStrategy implements BalancerStrategy
   @Override
   public boolean steady(final List<ServerHolder> serverHolders)
   {
+    if (balancerSlope <= BalancerStrategy.DEFAULT_BALANCER_SLOPE) {
+      return false;
+    }
     double totalCost = 0;
     double maxCost = Double.MIN_VALUE;
     double minCost = Double.MAX_VALUE;
@@ -289,9 +292,9 @@ public class CostBalancerStrategy implements BalancerStrategy
       maxCost = Math.max(maxCost, serverCost);
       minCost = Math.min(minCost, serverCost);
     }
-    double average = (double) totalCost / serverHolders.size();
-    double floor = (double) Math.floor(average * (1 - balancerSlop));
-    double ceiling = (double) Math.ceil(average * (1 + balancerSlop));
+    double average = totalCost / serverHolders.size();
+    double floor =  average * (1 - balancerSlope);
+    double ceiling =  average * (1 + balancerSlope);
     if (maxCost < ceiling && minCost > floor) {
       return true;
     }
