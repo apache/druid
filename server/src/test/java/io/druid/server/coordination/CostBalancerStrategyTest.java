@@ -121,7 +121,7 @@ public class CostBalancerStrategyTest
     DataSegment segment = getSegment(1000);
 
     final DateTime referenceTimestamp = new DateTime("2014-01-01");
-    BalancerStrategy strategy = new CostBalancerStrategy(referenceTimestamp, 4, 0.001F);
+    BalancerStrategy strategy = new CostBalancerStrategy(referenceTimestamp, 4, 0);
     ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList);
     Assert.assertNotNull("Should be able to find a place for new segment!!", holder);
     Assert.assertEquals("Best Server should be BEST_SERVER", "BEST_SERVER", holder.getServer().getName());
@@ -134,7 +134,7 @@ public class CostBalancerStrategyTest
     DataSegment segment = getSegment(1000);
 
     final DateTime referenceTimestamp = new DateTime("2014-01-01");
-    BalancerStrategy strategy = new CostBalancerStrategy(referenceTimestamp, 1, 0.001F);
+    BalancerStrategy strategy = new CostBalancerStrategy(referenceTimestamp, 1, 0);
     ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList);
     Assert.assertNotNull("Should be able to find a place for new segment!!", holder);
     Assert.assertEquals("Best Server should be BEST_SERVER", "BEST_SERVER", holder.getServer().getName());
@@ -147,13 +147,13 @@ public class CostBalancerStrategyTest
     setupDummyCluster(100, 500);
     DataSegment segment = getSegment(1000);
 
-    BalancerStrategy singleThreadStrategy = new CostBalancerStrategy(DateTime.now(DateTimeZone.UTC), 1, 0.001F);
+    BalancerStrategy singleThreadStrategy = new CostBalancerStrategy(DateTime.now(DateTimeZone.UTC), 1, 0);
     long start = System.currentTimeMillis();
     singleThreadStrategy.findNewSegmentHomeReplicator(segment, serverHolderList);
     long end = System.currentTimeMillis();
     long latencySingleThread = end - start;
 
-    BalancerStrategy strategy = new CostBalancerStrategy(DateTime.now(DateTimeZone.UTC), 4, 0.001F);
+    BalancerStrategy strategy = new CostBalancerStrategy(DateTime.now(DateTimeZone.UTC), 4, 0);
     start = System.currentTimeMillis();
     strategy.findNewSegmentHomeReplicator(segment, serverHolderList);
     end = System.currentTimeMillis();
@@ -167,7 +167,7 @@ public class CostBalancerStrategyTest
   public void testComputeJointSegmentCost()
   {
     DateTime referenceTime = new DateTime("2014-01-01T00:00:00");
-    CostBalancerStrategy strategy = new CostBalancerStrategy(referenceTime, 4, 0.001F);
+    CostBalancerStrategy strategy = new CostBalancerStrategy(referenceTime, 4, 0);
     double segmentCost = strategy.computeJointSegmentCosts(
         getSegment(
             100,
@@ -195,7 +195,7 @@ public class CostBalancerStrategyTest
     setupDummyCluster(10, 20);
 
     final DateTime referenceTimestamp = new DateTime("2014-01-01");
-    final BalancerStrategy strategy = new CostBalancerStrategy(referenceTimestamp, 1, 0.001F);
+    final BalancerStrategy strategy = new CostBalancerStrategy(referenceTimestamp, 1, 0);
     Assert.assertFalse(strategy.steady(serverHolderList));
 
     final BalancerStrategy strategy2 = new CostBalancerStrategy(referenceTimestamp, 1, 0.3F);

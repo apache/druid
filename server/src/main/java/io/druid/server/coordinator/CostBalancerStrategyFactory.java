@@ -23,17 +23,17 @@ import org.joda.time.DateTime;
 public class CostBalancerStrategyFactory implements BalancerStrategyFactory
 {
   private final int threadCount;
-  private final double balancerSlop;
+  private final double balancerSlope;
 
-  public CostBalancerStrategyFactory(int costBalancerStrategyThreadCount, double balancerSlop)
+  public CostBalancerStrategyFactory(int costBalancerStrategyThreadCount, double balancerSlope)
   {
     this.threadCount = costBalancerStrategyThreadCount;
-    this.balancerSlop = balancerSlop;
+    this.balancerSlope = balancerSlope;
   }
 
   @Override
   public BalancerStrategy createBalancerStrategy(DateTime referenceTimestamp)
   {
-    return new CostBalancerStrategy(referenceTimestamp, threadCount, balancerSlop);
+    return new CostBalancerStrategy(referenceTimestamp, threadCount, balancerSlope);
   }
 }

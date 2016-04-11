@@ -42,7 +42,7 @@ public class CoordinatorDynamicConfigTest
                      + "  \"replicationThrottleLimit\": 1,\n"
                      + "  \"emitBalancingStats\": true,\n"
                      + "  \"killDataSourceWhitelist\": [\"test\"],\n"
-                     + "  \"balancerSlop\": 0\n"
+                     + "  \"balancerSlope\": 0\n"
                      + "}\n";
 
     ObjectMapper mapper = TestHelper.getObjectMapper();
@@ -66,7 +66,7 @@ public class CoordinatorDynamicConfigTest
   public void testBuilderDefaults()
   {
     Assert.assertEquals(
-        new CoordinatorDynamicConfig(900000, 524288000, 100, 5, 15, 10, 1, false, null, 0.001F),
+        new CoordinatorDynamicConfig(900000, 524288000, 100, 5, 15, 10, 1, false, null, 0),
         new CoordinatorDynamicConfig.Builder().build()
     );
   }
@@ -74,8 +74,8 @@ public class CoordinatorDynamicConfigTest
   @Test
   public void testEqualsAndHashCodeSanity()
   {
-    CoordinatorDynamicConfig config1 = new CoordinatorDynamicConfig(900000, 524288000, 100, 5, 15, 10, 1, false, null, 0.001F);
-    CoordinatorDynamicConfig config2 = new CoordinatorDynamicConfig(900000, 524288000, 100, 5, 15, 10, 1, false, null, 0.001F);
+    CoordinatorDynamicConfig config1 = new CoordinatorDynamicConfig(900000, 524288000, 100, 5, 15, 10, 1, false, null, 0);
+    CoordinatorDynamicConfig config2 = new CoordinatorDynamicConfig(900000, 524288000, 100, 5, 15, 10, 1, false, null, 0);
 
     Assert.assertEquals(config1, config2);
     Assert.assertEquals(config1.hashCode(), config2.hashCode());
