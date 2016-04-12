@@ -173,7 +173,7 @@ The following policies are available:
 |-----|----|-----------|--------|
 |bitmap|String|The type of bitmap index to create. Choose from `roaring` or `concise`, or null to use the default (`concise`).|No|
 |dimensionCompression|String|Compression format for dimension columns. Choose from `LZ4`, `LZF`, or `uncompressed`. The default is `LZ4`.|No|
-|metricCompression|String|Compression format for dimension columns. Choose from `LZ4`, `LZF`, or `uncompressed`. The default is `LZ4`.|No|
+|metricCompression|String|Compression format for metric columns. Choose from `LZ4`, `LZF`, or `uncompressed`. The default is `LZ4`.|No|
 
 #### Sharding
 
