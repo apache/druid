@@ -93,15 +93,12 @@ The property `druid.realtime.specFile` has the path of a file (absolute or relat
     },
     "tuningConfig": {
       "type" : "realtime",
-      "maxRowsInMemory": 500000,
+      "maxRowsInMemory": 75000,
       "intermediatePersistPeriod": "PT10m",
       "windowPeriod": "PT10m",
       "basePersistDirectory": "\/tmp\/realtime\/basePersist",
       "rejectionPolicy": {
         "type": "serverTime"
-      },
-      "indexSpec": {
-         "bitmap":"roaring"
       }
     }
   }
