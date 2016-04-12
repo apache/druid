@@ -597,11 +597,11 @@ public class IndexGeneratorJobTest
         if (datasourceName.equals("website")) {
           Assert.assertEquals("website", dataSegment.getDataSource());
           Assert.assertEquals("host", dataSegment.getDimensions().get(0));
-          Assert.assertEquals("visited_num", dataSegment.getMetrics().get(0));
-          Assert.assertEquals("unique_hosts", dataSegment.getMetrics().get(1));
+          Assert.assertEquals("unique_hosts", dataSegment.getMetrics().get(0));
+          Assert.assertEquals("visited_num", dataSegment.getMetrics().get(1));
         } else if (datasourceName.equals("inherit_dims")) {
           Assert.assertEquals("inherit_dims", dataSegment.getDataSource());
-          Assert.assertEquals(ImmutableList.of("X", "Y", "M", "Q", "B", "F"), dataSegment.getDimensions());
+          Assert.assertEquals(ImmutableList.of("B", "F", "M", "Q", "X", "Y"), dataSegment.getDimensions());
           Assert.assertEquals("count", dataSegment.getMetrics().get(0));
         } else if (datasourceName.equals("inherit_dims2")) {
           Assert.assertEquals("inherit_dims2", dataSegment.getDataSource());
