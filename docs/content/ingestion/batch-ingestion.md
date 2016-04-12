@@ -192,8 +192,8 @@ The following properties can be used to tune how the MapReduce job is configured
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
 |bitmap|String|The type of bitmap index to create. Choose from `roaring` or `concise`, or null to use the default (`concise`).|No|
-|dimensionCompression|String|Compression format for dimension columns. Choose from `LZ4`, `LZF`, or `uncompressed`. `The default is LZ4`.|No|
-|metricCompression|String|Compression format for dimension columns. Choose from `LZ4`, `LZF`, or `uncompressed`. `The default is LZ4`.|No|
+|dimensionCompression|String|Compression format for dimension columns. Choose from `LZ4`, `LZF`, or `uncompressed`. The default is `LZ4`.|No|
+|metricCompression|String|Compression format for dimension columns. Choose from `LZ4`, `LZF`, or `uncompressed`. The default is `LZ4`.|No|
 
 ### Partitioning specification
 
