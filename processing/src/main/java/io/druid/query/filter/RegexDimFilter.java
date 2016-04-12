@@ -106,4 +106,35 @@ public class RegexDimFilter implements DimFilter
            ", extractionFn='" + extractionFn + '\'' +
            '}';
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof RegexDimFilter)) {
+      return false;
+    }
+
+    RegexDimFilter that = (RegexDimFilter) o;
+
+    if (!dimension.equals(that.dimension)) {
+      return false;
+    }
+    if (!pattern.equals(that.pattern)) {
+      return false;
+    }
+    return extractionFn != null ? extractionFn.equals(that.extractionFn) : that.extractionFn == null;
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = dimension.hashCode();
+    result = 31 * result + pattern.hashCode();
+    result = 31 * result + (extractionFn != null ? extractionFn.hashCode() : 0);
+    return result;
+  }
 }

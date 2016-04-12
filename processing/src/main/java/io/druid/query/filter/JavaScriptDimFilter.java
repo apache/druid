@@ -104,4 +104,35 @@ public class JavaScriptDimFilter implements DimFilter
            ", extractionFn='" + extractionFn + '\'' +
            '}';
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof JavaScriptDimFilter)) {
+      return false;
+    }
+
+    JavaScriptDimFilter that = (JavaScriptDimFilter) o;
+
+    if (!dimension.equals(that.dimension)) {
+      return false;
+    }
+    if (!function.equals(that.function)) {
+      return false;
+    }
+    return extractionFn != null ? extractionFn.equals(that.extractionFn) : that.extractionFn == null;
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = dimension.hashCode();
+    result = 31 * result + function.hashCode();
+    result = 31 * result + (extractionFn != null ? extractionFn.hashCode() : 0);
+    return result;
+  }
 }

@@ -93,4 +93,132 @@ public class SearchQueryDimFilterTest
     );
     Assert.assertFalse(Arrays.equals(searchQueryDimFilter.getCacheKey(), searchQueryDimFilter3.getCacheKey()));
   }
+
+  @Test
+  public void testEquals()
+  {
+    SearchQueryDimFilter searchQueryDimFilter = new SearchQueryDimFilter(
+        "dim",
+        new SearchQuerySpec()
+        {
+          @Override
+          public boolean accept(String dimVal)
+          {
+            return false;
+          }
+
+          @Override
+          public byte[] getCacheKey()
+          {
+            return StringUtils.toUtf8("value");
+          }
+        },
+        null
+    );
+
+    SearchQueryDimFilter searchQueryDimFilter2 = new SearchQueryDimFilter(
+        "di",
+        new SearchQuerySpec()
+        {
+          @Override
+          public boolean accept(String dimVal)
+          {
+            return false;
+          }
+
+          @Override
+          public byte[] getCacheKey()
+          {
+            return StringUtils.toUtf8("mvalue");
+          }
+        },
+        null
+    );
+    Assert.assertNotEquals(searchQueryDimFilter, searchQueryDimFilter2);
+
+    RegexDimExtractionFn regexFn = new RegexDimExtractionFn(".*", false, null);
+    SearchQueryDimFilter searchQueryDimFilter3 = new SearchQueryDimFilter(
+        "dim",
+        new SearchQuerySpec()
+        {
+          @Override
+          public boolean accept(String dimVal)
+          {
+            return false;
+          }
+
+          @Override
+          public byte[] getCacheKey()
+          {
+            return StringUtils.toUtf8("value");
+          }
+        },
+        regexFn
+    );
+    Assert.assertNotEquals(searchQueryDimFilter, searchQueryDimFilter3);
+  }
+
+  @Test
+  public void testHashcode()
+  {
+    SearchQueryDimFilter searchQueryDimFilter = new SearchQueryDimFilter(
+        "dim",
+        new SearchQuerySpec()
+        {
+          @Override
+          public boolean accept(String dimVal)
+          {
+            return false;
+          }
+
+          @Override
+          public byte[] getCacheKey()
+          {
+            return StringUtils.toUtf8("value");
+          }
+        },
+        null
+    );
+
+    SearchQueryDimFilter searchQueryDimFilter2 = new SearchQueryDimFilter(
+        "di",
+        new SearchQuerySpec()
+        {
+          @Override
+          public boolean accept(String dimVal)
+          {
+            return false;
+          }
+
+          @Override
+          public byte[] getCacheKey()
+          {
+            return StringUtils.toUtf8("mvalue");
+          }
+        },
+        null
+    );
+    Assert.assertNotEquals(searchQueryDimFilter.hashCode(), searchQueryDimFilter2.hashCode());
+
+    RegexDimExtractionFn regexFn = new RegexDimExtractionFn(".*", false, null);
+    SearchQueryDimFilter searchQueryDimFilter3 = new SearchQueryDimFilter(
+        "dim",
+        new SearchQuerySpec()
+        {
+          @Override
+          public boolean accept(String dimVal)
+          {
+            return false;
+          }
+
+          @Override
+          public byte[] getCacheKey()
+          {
+            return StringUtils.toUtf8("value");
+          }
+        },
+        regexFn
+    );
+    Assert.assertNotEquals(searchQueryDimFilter.hashCode(), searchQueryDimFilter3.hashCode());
+  }
 }
