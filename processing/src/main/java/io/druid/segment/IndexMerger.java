@@ -1474,7 +1474,15 @@ public class IndexMerger
       Object[] rhsMetrics = rhs.getMetrics();
 
       for (int i = 0; i < metrics.length; ++i) {
-        metrics[i] = metricAggs[i].combine(lhsMetrics[i], rhsMetrics[i]);
+        Object lhsMetric = lhsMetrics[i];
+        Object rhsMetric = rhsMetrics[i];
+        if (lhsMetric == null) {
+          metrics[i] = rhsMetric;
+        } else if (rhsMetric == null) {
+          metrics[i] = lhsMetric;
+        } else {
+          metrics[i] = metricAggs[i].combine(lhsMetric, rhsMetric);
+        }
       }
 
       final Rowboat retVal = new Rowboat(
