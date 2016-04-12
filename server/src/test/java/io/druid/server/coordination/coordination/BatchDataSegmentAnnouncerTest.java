@@ -69,8 +69,7 @@ public class BatchDataSegmentAnnouncerTest
   private Set<DataSegment> testSegments;
 
   private final AtomicInteger maxBytesPerNode = new AtomicInteger(512 * 1024);
-  private Boolean skipDimensions;
-  private Boolean skipMetrics;
+  private Boolean skipDimensionsAndMetrics;
   private Boolean skipLoadSpec;
 
 
@@ -98,8 +97,7 @@ public class BatchDataSegmentAnnouncerTest
     announcer.start();
 
     segmentReader = new SegmentReader(cf, jsonMapper);
-    skipDimensions = false;
-    skipMetrics = false;
+    skipDimensionsAndMetrics = false;
     skipLoadSpec = false;
     segmentAnnouncer = new BatchDataSegmentAnnouncer(
         new DruidServerMetadata(
@@ -125,15 +123,9 @@ public class BatchDataSegmentAnnouncerTest
           }
 
           @Override
-          public boolean isSkipDimensions()
+          public boolean isSkipDimensionsAndMetrics()
           {
-            return skipDimensions;
-          }
-
-          @Override
-          public boolean isSkipMetrics()
-          {
-            return skipMetrics;
+            return skipDimensionsAndMetrics;
           }
 
           @Override
@@ -208,7 +200,7 @@ public class BatchDataSegmentAnnouncerTest
   @Test
   public void testSkipDimensions() throws Exception
   {
-    skipDimensions = true;
+    skipDimensionsAndMetrics = true;
     Iterator<DataSegment> segIter = testSegments.iterator();
     DataSegment firstSegment = segIter.next();
 
@@ -220,27 +212,6 @@ public class BatchDataSegmentAnnouncerTest
       DataSegment announcedSegment = Iterables.getOnlyElement(segmentReader.read(joiner.join(testSegmentsPath, zNode)));
       Assert.assertEquals(announcedSegment, firstSegment);
       Assert.assertTrue(announcedSegment.getDimensions().isEmpty());
-    }
-
-    segmentAnnouncer.unannounceSegment(firstSegment);
-
-    Assert.assertTrue(cf.getChildren().forPath(testSegmentsPath).isEmpty());
-  }
-
-  @Test
-  public void testSkipMetrics() throws Exception
-  {
-    skipMetrics = true;
-    Iterator<DataSegment> segIter = testSegments.iterator();
-    DataSegment firstSegment = segIter.next();
-
-    segmentAnnouncer.announceSegment(firstSegment);
-
-    List<String> zNodes = cf.getChildren().forPath(testSegmentsPath);
-
-    for (String zNode : zNodes) {
-      DataSegment announcedSegment = Iterables.getOnlyElement(segmentReader.read(joiner.join(testSegmentsPath, zNode)));
-      Assert.assertEquals(announcedSegment, firstSegment);
       Assert.assertTrue(announcedSegment.getMetrics().isEmpty());
     }
 
