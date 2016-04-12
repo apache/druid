@@ -156,8 +156,6 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |reportParseExceptions|Boolean|If true, exceptions encountered during parsing will be thrown and will halt ingestion. If false, unparseable rows and fields will be skipped. If an entire row is skipped, the "unparseable" counter will be incremented. If some fields in a row were parseable and some were not, the parseable fields will be indexed and the "unparseable" counter will not be incremented.|false|
 |handoffConditionTimeout|long|Milliseconds to wait for segment handoff. It must be >= 0 and 0 means wait forerver.|0|
 |indexSpec|Object|Tune how data is indexed. See below for more information.|no|
-|reportParseExceptions|Boolean|If true, exceptions encountered during parsing will be thrown and will halt ingestion. If false, unparseable rows and fields will be skipped. If an entire row is skipped, the "unparseable" counter will be incremented. If some fields in a row were parseable and some were not, the parseable fields will be indexed and the "unparseable" counter will not be incremented.|false|
-|handoffConditionTimeout|long|Milliseconds to wait for segment handoff. It must be >= 0 and 0 means wait forerver.|0|
 
 Before enabling thread priority settings, users are highly encouraged to read the [original pull request](https://github.com/druid-io/druid/pull/984) and other documentation about proper use of `-XX:+UseThreadPriorities`. 
 
@@ -173,9 +171,9 @@ The following policies are available:
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
-|bitmap|string|type of bitmap to use (e.g. roaring or concise), null to use the default.Defaults to the bitmap type specified by the (deprecated) "druid.processing.bitmap.type" setting| No|
-|dimensionCompression|string|compression format for dimension columns. The default, null, means no compression|No|
-|metricCompression|string|compression format for metric columns, null to use the default.|No|
+|bitmap|String|The type of bitmap index to create. Choose from `roaring` or `concise`, or null to use the default (`concise`).|No|
+|dimensionCompression|String|Compression format for dimension columns. Choose from `LZ4`, `LZF`, or `uncompressed`. `The default is LZ4`.|No|
+|metricCompression|String|Compression format for dimension columns. Choose from `LZ4`, `LZF`, or `uncompressed`. `The default is LZ4`.|No|
 
 #### Sharding
 
