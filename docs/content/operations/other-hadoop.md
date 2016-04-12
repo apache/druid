@@ -91,7 +91,19 @@ If you are still having problems, include all relevant hadoop jars at the beginn
 
 #### CDH
 
-Members of the community have reported dependency conflicts between the version of Jackson used in CDH and Druid. Currently, our best workaround is to edit Druid's pom.xml dependencies to match the version of Jackson in your Hadoop version and recompile Druid.
+Members of the community have reported dependency conflicts between the version of Jackson used in CDH and Druid when running a Mapreduce job like:
+```
+java.lang.VerifyError: class com.fasterxml.jackson.datatype.guava.deser.HostAndPortDeserializer overrides final method deserialize.(Lcom/fasterxml/jackson/core/JsonParser;Lcom/fasterxml/jackson/databind/DeserializationContext;)Ljava/lang/Object;
+```
+
+In order to use the Cloudera distribution of Hadoop, you must configure Mapreduce to
+[favor Druid classpath over Hadoop]((https://hadoop.apache.org/docs/r2.7.1/hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduce_Compatibility_Hadoop1_Hadoop2.html))
+(i.e. use Jackson version provided with Druid).
+
+This can be achieved by either:
+- adding `"mapreduce.job.user.classpath.first": "true"` to the `jobProperties` property of the `tuningConfig` of your indexing task (see the [Job properties section for the Batch Ingestion using the HadoopDruidIndexer page](../ingestion/batch-ingestion.html)).
+- configuring the Druid Middle Manager to add the following property when creating a new Peon: `druid.indexer.runner.javaOpts=... -Dhadoop.mapreduce.job.user.classpath.first=true`
+- edit Druid's pom.xml dependencies to match the version of Jackson in your Hadoop version and recompile Druid
 
 For more about building Druid, please see [Building Druid](../development/build.html).
 
