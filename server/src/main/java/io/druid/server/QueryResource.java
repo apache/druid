@@ -206,7 +206,7 @@ public class QueryResource
 
                     requestLogger.log(
                         new RequestLogLine(
-                            new DateTime(),
+                            new DateTime(start),
                             req.getRemoteAddr(),
                             theQuery,
                             new QueryStats(
@@ -258,7 +258,7 @@ public class QueryResource
         );
         requestLogger.log(
             new RequestLogLine(
-                new DateTime(),
+                new DateTime(start),
                 req.getRemoteAddr(),
                 query,
                 new QueryStats(
@@ -305,7 +305,7 @@ public class QueryResource
         );
         requestLogger.log(
             new RequestLogLine(
-                new DateTime(),
+                new DateTime(start),
                 req.getRemoteAddr(),
                 query,
                 new QueryStats(ImmutableMap.<String, Object>of(
