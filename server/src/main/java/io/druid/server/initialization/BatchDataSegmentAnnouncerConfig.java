@@ -43,11 +43,7 @@ public class BatchDataSegmentAnnouncerConfig
 
   // Skip dimension list from segment announcements
   @JsonProperty
-  private boolean skipDimensions = false;
-
-  // Skip metrics list from segment announcements
-  @JsonProperty
-  private boolean skipMetrics = false;
+  private boolean skipDimensionsAndMetrics = false;
 
   public int getSegmentsPerNode()
   {
@@ -64,13 +60,9 @@ public class BatchDataSegmentAnnouncerConfig
     return skipLoadSpec;
   }
 
-  public boolean isSkipDimensions()
+  public boolean isSkipDimensionsAndMetrics()
   {
-    return skipDimensions;
+    return skipDimensionsAndMetrics;
   }
 
-  public boolean isSkipMetrics()
-  {
-    return skipMetrics;
-  }
 }
