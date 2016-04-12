@@ -69,6 +69,13 @@ Druid uses Jetty to serve HTTP requests.
 |`druid.query.groupBy.maxIntermediateRows`|Maximum number of intermediate rows. This can be lowered at query time by `maxIntermediateRows` attribute in query context.|50000|
 |`druid.query.groupBy.maxResults`|Maximum number of results.  This can be lowered at query time by `maxResults` attribute in query context.|500000|
 
+##### TopN Query Config
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.query.topN.minTopNThreshold`|default value of topN threshold|1000|
+|`druid.query.topN.maxIntermediateRows`|Maximum number of intermediate rows per pass while scanning segments. This can be lowered at query time by `maxIntermediateRows` attribute in query context.|Integer.MAX_VALUE|
+
 ##### Search Query Config
 
 |Property|Description|Default|

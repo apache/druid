@@ -117,6 +117,7 @@ public class TopNQueryQueryToolChestTest
     QueryRunnerFactory factory = new TopNQueryRunnerFactory(
         TestQueryRunners.getPool(),
         chest,
+        new TopNQueryConfig(),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
     QueryRunner<Result<TopNResultValue>> runner = QueryRunnerTestHelper.makeQueryRunner(

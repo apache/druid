@@ -43,24 +43,27 @@ public class TopNQueryRunnerFactory implements QueryRunnerFactory<Result<TopNRes
 {
   private final StupidPool<ByteBuffer> computationBufferPool;
   private final TopNQueryQueryToolChest toolchest;
+  private final TopNQueryConfig config;
   private final QueryWatcher queryWatcher;
 
   @Inject
   public TopNQueryRunnerFactory(
       @Global StupidPool<ByteBuffer> computationBufferPool,
       TopNQueryQueryToolChest toolchest,
+      TopNQueryConfig config,
       QueryWatcher queryWatcher
   )
   {
     this.computationBufferPool = computationBufferPool;
     this.toolchest = toolchest;
+    this.config = config;
     this.queryWatcher = queryWatcher;
   }
 
   @Override
   public QueryRunner<Result<TopNResultValue>> createRunner(final Segment segment)
   {
-    final TopNQueryEngine queryEngine = new TopNQueryEngine(computationBufferPool);
+    final TopNQueryEngine queryEngine = new TopNQueryEngine(computationBufferPool, config);
     return new QueryRunner<Result<TopNResultValue>>()
     {
       @Override

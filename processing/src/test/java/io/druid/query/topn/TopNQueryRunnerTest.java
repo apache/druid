@@ -99,6 +99,7 @@ public class TopNQueryRunnerTest
                     new TopNQueryConfig(),
                     QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
                 ),
+                new TopNQueryConfig(),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
             )
         )
@@ -120,6 +121,7 @@ public class TopNQueryRunnerTest
                     new TopNQueryConfig(),
                     QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
                 ),
+                new TopNQueryConfig(),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
             )
         )

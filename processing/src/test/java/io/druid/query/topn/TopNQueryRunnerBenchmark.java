@@ -100,6 +100,7 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
             }
         ),
         new TopNQueryQueryToolChest(new TopNQueryConfig(), QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
+        new TopNQueryConfig(),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
     testCaseMap.put(

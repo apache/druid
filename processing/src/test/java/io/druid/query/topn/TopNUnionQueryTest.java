@@ -69,6 +69,7 @@ public class TopNUnionQueryTest
                         new TopNQueryConfig(),
                         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
                     ),
+                    new TopNQueryConfig(),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
                 ),
                 QueryRunnerTestHelper.unionDataSource
@@ -89,6 +90,7 @@ public class TopNUnionQueryTest
                         new TopNQueryConfig(),
                         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
                     ),
+                    new TopNQueryConfig(),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
                 ),
                 QueryRunnerTestHelper.unionDataSource

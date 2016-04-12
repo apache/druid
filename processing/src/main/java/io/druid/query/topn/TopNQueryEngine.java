@@ -49,10 +49,12 @@ public class TopNQueryEngine
   private static final Logger log = new Logger(TopNQueryEngine.class);
 
   private final StupidPool<ByteBuffer> bufferPool;
+  private final TopNQueryConfig config;
 
-  public TopNQueryEngine(StupidPool<ByteBuffer> bufferPool)
+  public TopNQueryEngine(StupidPool<ByteBuffer> bufferPool, TopNQueryConfig config)
   {
     this.bufferPool = bufferPool;
+    this.config = config;
   }
 
   public Sequence<Result<TopNResultValue>> query(final TopNQuery query, final StorageAdapter adapter)
@@ -118,11 +120,11 @@ public class TopNQueryEngine
     } else if (selector.isHasExtractionFn()) {
       topNAlgorithm = new DimExtractionTopNAlgorithm(capabilities, query);
     } else if (selector.isAggregateAllMetrics()) {
-      topNAlgorithm = new PooledTopNAlgorithm(capabilities, query, bufferPool);
+      topNAlgorithm = new PooledTopNAlgorithm(capabilities, query, bufferPool, config);
     } else if (selector.isAggregateTopNMetricFirst() || query.getContextBoolean("doAggregateTopNMetricFirst", false)) {
-      topNAlgorithm = new AggregateTopNMetricFirstAlgorithm(capabilities, query, bufferPool);
+      topNAlgorithm = new AggregateTopNMetricFirstAlgorithm(capabilities, query, bufferPool, config);
     } else {
-      topNAlgorithm = new PooledTopNAlgorithm(capabilities, query, bufferPool);
+      topNAlgorithm = new PooledTopNAlgorithm(capabilities, query, bufferPool, config);
     }
 
     return new TopNMapFn(query, topNAlgorithm);

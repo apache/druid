@@ -31,8 +31,16 @@ public class TopNQueryConfig
   @Min(1)
   private int minTopNThreshold = 1000;
 
+  @JsonProperty
+  private int maxIntermediateRows = Integer.MAX_VALUE;
+
   public int getMinTopNThreshold()
   {
     return minTopNThreshold;
+  }
+
+  public int getMaxIntermediateRows()
+  {
+    return maxIntermediateRows;
   }
 }
