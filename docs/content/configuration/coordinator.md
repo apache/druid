@@ -72,7 +72,8 @@ A sample coordinator dynamic config JSON object is shown below:
   "replicantLifetime": 15,
   "replicationThrottleLimit": 10,
   "emitBalancingStats": false,
-  "killDataSourceWhitelist": ["wikipedia", "testDatasource"]
+  "killDataSourceWhitelist": ["wikipedia", "testDatasource"],
+  "balancerSlope": 0
 }
 ```
 
@@ -88,6 +89,7 @@ Issuing a GET request at the same URL will return the spec that is currently in 
 |`replicationThrottleLimit`|The maximum number of segments that can be replicated at one time.|10|
 |`emitBalancingStats`|Boolean flag for whether or not we should emit balancing stats. This is an expensive operation.|false|
 |`killDataSourceWhitelist`|List of dataSources for which kill tasks are sent if property `druid.coordinator.kill.on` is true.|none|
+|`balancerSlope`|The maximum gap of server balancer cost, if all server's cost between the interval, balancer will stop moving segments around.|0|
 
 To view the audit history of coordinator dynamic config issue a GET request to the URL -
 
