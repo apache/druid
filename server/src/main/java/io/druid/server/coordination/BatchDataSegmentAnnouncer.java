@@ -85,11 +85,8 @@ public class BatchDataSegmentAnnouncer extends AbstractDataSegmentAnnouncer
       public DataSegment apply(DataSegment input)
       {
         DataSegment rv = input;
-        if (config.isSkipDimensions()) {
-          rv = rv.withDimensions(null);
-        }
-        if (config.isSkipMetrics()) {
-          rv = rv.withMetrics(null);
+        if (config.isSkipDimensionsAndMetrics()) {
+          rv = rv.withDimensions(null).withMetrics(null);
         }
         if (config.isSkipLoadSpec()) {
           rv = rv.withLoadSpec(null);
