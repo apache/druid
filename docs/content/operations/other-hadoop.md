@@ -92,8 +92,9 @@ If you are still having problems, include all relevant hadoop jars at the beginn
 #### CDH
 
 Members of the community have reported dependency conflicts between the version of Jackson used in CDH and Druid when running a Mapreduce job like:
-
-    java.lang.VerifyError: class com.fasterxml.jackson.datatype.guava.deser.HostAndPortDeserializer overrides final method deserialize.(Lcom/fasterxml/jackson/core/JsonParser;Lcom/fasterxml/jackson/databind/DeserializationContext;)Ljava/lang/Object;
+```
+java.lang.VerifyError: class com.fasterxml.jackson.datatype.guava.deser.HostAndPortDeserializer overrides final method deserialize.(Lcom/fasterxml/jackson/core/JsonParser;Lcom/fasterxml/jackson/databind/DeserializationContext;)Ljava/lang/Object;
+```
 
 In order to use the Cloudera distribution of Hadoop, you must configure Mapreduce to
 [favor Druid classpath over Hadoop]((https://hadoop.apache.org/docs/r2.7.1/hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduce_Compatibility_Hadoop1_Hadoop2.html))
