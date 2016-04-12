@@ -20,10 +20,10 @@
 package io.druid.indexer.path;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -127,11 +127,6 @@ public class HadoopGlobPathSplitterTest
   }
 
   private static List<String> splitGlob(String path) {
-    List<StringBuilder> tmp = HadoopGlobPathSplitter.splitGlob(path);
-    List<String> result = new ArrayList<>(tmp.size());
-    for(StringBuilder sb : tmp) {
-      result.add(sb.toString());
-    }
-    return result;
+    return Lists.newArrayList(HadoopGlobPathSplitter.splitGlob(path));
   }
 }
