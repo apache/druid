@@ -54,16 +54,18 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 
-public class GroupByParallelQueryRunner<T> implements QueryRunner<T>
+public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
 {
-  private static final Logger log = new Logger(GroupByParallelQueryRunner.class);
+  private static final String CTX_KEY_IS_SINGLE_THREADED = "groupByIsSingleThreaded";
+
+  private static final Logger log = new Logger(GroupByMergedQueryRunner.class);
   private final Iterable<QueryRunner<T>> queryables;
   private final ListeningExecutorService exec;
   private final Supplier<GroupByQueryConfig> configSupplier;
   private final QueryWatcher queryWatcher;
   private final StupidPool<ByteBuffer> bufferPool;
 
-  public GroupByParallelQueryRunner(
+  public GroupByMergedQueryRunner(
       ExecutorService exec,
       Supplier<GroupByQueryConfig> configSupplier,
       QueryWatcher queryWatcher,
@@ -79,7 +81,108 @@ public class GroupByParallelQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> queryParam, final Map<String, Object> responseContext)
+  public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
+  {
+    boolean isSingleThreaded = query.getContextValue(CTX_KEY_IS_SINGLE_THREADED, configSupplier.get().isSingleThreaded());
+    if (isSingleThreaded) {
+      return runSingleThreaded(query, responseContext);
+    } else {
+      return runParallel(query, responseContext);
+    }
+  }
+
+  private Sequence<T> runSingleThreaded(final Query<T> queryParam, final Map<String, Object> responseContext)
+  {
+    return new ConcatQueryRunner<>(
+        Sequences.map(
+            Sequences.simple(queryables),
+            new Function<QueryRunner<T>, QueryRunner<T>>()
+            {
+              @Override
+              public QueryRunner<T> apply(final QueryRunner<T> input)
+              {
+                return new QueryRunner<T>()
+                {
+                  @Override
+                  public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
+                  {
+                    final Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> indexAccumulatorPair = GroupByQueryHelper
+                        .createIndexAccumulatorPair(
+                            (GroupByQuery) query,
+                            configSupplier.get(),
+                            bufferPool
+                        );
+                    final Pair<Queue, Accumulator<Queue, T>> bySegmentAccumulatorPair = GroupByQueryHelper.createBySegmentAccumulatorPair();
+                    final int priority = BaseQuery.getContextPriority(query, 0);
+                    final boolean bySegment = BaseQuery.getContextBySegment(query, false);
+
+                    final ListenableFuture<Void> future = exec.submit(
+                        new AbstractPrioritizedCallable<Void>(priority)
+                        {
+                          @Override
+                          public Void call() throws Exception
+                          {
+                            if (bySegment) {
+                              input.run(query, responseContext)
+                                   .accumulate(
+                                       bySegmentAccumulatorPair.lhs,
+                                       bySegmentAccumulatorPair.rhs
+                                   );
+                            } else {
+                              input.run(query, responseContext)
+                                   .accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
+                            }
+
+                            return null;
+                          }
+                        }
+                    );
+                    try {
+                      queryWatcher.registerQuery(query, future);
+                      final Number timeout = query.getContextValue(QueryContextKeys.TIMEOUT, (Number) null);
+                      if (timeout == null) {
+                        future.get();
+                      } else {
+                        future.get(timeout.longValue(), TimeUnit.MILLISECONDS);
+                      }
+                    }
+                    catch (InterruptedException e) {
+                      log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
+                      future.cancel(true);
+                      throw new QueryInterruptedException(e);
+                    }
+                    catch (CancellationException e) {
+                      throw new QueryInterruptedException(e);
+                    }
+                    catch (TimeoutException e) {
+                      log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
+                      future.cancel(true);
+                      throw new QueryInterruptedException(e);
+                    }
+                    catch (ExecutionException e) {
+                      throw Throwables.propagate(e.getCause());
+                    }
+
+                    if (bySegment) {
+                      return Sequences.simple(bySegmentAccumulatorPair.lhs);
+                    }
+
+                    return Sequences.simple(
+                        indexAccumulatorPair.lhs.iterableWithPostAggregations(
+                            null,
+                            query.isDescending()
+                        )
+                    );
+                  }
+                };
+              }
+            }
+        )
+    ).run(queryParam, responseContext);
+  }
+
+
+  private Sequence<T> runParallel(final Query<T> queryParam, final Map<String, Object> responseContext)
   {
     final GroupByQuery query = (GroupByQuery) queryParam;
     final Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> indexAccumulatorPair = GroupByQueryHelper.createIndexAccumulatorPair(
