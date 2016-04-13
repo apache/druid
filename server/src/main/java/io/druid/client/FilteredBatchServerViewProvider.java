@@ -28,9 +28,7 @@ import org.apache.curator.framework.CuratorFramework;
 
 import javax.validation.constraints.NotNull;
 
-/**
- */
-public class SingleServerInventoryProvider implements ServerInventoryViewProvider
+public class FilteredBatchServerViewProvider implements FilteredServerViewProvider
 {
   @JacksonInject
   @NotNull
@@ -45,8 +43,8 @@ public class SingleServerInventoryProvider implements ServerInventoryViewProvide
   private ObjectMapper jsonMapper = null;
 
   @Override
-  public ServerInventoryView get()
+  public BatchServerInventoryView get()
   {
-    return new SingleServerInventoryView(zkPaths, curator, jsonMapper, Predicates.<DataSegment>alwaysTrue());
+    return new BatchServerInventoryView(zkPaths, curator, jsonMapper, Predicates.<DataSegment>alwaysFalse());
   }
 }

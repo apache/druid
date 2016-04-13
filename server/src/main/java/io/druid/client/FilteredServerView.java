@@ -19,34 +19,14 @@
 
 package io.druid.client;
 
-import com.fasterxml.jackson.annotation.JacksonInject;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Predicates;
-import io.druid.server.initialization.ZkPathsConfig;
+import com.google.common.base.Predicate;
 import io.druid.timeline.DataSegment;
-import org.apache.curator.framework.CuratorFramework;
 
-import javax.validation.constraints.NotNull;
+import java.util.concurrent.Executor;
 
-/**
- */
-public class SingleServerInventoryProvider implements ServerInventoryViewProvider
+public interface FilteredServerView
 {
-  @JacksonInject
-  @NotNull
-  private ZkPathsConfig zkPaths = null;
-
-  @JacksonInject
-  @NotNull
-  private CuratorFramework curator = null;
-
-  @JacksonInject
-  @NotNull
-  private ObjectMapper jsonMapper = null;
-
-  @Override
-  public ServerInventoryView get()
-  {
-    return new SingleServerInventoryView(zkPaths, curator, jsonMapper, Predicates.<DataSegment>alwaysTrue());
-  }
+  public void registerSegmentCallback(
+      Executor exec, ServerView.SegmentCallback callback, Predicate<DataSegment> filter
+  );
 }

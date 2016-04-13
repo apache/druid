@@ -19,20 +19,33 @@
 
 package io.druid.indexing.test;
 
+import com.google.api.client.util.Lists;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Maps;
 import com.metamx.common.Pair;
+import io.druid.client.FilteredServerView;
 import io.druid.client.ServerView;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.Executor;
 
-public class TestServerView implements ServerView.SegmentCallback
+public class TestServerView implements FilteredServerView, ServerView.SegmentCallback
 {
   final ConcurrentMap<ServerView.SegmentCallback, Pair<Predicate<DataSegment>, Executor>> callbacks = Maps.newConcurrentMap();
+
+  @Override
+  public void registerSegmentCallback(
+      final Executor exec,
+      final ServerView.SegmentCallback callback,
+      final Predicate<DataSegment> filter
+  )
+  {
+    callbacks.put(callback, Pair.of(filter, exec));
+  }
 
   @Override
   public ServerView.CallbackAction segmentAdded(

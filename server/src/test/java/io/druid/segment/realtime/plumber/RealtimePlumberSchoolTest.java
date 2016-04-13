@@ -20,6 +20,7 @@
 package io.druid.segment.realtime.plumber;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Predicate;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
@@ -28,6 +29,8 @@ import com.google.common.io.Files;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.Granularity;
 import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.client.FilteredServerView;
+import io.druid.client.ServerView;
 import io.druid.client.cache.MapCache;
 import io.druid.data.input.Committer;
 import io.druid.data.input.InputRow;
