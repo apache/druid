@@ -65,7 +65,7 @@ druid.emitter.graphite.eventConverter={"type":"all", "namespacePrefix": "druid.t
 
 The second implementation called `whiteList`, will send only the white listed metrics and dimensions.
 Same as for the `all` converter user has control of `<namespacePrefix>.[<druid service name>].[<druid hostname>].`
-White-list based converter comes with the following  default white list map located under resources [defaultWhiteListMap.json](./src/main/resources/defaultWhiteListMap.json)
+White-list based converter comes with the following  default white list map located under resources in `./src/main/resources/defaultWhiteListMap.json`
 
 Although user can override the default white list map by supplying a property called `mapPath`.
 This property is a String containing  the path for the file containing **white list map Json object**.
