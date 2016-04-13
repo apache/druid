@@ -96,7 +96,7 @@ Let's send some data! We'll start with these three records:
 ```
 
 Druid streaming ingestion requires relatively current messages (relative to a slack time controlled by the
-[windowPeriod](ingestion-streams.html#segmentgranularity-and-windowperiod) value), so you should
+[windowPeriod](../ingestion/stream-push.html#segmentgranularity-and-windowperiod) value), so you should
 replace `2000-01-01T00:00:00Z` in these messages with the current time in ISO8601 format. You can
 get this by running:
 

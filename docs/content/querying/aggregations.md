@@ -194,7 +194,7 @@ Uses [HyperLogLog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf) to
 { "type" : "hyperUnique", "name" : <output_name>, "fieldName" : <metric_name> }
 ```
 
-For more approximate aggregators, please see [theta sketches](../development/datasketches-aggregators.html).
+For more approximate aggregators, please see [theta sketches](../development/extensions-core/datasketches-aggregators.html).
 
 ## Miscellaneous Aggregations
 

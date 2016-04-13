@@ -67,7 +67,7 @@ a `pollPeriod` at the end of which time they poll the remote resource of interes
 
 # Supported Lookups
 
-For additional lookups, please see our [extensions list](../development/extensions.html).
+For additional lookups, please see our [extensions list](../extensions.html).
 
 ## URI namespace update
 
