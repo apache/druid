@@ -54,10 +54,16 @@ Available Metrics
 |`query/wait/time`|Milliseconds spent waiting for a segment to be scanned.|id, segment.|several hundred milliseconds|
 |`segment/scan/pending`|Number of segments in queue waiting to be scanned.||Close to 0|
 
+### Jetty
+
+|Metric|Description|Normal Value|
+|------|-----------|------------|
+|`jetty/numOpenConnections`|Number of open jetty connections.|Not much higher than number of jetty threads.|
+
 ### Cache
 
-|Metric|Description|Dimensions|Normal Value|
-|------|-----------|----------|------------|
+|Metric|Description|Normal Value|
+|------|-----------|------------|
 |`query/cache/delta/*`|Cache metrics since the last emission.||N/A|
 |`query/cache/total/*`|Total cache metrics.||N/A|
 
