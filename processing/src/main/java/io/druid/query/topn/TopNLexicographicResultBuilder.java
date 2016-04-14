@@ -131,7 +131,7 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
   public TopNResultBuilder addEntry(DimensionAndMetricValueExtractor dimensionAndMetricValueExtractor)
   {
     Object dimensionValueObj = dimensionAndMetricValueExtractor.getDimensionValue(dimSpec.getOutputName());
-    String dimensionValue = dimensionValueObj.toString();
+    String dimensionValue = dimensionValueObj == null ? null : dimensionValueObj.toString();
 
     if (shouldAdd(dimensionValue)) {
       pQueue.add(
