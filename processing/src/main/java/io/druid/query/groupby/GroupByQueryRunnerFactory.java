@@ -29,6 +29,7 @@ import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.Accumulator;
+import com.metamx.common.guava.ResourceClosingSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
@@ -37,8 +38,8 @@ import io.druid.data.input.Row;
 import io.druid.guice.annotations.Global;
 import io.druid.query.AbstractPrioritizedCallable;
 import io.druid.query.BaseQuery;
+import io.druid.query.ChainedExecutionQueryRunner;
 import io.druid.query.ConcatQueryRunner;
-import io.druid.query.GroupByParallelQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryContextKeys;
 import io.druid.query.QueryInterruptedException;
@@ -182,8 +183,45 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
           )
       );
     } else {
-
-      return new GroupByParallelQueryRunner(queryExecutor, config, queryWatcher, computationBufferPool, queryRunners);
+      final ChainedExecutionQueryRunner runner = new ChainedExecutionQueryRunner(
+          queryExecutor,
+          queryWatcher,
+          queryRunners,
+          false
+      );
+      return new QueryRunner<Row>()
+      {
+        @Override
+        public Sequence<Row> run(Query<Row> query, Map<String, Object> responseContext)
+        {
+          if (BaseQuery.getContextBySegment(query, false)) {
+            final Pair<Queue, Accumulator<Queue, Row>> bySegmentAccumulatorPair =
+                GroupByQueryHelper.createBySegmentAccumulatorPair();
+            runner.run(query, responseContext).accumulate(bySegmentAccumulatorPair.lhs, bySegmentAccumulatorPair.rhs);
+            return Sequences.simple(bySegmentAccumulatorPair.lhs);
+          }
+          final Pair<IncrementalIndex, Accumulator<IncrementalIndex, Row>> indexAccumulatorPair =
+              GroupByQueryHelper.createIndexAccumulatorPair(
+                  (GroupByQuery) query,
+                  config.get(),
+                  computationBufferPool
+              );
+          try {
+            runner.run(query, responseContext).accumulate(
+                indexAccumulatorPair.lhs,
+                indexAccumulatorPair.rhs
+            );
+          }
+          catch (Exception e) {
+            indexAccumulatorPair.lhs.close();
+            throw e;
+          }
+          return new ResourceClosingSequence<Row>(
+              Sequences.simple(indexAccumulatorPair.lhs.iterableWithPostAggregations(null, query.isDescending())),
+              indexAccumulatorPair.lhs
+          );
+        }
+      };
     }
   }
 
