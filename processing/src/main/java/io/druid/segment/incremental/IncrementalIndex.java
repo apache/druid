@@ -323,7 +323,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
           @Override
           public Number get()
           {
-            return parsed.eval(binding);
+            return parsed.eval(binding).numericValue();
           }
         };
       }
