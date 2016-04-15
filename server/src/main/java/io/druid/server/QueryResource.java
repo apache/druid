@@ -107,9 +107,11 @@ public class QueryResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getServer(@PathParam("id") String queryId)
   {
+    if (log.isDebugEnabled()) {
+      log.debug("Received cancel request for query [%s]", queryId);
+    }
     queryManager.cancelQuery(queryId);
     return Response.status(Response.Status.ACCEPTED).build();
-
   }
 
   @POST
@@ -135,6 +137,7 @@ public class QueryResource
                                     ? objectMapper.writerWithDefaultPrettyPrinter()
                                     : objectMapper.writer();
 
+    final String currThreadName = Thread.currentThread().getName();
     try {
       query = objectMapper.readValue(in, Query.class);
       queryId = query.getId();
@@ -151,6 +154,8 @@ public class QueryResource
         );
       }
 
+      Thread.currentThread()
+            .setName(String.format("%s[%s_%s_%s]", currThreadName, query.getType(), query.getDataSource(), queryId));
       if (log.isDebugEnabled()) {
         log.debug("Got query [%s]", query);
       }
@@ -336,6 +341,9 @@ public class QueryResource
               )
           )
       ).build();
+    }
+    finally {
+      Thread.currentThread().setName(currThreadName);
     }
   }
 }
