@@ -946,9 +946,6 @@ public class IndexMerger
           }
 
           MutableBitmap bitset = bitmapSerdeFactory.getBitmapFactory().makeEmptyMutableBitmap();
-          if ((dictId == 0) && (Iterables.getFirst(dimVals, "") == null)) {
-            bitset.or(nullRowsList.get(i));
-          }
           for (Integer row : CombiningIterable.createSplatted(
               convertedInverteds,
               Ordering.<Integer>natural().nullsFirst()
@@ -956,6 +953,10 @@ public class IndexMerger
             if (row != INVALID_ROW) {
               bitset.add(row);
             }
+          }
+
+          if ((dictId == 0) && (Iterables.getFirst(dimVals, "") == null)) {
+            bitset.or(nullRowsList.get(i));
           }
 
           writer.write(
