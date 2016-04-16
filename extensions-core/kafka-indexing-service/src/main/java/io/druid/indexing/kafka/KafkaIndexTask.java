@@ -236,6 +236,12 @@ public class KafkaIndexTask extends AbstractTask
         }
       }
 
+      // Set up sequenceNames.
+      final Map<Integer, String> sequenceNames = Maps.newHashMap();
+      for (Integer partitionNum : nextOffsets.keySet()) {
+        sequenceNames.put(partitionNum, String.format("%s_%s", ioConfig.getBaseSequenceName(), partitionNum));
+      }
+
       // Set up committer.
       final Supplier<Committer> committerSupplier = new Supplier<Committer>()
       {
@@ -295,7 +301,7 @@ public class KafkaIndexTask extends AbstractTask
       // Main loop.
       // Could eventually support early termination (triggered by a supervisor)
       // Could eventually support leader/follower mode (for keeping replicas more in sync)
-      boolean stillReading = true;
+      boolean stillReading = !assignment.isEmpty();
       while (stillReading) {
         if (stopping) {
           log.info("Stopping early.");
@@ -352,7 +358,11 @@ public class KafkaIndexTask extends AbstractTask
 
             try {
               final InputRow row = Preconditions.checkNotNull(parser.parse(ByteBuffer.wrap(record.value())), "row");
-              final SegmentIdentifier identifier = driver.add(row, committerSupplier);
+              final SegmentIdentifier identifier = driver.add(
+                  row,
+                  sequenceNames.get(record.partition()),
+                  committerSupplier
+              );
 
               if (identifier == null) {
                 // Failure to allocate segment puts determinism at risk, bail out to be safe.
@@ -525,11 +535,7 @@ public class KafkaIndexTask extends AbstractTask
   {
     return new FiniteAppenderatorDriver(
         appenderator,
-        new ActionBasedSegmentAllocator(
-            toolbox.getTaskActionClient(),
-            dataSchema,
-            ioConfig.getSequenceName()
-        ),
+        new ActionBasedSegmentAllocator(toolbox.getTaskActionClient(), dataSchema),
         toolbox.getSegmentHandoffNotifierFactory(),
         new ActionBasedUsedSegmentChecker(toolbox.getTaskActionClient()),
         toolbox.getObjectMapper(),
