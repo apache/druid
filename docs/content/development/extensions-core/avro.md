@@ -90,7 +90,7 @@ For example, using Avro Hadoop parser with custom reader's schema file:
       "parser" : {
         "type" : "avro_hadoop",
         "parseSpec" : {
-          "type": "timeAndDims",
+          "format": "timeAndDims",
           "timestampSpec": <standard timestampSpec>,
           "dimensionsSpec": <standard dimensionsSpec>
         }
