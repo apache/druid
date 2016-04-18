@@ -19,16 +19,18 @@
 
 package io.druid.client;
 
+import com.google.common.base.Predicate;
+import com.metamx.common.Pair;
+import io.druid.server.coordination.DruidServerMetadata;
+import io.druid.timeline.DataSegment;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.inject.Provider;
+import java.util.concurrent.Executor;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = FilteredBatchServerViewProvider.class)
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "legacy", value = FilteredSingleServerViewProvider.class),
-    @JsonSubTypes.Type(name = "batch", value = FilteredBatchServerViewProvider.class)
-})
-public interface FilteredServerViewProvider extends Provider<FilteredServerView>
+public interface FilteredServerInventoryView extends InventoryView
 {
+  public void registerSegmentCallback(
+      Executor exec, ServerView.SegmentCallback callback, Predicate<Pair<DruidServerMetadata, DataSegment>> filter
+  );
+
+  public void registerServerCallback(Executor exec, ServerView.ServerCallback callback);
 }

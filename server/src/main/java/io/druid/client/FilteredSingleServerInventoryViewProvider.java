@@ -22,13 +22,15 @@ package io.druid.client;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicates;
+import com.metamx.common.Pair;
+import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.timeline.DataSegment;
 import org.apache.curator.framework.CuratorFramework;
 
 import javax.validation.constraints.NotNull;
 
-public class FilteredBatchServerViewProvider implements FilteredServerViewProvider
+public class FilteredSingleServerInventoryViewProvider implements FilteredServerInventoryViewProvider
 {
   @JacksonInject
   @NotNull
@@ -43,8 +45,8 @@ public class FilteredBatchServerViewProvider implements FilteredServerViewProvid
   private ObjectMapper jsonMapper = null;
 
   @Override
-  public BatchServerInventoryView get()
+  public SingleServerInventoryView get()
   {
-    return new BatchServerInventoryView(zkPaths, curator, jsonMapper, Predicates.<DataSegment>alwaysFalse());
+    return new SingleServerInventoryView(zkPaths, curator, jsonMapper, Predicates.<Pair<DruidServerMetadata, DataSegment>>alwaysFalse());
   }
 }

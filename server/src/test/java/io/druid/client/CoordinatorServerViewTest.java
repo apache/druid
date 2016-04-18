@@ -21,6 +21,7 @@ package io.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -292,7 +293,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
         zkPathsConfig,
         curator,
         jsonMapper,
-        Predicates.<DataSegment>alwaysTrue()
+        Predicates.<Pair<DruidServerMetadata, DataSegment>>alwaysTrue()
     )
     {
       @Override

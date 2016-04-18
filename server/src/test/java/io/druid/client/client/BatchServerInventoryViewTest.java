@@ -31,6 +31,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.ISE;
+import com.metamx.common.Pair;
 import io.druid.client.BatchServerInventoryView;
 import io.druid.client.DruidServer;
 import io.druid.client.ServerView;
@@ -161,7 +162,7 @@ public class BatchServerInventoryViewTest
         },
         cf,
         jsonMapper,
-        Predicates.<DataSegment>alwaysTrue()
+        Predicates.<Pair<DruidServerMetadata, DataSegment>>alwaysTrue()
     );
 
     batchServerInventoryView.start();
@@ -177,12 +178,12 @@ public class BatchServerInventoryViewTest
         },
         cf,
         jsonMapper,
-        new Predicate<DataSegment>()
+        new Predicate<Pair<DruidServerMetadata, DataSegment>>()
         {
           @Override
-          public boolean apply(@Nullable DataSegment dataSegment)
+          public boolean apply(@Nullable Pair<DruidServerMetadata, DataSegment> input)
           {
-            return dataSegment.getInterval().getStart().isBefore(SEGMENT_INTERVAL_START.plusDays(INITIAL_SEGMENTS));
+            return input.rhs.getInterval().getStart().isBefore(SEGMENT_INTERVAL_START.plusDays(INITIAL_SEGMENTS));
           }
         }
     ){
@@ -328,12 +329,12 @@ public class BatchServerInventoryViewTest
     filteredBatchServerInventoryView.registerSegmentCallback(
         MoreExecutors.sameThreadExecutor(),
         callback,
-        new Predicate<DataSegment>()
+        new Predicate<Pair<DruidServerMetadata, DataSegment>>()
         {
           @Override
-          public boolean apply(@Nullable DataSegment dataSegment)
+          public boolean apply(@Nullable Pair<DruidServerMetadata, DataSegment> input)
           {
-            return dataSegment.getInterval().getStart().equals(SEGMENT_INTERVAL_START.plusDays(INITIAL_SEGMENTS + 2));
+            return input.rhs.getInterval().getStart().equals(SEGMENT_INTERVAL_START.plusDays(INITIAL_SEGMENTS + 2));
           }
         }
     );

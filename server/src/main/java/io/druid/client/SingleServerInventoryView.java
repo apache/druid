@@ -26,6 +26,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.MapMaker;
 import com.google.inject.Inject;
+import com.metamx.common.Pair;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.guice.ManageLifecycle;
 import io.druid.server.coordination.DruidServerMetadata;
@@ -39,19 +40,20 @@ import java.util.concurrent.Executor;
 /**
  */
 @ManageLifecycle
-public class SingleServerInventoryView extends ServerInventoryView<DataSegment> implements FilteredServerView
+public class SingleServerInventoryView extends ServerInventoryView<DataSegment> implements FilteredServerInventoryView
 {
   private static final EmittingLogger log = new EmittingLogger(SingleServerInventoryView.class);
 
-  final private ConcurrentMap<SegmentCallback, Predicate<DataSegment>> segmentPredicates = new MapMaker().makeMap();
-  private final Predicate<DataSegment> defaultFilter;
+  final private ConcurrentMap<SegmentCallback, Predicate<Pair<DruidServerMetadata, DataSegment>>> segmentPredicates = new MapMaker()
+      .makeMap();
+  private final Predicate<Pair<DruidServerMetadata, DataSegment>> defaultFilter;
 
   @Inject
   public SingleServerInventoryView(
       final ZkPathsConfig zkPaths,
       final CuratorFramework curator,
       final ObjectMapper jsonMapper,
-      final Predicate<DataSegment> defaultFilter
+      final Predicate<Pair<DruidServerMetadata, DataSegment>> defaultFilter
   )
   {
     super(
@@ -60,7 +62,9 @@ public class SingleServerInventoryView extends ServerInventoryView<DataSegment> 
         zkPaths.getServedSegmentsPath(),
         curator,
         jsonMapper,
-        new TypeReference<DataSegment>(){}
+        new TypeReference<DataSegment>()
+        {
+        }
     );
 
     Preconditions.checkNotNull(defaultFilter);
@@ -72,8 +76,11 @@ public class SingleServerInventoryView extends ServerInventoryView<DataSegment> 
       DruidServer container, String inventoryKey, DataSegment inventory
   )
   {
-    Predicate<DataSegment> predicate = Predicates.or(defaultFilter, Predicates.or(segmentPredicates.values()));
-    if(predicate.apply(inventory)) {
+    Predicate<Pair<DruidServerMetadata, DataSegment>> predicate = Predicates.or(
+        defaultFilter,
+        Predicates.or(segmentPredicates.values())
+    );
+    if (predicate.apply(Pair.of(container.getMetadata(), inventory))) {
       addSingleInventory(container, inventory);
     }
     return container;
@@ -94,57 +101,67 @@ public class SingleServerInventoryView extends ServerInventoryView<DataSegment> 
     return container;
   }
 
-  @Override
   public void registerSegmentCallback(
-      final Executor exec, final SegmentCallback callback, final Predicate<DataSegment> filter
+      final Executor exec,
+      final SegmentCallback callback,
+      final Predicate<Pair<DruidServerMetadata, DataSegment>> filter
   )
   {
-    segmentPredicates.put(callback, filter);
+    SegmentCallback filteringCallback = new SingleServerInventoryView.FilteringSegmentCallback(callback, filter);
+    segmentPredicates.put(filteringCallback, filter);
     registerSegmentCallback(
-        exec, new SegmentCallback()
-        {
-          @Override
-          public CallbackAction segmentAdded(
-              DruidServerMetadata server, DataSegment segment
-          )
-          {
-            final CallbackAction action;
-            if(filter.apply(segment)) {
-              action = callback.segmentAdded(server, segment);
-              if (action.equals(CallbackAction.UNREGISTER)) {
-                segmentPredicates.remove(callback);
-              }
-            } else {
-              action = CallbackAction.CONTINUE;
-            }
-            return action;
-          }
-
-          @Override
-          public CallbackAction segmentRemoved(
-              DruidServerMetadata server, DataSegment segment
-          )
-          {
-            {
-              final CallbackAction action;
-              if(filter.apply(segment)) {
-                action = callback.segmentRemoved(server, segment);
-                if (action.equals(CallbackAction.UNREGISTER)) {
-                  segmentPredicates.remove(callback);
-                }
-              } else {
-                action = CallbackAction.CONTINUE;
-              }
-              return action;
-            }
-          }
-
-          @Override
-          public CallbackAction segmentViewInitialized()
-          {
-            return callback.segmentViewInitialized();
-          }
-        }
+        exec,
+        filteringCallback
     );
   }
+
+  @Override
+  protected void segmentCallbackRemoved(SegmentCallback callback)
+  {
+    segmentPredicates.remove(callback);
+  }
+
+  static class FilteringSegmentCallback implements SegmentCallback
+  {
+
+    private final SegmentCallback callback;
+    private final Predicate<Pair<DruidServerMetadata, DataSegment>> filter;
+
+    FilteringSegmentCallback(SegmentCallback callback, Predicate<Pair<DruidServerMetadata, DataSegment>> filter)
+    {
+      this.callback = callback;
+      this.filter = filter;
+    }
+
+    @Override
+    public CallbackAction segmentAdded(DruidServerMetadata server, DataSegment segment)
+    {
+      final CallbackAction action;
+      if (filter.apply(Pair.of(server, segment))) {
+        action = callback.segmentAdded(server, segment);
+      } else {
+        action = CallbackAction.CONTINUE;
+      }
+      return action;
+    }
+
+    @Override
+    public CallbackAction segmentRemoved(DruidServerMetadata server, DataSegment segment)
+    {
+      final CallbackAction action;
+      if (filter.apply(Pair.of(server, segment))) {
+        action = callback.segmentRemoved(server, segment);
+      } else {
+        action = CallbackAction.CONTINUE;
+      }
+      return action;
+    }
+
+    @Override
+    public CallbackAction segmentViewInitialized()
+    {
+      return callback.segmentViewInitialized();
+    }
+  }
+
 }

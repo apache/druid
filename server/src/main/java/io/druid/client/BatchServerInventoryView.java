@@ -21,6 +21,7 @@ package io.druid.client;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
@@ -29,6 +30,7 @@ import com.google.common.collect.MapMaker;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
+import com.metamx.common.Pair;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.guice.ManageLifecycle;
 import io.druid.server.coordination.DruidServerMetadata;
@@ -43,20 +45,22 @@ import java.util.concurrent.Executor;
 /**
  */
 @ManageLifecycle
-public class BatchServerInventoryView extends ServerInventoryView<Set<DataSegment>> implements FilteredServerView
+public class BatchServerInventoryView extends ServerInventoryView<Set<DataSegment>>
+    implements FilteredServerInventoryView
 {
   private static final EmittingLogger log = new EmittingLogger(BatchServerInventoryView.class);
 
   final private ConcurrentMap<String, Set<DataSegment>> zNodes = new MapMaker().makeMap();
-  final private ConcurrentMap<SegmentCallback, Predicate<DataSegment>> segmentPredicates = new MapMaker().makeMap();
-  final private Predicate<DataSegment> defaultFilter;
+  final private ConcurrentMap<SegmentCallback, Predicate<Pair<DruidServerMetadata, DataSegment>>> segmentPredicates = new MapMaker()
+      .makeMap();
+  final private Predicate<Pair<DruidServerMetadata, DataSegment>> defaultFilter;
 
   @Inject
   public BatchServerInventoryView(
       final ZkPathsConfig zkPaths,
       final CuratorFramework curator,
       final ObjectMapper jsonMapper,
-      final Predicate<DataSegment> defaultFilter
+      final Predicate<Pair<DruidServerMetadata, DataSegment>> defaultFilter
   )
   {
     super(
@@ -65,11 +69,12 @@ public class BatchServerInventoryView extends ServerInventoryView<Set<DataSegmen
         zkPaths.getLiveSegmentsPath(),
         curator,
         jsonMapper,
-        new TypeReference<Set<DataSegment>>(){}
+        new TypeReference<Set<DataSegment>>()
+        {
+        }
     );
 
-    Preconditions.checkNotNull(defaultFilter);
-    this.defaultFilter = defaultFilter;
+    this.defaultFilter = Preconditions.checkNotNull(defaultFilter);
   }
 
   @Override
@@ -79,10 +84,7 @@ public class BatchServerInventoryView extends ServerInventoryView<Set<DataSegmen
       final Set<DataSegment> inventory
   )
   {
-    Predicate<DataSegment> predicate = Predicates.or(defaultFilter, Predicates.or(segmentPredicates.values()));
-    // make a copy of the set and not just a filtered view, in order to not keep all the segment data in memory
-    Set<DataSegment> filteredInventory = Sets.newHashSet(Iterables.filter(inventory, predicate));
-
+    Set<DataSegment> filteredInventory = filterInventory(container, inventory);
     zNodes.put(inventoryKey, filteredInventory);
     for (DataSegment segment : filteredInventory) {
       addSingleInventory(container, segment);
@@ -90,14 +92,49 @@ public class BatchServerInventoryView extends ServerInventoryView<Set<DataSegmen
     return container;
   }
 
+  private Set<DataSegment> filterInventory(final DruidServer container, Set<DataSegment> inventory)
+  {
+    Predicate<Pair<DruidServerMetadata, DataSegment>> predicate = Predicates.or(
+        defaultFilter,
+        Predicates.or(segmentPredicates.values())
+    );
+
+    // make a copy of the set and not just a filtered view, in order to not keep all the segment data in memory
+    Set<DataSegment> filteredInventory = Sets.newHashSet(Iterables.transform(
+        Iterables.filter(
+            Iterables.transform(
+                inventory,
+                new Function<DataSegment, Pair<DruidServerMetadata, DataSegment>>()
+                {
+                  @Override
+                  public Pair<DruidServerMetadata, DataSegment> apply(DataSegment input)
+                  {
+                    return Pair.of(container.getMetadata(), input);
+                  }
+                }
+            ),
+            predicate
+        ),
+        new Function<Pair<DruidServerMetadata, DataSegment>, DataSegment>()
+        {
+          @Override
+          public DataSegment apply(
+              Pair<DruidServerMetadata, DataSegment> input
+          )
+          {
+            return input.rhs;
+          }
+        }
+    ));
+    return filteredInventory;
+  }
+
   @Override
   protected DruidServer updateInnerInventory(
       DruidServer container, String inventoryKey, Set<DataSegment> inventory
   )
   {
-    Predicate<DataSegment> predicate = Predicates.or(defaultFilter, Predicates.or(segmentPredicates.values()));
-    // make a copy of the set and not just a filtered view, in order to not keep all the segment data in memory
-    Set<DataSegment> filteredInventory = Sets.newHashSet(Iterables.filter(inventory, predicate));
+    Set<DataSegment> filteredInventory = filterInventory(container, inventory);
 
     Set<DataSegment> existing = zNodes.get(inventoryKey);
     if (existing == null) {
@@ -132,55 +169,23 @@ public class BatchServerInventoryView extends ServerInventoryView<Set<DataSegmen
     return container;
   }
 
-  @Override
   public void registerSegmentCallback(
-      final Executor exec, final SegmentCallback callback, final Predicate<DataSegment> filter
+      final Executor exec,
+      final SegmentCallback callback,
+      final Predicate<Pair<DruidServerMetadata, DataSegment>> filter
   )
   {
-    segmentPredicates.put(callback, filter);
+    SegmentCallback filteringCallback = new SingleServerInventoryView.FilteringSegmentCallback(callback, filter);
+    segmentPredicates.put(filteringCallback, filter);
     registerSegmentCallback(
-        exec, new SegmentCallback()
-        {
-          @Override
-          public CallbackAction segmentAdded(
-              DruidServerMetadata server, DataSegment segment
-          )
-          {
-            final CallbackAction action;
-            if(filter.apply(segment)) {
-              action = callback.segmentAdded(server, segment);
-              if (action.equals(CallbackAction.UNREGISTER)) {
-                segmentPredicates.remove(callback);
-              }
-            } else {
-              action = CallbackAction.CONTINUE;
-            }
-            return action;
-          }
-
-          @Override
-          public CallbackAction segmentRemoved(
-              DruidServerMetadata server, DataSegment segment
-          )
-          {
-            final CallbackAction action;
-            if(filter.apply(segment)) {
-              action = callback.segmentRemoved(server, segment);
-              if (action.equals(CallbackAction.UNREGISTER)) {
-                segmentPredicates.remove(callback);
-              }
-            } else {
-              action = CallbackAction.CONTINUE;
-            }
-            return action;
-          }
-
-          @Override
-          public CallbackAction segmentViewInitialized()
-          {
-            return callback.segmentViewInitialized();
-          }
-        }
+        exec,
+        filteringCallback
     );
+  }
+
+  @Override
+  protected void segmentCallbackRemoved(SegmentCallback callback)
+  {
+    segmentPredicates.remove(callback);
   }
 }

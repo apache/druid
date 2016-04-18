@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.dataformat.smile.SmileGenerator;
 import com.google.common.base.Function;
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -67,7 +68,7 @@ public class BrokerServerViewTest extends CuratorTestBase
   private CountDownLatch segmentAddedLatch;
   private CountDownLatch segmentRemovedLatch;
 
-  private ServerInventoryView baseView;
+  private BatchServerInventoryView baseView;
   private BrokerServerView brokerServerView;
 
   public BrokerServerViewTest()
@@ -290,7 +291,7 @@ public class BrokerServerViewTest extends CuratorTestBase
         zkPathsConfig,
         curator,
         jsonMapper,
-        Predicates.<DataSegment>alwaysTrue()
+        Predicates.<Pair<DruidServerMetadata, DataSegment>>alwaysTrue()
     )
     {
       @Override
