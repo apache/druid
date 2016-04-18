@@ -2722,7 +2722,7 @@ public class GroupByQueryRunnerTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setDimFilter(new JavaScriptDimFilter("quality", "function(dim){ return true; }", null))
+        .setDimFilter(JavaScriptDimFilter.of("quality", "function(dim){ return true; }", null))
         .setAggregatorSpecs(
             Arrays.asList(
                 QueryRunnerTestHelper.rowsCount,
@@ -2781,7 +2781,7 @@ public class GroupByQueryRunnerTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setDimFilter(new JavaScriptDimFilter("quality", "function(dim){ return true; }", null))
+        .setDimFilter(JavaScriptDimFilter.of("quality", "function(dim){ return true; }", null))
         .setAggregatorSpecs(
             Arrays.asList(
                 QueryRunnerTestHelper.rowsCount,
@@ -2849,7 +2849,7 @@ public class GroupByQueryRunnerTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setDimFilter(new JavaScriptDimFilter("quality", "function(dim){ return true; }", null))
+        .setDimFilter(JavaScriptDimFilter.of("quality", "function(dim){ return true; }", null))
         .setAggregatorSpecs(
             Arrays.asList(
                 QueryRunnerTestHelper.rowsCount,
@@ -3121,7 +3121,7 @@ public class GroupByQueryRunnerTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setDimFilter(new JavaScriptDimFilter("quality", "function(dim){ return true; }", null))
+        .setDimFilter(JavaScriptDimFilter.of("quality", "function(dim){ return true; }", null))
         .setAggregatorSpecs(
             Arrays.asList(
                 QueryRunnerTestHelper.rowsCount,
@@ -3382,7 +3382,7 @@ public class GroupByQueryRunnerTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setDimFilter(new JavaScriptDimFilter("quality", "function(dim){ return true; }", null))
+        .setDimFilter(JavaScriptDimFilter.of("quality", "function(dim){ return true; }", null))
         .setAggregatorSpecs(
             Arrays.asList(
                 QueryRunnerTestHelper.rowsCount,
@@ -3640,7 +3640,7 @@ public class GroupByQueryRunnerTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setDimFilter(new JavaScriptDimFilter("market", "function(dim){ return true; }", null))
+        .setDimFilter(JavaScriptDimFilter.of("market", "function(dim){ return true; }", null))
         .setAggregatorSpecs(
             Arrays.asList(
                 QueryRunnerTestHelper.rowsCount,
@@ -4817,7 +4817,7 @@ public class GroupByQueryRunnerTest
     superFilterList.add(new BoundDimFilter("quality", "super-mezzanine", "super-mezzanine", false, false, true, extractionFn));
     superFilterList.add(new RegexDimFilter("quality", "super-mezzanine", extractionFn));
     superFilterList.add(new SearchQueryDimFilter("quality", new ContainsSearchQuerySpec("super-mezzanine", true), extractionFn));
-    superFilterList.add(new JavaScriptDimFilter("quality", jsFn, extractionFn));
+    superFilterList.add(JavaScriptDimFilter.of("quality", jsFn, extractionFn));
     DimFilter superFilter = new AndDimFilter(superFilterList);
 
     GroupByQuery.Builder builder = GroupByQuery
@@ -4869,21 +4869,128 @@ public class GroupByQueryRunnerTest
     superFilterList.add(new InDimFilter("null_column", Arrays.asList("NOT-EMPTY", "FOOBAR", "EMPTY"), extractionFn));
     superFilterList.add(new BoundDimFilter("null_column", "EMPTY", "EMPTY", false, false, true, extractionFn));
     superFilterList.add(new RegexDimFilter("null_column", "EMPTY", extractionFn));
-    superFilterList.add(new SearchQueryDimFilter("null_column", new ContainsSearchQuerySpec("EMPTY", true), extractionFn));
-    superFilterList.add(new JavaScriptDimFilter("null_column", jsFn, extractionFn));
+    superFilterList.add(
+        new SearchQueryDimFilter(
+            "null_column",
+            new ContainsSearchQuerySpec("EMPTY", true),
+            extractionFn
+        )
+    );
+    superFilterList.add(JavaScriptDimFilter.of("null_column", jsFn, extractionFn));
     DimFilter superFilter = new AndDimFilter(superFilterList);
 
     GroupByQuery query = GroupByQuery.builder().setDataSource(QueryRunnerTestHelper.dataSource)
                                      .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-                                     .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("null_column", "alias")))
+                                     .setDimensions(
+                                         Lists.<DimensionSpec>newArrayList(
+                                             new DefaultDimensionSpec(
+                                                 "null_column",
+                                                 "alias"
+                                             )
+                                         )
+                                     )
                                      .setAggregatorSpecs(
-                                         Arrays.asList(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index")))
+                                         Arrays.asList(
+                                             QueryRunnerTestHelper.rowsCount,
+                                             new LongSumAggregatorFactory("idx", "index")
+                                         )
+                                     )
                                      .setGranularity(QueryRunnerTestHelper.dayGran)
                                      .setDimFilter(superFilter).build();
 
     List<Row> expectedResults = Arrays
-        .asList(GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", null, "rows", 13L, "idx", 6619L),
-                GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", null, "rows", 13L, "idx", 5827L));
+        .asList(
+            GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", null, "rows", 13L, "idx", 6619L),
+            GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", null, "rows", 13L, "idx", 5827L)
+        );
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
+  public void testJavaScriptDimFilterWithMultipleDimensions()
+  {
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(
+            Lists.<DimensionSpec>newArrayList(
+                new DefaultDimensionSpec("market", "mkt"),
+                new DefaultDimensionSpec("quality", "alias")
+            )
+        )
+        .setDimFilter(
+            JavaScriptDimFilter.of(
+                new String[]{"market", "quality"}, "function(d1, d2){ return d1.length == d2.length; }", null
+            )
+        )
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01", "alias", "news", "mkt", "spot", "rows", 1L, "idx", 121L
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01", "alias", "premium", "mkt", "upfront", "rows", 1L, "idx", 1234L
+        ),
+
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-02", "alias", "news", "mkt", "spot", "rows", 1L, "idx", 114L
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-02", "alias", "premium", "mkt", "upfront", "rows", 1L, "idx", 1049L
+        )
+    );
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+
+  @Test
+  public void testJavaScriptDimFilterWithMultipleDimensionsOnNotExistingDimension()
+  {
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(
+            Lists.<DimensionSpec>newArrayList(
+                new DefaultDimensionSpec("market", "mkt"),
+                new DefaultDimensionSpec("null_column", "null_field")
+            )
+        )
+        .setDimFilter(
+            JavaScriptDimFilter.of(
+                new String[]{"market", "null_column"}, "function(d1, d2){ return d1 === 'spot' && d2 === null; }", null
+            )
+        )
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-01", "null_field", null, "mkt", "spot", "rows", 9L, "idx", 1102L
+        ),
+        GroupByQueryRunnerTestHelper.createExpectedRow(
+            "2011-04-02", "null_field", null, "mkt", "spot", "rows", 9L, "idx", 1120L
+        )
+    );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "");

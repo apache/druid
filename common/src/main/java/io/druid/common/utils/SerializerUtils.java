@@ -22,7 +22,9 @@ package io.druid.common.utils;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
+import com.metamx.common.Pair;
 import com.metamx.common.StringUtils;
+import io.druid.cache.Cacheable;
 import io.druid.collections.IntList;
 
 import java.io.IOException;
@@ -37,6 +39,8 @@ import java.util.List;
 public class SerializerUtils
 {
   private static final Charset UTF8 = Charset.forName("UTF-8");
+  private static final byte[] EMPTY_BYTES = new byte[0];
+  private static final byte[][] EMPTY_BYTES_ARRAY = new byte[][] {EMPTY_BYTES};
 
   public <T extends OutputStream> void writeString(T out, String name) throws IOException
   {
@@ -72,12 +76,50 @@ public class SerializerUtils
     final int length = in.getInt();
     return StringUtils.fromUtf8(readBytes(in, length));
   }
-  
+
   public byte[] readBytes(ByteBuffer in, int length) throws IOException
   {
     byte[] bytes = new byte[length];
     in.get(bytes);
     return bytes;
+  }
+
+  public static Pair<Integer, byte[][]> serializeUTFs(String... values)
+  {
+    if (values == null) {
+      return Pair.of(0, EMPTY_BYTES_ARRAY);
+    }
+    int totalLength = 0;
+    byte[][] bytes = new byte[values.length][];
+
+    for (int idx = 0; idx < values.length; idx++) {
+      bytes[idx] = StringUtils.toUtf8(values[idx]);
+      if (bytes[idx] == null) {
+        bytes[idx] = EMPTY_BYTES;
+      } else {
+        totalLength += bytes[idx].length;
+      }
+    }
+    return Pair.of(totalLength, bytes);
+  }
+
+  public static Pair<Integer, byte[][]> serializeUTFs(Cacheable... values)
+  {
+    if (values == null) {
+      return Pair.of(0, EMPTY_BYTES_ARRAY);
+    }
+    int totalLength = 0;
+    byte[][] bytes = new byte[values.length][];
+
+    for (int idx = 0; idx < values.length; idx++) {
+      bytes[idx] = values[idx].getCacheKey();
+      if (bytes[idx] == null) {
+        bytes[idx] = EMPTY_BYTES;
+      } else {
+        totalLength += bytes[idx].length;
+      }
+    }
+    return Pair.of(totalLength, bytes);
   }
 
   public void writeStrings(OutputStream out, String[] names) throws IOException

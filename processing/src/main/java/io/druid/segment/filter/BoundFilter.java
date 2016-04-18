@@ -34,7 +34,7 @@ import io.druid.segment.data.Indexed;
 import java.util.Comparator;
 import java.util.Iterator;
 
-public class BoundFilter implements Filter
+public class BoundFilter extends Filter.AbstractFilter
 {
   private final BoundDimFilter boundDimFilter;
   private final Comparator<String> comparator;
@@ -181,6 +181,11 @@ public class BoundFilter implements Filter
           public boolean apply(String input)
           {
             return doesMatch(input);
+          }
+
+          @Override
+          public String toString() {
+            return boundDimFilter.toString();
           }
         }
     );

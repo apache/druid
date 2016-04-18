@@ -23,6 +23,7 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import io.druid.collections.IterableUtils;
 import io.druid.collections.StupidPool;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
@@ -60,7 +61,7 @@ public class TopNUnionQueryTest
   @Parameterized.Parameters
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
-    return QueryRunnerTestHelper.cartesian(
+    return IterableUtils.cartesian(
         Iterables.concat(
             QueryRunnerTestHelper.makeUnionQueryRunners(
                 new TopNQueryRunnerFactory(

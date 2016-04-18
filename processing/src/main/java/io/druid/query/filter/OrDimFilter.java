@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import io.druid.query.Druids;
 import io.druid.segment.filter.Filters;
 import io.druid.segment.filter.OrFilter;
@@ -33,6 +34,11 @@ import java.util.List;
  */
 public class OrDimFilter implements DimFilter
 {
+  public static DimFilter of(DimFilter... filters)
+  {
+    return filters == null ? null : filters.length == 1 ? filters[0] : new OrDimFilter(Lists.newArrayList(filters));
+  }
+
   private static final Joiner OR_JOINER = Joiner.on(" || ");
 
   final private List<DimFilter> fields;

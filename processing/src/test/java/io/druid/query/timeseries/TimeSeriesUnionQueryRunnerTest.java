@@ -24,6 +24,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
+import io.druid.collections.IterableUtils;
 import io.druid.query.Druids;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -64,7 +65,7 @@ public class TimeSeriesUnionQueryRunnerTest
   @Parameterized.Parameters(name="{0}:descending={1}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
-    return QueryRunnerTestHelper.cartesian(
+    return IterableUtils.cartesian(
         QueryRunnerTestHelper.makeUnionQueryRunners(
             new TimeseriesQueryRunnerFactory(
                 new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),

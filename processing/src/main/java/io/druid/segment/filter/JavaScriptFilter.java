@@ -19,155 +19,84 @@
 
 package io.druid.segment.filter;
 
-import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
+import com.google.common.base.Function;
 import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.common.guava.FunctionalIterable;
+import io.druid.collections.IterableUtils;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.extraction.ExtractionFns;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.data.Indexed;
 import org.mozilla.javascript.Context;
-import org.mozilla.javascript.Function;
-import org.mozilla.javascript.ScriptableObject;
 
-import javax.annotation.Nullable;
+import java.util.Arrays;
 
-public class JavaScriptFilter implements Filter
+public class JavaScriptFilter extends Filter.AbstractFilter
 {
+  private static final Iterable<String> EMPTY_STR_DIM_VAL = Arrays.asList((String) null);
+
   private final JavaScriptPredicate predicate;
-  private final String dimension;
-  private final ExtractionFn extractionFn;
+  private final Function<Object[], Object[]> extractor;
+  private final String[] dimensions;
 
-  public JavaScriptFilter(String dimension, final String script, ExtractionFn extractionFn)
+  public JavaScriptFilter(String[] dimensions, String script, ExtractionFn[] extractionFns)
   {
-    this.dimension = dimension;
-    this.predicate = new JavaScriptPredicate(script, extractionFn);
-    this.extractionFn = extractionFn;
-  }
-
-  @Override
-  public ImmutableBitmap getBitmapIndex(final BitmapIndexSelector selector)
-  {
-    final Context cx = Context.enter();
-    try {
-      final Indexed<String> dimValues = selector.getDimensionValues(dimension);
-      ImmutableBitmap bitmap;
-      if (dimValues == null || dimValues.size() == 0) {
-        bitmap = selector.getBitmapFactory().makeEmptyImmutableBitmap();
-        if (predicate.applyInContext(cx, null)) {
-          bitmap = selector.getBitmapFactory().complement(bitmap, selector.getNumRows());
-        }
-      } else {
-        bitmap = selector.getBitmapFactory().union(
-            FunctionalIterable.create(dimValues)
-                              .filter(
-                                  new Predicate<String>()
-                                  {
-                                    @Override
-                                    public boolean apply(@Nullable String input)
-                                    {
-                                      return predicate.applyInContext(cx, input);
-                                    }
-                                  }
-                              )
-                              .transform(
-                                  new com.google.common.base.Function<String, ImmutableBitmap>()
-                                  {
-                                    @Override
-                                    public ImmutableBitmap apply(@Nullable String input)
-                                    {
-                                      return selector.getBitmapIndex(dimension, input);
-                                    }
-                                  }
-                              )
-        );
+    this.dimensions = dimensions;
+    this.extractor = ExtractionFns.toTransform(extractionFns);
+    this.predicate = new JavaScriptPredicate(script) {
+      @Override
+      final boolean applyInContext(Context cx, Object[] input)
+      {
+        return Context.toBoolean(fnApply.call(cx, scope, scope, extractor.apply(input)));
       }
-      return bitmap;
-    }
-    finally {
-      Context.exit();
-    }
+    };
   }
 
   @Override
   public ValueMatcher makeMatcher(ValueMatcherFactory factory)
   {
     // suboptimal, since we need create one context per call to predicate.apply()
-    return factory.makeValueMatcher(dimension, predicate);
+    return factory.makeValueMatcher(dimensions, predicate);
   }
 
-  static class JavaScriptPredicate implements Predicate<String>
+  @Override
+  public ImmutableBitmap getBitmapIndex(final BitmapIndexSelector selector)
   {
-    final ScriptableObject scope;
-    final Function fnApply;
-    final String script;
-    final ExtractionFn extractionFn;
-
-    public JavaScriptPredicate(final String script, final ExtractionFn extractionFn)
-    {
-      Preconditions.checkNotNull(script, "script must not be null");
-      this.script = script;
-      this.extractionFn = extractionFn;
-
-      final Context cx = Context.enter();
-      try {
-        cx.setOptimizationLevel(9);
-        scope = cx.initStandardObjects();
-
-        fnApply = cx.compileFunction(scope, script, "script", 1, null);
-      }
-      finally {
-        Context.exit();
+    Iterable<String>[] dimValuesList = new Iterable[dimensions.length];
+    for (int idx = 0; idx < dimensions.length; idx++) {
+      Indexed<String> dimValues = selector.getDimensionValues(dimensions[idx]);
+      if (dimValues == null || dimValues.size() == 0) {
+        dimValuesList[idx] = EMPTY_STR_DIM_VAL;
+      } else {
+        dimValuesList[idx] = dimValues;
       }
     }
 
-    @Override
-    public boolean apply(final String input)
-    {
-      // one and only one context per thread
-      final Context cx = Context.enter();
-      try {
-        return applyInContext(cx, input);
+    ImmutableBitmap bitmap = selector.getBitmapFactory().makeEmptyImmutableBitmap();
+
+    final Context cx = Context.enter();
+    try {
+      // for dim X with [a,b,c] + dim Y with [1,2,3], we make cartesian of X and Y, which is in this case
+      // {(a,1), (a,2), (a,3), (b,1), (b,2), (b,3), (c,1), (c,2), (c,3)}
+      // and apply filter to them and find all possible rows that matched
+      // This can be very costly if cardinality of dimension is high. For that case it would be safer
+      // to use `byRow=true`, which applies filter by scanning by-row basis.
+      for (String[] param : IterableUtils.cartesian(String.class, dimValuesList)) {
+        if (predicate.applyInContext(cx, param)) {
+          ImmutableBitmap overlap = null;
+          for (int idx = 0; idx < dimensions.length; idx++) {
+            ImmutableBitmap dimBitMap = selector.getBitmapIndex(dimensions[idx], param[idx]);
+            overlap = overlap == null ? dimBitMap : overlap.intersection(dimBitMap);
+          }
+          bitmap = bitmap.union(overlap);
+        }
       }
-      finally {
-        Context.exit();
-      }
+      return bitmap;
     }
-
-    public boolean applyInContext(Context cx, String input)
-    {
-      if (extractionFn != null) {
-        input = extractionFn.apply(input);
-      }
-      return Context.toBoolean(fnApply.call(cx, scope, scope, new String[]{input}));
-    }
-
-    @Override
-    public boolean equals(Object o)
-    {
-      if (this == o) {
-        return true;
-      }
-      if (o == null || getClass() != o.getClass()) {
-        return false;
-      }
-
-      JavaScriptPredicate that = (JavaScriptPredicate) o;
-
-      if (!script.equals(that.script)) {
-        return false;
-      }
-
-      return true;
-    }
-
-    @Override
-    public int hashCode()
-    {
-      return script.hashCode();
+    finally {
+      Context.exit();
     }
   }
 }

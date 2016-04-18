@@ -28,11 +28,9 @@ import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.incremental.SpatialDimensionRowTransformer;
 
-import java.util.Arrays;
-
 /**
  */
-public class SpatialFilter implements Filter
+public class SpatialFilter extends Filter.AbstractFilter
 {
   private final String dimension;
   private final Bound bound;
@@ -72,5 +70,14 @@ public class SpatialFilter implements Filter
           }
         }
     );
+  }
+
+  @Override
+  public String toString()
+  {
+    return "SpatialFilter{" +
+           "dimension='" + dimension + '\'' +
+           ", bound=" + bound +
+           '}';
   }
 }

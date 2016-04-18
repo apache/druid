@@ -21,15 +21,14 @@ package io.druid.segment.incremental;
 
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
-import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
-import com.metamx.collections.spatial.search.Bound;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
+import io.druid.collections.IterableUtils;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.dimension.DimensionSpec;
@@ -61,6 +60,7 @@ import org.joda.time.Interval;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -71,7 +71,7 @@ import java.util.concurrent.ConcurrentNavigableMap;
  */
 public class IncrementalIndexStorageAdapter implements StorageAdapter
 {
-  private static final Splitter SPLITTER = Splitter.on(",");
+  private static final List<Object> EMPTY_PARAM = Arrays.asList((Object) null);
   private static final NullDimensionSelector NULL_DIMENSION_SELECTOR = new NullDimensionSelector();
 
   private final IncrementalIndex index;
@@ -178,7 +178,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public Sequence<Cursor> makeCursors(final Filter filter, final Interval interval, final QueryGranularity gran, final boolean descending)
+  public Sequence<Cursor> makeCursors(
+      final Filter filter,
+      final Interval interval,
+      final QueryGranularity gran,
+      final boolean descending
+  )
   {
     if (index.isEmpty()) {
       return Sequences.empty();
@@ -618,7 +623,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
   private ValueMatcher makeFilterMatcher(final Filter filter, final EntryHolder holder)
   {
     return filter == null
-           ? new BooleanValueMatcher(true)
+           ? BooleanValueMatcher.TRUE
            : filter.makeMatcher(new EntryHolderValueMatcherFactory(holder));
   }
 
@@ -684,7 +689,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
             }
           };
         }
-        return new BooleanValueMatcher(false);
+        return BooleanValueMatcher.FALSE;
       }
 
       return new ValueMatcher()
@@ -724,6 +729,54 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
           for (int dimVal : dims[dimIndex]) {
             if (predicate.apply(dimDim.getValue(dimVal))) {
+              return true;
+            }
+          }
+          return false;
+        }
+      };
+    }
+
+    @Override
+    public ValueMatcher makeValueMatcher(String[] dimensions, final Predicate<Object[]> predicate)
+    {
+      final int[] dimIndices = new int[dimensions.length];
+      final IncrementalIndex.DimDim[] dimValues = new IncrementalIndex.DimDim[dimensions.length];
+
+      Arrays.fill(dimIndices, -1);
+      for (int i = 0; i < dimensions.length; i++) {
+        IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimensions[i]);
+        if (dimensionDesc != null) {
+          dimIndices[i] = dimensionDesc.getIndex();
+          dimValues[i] = dimensionDesc.getValues();
+        }
+      }
+
+      return new ValueMatcher()
+      {
+        private final List<Object>[] dimValuesList = new List[dimIndices.length];
+
+        @Override
+        public boolean matches()
+        {
+          int[][] dims = holder.getKey().getDims();
+          for (int i = 0; i < dimIndices.length; i++) {
+            if (dimIndices[i] < 0 || dimIndices[i] >= dims.length) {
+              dimValuesList[i] = EMPTY_PARAM;
+              continue;
+            }
+            int[] dimIdx = dims[dimIndices[i]];
+            if (dimIdx == null || dimIdx.length == 0) {
+              dimValuesList[i] = EMPTY_PARAM;
+            } else {
+              dimValuesList[i] = Lists.newArrayListWithCapacity(dimIdx.length);
+              for (int j = 0; j < dimIdx.length; j++) {
+                dimValuesList[i].add(dimValues[i].getValue(dimIdx[j]));
+              }
+            }
+          }
+          for (Object[] param : IterableUtils.cartesian(Object.class, dimValuesList)) {
+            if (predicate.apply(param)) {
               return true;
             }
           }

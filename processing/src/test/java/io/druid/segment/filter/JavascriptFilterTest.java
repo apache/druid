@@ -93,51 +93,51 @@ public class JavascriptFilterTest extends BaseFilterTest
   @Test
   public void testSingleValueStringColumnWithoutNulls()
   {
-    assertFilterMatches(new JavaScriptDimFilter("dim0", jsNullFilter, null), ImmutableList.<String>of());
-    assertFilterMatches(new JavaScriptDimFilter("dim0", jsValueFilter(""), null), ImmutableList.<String>of());
-    assertFilterMatches(new JavaScriptDimFilter("dim0", jsValueFilter("0"), null), ImmutableList.of("0"));
-    assertFilterMatches(new JavaScriptDimFilter("dim0", jsValueFilter("1"), null), ImmutableList.of("1"));
+    assertFilterMatches(JavaScriptDimFilter.of("dim0", jsNullFilter, null), ImmutableList.<String>of());
+    assertFilterMatches(JavaScriptDimFilter.of("dim0", jsValueFilter(""), null), ImmutableList.<String>of());
+    assertFilterMatches(JavaScriptDimFilter.of("dim0", jsValueFilter("0"), null), ImmutableList.of("0"));
+    assertFilterMatches(JavaScriptDimFilter.of("dim0", jsValueFilter("1"), null), ImmutableList.of("1"));
   }
 
   @Test
   public void testSingleValueStringColumnWithNulls()
   {
-    assertFilterMatches(new JavaScriptDimFilter("dim1", jsNullFilter, null), ImmutableList.of("0"));
-    assertFilterMatches(new JavaScriptDimFilter("dim1", jsValueFilter("10"), null), ImmutableList.of("1"));
-    assertFilterMatches(new JavaScriptDimFilter("dim1", jsValueFilter("2"), null), ImmutableList.of("2"));
-    assertFilterMatches(new JavaScriptDimFilter("dim1", jsValueFilter("1"), null), ImmutableList.of("3"));
-    assertFilterMatches(new JavaScriptDimFilter("dim1", jsValueFilter("def"), null), ImmutableList.of("4"));
-    assertFilterMatches(new JavaScriptDimFilter("dim1", jsValueFilter("abc"), null), ImmutableList.of("5"));
-    assertFilterMatches(new JavaScriptDimFilter("dim1", jsValueFilter("ab"), null), ImmutableList.<String>of());
+    assertFilterMatches(JavaScriptDimFilter.of("dim1", jsNullFilter, null), ImmutableList.of("0"));
+    assertFilterMatches(JavaScriptDimFilter.of("dim1", jsValueFilter("10"), null), ImmutableList.of("1"));
+    assertFilterMatches(JavaScriptDimFilter.of("dim1", jsValueFilter("2"), null), ImmutableList.of("2"));
+    assertFilterMatches(JavaScriptDimFilter.of("dim1", jsValueFilter("1"), null), ImmutableList.of("3"));
+    assertFilterMatches(JavaScriptDimFilter.of("dim1", jsValueFilter("def"), null), ImmutableList.of("4"));
+    assertFilterMatches(JavaScriptDimFilter.of("dim1", jsValueFilter("abc"), null), ImmutableList.of("5"));
+    assertFilterMatches(JavaScriptDimFilter.of("dim1", jsValueFilter("ab"), null), ImmutableList.<String>of());
   }
 
   @Test
   public void testMultiValueStringColumn()
   {
     // multi-val null......
-    assertFilterMatches(new JavaScriptDimFilter("dim2", jsNullFilter, null), ImmutableList.of("1", "2", "5"));
-    assertFilterMatches(new JavaScriptDimFilter("dim2", jsValueFilter("a"), null), ImmutableList.of("0", "3"));
-    assertFilterMatches(new JavaScriptDimFilter("dim2", jsValueFilter("b"), null), ImmutableList.of("0"));
-    assertFilterMatches(new JavaScriptDimFilter("dim2", jsValueFilter("c"), null), ImmutableList.of("4"));
-    assertFilterMatches(new JavaScriptDimFilter("dim2", jsValueFilter("d"), null), ImmutableList.<String>of());
+    assertFilterMatches(JavaScriptDimFilter.of("dim2", jsNullFilter, null), ImmutableList.of("1", "2", "5"));
+    assertFilterMatches(JavaScriptDimFilter.of("dim2", jsValueFilter("a"), null), ImmutableList.of("0", "3"));
+    assertFilterMatches(JavaScriptDimFilter.of("dim2", jsValueFilter("b"), null), ImmutableList.of("0"));
+    assertFilterMatches(JavaScriptDimFilter.of("dim2", jsValueFilter("c"), null), ImmutableList.of("4"));
+    assertFilterMatches(JavaScriptDimFilter.of("dim2", jsValueFilter("d"), null), ImmutableList.<String>of());
   }
 
   @Test
   public void testMissingColumnSpecifiedInDimensionList()
   {
-    assertFilterMatches(new JavaScriptDimFilter("dim3", jsNullFilter, null), ImmutableList.of("0", "1", "2", "3", "4", "5"));
-    assertFilterMatches(new JavaScriptDimFilter("dim3", jsValueFilter("a"), null), ImmutableList.<String>of());
-    assertFilterMatches(new JavaScriptDimFilter("dim3", jsValueFilter("b"), null), ImmutableList.<String>of());
-    assertFilterMatches(new JavaScriptDimFilter("dim3", jsValueFilter("c"), null), ImmutableList.<String>of());
+    assertFilterMatches(JavaScriptDimFilter.of("dim3", jsNullFilter, null), ImmutableList.of("0", "1", "2", "3", "4", "5"));
+    assertFilterMatches(JavaScriptDimFilter.of("dim3", jsValueFilter("a"), null), ImmutableList.<String>of());
+    assertFilterMatches(JavaScriptDimFilter.of("dim3", jsValueFilter("b"), null), ImmutableList.<String>of());
+    assertFilterMatches(JavaScriptDimFilter.of("dim3", jsValueFilter("c"), null), ImmutableList.<String>of());
   }
 
   @Test
   public void testMissingColumnNotSpecifiedInDimensionList()
   {
-    assertFilterMatches(new JavaScriptDimFilter("dim4", jsNullFilter, null), ImmutableList.of("0", "1", "2", "3", "4", "5"));
-    assertFilterMatches(new JavaScriptDimFilter("dim4", jsValueFilter("a"), null), ImmutableList.<String>of());
-    assertFilterMatches(new JavaScriptDimFilter("dim4", jsValueFilter("b"), null), ImmutableList.<String>of());
-    assertFilterMatches(new JavaScriptDimFilter("dim4", jsValueFilter("c"), null), ImmutableList.<String>of());
+    assertFilterMatches(JavaScriptDimFilter.of("dim4", jsNullFilter, null), ImmutableList.of("0", "1", "2", "3", "4", "5"));
+    assertFilterMatches(JavaScriptDimFilter.of("dim4", jsValueFilter("a"), null), ImmutableList.<String>of());
+    assertFilterMatches(JavaScriptDimFilter.of("dim4", jsValueFilter("b"), null), ImmutableList.<String>of());
+    assertFilterMatches(JavaScriptDimFilter.of("dim4", jsValueFilter("c"), null), ImmutableList.<String>of());
   }
 
   @Test
@@ -152,20 +152,20 @@ public class JavascriptFilterTest extends BaseFilterTest
     LookupExtractor mapExtractor = new MapLookupExtractor(stringMap, false);
     LookupExtractionFn lookupFn = new LookupExtractionFn(mapExtractor, false, "UNKNOWN", false, true);
 
-    assertFilterMatches(new JavaScriptDimFilter("dim0", jsValueFilter("HELLO"), lookupFn), ImmutableList.of("1"));
-    assertFilterMatches(new JavaScriptDimFilter("dim0", jsValueFilter("UNKNOWN"), lookupFn), ImmutableList.of("0", "2", "3", "4", "5"));
+    assertFilterMatches(JavaScriptDimFilter.of("dim0", jsValueFilter("HELLO"), lookupFn), ImmutableList.of("1"));
+    assertFilterMatches(JavaScriptDimFilter.of("dim0", jsValueFilter("UNKNOWN"), lookupFn), ImmutableList.of("0", "2", "3", "4", "5"));
 
-    assertFilterMatches(new JavaScriptDimFilter("dim1", jsValueFilter("HELLO"), lookupFn), ImmutableList.of("3", "4"));
-    assertFilterMatches(new JavaScriptDimFilter("dim1", jsValueFilter("UNKNOWN"), lookupFn), ImmutableList.of("0", "1", "2", "5"));
+    assertFilterMatches(JavaScriptDimFilter.of("dim1", jsValueFilter("HELLO"), lookupFn), ImmutableList.of("3", "4"));
+    assertFilterMatches(JavaScriptDimFilter.of("dim1", jsValueFilter("UNKNOWN"), lookupFn), ImmutableList.of("0", "1", "2", "5"));
 
-    assertFilterMatches(new JavaScriptDimFilter("dim2", jsValueFilter("HELLO"), lookupFn), ImmutableList.of("0", "3"));
-    assertFilterMatches(new JavaScriptDimFilter("dim2", jsValueFilter("UNKNOWN"), lookupFn), ImmutableList.of("0", "1", "2", "4", "5"));
+    assertFilterMatches(JavaScriptDimFilter.of("dim2", jsValueFilter("HELLO"), lookupFn), ImmutableList.of("0", "3"));
+    assertFilterMatches(JavaScriptDimFilter.of("dim2", jsValueFilter("UNKNOWN"), lookupFn), ImmutableList.of("0", "1", "2", "4", "5"));
 
-    assertFilterMatches(new JavaScriptDimFilter("dim3", jsValueFilter("HELLO"), lookupFn), ImmutableList.<String>of());
-    assertFilterMatches(new JavaScriptDimFilter("dim3", jsValueFilter("UNKNOWN"), lookupFn), ImmutableList.of("0", "1", "2", "3", "4", "5"));
+    assertFilterMatches(JavaScriptDimFilter.of("dim3", jsValueFilter("HELLO"), lookupFn), ImmutableList.<String>of());
+    assertFilterMatches(JavaScriptDimFilter.of("dim3", jsValueFilter("UNKNOWN"), lookupFn), ImmutableList.of("0", "1", "2", "3", "4", "5"));
 
-    assertFilterMatches(new JavaScriptDimFilter("dim4", jsValueFilter("HELLO"), lookupFn), ImmutableList.<String>of());
-    assertFilterMatches(new JavaScriptDimFilter("dim4", jsValueFilter("UNKNOWN"), lookupFn), ImmutableList.of("0", "1", "2", "3", "4", "5"));
+    assertFilterMatches(JavaScriptDimFilter.of("dim4", jsValueFilter("HELLO"), lookupFn), ImmutableList.<String>of());
+    assertFilterMatches(JavaScriptDimFilter.of("dim4", jsValueFilter("UNKNOWN"), lookupFn), ImmutableList.of("0", "1", "2", "3", "4", "5"));
   }
 
   private void assertFilterMatches(

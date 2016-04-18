@@ -86,7 +86,6 @@ public class FilteredAggregatorTest
       public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec)
       {
         final String dimensionName = dimensionSpec.getDimension();
-        final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
 
         if (dimensionName.equals("dim")) {
           return dimensionSpec.decorate(
@@ -257,7 +256,7 @@ public class FilteredAggregatorTest
     String jsFn = "function(x) { return(x === 'a') }";
     factory = new FilteredAggregatorFactory(
         new DoubleSumAggregatorFactory("billy", "value"),
-        new JavaScriptDimFilter("dim", jsFn, null)
+        JavaScriptDimFilter.of("dim", jsFn, null)
     );
     selector = new TestFloatColumnSelector(values);
     validateFilteredAggs(factory, values, selector);
@@ -286,7 +285,7 @@ public class FilteredAggregatorTest
     );
     selector = new TestFloatColumnSelector(values);
     validateFilteredAggs(factory, values, selector);
-    
+
     factory = new FilteredAggregatorFactory(
         new DoubleSumAggregatorFactory("billy", "value"),
         new BoundDimFilter("dim", "aAARDVARK", "aAARDVARK", false, false, true, extractionFn)
@@ -311,7 +310,7 @@ public class FilteredAggregatorTest
     String jsFn = "function(x) { return(x === 'aAARDVARK') }";
     factory = new FilteredAggregatorFactory(
         new DoubleSumAggregatorFactory("billy", "value"),
-        new JavaScriptDimFilter("dim", jsFn, extractionFn)
+        JavaScriptDimFilter.of("dim", jsFn, extractionFn)
     );
     selector = new TestFloatColumnSelector(values);
     validateFilteredAggs(factory, values, selector);

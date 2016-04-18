@@ -21,7 +21,8 @@ package io.druid.segment.data;
 
 /**
  */
-public class IntersectingOffset implements Offset {
+public class IntersectingOffset implements Offset
+{
   private final Offset lhs;
   private final Offset rhs;
 
@@ -33,26 +34,28 @@ public class IntersectingOffset implements Offset {
     this.lhs = lhs;
     this.rhs = rhs;
 
-    findIntersection();
+    findIntersection(lhs.withinBounds(), rhs.withinBounds());
   }
 
   @Override
-  public int getOffset() {
+  public int getOffset()
+  {
     return lhs.getOffset();
   }
 
   @Override
-  public void increment() {
-    lhs.increment();
-    rhs.increment();
+  public boolean increment()
+  {
+    final boolean lhsInBound = lhs.increment();
+    final boolean rhsInBound = rhs.increment();
 
-    findIntersection();
+    return findIntersection(lhsInBound, rhsInBound);
   }
 
-  private void findIntersection()
+  private boolean findIntersection(boolean lhsInBound, boolean rhsInBound)
   {
-    if (! (lhs.withinBounds() && rhs.withinBounds())) {
-      return;
+    if (!(lhsInBound && rhsInBound)) {
+      return false;
     }
 
     int lhsOffset = lhs.getOffset();
@@ -61,8 +64,8 @@ public class IntersectingOffset implements Offset {
     while (lhsOffset != rhsOffset) {
       while (lhsOffset < rhsOffset) {
         lhs.increment();
-        if (! lhs.withinBounds()) {
-          return;
+        if (!lhs.withinBounds()) {
+          return false;
         }
 
         lhsOffset = lhs.getOffset();
@@ -70,17 +73,19 @@ public class IntersectingOffset implements Offset {
 
       while (rhsOffset < lhsOffset) {
         rhs.increment();
-        if (! rhs.withinBounds()) {
-          return;
+        if (!rhs.withinBounds()) {
+          return false;
         }
 
         rhsOffset = rhs.getOffset();
       }
     }
+    return true;
   }
 
   @Override
-  public boolean withinBounds() {
+  public boolean withinBounds()
+  {
     return lhs.withinBounds() && rhs.withinBounds();
   }
 

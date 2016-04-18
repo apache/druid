@@ -33,7 +33,7 @@ import java.util.Iterator;
 
 /**
  */
-public class DimensionPredicateFilter implements Filter
+public class DimensionPredicateFilter extends Filter.AbstractFilter
 {
   private final String dimension;
   private final Predicate<String> predicate;

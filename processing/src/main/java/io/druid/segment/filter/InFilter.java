@@ -24,22 +24,19 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
-import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.collections.bitmap.MutableBitmap;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Set;
 
 /**
  */
-public class InFilter implements Filter
+public class InFilter extends Filter.AbstractFilter
 {
   private final String dimension;
   private final Set<String> values;

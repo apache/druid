@@ -20,11 +20,50 @@
 package io.druid.query.filter;
 
 import com.metamx.collections.bitmap.ImmutableBitmap;
+import io.druid.segment.ColumnSelectorFactory;
+
+import java.util.List;
 
 /**
  */
 public interface Filter
 {
-  public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector);
-  public ValueMatcher makeMatcher(ValueMatcherFactory factory);
+  // this should be supported, at least
+  ValueMatcher makeMatcher(ValueMatcherFactory factory);
+
+  // return true only when getBitmapIndex() is implemented
+  boolean supportsBitmap();
+
+  // optional. bitmap based filter will be applied first whenever it's possible
+  ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector);
+
+  // optional. if bitmap filter cannot be supported, this should be implemented instead
+  ValueMatcher makeMatcher(ColumnSelectorFactory columnSelectorFactory);
+
+  // extend this
+  abstract class AbstractFilter implements Filter
+  {
+    @Override
+    public ImmutableBitmap getBitmapIndex(final BitmapIndexSelector selector)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public ValueMatcher makeMatcher(ColumnSelectorFactory columnSelectorFactory)
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public boolean supportsBitmap()
+    {
+      return true;
+    }
+  }
+
+  // marker for and/or/not
+  interface RelationalFilter {
+    List<Filter> getChildren();
+  }
 }
