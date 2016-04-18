@@ -22,18 +22,14 @@ package io.druid.segment.filter;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.common.guava.FunctionalIterable;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
-import io.druid.segment.data.Indexed;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.ScriptableObject;
-
-import javax.annotation.Nullable;
 
 public class JavaScriptFilter implements Filter
 {
@@ -53,39 +49,16 @@ public class JavaScriptFilter implements Filter
   {
     final Context cx = Context.enter();
     try {
-      final Indexed<String> dimValues = selector.getDimensionValues(dimension);
-      ImmutableBitmap bitmap;
-      if (dimValues == null || dimValues.size() == 0) {
-        bitmap = selector.getBitmapFactory().makeEmptyImmutableBitmap();
-        if (predicate.applyInContext(cx, null)) {
-          bitmap = selector.getBitmapFactory().complement(bitmap, selector.getNumRows());
+      final Predicate<String> contextualPredicate = new Predicate<String>()
+      {
+        @Override
+        public boolean apply(String input)
+        {
+          return predicate.applyInContext(cx, input);
         }
-      } else {
-        bitmap = selector.getBitmapFactory().union(
-            FunctionalIterable.create(dimValues)
-                              .filter(
-                                  new Predicate<String>()
-                                  {
-                                    @Override
-                                    public boolean apply(@Nullable String input)
-                                    {
-                                      return predicate.applyInContext(cx, input);
-                                    }
-                                  }
-                              )
-                              .transform(
-                                  new com.google.common.base.Function<String, ImmutableBitmap>()
-                                  {
-                                    @Override
-                                    public ImmutableBitmap apply(@Nullable String input)
-                                    {
-                                      return selector.getBitmapIndex(dimension, input);
-                                    }
-                                  }
-                              )
-        );
-      }
-      return bitmap;
+      };
+
+      return Filters.matchPredicate(dimension, selector, contextualPredicate);
     }
     finally {
       Context.exit();

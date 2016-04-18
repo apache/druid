@@ -22,16 +22,10 @@ package io.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Strings;
 import com.metamx.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
-import io.druid.query.lookup.LookupExtractionFn;
-import io.druid.query.lookup.LookupExtractor;
-import io.druid.segment.filter.SelectorFilter;
 
 import java.nio.ByteBuffer;
-import java.util.List;
-import java.util.Objects;
 
 /**
  * This class is deprecated, use SelectorDimFilter instead: {@link io.druid.query.filter.SelectorDimFilter}
@@ -106,7 +100,7 @@ public class ExtractionDimFilter implements DimFilter
   @Override
   public Filter toFilter()
   {
-    return new SelectorFilter(dimension, value, extractionFn);
+    return new SelectorDimFilter(dimension, value, extractionFn).toFilter();
   }
 
   @Override

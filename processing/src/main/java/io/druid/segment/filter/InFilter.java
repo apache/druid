@@ -23,18 +23,13 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.collections.bitmap.MutableBitmap;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 
-import javax.annotation.Nullable;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -69,18 +64,19 @@ public class InFilter implements Filter
           )
       );
     } else {
-      Iterable<String> allDimVals = selector.getDimensionValues(dimension);
-      if (allDimVals == null) {
-        allDimVals = Lists.newArrayList((String) null);
-      }
-
-      List<ImmutableBitmap> bitmaps = Lists.newArrayList();
-      for (String dimVal : allDimVals) {
-        if (values.contains(Strings.nullToEmpty(extractionFn.apply(dimVal)))) {
-          bitmaps.add(selector.getBitmapIndex(dimension, dimVal));
-        }
-      }
-      return selector.getBitmapFactory().union(bitmaps);
+      return Filters.matchPredicate(
+          dimension,
+          selector,
+          new Predicate<String>()
+          {
+            @Override
+            public boolean apply(String input)
+            {
+              // InDimFilter converts all null "values" to empty.
+              return values.contains(Strings.nullToEmpty(extractionFn.apply(input)));
+            }
+          }
+      );
     }
   }
 
