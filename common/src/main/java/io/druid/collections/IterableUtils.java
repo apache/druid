@@ -71,16 +71,18 @@ public class IterableUtils
 
           private boolean hasMore(int index)
           {
-            if (!valid.get(index) && iterators[index].hasNext()) {
-              cached[index] = iterators[index].next();
-              valid.set(index);
-            }
-            return valid.get(index);
+            return valid.get(index) || iterators[index].hasNext();
           }
 
           @Override
           public T[] next()
           {
+            for (int index = 0; index < iterables.length; index++) {
+              if (!valid.get(index)) {
+                cached[index] = iterators[index].next();
+                valid.set(index);
+              }
+            }
             T[] result = Arrays.copyOf(cached, cached.length);
             valid.clear(cached.length - 1);
             return result;

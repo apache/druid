@@ -19,6 +19,7 @@
 
 package io.druid.common.utils;
 
+import com.metamx.common.Pair;
 import io.druid.collections.IntList;
 import org.junit.After;
 import org.junit.Assert;
@@ -225,6 +226,16 @@ public class SerializerUtilsTest
     buffer.flip();
     String  [] actuals = serializerUtils.readStrings(buffer);
     Assert.assertArrayEquals(strings, actuals);
+  }
+
+  @Test
+  public void testSerializeUTF() throws Exception {
+    Pair<Integer, byte[][]> result = SerializerUtils.serializeUTFs(strings);
+    Assert.assertEquals(4, result.lhs.intValue());
+    Assert.assertEquals(strings.length, result.rhs.length);
+    Assert.assertArrayEquals(strings[0].getBytes("UTF-8"), result.rhs[0]);
+    Assert.assertArrayEquals(strings[1].getBytes("UTF-8"), result.rhs[1]);
+    Assert.assertArrayEquals(strings[2].getBytes("UTF-8"), result.rhs[2]);
   }
 
   @After

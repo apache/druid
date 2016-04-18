@@ -86,12 +86,19 @@ public class SerializerUtils
 
   public static Pair<Integer, byte[][]> serializeUTFs(String... values)
   {
+    if (values == null) {
+      return Pair.of(0, EMPTY_BYTES_ARRAY);
+    }
     int totalLength = 0;
     byte[][] bytes = new byte[values.length][];
 
     for (int idx = 0; idx < values.length; idx++) {
       bytes[idx] = StringUtils.toUtf8(values[idx]);
-      totalLength += bytes[idx].length;
+      if (bytes[idx] == null) {
+        bytes[idx] = EMPTY_BYTES;
+      } else {
+        totalLength += bytes[idx].length;
+      }
     }
     return Pair.of(totalLength, bytes);
   }
@@ -106,7 +113,11 @@ public class SerializerUtils
 
     for (int idx = 0; idx < values.length; idx++) {
       bytes[idx] = values[idx].getCacheKey();
-      totalLength += bytes[idx].length;
+      if (bytes[idx] == null) {
+        bytes[idx] = EMPTY_BYTES;
+      } else {
+        totalLength += bytes[idx].length;
+      }
     }
     return Pair.of(totalLength, bytes);
   }

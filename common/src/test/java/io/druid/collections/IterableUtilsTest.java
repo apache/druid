@@ -44,6 +44,9 @@ public class IterableUtilsTest
 
     Iterable<List<String>> expected = Sets.cartesianProduct(Arrays.<Set<String>>asList(sets));
     Iterable<String[]> result = IterableUtils.cartesian(String.class, sets);
+    for (String[] x : result) {
+      System.out.println("> " + Arrays.toString(x));
+    }
 
     Iterator<List<String>> e = expected.iterator();
     Iterator<String[]> r = result.iterator();
