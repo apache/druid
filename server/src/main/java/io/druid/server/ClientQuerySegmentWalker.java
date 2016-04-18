@@ -21,13 +21,10 @@ package io.druid.server;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
 import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.client.CachingClusteredClient;
-import io.druid.query.CPUTimeMetricQueryRunner;
-import io.druid.query.FinalizeResultsQueryRunner;
+import io.druid.query.FluentQueryRunnerBuilder;
 import io.druid.query.PostProcessingOperator;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -37,12 +34,7 @@ import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.RetryQueryRunner;
 import io.druid.query.RetryQueryRunnerConfig;
 import io.druid.query.SegmentDescriptor;
-import io.druid.query.UnionQueryRunner;
 import org.joda.time.Interval;
-
-import javax.annotation.Nullable;
-import java.util.Map;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  */
@@ -82,53 +74,31 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
     return makeRunner(query);
   }
 
-  private <T> QueryRunner<T> makeRunner(final Query<T> query)
+  private <T> QueryRunner<T> makeRunner(Query<T> query)
   {
-    final QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
-    final QueryRunner<T> baseRunner = CPUTimeMetricQueryRunner.safeBuild(
-        new FinalizeResultsQueryRunner<T>(
-            toolChest.postMergeQueryDecoration(
-                toolChest.mergeResults(
-                    new UnionQueryRunner<T>(
-                        toolChest.preMergeQueryDecoration(
-                            new RetryQueryRunner<T>(
-                                baseClient,
-                                toolChest,
-                                retryConfig,
-                                objectMapper
-                            )
-                        )
-                    )
-                )
-            ),
-            toolChest
-        ),
-        new Function<Query<T>, ServiceMetricEvent.Builder>()
+    QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
+    PostProcessingOperator<T> postProcessing = objectMapper.convertValue(
+        query.<String>getContextValue("postProcessing"),
+        new TypeReference<PostProcessingOperator<T>>()
         {
-          @Nullable
-          @Override
-          public ServiceMetricEvent.Builder apply(Query<T> tQuery)
-          {
-            return toolChest.makeMetricBuilder(tQuery);
-          }
-        },
-        emitter,
-        new AtomicLong(0L),
-        true
+        }
     );
 
-    final Map<String, Object> context = query.getContext();
-    PostProcessingOperator<T> postProcessing = null;
-    if (context != null) {
-      postProcessing = objectMapper.convertValue(
-          context.get("postProcessing"),
-          new TypeReference<PostProcessingOperator<T>>()
-          {
-          }
-      );
-    }
-
-    return postProcessing != null ?
-           postProcessing.postProcess(baseRunner) : baseRunner;
+    return new FluentQueryRunnerBuilder<>(toolChest)
+        .create(
+            new RetryQueryRunner<>(
+                baseClient,
+                toolChest,
+                retryConfig,
+                objectMapper
+            )
+        )
+        .applyPreMergeDecoration()
+        .mergeResults()
+        .applyPostMergeDecoration()
+        .emitCPUTimeMetric(emitter)
+        .postProcess(postProcessing);
   }
+
+
 }
