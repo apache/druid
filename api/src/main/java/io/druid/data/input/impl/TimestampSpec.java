@@ -20,7 +20,6 @@ package io.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
-import com.metamx.common.parsers.ParserUtils;
 import com.metamx.common.parsers.TimestampParser;
 import org.joda.time.DateTime;
 
@@ -30,6 +29,12 @@ import java.util.Map;
  */
 public class TimestampSpec
 {
+  private static class ParseCtx
+  {
+    Object lastTimeObject = null;
+    DateTime lastDateTime = null;
+  }
+
   private static final String DEFAULT_COLUMN = "timestamp";
   private static final String DEFAULT_FORMAT = "auto";
   private static final DateTime DEFAULT_MISSING_VALUE = null;
@@ -39,6 +44,9 @@ public class TimestampSpec
   private final Function<Object, DateTime> timestampConverter;
   // this value should never be set for production data
   private final DateTime missingValue;
+
+  // remember last value parsed
+  private ParseCtx parseCtx = new ParseCtx();
 
   @JsonCreator
   public TimestampSpec(
@@ -52,8 +60,8 @@ public class TimestampSpec
     this.timestampFormat = format == null ? DEFAULT_FORMAT : format;
     this.timestampConverter = TimestampParser.createObjectTimestampParser(timestampFormat);
     this.missingValue = missingValue == null
-                                       ? DEFAULT_MISSING_VALUE
-                                       : missingValue;
+                        ? DEFAULT_MISSING_VALUE
+                        : missingValue;
   }
 
   @JsonProperty("column")
@@ -77,8 +85,19 @@ public class TimestampSpec
   public DateTime extractTimestamp(Map<String, Object> input)
   {
     final Object o = input.get(timestampColumn);
-
-    return o == null ? missingValue : timestampConverter.apply(o);
+    DateTime extracted = missingValue;
+    if (o != null) {
+      if (o.equals(parseCtx.lastTimeObject)) {
+        extracted = parseCtx.lastDateTime;
+      } else {
+        ParseCtx newCtx = new ParseCtx();
+        newCtx.lastTimeObject = o;
+        extracted = timestampConverter.apply(o);
+        newCtx.lastDateTime = extracted;
+        parseCtx = newCtx;
+      }
+    }
+    return extracted;
   }
 
   @Override
