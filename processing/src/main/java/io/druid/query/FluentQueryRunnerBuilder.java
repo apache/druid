@@ -17,21 +17,12 @@
  * under the License.
  */
 
-package io.druid.server;
+package io.druid.query;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.metamx.common.guava.Sequence;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import io.druid.query.CPUTimeMetricQueryRunner;
-import io.druid.query.FinalizeResultsQueryRunner;
-import io.druid.query.PostProcessingOperator;
-import io.druid.query.Query;
-import io.druid.query.QueryRunner;
-import io.druid.query.QueryToolChest;
-import io.druid.query.UnionQueryRunner;
 
 import javax.annotation.Nullable;
 import java.util.Map;
@@ -40,16 +31,14 @@ import java.util.concurrent.atomic.AtomicLong;
 public class FluentQueryRunnerBuilder<T>
 {
   final QueryToolChest<T, Query<T>> toolChest;
-  final Query<T> query;
 
   public FluentQueryRunner create(QueryRunner<T> baseRunner) {
     return new FluentQueryRunner(baseRunner);
   }
 
-  public FluentQueryRunnerBuilder(QueryToolChest<T, Query<T>> toolChest, Query<T> query)
+  public FluentQueryRunnerBuilder(QueryToolChest<T, Query<T>> toolChest)
   {
     this.toolChest = toolChest;
-    this.query = query;
   }
 
   public class FluentQueryRunner implements QueryRunner<T>
@@ -117,15 +106,8 @@ public class FluentQueryRunnerBuilder<T>
       );
     }
 
-    public FluentQueryRunner postProcess(ObjectMapper objectMapper)
+    public FluentQueryRunner postProcess(PostProcessingOperator<T> postProcessing)
     {
-      PostProcessingOperator<T> postProcessing = objectMapper.convertValue(
-          query.<String>getContextValue("postProcessing"),
-          new TypeReference<PostProcessingOperator<T>>()
-          {
-          }
-      );
-
       return from(
           postProcessing != null ?
              postProcessing.postProcess(baseRunner) : baseRunner

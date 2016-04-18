@@ -442,19 +442,17 @@ public class QueryRunnerTestHelper
       Segment adapter
   )
   {
-    return new FinalizeResultsQueryRunner<T>(
-        factory.getToolchest().postMergeQueryDecoration(
-            factory.getToolchest().mergeResults(
-                new UnionQueryRunner<T>(
-                    new BySegmentQueryRunner<T>(
-                        segmentId, adapter.getDataInterval().getStart(),
-                        factory.createRunner(adapter)
-                    )
+    return new FluentQueryRunnerBuilder<T>(factory.getToolchest())
+        .create(
+            new UnionQueryRunner<T>(
+                new BySegmentQueryRunner<T>(
+                    segmentId, adapter.getDataInterval().getStart(),
+                    factory.createRunner(adapter)
                 )
             )
-        ),
-        factory.getToolchest()
-    );
+        )
+        .mergeResults()
+        .applyPostMergeDecoration();
   }
 
   public static <T> QueryRunner<T> makeFilteringQueryRunner(
@@ -462,41 +460,38 @@ public class QueryRunnerTestHelper
       final QueryRunnerFactory<T, Query<T>> factory) {
 
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
-    return new FinalizeResultsQueryRunner(
-        toolChest.postMergeQueryDecoration(
-            toolChest.mergeResults(
-                toolChest.preMergeQueryDecoration(
-                    new QueryRunner<T>()
-                    {
-                      @Override
-                      public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
-                      {
-                        List<TimelineObjectHolder> segments = Lists.newArrayList();
-                        for (Interval interval : query.getIntervals()) {
-                          segments.addAll(timeline.lookup(interval));
-                        }
-                        List<Sequence<T>> sequences = Lists.newArrayList();
-                        for (TimelineObjectHolder<String, Segment> holder : toolChest.filterSegments(query, segments)) {
-                          Segment segment = holder.getObject().getChunk(0).getObject();
-                          Query running = query.withQuerySegmentSpec(
-                              new SpecificSegmentSpec(
-                                  new SegmentDescriptor(
-                                      holder.getInterval(),
-                                      holder.getVersion(),
-                                      0
-                                  )
-                              )
-                          );
-                          sequences.add(factory.createRunner(segment).run(running, responseContext));
-                        }
-                        return new MergeSequence<>(query.getResultOrdering(), Sequences.simple(sequences));
-                      }
-                    }
-                )
-            )
-        ),
-        toolChest
-    );
+    return new FluentQueryRunnerBuilder<T>(toolChest)
+        .create(
+            new QueryRunner<T>()
+            {
+              @Override
+              public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
+              {
+                List<TimelineObjectHolder> segments = Lists.newArrayList();
+                for (Interval interval : query.getIntervals()) {
+                  segments.addAll(timeline.lookup(interval));
+                }
+                List<Sequence<T>> sequences = Lists.newArrayList();
+                for (TimelineObjectHolder<String, Segment> holder : toolChest.filterSegments(query, segments)) {
+                  Segment segment = holder.getObject().getChunk(0).getObject();
+                  Query running = query.withQuerySegmentSpec(
+                      new SpecificSegmentSpec(
+                          new SegmentDescriptor(
+                              holder.getInterval(),
+                              holder.getVersion(),
+                              0
+                          )
+                      )
+                  );
+                  sequences.add(factory.createRunner(segment).run(running, responseContext));
+                }
+                return new MergeSequence<>(query.getResultOrdering(), Sequences.simple(sequences));
+              }
+            }
+        )
+        .applyPreMergeDecoration()
+        .mergeResults()
+        .applyPostMergeDecoration();
   }
 
   public static IntervalChunkingQueryRunnerDecorator NoopIntervalChunkingQueryRunnerDecorator()

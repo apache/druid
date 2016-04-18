@@ -19,10 +19,13 @@
 
 package io.druid.server;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.CachingClusteredClient;
+import io.druid.query.FluentQueryRunnerBuilder;
+import io.druid.query.PostProcessingOperator;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QuerySegmentWalker;
@@ -74,8 +77,14 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
   private <T> QueryRunner<T> makeRunner(Query<T> query)
   {
     QueryToolChest<T, Query<T>> toolChest = warehouse.getToolChest(query);
+    PostProcessingOperator<T> postProcessing = objectMapper.convertValue(
+        query.<String>getContextValue("postProcessing"),
+        new TypeReference<PostProcessingOperator<T>>()
+        {
+        }
+    );
 
-    return new FluentQueryRunnerBuilder<>(toolChest, query)
+    return new FluentQueryRunnerBuilder<>(toolChest)
         .create(
             new RetryQueryRunner<>(
                 baseClient,
@@ -88,7 +97,7 @@ public class ClientQuerySegmentWalker implements QuerySegmentWalker
         .mergeResults()
         .applyPostMergeDecoration()
         .emitCPUTimeMetric(emitter)
-        .postProcess(objectMapper);
+        .postProcess(postProcessing);
   }
 
 
