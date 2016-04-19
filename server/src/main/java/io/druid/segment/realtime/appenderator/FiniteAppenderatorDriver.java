@@ -27,7 +27,9 @@ import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -75,10 +77,13 @@ public class FiniteAppenderatorDriver implements Closeable
   private final int maxRowsPerSegment;
   private final long handoffConditionTimeout;
 
-  // Key = Start of segment intervals. Value = Segment we're currently adding data to.
   // All access to "activeSegments" and "lastSegmentId" must be synchronized on "activeSegments".
-  private final NavigableMap<Long, SegmentIdentifier> activeSegments = new TreeMap<>();
-  private volatile String lastSegmentId = null;
+
+  // sequenceName -> start of segment interval -> segment we're currently adding data to
+  private final Map<String, NavigableMap<Long, SegmentIdentifier>> activeSegments = new TreeMap<>();
+
+  // sequenceName -> most recently allocated segment
+  private final Map<String, String> lastSegmentIds = Maps.newHashMap();
 
   // Notified when segments are dropped.
   private final Object handoffMonitor = new Object();
@@ -136,10 +141,17 @@ public class FiniteAppenderatorDriver implements Closeable
 
     if (metadata != null) {
       synchronized (activeSegments) {
-        for (SegmentIdentifier identifier : metadata.getActiveSegments()) {
-          activeSegments.put(identifier.getInterval().getStartMillis(), identifier);
+        for (Map.Entry<String, List<SegmentIdentifier>> entry : metadata.getActiveSegments().entrySet()) {
+          final String sequenceName = entry.getKey();
+          final TreeMap<Long, SegmentIdentifier> segmentMap = Maps.newTreeMap();
+
+          lastSegmentIds.put(sequenceName, metadata.getLastSegmentIds().get(sequenceName));
+          activeSegments.put(sequenceName, segmentMap);
+
+          for (SegmentIdentifier identifier : entry.getValue()) {
+            segmentMap.put(identifier.getInterval().getStartMillis(), identifier);
+          }
         }
-        lastSegmentId = metadata.getPreviousSegmentId();
       }
 
       return metadata.getCallerMetadata();
@@ -163,6 +175,7 @@ public class FiniteAppenderatorDriver implements Closeable
    * Add a row. Must not be called concurrently from multiple threads.
    *
    * @param row               the row to add
+   * @param sequenceName      sequenceName for this row's segment
    * @param committerSupplier supplier of a committer associated with all data that has been added, including this row
    *
    * @return segment to which this row was added, or null if segment allocator returned null for this row
@@ -171,10 +184,15 @@ public class FiniteAppenderatorDriver implements Closeable
    */
   public SegmentIdentifier add(
       final InputRow row,
+      final String sequenceName,
       final Supplier<Committer> committerSupplier
   ) throws IOException
   {
-    final SegmentIdentifier identifier = getSegment(row.getTimestamp());
+    Preconditions.checkNotNull(row, "row");
+    Preconditions.checkNotNull(sequenceName, "sequenceName");
+    Preconditions.checkNotNull(committerSupplier, "committerSupplier");
+
+    final SegmentIdentifier identifier = getSegment(row.getTimestamp(), sequenceName);
 
     if (identifier != null) {
       try {
@@ -191,24 +209,10 @@ public class FiniteAppenderatorDriver implements Closeable
     return identifier;
   }
 
-  public int getActiveSegmentCount()
-  {
-    synchronized (activeSegments) {
-      return activeSegments.size();
-    }
-  }
-
-  public List<SegmentIdentifier> getActiveSegments()
-  {
-    synchronized (activeSegments) {
-      return ImmutableList.copyOf(activeSegments.values());
-    }
-  }
-
   /**
    * Persist all data indexed through this driver so far. Blocks until complete.
    *
-   * Should be called after all data has been added through {@link #add(InputRow, Supplier)}.
+   * Should be called after all data has been added through {@link #add(InputRow, String, Supplier)}.
    *
    * @param committer committer representing all data that has been added so far
    *
@@ -235,7 +239,7 @@ public class FiniteAppenderatorDriver implements Closeable
    * Publish all data indexed through this driver so far, and waits for it to be handed off. Blocks until complete.
    * Retries forever on transient failures, but may exit early on permanent failures.
    *
-   * Should be called after all data has been added and persisted through {@link #add(InputRow, Supplier)} and
+   * Should be called after all data has been added and persisted through {@link #add(InputRow, String, Supplier)} and
    * {@link #persist(Committer)}.
    *
    * @param publisher publisher to use for this set of segments
@@ -256,7 +260,8 @@ public class FiniteAppenderatorDriver implements Closeable
                             ? System.currentTimeMillis() + handoffConditionTimeout
                             : 0;
 
-      log.info("Awaiting handoff...");
+      log.info("Awaiting handoff of segments: [%s]", Joiner.on(", ").join(appenderator.getSegments()));
+
       synchronized (handoffMonitor) {
         while (!appenderator.getSegments().isEmpty()) {
 
@@ -276,6 +281,8 @@ public class FiniteAppenderatorDriver implements Closeable
         }
       }
 
+      log.info("All segments handed off.");
+
       return new SegmentsAndMetadata(
           segmentsAndMetadata.getSegments(),
           ((FiniteAppenderatorDriverMetadata) segmentsAndMetadata.getCommitMetadata()).getCallerMetadata()
@@ -294,10 +301,16 @@ public class FiniteAppenderatorDriver implements Closeable
     handoffNotifier.close();
   }
 
-  private SegmentIdentifier getActiveSegment(final DateTime timestamp)
+  private SegmentIdentifier getActiveSegment(final DateTime timestamp, final String sequenceName)
   {
     synchronized (activeSegments) {
-      final Map.Entry<Long, SegmentIdentifier> candidateEntry = activeSegments.floorEntry(timestamp.getMillis());
+      final NavigableMap<Long, SegmentIdentifier> activeSegmentsForSequence = activeSegments.get(sequenceName);
+
+      if (activeSegmentsForSequence == null) {
+        return null;
+      }
+
+      final Map.Entry<Long, SegmentIdentifier> candidateEntry = activeSegmentsForSequence.floorEntry(timestamp.getMillis());
       if (candidateEntry != null && candidateEntry.getValue().getInterval().contains(timestamp)) {
         return candidateEntry.getValue();
       } else {
@@ -309,39 +322,50 @@ public class FiniteAppenderatorDriver implements Closeable
   /**
    * Return a segment usable for "timestamp". May return null if no segment can be allocated.
    *
-   * @param timestamp data timestamp
+   * @param timestamp    data timestamp
+   * @param sequenceName sequenceName for potential segment allocation
    *
    * @return identifier, or null
    *
    * @throws IOException if an exception occurs while allocating a segment
    */
-  private SegmentIdentifier getSegment(final DateTime timestamp) throws IOException
+  private SegmentIdentifier getSegment(final DateTime timestamp, final String sequenceName) throws IOException
   {
     synchronized (activeSegments) {
-      final SegmentIdentifier existing = getActiveSegment(timestamp);
+      final SegmentIdentifier existing = getActiveSegment(timestamp, sequenceName);
       if (existing != null) {
         return existing;
       } else {
         // Allocate new segment.
-        final SegmentIdentifier newSegment = segmentAllocator.allocate(timestamp, lastSegmentId);
+        final NavigableMap<Long, SegmentIdentifier> activeSegmentsForSequence = activeSegments.get(sequenceName);
+        final SegmentIdentifier newSegment = segmentAllocator.allocate(
+            timestamp,
+            sequenceName,
+            lastSegmentIds.get(sequenceName)
+        );
 
         if (newSegment != null) {
           final Long key = newSegment.getInterval().getStartMillis();
-          final SegmentIdentifier conflicting = activeSegments.get(key);
-          if (conflicting != null) {
-            throw new ISE(
-                "WTF?! Allocated segment[%s] which conflicts with existing segment[%s].",
-                newSegment,
-                conflicting
-            );
+
+          for (SegmentIdentifier identifier : appenderator.getSegments()) {
+            if (identifier.equals(newSegment)) {
+              throw new ISE(
+                  "WTF?! Allocated segment[%s] which conflicts with existing segment[%s].",
+                  newSegment,
+                  identifier
+              );
+            }
           }
 
-          log.info("New segment[%s].", newSegment);
-          activeSegments.put(key, newSegment);
-          lastSegmentId = newSegment.getIdentifierAsString();
+          log.info("New segment[%s] for sequenceName[%s].", newSegment, sequenceName);
+          if (activeSegmentsForSequence == null) {
+            activeSegments.put(sequenceName, Maps.<Long, SegmentIdentifier>newTreeMap());
+          }
+          activeSegments.get(sequenceName).put(key, newSegment);
+          lastSegmentIds.put(sequenceName, newSegment.getIdentifierAsString());
         } else {
           // Well, we tried.
-          log.warn("Cannot allocate segment for timestamp[%s]. ", timestamp);
+          log.warn("Cannot allocate segment for timestamp[%s], sequenceName[%s]. ", timestamp, sequenceName);
         }
 
         return newSegment;
@@ -368,14 +392,15 @@ public class FiniteAppenderatorDriver implements Closeable
   /**
    * Push and publish all segments to the metadata store.
    *
-   * @param publisher segment publisher
-   * @param committer wrapped committer (from wrapCommitter)
+   * @param publisher        segment publisher
+   * @param wrappedCommitter wrapped committer (from wrapCommitter)
    *
-   * @return published segments and metadata
+   * @return published segments and metadata, or null if segments could not be published due to transaction failure
+   * with commit metadata.
    */
   private SegmentsAndMetadata publishAll(
       final TransactionalSegmentPublisher publisher,
-      final Committer committer
+      final Committer wrappedCommitter
   ) throws InterruptedException
   {
     final List<SegmentIdentifier> theSegments = ImmutableList.copyOf(appenderator.getSegments());
@@ -384,7 +409,7 @@ public class FiniteAppenderatorDriver implements Closeable
     while (true) {
       try {
         log.info("Pushing segments: [%s]", Joiner.on(", ").join(theSegments));
-        final SegmentsAndMetadata segmentsAndMetadata = appenderator.push(theSegments, committer).get();
+        final SegmentsAndMetadata segmentsAndMetadata = appenderator.push(theSegments, wrappedCommitter).get();
 
         // Sanity check
         if (!segmentsToIdentifiers(segmentsAndMetadata.getSegments()).equals(Sets.newHashSet(theSegments))) {
@@ -401,21 +426,25 @@ public class FiniteAppenderatorDriver implements Closeable
             Joiner.on(", ").join(segmentsAndMetadata.getSegments())
         );
 
-        final boolean published = publisher.publishSegments(
-            ImmutableSet.copyOf(segmentsAndMetadata.getSegments()),
-            ((FiniteAppenderatorDriverMetadata) segmentsAndMetadata.getCommitMetadata()).getCallerMetadata()
-        );
-
-        if (published) {
-          log.info("Published segments, awaiting handoff.");
+        if (segmentsAndMetadata.getSegments().isEmpty()) {
+          log.info("Nothing to publish, skipping publish step.");
         } else {
-          log.info("Transaction failure while publishing segments, checking if someone else beat us to it.");
-          if (usedSegmentChecker.findUsedSegments(segmentsToIdentifiers(segmentsAndMetadata.getSegments()))
-                                .equals(Sets.newHashSet(segmentsAndMetadata.getSegments()))) {
-            log.info("Our segments really do exist, awaiting handoff.");
+          final boolean published = publisher.publishSegments(
+              ImmutableSet.copyOf(segmentsAndMetadata.getSegments()),
+              ((FiniteAppenderatorDriverMetadata) segmentsAndMetadata.getCommitMetadata()).getCallerMetadata()
+          );
+
+          if (published) {
+            log.info("Published segments, awaiting handoff.");
           } else {
-            log.warn("Our segments don't exist, giving up.");
-            return null;
+            log.info("Transaction failure while publishing segments, checking if someone else beat us to it.");
+            if (usedSegmentChecker.findUsedSegments(segmentsToIdentifiers(segmentsAndMetadata.getSegments()))
+                                  .equals(Sets.newHashSet(segmentsAndMetadata.getSegments()))) {
+              log.info("Our segments really do exist, awaiting handoff.");
+            } else {
+              log.warn("Our segments don't exist, giving up.");
+              return null;
+            }
           }
         }
 
@@ -491,8 +520,20 @@ public class FiniteAppenderatorDriver implements Closeable
   {
     synchronized (activeSegments) {
       final FiniteAppenderatorDriverMetadata wrappedMetadata = new FiniteAppenderatorDriverMetadata(
-          ImmutableList.copyOf(activeSegments.values()),
-          lastSegmentId,
+          ImmutableMap.copyOf(
+              Maps.transformValues(
+                  activeSegments,
+                  new Function<NavigableMap<Long, SegmentIdentifier>, List<SegmentIdentifier>>()
+                  {
+                    @Override
+                    public List<SegmentIdentifier> apply(NavigableMap<Long, SegmentIdentifier> input)
+                    {
+                      return ImmutableList.copyOf(input.values());
+                    }
+                  }
+              )
+          ),
+          ImmutableMap.copyOf(lastSegmentIds),
           committer.getMetadata()
       );
 

@@ -23,35 +23,36 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
+import java.util.Map;
 
 public class FiniteAppenderatorDriverMetadata
 {
-  private final List<SegmentIdentifier> activeSegments;
-  private final String previousSegmentId;
+  private final Map<String, List<SegmentIdentifier>> activeSegments;
+  private final Map<String, String> lastSegmentIds;
   private final Object callerMetadata;
 
   @JsonCreator
   public FiniteAppenderatorDriverMetadata(
-      @JsonProperty("activeSegments") List<SegmentIdentifier> activeSegments,
-      @JsonProperty("previousSegmentId") String previousSegmentId,
+      @JsonProperty("activeSegments") Map<String, List<SegmentIdentifier>> activeSegments,
+      @JsonProperty("lastSegmentIds") Map<String, String> lastSegmentIds,
       @JsonProperty("callerMetadata") Object callerMetadata
   )
   {
     this.activeSegments = activeSegments;
-    this.previousSegmentId = previousSegmentId;
+    this.lastSegmentIds = lastSegmentIds;
     this.callerMetadata = callerMetadata;
   }
 
   @JsonProperty
-  public List<SegmentIdentifier> getActiveSegments()
+  public Map<String, List<SegmentIdentifier>> getActiveSegments()
   {
     return activeSegments;
   }
 
   @JsonProperty
-  public String getPreviousSegmentId()
+  public Map<String, String> getLastSegmentIds()
   {
-    return previousSegmentId;
+    return lastSegmentIds;
   }
 
   @JsonProperty
@@ -65,7 +66,7 @@ public class FiniteAppenderatorDriverMetadata
   {
     return "FiniteAppenderatorDriverMetadata{" +
            "activeSegments=" + activeSegments +
-           ", previousSegmentId='" + previousSegmentId + '\'' +
+           ", lastSegmentIds=" + lastSegmentIds +
            ", callerMetadata=" + callerMetadata +
            '}';
   }

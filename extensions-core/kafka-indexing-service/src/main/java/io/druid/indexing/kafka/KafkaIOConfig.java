@@ -30,7 +30,7 @@ public class KafkaIOConfig implements IOConfig
 {
   private static final boolean DEFAULT_USE_TRANSACTION = true;
 
-  private final String sequenceName;
+  private final String baseSequenceName;
   private final KafkaPartitions startPartitions;
   private final KafkaPartitions endPartitions;
   private final Map<String, String> consumerProperties;
@@ -38,14 +38,14 @@ public class KafkaIOConfig implements IOConfig
 
   @JsonCreator
   public KafkaIOConfig(
-      @JsonProperty("sequenceName") String sequenceName,
+      @JsonProperty("baseSequenceName") String baseSequenceName,
       @JsonProperty("startPartitions") KafkaPartitions startPartitions,
       @JsonProperty("endPartitions") KafkaPartitions endPartitions,
       @JsonProperty("consumerProperties") Map<String, String> consumerProperties,
       @JsonProperty("useTransaction") Boolean useTransaction
   )
   {
-    this.sequenceName = Preconditions.checkNotNull(sequenceName, "sequenceName");
+    this.baseSequenceName = Preconditions.checkNotNull(baseSequenceName, "baseSequenceName");
     this.startPartitions = Preconditions.checkNotNull(startPartitions, "startPartitions");
     this.endPartitions = Preconditions.checkNotNull(endPartitions, "endPartitions");
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
@@ -72,9 +72,9 @@ public class KafkaIOConfig implements IOConfig
   }
 
   @JsonProperty
-  public String getSequenceName()
+  public String getBaseSequenceName()
   {
-    return sequenceName;
+    return baseSequenceName;
   }
 
   @JsonProperty
@@ -105,7 +105,7 @@ public class KafkaIOConfig implements IOConfig
   public String toString()
   {
     return "KafkaIOConfig{" +
-           "sequenceName='" + sequenceName + '\'' +
+           "baseSequenceName='" + baseSequenceName + '\'' +
            ", startPartitions=" + startPartitions +
            ", endPartitions=" + endPartitions +
            ", consumerProperties=" + consumerProperties +
