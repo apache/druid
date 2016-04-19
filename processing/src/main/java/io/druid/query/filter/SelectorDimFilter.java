@@ -21,19 +21,18 @@ package io.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
 import com.metamx.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.lookup.LookupExtractor;
+import io.druid.segment.filter.DimensionPredicateFilter;
 import io.druid.segment.filter.SelectorFilter;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
@@ -119,7 +118,20 @@ public class SelectorDimFilter implements DimFilter
   @Override
   public Filter toFilter()
   {
-    return new SelectorFilter(dimension, value, extractionFn);
+    if (extractionFn == null) {
+      return new SelectorFilter(dimension, value);
+    } else {
+      final String valueOrNull = Strings.emptyToNull(value);
+      final Predicate<String> predicate = new Predicate<String>()
+      {
+        @Override
+        public boolean apply(String input)
+        {
+          return Objects.equals(valueOrNull, input);
+        }
+      };
+      return new DimensionPredicateFilter(dimension, predicate, extractionFn);
+    }
   }
 
   @JsonProperty
