@@ -29,6 +29,7 @@ import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.js.JavaScriptConfig;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.filter.BoundDimFilter;
@@ -281,10 +282,10 @@ public class BoundFilterTest extends BaseFilterTest
   public void testMatchWithExtractionFn()
   {
     String extractionJsFn = "function(str) { return 'super-' + str; }";
-    ExtractionFn superFn = new JavaScriptExtractionFn(extractionJsFn, false);
+    ExtractionFn superFn = new JavaScriptExtractionFn(extractionJsFn, false, JavaScriptConfig.getDefault());
 
     String nullJsFn = "function(str) { return null; }";
-    ExtractionFn makeNullFn = new JavaScriptExtractionFn(nullJsFn, false);
+    ExtractionFn makeNullFn = new JavaScriptExtractionFn(nullJsFn, false, JavaScriptConfig.getDefault());
 
     assertFilterMatches(
         new BoundDimFilter("dim0", "", "", false, false, false, makeNullFn),

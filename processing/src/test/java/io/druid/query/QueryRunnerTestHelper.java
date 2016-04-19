@@ -29,6 +29,7 @@ import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.granularity.QueryGranularity;
+import io.druid.js.JavaScriptConfig;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -127,7 +128,8 @@ public class QueryRunnerTestHelper
       Arrays.asList("placementish", "index"),
       "function aggregate(current, a, b) { if ((Array.isArray(a) && a.indexOf('a') > -1) || a === 'a') { return current + b; } else { return current; } }",
       JS_RESET_0,
-      JS_COMBINE_A_PLUS_B
+      JS_COMBINE_A_PLUS_B,
+      JavaScriptConfig.getDefault()
   );
   public static final JavaScriptAggregatorFactory jsCountIfTimeGreaterThan = new JavaScriptAggregatorFactory(
       "ntimestamps",
@@ -136,14 +138,16 @@ public class QueryRunnerTestHelper
       new DateTime("2011-04-01T12:00:00Z").getMillis() +
       ") { return current + 1; } else { return current; } }",
       JS_RESET_0,
-      JS_COMBINE_A_PLUS_B
+      JS_COMBINE_A_PLUS_B,
+      JavaScriptConfig.getDefault()
   );
   public static final JavaScriptAggregatorFactory jsPlacementishCount = new JavaScriptAggregatorFactory(
       "pishcount",
       Arrays.asList("placementish", "index"),
       "function aggregate(current, a) { if (Array.isArray(a)) { return current + a.length; } else if (typeof a === 'string') { return current + 1; } else { return current; } }",
       JS_RESET_0,
-      JS_COMBINE_A_PLUS_B
+      JS_COMBINE_A_PLUS_B,
+      JavaScriptConfig.getDefault()
   );
   public static final HyperUniquesAggregatorFactory qualityUniques = new HyperUniquesAggregatorFactory(
       "uniques",
