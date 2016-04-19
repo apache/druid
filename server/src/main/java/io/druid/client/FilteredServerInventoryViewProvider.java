@@ -19,27 +19,16 @@
 
 package io.druid.client;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 
-import java.util.Set;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.inject.Provider;
 
-/**
- */
-public class BrokerSegmentWatcherConfig
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = FilteredBatchServerInventoryViewProvider.class)
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "legacy", value = FilteredSingleServerInventoryViewProvider.class),
+    @JsonSubTypes.Type(name = "batch", value = FilteredBatchServerInventoryViewProvider.class)
+})
+public interface FilteredServerInventoryViewProvider extends Provider<FilteredServerInventoryView>
 {
-  @JsonProperty
-  private Set<String> watchedTiers = null;
-
-  @JsonProperty
-  private Set<String> watchedDataSources = null;
-
-  public Set<String> getWatchedTiers()
-  {
-    return watchedTiers;
-  }
-
-  public Set<String> getWatchedDataSources()
-  {
-    return watchedDataSources;
-  }
 }

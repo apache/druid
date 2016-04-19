@@ -28,6 +28,7 @@ import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
+import io.druid.client.FilteredServerInventoryView;
 import io.druid.client.InventoryView;
 import io.druid.client.TimelineServerView;
 import io.druid.client.selector.ServerSelector;
@@ -63,13 +64,13 @@ public class ClientInfoResource
   private static final String KEY_DIMENSIONS = "dimensions";
   private static final String KEY_METRICS = "metrics";
 
-  private InventoryView serverInventoryView;
+  private FilteredServerInventoryView serverInventoryView;
   private TimelineServerView timelineServerView;
   private SegmentMetadataQueryConfig segmentMetadataQueryConfig;
 
   @Inject
   public ClientInfoResource(
-      InventoryView serverInventoryView,
+      FilteredServerInventoryView serverInventoryView,
       TimelineServerView timelineServerView,
       SegmentMetadataQueryConfig segmentMetadataQueryConfig
   )
