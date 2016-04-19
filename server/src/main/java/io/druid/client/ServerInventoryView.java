@@ -240,6 +240,7 @@ public abstract class ServerInventoryView<InventoryType> implements ServerView, 
             public void run()
             {
               if (CallbackAction.UNREGISTER == fn.apply(entry.getKey())) {
+                segmentCallbackRemoved(entry.getKey());
                 segmentCallbacks.remove(entry.getKey());
               }
             }
@@ -342,4 +343,6 @@ public abstract class ServerInventoryView<InventoryType> implements ServerView, 
       final DruidServer container,
       String inventoryKey
   );
+
+  protected abstract void segmentCallbackRemoved(SegmentCallback callback);
 }
