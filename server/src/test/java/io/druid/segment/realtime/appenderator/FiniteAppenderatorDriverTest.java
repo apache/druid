@@ -85,6 +85,7 @@ public class FiniteAppenderatorDriverTest
       )
   );
 
+  SegmentAllocator allocator;
   AppenderatorTester appenderatorTester;
   FiniteAppenderatorDriver driver;
 
@@ -92,9 +93,10 @@ public class FiniteAppenderatorDriverTest
   public void setUp()
   {
     appenderatorTester = new AppenderatorTester(MAX_ROWS_IN_MEMORY);
+    allocator = new TestSegmentAllocator(DATA_SOURCE, Granularity.HOUR);
     driver = new FiniteAppenderatorDriver(
         appenderatorTester.getAppenderator(),
-        new TestSegmentAllocator(DATA_SOURCE, Granularity.HOUR),
+        allocator,
         new TestSegmentHandoffNotifierFactory(),
         new TestUsedSegmentChecker(),
         OBJECT_MAPPER,
@@ -119,7 +121,7 @@ public class FiniteAppenderatorDriverTest
 
     for (int i = 0; i < ROWS.size(); i++) {
       committerSupplier.setMetadata(i + 1);
-      Assert.assertNotNull(driver.add(ROWS.get(i), committerSupplier));
+      Assert.assertNotNull(driver.add(ROWS.get(i), "dummy", committerSupplier));
     }
 
     final SegmentsAndMetadata segmentsAndMetadata = driver.finish(
@@ -212,6 +214,7 @@ public class FiniteAppenderatorDriverTest
     @Override
     public SegmentIdentifier allocate(
         final DateTime timestamp,
+        final String sequenceName,
         final String previousSegmentId
     ) throws IOException
     {
