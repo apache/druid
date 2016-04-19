@@ -39,6 +39,7 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   private static final Logger log = new Logger(PostgreSQLConnector.class);
   private static final String PAYLOAD_TYPE = "BYTEA";
   private static final String SERIAL_TYPE = "BIGSERIAL";
+  public static final int DEFAULT_STREAMING_RESULT_SIZE = 100;
 
   private final DBI dbi;
 
@@ -69,6 +70,12 @@ public class PostgreSQLConnector extends SQLMetadataConnector
   protected String getSerialType()
   {
     return SERIAL_TYPE;
+  }
+
+  @Override
+  protected int getStreamingFetchSize()
+  {
+    return DEFAULT_STREAMING_RESULT_SIZE;
   }
 
   protected boolean canUpsert(Handle handle) throws SQLException
