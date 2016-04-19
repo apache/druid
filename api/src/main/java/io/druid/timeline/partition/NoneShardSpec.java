@@ -20,14 +20,9 @@
 package io.druid.timeline.partition;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterables;
-import com.metamx.common.ISE;
 import io.druid.data.input.InputRow;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 
 /**
  */
@@ -37,6 +32,12 @@ public class NoneShardSpec implements ShardSpec
 
   @JsonCreator
   public static NoneShardSpec instance() { return INSTANCE; }
+
+  @Deprecated
+  // Use NoneShardSpec.instance() instead
+  public NoneShardSpec(){
+
+  }
 
   @Override
   public <T> PartitionChunk<T> createChunk(T obj)
