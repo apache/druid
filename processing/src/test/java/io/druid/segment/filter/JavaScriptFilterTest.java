@@ -48,7 +48,7 @@ import java.util.List;
 import java.util.Map;
 
 @RunWith(Parameterized.class)
-public class JavascriptFilterTest extends BaseFilterTest
+public class JavaScriptFilterTest extends BaseFilterTest
 {
   private static final String TIMESTAMP_COLUMN = "timestamp";
 
@@ -72,7 +72,7 @@ public class JavascriptFilterTest extends BaseFilterTest
       PARSER.parse(ImmutableMap.<String, Object>of("dim0", "5", "dim1", "abc"))
   );
 
-  public JavascriptFilterTest(
+  public JavaScriptFilterTest(
       String testName,
       IndexBuilder indexBuilder,
       Function<IndexBuilder, Pair<StorageAdapter, Closeable>> finisher,

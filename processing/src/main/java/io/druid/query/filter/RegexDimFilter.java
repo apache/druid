@@ -27,6 +27,7 @@ import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.filter.RegexFilter;
 
 import java.nio.ByteBuffer;
+import java.util.regex.Pattern;
 
 /**
  */
@@ -35,6 +36,8 @@ public class RegexDimFilter implements DimFilter
   private final String dimension;
   private final String pattern;
   private final ExtractionFn extractionFn;
+
+  private final Pattern compiledPattern;
 
   @JsonCreator
   public RegexDimFilter(
@@ -48,6 +51,7 @@ public class RegexDimFilter implements DimFilter
     this.dimension = dimension;
     this.pattern = pattern;
     this.extractionFn = extractionFn;
+    this.compiledPattern = Pattern.compile(pattern);
   }
 
   @JsonProperty
@@ -94,7 +98,7 @@ public class RegexDimFilter implements DimFilter
   @Override
   public Filter toFilter()
   {
-    return new RegexFilter(dimension, pattern, extractionFn);
+    return new RegexFilter(dimension, compiledPattern, extractionFn);
   }
 
   @Override
