@@ -58,6 +58,8 @@ public class TestBroker implements Closeable
   {
     final Properties props = new Properties();
     props.setProperty("zookeeper.connect", zookeeperConnect);
+    props.setProperty("zookeeper.session.timeout.ms", "30000");
+    props.setProperty("zookeeper.connection.timeout.ms", "30000");
     props.setProperty("log.dirs", directory.toString());
     props.setProperty("broker.id", String.valueOf(id));
     props.setProperty("port", String.valueOf(new Random().nextInt(9999) + 10000));

@@ -170,7 +170,8 @@ public class KafkaIndexTaskTest
       new ProducerRecord<byte[], byte[]>("topic0", 0, null, JB("2011", "e", "y", 1.0f)),
       new ProducerRecord<byte[], byte[]>("topic0", 0, null, "unparseable".getBytes()),
       new ProducerRecord<byte[], byte[]>("topic0", 0, null, JB("2013", "f", "y", 1.0f)),
-      new ProducerRecord<byte[], byte[]>("topic0", 1, null, JB("2012", "g", "y", 1.0f))
+      new ProducerRecord<byte[], byte[]>("topic0", 1, null, JB("2012", "g", "y", 1.0f)),
+      new ProducerRecord<byte[], byte[]>("topic0", 1, null, JB("2011", "h", "y", 1.0f))
   );
 
   static {
@@ -375,6 +376,42 @@ public class KafkaIndexTaskTest
     // Check segments in deep storage
     Assert.assertEquals(ImmutableList.of("c"), readSegmentDim1(desc1));
     Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentDim1(desc2));
+  }
+
+  @Test(timeout = 60_000L)
+  public void testRunOnNothing() throws Exception
+  {
+    // Insert data
+    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
+      for (ProducerRecord<byte[], byte[]> record : RECORDS) {
+        kafkaProducer.send(record).get();
+      }
+    }
+
+    final KafkaIndexTask task = createTask(
+        null,
+        new KafkaIOConfig(
+            "sequence0",
+            new KafkaPartitions("topic0", ImmutableMap.of(0, 2L)),
+            new KafkaPartitions("topic0", ImmutableMap.of(0, 2L)),
+            kafkaServer.consumerProperties(),
+            true
+        ),
+        null
+    );
+
+    final ListenableFuture<TaskStatus> future = runTask(task);
+
+    // Wait for task to exit
+    Assert.assertEquals(TaskStatus.Status.SUCCESS, future.get().getStatusCode());
+
+    // Check metrics
+    Assert.assertEquals(0, task.getFireDepartmentMetrics().processed());
+    Assert.assertEquals(0, task.getFireDepartmentMetrics().unparseable());
+    Assert.assertEquals(0, task.getFireDepartmentMetrics().thrownAway());
+
+    // Check published metadata
+    Assert.assertEquals(ImmutableSet.of(), publishedDescriptors());
   }
 
   @Test(timeout = 60_000L)
@@ -714,7 +751,7 @@ public class KafkaIndexTaskTest
         new KafkaIOConfig(
             "sequence0",
             new KafkaPartitions("topic0", ImmutableMap.of(0, 2L, 1, 0L)),
-            new KafkaPartitions("topic0", ImmutableMap.of(0, 5L, 1, 1L)),
+            new KafkaPartitions("topic0", ImmutableMap.of(0, 5L, 1, 2L)),
             kafkaServer.consumerProperties(),
             true
         ),
@@ -734,24 +771,30 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(TaskStatus.Status.SUCCESS, future.get().getStatusCode());
 
     // Check metrics
-    Assert.assertEquals(4, task.getFireDepartmentMetrics().processed());
+    Assert.assertEquals(5, task.getFireDepartmentMetrics().processed());
     Assert.assertEquals(0, task.getFireDepartmentMetrics().unparseable());
     Assert.assertEquals(0, task.getFireDepartmentMetrics().thrownAway());
 
     // Check published segments & metadata
     SegmentDescriptor desc1 = SD(task, "2010/P1D", 0);
     SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
-    SegmentDescriptor desc3 = SD(task, "2012/P1D", 0);
-    Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3), publishedDescriptors());
+    SegmentDescriptor desc3 = SD(task, "2011/P1D", 1);
+    SegmentDescriptor desc4 = SD(task, "2012/P1D", 0);
+    Assert.assertEquals(ImmutableSet.of(desc1, desc2, desc3, desc4), publishedDescriptors());
     Assert.assertEquals(
-        new KafkaDataSourceMetadata(new KafkaPartitions("topic0", ImmutableMap.of(0, 5L, 1, 1L))),
+        new KafkaDataSourceMetadata(new KafkaPartitions("topic0", ImmutableMap.of(0, 5L, 1, 2L))),
         metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
     );
 
     // Check segments in deep storage
     Assert.assertEquals(ImmutableList.of("c"), readSegmentDim1(desc1));
-    Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentDim1(desc2));
-    Assert.assertEquals(ImmutableList.of("g"), readSegmentDim1(desc3));
+    Assert.assertEquals(ImmutableList.of("g"), readSegmentDim1(desc4));
+
+    // Check desc2/desc3 without strong ordering because two partitions are interleaved nondeterministically
+    Assert.assertEquals(
+        ImmutableSet.of(ImmutableList.of("d", "e"), ImmutableList.of("h")),
+        ImmutableSet.of(readSegmentDim1(desc2), readSegmentDim1(desc3))
+    );
   }
 
   @Test(timeout = 60_000L)

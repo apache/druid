@@ -32,22 +32,20 @@ public class ActionBasedSegmentAllocator implements SegmentAllocator
 {
   private final TaskActionClient taskActionClient;
   private final DataSchema dataSchema;
-  private final String sequenceName;
 
   public ActionBasedSegmentAllocator(
       TaskActionClient taskActionClient,
-      DataSchema dataSchema,
-      String sequenceName
+      DataSchema dataSchema
   )
   {
     this.taskActionClient = taskActionClient;
     this.dataSchema = dataSchema;
-    this.sequenceName = sequenceName;
   }
 
   @Override
   public SegmentIdentifier allocate(
       final DateTime timestamp,
+      final String sequenceName,
       final String previousSegmentId
   ) throws IOException
   {
