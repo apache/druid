@@ -36,7 +36,7 @@ public class InDimFilterSerDesrTest
 {
   private static ObjectMapper mapper;
 
-  private final String actualInFilter = "{\"type\":\"in\",\"dimension\":\"dimTest\",\"values\":[\"good\",\"bad\"],\"extractionFn\":null}";
+  private final String actualInFilter = "{\"type\":\"in\",\"dimension\":\"dimTest\",\"values\":[\"bad\",\"good\"],\"extractionFn\":null}";
   @Before
   public void setUp()
   {

@@ -24,24 +24,19 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import com.metamx.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
-import io.druid.query.lookup.LookupExtractionFn;
-import io.druid.query.lookup.LookupExtractor;
 import io.druid.segment.filter.InFilter;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
+import java.util.Set;
 
 public class InDimFilter implements DimFilter
 {
-  private final List<String> values;
+  private final ImmutableSortedSet<String> values;
   private final String dimension;
   private final ExtractionFn extractionFn;
 
@@ -54,7 +49,7 @@ public class InDimFilter implements DimFilter
   {
     Preconditions.checkNotNull(dimension, "dimension can not be null");
     Preconditions.checkArgument(values != null && !values.isEmpty(), "values can not be null or empty");
-    this.values = Lists.newArrayList(
+    this.values = ImmutableSortedSet.copyOf(
         Iterables.transform(
             values, new Function<String, String>()
             {
@@ -78,7 +73,7 @@ public class InDimFilter implements DimFilter
   }
 
   @JsonProperty
-  public List<String> getValues()
+  public Set<String> getValues()
   {
     return values;
   }
@@ -103,7 +98,10 @@ public class InDimFilter implements DimFilter
     }
     byte[] extractionFnBytes = extractionFn == null ? new byte[0] : extractionFn.getCacheKey();
 
-    ByteBuffer filterCacheKey = ByteBuffer.allocate(3 + dimensionBytes.length + valuesBytesSize + extractionFnBytes.length)
+    ByteBuffer filterCacheKey = ByteBuffer.allocate(3
+                                                    + dimensionBytes.length
+                                                    + valuesBytesSize
+                                                    + extractionFnBytes.length)
                                           .put(DimFilterCacheHelper.IN_CACHE_ID)
                                           .put(dimensionBytes)
                                           .put(DimFilterCacheHelper.STRING_SEPARATOR)
@@ -125,7 +123,7 @@ public class InDimFilter implements DimFilter
   @Override
   public Filter toFilter()
   {
-    return new InFilter(dimension, ImmutableSet.copyOf(values), extractionFn);
+    return new InFilter(dimension, values, extractionFn);
   }
 
   @Override
