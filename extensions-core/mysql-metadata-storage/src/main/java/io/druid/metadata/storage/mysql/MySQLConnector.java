@@ -76,6 +76,14 @@ public class MySQLConnector extends SQLMetadataConnector
   }
 
   @Override
+  protected int getStreamingFetchSize()
+  {
+    // this is MySQL's way of indicating you want results streamed back
+    // see http://dev.mysql.com/doc/connector-j/5.1/en/connector-j-reference-implementation-notes.html
+    return Integer.MIN_VALUE;
+  }
+
+  @Override
   public boolean tableExists(Handle handle, String tableName)
   {
     // ensure database defaults to utf8, otherwise bail
