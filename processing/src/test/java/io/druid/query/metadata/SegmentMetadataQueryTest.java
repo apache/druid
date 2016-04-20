@@ -194,7 +194,7 @@ public class SegmentMetadataQueryTest
                 null,
                 null
             )
-        ), mmap1 ? 82863 : 83636,
+        ), mmap1 ? 93744 : 94517,
         1209,
         null,
         null,
@@ -238,7 +238,7 @@ public class SegmentMetadataQueryTest
                 null
             )
         // null_column will be included only for incremental index, which makes a little bigger result than expected
-        ), mmap2 ? 82863 : 83636,
+        ), mmap2 ? 93744 : 94517,
         1209,
         null,
         null,

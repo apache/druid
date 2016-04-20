@@ -28,6 +28,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
@@ -39,6 +40,8 @@ import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.granularity.QueryGranularity;
+import io.druid.math.expr.Expr;
+import io.druid.math.expr.Parser;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
@@ -78,6 +81,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -210,7 +214,33 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       @Override
       public NumericColumnSelector makeMathExpressionSelector(String expression)
       {
-        throw new UnsupportedOperationException("makeMathExpressionSelector");
+        final Expr parsed = Parser.parse(expression);
+
+        final Set<String> required = Sets.newHashSet(Parser.findRequiredBindings(parsed));
+        final Map<String, Supplier<Number>> values = Maps.newHashMapWithExpectedSize(required.size());
+
+        for (final String columnName : required) {
+          values.put(
+              columnName, new Supplier<Number>()
+              {
+                @Override
+                public Number get()
+                {
+                  return in.get().getFloatMetric(columnName);
+                }
+              }
+          );
+        }
+        final Expr.NumericBinding binding = Parser.withSuppliers(values);
+
+        return new NumericColumnSelector()
+        {
+          @Override
+          public Number get()
+          {
+            return parsed.eval(binding);
+          }
+        };
       }
 
       @Override

@@ -31,6 +31,7 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
+import io.druid.segment.column.Column;
 import org.joda.time.DateTime;
 
 import java.util.Arrays;
@@ -72,16 +73,21 @@ public class GroupByQueryRunnerTestHelper
     return new MapBasedRow(ts, theVals);
   }
 
-  public static List<Row> createExpectedRows(String[] columnNames, Iterable<Object[]> values)
+  public static List<Row> createExpectedRows(String[] columnNames, Object[]... values)
   {
+    int timeIndex = Arrays.asList(columnNames).indexOf(Column.TIME_COLUMN_NAME);
+    Preconditions.checkArgument(timeIndex >= 0);
+
     List<Row> expected = Lists.newArrayList();
     for (Object[] value : values) {
-      Preconditions.checkArgument(value.length == columnNames.length + 1);
+      Preconditions.checkArgument(value.length == columnNames.length);
       Map<String, Object> theVals = Maps.newHashMapWithExpectedSize(value.length);
       for (int i = 0; i < columnNames.length; i++) {
-        theVals.put(columnNames[i], value[i + 1]);
+        if (i != timeIndex) {
+          theVals.put(columnNames[i], value[i]);
+        }
       }
-      expected.add(new MapBasedRow(new DateTime(value[0]), theVals));
+      expected.add(new MapBasedRow(new DateTime(value[timeIndex]), theVals));
     }
     return expected;
   }
