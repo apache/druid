@@ -70,6 +70,10 @@
             <artifactId>javax.el</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.apache.zookeeper</groupId>
+            <artifactId>zookeeper</artifactId>
+        </dependency>
+        <dependency>
             <groupId>org.apache.curator</groupId>
             <artifactId>curator-framework</artifactId>
             <!-- We use log4j2 and log4j-1.2-api as a bridge -->
