@@ -55,15 +55,14 @@ public class StringComparators
   public static class LexicographicComparator implements StringComparator
   {
     private static final Ordering<String> ORDERING = Ordering.from(new Comparator<String>()
+    {
+      @Override
+      public int compare(String s, String s2)
       {
-        @Override
-        public int compare(String s, String s2)
-        {
-          return UnsignedBytes.lexicographicalComparator().compare(
-              StringUtils.toUtf8(s),
-              StringUtils.toUtf8(s2));
-        }
-      }).nullsFirst();
+        return UnsignedBytes.lexicographicalComparator().compare(
+                StringUtils.toUtf8(s), StringUtils.toUtf8(s2));
+      }
+    }).nullsFirst();
     
     @Override
     public int compare(String s, String s2)
@@ -305,13 +304,13 @@ public class StringComparators
   public static class StrlenComparator implements StringComparator
   {
     private static final Ordering<String> ORDERING = Ordering.from(new Comparator<String>()
+    {
+      @Override
+      public int compare(String s, String s2)
       {
-        @Override
-        public int compare(String s, String s2)
-        {
-          return Ints.compare(s.length(), s2.length());
-        }
-      }).nullsFirst().compound(Ordering.natural());
+        return Ints.compare(s.length(), s2.length());
+      }
+    }).nullsFirst().compound(Ordering.natural());
     
     @Override
     public int compare(String s, String s2)
