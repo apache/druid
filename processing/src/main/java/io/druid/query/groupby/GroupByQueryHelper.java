@@ -31,6 +31,7 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.incremental.IncrementalIndex;
+import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.incremental.OffheapIncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
@@ -43,7 +44,9 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 public class GroupByQueryHelper
 {
   private static final String CTX_KEY_MAX_RESULTS = "maxResults";
-  public final static String CTX_KEY_SORT_RESULTS = "sortResults";
+  final static String CTX_KEY_SORT_RESULTS = "sortResults";
+  final static String CTX_KEY_LIMIT_DURING_MERGE = "limitDuringMerge";
+  final static String CTX_KEY_DISABLE_LIMIT_DURING_MERGE = "disableLimitDuringMerge";
 
   public static <T> Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> createIndexAccumulatorPair(
       final GroupByQuery query,
@@ -82,32 +85,55 @@ public class GroupByQueryHelper
     );
     final IncrementalIndex index;
 
-    final boolean sortResults = query.getContextValue(CTX_KEY_SORT_RESULTS, true);
+    final int configuredMaxResults = Math.min(
+        query.getContextValue(CTX_KEY_MAX_RESULTS, config.getMaxResults()),
+        config.getMaxResults()
+    );
+    final int limitDuringMerge = query.getContextValue(CTX_KEY_LIMIT_DURING_MERGE, 0);
+    final boolean disableLimitDuringMerge = query.getContextBoolean(CTX_KEY_DISABLE_LIMIT_DURING_MERGE, false);
+    final int actualMaxResults;
+    final boolean sortResults;
+    final IncrementalIndex.OverflowAction overflowAction;
 
-    if (query.getContextValue("useOffheap", false)) {
+    // use granularity truncated min timestamp
+    // since incoming truncated timestamps may precede timeStart
+    final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
+        .withMinTimestamp(granTimeStart)
+        .withQueryGranularity(gran)
+        .withMetrics(aggs.toArray(new AggregatorFactory[aggs.size()]))
+        .build();
+
+
+    if (disableLimitDuringMerge || limitDuringMerge == 0 || Math.abs(limitDuringMerge) > configuredMaxResults) {
+      sortResults = query.getContextBoolean(CTX_KEY_SORT_RESULTS, true);
+      actualMaxResults = configuredMaxResults;
+      overflowAction = IncrementalIndex.OverflowAction.FAIL;
+    } else {
+      sortResults = true;
+      actualMaxResults = Math.abs(limitDuringMerge);
+      overflowAction = limitDuringMerge > 0
+                       ? IncrementalIndex.OverflowAction.DROP_HIGH
+                       : IncrementalIndex.OverflowAction.DROP_LOW;
+    }
+
+    if (query.getContextBoolean("useOffheap", false)) {
       index = new OffheapIncrementalIndex(
-          // use granularity truncated min timestamp
-          // since incoming truncated timestamps may precede timeStart
-          granTimeStart,
-          gran,
-          aggs.toArray(new AggregatorFactory[aggs.size()]),
+          schema,
           false,
           true,
           sortResults,
-          Math.min(query.getContextValue(CTX_KEY_MAX_RESULTS, config.getMaxResults()), config.getMaxResults()),
+          overflowAction,
+          actualMaxResults,
           bufferPool
       );
     } else {
       index = new OnheapIncrementalIndex(
-          // use granularity truncated min timestamp
-          // since incoming truncated timestamps may precede timeStart
-          granTimeStart,
-          gran,
-          aggs.toArray(new AggregatorFactory[aggs.size()]),
+          schema,
           false,
           true,
           sortResults,
-          Math.min(query.getContextValue(CTX_KEY_MAX_RESULTS, config.getMaxResults()), config.getMaxResults())
+          overflowAction,
+          actualMaxResults
       );
     }
 

@@ -19,6 +19,7 @@
 
 package io.druid.segment.incremental;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
@@ -56,6 +57,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   private final List<int[]> indexAndOffsets = new ArrayList<>();
 
   private final ConcurrentMap<TimeAndDims, Integer> facts;
+  private final OverflowAction overflowAction;
 
   private final AtomicInteger indexIncrement = new AtomicInteger(0);
 
@@ -76,6 +78,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       boolean deserializeComplexMetrics,
       boolean reportParseExceptions,
       boolean sortFacts,
+      OverflowAction overflowAction,
       int maxRowCount,
       StupidPool<ByteBuffer> bufferPool
   )
@@ -88,7 +91,22 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       this.facts = new ConcurrentSkipListMap<>(dimsComparator());
     } else {
       this.facts = new ConcurrentHashMap<>();
+
+      Preconditions.checkArgument(
+          overflowAction == OverflowAction.FAIL,
+          "overflowAction[%s] not valid with unsorted facts",
+          overflowAction
+      );
     }
+
+    this.overflowAction = overflowAction;
+
+    // TODO(gianm): Implement other overflowActions
+    Preconditions.checkArgument(
+        overflowAction == OverflowAction.FAIL,
+        "overflowAction[%s] not supported for offheap incremental index",
+        overflowAction
+    );
 
     //check that stupid pool gives buffers that can hold at least one row's aggregators
     ResourceHolder<ByteBuffer> bb = bufferPool.take();
@@ -123,6 +141,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
         deserializeComplexMetrics,
         reportParseExceptions,
         sortFacts,
+        OverflowAction.FAIL,
         maxRowCount,
         bufferPool
     );
@@ -144,6 +163,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
         true,
         true,
         true,
+        OverflowAction.FAIL,
         maxRowCount,
         bufferPool
     );
