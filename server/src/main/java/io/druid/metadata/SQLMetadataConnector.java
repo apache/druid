@@ -98,6 +98,14 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    */
   protected abstract String getSerialType();
 
+  /**
+   * Returns the value that should be passed to statement.setFetchSize to ensure results
+   * are streamed back from the database instead of fetching the entire result set in memory.
+   *
+   * @return optimal fetch size to stream results back
+   */
+  protected abstract int getStreamingFetchSize();
+
   public String getValidationQuery() { return "SELECT 1"; }
 
   public abstract boolean tableExists(Handle handle, final String tableName);
