@@ -20,6 +20,7 @@
 package io.druid.query;
 
 import com.google.common.base.Function;
+import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -29,14 +30,13 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.ISE;
-import com.metamx.common.guava.BaseSequence;
-import com.metamx.common.guava.MergeIterable;
+import com.metamx.common.guava.LazySequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
+import io.druid.collections.OrderedMergeSequence;
 
-import java.util.Arrays;
-import java.util.Iterator;
+import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
@@ -65,14 +65,21 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
   private final Iterable<QueryRunner<T>> queryables;
   private final ListeningExecutorService exec;
   private final QueryWatcher queryWatcher;
+  private final boolean mergeWithOrdering;
 
   public ChainedExecutionQueryRunner(
       ExecutorService exec,
       QueryWatcher queryWatcher,
-      QueryRunner<T>... queryables
+      Iterable<QueryRunner<T>> queryables,
+      boolean mergeWithOrdering
   )
   {
-    this(exec, queryWatcher, Arrays.asList(queryables));
+    // listeningDecorator will leave PrioritizedExecutorService unchanged,
+    // since it already implements ListeningExecutorService
+    this.exec = MoreExecutors.listeningDecorator(exec);
+    this.queryables = Iterables.unmodifiableIterable(queryables);
+    this.queryWatcher = queryWatcher;
+    this.mergeWithOrdering = mergeWithOrdering;
   }
 
   public ChainedExecutionQueryRunner(
@@ -81,11 +88,7 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
       Iterable<QueryRunner<T>> queryables
   )
   {
-    // listeningDecorator will leave PrioritizedExecutorService unchanged,
-    // since it already implements ListeningExecutorService
-    this.exec = MoreExecutors.listeningDecorator(exec);
-    this.queryables = Iterables.unmodifiableIterable(queryables);
-    this.queryWatcher = queryWatcher;
+    this(exec, queryWatcher, queryables, true);
   }
 
   @Override
@@ -94,96 +97,90 @@ public class ChainedExecutionQueryRunner<T> implements QueryRunner<T>
     final int priority = BaseQuery.getContextPriority(query, 0);
     final Ordering ordering = query.getResultOrdering();
 
-    return new BaseSequence<T, Iterator<T>>(
-        new BaseSequence.IteratorMaker<T, Iterator<T>>()
-        {
-          @Override
-          public Iterator<T> make()
-          {
-            // Make it a List<> to materialize all of the values (so that it will submit everything to the executor)
-            ListenableFuture<List<Iterable<T>>> futures = Futures.allAsList(
-                Lists.newArrayList(
-                    Iterables.transform(
-                        queryables,
-                        new Function<QueryRunner<T>, ListenableFuture<Iterable<T>>>()
+    final ListenableFuture<List<Sequence<T>>> futures = Futures.allAsList(
+        Lists.newArrayList(
+            Iterables.transform(
+                queryables,
+                new Function<QueryRunner<T>, ListenableFuture<Sequence<T>>>()
+                {
+                  @Override
+                  public ListenableFuture<Sequence<T>> apply(@Nullable final QueryRunner<T> input)
+                  {
+                    if (input == null) {
+                      throw new ISE("Null queryRunner! Looks to be some segment unmapping action happening");
+                    }
+
+                    return exec.submit(
+                        new AbstractPrioritizedCallable<Sequence<T>>(priority)
                         {
                           @Override
-                          public ListenableFuture<Iterable<T>> apply(final QueryRunner<T> input)
+                          public Sequence<T> call() throws Exception
                           {
-                            if (input == null) {
-                              throw new ISE("Null queryRunner! Looks to be some segment unmapping action happening");
+                            try {
+                              Sequence<T> result = input.run(query, responseContext);
+                              if (result == null) {
+                                throw new ISE("Got a null result! Segments are missing!");
+                              }
+                              return result;
                             }
-
-                            return exec.submit(
-                                new AbstractPrioritizedCallable<Iterable<T>>(priority)
-                                {
-                                  @Override
-                                  public Iterable<T> call() throws Exception
-                                  {
-                                    try {
-                                      Sequence<T> result = input.run(query, responseContext);
-                                      if (result == null) {
-                                        throw new ISE("Got a null result! Segments are missing!");
-                                      }
-
-                                      List<T> retVal = Sequences.toList(result, Lists.<T>newArrayList());
-                                      if (retVal == null) {
-                                        throw new ISE("Got a null list of results! WTF?!");
-                                      }
-
-                                      return retVal;
-                                    }
-                                    catch (QueryInterruptedException e) {
-                                      throw Throwables.propagate(e);
-                                    }
-                                    catch (Exception e) {
-                                      log.error(e, "Exception with one of the sequences!");
-                                      throw Throwables.propagate(e);
-                                    }
-                                  }
-                                }
-                            );
+                            catch (QueryInterruptedException e) {
+                              throw Throwables.propagate(e);
+                            }
+                            catch (Exception e) {
+                              log.error(e, "Exception with one of the sequences!");
+                              throw Throwables.propagate(e);
+                            }
                           }
                         }
-                    )
-                )
-            );
+                    );
+                  }
+                }
+            )
+        )
+    );
 
-            queryWatcher.registerQuery(query, futures);
+    queryWatcher.registerQuery(query, futures);
 
-            try {
-              final Number timeout = query.getContextValue(QueryContextKeys.TIMEOUT, (Number) null);
-              return new MergeIterable<>(
-                  ordering.nullsFirst(),
-                  timeout == null ?
-                  futures.get() :
-                  futures.get(timeout.longValue(), TimeUnit.MILLISECONDS)
-              ).iterator();
-            }
-            catch (InterruptedException e) {
-              log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
-              futures.cancel(true);
-              throw new QueryInterruptedException(e);
-            }
-            catch (CancellationException e) {
-              throw new QueryInterruptedException(e);
-            }
-            catch (TimeoutException e) {
-              log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
-              futures.cancel(true);
-              throw new QueryInterruptedException(e);
-            }
-            catch (ExecutionException e) {
-              throw Throwables.propagate(e.getCause());
-            }
-          }
-
+    return new LazySequence<>(
+        new Supplier<Sequence<T>>()
+        {
           @Override
-          public void cleanup(Iterator<T> tIterator)
+          public Sequence<T> get()
           {
-
+            Iterable<Sequence<T>> iterables = execute(query, futures);
+            if (mergeWithOrdering) {
+              return new OrderedMergeSequence<>(ordering.nullsFirst(), Sequences.simple(iterables));
+            }
+            return Sequences.concat(iterables);
           }
         }
     );
+  }
+
+  private Iterable<Sequence<T>> execute(Query<T> query, ListenableFuture<List<Sequence<T>>> futures)
+  {
+    try {
+      final Number timeout = query.getContextValue(QueryContextKeys.TIMEOUT, (Number) null);
+      return timeout == null ?
+             futures.get() :
+             futures.get(timeout.longValue(), TimeUnit.MILLISECONDS);
+
+    }
+    catch (InterruptedException e) {
+      log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
+      futures.cancel(true);
+      throw new QueryInterruptedException(e);
+    }
+    catch (CancellationException e) {
+      throw new QueryInterruptedException(e);
+    }
+    catch (TimeoutException e) {
+      log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
+      futures.cancel(true);
+      throw new QueryInterruptedException(e);
+    }
+    catch (ExecutionException e) {
+      throw Throwables.propagate(e.getCause());
+    }
   }
 }
