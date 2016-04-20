@@ -154,7 +154,7 @@ public class SelectQueryRunnerTest
 
     PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
     List<Result<SelectResultValue>> expectedResults = toExpected(
-        toEvents(new String[]{EventHolder.timestampKey + ":TIME"}, V_0112_0114),
+        toFullEvents(V_0112_0114),
         offset.startOffset(),
         offset.threshold()
     );
@@ -585,6 +585,18 @@ public class SelectQueryRunnerTest
     );
   }
 
+  private List<List<Map<String, Object>>> toFullEvents(final String[]... valueSet)
+  {
+    return toEvents(new String[]{EventHolder.timestampKey + ":TIME",
+                                 QueryRunnerTestHelper.marketDimension + ":STRING",
+                                 QueryRunnerTestHelper.qualityDimension + ":STRING",
+                                 QueryRunnerTestHelper.placementDimension + ":STRING",
+                                 QueryRunnerTestHelper.placementishDimension + ":STRINGS",
+                                 QueryRunnerTestHelper.indexMetric + ":FLOAT",
+                                 QueryRunnerTestHelper.partialNullDimension + ":STRING"},
+                    valueSet);
+  }
+
   private List<List<Map<String, Object>>> toEvents(final String[] dimSpecs, final String[]... valueSet)
   {
     List<List<Map<String, Object>>> events = Lists.newArrayList();
@@ -600,17 +612,19 @@ public class SelectQueryRunnerTest
                       Map<String, Object> event = Maps.newHashMap();
                       String[] values = input.split("\\t");
                       for (int i = 0; i < dimSpecs.length; i++) {
-                        if (dimSpecs[i] == null || i >= dimSpecs.length) {
+                        if (dimSpecs[i] == null || i >= dimSpecs.length || i >= values.length) {
                           continue;
                         }
                         String[] specs = dimSpecs[i].split(":");
                         event.put(
                             specs[0],
+                            specs.length == 1 || specs[1].equals("STRING") ? values[i] :
                             specs[1].equals("TIME") ? new DateTime(values[i]) :
                             specs[1].equals("FLOAT") ? Float.valueOf(values[i]) :
                             specs[1].equals("DOUBLE") ? Double.valueOf(values[i]) :
                             specs[1].equals("LONG") ? Long.valueOf(values[i]) :
                             specs[1].equals("NULL") ? null :
+                            specs[1].equals("STRINGS") ? Arrays.asList(values[i].split("\u0001")) :
                             values[i]
                         );
                       }
