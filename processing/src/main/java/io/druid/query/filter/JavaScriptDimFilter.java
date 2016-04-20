@@ -22,9 +22,13 @@ package io.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.metamx.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.filter.JavaScriptFilter;
+import org.mozilla.javascript.Context;
+import org.mozilla.javascript.Function;
+import org.mozilla.javascript.ScriptableObject;
 
 import java.nio.ByteBuffer;
 
@@ -33,6 +37,8 @@ public class JavaScriptDimFilter implements DimFilter
   private final String dimension;
   private final String function;
   private final ExtractionFn extractionFn;
+
+  private final JavaScriptPredicate predicate;
 
   @JsonCreator
   public JavaScriptDimFilter(
@@ -46,6 +52,7 @@ public class JavaScriptDimFilter implements DimFilter
     this.dimension = dimension;
     this.function = function;
     this.extractionFn = extractionFn;
+    this.predicate = new JavaScriptPredicate(function, extractionFn);
   }
 
   @JsonProperty
@@ -92,7 +99,7 @@ public class JavaScriptDimFilter implements DimFilter
   @Override
   public Filter toFilter()
   {
-    return new JavaScriptFilter(dimension, function, extractionFn);
+    return new JavaScriptFilter(dimension, predicate);
   }
 
   @Override
@@ -134,5 +141,77 @@ public class JavaScriptDimFilter implements DimFilter
     result = 31 * result + function.hashCode();
     result = 31 * result + (extractionFn != null ? extractionFn.hashCode() : 0);
     return result;
+  }
+
+  public static class JavaScriptPredicate implements Predicate<String>
+  {
+    final ScriptableObject scope;
+    final Function fnApply;
+    final String script;
+    final ExtractionFn extractionFn;
+
+    public JavaScriptPredicate(final String script, final ExtractionFn extractionFn)
+    {
+      Preconditions.checkNotNull(script, "script must not be null");
+      this.script = script;
+      this.extractionFn = extractionFn;
+
+      final Context cx = Context.enter();
+      try {
+        cx.setOptimizationLevel(9);
+        scope = cx.initStandardObjects();
+
+        fnApply = cx.compileFunction(scope, script, "script", 1, null);
+      }
+      finally {
+        Context.exit();
+      }
+    }
+
+    @Override
+    public boolean apply(final String input)
+    {
+      // one and only one context per thread
+      final Context cx = Context.enter();
+      try {
+        return applyInContext(cx, input);
+      }
+      finally {
+        Context.exit();
+      }
+    }
+
+    public boolean applyInContext(Context cx, String input)
+    {
+      if (extractionFn != null) {
+        input = extractionFn.apply(input);
+      }
+      return Context.toBoolean(fnApply.call(cx, scope, scope, new String[]{input}));
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      JavaScriptPredicate that = (JavaScriptPredicate) o;
+
+      if (!script.equals(that.script)) {
+        return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return script.hashCode();
+    }
   }
 }
