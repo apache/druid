@@ -25,6 +25,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.metamx.common.StringUtils;
+import io.druid.segment.column.ValueAccessor;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.ScriptableObject;
@@ -103,6 +104,9 @@ public class JavaScriptExtractionFn extends AbstractExtractionFn
   @Override
   public String apply(Object value)
   {
+    if (accessor == ValueAccessor.STRING) {
+      value = Strings.emptyToNull(accessor.getString(value));
+    }
     return Strings.emptyToNull(fn.apply(value));
   }
 

@@ -27,7 +27,9 @@ public interface ValueAccessor
 
   long getLong(Object value);
 
-  String getString(Object value, boolean nullToEmpty);
+  float getFloat(Object value);
+
+  String getString(Object value);
 
   Object getObject(Object value);
 
@@ -41,9 +43,15 @@ public interface ValueAccessor
     }
 
     @Override
-    public String getString(Object value, boolean nullToEmpty)
+    public float getFloat(Object value)
     {
-      throw new UnsupportedOperationException("getString");
+      throw new UnsupportedOperationException("getFloat");
+    }
+
+    @Override
+    public String getString(Object value)
+    {
+      return value == null ? null : String.valueOf(value);
     }
 
     @Override
@@ -68,9 +76,9 @@ public interface ValueAccessor
     }
 
     @Override
-    public String getString(Object value, boolean nullToEmpty)
+    public float getFloat(Object value)
     {
-      return (String) value;
+      return Float.valueOf((String) value);
     }
   };
 
@@ -87,11 +95,20 @@ public interface ValueAccessor
     {
       return (Long) value;
     }
+  };
+
+  ValueAccessor FLOAT = new AbstractValueAccessor()
+  {
+    @Override
+    public ValueType type()
+    {
+      return ValueType.FLOAT;
+    }
 
     @Override
-    public String getString(Object value, boolean nullToEmpty)
+    public float getFloat(Object value)
     {
-      return value != null ? String.valueOf(value) : nullToEmpty ? "" : null;
+      return (Float) value;
     }
   };
 

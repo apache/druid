@@ -22,7 +22,7 @@ package io.druid.query.extraction;
 public abstract class DimExtractionFn extends AbstractExtractionFn
 {
   public String apply(Object value) {
-    return apply(accessor.getString(value, false));
+    return apply(accessor.getString(value));
   }
 
   protected abstract String apply(String value);

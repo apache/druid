@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.segment.column.ValueAccessor;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
@@ -59,21 +60,27 @@ public class JavaScriptExtractionFnTest
   {
     String utcHour = "function(t) {\nreturn 'Second ' + Math.floor((t % 60000) / 1000);\n}";
     final long millis = new DateTime("2015-01-02T13:00:59.999Z").getMillis();
-    Assert.assertEquals("Second 59" , new JavaScriptExtractionFn(utcHour, false).apply(millis));
+    JavaScriptExtractionFn extractionFn = new JavaScriptExtractionFn(utcHour, false);
+    extractionFn.init(ValueAccessor.LONG);
+    Assert.assertEquals("Second 59", extractionFn.apply(millis));
   }
 
   @Test
   public void testLongs() throws Exception
   {
     String typeOf = "function(x) {\nreturn typeof x\n}";
-    Assert.assertEquals("number", new JavaScriptExtractionFn(typeOf, false).apply(1234L));
+    JavaScriptExtractionFn extractionFn = new JavaScriptExtractionFn(typeOf, false);
+    extractionFn.init(ValueAccessor.LONG);
+    Assert.assertEquals("number", extractionFn.apply(1234L));
   }
 
   @Test
   public void testFloats() throws Exception
   {
     String typeOf = "function(x) {\nreturn typeof x\n}";
-    Assert.assertEquals("number", new JavaScriptExtractionFn(typeOf, false).apply(1234.0));
+    JavaScriptExtractionFn extractionFn = new JavaScriptExtractionFn(typeOf, false);
+    extractionFn.init(ValueAccessor.FLOAT);
+    Assert.assertEquals("number", extractionFn.apply(1234.0));
   }
 
   @Test
@@ -110,12 +117,17 @@ public class JavaScriptExtractionFnTest
     String function = "function(x) { if (x == null) { return 'yes'; } else { return 'no' } }";
     ExtractionFn extractionFn = new JavaScriptExtractionFn(function, false);
 
-    Assert.assertEquals("yes", extractionFn.apply((String) null));
-    Assert.assertEquals("yes", extractionFn.apply((Object) null));
+    extractionFn.init(ValueAccessor.STRING);
+    Assert.assertEquals("yes", extractionFn.apply(null));
     Assert.assertEquals("yes", extractionFn.apply(""));
     Assert.assertEquals("no", extractionFn.apply("abc"));
+
+    extractionFn.init(ValueAccessor.COMPLEX);
     Assert.assertEquals("no", extractionFn.apply(new Object()));
-    Assert.assertEquals("no", extractionFn.apply(1));
+    Assert.assertEquals("yes", extractionFn.apply(null));
+
+    extractionFn.init(ValueAccessor.LONG);
+    Assert.assertEquals("no", extractionFn.apply(1L));
   }
 
   @Test

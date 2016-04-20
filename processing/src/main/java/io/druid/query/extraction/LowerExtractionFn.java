@@ -54,7 +54,7 @@ public class LowerExtractionFn extends AbstractExtractionFn
   @Override
   public String apply(Object key)
   {
-    final String value = accessor.getString(key, false);
+    final String value = accessor.getString(key);
     return Strings.isNullOrEmpty(value) ? null : value.toLowerCase(locale);
   }
 
