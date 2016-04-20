@@ -630,4 +630,31 @@ interface Function
       }
     }
   }
+
+  class CaseWhenFunc implements Function
+  {
+    @Override
+    public String name()
+    {
+      return "caseWhen";
+    }
+
+    @Override
+    public Number apply(List<Expr> args, Map<String, Number> bindings)
+    {
+      if (args.size() < 3) {
+        throw new RuntimeException("function 'caseWhen' needs at least 3 arguments");
+      }
+      for (int i = 0; i < args.size() - 1; i += 2) {
+        Number x = args.get(i).eval(bindings);
+        if (x instanceof Long && x.longValue() > 0 || x.doubleValue() > 0) {
+          return args.get(i + 1).eval(bindings);
+        }
+      }
+      if (args.size() % 2 != 0) {
+        return args.get(args.size() - 1).eval(bindings);
+      }
+      return 0;
+    }
+  }
 }

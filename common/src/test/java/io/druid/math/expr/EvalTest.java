@@ -65,6 +65,26 @@ public class EvalTest
     Assert.assertEquals(2.0, Parser.parse("sqrt(4.0)").eval(bindings).doubleValue(), 0.0001);
     Assert.assertEquals(2.0, Parser.parse("if(1.0, 2.0, 3.0)").eval(bindings).doubleValue(), 0.0001);
     Assert.assertEquals(3.0, Parser.parse("if(0.0, 2.0, 3.0)").eval(bindings).doubleValue(), 0.0001);
+
+    // exists
+    Assert.assertEquals(
+        3.0,
+        Parser.parse("CASE x - 1 WHEN 0.0 THEN 2.0 WHEN 1.0 THEN 3.0 END").eval(bindings).doubleValue(),
+        0.0001
+    );
+
+    // not-exists (implicit 0)
+    Assert.assertEquals(
+        0.0,
+        Parser.parse("CASE x + 10 WHEN 0.0 THEN 2.0 WHEN 1.0 THEN 3.0 END").eval(bindings).doubleValue(),
+        0.0001
+    );
+    // not-exists (explicit)
+    Assert.assertEquals(
+        100.0,
+        Parser.parse("CASE x + 10 WHEN 0.0 THEN 2.0 WHEN 1.0 THEN 3.0 ELSE 100.0 END").eval(bindings).doubleValue(),
+        0.0001
+    );
   }
 
   @Test
@@ -95,7 +115,7 @@ public class EvalTest
     Assert.assertEquals(9223372036854775806L, Parser.parse("4611686018427387903 * 2").eval(bindings).longValue());
     Assert.assertEquals(4611686018427387903L, Parser.parse("9223372036854775806 / 2").eval(bindings).longValue());
     Assert.assertEquals(7L, Parser.parse("9223372036854775807 % 9223372036854775800").eval(bindings).longValue());
-    Assert.assertEquals( 9223372030926249001L, Parser.parse("3037000499 ^ 2").eval(bindings).longValue());
+    Assert.assertEquals(9223372030926249001L, Parser.parse("3037000499 ^ 2").eval(bindings).longValue());
     Assert.assertEquals(-9223372036854775807L, Parser.parse("-9223372036854775807").eval(bindings).longValue());
 
     Assert.assertTrue(Parser.parse("!-9223372036854775807").eval(bindings).longValue() > 0);
@@ -103,7 +123,33 @@ public class EvalTest
     Assert.assertFalse(Parser.parse("!9223372036854775807").eval(bindings).longValue() > 0);
 
     Assert.assertEquals(3037000499L, Parser.parse("sqrt(9223372036854775807)").eval(bindings).longValue());
-    Assert.assertEquals(9223372036854775807L, Parser.parse("if(9223372036854775807, 9223372036854775807, 9223372036854775806)").eval(bindings).longValue());
-    Assert.assertEquals(9223372036854775806L, Parser.parse("if(0, 9223372036854775807, 9223372036854775806)").eval(bindings).longValue());
+    Assert.assertEquals(9223372036854775807L,
+                        Parser.parse("if(9223372036854775807, 9223372036854775807, 9223372036854775806)")
+                              .eval(bindings)
+                              .longValue()
+    );
+    Assert.assertEquals(
+        9223372036854775806L,
+        Parser.parse("if(0, 9223372036854775807, 9223372036854775806)").eval(bindings).longValue()
+    );
+
+    // exists
+    Assert.assertEquals(
+        3L,
+        Parser.parse("CASE x - 1 WHEN 9223372036854775807 THEN 2 WHEN 9223372036854775806 THEN 3 END")
+              .eval(bindings)
+              .longValue()
+    );
+
+    // not-exists (implicit 0)
+    Assert.assertEquals(
+        0L,
+        Parser.parse("CASE x + 10 WHEN 0 THEN 2 WHEN 1 THEN 3 END").eval(bindings).longValue()
+    );
+    // not-exists (explicit)
+    Assert.assertEquals(
+        100L,
+        Parser.parse("CASE x + 10 WHEN 0 THEN 2 WHEN 1 THEN 3 ELSE 100 END").eval(bindings).longValue()
+    );
   }
 }

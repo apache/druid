@@ -259,8 +259,8 @@ public class ParserTest
     String expected = "(sqrt [x])";
     Assert.assertEquals(expected, actual);
 
-    actual = Parser.parse("if(cond,then,else)").toString();
-    expected = "(if [cond, then, else])";
+    actual = Parser.parse("if(cond,x,y)").toString();
+    expected = "(if [cond, x, y])";
     Assert.assertEquals(expected, actual);
   }
 }
