@@ -81,110 +81,15 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
   }
 
   @Override
-  public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
-  {
-    boolean isSingleThreaded = query.getContextValue(CTX_KEY_IS_SINGLE_THREADED, configSupplier.get().isSingleThreaded());
-    if (isSingleThreaded) {
-      return runSingleThreaded(query, responseContext);
-    } else {
-      return runParallel(query, responseContext);
-    }
-  }
-
-  private Sequence<T> runSingleThreaded(final Query<T> queryParam, final Map<String, Object> responseContext)
-  {
-    return new ConcatQueryRunner<>(
-        Sequences.map(
-            Sequences.simple(queryables),
-            new Function<QueryRunner<T>, QueryRunner<T>>()
-            {
-              @Override
-              public QueryRunner<T> apply(final QueryRunner<T> input)
-              {
-                return new QueryRunner<T>()
-                {
-                  @Override
-                  public Sequence<T> run(final Query<T> query, final Map<String, Object> responseContext)
-                  {
-                    final Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> indexAccumulatorPair = GroupByQueryHelper
-                        .createIndexAccumulatorPair(
-                            (GroupByQuery) query,
-                            configSupplier.get(),
-                            bufferPool
-                        );
-                    final Pair<Queue, Accumulator<Queue, T>> bySegmentAccumulatorPair = GroupByQueryHelper.createBySegmentAccumulatorPair();
-                    final int priority = BaseQuery.getContextPriority(query, 0);
-                    final boolean bySegment = BaseQuery.getContextBySegment(query, false);
-
-                    final ListenableFuture<Void> future = exec.submit(
-                        new AbstractPrioritizedCallable<Void>(priority)
-                        {
-                          @Override
-                          public Void call() throws Exception
-                          {
-                            if (bySegment) {
-                              input.run(query, responseContext)
-                                   .accumulate(
-                                       bySegmentAccumulatorPair.lhs,
-                                       bySegmentAccumulatorPair.rhs
-                                   );
-                            } else {
-                              input.run(query, responseContext)
-                                   .accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
-                            }
-
-                            return null;
-                          }
-                        }
-                    );
-                    try {
-                      queryWatcher.registerQuery(query, future);
-                      final Number timeout = query.getContextValue(QueryContextKeys.TIMEOUT, (Number) null);
-                      if (timeout == null) {
-                        future.get();
-                      } else {
-                        future.get(timeout.longValue(), TimeUnit.MILLISECONDS);
-                      }
-                    }
-                    catch (InterruptedException e) {
-                      log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
-                      future.cancel(true);
-                      throw new QueryInterruptedException(e);
-                    }
-                    catch (CancellationException e) {
-                      throw new QueryInterruptedException(e);
-                    }
-                    catch (TimeoutException e) {
-                      log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
-                      future.cancel(true);
-                      throw new QueryInterruptedException(e);
-                    }
-                    catch (ExecutionException e) {
-                      throw Throwables.propagate(e.getCause());
-                    }
-
-                    if (bySegment) {
-                      return Sequences.simple(bySegmentAccumulatorPair.lhs);
-                    }
-
-                    return Sequences.simple(
-                        indexAccumulatorPair.lhs.iterableWithPostAggregations(
-                            null,
-                            query.isDescending()
-                        )
-                    );
-                  }
-                };
-              }
-            }
-        )
-    ).run(queryParam, responseContext);
-  }
-
-
-  private Sequence<T> runParallel(final Query<T> queryParam, final Map<String, Object> responseContext)
+  public Sequence<T> run(final Query<T> queryParam, final Map<String, Object> responseContext)
   {
     final GroupByQuery query = (GroupByQuery) queryParam;
+
+    final boolean isSingleThreaded = query.getContextValue(
+        CTX_KEY_IS_SINGLE_THREADED,
+        configSupplier.get().isSingleThreaded()
+    );
+
     final Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> indexAccumulatorPair = GroupByQueryHelper.createIndexAccumulatorPair(
         query,
         configSupplier.get(),
@@ -207,7 +112,7 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
                       throw new ISE("Null queryRunner! Looks to be some segment unmapping action happening");
                     }
 
-                    return exec.submit(
+                    ListenableFuture<Void> future = exec.submit(
                         new AbstractPrioritizedCallable<Void>(priority)
                         {
                           @Override
@@ -234,41 +139,20 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
                           }
                         }
                     );
+
+                    if (isSingleThreaded) {
+                      waitForFutureCompletion(query, future, indexAccumulatorPair.lhs);
+                    }
+
+                    return future;
                   }
                 }
             )
         )
     );
 
-    // Let the runners complete
-    try {
-      queryWatcher.registerQuery(query, futures);
-      final Number timeout = query.getContextValue(QueryContextKeys.TIMEOUT, (Number) null);
-      if (timeout == null) {
-        futures.get();
-      } else {
-        futures.get(timeout.longValue(), TimeUnit.MILLISECONDS);
-      }
-    }
-    catch (InterruptedException e) {
-      log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
-      futures.cancel(true);
-      indexAccumulatorPair.lhs.close();
-      throw new QueryInterruptedException(e);
-    }
-    catch (CancellationException e) {
-      indexAccumulatorPair.lhs.close();
-      throw new QueryInterruptedException(e);
-    }
-    catch (TimeoutException e) {
-      indexAccumulatorPair.lhs.close();
-      log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
-      futures.cancel(true);
-      throw new QueryInterruptedException(e);
-    }
-    catch (ExecutionException e) {
-      indexAccumulatorPair.lhs.close();
-      throw Throwables.propagate(e.getCause());
+    if (!isSingleThreaded) {
+      waitForFutureCompletion(query, futures, indexAccumulatorPair.lhs);
     }
 
     if (bySegment) {
@@ -290,5 +174,42 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
             )
         ), indexAccumulatorPair.lhs
     );
+  }
+
+  private void waitForFutureCompletion(
+      GroupByQuery query,
+      ListenableFuture<?> future,
+      IncrementalIndex<?> closeOnFailure
+  )
+  {
+    try {
+      queryWatcher.registerQuery(query, future);
+      final Number timeout = query.getContextValue(QueryContextKeys.TIMEOUT, (Number) null);
+      if (timeout == null) {
+        future.get();
+      } else {
+        future.get(timeout.longValue(), TimeUnit.MILLISECONDS);
+      }
+    }
+    catch (InterruptedException e) {
+      log.warn(e, "Query interrupted, cancelling pending results, query id [%s]", query.getId());
+      future.cancel(true);
+      closeOnFailure.close();
+      throw new QueryInterruptedException(e);
+    }
+    catch (CancellationException e) {
+      closeOnFailure.close();
+      throw new QueryInterruptedException(e);
+    }
+    catch (TimeoutException e) {
+      closeOnFailure.close();
+      log.info("Query timeout, cancelling pending results for query id [%s]", query.getId());
+      future.cancel(true);
+      throw new QueryInterruptedException(e);
+    }
+    catch (ExecutionException e) {
+      closeOnFailure.close();
+      throw Throwables.propagate(e.getCause());
+    }
   }
 }
