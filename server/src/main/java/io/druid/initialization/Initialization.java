@@ -42,6 +42,7 @@ import io.druid.guice.ExtensionsConfig;
 import io.druid.guice.FirehoseModule;
 import io.druid.guice.IndexingServiceDiscoveryModule;
 import io.druid.guice.JacksonConfigManagerModule;
+import io.druid.guice.JavaScriptModule;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.LocalDataStorageDruidModule;
 import io.druid.guice.MetadataConfigModule;
@@ -342,6 +343,7 @@ public class Initialization
         new LocalDataStorageDruidModule(),
         new FirehoseModule(),
         new ParsersModule(),
+        new JavaScriptModule(),
         new StartupLoggingModule()
     );
 

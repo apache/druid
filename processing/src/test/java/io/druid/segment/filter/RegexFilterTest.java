@@ -29,6 +29,7 @@ import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
+import io.druid.js.JavaScriptConfig;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.filter.DimFilter;
@@ -133,7 +134,7 @@ public class RegexFilterTest extends BaseFilterTest
   public void testRegexWithExtractionFn()
   {
     String nullJsFn = "function(str) { if (str === null) { return 'NOT_NULL_ANYMORE'; } else { return str;} }";
-    ExtractionFn changeNullFn = new JavaScriptExtractionFn(nullJsFn, false);
+    ExtractionFn changeNullFn = new JavaScriptExtractionFn(nullJsFn, false, JavaScriptConfig.getDefault());
 
     assertFilterMatches(new RegexDimFilter("dim1", ".*ANYMORE", changeNullFn), ImmutableList.of("0"));
     assertFilterMatches(new RegexDimFilter("dim1", "ab.*", changeNullFn), ImmutableList.<String>of("4", "5"));

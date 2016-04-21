@@ -19,13 +19,20 @@
 
 package io.druid.data.input.impl;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
+import com.metamx.common.parsers.Parser;
 import io.druid.TestObjectMapper;
+import io.druid.js.JavaScriptConfig;
 import org.junit.Assert;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Map;
 
 /**
  */
@@ -33,13 +40,23 @@ public class JavaScriptParseSpecTest
 {
   private final ObjectMapper jsonMapper = new TestObjectMapper();
 
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
+
   @Test
   public void testSerde() throws IOException
   {
+    jsonMapper.setInjectableValues(
+        new InjectableValues.Std().addValue(
+            JavaScriptConfig.class,
+            JavaScriptConfig.getDefault()
+        )
+    );
     JavaScriptParseSpec spec = new JavaScriptParseSpec(
         new TimestampSpec("abc", "iso", null),
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("abc")), null, null),
-        "abc"
+        "abc",
+        JavaScriptConfig.getDefault()
     );
     final JavaScriptParseSpec serde = jsonMapper.readValue(
         jsonMapper.writeValueAsString(spec),
@@ -50,5 +67,37 @@ public class JavaScriptParseSpecTest
 
     Assert.assertEquals("abc", serde.getFunction());
     Assert.assertEquals(Arrays.asList("abc"), serde.getDimensionsSpec().getDimensionNames());
+  }
+
+  @Test
+  public void testMakeParser()
+  {
+    final JavaScriptConfig config = JavaScriptConfig.getDefault();
+    JavaScriptParseSpec spec = new JavaScriptParseSpec(
+        new TimestampSpec("abc", "iso", null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("abc")), null, null),
+        "function(str) { var parts = str.split(\"-\"); return { one: parts[0], two: parts[1] } }",
+        config
+    );
+
+    final Parser<String, Object> parser = spec.makeParser();
+    final Map<String, Object> obj = parser.parse("x-y");
+    Assert.assertEquals(ImmutableMap.of("one", "x", "two", "y"), obj);
+  }
+
+  @Test
+  public void testMakeParserNotAllowed()
+  {
+    final JavaScriptConfig config = new JavaScriptConfig(true);
+    JavaScriptParseSpec spec = new JavaScriptParseSpec(
+        new TimestampSpec("abc", "iso", null),
+        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList("abc")), null, null),
+        "abc",
+        config
+    );
+
+    expectedException.expect(IllegalStateException.class);
+    expectedException.expectMessage("JavaScript is disabled");
+    spec.makeParser();
   }
 }
