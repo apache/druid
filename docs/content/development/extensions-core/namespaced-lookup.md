@@ -18,41 +18,7 @@ Make sure to [include](../../operations/including-extensions.html) `druid-namesp
 
 Namespaced lookups are appropriate for lookups which are not possible to pass at query time due to their size, 
 or are not desired to be passed at query time because the data is to reside in and be handled by the Druid servers. 
-Namespaced lookups can be specified as part of the runtime properties file. The property is a list of the namespaces 
-described as per the sections on this page. For example:
-
- ```json
- druid.query.extraction.namespace.lookups=
-   [
-     {
-       "type": "uri",
-       "namespace": "some_uri_lookup",
-       "uri": "file:/tmp/prefix/",
-       "namespaceParseSpec": {
-         "format": "csv",
-         "columns": [
-           "key",
-           "value"
-         ]
-       },
-       "pollPeriod": "PT5M"
-     },
-     {
-       "type": "jdbc",
-       "namespace": "some_jdbc_lookup",
-       "connectorConfig": {
-         "createTables": true,
-         "connectURI": "jdbc:mysql:\/\/localhost:3306\/druid",
-         "user": "druid",
-         "password": "diurd"
-       },
-       "table": "lookupTable",
-       "keyColumn": "mykeyColumn",
-       "valueColumn": "MyValueColumn",
-       "tsColumn": "timeColumn"
-     }
-   ]
- ```
+These lookups must be configured through the Cluster Wide Dynamic Configuration described at the end of the document.
 
 Proper functionality of Namespaced lookups requires the following extension to be loaded on the broker, peon, and historical nodes: 
 `druid-namespace-lookup`
@@ -117,6 +83,8 @@ One of either `uri` xor `uriPrefix` must be specified.
 The `pollPeriod` value specifies the period in ISO 8601 format between checks for updates. If the source of the lookup is capable of providing a timestamp, the lookup will only be updated if it has changed since the prior tick of `pollPeriod`. A value of 0, an absent parameter, or `null` all mean populate once and do not attempt to update. Whenever an update occurs, the updating system will look for a file with the most recent timestamp and assume that one with the most recent data.
 
 The `namespaceParseSpec` can be one of a number of values. Each of the examples below would rename foo to bar, baz to bat, and buck to truck. All parseSpec types assumes each input is delimited by a new line. See below for the types of parseSpec supported.
+
+Only ONE file which matches the search will be used. For most implementations, the discriminator for choosing the URIs is by whichever one reports the most recent timestamp for its modification time.
 
 ### csv lookupParseSpec
 
