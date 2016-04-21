@@ -111,12 +111,6 @@ public abstract class FunctionalExtraction extends DimExtractionFn
   }
 
   @Override
-  public boolean preservesOrdering()
-  {
-    return false;
-  }
-
-  @Override
   public ExtractionType getExtractionType()
   {
     return extractionType;

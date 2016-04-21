@@ -2462,18 +2462,6 @@ public class TopNQueryRunnerTest
       {
         return dimValue.equals("total_market") ? null : dimValue;
       }
-
-      @Override
-      public boolean preservesOrdering()
-      {
-        return false;
-      }
-
-      @Override
-      public ExtractionType getExtractionType()
-      {
-        return ExtractionType.MANY_TO_ONE;
-      }
     };
 
     final TopNQuery query = new TopNQueryBuilder()

@@ -61,7 +61,7 @@ public class SubstringDimExtractionFn extends DimExtractionFn
   }
 
   @Override
-  public String apply(String dimValue)
+  protected String apply(String dimValue)
   {
     if (Strings.isNullOrEmpty(dimValue)) {
       return null;
@@ -95,13 +95,7 @@ public class SubstringDimExtractionFn extends DimExtractionFn
   @Override
   public boolean preservesOrdering()
   {
-    return index == 0 ? true : false;
-  }
-
-  @Override
-  public ExtractionType getExtractionType()
-  {
-    return ExtractionType.MANY_TO_ONE;
+    return index == 0;
   }
 
   @Override

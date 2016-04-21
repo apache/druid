@@ -84,7 +84,7 @@ public class RegexDimExtractionFn extends DimExtractionFn
   }
 
   @Override
-  public String apply(String dimValue)
+  protected String apply(String dimValue)
   {
     final String retVal;
     final Matcher matcher = pattern.matcher(Strings.nullToEmpty(dimValue));
@@ -112,18 +112,6 @@ public class RegexDimExtractionFn extends DimExtractionFn
   public String getReplaceMissingValueWith()
   {
     return replaceMissingValueWith;
-  }
-
-  @Override
-  public boolean preservesOrdering()
-  {
-    return false;
-  }
-
-  @Override
-  public ExtractionType getExtractionType()
-  {
-    return ExtractionType.MANY_TO_ONE;
   }
 
   @Override

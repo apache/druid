@@ -41,6 +41,7 @@ import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ComplexColumn;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.GenericColumn;
+import io.druid.segment.column.ValueAccessor;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
@@ -393,7 +394,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                             descending
                         );
                       }
-
+                      if (extractionFn != null) {
+                        extractionFn.init(ValueAccessor.STRING);  // use accessor for the dimension type
+                      }
                       DictionaryEncodedColumn cachedColumn = dictionaryColumnCache.get(dimension);
                       if (cachedColumn == null) {
                         cachedColumn = columnDesc.getDictionaryEncoding();

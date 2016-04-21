@@ -22,6 +22,7 @@ package io.druid.segment;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.segment.column.ValueAccessor;
 import io.druid.segment.data.IndexedInts;
 
 import java.io.IOException;
@@ -49,6 +50,7 @@ public class SingleScanTimeDimSelector implements DimensionSelector
     if (extractionFn == null) {
       throw new UnsupportedOperationException("time dimension must provide an extraction function");
     }
+    extractionFn.init(ValueAccessor.LONG);
 
     this.extractionFn = extractionFn;
     this.selector = selector;

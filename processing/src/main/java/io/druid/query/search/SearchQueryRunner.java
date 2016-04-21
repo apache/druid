@@ -53,6 +53,7 @@ import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
+import io.druid.segment.column.ValueAccessor;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
 import org.apache.commons.lang.mutable.MutableInt;
@@ -120,6 +121,8 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
         if (extractionFn == null) {
           extractionFn = IdentityExtractionFn.getInstance();
         }
+        extractionFn.init(ValueAccessor.STRING);  // use accessor for the dimension type
+
         if (bitmapIndex != null) {
           for (int i = 0; i < bitmapIndex.getCardinality(); ++i) {
             String dimVal = Strings.nullToEmpty(extractionFn.apply(bitmapIndex.getValue(i)));

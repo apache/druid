@@ -21,7 +21,7 @@ package io.druid.query.extraction;
 
 import com.google.common.base.Strings;
 
-public class IdentityExtractionFn implements ExtractionFn
+public class IdentityExtractionFn extends AbstractExtractionFn
 {
   private static final IdentityExtractionFn instance = new IdentityExtractionFn();
 
@@ -40,18 +40,6 @@ public class IdentityExtractionFn implements ExtractionFn
   public String apply(Object value)
   {
     return value == null ? null : Strings.emptyToNull(value.toString());
-  }
-
-  @Override
-  public String apply(String value)
-  {
-    return Strings.emptyToNull(value);
-  }
-
-  @Override
-  public String apply(long value)
-  {
-    return Long.toString(value);
   }
 
   @Override
@@ -78,7 +66,7 @@ public class IdentityExtractionFn implements ExtractionFn
      return o != null && o instanceof IdentityExtractionFn;
   }
 
-  public static final IdentityExtractionFn getInstance()
+  public static IdentityExtractionFn getInstance()
   {
     return instance;
   }

@@ -22,6 +22,7 @@ package io.druid.query.extraction;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.segment.column.ValueAccessor;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -35,6 +36,7 @@ public class StringFormatExtractionFnTest
   public void testApply() throws Exception
   {
     StringFormatExtractionFn fn = new StringFormatExtractionFn("[%s]");
+    fn.init(ValueAccessor.LONG);
     long test = 1000L;
     Assert.assertEquals("[1000]", fn.apply(test));
   }

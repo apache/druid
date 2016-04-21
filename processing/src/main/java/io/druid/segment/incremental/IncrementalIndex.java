@@ -54,6 +54,7 @@ import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
+import io.druid.segment.column.ValueAccessor;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.serde.ComplexMetricExtractor;
@@ -267,6 +268,9 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       {
         final String dimension = dimensionSpec.getDimension();
         final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
+        if (extractionFn != null) {
+          extractionFn.init(ValueAccessor.STRING);  // use accessor for the dimension type
+        }
 
         return new DimensionSelector()
         {

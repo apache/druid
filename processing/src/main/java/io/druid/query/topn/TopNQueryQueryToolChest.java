@@ -51,7 +51,9 @@ import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.DimFilter;
+import io.druid.segment.column.ValueAccessor;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -467,6 +469,11 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
         if (!TopNQueryEngine.canApplyExtractionInPost(topNQuery)) {
           return resultSequence;
         } else {
+
+          final DimensionSpec dimensionSpec = topNQuery.getDimensionSpec();
+          final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
+          extractionFn.init(ValueAccessor.STRING);  // use accessor for the dimension type
+
           return Sequences.map(
               resultSequence, new Function<Result<TopNResultValue>, Result<TopNResultValue>>()
               {
@@ -488,12 +495,9 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
                                 )
                                 {
                                   String dimOutputName = topNQuery.getDimensionSpec().getOutputName();
-                                  Object dimValue = input.getDimensionValue(dimOutputName);
+                                  Object dimValue = input.getStringDimensionValue(dimOutputName);
                                   Map<String, Object> map = input.getBaseObject();
-                                  map.put(
-                                      dimOutputName,
-                                      topNQuery.getDimensionSpec().getExtractionFn().apply(dimValue)
-                                  );
+                                  map.put(dimOutputName, extractionFn.apply(dimValue));
                                   return input;
                                 }
                               }

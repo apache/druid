@@ -25,13 +25,14 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.metamx.common.StringUtils;
+import io.druid.segment.column.ValueAccessor;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.ScriptableObject;
 
 import java.nio.ByteBuffer;
 
-public class JavaScriptExtractionFn implements ExtractionFn
+public class JavaScriptExtractionFn extends AbstractExtractionFn
 {
   private static Function<Object, String> compile(String function)
   {
@@ -103,19 +104,10 @@ public class JavaScriptExtractionFn implements ExtractionFn
   @Override
   public String apply(Object value)
   {
+    if (accessor == ValueAccessor.STRING) {
+      value = Strings.emptyToNull(accessor.getString(value));
+    }
     return Strings.emptyToNull(fn.apply(value));
-  }
-
-  @Override
-  public String apply(String value)
-  {
-    return this.apply((Object) Strings.emptyToNull(value));
-  }
-
-  @Override
-  public String apply(long value)
-  {
-    return this.apply((Long) value);
   }
 
   @Override

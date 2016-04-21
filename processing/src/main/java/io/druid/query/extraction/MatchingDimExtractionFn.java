@@ -58,7 +58,7 @@ public class MatchingDimExtractionFn extends DimExtractionFn
   }
 
   @Override
-  public String apply(String dimValue)
+  protected String apply(String dimValue)
   {
     if (Strings.isNullOrEmpty(dimValue)) {
       // We'd return null whether or not the pattern matched
@@ -73,18 +73,6 @@ public class MatchingDimExtractionFn extends DimExtractionFn
   public String getExpr()
   {
     return expr;
-  }
-
-  @Override
-  public boolean preservesOrdering()
-  {
-    return false;
-  }
-
-  @Override
-  public ExtractionType getExtractionType()
-  {
-    return ExtractionType.MANY_TO_ONE;
   }
 
   @Override

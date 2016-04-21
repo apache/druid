@@ -95,7 +95,7 @@ public class StringFormatExtractionFn extends DimExtractionFn
   }
 
   @Override
-  public String apply(String value)
+  protected String apply(String value)
   {
     if (value == null) {
       if (nullHandling == NullHandling.RETURNNULL) {
@@ -106,18 +106,6 @@ public class StringFormatExtractionFn extends DimExtractionFn
       }
     }
     return Strings.emptyToNull(String.format(format, value));
-  }
-
-  @Override
-  public boolean preservesOrdering()
-  {
-    return false;
-  }
-
-  @Override
-  public ExtractionType getExtractionType()
-  {
-    return ExtractionType.MANY_TO_ONE;
   }
 
   @Override

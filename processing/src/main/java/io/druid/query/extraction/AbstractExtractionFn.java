@@ -19,11 +19,29 @@
 
 package io.druid.query.extraction;
 
-public abstract class DimExtractionFn extends AbstractExtractionFn
+import io.druid.segment.column.ValueAccessor;
+
+/**
+ */
+public abstract class AbstractExtractionFn implements ExtractionFn
 {
-  public String apply(Object value) {
-    return apply(accessor.getString(value));
+  protected transient ValueAccessor accessor = ValueAccessor.STRING;
+
+  @Override
+  public void init(ValueAccessor accessor)
+  {
+    this.accessor = accessor;
   }
 
-  protected abstract String apply(String value);
+  @Override
+  public boolean preservesOrdering()
+  {
+    return false;
+  }
+
+  @Override
+  public ExtractionType getExtractionType()
+  {
+    return ExtractionType.MANY_TO_ONE;
+  }
 }

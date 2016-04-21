@@ -66,7 +66,7 @@ public class TimeDimExtractionFn extends DimExtractionFn
   }
 
   @Override
-  public String apply(String dimValue)
+  protected String apply(String dimValue)
   {
     Date date;
     try {
@@ -88,18 +88,6 @@ public class TimeDimExtractionFn extends DimExtractionFn
   public String getResultFormat()
   {
     return resultFormat;
-  }
-
-  @Override
-  public boolean preservesOrdering()
-  {
-    return false;
-  }
-
-  @Override
-  public ExtractionType getExtractionType()
-  {
-    return ExtractionType.MANY_TO_ONE;
   }
 
   @Override

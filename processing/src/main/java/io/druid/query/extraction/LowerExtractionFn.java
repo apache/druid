@@ -31,7 +31,7 @@ import java.nio.ByteBuffer;
 import java.util.Locale;
 
 @JsonTypeName("lower")
-public class LowerExtractionFn extends DimExtractionFn
+public class LowerExtractionFn extends AbstractExtractionFn
 {
   private final Locale locale;
 
@@ -52,24 +52,10 @@ public class LowerExtractionFn extends DimExtractionFn
 
   @Nullable
   @Override
-  public String apply(String key)
+  public String apply(Object key)
   {
-    if (Strings.isNullOrEmpty(key)) {
-      return null;
-    }
-    return key.toLowerCase(locale);
-  }
-
-  @Override
-  public boolean preservesOrdering()
-  {
-    return false;
-  }
-
-  @Override
-  public ExtractionType getExtractionType()
-  {
-    return ExtractionType.MANY_TO_ONE;
+    final String value = accessor.getString(key);
+    return Strings.isNullOrEmpty(value) ? null : value.toLowerCase(locale);
   }
 
   @Override
