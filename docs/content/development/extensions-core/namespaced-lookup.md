@@ -18,7 +18,41 @@ Make sure to [include](../../operations/including-extensions.html) `druid-namesp
 
 Namespaced lookups are appropriate for lookups which are not possible to pass at query time due to their size, 
 or are not desired to be passed at query time because the data is to reside in and be handled by the Druid servers. 
-These lookups must be configured through the Cluster Wide Dynamic Configuration described at the end of the document.
+Namespaced lookups can be specified as part of the runtime properties file. The property is a list of the namespaces 
+described as per the sections on this page. For example:
+
+ ```json
+ druid.query.extraction.namespace.lookups=
+   [
+     {
+       "type": "uri",
+       "namespace": "some_uri_lookup",
+       "uri": "file:/tmp/prefix/",
+       "namespaceParseSpec": {
+         "format": "csv",
+         "columns": [
+           "key",
+           "value"
+         ]
+       },
+       "pollPeriod": "PT5M"
+     },
+     {
+       "type": "jdbc",
+       "namespace": "some_jdbc_lookup",
+       "connectorConfig": {
+         "createTables": true,
+         "connectURI": "jdbc:mysql:\/\/localhost:3306\/druid",
+         "user": "druid",
+         "password": "diurd"
+       },
+       "table": "lookupTable",
+       "keyColumn": "mykeyColumn",
+       "valueColumn": "MyValueColumn",
+       "tsColumn": "timeColumn"
+     }
+   ]
+ ```
 
 Proper functionality of Namespaced lookups requires the following extension to be loaded on the broker, peon, and historical nodes: 
 `druid-namespace-lookup`
