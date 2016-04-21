@@ -287,6 +287,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
         if (chatHandlerProvider.isPresent()) {
           chatHandlerProvider.get().unregister(serviceName);
         }
+        exec.shutdown();
       }
     }
 
