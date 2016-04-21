@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Stopwatch;
 import com.google.common.primitives.Longs;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -38,7 +39,6 @@ import io.druid.concurrent.Execs;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.server.namespace.cache.NamespaceExtractionCacheManager;
 import kafka.consumer.ConsumerConfig;
-import kafka.consumer.ConsumerIterator;
 import kafka.consumer.KafkaStream;
 import kafka.consumer.Whitelist;
 import kafka.javaapi.consumer.ConsumerConnector;
@@ -46,13 +46,17 @@ import kafka.message.MessageAndMetadata;
 import kafka.serializer.Decoder;
 
 import javax.annotation.Nullable;
-import javax.validation.constraints.NotNull;
+import javax.validation.constraints.Min;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
@@ -79,8 +83,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   private final AtomicReference<Map<String, String>> mapRef = new AtomicReference<>(null);
 
   private AtomicBoolean started = new AtomicBoolean(false);
-  private ListenableFuture<?> future = null;
-  private ConsumerConnector consumerConnector;
+  private volatile ListenableFuture<?> future = null;
 
   @JsonProperty
   private final String kafkaTopic;
@@ -88,11 +91,19 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   @JsonProperty
   private final Map<String, String> kafkaProperties;
 
+  @JsonProperty
+  private final long connectTimeout;
+
+  @JsonProperty
+  private final boolean isOneToOne;
+
   @JsonCreator
   public KafkaLookupExtractorFactory(
       @JacksonInject NamespaceExtractionCacheManager cacheManager,
-      @NotNull @JsonProperty(value = "kafkaTopic", required = true) final String kafkaTopic,
-      @NotNull @JsonProperty(value = "kafkaProperties", required = true) final Map<String, String> kafkaProperties
+      @JsonProperty("kafkaTopic") final String kafkaTopic,
+      @JsonProperty("kafkaProperties") final Map<String, String> kafkaProperties,
+      @JsonProperty("connectTimeout") @Min(0) long connectTimeout,
+      @JsonProperty("isOneToOne") boolean isOneToOne
   )
   {
     this.kafkaTopic = Preconditions.checkNotNull(kafkaTopic, "kafkaTopic required");
@@ -102,6 +113,17 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
         Thread.MIN_PRIORITY
     ));
     this.cacheManager = cacheManager;
+    this.connectTimeout = connectTimeout;
+    this.isOneToOne = isOneToOne;
+  }
+
+  public KafkaLookupExtractorFactory(
+      NamespaceExtractionCacheManager cacheManager,
+      String kafkaTopic,
+      Map<String, String> kafkaProperties
+  )
+  {
+    this(cacheManager, kafkaTopic, kafkaProperties, 0, false);
   }
 
   public String getKafkaTopic()
@@ -112,6 +134,16 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   public Map<String, String> getKafkaProperties()
   {
     return kafkaProperties;
+  }
+
+  public long getConnectTimeout()
+  {
+    return connectTimeout;
+  }
+
+  public boolean isOneToOne()
+  {
+    return isOneToOne;
   }
 
   @Override
@@ -153,20 +185,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
       // Enable publish-subscribe
       kafkaProperties.setProperty("auto.offset.reset", "smallest");
 
-      consumerConnector = buildConnector(kafkaProperties);
-
-      final List<KafkaStream<String, String>> streams = consumerConnector.createMessageStreamsByFilter(
-          new Whitelist(Pattern.quote(topic)), 1, DEFAULT_STRING_DECODER, DEFAULT_STRING_DECODER
-      );
-
-      if (streams == null || streams.isEmpty()) {
-        throw new IAE("Topic [%s] had no streams", topic);
-      }
-      if (streams.size() > 1) {
-        throw new ISE("Topic [%s] has %d streams! expected 1", topic, streams.size());
-      }
-      final KafkaStream<String, String> kafkaStream = streams.get(0);
-      final ConsumerIterator<String, String> it = kafkaStream.iterator();
+      final CountDownLatch startingReads = new CountDownLatch(1);
 
       final ListenableFuture<?> future = executorService.submit(
           new Runnable()
@@ -174,18 +193,42 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
             @Override
             public void run()
             {
-              while (it.hasNext()) {
-                final MessageAndMetadata<String, String> messageAndMetadata = it.next();
-                final String key = messageAndMetadata.key();
-                final String message = messageAndMetadata.message();
-                if (key == null || message == null) {
-                  LOG.error("Bad key/message from topic [%s]: [%s]", topic, messageAndMetadata);
-                  continue;
+              while (!executorService.isShutdown() && !Thread.currentThread().isInterrupted()) {
+                final ConsumerConnector consumerConnector = buildConnector(kafkaProperties);
+                try {
+                  final List<KafkaStream<String, String>> streams = consumerConnector.createMessageStreamsByFilter(
+                      new Whitelist(Pattern.quote(topic)), 1, DEFAULT_STRING_DECODER, DEFAULT_STRING_DECODER
+                  );
+
+                  if (streams == null || streams.isEmpty()) {
+                    throw new IAE("Topic [%s] had no streams", topic);
+                  }
+                  if (streams.size() > 1) {
+                    throw new ISE("Topic [%s] has %d streams! expected 1", topic, streams.size());
+                  }
+                  final KafkaStream<String, String> kafkaStream = streams.get(0);
+
+                  startingReads.countDown();
+
+                  for (final MessageAndMetadata<String, String> messageAndMetadata : kafkaStream) {
+                    final String key = messageAndMetadata.key();
+                    final String message = messageAndMetadata.message();
+                    if (key == null || message == null) {
+                      LOG.error("Bad key/message from topic [%s]: [%s]", topic, messageAndMetadata);
+                      continue;
+                    }
+                    doubleEventCount.incrementAndGet();
+                    map.put(key, message);
+                    doubleEventCount.incrementAndGet();
+                    LOG.trace("Placed key[%s] val[%s]", key, message);
+                  }
                 }
-                doubleEventCount.incrementAndGet();
-                map.put(key, message);
-                doubleEventCount.incrementAndGet();
-                LOG.trace("Placed key[%s] val[%s]", key, message);
+                catch (Exception e) {
+                  LOG.error(e, "Error reading stream for topic [%s]", topic);
+                }
+                finally {
+                  consumerConnector.shutdown();
+                }
               }
             }
           }
@@ -212,6 +255,28 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
           MoreExecutors.sameThreadExecutor()
       );
       this.future = future;
+      final Stopwatch stopwatch = Stopwatch.createStarted();
+      try {
+        while (!startingReads.await(100, TimeUnit.MILLISECONDS) && connectTimeout > 0L) {
+          // Don't return until we have actually connected
+          if (future.isDone()) {
+            future.get();
+          } else {
+            if (stopwatch.elapsed(TimeUnit.MILLISECONDS) > connectTimeout) {
+              throw new TimeoutException("Failed to connect to kafka in sufficient time");
+            }
+          }
+        }
+      }
+      catch (InterruptedException | ExecutionException | TimeoutException e) {
+        if (!future.isDone() && !future.cancel(true) && !future.isDone()) {
+          LOG.warn("Could not cancel kafka listening thread");
+        }
+        LOG.error(e, "Failed to start kafka extraction factory");
+        cacheManager.delete(factoryId);
+        return false;
+      }
+
       started.set(true);
       return true;
     }
@@ -225,15 +290,13 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     );
   }
 
-  ;
-
   @Override
   public boolean close()
   {
     synchronized (startStopLock) {
       if (!started.get() || executorService.isShutdown()) {
         LOG.info("Already shutdown, ignoring");
-        return false;
+        return true;
       }
       started.set(false);
       executorService.shutdownNow();
@@ -248,9 +311,6 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
         LOG.error("Error removing [%s] for topic [%s] from cache", factoryId, getKafkaTopic());
         return false;
       }
-      if (consumerConnector != null) {
-        consumerConnector.shutdown();
-      }
       return true;
     }
   }
@@ -262,13 +322,21 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
       return false;
     }
 
-    if (other == null || getClass() != other.getClass()) {
+    if(other == null) {
+      return false;
+    }
+
+    if (getClass() != other.getClass()) {
       return true;
     }
 
     final KafkaLookupExtractorFactory that = (KafkaLookupExtractorFactory) other;
 
-    return !(getKafkaTopic().equals(that.getKafkaTopic()) && getKafkaProperties().equals(that.getKafkaProperties()));
+    return !(getKafkaTopic().equals(that.getKafkaTopic())
+             && getKafkaProperties().equals(that.getKafkaProperties())
+             && getConnectTimeout() == that.getConnectTimeout()
+             && isOneToOne() == that.isOneToOne()
+    );
   }
 
   @Override
@@ -276,7 +344,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   {
     final Map<String, String> map = Preconditions.checkNotNull(mapRef.get(), "Not started");
     final long startCount = doubleEventCount.get();
-    return new MapLookupExtractor(map, false)
+    return new MapLookupExtractor(map, isOneToOne())
     {
       @Override
       public byte[] getCacheKey()
@@ -322,5 +390,10 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   AtomicLong getDoubleEventCount()
   {
     return doubleEventCount;
+  }
+
+  ListenableFuture<?> getFuture()
+  {
+    return future;
   }
 }

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.StringUtils;
@@ -202,20 +203,39 @@ public class KafkaLookupExtractorFactoryTest
         TOPIC,
         DEFAULT_PROPERTIES
     )));
+
     Assert.assertTrue(factory.replaces(new KafkaLookupExtractorFactory(
         cacheManager,
         TOPIC + "b",
         DEFAULT_PROPERTIES
     )));
+
     Assert.assertTrue(factory.replaces(new KafkaLookupExtractorFactory(
         cacheManager,
         TOPIC,
         ImmutableMap.of("some.property", "some.other.value")
     )));
+
     Assert.assertTrue(factory.replaces(new KafkaLookupExtractorFactory(
         cacheManager,
         TOPIC,
         ImmutableMap.of("some.other.property", "some.value")
+    )));
+
+    Assert.assertTrue(factory.replaces(new KafkaLookupExtractorFactory(
+        cacheManager,
+        TOPIC,
+        DEFAULT_PROPERTIES,
+        1,
+        false
+    )));
+
+    Assert.assertTrue(factory.replaces(new KafkaLookupExtractorFactory(
+        cacheManager,
+        TOPIC,
+        DEFAULT_PROPERTIES,
+        0,
+        true
     )));
   }
 
@@ -227,7 +247,7 @@ public class KafkaLookupExtractorFactoryTest
         TOPIC,
         DEFAULT_PROPERTIES
     );
-    Assert.assertFalse(factory.close());
+    Assert.assertTrue(factory.close());
   }
 
   @Test
@@ -267,6 +287,42 @@ public class KafkaLookupExtractorFactoryTest
     Assert.assertTrue(factory.start());
     Assert.assertTrue(factory.close());
     EasyMock.verify(cacheManager, kafkaStream, consumerConnector, consumerIterator);
+  }
+
+
+  @Test
+  public void testStartFailsFromTimeout() throws Exception
+  {
+    EasyMock.expect(cacheManager.getCacheMap(EasyMock.anyString()))
+            .andReturn(new ConcurrentHashMap<String, String>())
+            .once();
+    EasyMock.expect(cacheManager.delete(EasyMock.anyString())).andReturn(true).once();
+    EasyMock.replay(cacheManager);
+    final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
+        cacheManager,
+        TOPIC,
+        ImmutableMap.of("zookeeper.connect", "localhost"),
+        1,
+        false
+    )
+    {
+      @Override
+      ConsumerConnector buildConnector(Properties properties)
+      {
+        // Lock up
+        try {
+          Thread.currentThread().join();
+        }
+        catch (InterruptedException e) {
+          throw Throwables.propagate(e);
+        }
+        throw new RuntimeException("shouldn't make it here");
+      }
+    };
+    Assert.assertFalse(factory.start());
+    Assert.assertTrue(factory.getFuture().isDone());
+    Assert.assertTrue(factory.getFuture().isCancelled());
+    EasyMock.verify(cacheManager);
   }
 
   @Test
