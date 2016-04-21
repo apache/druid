@@ -65,7 +65,7 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
     try {
       ConcurrentMap<String, String> cacheMap = mapMap.get(cacheKey);
       if (cacheMap == null) {
-        throw new IAE("Namespace [%s] does not exist", cacheKey);
+        throw new IAE("Extraction Cache [%s] does not exist", cacheKey);
       }
       dataSize.addAndGet(cacheMap.size());
       ConcurrentMap<String, String> prior = mapMap.put(namespaceKey, cacheMap);
