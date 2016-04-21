@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
-import com.metamx.collections.spatial.search.Bound;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.granularity.QueryGranularity;
@@ -235,11 +234,10 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
               {
                 cursorMap = index.getSubMap(
+                    new IncrementalIndex.TimeAndDims(timeStart, new int[][]{}),
                     new IncrementalIndex.TimeAndDims(
-                        timeStart, new int[][]{}, null
-                    ),
-                    new IncrementalIndex.TimeAndDims(
-                        Math.min(actualInterval.getEndMillis(), gran.next(input)), new int[][]{}, null
+                        Math.min(actualInterval.getEndMillis(), gran.next(input)),
+                        new int[][]{}
                     )
                 );
                 if (descending) {
