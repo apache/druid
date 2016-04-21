@@ -27,10 +27,13 @@ import com.google.common.collect.Lists;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
+import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.TaskRunnerWorkItem;
 import io.druid.indexing.worker.Worker;
 import io.druid.indexing.worker.WorkerCuratorCoordinator;
+import io.druid.server.http.security.ConfigResourceFilter;
+import io.druid.server.http.security.StateResourceFilter;
 import io.druid.tasklogs.TaskLogStreamer;
 
 import javax.ws.rs.DefaultValue;
@@ -73,6 +76,7 @@ public class WorkerResource
   @POST
   @Path("/disable")
   @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(ConfigResourceFilter.class)
   public Response doDisable()
   {
     try {
@@ -93,6 +97,7 @@ public class WorkerResource
   @POST
   @Path("/enable")
   @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(ConfigResourceFilter.class)
   public Response doEnable()
   {
     try {
@@ -107,6 +112,7 @@ public class WorkerResource
   @GET
   @Path("/enabled")
   @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(StateResourceFilter.class)
   public Response isEnabled()
   {
     try {
@@ -122,6 +128,7 @@ public class WorkerResource
   @GET
   @Path("/tasks")
   @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(StateResourceFilter.class)
   public Response getTasks()
   {
     try {
@@ -149,6 +156,7 @@ public class WorkerResource
   @POST
   @Path("/task/{taskid}/shutdown")
   @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(StateResourceFilter.class)
   public Response doShutdown(@PathParam("taskid") String taskid)
   {
     try {
@@ -164,6 +172,7 @@ public class WorkerResource
   @GET
   @Path("/task/{taskid}/log")
   @Produces("text/plain")
+  @ResourceFilters(StateResourceFilter.class)
   public Response doGetLog(
       @PathParam("taskid") String taskid,
       @QueryParam("offset") @DefaultValue("0") long offset

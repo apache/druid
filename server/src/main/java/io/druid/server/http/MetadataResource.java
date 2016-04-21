@@ -20,26 +20,42 @@
 package io.druid.server.http;
 
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
+import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
+import com.metamx.common.Pair;
+import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.client.DruidDataSource;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.metadata.MetadataSegmentManager;
+import io.druid.server.http.security.DatasourceResourceFilter;
+import io.druid.server.security.Access;
+import io.druid.server.security.Action;
+import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthorizationInfo;
+import io.druid.server.security.Resource;
+import io.druid.server.security.ResourceType;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  */
@@ -48,15 +64,18 @@ public class MetadataResource
 {
   private final MetadataSegmentManager metadataSegmentManager;
   private final IndexerMetadataStorageCoordinator metadataStorageCoordinator;
+  private final AuthConfig authConfig;
 
   @Inject
   public MetadataResource(
       MetadataSegmentManager metadataSegmentManager,
-      IndexerMetadataStorageCoordinator metadataStorageCoordinator
+      IndexerMetadataStorageCoordinator metadataStorageCoordinator,
+      AuthConfig authConfig
   )
   {
     this.metadataSegmentManager = metadataSegmentManager;
     this.metadataStorageCoordinator = metadataStorageCoordinator;
+    this.authConfig = authConfig;
   }
 
   @GET
@@ -64,20 +83,88 @@ public class MetadataResource
   @Produces(MediaType.APPLICATION_JSON)
   public Response getDatabaseDataSources(
       @QueryParam("full") String full,
-      @QueryParam("includeDisabled") String includeDisabled
+      @QueryParam("includeDisabled") String includeDisabled,
+      @Context final HttpServletRequest req
   )
   {
     Response.ResponseBuilder builder = Response.status(Response.Status.OK);
+
+    final Collection<DruidDataSource> druidDataSources;
+    if (authConfig.isEnabled()) {
+      // This is an experimental feature, see - https://github.com/druid-io/druid/pull/2424
+      final Map<Pair<Resource, Action>, Access> resourceAccessMap = new HashMap<>();
+      final AuthorizationInfo authorizationInfo = (AuthorizationInfo) req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN);
+      if (includeDisabled != null) {
+        return builder.entity(
+            Collections2.filter(
+                metadataSegmentManager.getAllDatasourceNames(),
+                new Predicate<String>()
+                {
+                  @Override
+                  public boolean apply(String input)
+                  {
+                    Resource resource = new Resource(input, ResourceType.DATASOURCE);
+                    Action action = Action.READ;
+                    Pair<Resource, Action> key = new Pair<>(resource, action);
+                    if (resourceAccessMap.containsKey(key)) {
+                      return resourceAccessMap.get(key).isAllowed();
+                    } else {
+                      Access access = authorizationInfo.isAuthorized(key.lhs, key.rhs);
+                      resourceAccessMap.put(key, access);
+                      return access.isAllowed();
+                    }
+                  }
+                }
+            )).build();
+      } else {
+        druidDataSources =
+            Collections2.filter(
+                metadataSegmentManager.getInventory(),
+                new Predicate<DruidDataSource>()
+                {
+                  @Override
+                  public boolean apply(DruidDataSource input)
+                  {
+                    Resource resource = new Resource(input.getName(), ResourceType.DATASOURCE);
+                    Action action = Action.READ;
+                    Pair<Resource, Action> key = new Pair<>(resource, action);
+                    if (resourceAccessMap.containsKey(key)) {
+                      return resourceAccessMap.get(key).isAllowed();
+                    } else {
+                      Access access = authorizationInfo.isAuthorized(key.lhs, key.rhs);
+                      resourceAccessMap.put(key, access);
+                      return access.isAllowed();
+                    }
+                  }
+                }
+            );
+      }
+    } else {
+      druidDataSources = metadataSegmentManager.getInventory();
+    }
+
     if (includeDisabled != null) {
-      return builder.entity(metadataSegmentManager.getAllDatasourceNames()).build();
+      return builder.entity(
+          Collections2.transform(
+              druidDataSources,
+              new Function<DruidDataSource, String>()
+              {
+                @Override
+                public String apply(DruidDataSource input)
+                {
+                  return input.getName();
+                }
+              }
+          )
+      ).build();
     }
     if (full != null) {
-      return builder.entity(metadataSegmentManager.getInventory()).build();
+      return builder.entity(druidDataSources).build();
     }
 
     List<String> dataSourceNames = Lists.newArrayList(
         Iterables.transform(
-            metadataSegmentManager.getInventory(),
+            druidDataSources,
             new Function<DruidDataSource, String>()
             {
               @Override
@@ -97,6 +184,7 @@ public class MetadataResource
   @GET
   @Path("/datasources/{dataSourceName}")
   @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
   public Response getDatabaseSegmentDataSource(
       @PathParam("dataSourceName") final String dataSourceName
   )
@@ -112,6 +200,7 @@ public class MetadataResource
   @GET
   @Path("/datasources/{dataSourceName}/segments")
   @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
   public Response getDatabaseSegmentDataSourceSegments(
       @PathParam("dataSourceName") String dataSourceName,
       @QueryParam("full") String full
@@ -145,13 +234,14 @@ public class MetadataResource
   @POST
   @Path("/datasources/{dataSourceName}/segments")
   @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
   public Response getDatabaseSegmentDataSourceSegments(
       @PathParam("dataSourceName") String dataSourceName,
       @QueryParam("full") String full,
       List<Interval> intervals
   )
   {
-    List<DataSegment> segments = null;
+    List<DataSegment> segments;
     try {
       segments = metadataStorageCoordinator.getUsedSegmentsForIntervals(dataSourceName, intervals);
     }
@@ -182,6 +272,7 @@ public class MetadataResource
   @GET
   @Path("/datasources/{dataSourceName}/segments/{segmentId}")
   @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
   public Response getDatabaseSegmentDataSourceSegment(
       @PathParam("dataSourceName") String dataSourceName,
       @PathParam("segmentId") String segmentId
