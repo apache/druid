@@ -19,17 +19,20 @@
 
 package io.druid.query.extraction;
 
+import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.js.JavaScriptConfig;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.Set;
 
-public class CascadeExtractionFnTest {
+public class CascadeExtractionFnTest
+{
   private static final String[] paths = {
       "/druid/prod/historical",
       "/druid/prod/broker",
@@ -44,10 +47,14 @@ public class CascadeExtractionFnTest {
   private final String regex = "/([^/]+)/";
   private final String function = "function(str) { return \"the \".concat(str) }";
   private final RegexDimExtractionFn regexDimExtractionFn = new RegexDimExtractionFn(regex, false, null);
-  private final JavaScriptExtractionFn javascriptExtractionFn = new JavaScriptExtractionFn(function, true);
+  private final JavaScriptExtractionFn javascriptExtractionFn = new JavaScriptExtractionFn(
+      function,
+      true,
+      JavaScriptConfig.getDefault()
+  );
   private final SubstringDimExtractionFn substringDimExtractionFn = new SubstringDimExtractionFn(0, 7);
   private final String regexDimExtractionFnJson = "{ \"type\" : \"regex\", \"expr\" : \"/([^/]+)/\" , " +
-      "\"replaceMissingValue\": false, \"replaceMissingValueWith\": null}";
+                                                  "\"replaceMissingValue\": false, \"replaceMissingValueWith\": null}";
   private final String javascriptExtractionFnJson =
       "{ \"type\" : \"javascript\", \"function\" : \"function(str) { return \\\"the \\\".concat(str) }\" }";
   private final String substringDimExtractionFnJson = "{ \"type\" : \"substring\", \"index\" : 0, \"length\" : 7 }";
@@ -63,7 +70,7 @@ public class CascadeExtractionFnTest {
     CascadeExtractionFn cascadeExtractionFn = new CascadeExtractionFn(fns);
 
     Set<String> extracted = Sets.newLinkedHashSet();
-    for (String path: paths) {
+    for (String path : paths) {
       extracted.add(cascadeExtractionFn.apply(path));
     }
 
@@ -162,9 +169,20 @@ public class CascadeExtractionFnTest {
   public void testSerde() throws Exception
   {
     final ObjectMapper objectMapper = new DefaultObjectMapper();
-
-    final String json = "{\"type\" : \"cascade\", \"extractionFns\": ["+
-        regexDimExtractionFnJson + "," + javascriptExtractionFnJson + "," + substringDimExtractionFnJson + "]}";
+    objectMapper.setInjectableValues(
+        new InjectableValues.Std().addValue(
+            JavaScriptConfig.class,
+            JavaScriptConfig.getDefault()
+        )
+    );
+    final String json = "{\"type\" : \"cascade\", \"extractionFns\": ["
+                        +
+                        regexDimExtractionFnJson
+                        + ","
+                        + javascriptExtractionFnJson
+                        + ","
+                        + substringDimExtractionFnJson
+                        + "]}";
 
     CascadeExtractionFn cascadeExtractionFn = (CascadeExtractionFn) objectMapper.readValue(json, ExtractionFn.class);
     RegexDimExtractionFn regexDimExtractionFn =
