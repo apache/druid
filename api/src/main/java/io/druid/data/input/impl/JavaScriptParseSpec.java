@@ -19,10 +19,13 @@
 
 package io.druid.data.input.impl;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.metamx.common.ISE;
 import com.metamx.common.parsers.JavaScriptParser;
 import com.metamx.common.parsers.Parser;
+import io.druid.js.JavaScriptConfig;
 
 import java.util.List;
 
@@ -31,17 +34,20 @@ import java.util.List;
 public class JavaScriptParseSpec extends ParseSpec
 {
   private final String function;
+  private final JavaScriptConfig config;
 
   @JsonCreator
   public JavaScriptParseSpec(
       @JsonProperty("timestampSpec") TimestampSpec timestampSpec,
       @JsonProperty("dimensionsSpec") DimensionsSpec dimensionsSpec,
-      @JsonProperty("function") String function
+      @JsonProperty("function") String function,
+      @JacksonInject JavaScriptConfig config
   )
   {
     super(timestampSpec, dimensionsSpec);
 
     this.function = function;
+    this.config = config;
   }
 
   @JsonProperty("function")
@@ -58,23 +64,27 @@ public class JavaScriptParseSpec extends ParseSpec
   @Override
   public Parser<String, Object> makeParser()
   {
+    if (config.isDisabled()) {
+      throw new ISE("JavaScript is disabled");
+    }
+
     return new JavaScriptParser(function);
   }
 
   @Override
   public ParseSpec withTimestampSpec(TimestampSpec spec)
   {
-    return new JavaScriptParseSpec(spec, getDimensionsSpec(), function);
+    return new JavaScriptParseSpec(spec, getDimensionsSpec(), function, config);
   }
 
   @Override
   public ParseSpec withDimensionsSpec(DimensionsSpec spec)
   {
-    return new JavaScriptParseSpec(getTimestampSpec(), spec, function);
+    return new JavaScriptParseSpec(getTimestampSpec(), spec, function, config);
   }
 
   public ParseSpec withFunction(String fn)
   {
-    return new JavaScriptParseSpec(getTimestampSpec(), getDimensionsSpec(), fn);
+    return new JavaScriptParseSpec(getTimestampSpec(), getDimensionsSpec(), fn, config);
   }
 }
