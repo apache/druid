@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.io.Files;
 import com.metamx.common.ISE;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.query.extraction.MapLookupExtractorFactory;
 import org.easymock.EasyMock;
 import org.junit.After;
 import org.junit.Assert;
@@ -45,6 +44,7 @@ public class LookupReferencesManagerTest
   @Before
   public void setUp() throws IOException
   {
+    mapper.registerSubtypes(MapLookupExtractorFactory.class);
     lookupReferencesManager = new LookupReferencesManager(new LookupConfig(Files.createTempDir().getAbsolutePath()), mapper);
     Assert.assertTrue("must be closed before start call", lookupReferencesManager.isClosed());
     lookupReferencesManager.start();
@@ -260,5 +260,4 @@ public class LookupReferencesManagerTest
     Assert.assertEquals(lookupExtractorFactory, lookupReferencesManager.get("testMockForBootstrap"));
 
   }
-
 }

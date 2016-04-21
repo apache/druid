@@ -25,6 +25,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Binder;
@@ -50,7 +52,6 @@ import io.druid.server.lookup.cache.LookupCoordinatorManager;
 import org.apache.curator.utils.ZKPaths;
 
 import javax.ws.rs.Path;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -68,7 +69,9 @@ public class LookupModule implements DruidModule
   @Override
   public List<? extends Module> getJacksonModules()
   {
-    return Collections.emptyList();
+    return ImmutableList.<Module>of(
+        new SimpleModule("DruidLookupModule").registerSubtypes(MapLookupExtractorFactory.class)
+    );
   }
 
   @Override
@@ -78,6 +81,7 @@ public class LookupModule implements DruidModule
     LifecycleModule.register(binder, LookupReferencesManager.class);
     JsonConfigProvider.bind(binder, PROPERTY_BASE, LookupListeningAnnouncerConfig.class);
     Jerseys.addResource(binder, LookupListeningResource.class);
+    Jerseys.addResource(binder, LookupIntrospectionResource.class);
     LifecycleModule.register(binder, LookupResourceListenerAnnouncer.class);
   }
 }
