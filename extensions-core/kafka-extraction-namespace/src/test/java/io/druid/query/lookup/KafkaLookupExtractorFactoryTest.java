@@ -28,7 +28,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.StringUtils;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.query.extraction.MapLookupExtractorFactory;
 import io.druid.server.namespace.cache.NamespaceExtractionCacheManager;
 import kafka.consumer.ConsumerIterator;
 import kafka.consumer.KafkaStream;
