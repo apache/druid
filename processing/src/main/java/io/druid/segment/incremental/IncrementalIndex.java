@@ -965,6 +965,13 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     return maxIngestedEventTime;
   }
 
+  public enum OverflowAction
+  {
+    FAIL,
+    DROP_LOW,
+    DROP_HIGH
+  }
+
   public static final class DimensionDesc
   {
     private final int index;

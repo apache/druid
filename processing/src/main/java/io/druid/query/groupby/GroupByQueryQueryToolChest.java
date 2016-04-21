@@ -64,6 +64,9 @@ import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.groupby.orderby.DefaultLimitSpec;
+import io.druid.query.groupby.orderby.OrderByColumnSpec;
+import io.druid.query.ordering.StringComparators;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
@@ -254,8 +257,26 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       );
 
     } else {
+      final ImmutableMap.Builder<String, Object> outerContext = ImmutableMap.builder();
+      final ImmutableMap.Builder<String, Object> innerContext = ImmutableMap.builder();
+
+      innerContext.put("finalize", false);
+
+      final int limitDuringMerge = getLimitDuringMerge(query);
+
+      if (limitDuringMerge == 0) {
+        //setting sort to false avoids unnecessary sorting while merging results. we only need to sort
+        //in the end when returning results to user.
+        innerContext.put(GroupByQueryHelper.CTX_KEY_SORT_RESULTS, false);
+      } else {
+        // Leave sorting alone when applying limits during the merge.
+        innerContext.put(GroupByQueryHelper.CTX_KEY_LIMIT_DURING_MERGE, limitDuringMerge);
+        outerContext.put(GroupByQueryHelper.CTX_KEY_LIMIT_DURING_MERGE, limitDuringMerge);
+      }
+
       final IncrementalIndex index = makeIncrementalIndex(
-          query, runner.run(
+          query.withOverriddenContext(outerContext.build()),
+          runner.run(
               new GroupByQuery(
                   query.getDataSource(),
                   query.getQuerySegmentSpec(),
@@ -269,25 +290,70 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
                   null,
                   null,
                   query.getContext()
-              ).withOverriddenContext(
-                  ImmutableMap.<String, Object>of(
-                      "finalize", false,
-                      //setting sort to false avoids unnecessary sorting while merging results. we only need to sort
-                      //in the end when returning results to user.
-                      GroupByQueryHelper.CTX_KEY_SORT_RESULTS, false
-                  )
-              )
-              , context
+              ).withOverriddenContext(innerContext.build()),
+              context
           )
       );
-      return new ResourceClosingSequence<>(query.applyLimit(postAggregate(query, index)), index);
+
+      if (limitDuringMerge == 0) {
+        return new ResourceClosingSequence<>(query.applyLimit(postAggregate(query, index)), index);
+      } else {
+        return new ResourceClosingSequence<>(postAggregate(query, index), index);
+      }
     }
+  }
+
+  /**
+   * Returns the limit that should be applied while merging. The returned limit will either be 0 (no limiting),
+   * a positive integer (limit ascending), or a negative integer (limit descending using abs(limit)).
+   */
+  private int getLimitDuringMerge(GroupByQuery query)
+  {
+    // We can limit during merge if,
+    // 1) the limit is on the same dimensions we're grouping on
+    // 2) there is no having clause
+
+    // TODO(gianm): Are we allowed to do this if granularity != all?
+    // TODO(gianm): Allow limit specs to be prefixes of the dimension list?
+
+    if (query.getHavingSpec() != null || !(query.getLimitSpec() instanceof DefaultLimitSpec)) {
+      return 0;
+    }
+
+    final DefaultLimitSpec limitSpec = (DefaultLimitSpec) query.getLimitSpec();
+    if (limitSpec.getColumns().isEmpty() || limitSpec.getColumns().size() != query.getDimensions().size()) {
+      return 0;
+    }
+
+    OrderByColumnSpec.Direction direction = null;
+
+    for (int i = 0; i < limitSpec.getColumns().size(); i++) {
+      final OrderByColumnSpec orderSpec = limitSpec.getColumns().get(i);
+      final DimensionSpec dimensionSpec = query.getDimensions().get(i);
+
+      if (i == 0) {
+        direction = orderSpec.getDirection();
+      }
+
+      // TODO(gianm): Confirm this works with extractionFns
+      if (!orderSpec.getDimension().equals(dimensionSpec.getOutputName())
+          || orderSpec.getDirection() != direction
+          || !orderSpec.getDimensionComparator().equals(StringComparators.LEXICOGRAPHIC)) {
+        return 0;
+      }
+    }
+
+    return (direction == OrderByColumnSpec.Direction.DESCENDING ? -1 : 1) * limitSpec.getLimit();
   }
 
   private Sequence<Row> postAggregate(final GroupByQuery query, IncrementalIndex index)
   {
+    // BaseQuery.getDescending is always false for groupBy, but we may still want descending results if
+    // we're using the incremental index to do limiting.
+    final boolean descending = getLimitDuringMerge(query) < 0;
+
     return Sequences.map(
-        Sequences.simple(index.iterableWithPostAggregations(query.getPostAggregatorSpecs(), query.isDescending())),
+        Sequences.simple(index.iterableWithPostAggregations(query.getPostAggregatorSpecs(), descending)),
         new Function<Row, Row>()
         {
           @Override
@@ -428,7 +494,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
                   return runner.run(query, responseContext);
                 }
                 GroupByQuery groupByQuery = (GroupByQuery) query;
-                if (groupByQuery.getDimFilter() != null){
+                if (groupByQuery.getDimFilter() != null) {
                   groupByQuery = groupByQuery.withDimFilter(groupByQuery.getDimFilter().optimize());
                 }
                 final GroupByQuery delegateGroupByQuery = groupByQuery;

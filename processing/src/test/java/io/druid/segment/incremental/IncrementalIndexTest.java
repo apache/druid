@@ -110,7 +110,13 @@ public class IncrementalIndexTest
                   public IncrementalIndex createIndex()
                   {
                     return new OffheapIncrementalIndex(
-                        schema, true, true, true, 1000000, new StupidPool<ByteBuffer>(
+                        schema,
+                        true,
+                        true,
+                        true,
+                        IncrementalIndex.OverflowAction.FAIL,
+                        1000000,
+                        new StupidPool<ByteBuffer>(
                             new Supplier<ByteBuffer>()
                             {
                               @Override

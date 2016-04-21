@@ -19,6 +19,7 @@
 
 package io.druid.segment.incremental;
 
+import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -39,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -50,6 +52,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 
   private final ConcurrentHashMap<Integer, Aggregator[]> aggregators = new ConcurrentHashMap<>();
   private final ConcurrentMap<TimeAndDims, Integer> facts;
+  private final OverflowAction overflowAction;
   private final AtomicInteger indexIncrement = new AtomicInteger(0);
   protected final int maxRowCount;
   private volatile Map<String, ColumnSelectorFactory> selectors;
@@ -61,6 +64,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       boolean deserializeComplexMetrics,
       boolean reportParseExceptions,
       boolean sortFacts,
+      OverflowAction overflowAction,
       int maxRowCount
   )
   {
@@ -71,7 +75,15 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       this.facts = new ConcurrentSkipListMap<>(dimsComparator());
     } else {
       this.facts = new ConcurrentHashMap<>();
+
+      Preconditions.checkArgument(
+          overflowAction == OverflowAction.FAIL,
+          "overflowAction[%s] not valid with unsorted facts",
+          overflowAction
+      );
     }
+
+    this.overflowAction = overflowAction;
   }
 
   public OnheapIncrementalIndex(
@@ -92,6 +104,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
         deserializeComplexMetrics,
         reportParseExceptions,
         sortFacts,
+        OverflowAction.FAIL,
         maxRowCount
     );
   }
@@ -111,6 +124,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
         true,
         true,
         true,
+        OverflowAction.FAIL,
         maxRowCount
     );
   }
@@ -121,7 +135,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       int maxRowCount
   )
   {
-    this(incrementalIndexSchema, true, reportParseExceptions, true, maxRowCount);
+    this(incrementalIndexSchema, true, reportParseExceptions, true, OverflowAction.FAIL, maxRowCount);
   }
 
   @Override
@@ -164,14 +178,54 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       Supplier<InputRow> rowSupplier
   ) throws IndexSizeExceededException
   {
+    final Aggregator[] aggs = getAggregatorsForTimeAndDims(metrics, row, numEntries, key, rowContainer);
+
+    if (aggs != null) {
+      rowContainer.set(row);
+
+      for (Aggregator agg : aggs) {
+        synchronized (agg) {
+          try {
+            agg.aggregate();
+          }
+          catch (ParseException e) {
+            // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
+            if (reportParseExceptions) {
+              throw new ParseException(e, "Encountered parse error for aggregator[%s]", agg.getName());
+            } else {
+              log.debug(e, "Encountered parse error, skipping aggregator[%s].", agg.getName());
+            }
+          }
+        }
+      }
+
+      rowContainer.set(null);
+    }
+
+    return numEntries.get();
+  }
+
+  /**
+   * Returns aggregators for a key, or null if we decided not to index this key.
+   *
+   * @return aggregators, or null
+   *
+   * @throws IndexSizeExceededException if facts map is full
+   */
+  private Aggregator[] getAggregatorsForTimeAndDims(
+      final AggregatorFactory[] metrics,
+      final InputRow row,
+      final AtomicInteger numEntries,
+      final TimeAndDims key,
+      final ThreadLocal<InputRow> rowContainer
+  ) throws IndexSizeExceededException
+  {
     final Integer priorIndex = facts.get(key);
 
-    Aggregator[] aggs;
-
     if (null != priorIndex) {
-      aggs = concurrentGet(priorIndex);
+      return concurrentGet(priorIndex);
     } else {
-      aggs = new Aggregator[metrics.length];
+      final Aggregator[] aggs = new Aggregator[metrics.length];
 
       rowContainer.set(row);
       for (int i = 0; i < metrics.length; i++) {
@@ -182,48 +236,54 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       }
       rowContainer.set(null);
 
-      final Integer rowIndex = indexIncrement.getAndIncrement();
+      final int rowIndex = indexIncrement.getAndIncrement();
 
       concurrentSet(rowIndex, aggs);
 
-      // Last ditch sanity checks
-      if (numEntries.get() >= maxRowCount && !facts.containsKey(key)) {
-        throw new IndexSizeExceededException("Maximum number of rows [%d] reached", maxRowCount);
-      }
+      // Optimistically add to facts, then check size and adjust if needed.
       final Integer prev = facts.putIfAbsent(key, rowIndex);
-      if (null == prev) {
-        numEntries.incrementAndGet();
-      } else {
-        // We lost a race
-        aggs = concurrentGet(prev);
-        // Free up the misfire
-        concurrentRemove(rowIndex);
-        // This is expected to occur ~80% of the time in the worst scenarios
-      }
-    }
+      if (prev == null) {
+        if (numEntries.incrementAndGet() > maxRowCount) {
+          // Oops, we added a row that overflowed facts. Remove something.
 
-    rowContainer.set(row);
-
-    for (Aggregator agg : aggs) {
-      synchronized (agg) {
-        try {
-          agg.aggregate();
-        }
-        catch (ParseException e) {
-          // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
-          if (reportParseExceptions) {
-            throw new ParseException(e, "Encountered parse error for aggregator[%s]", agg.getName());
-          } else {
-            log.debug(e, "Encountered parse error, skipping aggregator[%s].", agg.getName());
+          if (overflowAction == OverflowAction.FAIL) {
+            final Integer removed = facts.remove(key);
+            if (removed != null) {
+              numEntries.decrementAndGet();
+            }
+            throw new IndexSizeExceededException("Maximum number of rows [%d] reached", maxRowCount);
+          } else if (overflowAction == OverflowAction.DROP_LOW) {
+            final Map.Entry<TimeAndDims, Integer> removed = ((ConcurrentNavigableMap<TimeAndDims, Integer>) facts).pollFirstEntry();
+            if (removed != null) {
+              numEntries.decrementAndGet();
+              if (rowIndex == removed.getValue()) {
+                // We removed our own row!
+                return null;
+              }
+            }
+          } else if (overflowAction == OverflowAction.DROP_HIGH) {
+            final Map.Entry<TimeAndDims, Integer> removed = ((ConcurrentNavigableMap<TimeAndDims, Integer>) facts).pollLastEntry();
+            if (removed != null) {
+              numEntries.decrementAndGet();
+              if (rowIndex == removed.getValue()) {
+                // We removed our own row!
+                return null;
+              }
+            }
           }
         }
+
+        // Some other thread might already be removing us from facts, but it's too late to worry about that.
+        // Just return the aggregators and let them be aggregated. They'll eventually get GCed as references to
+        // them are lost.
+        return aggs;
+      } else {
+        // We lost the race to add to facts, free up the misfire.
+        // This is expected to occur ~80% of the time in the worst scenarios.
+        concurrentRemove(rowIndex);
+        return concurrentGet(prev);
       }
     }
-
-    rowContainer.set(null);
-
-
-    return numEntries.get();
   }
 
   protected Aggregator[] concurrentGet(int offset)
