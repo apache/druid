@@ -174,7 +174,11 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
                         return Sequences.simple(bySegmentAccumulatorPair.lhs);
                       }
 
-                      return Sequences.simple(indexAccumulatorPair.lhs.iterableWithPostAggregations(null, query.isDescending()));
+                      return Sequences.simple(indexAccumulatorPair.lhs.iterableWithPostAggregations(
+                          null,
+                          false,
+                          GroupByQueryHelper.isSortResults(queryParam)
+                      ));
                     }
                   };
                 }

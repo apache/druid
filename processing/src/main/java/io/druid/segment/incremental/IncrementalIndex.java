@@ -434,7 +434,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     }
   }
 
-  private DimDim newDimDim(String dimension, ValueType type) {
+  private DimDim newDimDim(String dimension, ValueType type)
+  {
     DimDim newDimDim;
     switch (type) {
       case LONG:
@@ -561,7 +562,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
    *
    * @return the number of rows in the data set after adding the InputRow
    */
-  public int add(InputRow row) throws IndexSizeExceededException {
+  public int add(InputRow row) throws IndexSizeExceededException
+  {
     TimeAndDims key = toTimeAndDims(row);
     final int rv = addToFacts(
         metrics,
@@ -820,7 +822,12 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   @GuardedBy("dimensionDescs")
   private DimensionDesc addNewDimension(String dim, ColumnCapabilitiesImpl capabilities)
   {
-    DimensionDesc desc = new DimensionDesc(dimensionDescs.size(), dim, newDimDim(dim, capabilities.getType()), capabilities);
+    DimensionDesc desc = new DimensionDesc(
+        dimensionDescs.size(),
+        dim,
+        newDimDim(dim, capabilities.getType()),
+        capabilities
+    );
     if (dimValues.size() != desc.getIndex()) {
       throw new ISE("dimensionDescs and dimValues for [%s] is out of sync!!", dim);
     }
@@ -877,10 +884,14 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   @Override
   public Iterator<Row> iterator()
   {
-    return iterableWithPostAggregations(null, false).iterator();
+    return iterableWithPostAggregations(null, false, false).iterator();
   }
 
-  public Iterable<Row> iterableWithPostAggregations(final List<PostAggregator> postAggs, final boolean descending)
+  public Iterable<Row> iterableWithPostAggregations(
+      final List<PostAggregator> postAggs,
+      final boolean descending,
+      final boolean sorted
+  )
   {
     return new Iterable<Row>()
     {
@@ -889,15 +900,34 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       {
         final List<DimensionDesc> dimensions = getDimensions();
 
-        Map<TimeAndDims, Integer> facts = null;
-        if (descending && sortFacts) {
-          facts = ((ConcurrentNavigableMap<TimeAndDims, Integer>) getFacts()).descendingMap();
+        final Iterable<Map.Entry<TimeAndDims, Integer>> facts;
+        if (sorted && sortFacts) {
+          facts = descending ? ((ConcurrentNavigableMap<TimeAndDims, Integer>) getFacts()).descendingMap().entrySet()
+                             : getFacts().entrySet();
+        } else if (sorted) {
+          // Materialize and sort
+          final Comparator<TimeAndDims> comparator = descending
+                                                     ? Ordering.from(dimsComparator()).reverse()
+                                                     : dimsComparator();
+          List<Map.Entry<TimeAndDims, Integer>> factsList = Lists.newArrayList(getFacts().entrySet());
+          Collections.sort(
+              factsList,
+              new Comparator<Map.Entry<TimeAndDims, Integer>>()
+              {
+                @Override
+                public int compare(Map.Entry<TimeAndDims, Integer> a, Map.Entry<TimeAndDims, Integer> b)
+                {
+                  return comparator.compare(a.getKey(), b.getKey());
+                }
+              }
+          );
+          facts = factsList;
         } else {
-          facts = getFacts();
+          facts = getFacts().entrySet();
         }
 
         return Iterators.transform(
-            facts.entrySet().iterator(),
+            facts.iterator(),
             new Function<Map.Entry<TimeAndDims, Integer>, Row>()
             {
               @Override
