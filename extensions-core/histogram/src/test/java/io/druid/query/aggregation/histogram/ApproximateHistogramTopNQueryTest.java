@@ -63,6 +63,7 @@ public class ApproximateHistogramTopNQueryTest
                 new TopNQueryRunnerFactory(
                     TestQueryRunners.getPool(),
                     new TopNQueryQueryToolChest(new TopNQueryConfig(), QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
+                    new TopNQueryConfig(),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
                 )
             ),
@@ -79,6 +80,7 @@ public class ApproximateHistogramTopNQueryTest
                         }
                     ),
                     new TopNQueryQueryToolChest(new TopNQueryConfig(), QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
+                    new TopNQueryConfig(),
                     QueryRunnerTestHelper.NOOP_QUERYWATCHER
                 )
             )

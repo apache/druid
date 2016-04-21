@@ -38,15 +38,19 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class PooledTopNAlgorithm
     extends BaseTopNAlgorithm<int[], BufferAggregator[], PooledTopNAlgorithm.PooledTopNParams>
 {
+  private static final String CTX_KEY_MAX_INTERMEDIATE_ROWS = "maxIntermediateRows";
+
   private final Capabilities capabilities;
   private final TopNQuery query;
   private final StupidPool<ByteBuffer> bufferPool;
+  private final TopNQueryConfig config;
   private static final int AGG_UNROLL_COUNT = 8; // Must be able to fit loop below
 
   public PooledTopNAlgorithm(
       Capabilities capabilities,
       TopNQuery query,
-      StupidPool<ByteBuffer> bufferPool
+      StupidPool<ByteBuffer> bufferPool,
+      TopNQueryConfig config
   )
   {
     super(capabilities);
@@ -54,6 +58,7 @@ public class PooledTopNAlgorithm
     this.capabilities = capabilities;
     this.query = query;
     this.bufferPool = bufferPool;
+    this.config = config;
   }
 
   @Override
@@ -97,7 +102,16 @@ public class PooledTopNAlgorithm
       numBytesPerRecord += aggregatorSizes[i];
     }
 
-    final int numValuesPerPass = numBytesToWorkWith / numBytesPerRecord;
+    final int numValuesPerPass = Math.min(
+        numBytesToWorkWith / numBytesPerRecord,
+        Math.min(
+            query.getContextValue(
+                CTX_KEY_MAX_INTERMEDIATE_ROWS,
+                config.getMaxIntermediateRows()
+            ),
+            config.getMaxIntermediateRows()
+        )
+    );
 
     return PooledTopNParams.builder()
                            .withDimSelector(dimSelector)

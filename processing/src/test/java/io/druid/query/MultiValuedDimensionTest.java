@@ -292,6 +292,7 @@ public class MultiValuedDimensionTest
             new TopNQueryConfig(),
             QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
         ),
+        new TopNQueryConfig(),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
     QueryRunner<Result<TopNResultValue>> runner = QueryRunnerTestHelper.makeQueryRunner(

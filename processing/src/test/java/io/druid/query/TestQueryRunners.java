@@ -64,6 +64,7 @@ public class TestQueryRunners
         pool,
         new TopNQueryQueryToolChest(topNConfig,
             QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()),
+        new TopNQueryConfig(),
         QueryRunnerTestHelper.NOOP_QUERYWATCHER
     );
     return new FinalizeResultsQueryRunner<T>(

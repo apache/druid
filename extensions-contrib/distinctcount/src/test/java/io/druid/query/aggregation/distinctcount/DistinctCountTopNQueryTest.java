@@ -32,6 +32,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNQueryBuilder;
+import io.druid.query.topn.TopNQueryConfig;
 import io.druid.query.topn.TopNQueryEngine;
 import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.TestHelper;
@@ -62,7 +63,8 @@ public class DistinctCountTopNQueryTest
                 return ByteBuffer.allocate(1024 * 1024);
               }
             }
-        )
+        ),
+        new TopNQueryConfig()
     );
 
     IncrementalIndex index = new OnheapIncrementalIndex(

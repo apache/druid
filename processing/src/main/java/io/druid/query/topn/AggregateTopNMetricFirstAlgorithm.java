@@ -41,16 +41,19 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
   private final Capabilities capabilities;
   private final TopNQuery query;
   private final StupidPool<ByteBuffer> bufferPool;
+  private final TopNQueryConfig config;
 
   public AggregateTopNMetricFirstAlgorithm(
       Capabilities capabilities,
       TopNQuery query,
-      StupidPool<ByteBuffer> bufferPool
+      StupidPool<ByteBuffer> bufferPool,
+      TopNQueryConfig config
   )
   {
     this.capabilities = capabilities;
     this.query = query;
     this.bufferPool = bufferPool;
+    this.config = config;
   }
 
   @Override
@@ -88,7 +91,7 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
                                                         .build();
     final TopNResultBuilder singleMetricResultBuilder = BaseTopNAlgorithm.makeResultBuilder(params, singleMetricQuery);
 
-    PooledTopNAlgorithm singleMetricAlgo = new PooledTopNAlgorithm(capabilities, singleMetricQuery, bufferPool);
+    PooledTopNAlgorithm singleMetricAlgo = new PooledTopNAlgorithm(capabilities, singleMetricQuery, bufferPool, config);
     PooledTopNAlgorithm.PooledTopNParams singleMetricParam = null;
     int[] dimValSelector = null;
     try {
@@ -106,7 +109,7 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
       singleMetricAlgo.cleanup(singleMetricParam);
     }
 
-    PooledTopNAlgorithm allMetricAlgo = new PooledTopNAlgorithm(capabilities, query, bufferPool);
+    PooledTopNAlgorithm allMetricAlgo = new PooledTopNAlgorithm(capabilities, query, bufferPool, config);
     PooledTopNAlgorithm.PooledTopNParams allMetricsParam = null;
     try {
       // Run topN for all metrics for top N dimension values

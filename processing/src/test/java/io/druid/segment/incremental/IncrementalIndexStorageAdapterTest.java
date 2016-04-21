@@ -44,6 +44,7 @@ import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryEngine;
 import io.druid.query.topn.TopNQueryBuilder;
+import io.druid.query.topn.TopNQueryConfig;
 import io.druid.query.topn.TopNQueryEngine;
 import io.druid.query.topn.TopNResultValue;
 import io.druid.segment.Cursor;
@@ -312,7 +313,8 @@ public class IncrementalIndexStorageAdapterTest
                 return ByteBuffer.allocate(50000);
               }
             }
-        )
+        ),
+        new TopNQueryConfig()
     );
 
     final Iterable<Result<TopNResultValue>> results = Sequences.toList(
