@@ -45,6 +45,11 @@ public class GroupByQueryHelper
   private static final String CTX_KEY_MAX_RESULTS = "maxResults";
   public final static String CTX_KEY_SORT_RESULTS = "sortResults";
 
+  public static boolean isSortResults(GroupByQuery query)
+  {
+    return query.getContextValue(CTX_KEY_SORT_RESULTS, true);
+  }
+
   public static <T> Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> createIndexAccumulatorPair(
       final GroupByQuery query,
       final GroupByQueryConfig config,
@@ -82,7 +87,7 @@ public class GroupByQueryHelper
     );
     final IncrementalIndex index;
 
-    final boolean sortResults = query.getContextValue(CTX_KEY_SORT_RESULTS, true);
+    final boolean sortResults = isSortResults(query);
 
     if (query.getContextValue("useOffheap", false)) {
       index = new OffheapIncrementalIndex(

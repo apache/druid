@@ -255,7 +255,13 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
 
     } else {
       final IncrementalIndex index = makeIncrementalIndex(
-          query, runner.run(
+          query.withOverriddenContext(
+              ImmutableMap.<String, Object>of(
+                  // Don't force sorting here, postAggregate will do it.
+                  GroupByQueryHelper.CTX_KEY_SORT_RESULTS, false
+              )
+          ),
+          runner.run(
               new GroupByQuery(
                   query.getDataSource(),
                   query.getQuerySegmentSpec(),
@@ -287,7 +293,11 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
   private Sequence<Row> postAggregate(final GroupByQuery query, IncrementalIndex index)
   {
     return Sequences.map(
-        Sequences.simple(index.iterableWithPostAggregations(query.getPostAggregatorSpecs(), query.isDescending())),
+        Sequences.simple(index.iterableWithPostAggregations(
+            query.getPostAggregatorSpecs(),
+            false,
+            GroupByQueryHelper.isSortResults(query)
+        )),
         new Function<Row, Row>()
         {
           @Override
@@ -428,7 +438,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
                   return runner.run(query, responseContext);
                 }
                 GroupByQuery groupByQuery = (GroupByQuery) query;
-                if (groupByQuery.getDimFilter() != null){
+                if (groupByQuery.getDimFilter() != null) {
                   groupByQuery = groupByQuery.withDimFilter(groupByQuery.getDimFilter().optimize());
                 }
                 final GroupByQuery delegateGroupByQuery = groupByQuery;
