@@ -246,6 +246,13 @@ public class RegisteredLookupExtractionFnTest
         return false;
       }
 
+      @Nullable
+      @Override
+      public LookupIntrospectHandler getIntrospectHandler()
+      {
+        return null;
+      }
+
       @Override
       public LookupExtractor get()
       {
