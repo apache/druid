@@ -262,7 +262,7 @@ public class KafkaLookupExtractorFactoryTest
             DEFAULT_STRING_DECODER),
         EasyMock.eq(DEFAULT_STRING_DECODER)
     )).andReturn(ImmutableList.of(kafkaStream)).once();
-    EasyMock.expect(kafkaStream.iterator()).andReturn(consumerIterator).once();
+    EasyMock.expect(kafkaStream.iterator()).andReturn(consumerIterator).anyTimes();
     EasyMock.expect(consumerIterator.hasNext()).andReturn(false).anyTimes();
     EasyMock.expect(cacheManager.getCacheMap(EasyMock.anyString()))
             .andReturn(new ConcurrentHashMap<String, String>())
@@ -287,6 +287,7 @@ public class KafkaLookupExtractorFactoryTest
     };
     Assert.assertTrue(factory.start());
     Assert.assertTrue(factory.close());
+    Assert.assertTrue(factory.getFuture().isDone());
     EasyMock.verify(cacheManager, kafkaStream, consumerConnector, consumerIterator);
   }
 
@@ -339,7 +340,7 @@ public class KafkaLookupExtractorFactoryTest
             DEFAULT_STRING_DECODER),
         EasyMock.eq(DEFAULT_STRING_DECODER)
     )).andReturn(ImmutableList.of(kafkaStream)).once();
-    EasyMock.expect(kafkaStream.iterator()).andReturn(consumerIterator).once();
+    EasyMock.expect(kafkaStream.iterator()).andReturn(consumerIterator).anyTimes();
     EasyMock.expect(consumerIterator.hasNext()).andReturn(false).anyTimes();
     EasyMock.expect(cacheManager.getCacheMap(EasyMock.anyString()))
             .andReturn(new ConcurrentHashMap<String, String>())
@@ -378,7 +379,7 @@ public class KafkaLookupExtractorFactoryTest
             DEFAULT_STRING_DECODER),
         EasyMock.eq(DEFAULT_STRING_DECODER)
     )).andReturn(ImmutableList.of(kafkaStream)).once();
-    EasyMock.expect(kafkaStream.iterator()).andReturn(consumerIterator).once();
+    EasyMock.expect(kafkaStream.iterator()).andReturn(consumerIterator).anyTimes();
     EasyMock.expect(consumerIterator.hasNext()).andReturn(false).anyTimes();
     EasyMock.expect(cacheManager.getCacheMap(EasyMock.anyString()))
             .andReturn(new ConcurrentHashMap<String, String>())
@@ -418,7 +419,7 @@ public class KafkaLookupExtractorFactoryTest
             DEFAULT_STRING_DECODER),
         EasyMock.eq(DEFAULT_STRING_DECODER)
     )).andReturn(ImmutableList.of(kafkaStream)).once();
-    EasyMock.expect(kafkaStream.iterator()).andReturn(consumerIterator).once();
+    EasyMock.expect(kafkaStream.iterator()).andReturn(consumerIterator).anyTimes();
     EasyMock.expect(consumerIterator.hasNext()).andReturn(false).anyTimes();
     EasyMock.expect(cacheManager.getCacheMap(EasyMock.anyString()))
             .andReturn(new ConcurrentHashMap<String, String>())
