@@ -35,8 +35,8 @@ An example timeseries query object is shown below:
       "name": "sample_divide",
       "fn": "/",
       "fields": [
-        { "type": "fieldAccess", "name": "sample_name1", "fieldName": "sample_fieldName1" },
-        { "type": "fieldAccess", "name": "sample_name2", "fieldName": "sample_fieldName2" }
+        { "type": "fieldAccess", "name": "postAgg__sample_name1", "fieldName": "sample_name1" },
+        { "type": "fieldAccess", "name": "postAgg__sample_name2", "fieldName": "sample_name2" }
       ]
     }
   ],
