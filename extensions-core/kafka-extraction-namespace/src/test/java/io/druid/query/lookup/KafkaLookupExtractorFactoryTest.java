@@ -274,7 +274,9 @@ public class KafkaLookupExtractorFactoryTest
     final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
         cacheManager,
         TOPIC,
-        ImmutableMap.of("zookeeper.connect", "localhost")
+        ImmutableMap.of("zookeeper.connect", "localhost"),
+        10_000L,
+        false
     )
     {
       @Override
@@ -428,7 +430,9 @@ public class KafkaLookupExtractorFactoryTest
     final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
         cacheManager,
         TOPIC,
-        ImmutableMap.of("zookeeper.connect", "localhost")
+        ImmutableMap.of("zookeeper.connect", "localhost"),
+        10_000L,
+        false
     )
     {
       @Override
