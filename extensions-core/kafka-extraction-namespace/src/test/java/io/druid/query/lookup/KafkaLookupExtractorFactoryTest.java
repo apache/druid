@@ -288,7 +288,7 @@ public class KafkaLookupExtractorFactoryTest
     Assert.assertTrue(factory.start());
     Assert.assertTrue(factory.close());
     Assert.assertTrue(factory.getFuture().isDone());
-    EasyMock.verify(cacheManager, kafkaStream, consumerConnector, consumerIterator);
+    EasyMock.verify(cacheManager);
   }
 
 
@@ -403,7 +403,7 @@ public class KafkaLookupExtractorFactoryTest
     Assert.assertTrue(factory.start());
     Assert.assertTrue(factory.close());
     Assert.assertFalse(factory.start());
-    EasyMock.verify(cacheManager, kafkaStream, consumerConnector, consumerIterator);
+    EasyMock.verify(cacheManager);
   }
 
   @Test
@@ -445,7 +445,7 @@ public class KafkaLookupExtractorFactoryTest
     Assert.assertTrue(factory.start());
     Assert.assertFalse(factory.start());
     Assert.assertTrue(factory.close());
-    EasyMock.verify(cacheManager, kafkaStream, consumerConnector, consumerIterator);
+    EasyMock.verify(cacheManager);
   }
 
   @Test
