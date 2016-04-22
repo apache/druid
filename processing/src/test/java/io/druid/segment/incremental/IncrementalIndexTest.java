@@ -20,6 +20,7 @@
 package io.druid.segment.incremental;
 
 import com.google.common.base.Supplier;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
@@ -47,6 +48,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.List;
 
 /**
  */
@@ -91,41 +93,47 @@ public class IncrementalIndexTest
         dimensions,
         metrics
     );
-    return Arrays.asList(
-        new Object[][]{
-            {
-                new IndexCreator()
+
+    final List<Object[]> constructors = Lists.newArrayList();
+    for (final Boolean sortFacts : ImmutableList.of(false, true)) {
+      constructors.add(
+          new Object[]{
+              new IndexCreator()
+              {
+                @Override
+                public IncrementalIndex createIndex()
                 {
-                  @Override
-                  public IncrementalIndex createIndex()
-                  {
-                    return new OnheapIncrementalIndex(schema, true, 1000);
-                  }
+                  return new OnheapIncrementalIndex(schema, false, true, sortFacts, 1000);
                 }
-            },
-            {
-                new IndexCreator()
+              }
+          }
+      );
+      constructors.add(
+          new Object[]{
+              new IndexCreator()
+              {
+                @Override
+                public IncrementalIndex createIndex()
                 {
-                  @Override
-                  public IncrementalIndex createIndex()
-                  {
-                    return new OffheapIncrementalIndex(
-                        schema, true, true, true, 1000000, new StupidPool<ByteBuffer>(
-                            new Supplier<ByteBuffer>()
-                            {
-                              @Override
-                              public ByteBuffer get()
-                              {
-                                return ByteBuffer.allocate(256 * 1024);
-                              }
-                            }
-                        )
-                    );
-                  }
+                  return new OffheapIncrementalIndex(
+                      schema, true, true, sortFacts, 1000000, new StupidPool<ByteBuffer>(
+                      new Supplier<ByteBuffer>()
+                      {
+                        @Override
+                        public ByteBuffer get()
+                        {
+                          return ByteBuffer.allocate(256 * 1024);
+                        }
+                      }
+                  )
+                  );
                 }
-            }
-        }
-    );
+              }
+          }
+      );
+    }
+
+    return constructors;
   }
 
   @Test(expected = ISE.class)
@@ -199,7 +207,8 @@ public class IncrementalIndexTest
             ImmutableMap.<String, Object>of(
                 "string", Arrays.asList("A", null, ""),
                 "float", Arrays.asList(Float.MAX_VALUE, null, ""),
-                "long", Arrays.asList(Long.MIN_VALUE, null, ""))
+                "long", Arrays.asList(Long.MIN_VALUE, null, "")
+            )
         )
     );
 
@@ -208,5 +217,21 @@ public class IncrementalIndexTest
     Assert.assertArrayEquals(new String[]{"", "", "A"}, (Object[]) row.getRaw("string"));
     Assert.assertArrayEquals(new Float[]{null, null, Float.MAX_VALUE}, (Object[]) row.getRaw("float"));
     Assert.assertArrayEquals(new Long[]{null, null, Long.MIN_VALUE}, (Object[]) row.getRaw("long"));
+  }
+
+  @Test
+  public void sameRow() throws IndexSizeExceededException
+  {
+    MapBasedInputRow row = new MapBasedInputRow(
+        new DateTime().minus(1).getMillis(),
+        Lists.newArrayList("billy", "joe"),
+        ImmutableMap.<String, Object>of("billy", "A", "joe", "B")
+    );
+    IncrementalIndex index = closer.closeLater(indexCreator.createIndex());
+    index.add(row);
+    index.add(row);
+    index.add(row);
+
+    Assert.assertEquals(1, index.size());
   }
 }

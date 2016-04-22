@@ -1220,6 +1220,42 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
           }
       ) + '}';
     }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      TimeAndDims that = (TimeAndDims) o;
+
+      if (timestamp != that.timestamp) {
+        return false;
+      }
+      if (dims.length != that.dims.length) {
+        return false;
+      }
+      for (int i = 0; i < dims.length; i++) {
+        if (!Arrays.equals(dims[i], that.dims[i])) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      int hash = (int) timestamp;
+      for (int i = 0; i < dims.length; i++) {
+        hash = 31 * hash + Arrays.hashCode(dims[i]);
+      }
+      return hash;
+    }
   }
 
   protected final Comparator<TimeAndDims> dimsComparator()
