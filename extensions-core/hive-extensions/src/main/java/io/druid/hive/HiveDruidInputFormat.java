@@ -19,9 +19,13 @@
 
 package io.druid.hive;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Functions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Range;
 import io.druid.indexer.hadoop.QueryBasedInputFormat;
+import io.druid.query.filter.AndDimFilter;
+import io.druid.query.filter.DimFilter;
 import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -35,12 +39,12 @@ import org.apache.hadoop.mapred.RecordReader;
 import org.apache.hadoop.mapred.RecordWriter;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.util.Progressable;
-import org.joda.time.Interval;
 
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 public class HiveDruidInputFormat extends QueryBasedInputFormat implements HiveOutputFormat
@@ -72,16 +76,29 @@ public class HiveDruidInputFormat extends QueryBasedInputFormat implements HiveO
   }
 
   @Override
-  protected final Configuration configure(Configuration configuration)
+  protected final Configuration configure(Configuration configuration, ObjectMapper mapper)
+      throws IOException
   {
-    List<Interval> intervals = ExpressionConverter.convert(configuration);
-    if (intervals == null || intervals.isEmpty()) {
+    Map<String, List<Range>> converted = ExpressionConverter.convert(configuration);
+    List<Range> timeRanges = converted.remove(ExpressionConverter.TIME_COLUMN_NAME);
+    if (timeRanges == null || timeRanges.isEmpty()) {
       throw new IllegalArgumentException("failed to extract intervals from predicate");
     }
     configuration.set(
         CONF_DRUID_INTERVALS,
-        StringUtils.join(Lists.transform(intervals, Functions.toStringFunction()), ",")
+        StringUtils.join(Lists.transform(ExpressionConverter.toInterval(timeRanges), Functions.toStringFunction()), ",")
     );
+
+    List<DimFilter> filters = Lists.newArrayList();
+    for (Map.Entry<String, List<Range>> entry : converted.entrySet()) {
+      DimFilter filter = ExpressionConverter.toFilter(entry.getKey(), entry.getValue());
+      if (filter != null) {
+        filters.add(filter);
+      }
+    }
+    if (!filters.isEmpty()) {
+      configuration.set(CONF_DRUID_FILTERS, mapper.writeValueAsString(new AndDimFilter(filters).optimize()));
+    }
     return configuration;
   }
 

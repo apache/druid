@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
 import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
@@ -103,8 +104,9 @@ public class QueryBasedInputFormat extends InputFormat<NullWritable, MapWritable
   public static final String CONF_SELECT_COLUMNS = "hive.io.file.readcolumn.names";
 
   public static final int DEFAULT_SELECT_THRESHOLD = 10000;
+  public static final int DEFAULT_MAX_SPLIT_SIZE = -1;  // split per segment
 
-  protected Configuration configure(Configuration configuration)
+  protected Configuration configure(Configuration configuration, ObjectMapper mapper) throws IOException
   {
     return configuration;
   }
@@ -123,14 +125,15 @@ public class QueryBasedInputFormat extends InputFormat<NullWritable, MapWritable
 
   protected DruidInputSplit[] getInputSplits(Configuration conf) throws IOException
   {
-    conf = configure(conf);
-
     ObjectMapper mapper = new ObjectMapper();
     mapper.registerModule(new DruidDefaultSerializersModule());
+
+    conf = configure(conf, mapper);
 
     String brokerAddress = Preconditions.checkNotNull(conf.get(CONF_DRUID_BROKER_ADDRESS), "Missing broker address");
     String dataSource = Preconditions.checkNotNull(conf.get(CONF_DRUID_DATASOURCE), "Missing datasource name");
     String intervals = Preconditions.checkNotNull(conf.get(CONF_DRUID_INTERVALS), "Missing interval");
+    String filters = conf.get(CONF_DRUID_FILTERS);
 
     String requestURL =
         String.format(
@@ -171,7 +174,7 @@ public class QueryBasedInputFormat extends InputFormat<NullWritable, MapWritable
 
     logger.info("segments to read [%s]", segments);
 
-    long maxSize = conf.getLong(CONF_MAX_SPLIT_SIZE, 0);
+    long maxSize = conf.getLong(CONF_MAX_SPLIT_SIZE, DEFAULT_MAX_SPLIT_SIZE);
 
     if (maxSize > 0) {
       Collections.shuffle(segments);
@@ -186,9 +189,9 @@ public class QueryBasedInputFormat extends InputFormat<NullWritable, MapWritable
     long currentSize = 0;
 
     for (LocatedSegmentDescriptor segment : segments) {
-      if (maxSize > 0 && currentSize + segment.getSize() > maxSize) {
-        splits.add(toSplit(dataSource, currentGroup));
-        currentGroup = Lists.newArrayList();
+      if (maxSize < 0 || maxSize > 0 && currentSize + segment.getSize() > maxSize) {
+        splits.add(toSplit(dataSource, filters, currentGroup));
+        currentGroup.clear();
         currentSize = 0;
       }
 
@@ -197,7 +200,7 @@ public class QueryBasedInputFormat extends InputFormat<NullWritable, MapWritable
     }
 
     if (!currentGroup.isEmpty()) {
-      splits.add(toSplit(dataSource, currentGroup));
+      splits.add(toSplit(dataSource, filters, currentGroup));
     }
 
     logger.info("Number of splits [%d]", splits.size());
@@ -206,7 +209,8 @@ public class QueryBasedInputFormat extends InputFormat<NullWritable, MapWritable
 
   @Override
   public org.apache.hadoop.mapred.RecordReader getRecordReader(
-      org.apache.hadoop.mapred.InputSplit split, JobConf job, Reporter reporter) throws IOException
+      org.apache.hadoop.mapred.InputSplit split, JobConf job, Reporter reporter
+  ) throws IOException
   {
     DruidRecordReader reader = new DruidRecordReader();
     reader.initialize((DruidInputSplit) split, job);
@@ -222,25 +226,19 @@ public class QueryBasedInputFormat extends InputFormat<NullWritable, MapWritable
     return new DruidRecordReader();
   }
 
-  private DruidInputSplit toSplit(String dataSource, List<LocatedSegmentDescriptor> segments)
+  private DruidInputSplit toSplit(String dataSource, String filters, List<LocatedSegmentDescriptor> segments)
   {
-    String[] locations = null;
-    try {
-      locations = getFrequentLocations(segments);
-    }
-    catch (Exception e) {
-      logger.error(e, "Exception thrown finding location of splits");
-    }
     long size = 0;
     List<Interval> intervals = Lists.newArrayList();
     for (LocatedSegmentDescriptor segment : segments) {
       size += segment.getSize();
       intervals.add(segment.getInterval());
     }
-    return new DruidInputSplit(dataSource, locations, intervals, size);
+    String[] locations = getFrequentLocations(segments);
+    return new DruidInputSplit(dataSource, intervals, filters, locations, size);
   }
 
-  private String[] getFrequentLocations(List<LocatedSegmentDescriptor> segments) throws IOException
+  private String[] getFrequentLocations(List<LocatedSegmentDescriptor> segments)
   {
     List<String> locations = Lists.newArrayList();
     for (LocatedSegmentDescriptor segment : segments) {
@@ -288,6 +286,7 @@ public class QueryBasedInputFormat extends InputFormat<NullWritable, MapWritable
   public static final class DruidInputSplit extends InputSplit implements org.apache.hadoop.mapred.InputSplit
   {
     private String dataSource;
+    private String filters;
     private List<Interval> intervals;
     private String[] locations;
     private long length;
@@ -297,11 +296,17 @@ public class QueryBasedInputFormat extends InputFormat<NullWritable, MapWritable
     {
     }
 
-    public DruidInputSplit(String dataSource, String[] locations, List<Interval> intervals, long length)
+    public DruidInputSplit(
+        String dataSource,
+        List<Interval> intervals,
+        String filters,
+        String[] locations,
+        long length
+    )
     {
-      this();
       this.dataSource = dataSource;
       this.intervals = intervals;
+      this.filters = filters;
       this.locations = locations;
       this.length = length;
     }
@@ -323,6 +328,11 @@ public class QueryBasedInputFormat extends InputFormat<NullWritable, MapWritable
       return dataSource;
     }
 
+    public String getFilters()
+    {
+      return filters;
+    }
+
     public List<Interval> getIntervals()
     {
       return intervals;
@@ -336,6 +346,7 @@ public class QueryBasedInputFormat extends InputFormat<NullWritable, MapWritable
       for (String interval : Lists.transform(intervals, Functions.toStringFunction())) {
         out.writeUTF(interval);
       }
+      out.writeUTF(Strings.nullToEmpty(filters));
       out.writeInt(locations.length);
       for (String location : locations) {
         out.writeUTF(location);
@@ -351,6 +362,7 @@ public class QueryBasedInputFormat extends InputFormat<NullWritable, MapWritable
       for (int i = in.readInt(); i > 0; i--) {
         intervals.add(new Interval(in.readUTF()));
       }
+      filters = in.readUTF();
       locations = new String[in.readInt()];
       for (int i = 0; i < locations.length; i++) {
         locations[i] = in.readUTF();
@@ -363,7 +375,8 @@ public class QueryBasedInputFormat extends InputFormat<NullWritable, MapWritable
     {
       return "DruidInputSplit{" +
              "dataSource=" + dataSource +
-             "intervals=" + intervals +
+             ", intervals=" + intervals +
+             ", filters=" + filters +
              ", locations=" + Arrays.toString(locations) +
              '}';
     }
@@ -426,7 +439,7 @@ public class QueryBasedInputFormat extends InputFormat<NullWritable, MapWritable
 
       builder.dimensionSpecs(dimensionSpecs);
 
-      String filters = configuration.get(CONF_DRUID_FILTERS);
+      String filters = split.getFilters();
       if (filters != null && !filters.isEmpty()) {
         builder.filters(mapper.readValue(filters, DimFilter.class));
       }
@@ -441,17 +454,18 @@ public class QueryBasedInputFormat extends InputFormat<NullWritable, MapWritable
       catch (Exception e) {
         throw new IOException(e);
       }
+
+      if (logger.isInfoEnabled()) {
+        logger.info("Retrieving from druid using query.. " + nextQuery());
+      }
     }
 
     private void nextPage() throws IOException, InterruptedException
     {
-      PagingSpec pagingSpec = new PagingSpec(paging, threshold, true);
-      SelectQuery query = builder.pagingSpec(pagingSpec).build();
-
       StatusResponseHolder response;
       try {
         response = client.go(
-            request.setContent(mapper.writeValueAsBytes(query))
+            request.setContent(mapper.writeValueAsBytes(nextQuery()))
                    .setHeader(
                        HttpHeaders.Names.CONTENT_TYPE,
                        MediaType.APPLICATION_JSON
@@ -482,6 +496,12 @@ public class QueryBasedInputFormat extends InputFormat<NullWritable, MapWritable
         events = Iterators.emptyIterator();
         finished = true;
       }
+    }
+
+    private SelectQuery nextQuery()
+    {
+      PagingSpec pagingSpec = new PagingSpec(paging, threshold, true);
+      return builder.pagingSpec(pagingSpec).build();
     }
 
     @Override
