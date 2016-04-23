@@ -19,9 +19,30 @@
 
 package io.druid.hive;
 
-import static org.junit.Assert.*;
+import org.apache.hadoop.hive.ql.metadata.DefaultStorageHandler;
+import org.apache.hadoop.hive.serde2.SerDe;
+import org.apache.hadoop.mapred.InputFormat;
+import org.apache.hadoop.mapred.OutputFormat;
 
-public class HiveDruidInputFormatTest
+/**
+ */
+public class DruidHiveStorageHandler extends DefaultStorageHandler
 {
+  @Override
+  public Class<? extends InputFormat> getInputFormatClass()
+  {
+    return DruidHiveInputFormat.class;
+  }
 
+  @Override
+  public Class<? extends OutputFormat> getOutputFormatClass()
+  {
+    return DruidHiveInputFormat.class;
+  }
+
+  @Override
+  public Class<? extends SerDe> getSerDeClass()
+  {
+    return DruidHiveSerDe.class;
+  }
 }

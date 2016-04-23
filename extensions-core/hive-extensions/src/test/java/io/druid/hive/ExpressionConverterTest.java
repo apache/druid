@@ -45,6 +45,7 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.sql.Timestamp;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -62,6 +63,7 @@ public class ExpressionConverterTest
     types.put("col2", TypeInfoFactory.stringTypeInfo);
 
     ExprNodeColumnDesc longTime = new ExprNodeColumnDesc(Long.class, "__time", "some_table", false);
+    ExprNodeColumnDesc timestampTime = new ExprNodeColumnDesc(Timestamp.class, "__time", "some_table", false);
 
     ExprNodeColumnDesc someColumn1 = new ExprNodeColumnDesc(String.class, "col1", "some_table", false);
     ExprNodeColumnDesc someColumn2 = new ExprNodeColumnDesc(String.class, "col2", "some_table", false);
@@ -101,8 +103,8 @@ public class ExpressionConverterTest
         PrimitiveObjectInspectorFactory.javaBooleanObjectInspector,
         new GenericUDFOPGreaterThan(),
         Arrays.<ExprNodeDesc>asList(
-            longTime,
-            new ExprNodeConstantDesc(TypeInfoFactory.longTypeInfo, new DateTime(2010, 1, 1, 0, 0).getMillis())
+            timestampTime,
+            new ExprNodeConstantDesc(TypeInfoFactory.longTypeInfo, new Timestamp(new DateTime(2010, 1, 1, 0, 0).getMillis()))
         )
     );
     ExprNodeGenericFuncDesc lt = new ExprNodeGenericFuncDesc(
@@ -218,19 +220,19 @@ public class ExpressionConverterTest
         between0,
         types,
         Arrays.asList("(1262304000000‥1330560000000)"),
-        Arrays.asList("2010-01-01T00:00:00.000Z/2012-03-01T00:00:00.000Z")
+        Arrays.asList("2010-01-01T00:00:00.001Z/2012-03-01T00:00:00.000Z")
     );
     validate(
         between1,
         types,
         Arrays.asList("[1306922400000‥1459512000000]"),
-        Arrays.asList("2011-06-01T10:00:00.000Z/2016-04-01T12:00:00.000Z")
+        Arrays.asList("2011-06-01T10:00:00.000Z/2016-04-01T12:00:00.001Z")
     );
     validate(
         between2,
         types,
         Arrays.asList("[1459512000000‥1483272600000]"),
-        Arrays.asList("2016-04-01T12:00:00.000Z/2017-01-01T12:10:00.000Z")
+        Arrays.asList("2016-04-01T12:00:00.000Z/2017-01-01T12:10:00.001Z")
     );
 
     // 0 AND 1
@@ -245,21 +247,21 @@ public class ExpressionConverterTest
         intersectOr,
         types,
         Arrays.asList("(1262304000000‥1459512000000]"),
-        Arrays.asList("2010-01-01T00:00:00.000Z/2016-04-01T12:00:00.000Z")
+        Arrays.asList("2010-01-01T00:00:00.001Z/2016-04-01T12:00:00.001Z")
     );
     // 1 AND 2
     validate(
         abutAnd,
         types,
         Arrays.asList("[1459512000000‥1459512000000]"),
-        Arrays.asList("2016-04-01T12:00:00.000Z/2016-04-01T12:00:00.000Z")
+        Arrays.asList("2016-04-01T12:00:00.000Z/2016-04-01T12:00:00.001Z")
     );
     // 1 OR 2
     validate(
         abutOr,
         types,
         Arrays.asList("[1306922400000‥1483272600000]"),
-        Arrays.asList("2011-06-01T10:00:00.000Z/2017-01-01T12:10:00.000Z")
+        Arrays.asList("2011-06-01T10:00:00.000Z/2017-01-01T12:10:00.001Z")
     );
     // 0 OR 2
     validate(
@@ -267,8 +269,8 @@ public class ExpressionConverterTest
         types,
         Arrays.asList("(1262304000000‥1330560000000)", "[1459512000000‥1483272600000]"),
         Arrays.asList(
-            "2010-01-01T00:00:00.000Z/2012-03-01T00:00:00.000Z",
-            "2016-04-01T12:00:00.000Z/2017-01-01T12:10:00.000Z"
+            "2010-01-01T00:00:00.001Z/2012-03-01T00:00:00.000Z",
+            "2016-04-01T12:00:00.000Z/2017-01-01T12:10:00.001Z"
         )
     );
 
@@ -276,7 +278,7 @@ public class ExpressionConverterTest
         complex1,
         types,
         Arrays.asList("(-∞‥1459512000000]"),
-        Arrays.asList("-146136543-09-08T08:23:32.096Z/2016-04-01T12:00:00.000Z")
+        Arrays.asList("-146136543-09-08T08:23:32.096Z/2016-04-01T12:00:00.001Z")
     );
   }
 

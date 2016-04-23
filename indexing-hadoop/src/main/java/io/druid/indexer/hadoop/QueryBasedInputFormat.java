@@ -189,7 +189,11 @@ public class QueryBasedInputFormat extends InputFormat<NullWritable, MapWritable
     long currentSize = 0;
 
     for (LocatedSegmentDescriptor segment : segments) {
-      if (maxSize < 0 || maxSize > 0 && currentSize + segment.getSize() > maxSize) {
+      if (maxSize < 0) {
+        splits.add(toSplit(dataSource, filters, Arrays.asList(segment)));
+        continue;
+      }
+      if (maxSize > 0 && currentSize + segment.getSize() > maxSize) {
         splits.add(toSplit(dataSource, filters, currentGroup));
         currentGroup.clear();
         currentSize = 0;

@@ -34,6 +34,7 @@ import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.InDimFilter;
 import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
+import org.apache.commons.lang.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hive.ql.exec.SerializationUtilities;
 import org.apache.hadoop.hive.ql.io.sarg.ConvertAstToSearchArg;
@@ -93,7 +94,7 @@ public class ExpressionConverter
               start++;
             }
             if (range.hasUpperBound() && range.upperBoundType() == BoundType.CLOSED) {
-              end--;
+              end++;
             }
             return new Interval(start, end);
           }
@@ -203,7 +204,11 @@ public class ExpressionConverter
       }
     }
 
-    return Maps.transformValues(rangeMap, Ranges.COMPACT);
+    Map<String, List<Range>> rangesMap = Maps.transformValues(rangeMap, Ranges.COMPACT);
+    for (Map.Entry<String, List<Range>> entry : rangesMap.entrySet()) {
+      logger.info(">> " + entry);
+    }
+    return rangesMap;
   }
 
   private static String extractSoleColumn(ExpressionTree tree, List<PredicateLeaf> leaves)
@@ -318,6 +323,34 @@ public class ExpressionConverter
         return toDouble(literal);
       case STRING:
         return String.valueOf(literal);
+      case TIMESTAMP:
+        return toTimestamp(literal);
+    }
+    return null;
+  }
+
+  private static Comparable toTimestamp(Object literal)
+  {
+    if (literal instanceof Timestamp) {
+      return (Timestamp)literal;
+    }
+    if (literal instanceof Date) {
+      return new Timestamp(((Date) literal).getTime());
+    }
+    if (literal instanceof Number) {
+      return new Timestamp(((Number) literal).longValue());
+    }
+    if (literal instanceof String) {
+        String string = (String) literal;
+      if (StringUtils.isNumeric(string)) {
+        return new Timestamp(Long.valueOf(string));
+      }
+      try {
+        return Timestamp.valueOf(string);
+      }
+      catch (NumberFormatException e) {
+        // ignore
+      }
     }
     return null;
   }

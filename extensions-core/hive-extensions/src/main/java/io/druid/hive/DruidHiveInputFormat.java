@@ -47,7 +47,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
-public class HiveDruidInputFormat extends QueryBasedInputFormat implements HiveOutputFormat
+public class DruidHiveInputFormat extends QueryBasedInputFormat implements HiveOutputFormat
 {
   @Override
   public InputSplit[] getSplits(JobConf job, int numSplits) throws IOException

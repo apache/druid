@@ -43,9 +43,9 @@ import java.util.Properties;
 
 /**
  */
-public class HiveDruidSerDe extends AbstractSerDe
+public class DruidHiveSerDe extends AbstractSerDe
 {
-  private static final Logger logger = new Logger(HiveDruidSerDe.class);
+  private static final Logger logger = new Logger(DruidHiveSerDe.class);
 
   private String[] columns;
   private ObjectInspector inspector;
