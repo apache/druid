@@ -69,15 +69,14 @@ public class ExpressionConverter
 
   public static final String TIME_COLUMN_NAME = "__time";
 
-  static Map<String, List<Range>> convert(Configuration configuration)
+  static Map<String, List<Range>> convert(Configuration configuration, Map<String, PrimitiveTypeInfo> types)
   {
     String filterExprSerialized = configuration.get(TableScanDesc.FILTER_EXPR_CONF_STR);
     if (filterExprSerialized == null) {
       logger.info("No predicate is pushed down");
       return Collections.emptyMap();
     }
-    ExprNodeGenericFuncDesc expr = SerializationUtilities.deserializeExpression(filterExprSerialized);
-    return getRanges(expr, getColumnTypes(configuration));
+    return getRanges(SerializationUtilities.deserializeExpression(filterExprSerialized), types);
   }
 
   public static List<Interval> toInterval(List<Range> ranges)
@@ -134,7 +133,7 @@ public class ExpressionConverter
     return dimFilter;
   }
 
-  private static Map<String, PrimitiveTypeInfo> getColumnTypes(Configuration configuration)
+  public static Map<String, PrimitiveTypeInfo> getColumnTypes(Configuration configuration)
   {
     String[] colNames = configuration.getStrings(serdeConstants.LIST_COLUMNS);
     String[] colTypes = configuration.getStrings(serdeConstants.LIST_COLUMN_TYPES);
@@ -150,8 +149,9 @@ public class ExpressionConverter
       String colName = colNames[i].trim();
       PrimitiveTypeInfo typeInfo = TypeInfoFactory.getPrimitiveTypeInfo(colTypes[i]);
       if (colName.equals(ExpressionConverter.TIME_COLUMN_NAME) &&
-          typeInfo.getPrimitiveCategory() != PrimitiveObjectInspector.PrimitiveCategory.LONG) {
-        logger.warn("time column should be defined as bigint type, yet");
+          typeInfo.getPrimitiveCategory() != PrimitiveObjectInspector.PrimitiveCategory.LONG &&
+          typeInfo.getPrimitiveCategory() != PrimitiveObjectInspector.PrimitiveCategory.TIMESTAMP) {
+        logger.warn("time column should be defined as bigint or timestamp type");
       }
       typeMap.put(colName, typeInfo);
     }

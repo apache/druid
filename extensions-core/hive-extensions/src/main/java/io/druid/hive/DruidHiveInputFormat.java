@@ -32,6 +32,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.ql.exec.FileSinkOperator;
 import org.apache.hadoop.hive.ql.io.HiveOutputFormat;
+import org.apache.hadoop.hive.serde2.objectinspector.PrimitiveObjectInspector;
+import org.apache.hadoop.hive.serde2.typeinfo.PrimitiveTypeInfo;
 import org.apache.hadoop.mapred.FileSplit;
 import org.apache.hadoop.mapred.InputSplit;
 import org.apache.hadoop.mapred.JobConf;
@@ -79,7 +81,8 @@ public class DruidHiveInputFormat extends QueryBasedInputFormat implements HiveO
   protected final Configuration configure(Configuration configuration, ObjectMapper mapper)
       throws IOException
   {
-    Map<String, List<Range>> converted = ExpressionConverter.convert(configuration);
+    Map<String, PrimitiveTypeInfo> types = ExpressionConverter.getColumnTypes(configuration);
+    Map<String, List<Range>> converted = ExpressionConverter.convert(configuration, types);
     List<Range> timeRanges = converted.remove(ExpressionConverter.TIME_COLUMN_NAME);
     if (timeRanges == null || timeRanges.isEmpty()) {
       throw new IllegalArgumentException("failed to extract intervals from predicate");
@@ -91,9 +94,11 @@ public class DruidHiveInputFormat extends QueryBasedInputFormat implements HiveO
 
     List<DimFilter> filters = Lists.newArrayList();
     for (Map.Entry<String, List<Range>> entry : converted.entrySet()) {
-      DimFilter filter = ExpressionConverter.toFilter(entry.getKey(), entry.getValue());
-      if (filter != null) {
-        filters.add(filter);
+      if (types.get(entry.getKey()).getPrimitiveCategory() == PrimitiveObjectInspector.PrimitiveCategory.STRING) {
+        DimFilter filter = ExpressionConverter.toFilter(entry.getKey(), entry.getValue());
+        if (filter != null) {
+          filters.add(filter);
+        }
       }
     }
     if (!filters.isEmpty()) {
