@@ -19,10 +19,8 @@
 
 package io.druid.math.expr;
 
-import com.google.common.collect.Lists;
 import io.druid.math.expr.antlr.ExprBaseListener;
 import io.druid.math.expr.antlr.ExprParser;
-import org.antlr.v4.runtime.ParserRuleContext;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
@@ -103,41 +101,6 @@ public class ExprListenerImpl extends ExprBaseListener
       default:
         throw new RuntimeException("Unrecognized binary operator " + ctx.getChild(1).getText());
     }
-  }
-
-  @Override
-  public void exitCaseWhenExpr(ExprParser.CaseWhenExprContext ctx)
-  {
-    List<ParseTree> caseExprs = findNextNodesOfType(ctx, ExprParser.CASE);
-    List<ParseTree> whenExprs = findNextNodesOfType(ctx, ExprParser.WHEN);
-    List<ParseTree> thenExprs = findNextNodesOfType(ctx, ExprParser.THEN);
-    List<ParseTree> elseExprs = findNextNodesOfType(ctx, ExprParser.ELSE);
-
-    if (caseExprs.size() != 1) {
-      throw new IllegalStateException("case expression does not exist");
-    }
-    if (whenExprs.size() != thenExprs.size()) {
-      throw new IllegalStateException("invalid pair of when/then clause");
-    }
-
-    List<Expr> args = Lists.newArrayList();
-    Expr caseExpr = (Expr) nodes.get(caseExprs.get(0));
-    for (int i = 0; i < whenExprs.size(); i++) {
-      args.add(new BinEqExpr("=", caseExpr, (Expr) nodes.get(whenExprs.get(i))));
-      args.add((Expr) nodes.get(thenExprs.get(i)));
-    }
-    if (!elseExprs.isEmpty()) {
-      args.add((Expr)nodes.get(elseExprs.get(0)));
-    }
-    nodes.put(ctx, new FunctionExpr("caseWhen", args));
-  }
-
-  private List<ParseTree> findNextNodesOfType(ParserRuleContext context, int type) {
-    List<ParseTree> contexts = Lists.newArrayList();
-    for (TerminalNode terminal : context.getTokens(type)) {
-      contexts.add(context.getChild(context.children.indexOf(terminal) + 1));
-    }
-    return contexts;
   }
 
   @Override

@@ -69,20 +69,20 @@ public class EvalTest
     // exists
     Assert.assertEquals(
         3.0,
-        Parser.parse("CASE x - 1 WHEN 0.0 THEN 2.0 WHEN 1.0 THEN 3.0 END").eval(bindings).doubleValue(),
+        Parser.parse("case (x - 1, 0.0, 2.0, 1.0, 3.0)").eval(bindings).doubleValue(),
         0.0001
     );
 
     // not-exists (implicit 0)
     Assert.assertEquals(
         0.0,
-        Parser.parse("CASE x + 10 WHEN 0.0 THEN 2.0 WHEN 1.0 THEN 3.0 END").eval(bindings).doubleValue(),
+        Parser.parse("case (x + 10, 0.0, 2.0, 2.0, 3.0)").eval(bindings).doubleValue(),
         0.0001
     );
     // not-exists (explicit)
     Assert.assertEquals(
         100.0,
-        Parser.parse("CASE x + 10 WHEN 0.0 THEN 2.0 WHEN 1.0 THEN 3.0 ELSE 100.0 END").eval(bindings).doubleValue(),
+        Parser.parse("case (x + 10, 0.0, 2.0, 2.0, 3.0, 100.0)").eval(bindings).doubleValue(),
         0.0001
     );
   }
@@ -136,7 +136,7 @@ public class EvalTest
     // exists
     Assert.assertEquals(
         3L,
-        Parser.parse("CASE x - 1 WHEN 9223372036854775807 THEN 2 WHEN 9223372036854775806 THEN 3 END")
+        Parser.parse("case (x - 1, 9223372036854775807, 2, 9223372036854775806, 3)")
               .eval(bindings)
               .longValue()
     );
@@ -144,12 +144,12 @@ public class EvalTest
     // not-exists (implicit 0)
     Assert.assertEquals(
         0L,
-        Parser.parse("CASE x + 10 WHEN 0 THEN 2 WHEN 1 THEN 3 END").eval(bindings).longValue()
+        Parser.parse("case (x + 10, 0, 2, 1, 3)").eval(bindings).longValue()
     );
     // not-exists (explicit)
     Assert.assertEquals(
         100L,
-        Parser.parse("CASE x + 10 WHEN 0 THEN 2 WHEN 1 THEN 3 ELSE 100 END").eval(bindings).longValue()
+        Parser.parse("case (x + 10, 0, 2, 1, 3, 100)").eval(bindings).longValue()
     );
   }
 }

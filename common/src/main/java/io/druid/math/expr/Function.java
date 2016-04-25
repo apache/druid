@@ -636,25 +636,26 @@ interface Function
     @Override
     public String name()
     {
-      return "caseWhen";
+      return "case";
     }
 
     @Override
     public Number apply(List<Expr> args, Map<String, Number> bindings)
     {
       if (args.size() < 3) {
-        throw new RuntimeException("function 'caseWhen' needs at least 3 arguments");
+        throw new RuntimeException("function 'case' needs at least 3 arguments");
       }
-      for (int i = 0; i < args.size() - 1; i += 2) {
-        Number x = args.get(i).eval(bindings);
+      final Number leftVal = args.get(0).eval(bindings);
+      for (int i = 1; i < args.size() - 1; i += 2) {
+        Number x = Evals.eq(leftVal, args.get(i).eval(bindings));
         if (x instanceof Long && x.longValue() > 0 || x.doubleValue() > 0) {
           return args.get(i + 1).eval(bindings);
         }
       }
-      if (args.size() % 2 != 0) {
+      if (args.size() % 2 != 1) {
         return args.get(args.size() - 1).eval(bindings);
       }
-      return 0;
+      return leftVal instanceof Long ? 0L : 0.0d;
     }
   }
 }

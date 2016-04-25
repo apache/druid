@@ -191,7 +191,7 @@ abstract class BinaryOpExprBase implements Expr
 
   protected boolean isLong(Number left, Number right)
   {
-    return left instanceof Long && right instanceof Long;
+    return Evals.isAnyLong(left, right);
   }
 
   @Override
@@ -424,11 +424,7 @@ class BinEqExpr extends BinaryOpExprBase
   {
     Number leftVal = left.eval(bindings);
     Number rightVal = right.eval(bindings);
-    if (isLong(leftVal, rightVal)) {
-      return leftVal.longValue() == rightVal.longValue() ? 1 : 0;
-    } else {
-      return leftVal.doubleValue() == rightVal.doubleValue() ? 1.0d : 0.0d;
-    }
+    return Evals.eq(leftVal, rightVal);
   }
 }
 
