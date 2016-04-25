@@ -421,6 +421,13 @@ public class HadoopDruidIndexerConfig
     );
   }
 
+  public List<Interval> getInputIntervals()
+  {
+    return schema.getDataSchema()
+                 .getGranularitySpec()
+                 .inputIntervals();
+  }
+
   public Optional<Iterable<Bucket>> getAllBuckets()
   {
     Optional<Set<Interval>> intervals = getSegmentGranularIntervals();

@@ -57,9 +57,7 @@ public class UniformGranularitySpec implements GranularitySpec
     if (inputIntervals != null) {
       List<Interval> granularIntervals = Lists.newArrayList();
       for (Interval inputInterval : inputIntervals) {
-        for (Interval interval : segmentGranularity.getIterable(inputInterval)) {
-          granularIntervals.add(trim(inputInterval, interval));
-        }
+        Iterables.addAll(granularIntervals, this.segmentGranularity.getIterable(inputInterval));
       }
       this.inputIntervals = ImmutableList.copyOf(inputIntervals);
       this.wrappedSpec = new ArbitraryGranularitySpec(queryGranularity, granularIntervals);
@@ -67,23 +65,6 @@ public class UniformGranularitySpec implements GranularitySpec
       this.inputIntervals = null;
       this.wrappedSpec = null;
     }
-  }
-
-  private Interval trim(Interval inputInterval, Interval interval)
-  {
-    long start = interval.getStartMillis();
-    long end = interval.getEndMillis();
-
-    boolean makeNew = false;
-    if (start < inputInterval.getStartMillis()) {
-      start = inputInterval.getStartMillis();
-      makeNew = true;
-    }
-    if (end > inputInterval.getEndMillis()) {
-      end = inputInterval.getEndMillis();
-      makeNew = true;
-    }
-    return makeNew ? new Interval(start, end) : interval;
   }
 
   @Override
@@ -94,6 +75,12 @@ public class UniformGranularitySpec implements GranularitySpec
     } else {
       return wrappedSpec.bucketIntervals();
     }
+  }
+
+  @Override
+  public List<Interval> inputIntervals()
+  {
+    return inputIntervals == null ? ImmutableList.<Interval>of() : ImmutableList.copyOf(inputIntervals);
   }
 
   @Override
