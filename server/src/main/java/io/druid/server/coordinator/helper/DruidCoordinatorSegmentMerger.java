@@ -89,7 +89,8 @@ public class DruidCoordinatorSegmentMerger implements DruidCoordinatorHelper
         timeline.add(
             dataSegment.getInterval(),
             dataSegment.getVersion(),
-            dataSegment.getShardSpec().createChunk(dataSegment)
+            dataSegment.getShardSpec().createChunk(dataSegment),
+            dataSegment.getSize()
         );
       }
     }

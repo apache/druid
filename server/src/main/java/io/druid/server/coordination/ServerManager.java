@@ -186,7 +186,8 @@ public class ServerManager implements QuerySegmentWalker
       loadedIntervals.add(
           segment.getInterval(),
           segment.getVersion(),
-          segment.getShardSpec().createChunk(new ReferenceCountingSegment(adapter))
+          segment.getShardSpec().createChunk(new ReferenceCountingSegment(adapter)),
+          segment.getSize()
       );
       synchronized (dataSourceSizes) {
         dataSourceSizes.add(dataSource, segment.getSize());

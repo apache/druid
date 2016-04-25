@@ -164,7 +164,7 @@ public class CachingClusteredClientFunctionalityTest {
               }
             }
         )
-    ));
+    ), -1);
   }
 
   protected CachingClusteredClient makeClient(final ListeningExecutorService backgroundExecutorService)

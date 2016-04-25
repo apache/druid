@@ -28,16 +28,19 @@ public class TimelineObjectHolder<VersionType, ObjectType> implements LogicalSeg
 {
   private final Interval interval;
   private final VersionType version;
+  private final long approxSize;
   private final PartitionHolder<ObjectType> object;
 
   public TimelineObjectHolder(
       Interval interval,
       VersionType version,
+      long approxSize,
       PartitionHolder<ObjectType> object
   )
   {
     this.interval = interval;
     this.version = version;
+    this.approxSize = approxSize;
     this.object = object;
   }
 
@@ -50,6 +53,11 @@ public class TimelineObjectHolder<VersionType, ObjectType> implements LogicalSeg
   public VersionType getVersion()
   {
     return version;
+  }
+
+  public long getApproximatedSize()
+  {
+    return approxSize;
   }
 
   public PartitionHolder<ObjectType> getObject()

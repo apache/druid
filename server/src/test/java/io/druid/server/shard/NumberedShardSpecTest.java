@@ -186,7 +186,7 @@ public class NumberedShardSpecTest
     Interval interval = new Interval("2000/3000");
     String version = "v1";
     for (PartitionChunk<String> chunk : chunks) {
-      timeline.add(interval, version, chunk);
+      timeline.add(interval, version, chunk, -1);
     }
 
     Set<String> actualObjects = new HashSet<>();

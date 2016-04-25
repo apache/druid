@@ -54,7 +54,6 @@ import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.TransactionStatus;
-import org.skife.jdbi.v2.exceptions.TransactionFailedException;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.tweak.ResultSetMapper;
 import org.skife.jdbi.v2.util.ByteArrayMapper;
@@ -229,7 +228,8 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
                             timeline.add(
                                 segment.getInterval(),
                                 segment.getVersion(),
-                                segment.getShardSpec().createChunk(segment)
+                                segment.getShardSpec().createChunk(segment),
+                                segment.getSize()
                             );
 
                             return timeline;

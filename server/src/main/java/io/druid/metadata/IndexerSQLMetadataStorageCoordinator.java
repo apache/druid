@@ -250,7 +250,12 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
           DataSegment.class
       );
 
-      timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(segment));
+      timeline.add(
+          segment.getInterval(),
+          segment.getVersion(),
+          segment.getShardSpec().createChunk(segment),
+          segment.getSize()
+      );
 
     }
 

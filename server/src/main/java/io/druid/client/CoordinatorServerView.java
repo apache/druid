@@ -141,7 +141,8 @@ public class CoordinatorServerView implements InventoryView
         timeline.add(
             segment.getInterval(),
             segment.getVersion(),
-            segment.getShardSpec().createChunk(segmentLoadInfo)
+            segment.getShardSpec().createChunk(segmentLoadInfo),
+            segment.getSize()
         );
         segmentLoadInfos.put(segmentId, segmentLoadInfo);
       }

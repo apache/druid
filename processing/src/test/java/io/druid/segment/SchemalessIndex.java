@@ -448,7 +448,7 @@ public class SchemalessIndex
       ShardSpec noneShardSpec = new NoneShardSpec();
 
       for (int i = 0; i < intervals.size(); i++) {
-        timeline.add(intervals.get(i), i, noneShardSpec.createChunk(filesToMap.get(i)));
+        timeline.add(intervals.get(i), i, noneShardSpec.createChunk(filesToMap.get(i)), -1);
       }
 
       final List<IndexableAdapter> adapters = Lists.newArrayList(

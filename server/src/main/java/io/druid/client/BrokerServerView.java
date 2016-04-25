@@ -229,7 +229,12 @@ public class BrokerServerView implements TimelineServerView
           timelines.put(segment.getDataSource(), timeline);
         }
 
-        timeline.add(segment.getInterval(), segment.getVersion(), segment.getShardSpec().createChunk(selector));
+        timeline.add(
+            segment.getInterval(),
+            segment.getVersion(),
+            segment.getShardSpec().createChunk(selector),
+            segment.getSize()
+        );
         selectors.put(segmentId, selector);
       }
 
