@@ -81,7 +81,7 @@ public class GroupByQueryEngine
     this.intermediateResultsBufferPool = intermediateResultsBufferPool;
   }
 
-  public Sequence<Row> process(final GroupByQuery query, final StorageAdapter storageAdapter, final boolean sort)
+  public Sequence<Row> process(final GroupByQuery query, final StorageAdapter storageAdapter)
   {
     if (storageAdapter == null) {
       throw new ISE(
@@ -118,7 +118,7 @@ public class GroupByQueryEngine
                           @Override
                           public RowIterator make()
                           {
-                            return new RowIterator(query, cursor, bufferHolder.get(), config.get(), sort);
+                            return new RowIterator(query, cursor, bufferHolder.get(), config.get(), false);
                           }
 
                           @Override
