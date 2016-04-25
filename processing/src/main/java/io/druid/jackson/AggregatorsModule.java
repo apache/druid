@@ -98,6 +98,7 @@ public class AggregatorsModule extends SimpleModule
       @JsonSubTypes.Type(name = "expression", value = ExpressionPostAggregator.class),
       @JsonSubTypes.Type(name = "arithmetic", value = ArithmeticPostAggregator.class),
       @JsonSubTypes.Type(name = "fieldAccess", value = FieldAccessPostAggregator.class),
+      @JsonSubTypes.Type(name = "finalFieldAccess", value = FieldAccessPostAggregator.class),
       @JsonSubTypes.Type(name = "constant", value = ConstantPostAggregator.class),
       @JsonSubTypes.Type(name = "javascript", value = JavaScriptPostAggregator.class),
       @JsonSubTypes.Type(name = "hyperUniqueCardinality", value = HyperUniqueFinalizingPostAggregator.class),
