@@ -46,7 +46,7 @@ import io.druid.query.ResultMergeQueryRunner;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
-import io.druid.segment.SegmentDesc;
+import io.druid.timeline.DataSegmentUtils;
 import io.druid.timeline.LogicalSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -281,7 +281,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
     final QueryGranularity granularity = query.getGranularity();
 
     List<Interval> intervals = Lists.newArrayList(
-        Iterables.transform(paging.keySet(), SegmentDesc.INTERVAL_EXTRACTOR(dataSource))
+        Iterables.transform(paging.keySet(), DataSegmentUtils.INTERVAL_EXTRACTOR(dataSource))
     );
     Collections.sort(
         intervals, query.isDescending() ? Comparators.intervalsByEndThenStart()

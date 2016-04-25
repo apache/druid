@@ -35,7 +35,7 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.Segment;
-import io.druid.segment.SegmentDesc;
+import io.druid.timeline.DataSegmentUtils;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.Column;
 import io.druid.segment.data.IndexedInts;
@@ -80,7 +80,7 @@ public class SelectQueryEngine
     Preconditions.checkArgument(intervals.size() == 1, "Can only handle a single interval, got[%s]", intervals);
 
     // should be rewritten with given interval
-    final String segmentId = SegmentDesc.withInterval(dataSource, segment.getIdentifier(), intervals.get(0));
+    final String segmentId = DataSegmentUtils.withInterval(dataSource, segment.getIdentifier(), intervals.get(0));
 
     return QueryRunnerHelper.makeCursorBasedQuery(
         adapter,
