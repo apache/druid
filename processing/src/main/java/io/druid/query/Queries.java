@@ -45,7 +45,7 @@ public class Queries
 
     final Map<String, AggregatorFactory> aggsFactoryMap = Maps.newHashMap();
     for (AggregatorFactory aggFactory : aggFactories) {
-      Preconditions.checkArgument(aggsFactoryMap.containsKey(aggFactory.getName()), "[%s] already defined", aggFactory.getName());
+      Preconditions.checkArgument(!aggsFactoryMap.containsKey(aggFactory.getName()), "[%s] already defined", aggFactory.getName());
       aggsFactoryMap.put(aggFactory.getName(), aggFactory);
     }
 
@@ -60,7 +60,6 @@ public class Queries
             missing.isEmpty(),
             "Missing fields [%s] for postAggregator [%s]", missing, postAgg.getName()
         );
-        Preconditions.checkArgument(combinedAggNames.add(postAgg.getName()), "[%s] already defined", postAgg.getName());
 
         if (postAgg instanceof HasDependentAggFactories) {
           HasDependentAggFactories richPostAgg = (HasDependentAggFactories)postAgg;
