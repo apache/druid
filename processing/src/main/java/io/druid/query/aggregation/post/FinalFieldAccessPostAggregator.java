@@ -34,7 +34,7 @@ public class FinalFieldAccessPostAggregator implements PostAggregator, HasDepend
 {
   private final String name;
   private final String fieldName;
-  Map<String, AggregatorFactory> aggFactoryMap;
+  private Map<String, AggregatorFactory> aggFactoryMap;
 
   @JsonCreator
   public FinalFieldAccessPostAggregator(
@@ -61,7 +61,7 @@ public class FinalFieldAccessPostAggregator implements PostAggregator, HasDepend
   @Override
   public Object compute(Map<String, Object> combinedAggregators)
   {
-    if (aggFactoryMap != null && aggFactoryMap.containsValue(fieldName)) {
+    if (aggFactoryMap != null && aggFactoryMap.containsKey(fieldName)) {
       return aggFactoryMap.get(fieldName).finalizeComputation(
           combinedAggregators.get(fieldName)
       );
@@ -89,6 +89,7 @@ public class FinalFieldAccessPostAggregator implements PostAggregator, HasDepend
     return "FinalFieldAccessPostAggregator{" +
            "name'" + name + '\'' +
            ", fieldName='" + fieldName + '\'' +
+           ", aggFactoryMap='" + aggFactoryMap + '\'' +
            '}';
   }
 
@@ -102,6 +103,7 @@ public class FinalFieldAccessPostAggregator implements PostAggregator, HasDepend
 
     if (fieldName != null ? !fieldName.equals(that.fieldName) : that.fieldName != null) return false;
     if (name != null ? !name.equals(that.name) : that.name != null) return false;
+    if (aggFactoryMap != null ? !aggFactoryMap.equals(that.aggFactoryMap) : that.aggFactoryMap != null) return false;
 
     return true;
   }
@@ -111,6 +113,7 @@ public class FinalFieldAccessPostAggregator implements PostAggregator, HasDepend
   {
     int result = name != null ? name.hashCode() : 0;
     result = 31 * result + (fieldName != null ? fieldName.hashCode() : 0);
+    result = 31 * result + (aggFactoryMap != null ? aggFactoryMap.hashCode() : 0);
     return result;
   }
 
