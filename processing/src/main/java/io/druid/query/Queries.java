@@ -50,7 +50,7 @@ public class Queries
     }
 
     if (postAggs != null && !postAggs.isEmpty()) {
-      final Set<String> combinedAggNames = aggsFactoryMap.keySet();
+      final Set<String> combinedAggNames = Sets.newHashSet(aggsFactoryMap.keySet());
 
       for (final PostAggregator postAgg : postAggs) {
         final Set<String> dependencies = postAgg.getDependentFields();
@@ -60,6 +60,7 @@ public class Queries
             missing.isEmpty(),
             "Missing fields [%s] for postAggregator [%s]", missing, postAgg.getName()
         );
+        Preconditions.checkArgument(combinedAggNames.add(postAgg.getName()), "[%s] already defined", postAgg.getName());
 
         if (postAgg instanceof HasDependentAggFactories) {
           HasDependentAggFactories richPostAgg = (HasDependentAggFactories)postAgg;
