@@ -125,7 +125,7 @@ public class GroupByQuery extends BaseQuery<Row>
     this.limitSpec = (limitSpec == null) ? new NoopLimitSpec() : limitSpec;
 
     Preconditions.checkNotNull(this.granularity, "Must specify a granularity");
-    Queries.verifyAggregations(this.aggregatorSpecs, this.postAggregatorSpecs);
+    Queries.prepareAggregations(this.aggregatorSpecs, this.postAggregatorSpecs);
 
     // Verify no duplicate names between dimensions, aggregators, and postAggregators.
     // They will all end up in the same namespace in the returned Rows and we can't have them clobbering each other.

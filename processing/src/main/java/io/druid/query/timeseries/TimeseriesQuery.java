@@ -65,7 +65,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.<AggregatorFactory>of() : aggregatorSpecs;
     this.postAggregatorSpecs = postAggregatorSpecs == null ? ImmutableList.<PostAggregator>of() : postAggregatorSpecs;
 
-    Queries.verifyAggregations(this.aggregatorSpecs, this.postAggregatorSpecs);
+    Queries.prepareAggregations(this.aggregatorSpecs, this.postAggregatorSpecs);
   }
 
   @Override

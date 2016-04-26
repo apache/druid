@@ -61,7 +61,7 @@ public class FinalFieldAccessPostAggregator implements PostAggregator, HasDepend
   @Override
   public Object compute(Map<String, Object> combinedAggregators)
   {
-    if (aggFactoryMap != null) {
+    if (aggFactoryMap != null && aggFactoryMap.containsValue(fieldName)) {
       return aggFactoryMap.get(fieldName).finalizeComputation(
           combinedAggregators.get(fieldName)
       );

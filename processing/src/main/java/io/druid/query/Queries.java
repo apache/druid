@@ -36,7 +36,7 @@ import java.util.Set;
  */
 public class Queries
 {
-  public static void verifyAggregations(
+  public static void prepareAggregations(
       List<AggregatorFactory> aggFactories,
       List<PostAggregator> postAggs
   )

@@ -82,7 +82,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
     Preconditions.checkArgument(threshold != 0, "Threshold cannot be equal to 0.");
     topNMetricSpec.verifyPreconditions(this.aggregatorSpecs, this.postAggregatorSpecs);
 
-    Queries.verifyAggregations(this.aggregatorSpecs, this.postAggregatorSpecs);
+    Queries.prepareAggregations(this.aggregatorSpecs, this.postAggregatorSpecs);
   }
 
   @Override
