@@ -50,5 +50,6 @@ public class FinalFieldAccessPostAggregatorTest
   {
     FinalFieldAccessPostAggregator finalFieldAccessPostAggregator
         = new FinalFieldAccessPostAggregator("finalName1", "rows");
+
   }
 }
