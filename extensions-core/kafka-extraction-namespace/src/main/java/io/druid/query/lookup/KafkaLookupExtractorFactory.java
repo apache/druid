@@ -38,17 +38,6 @@ import com.metamx.common.logger.Logger;
 import io.druid.concurrent.Execs;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.server.namespace.cache.NamespaceExtractionCacheManager;
-import kafka.consumer.ConsumerConfig;
-import kafka.consumer.KafkaStream;
-import kafka.consumer.Whitelist;
-import kafka.javaapi.consumer.ConsumerConnector;
-import kafka.message.MessageAndMetadata;
-import kafka.serializer.Decoder;
-
-import javax.annotation.Nullable;
-import javax.validation.constraints.Min;
-import javax.ws.rs.GET;
-import javax.ws.rs.core.Response;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
@@ -63,6 +52,16 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
+import javax.annotation.Nullable;
+import javax.validation.constraints.Min;
+import javax.ws.rs.GET;
+import javax.ws.rs.core.Response;
+import kafka.consumer.ConsumerConfig;
+import kafka.consumer.KafkaStream;
+import kafka.consumer.Whitelist;
+import kafka.javaapi.consumer.ConsumerConnector;
+import kafka.message.MessageAndMetadata;
+import kafka.serializer.Decoder;
 
 @JsonTypeName("kafka")
 public class KafkaLookupExtractorFactory implements LookupExtractorFactory
@@ -77,14 +76,13 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     }
   };
 
-  private final Object startStopLock = new Object();
   private final ListeningExecutorService executorService;
   private final AtomicLong doubleEventCount = new AtomicLong(0L);
   private final NamespaceExtractionCacheManager cacheManager;
   private final String factoryId = UUID.randomUUID().toString();
   private final AtomicReference<Map<String, String>> mapRef = new AtomicReference<>(null);
-
-  private AtomicBoolean started = new AtomicBoolean(false);
+  private final AtomicBoolean started = new AtomicBoolean(false);
+  
   private volatile ListenableFuture<?> future = null;
 
   @JsonProperty
@@ -151,7 +149,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   @Override
   public boolean start()
   {
-    synchronized (startStopLock) {
+    synchronized (started) {
       if (started.get()) {
         LOG.warn("Already started, not starting again");
         return false;
@@ -295,7 +293,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   @Override
   public boolean close()
   {
-    synchronized (startStopLock) {
+    synchronized (started) {
       if (!started.get() || executorService.isShutdown()) {
         LOG.info("Already shutdown, ignoring");
         return true;
