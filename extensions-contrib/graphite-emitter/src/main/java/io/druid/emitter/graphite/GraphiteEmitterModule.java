@@ -67,6 +67,6 @@ public class GraphiteEmitterModule implements DruidModule
           }
         }
     );
-    return new GraphiteEmitter(graphiteEmitterConfig, emitters, mapper);
+    return new GraphiteEmitter(graphiteEmitterConfig, emitters);
   }
 }

@@ -24,7 +24,9 @@ All the configuration parameters for graphite emitter are under `druid.emitter.g
 |`druid.emitter.graphite.flushPeriod` | Queue flushing period in milliseconds. |no|1 minute|
 |`druid.emitter.graphite.maxQueueSize`| Maximum size of the queue used to buffer events. |no|`MAX_INT`|
 |`druid.emitter.graphite.alertEmitters`| List of emitters where alerts will be forwarded to. |no| empty list (no forwarding)|
- 
+|`druid.emitter.graphite.emitWaitTime` | wait time in milliseconds to try to send the event otherwise emitter will throwing event. |no|0|
+|`druid.emitter.graphite.waitForEventTime` | waiting time in milliseconds if necessary for an event to become available. |no|1000 (1 sec)|
+
 ### Druid to Graphite Event Converter
  
 Graphite Event Converter defines a mapping between druid metrics name plus dimensions to a Graphite metric path.
