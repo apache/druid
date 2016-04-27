@@ -359,6 +359,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
       public byte[] getCacheKey()
       {
         final byte[] idutf8 = StringUtils.toUtf8(factoryId);
+        // If the number of things added has not changed during the course of this extractor's life, we can cache it
         if (startCount == doubleEventCount.get()) {
           return ByteBuffer
               .allocate(idutf8.length + 1 + Longs.BYTES)
@@ -367,6 +368,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
               .putLong(startCount)
               .array();
         } else {
+          // If the number of things added HAS changed during the coruse of this extractor's life, we CANNOT cache
           final byte[] scrambler = StringUtils.toUtf8(UUID.randomUUID().toString());
           return ByteBuffer
               .allocate(idutf8.length + 1 + scrambler.length + 1)
