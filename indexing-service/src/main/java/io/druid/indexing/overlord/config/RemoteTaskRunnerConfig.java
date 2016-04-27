@@ -28,7 +28,7 @@ import javax.validation.constraints.NotNull;
 
 /**
  */
-public class RemoteTaskRunnerConfig
+public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
 {
   @JsonProperty
   @NotNull
@@ -37,9 +37,6 @@ public class RemoteTaskRunnerConfig
   @JsonProperty
   @NotNull
   private Period taskCleanupTimeout = new Period("PT15M");
-
-  @JsonProperty
-  private String minWorkerVersion = "0";
 
   @JsonProperty
   @Min(10 * 1024)
@@ -60,11 +57,6 @@ public class RemoteTaskRunnerConfig
   @JsonProperty
   public Period getTaskCleanupTimeout(){
     return taskCleanupTimeout;
-  }
-
-  public String getMinWorkerVersion()
-  {
-    return minWorkerVersion;
   }
 
   public int getMaxZnodeBytes()
@@ -107,7 +99,7 @@ public class RemoteTaskRunnerConfig
     if (!taskCleanupTimeout.equals(that.taskCleanupTimeout)) {
       return false;
     }
-    if (!minWorkerVersion.equals(that.minWorkerVersion)) {
+    if (!getMinWorkerVersion().equals(that.getMinWorkerVersion())) {
       return false;
     }
     return taskShutdownLinkTimeout.equals(that.taskShutdownLinkTimeout);
@@ -119,7 +111,7 @@ public class RemoteTaskRunnerConfig
   {
     int result = taskAssignmentTimeout.hashCode();
     result = 31 * result + taskCleanupTimeout.hashCode();
-    result = 31 * result + minWorkerVersion.hashCode();
+    result = 31 * result + getMinWorkerVersion().hashCode();
     result = 31 * result + maxZnodeBytes;
     result = 31 * result + taskShutdownLinkTimeout.hashCode();
     result = 31 * result + pendingTasksRunnerNumThreads;
@@ -132,7 +124,7 @@ public class RemoteTaskRunnerConfig
     return "RemoteTaskRunnerConfig{" +
            "taskAssignmentTimeout=" + taskAssignmentTimeout +
            ", taskCleanupTimeout=" + taskCleanupTimeout +
-           ", minWorkerVersion='" + minWorkerVersion + '\'' +
+           ", minWorkerVersion='" + getMinWorkerVersion() + '\'' +
            ", maxZnodeBytes=" + maxZnodeBytes +
            ", taskShutdownLinkTimeout=" + taskShutdownLinkTimeout +
            ", pendingTasksRunnerNumThreads=" + pendingTasksRunnerNumThreads +

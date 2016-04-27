@@ -30,8 +30,8 @@ import io.druid.guice.annotations.Global;
 import io.druid.indexing.overlord.autoscaling.NoopResourceManagementStrategy;
 import io.druid.indexing.overlord.autoscaling.ResourceManagementSchedulerConfig;
 import io.druid.indexing.overlord.autoscaling.ResourceManagementStrategy;
-import io.druid.indexing.overlord.autoscaling.SimpleResourceManagementConfig;
-import io.druid.indexing.overlord.autoscaling.SimpleResourceManagementStrategy;
+import io.druid.indexing.overlord.autoscaling.SimpleWorkerResourceManagementConfig;
+import io.druid.indexing.overlord.autoscaling.SimpleWorkerResourceManagementStrategy;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.server.initialization.IndexerZkConfig;
@@ -44,15 +44,14 @@ import java.util.concurrent.ScheduledExecutorService;
 public class RemoteTaskRunnerFactory implements TaskRunnerFactory<RemoteTaskRunner>
 {
   public static final String TYPE_NAME = "remote";
-  private static final Logger LOG = new Logger(RemoteTaskRunnerFactory.class);
   private final CuratorFramework curator;
   private final RemoteTaskRunnerConfig remoteTaskRunnerConfig;
   private final IndexerZkConfig zkPaths;
   private final ObjectMapper jsonMapper;
   private final HttpClient httpClient;
   private final Supplier<WorkerBehaviorConfig> workerConfigRef;
-  private final SimpleResourceManagementConfig config;
   private final ResourceManagementSchedulerConfig resourceManagementSchedulerConfig;
+  private final ResourceManagementStrategy resourceManagementStrategy;
   private final ScheduledExecutorFactory factory;
 
   @Inject
@@ -64,8 +63,8 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory<RemoteTaskRunn
       @Global final HttpClient httpClient,
       final Supplier<WorkerBehaviorConfig> workerConfigRef,
       final ScheduledExecutorFactory factory,
-      final SimpleResourceManagementConfig config,
-      final ResourceManagementSchedulerConfig resourceManagementSchedulerConfig
+      final ResourceManagementSchedulerConfig resourceManagementSchedulerConfig,
+      final ResourceManagementStrategy resourceManagementStrategy
   )
   {
     this.curator = curator;
@@ -74,25 +73,14 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory<RemoteTaskRunn
     this.jsonMapper = jsonMapper;
     this.httpClient = httpClient;
     this.workerConfigRef = workerConfigRef;
-    this.config = config;
     this.resourceManagementSchedulerConfig = resourceManagementSchedulerConfig;
+    this.resourceManagementStrategy = resourceManagementStrategy;
     this.factory = factory;
   }
 
   @Override
   public RemoteTaskRunner build()
   {
-    final ResourceManagementStrategy<WorkerTaskRunner> resourceManagementStrategy;
-    if (resourceManagementSchedulerConfig.isDoAutoscale()) {
-      resourceManagementStrategy = new SimpleResourceManagementStrategy(
-          config,
-          workerConfigRef,
-          resourceManagementSchedulerConfig,
-          factory.create(1, "RemoteTaskRunner-ResourceManagement--%d")
-      );
-    } else {
-      resourceManagementStrategy = new NoopResourceManagementStrategy<>();
-    }
     return new RemoteTaskRunner(
         jsonMapper,
         remoteTaskRunnerConfig,
@@ -105,7 +93,9 @@ public class RemoteTaskRunnerFactory implements TaskRunnerFactory<RemoteTaskRunn
         httpClient,
         workerConfigRef,
         factory.create(1, "RemoteTaskRunner-Scheduled-Cleanup--%d"),
-        resourceManagementStrategy
+        resourceManagementSchedulerConfig.isDoAutoscale()
+        ? resourceManagementStrategy
+        : new NoopResourceManagementStrategy<>()
     );
   }
 }
