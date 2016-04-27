@@ -26,6 +26,7 @@ import com.google.common.primitives.Ints;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
+import io.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 
 import java.util.Comparator;
 import java.util.TreeSet;
@@ -36,7 +37,7 @@ public class EqualDistributionWorkerSelectStrategy implements WorkerSelectStrate
 {
   @Override
   public Optional<ImmutableWorkerInfo> findWorkerForTask(
-      RemoteTaskRunnerConfig config, ImmutableMap<String, ImmutableWorkerInfo> zkWorkers, Task task
+      WorkerTaskRunnerConfig config, ImmutableMap<String, ImmutableWorkerInfo> zkWorkers, Task task
   )
   {
     final TreeSet<ImmutableWorkerInfo> sortedWorkers = Sets.newTreeSet(

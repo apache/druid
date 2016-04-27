@@ -29,10 +29,10 @@ import com.metamx.http.client.HttpClient;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.overlord.autoscaling.ResourceManagementSchedulerConfig;
-import io.druid.indexing.overlord.autoscaling.SimpleResourceManagementConfig;
+import io.druid.indexing.overlord.autoscaling.SimpleWorkerResourceManagementConfig;
+import io.druid.indexing.overlord.autoscaling.SimpleWorkerResourceManagementStrategy;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.server.initialization.IndexerZkConfig;
 import io.druid.server.initialization.ZkPathsConfig;
 import junit.framework.Assert;
@@ -109,7 +109,7 @@ public class RemoteTaskRunnerFactoryTest
         return ScheduledExecutors.fixed(i, s);
       }
     };
-    SimpleResourceManagementConfig resourceManagementConfig = new SimpleResourceManagementConfig();
+    SimpleWorkerResourceManagementConfig resourceManagementConfig = new SimpleWorkerResourceManagementConfig();
     ResourceManagementSchedulerConfig resourceManagementSchedulerConfig = new ResourceManagementSchedulerConfig()
     {
       @Override
@@ -126,14 +126,19 @@ public class RemoteTaskRunnerFactoryTest
         httpClient,
         workerBehaviorConfig,
         executorFactory,
-        resourceManagementConfig,
-        resourceManagementSchedulerConfig
+        resourceManagementSchedulerConfig,
+        new SimpleWorkerResourceManagementStrategy(
+            resourceManagementConfig,
+            workerBehaviorConfig,
+            resourceManagementSchedulerConfig,
+            executorFactory
+        )
     );
-    Assert.assertEquals(0, executorCount.get());
+    Assert.assertEquals(1, executorCount.get());
     RemoteTaskRunner remoteTaskRunner1 = factory.build();
     Assert.assertEquals(2, executorCount.get());
     RemoteTaskRunner remoteTaskRunner2 = factory.build();
-    Assert.assertEquals(4, executorCount.get());
+    Assert.assertEquals(3, executorCount.get());
 
   }
 }
