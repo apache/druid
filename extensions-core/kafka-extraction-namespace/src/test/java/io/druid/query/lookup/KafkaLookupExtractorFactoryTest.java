@@ -443,7 +443,7 @@ public class KafkaLookupExtractorFactoryTest
       }
     };
     Assert.assertTrue(factory.start());
-    Assert.assertFalse(factory.start());
+    Assert.assertTrue(factory.start());
     Assert.assertTrue(factory.close());
     EasyMock.verify(cacheManager);
   }
