@@ -29,9 +29,15 @@ import com.metamx.common.logger.Logger;
 import io.druid.query.extraction.namespace.ExtractionNamespace;
 import io.druid.query.lookup.LookupExtractor;
 import io.druid.query.lookup.LookupExtractorFactory;
+import io.druid.query.lookup.LookupIntrospectHandler;
 import io.druid.server.namespace.cache.NamespaceExtractionCacheManager;
 
 import javax.annotation.Nullable;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.UUID;
@@ -51,6 +57,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
   private final ReadWriteLock startStopSync = new ReentrantReadWriteLock();
   private final ExtractionNamespace extractionNamespace;
   private final NamespaceExtractionCacheManager manager;
+  private final LookupIntrospectHandler lookupIntrospectHandler;
 
   private final String extractorID;
 
@@ -66,6 +73,35 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
     );
     this.manager = manager;
     this.extractorID = buildID();
+    this.lookupIntrospectHandler = new LookupIntrospectHandler() {
+      @GET
+      @Path("/keys")
+      @Produces(MediaType.APPLICATION_JSON)
+      public Response getKeys()
+      {
+        return Response.ok(getLatest().keySet().toString()).build();
+      }
+
+      @GET
+      @Path("/values")
+      @Produces(MediaType.APPLICATION_JSON)
+      public Response getValues()
+      {
+        return Response.ok(getLatest().values().toString()).build();
+      }
+
+      @GET
+      @Produces(MediaType.APPLICATION_JSON)
+      public Response getMap()
+      {
+        return Response.ok(getLatest()).build();
+      }
+
+      private Map<String, String> getLatest()
+      {
+        return ((MapLookupExtractor)get()).getMap();
+      }
+    };
   }
 
   @Override
@@ -115,6 +151,12 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
       return !extractionNamespace.equals(that.extractionNamespace);
     }
     return true;
+  }
+
+  @Override
+  public LookupIntrospectHandler getIntrospectHandler()
+  {
+    return lookupIntrospectHandler;
   }
 
   @JsonProperty
