@@ -19,6 +19,8 @@
 package io.druid.indexing.overlord;
 
 import com.google.common.base.Predicate;
+import io.druid.indexing.common.task.Task;
+import io.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 import io.druid.indexing.worker.Worker;
 
 import java.util.Collection;
@@ -44,4 +46,9 @@ public interface WorkerTaskRunner extends TaskRunner
    * @return
    */
   Collection<Worker> markWorkersLazy(Predicate<ImmutableWorkerInfo> isLazyWorker, int maxWorkers);
+
+  WorkerTaskRunnerConfig getConfig();
+
+  Collection<Task> getPendingTaskPayloads();
+
 }

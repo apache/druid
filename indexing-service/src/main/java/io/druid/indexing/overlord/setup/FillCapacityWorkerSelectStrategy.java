@@ -26,6 +26,7 @@ import com.google.common.primitives.Ints;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
+import io.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 
 import java.util.Comparator;
 import java.util.TreeSet;
@@ -36,7 +37,7 @@ public class FillCapacityWorkerSelectStrategy implements WorkerSelectStrategy
 {
   @Override
   public Optional<ImmutableWorkerInfo> findWorkerForTask(
-      final RemoteTaskRunnerConfig config,
+      final WorkerTaskRunnerConfig config,
       final ImmutableMap<String, ImmutableWorkerInfo> zkWorkers,
       final Task task
   )

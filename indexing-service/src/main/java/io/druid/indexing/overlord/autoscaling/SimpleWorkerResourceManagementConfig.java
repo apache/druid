@@ -24,7 +24,7 @@ import org.joda.time.Period;
 
 /**
  */
-public class SimpleResourceManagementConfig
+public class SimpleWorkerResourceManagementConfig
 {
   @JsonProperty
   private Period workerIdleTimeout = new Period("PT90m");
@@ -49,7 +49,7 @@ public class SimpleResourceManagementConfig
     return workerIdleTimeout;
   }
 
-  public SimpleResourceManagementConfig setWorkerIdleTimeout(Period workerIdleTimeout)
+  public SimpleWorkerResourceManagementConfig setWorkerIdleTimeout(Period workerIdleTimeout)
   {
     this.workerIdleTimeout = workerIdleTimeout;
     return this;
@@ -60,7 +60,7 @@ public class SimpleResourceManagementConfig
     return maxScalingDuration;
   }
 
-  public SimpleResourceManagementConfig setMaxScalingDuration(Period maxScalingDuration)
+  public SimpleWorkerResourceManagementConfig setMaxScalingDuration(Period maxScalingDuration)
   {
     this.maxScalingDuration = maxScalingDuration;
     return this;
@@ -71,7 +71,7 @@ public class SimpleResourceManagementConfig
     return numEventsToTrack;
   }
 
-  public SimpleResourceManagementConfig setNumEventsToTrack(int numEventsToTrack)
+  public SimpleWorkerResourceManagementConfig setNumEventsToTrack(int numEventsToTrack)
   {
     this.numEventsToTrack = numEventsToTrack;
     return this;
@@ -82,7 +82,7 @@ public class SimpleResourceManagementConfig
     return pendingTaskTimeout;
   }
 
-  public SimpleResourceManagementConfig setPendingTaskTimeout(Period pendingTaskTimeout)
+  public SimpleWorkerResourceManagementConfig setPendingTaskTimeout(Period pendingTaskTimeout)
   {
     this.pendingTaskTimeout = pendingTaskTimeout;
     return this;
@@ -93,7 +93,7 @@ public class SimpleResourceManagementConfig
     return workerVersion;
   }
 
-  public SimpleResourceManagementConfig setWorkerVersion(String workerVersion)
+  public SimpleWorkerResourceManagementConfig setWorkerVersion(String workerVersion)
   {
     this.workerVersion = workerVersion;
     return this;
@@ -105,7 +105,7 @@ public class SimpleResourceManagementConfig
     return workerPort;
   }
 
-  public SimpleResourceManagementConfig setWorkerPort(int workerPort)
+  public SimpleWorkerResourceManagementConfig setWorkerPort(int workerPort)
   {
     this.workerPort = workerPort;
     return this;
