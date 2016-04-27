@@ -93,7 +93,7 @@ The property `druid.realtime.specFile` has the path of a file (absolute or relat
     },
     "tuningConfig": {
       "type" : "realtime",
-      "maxRowsInMemory": 500000,
+      "maxRowsInMemory": 75000,
       "intermediatePersistPeriod": "PT10m",
       "windowPeriod": "PT10m",
       "basePersistDirectory": "\/tmp\/realtime\/basePersist",
@@ -155,6 +155,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |mergeThreadPriority|int|If `-XX:+UseThreadPriorities` is properly enabled, this will set the thread priority of the merging thread to `Thread.NORM_PRIORITY` plus this value within the bounds of `Thread.MIN_PRIORITY` and `Thread.MAX_PRIORITY`. A value of 0 indicates to not change the thread priority.|no (default = 0; inherit and do not override)|
 |reportParseExceptions|Boolean|If true, exceptions encountered during parsing will be thrown and will halt ingestion. If false, unparseable rows and fields will be skipped. If an entire row is skipped, the "unparseable" counter will be incremented. If some fields in a row were parseable and some were not, the parseable fields will be indexed and the "unparseable" counter will not be incremented.|false|
 |handoffConditionTimeout|long|Milliseconds to wait for segment handoff. It must be >= 0 and 0 means wait forerver.|0|
+|indexSpec|Object|Tune how data is indexed. See below for more information.|no|
 
 Before enabling thread priority settings, users are highly encouraged to read the [original pull request](https://github.com/druid-io/druid/pull/984) and other documentation about proper use of `-XX:+UseThreadPriorities`. 
 
@@ -166,6 +167,13 @@ The following policies are available:
 * `messageTime` &ndash; Can be used for non-"current time" as long as that data is relatively in sequence. Events are rejected if they are less than `windowPeriod` from the event with the latest timestamp. Hand off only occurs if an event is seen after the segmentGranularity and `windowPeriod` (hand off will not periodically occur unless you have a constant stream of data).
 * `none` &ndash; All events are accepted. Never hands off data unless shutdown() is called on the configured firehose.
 
+### Index Spec
+
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|bitmap|String|The type of bitmap index to create. Choose from `roaring` or `concise`, or null to use the default (`concise`).|No|
+|dimensionCompression|String|Compression format for dimension columns. Choose from `LZ4`, `LZF`, or `uncompressed`. The default is `LZ4`.|No|
+|metricCompression|String|Compression format for metric columns. Choose from `LZ4`, `LZF`, or `uncompressed`. The default is `LZ4`.|No|
 
 #### Sharding
 

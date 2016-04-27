@@ -25,10 +25,10 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.extraction.ExtractionFn;
-import io.druid.query.lookup.LookupExtractor;
-import io.druid.query.lookup.LookupExtractorFactory;
-import io.druid.query.lookup.LookupReferencesManager;
 import io.druid.query.extraction.MapLookupExtractor;
+import io.druid.query.lookup.LookupExtractor;
+import io.druid.query.lookup.LookupReferencesManager;
+import io.druid.query.lookup.MapLookupExtractorFactory;
 import junitparams.JUnitParamsRunner;
 import junitparams.Parameters;
 import org.easymock.EasyMock;
@@ -36,7 +36,6 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Map;
@@ -51,32 +50,8 @@ public class LookupDimensionSpecTest
   private static final LookupReferencesManager LOOKUP_REF_MANAGER = EasyMock.createMock(LookupReferencesManager.class);
 
   static {
-    EasyMock.expect(LOOKUP_REF_MANAGER.get(EasyMock.eq("lookupName"))).andReturn(new LookupExtractorFactory()
-    {
-      @Override
-      public boolean start()
-      {
-        return true;
-      }
-
-      @Override
-      public boolean close()
-      {
-        return true;
-      }
-
-      @Override
-      public boolean replaces(@Nullable LookupExtractorFactory other)
-      {
-        return true;
-      }
-
-      @Override
-      public LookupExtractor get()
-      {
-        return MAP_LOOKUP_EXTRACTOR;
-      }
-    }).anyTimes();
+    EasyMock.expect(LOOKUP_REF_MANAGER.get(EasyMock.eq("lookupName"))).andReturn(new MapLookupExtractorFactory(STRING_MAP, false)
+    ).anyTimes();
     EasyMock.replay(LOOKUP_REF_MANAGER);
   }
 

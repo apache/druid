@@ -29,27 +29,31 @@ import java.util.Map;
 public class KafkaIOConfig implements IOConfig
 {
   private static final boolean DEFAULT_USE_TRANSACTION = true;
+  private static final boolean DEFAULT_PAUSE_AFTER_READ = false;
 
-  private final String sequenceName;
+  private final String baseSequenceName;
   private final KafkaPartitions startPartitions;
   private final KafkaPartitions endPartitions;
   private final Map<String, String> consumerProperties;
   private final boolean useTransaction;
+  private final boolean pauseAfterRead;
 
   @JsonCreator
   public KafkaIOConfig(
-      @JsonProperty("sequenceName") String sequenceName,
+      @JsonProperty("baseSequenceName") String baseSequenceName,
       @JsonProperty("startPartitions") KafkaPartitions startPartitions,
       @JsonProperty("endPartitions") KafkaPartitions endPartitions,
       @JsonProperty("consumerProperties") Map<String, String> consumerProperties,
-      @JsonProperty("useTransaction") Boolean useTransaction
+      @JsonProperty("useTransaction") Boolean useTransaction,
+      @JsonProperty("pauseAfterRead") Boolean pauseAfterRead
   )
   {
-    this.sequenceName = Preconditions.checkNotNull(sequenceName, "sequenceName");
+    this.baseSequenceName = Preconditions.checkNotNull(baseSequenceName, "baseSequenceName");
     this.startPartitions = Preconditions.checkNotNull(startPartitions, "startPartitions");
     this.endPartitions = Preconditions.checkNotNull(endPartitions, "endPartitions");
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
     this.useTransaction = useTransaction != null ? useTransaction : DEFAULT_USE_TRANSACTION;
+    this.pauseAfterRead = pauseAfterRead != null ? pauseAfterRead : DEFAULT_PAUSE_AFTER_READ;
 
     Preconditions.checkArgument(
         startPartitions.getTopic().equals(endPartitions.getTopic()),
@@ -72,9 +76,9 @@ public class KafkaIOConfig implements IOConfig
   }
 
   @JsonProperty
-  public String getSequenceName()
+  public String getBaseSequenceName()
   {
-    return sequenceName;
+    return baseSequenceName;
   }
 
   @JsonProperty
@@ -101,15 +105,22 @@ public class KafkaIOConfig implements IOConfig
     return useTransaction;
   }
 
+  @JsonProperty
+  public boolean isPauseAfterRead()
+  {
+    return pauseAfterRead;
+  }
+
   @Override
   public String toString()
   {
     return "KafkaIOConfig{" +
-           "sequenceName='" + sequenceName + '\'' +
+           "baseSequenceName='" + baseSequenceName + '\'' +
            ", startPartitions=" + startPartitions +
            ", endPartitions=" + endPartitions +
            ", consumerProperties=" + consumerProperties +
            ", useTransaction=" + useTransaction +
+           ", pauseAfterRead=" + pauseAfterRead +
            '}';
   }
 }

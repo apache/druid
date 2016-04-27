@@ -17,10 +17,21 @@
  * under the License.
  */
 
-package io.druid.segment.realtime;
+package io.druid.js;
 
-/**
- */
-public abstract class RealtimeCuratorDataSegmentAnnouncerConfig
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.Assert;
+import org.junit.Test;
+
+public class JavaScriptConfigTest
 {
+  @Test
+  public void testSerde() throws Exception
+  {
+    final JavaScriptConfig config = new JavaScriptConfig(true);
+    final ObjectMapper mapper = new ObjectMapper();
+    final JavaScriptConfig config2 = mapper.readValue(mapper.writeValueAsBytes(config), JavaScriptConfig.class);
+    Assert.assertTrue(config2.isDisabled());
+    Assert.assertEquals(config, config2);
+  }
 }

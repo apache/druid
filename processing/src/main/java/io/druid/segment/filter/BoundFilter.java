@@ -29,7 +29,6 @@ import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.query.ordering.StringComparators;
 import io.druid.segment.column.BitmapIndex;
-import io.druid.segment.data.Indexed;
 
 import java.util.Comparator;
 import java.util.Iterator;
@@ -52,63 +51,31 @@ public class BoundFilter implements Filter
   @Override
   public ImmutableBitmap getBitmapIndex(final BitmapIndexSelector selector)
   {
-    final BitmapIndex bitmapIndex = selector.getBitmapIndex(boundDimFilter.getDimension());
-
-    if (bitmapIndex == null) {
-      if (doesMatch(null)) {
-        return selector.getBitmapFactory()
-                       .complement(selector.getBitmapFactory().makeEmptyImmutableBitmap(), selector.getNumRows());
-      } else {
-        return selector.getBitmapFactory().makeEmptyImmutableBitmap();
-      }
-    }
-
     if (boundDimFilter.isAlphaNumeric() || extractionFn != null) {
-      // inspect all values
-
-      // will be non-null because bitmapIndex was non-null
-      final Indexed<String> dimValues = selector.getDimensionValues(boundDimFilter.getDimension());
-
-      return selector.getBitmapFactory().union(
-          new Iterable<ImmutableBitmap>()
+      return Filters.matchPredicate(
+          boundDimFilter.getDimension(),
+          selector,
+          new Predicate<String>()
           {
             @Override
-            public Iterator<ImmutableBitmap> iterator()
+            public boolean apply(String input)
             {
-              return new Iterator<ImmutableBitmap>()
-              {
-                int currIndex = 0;
-
-                @Override
-                public boolean hasNext()
-                {
-                  return currIndex < bitmapIndex.getCardinality();
-                }
-
-                @Override
-                public ImmutableBitmap next()
-                {
-                  while (currIndex < bitmapIndex.getCardinality() && !doesMatch(dimValues.get(currIndex))) {
-                    currIndex++;
-                  }
-
-                  if (currIndex == bitmapIndex.getCardinality()) {
-                    return bitmapIndex.getBitmapFactory().makeEmptyImmutableBitmap();
-                  }
-
-                  return bitmapIndex.getBitmap(currIndex++);
-                }
-
-                @Override
-                public void remove()
-                {
-                  throw new UnsupportedOperationException();
-                }
-              };
+              return doesMatch(input);
             }
           }
       );
     } else {
+      final BitmapIndex bitmapIndex = selector.getBitmapIndex(boundDimFilter.getDimension());
+
+      if (bitmapIndex == null || bitmapIndex.getCardinality() == 0) {
+        if (doesMatch(null)) {
+          return selector.getBitmapFactory()
+                         .complement(selector.getBitmapFactory().makeEmptyImmutableBitmap(), selector.getNumRows());
+        } else {
+          return selector.getBitmapFactory().makeEmptyImmutableBitmap();
+        }
+      }
+
       // search for start, end indexes in the bitmaps; then include all bitmaps between those points
 
       final int startIndex; // inclusive

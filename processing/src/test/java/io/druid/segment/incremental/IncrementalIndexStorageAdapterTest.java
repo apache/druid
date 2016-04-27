@@ -32,6 +32,7 @@ import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
+import io.druid.js.JavaScriptConfig;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -188,7 +189,8 @@ public class IncrementalIndexStorageAdapterTest
                             Arrays.asList("sally", "billy"),
                             "function(current, s, b) { return current + (s == null ? 0 : s.length) + (b == null ? 0 : b.length); }",
                             "function() { return 0; }",
-                            "function(a,b) { return a + b; }"
+                            "function(a,b) { return a + b; }",
+                            JavaScriptConfig.getDefault()
                         )
                     )
                     .build(),
@@ -259,7 +261,7 @@ public class IncrementalIndexStorageAdapterTest
 
     for (boolean descending : Arrays.asList(false, true)) {
       Sequence<Cursor> cursorSequence = adapter.makeCursors(
-          new SelectorFilter("sally", "bo", null),
+          new SelectorFilter("sally", "bo"),
           interval,
           QueryGranularity.NONE,
           descending

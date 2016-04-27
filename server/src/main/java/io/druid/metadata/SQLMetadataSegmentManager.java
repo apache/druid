@@ -52,11 +52,15 @@ import org.skife.jdbi.v2.Folder3;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.StatementContext;
+import org.skife.jdbi.v2.TransactionCallback;
+import org.skife.jdbi.v2.TransactionStatus;
+import org.skife.jdbi.v2.exceptions.TransactionFailedException;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.tweak.ResultSetMapper;
 import org.skife.jdbi.v2.util.ByteArrayMapper;
 
 import java.io.IOException;
+import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -82,7 +86,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   private final Supplier<MetadataSegmentManagerConfig> config;
   private final Supplier<MetadataStorageTablesConfig> dbTables;
   private final AtomicReference<ConcurrentHashMap<String, DruidDataSource>> dataSources;
-  private final IDBI dbi;
+  private final SQLMetadataConnector connector;
 
   private volatile ListeningScheduledExecutorService exec = null;
   private volatile ListenableFuture<?> future = null;
@@ -103,7 +107,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     this.dataSources = new AtomicReference<>(
         new ConcurrentHashMap<String, DruidDataSource>()
     );
-    this.dbi = connector.getDBI();
+    this.connector = connector;
   }
 
   @LifecycleStart
@@ -157,53 +161,85 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     }
   }
 
+  private <T> T inReadOnlyTransaction(final TransactionCallback<T> callback)
+  {
+    return connector.getDBI().withHandle(
+        new HandleCallback<T>()
+        {
+          @Override
+          public T withHandle(Handle handle) throws Exception
+          {
+            final Connection connection = handle.getConnection();
+            final boolean readOnly = connection.isReadOnly();
+            connection.setReadOnly(true);
+            try {
+              return handle.inTransaction(callback);
+            } finally {
+              try {
+                connection.setReadOnly(readOnly);
+              } catch (SQLException e) {
+                // at least try to log it so we don't swallow exceptions
+                log.error(e, "Unable to reset connection read-only state");
+              }
+            }
+          }
+        }
+    );
+  }
+
   @Override
   public boolean enableDatasource(final String ds)
   {
     try {
-      VersionedIntervalTimeline<String, DataSegment> segmentTimeline = dbi.withHandle(
-          new HandleCallback<VersionedIntervalTimeline<String, DataSegment>>()
+      final IDBI dbi = connector.getDBI();
+      VersionedIntervalTimeline<String, DataSegment> segmentTimeline = inReadOnlyTransaction(
+          new TransactionCallback<VersionedIntervalTimeline<String, DataSegment>>()
           {
             @Override
-            public VersionedIntervalTimeline<String, DataSegment> withHandle(Handle handle) throws Exception
+            public VersionedIntervalTimeline<String, DataSegment> inTransaction(
+                Handle handle, TransactionStatus status
+            ) throws Exception
             {
-              return handle.createQuery(
-                  String.format("SELECT payload FROM %s WHERE dataSource = :dataSource", getSegmentsTable())
-              )
-                           .bind("dataSource", ds)
-                           .map(ByteArrayMapper.FIRST)
-                           .fold(
-                               new VersionedIntervalTimeline<String, DataSegment>(Ordering.natural()),
-                               new Folder3<VersionedIntervalTimeline<String, DataSegment>, byte[]>()
-                               {
-                                 @Override
-                                 public VersionedIntervalTimeline<String, DataSegment> fold(
-                                     VersionedIntervalTimeline<String, DataSegment> timeline,
-                                     byte[] payload,
-                                     FoldController foldController,
-                                     StatementContext statementContext
-                                 ) throws SQLException
-                                 {
-                                   try {
-                                     DataSegment segment = jsonMapper.readValue(
-                                         payload,
-                                         DataSegment.class
-                                     );
+              return handle
+                  .createQuery(String.format(
+                      "SELECT payload FROM %s WHERE dataSource = :dataSource",
+                      getSegmentsTable()
+                  ))
+                  .setFetchSize(connector.getStreamingFetchSize())
+                  .bind("dataSource", ds)
+                  .map(ByteArrayMapper.FIRST)
+                  .fold(
+                      new VersionedIntervalTimeline<String, DataSegment>(Ordering.natural()),
+                      new Folder3<VersionedIntervalTimeline<String, DataSegment>, byte[]>()
+                      {
+                        @Override
+                        public VersionedIntervalTimeline<String, DataSegment> fold(
+                            VersionedIntervalTimeline<String, DataSegment> timeline,
+                            byte[] payload,
+                            FoldController foldController,
+                            StatementContext statementContext
+                        ) throws SQLException
+                        {
+                          try {
+                            DataSegment segment = jsonMapper.readValue(
+                                payload,
+                                DataSegment.class
+                            );
 
-                                     timeline.add(
-                                         segment.getInterval(),
-                                         segment.getVersion(),
-                                         segment.getShardSpec().createChunk(segment)
-                                     );
+                            timeline.add(
+                                segment.getInterval(),
+                                segment.getVersion(),
+                                segment.getShardSpec().createChunk(segment)
+                            );
 
-                                     return timeline;
-                                   }
-                                   catch (Exception e) {
-                                     throw new SQLException(e.toString());
-                                   }
-                                 }
-                               }
-                           );
+                            return timeline;
+                          }
+                          catch (Exception e) {
+                            throw new SQLException(e.toString());
+                          }
+                        }
+                      }
+                  );
             }
           }
       );
@@ -260,7 +296,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   public boolean enableSegment(final String segmentId)
   {
     try {
-      dbi.withHandle(
+      connector.getDBI().withHandle(
           new HandleCallback<Void>()
           {
             @Override
@@ -295,7 +331,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
         return false;
       }
 
-      dbi.withHandle(
+      connector.getDBI().withHandle(
           new HandleCallback<Void>()
           {
             @Override
@@ -326,7 +362,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   public boolean removeSegment(String ds, final String segmentID)
   {
     try {
-      dbi.withHandle(
+      connector.getDBI().withHandle(
           new HandleCallback<Void>()
           {
             @Override
@@ -386,7 +422,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   public Collection<String> getAllDatasourceNames()
   {
     synchronized (lock) {
-      return dbi.withHandle(
+      return connector.getDBI().withHandle(
           new HandleCallback<List<String>>()
           {
             @Override
@@ -433,33 +469,38 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
 
       log.debug("Starting polling of segment table");
 
-      final List<DataSegment> segments = dbi.withHandle(
-          new HandleCallback<List<DataSegment>>()
+      // some databases such as PostgreSQL require auto-commit turned off
+      // to stream results back, enabling transactions disables auto-commit
+      //
+      // setting connection to read-only will allow some database such as MySQL
+      // to automatically use read-only transaction mode, further optimizing the query
+      final List<DataSegment> segments = inReadOnlyTransaction(
+          new TransactionCallback<List<DataSegment>>()
           {
             @Override
-            public List<DataSegment> withHandle(Handle handle) throws Exception
+            public List<DataSegment> inTransaction(Handle handle, TransactionStatus status) throws Exception
             {
-              return handle.createQuery(
-                  String.format("SELECT payload FROM %s WHERE used=true", getSegmentsTable())
-              )
-                           .map(
-                               new ResultSetMapper<DataSegment>()
-                               {
-                                 @Override
-                                 public DataSegment map(int index, ResultSet r, StatementContext ctx)
-                                     throws SQLException
-                                 {
-                                   try {
-                                     return jsonMapper.readValue(r.getBytes("payload"), DataSegment.class);
-                                   }
-                                   catch (IOException e) {
-                                     log.makeAlert(e, "Failed to read segment from db.");
-                                     return null;
-                                   }
-                                 }
-                               }
-                           )
-                           .list();
+              return handle
+                  .createQuery(String.format("SELECT payload FROM %s WHERE used=true", getSegmentsTable()))
+                  .setFetchSize(connector.getStreamingFetchSize())
+                  .map(
+                      new ResultSetMapper<DataSegment>()
+                      {
+                        @Override
+                        public DataSegment map(int index, ResultSet r, StatementContext ctx)
+                            throws SQLException
+                        {
+                          try {
+                            return jsonMapper.readValue(r.getBytes("payload"), DataSegment.class);
+                          }
+                          catch (IOException e) {
+                            log.makeAlert(e, "Failed to read segment from db.");
+                            return null;
+                          }
+                        }
+                      }
+                  )
+                  .list();
             }
           }
       );
@@ -526,11 +567,11 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
       final int limit
   )
   {
-    return dbi.withHandle(
-        new HandleCallback<List<Interval>>()
+    return inReadOnlyTransaction(
+        new TransactionCallback<List<Interval>>()
         {
           @Override
-          public List<Interval> withHandle(Handle handle) throws IOException, SQLException
+          public List<Interval> inTransaction(Handle handle, TransactionStatus status) throws Exception
           {
             Iterator<Interval> iter = handle
                 .createQuery(
@@ -539,6 +580,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
                         getSegmentsTable()
                     )
                 )
+                .setFetchSize(connector.getStreamingFetchSize())
                 .bind("dataSource", dataSource)
                 .bind("start", interval.getStart().toString())
                 .bind("end", interval.getEnd().toString())

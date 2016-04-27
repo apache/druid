@@ -21,8 +21,13 @@ package io.druid.indexer.path;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import com.metamx.common.logger.Logger;
 import io.druid.indexer.HadoopDruidIndexerConfig;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.Job;
@@ -31,6 +36,7 @@ import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 
 import java.io.IOException;
+import java.util.Set;
 
 
 public class StaticPathSpec implements PathSpec
@@ -72,14 +78,26 @@ public class StaticPathSpec implements PathSpec
     return paths;
   }
 
-  public final static void addToMultipleInputs(
+  public static void addToMultipleInputs(
       HadoopDruidIndexerConfig config,
       Job job,
       String path,
       Class<? extends InputFormat> inputFormatClass
   )
   {
-    if (path == null) {
+    if (path != null) {
+      addToMultipleInputs(config, job, ImmutableSet.of(path), inputFormatClass);
+    }
+  }
+
+  public static void addToMultipleInputs(
+      HadoopDruidIndexerConfig config,
+      Job job,
+      Set<String> paths,
+      Class<? extends InputFormat> inputFormatClass
+  )
+  {
+    if (paths == null || paths.isEmpty()) {
       return;
     }
 
@@ -96,9 +114,33 @@ public class StaticPathSpec implements PathSpec
     // MultipleInputs.addInputPath(job, path, inputFormatClassToUse)
     // but have to handle hadoop glob path ourselves correctly
     // This change and HadoopGlobPathSplitter.java can be removed once the hadoop issue is fixed
-    for (StringBuilder sb : HadoopGlobPathSplitter.splitGlob(path)) {
-      MultipleInputs.addInputPath(job, new Path(sb.toString()), inputFormatClassToUse);
+    Set<String> pathStrings = Sets.newLinkedHashSet();
+    for (String path : paths) {
+      Iterables.addAll(pathStrings, HadoopGlobPathSplitter.splitGlob(path));
     }
+    if (!pathStrings.isEmpty()) {
+      addInputPath(job, pathStrings, inputFormatClassToUse);
+    }
+  }
+
+  // copied from MultipleInputs.addInputPath with slight modifications
+  private static void addInputPath(Job job, Iterable<String> pathStrings, Class<? extends InputFormat> inputFormatClass)
+  {
+    Configuration conf = job.getConfiguration();
+    StringBuilder inputFormats = new StringBuilder(Strings.nullToEmpty(conf.get(MultipleInputs.DIR_FORMATS)));
+
+    String[] paths = Iterables.toArray(pathStrings, String.class);
+    for (int i = 0; i < paths.length - 1; i++) {
+      if (inputFormats.length() > 0) {
+        inputFormats.append(',');
+      }
+      inputFormats.append(paths[i]).append(';').append(inputFormatClass.getName());
+    }
+    if (inputFormats.length() > 0) {
+      conf.set(MultipleInputs.DIR_FORMATS, inputFormats.toString());
+    }
+    // add last one separately for possible initialization in MultipleInputs
+    MultipleInputs.addInputPath(job, new Path(paths[paths.length - 1]), inputFormatClass);
   }
 
   @Override

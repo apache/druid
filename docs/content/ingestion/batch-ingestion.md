@@ -161,9 +161,39 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |ignoreInvalidRows|Boolean|Ignore rows found to have problems.|no (default == false)|
 |combineText|Boolean|Use CombineTextInputFormat to combine multiple files into a file split. This can speed up Hadoop jobs when processing a large number of small files.|no (default == false)|
 |useCombiner|Boolean|Use Hadoop combiner to merge rows at mapper if possible.|no (default == false)|
-|jobProperties|Object|A map of properties to add to the Hadoop job configuration.|no (default == null)|
+|jobProperties|Object|A map of properties to add to the Hadoop job configuration, see below for details.|no (default == null)|
+|indexSpec|Object|Tune how data is indexed. See below for more information.|no|
 |buildV9Directly|Boolean|Build v9 index directly instead of building v8 index and converting it to v9 format.|no (default = false)|
 |numBackgroundPersistThreads|Integer|The number of new background threads to use for incremental persists. Using this feature causes a notable increase in memory pressure and cpu usage but will make the job finish more quickly. If changing from the default of 0 (use current thread for persists), we recommend setting it to 1.|no (default == 0)|
+
+#### jobProperties field of TuningConfig
+
+```json
+   "tuningConfig" : {
+     "type": "hadoop",
+     "jobProperties": {
+       "<hadoop-property-a>": "<value-a>",
+       "<hadoop-property-b>": "<value-b>"
+     }
+   }
+```
+
+The following properties can be used to tune how the MapReduce job is configured by overriding default Hadoop/YARN/Mapreduce configurations:
+
+|Property name|Type|Description|
+|-------------|----|-----------|
+|mapreduce.job.user.classpath.first|String|Use Druid classpath instead of Hadoop classpath for common libraries like [Jackson](https://github.com/FasterXML/jackson) (required with [Cloudera Hadoop distribution](../operations/other-hadoop.html)) when set to `"true"`.|
+|...|String|See [Mapred configuration](https://hadoop.apache.org/docs/stable/hadoop-mapreduce-client/hadoop-mapreduce-client-core/mapred-default.xml) for more configuration parameters.|
+
+**Please note that using `mapreduce.job.user.classpath.first` is an expert feature and should not be used without a deep understanding of Hadoop and Java class loading mechanism.**
+
+#### IndexSpec
+
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|bitmap|String|The type of bitmap index to create. Choose from `roaring` or `concise`, or null to use the default (`concise`).|No|
+|dimensionCompression|String|Compression format for dimension columns. Choose from `LZ4`, `LZF`, or `uncompressed`. The default is `LZ4`.|No|
+|metricCompression|String|Compression format for metric columns. Choose from `LZ4`, `LZF`, or `uncompressed`. The default is `LZ4`.|No|
 
 ### Partitioning specification
 

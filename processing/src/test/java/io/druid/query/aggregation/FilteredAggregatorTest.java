@@ -20,6 +20,7 @@
 package io.druid.query.aggregation;
 
 import com.google.common.collect.Lists;
+import io.druid.js.JavaScriptConfig;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavaScriptExtractionFn;
@@ -257,7 +258,7 @@ public class FilteredAggregatorTest
     String jsFn = "function(x) { return(x === 'a') }";
     factory = new FilteredAggregatorFactory(
         new DoubleSumAggregatorFactory("billy", "value"),
-        new JavaScriptDimFilter("dim", jsFn, null)
+        new JavaScriptDimFilter("dim", jsFn, null, JavaScriptConfig.getDefault())
     );
     selector = new TestFloatColumnSelector(values);
     validateFilteredAggs(factory, values, selector);
@@ -271,7 +272,7 @@ public class FilteredAggregatorTest
     FilteredAggregatorFactory factory;
 
     String extractionJsFn = "function(str) { return str + 'AARDVARK'; }";
-    ExtractionFn extractionFn = new JavaScriptExtractionFn(extractionJsFn, false);
+    ExtractionFn extractionFn = new JavaScriptExtractionFn(extractionJsFn, false, JavaScriptConfig.getDefault());
 
     factory = new FilteredAggregatorFactory(
         new DoubleSumAggregatorFactory("billy", "value"),
@@ -311,7 +312,7 @@ public class FilteredAggregatorTest
     String jsFn = "function(x) { return(x === 'aAARDVARK') }";
     factory = new FilteredAggregatorFactory(
         new DoubleSumAggregatorFactory("billy", "value"),
-        new JavaScriptDimFilter("dim", jsFn, extractionFn)
+        new JavaScriptDimFilter("dim", jsFn, extractionFn, JavaScriptConfig.getDefault())
     );
     selector = new TestFloatColumnSelector(values);
     validateFilteredAggs(factory, values, selector);

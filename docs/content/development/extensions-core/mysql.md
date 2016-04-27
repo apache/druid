@@ -51,5 +51,5 @@ Make sure to [include](../../operations/including-extensions.html) `mysql-metada
 
   Note: the metadata storage extension is not packaged within the main Druid tarball; it is
   packaged in a separate tarball that can be downloaded from [here](http://druid.io/downloads.html).
-  You can also get it using [pull-deps](../pull-deps.html), or you can build
-  it from source code; see [Build from Source](../development/build.html).
+  You can also get it using [pull-deps](../../operations/pull-deps.html), or you can build
+  it from source code; see [Build from Source](../build.html).

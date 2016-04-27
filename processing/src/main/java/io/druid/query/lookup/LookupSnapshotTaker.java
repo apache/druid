@@ -37,7 +37,7 @@ import java.util.List;
 public class LookupSnapshotTaker
 {
   private static final Logger LOGGER = new Logger(LookupSnapshotTaker.class);
-  private static final String PERSIST_FILE_NAME = "lookupSnapshot.json";
+  protected static final String PERSIST_FILE_NAME = "lookupSnapshot.json";
 
   private final ObjectMapper objectMapper;
   private final File persistDirectory;

@@ -296,3 +296,14 @@ In current Druid, multiple data segments may be announced under the same Znode.
 |--------|-----------|-------|
 |`druid.announcer.segmentsPerNode`|Each Znode contains info for up to this many segments.|50|
 |`druid.announcer.maxBytesPerNode`|Max byte size for Znode.|524288|
+|`druid.announcer.skipDimensionsAndMetrics`|Skip Dimensions and Metrics list from segment announcements. NOTE: Enabling this will also remove the dimensions and metrics list from coordinator and broker endpoints.|false|
+|`druid.announcer.skipLoadSpec`|Skip segment LoadSpec from segment announcements. NOTE: Enabling this will also remove the loadspec from coordinator and broker endpoints.|false|
+
+### JavaScript
+
+Druid supports dynamic runtime extension through JavaScript functions. This functionality can be configured through
+the following properties.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.javascript.disable`|Set to "true" to disable JavaScript functionality. This affects the JavaScript parser, filter, extractionFn, aggregator, and post-aggregator.|false|

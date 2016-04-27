@@ -33,7 +33,9 @@ public class GraphiteEmitterConfigTest
         1000L,
         100,
         new SendAllGraphiteEventConverter("prefix", true, true),
-        Collections.EMPTY_LIST
+        Collections.EMPTY_LIST,
+        null,
+        null
     );
     String graphiteEmitterConfigString = mapper.writeValueAsString(graphiteEmitterConfig);
     GraphiteEmitterConfig graphiteEmitterConfigExpected = mapper.reader(GraphiteEmitterConfig.class).readValue(

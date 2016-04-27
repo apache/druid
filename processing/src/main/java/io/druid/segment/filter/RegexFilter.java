@@ -30,7 +30,7 @@ public class RegexFilter extends DimensionPredicateFilter
 {
   public RegexFilter(
       String dimension,
-      final String pattern,
+      final Pattern pattern,
       final ExtractionFn extractionFn
   )
   {
@@ -38,12 +38,10 @@ public class RegexFilter extends DimensionPredicateFilter
         dimension,
         new Predicate<String>()
         {
-          Pattern compiled = Pattern.compile(pattern);
-
           @Override
           public boolean apply(String input)
           {
-            return (input != null) && compiled.matcher(input).find();
+            return (input != null) && pattern.matcher(input).find();
           }
         },
         extractionFn

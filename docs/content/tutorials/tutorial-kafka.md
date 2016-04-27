@@ -43,13 +43,6 @@ Run this command to create a Kafka topic called *metrics*, to which we'll send d
 ./bin/kafka-topics.sh --create --zookeeper localhost:2181 --replication-factor 1 --partitions 1 --topic metrics
 ```
 
-## Enable Druid Kafka ingestion
-
-Druid includes configs for [Tranquility Kafka](../ingestion/stream-pull.html#kafka) to support loading data from Kafka.
-To enable this in the quickstart-based configuration:
-
-- Stop your Tranquility command (CTRL-C) and then start it up again.
-
 ## Send example data
 
 Let's launch a console producer for our topic and send some data!
@@ -154,7 +147,7 @@ sections:
 Next, start Druid Kafka ingestion:
 
 ```bash
-bin/tranquility kafka -configFile ../druid-0.9.0-SNAPSHOT/conf-quickstart/tranquility/kafka.json
+bin/tranquility kafka -configFile ../druid-0.9.0/conf-quickstart/tranquility/kafka.json
 ```
 
 - If your Tranquility server or Kafka is already running, stop it (CTRL-C) and

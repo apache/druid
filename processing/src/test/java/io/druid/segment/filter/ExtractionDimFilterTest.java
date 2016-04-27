@@ -32,6 +32,8 @@ import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.DimFilters;
 import io.druid.query.filter.ExtractionDimFilter;
+import io.druid.query.filter.Filter;
+import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.data.ArrayIndexed;
 import io.druid.segment.data.BitmapSerdeFactory;
@@ -160,9 +162,9 @@ public class ExtractionDimFilterTest
   @Test
   public void testEmpty()
   {
-    SelectorFilter extractionFilter = new SelectorFilter(
+    Filter extractionFilter = new SelectorDimFilter(
         "foo", "NFDJUKFNDSJFNS", DIM_EXTRACTION_FN
-    );
+    ).toFilter();
     ImmutableBitmap immutableBitmap = extractionFilter.getBitmapIndex(BITMAP_INDEX_SELECTOR);
     Assert.assertEquals(0, immutableBitmap.size());
   }
@@ -170,9 +172,9 @@ public class ExtractionDimFilterTest
   @Test
   public void testNull()
   {
-    SelectorFilter extractionFilter = new SelectorFilter(
+    Filter extractionFilter = new SelectorDimFilter(
         "FDHJSFFHDS", "extractDimVal", DIM_EXTRACTION_FN
-    );
+    ).toFilter();
     ImmutableBitmap immutableBitmap = extractionFilter.getBitmapIndex(BITMAP_INDEX_SELECTOR);
     Assert.assertEquals(0, immutableBitmap.size());
   }
@@ -180,9 +182,9 @@ public class ExtractionDimFilterTest
   @Test
   public void testNormal()
   {
-    SelectorFilter extractionFilter = new SelectorFilter(
+    Filter extractionFilter = new SelectorDimFilter(
         "foo", "extractDimVal", DIM_EXTRACTION_FN
-    );
+    ).toFilter();
     ImmutableBitmap immutableBitmap = extractionFilter.getBitmapIndex(BITMAP_INDEX_SELECTOR);
     Assert.assertEquals(1, immutableBitmap.size());
   }

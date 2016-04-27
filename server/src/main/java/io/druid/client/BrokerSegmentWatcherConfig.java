@@ -30,8 +30,16 @@ public class BrokerSegmentWatcherConfig
   @JsonProperty
   private Set<String> watchedTiers = null;
 
+  @JsonProperty
+  private Set<String> watchedDataSources = null;
+
   public Set<String> getWatchedTiers()
   {
     return watchedTiers;
+  }
+
+  public Set<String> getWatchedDataSources()
+  {
+    return watchedDataSources;
   }
 }

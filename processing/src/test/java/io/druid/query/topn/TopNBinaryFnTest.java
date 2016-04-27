@@ -37,6 +37,7 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -451,6 +452,64 @@ public class TopNBinaryFnTest
         QueryGranularity.ALL,
         new DefaultDimensionSpec("testdim", null),
         new NumericTopNMetricSpec("index"),
+        2,
+        aggregatorFactories,
+        postAggregators
+    ).apply(
+        result1,
+        result2
+    );
+    Assert.assertEquals(expected.getTimestamp(), actual.getTimestamp());
+    assertTopNMergeResult(expected.getValue(), actual.getValue());
+  }
+
+  @Test
+  public void testMergeLexicographicWithInvalidDimName()
+  {
+    Result<TopNResultValue> result1 = new Result<TopNResultValue>(
+        currTime,
+        new TopNResultValue(
+            ImmutableList.<Map<String, Object>>of(
+                ImmutableMap.<String, Object>of(
+                    "rows", 1L,
+                    "index", 2L,
+                    "testdim", "1"
+                )
+            )
+        )
+    );
+    Result<TopNResultValue> result2 = new Result<TopNResultValue>(
+        currTime,
+        new TopNResultValue(
+            ImmutableList.<Map<String, Object>>of(
+                ImmutableMap.<String, Object>of(
+                    "rows", 2L,
+                    "index", 3L,
+                    "testdim", "1"
+                )
+            )
+        )
+    );
+
+    Map<String, Object> resultMap = new HashMap<>();
+    resultMap.put("INVALID_DIM_NAME", null);
+    resultMap.put("rows", 3L);
+    resultMap.put("index", 5L);
+
+    Result<TopNResultValue> expected = new Result<TopNResultValue>(
+        currTime,
+        new TopNResultValue(
+            ImmutableList.<Map<String, Object>>of(
+                resultMap
+            )
+        )
+    );
+
+    Result<TopNResultValue> actual = new TopNBinaryFn(
+        TopNResultMerger.identity,
+        QueryGranularity.ALL,
+        new DefaultDimensionSpec("INVALID_DIM_NAME", null),
+        new LexicographicTopNMetricSpec(null),
         2,
         aggregatorFactories,
         postAggregators

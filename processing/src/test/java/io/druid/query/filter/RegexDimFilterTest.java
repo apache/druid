@@ -40,4 +40,39 @@ public class RegexDimFilterTest
     Assert.assertFalse(Arrays.equals(regexDimFilter.getCacheKey(), regexDimFilter3.getCacheKey()));
 
   }
+
+  @Test
+  public void testEquals()
+  {
+    RegexDimFilter regexDimFilter = new RegexDimFilter("dim", "reg", null);
+    RegexDimFilter regexDimFilter2 = new RegexDimFilter("di", "mreg", null);
+    RegexDimFilter regexDimFilter3 = new RegexDimFilter("di", "mreg", null);
+
+    Assert.assertNotEquals(regexDimFilter, regexDimFilter2);
+    Assert.assertEquals(regexDimFilter2, regexDimFilter3);
+
+    RegexDimExtractionFn regexFn = new RegexDimExtractionFn(".*", false, null);
+    RegexDimFilter regexDimFilter4 = new RegexDimFilter("dim", "reg", regexFn);
+    RegexDimFilter regexDimFilter5 = new RegexDimFilter("dim", "reg", regexFn);
+    Assert.assertNotEquals(regexDimFilter, regexDimFilter4);
+    Assert.assertEquals(regexDimFilter4, regexDimFilter5);
+
+  }
+
+  @Test
+  public void testHashcode() {
+    RegexDimFilter regexDimFilter = new RegexDimFilter("dim", "reg", null);
+    RegexDimFilter regexDimFilter2 = new RegexDimFilter("di", "mreg", null);
+    RegexDimFilter regexDimFilter3 = new RegexDimFilter("di", "mreg", null);
+
+    Assert.assertNotEquals(regexDimFilter.hashCode(), regexDimFilter2.hashCode());
+    Assert.assertEquals(regexDimFilter2.hashCode(), regexDimFilter3.hashCode());
+
+    RegexDimExtractionFn regexFn = new RegexDimExtractionFn(".*", false, null);
+    RegexDimFilter regexDimFilter4 = new RegexDimFilter("dim", "reg", regexFn);
+    RegexDimFilter regexDimFilter5 = new RegexDimFilter("dim", "reg", regexFn);
+    Assert.assertNotEquals(regexDimFilter.hashCode(), regexDimFilter4.hashCode());
+    Assert.assertEquals(regexDimFilter4.hashCode(), regexDimFilter5.hashCode());
+  }
+
 }

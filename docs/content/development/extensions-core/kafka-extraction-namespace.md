@@ -5,7 +5,7 @@ layout: doc_page
 # Kafka Namespaced Lookup
 
 <div class="note caution">
-Lookups are an <a href="../development/experimental.html">experimental</a> feature.
+Lookups are an <a href="../experimental.html">experimental</a> feature.
 </div>
 
 Make sure to [include](../../operations/including-extensions.html) `druid-namespace-lookup` and `druid-kafka-extraction-namespace` as an extension.

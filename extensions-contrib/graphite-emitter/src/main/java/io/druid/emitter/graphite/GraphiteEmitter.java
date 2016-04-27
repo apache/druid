@@ -20,8 +20,6 @@
 package io.druid.emitter.graphite;
 
 import com.codahale.metrics.graphite.PickledGraphite;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
@@ -30,7 +28,6 @@ import com.metamx.emitter.core.Event;
 import com.metamx.emitter.service.AlertEvent;
 import com.metamx.emitter.service.ServiceMetricEvent;
 
-import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -41,6 +38,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
 
@@ -52,22 +50,20 @@ public class GraphiteEmitter implements Emitter
   private final GraphiteEmitterConfig graphiteEmitterConfig;
   private final List<Emitter> emitterList;
   private final AtomicBoolean started = new AtomicBoolean(false);
-  private final ObjectMapper mapper;
   private final LinkedBlockingQueue<GraphiteEvent> eventsQueue;
-  private final static long DEFAULT_PUT_GET_TIMEOUT = 1000; // default wait for put/get operations on the queue 1 sec
   private static final long FLUSH_TIMEOUT = 60000; // default flush wait 1 min
   private final ScheduledExecutorService exec = Executors.newScheduledThreadPool(2, new ThreadFactoryBuilder()
       .setDaemon(true)
       .setNameFormat("GraphiteEmitter-%s")
       .build()); // Thread pool of two in order to schedule flush runnable
+  private AtomicLong  countLostEvents = new AtomicLong(0);
 
   public GraphiteEmitter(
-      @NotNull GraphiteEmitterConfig graphiteEmitterConfig,
-      List<Emitter> emitterList, @NotNull ObjectMapper mapper
+      GraphiteEmitterConfig graphiteEmitterConfig,
+      List<Emitter> emitterList
   )
   {
     this.emitterList = emitterList;
-    this.mapper = mapper;
     this.graphiteEmitterConfig = graphiteEmitterConfig;
     this.graphiteEventConverter = graphiteEmitterConfig.getDruidToGraphiteEventConverter();
     this.eventsQueue = new LinkedBlockingQueue(graphiteEmitterConfig.getMaxQueueSize());
@@ -103,21 +99,24 @@ public class GraphiteEmitter implements Emitter
         return;
       }
       try {
-        final boolean isSuccessful = eventsQueue.offer(graphiteEvent, DEFAULT_PUT_GET_TIMEOUT, TimeUnit.MILLISECONDS);
+        final boolean isSuccessful = eventsQueue.offer(
+            graphiteEvent,
+            graphiteEmitterConfig.getEmitWaitTime(),
+            TimeUnit.MILLISECONDS
+        );
         if (!isSuccessful) {
-          log.error(
-              "Throwing event [%s] on the floor Graphite queue is full please increase the capacity or/and the consumer frequency",
-              mapper.writeValueAsString(event)
-          );
+          if (countLostEvents.getAndIncrement() % 1000 == 0) {
+            log.error(
+                "Lost total of [%s] events because of emitter queue is full. Please increase the capacity or/and the consumer frequency",
+                countLostEvents.get()
+            );
+          }
         }
       }
       catch (InterruptedException e) {
         log.error(e, "got interrupted with message [%s]", e.getMessage());
         Thread.currentThread().interrupt();
 
-      }
-      catch (JsonProcessingException e) {
-        log.error(e, e.getMessage());
       }
     } else if (!emitterList.isEmpty() && event instanceof AlertEvent) {
       for (Emitter emitter : emitterList) {
@@ -147,7 +146,10 @@ public class GraphiteEmitter implements Emitter
         }
         while (eventsQueue.size() > 0 && !exec.isShutdown()) {
           try {
-            final GraphiteEvent graphiteEvent = eventsQueue.poll(DEFAULT_PUT_GET_TIMEOUT, TimeUnit.MILLISECONDS);
+            final GraphiteEvent graphiteEvent = eventsQueue.poll(
+                graphiteEmitterConfig.getWaitForEventTime(),
+                TimeUnit.MILLISECONDS
+            );
             if (graphiteEvent != null) {
               log.debug(
                   "sent [%s] with value [%s] and time [%s]",

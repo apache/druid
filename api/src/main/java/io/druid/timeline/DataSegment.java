@@ -126,7 +126,7 @@ public class DataSegment implements Comparable<DataSegment>
     this.metrics = metrics == null
                    ? ImmutableList.<String>of()
                    : ImmutableList.copyOf(Iterables.transform(Iterables.filter(metrics, nonEmpty), internFun));
-    this.shardSpec = (shardSpec == null) ? new NoneShardSpec() : shardSpec;
+    this.shardSpec = (shardSpec == null) ? NoneShardSpec.instance() : shardSpec;
     this.binaryVersion = binaryVersion;
     this.size = size;
 
@@ -219,6 +219,11 @@ public class DataSegment implements Comparable<DataSegment>
   public DataSegment withDimensions(List<String> dimensions)
   {
     return builder(this).dimensions(dimensions).build();
+  }
+
+  public DataSegment withMetrics(List<String> metrics)
+  {
+    return builder(this).metrics(metrics).build();
   }
 
   public DataSegment withSize(long size)
@@ -323,7 +328,7 @@ public class DataSegment implements Comparable<DataSegment>
       this.loadSpec = ImmutableMap.of();
       this.dimensions = ImmutableList.of();
       this.metrics = ImmutableList.of();
-      this.shardSpec = new NoneShardSpec();
+      this.shardSpec = NoneShardSpec.instance();
       this.size = -1;
     }
 

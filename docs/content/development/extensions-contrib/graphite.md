@@ -24,7 +24,9 @@ All the configuration parameters for graphite emitter are under `druid.emitter.g
 |`druid.emitter.graphite.flushPeriod` | Queue flushing period in milliseconds. |no|1 minute|
 |`druid.emitter.graphite.maxQueueSize`| Maximum size of the queue used to buffer events. |no|`MAX_INT`|
 |`druid.emitter.graphite.alertEmitters`| List of emitters where alerts will be forwarded to. |no| empty list (no forwarding)|
- 
+|`druid.emitter.graphite.emitWaitTime` | wait time in milliseconds to try to send the event otherwise emitter will throwing event. |no|0|
+|`druid.emitter.graphite.waitForEventTime` | waiting time in milliseconds if necessary for an event to become available. |no|1000 (1 sec)|
+
 ### Druid to Graphite Event Converter
  
 Graphite Event Converter defines a mapping between druid metrics name plus dimensions to a Graphite metric path.
@@ -65,7 +67,7 @@ druid.emitter.graphite.eventConverter={"type":"all", "namespacePrefix": "druid.t
 
 The second implementation called `whiteList`, will send only the white listed metrics and dimensions.
 Same as for the `all` converter user has control of `<namespacePrefix>.[<druid service name>].[<druid hostname>].`
-White-list based converter comes with the following  default white list map located under resources [defaultWhiteListMap.json](./src/main/resources/defaultWhiteListMap.json)
+White-list based converter comes with the following  default white list map located under resources in `./src/main/resources/defaultWhiteListMap.json`
 
 Although user can override the default white list map by supplying a property called `mapPath`.
 This property is a String containing  the path for the file containing **white list map Json object**.

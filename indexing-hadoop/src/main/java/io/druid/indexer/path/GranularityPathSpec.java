@@ -151,10 +151,8 @@ public class GranularityPathSpec implements PathSpec
       }
     }
 
-    for (String path : paths) {
-      log.info("Appending path[%s]", path);
-      StaticPathSpec.addToMultipleInputs(config, job, path, inputFormat);
-    }
+    log.info("Appending path %s", paths);
+    StaticPathSpec.addToMultipleInputs(config, job, paths, inputFormat);
 
     return job;
   }

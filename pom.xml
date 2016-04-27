@@ -59,7 +59,7 @@
 
     <properties>
         <metamx.java-util.version>0.27.9</metamx.java-util.version>
-        <apache.curator.version>2.9.1</apache.curator.version>
+        <apache.curator.version>2.10.0</apache.curator.version>
         <jetty.version>9.2.5.v20141112</jetty.version>
         <jersey.version>1.19</jersey.version>
         <!-- Watch out for Hadoop compatibility when updating to >= 2.5; see https://github.com/druid-io/druid/pull/1669 -->
@@ -210,6 +210,11 @@
                         <artifactId>slf4j-api</artifactId>
                     </exclusion>
                 </exclusions>
+              </dependency>
+            <dependency>
+                <groupId>org.apache.zookeeper</groupId>
+                <artifactId>zookeeper</artifactId>
+                <version>3.4.8</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.curator</groupId>
@@ -444,12 +449,12 @@
             <dependency>
                 <groupId>org.antlr</groupId>
                 <artifactId>antlr4-runtime</artifactId>
-                <version>4.0</version>
+                <version>4.5.1</version>
             </dependency>
             <dependency>
                 <groupId>org.antlr</groupId>
                 <artifactId>antlr4-coordinator</artifactId>
-                <version>4.0</version>
+                <version>4.5.1</version>
             </dependency>
             <dependency>
                 <groupId>commons-cli</groupId>
@@ -740,7 +745,7 @@
                 <plugin>
                     <groupId>org.antlr</groupId>
                     <artifactId>antlr4-maven-plugin</artifactId>
-                    <version>4.0</version>
+                    <version>4.5.1</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
