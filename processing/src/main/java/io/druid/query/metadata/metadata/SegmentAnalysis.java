@@ -34,7 +34,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
   private final List<Interval> interval;
   private final Map<String, ColumnAnalysis> columns;
   private final long size;
-  private final int numRows;
+  private final long numRows;
   private final Map<String, AggregatorFactory> aggregators;
 
   @JsonCreator
@@ -43,7 +43,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
       @JsonProperty("intervals") List<Interval> interval,
       @JsonProperty("columns") Map<String, ColumnAnalysis> columns,
       @JsonProperty("size") long size,
-      @JsonProperty("numRows") int numRows,
+      @JsonProperty("numRows") long numRows,
       @JsonProperty("aggregators") Map<String, AggregatorFactory> aggregators
   )
   {
@@ -80,7 +80,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
   }
 
   @JsonProperty
-  public int getNumRows()
+  public long getNumRows()
   {
     return numRows;
   }
