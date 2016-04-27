@@ -76,7 +76,7 @@ public class SegmentAnalyzer
     this.analysisTypes = analysisTypes;
   }
 
-  public int numRows(Segment segment)
+  public long numRows(Segment segment)
   {
     return Preconditions.checkNotNull(segment, "segment").asStorageAdapter().getNumRows();
   }
