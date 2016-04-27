@@ -31,6 +31,7 @@ public class GraphiteEmitterConfig
 {
   private final static int DEFAULT_BATCH_SIZE = 100;
   private static final Long DEFAULT_FLUSH_PERIOD = (long) (60 * 1000); // flush every one minute
+  private final static long DEFAULT_GET_TIMEOUT = 1000; // default wait for get operations on the queue 1 sec
 
   @JsonProperty
   final private String hostname;
@@ -47,6 +48,13 @@ public class GraphiteEmitterConfig
 
   @JsonProperty
   final private List<String> alertEmitters;
+
+  @JsonProperty
+  final private Long emitWaitTime;
+
+  //waiting up to the specified wait time if necessary for an event to become available.
+  @JsonProperty
+  final private Long waitForEventTime;
 
   @Override
   public boolean equals(Object o)
@@ -66,40 +74,42 @@ public class GraphiteEmitterConfig
     if (getBatchSize() != that.getBatchSize()) {
       return false;
     }
-    if (getHostname() != null ? !getHostname().equals(that.getHostname()) : that.getHostname() != null) {
+    if (!getHostname().equals(that.getHostname())) {
       return false;
     }
-    if (getFlushPeriod() != null ? !getFlushPeriod().equals(that.getFlushPeriod()) : that.getFlushPeriod() != null) {
+    if (!getFlushPeriod().equals(that.getFlushPeriod())) {
       return false;
     }
-    if (getMaxQueueSize() != null
-        ? !getMaxQueueSize().equals(that.getMaxQueueSize())
-        : that.getMaxQueueSize() != null) {
+    if (!getMaxQueueSize().equals(that.getMaxQueueSize())) {
       return false;
     }
-    if (getDruidToGraphiteEventConverter() != null
-        ? !getDruidToGraphiteEventConverter().equals(that.getDruidToGraphiteEventConverter())
-        : that.getDruidToGraphiteEventConverter() != null) {
+    if (!getDruidToGraphiteEventConverter().equals(that.getDruidToGraphiteEventConverter())) {
       return false;
     }
-    return !(getAlertEmitters() != null
-             ? !getAlertEmitters().equals(that.getAlertEmitters())
-             : that.getAlertEmitters() != null);
+    if (getAlertEmitters() != null
+        ? !getAlertEmitters().equals(that.getAlertEmitters())
+        : that.getAlertEmitters() != null) {
+      return false;
+    }
+    if (!getEmitWaitTime().equals(that.getEmitWaitTime())) {
+      return false;
+    }
+    return getWaitForEventTime().equals(that.getWaitForEventTime());
 
   }
 
   @Override
   public int hashCode()
   {
-    int result = getHostname() != null ? getHostname().hashCode() : 0;
+    int result = getHostname().hashCode();
     result = 31 * result + getPort();
     result = 31 * result + getBatchSize();
-    result = 31 * result + (getFlushPeriod() != null ? getFlushPeriod().hashCode() : 0);
-    result = 31 * result + (getMaxQueueSize() != null ? getMaxQueueSize().hashCode() : 0);
-    result = 31 * result + (getDruidToGraphiteEventConverter() != null
-                            ? getDruidToGraphiteEventConverter().hashCode()
-                            : 0);
+    result = 31 * result + getFlushPeriod().hashCode();
+    result = 31 * result + getMaxQueueSize().hashCode();
+    result = 31 * result + getDruidToGraphiteEventConverter().hashCode();
     result = 31 * result + (getAlertEmitters() != null ? getAlertEmitters().hashCode() : 0);
+    result = 31 * result + getEmitWaitTime().hashCode();
+    result = 31 * result + getWaitForEventTime().hashCode();
     return result;
   }
 
@@ -111,9 +121,13 @@ public class GraphiteEmitterConfig
       @JsonProperty("flushPeriod") Long flushPeriod,
       @JsonProperty("maxQueueSize") Integer maxQueueSize,
       @JsonProperty("eventConverter") DruidToGraphiteEventConverter druidToGraphiteEventConverter,
-      @JsonProperty("alertEmitters") List<String> alertEmitters
+      @JsonProperty("alertEmitters") List<String> alertEmitters,
+      @JsonProperty("emitWaitTime") Long emitWaitTime,
+      @JsonProperty("waitForEventTime") Long waitForEventTime
   )
   {
+    this.waitForEventTime = waitForEventTime == null ? DEFAULT_GET_TIMEOUT : waitForEventTime;
+    this.emitWaitTime = emitWaitTime == null ? 0 : emitWaitTime;
     this.alertEmitters = alertEmitters == null ? Collections.<String>emptyList() : alertEmitters;
     this.druidToGraphiteEventConverter = Preconditions.checkNotNull(
         druidToGraphiteEventConverter,
@@ -166,5 +180,17 @@ public class GraphiteEmitterConfig
   public List<String> getAlertEmitters()
   {
     return alertEmitters;
+  }
+
+  @JsonProperty
+  public Long getEmitWaitTime()
+  {
+    return emitWaitTime;
+  }
+
+  @JsonProperty
+  public Long getWaitForEventTime()
+  {
+    return waitForEventTime;
   }
 }
