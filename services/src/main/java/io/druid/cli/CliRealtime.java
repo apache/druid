@@ -21,14 +21,17 @@ package io.druid.cli;
 
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
 import com.metamx.common.logger.Logger;
 import io.airlift.airline.Command;
 import io.druid.guice.RealtimeModule;
+import io.druid.query.lookup.LookupModule;
 import io.druid.server.initialization.jetty.ChatHandlerServerModule;
 
 import java.util.List;
+import java.util.Properties;
 
 /**
  */
@@ -40,6 +43,9 @@ public class CliRealtime extends ServerRunnable
 {
   private static final Logger log = new Logger(CliRealtime.class);
 
+  @Inject
+  private Properties properties;
+
   public CliRealtime()
   {
     super(log);
@@ -48,9 +54,10 @@ public class CliRealtime extends ServerRunnable
   @Override
   protected List<? extends Module> getModules()
   {
-    return ImmutableList.<Module>of(
+    return ImmutableList.of(
         new RealtimeModule(),
-        new Module() {
+        new Module()
+        {
           @Override
           public void configure(Binder binder)
           {
@@ -58,7 +65,8 @@ public class CliRealtime extends ServerRunnable
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8084);
           }
         },
-        new ChatHandlerServerModule()
+        new ChatHandlerServerModule(properties),
+        new LookupModule()
     );
   }
 }

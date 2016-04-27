@@ -38,6 +38,7 @@ import io.druid.data.input.Row;
 import io.druid.granularity.PeriodGranularity;
 import io.druid.granularity.QueryGranularity;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.js.JavaScriptConfig;
 import io.druid.query.BySegmentResultValue;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.Druids;
@@ -64,15 +65,19 @@ import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
-import io.druid.query.extraction.LookupExtractionFn;
+import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.extraction.RegexDimExtractionFn;
 import io.druid.query.extraction.TimeFormatExtractionFn;
+import io.druid.query.filter.AndDimFilter;
+import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.ExtractionDimFilter;
+import io.druid.query.filter.InDimFilter;
 import io.druid.query.filter.JavaScriptDimFilter;
 import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.RegexDimFilter;
+import io.druid.query.filter.SearchQueryDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.groupby.having.EqualToHavingSpec;
 import io.druid.query.groupby.having.GreaterThanHavingSpec;
@@ -81,7 +86,9 @@ import io.druid.query.groupby.having.OrHavingSpec;
 import io.druid.query.groupby.orderby.DefaultLimitSpec;
 import io.druid.query.groupby.orderby.LimitSpec;
 import io.druid.query.groupby.orderby.OrderByColumnSpec;
+import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.ordering.StringComparators;
+import io.druid.query.search.search.ContainsSearchQuerySpec;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.segment.TestHelper;
 import io.druid.segment.column.Column;
@@ -101,6 +108,7 @@ import org.junit.runners.Parameterized;
 import javax.annotation.Nullable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Comparator;
@@ -298,7 +306,10 @@ public class GroupByQueryRunnerTest
         .setDimensions(
             Lists.<DimensionSpec>newArrayList(
                 new ExtractionDimensionSpec(
-                    "quality", "alias", new LookupExtractionFn(new MapLookupExtractor(map, false), false, null, false, false), null
+                    "quality",
+                    "alias",
+                    new LookupExtractionFn(new MapLookupExtractor(map, false), false, null, false, false),
+                    null
                 )
             )
         )
@@ -374,7 +385,10 @@ public class GroupByQueryRunnerTest
         .setDimensions(
             Lists.<DimensionSpec>newArrayList(
                 new ExtractionDimensionSpec(
-                    "quality", "alias", new LookupExtractionFn(new MapLookupExtractor(map, false), true, null, false, false), null
+                    "quality",
+                    "alias",
+                    new LookupExtractionFn(new MapLookupExtractor(map, false), true, null, false, false),
+                    null
                 )
             )
         )
@@ -450,7 +464,10 @@ public class GroupByQueryRunnerTest
         .setDimensions(
             Lists.<DimensionSpec>newArrayList(
                 new ExtractionDimensionSpec(
-                    "quality", "alias", new LookupExtractionFn(new MapLookupExtractor(map, false), true, null, true, false), null
+                    "quality",
+                    "alias",
+                    new LookupExtractionFn(new MapLookupExtractor(map, false), true, null, true, false),
+                    null
                 )
             )
         )
@@ -604,7 +621,10 @@ public class GroupByQueryRunnerTest
         .setDimensions(
             Lists.<DimensionSpec>newArrayList(
                 new ExtractionDimensionSpec(
-                    "quality", "alias", new LookupExtractionFn(new MapLookupExtractor(map, false), false, null, true, false), null
+                    "quality",
+                    "alias",
+                    new LookupExtractionFn(new MapLookupExtractor(map, false), false, null, true, false),
+                    null
                 )
             )
         )
@@ -1284,7 +1304,7 @@ public class GroupByQueryRunnerTest
         new DefaultLimitSpec(OrderByColumnSpec.ascending("rows", "idx"), null),
         new DefaultLimitSpec(OrderByColumnSpec.descending("idx"), null),
         new DefaultLimitSpec(OrderByColumnSpec.descending("rows", "idx"), null),
-    };
+        };
 
     final Comparator<Row> idxComparator =
         new Comparator<Row>()
@@ -1976,7 +1996,10 @@ public class GroupByQueryRunnerTest
         .setDimensions(
             Lists.<DimensionSpec>newArrayList(
                 new ExtractionDimensionSpec(
-                    "quality", "alias", new LookupExtractionFn(new MapLookupExtractor(map, false), false, null, false, false), null
+                    "quality",
+                    "alias",
+                    new LookupExtractionFn(new MapLookupExtractor(map, false), false, null, false, false),
+                    null
                 )
             )
         )
@@ -1987,11 +2010,11 @@ public class GroupByQueryRunnerTest
             )
         )
         .setLimitSpec(new DefaultLimitSpec(Lists.<OrderByColumnSpec>newArrayList(
-                new OrderByColumnSpec("alias", null, StringComparators.ALPHANUMERIC)), null))
+            new OrderByColumnSpec("alias", null, StringComparators.ALPHANUMERIC)), null))
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
-     List<Row> expectedResults = Arrays.asList(
+    List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health0000", "rows", 1L, "idx", 121L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health09", "rows", 3L, "idx", 2870L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health20", "rows", 1L, "idx", 118L),
@@ -2034,8 +2057,8 @@ public class GroupByQueryRunnerTest
             )
         )
         .setInterval(QueryRunnerTestHelper.firstToThird)
-            // Using a limitSpec here to achieve a per group limit is incorrect.
-            // Limit is applied on the overall results.
+        // Using a limitSpec here to achieve a per group limit is incorrect.
+        // Limit is applied on the overall results.
         .setLimitSpec(
             new DefaultLimitSpec(
                 Lists.newArrayList(
@@ -2506,7 +2529,7 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setInterval("2011-04-02/2011-04-04")
-        .setDimFilter(new RegexDimFilter("quality", "auto.*"))
+        .setDimFilter(new RegexDimFilter("quality", "auto.*", null))
         .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "quality")))
         .setAggregatorSpecs(
             Arrays.<AggregatorFactory>asList(
@@ -2715,7 +2738,12 @@ public class GroupByQueryRunnerTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setDimFilter(new JavaScriptDimFilter("quality", "function(dim){ return true; }"))
+        .setDimFilter(new JavaScriptDimFilter(
+            "quality",
+            "function(dim){ return true; }",
+            null,
+            JavaScriptConfig.getDefault()
+        ))
         .setAggregatorSpecs(
             Arrays.asList(
                 QueryRunnerTestHelper.rowsCount,
@@ -2774,7 +2802,12 @@ public class GroupByQueryRunnerTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setDimFilter(new JavaScriptDimFilter("quality", "function(dim){ return true; }"))
+        .setDimFilter(new JavaScriptDimFilter(
+            "quality",
+            "function(dim){ return true; }",
+            null,
+            JavaScriptConfig.getDefault()
+        ))
         .setAggregatorSpecs(
             Arrays.asList(
                 QueryRunnerTestHelper.rowsCount,
@@ -2836,13 +2869,18 @@ public class GroupByQueryRunnerTest
   public void testSubqueryWithExtractionFnInOuterQuery()
   {
     //https://github.com/druid-io/druid/issues/2556
-    
+
     GroupByQuery subquery = GroupByQuery
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setDimFilter(new JavaScriptDimFilter("quality", "function(dim){ return true; }"))
+        .setDimFilter(new JavaScriptDimFilter(
+            "quality",
+            "function(dim){ return true; }",
+            null,
+            JavaScriptConfig.getDefault()
+        ))
         .setAggregatorSpecs(
             Arrays.asList(
                 QueryRunnerTestHelper.rowsCount,
@@ -2863,11 +2901,11 @@ public class GroupByQueryRunnerTest
             )
         )
         .setDimensions(Lists.<DimensionSpec>newArrayList(
-                           new ExtractionDimensionSpec(
-                               "alias",
-                               "alias",
-                               new RegexDimExtractionFn("(a).*", true, "a")
-                           )
+            new ExtractionDimensionSpec(
+                "alias",
+                "alias",
+                new RegexDimExtractionFn("(a).*", true, "a")
+            )
                        )
         )
         .setAggregatorSpecs(
@@ -2973,9 +3011,11 @@ public class GroupByQueryRunnerTest
 
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "idx1", 2900.0, "idx2", 2900.0,
-            "idx3", 5800.0, "idx4", 5800.0),
+                                                       "idx3", 5800.0, "idx4", 5800.0
+        ),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "idx1", 2505.0, "idx2", 2505.0,
-            "idx3", 5010.0, "idx4", 5010.0)
+                                                       "idx3", 5010.0, "idx4", 5010.0
+        )
     );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
@@ -3012,15 +3052,15 @@ public class GroupByQueryRunnerTest
         .setDimFilter(
             new OrDimFilter(
                 Lists.<DimFilter>newArrayList(
-                    new SelectorDimFilter("quality", "automotive"),
-                    new SelectorDimFilter("quality", "premium"),
-                    new SelectorDimFilter("quality", "mezzanine"),
-                    new SelectorDimFilter("quality", "business"),
-                    new SelectorDimFilter("quality", "entertainment"),
-                    new SelectorDimFilter("quality", "health"),
-                    new SelectorDimFilter("quality", "news"),
-                    new SelectorDimFilter("quality", "technology"),
-                    new SelectorDimFilter("quality", "travel")
+                    new SelectorDimFilter("quality", "automotive", null),
+                    new SelectorDimFilter("quality", "premium", null),
+                    new SelectorDimFilter("quality", "mezzanine", null),
+                    new SelectorDimFilter("quality", "business", null),
+                    new SelectorDimFilter("quality", "entertainment", null),
+                    new SelectorDimFilter("quality", "health", null),
+                    new SelectorDimFilter("quality", "news", null),
+                    new SelectorDimFilter("quality", "technology", null),
+                    new SelectorDimFilter("quality", "travel", null)
                 )
             )
         )
@@ -3114,7 +3154,12 @@ public class GroupByQueryRunnerTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setDimFilter(new JavaScriptDimFilter("quality", "function(dim){ return true; }"))
+        .setDimFilter(new JavaScriptDimFilter(
+            "quality",
+            "function(dim){ return true; }",
+            null,
+            JavaScriptConfig.getDefault()
+        ))
         .setAggregatorSpecs(
             Arrays.asList(
                 QueryRunnerTestHelper.rowsCount,
@@ -3375,7 +3420,12 @@ public class GroupByQueryRunnerTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setDimFilter(new JavaScriptDimFilter("quality", "function(dim){ return true; }"))
+        .setDimFilter(new JavaScriptDimFilter(
+            "quality",
+            "function(dim){ return true; }",
+            null,
+            JavaScriptConfig.getDefault()
+        ))
         .setAggregatorSpecs(
             Arrays.asList(
                 QueryRunnerTestHelper.rowsCount,
@@ -3633,7 +3683,12 @@ public class GroupByQueryRunnerTest
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
         .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
-        .setDimFilter(new JavaScriptDimFilter("market", "function(dim){ return true; }"))
+        .setDimFilter(new JavaScriptDimFilter(
+            "market",
+            "function(dim){ return true; }",
+            null,
+            JavaScriptConfig.getDefault()
+        ))
         .setAggregatorSpecs(
             Arrays.asList(
                 QueryRunnerTestHelper.rowsCount,
@@ -3643,7 +3698,8 @@ public class GroupByQueryRunnerTest
                     Arrays.asList("index", "market"),
                     "function(current, index, dim){return current + index + dim.length;}",
                     "function(){return 0;}",
-                    "function(a,b){return a + b;}"
+                    "function(a,b){return a + b;}",
+                    JavaScriptConfig.getDefault()
                 )
             )
         )
@@ -4054,8 +4110,8 @@ public class GroupByQueryRunnerTest
         .setDimFilter(
             new OrDimFilter(
                 Arrays.<DimFilter>asList(
-                    new SelectorDimFilter("market", "spot"),
-                    new SelectorDimFilter("market", "upfront")
+                    new SelectorDimFilter("market", "spot", null),
+                    new SelectorDimFilter("market", "upfront", null)
                 )
             )
         )
@@ -4286,7 +4342,7 @@ public class GroupByQueryRunnerTest
             )
         )
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
-        .setDimFilter(new SelectorDimFilter("quality", "mezzanine"))
+        .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
         .setContext(ImmutableMap.<String, Object>of("bySegment", true));
     final GroupByQuery fullQuery = builder.build();
     QueryToolChest toolChest = factory.getToolchest();
@@ -4362,7 +4418,7 @@ public class GroupByQueryRunnerTest
             )
         )
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
-        .setDimFilter(new SelectorDimFilter("quality", "mezzanine"))
+        .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
         .setContext(ImmutableMap.<String, Object>of("bySegment", true));
     final GroupByQuery fullQuery = builder.build();
     QueryToolChest toolChest = factory.getToolchest();
@@ -4437,7 +4493,7 @@ public class GroupByQueryRunnerTest
             )
         )
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
-        .setDimFilter(new SelectorDimFilter("quality", "mezzanine"))
+        .setDimFilter(new SelectorDimFilter("quality", "mezzanine", null))
         .setContext(ImmutableMap.<String, Object>of("bySegment", true));
     final GroupByQuery fullQuery = builder.build();
     QueryToolChest toolChest = factory.getToolchest();
@@ -4474,11 +4530,11 @@ public class GroupByQueryRunnerTest
 
     List<DimFilter> dimFilters = Lists.<DimFilter>newArrayList(
         new ExtractionDimFilter("quality", "automotiveAndBusinessAndNewsAndMezzanine", lookupExtractionFn, null),
-        new SelectorDimFilter("quality", "entertainment"),
-        new SelectorDimFilter("quality", "health"),
-        new SelectorDimFilter("quality", "premium"),
-        new SelectorDimFilter("quality", "technology"),
-        new SelectorDimFilter("quality", "travel")
+        new SelectorDimFilter("quality", "entertainment", null),
+        new SelectorDimFilter("quality", "health", null),
+        new SelectorDimFilter("quality", "premium", null),
+        new SelectorDimFilter("quality", "technology", null),
+        new SelectorDimFilter("quality", "travel", null)
     );
 
     GroupByQuery query = GroupByQuery.builder().setDataSource(QueryRunnerTestHelper.dataSource)
@@ -4672,7 +4728,7 @@ public class GroupByQueryRunnerTest
 
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
     LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, "missing", true, false);
-    DimFilter filter = new ExtractionDimFilter("quality","mezzanineANDnews",lookupExtractionFn,null);
+    DimFilter filter = new ExtractionDimFilter("quality", "mezzanineANDnews", lookupExtractionFn, null);
     GroupByQuery query = GroupByQuery.builder().setDataSource(QueryRunnerTestHelper.dataSource)
                                      .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
                                      .setDimensions(
@@ -4724,7 +4780,7 @@ public class GroupByQueryRunnerTest
   }
 
   @Test
-  public  void testGroupByWithExtractionDimFilterOptimazitionManyToOne()
+  public void testGroupByWithExtractionDimFilterOptimazitionManyToOne()
   {
     Map<String, String> extractionMap = new HashMap<>();
     extractionMap.put("mezzanine", "newsANDmezzanine");
@@ -4734,24 +4790,37 @@ public class GroupByQueryRunnerTest
     LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, true);
     GroupByQuery query = GroupByQuery.builder().setDataSource(QueryRunnerTestHelper.dataSource)
                                      .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-                                     .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+                                     .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec(
+                                         "quality",
+                                         "alias"
+                                     )))
                                      .setAggregatorSpecs(
-                                         Arrays.asList(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index")))
+                                         Arrays.asList(
+                                             QueryRunnerTestHelper.rowsCount,
+                                             new LongSumAggregatorFactory("idx", "index")
+                                         ))
                                      .setGranularity(QueryRunnerTestHelper.dayGran)
-                                     .setDimFilter(new ExtractionDimFilter("quality", "newsANDmezzanine", lookupExtractionFn, null))
+                                     .setDimFilter(new ExtractionDimFilter(
+                                         "quality",
+                                         "newsANDmezzanine",
+                                         lookupExtractionFn,
+                                         null
+                                     ))
                                      .build();
     List<Row> expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 3L, "idx", 2870L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 1L, "idx", 121L),
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
-        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news", "rows", 1L, "idx", 114L));
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news", "rows", 1L, "idx", 114L)
+    );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
 
 
-  @Test public void testGroupByWithExtractionDimFilterNullDims()
+  @Test
+  public void testGroupByWithExtractionDimFilterNullDims()
   {
     Map<String, String> extractionMap = new HashMap<>();
     extractionMap.put("", "EMPTY");
@@ -4761,14 +4830,162 @@ public class GroupByQueryRunnerTest
 
     GroupByQuery query = GroupByQuery.builder().setDataSource(QueryRunnerTestHelper.dataSource)
                                      .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
-                                     .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("null_column", "alias")))
+                                     .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec(
+                                         "null_column",
+                                         "alias"
+                                     )))
                                      .setAggregatorSpecs(
-                                         Arrays.asList(QueryRunnerTestHelper.rowsCount, new LongSumAggregatorFactory("idx", "index")))
+                                         Arrays.asList(
+                                             QueryRunnerTestHelper.rowsCount,
+                                             new LongSumAggregatorFactory("idx", "index")
+                                         ))
                                      .setGranularity(QueryRunnerTestHelper.dayGran)
-                                     .setDimFilter(new ExtractionDimFilter("null_column", "EMPTY", lookupExtractionFn, null)).build();
+                                     .setDimFilter(new ExtractionDimFilter(
+                                         "null_column",
+                                         "EMPTY",
+                                         lookupExtractionFn,
+                                         null
+                                     )).build();
     List<Row> expectedResults = Arrays
-        .asList(GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", null, "rows", 13L, "idx", 6619L),
-                GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", null, "rows", 13L, "idx", 5827L));
+        .asList(
+            GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", null, "rows", 13L, "idx", 6619L),
+            GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", null, "rows", 13L, "idx", 5827L)
+        );
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
+  public void testBySegmentResultsWithAllFiltersWithExtractionFns()
+  {
+    int segmentCount = 32;
+    Result<BySegmentResultValue> singleSegmentResult = new Result<BySegmentResultValue>(
+        new DateTime("2011-01-12T00:00:00.000Z"),
+        new BySegmentResultValueClass(
+            Arrays.asList(
+                GroupByQueryRunnerTestHelper.createExpectedRow(
+                    "2011-04-01",
+                    "alias",
+                    "mezzanine",
+                    "rows",
+                    6L,
+                    "idx",
+                    4420L
+                )
+            ), "testSegment", new Interval("2011-04-02T00:00:00.000Z/2011-04-04T00:00:00.000Z")
+        )
+    );
+    List<Result> bySegmentResults = Lists.newArrayList();
+    for (int i = 0; i < segmentCount; i++) {
+      bySegmentResults.add(singleSegmentResult);
+    }
+
+    String extractionJsFn = "function(str) { return 'super-' + str; }";
+    String jsFn = "function(x) { return(x === 'super-mezzanine') }";
+    ExtractionFn extractionFn = new JavaScriptExtractionFn(extractionJsFn, false, JavaScriptConfig.getDefault());
+
+    List<DimFilter> superFilterList = new ArrayList<>();
+    superFilterList.add(new SelectorDimFilter("quality", "super-mezzanine", extractionFn));
+    superFilterList.add(new InDimFilter(
+        "quality",
+        Arrays.asList("not-super-mezzanine", "FOOBAR", "super-mezzanine"),
+        extractionFn
+    ));
+    superFilterList.add(new BoundDimFilter(
+        "quality",
+        "super-mezzanine",
+        "super-mezzanine",
+        false,
+        false,
+        true,
+        extractionFn
+    ));
+    superFilterList.add(new RegexDimFilter("quality", "super-mezzanine", extractionFn));
+    superFilterList.add(new SearchQueryDimFilter(
+        "quality",
+        new ContainsSearchQuerySpec("super-mezzanine", true),
+        extractionFn
+    ));
+    superFilterList.add(new JavaScriptDimFilter("quality", jsFn, extractionFn, JavaScriptConfig.getDefault()));
+    DimFilter superFilter = new AndDimFilter(superFilterList);
+
+    GroupByQuery.Builder builder = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setInterval("2011-04-02/2011-04-04")
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
+        .setDimFilter(superFilter)
+        .setContext(ImmutableMap.<String, Object>of("bySegment", true));
+    final GroupByQuery fullQuery = builder.build();
+    QueryToolChest toolChest = factory.getToolchest();
+
+    List<QueryRunner<Row>> singleSegmentRunners = Lists.newArrayList();
+    for (int i = 0; i < segmentCount; i++) {
+      singleSegmentRunners.add(toolChest.preMergeQueryDecoration(runner));
+    }
+    ExecutorService exec = Executors.newCachedThreadPool();
+    QueryRunner theRunner = toolChest.postMergeQueryDecoration(
+        new FinalizeResultsQueryRunner<>(
+            toolChest.mergeResults(factory.mergeRunners(Executors.newCachedThreadPool(), singleSegmentRunners)),
+            toolChest
+        )
+    );
+
+    TestHelper.assertExpectedObjects(bySegmentResults, theRunner.run(fullQuery, Maps.newHashMap()), "");
+    exec.shutdownNow();
+  }
+
+  @Test
+  public void testGroupByWithAllFiltersOnNullDimsWithExtractionFns()
+  {
+    Map<String, String> extractionMap = new HashMap<>();
+    extractionMap.put("", "EMPTY");
+    extractionMap.put(null, "EMPTY");
+
+    MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
+    LookupExtractionFn extractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, true);
+    String jsFn = "function(x) { return(x === 'EMPTY') }";
+
+    List<DimFilter> superFilterList = new ArrayList<>();
+    superFilterList.add(new SelectorDimFilter("null_column", "EMPTY", extractionFn));
+    superFilterList.add(new InDimFilter("null_column", Arrays.asList("NOT-EMPTY", "FOOBAR", "EMPTY"), extractionFn));
+    superFilterList.add(new BoundDimFilter("null_column", "EMPTY", "EMPTY", false, false, true, extractionFn));
+    superFilterList.add(new RegexDimFilter("null_column", "EMPTY", extractionFn));
+    superFilterList.add(new SearchQueryDimFilter(
+        "null_column",
+        new ContainsSearchQuerySpec("EMPTY", true),
+        extractionFn
+    ));
+    superFilterList.add(new JavaScriptDimFilter("null_column", jsFn, extractionFn, JavaScriptConfig.getDefault()));
+    DimFilter superFilter = new AndDimFilter(superFilterList);
+
+    GroupByQuery query = GroupByQuery.builder().setDataSource(QueryRunnerTestHelper.dataSource)
+                                     .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+                                     .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec(
+                                         "null_column",
+                                         "alias"
+                                     )))
+                                     .setAggregatorSpecs(
+                                         Arrays.asList(
+                                             QueryRunnerTestHelper.rowsCount,
+                                             new LongSumAggregatorFactory("idx", "index")
+                                         ))
+                                     .setGranularity(QueryRunnerTestHelper.dayGran)
+                                     .setDimFilter(superFilter).build();
+
+    List<Row> expectedResults = Arrays
+        .asList(
+            GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", null, "rows", 13L, "idx", 6619L),
+            GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", null, "rows", 13L, "idx", 5827L)
+        );
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "");

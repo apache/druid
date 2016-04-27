@@ -193,7 +193,7 @@ public class HadoopDruidIndexerConfigTest
     List<HadoopyShardSpec> specs = Lists.newArrayList();
     final int partitionCount = 10;
     for (int i = 0; i < partitionCount; i++) {
-      specs.add(new HadoopyShardSpec(new HashBasedNumberedShardSpec(i, partitionCount, new DefaultObjectMapper()), i));
+      specs.add(new HadoopyShardSpec(new HashBasedNumberedShardSpec(i, partitionCount, null, new DefaultObjectMapper()), i));
     }
 
     HadoopIngestionSpec spec = new HadoopIngestionSpec(

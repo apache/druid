@@ -22,6 +22,7 @@ package io.druid.cli;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
@@ -62,7 +63,7 @@ import io.druid.indexing.worker.executor.ExecutorLifecycle;
 import io.druid.indexing.worker.executor.ExecutorLifecycleConfig;
 import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
 import io.druid.query.QuerySegmentWalker;
-import io.druid.query.extraction.LookupReferencesManager;
+import io.druid.query.lookup.LookupModule;
 import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentKiller;
 import io.druid.segment.loading.DataSegmentMover;
@@ -85,6 +86,7 @@ import org.eclipse.jetty.server.Server;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Properties;
 import java.util.Set;
 
 /**
@@ -103,6 +105,9 @@ public class CliPeon extends GuiceRunnable
   public String nodeType = "indexer-executor";
 
   private static final Logger log = new Logger(CliPeon.class);
+
+  @Inject
+  private Properties properties;
 
   public CliPeon()
   {
@@ -190,9 +195,7 @@ public class CliPeon extends GuiceRunnable
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class);
             Jerseys.addResource(binder, QueryResource.class);
             LifecycleModule.register(binder, QueryResource.class);
-            LifecycleModule.register(binder, LookupReferencesManager.class);
             binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig(nodeType));
-
             LifecycleModule.register(binder, Server.class);
           }
 
@@ -222,7 +225,8 @@ public class CliPeon extends GuiceRunnable
           }
         },
         new IndexingServiceFirehoseModule(),
-        new ChatHandlerServerModule()
+        new ChatHandlerServerModule(properties),
+        new LookupModule()
     );
   }
 

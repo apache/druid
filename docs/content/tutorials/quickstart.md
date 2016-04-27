@@ -159,9 +159,9 @@ library for Druid.
 To download Tranquility, issue the following commands in your terminal:
 
 ```bash
-curl -O http://static.druid.io/tranquility/releases/tranquility-distribution-0.7.2.tgz
-tar -xzf tranquility-distribution-0.7.2.tgz
-cd tranquility-distribution-0.7.2
+curl -O http://static.druid.io/tranquility/releases/tranquility-distribution-0.7.4.tgz
+tar -xzf tranquility-distribution-0.7.4.tgz
+cd tranquility-distribution-0.7.4
 ```
 
 We've included a configuration file in `conf-quickstart/tranquility/server.json` as part of the Druid distribution
@@ -174,7 +174,7 @@ bin/tranquility server -configFile <path_to_druid_distro>/conf-quickstart/tranqu
 
 <div class="note info">
 This section shows you how to load data using Tranquility Server, but Druid also supports a wide
-variety of <a href="ingestion-streams.html#stream-push">other streaming ingestion options</a>, including from
+variety of <a href="../ingestion/stream-ingestion.html#stream-push">other streaming ingestion options</a>, including from
 popular streaming systems like Kafka, Storm, Samza, and Spark Streaming.
 </div>
 
@@ -226,10 +226,10 @@ curl -L -H'Content-Type: application/json' -XPOST --data-binary @quickstart/wiki
 
 Druid is ideal for power user-facing analytic applications. There are a number of different open source applications to
 visualize and explore data in Druid. We recommend trying [Pivot](https://github.com/implydata/pivot),
-[Panoramix](https://github.com/mistercrunch/panoramix), or [Metabase](https://github.com/metabase/metabase) to start
+[Caravel](https://github.com/airbnb/caravel), or [Metabase](https://github.com/metabase/metabase) to start
 visualizing the data you just ingested.
 
-If you installed Pivot for example, you should be able to view your data in your browser at [localhost:9090](localhost:9090).
+If you installed Pivot for example, you should be able to view your data in your browser at [localhost:9090](http://localhost:9090/).
 
 ### SQL and other query libraries
 

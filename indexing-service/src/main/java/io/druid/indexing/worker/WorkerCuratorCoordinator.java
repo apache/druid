@@ -20,9 +20,7 @@
 package io.druid.indexing.worker;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
 import com.google.common.base.Joiner;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.MoreExecutors;
@@ -37,9 +35,9 @@ import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.server.initialization.IndexerZkConfig;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.CreateMode;
+import org.apache.zookeeper.KeeperException;
 import org.joda.time.DateTime;
 
-import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.List;
 
@@ -167,64 +165,47 @@ public class WorkerCuratorCoordinator
     return worker;
   }
 
-  public void removeTaskRunZnode(String taskId)
+  public void removeTaskRunZnode(String taskId) throws Exception
   {
     try {
       curatorFramework.delete().guaranteed().forPath(getTaskPathForId(taskId));
     }
-    catch (Exception e) {
+    catch (KeeperException e) {
       log.warn(e, "Could not delete task path for task[%s]", taskId);
     }
   }
 
-  public void updateTaskStatusAnnouncement(TaskAnnouncement announcement)
+  public void updateTaskStatusAnnouncement(TaskAnnouncement announcement) throws Exception
   {
     synchronized (lock) {
       if (!started) {
         return;
       }
 
-      try {
-        CuratorUtils.createOrSet(
-            curatorFramework,
-            getStatusPathForId(announcement.getTaskStatus().getId()),
-            CreateMode.PERSISTENT,
-            jsonMapper.writeValueAsBytes(announcement),
-            config.getMaxZnodeBytes()
-        );
-      }
-      catch (Exception e) {
-        throw Throwables.propagate(e);
-      }
+      CuratorUtils.createOrSet(
+          curatorFramework,
+          getStatusPathForId(announcement.getTaskStatus().getId()),
+          CreateMode.PERSISTENT,
+          jsonMapper.writeValueAsBytes(announcement),
+          config.getMaxZnodeBytes()
+      );
     }
   }
 
-  public List<TaskAnnouncement> getAnnouncements()
+  public List<TaskAnnouncement> getAnnouncements() throws Exception
   {
-    try {
-      return Lists.transform(
-          curatorFramework.getChildren().forPath(getStatusPathForWorker()), new Function<String, TaskAnnouncement>()
-          {
-            @Nullable
-            @Override
-            public TaskAnnouncement apply(String input)
-            {
-              try {
-                return jsonMapper.readValue(
-                    curatorFramework.getData().forPath(getStatusPathForId(input)),
-                    TaskAnnouncement.class
-                );
-              }
-              catch (Exception e) {
-                throw Throwables.propagate(e);
-              }
-            }
-          }
+    final List<TaskAnnouncement> announcements = Lists.newArrayList();
+
+    for (String id : curatorFramework.getChildren().forPath(getStatusPathForWorker())) {
+      announcements.add(
+          jsonMapper.readValue(
+              curatorFramework.getData().forPath(getStatusPathForId(id)),
+              TaskAnnouncement.class
+          )
       );
     }
-    catch (Exception e) {
-      throw Throwables.propagate(e);
-    }
+
+    return announcements;
   }
 
   public void updateWorkerAnnouncement(Worker newWorker) throws Exception

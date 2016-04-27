@@ -20,103 +20,133 @@
 package io.druid.segment.filter;
 
 import com.google.common.base.Function;
-import com.google.common.collect.Lists;
-import io.druid.query.filter.AndDimFilter;
-import io.druid.query.filter.BoundDimFilter;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
+import com.google.common.collect.ImmutableList;
+import com.metamx.collections.bitmap.ImmutableBitmap;
+import com.metamx.common.guava.FunctionalIterable;
+import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.DimFilter;
-import io.druid.query.filter.ExtractionDimFilter;
 import io.druid.query.filter.Filter;
-import io.druid.query.filter.InDimFilter;
-import io.druid.query.filter.JavaScriptDimFilter;
-import io.druid.query.filter.NotDimFilter;
-import io.druid.query.filter.OrDimFilter;
-import io.druid.query.filter.RegexDimFilter;
-import io.druid.query.filter.SearchQueryDimFilter;
-import io.druid.query.filter.SelectorDimFilter;
-import io.druid.query.filter.SpatialDimFilter;
+import io.druid.segment.column.BitmapIndex;
+import io.druid.segment.data.Indexed;
 
-import javax.annotation.Nullable;
+import java.util.Iterator;
 import java.util.List;
 
 /**
  */
 public class Filters
 {
-  public static List<Filter> convertDimensionFilters(List<DimFilter> filters)
+  /**
+   * Convert a list of DimFilters to a list of Filters.
+   *
+   * @param dimFilters list of DimFilters, should all be non-null
+   *
+   * @return list of Filters
+   */
+  public static List<Filter> toFilters(List<DimFilter> dimFilters)
   {
-    return Lists.transform(
-        filters,
-        new Function<DimFilter, Filter>()
-        {
-          @Override
-          public Filter apply(@Nullable DimFilter input)
-          {
-            return convertDimensionFilters(input);
-          }
-        }
+    return ImmutableList.copyOf(
+        FunctionalIterable
+            .create(dimFilters)
+            .transform(
+                new Function<DimFilter, Filter>()
+                {
+                  @Override
+                  public Filter apply(DimFilter input)
+                  {
+                    return input.toFilter();
+                  }
+                }
+            )
     );
   }
 
-  public static Filter convertDimensionFilters(DimFilter dimFilter)
+  /**
+   * Convert a DimFilter to a Filter.
+   *
+   * @param dimFilter dimFilter
+   *
+   * @return converted filter, or null if input was null
+   */
+  public static Filter toFilter(DimFilter dimFilter)
   {
-    if (dimFilter == null) {
-      return null;
+    return dimFilter == null ? null : dimFilter.toFilter();
+  }
+
+  /**
+   * Return the union of bitmaps for all values matching a particular predicate.
+   *
+   * @param dimension dimension to look at
+   * @param selector  bitmap selector
+   * @param predicate predicate to use
+   *
+   * @return bitmap of matching rows
+   */
+  public static ImmutableBitmap matchPredicate(
+      final String dimension,
+      final BitmapIndexSelector selector,
+      final Predicate<String> predicate
+  )
+  {
+    Preconditions.checkNotNull(dimension, "dimension");
+    Preconditions.checkNotNull(selector, "selector");
+    Preconditions.checkNotNull(predicate, "predicate");
+
+    // Missing dimension -> match all rows if the predicate matches null; match no rows otherwise
+    final Indexed<String> dimValues = selector.getDimensionValues(dimension);
+    if (dimValues == null || dimValues.size() == 0) {
+      if (predicate.apply(null)) {
+        return selector.getBitmapFactory().complement(
+            selector.getBitmapFactory().makeEmptyImmutableBitmap(),
+            selector.getNumRows()
+        );
+      } else {
+        return selector.getBitmapFactory().makeEmptyImmutableBitmap();
+      }
     }
 
-    Filter filter = null;
-    if (dimFilter instanceof AndDimFilter) {
-      filter = new AndFilter(convertDimensionFilters(((AndDimFilter) dimFilter).getFields()));
-    } else if (dimFilter instanceof OrDimFilter) {
-      filter = new OrFilter(convertDimensionFilters(((OrDimFilter) dimFilter).getFields()));
-    } else if (dimFilter instanceof NotDimFilter) {
-      filter = new NotFilter(convertDimensionFilters(((NotDimFilter) dimFilter).getField()));
-    } else if (dimFilter instanceof SelectorDimFilter) {
-      final SelectorDimFilter selectorDimFilter = (SelectorDimFilter) dimFilter;
-
-      filter = new SelectorFilter(selectorDimFilter.getDimension(), selectorDimFilter.getValue());
-    } else if (dimFilter instanceof ExtractionDimFilter) {
-      final ExtractionDimFilter extractionDimFilter = (ExtractionDimFilter) dimFilter;
-
-      filter = new ExtractionFilter(
-          extractionDimFilter.getDimension(),
-          extractionDimFilter.getValue(),
-          extractionDimFilter.getExtractionFn()
-      );
-    } else if (dimFilter instanceof RegexDimFilter) {
-      final RegexDimFilter regexDimFilter = (RegexDimFilter) dimFilter;
-
-      filter = new RegexFilter(regexDimFilter.getDimension(), regexDimFilter.getPattern());
-    } else if (dimFilter instanceof SearchQueryDimFilter) {
-      final SearchQueryDimFilter searchQueryFilter = (SearchQueryDimFilter) dimFilter;
-
-      filter = new SearchQueryFilter(searchQueryFilter.getDimension(), searchQueryFilter.getQuery());
-    } else if (dimFilter instanceof JavaScriptDimFilter) {
-      final JavaScriptDimFilter javaScriptDimFilter = (JavaScriptDimFilter) dimFilter;
-
-      filter = new JavaScriptFilter(javaScriptDimFilter.getDimension(), javaScriptDimFilter.getFunction());
-    } else if (dimFilter instanceof SpatialDimFilter) {
-      final SpatialDimFilter spatialDimFilter = (SpatialDimFilter) dimFilter;
-
-      filter = new SpatialFilter(spatialDimFilter.getDimension(), spatialDimFilter.getBound());
-    } else if (dimFilter instanceof InDimFilter) {
-      final InDimFilter inDimFilter = (InDimFilter) dimFilter;
-      final List<Filter> listFilters = Lists.transform(
-          inDimFilter.getValues(), new Function<String, Filter>()
+    // Apply predicate to all dimension values and union the matching bitmaps
+    final BitmapIndex bitmapIndex = selector.getBitmapIndex(dimension);
+    return selector.getBitmapFactory().union(
+        new Iterable<ImmutableBitmap>()
+        {
+          @Override
+          public Iterator<ImmutableBitmap> iterator()
           {
-            @Nullable
-            @Override
-            public Filter apply(@Nullable String input)
+            return new Iterator<ImmutableBitmap>()
             {
-              return new SelectorFilter(inDimFilter.getDimension(), input);
-            }
+              int currIndex = 0;
+
+              @Override
+              public boolean hasNext()
+              {
+                return currIndex < bitmapIndex.getCardinality();
+              }
+
+              @Override
+              public ImmutableBitmap next()
+              {
+                while (currIndex < bitmapIndex.getCardinality() && !predicate.apply(dimValues.get(currIndex))) {
+                  currIndex++;
+                }
+
+                if (currIndex == bitmapIndex.getCardinality()) {
+                  return bitmapIndex.getBitmapFactory().makeEmptyImmutableBitmap();
+                }
+
+                return bitmapIndex.getBitmap(currIndex++);
+              }
+
+              @Override
+              public void remove()
+              {
+                throw new UnsupportedOperationException();
+              }
+            };
           }
-      );
-
-      filter = new OrFilter(listFilters);
-    } else if (dimFilter instanceof BoundDimFilter) {
-      filter = new BoundFilter((BoundDimFilter) dimFilter);
-    }
-
-    return filter;
+        }
+    );
   }
 }

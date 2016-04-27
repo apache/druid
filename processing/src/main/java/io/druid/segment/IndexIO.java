@@ -96,9 +96,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/**
- * This should be changed to use DI instead of a static reference...
- */
 public class IndexIO
 {
   public static final byte V8_VERSION = 0x8;

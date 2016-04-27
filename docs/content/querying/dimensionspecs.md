@@ -259,7 +259,7 @@ For instance the following filter
 ```json
 {
     "filter": {
-        "type": "extraction",
+        "type": "selector",
         "dimension": "product",
         "value": "bar_1",
         "extractionFn": {
@@ -308,6 +308,26 @@ This allows distinguishing between a null dimension and a lookup resulting in a 
 For example, specifying `{"":"bar","bat":"baz"}` with dimension values `[null, "foo", "bat"]` and replacing missing values with `"oof"` will yield results of `["bar", "oof", "baz"]`.
 Omitting the empty string key will cause the missing value to take over. For example, specifying `{"bat":"baz"}` with dimension values `[null, "foo", "bat"]` and replacing missing values with `"oof"` will yield results of `["oof", "oof", "baz"]`.
 
+### Registered Lookup Extraction Function
+
+While it is recommended that the [lookup dimension spec](#lookup-dimensionspecs) be used whenever possible, any lookup that is registered for use as a lookup dimension spec can be used as a dimension extraction.
+
+The specification for dimension extraction using dimension specification named lookups is formatted as per the following example:
+
+```json
+{
+  "type":"registeredLookup",
+  "lookup":"some_lookup_name",
+  "retainMissingValue":true,
+  "injective":false
+}
+```
+
+All the flags for [lookup extraction function](#lookup-extraction-function) apply here as well.
+
+In general, the dimension specification should be used. This dimension **extraction** implementation is made available for testing, validation, and transitioning from dimension extraction to the dimension specification style lookups.
+There is also a chance that a feature uses dimension extraction in such a way that it is not applied to dimension specification lookups. Such a scenario should be brought to the attention of the development mailing list.
+
 ### Cascade Extraction Function
 
 Provides chained execution of extraction functions.
@@ -346,19 +366,19 @@ For example, `'/druid/prod/historical'` is transformed to `'the dru'` as regular
 Returns the dimension value formatted according to the given format string.
 
 ```json
-{ "type" : "stringFormat", "format" : <sprintf_expression> }
+{ "type" : "stringFormat", "format" : <sprintf_expression>, "nullHandling" : <optional attribute for handling null value> }
 ```
 
-For example if you want to concat "[" and "]" before and after the actual dimension value, you need to specify "[%s]" as format string.
+For example if you want to concat "[" and "]" before and after the actual dimension value, you need to specify "[%s]" as format string. "nullHandling" can be one of `nullString`, `emptyString` or `returnNull`. With "[%s]" format, each configuration will result `[null]`, `[]`, `null`. Default is `nullString`.
 
-### Filtering DimensionSpecs
+### Filtered DimensionSpecs
 
-These are only valid for multi-valued dimensions. If you have a row in druid that has a multi-valued dimension with values ["v1", "v2", "v3"] and you send a groupBy/topN query grouping by that dimension with [query filter](filter.html) for value "v1". In the response you will get 3 rows containing "v1", "v2" and "v3". This behavior might be unintuitive for some use cases.
+These are only valid for multi-value dimensions. If you have a row in druid that has a multi-value dimension with values ["v1", "v2", "v3"] and you send a groupBy/topN query grouping by that dimension with [query filter](filters.html) for value "v1". In the response you will get 3 rows containing "v1", "v2" and "v3". This behavior might be unintuitive for some use cases.
 
-It happens because `query filter` is internally used on the bitmaps and only used to match the row to be included in the query result processing. With multivalued dimensions, "query filter" behaves like a contains check, which will match the row with dimension value ["v1", "v2", "v3"]. Please see the section on "Multi-value columns" in [segment](../design/segments.html) for more details.
-Then groupBy/topN processing pipeline "explodes" all multi-valued dimensions resulting 3 rows for "v1", "v2" and "v3" each.
+It happens because "query filter" is internally used on the bitmaps and only used to match the row to be included in the query result processing. With multi-value dimensions, "query filter" behaves like a contains check, which will match the row with dimension value ["v1", "v2", "v3"]. Please see the section on "Multi-value columns" in [segment](../design/segments.html) for more details.
+Then groupBy/topN processing pipeline "explodes" all multi-value dimensions resulting 3 rows for "v1", "v2" and "v3" each.
 
-In addition to "query filter" which efficiently selects the rows to be processed, you can use the filtering dimension spec to filter for specific values within the values of a multi-valued dimension. These dimensionSpecs take a delegate DimensionSpec and a filtering criteria. From the "exploded" rows, only rows matching the given filtering criteria are returned in the query result.
+In addition to "query filter" which efficiently selects the rows to be processed, you can use the filtered dimension spec to filter for specific values within the values of a multi-value dimension. These dimensionSpecs take a delegate DimensionSpec and a filtering criteria. From the "exploded" rows, only rows matching the given filtering criteria are returned in the query result.
 
 The following filtered dimension spec acts as a whitelist or blacklist for values as per the "isWhitelist" attribute value.
 
@@ -372,7 +392,7 @@ Following filtered dimension spec retains only the values matching regex. Note t
 { "type" : "regexFiltered", "delegate" : <dimensionSpec>, "pattern": <java regex pattern> }
 ```
 
-For more details and examples, see [multi-valued dimensions](multi-valued-dimensions.html).
+For more details and examples, see [multi-value dimensions](multi-value-dimensions.html).
 
 ### Upper and Lower extraction functions.
 

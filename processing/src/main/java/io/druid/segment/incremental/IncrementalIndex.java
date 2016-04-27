@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
@@ -36,6 +37,7 @@ import com.metamx.common.parsers.ParseException;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
+import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.granularity.QueryGranularity;
@@ -71,6 +73,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -81,13 +84,16 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 {
   private volatile DateTime maxIngestedEventTime;
 
-  private static final Map<String, ValueType> TYPE_MAP = ImmutableMap.<String, ValueType>builder()
-      .put("Long[]", ValueType.LONG)
-      .put("Double[]", ValueType.FLOAT)
-      .put("String[]", ValueType.STRING)
-      .put("Long", ValueType.LONG)
-      .put("Double", ValueType.FLOAT)
-      .put("String", ValueType.STRING)
+  // Used to discover ValueType based on the class of values in a row
+  // Also used to convert between the duplicate ValueType enums in DimensionSchema (druid-api) and main druid.
+  private static final Map<Object, ValueType> TYPE_MAP = ImmutableMap.<Object, ValueType>builder()
+      .put(Long.class, ValueType.LONG)
+      .put(Double.class, ValueType.FLOAT)
+      .put(Float.class, ValueType.FLOAT)
+      .put(String.class, ValueType.STRING)
+      .put(DimensionSchema.ValueType.LONG, ValueType.LONG)
+      .put(DimensionSchema.ValueType.FLOAT, ValueType.FLOAT)
+      .put(DimensionSchema.ValueType.STRING, ValueType.STRING)
       .build();
 
   private static final Function<Object, String> STRING_TRANSFORMER = new Function<Object, String>()
@@ -95,7 +101,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     @Override
     public String apply(final Object o)
     {
-      return String.valueOf(o);
+      return o == null ? null : String.valueOf(o);
     }
   };
 
@@ -108,8 +114,9 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
         return null;
       }
       if (o instanceof String) {
+        String s = (String) o;
         try {
-          return Long.valueOf((String) o);
+          return s.isEmpty() ? null : Long.valueOf(s);
         }
         catch (NumberFormatException nfe) {
           throw new ParseException(nfe, "Unable to parse value[%s] as long in column: ", o);
@@ -131,8 +138,9 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
         return null;
       }
       if (o instanceof String) {
+        String s = (String) o;
         try {
-          return Float.valueOf((String) o);
+          return s.isEmpty() ? null : Float.valueOf(s);
         }
         catch (NumberFormatException nfe) {
           throw new ParseException(nfe, "Unable to parse value[%s] as float in column: ", o);
@@ -340,6 +348,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   private final AggregatorType[] aggs;
   private final boolean deserializeComplexMetrics;
   private final boolean reportParseExceptions;
+  private final boolean sortFacts;
   private final Metadata metadata;
 
   private final Map<String, MetricDesc> metricDescs;
@@ -347,6 +356,9 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   private final Map<String, DimensionDesc> dimensionDescs;
   private final Map<String, ColumnCapabilitiesImpl> columnCapabilities;
   private final List<DimDim> dimValues;
+
+  // looks need a configuration
+  private final Ordering<Comparable> ordering = Ordering.natural().nullsFirst();
 
   private final AtomicInteger numEntries = new AtomicInteger();
 
@@ -374,7 +386,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   public IncrementalIndex(
       final IncrementalIndexSchema incrementalIndexSchema,
       final boolean deserializeComplexMetrics,
-      final boolean reportParseExceptions
+      final boolean reportParseExceptions,
+      final boolean sortFacts
   )
   {
     this.minTimestamp = incrementalIndexSchema.getMinTimestamp();
@@ -383,6 +396,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     this.rowTransformers = new CopyOnWriteArrayList<>();
     this.deserializeComplexMetrics = deserializeComplexMetrics;
     this.reportParseExceptions = reportParseExceptions;
+    this.sortFacts = sortFacts;
 
     this.metadata = new Metadata().setAggregators(getCombiningAggregators(metrics));
 
@@ -400,23 +414,23 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
     this.dimensionDescs = Maps.newLinkedHashMap();
     this.dimValues = Collections.synchronizedList(Lists.<DimDim>newArrayList());
-    for (String dimension : dimensionsSpec.getDimensions()) {
+
+    for (DimensionSchema dimSchema : dimensionsSpec.getDimensions()) {
       ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
-      capabilities.setType(ValueType.STRING);
-      addNewDimension(dimension, capabilities);
-      columnCapabilities.put(dimension, capabilities);
+      ValueType type = TYPE_MAP.get(dimSchema.getValueType());
+      capabilities.setType(type);
+      if (dimSchema.getTypeName().equals(DimensionSchema.SPATIAL_TYPE_NAME)) {
+        capabilities.setHasSpatialIndexes(true);
+      } else {
+        addNewDimension(dimSchema.getName(), capabilities);
+      }
+      columnCapabilities.put(dimSchema.getName(), capabilities);
     }
 
     // This should really be more generic
     List<SpatialDimensionSchema> spatialDimensions = dimensionsSpec.getSpatialDimensions();
     if (!spatialDimensions.isEmpty()) {
       this.rowTransformers.add(new SpatialDimensionRowTransformer(spatialDimensions));
-    }
-    for (SpatialDimensionSchema spatialDimension : spatialDimensions) {
-      ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
-      capabilities.setType(ValueType.STRING);
-      capabilities.setHasSpatialIndexes(true);
-      columnCapabilities.put(spatialDimension.getDimName(), capabilities);
     }
   }
 
@@ -441,7 +455,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   // use newDimDim() to create a DimDim, makeDimDim() provides the subclass-specific implementation
   protected abstract DimDim makeDimDim(String dimension, Object lock);
 
-  public abstract ConcurrentNavigableMap<TimeAndDims, Integer> getFacts();
+  public abstract ConcurrentMap<TimeAndDims, Integer> getFacts();
 
   public abstract boolean canAppendRow();
 
@@ -507,7 +521,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       return null;
     }
 
-    return TYPE_MAP.get(singleVal.getClass().getSimpleName());
+    return TYPE_MAP.get(singleVal.getClass());
   }
 
   private List<Comparable> getRowDimensionAsComparables(InputRow row, String dimension, ValueType type)
@@ -592,7 +606,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
           capabilities = columnCapabilities.get(dimension);
           if (capabilities == null) {
             capabilities = new ColumnCapabilitiesImpl();
-            // TODO: For schemaless type discovery, assume everything is a String for now, can change later.
+            // For schemaless type discovery, assume everything is a String for now, can change later.
             //valType = getTypeFromDimVal(row.getRaw(dimension));
             if (valType == null) {
               valType = ValueType.STRING;
@@ -673,12 +687,20 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
   private long getMinTimeMillis()
   {
-    return getFacts().firstKey().getTimestamp();
+    if (sortFacts) {
+      return ((ConcurrentNavigableMap<TimeAndDims, Integer>) getFacts()).firstKey().getTimestamp();
+    } else {
+      throw new UnsupportedOperationException("can't get minTime from unsorted facts data.");
+    }
   }
 
   private long getMaxTimeMillis()
   {
-    return getFacts().lastKey().getTimestamp();
+    if (sortFacts) {
+      return ((ConcurrentNavigableMap<TimeAndDims, Integer>) getFacts()).lastKey().getTimestamp();
+    } else {
+      throw new UnsupportedOperationException("can't get maxTime from unsorted facts data.");
+    }
   }
 
   private int[] getDimVals(final DimDim dimLookup, final List<Comparable> dimValues)
@@ -697,7 +719,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     }
 
     Comparable[] dimArray = dimValues.toArray(new Comparable[dimValues.size()]);
-    Arrays.sort(dimArray);
+    Arrays.sort(dimArray, ordering);
 
     final int[] retVal = new int[dimArray.length];
 
@@ -831,7 +853,11 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
   public ConcurrentNavigableMap<TimeAndDims, Integer> getSubMap(TimeAndDims start, TimeAndDims end)
   {
-    return getFacts().subMap(start, end);
+    if (sortFacts) {
+      return ((ConcurrentNavigableMap<TimeAndDims, Integer>) getFacts()).subMap(start, end);
+    } else {
+      throw new UnsupportedOperationException("can't get subMap from unsorted facts data.");
+    }
   }
 
   public Metadata getMetadata()
@@ -862,7 +888,14 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       public Iterator<Row> iterator()
       {
         final List<DimensionDesc> dimensions = getDimensions();
-        final ConcurrentNavigableMap<TimeAndDims, Integer> facts = descending ? getFacts().descendingMap() : getFacts();
+
+        Map<TimeAndDims, Integer> facts = null;
+        if (descending && sortFacts) {
+          facts = ((ConcurrentNavigableMap<TimeAndDims, Integer>) getFacts()).descendingMap();
+        } else {
+          facts = getFacts();
+        }
+
         return Iterators.transform(
             facts.entrySet().iterator(),
             new Function<Map.Entry<TimeAndDims, Integer>, Row>()
@@ -1187,6 +1220,42 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
           }
       ) + '}';
     }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      TimeAndDims that = (TimeAndDims) o;
+
+      if (timestamp != that.timestamp) {
+        return false;
+      }
+      if (dims.length != that.dims.length) {
+        return false;
+      }
+      for (int i = 0; i < dims.length; i++) {
+        if (!Arrays.equals(dims[i], that.dims[i])) {
+          return false;
+        }
+      }
+      return true;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      int hash = (int) timestamp;
+      for (int i = 0; i < dims.length; i++) {
+        hash = 31 * hash + Arrays.hashCode(dims[i]);
+      }
+      return hash;
+    }
   }
 
   protected final Comparator<TimeAndDims> dimsComparator()
@@ -1212,26 +1281,6 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
       int index = 0;
       while (retVal == 0 && index < numComparisons) {
-        ValueType lhsType = lhs.types[index];
-        ValueType rhsType = rhs.types[index];
-
-        if (lhsType == null) {
-          if (rhsType == null) {
-            ++index;
-            continue;
-          }
-          return -1;
-        }
-
-        if (rhsType == null) {
-          return 1;
-        }
-
-        retVal = lhsType.compareTo(rhsType);
-        if (retVal != 0) {
-          return retVal;
-        }
-
         final int[] lhsIdxs = lhs.dims[index];
         final int[] rhsIdxs = rhs.dims[index];
 

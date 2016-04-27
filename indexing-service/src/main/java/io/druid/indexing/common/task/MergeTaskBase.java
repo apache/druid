@@ -171,7 +171,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
       emitter.emit(builder.build("merger/uploadTime", System.currentTimeMillis() - uploadStart));
       emitter.emit(builder.build("merger/mergeSize", uploadedSegment.getSize()));
 
-      toolbox.pushSegments(ImmutableList.of(uploadedSegment));
+      toolbox.publishSegments(ImmutableList.of(uploadedSegment));
 
       return TaskStatus.success(getId());
     }

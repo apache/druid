@@ -46,9 +46,9 @@ The coordinator node uses several of the global configs in [Configuration](../co
 Dynamic Configuration
 ---------------------
 
-The coordinator has dynamic configuration to change certain behaviour on the fly. The coordinator a JSON spec object from the Druid [metadata storage](../dependencies/metadata-storage.html) config table. This object is detailed below:
+The coordinator has dynamic configuration to change certain behaviour on the fly. The coordinator uses a JSON spec object from the Druid [metadata storage](../dependencies/metadata-storage.html) config table. This object is detailed below:
 
-It is recommended that you use the Coordinator Console to configure these parameters. However, if you need to do it via HTTP, the JSON object can be submitted to the overlord via a POST request at:
+It is recommended that you use the Coordinator Console to configure these parameters. However, if you need to do it via HTTP, the JSON object can be submitted to the coordinator via a POST request at:
 
 ```
 http://<COORDINATOR_IP>:<PORT>/druid/coordinator/v1/config
@@ -81,7 +81,7 @@ Issuing a GET request at the same URL will return the spec that is currently in 
 |Property|Description|Default|
 |--------|-----------|-------|
 |`millisToWaitBeforeDeleting`|How long does the coordinator need to be active before it can start removing (marking unused) segments in metadata storage.|900000 (15 mins)|
-|`mergeBytesLimit`|The maximum number of bytes to merge (for segments).|524288000L|
+|`mergeBytesLimit`|The maximum total uncompressed size in bytes of segments to merge.|524288000L|
 |`mergeSegmentsLimit`|The maximum number of segments that can be in a single [append task](../ingestion/tasks.html).|100|
 |`maxSegmentsToMove`|The maximum number of segments that can be moved at any given time.|5|
 |`replicantLifetime`|The maximum number of coordinator runs for a segment to be replicated before we start alerting.|15|
@@ -102,3 +102,16 @@ To view last <n> entries of the audit history of coordinator dynamic config issu
 ```
 http://<COORDINATOR_IP>:<PORT>/druid/coordinator/v1/config/history?count=<n>
 ```
+
+
+# Lookups Dynamic Config (EXPERIMENTAL)
+These configuration options control the behavior of the Lookup dynamic configuration described in the [lookups page](../querying/lookups.html)
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.manager.lookups.hostDeleteTimeout`|How long to wait for a `DELETE` request to a particular node before considering the `DELETE` a failure|PT1s|
+|`druid.manager.lookups.hostUpdateTimeout`|How long to wait for a `POST` request to a particular node before considering the `POST` a failure|PT10s|
+|`druid.manager.lookups.deleteAllTimeout`|How long to wait for all `DELETE` requests to finish before considering the delete attempt a failure|PT10s|
+|`druid.manager.lookups.updateAllTimeout`|How long to wait for all `POST` requests to finish before considering the attempt a failure|PT60s|
+|`druid.manager.lookups.threadPoolSize`|How many nodes can be managed concurrently (concurrent POST and DELETE requests). Requests this limit will wait in a queue until a slot becomes available.|10|
+|`druid.manager.lookups.period`|How many milliseconds between checks for configuration changes|30_000|

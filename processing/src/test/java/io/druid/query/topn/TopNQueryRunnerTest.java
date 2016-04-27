@@ -33,6 +33,7 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.collections.StupidPool;
 import io.druid.granularity.QueryGranularity;
+import io.druid.js.JavaScriptConfig;
 import io.druid.query.BySegmentResultValue;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.Druids;
@@ -52,7 +53,7 @@ import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.extraction.DimExtractionFn;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavaScriptExtractionFn;
-import io.druid.query.extraction.LookupExtractionFn;
+import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.extraction.RegexDimExtractionFn;
 import io.druid.query.extraction.TimeFormatExtractionFn;
@@ -377,17 +378,17 @@ public class TopNQueryRunnerTest
             new TopNResultValue(
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "total_market")
-                                .put("uniques", 0)
-                                .build(),
+                        .put("market", "spot")
+                        .put("uniques", 0)
+                        .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "spot")
-                                .put("uniques", 0)
-                                .build(),
+                        .put("market", "total_market")
+                        .put("uniques", 0)
+                        .build(),
                     ImmutableMap.<String, Object>builder()
-                                .put("market", "upfront")
-                                .put("uniques", 0)
-                                .build()
+                        .put("market", "upfront")
+                        .put("uniques", 0)
+                        .build()
                 )
             )
         )
@@ -1508,7 +1509,7 @@ public class TopNQueryRunnerTest
             new ExtractionDimensionSpec(
                 QueryRunnerTestHelper.marketDimension,
                 QueryRunnerTestHelper.marketDimension,
-                new JavaScriptExtractionFn("function(f) { return \"POTATO\"; }", false),
+                new JavaScriptExtractionFn("function(f) { return \"POTATO\"; }", false, JavaScriptConfig.getDefault()),
                 null
             )
         )
@@ -3042,7 +3043,7 @@ public class TopNQueryRunnerTest
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension("null_column")
         .filters(
-            new SelectorDimFilter("null_column", null)
+            new SelectorDimFilter("null_column", null, null)
         )
         .metric(QueryRunnerTestHelper.indexMetric)
         .threshold(4)
@@ -3127,7 +3128,7 @@ public class TopNQueryRunnerTest
         .granularity(QueryGranularity.ALL)
         .dimension("partial_null_column")
         .metric(QueryRunnerTestHelper.uniqueMetric)
-        .filters(new SelectorDimFilter("partial_null_column", null))
+        .filters(new SelectorDimFilter("partial_null_column", null, null))
         .threshold(1000)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -3159,7 +3160,7 @@ public class TopNQueryRunnerTest
         .granularity(QueryGranularity.ALL)
         .dimension("partial_null_column")
         .metric(QueryRunnerTestHelper.uniqueMetric)
-        .filters(new SelectorDimFilter("partial_null_column", "value"))
+        .filters(new SelectorDimFilter("partial_null_column", "value", null))
         .threshold(1000)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)

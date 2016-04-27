@@ -19,12 +19,15 @@
 
 package io.druid.query.extraction;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.metamx.common.ISE;
 import com.metamx.common.StringUtils;
+import io.druid.js.JavaScriptConfig;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.ScriptableObject;
@@ -37,7 +40,7 @@ public class JavaScriptExtractionFn implements ExtractionFn
   {
     final ContextFactory contextFactory = ContextFactory.getGlobal();
     final Context context = contextFactory.enterContext();
-    context.setOptimizationLevel(9);
+    context.setOptimizationLevel(JavaScriptConfig.DEFAULT_OPTIMIZATION_LEVEL);
 
     final ScriptableObject scope = context.initStandardObjects();
 
@@ -68,14 +71,20 @@ public class JavaScriptExtractionFn implements ExtractionFn
   @JsonCreator
   public JavaScriptExtractionFn(
       @JsonProperty("function") String function,
-      @JsonProperty("injective") boolean injective
+      @JsonProperty("injective") boolean injective,
+      @JacksonInject JavaScriptConfig config
   )
   {
     Preconditions.checkNotNull(function, "function must not be null");
 
     this.function = function;
-    this.fn = compile(function);
     this.injective = injective;
+
+    if (config.isDisabled()) {
+      this.fn = null;
+    } else {
+      this.fn = compile(function);
+    }
   }
 
   @JsonProperty
@@ -103,13 +112,17 @@ public class JavaScriptExtractionFn implements ExtractionFn
   @Override
   public String apply(Object value)
   {
+    if (fn == null) {
+      throw new ISE("JavaScript is disabled");
+    }
+
     return Strings.emptyToNull(fn.apply(value));
   }
 
   @Override
   public String apply(String value)
   {
-    return this.apply((Object) value);
+    return this.apply((Object) Strings.emptyToNull(value));
   }
 
   @Override

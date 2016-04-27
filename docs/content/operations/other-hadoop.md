@@ -11,6 +11,7 @@ that contains Hadoop jars.
 
 You can also use the `pull-deps` tool to download other Hadoop dependencies you want. 
 See [pull-deps](../operations/pull-deps.html) for a complete example.
+Another way is using a minimal `pom.xml` only contains your version of `hadoop-client` and then run `mvn dependency:copy-dependency` to get required libraries.
 
 ## Load Hadoop dependencies
 
@@ -91,9 +92,29 @@ If you are still having problems, include all relevant hadoop jars at the beginn
 
 #### CDH
 
-Members of the community have reported dependency conflicts between the version of Jackson used in CDH and Druid. Currently, our best workaround is to edit Druid's pom.xml dependencies to match the version of Jackson in your Hadoop version and recompile Druid.
+Members of the community have reported dependency conflicts between the version of Jackson used in CDH and Druid when running a Mapreduce job like:
+```
+java.lang.VerifyError: class com.fasterxml.jackson.datatype.guava.deser.HostAndPortDeserializer overrides final method deserialize.(Lcom/fasterxml/jackson/core/JsonParser;Lcom/fasterxml/jackson/databind/DeserializationContext;)Ljava/lang/Object;
+```
+
+In order to use the Cloudera distribution of Hadoop, you must configure Mapreduce to
+[favor Druid classpath over Hadoop]((https://hadoop.apache.org/docs/r2.7.1/hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduce_Compatibility_Hadoop1_Hadoop2.html))
+(i.e. use Jackson version provided with Druid).
+
+This can be achieved by either:
+- adding `"mapreduce.job.user.classpath.first": "true"` to the `jobProperties` property of the `tuningConfig` of your indexing task (see the [Job properties section for the Batch Ingestion using the HadoopDruidIndexer page](../ingestion/batch-ingestion.html)).
+- configuring the Druid Middle Manager to add the following property when creating a new Peon: `druid.indexer.runner.javaOpts=... -Dhadoop.mapreduce.job.user.classpath.first=true`
+- edit Druid's pom.xml dependencies to match the version of Jackson in your Hadoop version and recompile Druid
+
+Members of the community have reported dependency conflicts between the version of Jackson used in CDH and Druid.
+
+**Workaround - 1**
+
+Currently, our best workaround is to edit Druid's pom.xml dependencies to match the version of Jackson in your Hadoop version and recompile Druid.
 
 For more about building Druid, please see [Building Druid](../development/build.html).
+
+**Workaround - 2**
 
 Another workaround solution is to build a custom fat jar of Druid using [sbt](http://www.scala-sbt.org/), which manually excludes all the conflicting Jackson dependencies, and then put this fat jar in the classpath of the command that starts overlord indexing service. To do this, please follow the following steps.
 
@@ -121,6 +142,97 @@ addSbtPlugin("com.eed3si9n" % "sbt-assembly" % "0.13.0")
 (9) Make sure the jars you've uploaded has been completely removed. The HDFS directory is by default '/tmp/druid-indexing/classpath'.
 
 (10) Include the fat jar in the classpath when you start the indexing service. Make sure you've removed 'lib/*' from your classpath because now the fat jar includes all you need.
+
+**Workaround - 3**
+
+If sbt is not your choice, you can also use `maven-shade-plugin` to make a fat jar: relocation all jackson packages will resolve it too. In this way, druid will not be affected by jackson library embedded in hadoop. Please follow the steps below:
+
+(1) Add all extensions you needed to `services/pom.xml` like
+
+ ```xml
+ <dependency>
+      <groupId>io.druid.extensions</groupId>
+      <artifactId>druid-avro-extensions</artifactId>
+      <version>${project.parent.version}</version>
+  </dependency>
+
+  <dependency>
+      <groupId>io.druid.extensions.contrib</groupId>
+      <artifactId>druid-parquet-extensions</artifactId>
+      <version>${project.parent.version}</version>
+  </dependency>
+
+  <dependency>
+      <groupId>io.druid.extensions</groupId>
+      <artifactId>druid-hdfs-storage</artifactId>
+      <version>${project.parent.version}</version>
+  </dependency>
+
+  <dependency>
+      <groupId>io.druid.extensions</groupId>
+      <artifactId>mysql-metadata-storage</artifactId>
+      <version>${project.parent.version}</version>
+  </dependency>
+ ```
+
+(2) Shade jackson packages and assemble a fat jar.
+
+```xml
+<plugin>
+     <groupId>org.apache.maven.plugins</groupId>
+     <artifactId>maven-shade-plugin</artifactId>
+     <executions>
+         <execution>
+             <phase>package</phase>
+             <goals>
+                 <goal>shade</goal>
+             </goals>
+             <configuration>
+                 <outputFile>
+                     ${project.build.directory}/${project.artifactId}-${project.version}-selfcontained.jar
+                 </outputFile>
+                 <relocations>
+                     <relocation>
+                         <pattern>com.fasterxml.jackson</pattern>
+                         <shadedPattern>shade.com.fasterxml.jackson</shadedPattern>
+                     </relocation>
+                 </relocations>
+                 <artifactSet>
+                     <includes>
+                         <include>*:*</include>
+                     </includes>
+                 </artifactSet>
+                 <filters>
+                     <filter>
+                         <artifact>*:*</artifact>
+                         <excludes>
+                             <exclude>META-INF/*.SF</exclude>
+                             <exclude>META-INF/*.DSA</exclude>
+                             <exclude>META-INF/*.RSA</exclude>
+                         </excludes>
+                     </filter>
+                 </filters>
+                 <transformers>
+                     <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                 </transformers>
+             </configuration>
+         </execution>
+     </executions>
+ </plugin>
+```
+
+Copy out `services/target/xxxxx-selfcontained.jar` after `mvn install` in project root for further usage.
+
+(3) run hadoop indexer (post an indexing task is not possible now) as below. `lib` is not needed anymore. As hadoop indexer is a standalone tool, you don't have to replace the jars of your running services:
+
+```bash
+java -Xmx32m \
+  -Dfile.encoding=UTF-8 -Duser.timezone=UTC \
+  -classpath config/hadoop:config/overlord:config/_common:$SELF_CONTAINED_JAR:$HADOOP_DISTRIBUTION/etc/hadoop \
+  -Djava.security.krb5.conf=$KRB5 \
+  io.druid.cli.Main index hadoop \
+  $config_path
+```
 
 ## Working with Hadoop 1.x and older
 

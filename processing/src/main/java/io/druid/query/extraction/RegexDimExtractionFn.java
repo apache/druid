@@ -86,11 +86,8 @@ public class RegexDimExtractionFn extends DimExtractionFn
   @Override
   public String apply(String dimValue)
   {
-    if (dimValue == null) {
-      return null;
-    }
-    String retVal;
-    Matcher matcher = pattern.matcher(dimValue);
+    final String retVal;
+    final Matcher matcher = pattern.matcher(Strings.nullToEmpty(dimValue));
     if (matcher.find()) {
       retVal = matcher.group(1);
     } else {

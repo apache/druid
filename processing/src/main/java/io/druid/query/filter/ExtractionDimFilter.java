@@ -21,19 +21,16 @@ package io.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import com.metamx.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
-import io.druid.query.extraction.LookupExtractionFn;
-import io.druid.query.extraction.LookupExtractor;
 
 import java.nio.ByteBuffer;
-import java.util.List;
 
 /**
+ * This class is deprecated, use SelectorDimFilter instead: {@link io.druid.query.filter.SelectorDimFilter}
  */
+@Deprecated
 public class ExtractionDimFilter implements DimFilter
 {
   private final String dimension;
@@ -97,23 +94,13 @@ public class ExtractionDimFilter implements DimFilter
   @Override
   public DimFilter optimize()
   {
-    if (this.getExtractionFn() instanceof LookupExtractionFn
-        && ((LookupExtractionFn) this.getExtractionFn()).isOptimize()) {
-      LookupExtractor lookup = ((LookupExtractionFn) this.getExtractionFn()).getLookup();
-      final List<String> keys = lookup.unapply(this.getValue());
-      final String dimensionName = this.getDimension();
-      if (!keys.isEmpty()) {
-        return new OrDimFilter(Lists.transform(keys, new Function<String, DimFilter>()
-        {
-          @Override
-          public DimFilter apply(String input)
-          {
-            return new SelectorDimFilter(dimensionName, input);
-          }
-        }));
-      }
-    }
-    return this;
+    return new SelectorDimFilter(dimension, value, extractionFn).optimize();
+  }
+
+  @Override
+  public Filter toFilter()
+  {
+    return new SelectorDimFilter(dimension, value, extractionFn).toFilter();
   }
 
   @Override

@@ -21,13 +21,12 @@ package io.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Lists;
 import io.druid.query.Druids;
+import io.druid.segment.filter.Filters;
+import io.druid.segment.filter.OrFilter;
 
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -43,7 +42,7 @@ public class OrDimFilter implements DimFilter
       @JsonProperty("fields") List<DimFilter> fields
   )
   {
-    fields.removeAll(Collections.singletonList(null));
+    fields = DimFilters.filterNulls(fields);
     Preconditions.checkArgument(fields.size() > 0, "OR operator requires at least one field");
     this.fields = fields;
   }
@@ -63,14 +62,14 @@ public class OrDimFilter implements DimFilter
   @Override
   public DimFilter optimize()
   {
-    return Druids.newOrDimFilterBuilder().fields(Lists.transform(this.getFields(), new Function<DimFilter, DimFilter>()
-    {
-      @Override
-      public DimFilter apply(DimFilter input)
-      {
-        return input.optimize();
-      }
-    })).build();
+    List<DimFilter> elements = DimFilters.optimize(fields);
+    return elements.size() == 1 ? elements.get(0) : Druids.newOrDimFilterBuilder().fields(elements).build();
+  }
+
+  @Override
+  public Filter toFilter()
+  {
+    return new OrFilter(Filters.toFilters(fields));
   }
 
   @Override

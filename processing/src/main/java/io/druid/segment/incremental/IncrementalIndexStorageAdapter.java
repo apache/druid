@@ -707,7 +707,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     {
       IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimension);
       if (dimensionDesc == null) {
-        return new BooleanValueMatcher(false);
+        return new BooleanValueMatcher(predicate.apply(null));
       }
       final int dimIndex = dimensionDesc.getIndex();
       final IncrementalIndex.DimDim dimDim = dimensionDesc.getValues();
@@ -724,46 +724,6 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
           for (int dimVal : dims[dimIndex]) {
             if (predicate.apply(dimDim.getValue(dimVal))) {
-              return true;
-            }
-          }
-          return false;
-        }
-      };
-    }
-
-    @Override
-    public ValueMatcher makeValueMatcher(final String dimension, final Bound bound)
-    {
-      IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimension);
-      if (dimensionDesc == null) {
-        return new BooleanValueMatcher(false);
-      }
-      final int dimIndex = dimensionDesc.getIndex();
-      final IncrementalIndex.DimDim dimDim = dimensionDesc.getValues();
-
-      return new ValueMatcher()
-      {
-        @Override
-        public boolean matches()
-        {
-          int[][] dims = holder.getKey().getDims();
-          if (dimIndex >= dims.length || dims[dimIndex] == null) {
-            return false;
-          }
-
-          for (int dimVal : dims[dimIndex]) {
-            Comparable fullDimVal = dimDim.getValue(dimVal);
-            // TODO: decide what to do for non-String spatial dims, skip for now
-            if (!(fullDimVal instanceof String)) {
-              return false;
-            }
-            List<String> stringCoords = Lists.newArrayList(SPLITTER.split((String) fullDimVal));
-            float[] coords = new float[stringCoords.size()];
-            for (int j = 0; j < coords.length; j++) {
-              coords[j] = Float.valueOf(stringCoords.get(j));
-            }
-            if (bound.contains(coords)) {
               return true;
             }
           }

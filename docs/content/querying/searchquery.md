@@ -50,11 +50,13 @@ The format of the result is:
     "result": [
       {
         "dimension": "dim1",
-        "value": "Ke$ha"
+        "value": "Ke$ha",
+        "count": 3
       },
       {
         "dimension": "dim2",
-        "value": "Ke$haForPresident"
+        "value": "Ke$haForPresident",
+        "count": 1
       }
     ]
   },
@@ -63,11 +65,13 @@ The format of the result is:
     "result": [
       {
         "dimension": "dim1",
-        "value": "SomethingThatContainsKe"
+        "value": "SomethingThatContainsKe",
+        "count": 1
       },
       {
         "dimension": "dim2",
-        "value": "SomethingElseThatContainsKe"
+        "value": "SomethingElseThatContainsKe",
+        "count": 2
       }
     ]
   }

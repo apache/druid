@@ -160,7 +160,7 @@ public class HadoopConverterJobTest
                     new StringInputRowParser(
                         new DelimitedParseSpec(
                             new TimestampSpec("ts", "iso", null),
-                            new DimensionsSpec(Arrays.asList(TestIndex.DIMENSIONS), null, null),
+                            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList(TestIndex.DIMENSIONS)), null, null),
                             "\t",
                             "\u0001",
                             Arrays.asList(TestIndex.COLUMNS)
@@ -209,6 +209,7 @@ public class HadoopConverterJobTest
     );
     metadataStorageTablesConfigSupplier = derbyConnectorRule.metadataTablesConfigSupplier();
     connector = derbyConnectorRule.getConnector();
+
     try {
       connector.getDBI().withHandle(
           new HandleCallback<Void>()

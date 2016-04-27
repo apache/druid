@@ -27,7 +27,7 @@
     </parent>
 
     <artifactId>druid</artifactId>
-    <version>0.9.0-SNAPSHOT</version>
+    <version>0.9.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <name>${project.groupId}:${project.artifactId}</name>
@@ -54,15 +54,14 @@
         <connection>scm:git:ssh://git@github.com/druid-io/druid.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/druid-io/druid.git</developerConnection>
         <url>https://github.com/druid-io/druid.git</url>
-        <tag>0.9.0-SNAPSHOT</tag>
+        <tag>0.9.1-SNAPSHOT</tag>
     </scm>
 
     <properties>
         <metamx.java-util.version>0.27.9</metamx.java-util.version>
-        <apache.curator.version>2.9.1</apache.curator.version>
+        <apache.curator.version>2.10.0</apache.curator.version>
         <jetty.version>9.2.5.v20141112</jetty.version>
         <jersey.version>1.19</jersey.version>
-        <druid.api.version>0.3.16</druid.api.version>
         <!-- Watch out for Hadoop compatibility when updating to >= 2.5; see https://github.com/druid-io/druid/pull/1669 -->
         <jackson.version>2.4.6</jackson.version>
         <log4j.version>2.5</log4j.version>
@@ -71,6 +70,7 @@
     </properties>
 
     <modules>
+        <module>api</module>
         <module>common</module>
         <module>examples</module>
         <module>indexing-hadoop</module>
@@ -88,6 +88,7 @@
         <module>extensions-core/histogram</module>
         <module>extensions-core/kafka-eight</module>
         <module>extensions-core/kafka-extraction-namespace</module>
+        <module>extensions-core/kafka-indexing-service</module>
         <module>extensions-core/mysql-metadata-storage</module>
         <module>extensions-core/postgresql-metadata-storage</module>
         <module>extensions-core/namespace-lookup</module>
@@ -100,6 +101,8 @@
         <module>extensions-contrib/graphite-emitter</module>
         <module>extensions-contrib/kafka-eight-simpleConsumer</module>
         <module>extensions-contrib/rabbitmq</module>
+        <module>extensions-contrib/distinctcount</module>
+        <module>extensions-contrib/parquet-extensions</module>
 
         <!-- distribution packaging -->
         <module>distribution</module>
@@ -107,12 +110,6 @@
 
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>io.druid</groupId>
-                <artifactId>druid-api</artifactId>
-                <version>${druid.api.version}</version>
-            </dependency>
-
             <!-- Compile Scope -->
             <dependency>
                 <groupId>com.metamx</groupId>
@@ -213,6 +210,11 @@
                         <artifactId>slf4j-api</artifactId>
                     </exclusion>
                 </exclusions>
+              </dependency>
+            <dependency>
+                <groupId>org.apache.zookeeper</groupId>
+                <artifactId>zookeeper</artifactId>
+                <version>3.4.8</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.curator</groupId>
@@ -447,12 +449,12 @@
             <dependency>
                 <groupId>org.antlr</groupId>
                 <artifactId>antlr4-runtime</artifactId>
-                <version>4.0</version>
+                <version>4.5.1</version>
             </dependency>
             <dependency>
                 <groupId>org.antlr</groupId>
                 <artifactId>antlr4-coordinator</artifactId>
-                <version>4.0</version>
+                <version>4.5.1</version>
             </dependency>
             <dependency>
                 <groupId>commons-cli</groupId>
@@ -575,6 +577,11 @@
                 <scope>test</scope>
             </dependency>
             <dependency>
+                <groupId>org.slf4j</groupId>
+                <artifactId>slf4j-simple</artifactId>
+                <version>${slf4j.version}</version>
+            </dependency>
+            <dependency>
                 <groupId>com.carrotsearch</groupId>
                 <artifactId>junit-benchmarks</artifactId>
                 <version>0.7.2</version>
@@ -614,6 +621,10 @@
                 <artifactId>geoip2</artifactId>
                 <version>0.4.0</version>
                 <exclusions>
+                    <exclusion>
+                        <groupId>com.google.http-client</groupId>
+                        <artifactId>google-http-client</artifactId>
+                    </exclusion>
                     <exclusion>
                         <groupId>org.apache.httpcomponents</groupId>
                         <artifactId>httpclient</artifactId>
@@ -734,7 +745,7 @@
                 <plugin>
                     <groupId>org.antlr</groupId>
                     <artifactId>antlr4-maven-plugin</artifactId>
-                    <version>4.0</version>
+                    <version>4.5.1</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>

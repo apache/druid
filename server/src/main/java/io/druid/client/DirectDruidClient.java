@@ -160,7 +160,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     final String cancelUrl = String.format("http://%s/druid/v2/%s", host, query.getId());
 
     try {
-      log.debug("Querying url[%s]", url);
+      log.debug("Querying queryId[%s] url[%s]", query.getId(), url);
 
       final long requestStartTime = System.currentTimeMillis();
 
@@ -179,7 +179,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         @Override
         public ClientResponse<InputStream> handleResponse(HttpResponse response)
         {
-          log.debug("Initial response from url[%s]", url);
+          log.debug("Initial response from url[%s] for queryId[%s]", url, query.getId());
           responseStartTime = System.currentTimeMillis();
           emitter.emit(builder.build("query/node/ttfb", responseStartTime - requestStartTime));
 
@@ -272,7 +272,8 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         {
           long stopTime = System.currentTimeMillis();
           log.debug(
-              "Completed request to url[%s] with %,d bytes returned in %,d millis [%,f b/s].",
+              "Completed queryId[%s] request to url[%s] with %,d bytes returned in %,d millis [%,f b/s].",
+              query.getId(),
               url,
               byteCount.get(),
               stopTime - responseStartTime,

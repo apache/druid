@@ -159,7 +159,7 @@ public class CoordinatorBasedSegmentHandoffNotifier implements SegmentHandoffNot
   }
 
   @Override
-  public void stop()
+  public void close()
   {
     scheduledExecutor.shutdown();
   }

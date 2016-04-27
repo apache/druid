@@ -29,7 +29,7 @@
     <parent>
         <artifactId>druid</artifactId>
         <groupId>io.druid</groupId>
-        <version>0.9.0-SNAPSHOT</version>
+        <version>0.9.1-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -80,6 +80,8 @@
                                 <argument>io.druid.extensions:druid-kafka-eight</argument>
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-kafka-extraction-namespace</argument>
+                                <argument>-c</argument>
+                                <argument>io.druid.extensions:druid-kafka-indexing-service</argument>
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:mysql-metadata-storage</argument>
                                 <argument>-c</argument>

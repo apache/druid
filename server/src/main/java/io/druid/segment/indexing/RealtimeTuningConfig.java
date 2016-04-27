@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.io.Files;
 import io.druid.segment.IndexSpec;
+import io.druid.segment.realtime.appenderator.AppenderatorConfig;
 import io.druid.segment.realtime.plumber.IntervalStartVersioningPolicy;
 import io.druid.segment.realtime.plumber.RejectionPolicyFactory;
 import io.druid.segment.realtime.plumber.ServerTimeRejectionPolicyFactory;
@@ -36,7 +37,7 @@ import java.io.File;
 
 /**
  */
-public class RealtimeTuningConfig implements TuningConfig
+public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
 {
   private static final int defaultMaxRowsInMemory = 75000;
   private static final Period defaultIntermediatePersistPeriod = new Period("PT10M");

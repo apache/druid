@@ -21,31 +21,48 @@ package io.druid.timeline.partition;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Function;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Rows;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
 public class HashBasedNumberedShardSpec extends NumberedShardSpec
 {
   private static final HashFunction hashFunction = Hashing.murmur3_32();
+  private static final List<String> DEFAULT_PARTITION_DIMENSIONS = ImmutableList.of();
+
   private final ObjectMapper jsonMapper;
+  @JsonIgnore
+  private final List<String> partitionDimensions;
 
   @JsonCreator
   public HashBasedNumberedShardSpec(
       @JsonProperty("partitionNum") int partitionNum,
       @JsonProperty("partitions") int partitions,
+      @JsonProperty("partitionDimensions") @Nullable List<String> partitionDimensions,
       @JacksonInject ObjectMapper jsonMapper
   )
   {
     super(partitionNum, partitions);
     this.jsonMapper = jsonMapper;
+    this.partitionDimensions = partitionDimensions == null ? DEFAULT_PARTITION_DIMENSIONS : partitionDimensions;
+  }
+
+  @JsonProperty("partitionDimensions")
+  public List<String> getPartitionDimensions()
+  {
+    return partitionDimensions;
   }
 
   @Override
@@ -56,12 +73,28 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
 
   protected int hash(long timestamp, InputRow inputRow)
   {
-    final List<Object> groupKey = Rows.toGroupKey(timestamp, inputRow);
+    final List<Object> groupKey = getGroupKey(timestamp, inputRow);
     try {
       return hashFunction.hashBytes(jsonMapper.writeValueAsBytes(groupKey)).asInt();
     }
     catch (JsonProcessingException e) {
       throw Throwables.propagate(e);
+    }
+  }
+
+  List<Object> getGroupKey(final long timestamp, final InputRow inputRow)
+  {
+    if (partitionDimensions.isEmpty()) {
+      return Rows.toGroupKey(timestamp, inputRow);
+    } else {
+      return Lists.transform(partitionDimensions, new Function<String, Object>()
+      {
+        @Override
+        public Object apply(final String dim)
+        {
+          return inputRow.getDimension(dim);
+        }
+      });
     }
   }
 
@@ -71,6 +104,7 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
     return "HashBasedNumberedShardSpec{" +
            "partitionNum=" + getPartitionNum() +
            ", partitions=" + getPartitions() +
+           ", partitionDimensions=" + getPartitionDimensions() +
            '}';
   }
 

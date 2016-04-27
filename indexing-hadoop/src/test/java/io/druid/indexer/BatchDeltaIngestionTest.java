@@ -346,7 +346,7 @@ public class BatchDeltaIngestionTest
                     new StringInputRowParser(
                         new CSVParseSpec(
                             new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                            new DimensionsSpec(ImmutableList.of("host"), null, null),
+                            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
                             null,
                             ImmutableList.of("timestamp", "host", "host2", "visited_num")
                         )
@@ -393,7 +393,7 @@ public class BatchDeltaIngestionTest
             INTERVAL_FULL.getStart(),
             ImmutableList.of(
                 new HadoopyShardSpec(
-                    new HashBasedNumberedShardSpec(0, 1, HadoopDruidIndexerConfig.JSON_MAPPER),
+                    new HashBasedNumberedShardSpec(0, 1, null, HadoopDruidIndexerConfig.JSON_MAPPER),
                     0
                 )
             )

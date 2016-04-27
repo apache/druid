@@ -19,68 +19,54 @@
 
 package io.druid.segment.filter;
 
-import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.common.guava.FunctionalIterable;
+import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
-import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.data.Indexed;
-
-import javax.annotation.Nullable;
 
 /**
  */
-class DimensionPredicateFilter implements Filter
+public class DimensionPredicateFilter implements Filter
 {
   private final String dimension;
   private final Predicate<String> predicate;
 
   public DimensionPredicateFilter(
-      String dimension,
-      Predicate<String> predicate
+      final String dimension,
+      final Predicate<String> predicate,
+      final ExtractionFn extractionFn
   )
   {
-    this.dimension = dimension;
-    this.predicate = predicate;
+    Preconditions.checkNotNull(predicate, "predicate");
+    this.dimension = Preconditions.checkNotNull(dimension, "dimension");
+
+    if (extractionFn == null) {
+      this.predicate = predicate;
+    } else {
+      this.predicate = new Predicate<String>()
+      {
+        @Override
+        public boolean apply(String input)
+        {
+          return predicate.apply(extractionFn.apply(input));
+        }
+      };
+    }
   }
 
   @Override
   public ImmutableBitmap getBitmapIndex(final BitmapIndexSelector selector)
   {
-    Indexed<String> dimValues = selector.getDimensionValues(dimension);
-    if (dimValues == null || dimValues.size() == 0 || predicate == null) {
-      return selector.getBitmapFactory().makeEmptyImmutableBitmap();
-    }
-
-    return selector.getBitmapFactory().union(
-        FunctionalIterable.create(dimValues)
-                          .filter(predicate)
-                          .transform(
-                              new Function<String, ImmutableBitmap>()
-                              {
-                                @Override
-                                public ImmutableBitmap apply(@Nullable String input)
-                                {
-                                  return selector.getBitmapIndex(dimension, input);
-                                }
-                              }
-                          )
-    );
+    return Filters.matchPredicate(dimension, selector, predicate);
   }
 
   @Override
   public ValueMatcher makeMatcher(ValueMatcherFactory factory)
   {
     return factory.makeValueMatcher(dimension, predicate);
-  }
-
-  @Override
-  public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
-  {
-    throw new UnsupportedOperationException();
   }
 }

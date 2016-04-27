@@ -32,13 +32,22 @@ import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.DimFilters;
 import io.druid.query.filter.ExtractionDimFilter;
+import io.druid.query.filter.Filter;
+import io.druid.query.filter.SelectorDimFilter;
+import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.data.ArrayIndexed;
+import io.druid.segment.data.BitmapSerdeFactory;
+import io.druid.segment.data.ConciseBitmapSerdeFactory;
+import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.Indexed;
+import io.druid.segment.data.RoaringBitmapSerdeFactory;
+import io.druid.segment.serde.BitmapIndexColumnPartSupplier;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import java.util.Arrays;
 import java.util.Map;
 
 /**
@@ -61,20 +70,22 @@ public class ExtractionDimFilterTest
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
-        new Object[]{new ConciseBitmapFactory()},
-        new Object[]{new RoaringBitmapFactory()}
+        new Object[]{new ConciseBitmapFactory(), new ConciseBitmapSerdeFactory()},
+        new Object[]{new RoaringBitmapFactory(), new RoaringBitmapSerdeFactory()}
     );
   }
 
-  public ExtractionDimFilterTest(BitmapFactory bitmapFactory)
+  public ExtractionDimFilterTest(BitmapFactory bitmapFactory, BitmapSerdeFactory bitmapSerdeFactory)
   {
     final MutableBitmap mutableBitmap = bitmapFactory.makeEmptyMutableBitmap();
     mutableBitmap.add(1);
     this.foo1BitMap = bitmapFactory.makeImmutableBitmap(mutableBitmap);
     this.factory = bitmapFactory;
+    this.serdeFactory = bitmapSerdeFactory;
   }
 
   private final BitmapFactory factory;
+  private final BitmapSerdeFactory serdeFactory;
   private final ImmutableBitmap foo1BitMap;
 
   private final BitmapIndexSelector BITMAP_INDEX_SELECTOR = new BitmapIndexSelector()
@@ -102,6 +113,16 @@ public class ExtractionDimFilterTest
     public ImmutableBitmap getBitmapIndex(String dimension, String value)
     {
       return "foo1".equals(value) ? foo1BitMap : null;
+    }
+
+    @Override
+    public BitmapIndex getBitmapIndex(String dimension)
+    {
+      return new BitmapIndexColumnPartSupplier(
+          factory,
+          GenericIndexed.fromIterable(Arrays.asList(foo1BitMap), serdeFactory.getObjectStrategy()),
+          GenericIndexed.fromIterable(Arrays.asList("foo1"), GenericIndexed.STRING_STRATEGY)
+      ).get();
     }
 
     @Override
@@ -141,9 +162,9 @@ public class ExtractionDimFilterTest
   @Test
   public void testEmpty()
   {
-    ExtractionFilter extractionFilter = new ExtractionFilter(
+    Filter extractionFilter = new SelectorDimFilter(
         "foo", "NFDJUKFNDSJFNS", DIM_EXTRACTION_FN
-    );
+    ).toFilter();
     ImmutableBitmap immutableBitmap = extractionFilter.getBitmapIndex(BITMAP_INDEX_SELECTOR);
     Assert.assertEquals(0, immutableBitmap.size());
   }
@@ -151,9 +172,9 @@ public class ExtractionDimFilterTest
   @Test
   public void testNull()
   {
-    ExtractionFilter extractionFilter = new ExtractionFilter(
+    Filter extractionFilter = new SelectorDimFilter(
         "FDHJSFFHDS", "extractDimVal", DIM_EXTRACTION_FN
-    );
+    ).toFilter();
     ImmutableBitmap immutableBitmap = extractionFilter.getBitmapIndex(BITMAP_INDEX_SELECTOR);
     Assert.assertEquals(0, immutableBitmap.size());
   }
@@ -161,9 +182,9 @@ public class ExtractionDimFilterTest
   @Test
   public void testNormal()
   {
-    ExtractionFilter extractionFilter = new ExtractionFilter(
+    Filter extractionFilter = new SelectorDimFilter(
         "foo", "extractDimVal", DIM_EXTRACTION_FN
-    );
+    ).toFilter();
     ImmutableBitmap immutableBitmap = extractionFilter.getBitmapIndex(BITMAP_INDEX_SELECTOR);
     Assert.assertEquals(1, immutableBitmap.size());
   }
@@ -172,7 +193,7 @@ public class ExtractionDimFilterTest
   public void testOr()
   {
     Assert.assertEquals(
-        1, Filters.convertDimensionFilters(
+        1, Filters.toFilter(
             DimFilters.or(
                 new ExtractionDimFilter(
                     "foo",
@@ -186,7 +207,7 @@ public class ExtractionDimFilterTest
 
     Assert.assertEquals(
         1,
-        Filters.convertDimensionFilters(
+        Filters.toFilter(
             DimFilters.or(
                 new ExtractionDimFilter(
                     "foo",
@@ -209,7 +230,7 @@ public class ExtractionDimFilterTest
   public void testAnd()
   {
     Assert.assertEquals(
-        1, Filters.convertDimensionFilters(
+        1, Filters.toFilter(
             DimFilters.or(
                 new ExtractionDimFilter(
                     "foo",
@@ -223,7 +244,7 @@ public class ExtractionDimFilterTest
 
     Assert.assertEquals(
         1,
-        Filters.convertDimensionFilters(
+        Filters.toFilter(
             DimFilters.and(
                 new ExtractionDimFilter(
                     "foo",
@@ -247,7 +268,7 @@ public class ExtractionDimFilterTest
   {
 
     Assert.assertEquals(
-        1, Filters.convertDimensionFilters(
+        1, Filters.toFilter(
             DimFilters.or(
                 new ExtractionDimFilter(
                     "foo",
@@ -261,7 +282,7 @@ public class ExtractionDimFilterTest
 
     Assert.assertEquals(
         1,
-        Filters.convertDimensionFilters(
+        Filters.toFilter(
             DimFilters.not(
                 new ExtractionDimFilter(
                     "foo",

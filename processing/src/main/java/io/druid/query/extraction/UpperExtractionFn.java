@@ -31,7 +31,7 @@ import java.nio.ByteBuffer;
 import java.util.Locale;
 
 @JsonTypeName("upper")
-public class UpperExtractionFn implements ExtractionFn
+public class UpperExtractionFn extends DimExtractionFn
 {
   private final Locale locale;
 
@@ -60,12 +60,6 @@ public class UpperExtractionFn implements ExtractionFn
   }
 
   @Override
-  public String apply(long value)
-  {
-    return apply(String.valueOf(value));
-  }
-
-  @Override
   public boolean preservesOrdering()
   {
     return false;
@@ -86,11 +80,5 @@ public class UpperExtractionFn implements ExtractionFn
                      .put((byte) 0XFF)
                      .put(localeBytes)
                      .array();
-  }
-
-  @Override
-  public String apply(Object value)
-  {
-    return apply(String.valueOf(value));
   }
 }

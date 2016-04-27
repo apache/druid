@@ -29,7 +29,7 @@ public interface WorkerTaskRunner extends TaskRunner
    * List of known workers who can accept tasks
    * @return A list of workers who can accept tasks for running
    */
-  Collection<Worker> getWorkers();
+  Collection<ImmutableWorkerInfo> getWorkers();
 
   /**
    * Return a list of workers who can be reaped by autoscaling
@@ -43,5 +43,5 @@ public interface WorkerTaskRunner extends TaskRunner
    * @param maxWorkers
    * @return
    */
-  Collection<Worker> markWorkersLazy(Predicate<Worker> isLazyWorker, int maxWorkers);
+  Collection<Worker> markWorkersLazy(Predicate<ImmutableWorkerInfo> isLazyWorker, int maxWorkers);
 }

@@ -273,7 +273,7 @@ public class IndexIOTest
                                           )
                                           .withDimensionsSpec(
                                               new DimensionsSpec(
-                                                  Arrays.asList("dim0", "dim1"),
+                                                  DimensionsSpec.getDefaultSchemas(Arrays.asList("dim0", "dim1")),
                                                   null,
                                                   null
                                               )
@@ -295,7 +295,7 @@ public class IndexIOTest
                                           )
                                           .withDimensionsSpec(
                                               new DimensionsSpec(
-                                                  Arrays.asList("dim0", "dim1"),
+                                                  DimensionsSpec.getDefaultSchemas(Arrays.asList("dim0", "dim1")),
                                                   null,
                                                   null
                                               )

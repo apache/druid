@@ -157,7 +157,21 @@ public abstract class HadoopTask extends AbstractTask
         null
     );
 
-    System.setProperty("druid.hadoop.internal.classpath", Joiner.on(File.pathSeparator).join(jobURLs));
+    final String hadoopContainerDruidClasspathJars;
+    if (extensionsConfig.getHadoopContainerDruidClasspath() == null) {
+      hadoopContainerDruidClasspathJars = Joiner.on(File.pathSeparator).join(jobURLs);
+
+    } else {
+      hadoopContainerDruidClasspathJars =
+          Joiner.on(File.pathSeparator)
+                .join(
+                    Initialization.getURLsForClasspath(extensionsConfig.getHadoopContainerDruidClasspath())
+                );
+    }
+
+    log.info("Hadoop Container Druid Classpath is set to [%s]", hadoopContainerDruidClasspathJars);
+    System.setProperty("druid.hadoop.internal.classpath", hadoopContainerDruidClasspathJars);
+
     return classLoader;
   }
 

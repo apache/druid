@@ -194,7 +194,8 @@ public class InitializationTest
     Assert.assertArrayEquals(
         "Non-exist root extensionsDir should return an empty array of File",
         new File[]{},
-        Initialization.getExtensionFilesToLoad(new ExtensionsConfig(){
+        Initialization.getExtensionFilesToLoad(new ExtensionsConfig()
+        {
           @Override
           public String getDirectory()
           {
@@ -385,6 +386,44 @@ public class InitializationTest
         ), config
     );
     Assert.assertArrayEquals(expectedFileList, actualFileList);
+  }
+
+  @Test
+  public void testGetURLsForClasspath() throws Exception
+  {
+    File tmpDir1 = temporaryFolder.newFolder();
+    File tmpDir2 = temporaryFolder.newFolder();
+    File tmpDir3 = temporaryFolder.newFolder();
+
+    File tmpDir1a = new File(tmpDir1, "a.jar");
+    tmpDir1a.createNewFile();
+    File tmpDir1b = new File(tmpDir1, "b.jar");
+    tmpDir1b.createNewFile();
+    new File(tmpDir1, "note1.txt").createNewFile();
+
+    File tmpDir2c = new File(tmpDir2, "c.jar");
+    tmpDir2c.createNewFile();
+    File tmpDir2d = new File(tmpDir2, "d.jar");
+    tmpDir2d.createNewFile();
+    File tmpDir2e = new File(tmpDir2, "e.JAR");
+    tmpDir2e.createNewFile();
+    new File(tmpDir2, "note2.txt").createNewFile();
+
+    String cp = tmpDir1.getAbsolutePath() + File.separator + "*"
+                + File.pathSeparator
+                + tmpDir3.getAbsolutePath()
+                + File.pathSeparator
+                + tmpDir2.getAbsolutePath() + File.separator + "*";
+
+    // getURLsForClasspath uses listFiles which does NOT guarantee any ordering for the name strings.
+    List<URL> urLsForClasspath = Initialization.getURLsForClasspath(cp);
+    Assert.assertEquals(Sets.newHashSet(tmpDir1a.toURI().toURL(), tmpDir1b.toURI().toURL()),
+                        Sets.newHashSet(urLsForClasspath.subList(0, 2)));
+    Assert.assertEquals(tmpDir3.toURI().toURL(), urLsForClasspath.get(2));
+    Assert.assertEquals(Sets.newHashSet(tmpDir2c.toURI().toURL(), tmpDir2d.toURI().toURL(), tmpDir2e.toURI().toURL()),
+                        Sets.newHashSet(urLsForClasspath.subList(3, 6)));
+
+
   }
 
   public static class TestDruidModule implements DruidModule

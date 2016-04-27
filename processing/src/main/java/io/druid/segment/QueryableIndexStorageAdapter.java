@@ -424,8 +424,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                           {
                             final String value = column.lookupName(id);
                             return extractionFn == null ?
-                                   Strings.nullToEmpty(value) :
-                                   extractionFn.apply(Strings.nullToEmpty(value));
+                                   value :
+                                   extractionFn.apply(value);
                           }
 
                           @Override
@@ -614,7 +614,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
                         if (columnVals.hasMultipleValues()) {
                           throw new UnsupportedOperationException(
-                              "makeObjectColumnSelector does not support multivalued GenericColumns"
+                              "makeObjectColumnSelector does not support multi-value GenericColumns"
                           );
                         }
 

@@ -23,6 +23,7 @@ Many of Druid's external dependencies can be plugged in as modules. Extensions c
 |--------|-----------|-------|
 |`druid.extensions.directory`|The root extension directory where user can put extensions related files. Druid will load extensions stored under this directory.|`extensions` (This is a relative path to Druid's working directory)|
 |`druid.extensions.hadoopDependenciesDir`|The root hadoop dependencies directory where user can put hadoop related dependencies files. Druid will load the dependencies based on the hadoop coordinate specified in the hadoop index task.|`hadoop-dependencies` (This is a relative path to Druid's working directory|
+|`druid.extensions.hadoopContainerDruidClasspath`|Hadoop Indexing launches hadoop jobs and this configuration provides way to explicitly set the user classpath for the hadoop job. By default this is computed automatically by druid based on the druid process classpath and set of extensions. However, sometimes you might want to be explicit to resolve dependency conflicts between druid and hadoop.|null|
 |`druid.extensions.loadList`|A JSON array of extensions to load from extension directories by Druid. If it is not specified, its value will be `null` and Druid will load all the extensions under `druid.extensions.directory`. If its value is empty list `[]`, then no extensions will be loaded at all.|null|
 |`druid.extensions.searchCurrentClassloader`|This is a boolean flag that determines if Druid will search the main classloader for extensions.  It defaults to true but can be turned off if you have reason to not automatically add all modules on the classpath.|true|
 
@@ -295,3 +296,14 @@ In current Druid, multiple data segments may be announced under the same Znode.
 |--------|-----------|-------|
 |`druid.announcer.segmentsPerNode`|Each Znode contains info for up to this many segments.|50|
 |`druid.announcer.maxBytesPerNode`|Max byte size for Znode.|524288|
+|`druid.announcer.skipDimensionsAndMetrics`|Skip Dimensions and Metrics list from segment announcements. NOTE: Enabling this will also remove the dimensions and metrics list from coordinator and broker endpoints.|false|
+|`druid.announcer.skipLoadSpec`|Skip segment LoadSpec from segment announcements. NOTE: Enabling this will also remove the loadspec from coordinator and broker endpoints.|false|
+
+### JavaScript
+
+Druid supports dynamic runtime extension through JavaScript functions. This functionality can be configured through
+the following properties.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.javascript.disable`|Set to "true" to disable JavaScript functionality. This affects the JavaScript parser, filter, extractionFn, aggregator, and post-aggregator.|false|

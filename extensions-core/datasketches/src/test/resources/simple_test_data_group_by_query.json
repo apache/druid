@@ -1,8 +1,8 @@
 {
   "queryType": "groupBy",
   "dataSource": "test_datasource",
-  "granularity": "ALL",
-  "dimensions": [],
+  "granularity":"ALL",
+  "dimensions": ["product"],
   "aggregations": [
     {
       "type": "thetaSketch",
@@ -89,5 +89,18 @@
   ],
   "intervals": [
     "2014-10-19T00:00:00.000Z/2014-10-22T00:00:00.000Z"
-  ]
+  ],
+  "limitSpec": {
+    "type": "default",
+    "columns": [
+      {
+        "dimension": "sketchEstimatePostAgg",
+        "direction": "ASC"
+      },
+      {
+        "dimension": "product",
+        "direction": "ASC"
+      }
+    ]
+  }
 }

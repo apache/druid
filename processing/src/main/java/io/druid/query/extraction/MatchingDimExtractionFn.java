@@ -22,6 +22,7 @@ package io.druid.query.extraction;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.metamx.common.StringUtils;
 
 import java.nio.ByteBuffer;
@@ -59,7 +60,11 @@ public class MatchingDimExtractionFn extends DimExtractionFn
   @Override
   public String apply(String dimValue)
   {
-    dimValue = (dimValue == null) ? "" : dimValue;
+    if (Strings.isNullOrEmpty(dimValue)) {
+      // We'd return null whether or not the pattern matched
+      return null;
+    }
+
     Matcher matcher = pattern.matcher(dimValue);
     return matcher.find() ? dimValue : null;
   }

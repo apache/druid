@@ -203,7 +203,14 @@ public class RealtimeManagerTest
         null,
         null
     );
-    plumber = new TestPlumber(new Sink(new Interval("0/P5000Y"), schema, tuningConfig, new DateTime().toString()));
+    plumber = new TestPlumber(new Sink(
+        new Interval("0/P5000Y"),
+        schema,
+        tuningConfig.getShardSpec(),
+        new DateTime().toString(),
+        tuningConfig.getMaxRowsInMemory(),
+        tuningConfig.isReportParseExceptions()
+    ));
 
     realtimeManager = new RealtimeManager(
         Arrays.<FireDepartment>asList(
@@ -215,7 +222,14 @@ public class RealtimeManagerTest
         ),
         null
     );
-    plumber2 = new TestPlumber(new Sink(new Interval("0/P5000Y"), schema2, tuningConfig, new DateTime().toString()));
+    plumber2 = new TestPlumber(new Sink(
+        new Interval("0/P5000Y"),
+        schema2,
+        tuningConfig.getShardSpec(),
+        new DateTime().toString(),
+        tuningConfig.getMaxRowsInMemory(),
+        tuningConfig.isReportParseExceptions()
+    ));
 
     realtimeManager2 = new RealtimeManager(
         Arrays.<FireDepartment>asList(

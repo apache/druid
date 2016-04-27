@@ -24,10 +24,8 @@ package io.druid.curator.inventory;
 public interface CuratorInventoryManagerStrategy<ContainerClass, InventoryClass>
 {
   public ContainerClass deserializeContainer(byte[] bytes);
-  public byte[] serializeContainer(ContainerClass container);
 
   public InventoryClass deserializeInventory(byte[] bytes);
-  public byte[] serializeInventory(InventoryClass inventory);
 
   public void newContainer(ContainerClass newContainer);
   public void deadContainer(ContainerClass deadContainer);

@@ -1170,7 +1170,7 @@ public class RealtimeIndexTaskTest
           }
 
           @Override
-          public void stop()
+          public void close()
           {
             //Noop
           }

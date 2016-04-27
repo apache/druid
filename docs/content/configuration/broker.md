@@ -67,7 +67,6 @@ The broker uses processing configs for nested groupBy queries. And, optionally, 
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.query.groupBy.singleThreaded`|Run single threaded group By queries.|false|
 |`druid.query.groupBy.maxIntermediateRows`|Maximum number of intermediate rows. This can be lowered at query time by `maxIntermediateRows` attribute in query context.|50000|
 |`druid.query.groupBy.maxResults`|Maximum number of results.  This can be lowered at query time by `maxResults` attribute in query context.|500000|
 
@@ -95,3 +94,11 @@ You can optionally only configure caching to be enabled on the broker by setting
 |`druid.broker.cache.cacheBulkMergeLimit`|positive integer or 0|Queries with more segments than this number will not attempt to fetch from cache at the broker level, leaving potential caching fetches (and cache result merging) to the historicals|`Integer.MAX_VALUE`|
 
 See [cache configuration](caching.html) for how to configure cache settings.
+
+### Others
+
+|Property|Possible Values|Description|Default|
+|--------|---------------|-----------|-------|
+|`druid.broker.segment.watchedTiers`|List of strings|Broker watches the segment announcements from nodes serving segments to build cache of which node is serving which segments, this configuration allows to only consider segments being served from a whitelist of tiers. By default, Broker would consider all tiers. This can be used to partition your dataSources in specific historical tiers and configure brokers in partitions so that they are only queryable for specific dataSources.|none|
+|`druid.broker.segment.watchedDataSources`|List of strings|Broker watches the segment announcements from nodes serving segments to build cache of which node is serving which segments, this configuration allows to only consider segments being served from a whitelist of dataSources. By default, Broker would consider all datasources. This can be used to configure brokers in partitions so that they are only queryable for specific dataSources.|none|
+

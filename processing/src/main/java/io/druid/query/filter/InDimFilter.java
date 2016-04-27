@@ -21,24 +21,49 @@ package io.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.Iterables;
 import com.metamx.common.StringUtils;
+import io.druid.query.extraction.ExtractionFn;
+import io.druid.segment.filter.InFilter;
 
 import java.nio.ByteBuffer;
-import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 
 public class InDimFilter implements DimFilter
 {
-  private final List<String> values;
+  private final ImmutableSortedSet<String> values;
   private final String dimension;
+  private final ExtractionFn extractionFn;
 
   @JsonCreator
-  public InDimFilter(@JsonProperty("dimension") String dimension, @JsonProperty("values") List<String> values)
+  public InDimFilter(
+      @JsonProperty("dimension") String dimension,
+      @JsonProperty("values") List<String> values,
+      @JsonProperty("extractionFn") ExtractionFn extractionFn
+  )
   {
     Preconditions.checkNotNull(dimension, "dimension can not be null");
-    this.values = (values == null) ? Collections.<String>emptyList() : values;
+    Preconditions.checkArgument(values != null && !values.isEmpty(), "values can not be null or empty");
+    this.values = ImmutableSortedSet.copyOf(
+        Iterables.transform(
+            values, new Function<String, String>()
+            {
+              @Override
+              public String apply(String input)
+              {
+                return Strings.nullToEmpty(input);
+              }
+
+            }
+        )
+    );
     this.dimension = dimension;
+    this.extractionFn = extractionFn;
   }
 
   @JsonProperty
@@ -48,9 +73,15 @@ public class InDimFilter implements DimFilter
   }
 
   @JsonProperty
-  public List<String> getValues()
+  public Set<String> getValues()
   {
     return values;
+  }
+
+  @JsonProperty
+  public ExtractionFn getExtractionFn()
+  {
+    return extractionFn;
   }
 
   @Override
@@ -61,16 +92,22 @@ public class InDimFilter implements DimFilter
     int valuesBytesSize = 0;
     int index = 0;
     for (String value : values) {
-      valuesBytes[index] = StringUtils.toUtf8(value);
+      valuesBytes[index] = StringUtils.toUtf8(Strings.nullToEmpty(value));
       valuesBytesSize += valuesBytes[index].length + 1;
       ++index;
     }
+    byte[] extractionFnBytes = extractionFn == null ? new byte[0] : extractionFn.getCacheKey();
 
-    ByteBuffer filterCacheKey = ByteBuffer.allocate(2 + dimensionBytes.length + valuesBytesSize)
+    ByteBuffer filterCacheKey = ByteBuffer.allocate(3
+                                                    + dimensionBytes.length
+                                                    + valuesBytesSize
+                                                    + extractionFnBytes.length)
                                           .put(DimFilterCacheHelper.IN_CACHE_ID)
                                           .put(dimensionBytes)
+                                          .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                                          .put(extractionFnBytes)
                                           .put(DimFilterCacheHelper.STRING_SEPARATOR);
-    for (byte [] bytes: valuesBytes) {
+    for (byte[] bytes : valuesBytes) {
       filterCacheKey.put(bytes)
                     .put((byte) 0xFF);
     }
@@ -84,11 +121,9 @@ public class InDimFilter implements DimFilter
   }
 
   @Override
-  public int hashCode()
+  public Filter toFilter()
   {
-    int result = getValues().hashCode();
-    result = 31 * result + getDimension().hashCode();
-    return result;
+    return new InFilter(dimension, values, extractionFn);
   }
 
   @Override
@@ -97,16 +132,28 @@ public class InDimFilter implements DimFilter
     if (this == o) {
       return true;
     }
-    if (!(o instanceof InDimFilter)) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
 
     InDimFilter that = (InDimFilter) o;
 
-    if (!values.equals(that.values)) {
+    if (values != null ? !values.equals(that.values) : that.values != null) {
       return false;
     }
-    return dimension.equals(that.dimension);
+    if (!dimension.equals(that.dimension)) {
+      return false;
+    }
+    return extractionFn != null ? extractionFn.equals(that.extractionFn) : that.extractionFn == null;
 
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = values != null ? values.hashCode() : 0;
+    result = 31 * result + dimension.hashCode();
+    result = 31 * result + (extractionFn != null ? extractionFn.hashCode() : 0);
+    return result;
   }
 }

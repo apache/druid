@@ -288,7 +288,7 @@ public class IngestSegmentFirehoseFactoryTest
             new JSONParseSpec(
                 new TimestampSpec(TIME_COLUMN, "auto", null),
                 new DimensionsSpec(
-                    ImmutableList.<String>of(),
+                    DimensionsSpec.getDefaultSchemas(ImmutableList.<String>of()),
                     ImmutableList.of(DIM_FLOAT_NAME, DIM_LONG_NAME),
                     ImmutableList.<SpatialDimensionSchema>of()
                 )
@@ -305,7 +305,7 @@ public class IngestSegmentFirehoseFactoryTest
                   new IngestSegmentFirehoseFactory(
                       DATA_SOURCE_NAME,
                       FOREVER,
-                      new SelectorDimFilter(DIM_NAME, DIM_VALUE),
+                      new SelectorDimFilter(DIM_NAME, DIM_VALUE, null),
                       dim_names,
                       metric_names,
                       Guice.createInjector(
@@ -406,7 +406,7 @@ public class IngestSegmentFirehoseFactoryTest
       new JSONParseSpec(
           new TimestampSpec(TIME_COLUMN, "auto", null),
           new DimensionsSpec(
-              ImmutableList.of(DIM_NAME),
+              DimensionsSpec.getDefaultSchemas(ImmutableList.of(DIM_NAME)),
               ImmutableList.of(DIM_FLOAT_NAME, DIM_LONG_NAME),
               ImmutableList.<SpatialDimensionSchema>of()
           )

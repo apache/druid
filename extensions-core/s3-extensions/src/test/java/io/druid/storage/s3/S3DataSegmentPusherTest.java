@@ -19,8 +19,8 @@
 
 package io.druid.storage.s3;
 
-import com.google.api.client.util.Lists;
-import com.google.api.client.util.Maps;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.timeline.DataSegment;

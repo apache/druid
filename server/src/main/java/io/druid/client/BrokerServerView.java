@@ -20,10 +20,12 @@
 package io.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
+import com.metamx.common.Pair;
 import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.http.client.HttpClient;
@@ -42,6 +44,7 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
 
+import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
@@ -64,9 +67,10 @@ public class BrokerServerView implements TimelineServerView
   private final QueryWatcher queryWatcher;
   private final ObjectMapper smileMapper;
   private final HttpClient httpClient;
-  private final ServerInventoryView baseView;
+  private final FilteredServerInventoryView baseView;
   private final TierSelectorStrategy tierSelectorStrategy;
   private final ServiceEmitter emitter;
+  private final Predicate<Pair<DruidServerMetadata, DataSegment>> segmentFilter;
 
   private volatile boolean initialized = false;
 
@@ -76,9 +80,10 @@ public class BrokerServerView implements TimelineServerView
       QueryWatcher queryWatcher,
       @Smile ObjectMapper smileMapper,
       @Client HttpClient httpClient,
-      ServerInventoryView baseView,
+      FilteredServerInventoryView baseView,
       TierSelectorStrategy tierSelectorStrategy,
-      ServiceEmitter emitter
+      ServiceEmitter emitter,
+      final BrokerSegmentWatcherConfig segmentWatcherConfig
   )
   {
     this.warehouse = warehouse;
@@ -88,11 +93,30 @@ public class BrokerServerView implements TimelineServerView
     this.baseView = baseView;
     this.tierSelectorStrategy = tierSelectorStrategy;
     this.emitter = emitter;
-
     this.clients = Maps.newConcurrentMap();
     this.selectors = Maps.newHashMap();
     this.timelines = Maps.newHashMap();
 
+    this.segmentFilter = new Predicate<Pair<DruidServerMetadata, DataSegment>>()
+    {
+      @Override
+      public boolean apply(
+          Pair<DruidServerMetadata, DataSegment> input
+      )
+      {
+        if (segmentWatcherConfig.getWatchedTiers() != null
+            && !segmentWatcherConfig.getWatchedTiers().contains(input.lhs.getTier())) {
+          return false;
+        }
+
+        if (segmentWatcherConfig.getWatchedDataSources() != null
+            && !segmentWatcherConfig.getWatchedDataSources().contains(input.rhs.getDataSource())) {
+          return false;
+        }
+
+        return true;
+      }
+    };
     ExecutorService exec = Execs.singleThreaded("BrokerServerView-%s");
     baseView.registerSegmentCallback(
         exec,
@@ -118,7 +142,8 @@ public class BrokerServerView implements TimelineServerView
             initialized = true;
             return ServerView.CallbackAction.CONTINUE;
           }
-        }
+        },
+        segmentFilter
     );
 
     baseView.registerServerCallback(
@@ -188,6 +213,8 @@ public class BrokerServerView implements TimelineServerView
 
   private void serverAddedSegment(final DruidServerMetadata server, final DataSegment segment)
   {
+
+
     String segmentId = segment.getIdentifier();
     synchronized (lock) {
       log.debug("Adding segment[%s] for server[%s]", segment, server);
@@ -216,6 +243,7 @@ public class BrokerServerView implements TimelineServerView
 
   private void serverRemovedSegment(DruidServerMetadata server, DataSegment segment)
   {
+
     String segmentId = segment.getIdentifier();
     final ServerSelector selector;
 
@@ -288,6 +316,6 @@ public class BrokerServerView implements TimelineServerView
   @Override
   public void registerSegmentCallback(Executor exec, SegmentCallback callback)
   {
-    baseView.registerSegmentCallback(exec, callback);
+    baseView.registerSegmentCallback(exec, callback, segmentFilter);
   }
 }

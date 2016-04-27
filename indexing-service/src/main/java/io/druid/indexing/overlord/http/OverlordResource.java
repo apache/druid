@@ -39,7 +39,6 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.actions.TaskActionHolder;
 import io.druid.indexing.common.task.Task;
-import io.druid.indexing.overlord.RemoteTaskRunner;
 import io.druid.indexing.overlord.TaskMaster;
 import io.druid.indexing.overlord.TaskQueue;
 import io.druid.indexing.overlord.TaskRunner;
@@ -259,7 +258,7 @@ public class OverlordResource
   @POST
   @Path("/action")
   @Produces(MediaType.APPLICATION_JSON)
-  public <T> Response doAction(final TaskActionHolder<T> holder)
+  public Response doAction(final TaskActionHolder holder)
   {
     return asLeaderWith(
         taskMaster.getTaskActionClient(holder.getTask()),
@@ -275,7 +274,7 @@ public class OverlordResource
             // or token that gets passed around.
 
             try {
-              final T ret = taskActionClient.submit(holder.getAction());
+              final Object ret = taskActionClient.submit(holder.getAction());
               retMap = Maps.newHashMap();
               retMap.put("result", ret);
             }
@@ -416,10 +415,7 @@ public class OverlordResource
           @Override
           public Response apply(TaskRunner taskRunner)
           {
-            if (taskRunner instanceof RemoteTaskRunner) {
-              // Use getZkWorkers instead of getWorkers, as they return richer details (like the list of running tasks)
-              return Response.ok(((RemoteTaskRunner) taskRunner).getZkWorkers()).build();
-            } else if (taskRunner instanceof WorkerTaskRunner) {
+            if (taskRunner instanceof WorkerTaskRunner) {
               return Response.ok(((WorkerTaskRunner) taskRunner).getWorkers()).build();
             } else {
               log.debug(

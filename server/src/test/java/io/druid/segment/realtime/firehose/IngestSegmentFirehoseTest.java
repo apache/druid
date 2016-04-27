@@ -107,7 +107,7 @@ public class IngestSegmentFirehoseTest
     StringInputRowParser parser = new StringInputRowParser(
         new CSVParseSpec(
             new TimestampSpec("timestamp", "yyyyMMddHH", null),
-            new DimensionsSpec(ImmutableList.of("host"), null, null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
             null,
             ImmutableList.of("timestamp", "host", "visited")
         ),
@@ -120,7 +120,7 @@ public class IngestSegmentFirehoseTest
 
     IncrementalIndex index = null;
     try {
-      index = new OnheapIncrementalIndex(0, QueryGranularity.NONE, aggregators, true, true, 5000);
+      index = new OnheapIncrementalIndex(0, QueryGranularity.NONE, aggregators, true, true, true, 5000);
       for (String line : rows) {
         index.add(parser.parse(line));
       }

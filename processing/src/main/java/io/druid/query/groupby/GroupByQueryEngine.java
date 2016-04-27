@@ -95,7 +95,7 @@ public class GroupByQueryEngine
     }
 
     final Sequence<Cursor> cursors = storageAdapter.makeCursors(
-        Filters.convertDimensionFilters(query.getDimFilter()),
+        Filters.toFilter(query.getDimFilter()),
         intervals.get(0),
         query.getGranularity(),
         false

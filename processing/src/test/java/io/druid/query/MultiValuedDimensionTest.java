@@ -99,13 +99,14 @@ public class MultiValuedDimensionTest
         },
         true,
         true,
+        true,
         5000
     );
 
     StringInputRowParser parser = new StringInputRowParser(
         new CSVParseSpec(
             new TimestampSpec("timestamp", "iso", null),
-            new DimensionsSpec(ImmutableList.of("product", "tags"), null, null),
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("product", "tags")), null, null),
             "\t",
             ImmutableList.of("timestamp", "product", "tags")
         ),
@@ -195,7 +196,7 @@ public class MultiValuedDimensionTest
             )
         )
         .setDimFilter(
-            new SelectorDimFilter("tags", "t3")
+            new SelectorDimFilter("tags", "t3", null)
         )
         .build();
 
@@ -243,7 +244,7 @@ public class MultiValuedDimensionTest
             )
         )
         .setDimFilter(
-            new SelectorDimFilter("tags", "t3")
+            new SelectorDimFilter("tags", "t3", null)
         )
         .build();
 
@@ -283,7 +284,7 @@ public class MultiValuedDimensionTest
                     }
             ))
         .threshold(5)
-        .filters(new SelectorDimFilter("tags", "t3")).build();
+        .filters(new SelectorDimFilter("tags", "t3", null)).build();
 
     QueryRunnerFactory factory = new TopNQueryRunnerFactory(
         TestQueryRunners.getPool(),

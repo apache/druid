@@ -4,8 +4,7 @@ layout: doc_page
 # Joins
 
 Druid has limited support for joins through [query-time lookups](../querying/lookups.html). The common use case of 
-query-time lookups is to replace one dimension value that (e.g. a String ID) with another value (e.g. a human-readable  
-String value). This is similar a star-schema join.
+query-time lookups is to replace one dimension value (e.g. a String ID) with another value (e.g. a human-readable String value). This is similar to a star-schema join.
 
 Druid does not yet have full support for joins. Although Druid’s storage format would allow for the implementation 
 of joins (there is no loss of fidelity for columns included as dimensions), full support for joins have not yet been implemented yet 

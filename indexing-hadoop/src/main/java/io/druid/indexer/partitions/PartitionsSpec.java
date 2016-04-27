@@ -26,6 +26,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.Jobby;
 
+import java.util.List;
+
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = HashedPartitionsSpec.class)
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "dimension", value = SingleDimensionPartitionsSpec.class),
@@ -51,4 +53,6 @@ public interface PartitionsSpec
   @JsonProperty
   public int getNumShards();
 
+  @JsonProperty
+  public List<String> getPartitionDimensions();
 }

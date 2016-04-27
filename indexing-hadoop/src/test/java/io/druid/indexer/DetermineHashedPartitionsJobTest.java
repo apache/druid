@@ -112,7 +112,7 @@ public class DetermineHashedPartitionsJobTest
                     new DelimitedParseSpec(
                         new TimestampSpec("ts", null, null),
                         new DimensionsSpec(
-                            ImmutableList.of("market", "quality", "placement", "placementish"),
+                            DimensionsSpec.getDefaultSchemas(ImmutableList.of("market", "quality", "placement", "placementish")),
                             null,
                             null
                         ),
@@ -149,7 +149,7 @@ public class DetermineHashedPartitionsJobTest
         new HadoopTuningConfig(
             tmpDir.getAbsolutePath(),
             null,
-            new HashedPartitionsSpec(targetPartitionSize, null, true, null),
+            new HashedPartitionsSpec(targetPartitionSize, null, true, null, null),
             null,
             null,
             null,

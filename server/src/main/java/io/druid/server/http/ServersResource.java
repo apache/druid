@@ -55,6 +55,19 @@ public class ServersResource
         .build();
   }
 
+  private static Map<String, Object> makeFullServer(DruidServer input)
+  {
+    return new ImmutableMap.Builder<String, Object>()
+        .put("host", input.getHost())
+        .put("maxSize", input.getMaxSize())
+        .put("type", input.getType())
+        .put("tier", input.getTier())
+        .put("priority", input.getPriority())
+        .put("segments", input.getSegments())
+        .put("currSize", input.getCurrSize())
+        .build();
+  }
+
   private final InventoryView serverInventoryView;
 
   @Inject
@@ -75,7 +88,21 @@ public class ServersResource
     Response.ResponseBuilder builder = Response.status(Response.Status.OK);
 
     if (full != null) {
-      return builder.entity(Lists.newArrayList(serverInventoryView.getInventory())).build();
+      return builder.entity(
+          Lists.newArrayList(
+              Iterables.transform(
+                  serverInventoryView.getInventory(),
+                  new Function<DruidServer, Map<String, Object>>()
+                  {
+                    @Override
+                    public Map<String, Object> apply(DruidServer input)
+                    {
+                      return makeFullServer(input);
+                    }
+                  }
+              )
+          )
+      ).build();
     } else if (simple != null) {
       return builder.entity(
           Lists.newArrayList(
@@ -130,7 +157,7 @@ public class ServersResource
       return builder.entity(makeSimpleServer(server)).build();
     }
 
-    return builder.entity(server)
+    return builder.entity(makeFullServer(server))
                   .build();
   }
 

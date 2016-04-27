@@ -29,6 +29,7 @@ import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.granularity.QueryGranularity;
+import io.druid.js.JavaScriptConfig;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -102,6 +103,8 @@ public class QueryRunnerTestHelper
   public static final String qualityDimension = "quality";
   public static final String placementDimension = "placement";
   public static final String placementishDimension = "placementish";
+  public static final String partialNullDimension = "partial_null_column";
+
   public static final List<String> dimensions = Lists.newArrayList(
       marketDimension,
       qualityDimension,
@@ -125,7 +128,8 @@ public class QueryRunnerTestHelper
       Arrays.asList("placementish", "index"),
       "function aggregate(current, a, b) { if ((Array.isArray(a) && a.indexOf('a') > -1) || a === 'a') { return current + b; } else { return current; } }",
       JS_RESET_0,
-      JS_COMBINE_A_PLUS_B
+      JS_COMBINE_A_PLUS_B,
+      JavaScriptConfig.getDefault()
   );
   public static final JavaScriptAggregatorFactory jsCountIfTimeGreaterThan = new JavaScriptAggregatorFactory(
       "ntimestamps",
@@ -134,14 +138,16 @@ public class QueryRunnerTestHelper
       new DateTime("2011-04-01T12:00:00Z").getMillis() +
       ") { return current + 1; } else { return current; } }",
       JS_RESET_0,
-      JS_COMBINE_A_PLUS_B
+      JS_COMBINE_A_PLUS_B,
+      JavaScriptConfig.getDefault()
   );
   public static final JavaScriptAggregatorFactory jsPlacementishCount = new JavaScriptAggregatorFactory(
       "pishcount",
       Arrays.asList("placementish", "index"),
       "function aggregate(current, a) { if (Array.isArray(a)) { return current + a.length; } else if (typeof a === 'string') { return current + 1; } else { return current; } }",
       JS_RESET_0,
-      JS_COMBINE_A_PLUS_B
+      JS_COMBINE_A_PLUS_B,
+      JavaScriptConfig.getDefault()
   );
   public static final HyperUniquesAggregatorFactory qualityUniques = new HyperUniquesAggregatorFactory(
       "uniques",
@@ -440,19 +446,17 @@ public class QueryRunnerTestHelper
       Segment adapter
   )
   {
-    return new FinalizeResultsQueryRunner<T>(
-        factory.getToolchest().postMergeQueryDecoration(
-            factory.getToolchest().mergeResults(
-                new UnionQueryRunner<T>(
-                    new BySegmentQueryRunner<T>(
-                        segmentId, adapter.getDataInterval().getStart(),
-                        factory.createRunner(adapter)
-                    )
+    return new FluentQueryRunnerBuilder<T>(factory.getToolchest())
+        .create(
+            new UnionQueryRunner<T>(
+                new BySegmentQueryRunner<T>(
+                    segmentId, adapter.getDataInterval().getStart(),
+                    factory.createRunner(adapter)
                 )
             )
-        ),
-        factory.getToolchest()
-    );
+        )
+        .mergeResults()
+        .applyPostMergeDecoration();
   }
 
   public static <T> QueryRunner<T> makeFilteringQueryRunner(
@@ -460,41 +464,38 @@ public class QueryRunnerTestHelper
       final QueryRunnerFactory<T, Query<T>> factory) {
 
     final QueryToolChest<T, Query<T>> toolChest = factory.getToolchest();
-    return new FinalizeResultsQueryRunner(
-        toolChest.postMergeQueryDecoration(
-            toolChest.mergeResults(
-                toolChest.preMergeQueryDecoration(
-                    new QueryRunner<T>()
-                    {
-                      @Override
-                      public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
-                      {
-                        List<TimelineObjectHolder> segments = Lists.newArrayList();
-                        for (Interval interval : query.getIntervals()) {
-                          segments.addAll(timeline.lookup(interval));
-                        }
-                        List<Sequence<T>> sequences = Lists.newArrayList();
-                        for (TimelineObjectHolder<String, Segment> holder : toolChest.filterSegments(query, segments)) {
-                          Segment segment = holder.getObject().getChunk(0).getObject();
-                          Query running = query.withQuerySegmentSpec(
-                              new SpecificSegmentSpec(
-                                  new SegmentDescriptor(
-                                      holder.getInterval(),
-                                      holder.getVersion(),
-                                      0
-                                  )
-                              )
-                          );
-                          sequences.add(factory.createRunner(segment).run(running, responseContext));
-                        }
-                        return new MergeSequence<>(query.getResultOrdering(), Sequences.simple(sequences));
-                      }
-                    }
-                )
-            )
-        ),
-        toolChest
-    );
+    return new FluentQueryRunnerBuilder<T>(toolChest)
+        .create(
+            new QueryRunner<T>()
+            {
+              @Override
+              public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
+              {
+                List<TimelineObjectHolder> segments = Lists.newArrayList();
+                for (Interval interval : query.getIntervals()) {
+                  segments.addAll(timeline.lookup(interval));
+                }
+                List<Sequence<T>> sequences = Lists.newArrayList();
+                for (TimelineObjectHolder<String, Segment> holder : toolChest.filterSegments(query, segments)) {
+                  Segment segment = holder.getObject().getChunk(0).getObject();
+                  Query running = query.withQuerySegmentSpec(
+                      new SpecificSegmentSpec(
+                          new SegmentDescriptor(
+                              holder.getInterval(),
+                              holder.getVersion(),
+                              0
+                          )
+                      )
+                  );
+                  sequences.add(factory.createRunner(segment).run(running, responseContext));
+                }
+                return new MergeSequence<>(query.getResultOrdering(), Sequences.simple(sequences));
+              }
+            }
+        )
+        .applyPreMergeDecoration()
+        .mergeResults()
+        .applyPostMergeDecoration();
   }
 
   public static IntervalChunkingQueryRunnerDecorator NoopIntervalChunkingQueryRunnerDecorator()

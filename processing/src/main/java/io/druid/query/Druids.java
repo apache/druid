@@ -32,6 +32,7 @@ import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.InDimFilter;
 import io.druid.query.filter.NoopDimFilter;
 import io.druid.query.filter.NotDimFilter;
 import io.druid.query.filter.OrDimFilter;
@@ -44,6 +45,7 @@ import io.druid.query.search.search.FragmentSearchQuerySpec;
 import io.druid.query.search.search.InsensitiveContainsSearchQuerySpec;
 import io.druid.query.search.search.SearchQuery;
 import io.druid.query.search.search.SearchQuerySpec;
+import io.druid.query.search.search.SearchSortSpec;
 import io.druid.query.select.PagingSpec;
 import io.druid.query.select.SelectQuery;
 import io.druid.query.spec.LegacySegmentSpec;
@@ -161,9 +163,9 @@ public class Druids
 
     public OrDimFilterBuilder fields(String dimensionName, String value, String... values)
     {
-      fields = Lists.<DimFilter>newArrayList(new SelectorDimFilter(dimensionName, value));
+      fields = Lists.<DimFilter>newArrayList(new SelectorDimFilter(dimensionName, value, null));
       for (String val : values) {
-        fields.add(new SelectorDimFilter(dimensionName, val));
+        fields.add(new SelectorDimFilter(dimensionName, val, null));
       }
       return this;
     }
@@ -254,7 +256,7 @@ public class Druids
 
     public SelectorDimFilter build()
     {
-      return new SelectorDimFilter(dimension, value);
+      return new SelectorDimFilter(dimension, value, null);
     }
 
     public SelectorDimFilterBuilder copy(SelectorDimFilterBuilder builder)
@@ -457,17 +459,13 @@ public class Druids
 
     public TimeseriesQueryBuilder filters(String dimensionName, String value)
     {
-      dimFilter = new SelectorDimFilter(dimensionName, value);
+      dimFilter = new SelectorDimFilter(dimensionName, value, null);
       return this;
     }
 
     public TimeseriesQueryBuilder filters(String dimensionName, String value, String... values)
     {
-      List<DimFilter> fields = Lists.<DimFilter>newArrayList(new SelectorDimFilter(dimensionName, value));
-      for (String val : values) {
-        fields.add(new SelectorDimFilter(dimensionName, val));
-      }
-      dimFilter = new OrDimFilter(fields);
+      dimFilter = new InDimFilter(dimensionName, Lists.asList(value, values), null);
       return this;
     }
 
@@ -547,6 +545,7 @@ public class Druids
     private QuerySegmentSpec querySegmentSpec;
     private List<DimensionSpec> dimensions;
     private SearchQuerySpec querySpec;
+    private SearchSortSpec sortSpec;
     private Map<String, Object> context;
 
     public SearchQueryBuilder()
@@ -571,7 +570,7 @@ public class Druids
           querySegmentSpec,
           dimensions,
           querySpec,
-          null,
+          sortSpec,
           context
       );
     }
@@ -616,17 +615,13 @@ public class Druids
 
     public SearchQueryBuilder filters(String dimensionName, String value)
     {
-      dimFilter = new SelectorDimFilter(dimensionName, value);
+      dimFilter = new SelectorDimFilter(dimensionName, value, null);
       return this;
     }
 
     public SearchQueryBuilder filters(String dimensionName, String value, String... values)
     {
-      List<DimFilter> fields = Lists.<DimFilter>newArrayList(new SelectorDimFilter(dimensionName, value));
-      for (String val : values) {
-        fields.add(new SelectorDimFilter(dimensionName, val));
-      }
-      dimFilter = new OrDimFilter(fields);
+      dimFilter = new InDimFilter(dimensionName, Lists.asList(value, values), null);
       return this;
     }
 
@@ -733,6 +728,12 @@ public class Druids
     public SearchQueryBuilder fragments(List<String> q)
     {
       return fragments(q, false);
+    }
+
+    public SearchQueryBuilder sortSpec(SearchSortSpec sortSpec)
+    {
+      this.sortSpec = sortSpec;
+      return this;
     }
 
     public SearchQueryBuilder fragments(List<String> q, boolean caseSensitive)
@@ -1158,17 +1159,13 @@ public class Druids
 
     public SelectQueryBuilder filters(String dimensionName, String value)
     {
-      dimFilter = new SelectorDimFilter(dimensionName, value);
+      dimFilter = new SelectorDimFilter(dimensionName, value, null);
       return this;
     }
 
     public SelectQueryBuilder filters(String dimensionName, String value, String... values)
     {
-      List<DimFilter> fields = Lists.<DimFilter>newArrayList(new SelectorDimFilter(dimensionName, value));
-      for (String val : values) {
-        fields.add(new SelectorDimFilter(dimensionName, val));
-      }
-      dimFilter = new OrDimFilter(fields);
+      dimFilter = new InDimFilter(dimensionName, Lists.asList(value, values), null);
       return this;
     }
 

@@ -98,6 +98,14 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
    */
   protected abstract String getSerialType();
 
+  /**
+   * Returns the value that should be passed to statement.setFetchSize to ensure results
+   * are streamed back from the database instead of fetching the entire result set in memory.
+   *
+   * @return optimal fetch size to stream results back
+   */
+  protected abstract int getStreamingFetchSize();
+
   public String getValidationQuery() { return "SELECT 1"; }
 
   public abstract boolean tableExists(Handle handle, final String tableName);
@@ -209,6 +217,25 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
                 + "  payload %2$s NOT NULL,\n"
                 + "  PRIMARY KEY (id),\n"
                 + "  UNIQUE (sequence_name_prev_id_sha1)\n"
+                + ")",
+                tableName, getPayloadType()
+            )
+        )
+    );
+  }
+
+  public void createDataSourceTable(final String tableName)
+  {
+    createTable(
+        tableName,
+        ImmutableList.of(
+            String.format(
+                "CREATE TABLE %1$s (\n"
+                + "  dataSource VARCHAR(255) NOT NULL,\n"
+                + "  created_date VARCHAR(255) NOT NULL,\n"
+                + "  commit_metadata_payload %2$s NOT NULL,\n"
+                + "  commit_metadata_sha1 VARCHAR(255) NOT NULL,\n"
+                + "  PRIMARY KEY (dataSource)\n"
                 + ")",
                 tableName, getPayloadType()
             )
@@ -390,6 +417,13 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
 
   public abstract DBI getDBI();
 
+  public void createDataSourceTable()
+  {
+    if (config.get().isCreateTables()) {
+      createDataSourceTable(tablesConfigSupplier.get().getDataSourceTable());
+    }
+  }
+
   @Override
   public void createPendingSegmentsTable()
   {
@@ -442,33 +476,45 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       final String key
   )
   {
-    final String selectStatement = String.format("SELECT %s FROM %s WHERE %s = :key", valueColumn,
-                                                 tableName, keyColumn
-    );
-
     return getDBI().withHandle(
         new HandleCallback<byte[]>()
         {
           @Override
           public byte[] withHandle(Handle handle) throws Exception
           {
-            List<byte[]> matched = handle.createQuery(selectStatement)
-                                         .bind("key", key)
-                                         .map(ByteArrayMapper.FIRST)
-                                         .list();
-
-            if (matched.isEmpty()) {
-              return null;
-            }
-
-            if (matched.size() > 1) {
-              throw new ISE("Error! More than one matching entry[%d] found for [%s]?!", matched.size(), key);
-            }
-
-            return matched.get(0);
+            return lookupWithHandle(handle, tableName, keyColumn, valueColumn, key);
           }
         }
     );
+  }
+
+  public byte[] lookupWithHandle(
+      final Handle handle,
+      final String tableName,
+      final String keyColumn,
+      final String valueColumn,
+      final String key
+  )
+  {
+    final String selectStatement = String.format(
+        "SELECT %s FROM %s WHERE %s = :key", valueColumn,
+        tableName, keyColumn
+    );
+
+    List<byte[]> matched = handle.createQuery(selectStatement)
+                                 .bind("key", key)
+                                 .map(ByteArrayMapper.FIRST)
+                                 .list();
+
+    if (matched.isEmpty()) {
+      return null;
+    }
+
+    if (matched.size() > 1) {
+      throw new ISE("Error! More than one matching entry[%d] found for [%s]?!", matched.size(), key);
+    }
+
+    return matched.get(0);
   }
 
   public MetadataStorageConnectorConfig getConfig() { return config.get(); }

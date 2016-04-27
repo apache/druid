@@ -43,7 +43,7 @@ public class AvroStreamInputRowParser implements ByteBufferInputRowParser
   )
   {
     this.parseSpec = parseSpec;
-    this.dimensions = parseSpec.getDimensionsSpec().getDimensions();
+    this.dimensions = parseSpec.getDimensionsSpec().getDimensionNames();
     this.avroBytesDecoder = avroBytesDecoder;
   }
 

@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.metamx.common.StringUtils;
+import io.druid.query.extraction.ExtractionFn;
+import io.druid.segment.filter.BoundFilter;
 
 import java.nio.ByteBuffer;
 
@@ -34,6 +36,7 @@ public class BoundDimFilter implements DimFilter
   private final boolean lowerStrict;
   private final boolean upperStrict;
   private final boolean alphaNumeric;
+  private final ExtractionFn extractionFn;
 
   @JsonCreator
   public BoundDimFilter(
@@ -42,7 +45,8 @@ public class BoundDimFilter implements DimFilter
       @JsonProperty("upper") String upper,
       @JsonProperty("lowerStrict") Boolean lowerStrict,
       @JsonProperty("upperStrict") Boolean upperStrict,
-      @JsonProperty("alphaNumeric") Boolean alphaNumeric
+      @JsonProperty("alphaNumeric") Boolean alphaNumeric,
+      @JsonProperty("extractionFn") ExtractionFn extractionFn
   )
   {
     this.dimension = Preconditions.checkNotNull(dimension, "dimension can not be null");
@@ -52,6 +56,7 @@ public class BoundDimFilter implements DimFilter
     this.lowerStrict = (lowerStrict == null) ? false : lowerStrict;
     this.upperStrict = (upperStrict == null) ? false : upperStrict;
     this.alphaNumeric = (alphaNumeric == null) ? false : alphaNumeric;
+    this.extractionFn = extractionFn;
   }
 
   @JsonProperty
@@ -90,6 +95,22 @@ public class BoundDimFilter implements DimFilter
     return alphaNumeric;
   }
 
+  public boolean hasLowerBound()
+  {
+    return lower != null;
+  }
+
+  public boolean hasUpperBound()
+  {
+    return upper != null;
+  }
+
+  @JsonProperty
+  public ExtractionFn getExtractionFn()
+  {
+    return extractionFn;
+  }
+
   @Override
   public byte[] getCacheKey()
   {
@@ -107,11 +128,14 @@ public class BoundDimFilter implements DimFilter
     byte upperStrictByte = (this.isUpperStrict() == false) ? 0x0 : (byte) 1;
     byte AlphaNumericByte = (this.isAlphaNumeric() == false) ? 0x0 : (byte) 1;
 
+    byte[] extractionFnBytes = extractionFn == null ? new byte[0] : extractionFn.getCacheKey();
+
     ByteBuffer boundCacheBuffer = ByteBuffer.allocate(
-        8
+        9
         + dimensionBytes.length
         + upperBytes.length
         + lowerBytes.length
+        + extractionFnBytes.length
     );
     boundCacheBuffer.put(DimFilterCacheHelper.BOUND_CACHE_ID)
                     .put(boundType)
@@ -123,7 +147,9 @@ public class BoundDimFilter implements DimFilter
                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
                     .put(upperBytes)
                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
-                    .put(lowerBytes);
+                    .put(lowerBytes)
+                    .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                    .put(extractionFnBytes);
     return boundCacheBuffer.array();
   }
 
@@ -134,12 +160,18 @@ public class BoundDimFilter implements DimFilter
   }
 
   @Override
+  public Filter toFilter()
+  {
+    return new BoundFilter(this);
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
       return true;
     }
-    if (!(o instanceof BoundDimFilter)) {
+    if (o == null || getClass() != o.getClass()) {
       return false;
     }
 
@@ -160,7 +192,12 @@ public class BoundDimFilter implements DimFilter
     if (getUpper() != null ? !getUpper().equals(that.getUpper()) : that.getUpper() != null) {
       return false;
     }
-    return !(getLower() != null ? !getLower().equals(that.getLower()) : that.getLower() != null);
+    if (getLower() != null ? !getLower().equals(that.getLower()) : that.getLower() != null) {
+      return false;
+    }
+    return getExtractionFn() != null
+           ? getExtractionFn().equals(that.getExtractionFn())
+           : that.getExtractionFn() == null;
 
   }
 
@@ -173,6 +210,7 @@ public class BoundDimFilter implements DimFilter
     result = 31 * result + (isLowerStrict() ? 1 : 0);
     result = 31 * result + (isUpperStrict() ? 1 : 0);
     result = 31 * result + (isAlphaNumeric() ? 1 : 0);
+    result = 31 * result + (getExtractionFn() != null ? getExtractionFn().hashCode() : 0);
     return result;
   }
 }

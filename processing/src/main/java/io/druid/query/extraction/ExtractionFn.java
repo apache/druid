@@ -21,6 +21,8 @@ package io.druid.query.extraction;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import io.druid.query.lookup.LookupExtractionFn;
+import io.druid.query.lookup.RegisteredLookupExtractionFn;
 
 /**
  */
@@ -34,6 +36,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
     @JsonSubTypes.Type(name = "timeFormat", value = TimeFormatExtractionFn.class),
     @JsonSubTypes.Type(name = "identity", value = IdentityExtractionFn.class),
     @JsonSubTypes.Type(name = "lookup", value = LookupExtractionFn.class),
+    @JsonSubTypes.Type(name = "registeredLookup", value = RegisteredLookupExtractionFn.class),
     @JsonSubTypes.Type(name = "substring", value = SubstringDimExtractionFn.class),
     @JsonSubTypes.Type(name = "cascade", value = CascadeExtractionFn.class),
     @JsonSubTypes.Type(name = "stringFormat", value = StringFormatExtractionFn.class),
@@ -58,7 +61,7 @@ public interface ExtractionFn
   public byte[] getCacheKey();
 
   /**
-   * The "extraction" function.  This should map a value into some other String value.
+   * The "extraction" function.  This should map an Object into some String value.
    * <p>
    * In order to maintain the "null and empty string are equivalent" semantics that Druid provides, the
    * empty string is considered invalid output for this method and should instead return null.  This is
@@ -71,8 +74,28 @@ public interface ExtractionFn
    */
   public String apply(Object value);
 
+  /**
+   * The "extraction" function.  This should map a String value into some other String value.
+   * <p>
+   * Like {@link #apply(Object)}, the empty string is considered invalid output for this method and it should
+   * instead return null.
+   *
+   * @param value the original value of the dimension
+   *
+   * @return a value that should be used instead of the original
+   */
   public String apply(String value);
 
+  /**
+   * The "extraction" function.  This should map a long value into some String value.
+   * <p>
+   * Like {@link #apply(Object)}, the empty string is considered invalid output for this method and it should
+   * instead return null.
+   *
+   * @param value the original value of the dimension
+   *
+   * @return a value that should be used instead of the original
+   */
   public String apply(long value);
 
   /**
