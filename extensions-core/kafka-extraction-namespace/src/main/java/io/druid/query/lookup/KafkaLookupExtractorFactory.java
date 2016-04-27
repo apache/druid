@@ -82,7 +82,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   private final String factoryId = UUID.randomUUID().toString();
   private final AtomicReference<Map<String, String>> mapRef = new AtomicReference<>(null);
   private final AtomicBoolean started = new AtomicBoolean(false);
-  
+
   private volatile ListenableFuture<?> future = null;
 
   @JsonProperty
@@ -152,7 +152,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     synchronized (started) {
       if (started.get()) {
         LOG.warn("Already started, not starting again");
-        return false;
+        return started.get();
       }
       if (executorService.isShutdown()) {
         LOG.warn("Already shut down, not starting again");
@@ -296,7 +296,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     synchronized (started) {
       if (!started.get() || executorService.isShutdown()) {
         LOG.info("Already shutdown, ignoring");
-        return true;
+        return !started.get();
       }
       started.set(false);
       executorService.shutdownNow();
