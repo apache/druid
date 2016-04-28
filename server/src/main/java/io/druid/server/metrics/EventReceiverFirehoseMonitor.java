@@ -28,11 +28,9 @@ import com.metamx.metrics.AbstractMonitor;
 import com.metamx.metrics.KeyedDiff;
 import com.metamx.metrics.MonitorUtils;
 import io.druid.query.DruidMetrics;
-import io.druid.segment.realtime.firehose.EventReceiverFirehoseFactory;
 
 import java.util.Map;
 import java.util.Properties;
-import java.util.concurrent.atomic.AtomicLong;
 
 public class EventReceiverFirehoseMonitor extends AbstractMonitor
 {

@@ -25,6 +25,11 @@ import io.druid.client.CoordinatorServerView;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.indexing.IndexingServiceClient;
+import io.druid.server.security.Access;
+import io.druid.server.security.Action;
+import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthorizationInfo;
+import io.druid.server.security.Resource;
 import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
@@ -32,6 +37,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -47,10 +53,12 @@ public class DatasourcesResourceTest
   private DruidServer server;
   private List<DruidDataSource> listDataSources;
   private List<DataSegment> dataSegmentList;
+  private HttpServletRequest request;
 
   @Before
   public void setUp()
   {
+    request = EasyMock.createStrictMock(HttpServletRequest.class);
     inventoryView = EasyMock.createStrictMock(CoordinatorServerView.class);
     server = EasyMock.createStrictMock(DruidServer.class);
     dataSegmentList = new ArrayList<>();
@@ -94,8 +102,12 @@ public class DatasourcesResourceTest
         )
     );
     listDataSources = new ArrayList<>();
-    listDataSources.add(new DruidDataSource("datasource1", new HashMap()).addSegment("part1", dataSegmentList.get(0)));
-    listDataSources.add(new DruidDataSource("datasource2", new HashMap()).addSegment("part1", dataSegmentList.get(1)));
+    listDataSources.add(
+        new DruidDataSource("datasource1", new HashMap()).addSegment("part1", dataSegmentList.get(0))
+    );
+    listDataSources.add(
+        new DruidDataSource("datasource2", new HashMap()).addSegment("part1", dataSegmentList.get(1))
+    );
   }
 
   @Test
@@ -108,8 +120,8 @@ public class DatasourcesResourceTest
         ImmutableList.of(server)
     ).atLeastOnce();
     EasyMock.replay(inventoryView, server);
-    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null);
-    Response response = datasourcesResource.getQueryableDataSources("full", null);
+    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null, new AuthConfig());
+    Response response = datasourcesResource.getQueryableDataSources("full", null, request);
     Set<DruidDataSource> result = (Set<DruidDataSource>) response.getEntity();
     DruidDataSource[] resultantDruidDataSources = new DruidDataSource[result.size()];
     result.toArray(resultantDruidDataSources);
@@ -117,13 +129,60 @@ public class DatasourcesResourceTest
     Assert.assertEquals(2, resultantDruidDataSources.length);
     Assert.assertArrayEquals(listDataSources.toArray(), resultantDruidDataSources);
 
-    response = datasourcesResource.getQueryableDataSources(null, null);
+    response = datasourcesResource.getQueryableDataSources(null, null, request);
     List<String> result1 = (List<String>) response.getEntity();
     Assert.assertEquals(200, response.getStatus());
     Assert.assertEquals(2, result1.size());
     Assert.assertTrue(result1.contains("datasource1"));
     Assert.assertTrue(result1.contains("datasource2"));
     EasyMock.verify(inventoryView, server);
+  }
+
+  @Test
+  public void testSecuredGetFullQueryableDataSources() throws Exception
+  {
+    EasyMock.expect(server.getDataSources()).andReturn(
+        ImmutableList.of(listDataSources.get(0), listDataSources.get(1))
+    ).atLeastOnce();
+    EasyMock.expect(inventoryView.getInventory()).andReturn(
+        ImmutableList.of(server)
+    ).atLeastOnce();
+    EasyMock.expect(request.getAttribute(AuthConfig.DRUID_AUTH_TOKEN)).andReturn(
+        new AuthorizationInfo()
+        {
+          @Override
+          public Access isAuthorized(
+              Resource resource, Action action
+          )
+          {
+            if (resource.getName().equals("datasource1")) {
+              return new Access(true);
+            } else {
+              return new Access(false);
+            }
+          }
+        }
+    ).times(2);
+    EasyMock.replay(inventoryView, server, request);
+
+    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null, new AuthConfig(true));
+    Response response = datasourcesResource.getQueryableDataSources("full", null, request);
+    Set<DruidDataSource> result = (Set<DruidDataSource>) response.getEntity();
+    DruidDataSource[] resultantDruidDataSources = new DruidDataSource[result.size()];
+    result.toArray(resultantDruidDataSources);
+
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(1, resultantDruidDataSources.length);
+    Assert.assertArrayEquals(listDataSources.subList(0, 1).toArray(), resultantDruidDataSources);
+
+    response = datasourcesResource.getQueryableDataSources(null, null, request);
+    List<String> result1 = (List<String>) response.getEntity();
+
+    Assert.assertEquals(200, response.getStatus());
+    Assert.assertEquals(1, result1.size());
+    Assert.assertTrue(result1.contains("datasource1"));
+
+    EasyMock.verify(inventoryView, server, request);
   }
 
   @Test
@@ -145,8 +204,8 @@ public class DatasourcesResourceTest
     ).atLeastOnce();
 
     EasyMock.replay(inventoryView, server);
-    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null);
-    Response response = datasourcesResource.getQueryableDataSources(null, "simple");
+    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null, new AuthConfig());
+    Response response = datasourcesResource.getQueryableDataSources(null, "simple", request);
     Assert.assertEquals(200, response.getStatus());
     List<Map<String, Object>> results = (List<Map<String, Object>>) response.getEntity();
     int index = 0;
@@ -172,7 +231,7 @@ public class DatasourcesResourceTest
     ).atLeastOnce();
 
     EasyMock.replay(inventoryView, server);
-    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null);
+    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null, new AuthConfig());
     Response response = datasourcesResource.getTheDataSource("datasource1", "full");
     DruidDataSource result = (DruidDataSource) response.getEntity();
     Assert.assertEquals(200, response.getStatus());
@@ -189,7 +248,7 @@ public class DatasourcesResourceTest
     ).atLeastOnce();
 
     EasyMock.replay(inventoryView, server);
-    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null);
+    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null, new AuthConfig());
     Assert.assertEquals(204, datasourcesResource.getTheDataSource("none", null).getStatus());
     EasyMock.verify(inventoryView, server);
   }
@@ -211,7 +270,7 @@ public class DatasourcesResourceTest
     ).atLeastOnce();
 
     EasyMock.replay(inventoryView, server);
-    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null);
+    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null, new AuthConfig());
     Response response = datasourcesResource.getTheDataSource("datasource1", null);
     Assert.assertEquals(200, response.getStatus());
     Map<String, Map<String, Object>> result = (Map<String, Map<String, Object>>) response.getEntity();
@@ -250,7 +309,7 @@ public class DatasourcesResourceTest
     ).atLeastOnce();
 
     EasyMock.replay(inventoryView, server, server2, server3);
-    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null);
+    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null, new AuthConfig());
     Response response = datasourcesResource.getTheDataSource("datasource1", null);
     Assert.assertEquals(200, response.getStatus());
     Map<String, Map<String, Object>> result = (Map<String, Map<String, Object>>) response.getEntity();
@@ -281,7 +340,7 @@ public class DatasourcesResourceTest
     List<Interval> expectedIntervals = new ArrayList<>();
     expectedIntervals.add(new Interval("2010-01-22T00:00:00.000Z/2010-01-23T00:00:00.000Z"));
     expectedIntervals.add(new Interval("2010-01-01T00:00:00.000Z/2010-01-02T00:00:00.000Z"));
-    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null);
+    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null, new AuthConfig());
 
     Response response = datasourcesResource.getSegmentDataSourceIntervals("invalidDataSource", null, null);
     Assert.assertEquals(response.getEntity(), null);
@@ -328,7 +387,7 @@ public class DatasourcesResourceTest
     ).atLeastOnce();
     EasyMock.replay(inventoryView);
 
-    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null);
+    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, null, new AuthConfig());
     Response response = datasourcesResource.getSegmentDataSourceSpecificInterval(
         "invalidDataSource",
         "2010-01-01/P1D",
@@ -395,7 +454,7 @@ public class DatasourcesResourceTest
     EasyMock.expectLastCall().once();
     EasyMock.replay(indexingServiceClient, server);
 
-    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, indexingServiceClient);
+    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, indexingServiceClient, new AuthConfig());
     Response response = datasourcesResource.deleteDataSourceSpecificInterval("datasource1", interval);
 
     Assert.assertEquals(200, response.getStatus());
@@ -407,7 +466,7 @@ public class DatasourcesResourceTest
   public void testDeleteDataSource() {
     IndexingServiceClient indexingServiceClient = EasyMock.createStrictMock(IndexingServiceClient.class);
     EasyMock.replay(indexingServiceClient, server);
-    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, indexingServiceClient);
+    DatasourcesResource datasourcesResource = new DatasourcesResource(inventoryView, null, indexingServiceClient, new AuthConfig());
     Response response = datasourcesResource.deleteDataSource("datasource", "true", "???");
     Assert.assertEquals(400, response.getStatus());
     Assert.assertNotNull(response.getEntity());

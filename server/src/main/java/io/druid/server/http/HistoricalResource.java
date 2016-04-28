@@ -20,7 +20,9 @@
 package io.druid.server.http;
 
 import com.google.common.collect.ImmutableMap;
+import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.server.coordination.ZkCoordinator;
+import io.druid.server.http.security.StateResourceFilter;
 
 import javax.inject.Inject;
 import javax.ws.rs.GET;
@@ -30,6 +32,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 @Path("/druid/historical/v1")
+@ResourceFilters(StateResourceFilter.class)
 public class HistoricalResource
 {
   private final ZkCoordinator coordinator;
