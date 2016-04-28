@@ -33,6 +33,12 @@ The consumer properties `group.id` and `auto.offset.reset` CANNOT be set in `kaf
 
 See [lookups](../../querying/lookups.html) for how to configure and use lookups.
 
+# Limitations
+
+Currently the Kafka lookup extractor feeds the entire kafka stream into a local cache. If you are using OnHeap caching, this can easily clobber your java heap if the kafka stream spews a lot of unique keys.
+OffHeap caching should alleviate these concerns, but there is still a limit to the quantity of data that can be stored.
+There is currently no eviction policy.
+
 ## Testing the Kafka rename functionality
 
 To test this setup, you can send key/value pairs to a kafka stream via the following producer console:
