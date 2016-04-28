@@ -25,6 +25,7 @@ import com.yahoo.sketches.theta.Sketch;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 
+import java.nio.ByteBuffer;
 import java.util.Collections;
 import java.util.List;
 
@@ -104,7 +105,7 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
   {
     return isInputThetaSketch;
   }
-  
+
   @JsonProperty
   public Integer getErrorBoundsStdDev()
   {
@@ -126,9 +127,9 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
       Sketch sketch = (Sketch) object;
       if (errorBoundsStdDev != null) {
         SketchEstimateWithErrorBounds result = new SketchEstimateWithErrorBounds(
-            sketch.getEstimate(), 
-            sketch.getUpperBound(errorBoundsStdDev), 
-            sketch.getLowerBound(errorBoundsStdDev), 
+            sketch.getEstimate(),
+            sketch.getUpperBound(errorBoundsStdDev),
+            sketch.getLowerBound(errorBoundsStdDev),
             errorBoundsStdDev);
         return result;
       } else {
@@ -147,6 +148,17 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
     } else {
       return SketchModule.THETA_SKETCH_BUILD_AGG;
     }
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    final byte[] superCacheKey = super.getCacheKey();
+
+    return ByteBuffer.allocate(superCacheKey.length + 1)
+                     .put(superCacheKey)
+                     .put(isInputThetaSketch ? (byte) 1 : (byte) 0)
+                     .array();
   }
 
   @Override
