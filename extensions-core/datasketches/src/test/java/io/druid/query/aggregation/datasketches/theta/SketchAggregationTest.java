@@ -46,6 +46,7 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -382,6 +383,38 @@ public class SketchAggregationTest
             )
         )
     );
+  }
+
+  @Test
+  public void testCacheKey()
+  {
+    final SketchMergeAggregatorFactory factory1 = new SketchMergeAggregatorFactory(
+        "name",
+        "fieldName",
+        16,
+        null,
+        null,
+        null
+    );
+    final SketchMergeAggregatorFactory factory2 = new SketchMergeAggregatorFactory(
+        "name",
+        "fieldName",
+        16,
+        null,
+        null,
+        null
+    );
+    final SketchMergeAggregatorFactory factory3 = new SketchMergeAggregatorFactory(
+        "name",
+        "fieldName",
+        32,
+        null,
+        null,
+        null
+    );
+
+    Assert.assertTrue(Arrays.equals(factory1.getCacheKey(), factory2.getCacheKey()));
+    Assert.assertFalse(Arrays.equals(factory1.getCacheKey(), factory3.getCacheKey()));
   }
 
   private void assertPostAggregatorSerde(PostAggregator agg) throws Exception
