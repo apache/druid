@@ -588,7 +588,11 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                 String taskId = taskRunnerWorkItem.getTaskId();
                 if (tryAssignTasks.putIfAbsent(taskId, taskId) == null) {
                   try {
-                    if (tryAssignTask(pendingTaskPayloads.get(taskId), taskRunnerWorkItem)) {
+                    //this can still be null due to race from explicit task shutdown request
+                    //or if another thread steals and completes this task right after this thread makes copy
+                    //of pending tasks. See https://github.com/druid-io/druid/issues/2842 .
+                    Task task = pendingTaskPayloads.get(taskId);
+                    if (task != null && tryAssignTask(task, taskRunnerWorkItem)) {
                       pendingTaskPayloads.remove(taskId);
                     }
                   }
@@ -597,7 +601,9 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                        .addData("taskId", taskRunnerWorkItem.getTaskId())
                        .emit();
                     RemoteTaskRunnerWorkItem workItem = pendingTasks.remove(taskId);
-                    taskComplete(workItem, null, TaskStatus.failure(taskId));
+                    if (workItem != null) {
+                      taskComplete(workItem, null, TaskStatus.failure(taskId));
+                    }
                   }
                   finally {
                     tryAssignTasks.remove(taskId);
@@ -677,8 +683,9 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       }
 
       ZkWorker assignedWorker = null;
+      Optional<ImmutableWorkerInfo> immutableZkWorker = null;
       try {
-        final Optional<ImmutableWorkerInfo> immutableZkWorker = strategy.findWorkerForTask(
+        immutableZkWorker = strategy.findWorkerForTask(
             config,
             ImmutableMap.copyOf(
                 Maps.transformEntries(
@@ -708,22 +715,38 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
             task
         );
 
-        if (immutableZkWorker.isPresent()
-            &&
-            workersWithUnacknowledgedTask.putIfAbsent(immutableZkWorker.get().getWorker().getHost(), task.getId())
-            == null) {
-          assignedWorker = zkWorkers.get(immutableZkWorker.get().getWorker().getHost());
-          return announceTask(task, assignedWorker, taskRunnerWorkItem);
+        if (immutableZkWorker.isPresent()) {
+          if (workersWithUnacknowledgedTask.putIfAbsent(immutableZkWorker.get().getWorker().getHost(), task.getId())
+              == null) {
+            assignedWorker = zkWorkers.get(immutableZkWorker.get().getWorker().getHost());
+            return announceTask(task, assignedWorker, taskRunnerWorkItem);
+          } else {
+            log.debug(
+                "Lost race to run task [%s] on worker [%s]. Workers to ack tasks are [%s].",
+                task.getId(),
+                immutableZkWorker.get().getWorker().getHost(),
+                workersWithUnacknowledgedTask
+            );
+          }
+        } else {
+          log.debug(
+              "Unsuccessful task-assign attempt for task [%s] on workers [%s]. Workers to ack tasks are [%s].",
+              task.getId(),
+              zkWorkers.values(),
+              workersWithUnacknowledgedTask
+          );
         }
 
-        log.debug("Worker nodes %s do not have capacity to run any more tasks!", zkWorkers.values());
         return false;
       }
       finally {
         if (assignedWorker != null) {
           workersWithUnacknowledgedTask.remove(assignedWorker.getWorker().getHost());
-          // note that this is essential as a task might not get a worker because a worker was assigned another task.
-          // so this will ensure that other pending tasks are tried for assignment again.
+        }
+
+        if(immutableZkWorker.isPresent()) {
+          //if this attempt lost the race to run the task then there might be another worker available to try on.
+          //if this attempt won the race to run the task then other task might be able to use this worker now after task ack.
           runPendingTasks();
         }
       }
@@ -1195,5 +1218,11 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   RemoteTaskRunnerConfig getRemoteTaskRunnerConfig()
   {
     return config;
+  }
+
+  @VisibleForTesting
+  Map<String, String> getWorkersWithUnacknowledgedTask()
+  {
+    return workersWithUnacknowledgedTask;
   }
 }
