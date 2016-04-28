@@ -20,9 +20,13 @@
 package io.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Throwables;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.concurrent.Execs;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -31,9 +35,15 @@ import io.druid.query.SegmentDescriptor;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.NoopRequestLogger;
 import io.druid.server.metrics.NoopServiceEmitter;
+import io.druid.server.security.Access;
+import io.druid.server.security.Action;
+import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthorizationInfo;
+import io.druid.server.security.Resource;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
 import org.joda.time.Period;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -45,6 +55,8 @@ import javax.ws.rs.core.Response;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
 
 /**
  *
@@ -97,6 +109,9 @@ public class QueryResourceTest
 
   private static final ServiceEmitter noopServiceEmitter = new NoopServiceEmitter();
 
+  private QueryResource queryResource;
+  private QueryManager queryManager;
+
   @BeforeClass
   public static void staticSetup()
   {
@@ -106,9 +121,19 @@ public class QueryResourceTest
   @Before
   public void setup()
   {
-    EasyMock.expect(testServletRequest.getContentType()).andReturn(MediaType.APPLICATION_JSON);
+    EasyMock.expect(testServletRequest.getContentType()).andReturn(MediaType.APPLICATION_JSON).anyTimes();
     EasyMock.expect(testServletRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
-    EasyMock.replay(testServletRequest);
+    queryManager = new QueryManager();
+    queryResource = new QueryResource(
+        serverConfig,
+        jsonMapper,
+        jsonMapper,
+        testSegmentWalker,
+        new NoopServiceEmitter(),
+        new NoopRequestLogger(),
+        queryManager,
+        new AuthConfig()
+    );
   }
 
   private static final String simpleTimeSeriesQuery = "{\n"
@@ -129,42 +154,273 @@ public class QueryResourceTest
   @Test
   public void testGoodQuery() throws IOException
   {
-    QueryResource queryResource = new QueryResource(
-        serverConfig,
-        jsonMapper,
-        jsonMapper,
-        testSegmentWalker,
-        new NoopServiceEmitter(),
-        new NoopRequestLogger(),
-        new QueryManager()
-    );
-    Response respone = queryResource.doPost(
+    EasyMock.replay(testServletRequest);
+    Response response = queryResource.doPost(
         new ByteArrayInputStream(simpleTimeSeriesQuery.getBytes("UTF-8")),
         null /*pretty*/,
         testServletRequest
     );
-    Assert.assertNotNull(respone);
+    Assert.assertNotNull(response);
   }
 
   @Test
   public void testBadQuery() throws IOException
   {
+    EasyMock.replay(testServletRequest);
+    Response response = queryResource.doPost(
+        new ByteArrayInputStream("Meka Leka Hi Meka Hiney Ho".getBytes("UTF-8")),
+        null /*pretty*/,
+        testServletRequest
+    );
+    Assert.assertNotNull(response);
+    Assert.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+  }
 
-    QueryResource queryResource = new QueryResource(
+  @Test
+  public void testSecuredQuery() throws Exception
+  {
+    EasyMock.expect(testServletRequest.getAttribute(EasyMock.anyString())).andReturn(
+        new AuthorizationInfo()
+        {
+          @Override
+          public Access isAuthorized(
+              Resource resource, Action action
+          )
+          {
+            if (resource.getName().equals("allow")) {
+              return new Access(true);
+            } else {
+              return new Access(false);
+            }
+          }
+        }
+    ).times(2);
+    EasyMock.replay(testServletRequest);
+
+    queryResource = new QueryResource(
         serverConfig,
         jsonMapper,
         jsonMapper,
         testSegmentWalker,
         new NoopServiceEmitter(),
         new NoopRequestLogger(),
-        new QueryManager()
+        queryManager,
+        new AuthConfig(true)
     );
-    Response respone = queryResource.doPost(
-        new ByteArrayInputStream("Meka Leka Hi Meka Hiney Ho".getBytes("UTF-8")),
+
+    Response response = queryResource.doPost(
+        new ByteArrayInputStream(simpleTimeSeriesQuery.getBytes("UTF-8")),
         null /*pretty*/,
         testServletRequest
     );
-    Assert.assertNotNull(respone);
-    Assert.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), respone.getStatus());
+    Assert.assertEquals(Response.Status.FORBIDDEN.getStatusCode(), response.getStatus());
+
+    response = queryResource.doPost(
+        new ByteArrayInputStream("{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\"}".getBytes("UTF-8")),
+        null /*pretty*/,
+        testServletRequest
+    );
+
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+
+  }
+
+  @Test(timeout = 60_000L)
+  public void testSecuredGetServer() throws Exception
+  {
+    final CountDownLatch waitForCancellationLatch = new CountDownLatch(1);
+    final CountDownLatch waitFinishLatch = new CountDownLatch(2);
+    final CountDownLatch startAwaitLatch = new CountDownLatch(1);
+    final CountDownLatch cancelledCountDownLatch = new CountDownLatch(1);
+
+    EasyMock.expect(testServletRequest.getAttribute(EasyMock.anyString())).andReturn(
+        new AuthorizationInfo()
+        {
+          @Override
+          public Access isAuthorized(
+              Resource resource, Action action
+          )
+          {
+            // READ action corresponds to the query
+            // WRITE corresponds to cancellation of query
+            if (action.equals(Action.READ)) {
+              try {
+                waitForCancellationLatch.await();
+              }
+              catch (InterruptedException e) {
+                // When the query is cancelled the control will reach here,
+                // countdown the latch and rethrow the exception so that error response is returned for the query
+                cancelledCountDownLatch.countDown();
+                Throwables.propagate(e);
+              }
+              return new Access(true);
+            } else {
+              return new Access(true);
+            }
+          }
+        }
+    ).times(2);
+    EasyMock.replay(testServletRequest);
+
+    queryResource = new QueryResource(
+        serverConfig,
+        jsonMapper,
+        jsonMapper,
+        testSegmentWalker,
+        new NoopServiceEmitter(),
+        new NoopRequestLogger(),
+        queryManager,
+        new AuthConfig(true)
+    );
+
+    final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","
+                               + "\"context\":{\"queryId\":\"id_1\"}}";
+    ObjectMapper mapper = new DefaultObjectMapper();
+    Query query = mapper.readValue(queryString, Query.class);
+
+    ListenableFuture future = MoreExecutors.listeningDecorator(
+        Execs.singleThreaded("test_query_resource_%s")
+    ).submit(
+        new Runnable()
+        {
+          @Override
+          public void run()
+          {
+            try {
+              startAwaitLatch.countDown();
+              Response response = queryResource.doPost(
+                  new ByteArrayInputStream(queryString.getBytes("UTF-8")),
+                  null,
+                  testServletRequest
+              );
+
+              Assert.assertEquals(Response.Status.INTERNAL_SERVER_ERROR.getStatusCode(), response.getStatus());
+            }
+            catch (IOException e) {
+              Throwables.propagate(e);
+            }
+            waitFinishLatch.countDown();
+          }
+        }
+    );
+
+    queryManager.registerQuery(query, future);
+    startAwaitLatch.await();
+
+    Executors.newSingleThreadExecutor().submit(
+        new Runnable()
+        {
+          @Override
+          public void run()
+          {
+            Response response = queryResource.getServer("id_1", testServletRequest);
+            Assert.assertEquals(Response.Status.ACCEPTED.getStatusCode(), response.getStatus());
+            waitForCancellationLatch.countDown();
+            waitFinishLatch.countDown();
+          }
+        }
+    );
+    waitFinishLatch.await();
+    cancelledCountDownLatch.await();
+  }
+
+  @Test(timeout = 60_000L)
+  public void testDenySecuredGetServer() throws Exception
+  {
+    final CountDownLatch waitForCancellationLatch = new CountDownLatch(1);
+    final CountDownLatch waitFinishLatch = new CountDownLatch(2);
+    final CountDownLatch startAwaitLatch = new CountDownLatch(1);
+
+    EasyMock.expect(testServletRequest.getAttribute(EasyMock.anyString())).andReturn(
+        new AuthorizationInfo()
+        {
+          @Override
+          public Access isAuthorized(
+              Resource resource, Action action
+          )
+          {
+            // READ action corresponds to the query
+            // WRITE corresponds to cancellation of query
+            if (action.equals(Action.READ)) {
+              try {
+                waitForCancellationLatch.await();
+              }
+              catch (InterruptedException e) {
+                Throwables.propagate(e);
+              }
+              return new Access(true);
+            } else {
+              // Deny access to cancel the query
+              return new Access(false);
+            }
+          }
+        }
+    ).times(2);
+    EasyMock.replay(testServletRequest);
+
+    queryResource = new QueryResource(
+        serverConfig,
+        jsonMapper,
+        jsonMapper,
+        testSegmentWalker,
+        new NoopServiceEmitter(),
+        new NoopRequestLogger(),
+        queryManager,
+        new AuthConfig(true)
+    );
+
+    final String queryString = "{\"queryType\":\"timeBoundary\", \"dataSource\":\"allow\","
+                               + "\"context\":{\"queryId\":\"id_1\"}}";
+    ObjectMapper mapper = new DefaultObjectMapper();
+    Query query = mapper.readValue(queryString, Query.class);
+
+    ListenableFuture future = MoreExecutors.listeningDecorator(
+        Execs.singleThreaded("test_query_resource_%s")
+    ).submit(
+        new Runnable()
+        {
+          @Override
+          public void run()
+          {
+            try {
+              startAwaitLatch.countDown();
+              Response response = queryResource.doPost(
+                  new ByteArrayInputStream(queryString.getBytes("UTF-8")),
+                  null,
+                  testServletRequest
+              );
+              Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
+            }
+            catch (IOException e) {
+              Throwables.propagate(e);
+            }
+            waitFinishLatch.countDown();
+          }
+        }
+    );
+
+    queryManager.registerQuery(query, future);
+    startAwaitLatch.await();
+
+    Executors.newSingleThreadExecutor().submit(
+        new Runnable()
+        {
+          @Override
+          public void run()
+          {
+            Response response = queryResource.getServer("id_1", testServletRequest);
+            Assert.assertEquals(Response.Status.FORBIDDEN.getStatusCode(), response.getStatus());
+            waitForCancellationLatch.countDown();
+            waitFinishLatch.countDown();
+          }
+        }
+    );
+    waitFinishLatch.await();
+  }
+
+  @After
+  public void tearDown()
+  {
+    EasyMock.verify(testServletRequest);
   }
 }

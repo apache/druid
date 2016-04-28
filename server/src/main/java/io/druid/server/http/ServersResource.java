@@ -25,8 +25,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
+import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.client.DruidServer;
 import io.druid.client.InventoryView;
+import io.druid.server.http.security.StateResourceFilter;
 import io.druid.timeline.DataSegment;
 
 import javax.ws.rs.GET;
@@ -41,6 +43,7 @@ import java.util.Map;
 /**
  */
 @Path("/druid/coordinator/v1/servers")
+@ResourceFilters(StateResourceFilter.class)
 public class ServersResource
 {
   private static Map<String, Object> makeSimpleServer(DruidServer input)

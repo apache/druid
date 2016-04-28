@@ -57,6 +57,7 @@ import io.druid.guice.annotations.Client;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.guice.http.HttpClientModule;
+import io.druid.guice.security.DruidAuthModule;
 import io.druid.metadata.storage.derby.DerbyMetadataStorageDruidModule;
 import io.druid.server.initialization.EmitterModule;
 import io.druid.server.initialization.jetty.JettyServerModule;
@@ -318,7 +319,9 @@ public class Initialization
   {
     final ModuleList defaultModules = new ModuleList(baseInjector);
     defaultModules.addModules(
+        // New modules should be added after Log4jShutterDownerModule
         new Log4jShutterDownerModule(),
+        new DruidAuthModule(),
         new LifecycleModule(),
         EmitterModule.class,
         HttpClientModule.global(),
