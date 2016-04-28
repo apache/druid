@@ -37,7 +37,7 @@ import java.nio.ByteBuffer;
 @JsonTypeName("approxHistogramFold")
 public class ApproximateHistogramFoldingAggregatorFactory extends ApproximateHistogramAggregatorFactory
 {
-  private static final byte CACHE_TYPE_ID = 0x9;
+  private static final byte CACHE_TYPE_ID = 13;
 
   @JsonCreator
   public ApproximateHistogramFoldingAggregatorFactory(
