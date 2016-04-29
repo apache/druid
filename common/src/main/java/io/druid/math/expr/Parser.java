@@ -44,7 +44,7 @@ public class Parser
       if (!Modifier.isAbstract(clazz.getModifiers()) && Function.class.isAssignableFrom(clazz)) {
         try {
           Function function = (Function)clazz.newInstance();
-          functionMap.put(function.name(), function);
+          functionMap.put(function.name().toLowerCase(), function);
         }
         catch (Exception e) {
           log.info("failed to instantiate " + clazz.getName() + ".. ignoring", e);
