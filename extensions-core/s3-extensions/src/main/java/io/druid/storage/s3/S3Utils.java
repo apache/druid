@@ -91,7 +91,7 @@ public class S3Utils
       throws ServiceException
   {
     try {
-      s3Client.getObjectDetails(new S3Bucket(bucketName), objectKey);
+      s3Client.getObjectDetails(bucketName, objectKey);
     }
     catch (ServiceException e) {
       if (404 == e.getResponseCode()
