@@ -19,7 +19,7 @@
 
 package io.druid.timeline;
 
-import io.druid.timeline.DataSegmentUtils.SegmentElements;
+import io.druid.timeline.DataSegmentUtils.SegmentIdentifierParts;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
@@ -32,7 +32,7 @@ public class DataSegmentUtilsTest
   public void testBasic()
   {
     String datasource = "datasource";
-    SegmentElements desc = new SegmentElements(datasource, new Interval("2015-01-02/2015-01-03"), "ver", "0_0");
+    SegmentIdentifierParts desc = new SegmentIdentifierParts(datasource, new Interval("2015-01-02/2015-01-03"), "ver", "0_0");
     Assert.assertEquals("datasource_2015-01-02T00:00:00.000Z_2015-01-03T00:00:00.000Z_ver_0_0", desc.toString());
     Assert.assertEquals(desc, DataSegmentUtils.valueOf(datasource, desc.toString()));
 
@@ -40,7 +40,7 @@ public class DataSegmentUtilsTest
     Assert.assertEquals("datasource_2014-10-20T00:00:00.000Z_2014-10-21T00:00:00.000Z_ver_0_0", desc.toString());
     Assert.assertEquals(desc, DataSegmentUtils.valueOf(datasource, desc.toString()));
 
-    desc = new SegmentElements(datasource, new Interval("2015-01-02/2015-01-03"), "ver", null);
+    desc = new SegmentIdentifierParts(datasource, new Interval("2015-01-02/2015-01-03"), "ver", null);
     Assert.assertEquals("datasource_2015-01-02T00:00:00.000Z_2015-01-03T00:00:00.000Z_ver", desc.toString());
     Assert.assertEquals(desc, DataSegmentUtils.valueOf(datasource, desc.toString()));
 
@@ -48,7 +48,7 @@ public class DataSegmentUtilsTest
     Assert.assertEquals("datasource_2014-10-20T00:00:00.000Z_2014-10-21T00:00:00.000Z_ver", desc.toString());
     Assert.assertEquals(desc, DataSegmentUtils.valueOf(datasource, desc.toString()));
 
-    desc = new SegmentElements(datasource, new Interval("2015-01-02/2015-01-03"), null, null);
+    desc = new SegmentIdentifierParts(datasource, new Interval("2015-01-02/2015-01-03"), null, null);
     Assert.assertEquals("datasource_2015-01-02T00:00:00.000Z_2015-01-03T00:00:00.000Z", desc.toString());
     Assert.assertEquals(desc, DataSegmentUtils.valueOf(datasource, desc.toString()));
 
@@ -61,7 +61,7 @@ public class DataSegmentUtilsTest
   public void testDataSourceWithUnderscore1()
   {
     String datasource = "datasource_1";
-    SegmentElements desc = new SegmentElements(datasource, new Interval("2015-01-02/2015-01-03"), "ver", "0_0");
+    SegmentIdentifierParts desc = new SegmentIdentifierParts(datasource, new Interval("2015-01-02/2015-01-03"), "ver", "0_0");
     Assert.assertEquals("datasource_1_2015-01-02T00:00:00.000Z_2015-01-03T00:00:00.000Z_ver_0_0", desc.toString());
     Assert.assertEquals(desc, DataSegmentUtils.valueOf(datasource, desc.toString()));
 
@@ -69,7 +69,7 @@ public class DataSegmentUtilsTest
     Assert.assertEquals("datasource_1_2014-10-20T00:00:00.000Z_2014-10-21T00:00:00.000Z_ver_0_0", desc.toString());
     Assert.assertEquals(desc, DataSegmentUtils.valueOf(datasource, desc.toString()));
 
-    desc = new SegmentElements(datasource, new Interval("2015-01-02/2015-01-03"), "ver", null);
+    desc = new SegmentIdentifierParts(datasource, new Interval("2015-01-02/2015-01-03"), "ver", null);
     Assert.assertEquals("datasource_1_2015-01-02T00:00:00.000Z_2015-01-03T00:00:00.000Z_ver", desc.toString());
     Assert.assertEquals(desc, DataSegmentUtils.valueOf(datasource, desc.toString()));
 
@@ -77,7 +77,7 @@ public class DataSegmentUtilsTest
     Assert.assertEquals("datasource_1_2014-10-20T00:00:00.000Z_2014-10-21T00:00:00.000Z_ver", desc.toString());
     Assert.assertEquals(desc, DataSegmentUtils.valueOf(datasource, desc.toString()));
 
-    desc = new SegmentElements(datasource, new Interval("2015-01-02/2015-01-03"), null, null);
+    desc = new SegmentIdentifierParts(datasource, new Interval("2015-01-02/2015-01-03"), null, null);
     Assert.assertEquals("datasource_1_2015-01-02T00:00:00.000Z_2015-01-03T00:00:00.000Z", desc.toString());
     Assert.assertEquals(desc, DataSegmentUtils.valueOf(datasource, desc.toString()));
 
@@ -90,7 +90,7 @@ public class DataSegmentUtilsTest
   public void testDataSourceWithUnderscore2()
   {
     String dataSource = "datasource_2015-01-01T00:00:00.000Z";
-    SegmentElements desc = new SegmentElements(dataSource, new Interval("2015-01-02/2015-01-03"), "ver", "0_0");
+    SegmentIdentifierParts desc = new SegmentIdentifierParts(dataSource, new Interval("2015-01-02/2015-01-03"), "ver", "0_0");
     Assert.assertEquals(
         "datasource_2015-01-01T00:00:00.000Z_2015-01-02T00:00:00.000Z_2015-01-03T00:00:00.000Z_ver_0_0",
         desc.toString()
@@ -104,7 +104,7 @@ public class DataSegmentUtilsTest
     );
     Assert.assertEquals(desc, DataSegmentUtils.valueOf(dataSource, desc.toString()));
 
-    desc = new SegmentElements(dataSource, new Interval("2015-01-02/2015-01-03"), "ver", null);
+    desc = new SegmentIdentifierParts(dataSource, new Interval("2015-01-02/2015-01-03"), "ver", null);
     Assert.assertEquals(
         "datasource_2015-01-01T00:00:00.000Z_2015-01-02T00:00:00.000Z_2015-01-03T00:00:00.000Z_ver",
         desc.toString()
@@ -118,7 +118,7 @@ public class DataSegmentUtilsTest
     );
     Assert.assertEquals(desc, DataSegmentUtils.valueOf(dataSource, desc.toString()));
 
-    desc = new SegmentElements(dataSource, new Interval("2015-01-02/2015-01-03"), null, null);
+    desc = new SegmentIdentifierParts(dataSource, new Interval("2015-01-02/2015-01-03"), null, null);
     Assert.assertEquals(
         "datasource_2015-01-01T00:00:00.000Z_2015-01-02T00:00:00.000Z_2015-01-03T00:00:00.000Z",
         desc.toString()

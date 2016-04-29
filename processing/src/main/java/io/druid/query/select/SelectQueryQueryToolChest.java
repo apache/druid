@@ -269,7 +269,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
   @Override
   public <T extends LogicalSegment> List<T> filterSegments(SelectQuery query, List<T> segments)
   {
-    // this is safe (see ServerManager)
+    // at the point where this code is called, only one datasource should exist.
     String dataSource = Iterables.getOnlyElement(query.getDataSource().getNames());
 
     PagingSpec pagingSpec = query.getPagingSpec();

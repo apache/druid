@@ -19,8 +19,6 @@
 
 package io.druid.common.utils;
 
-import java.util.Iterator;
-
 /**
  */
 public class StringUtils extends com.metamx.common.StringUtils
@@ -47,43 +45,5 @@ public class StringUtils extends com.metamx.common.StringUtils
       }
     }
     return length;
-  }
-
-  // copied from commons.lang.StringUtils
-  public static String join(final Iterable<String> iterable, final String separator)
-  {
-    return join(iterable.iterator(), separator);
-  }
-
-  public static String join(final Iterator<String> iterator, final String separator)
-  {
-    // handle null, zero and one elements before building a buffer
-    if (iterator == null) {
-      return null;
-    }
-    if (!iterator.hasNext()) {
-      return EMPTY;
-    }
-    String first = iterator.next();
-    if (!iterator.hasNext()) {
-      return first;
-    }
-
-    // two or more elements
-    StringBuilder buf = new StringBuilder(256);
-    if (first != null) {
-      buf.append(first);
-    }
-
-    while (iterator.hasNext()) {
-      if (separator != null) {
-        buf.append(separator);
-      }
-      String obj = iterator.next();
-      if (obj != null) {
-        buf.append(obj);
-      }
-    }
-    return buf.toString();
   }
 }

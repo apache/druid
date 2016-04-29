@@ -48,33 +48,35 @@ public class DataSegmentUtils
   }
 
   // ignores shard spec
-  public static SegmentElements valueOf(String dataSource, String identifier)
+  public static SegmentIdentifierParts valueOf(String dataSource, String identifier)
   {
-    SegmentElements segmentDesc = parse(dataSource, identifier);
+    SegmentIdentifierParts segmentDesc = parse(dataSource, identifier);
     if (segmentDesc == null) {
       throw new IllegalArgumentException("Invalid identifier " + identifier);
     }
     return segmentDesc;
   }
 
-  private static SegmentElements parse(String dataSource, String identifier)
+  private static SegmentIdentifierParts parse(String dataSource, String identifier)
   {
-    if (!identifier.startsWith(dataSource + DataSegment.delimiter)) {
+    if (!identifier.startsWith(String.format("%s/", dataSource))) {
+      LOGGER.info("Invalid identifier %s", identifier);
       return null;
     }
     String remaining = identifier.substring(dataSource.length() + 1);
     String[] splits = remaining.split(DataSegment.delimiter);
-    if (splits.length < 2) {
+    if (splits.length < 3) {
+      LOGGER.info("Invalid identifier %s", identifier);
       return null;
     }
 
     DateTimeFormatter formatter = ISODateTimeFormat.dateTime();
     DateTime start = formatter.parseDateTime(splits[0]);
     DateTime end = formatter.parseDateTime(splits[1]);
-    String version = splits.length > 2 ? splits[2] : null;
+    String version = splits[2];
     String trail = splits.length > 3 ? join(splits, DataSegment.delimiter, 3, splits.length) : null;
 
-    return new SegmentElements(
+    return new SegmentIdentifierParts(
         dataSource,
         new Interval(start.getMillis(), end.getMillis()),
         version,
@@ -84,7 +86,7 @@ public class DataSegmentUtils
 
   public static String withInterval(final String dataSource, final String identifier, Interval newInterval)
   {
-    SegmentElements segmentDesc = DataSegmentUtils.parse(dataSource, identifier);
+    SegmentIdentifierParts segmentDesc = DataSegmentUtils.parse(dataSource, identifier);
     if (segmentDesc == null) {
       // happens for test segments which has invalid segment id.. ignore for now
       LOGGER.warn("Invalid segment identifier " + identifier);
@@ -93,14 +95,14 @@ public class DataSegmentUtils
     return segmentDesc.withInterval(newInterval).toString();
   }
 
-  static class SegmentElements
+  static class SegmentIdentifierParts
   {
     private final String dataSource;
     private final Interval interval;
     private final String version;
     private final String trail;
 
-    public SegmentElements(String dataSource, Interval interval, String version, String trail)
+    public SegmentIdentifierParts(String dataSource, Interval interval, String version, String trail)
     {
       this.dataSource = dataSource;
       this.interval = interval;
@@ -123,9 +125,9 @@ public class DataSegmentUtils
       return version;
     }
 
-    public SegmentElements withInterval(Interval interval)
+    public SegmentIdentifierParts withInterval(Interval interval)
     {
-      return new SegmentElements(dataSource, interval, version, trail);
+      return new SegmentIdentifierParts(dataSource, interval, version, trail);
     }
 
     @Override
@@ -138,7 +140,7 @@ public class DataSegmentUtils
         return false;
       }
 
-      SegmentElements that = (SegmentElements) o;
+      SegmentIdentifierParts that = (SegmentIdentifierParts) o;
 
       if (!Objects.equals(dataSource, that.dataSource)) {
         return false;

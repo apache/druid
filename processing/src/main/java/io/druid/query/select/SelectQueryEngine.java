@@ -60,7 +60,7 @@ public class SelectQueryEngine
       );
     }
 
-    // this is safe (see ServerManager)
+    // at the point where this code is called, only one datasource should exist.
     String dataSource = Iterables.getOnlyElement(query.getDataSource().getNames());
 
     final Iterable<DimensionSpec> dims;
