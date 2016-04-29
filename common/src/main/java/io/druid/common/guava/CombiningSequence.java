@@ -81,7 +81,7 @@ public class CombiningSequence<T> implements Sequence<T>
   }
 
   public <OutType> Yielder<OutType> makeYielder(
-      Yielder<T> yielder,
+      final Yielder<T> yielder,
       final CombiningYieldingAccumulator<OutType, T> combiningAccumulator,
       boolean finalValue
   )
@@ -92,7 +92,7 @@ public class CombiningSequence<T> implements Sequence<T>
 
     if(!yielder.isDone()) {
       retVal = combiningAccumulator.getRetVal();
-      finalYielder = yielder.next(yielder.get());
+      finalYielder = null;
       finalFinalValue = false;
     } else {
       if(!finalValue && combiningAccumulator.accumulatedSomething()) {
@@ -124,7 +124,11 @@ public class CombiningSequence<T> implements Sequence<T>
       public Yielder<OutType> next(OutType initValue)
       {
         combiningAccumulator.reset();
-        return makeYielder(finalYielder, combiningAccumulator, finalFinalValue);
+        return makeYielder(
+            finalYielder == null ? yielder.next(yielder.get()) : finalYielder,
+            combiningAccumulator,
+            finalFinalValue
+        );
       }
 
       @Override
@@ -136,7 +140,9 @@ public class CombiningSequence<T> implements Sequence<T>
       @Override
       public void close() throws IOException
       {
-        finalYielder.close();
+        if (finalYielder != null) {
+          finalYielder.close();
+        }
       }
     };
   }
