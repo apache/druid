@@ -151,17 +151,6 @@ public class SketchMergeAggregatorFactory extends SketchAggregatorFactory
   }
 
   @Override
-  public byte[] getCacheKey()
-  {
-    final byte[] superCacheKey = super.getCacheKey();
-
-    return ByteBuffer.allocate(superCacheKey.length + 1)
-                     .put(superCacheKey)
-                     .put(isInputThetaSketch ? (byte) 1 : (byte) 0)
-                     .array();
-  }
-
-  @Override
   public boolean equals(Object o)
   {
     if (this == o) {
