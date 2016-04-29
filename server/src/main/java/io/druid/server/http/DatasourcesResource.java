@@ -31,6 +31,7 @@ import com.metamx.common.Pair;
 import com.metamx.common.guava.Comparators;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
+import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.client.CoordinatorServerView;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
@@ -39,6 +40,9 @@ import io.druid.client.SegmentLoadInfo;
 import io.druid.client.indexing.IndexingServiceClient;
 import io.druid.metadata.MetadataSegmentManager;
 import io.druid.query.TableDataSource;
+import io.druid.server.http.security.DatasourceResourceFilter;
+import io.druid.server.security.AuthConfig;
+import io.druid.server.security.AuthorizationInfo;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
 import io.druid.timeline.TimelineObjectHolder;
@@ -47,6 +51,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
@@ -55,6 +60,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Comparator;
@@ -73,28 +79,38 @@ public class DatasourcesResource
   private final CoordinatorServerView serverInventoryView;
   private final MetadataSegmentManager databaseSegmentManager;
   private final IndexingServiceClient indexingServiceClient;
+  private final AuthConfig authConfig;
 
   @Inject
   public DatasourcesResource(
       CoordinatorServerView serverInventoryView,
       MetadataSegmentManager databaseSegmentManager,
-      @Nullable IndexingServiceClient indexingServiceClient
+      @Nullable IndexingServiceClient indexingServiceClient,
+      AuthConfig authConfig
   )
   {
     this.serverInventoryView = serverInventoryView;
     this.databaseSegmentManager = databaseSegmentManager;
     this.indexingServiceClient = indexingServiceClient;
+    this.authConfig = authConfig;
   }
 
   @GET
   @Produces(MediaType.APPLICATION_JSON)
   public Response getQueryableDataSources(
       @QueryParam("full") String full,
-      @QueryParam("simple") String simple
+      @QueryParam("simple") String simple,
+      @Context final HttpServletRequest req
   )
   {
     Response.ResponseBuilder builder = Response.ok();
-    final Set<DruidDataSource> datasources = InventoryViewUtils.getDataSources(serverInventoryView);
+    final Set<DruidDataSource> datasources = authConfig.isEnabled() ?
+                                             InventoryViewUtils.getSecuredDataSources(
+                                                 serverInventoryView,
+                                                 (AuthorizationInfo) req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN)
+                                             ) :
+                                             InventoryViewUtils.getDataSources(serverInventoryView);
+
     if (full != null) {
       return builder.entity(datasources).build();
     } else if (simple != null) {
@@ -135,12 +151,14 @@ public class DatasourcesResource
   @GET
   @Path("/{dataSourceName}")
   @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
   public Response getTheDataSource(
       @PathParam("dataSourceName") final String dataSourceName,
       @QueryParam("full") final String full
   )
   {
     DruidDataSource dataSource = getDataSource(dataSourceName);
+
     if (dataSource == null) {
       return Response.noContent().build();
     }
@@ -155,6 +173,7 @@ public class DatasourcesResource
   @POST
   @Path("/{dataSourceName}")
   @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
   public Response enableDataSource(
       @PathParam("dataSourceName") final String dataSourceName
   )
@@ -175,6 +194,7 @@ public class DatasourcesResource
   @DELETE
   @Deprecated
   @Path("/{dataSourceName}")
+  @ResourceFilters(DatasourceResourceFilter.class)
   @Produces(MediaType.APPLICATION_JSON)
   public Response deleteDataSource(
       @PathParam("dataSourceName") final String dataSourceName,
@@ -253,6 +273,7 @@ public class DatasourcesResource
   @GET
   @Path("/{dataSourceName}/intervals")
   @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
   public Response getSegmentDataSourceIntervals(
       @PathParam("dataSourceName") String dataSourceName,
       @QueryParam("simple") String simple,
@@ -313,6 +334,7 @@ public class DatasourcesResource
   @GET
   @Path("/{dataSourceName}/intervals/{interval}")
   @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
   public Response getSegmentDataSourceSpecificInterval(
       @PathParam("dataSourceName") String dataSourceName,
       @PathParam("interval") String interval,
@@ -380,6 +402,7 @@ public class DatasourcesResource
   @GET
   @Path("/{dataSourceName}/segments")
   @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
   public Response getSegmentDataSourceSegments(
       @PathParam("dataSourceName") String dataSourceName,
       @QueryParam("full") String full
@@ -413,6 +436,7 @@ public class DatasourcesResource
   @GET
   @Path("/{dataSourceName}/segments/{segmentId}")
   @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
   public Response getSegmentDataSourceSegment(
       @PathParam("dataSourceName") String dataSourceName,
       @PathParam("segmentId") String segmentId
@@ -436,6 +460,7 @@ public class DatasourcesResource
 
   @DELETE
   @Path("/{dataSourceName}/segments/{segmentId}")
+  @ResourceFilters(DatasourceResourceFilter.class)
   public Response deleteDatasourceSegment(
       @PathParam("dataSourceName") String dataSourceName,
       @PathParam("segmentId") String segmentId
@@ -451,6 +476,7 @@ public class DatasourcesResource
   @POST
   @Path("/{dataSourceName}/segments/{segmentId}")
   @Consumes(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
   public Response enableDatasourceSegment(
       @PathParam("dataSourceName") String dataSourceName,
       @PathParam("segmentId") String segmentId
@@ -466,6 +492,7 @@ public class DatasourcesResource
   @GET
   @Path("/{dataSourceName}/tiers")
   @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
   public Response getSegmentDataSourceTiers(
       @PathParam("dataSourceName") String dataSourceName
   )
@@ -624,6 +651,7 @@ public class DatasourcesResource
   @GET
   @Path("/{dataSourceName}/intervals/{interval}/serverview")
   @Produces(MediaType.APPLICATION_JSON)
+  @ResourceFilters(DatasourceResourceFilter.class)
   public Response getSegmentDataSourceSpecificInterval(
       @PathParam("dataSourceName") String dataSourceName,
       @PathParam("interval") String interval,
