@@ -211,7 +211,7 @@ public class PendingTaskBasedWorkerResourceManagementStrategy extends AbstractWo
     );
 
     if (want > 0 && currValidWorkers >= maxWorkerCount) {
-      log.warn("Unable to provision more workers. Current workerCount[%d] maximum workerCount[%d].");
+      log.warn("Unable to provision more workers. Current workerCount[%d] maximum workerCount[%d].", currValidWorkers, maxWorkerCount);
       return 0;
     }
     want = Math.min(want, maxWorkerCount - currValidWorkers);
