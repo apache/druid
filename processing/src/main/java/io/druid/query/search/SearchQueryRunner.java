@@ -35,7 +35,6 @@ import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.EmittingLogger;
-import io.druid.granularity.QueryGranularities;
 import io.druid.query.Druids;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -125,14 +124,13 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
         final Column timeColumn = index.getColumn(Column.TIME_COLUMN_NAME);
         final GenericColumn timeValues = timeColumn.getGenericColumn();
 
-        for (int i = 0; i < timeValues.length(); i++)
-        {
-          long time = timeValues.getLongSingleValueRow(i);
-          if (interval.contains(time))
-          {
-            timeBitmap.add(i);
-          }
+        int startIndex = Math.max(0, getStartIndexOfTime(timeValues, interval.getStartMillis(), true));
+        int endIndex = Math.min(timeValues.length() - 1, getStartIndexOfTime(timeValues, interval.getEndMillis(), false));
+
+        for (int i = startIndex; i <= endIndex; i++) {
+          timeBitmap.add(i);
         }
+
         final ImmutableBitmap finalTimeBitmap = bitmapFactory.makeImmutableBitmap(timeBitmap);
         timeFilteredBitmap =
             (baseFilter == null) ? finalTimeBitmap : finalTimeBitmap.intersection(baseFilter);
@@ -248,6 +246,36 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     );
 
     return makeReturnResult(limit, retVal);
+  }
+
+  private int getStartIndexOfTime(GenericColumn timeValues, long time, boolean inclusive)
+  {
+    int low = 0;
+    int high = timeValues.length() - 1;
+
+    while (low <= high) {
+      int mid = (low + high) >>> 1;
+      long midVal = timeValues.getLongSingleValueRow(mid);
+
+      if (midVal < time)
+        low = mid + 1;
+      else if (midVal > time)
+        high = mid - 1;
+      else { // key found
+        int i;
+        // rewind the index of the same time values
+        for (i = mid - 1; i >= 0; i--) {
+          long prev = timeValues.getLongSingleValueRow(i);
+          if (time != prev) {
+            break;
+          }
+        }
+        return inclusive ? i + 1 : i;
+      }
+    }
+    // key not found.
+    // return insert index
+    return low;
   }
 
   private Sequence<Result<SearchResultValue>> makeReturnResult(
