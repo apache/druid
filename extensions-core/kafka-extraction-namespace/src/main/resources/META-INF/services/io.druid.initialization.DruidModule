@@ -16,4 +16,4 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-io.druid.server.namespace.KafkaExtractionNamespaceModule
+io.druid.query.lookup.KafkaExtractionNamespaceModule
