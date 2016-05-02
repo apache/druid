@@ -698,13 +698,21 @@ public class DruidCoordinator
                                          .withEmitter(emitter)
                                          .withBalancerStrategyFactory(factory)
                                          .build();
-
-        for (DruidCoordinatorHelper helper : helpers) {
-          // Don't read state and run state in the same helper otherwise racy conditions may exist
-          if (leader && startingLeaderCounter == leaderCounter) {
-            params = helper.run(params);
+        try {
+          for (DruidCoordinatorHelper helper : helpers) {
+            // Don't read state and run state in the same helper otherwise racy conditions may exist
+            if (leader && startingLeaderCounter == leaderCounter) {
+              params = helper.run(params);
+            }
           }
         }
+        finally {
+          if (params.getBalancerStrategyFactory() != null) {
+            params.getBalancerStrategyFactory().close();
+          }
+        }
+
+
       }
       catch (Exception e) {
         log.makeAlert(e, "Caught exception, ignoring so that schedule keeps going.").emit();

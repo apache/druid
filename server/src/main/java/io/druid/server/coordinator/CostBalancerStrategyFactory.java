@@ -20,18 +20,28 @@ package io.druid.server.coordinator;
 
 import org.joda.time.DateTime;
 
+import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 public class CostBalancerStrategyFactory implements BalancerStrategyFactory
 {
-  private final int threadCount;
+  private final ExecutorService exec;
 
   public CostBalancerStrategyFactory(int costBalancerStrategyThreadCount)
   {
-    this.threadCount = costBalancerStrategyThreadCount;
+    this.exec = Executors.newFixedThreadPool(costBalancerStrategyThreadCount);
   }
 
   @Override
   public BalancerStrategy createBalancerStrategy(DateTime referenceTimestamp)
   {
-    return new CostBalancerStrategy(referenceTimestamp, threadCount);
+    return new CostBalancerStrategy(referenceTimestamp, exec);
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+    exec.shutdownNow();
   }
 }

@@ -34,6 +34,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -134,7 +135,7 @@ public class DruidCoordinatorBalancerTest
 
 
   @Test
-  public void testMoveToEmptyServerBalancer()
+  public void testMoveToEmptyServerBalancer() throws IOException
   {
     EasyMock.expect(druidServer1.getName()).andReturn("from").atLeastOnce();
     EasyMock.expect(druidServer1.getCurrSize()).andReturn(30L).atLeastOnce();
@@ -197,19 +198,21 @@ public class DruidCoordinatorBalancerTest
                                         MAX_SEGMENTS_TO_MOVE
                                     ).build()
                                 )
-                                .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
+                                     .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
+                                     .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                                 .build();
 
     params = new DruidCoordinatorBalancerTester(coordinator).run(params);
     Assert.assertTrue(params.getCoordinatorStats().getPerTierStats().get("movedCount").get("normal").get() > 0);
     Assert.assertTrue(params.getCoordinatorStats().getPerTierStats().get("movedCount").get("normal").get() < segments.size());
+    params.getBalancerStrategyFactory().close();
   }
 
 
 
 
   @Test
-  public void testRun1()
+  public void testRun1() throws IOException
   {
     // Mock some servers of different usages
 
@@ -272,16 +275,18 @@ public class DruidCoordinatorBalancerTest
                                     new CoordinatorDynamicConfig.Builder().withMaxSegmentsToMove(MAX_SEGMENTS_TO_MOVE)
                                                                      .build()
                                 )
-                                .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
+                                     .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
+                                     .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                                 .build();
 
     params = new DruidCoordinatorBalancerTester(coordinator).run(params);
     Assert.assertTrue(params.getCoordinatorStats().getPerTierStats().get("movedCount").get("normal").get() > 0);
+    params.getBalancerStrategyFactory().close();
   }
 
 
   @Test
-  public void testRun2()
+  public void testRun2() throws IOException
   {
     // Mock some servers of different usages
     EasyMock.expect(druidServer1.getName()).andReturn("1").atLeastOnce();
@@ -366,11 +371,13 @@ public class DruidCoordinatorBalancerTest
                                         MAX_SEGMENTS_TO_MOVE
                                     ).build()
                                 )
-                                .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
+                                     .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
+                                     .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                                 .build();
 
     params = new DruidCoordinatorBalancerTester(coordinator).run(params);
     Assert.assertTrue(params.getCoordinatorStats().getPerTierStats().get("movedCount").get("normal").get() > 0);
+    params.getBalancerStrategyFactory().close();
   }
 
 }
