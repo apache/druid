@@ -24,9 +24,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import io.druid.query.extraction.namespace.ExtractionNamespace;
@@ -45,7 +42,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
@@ -58,7 +54,7 @@ public class NamespaceExtractionCacheManagersTest
   private static final Logger log = new Logger(NamespaceExtractionCacheManagersTest.class);
   private static final Lifecycle lifecycle = new Lifecycle();
 
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> getParameters()
   {
     ArrayList<Object[]> params = new ArrayList<>();
@@ -67,14 +63,14 @@ public class NamespaceExtractionCacheManagersTest
     ConcurrentMap<String, Function<String, List<String>>> reverserFnMap = new ConcurrentHashMap<String, Function<String, List<String>>>();
     params.add(
         new Object[]{
-                   new OffHeapNamespaceExtractionCacheManager(
-                   lifecycle,
-                   fnMap,
-                   reverserFnMap,
-                   new NoopServiceEmitter(),
-                   ImmutableMap.<Class<? extends ExtractionNamespace>, ExtractionNamespaceFunctionFactory<?>>of()
-               ), fnMap
-               }
+            new OffHeapNamespaceExtractionCacheManager(
+                lifecycle,
+                fnMap,
+                reverserFnMap,
+                new NoopServiceEmitter(),
+                ImmutableMap.<Class<? extends ExtractionNamespace>, ExtractionNamespaceFunctionFactory<?>>of()
+            ), fnMap
+        }
     );
     params.add(
         new Object[]{
@@ -138,6 +134,36 @@ public class NamespaceExtractionCacheManagersTest
   }
 
   @Test
+  public void testSimpleCacheSwap()
+  {
+    for (String ns : nsList) {
+      ConcurrentMap<String, String> map = extractionCacheManager.getCacheMap(ns + "old_cache");
+      map.put("key", "val");
+      extractionCacheManager.swapAndClearCache(ns, ns + "old_cache");
+      Assert.assertEquals("val", map.get("key"));
+      Assert.assertEquals("val", extractionCacheManager.getCacheMap(ns).get("key"));
+
+      ConcurrentMap<String, String> map2 = extractionCacheManager.getCacheMap(ns + "cache");
+      map2.put("key", "val2");
+      Assert.assertTrue(extractionCacheManager.swapAndClearCache(ns, ns + "cache"));
+      Assert.assertEquals("val2", map2.get("key"));
+      Assert.assertEquals("val2", extractionCacheManager.getCacheMap(ns).get("key"));
+    }
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testMissingCacheThrowsIAE()
+  {
+    for (String ns : nsList) {
+      ConcurrentMap<String, String> map = extractionCacheManager.getCacheMap(ns);
+      map.put("key", "val");
+      Assert.assertEquals("val", map.get("key"));
+      Assert.assertEquals("val", extractionCacheManager.getCacheMap(ns).get("key"));
+      Assert.assertFalse(extractionCacheManager.swapAndClearCache(ns, "I don't exist"));
+    }
+  }
+
+  @Test
   public void testCacheList()
   {
     List<String> nsList = new ArrayList<String>(NamespaceExtractionCacheManagersTest.nsList);
@@ -145,6 +171,12 @@ public class NamespaceExtractionCacheManagersTest
     Collections.sort(nsList);
     Collections.sort(retvalList);
     Assert.assertArrayEquals(nsList.toArray(), retvalList.toArray());
+  }
+
+  @Test
+  public void testNoDeleteNonexistant()
+  {
+    Assert.assertFalse(extractionCacheManager.delete("I don't exist"));
   }
 
   public static void waitFor(Future<?> future) throws InterruptedException

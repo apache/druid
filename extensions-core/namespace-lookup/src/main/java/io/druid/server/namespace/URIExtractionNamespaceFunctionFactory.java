@@ -45,6 +45,8 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -120,7 +122,8 @@ public class URIExtractionNamespaceFunctionFactory implements ExtractionNamespac
       @Override
       public String call()
       {
-        final URI originalUri = extractionNamespace.getUri();
+        final boolean doSearch = extractionNamespace.getUriPrefix() != null;
+        final URI originalUri = doSearch ? extractionNamespace.getUriPrefix() : extractionNamespace.getUri();
         final SearchableVersionedDataFinder<URI> pullerRaw = pullers.get(originalUri.getScheme());
         if (pullerRaw == null) {
           throw new IAE(
@@ -132,15 +135,29 @@ public class URIExtractionNamespaceFunctionFactory implements ExtractionNamespac
         if (!(pullerRaw instanceof URIDataPuller)) {
           throw new IAE(
               "Cannot load data from location [%s]. Data pulling from [%s] not supported",
-              originalUri.toString(),
+              originalUri,
               originalUri.getScheme()
           );
         }
         final URIDataPuller puller = (URIDataPuller) pullerRaw;
-        final String versionRegex = extractionNamespace.getVersionRegex();
+        final Pattern versionRegex;
+        final URI uriBase;
+        if (doSearch) {
+          uriBase = extractionNamespace.getUriPrefix();
+
+          if (extractionNamespace.getFileRegex() != null) {
+            versionRegex = Pattern.compile(extractionNamespace.getFileRegex());
+          } else {
+            versionRegex = null;
+          }
+        } else {
+          final Path filePath = Paths.get(extractionNamespace.getUri());
+          versionRegex = Pattern.compile(Pattern.quote(filePath.getFileName().toString()));
+          uriBase = filePath.getParent().toUri();
+        }
         final URI uri = pullerRaw.getLatestVersion(
-            originalUri,
-            versionRegex == null ? null : Pattern.compile(versionRegex)
+            uriBase,
+            versionRegex
         );
         if (uri == null) {
           throw new RuntimeException(

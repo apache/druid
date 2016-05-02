@@ -110,6 +110,7 @@ public class NamespacedExtractorModuleTest
     final URIExtractionNamespace namespace = new URIExtractionNamespace(
         "ns",
         tmpFile.toURI(),
+        null, null,
         new URIExtractionNamespace.ObjectMapperFlatDataParser(
             URIExtractionNamespaceTest.registerTypes(new DefaultObjectMapper())
         ),
@@ -132,6 +133,7 @@ public class NamespacedExtractorModuleTest
     final URIExtractionNamespace namespace = new URIExtractionNamespace(
         "ns",
         tmpFile.toURI(),
+        null, null,
         new URIExtractionNamespace.ObjectMapperFlatDataParser(URIExtractionNamespaceTest.registerTypes(new DefaultObjectMapper())),
         new Period(0),
         null
@@ -159,6 +161,7 @@ public class NamespacedExtractorModuleTest
     final URIExtractionNamespace namespace = new URIExtractionNamespace(
         "ns",
         tmpFile.toURI(),
+        null, null,
         new URIExtractionNamespace.ObjectMapperFlatDataParser(
             URIExtractionNamespaceTest.registerTypes(new DefaultObjectMapper())
         ),
@@ -181,6 +184,7 @@ public class NamespacedExtractorModuleTest
     final URIExtractionNamespace namespace = new URIExtractionNamespace(
         "ns",
         tmpFile.toURI(),
+        null, null,
         new URIExtractionNamespace.ObjectMapperFlatDataParser(
             URIExtractionNamespaceTest.registerTypes(new DefaultObjectMapper())
         ),
