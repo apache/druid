@@ -177,6 +177,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     URIExtractionNamespace namespace = new URIExtractionNamespace(
         "ns",
         tmpFile.toURI(),
+        null, null,
         new URIExtractionNamespace.ObjectMapperFlatDataParser(
             URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
         ),
@@ -201,6 +202,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     URIExtractionNamespace namespace = new URIExtractionNamespace(
         "ns",
         tmpFile.toURI(),
+        null, null,
         new URIExtractionNamespace.ObjectMapperFlatDataParser(
             URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
         ),
@@ -221,6 +223,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
       final URIExtractionNamespace namespace = new URIExtractionNamespace(
           "ns",
           tmpFile.toURI(),
+          null, null,
           new URIExtractionNamespace.ObjectMapperFlatDataParser(
               URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
           ),
@@ -353,6 +356,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     final URIExtractionNamespace namespace = new URIExtractionNamespace(
         ns,
         tmpFile.toURI(),
+        null, null,
         new URIExtractionNamespace.ObjectMapperFlatDataParser(
             URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
         ),
@@ -431,6 +435,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
       final URIExtractionNamespace namespace = new URIExtractionNamespace(
           "ns",
           tmpFile.toURI(),
+          null, null,
           new URIExtractionNamespace.ObjectMapperFlatDataParser(
               URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
           ),
@@ -479,6 +484,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
       final URIExtractionNamespace namespace = new URIExtractionNamespace(
           "ns",
           tmpFile.toURI(),
+          null, null,
           new URIExtractionNamespace.ObjectMapperFlatDataParser(
               URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
           ),

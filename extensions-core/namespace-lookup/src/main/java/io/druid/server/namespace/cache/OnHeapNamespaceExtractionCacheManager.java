@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.util.concurrent.Striped;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
+import com.metamx.common.IAE;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.query.extraction.namespace.ExtractionNamespace;
@@ -53,7 +54,7 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
       final Map<Class<? extends ExtractionNamespace>, ExtractionNamespaceFunctionFactory<?>> namespaceFunctionFactoryMap
   )
   {
-    super(lifecycle, fnCache, reverseFnCache,emitter, namespaceFunctionFactoryMap);
+    super(lifecycle, fnCache, reverseFnCache, emitter, namespaceFunctionFactoryMap);
   }
 
   @Override
@@ -64,14 +65,14 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
     try {
       ConcurrentMap<String, String> cacheMap = mapMap.get(cacheKey);
       if (cacheMap == null) {
-        // Sometimes cache will not be populated (for example: if it doesn't contain new data)
-        return false;
+        throw new IAE("Extraction Cache [%s] does not exist", cacheKey);
       }
       dataSize.addAndGet(cacheMap.size());
       ConcurrentMap<String, String> prior = mapMap.put(namespaceKey, cacheMap);
       mapMap.remove(cacheKey);
       if (prior != null) {
         dataSize.addAndGet(-prior.size());
+        // Old map will get GC'd when it is not used anymore
         return true;
       } else {
         return false;
@@ -87,7 +88,7 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
   {
     ConcurrentMap<String, String> map = mapMap.get(namespaceOrCacheKey);
     if (map == null) {
-      mapMap.putIfAbsent(namespaceOrCacheKey, new ConcurrentHashMap<String, String>(32));
+      mapMap.putIfAbsent(namespaceOrCacheKey, new ConcurrentHashMap<String, String>());
       map = mapMap.get(namespaceOrCacheKey);
     }
     return map;
