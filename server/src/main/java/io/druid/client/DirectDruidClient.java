@@ -69,6 +69,7 @@ import org.jboss.netty.handler.codec.http.HttpChunk;
 import org.jboss.netty.handler.codec.http.HttpHeaders;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponse;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
 import javax.ws.rs.core.MediaType;
 import java.io.Closeable;
@@ -179,9 +180,24 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         @Override
         public ClientResponse<InputStream> handleResponse(HttpResponse response)
         {
-          log.debug("Initial response from url[%s] for queryId[%s]", url, query.getId());
+          HttpResponseStatus status = response.getStatus();
+          log.debug("Initial response from url[%s] for queryId[%s] with status[%s]", url, query.getId(), status);
           responseStartTime = System.currentTimeMillis();
           emitter.emit(builder.build("query/node/ttfb", responseStartTime - requestStartTime));
+
+          if (status.getCode() >= HttpResponseStatus.INTERNAL_SERVER_ERROR.getCode()) {
+            final String contents = response.getContent().toString(Charsets.ISO_8859_1);
+            return ClientResponse.<InputStream>finished(
+                new InputStream()
+                {
+                  @Override
+                  public int read() throws IOException
+                  {
+                    throw new IOException(contents);
+                  }
+                }
+            );
+          }
 
           try {
             final String responseContext = response.headers().get("X-Druid-Response-Context");
