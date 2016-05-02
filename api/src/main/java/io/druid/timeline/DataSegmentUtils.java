@@ -59,7 +59,7 @@ public class DataSegmentUtils
 
   private static SegmentIdentifierParts parse(String dataSource, String identifier)
   {
-    if (!identifier.startsWith(String.format("%s/", dataSource))) {
+    if (!identifier.startsWith(String.format("%s_", dataSource))) {
       LOGGER.info("Invalid identifier %s", identifier);
       return null;
     }
