@@ -20,6 +20,7 @@
 package io.druid.common.guava;
 
 import com.google.common.base.Predicate;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
@@ -47,7 +48,7 @@ public class CombiningSequenceTest
   @Parameterized.Parameters
   public static Collection<Object[]> valuesToTry()
   {
-    return Arrays.asList(new Object[][] {
+    return Arrays.asList(new Object[][]{
         {1}, {2}, {3}, {4}, {5}, {1000}
     });
   }
@@ -194,27 +195,48 @@ public class CombiningSequenceTest
   private void testCombining(List<Pair<Integer, Integer>> pairs, List<Pair<Integer, Integer>> expected)
       throws IOException
   {
-    Sequence<Pair<Integer, Integer>> seq = new CombiningSequence<Pair<Integer, Integer>>(
-        Sequences.simple(pairs),
-        Ordering.natural().onResultOf(Pair.<Integer, Integer>lhsFn()),
-        new BinaryFn<Pair<Integer, Integer>, Pair<Integer, Integer>, Pair<Integer, Integer>>()
-        {
-          @Override
-          public Pair<Integer, Integer> apply(
-              Pair<Integer, Integer> lhs, Pair<Integer, Integer> rhs
-          )
-          {
-            if (lhs == null) {
-              return rhs;
-            }
+    for (int limit = 0; limit < expected.size() + 1; limit++) {
+      // limit = 0 doesn't work properly; it returns 1 element
+      final int expectedLimit = limit == 0 ? 1 : limit;
 
-            if (rhs == null) {
-              return lhs;
-            }
+      testCombining(
+          pairs,
+          Lists.newArrayList(Iterables.limit(expected, expectedLimit)),
+          limit
+      );
+    }
+  }
 
-            return Pair.of(lhs.lhs, lhs.rhs + rhs.rhs);
-          }
-        }
+  private void testCombining(
+      List<Pair<Integer, Integer>> pairs,
+      List<Pair<Integer, Integer>> expected,
+      int limit
+  ) throws IOException
+  {
+    Sequence<Pair<Integer, Integer>> seq = Sequences.limit(
+        new CombiningSequence<>(
+            Sequences.simple(pairs),
+            Ordering.natural().onResultOf(Pair.<Integer, Integer>lhsFn()),
+            new BinaryFn<Pair<Integer, Integer>, Pair<Integer, Integer>, Pair<Integer, Integer>>()
+            {
+              @Override
+              public Pair<Integer, Integer> apply(
+                  Pair<Integer, Integer> lhs, Pair<Integer, Integer> rhs
+              )
+              {
+                if (lhs == null) {
+                  return rhs;
+                }
+
+                if (rhs == null) {
+                  return lhs;
+                }
+
+                return Pair.of(lhs.lhs, lhs.rhs + rhs.rhs);
+              }
+            }
+        ),
+        limit
     );
 
     List<Pair<Integer, Integer>> merged = Sequences.toList(seq, Lists.<Pair<Integer, Integer>>newArrayList());
@@ -233,7 +255,9 @@ public class CombiningSequenceTest
           )
           {
             count++;
-            if(count % yieldEvery == 0) yield();
+            if (count % yieldEvery == 0) {
+              yield();
+            }
             return rhs;
           }
         }

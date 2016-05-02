@@ -198,7 +198,7 @@ public class FiniteAppenderatorDriver implements Closeable
       try {
         final int numRows = appenderator.add(identifier, row, wrapCommitterSupplier(committerSupplier));
         if (numRows >= maxRowsPerSegment) {
-          moveSegmentOut(ImmutableList.of(identifier));
+          moveSegmentOut(sequenceName, ImmutableList.of(identifier));
         }
       }
       catch (SegmentNotWritableException e) {
@@ -376,13 +376,18 @@ public class FiniteAppenderatorDriver implements Closeable
   /**
    * Move a set of identifiers out from "active", making way for newer segments.
    */
-  private void moveSegmentOut(final List<SegmentIdentifier> identifiers)
+  private void moveSegmentOut(final String sequenceName, final List<SegmentIdentifier> identifiers)
   {
     synchronized (activeSegments) {
+      final NavigableMap<Long, SegmentIdentifier> activeSegmentsForSequence = activeSegments.get(sequenceName);
+      if (activeSegmentsForSequence == null) {
+        throw new ISE("WTF?! Asked to remove segments for sequenceName[%s] which doesn't exist...", sequenceName);
+      }
+
       for (final SegmentIdentifier identifier : identifiers) {
         log.info("Moving segment[%s] out of active list.", identifier);
         final long key = identifier.getInterval().getStartMillis();
-        if (activeSegments.remove(key) != identifier) {
+        if (activeSegmentsForSequence.remove(key) != identifier) {
           throw new ISE("WTF?! Asked to remove segment[%s] that didn't exist...", identifier);
         }
       }

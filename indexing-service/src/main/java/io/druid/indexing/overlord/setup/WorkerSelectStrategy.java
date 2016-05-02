@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
+import io.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 
 /**
  * The {@link io.druid.indexing.overlord.RemoteTaskRunner} uses this class to select a worker to assign tasks to.
@@ -49,7 +50,7 @@ public interface WorkerSelectStrategy
    * @return A {@link io.druid.indexing.overlord.ImmutableWorkerInfo} to run the task if one is available.
    */
   Optional<ImmutableWorkerInfo> findWorkerForTask(
-      final RemoteTaskRunnerConfig config,
+      final WorkerTaskRunnerConfig config,
       final ImmutableMap<String, ImmutableWorkerInfo> zkWorkers,
       final Task task
   );
