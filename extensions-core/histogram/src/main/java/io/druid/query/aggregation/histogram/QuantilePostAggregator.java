@@ -93,4 +93,35 @@ public class QuantilePostAggregator extends ApproximateHistogramPostAggregator
            ", fieldName='" + fieldName + '\'' +
            '}';
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof QuantilePostAggregator)) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+
+    QuantilePostAggregator that = (QuantilePostAggregator) o;
+
+    if (Float.compare(that.probability, probability) != 0) {
+      return false;
+    }
+    return fieldName != null ? fieldName.equals(that.fieldName) : that.fieldName == null;
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = super.hashCode();
+    result = 31 * result + (probability != +0.0f ? Float.floatToIntBits(probability) : 0);
+    result = 31 * result + (fieldName != null ? fieldName.hashCode() : 0);
+    return result;
+  }
 }

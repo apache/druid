@@ -88,4 +88,39 @@ public class BucketsPostAggregator extends ApproximateHistogramPostAggregator
            ", offset=" + this.getOffset() +
            '}';
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof BucketsPostAggregator)) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+
+    BucketsPostAggregator that = (BucketsPostAggregator) o;
+
+    if (Float.compare(that.bucketSize, bucketSize) != 0) {
+      return false;
+    }
+    if (Float.compare(that.offset, offset) != 0) {
+      return false;
+    }
+    return fieldName != null ? fieldName.equals(that.fieldName) : that.fieldName == null;
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = super.hashCode();
+    result = 31 * result + (bucketSize != +0.0f ? Float.floatToIntBits(bucketSize) : 0);
+    result = 31 * result + (offset != +0.0f ? Float.floatToIntBits(offset) : 0);
+    result = 31 * result + (fieldName != null ? fieldName.hashCode() : 0);
+    return result;
+  }
 }

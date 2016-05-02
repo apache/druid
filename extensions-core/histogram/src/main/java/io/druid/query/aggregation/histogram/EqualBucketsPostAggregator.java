@@ -77,4 +77,35 @@ public class EqualBucketsPostAggregator extends ApproximateHistogramPostAggregat
            ", numBuckets=" + this.getNumBuckets() +
            '}';
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof EqualBucketsPostAggregator)) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+
+    EqualBucketsPostAggregator that = (EqualBucketsPostAggregator) o;
+
+    if (numBuckets != that.numBuckets) {
+      return false;
+    }
+    return fieldName != null ? fieldName.equals(that.fieldName) : that.fieldName == null;
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = super.hashCode();
+    result = 31 * result + numBuckets;
+    result = 31 * result + (fieldName != null ? fieldName.hashCode() : 0);
+    return result;
+  }
 }

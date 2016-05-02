@@ -78,4 +78,31 @@ public class MaxPostAggregator extends ApproximateHistogramPostAggregator
            "fieldName='" + fieldName + '\'' +
            '}';
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof MaxPostAggregator)) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+
+    MaxPostAggregator that = (MaxPostAggregator) o;
+
+    return fieldName != null ? fieldName.equals(that.fieldName) : that.fieldName == null;
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = super.hashCode();
+    result = 31 * result + (fieldName != null ? fieldName.hashCode() : 0);
+    return result;
+  }
 }

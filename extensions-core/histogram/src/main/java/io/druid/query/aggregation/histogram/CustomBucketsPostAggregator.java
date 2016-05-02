@@ -74,4 +74,35 @@ public class CustomBucketsPostAggregator extends ApproximateHistogramPostAggrega
            ", breaks=" + Arrays.toString(this.getBreaks()) +
            '}';
   }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof CustomBucketsPostAggregator)) {
+      return false;
+    }
+    if (!super.equals(o)) {
+      return false;
+    }
+
+    CustomBucketsPostAggregator that = (CustomBucketsPostAggregator) o;
+
+    if (!Arrays.equals(breaks, that.breaks)) {
+      return false;
+    }
+    return fieldName != null ? fieldName.equals(that.fieldName) : that.fieldName == null;
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = super.hashCode();
+    result = 31 * result + Arrays.hashCode(breaks);
+    result = 31 * result + (fieldName != null ? fieldName.hashCode() : 0);
+    return result;
+  }
 }
