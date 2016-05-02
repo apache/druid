@@ -118,21 +118,27 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
       final ImmutableBitmap baseFilter =
           filter == null ? null : filter.getBitmapIndex(new ColumnSelectorBitmapIndexSelector(bitmapFactory, index));
 
-      MutableBitmap timeBitmap = bitmapFactory.makeEmptyMutableBitmap();
-      final Column timeColumn = index.getColumn(Column.TIME_COLUMN_NAME);
-      final GenericColumn timeValues = timeColumn.getGenericColumn();
-
-      for (int i = 0; i < timeValues.length(); i++)
+      ImmutableBitmap timeFilteredBitmap;
+      if (!interval.contains(segment.getDataInterval()))
       {
-        long time = timeValues.getLongSingleValueRow(i);
-        if (interval.contains(time))
+        MutableBitmap timeBitmap = bitmapFactory.makeEmptyMutableBitmap();
+        final Column timeColumn = index.getColumn(Column.TIME_COLUMN_NAME);
+        final GenericColumn timeValues = timeColumn.getGenericColumn();
+
+        for (int i = 0; i < timeValues.length(); i++)
         {
-          timeBitmap.add(i);
+          long time = timeValues.getLongSingleValueRow(i);
+          if (interval.contains(time))
+          {
+            timeBitmap.add(i);
+          }
         }
+        final ImmutableBitmap finalTimeBitmap = bitmapFactory.makeImmutableBitmap(timeBitmap);
+        timeFilteredBitmap =
+            (baseFilter == null) ? finalTimeBitmap : finalTimeBitmap.intersection(baseFilter);
+      } else {
+        timeFilteredBitmap = baseFilter;
       }
-      final ImmutableBitmap finalTimeBitmap = bitmapFactory.makeImmutableBitmap(timeBitmap);
-      final ImmutableBitmap timeFilteredBitmap =
-          (baseFilter == null) ? finalTimeBitmap : finalTimeBitmap.intersection(baseFilter);
 
       for (DimensionSpec dimension : dimsToSearch) {
         final Column column = index.getColumn(dimension.getDimension());
@@ -152,7 +158,9 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
               continue;
             }
             ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
-            bitmap = bitmapFactory.intersection(Arrays.asList(timeFilteredBitmap, bitmap));
+            if (timeFilteredBitmap != null) {
+              bitmap = bitmapFactory.intersection(Arrays.asList(timeFilteredBitmap, bitmap));
+            }
             if (bitmap.size() > 0) {
               MutableInt counter = new MutableInt(bitmap.size());
               MutableInt prev = retVal.put(new SearchHit(dimension.getOutputName(), dimVal), counter);

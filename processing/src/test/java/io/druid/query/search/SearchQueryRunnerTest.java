@@ -174,7 +174,7 @@ public class SearchQueryRunnerTest
 
     checkSearchQuery(searchQuery, mergedRunner, expectedHits);
   }
-
+  
   @Test
   public void testSearchSameValueInMultiDims()
   {
