@@ -29,6 +29,7 @@ import com.google.inject.Inject;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
+import io.druid.granularity.QueryGranularity;
 import io.druid.query.AbstractPrioritizedCallable;
 import io.druid.query.BaseQuery;
 import io.druid.query.ConcatQueryRunner;
@@ -111,8 +112,9 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
         List<Interval> retIntervals = query.analyzingInterval() ? Arrays.asList(segment.getDataInterval()) : null;
 
         final Map<String, AggregatorFactory> aggregators;
+        Metadata metadata = null;
         if (query.hasAggregators()) {
-          final Metadata metadata = segment.asStorageAdapter().getMetadata();
+          metadata = segment.asStorageAdapter().getMetadata();
           if (metadata != null && metadata.getAggregators() != null) {
             aggregators = Maps.newHashMap();
             for (AggregatorFactory aggregator : metadata.getAggregators()) {
@@ -125,6 +127,16 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
           aggregators = null;
         }
 
+        final QueryGranularity queryGranularity;
+        if (query.hasQueryGranularity()) {
+          if (metadata == null) {
+            metadata = segment.asStorageAdapter().getMetadata();
+          }
+          queryGranularity = metadata.getQueryGranularity();
+        } else {
+          queryGranularity = null;
+        }
+
         return Sequences.simple(
             Arrays.asList(
                 new SegmentAnalysis(
@@ -133,7 +145,8 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                     columns,
                     totalSize,
                     numRows,
-                    aggregators
+                    aggregators,
+                    queryGranularity
                 )
             )
         );
