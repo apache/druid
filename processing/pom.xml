@@ -44,6 +44,10 @@
             <artifactId>emitter</artifactId>
         </dependency>
         <dependency>
+            <groupId>com.metamx</groupId>
+            <artifactId>server-metrics</artifactId>
+        </dependency>
+        <dependency>
             <groupId>com.ning</groupId>
             <artifactId>compress-lzf</artifactId>
         </dependency>

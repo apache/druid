@@ -29,8 +29,6 @@ import com.google.inject.ProvisionException;
 import com.metamx.common.concurrent.ExecutorServiceConfig;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
-import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.client.cache.CacheConfig;
 import io.druid.collections.StupidPool;
 import io.druid.common.utils.VMUtils;
@@ -39,8 +37,10 @@ import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Processing;
 import io.druid.offheap.OffheapBufferPool;
 import io.druid.query.DruidProcessingConfig;
+import io.druid.query.ExecutorServiceMonitor;
 import io.druid.query.MetricsEmittingExecutorService;
 import io.druid.query.PrioritizedExecutorService;
+import io.druid.server.metrics.MetricsModule;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.ExecutorService;
@@ -57,6 +57,7 @@ public class DruidProcessingModule implements Module
   {
     ConfigProvider.bind(binder, DruidProcessingConfig.class, ImmutableMap.of("base_path", "druid.processing"));
     binder.bind(ExecutorServiceConfig.class).to(DruidProcessingConfig.class);
+    MetricsModule.register(binder, ExecutorServiceMonitor.class);
   }
 
   @Provides
@@ -85,7 +86,7 @@ public class DruidProcessingModule implements Module
   @ManageLifecycle
   public ExecutorService getProcessingExecutorService(
       DruidProcessingConfig config,
-      ServiceEmitter emitter,
+      ExecutorServiceMonitor executorServiceMonitor,
       Lifecycle lifecycle
   )
   {
@@ -94,8 +95,7 @@ public class DruidProcessingModule implements Module
             lifecycle,
             config
         ),
-        emitter,
-        new ServiceMetricEvent.Builder()
+        executorServiceMonitor
     );
   }
 
