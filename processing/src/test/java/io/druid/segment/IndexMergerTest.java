@@ -182,6 +182,11 @@ public class IndexMergerTest
         IncrementalIndexTest.getDefaultCombiningAggregatorFactories(),
         index.getMetadata().getAggregators()
     );
+
+    Assert.assertEquals(
+        QueryGranularity.NONE,
+        index.getMetadata().getQueryGranularity()
+    );
   }
 
   @Test
@@ -267,6 +272,7 @@ public class IndexMergerTest
             .setAggregators(
                 IncrementalIndexTest.getDefaultCombiningAggregatorFactories()
             )
+            .setQueryGranularity(QueryGranularity.NONE)
             .putAll(metadataElems),
         index.getMetadata()
     );

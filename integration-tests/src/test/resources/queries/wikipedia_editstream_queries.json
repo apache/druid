@@ -1066,7 +1066,8 @@
                 },
                 "size": 902457341,
                 "numRows": 4462111,
-                "aggregators": null
+                "aggregators": null,
+                "queryGranularity": null
             }
         ]
     }
