@@ -21,6 +21,8 @@ package io.druid.math.expr;
 
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
+import com.metamx.common.logger.Logger;
 import io.druid.math.expr.antlr.ExprLexer;
 import io.druid.math.expr.antlr.ExprParser;
 import org.antlr.v4.runtime.ANTLRInputStream;
@@ -28,17 +30,28 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import org.antlr.v4.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.tree.ParseTreeWalker;
 
+import java.lang.reflect.Modifier;
 import java.util.Map;
 
 public class Parser
 {
+  static final Logger log = new Logger(Parser.class);
   static final Map<String, Function> func;
 
   static {
-    func = ImmutableMap.<String, Function>builder()
-                       .put("sqrt", new SqrtFunc())
-                       .put("if", new ConditionFunc())
-                       .build();
+    Map<String, Function> functionMap = Maps.newHashMap();
+    for (Class clazz : Function.class.getClasses()) {
+      if (!Modifier.isAbstract(clazz.getModifiers()) && Function.class.isAssignableFrom(clazz)) {
+        try {
+          Function function = (Function)clazz.newInstance();
+          functionMap.put(function.name().toLowerCase(), function);
+        }
+        catch (Exception e) {
+          log.info("failed to instantiate " + clazz.getName() + ".. ignoring", e);
+        }
+      }
+    }
+    func = ImmutableMap.copyOf(functionMap);
   }
 
   public static Expr parse(String in)

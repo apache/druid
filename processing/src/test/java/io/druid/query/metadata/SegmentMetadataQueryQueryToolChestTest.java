@@ -85,6 +85,7 @@ public class SegmentMetadataQueryQueryToolChestTest
             )
         ), 71982,
         100,
+        null,
         null
     );
 
@@ -113,7 +114,8 @@ public class SegmentMetadataQueryQueryToolChestTest
         ImmutableMap.of(
             "foo", new LongSumAggregatorFactory("foo", "foo"),
             "baz", new DoubleSumAggregatorFactory("baz", "baz")
-        )
+        ),
+        null
     );
     final SegmentAnalysis analysis2 = new SegmentAnalysis(
         "id",
@@ -124,7 +126,8 @@ public class SegmentMetadataQueryQueryToolChestTest
         ImmutableMap.of(
             "foo", new LongSumAggregatorFactory("foo", "foo"),
             "bar", new DoubleSumAggregatorFactory("bar", "bar")
-        )
+        ),
+        null
     );
 
     Assert.assertEquals(
@@ -154,6 +157,7 @@ public class SegmentMetadataQueryQueryToolChestTest
         Maps.<String, ColumnAnalysis>newHashMap(),
         0,
         0,
+        null,
         null
     );
     final SegmentAnalysis analysis2 = new SegmentAnalysis(
@@ -165,7 +169,8 @@ public class SegmentMetadataQueryQueryToolChestTest
         ImmutableMap.of(
             "foo", new LongSumAggregatorFactory("foo", "foo"),
             "bar", new DoubleSumAggregatorFactory("bar", "bar")
-        )
+        ),
+        null
     );
 
     Assert.assertNull(mergeStrict(analysis1, analysis2).getAggregators());
@@ -187,6 +192,7 @@ public class SegmentMetadataQueryQueryToolChestTest
         Maps.<String, ColumnAnalysis>newHashMap(),
         0,
         0,
+        null,
         null
     );
     final SegmentAnalysis analysis2 = new SegmentAnalysis(
@@ -195,6 +201,7 @@ public class SegmentMetadataQueryQueryToolChestTest
         Maps.<String, ColumnAnalysis>newHashMap(),
         0,
         0,
+        null,
         null
     );
 
@@ -214,7 +221,8 @@ public class SegmentMetadataQueryQueryToolChestTest
         ImmutableMap.of(
             "foo", new LongSumAggregatorFactory("foo", "foo"),
             "bar", new DoubleSumAggregatorFactory("bar", "bar")
-        )
+        ),
+        null
     );
     final SegmentAnalysis analysis2 = new SegmentAnalysis(
         "id",
@@ -226,7 +234,8 @@ public class SegmentMetadataQueryQueryToolChestTest
             "foo", new LongSumAggregatorFactory("foo", "foo"),
             "bar", new DoubleMaxAggregatorFactory("bar", "bar"),
             "baz", new LongMaxAggregatorFactory("baz", "baz")
-        )
+        ),
+        null
     );
 
     final Map<String, AggregatorFactory> expectedLenient = Maps.newHashMap();
