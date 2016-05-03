@@ -143,7 +143,7 @@ public class EventReceiverFirehoseFactory implements FirehoseFactory<MapInputRow
 
     public EventReceiverFirehose(MapInputRowParser parser)
     {
-      this.buffer = new ArrayBlockingQueue<InputRow>(bufferSize);
+      this.buffer = new ArrayBlockingQueue<>(bufferSize);
       this.parser = parser;
     }
 

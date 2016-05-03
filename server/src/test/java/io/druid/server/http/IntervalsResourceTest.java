@@ -22,13 +22,16 @@ package io.druid.server.http;
 import com.google.common.collect.ImmutableList;
 import io.druid.client.DruidServer;
 import io.druid.client.InventoryView;
+import io.druid.server.security.AuthConfig;
 import io.druid.timeline.DataSegment;
 import org.easymock.EasyMock;
 import org.joda.time.Interval;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.core.Response;
 import java.util.ArrayList;
 import java.util.List;
@@ -40,12 +43,15 @@ public class IntervalsResourceTest
   private InventoryView inventoryView;
   private DruidServer server;
   private List<DataSegment> dataSegmentList;
+  private HttpServletRequest request;
 
   @Before
   public void setUp()
   {
     inventoryView = EasyMock.createStrictMock(InventoryView.class);
     server = EasyMock.createStrictMock(DruidServer.class);
+    request = EasyMock.createStrictMock(HttpServletRequest.class);
+
     dataSegmentList = new ArrayList<>();
     dataSegmentList.add(
         new DataSegment(
@@ -103,9 +109,9 @@ public class IntervalsResourceTest
     List<Interval> expectedIntervals = new ArrayList<>();
     expectedIntervals.add(new Interval("2010-01-01T00:00:00.000Z/2010-01-02T00:00:00.000Z"));
     expectedIntervals.add(new Interval("2010-01-22T00:00:00.000Z/2010-01-23T00:00:00.000Z"));
-    IntervalsResource intervalsResource = new IntervalsResource(inventoryView);
+    IntervalsResource intervalsResource = new IntervalsResource(inventoryView, new AuthConfig());
 
-    Response response = intervalsResource.getIntervals();
+    Response response = intervalsResource.getIntervals(request);
     TreeMap<Interval, Map<String, Map<String, Object>>> actualIntervals = (TreeMap) response.getEntity();
     Assert.assertEquals(2, actualIntervals.size());
     Assert.assertEquals(expectedIntervals.get(1), actualIntervals.firstKey());
@@ -117,7 +123,6 @@ public class IntervalsResourceTest
     Assert.assertEquals(5L, actualIntervals.get(expectedIntervals.get(0)).get("datasource2").get("size"));
     Assert.assertEquals(1, actualIntervals.get(expectedIntervals.get(0)).get("datasource2").get("count"));
 
-    EasyMock.verify(inventoryView);
   }
 
   @Test
@@ -130,16 +135,15 @@ public class IntervalsResourceTest
 
     List<Interval> expectedIntervals = new ArrayList<>();
     expectedIntervals.add(new Interval("2010-01-01T00:00:00.000Z/2010-01-02T00:00:00.000Z"));
-    IntervalsResource intervalsResource = new IntervalsResource(inventoryView);
+    IntervalsResource intervalsResource = new IntervalsResource(inventoryView, new AuthConfig());
 
-    Response response = intervalsResource.getSpecificIntervals("2010-01-01T00:00:00.000Z/P1D", "simple", null);
+    Response response = intervalsResource.getSpecificIntervals("2010-01-01T00:00:00.000Z/P1D", "simple", null, request);
     Map<Interval, Map<String, Object>> actualIntervals = (Map) response.getEntity();
     Assert.assertEquals(1, actualIntervals.size());
     Assert.assertTrue(actualIntervals.containsKey(expectedIntervals.get(0)));
     Assert.assertEquals(25L, actualIntervals.get(expectedIntervals.get(0)).get("size"));
     Assert.assertEquals(2, actualIntervals.get(expectedIntervals.get(0)).get("count"));
 
-    EasyMock.verify(inventoryView);
   }
 
   @Test
@@ -152,9 +156,9 @@ public class IntervalsResourceTest
 
     List<Interval> expectedIntervals = new ArrayList<>();
     expectedIntervals.add(new Interval("2010-01-01T00:00:00.000Z/2010-01-02T00:00:00.000Z"));
-    IntervalsResource intervalsResource = new IntervalsResource(inventoryView);
+    IntervalsResource intervalsResource = new IntervalsResource(inventoryView, new AuthConfig());
 
-    Response response = intervalsResource.getSpecificIntervals("2010-01-01T00:00:00.000Z/P1D", null, "full");
+    Response response = intervalsResource.getSpecificIntervals("2010-01-01T00:00:00.000Z/P1D", null, "full", request);
     TreeMap<Interval, Map<String, Map<String, Object>>> actualIntervals = (TreeMap) response.getEntity();
     Assert.assertEquals(1, actualIntervals.size());
     Assert.assertEquals(expectedIntervals.get(0), actualIntervals.firstKey());
@@ -163,7 +167,6 @@ public class IntervalsResourceTest
     Assert.assertEquals(5L, actualIntervals.get(expectedIntervals.get(0)).get("datasource2").get("size"));
     Assert.assertEquals(1, actualIntervals.get(expectedIntervals.get(0)).get("datasource2").get("count"));
 
-    EasyMock.verify(inventoryView);
   }
 
   @Test
@@ -174,14 +177,19 @@ public class IntervalsResourceTest
     ).atLeastOnce();
     EasyMock.replay(inventoryView);
 
-    IntervalsResource intervalsResource = new IntervalsResource(inventoryView);
+    IntervalsResource intervalsResource = new IntervalsResource(inventoryView, new AuthConfig());
 
-    Response response = intervalsResource.getSpecificIntervals("2010-01-01T00:00:00.000Z/P1D", null, null);
+    Response response = intervalsResource.getSpecificIntervals("2010-01-01T00:00:00.000Z/P1D", null, null, request);
     Map<String, Object> actualIntervals = (Map) response.getEntity();
     Assert.assertEquals(2, actualIntervals.size());
     Assert.assertEquals(25L, actualIntervals.get("size"));
     Assert.assertEquals(2, actualIntervals.get("count"));
 
+  }
+
+  @After
+  public void tearDown() {
     EasyMock.verify(inventoryView);
   }
+
 }

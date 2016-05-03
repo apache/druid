@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableMap;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
+import io.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 
 import javax.script.Compilable;
 import javax.script.Invocable;
@@ -39,7 +40,7 @@ public class JavaScriptWorkerSelectStrategy implements WorkerSelectStrategy
 {
   public static interface SelectorFunction
   {
-    public String apply(RemoteTaskRunnerConfig config, ImmutableMap<String, ImmutableWorkerInfo> zkWorkers, Task task);
+    public String apply(WorkerTaskRunnerConfig config, ImmutableMap<String, ImmutableWorkerInfo> zkWorkers, Task task);
   }
 
   private final SelectorFunction fnSelector;
@@ -62,7 +63,7 @@ public class JavaScriptWorkerSelectStrategy implements WorkerSelectStrategy
 
   @Override
   public Optional<ImmutableWorkerInfo> findWorkerForTask(
-      RemoteTaskRunnerConfig config, ImmutableMap<String, ImmutableWorkerInfo> zkWorkers, Task task
+      WorkerTaskRunnerConfig config, ImmutableMap<String, ImmutableWorkerInfo> zkWorkers, Task task
   )
   {
     String worker = fnSelector.apply(config, zkWorkers, task);

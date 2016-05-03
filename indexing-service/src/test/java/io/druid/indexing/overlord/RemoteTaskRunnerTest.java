@@ -23,36 +23,22 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.metamx.common.concurrent.ScheduledExecutors;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
-import io.druid.common.guava.DSuppliers;
-import io.druid.curator.PotentiallyGzippedCompressionProvider;
-import io.druid.curator.cache.SimplePathChildrenCacheFactory;
 import io.druid.indexing.common.IndexingServiceCondition;
-import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TestRealtimeTask;
 import io.druid.indexing.common.TestTasks;
 import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
-import io.druid.indexing.overlord.autoscaling.NoopResourceManagementStrategy;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
-import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
-import io.druid.indexing.worker.TaskAnnouncement;
 import io.druid.indexing.worker.Worker;
-import io.druid.server.initialization.IndexerZkConfig;
-import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
-import org.apache.curator.framework.CuratorFrameworkFactory;
-import org.apache.curator.retry.ExponentialBackoffRetry;
-import org.apache.curator.test.TestingCluster;
 import org.apache.zookeeper.CreateMode;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
@@ -65,46 +51,29 @@ import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 public class RemoteTaskRunnerTest
 {
-  private static final Joiner joiner = Joiner.on("/");
-  private static final String basePath = "/test/druid";
-  private static final String announcementsPath = String.format("%s/indexer/announcements/worker", basePath);
-  private static final String tasksPath = String.format("%s/indexer/tasks/worker", basePath);
-  private static final String statusPath = String.format("%s/indexer/status/worker", basePath);
+  private static final Joiner joiner = RemoteTaskRunnerTestUtils.joiner;
+  private static final String workerHost = "worker";
+  private static final String announcementsPath = joiner.join(RemoteTaskRunnerTestUtils.announcementsPath, workerHost);
+  private static final String statusPath = joiner.join(RemoteTaskRunnerTestUtils.statusPath, workerHost);
   private static final int TIMEOUT_SECONDS = 20;
-  private static final TaskLocation DUMMY_LOCATION = TaskLocation.create("dummy", 9000);
 
-  private ObjectMapper jsonMapper;
-
-  private TestingCluster testingCluster;
-  private CuratorFramework cf;
   private RemoteTaskRunner remoteTaskRunner;
+  private RemoteTaskRunnerTestUtils rtrTestUtils = new RemoteTaskRunnerTestUtils();
+  private ObjectMapper jsonMapper;
+  private CuratorFramework cf;
 
   private Task task;
-
   private Worker worker;
 
   @Before
   public void setUp() throws Exception
   {
-    TestUtils testUtils = new TestUtils();
-    jsonMapper = testUtils.getTestObjectMapper();
-
-    testingCluster = new TestingCluster(1);
-    testingCluster.start();
-
-    cf = CuratorFrameworkFactory.builder()
-                                .connectString(testingCluster.getConnectString())
-                                .retryPolicy(new ExponentialBackoffRetry(1, 10))
-                                .compressionProvider(new PotentiallyGzippedCompressionProvider(false))
-                                .build();
-    cf.start();
-    cf.blockUntilConnected();
-    cf.create().creatingParentsIfNeeded().forPath(basePath);
-    cf.create().creatingParentsIfNeeded().forPath(tasksPath);
+    rtrTestUtils.setUp();
+    jsonMapper = rtrTestUtils.getObjectMapper();
+    cf = rtrTestUtils.getCuratorFramework();
 
     task = TestTasks.unending("task");
   }
@@ -112,9 +81,10 @@ public class RemoteTaskRunnerTest
   @After
   public void tearDown() throws Exception
   {
-    remoteTaskRunner.stop();
-    cf.close();
-    testingCluster.stop();
+    if (remoteTaskRunner != null) {
+      remoteTaskRunner.stop();
+    }
+    rtrTestUtils.tearDown();
   }
 
   @Test
@@ -461,80 +431,27 @@ public class RemoteTaskRunnerTest
 
   private void makeRemoteTaskRunner(RemoteTaskRunnerConfig config) throws Exception
   {
-    remoteTaskRunner = new RemoteTaskRunner(
-        jsonMapper,
-        config,
-        new IndexerZkConfig(
-            new ZkPathsConfig()
-            {
-              @Override
-              public String getBase()
-              {
-                return basePath;
-              }
-            }, null, null, null, null, null
-        ),
-        cf,
-        new SimplePathChildrenCacheFactory.Builder().build(),
-        null,
-        DSuppliers.of(new AtomicReference<>(WorkerBehaviorConfig.defaultConfig())),
-        ScheduledExecutors.fixed(1, "Remote-Task-Runner-Cleanup--%d"),
-        new NoopResourceManagementStrategy<WorkerTaskRunner>()
-    );
-
-    remoteTaskRunner.start();
+    remoteTaskRunner = rtrTestUtils.makeRemoteTaskRunner(config);
   }
 
   private void makeWorker() throws Exception
   {
-    worker = new Worker(
-        "worker",
-        "localhost",
-        3,
-        "0"
-    );
-
-    cf.create().creatingParentsIfNeeded().withMode(CreateMode.EPHEMERAL).forPath(
-        announcementsPath,
-        jsonMapper.writeValueAsBytes(worker)
-    );
+    worker = rtrTestUtils.makeWorker(workerHost);
   }
 
   private void disableWorker() throws Exception
   {
-    cf.setData().forPath(
-        announcementsPath,
-        jsonMapper.writeValueAsBytes(new Worker(worker.getHost(), worker.getIp(), worker.getCapacity(), ""))
-    );
+    rtrTestUtils.disableWorker(worker);
   }
 
   private boolean taskAnnounced(final String taskId)
   {
-    return pathExists(joiner.join(tasksPath, taskId));
+    return rtrTestUtils.taskAnnounced(workerHost, taskId);
   }
 
   private boolean workerRunningTask(final String taskId)
   {
-    return pathExists(joiner.join(statusPath, taskId));
-  }
-
-  private boolean pathExists(final String path)
-  {
-    return TestUtils.conditionValid(
-        new IndexingServiceCondition()
-        {
-          @Override
-          public boolean isValid()
-          {
-            try {
-              return cf.checkExists().forPath(path) != null;
-            }
-            catch (Exception e) {
-              throw Throwables.propagate(e);
-            }
-          }
-        }
-    );
+    return rtrTestUtils.workerRunningTask(workerHost, taskId);
   }
 
   private boolean workerCompletedTask(final ListenableFuture<TaskStatus> result)
@@ -553,18 +470,12 @@ public class RemoteTaskRunnerTest
 
   private void mockWorkerRunningTask(final Task task) throws Exception
   {
-    cf.delete().forPath(joiner.join(tasksPath, task.getId()));
-
-    TaskAnnouncement taskAnnouncement = TaskAnnouncement.create(task, TaskStatus.running(task.getId()), DUMMY_LOCATION);
-    cf.create()
-      .creatingParentsIfNeeded()
-      .forPath(joiner.join(statusPath, task.getId()), jsonMapper.writeValueAsBytes(taskAnnouncement));
+    rtrTestUtils.mockWorkerRunningTask("worker", task);
   }
 
   private void mockWorkerCompleteSuccessfulTask(final Task task) throws Exception
   {
-    TaskAnnouncement taskAnnouncement = TaskAnnouncement.create(task, TaskStatus.success(task.getId()), DUMMY_LOCATION);
-    cf.setData().forPath(joiner.join(statusPath, task.getId()), jsonMapper.writeValueAsBytes(taskAnnouncement));
+    rtrTestUtils.mockWorkerCompleteSuccessfulTask("worker", task);
   }
 
   @Test

@@ -2,7 +2,7 @@
 layout: doc_page
 ---
 
-# Kafka Namespaced Lookup
+# Kafka Lookups
 
 <div class="note caution">
 Lookups are an <a href="../experimental.html">experimental</a> feature.
@@ -10,44 +10,34 @@ Lookups are an <a href="../experimental.html">experimental</a> feature.
 
 Make sure to [include](../../operations/including-extensions.html) `druid-namespace-lookup` and `druid-kafka-extraction-namespace` as an extension.
 
-Note that this lookup does not employ a `pollPeriod`.
-
-If you need updates to populate as promptly as possible, it is possible to plug into a kafka topic whose key is the old value and message is the desired new value (both in UTF-8).
+If you need updates to populate as promptly as possible, it is possible to plug into a kafka topic whose key is the old value and message is the desired new value (both in UTF-8) as a LookupExtractorFactory.
 
 ```json
 {
   "type":"kafka",
-  "namespace":"testTopic",
-  "kafkaTopic":"testTopic"
+  "kafkaTopic":"testTopic",
+  "kafkaProperties":{"zookeeper.connect","somehost:2181/kafka"}
 }
 ```
 
 |Parameter|Description|Required|Default|
 |---------|-----------|--------|-------|
-|`namespace`|The namespace to define|Yes||
 |`kafkaTopic`|The kafka topic to read the data from|Yes||
-
-## Kafka renames
+|`kafkaProperties`|Kafka consumer properties. At least"zookeeper.connect" must be specified. Only the zookeeper connector is supported|Yes||
+|`connectTimeout`|How long to wait for an initial connection|No|`0` (do not wait)|
+|`isOneToOne`|The map is a one-to-one (see[Lookup DimensionSpecs](../querying/dimensionspecs.html))|No|`false`|
 
 The extension `kafka-extraction-namespace` enables reading from a kafka feed which has name/key pairs to allow renaming of dimension values. An example use case would be to rename an ID to a human readable format.
 
-Currently the historical node caches the key/value pairs from the kafka feed in an ephemeral memory mapped DB via MapDB.
+The consumer properties `group.id` and `auto.offset.reset` CANNOT be set in `kafkaProperties` as they are set by the extension as `UUID.randomUUID().toString()` and `smallest` respectively.
 
-## Configuration
+See [lookups](../../querying/lookups.html) for how to configure and use lookups.
 
-The following options are used to define the behavior and should be included wherever the extension is included (all query servicing nodes):
+# Limitations
 
-|Property|Description|Default|
-|--------|-----------|-------|
-|`druid.query.rename.kafka.properties`|A json map of kafka consumer properties. See below for special properties.|See below|
-
-The following are the handling for kafka consumer properties in `druid.query.rename.kafka.properties`
-
-|Property|Description|Default|
-|--------|-----------|-------|
-|`zookeeper.connect`|Zookeeper connection string|`localhost:2181/kafka`|
-|`group.id`|Group ID, auto-assigned for publish-subscribe model and cannot be overridden|`UUID.randomUUID().toString()`|
-|`auto.offset.reset`|Setting to get the entire kafka rename stream. Cannot be overridden|`smallest`|
+Currently the Kafka lookup extractor feeds the entire kafka stream into a local cache. If you are using OnHeap caching, this can easily clobber your java heap if the kafka stream spews a lot of unique keys.
+OffHeap caching should alleviate these concerns, but there is still a limit to the quantity of data that can be stored.
+There is currently no eviction policy.
 
 ## Testing the Kafka rename functionality
 

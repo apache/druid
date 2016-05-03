@@ -140,6 +140,33 @@ public class FiniteAppenderatorDriverTest
     Assert.assertEquals(3, segmentsAndMetadata.getCommitMetadata());
   }
 
+  @Test
+  public void testMaxRowsPerSegment() throws Exception
+  {
+    final int numSegments = 3;
+    final TestCommitterSupplier<Integer> committerSupplier = new TestCommitterSupplier<>();
+    Assert.assertNull(driver.startJob());
+
+    for (int i = 0; i < numSegments * MAX_ROWS_PER_SEGMENT; i++) {
+      committerSupplier.setMetadata(i + 1);
+      InputRow row = new MapBasedInputRow(
+          new DateTime("2000T01"),
+          ImmutableList.of("dim2"),
+          ImmutableMap.<String, Object>of(
+              "dim2",
+              String.format("bar-%d", i),
+              "met1",
+              2.0
+          )
+      );
+      Assert.assertNotNull(driver.add(row, "dummy", committerSupplier));
+    }
+
+    final SegmentsAndMetadata segmentsAndMetadata = driver.finish(makeOkPublisher(), committerSupplier.get());
+    Assert.assertEquals(numSegments, segmentsAndMetadata.getSegments().size());
+    Assert.assertEquals(numSegments * MAX_ROWS_PER_SEGMENT, segmentsAndMetadata.getCommitMetadata());
+  }
+
   private Set<SegmentIdentifier> asIdentifiers(Iterable<DataSegment> segments)
   {
     return ImmutableSet.copyOf(

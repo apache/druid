@@ -62,7 +62,7 @@ public class SimpleResourceManagementStrategyTest
 {
   private AutoScaler autoScaler;
   private Task testTask;
-  private SimpleResourceManagementStrategy simpleResourceManagementStrategy;
+  private SimpleWorkerResourceManagementStrategy simpleResourceManagementStrategy;
   private AtomicReference<WorkerBehaviorConfig> workerConfig;
   private ScheduledExecutorService executorService = Execs.scheduledSingleThreaded("test service");
 
@@ -72,7 +72,7 @@ public class SimpleResourceManagementStrategyTest
     autoScaler = EasyMock.createMock(AutoScaler.class);
     testTask = TestTasks.immediateSuccess("task1");
 
-    final SimpleResourceManagementConfig simpleResourceManagementConfig = new SimpleResourceManagementConfig()
+    final SimpleWorkerResourceManagementConfig simpleWorkerResourceManagementConfig = new SimpleWorkerResourceManagementConfig()
         .setWorkerIdleTimeout(new Period(0))
         .setMaxScalingDuration(new Period(1000))
         .setNumEventsToTrack(1)
@@ -88,8 +88,8 @@ public class SimpleResourceManagementStrategyTest
         )
     );
 
-    simpleResourceManagementStrategy = new SimpleResourceManagementStrategy(
-        simpleResourceManagementConfig,
+    simpleResourceManagementStrategy = new SimpleWorkerResourceManagementStrategy(
+        simpleWorkerResourceManagementConfig,
         DSuppliers.of(workerConfig),
         schedulerConfig,
         executorService
