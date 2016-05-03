@@ -49,6 +49,15 @@ public final class AllGranularity extends BaseQueryGranularity
   }
 
   @Override
+  public Integer compare(QueryGranularity other)
+  {
+    if (other instanceof AllGranularity) {
+      return 0;
+    }
+    return 1;
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

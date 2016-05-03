@@ -25,10 +25,12 @@ import com.metamx.common.StringUtils;
 import org.joda.time.Chronology;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+import org.joda.time.DurationField;
+import org.joda.time.DurationFieldType;
 import org.joda.time.Period;
 import org.joda.time.chrono.ISOChronology;
 
-public class  PeriodGranularity extends BaseQueryGranularity
+public class PeriodGranularity extends BaseQueryGranularity
 {
   private final Period period;
   private final Chronology chronology;
@@ -57,7 +59,7 @@ public class  PeriodGranularity extends BaseQueryGranularity
       this.origin = origin.getMillis();
       this.hasOrigin = true;
     }
-    this.isCompound = isCompoundPeriod(period);
+    this.isCompound = isCompoundPeriod();
   }
 
   @JsonProperty("period")
@@ -266,19 +268,25 @@ public class  PeriodGranularity extends BaseQueryGranularity
     return t;
   }
 
-  private static boolean isCompoundPeriod(Period period)
+  private boolean isCompoundPeriod()
+  {
+    return getSoleDurationField() == Integer.MIN_VALUE;
+  }
+
+  // Integer.MIN_VALUE for complex period
+  private int getSoleDurationField()
   {
     int[] values = period.getValues();
-    boolean single = false;
-    for(int v : values)
-    {
-      if(v > 0)
-      {
-        if(single) return true;
-        single = true;
+    int index = -1;
+    for (int i = 0; i < values.length; i++) {
+      if (values[i] > 0) {
+        if (index >= 0) {
+          return Integer.MIN_VALUE;
+        }
+        index = i;
       }
     }
-    return false;
+    return index;
   }
 
   private long truncateCompoundPeriod(long t)
@@ -306,7 +314,7 @@ public class  PeriodGranularity extends BaseQueryGranularity
   {
     // toStandardDuration assumes days are always 24h, and hours are always 60 minutes,
     // which may not always be the case, e.g if there are daylight saving changes.
-    if (chronology.days().isPrecise() && chronology.hours().isPrecise()) {
+    if (isPrecise()) {
       final long millis = period.toStandardDuration().getMillis();
       long offset = t % millis - origin % millis;
       if(offset < 0) {
@@ -327,6 +335,59 @@ public class  PeriodGranularity extends BaseQueryGranularity
   public byte[] cacheKey()
   {
     return StringUtils.toUtf8(period.toString() + ":" + chronology.getZone().toString() + ":" + origin);
+  }
+
+  @Override
+  public Integer compare(QueryGranularity other)
+  {
+    if (other instanceof PeriodGranularity) {
+      PeriodGranularity pg1 = this;
+      PeriodGranularity pg2 = (PeriodGranularity) other;
+      Chronology c1 = pg1.chronology;
+      Chronology c2 = pg2.chronology;
+      if (pg1.origin != pg2.origin || !c1.equals(c2)) {
+        return null;
+      }
+      int s1 = pg1.getSoleDurationField();
+      int s2 = pg2.getSoleDurationField();
+      if (s1 == s2) {
+        if (s1 == -1) {
+          return 0;
+        } else if (s1 >= 0) {
+          return compareMultiplicity(pg1.period.getValue(s1), pg2.period.getValue(s2));
+        }
+      }
+      if (!pg1.isPrecise() || !pg2.isPrecise()) {
+        // if any non-precise field is included, it cannot be compared with each other by standard duration
+        return null;
+      }
+      return compareMultiplicity(
+          pg1.period.toStandardDuration().getMillis(),
+          pg2.period.toStandardDuration().getMillis()
+      );
+    }
+    return super.compare(other);
+  }
+
+  /**
+   * see {@link DurationField#isPrecise}
+   *
+   *  A precise field can calculate its value from milliseconds without needing a reference date
+   */
+  public boolean isPrecise()
+  {
+    DurationFieldType[] types = period.getFieldTypes();
+    boolean started = false;
+    for (int i = 0; i < types.length; i++) {
+      if (started || period.getValue(i) != 0) {
+        started = true;
+        DurationField field = types[i].getField(chronology);
+        if (!field.isSupported() || !field.isPrecise()) {
+          return false;
+        }
+      }
+    }
+    return true;
   }
 
   @Override
@@ -372,7 +433,7 @@ public class  PeriodGranularity extends BaseQueryGranularity
   {
     return "PeriodGranularity{" +
            "period=" + period +
-           ", timeZone=" + chronology .getZone() +
+           ", timeZone=" + chronology.getZone() +
            ", origin=" + (hasOrigin ? origin : "null") +
            '}';
   }

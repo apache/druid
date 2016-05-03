@@ -33,8 +33,8 @@ public class DurationGranularity extends BaseQueryGranularity
 
   @JsonCreator
   public DurationGranularity(
-    @JsonProperty("duration") long duration,
-    @JsonProperty("origin") DateTime origin
+      @JsonProperty("duration") long duration,
+      @JsonProperty("origin") DateTime origin
   )
   {
     this(duration, origin == null ? 0 : origin.getMillis());
@@ -74,7 +74,7 @@ public class DurationGranularity extends BaseQueryGranularity
   {
     final long duration = getDurationMillis();
     long offset = t % duration - origin % duration;
-    if(offset < 0) {
+    if (offset < 0) {
       offset += duration;
     }
     return t - offset;
@@ -89,6 +89,20 @@ public class DurationGranularity extends BaseQueryGranularity
   public long getDurationMillis()
   {
     return length;
+  }
+
+  @Override
+  public Integer compare(QueryGranularity other)
+  {
+    if (other instanceof DurationGranularity) {
+      DurationGranularity dg1 = this;
+      DurationGranularity dg2 = (DurationGranularity) other;
+      if (dg1.getOriginMillis() != dg2.getOriginMillis()) {
+        return null;
+      }
+      return compareMultiplicity(dg1.getDuration(), dg2.getDuration());
+    }
+    return super.compare(other);
   }
 
   @Override
