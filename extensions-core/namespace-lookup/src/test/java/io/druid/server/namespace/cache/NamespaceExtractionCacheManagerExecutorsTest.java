@@ -173,6 +173,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     final String namespaceID = "ns";
     URIExtractionNamespace namespace = new URIExtractionNamespace(
         tmpFile.toURI(),
+        null, null,
         new URIExtractionNamespace.ObjectMapperFlatDataParser(
             URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
         ),
@@ -197,6 +198,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     final String namespaceID = "ns";
     URIExtractionNamespace namespace = new URIExtractionNamespace(
         tmpFile.toURI(),
+        null, null,
         new URIExtractionNamespace.ObjectMapperFlatDataParser(
             URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
         ),
@@ -217,6 +219,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     try {
       final URIExtractionNamespace namespace = new URIExtractionNamespace(
           tmpFile.toURI(),
+          null, null,
           new URIExtractionNamespace.ObjectMapperFlatDataParser(
               URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
           ),
@@ -348,6 +351,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     final long period = 1_000L;// Give it some time between attempts to update
     final URIExtractionNamespace namespace = new URIExtractionNamespace(
         tmpFile.toURI(),
+        null, null,
         new URIExtractionNamespace.ObjectMapperFlatDataParser(
             URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
         ),
@@ -425,6 +429,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
 
       final URIExtractionNamespace namespace = new URIExtractionNamespace(
           tmpFile.toURI(),
+          null, null,
           new URIExtractionNamespace.ObjectMapperFlatDataParser(
               URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
           ),
@@ -473,6 +478,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
     try {
       final URIExtractionNamespace namespace = new URIExtractionNamespace(
           tmpFile.toURI(),
+          null, null,
           new URIExtractionNamespace.ObjectMapperFlatDataParser(
               URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
           ),

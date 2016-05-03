@@ -51,7 +51,7 @@ public class NamespaceExtractionCacheManagersTest
   private static final Logger log = new Logger(NamespaceExtractionCacheManagersTest.class);
   private static final Lifecycle lifecycle = new Lifecycle();
 
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> getParameters()
   {
     ArrayList<Object[]> params = new ArrayList<>();
@@ -109,6 +109,36 @@ public class NamespaceExtractionCacheManagersTest
   }
 
   @Test
+  public void testSimpleCacheSwap()
+  {
+    for (String ns : nsList) {
+      ConcurrentMap<String, String> map = extractionCacheManager.getCacheMap(ns + "old_cache");
+      map.put("key", "val");
+      extractionCacheManager.swapAndClearCache(ns, ns + "old_cache");
+      Assert.assertEquals("val", map.get("key"));
+      Assert.assertEquals("val", extractionCacheManager.getCacheMap(ns).get("key"));
+
+      ConcurrentMap<String, String> map2 = extractionCacheManager.getCacheMap(ns + "cache");
+      map2.put("key", "val2");
+      Assert.assertTrue(extractionCacheManager.swapAndClearCache(ns, ns + "cache"));
+      Assert.assertEquals("val2", map2.get("key"));
+      Assert.assertEquals("val2", extractionCacheManager.getCacheMap(ns).get("key"));
+    }
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testMissingCacheThrowsIAE()
+  {
+    for (String ns : nsList) {
+      ConcurrentMap<String, String> map = extractionCacheManager.getCacheMap(ns);
+      map.put("key", "val");
+      Assert.assertEquals("val", map.get("key"));
+      Assert.assertEquals("val", extractionCacheManager.getCacheMap(ns).get("key"));
+      Assert.assertFalse(extractionCacheManager.swapAndClearCache(ns, "I don't exist"));
+    }
+  }
+
+  @Test
   public void testCacheList()
   {
     List<String> nsList = new ArrayList<String>(NamespaceExtractionCacheManagersTest.nsList);
@@ -119,6 +149,12 @@ public class NamespaceExtractionCacheManagersTest
     Collections.sort(nsList);
     Collections.sort(retvalList);
     Assert.assertArrayEquals(nsList.toArray(), retvalList.toArray());
+  }
+
+  @Test
+  public void testNoDeleteNonexistant()
+  {
+    Assert.assertFalse(extractionCacheManager.delete("I don't exist"));
   }
 
   public static void waitFor(Future<?> future) throws InterruptedException

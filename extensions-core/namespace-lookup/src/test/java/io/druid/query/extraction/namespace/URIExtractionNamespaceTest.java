@@ -19,6 +19,7 @@
 
 package io.druid.query.extraction.namespace;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.introspect.AnnotationIntrospectorPair;
 import com.google.common.collect.ImmutableList;
@@ -324,11 +325,29 @@ public class URIExtractionNamespaceTest
   }
 
   @Test
+  public void testMatchedJson() throws IOException
+  {
+    final ObjectMapper mapper = registerTypes(new DefaultObjectMapper());
+    URIExtractionNamespace namespace = mapper.readValue(
+        "{\"type\":\"uri\", \"uriPrefix\":\"file:/foo\", \"namespaceParseSpec\":{\"format\":\"simpleJson\"}, \"pollPeriod\":\"PT5M\", \"versionRegex\":\"a.b.c\", \"namespace\":\"testNamespace\"}",
+        URIExtractionNamespace.class
+    );
+
+    Assert.assertEquals(
+        URIExtractionNamespace.ObjectMapperFlatDataParser.class.getCanonicalName(),
+        namespace.getNamespaceParseSpec().getClass().getCanonicalName()
+    );
+    Assert.assertEquals("file:/foo", namespace.getUriPrefix().toString());
+    Assert.assertEquals("a.b.c", namespace.getFileRegex());
+    Assert.assertEquals(5L * 60_000L, namespace.getPollMs());
+  }
+
+  @Test
   public void testExplicitJson() throws IOException
   {
     final ObjectMapper mapper = registerTypes(new DefaultObjectMapper());
     URIExtractionNamespace namespace = mapper.readValue(
-        "{\"type\":\"uri\", \"uri\":\"file:/foo\", \"namespaceParseSpec\":{\"format\":\"simpleJson\"}, \"pollPeriod\":\"PT5M\", \"versionRegex\":\"a.b.c\"}",
+        "{\"type\":\"uri\", \"uri\":\"file:/foo\", \"namespaceParseSpec\":{\"format\":\"simpleJson\"}, \"pollPeriod\":\"PT5M\"}",
         URIExtractionNamespace.class
     );
 
@@ -337,8 +356,17 @@ public class URIExtractionNamespaceTest
         namespace.getNamespaceParseSpec().getClass().getCanonicalName()
     );
     Assert.assertEquals("file:/foo", namespace.getUri().toString());
-    Assert.assertEquals("a.b.c", namespace.getVersionRegex());
     Assert.assertEquals(5L * 60_000L, namespace.getPollMs());
+  }
+
+  @Test(expected = JsonMappingException.class)
+  public void testExplicitJsonException() throws IOException
+  {
+    final ObjectMapper mapper = registerTypes(new DefaultObjectMapper());
+    mapper.readValue(
+        "{\"type\":\"uri\", \"uri\":\"file:/foo\", \"namespaceParseSpec\":{\"format\":\"simpleJson\"}, \"pollPeriod\":\"PT5M\", \"versionRegex\":\"a.b.c\", \"namespace\":\"testNamespace\"}",
+        URIExtractionNamespace.class
+    );
   }
 
   @Test

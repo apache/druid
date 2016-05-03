@@ -29,6 +29,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.net.URI;
 import java.util.concurrent.Callable;
@@ -81,7 +82,7 @@ public class HdfsFileTimestampVersionFinder extends HdfsDataSegmentPuller implem
    * @return The URI of the file with the most recent modified timestamp.
    */
   @Override
-  public URI getLatestVersion(final URI uri, final Pattern pattern)
+  public URI getLatestVersion(final URI uri, final @Nullable Pattern pattern)
   {
     final Path path = new Path(uri);
     try {

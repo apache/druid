@@ -22,6 +22,7 @@ package io.druid.server.initialization.jetty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.google.inject.Binder;
 import com.google.inject.ConfigurationException;
@@ -34,6 +35,10 @@ import com.google.inject.Singleton;
 import com.google.inject.multibindings.Multibinder;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
+import com.metamx.emitter.service.ServiceEmitter;
+import com.metamx.emitter.service.ServiceMetricEvent;
+import com.metamx.metrics.AbstractMonitor;
+import com.metamx.metrics.MonitorUtils;
 import com.sun.jersey.api.core.DefaultResourceConfig;
 import com.sun.jersey.api.core.ResourceConfig;
 import com.sun.jersey.guice.JerseyServletModule;
@@ -45,9 +50,13 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.annotations.JSR311Resource;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Self;
+import io.druid.query.DruidMetrics;
 import io.druid.server.DruidNode;
 import io.druid.server.StatusResource;
 import io.druid.server.initialization.ServerConfig;
+import io.druid.server.metrics.MetricsModule;
+import io.druid.server.metrics.MonitorsConfig;
+import org.eclipse.jetty.server.ConnectionFactory;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
@@ -55,14 +64,20 @@ import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.util.thread.ScheduledExecutorScheduler;
 
 import javax.servlet.ServletException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  */
 public class JettyServerModule extends JerseyServletModule
 {
   private static final Logger log = new Logger(JettyServerModule.class);
+
+  private static final AtomicInteger activeConnections = new AtomicInteger();
 
   @Override
   protected void configureServlets()
@@ -83,6 +98,8 @@ public class JettyServerModule extends JerseyServletModule
     //Adding empty binding for ServletFilterHolders so that injector returns
     //an empty set when no external modules provide ServletFilterHolder impls
     Multibinder.newSetBinder(binder, ServletFilterHolder.class);
+
+    MetricsModule.register(binder, JettyMonitor.class);
   }
 
   public static class DruidGuiceContainer extends GuiceContainer
@@ -110,7 +127,9 @@ public class JettyServerModule extends JerseyServletModule
 
   @Provides
   @LazySingleton
-  public Server getServer(Injector injector, Lifecycle lifecycle, @Self DruidNode node, ServerConfig config)
+  public Server getServer(
+      final Injector injector, final Lifecycle lifecycle, @Self final DruidNode node, final ServerConfig config
+  )
   {
     final Server server = makeJettyServer(node, config);
     initializeServer(injector, lifecycle, server);
@@ -145,6 +164,12 @@ public class JettyServerModule extends JerseyServletModule
     // workaround suggested in -
     // https://bugs.eclipse.org/bugs/show_bug.cgi?id=435322#c66 for jetty half open connection issues during failovers
     connector.setAcceptorPriorityDelta(-1);
+
+    List<ConnectionFactory> monitoredConnFactories = new ArrayList<>();
+    for (ConnectionFactory cf : connector.getConnectionFactories()) {
+      monitoredConnFactories.add(new JettyMonitoringConnectionFactory(cf, activeConnections));
+    }
+    connector.setConnectionFactories(monitoredConnFactories);
 
     server.setConnectors(new Connector[]{connector});
 
@@ -184,4 +209,37 @@ public class JettyServerModule extends JerseyServletModule
     );
   }
 
+  @Provides
+  @Singleton
+  public JettyMonitor getJettyMonitor(Properties props)
+  {
+    return new JettyMonitor(props);
+  }
+
+  public static class JettyMonitor extends AbstractMonitor
+  {
+    private final Map<String, String[]> dimensions;
+
+    public JettyMonitor(Properties props)
+    {
+      this.dimensions = MonitorsConfig.extractDimensions(
+          props,
+          Lists.newArrayList(
+              DruidMetrics.DATASOURCE,
+              DruidMetrics.TASK_ID
+          )
+      );
+    }
+
+    @Override
+    public boolean doMonitor(ServiceEmitter emitter)
+    {
+      final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
+      MonitorUtils.addDimensionsToBuilder(
+          builder, dimensions
+      );
+      emitter.emit(builder.build("jetty/numOpenConnections", activeConnections.get()));
+      return true;
+    }
+  }
 }

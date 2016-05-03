@@ -77,10 +77,11 @@ public class NamespaceLookupExtractorFactoryTest
   {
     final URIExtractionNamespace uriExtractionNamespace = new URIExtractionNamespace(
         temporaryFolder.newFolder().toURI(),
+        null, null,
         new URIExtractionNamespace.ObjectMapperFlatDataParser(mapper),
 
         Period.millis(0),
-        "foo"
+        null
     );
     final NamespaceLookupExtractorFactory namespaceLookupExtractorFactory = new NamespaceLookupExtractorFactory(
         uriExtractionNamespace,

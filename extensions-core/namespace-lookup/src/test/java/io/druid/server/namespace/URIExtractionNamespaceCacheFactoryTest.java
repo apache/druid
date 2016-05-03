@@ -24,6 +24,8 @@ import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Sets;
+import com.metamx.common.IAE;
 import com.metamx.common.UOE;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.emitter.service.ServiceEmitter;
@@ -39,12 +41,15 @@ import io.druid.server.namespace.cache.NamespaceExtractionCacheManager;
 import io.druid.server.namespace.cache.NamespaceExtractionCacheManagersTest;
 import io.druid.server.namespace.cache.OffHeapNamespaceExtractionCacheManager;
 import io.druid.server.namespace.cache.OnHeapNamespaceExtractionCacheManager;
+import org.hamcrest.BaseMatcher;
+import org.hamcrest.Description;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
@@ -59,12 +64,12 @@ import java.io.OutputStreamWriter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -236,6 +241,8 @@ public class URIExtractionNamespaceCacheFactoryTest
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   private final String suffix;
   private final Function<File, OutputStream> outStreamSupplier;
@@ -273,11 +280,12 @@ public class URIExtractionNamespaceCacheFactoryTest
     );
     namespace = new URIExtractionNamespace(
         tmpFile.toURI(),
+        null, null,
         new URIExtractionNamespace.ObjectMapperFlatDataParser(
             URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
         ),
         new Period(0),
-        Pattern.quote(tmpFile.getName())
+        null
     );
     id = "ns";
   }
@@ -299,6 +307,26 @@ public class URIExtractionNamespaceCacheFactoryTest
   }
 
   @Test
+  public void simpleTestRegex() throws IOException, ExecutionException, InterruptedException
+  {
+    String regexID = "regex";
+    final URIExtractionNamespace namespace = new URIExtractionNamespace(
+        null,
+        Paths.get(this.namespace.getUri()).getParent().toUri(),
+        Pattern.quote(Paths.get(this.namespace.getUri()).getFileName().toString()),
+        this.namespace.getNamespaceParseSpec(),
+        Period.millis((int) this.namespace.getPollMs()),
+        null
+    );
+    Assert.assertTrue(!manager.getKnownIDs().contains(regexID));
+    NamespaceExtractionCacheManagersTest.waitFor(manager.schedule(regexID, namespace));
+    Map<String, String> map = manager.getCacheMap(regexID);
+    Assert.assertNotNull(map);
+    Assert.assertEquals("bar", map.get("foo"));
+    Assert.assertEquals(null, map.get("baz"));
+  }
+
+  @Test
   public void simplePileONamespacesTest() throws InterruptedException
   {
     final int size = 128;
@@ -308,11 +336,12 @@ public class URIExtractionNamespaceCacheFactoryTest
       ids.add(id);
       URIExtractionNamespace namespace = new URIExtractionNamespace(
           tmpFile.toURI(),
+          null, null,
           new URIExtractionNamespace.ObjectMapperFlatDataParser(
               URIExtractionNamespaceTest.registerTypes(new ObjectMapper())
           ),
           new Period(0),
-          Pattern.quote(tmpFile.getName())
+          null
       );
 
       Assert.assertFalse(manager.getKnownIDs().contains(id));
@@ -353,11 +382,12 @@ public class URIExtractionNamespaceCacheFactoryTest
   {
     URIExtractionNamespace badNamespace = new URIExtractionNamespace(
         namespace.getUri(),
+        null, null,
         namespace.getNamespaceParseSpec(),
         Period.millis((int) namespace.getPollMs()),
-        "\\QNEVER GONNA FIND ME" + UUID
-            .randomUUID().toString() + "\\E"
+        null
     );
+    Assert.assertTrue(new File(namespace.getUri()).delete());
     ConcurrentMap<String, String> map = new ConcurrentHashMap<>();
     try {
       factory.getCachePopulator(id, badNamespace, null, map).call();
@@ -368,5 +398,106 @@ public class URIExtractionNamespaceCacheFactoryTest
       return;
     }
     Assert.fail("Did not have exception");
+  }
+
+  @Test
+  public void testMissingRegex() throws Exception
+  {
+    String badId = "bad";
+    URIExtractionNamespace badNamespace = new URIExtractionNamespace(
+        null,
+        Paths.get(namespace.getUri()).getParent().toUri(),
+        Pattern.quote(Paths.get(namespace.getUri()).getFileName().toString()),
+        namespace.getNamespaceParseSpec(),
+        Period.millis((int) namespace.getPollMs()),
+        null
+    );
+    Assert.assertTrue(new File(namespace.getUri()).delete());
+    ConcurrentMap<String, String> map = new ConcurrentHashMap<>();
+    expectedException.expect(new BaseMatcher<Throwable>()
+    {
+      @Override
+      public void describeTo(Description description)
+      {
+
+      }
+
+      @Override
+      public boolean matches(Object o)
+      {
+        if (!(o instanceof Throwable)) {
+          return false;
+        }
+        final Throwable t = (Throwable) o;
+        return t.getCause() != null && t.getCause() instanceof FileNotFoundException;
+      }
+    });
+    factory.getCachePopulator(badId, badNamespace, null, map).call();
+  }
+
+  @Test(expected = IAE.class)
+  public void testExceptionalCreationDoubleURI()
+  {
+    new URIExtractionNamespace(
+        namespace.getUri(),
+        namespace.getUri(),
+        null,
+        namespace.getNamespaceParseSpec(),
+        Period.millis((int)namespace.getPollMs()),
+        null
+    );
+  }
+
+  @Test(expected = IAE.class)
+  public void testExceptionalCreationURIWithPattern()
+  {
+    new URIExtractionNamespace(
+        namespace.getUri(),
+        null,
+        "",
+        namespace.getNamespaceParseSpec(),
+        Period.millis((int)namespace.getPollMs()),
+        null
+    );
+  }
+
+  @Test(expected = IAE.class)
+  public void testExceptionalCreationURIWithLegacyPattern()
+  {
+    new URIExtractionNamespace(
+        namespace.getUri(),
+        null,
+        null,
+        namespace.getNamespaceParseSpec(),
+        Period.millis((int)namespace.getPollMs()),
+        ""
+    );
+  }
+
+  @Test(expected = IAE.class)
+  public void testLegacyMix()
+  {
+    new URIExtractionNamespace(
+        null,
+        namespace.getUri(),
+        "",
+        namespace.getNamespaceParseSpec(),
+        Period.millis((int)namespace.getPollMs()),
+        ""
+    );
+  }
+
+
+  @Test(expected = IAE.class)
+  public void testBadPattern()
+  {
+    new URIExtractionNamespace(
+        null,
+        namespace.getUri(),
+        "[",
+        namespace.getNamespaceParseSpec(),
+        Period.millis((int)namespace.getPollMs()),
+        null
+    );
   }
 }
