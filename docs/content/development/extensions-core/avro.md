@@ -33,7 +33,7 @@ For example, using Avro stream parser with schema repo Avro bytes decoder:
     }
   },
   "parseSpec" : {
-    "type": "timeAndDims",
+    "format": "timeAndDims",
     "timestampSpec": <standard timestampSpec>,
     "dimensionsSpec": <standard dimensionsSpec>
   }
