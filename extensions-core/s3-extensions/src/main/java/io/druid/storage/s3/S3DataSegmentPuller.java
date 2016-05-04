@@ -138,20 +138,6 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
       {
         throw new UOE("Cannot delete S3 items anonymously. jetS3t doesn't support authenticated deletes easily.");
       }
-
-      @Override
-      public void finalize() throws Throwable
-      {
-        try {
-          if (!streamAcquired) {
-            // Make absolutely sure
-            storageObject.closeDataInputStream();
-          }
-        }
-        finally {
-          super.finalize();
-        }
-      }
     };
   }
 
