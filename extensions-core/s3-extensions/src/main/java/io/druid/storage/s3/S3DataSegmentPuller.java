@@ -93,9 +93,10 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
               return storageObject.getDataInputStream();
             }
             // lazily promote to full GET
-            streamAcquired = true;
             storageObject = s3Client.getObject(s3Obj.getBucketName(), s3Obj.getKey());
-            return storageObject.getDataInputStream();
+            final InputStream stream = storageObject.getDataInputStream();
+            streamAcquired = true;
+            return stream;
           }
         }
         catch (ServiceException e) {
