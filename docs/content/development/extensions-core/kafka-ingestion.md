@@ -2,14 +2,19 @@
 layout: doc_page
 ---
 
-# Kafka Ingestion
+# Kafka Indexing Service
 
-The recommended way of ingesting data from Kafka is to use the `kafka-indexing-service` core extension (see
-[Including Extensions](../operations/including-extensions.html)). The Kafka indexing service enables the configuration
-of *supervisors* on the Overlord, which facilitate ingestion from Kafka by managing the creation and lifetime of Kafka
-indexing tasks. These indexing tasks read events using Kafka's own partition and offset mechanism and are therefore able
-to provide guarantees of exactly-once ingestion. The supervisor oversees the state of the indexing tasks to
-coordinate handoffs, manage failures, and ensure that the scalability and replication requirements are maintained.
+The Kafka indexing service enables the configuration of *supervisors* on the Overlord, which facilitate ingestion from
+Kafka by managing the creation and lifetime of Kafka indexing tasks. These indexing tasks read events using Kafka's own
+partition and offset mechanism and are therefore able to provide guarantees of exactly-once ingestion. They are also
+able to read non-recent events from Kafka and are not subject to the window period considerations imposed on other
+ingestion mechanisms. The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures,
+and ensure that the scalability and replication requirements are maintained.
+
+This service is provided in the `kafka-indexing-service` core extension (see
+[Including Extensions](../../operations/including-extensions.html)). Please note that the Kafka indexing service is
+currently designated as an *experimental feature* and is subject to the usual
+[experimental caveats](../experimental.html).
 
 ## Submitting a Supervisor Spec
 
@@ -78,7 +83,9 @@ A sample supervisor spec is shown below:
   },
   "ioConfig": {
     "topic": "metrics",
-    "kafkaBrokers": "<BROKER_1>:<PORT_1>,<BROKER_2>:<PORT_2>,...",
+    "consumerProperties": {
+      "bootstrap.servers": "localhost:9092"
+    },
     "taskCount": 1,
     "replicas": 1,
     "taskDuration": "PT1H"
@@ -91,7 +98,7 @@ A sample supervisor spec is shown below:
 |Field|Description|Required|
 |--------|-----------|---------|
 |`type`|The supervisor type, this should always be `kafka`.|yes|
-|`dataSchema`|The schema that will be used by the Kafka indexing task during ingestion, see [Ingestion Spec](../ingestion/index.html).|yes|
+|`dataSchema`|The schema that will be used by the Kafka indexing task during ingestion, see [Ingestion Spec](../../ingestion/index.html).|yes|
 |`tuningConfig`|A KafkaTuningConfig that will be provided to indexing tasks, see below.|no|
 |`ioConfig`|A KafkaSupervisorIOConfig to configure the supervisor, see below.|yes|
 
@@ -105,7 +112,6 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |`maxRowsInMemory`|Integer|The number of rows to aggregate before persisting. This number is the post-aggregation rows, so it is not equivalent to the number of input events, but the number of aggregated rows that those events result in. This is used to manage the required JVM heap size. Maximum heap memory usage for indexing scales with maxRowsInMemory * (2 + maxPendingPersists).|no (default == 75000)|
 |`maxRowsPerSegment`|Integer|The number of rows to aggregate into a segment; this number is post-aggregation rows.|no (default == 5000000)|
 |`intermediatePersistPeriod`|ISO8601 Period|The period that determines the rate at which intermediate persists occur.|no (default == PT10M)|
-|`basePersistDirectory`|String|The local directory used for persisted data.|no (default == Java temp directory)|
 |`maxPendingPersists`|Integer|Maximum number of persists that can be pending but not started. If this limit would be exceeded by a new intermediate persist, ingestion will block until the currently-running persist finishes. Maximum heap memory usage for indexing scales with maxRowsInMemory * (2 + maxPendingPersists).|no (default == 0, meaning one persist can be running concurrently with ingestion, and none can be queued up)|
 |`indexSpec`|Object|Tune how data is indexed, see 'IndexSpec' below for more details.|no|
 |`buildV9Directly`|Boolean|Whether to build a v9 index directly instead of first building a v8 index and then converting it to v9 format.|no (default == false)|
@@ -125,11 +131,10 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
 |`topic`|String|The Kafka topic to read from. This must be a specific topic as topic patterns are not supported.|yes|
-|`kafkaBrokers`|String|A list of Kafka brokers in the form: `<BROKER_1>:<PORT_1>,<BROKER_2>:<PORT_2>,...`|yes|
+|`consumerProperties`|Map<String, String>|A map of properties to be passed to the Kafka consumer. This must contain a property `bootstrap.servers` with a list of Kafka brokers in the form: `<BROKER_1>:<PORT_1>,<BROKER_2>:<PORT_2>,...`.|yes|
 |`replicas`|Integer|The number of replica sets, where 1 means a single set of tasks (no replication). Replica tasks will always be assigned to different workers to provide resiliency against node failure.|no (default == 1)|
 |`taskCount`|Integer|The maximum number of *reading* tasks in a *replica set*. This means that the maximum number of reading tasks will be `taskCount * replicas` and the total number of tasks (*reading* + *publishing*) will be higher than this. See 'Capacity Planning' below for more details. The number of reading tasks will be less than `taskCount` if `taskCount > {numKafkaPartitions}`.|no (default == 1)|
 |`taskDuration`|ISO8601 Period|The length of time before tasks stop reading and begin publishing their segment. Note that segments are only pushed to deep storage and loadable by historical nodes when the indexing task completes.|no (default == PT1H)|
-|`consumerProperties`|Map<String, String>|A map of properties to be passed to the Kafka consumer. Note that 'bootstrap.servers' will be overridden with the value in `kafkaBrokers`.|no|
 |`startDelay`|ISO8601 Period|The period to wait before the supervisor starts managing tasks.|no (default == PT5S)|
 |`period`|ISO8601 Period|How often the supervisor will execute its management logic. Note that the supervisor will also run in response to certain events (such as tasks succeeding, failing, and reaching their taskDuration) so this value specifies the maximum time between iterations.|no (default == PT30S)|
 |`useEarliestOffset`|Boolean|If a supervisor is managing a dataSource for the first time, it will obtain a set of starting offsets from Kafka. This flag determines whether it retrieves the earliest or latest offsets in Kafka. Under normal circumstances, subsequent tasks will start from where the previous segments ended so this flag will only be used on first run.|no (default == false)|
@@ -237,4 +242,7 @@ Following from the previous section, schema and configuration changes are manage
 with a call to the `POST /druid/indexer/v1/supervisor/<supervisorId>/shutdown` endpoint, waiting for the running tasks
 to complete, and then submitting the updated schema via the `POST /druid/indexer/v1/supervisor` create supervisor
 endpoint. The updated supervisor will begin reading from the offsets where the previous supervisor ended and no data
-will be lost.
+will be lost. If the updated schema is posted before the previously running tasks have completed, the supervisor will
+detect that the tasks are no longer compatible with the new schema and will issue a shutdown command to the tasks which
+may result in the current segments not being published. If this happens, the tasks based on the updated schema will
+begin reading from the same starting offsets as the previous aborted tasks and no data will be lost.

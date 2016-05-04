@@ -1141,8 +1141,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
     runningTasks.remove(taskStatus.getId());
 
     // Notify interested parties
-    TaskRunnerUtils.notifyStatusChanged(listeners, taskStatus.getId(), taskStatus);
     taskRunnerWorkItem.setResult(taskStatus);
+    TaskRunnerUtils.notifyStatusChanged(listeners, taskStatus.getId(), taskStatus);
   }
 
   @Override

@@ -22,6 +22,13 @@ package io.druid.indexing.overlord.supervisor;
 public interface Supervisor
 {
   void start();
+
+  /**
+   * @param stopGracefully If true, supervisor will cleanly shutdown managed tasks if possible (for example signalling
+   *                       them to publish their segments and exit). The implementation may block until the tasks have
+   *                       either acknowledged or completed. If false, supervisor will stop immediately and leave any
+   *                       running tasks as they are.
+   */
   void stop(boolean stopGracefully);
 
   SupervisorReport getStatus();

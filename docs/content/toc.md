@@ -19,7 +19,6 @@
   * [Stream Ingestion](../ingestion/stream-ingestion.html)
     * [Stream Push](../ingestion/stream-push.html)
     * [Stream Pull](../ingestion/stream-pull.html)
-  * [Kafka Ingestion](../ingestion/kafka-ingestion.html)
   * [Updating Existing Data](../ingestion/update-existing-data.html)
   * [FAQ](../ingestion/faq.html)
 
@@ -97,7 +96,9 @@
     * [Approximate Histograms and Quantiles](../development/extensions-core/approximate-histograms.html)
     * [Datasketches](../development/extensions-core/datasketches-aggregators.html)       
     * [Geographic Queries](../development/geo.html)
-    * [Router](../development/router.html)    
+    * [Router](../development/router.html)
+    * [Kafka Indexing Service](../development/extensions-core/kafka-ingestion.html)
+
 
 ## Misc
   * [Papers & Talks](../misc/papers-and-talks.html)

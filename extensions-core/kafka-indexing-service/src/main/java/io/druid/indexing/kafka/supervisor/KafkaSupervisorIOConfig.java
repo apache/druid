@@ -25,13 +25,13 @@ import com.google.common.base.Preconditions;
 import org.joda.time.Duration;
 import org.joda.time.Period;
 
-import java.util.HashMap;
 import java.util.Map;
 
 public class KafkaSupervisorIOConfig
 {
+  public static final String BOOTSTRAP_SERVERS_KEY = "bootstrap.servers";
+
   private final String topic;
-  private final String kafkaBrokers;
   private final Integer replicas;
   private final Integer taskCount;
   private final Duration taskDuration;
@@ -44,7 +44,6 @@ public class KafkaSupervisorIOConfig
   @JsonCreator
   public KafkaSupervisorIOConfig(
       @JsonProperty("topic") String topic,
-      @JsonProperty("kafkaBrokers") String kafkaBrokers,
       @JsonProperty("replicas") Integer replicas,
       @JsonProperty("taskCount") Integer taskCount,
       @JsonProperty("taskDuration") Period taskDuration,
@@ -56,11 +55,15 @@ public class KafkaSupervisorIOConfig
   )
   {
     this.topic = Preconditions.checkNotNull(topic, "topic");
-    this.kafkaBrokers = Preconditions.checkNotNull(kafkaBrokers, "kafkaBrokers");
+    this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
+    Preconditions.checkNotNull(
+        consumerProperties.get(BOOTSTRAP_SERVERS_KEY),
+        String.format("consumerProperties must contain entry for [%s]", BOOTSTRAP_SERVERS_KEY)
+    );
+
     this.replicas = (replicas != null ? replicas : 1);
     this.taskCount = (taskCount != null ? taskCount : 1);
     this.taskDuration = defaultDuration(taskDuration, "PT1H");
-    this.consumerProperties = (consumerProperties != null ? consumerProperties : new HashMap<String, String>());
     this.startDelay = defaultDuration(startDelay, "PT5S");
     this.period = defaultDuration(period, "PT30S");
     this.useEarliestOffset = (useEarliestOffset != null ? useEarliestOffset : false);
@@ -71,12 +74,6 @@ public class KafkaSupervisorIOConfig
   public String getTopic()
   {
     return topic;
-  }
-
-  @JsonProperty
-  public String getKafkaBrokers()
-  {
-    return kafkaBrokers;
   }
 
   @JsonProperty

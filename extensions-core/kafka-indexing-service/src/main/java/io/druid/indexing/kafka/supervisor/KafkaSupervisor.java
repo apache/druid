@@ -70,11 +70,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Supervisor responsible for managing the KafkaIndexTasks for a single dataSource. At a high level, the class accepts a
@@ -108,9 +108,9 @@ public class KafkaSupervisor implements Supervisor
     // this task group has completed successfully, at which point this will be destroyed and a new task group will be
     // created with new starting offsets. This allows us to create replacement tasks for failed tasks that process the
     // same offsets, even if the values in [partitionGroups] has been changed.
-    Map<Integer, Long> partitionOffsets = new HashMap<>();
+    final Map<Integer, Long> partitionOffsets;
 
-    Map<String, TaskData> tasks = new HashMap<>();
+    final Map<String, TaskData> tasks = new HashMap<>();
     DateTime completionTimeout; // is set after signalTasksToFinish(); if not done by timeout, take corrective action
 
     public TaskGroup(Map<Integer, Long> partitionOffsets)
@@ -158,15 +158,15 @@ public class KafkaSupervisor implements Supervisor
   private final String supervisorId;
 
   private final ExecutorService exec;
+  private final ScheduledExecutorService scheduledExec;
   private final BlockingQueue<Notice> notices = new LinkedBlockingDeque<>();
-  private final Timer timer = new Timer(true);
   private final Object stopLock = new Object();
 
-  private KafkaConsumer consumer;
-  private DateTime firstRunTime;
   private boolean listenerRegistered = false;
   private long lastRunTime;
 
+  private volatile DateTime firstRunTime;
+  private volatile KafkaConsumer consumer;
   private volatile boolean started = false;
   private volatile boolean stopped = false;
 
@@ -189,7 +189,8 @@ public class KafkaSupervisor implements Supervisor
     this.dataSource = spec.getDataSchema().getDataSource();
     this.ioConfig = spec.getIoConfig();
     this.supervisorId = String.format("KafkaSupervisor-%s", dataSource);
-    this.exec = Execs.singleThreaded(supervisorId);
+    this.exec = Execs.singleThreaded(supervisorId + "-%d");
+    this.scheduledExec = Execs.scheduledSingleThreaded(supervisorId + "-Scheduler-%d");
   }
 
   @Override
@@ -199,7 +200,7 @@ public class KafkaSupervisor implements Supervisor
     Preconditions.checkState(!exec.isShutdown(), "already stopped");
 
     try {
-      consumer = getKafkaConsumer(ioConfig.getKafkaBrokers());
+      consumer = getKafkaConsumer();
 
       exec.submit(
           new Runnable()
@@ -235,10 +236,11 @@ public class KafkaSupervisor implements Supervisor
     }
 
     firstRunTime = DateTime.now().plus(ioConfig.getStartDelay());
-    timer.scheduleAtFixedRate(
+    scheduledExec.scheduleAtFixedRate(
         buildRunTask(),
-        firstRunTime.toDate(),
-        Math.max(ioConfig.getPeriod().getMillis(), MAX_RUN_FREQUENCY_MILLIS)
+        ioConfig.getStartDelay().getMillis(),
+        Math.max(ioConfig.getPeriod().getMillis(), MAX_RUN_FREQUENCY_MILLIS),
+        TimeUnit.MILLISECONDS
     );
 
     started = true;
@@ -253,7 +255,7 @@ public class KafkaSupervisor implements Supervisor
     log.info("Beginning shutdown of KafkaSupervisor[%s]", dataSource);
 
     try {
-      timer.cancel(); // stop recurring executions
+      scheduledExec.shutdownNow(); // stop recurring executions
 
       Optional<TaskRunner> taskRunner = taskMaster.getTaskRunner();
       if (taskRunner.isPresent()) {
@@ -391,8 +393,9 @@ public class KafkaSupervisor implements Supervisor
     createNewTasks();
 
     if (log.isDebugEnabled()) {
-      // generateReport() with includeOffsets == true is an expensive call
       log.debug(generateReport(true).toString());
+    } else {
+      log.info(generateReport(false).toString());
     }
   }
 
@@ -430,14 +433,13 @@ public class KafkaSupervisor implements Supervisor
     return suffix.toString();
   }
 
-  private KafkaConsumer<byte[], byte[]> getKafkaConsumer(String bootstrapServers)
+  private KafkaConsumer<byte[], byte[]> getKafkaConsumer()
   {
     final Properties props = new Properties();
     props.putAll(ioConfig.getConsumerProperties());
 
     props.setProperty("enable.auto.commit", "false");
     props.setProperty("metadata.max.age.ms", "10000");
-    props.setProperty("bootstrap.servers", bootstrapServers);
     props.setProperty("group.id", String.format("kafka-supervisor-%s", getRandomId()));
 
     ClassLoader currCtxCl = Thread.currentThread().getContextClassLoader();
@@ -460,7 +462,7 @@ public class KafkaSupervisor implements Supervisor
       log.warn(
           e,
           "Unable to get partition data from Kafka for brokers [%s], are the brokers up?",
-          ioConfig.getKafkaBrokers()
+          ioConfig.getConsumerProperties().get(KafkaSupervisorIOConfig.BOOTSTRAP_SERVERS_KEY)
       );
       return;
     }
@@ -538,6 +540,20 @@ public class KafkaSupervisor implements Supervisor
                            .getStartPartitions()
                            .getPartitionOffsetMap()
               );
+
+              // update partitionGroups with the publishing task's offsets (if they are greater than what is existing)
+              // so that the next tasks will start reading from where this task left off
+              Map<Integer, Long> publishingTaskCurrentOffsets = getCurrentOffsets(taskId, true);
+              Map<Integer, Long> partitionOffsets = partitionGroups.get(taskGroupId);
+
+              for (Map.Entry<Integer, Long> entry : publishingTaskCurrentOffsets.entrySet()) {
+                Integer partition = entry.getKey();
+                Long offset = entry.getValue();
+                if (partitionOffsets.get(partition) == null || partitionOffsets.get(partition) < offset) {
+                  partitionOffsets.put(partition, offset);
+                }
+              }
+
             } else {
               if (!taskGroups.containsKey(taskGroupId)) {
                 log.debug("Creating new task group [%d]", taskGroupId);
@@ -601,7 +617,11 @@ public class KafkaSupervisor implements Supervisor
               long millisRemaining = ioConfig.getTaskDuration().getMillis() - (System.currentTimeMillis()
                                                                                - taskData.startTime.getMillis());
               if (millisRemaining > 0) {
-                timer.schedule(buildRunTask(), millisRemaining);
+                scheduledExec.schedule(
+                    buildRunTask(),
+                    millisRemaining + MAX_RUN_FREQUENCY_MILLIS,
+                    TimeUnit.MILLISECONDS
+                );
               }
             }
           }
@@ -899,7 +919,7 @@ public class KafkaSupervisor implements Supervisor
     if (createdTask && firstRunTime.isBeforeNow()) {
       // Schedule a run event after a short delay to update our internal data structures with the new tasks that were
       // just created. This is mainly for the benefit of the status API in situations where the run period is lengthy.
-      timer.schedule(buildRunTask(), 5000);
+      scheduledExec.schedule(buildRunTask(), 5000, TimeUnit.MILLISECONDS);
     }
   }
 
@@ -914,7 +934,6 @@ public class KafkaSupervisor implements Supervisor
     String sequenceName = generateSequenceName(groupId);
 
     Map<String, String> consumerProperties = Maps.newHashMap(ioConfig.getConsumerProperties());
-    consumerProperties.put("bootstrap.servers", ioConfig.getKafkaBrokers());
 
     KafkaIOConfig kafkaIOConfig = new KafkaIOConfig(
         sequenceName,
@@ -1251,9 +1270,9 @@ public class KafkaSupervisor implements Supervisor
     return report;
   }
 
-  private TimerTask buildRunTask()
+  private Runnable buildRunTask()
   {
-    return new TimerTask()
+    return new Runnable()
     {
       @Override
       public void run()
