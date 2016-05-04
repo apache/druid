@@ -30,18 +30,13 @@ import com.metamx.common.FileUtils;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.MapUtils;
+import com.metamx.common.StringUtils;
 import com.metamx.common.UOE;
 import com.metamx.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentPuller;
 import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.segment.loading.URIDataPuller;
 import io.druid.timeline.DataSegment;
-import org.jets3t.service.S3ServiceException;
-import org.jets3t.service.ServiceException;
-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
-import org.jets3t.service.model.S3Object;
-
-import javax.tools.FileObject;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -51,6 +46,11 @@ import java.io.Writer;
 import java.net.URI;
 import java.util.Map;
 import java.util.concurrent.Callable;
+import javax.tools.FileObject;
+import org.jets3t.service.S3ServiceException;
+import org.jets3t.service.ServiceException;
+import org.jets3t.service.impl.rest.httpclient.RestS3Service;
+import org.jets3t.service.model.StorageObject;
 
 /**
  * A data segment puller that also hanldes URI data pulls.
@@ -59,15 +59,17 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
 {
   public static final int DEFAULT_RETRY_COUNT = 3;
 
-  public static FileObject buildFileObject(final URI uri, final RestS3Service s3Client) throws S3ServiceException
+  public static FileObject buildFileObject(final URI uri, final RestS3Service s3Client) throws ServiceException
   {
     final S3Coords coords = new S3Coords(checkURI(uri));
-    final S3Object s3Obj = s3Client.getObject(coords.bucket, coords.path);
+    final StorageObject s3Obj = s3Client.getObjectDetails(coords.bucket, coords.path);
     final String path = uri.getPath();
 
     return new FileObject()
     {
+      final Object inputStreamOpener = new Object();
       volatile boolean streamAcquired = false;
+      volatile StorageObject storageObject = s3Obj;
 
       @Override
       public URI toUri()
@@ -86,11 +88,19 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
       public InputStream openInputStream() throws IOException
       {
         try {
-          streamAcquired = true;
-          return s3Obj.getDataInputStream();
+          synchronized (inputStreamOpener) {
+            if (streamAcquired) {
+              return storageObject.getDataInputStream();
+            }
+            // lazily promote to full GET
+            storageObject = s3Client.getObject(s3Obj.getBucketName(), s3Obj.getKey());
+            final InputStream stream = storageObject.getDataInputStream();
+            streamAcquired = true;
+            return stream;
+          }
         }
         catch (ServiceException e) {
-          throw new IOException(String.format("Could not load S3 URI [%s]", uri), e);
+          throw new IOException(StringUtils.safeFormat("Could not load S3 URI [%s]", uri), e);
         }
       }
 
@@ -128,19 +138,6 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
       public boolean delete()
       {
         throw new UOE("Cannot delete S3 items anonymously. jetS3t doesn't support authenticated deletes easily.");
-      }
-
-      @Override
-      public void finalize() throws Throwable
-      {
-        try {
-          if (!streamAcquired) {
-            s3Obj.closeDataInputStream();
-          }
-        }
-        finally {
-          super.finalize();
-        }
       }
     };
   }
@@ -220,7 +217,7 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
         final String fname = Files.getNameWithoutExtension(uri.getPath());
         final File outFile = new File(outDir, fname);
 
-        final FileUtils.FileCopyResult result = CompressionUtils.gunzip(byteSource, outFile);
+        final FileUtils.FileCopyResult result = CompressionUtils.gunzip(byteSource, outFile, S3Utils.S3RETRY);
         log.info("Loaded %d bytes from [%s] to [%s]", result.size(), s3Coords.toString(), outFile.getAbsolutePath());
         return result;
       }
@@ -301,12 +298,9 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
   {
     try {
       final FileObject object = buildFileObject(uri, s3Client);
-      // buildFileObject has a hidden input stream that gets open deep in jets3t. This helps prevent resource leaks
-      try (InputStream nullStream = object.openInputStream()) {
-        return String.format("%d", object.getLastModified());
-      }
+      return String.format("%d", object.getLastModified());
     }
-    catch (S3ServiceException e) {
+    catch (ServiceException e) {
       if (S3Utils.isServiceExceptionRecoverable(e)) {
         // The recoverable logic is always true for IOException, so we want to only pass IOException if it is recoverable
         throw new IOException(
