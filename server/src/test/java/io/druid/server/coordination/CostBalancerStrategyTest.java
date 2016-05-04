@@ -22,6 +22,7 @@ package io.druid.server.coordination;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.client.ImmutableDruidDataSource;
 import io.druid.client.ImmutableDruidServer;
 import io.druid.concurrent.Execs;
@@ -125,7 +126,10 @@ public class CostBalancerStrategyTest
     DataSegment segment = getSegment(1000);
 
     final DateTime referenceTimestamp = new DateTime("2014-01-01");
-    BalancerStrategy strategy = new CostBalancerStrategy(referenceTimestamp, Executors.newFixedThreadPool(4));
+    BalancerStrategy strategy = new CostBalancerStrategy(
+        referenceTimestamp,
+        MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(4))
+    );
     ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList);
     Assert.assertNotNull("Should be able to find a place for new segment!!", holder);
     Assert.assertEquals("Best Server should be BEST_SERVER", "BEST_SERVER", holder.getServer().getName());
@@ -138,7 +142,10 @@ public class CostBalancerStrategyTest
     DataSegment segment = getSegment(1000);
 
     final DateTime referenceTimestamp = new DateTime("2014-01-01");
-    BalancerStrategy strategy = new CostBalancerStrategy(referenceTimestamp, Executors.newFixedThreadPool(1));
+    BalancerStrategy strategy = new CostBalancerStrategy(
+        referenceTimestamp,
+        MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(1))
+    );
     ServerHolder holder = strategy.findNewSegmentHomeReplicator(segment, serverHolderList);
     Assert.assertNotNull("Should be able to find a place for new segment!!", holder);
     Assert.assertEquals("Best Server should be BEST_SERVER", "BEST_SERVER", holder.getServer().getName());
@@ -148,7 +155,10 @@ public class CostBalancerStrategyTest
   public void testComputeJointSegmentCost()
   {
     DateTime referenceTime = new DateTime("2014-01-01T00:00:00");
-    CostBalancerStrategy strategy = new CostBalancerStrategy(referenceTime, Executors.newFixedThreadPool(4));
+    CostBalancerStrategy strategy = new CostBalancerStrategy(
+        referenceTime,
+        MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(4))
+    );
     double segmentCost = strategy.computeJointSegmentCosts(
         getSegment(
             100,

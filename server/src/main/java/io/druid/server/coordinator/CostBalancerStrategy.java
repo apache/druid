@@ -54,10 +54,10 @@ public class CostBalancerStrategy implements BalancerStrategy
     }
   }
 
-  public CostBalancerStrategy(DateTime referenceTimestamp, ExecutorService exec)
+  public CostBalancerStrategy(DateTime referenceTimestamp, ListeningExecutorService exec)
   {
     this.referenceTimestamp = referenceTimestamp.getMillis();
-    this.exec = MoreExecutors.listeningDecorator(exec);
+    this.exec = exec;
   }
 
   @Override
