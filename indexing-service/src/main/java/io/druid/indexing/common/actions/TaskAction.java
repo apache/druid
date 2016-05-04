@@ -33,6 +33,7 @@ import java.io.IOException;
     @JsonSubTypes.Type(name = "lockList", value = LockListAction.class),
     @JsonSubTypes.Type(name = "lockRelease", value = LockReleaseAction.class),
     @JsonSubTypes.Type(name = "segmentInsertion", value = SegmentInsertAction.class),
+    @JsonSubTypes.Type(name = "segmentTransactionalInsert", value = SegmentTransactionalInsertAction.class),
     @JsonSubTypes.Type(name = "segmentListUsed", value = SegmentListUsedAction.class),
     @JsonSubTypes.Type(name = "segmentListUnused", value = SegmentListUnusedAction.class),
     @JsonSubTypes.Type(name = "segmentNuke", value = SegmentNukeAction.class),
