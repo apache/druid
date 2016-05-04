@@ -64,7 +64,6 @@ public class S3DataSegmentPullerTest
     EasyMock.expect(s3Client.getObjectDetails(EasyMock.eq(bucket), EasyMock.eq(object0.getKey())))
             .andReturn(object0)
             .once();
-    EasyMock.expect(s3Client.getObject(EasyMock.eq(bucket), EasyMock.eq(object0.getKey()))).andReturn(object0).once();
     S3DataSegmentPuller puller = new S3DataSegmentPuller(s3Client);
 
     EasyMock.replay(s3Client);

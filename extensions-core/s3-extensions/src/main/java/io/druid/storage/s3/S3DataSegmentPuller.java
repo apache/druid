@@ -311,10 +311,7 @@ public class S3DataSegmentPuller implements DataSegmentPuller, URIDataPuller
   {
     try {
       final FileObject object = buildFileObject(uri, s3Client);
-      // buildFileObject has a hidden input stream that gets open deep in jets3t. This helps prevent resource leaks
-      try (InputStream nullStream = object.openInputStream()) {
-        return String.format("%d", object.getLastModified());
-      }
+      return String.format("%d", object.getLastModified());
     }
     catch (ServiceException e) {
       if (S3Utils.isServiceExceptionRecoverable(e)) {
