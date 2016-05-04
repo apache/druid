@@ -23,11 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableSet;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.DataSourceMetadata;
-import io.druid.indexing.overlord.SegmentPublishResult;
-import io.druid.query.DruidMetrics;
 import io.druid.timeline.DataSegment;
 
 import java.io.IOException;
@@ -41,29 +38,16 @@ import java.util.Set;
  * that the task cannot actually complete. Callers should avoid this by avoiding inserting too many segments in the
  * same action.
  */
-public class SegmentInsertAction implements TaskAction<SegmentPublishResult>
+public class SegmentInsertAction implements TaskAction<Set<DataSegment>>
 {
   private final Set<DataSegment> segments;
-  private final DataSourceMetadata startMetadata;
-  private final DataSourceMetadata endMetadata;
-
-  public SegmentInsertAction(
-      Set<DataSegment> segments
-  )
-  {
-    this(segments, null, null);
-  }
 
   @JsonCreator
   public SegmentInsertAction(
-      @JsonProperty("segments") Set<DataSegment> segments,
-      @JsonProperty("startMetadata") DataSourceMetadata startMetadata,
-      @JsonProperty("endMetadata") DataSourceMetadata endMetadata
+      @JsonProperty("segments") Set<DataSegment> segments
   )
   {
     this.segments = ImmutableSet.copyOf(segments);
-    this.startMetadata = startMetadata;
-    this.endMetadata = endMetadata;
   }
 
   @JsonProperty
@@ -72,21 +56,9 @@ public class SegmentInsertAction implements TaskAction<SegmentPublishResult>
     return segments;
   }
 
-  @JsonProperty
-  public DataSourceMetadata getStartMetadata()
+  public TypeReference<Set<DataSegment>> getReturnTypeReference()
   {
-    return startMetadata;
-  }
-
-  @JsonProperty
-  public DataSourceMetadata getEndMetadata()
-  {
-    return endMetadata;
-  }
-
-  public TypeReference<SegmentPublishResult> getReturnTypeReference()
-  {
-    return new TypeReference<SegmentPublishResult>()
+    return new TypeReference<Set<DataSegment>>()
     {
     };
   }
@@ -94,36 +66,12 @@ public class SegmentInsertAction implements TaskAction<SegmentPublishResult>
   /**
    * Behaves similarly to
    * {@link io.druid.indexing.overlord.IndexerMetadataStorageCoordinator#announceHistoricalSegments(Set, DataSourceMetadata, DataSourceMetadata)},
-   * including the possibility of returning null in case of metadata transaction failure.
+   * with startMetadata and endMetadata both null.
    */
   @Override
-  public SegmentPublishResult perform(Task task, TaskActionToolbox toolbox) throws IOException
+  public Set<DataSegment> perform(Task task, TaskActionToolbox toolbox) throws IOException
   {
-    toolbox.verifyTaskLocks(task, segments);
-
-    final SegmentPublishResult retVal = toolbox.getIndexerMetadataStorageCoordinator().announceHistoricalSegments(
-        segments,
-        startMetadata,
-        endMetadata
-    );
-
-    // Emit metrics
-    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder()
-        .setDimension(DruidMetrics.DATASOURCE, task.getDataSource())
-        .setDimension(DruidMetrics.TASK_TYPE, task.getType());
-
-    if (retVal.isSuccess()) {
-      toolbox.getEmitter().emit(metricBuilder.build("segment/txn/success", 1));
-    } else {
-      toolbox.getEmitter().emit(metricBuilder.build("segment/txn/failure", 1));
-    }
-
-    for (DataSegment segment : retVal.getSegments()) {
-      metricBuilder.setDimension(DruidMetrics.INTERVAL, segment.getInterval().toString());
-      toolbox.getEmitter().emit(metricBuilder.build("segment/added/bytes", segment.getSize()));
-    }
-
-    return retVal;
+    return new SegmentTransactionalInsertAction(segments, null, null).perform(task, toolbox).getSegments();
   }
 
   @Override
@@ -137,8 +85,6 @@ public class SegmentInsertAction implements TaskAction<SegmentPublishResult>
   {
     return "SegmentInsertAction{" +
            "segments=" + segments +
-           ", startMetadata=" + startMetadata +
-           ", endMetadata=" + endMetadata +
            '}';
   }
 }
