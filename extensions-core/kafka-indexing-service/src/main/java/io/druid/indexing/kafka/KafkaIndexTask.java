@@ -52,6 +52,7 @@ import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentInsertAction;
+import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.task.AbstractTask;
 import io.druid.indexing.common.task.TaskResource;
@@ -476,16 +477,16 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
             throw new ISE("WTF?! Driver attempted to publish invalid metadata[%s].", commitMetadata);
           }
 
-          final SegmentInsertAction action;
+          final SegmentTransactionalInsertAction action;
 
           if (ioConfig.isUseTransaction()) {
-            action = new SegmentInsertAction(
+            action = new SegmentTransactionalInsertAction(
                 segments,
                 new KafkaDataSourceMetadata(ioConfig.getStartPartitions()),
                 new KafkaDataSourceMetadata(finalPartitions)
             );
           } else {
-            action = new SegmentInsertAction(segments, null, null);
+            action = new SegmentTransactionalInsertAction(segments, null, null);
           }
 
           log.info("Publishing with isTransaction[%s].", ioConfig.isUseTransaction());
