@@ -355,7 +355,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
   private final Map<String, DimensionDesc> dimensionDescs;
   private final Map<String, ColumnCapabilitiesImpl> columnCapabilities;
-  private final List<DimDim> dimValues;
+  protected final List<DimDim> dimValues;
 
   // looks need a configuration
   private final Ordering<Comparable> ordering = Ordering.natural().nullsFirst();
