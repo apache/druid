@@ -211,4 +211,102 @@ public class DataSchemaTest
         actual
     );
   }
+
+
+  @Test
+  public void testEquals() throws Exception
+  {
+    String jsonStr = "{"
+                     + "\"dataSource\":\"test\","
+                     + "\"parser\":{"
+                     + "\"type\":\"string\","
+                     + "\"parseSpec\":{"
+                     + "\"format\":\"json\","
+                     + "\"timestampSpec\":{\"column\":\"xXx\", \"format\": \"auto\", \"missingValue\": null},"
+                     + "\"dimensionsSpec\":{\"dimensions\":[\"foo\"], \"dimensionExclusions\":[]},"
+                     + "\"flattenSpec\":{\"useFieldDiscovery\":true, \"fields\":[]},"
+                     + "\"featureSpec\":{}},"
+                     + "\"encoding\":\"UTF-8\""
+                     + "},"
+                     + "\"metricsSpec\":[{\"type\":\"doubleSum\",\"name\":\"metric1\",\"fieldName\":\"col1\"}],"
+                     + "\"granularitySpec\":{"
+                     + "\"type\":\"arbitrary\","
+                     + "\"queryGranularity\":{\"type\":\"duration\",\"duration\":86400000,\"origin\":\"1970-01-01T00:00:00.000Z\"},"
+                     + "\"intervals\":[\"2014-01-01T00:00:00.000Z/2015-01-01T00:00:00.000Z\"]}}";
+
+    String jsonStr2 = "{"
+                     + "\"dataSource\":\"test\","
+                     + "\"parser\":{"
+                     + "\"type\":\"string\","
+                     + "\"parseSpec\":{"
+                     + "\"format\":\"json\","
+                     + "\"timestampSpec\":{\"column\":\"xXx\", \"format\": \"auto\", \"missingValue\": null},"
+                     + "\"dimensionsSpec\":{\"dimensions\":[{\"name\":\"foo\", \"type\":\"string\"}], \"dimensionExclusions\":[]},"
+                     + "\"flattenSpec\":{\"useFieldDiscovery\":true, \"fields\":[]},"
+                     + "\"featureSpec\":{}},"
+                     + "\"encoding\":\"UTF-8\""
+                     + "},"
+                     + "\"metricsSpec\":[{\"type\":\"doubleSum\",\"name\":\"metric1\",\"fieldName\":\"col1\"}],"
+                     + "\"granularitySpec\":{"
+                     + "\"type\":\"arbitrary\","
+                     + "\"queryGranularity\":{\"type\":\"duration\",\"duration\":86400000,\"origin\":\"1970-01-01T00:00:00.000Z\"},"
+                     + "\"intervals\":[\"2014-01-01T00:00:00.000Z/2015-01-01T00:00:00.000Z\"]}}";
+
+
+    String jsonStrProtobuf = "{"
+                      + "\"dataSource\":\"test\","
+                      + "\"parser\":{"
+                      + "\"type\":\"protobuf\","
+                      + "\"descriptor\":\"PROTOBUF_AAAAA\","
+                      + "\"parseSpec\":{"
+                      + "\"format\":\"json\","
+                      + "\"timestampSpec\":{\"column\":\"xXx\", \"format\": \"auto\", \"missingValue\": null},"
+                      + "\"dimensionsSpec\":{\"dimensions\":[{\"name\":\"foo\", \"type\":\"string\"}], \"dimensionExclusions\":[]},"
+                      + "\"flattenSpec\":{\"useFieldDiscovery\":true, \"fields\":[]},"
+                      + "\"featureSpec\":{}},"
+                      + "\"encoding\":\"UTF-8\""
+                      + "},"
+                      + "\"metricsSpec\":[{\"type\":\"doubleSum\",\"name\":\"metric1\",\"fieldName\":\"col1\"}],"
+                      + "\"granularitySpec\":{"
+                      + "\"type\":\"arbitrary\","
+                      + "\"queryGranularity\":{\"type\":\"duration\",\"duration\":86400000,\"origin\":\"1970-01-01T00:00:00.000Z\"},"
+                      + "\"intervals\":[\"2014-01-01T00:00:00.000Z/2015-01-01T00:00:00.000Z\"]}}";
+
+    DataSchema actual = jsonMapper.readValue(jsonStr, DataSchema.class);
+    DataSchema actual2 = jsonMapper.readValue(jsonStr2, DataSchema.class);
+    DataSchema actual3 = jsonMapper.readValue(jsonStr, DataSchema.class);
+
+    DataSchema actualProtobuf = jsonMapper.readValue(jsonStrProtobuf, DataSchema.class);
+
+    Assert.assertEquals(actual, actual2);
+    Assert.assertEquals(actual, actual3);
+    Assert.assertNotEquals(actual, actualProtobuf);
+
+    String jsonStrProtobuf2 =
+        "{"
+        + "\"dataSource\":\"test\","
+        + "\"parser\":{"
+        + "\"type\":\"protobuf\","
+        + "\"descriptor\":\"PROTOBUF_BBBBB\","
+        + "\"parseSpec\":{"
+        + "\"format\":\"json\","
+        + "\"timestampSpec\":{\"column\":\"xXx\", \"format\": \"auto\", \"missingValue\": null},"
+        + "\"dimensionsSpec\":{\"dimensions\":[{\"name\":\"foo\", \"type\":\"string\"}], \"dimensionExclusions\":[]},"
+        + "\"flattenSpec\":{\"useFieldDiscovery\":true, \"fields\":[]},"
+        + "\"featureSpec\":{}},"
+        + "\"encoding\":\"UTF-8\""
+        + "},"
+        + "\"metricsSpec\":[{\"type\":\"doubleSum\",\"name\":\"metric1\",\"fieldName\":\"col1\"}],"
+        + "\"granularitySpec\":{"
+        + "\"type\":\"arbitrary\","
+        + "\"queryGranularity\":{\"type\":\"duration\",\"duration\":86400000,\"origin\":\"1970-01-01T00:00:00.000Z\"},"
+        + "\"intervals\":[\"2014-01-01T00:00:00.000Z/2015-01-01T00:00:00.000Z\"]}}";
+
+    DataSchema actualProtobufSame = jsonMapper.readValue(jsonStrProtobuf, DataSchema.class);
+    DataSchema actualProtobufDifferent = jsonMapper.readValue(jsonStrProtobuf2, DataSchema.class);
+
+    Assert.assertNotEquals(actualProtobuf, actualProtobufDifferent);
+    Assert.assertEquals(actualProtobuf, actualProtobufSame);
+
+  }
 }
