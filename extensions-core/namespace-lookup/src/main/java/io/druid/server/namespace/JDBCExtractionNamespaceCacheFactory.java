@@ -19,15 +19,10 @@
 
 package io.druid.server.namespace;
 
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.metamx.common.Pair;
 import com.metamx.common.logger.Logger;
 import io.druid.common.utils.JodaUtils;
-import io.druid.query.extraction.namespace.ExtractionNamespaceFunctionFactory;
+import io.druid.query.extraction.namespace.ExtractionNamespaceCacheFactory;
 import io.druid.query.extraction.namespace.JDBCExtractionNamespace;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
@@ -36,7 +31,6 @@ import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.tweak.ResultSetMapper;
 import org.skife.jdbi.v2.util.TimestampMapper;
 
-import javax.annotation.Nullable;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -49,60 +43,22 @@ import java.util.concurrent.ConcurrentMap;
 /**
  *
  */
-public class JDBCExtractionNamespaceFunctionFactory
-    implements ExtractionNamespaceFunctionFactory<JDBCExtractionNamespace>
+public class JDBCExtractionNamespaceCacheFactory
+    implements ExtractionNamespaceCacheFactory<JDBCExtractionNamespace>
 {
-  private static final Logger LOG = new Logger(JDBCExtractionNamespaceFunctionFactory.class);
+  private static final Logger LOG = new Logger(JDBCExtractionNamespaceCacheFactory.class);
   private final ConcurrentMap<String, DBI> dbiCache = new ConcurrentHashMap<>();
 
   @Override
-  public Function<String, String> buildFn(JDBCExtractionNamespace extractionNamespace, final Map<String, String> cache)
-  {
-    return new Function<String, String>()
-    {
-      @Nullable
-      @Override
-      public String apply(String input)
-      {
-        if (Strings.isNullOrEmpty(input)) {
-          return null;
-        }
-        return Strings.emptyToNull(cache.get(input));
-      }
-    };
-  }
-
-  @Override
-  public Function<String, List<String>> buildReverseFn(
-      JDBCExtractionNamespace extractionNamespace, final Map<String, String> cache
-  )
-  {
-    return new Function<String, List<String>>()
-    {
-      @Nullable
-      @Override
-      public List<String> apply(@Nullable final String value)
-      {
-        return Lists.newArrayList(Maps.filterKeys(cache, new Predicate<String>()
-        {
-          @Override public boolean apply(@Nullable String key)
-          {
-            return cache.get(key).equals(Strings.nullToEmpty(value));
-          }
-        }).keySet());
-      }
-    };
-  }
-
-  @Override
   public Callable<String> getCachePopulator(
+      final String id,
       final JDBCExtractionNamespace namespace,
       final String lastVersion,
       final Map<String, String> cache
   )
   {
     final long lastCheck = lastVersion == null ? JodaUtils.MIN_INSTANT : Long.parseLong(lastVersion);
-    final Long lastDBUpdate = lastUpdates(namespace);
+    final Long lastDBUpdate = lastUpdates(id, namespace);
     if (lastDBUpdate != null && lastDBUpdate <= lastCheck) {
       return new Callable<String>()
       {
@@ -118,12 +74,12 @@ public class JDBCExtractionNamespaceFunctionFactory
       @Override
       public String call()
       {
-        final DBI dbi = ensureDBI(namespace);
+        final DBI dbi = ensureDBI(id, namespace);
         final String table = namespace.getTable();
         final String valueColumn = namespace.getValueColumn();
         final String keyColumn = namespace.getKeyColumn();
 
-        LOG.debug("Updating [%s]", namespace.getNamespace());
+        LOG.debug("Updating [%s]", id);
         final List<Pair<String, String>> pairs = dbi.withHandle(
             new HandleCallback<List<Pair<String, String>>>()
             {
@@ -161,15 +117,15 @@ public class JDBCExtractionNamespaceFunctionFactory
         for (Pair<String, String> pair : pairs) {
           cache.put(pair.lhs, pair.rhs);
         }
-        LOG.info("Finished loading %d values for namespace[%s]", cache.size(), namespace.getNamespace());
+        LOG.info("Finished loading %d values for namespace[%s]", cache.size(), id);
         return String.format("%d", System.currentTimeMillis());
       }
     };
   }
 
-  private DBI ensureDBI(JDBCExtractionNamespace namespace)
+  private DBI ensureDBI(String id, JDBCExtractionNamespace namespace)
   {
-    final String key = namespace.getNamespace();
+    final String key = id;
     DBI dbi = null;
     if (dbiCache.containsKey(key)) {
       dbi = dbiCache.get(key);
@@ -186,9 +142,9 @@ public class JDBCExtractionNamespaceFunctionFactory
     return dbi;
   }
 
-  private Long lastUpdates(JDBCExtractionNamespace namespace)
+  private Long lastUpdates(String id, JDBCExtractionNamespace namespace)
   {
-    final DBI dbi = ensureDBI(namespace);
+    final DBI dbi = ensureDBI(id, namespace);
     final String table = namespace.getTable();
     final String tsColumn = namespace.getTsColumn();
     if (tsColumn == null) {

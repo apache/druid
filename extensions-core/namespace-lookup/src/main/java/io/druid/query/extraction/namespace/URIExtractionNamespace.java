@@ -60,8 +60,6 @@ import java.util.regex.PatternSyntaxException;
 public class URIExtractionNamespace implements ExtractionNamespace
 {
   @JsonProperty
-  private final String namespace;
-  @JsonProperty
   private final URI uri;
   @JsonProperty
   private final URI uriPrefix;
@@ -74,8 +72,6 @@ public class URIExtractionNamespace implements ExtractionNamespace
 
   @JsonCreator
   public URIExtractionNamespace(
-      @NotNull @JsonProperty(value = "namespace", required = true)
-          String namespace,
       @JsonProperty(value = "uri", required = false)
           URI uri,
       @JsonProperty(value = "uriPrefix", required = false)
@@ -91,7 +87,6 @@ public class URIExtractionNamespace implements ExtractionNamespace
           String versionRegex
   )
   {
-    this.namespace = Preconditions.checkNotNull(namespace, "namespace");
     this.uri = uri;
     this.uriPrefix = uriPrefix;
     if ((uri != null) == (uriPrefix != null)) {
@@ -116,12 +111,6 @@ public class URIExtractionNamespace implements ExtractionNamespace
         throw new IAE(ex, "Could not parse `fileRegex` [%s]", this.fileRegex);
       }
     }
-  }
-
-  @Override
-  public String getNamespace()
-  {
-    return namespace;
   }
 
   public String getFileRegex()
@@ -154,8 +143,7 @@ public class URIExtractionNamespace implements ExtractionNamespace
   public String toString()
   {
     return "URIExtractionNamespace{" +
-           "namespace='" + namespace + '\'' +
-           ", uri=" + uri +
+           "uri=" + uri +
            ", uriPrefix=" + uriPrefix +
            ", namespaceParseSpec=" + namespaceParseSpec +
            ", fileRegex='" + fileRegex + '\'' +
@@ -175,9 +163,6 @@ public class URIExtractionNamespace implements ExtractionNamespace
 
     URIExtractionNamespace that = (URIExtractionNamespace) o;
 
-    if (!getNamespace().equals(that.getNamespace())) {
-      return false;
-    }
     if (getUri() != null ? !getUri().equals(that.getUri()) : that.getUri() != null) {
       return false;
     }
@@ -197,8 +182,7 @@ public class URIExtractionNamespace implements ExtractionNamespace
   @Override
   public int hashCode()
   {
-    int result = getNamespace().hashCode();
-    result = 31 * result + (getUri() != null ? getUri().hashCode() : 0);
+    int result = getUri() != null ? getUri().hashCode() : 0;
     result = 31 * result + (getUriPrefix() != null ? getUriPrefix().hashCode() : 0);
     result = 31 * result + getNamespaceParseSpec().hashCode();
     result = 31 * result + (getFileRegex() != null ? getFileRegex().hashCode() : 0);
@@ -339,6 +323,28 @@ public class URIExtractionNamespace implements ExtractionNamespace
     }
 
     @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      CSVFlatDataParser that = (CSVFlatDataParser) o;
+
+      if (!getColumns().equals(that.getColumns())) {
+        return false;
+      }
+      if (!getKeyColumn().equals(that.getKeyColumn())) {
+        return false;
+      }
+
+      return getValueColumn().equals(that.getValueColumn());
+    }
+
+    @Override
     public String toString()
     {
       return String.format(
@@ -431,6 +437,31 @@ public class URIExtractionNamespace implements ExtractionNamespace
     }
 
     @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      TSVFlatDataParser that = (TSVFlatDataParser) o;
+
+      if (!getColumns().equals(that.getColumns())) {
+        return false;
+      }
+      if ((getDelimiter() == null) ? that.getDelimiter() == null : getDelimiter().equals(that.getDelimiter())) {
+        return false;
+      }
+      if (!getKeyColumn().equals(that.getKeyColumn())) {
+        return false;
+      }
+
+      return getValueColumn().equals(that.getValueColumn());
+    }
+
+    @Override
     public String toString()
     {
       return String.format(
@@ -484,6 +515,25 @@ public class URIExtractionNamespace implements ExtractionNamespace
     public Parser<String, String> getParser()
     {
       return this.parser;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      JSONFlatDataParser that = (JSONFlatDataParser) o;
+
+      if (!getKeyFieldName().equals(that.getKeyFieldName())) {
+        return false;
+      }
+
+      return getValueFieldName().equals(that.getValueFieldName());
     }
 
     @Override
@@ -543,6 +593,19 @@ public class URIExtractionNamespace implements ExtractionNamespace
     public Parser<String, String> getParser()
     {
       return parser;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      return true;
     }
 
     @Override

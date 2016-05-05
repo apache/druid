@@ -19,17 +19,14 @@
 
 package io.druid.server.namespace.cache;
 
-import com.google.common.base.Function;
 import com.google.common.util.concurrent.Striped;
 import com.google.inject.Inject;
-import com.google.inject.name.Named;
 import com.metamx.common.IAE;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.query.extraction.namespace.ExtractionNamespace;
-import io.druid.query.extraction.namespace.ExtractionNamespaceFunctionFactory;
+import io.druid.query.extraction.namespace.ExtractionNamespaceCacheFactory;
 
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -46,15 +43,11 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
   @Inject
   public OnHeapNamespaceExtractionCacheManager(
       final Lifecycle lifecycle,
-      @Named("namespaceExtractionFunctionCache")
-      final ConcurrentMap<String, Function<String, String>> fnCache,
-      @Named("namespaceReverseExtractionFunctionCache")
-      final ConcurrentMap<String, Function<String, List<String>>> reverseFnCache,
       final ServiceEmitter emitter,
-      final Map<Class<? extends ExtractionNamespace>, ExtractionNamespaceFunctionFactory<?>> namespaceFunctionFactoryMap
+      final Map<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>> namespaceFunctionFactoryMap
   )
   {
-    super(lifecycle, fnCache, reverseFnCache, emitter, namespaceFunctionFactoryMap);
+    super(lifecycle, emitter, namespaceFunctionFactoryMap);
   }
 
   @Override

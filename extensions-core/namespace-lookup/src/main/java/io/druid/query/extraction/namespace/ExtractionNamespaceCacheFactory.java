@@ -28,29 +28,8 @@ import java.util.concurrent.Callable;
 /**
  *
  */
-public interface ExtractionNamespaceFunctionFactory<T extends ExtractionNamespace>
+public interface ExtractionNamespaceCacheFactory<T extends ExtractionNamespace>
 {
-
-  /**
-   * Create a function for the given namespace which will do the manipulation requested in the extractionNamespace.
-   * A simple implementation would simply use the cache supplied by the `NamespaceExtractionCacheManager`.
-   * More advanced implementations may need more than just what can be cached by `NamespaceExtractionCacheManager`.
-   *
-   * @param extractionNamespace The ExtractionNamespace for which a manipulating function is needed.
-   *
-   * @return A function which will perform an extraction in accordance with the desires of the ExtractionNamespace
-   */
-  Function<String, String> buildFn(T extractionNamespace, Map<String, String> cache);
-
-
-  /**
-   * @param extractionNamespace The ExtractionNamespace for which a manipulating reverse function is needed.
-   * @param cache view of the cache containing the function mapping.
-   *
-   * @return A function that will perform reverse lookup.
-   */
-  Function<String, List<String>> buildReverseFn(T extractionNamespace, final Map<String, String> cache);
-
   /**
    * This function is called once if `ExtractionNamespace.getUpdateMs() == 0`, or every update if
    * `ExtractionNamespace.getUpdateMs() > 0`
@@ -60,6 +39,7 @@ public interface ExtractionNamespaceFunctionFactory<T extends ExtractionNamespac
    * initialize resources.
    * If the result of the Callable is the same as what is passed in as lastVersion, then no swap takes place, and the swap is discarded.
    *
+   * @param id                  The ID of ExtractionNamespace
    * @param extractionNamespace The ExtractionNamespace for which to populate data.
    * @param lastVersion         The version which was last cached
    * @param swap                The temporary Map into which data may be placed and will be "swapped" with the proper
@@ -70,5 +50,5 @@ public interface ExtractionNamespaceFunctionFactory<T extends ExtractionNamespac
    * @return A callable that will be used to refresh resources of the namespace and return the version string used in
    * the populating
    */
-  Callable<String> getCachePopulator(T extractionNamespace, String lastVersion, Map<String, String> swap);
+  Callable<String> getCachePopulator(String id, T extractionNamespace, String lastVersion, Map<String, String> swap);
 }

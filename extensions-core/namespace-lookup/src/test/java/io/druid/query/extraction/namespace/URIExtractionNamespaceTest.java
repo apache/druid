@@ -338,7 +338,6 @@ public class URIExtractionNamespaceTest
         namespace.getNamespaceParseSpec().getClass().getCanonicalName()
     );
     Assert.assertEquals("file:/foo", namespace.getUriPrefix().toString());
-    Assert.assertEquals("testNamespace", namespace.getNamespace());
     Assert.assertEquals("a.b.c", namespace.getFileRegex());
     Assert.assertEquals(5L * 60_000L, namespace.getPollMs());
   }
@@ -348,7 +347,7 @@ public class URIExtractionNamespaceTest
   {
     final ObjectMapper mapper = registerTypes(new DefaultObjectMapper());
     URIExtractionNamespace namespace = mapper.readValue(
-        "{\"type\":\"uri\", \"uri\":\"file:/foo/a.b.c\", \"namespaceParseSpec\":{\"format\":\"simpleJson\"}, \"pollPeriod\":\"PT5M\", \"namespace\":\"testNamespace\"}",
+        "{\"type\":\"uri\", \"uri\":\"file:/foo\", \"namespaceParseSpec\":{\"format\":\"simpleJson\"}, \"pollPeriod\":\"PT5M\"}",
         URIExtractionNamespace.class
     );
 
@@ -356,8 +355,7 @@ public class URIExtractionNamespaceTest
         URIExtractionNamespace.ObjectMapperFlatDataParser.class.getCanonicalName(),
         namespace.getNamespaceParseSpec().getClass().getCanonicalName()
     );
-    Assert.assertEquals("file:/foo/a.b.c", namespace.getUri().toString());
-    Assert.assertEquals("testNamespace", namespace.getNamespace());
+    Assert.assertEquals("file:/foo", namespace.getUri().toString());
     Assert.assertEquals(5L * 60_000L, namespace.getPollMs());
   }
 
