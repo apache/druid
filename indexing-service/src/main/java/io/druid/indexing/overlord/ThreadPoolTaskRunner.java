@@ -29,6 +29,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
+import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
@@ -108,14 +109,33 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
   @Override
   public void registerListener(TaskRunnerListener listener, Executor executor)
   {
+    for (Pair<TaskRunnerListener, Executor> pair : listeners) {
+      if (pair.lhs.getListenerId().equals(listener.getListenerId())) {
+        throw new ISE("Listener [%s] already registered", listener.getListenerId());
+      }
+    }
+
     final Pair<TaskRunnerListener, Executor> listenerPair = Pair.of(listener, executor);
 
     // Location never changes for an existing task, so it's ok to add the listener first and then issue bootstrap
     // callbacks without any special synchronization.
 
     listeners.add(listenerPair);
+    log.info("Registered listener [%s]", listener.getListenerId());
     for (ThreadPoolTaskRunnerWorkItem item : runningItems) {
       TaskRunnerUtils.notifyLocationChanged(ImmutableList.of(listenerPair), item.getTaskId(), item.getLocation());
+    }
+  }
+
+  @Override
+  public void unregisterListener(String listenerId)
+  {
+    for (Pair<TaskRunnerListener, Executor> pair : listeners) {
+      if (pair.lhs.getListenerId().equals(listenerId)) {
+        listeners.remove(pair);
+        log.info("Unregistered listener [%s]", listenerId);
+        return;
+      }
     }
   }
 
@@ -169,6 +189,8 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
               task.getId(),
               System.currentTimeMillis() - start
           );
+
+          TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), taskStatus);
         }
         catch (Exception e) {
           log.makeAlert(e, "Graceful task shutdown failed: %s", task.getDataSource())
@@ -177,9 +199,11 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
              .emit();
           log.warn(e, "Graceful shutdown of task[%s] aborted with exception.", task.getId());
           error = true;
+          TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), TaskStatus.failure(task.getId()));
         }
       } else {
         graceful = false;
+        TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), TaskStatus.failure(task.getId()));
       }
 
       elapsed = System.currentTimeMillis() - start;
@@ -408,6 +432,7 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
             task.getId(),
             location
         );
+        TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), TaskStatus.running(task.getId()));
         status = task.run(toolbox);
       }
       catch (InterruptedException e) {
@@ -431,7 +456,9 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
         throw t;
       }
 
-      return status.withDuration(System.currentTimeMillis() - startTime);
+      status = status.withDuration(System.currentTimeMillis() - startTime);
+      TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), status);
+      return status;
     }
   }
 }

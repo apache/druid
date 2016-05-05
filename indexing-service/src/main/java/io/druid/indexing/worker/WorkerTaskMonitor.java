@@ -218,9 +218,21 @@ public class WorkerTaskMonitor
         new TaskRunnerListener()
         {
           @Override
+          public String getListenerId()
+          {
+            return "WorkerTaskMonitor";
+          }
+
+          @Override
           public void locationChanged(final String taskId, final TaskLocation newLocation)
           {
             notices.add(new LocationNotice(taskId, newLocation));
+          }
+
+          @Override
+          public void statusChanged(final String taskId, final TaskStatus status)
+          {
+            // do nothing
           }
         },
         MoreExecutors.sameThreadExecutor()
@@ -257,6 +269,7 @@ public class WorkerTaskMonitor
 
       try {
         started = false;
+        taskRunner.unregisterListener("WorkerTaskMonitor");
         exec.shutdownNow();
         pathChildrenCache.close();
         taskRunner.stop();

@@ -71,6 +71,7 @@ import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.indexing.overlord.http.OverlordRedirectInfo;
 import io.druid.indexing.overlord.http.OverlordResource;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
+import io.druid.indexing.overlord.supervisor.SupervisorResource;
 import io.druid.indexing.worker.config.WorkerConfig;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.server.audit.AuditManagerProvider;
@@ -158,6 +159,7 @@ public class CliOverlord extends ServerRunnable
 
             binder.bind(JettyServerInitializer.class).toInstance(new OverlordJettyServerInitializer());
             Jerseys.addResource(binder, OverlordResource.class);
+            Jerseys.addResource(binder, SupervisorResource.class);
 
             LifecycleModule.register(binder, Server.class);
           }

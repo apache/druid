@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import io.druid.indexing.kafka.supervisor.KafkaSupervisorSpec;
 import io.druid.initialization.DruidModule;
 
 import java.util.List;
@@ -39,7 +40,8 @@ public class KafkaIndexTaskModule implements DruidModule
                 new NamedType(KafkaIndexTask.class, "index_kafka"),
                 new NamedType(KafkaDataSourceMetadata.class, "kafka"),
                 new NamedType(KafkaIOConfig.class, "kafka"),
-                new NamedType(KafkaTuningConfig.class, "kafka")
+                new NamedType(KafkaTuningConfig.class, "kafka"),
+                new NamedType(KafkaSupervisorSpec.class, "kafka")
             )
     );
   }

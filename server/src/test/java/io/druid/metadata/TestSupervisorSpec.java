@@ -17,54 +17,41 @@
  * under the License.
  */
 
-package io.druid.indexing.common;
+package io.druid.metadata;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Period;
+import io.druid.indexing.overlord.supervisor.Supervisor;
+import io.druid.indexing.overlord.supervisor.SupervisorSpec;
 
-/**
- */
-public class RetryPolicyConfig
+public class TestSupervisorSpec implements SupervisorSpec
 {
+  private String id;
+  private Object data;
+
+  @JsonCreator
+  public TestSupervisorSpec(@JsonProperty("id") String id, @JsonProperty("data") Object data)
+  {
+    this.id = id;
+    this.data = data;
+  }
+
+  @Override
   @JsonProperty
-  private Period minWait = new Period("PT5S");
+  public String getId()
+  {
+    return id;
+  }
+
+  @Override
+  public Supervisor createSupervisor()
+  {
+    return null;
+  }
 
   @JsonProperty
-  private Period maxWait = new Period("PT1M");
-
-  @JsonProperty
-  private long maxRetryCount = 60;
-
-  public Period getMinWait()
+  public Object getData()
   {
-    return minWait;
-  }
-
-  public RetryPolicyConfig setMinWait(Period minWait)
-  {
-    this.minWait = minWait;
-    return this;
-  }
-
-  public Period getMaxWait()
-  {
-    return maxWait;
-  }
-
-  public RetryPolicyConfig setMaxWait(Period maxWait)
-  {
-    this.maxWait = maxWait;
-    return this;
-  }
-
-  public long getMaxRetryCount()
-  {
-    return maxRetryCount;
-  }
-
-  public RetryPolicyConfig setMaxRetryCount(long maxRetryCount)
-  {
-    this.maxRetryCount = maxRetryCount;
-    return this;
+    return data;
   }
 }

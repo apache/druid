@@ -39,6 +39,8 @@ import java.util.Random;
 
 public class TestBroker implements Closeable
 {
+  private final static Random RANDOM = new Random();
+
   private final String zookeeperConnect;
   private final File directory;
   private final int id;
@@ -102,6 +104,8 @@ public class TestBroker implements Closeable
     props.put("bootstrap.servers", String.format("localhost:%d", getPort()));
     props.put("key.deserializer", ByteArrayDeserializer.class.getName());
     props.put("value.deserializer", ByteArrayDeserializer.class.getName());
+    props.put("group.id", String.valueOf(RANDOM.nextInt()));
+    props.put("auto.offset.reset", "earliest");
     return props;
   }
 

@@ -17,40 +17,19 @@
  * under the License.
  */
 
-package io.druid.metadata;
+package io.druid.indexing.overlord.supervisor;
 
-/**
- */
-public interface MetadataStorageConnector
+public interface Supervisor
 {
-  Void insertOrUpdate(
-      final String tableName,
-      final String keyColumn,
-      final String valueColumn,
-      final String key,
-      final byte[] value
-  ) throws Exception;
+  void start();
 
-  byte[] lookup(
-      final String tableName,
-      final String keyColumn,
-      final String valueColumn,
-      final String key
-  );
+  /**
+   * @param stopGracefully If true, supervisor will cleanly shutdown managed tasks if possible (for example signalling
+   *                       them to publish their segments and exit). The implementation may block until the tasks have
+   *                       either acknowledged or completed. If false, supervisor will stop immediately and leave any
+   *                       running tasks as they are.
+   */
+  void stop(boolean stopGracefully);
 
-  void createDataSourceTable();
-
-  void createPendingSegmentsTable();
-
-  void createSegmentTable();
-
-  void createRulesTable();
-
-  void createConfigTable();
-
-  void createTaskTables();
-
-  void createAuditTable();
-
-  void createSupervisorsTable();
+  SupervisorReport getStatus();
 }

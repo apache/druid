@@ -50,6 +50,7 @@ import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.TaskStorageQueryAdapter;
 import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.config.TaskQueueConfig;
+import io.druid.indexing.overlord.supervisor.SupervisorManager;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.IndexerZkConfig;
 import io.druid.server.initialization.ZkPathsConfig;
@@ -96,6 +97,7 @@ public class OverlordTest
   private CountDownLatch[] taskCompletionCountDownLatches;
   private CountDownLatch[] runTaskCountDownLatches;
   private HttpServletRequest req;
+  private SupervisorManager supervisorManager;
 
   private void setupServerAndCurator() throws Exception
   {
@@ -121,6 +123,7 @@ public class OverlordTest
   public void setUp() throws Exception
   {
     req = EasyMock.createStrictMock(HttpServletRequest.class);
+    supervisorManager = EasyMock.createMock(SupervisorManager.class);
     taskLockbox = EasyMock.createStrictMock(TaskLockbox.class);
     taskLockbox.syncFromStorage();
     EasyMock.expectLastCall().atLeastOnce();
@@ -179,7 +182,8 @@ public class OverlordTest
             announcementLatch.countDown();
           }
         },
-        serviceEmitter
+        serviceEmitter,
+        supervisorManager
     );
     EmittingLogger.registerEmitter(serviceEmitter);
   }
@@ -311,6 +315,13 @@ public class OverlordTest
 
     @Override
     public void registerListener(TaskRunnerListener listener, Executor executor)
+    {
+      // Overlord doesn't call this method
+      throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void unregisterListener(String listenerId)
     {
       // Overlord doesn't call this method
       throw new UnsupportedOperationException();
