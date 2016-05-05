@@ -17,54 +17,34 @@
  * under the License.
  */
 
-package io.druid.indexing.common;
+package io.druid.indexing.overlord.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Period;
+import org.joda.time.DateTime;
 
-/**
- */
-public class RetryPolicyConfig
+public abstract class SupervisorReport
 {
+  private String id;
+  private DateTime generationTime;
+
+  public SupervisorReport(String id, DateTime generationTime)
+  {
+    this.id = id;
+    this.generationTime = generationTime;
+  }
+
   @JsonProperty
-  private Period minWait = new Period("PT5S");
+  public String getId()
+  {
+    return id;
+  }
 
   @JsonProperty
-  private Period maxWait = new Period("PT1M");
+  public DateTime getGenerationTime()
+  {
+    return generationTime;
+  }
 
   @JsonProperty
-  private long maxRetryCount = 60;
-
-  public Period getMinWait()
-  {
-    return minWait;
-  }
-
-  public RetryPolicyConfig setMinWait(Period minWait)
-  {
-    this.minWait = minWait;
-    return this;
-  }
-
-  public Period getMaxWait()
-  {
-    return maxWait;
-  }
-
-  public RetryPolicyConfig setMaxWait(Period maxWait)
-  {
-    this.maxWait = maxWait;
-    return this;
-  }
-
-  public long getMaxRetryCount()
-  {
-    return maxRetryCount;
-  }
-
-  public RetryPolicyConfig setMaxRetryCount(long maxRetryCount)
-  {
-    this.maxRetryCount = maxRetryCount;
-    return this;
-  }
+  public abstract Object getPayload();
 }

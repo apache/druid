@@ -17,54 +17,35 @@
  * under the License.
  */
 
-package io.druid.indexing.common;
-
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.Period;
+package io.druid.indexing.overlord.supervisor;
 
 /**
+ * Used as a tombstone marker in the supervisors metadata table to indicate that the supervisor has been removed.
  */
-public class RetryPolicyConfig
+public class NoopSupervisorSpec implements SupervisorSpec
 {
-  @JsonProperty
-  private Period minWait = new Period("PT5S");
-
-  @JsonProperty
-  private Period maxWait = new Period("PT1M");
-
-  @JsonProperty
-  private long maxRetryCount = 60;
-
-  public Period getMinWait()
+  @Override
+  public String getId()
   {
-    return minWait;
+    return null;
   }
 
-  public RetryPolicyConfig setMinWait(Period minWait)
+  @Override
+  public Supervisor createSupervisor()
   {
-    this.minWait = minWait;
-    return this;
-  }
+    return new Supervisor()
+    {
+      @Override
+      public void start() {}
 
-  public Period getMaxWait()
-  {
-    return maxWait;
-  }
+      @Override
+      public void stop(boolean stopGracefully) {}
 
-  public RetryPolicyConfig setMaxWait(Period maxWait)
-  {
-    this.maxWait = maxWait;
-    return this;
-  }
-
-  public long getMaxRetryCount()
-  {
-    return maxRetryCount;
-  }
-
-  public RetryPolicyConfig setMaxRetryCount(long maxRetryCount)
-  {
-    this.maxRetryCount = maxRetryCount;
-    return this;
+      @Override
+      public SupervisorReport getStatus()
+      {
+        return null;
+      }
+    };
   }
 }

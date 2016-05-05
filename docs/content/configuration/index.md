@@ -184,6 +184,7 @@ These properties specify the jdbc connection and other configuration around the 
 |`druid.metadata.storage.tables.tasks`|Used by the indexing service to store tasks.|druid_tasks|
 |`druid.metadata.storage.tables.taskLog`|Used by the indexing service to store task logs.|druid_taskLog|
 |`druid.metadata.storage.tables.taskLock`|Used by the indexing service to store task locks.|druid_taskLock|
+|`druid.metadata.storage.tables.supervisors`|Used by the indexing service to store supervisor configurations.|druid_supervisors|
 |`druid.metadata.storage.tables.audit`|The table to use for audit history of configuration changes e.g. Coordinator rules.|druid_audit|
 
 ### Deep Storage

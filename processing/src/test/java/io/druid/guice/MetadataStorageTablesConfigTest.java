@@ -78,5 +78,7 @@ public class MetadataStorageTablesConfigTest
         props.getProperty("druid.metadata.storage.tables.taskLock"),
         config.getLockTable(MetadataStorageTablesConfig.TASK_ENTRY_TYPE)
     );
+    Assert.assertEquals(props.getProperty("druid.metadata.storage.tables.dataSource"), config.getDataSourceTable());
+    Assert.assertEquals(props.getProperty("druid.metadata.storage.tables.supervisors"), config.getSupervisorTable());
   }
 }
