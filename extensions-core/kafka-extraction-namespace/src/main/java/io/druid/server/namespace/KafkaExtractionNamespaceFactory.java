@@ -20,17 +20,10 @@
 package io.druid.server.namespace;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
-import com.google.common.base.Function;
-import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import io.druid.query.extraction.namespace.ExtractionNamespaceCacheFactory;
 import io.druid.query.extraction.namespace.KafkaExtractionNamespace;
-
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -82,10 +75,8 @@ public class KafkaExtractionNamespaceFactory implements ExtractionNamespaceCache
 
   private KafkaExtractionManager findAppropriate(Properties kafkaProperties)
   {
-    for (KafkaExtractionManager manager: kafkaExtractionManagers)
-    {
-      if (manager.supports(kafkaProperties))
-      {
+    for (KafkaExtractionManager manager : kafkaExtractionManagers) {
+      if (manager.supports(kafkaProperties)) {
         return manager;
       }
     }

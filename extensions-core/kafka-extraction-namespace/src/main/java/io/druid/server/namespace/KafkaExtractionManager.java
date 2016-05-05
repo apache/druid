@@ -27,15 +27,22 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.google.inject.Inject;
-import com.google.inject.name.Named;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.StringUtils;
-import com.metamx.common.lifecycle.LifecycleStart;
-import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
-import io.druid.guice.ManageLifecycle;
 import io.druid.query.extraction.namespace.KafkaExtractionNamespace;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
+import java.util.regex.Pattern;
 import kafka.consumer.ConsumerConfig;
 import kafka.consumer.ConsumerIterator;
 import kafka.consumer.KafkaStream;
@@ -43,16 +50,6 @@ import kafka.consumer.Whitelist;
 import kafka.javaapi.consumer.ConsumerConnector;
 import kafka.message.MessageAndMetadata;
 import kafka.serializer.Decoder;
-
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.UUID;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.regex.Pattern;
 
 /**
  *
@@ -106,7 +103,7 @@ public class KafkaExtractionManager
   {
     if (otherProperties.containsKey("zookeeper.connect")) {
       return this.kafkaProperties.getProperty("zookeeper.connect")
-          .equals(otherProperties.getProperty("zookeeper.connect"));
+                                 .equals(otherProperties.getProperty("zookeeper.connect"));
     }
     return false;
   }
@@ -127,11 +124,11 @@ public class KafkaExtractionManager
 
   public long getNumEvents(String namespace)
   {
-    if(namespace == null){
+    if (namespace == null) {
       return 0L;
     } else {
       final AtomicLong eventCounter = topicEvents.get(namespace);
-      if(eventCounter != null) {
+      if (eventCounter != null) {
         return eventCounter.get();
       } else {
         return 0L;
@@ -171,7 +168,7 @@ public class KafkaExtractionManager
             final ConsumerIterator<String, String> it = kafkaStream.iterator();
             log.info("Listening to topic [%s] for namespace [%s]", topic, id);
             AtomicLong eventCounter = topicEvents.get(id);
-            if(eventCounter == null){
+            if (eventCounter == null) {
               topicEvents.putIfAbsent(id, new AtomicLong(0L));
               eventCounter = topicEvents.get(id);
             }
