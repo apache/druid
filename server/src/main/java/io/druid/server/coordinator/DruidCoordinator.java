@@ -686,19 +686,17 @@ public class DruidCoordinator
           }
         }
 
-        BalancerStrategyFactory factory =
-            new CostBalancerStrategyFactory(getDynamicConfigs().getBalancerComputeThreads());
-
-        // Do coordinator stuff.
-        DruidCoordinatorRuntimeParams params =
-            DruidCoordinatorRuntimeParams.newBuilder()
-                                         .withStartTime(startTime)
-                                         .withDatasources(metadataSegmentManager.getInventory())
-                                         .withDynamicConfigs(getDynamicConfigs())
-                                         .withEmitter(emitter)
-                                         .withBalancerStrategyFactory(factory)
-                                         .build();
-        try {
+        try (BalancerStrategyFactory factory =
+                 new CostBalancerStrategyFactory(getDynamicConfigs().getBalancerComputeThreads())) {
+          // Do coordinator stuff.
+          DruidCoordinatorRuntimeParams params =
+              DruidCoordinatorRuntimeParams.newBuilder()
+                                           .withStartTime(startTime)
+                                           .withDatasources(metadataSegmentManager.getInventory())
+                                           .withDynamicConfigs(getDynamicConfigs())
+                                           .withEmitter(emitter)
+                                           .withBalancerStrategyFactory(factory)
+                                           .build();
           for (DruidCoordinatorHelper helper : helpers) {
             // Don't read state and run state in the same helper otherwise racy conditions may exist
             if (leader && startingLeaderCounter == leaderCounter) {
@@ -706,13 +704,6 @@ public class DruidCoordinator
             }
           }
         }
-        finally {
-          if (params.getBalancerStrategyFactory() != null) {
-            params.getBalancerStrategyFactory().close();
-          }
-        }
-
-
       }
       catch (Exception e) {
         log.makeAlert(e, "Caught exception, ignoring so that schedule keeps going.").emit();
