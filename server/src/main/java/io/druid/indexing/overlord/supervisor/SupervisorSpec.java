@@ -17,40 +17,18 @@
  * under the License.
  */
 
-package io.druid.metadata;
+package io.druid.indexing.overlord.supervisor;
 
-/**
- */
-public interface MetadataStorageConnector
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+@JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "NoopSupervisorSpec", value = NoopSupervisorSpec.class)
+})
+public interface SupervisorSpec
 {
-  Void insertOrUpdate(
-      final String tableName,
-      final String keyColumn,
-      final String valueColumn,
-      final String key,
-      final byte[] value
-  ) throws Exception;
+  String getId();
 
-  byte[] lookup(
-      final String tableName,
-      final String keyColumn,
-      final String valueColumn,
-      final String key
-  );
-
-  void createDataSourceTable();
-
-  void createPendingSegmentsTable();
-
-  void createSegmentTable();
-
-  void createRulesTable();
-
-  void createConfigTable();
-
-  void createTaskTables();
-
-  void createAuditTable();
-
-  void createSupervisorsTable();
+  Supervisor createSupervisor();
 }

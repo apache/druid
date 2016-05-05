@@ -21,9 +21,6 @@ package io.druid.indexing.overlord;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Joiner;
@@ -175,8 +172,15 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
     return retVal;
   }
 
+  @Override
   public void registerListener(TaskRunnerListener listener, Executor executor)
   {
+    for (Pair<TaskRunnerListener, Executor> pair : listeners) {
+      if (pair.lhs.getListenerId().equals(listener.getListenerId())) {
+        throw new ISE("Listener [%s] already registered", listener.getListenerId());
+      }
+    }
+
     final Pair<TaskRunnerListener, Executor> listenerPair = Pair.of(listener, executor);
 
     synchronized (tasks) {
@@ -185,6 +189,19 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
       }
 
       listeners.add(listenerPair);
+      log.info("Registered listener [%s]", listener.getListenerId());
+    }
+  }
+
+  @Override
+  public void unregisterListener(String listenerId)
+  {
+    for (Pair<TaskRunnerListener, Executor> pair : listeners) {
+      if (pair.lhs.getListenerId().equals(listenerId)) {
+        listeners.remove(pair);
+        log.info("Unregistered listener [%s]", listenerId);
+        return;
+      }
     }
   }
 
@@ -401,6 +418,11 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                             }
 
                             TaskRunnerUtils.notifyLocationChanged(listeners, task.getId(), taskLocation);
+                            TaskRunnerUtils.notifyStatusChanged(
+                                listeners,
+                                task.getId(),
+                                TaskStatus.running(task.getId())
+                            );
 
                             log.info("Logging task %s output to: %s", task.getId(), logFile);
                             boolean runFailed = true;
@@ -419,13 +441,17 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               taskLogPusher.pushTaskLog(task.getId(), logFile);
                             }
 
+                            TaskStatus status;
                             if (!runFailed) {
                               // Process exited successfully
-                              return jsonMapper.readValue(statusFile, TaskStatus.class);
+                              status = jsonMapper.readValue(statusFile, TaskStatus.class);
                             } else {
                               // Process exited unsuccessfully
-                              return TaskStatus.failure(task.getId());
+                              status = TaskStatus.failure(task.getId());
                             }
+
+                            TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), status);
+                            return status;
                           }
                           catch (Throwable t) {
                             throw closer.rethrow(t);
