@@ -35,19 +35,19 @@ public interface LookupExtractorFactory extends Supplier<LookupExtractor>
   /**
    * <p>
    *   This method will be called to start the LookupExtractor upon registered
-   *   Calling start multiple times should not lead to any failure and suppose to return true in both cases.
+   *   Calling start multiple times should return true if successfully started.
    * </p>
    *
-   * @return true if start successfully started the {@link LookupExtractor}
+   * @return Returns false if is not successfully started the {@link LookupExtractor} otherwise returns true.
    */
   public boolean start();
 
   /**
    * <p>
    *   This method will be called to stop the LookupExtractor upon deletion.
-   *   Calling this method multiple times should not lead to any failure.
+   *   Calling this method multiple times should always return true if successfully closed.
    * </p>
-   * @return true if successfully closed the {@link LookupExtractor}
+   * @return Returns false if not successfully closed the {@link LookupExtractor} otherwise returns true
    */
   public boolean close();
   /**
