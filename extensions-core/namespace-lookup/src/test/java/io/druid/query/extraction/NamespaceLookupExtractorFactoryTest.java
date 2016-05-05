@@ -160,7 +160,7 @@ public class NamespaceLookupExtractorFactoryTest
     );
     Assert.assertTrue(namespaceLookupExtractorFactory.start());
     Assert.assertTrue(namespaceLookupExtractorFactory.close());
-    Assert.assertFalse(namespaceLookupExtractorFactory.close());
+    Assert.assertTrue(namespaceLookupExtractorFactory.close());
     EasyMock.verify(cacheManager);
   }
 
@@ -187,7 +187,7 @@ public class NamespaceLookupExtractorFactoryTest
         cacheManager
     );
     Assert.assertTrue(namespaceLookupExtractorFactory.start());
-    Assert.assertFalse(namespaceLookupExtractorFactory.start());
+    Assert.assertTrue(namespaceLookupExtractorFactory.start());
     EasyMock.verify(cacheManager);
   }
 

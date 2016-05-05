@@ -112,7 +112,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
     try {
       if (!started.compareAndSet(false, true)) {
         LOG.warn("Already started!");
-        return false;
+        return true;
       }
       if (!manager.scheduleAndWait(extractorID, extractionNamespace, SCHEDULE_TIMEOUT)) {
         LOG.warn("Failed to schedule lookup [%s]", extractorID);
@@ -134,7 +134,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
     try {
       if (!started.compareAndSet(true, false)) {
         LOG.warn("Not started!");
-        return false;
+        return true;
       }
       return manager.checkedDelete(extractorID);
     }
