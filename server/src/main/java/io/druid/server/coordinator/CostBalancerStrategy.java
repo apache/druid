@@ -32,7 +32,7 @@ import org.joda.time.Interval;
 
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.Executors;
+import java.util.concurrent.ExecutorService;
 
 public class CostBalancerStrategy implements BalancerStrategy
 {
@@ -41,12 +41,23 @@ public class CostBalancerStrategy implements BalancerStrategy
   private static final long SEVEN_DAYS_IN_MILLIS = 7 * DAY_IN_MILLIS;
   private static final long THIRTY_DAYS_IN_MILLIS = 30 * DAY_IN_MILLIS;
   private final long referenceTimestamp;
-  private final int threadCount;
+  private final ListeningExecutorService exec;
 
-  public CostBalancerStrategy(DateTime referenceTimestamp, int threadCount)
+  public static long gapMillis(Interval interval1, Interval interval2)
+  {
+    if (interval1.getStartMillis() > interval2.getEndMillis()) {
+      return interval1.getStartMillis() - interval2.getEndMillis();
+    } else if (interval2.getStartMillis() > interval1.getEndMillis()) {
+      return interval2.getStartMillis() - interval1.getEndMillis();
+    } else {
+      return 0;
+    }
+  }
+
+  public CostBalancerStrategy(DateTime referenceTimestamp, ListeningExecutorService exec)
   {
     this.referenceTimestamp = referenceTimestamp.getMillis();
-    this.threadCount = threadCount;
+    this.exec = exec;
   }
 
   @Override
@@ -85,7 +96,7 @@ public class CostBalancerStrategy implements BalancerStrategy
    */
   public double computeJointSegmentCosts(final DataSegment segment1, final DataSegment segment2)
   {
-    final Interval gap = segment1.getInterval().gap(segment2.getInterval());
+    final long gapMillis = gapMillis(segment1.getInterval(), segment2.getInterval());
 
     final double baseCost = Math.min(segment1.getSize(), segment2.getSize());
     double recencyPenalty = 1;
@@ -103,10 +114,9 @@ public class CostBalancerStrategy implements BalancerStrategy
     }
 
     /** gap is null if the two segment intervals overlap or if they're adjacent */
-    if (gap == null) {
+    if (gapMillis == 0) {
       gapPenalty = 2;
     } else {
-      long gapMillis = gap.toDurationMillis();
       if (gapMillis < THIRTY_DAYS_IN_MILLIS) {
         gapPenalty = 2 - gapMillis / THIRTY_DAYS_IN_MILLIS;
       }
@@ -151,8 +161,8 @@ public class CostBalancerStrategy implements BalancerStrategy
    * @param serverHolders A list of ServerHolders for a particular tier.
    *
    * @return The normalization value (the sum of the diagonal entries in the
-   *         pairwise cost matrix).  This is the cost of a cluster if each
-   *         segment were to get its own historical node.
+   * pairwise cost matrix).  This is the cost of a cluster if each
+   * segment were to get its own historical node.
    */
   public double calculateNormalization(final List<ServerHolder> serverHolders)
   {
@@ -234,12 +244,11 @@ public class CostBalancerStrategy implements BalancerStrategy
   {
     Pair<Double, ServerHolder> bestServer = Pair.of(Double.POSITIVE_INFINITY, null);
 
-    ListeningExecutorService service = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(threadCount));
     List<ListenableFuture<Pair<Double, ServerHolder>>> futures = Lists.newArrayList();
 
     for (final ServerHolder server : serverHolders) {
       futures.add(
-          service.submit(
+          exec.submit(
               new Callable<Pair<Double, ServerHolder>>()
               {
                 @Override
@@ -264,9 +273,7 @@ public class CostBalancerStrategy implements BalancerStrategy
     catch (Exception e) {
       log.makeAlert(e, "Cost Balancer Multithread strategy wasn't able to complete cost computation.").emit();
     }
-    service.shutdown();
     return bestServer;
   }
-
 }
 
