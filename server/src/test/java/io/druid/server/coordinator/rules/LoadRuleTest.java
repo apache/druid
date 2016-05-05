@@ -33,6 +33,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.DruidServer;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.server.coordinator.CoordinatorStats;
+import io.druid.server.coordinator.CostBalancerStrategyFactory;
 import io.druid.server.coordinator.DruidCluster;
 import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import io.druid.server.coordinator.LoadPeonCallback;
@@ -189,18 +190,22 @@ public class LoadRuleTest
         )
     );
 
+    CostBalancerStrategyFactory costBalancerStrategyFactory = new CostBalancerStrategyFactory(1);
     CoordinatorStats stats = rule.run(
         null,
         DruidCoordinatorRuntimeParams.newBuilder()
                                      .withDruidCluster(druidCluster)
-                                     .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
+                                     .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
                                      .withReplicationManager(throttler)
+                                     .withBalancerStrategyFactory(costBalancerStrategyFactory)
+                                     .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                                      .withAvailableSegments(Arrays.asList(segment)).build(),
         segment
     );
 
     Assert.assertTrue(stats.getPerTierStats().get("assignedCount").get("hot").get() == 1);
     Assert.assertTrue(stats.getPerTierStats().get("assignedCount").get(DruidServer.DEFAULT_TIER).get() == 2);
+    costBalancerStrategyFactory.close();
   }
 
   @Test
@@ -291,19 +296,22 @@ public class LoadRuleTest
         )
     );
 
-
+    CostBalancerStrategyFactory costBalancerStrategyFactory = new CostBalancerStrategyFactory(1);
     CoordinatorStats stats = rule.run(
         null,
         DruidCoordinatorRuntimeParams.newBuilder()
                                      .withDruidCluster(druidCluster)
                                      .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
                                      .withReplicationManager(throttler)
+                                     .withBalancerStrategyFactory(costBalancerStrategyFactory)
+                                     .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                                      .withAvailableSegments(Arrays.asList(segment)).build(),
         segment
     );
 
     Assert.assertTrue(stats.getPerTierStats().get("droppedCount").get("hot").get() == 1);
     Assert.assertTrue(stats.getPerTierStats().get("droppedCount").get(DruidServer.DEFAULT_TIER).get() == 1);
+    costBalancerStrategyFactory.close();
   }
 
   @Test
@@ -373,18 +381,21 @@ public class LoadRuleTest
             )
         )
     );
-
+CostBalancerStrategyFactory costBalancerStrategyFactory = new CostBalancerStrategyFactory(1);
     CoordinatorStats stats = rule.run(
         null,
         DruidCoordinatorRuntimeParams.newBuilder()
                                      .withDruidCluster(druidCluster)
                                      .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
                                      .withReplicationManager(throttler)
+                                     .withBalancerStrategyFactory(costBalancerStrategyFactory)
+                                     .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                                      .withAvailableSegments(Arrays.asList(segment)).build(),
         segment
     );
 
     Assert.assertTrue(stats.getPerTierStats().get("assignedCount").get("hot").get() == 1);
+    costBalancerStrategyFactory.close();
   }
 
   @Test
@@ -470,6 +481,7 @@ public class LoadRuleTest
             )
         )
     );
+    CostBalancerStrategyFactory costBalancerStrategyFactory = new CostBalancerStrategyFactory(1);
 
     CoordinatorStats stats = rule.run(
         null,
@@ -477,10 +489,13 @@ public class LoadRuleTest
                                      .withDruidCluster(druidCluster)
                                      .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
                                      .withReplicationManager(throttler)
+                                     .withBalancerStrategyFactory(costBalancerStrategyFactory)
+                                     .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                                      .withAvailableSegments(Arrays.asList(segment)).build(),
         segment
     );
 
     Assert.assertTrue(stats.getPerTierStats().get("droppedCount").get("hot").get() == 1);
+    costBalancerStrategyFactory.close();
   }
 }
