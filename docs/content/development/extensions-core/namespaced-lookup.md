@@ -91,7 +91,6 @@ The remapping values for each namespaced lookup can be specified by a json objec
 ```json
 {
   "type":"uri",
-  "namespace":"some_lookup",
   "uri": "s3://bucket/some/key/prefix/renames-0003.gz",
   "namespaceParseSpec":{
     "format":"csv",
@@ -104,7 +103,6 @@ The remapping values for each namespaced lookup can be specified by a json objec
 ```json
 {
   "type":"uri",
-  "namespace":"some_lookup",
   "uriPrefix": "s3://bucket/some/key/prefix/",
   "fileRegex":"renames-[0-9]*\\.gz",
   "namespaceParseSpec":{
