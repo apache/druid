@@ -37,7 +37,6 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.query.extraction.namespace.ExtractionNamespace;
 import io.druid.query.extraction.namespace.ExtractionNamespaceCacheFactory;
-
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
@@ -84,7 +83,6 @@ public abstract class NamespaceExtractionCacheManager
   private final ListeningScheduledExecutorService listeningScheduledExecutorService;
   protected final ConcurrentMap<String, NamespaceImplData> implData = new ConcurrentHashMap<>();
   protected final AtomicLong tasksStarted = new AtomicLong(0);
-  protected final AtomicLong dataSize = new AtomicLong(0);
   protected final ServiceEmitter serviceEmitter;
   private final ConcurrentHashMap<String, String> lastVersion = new ConcurrentHashMap<>();
   private final Map<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>> namespaceFunctionFactoryMap;
@@ -118,12 +116,12 @@ public abstract class NamespaceExtractionCacheManager
           {
             try {
               final long tasks = tasksStarted.get();
-              serviceEmitter.emit(ServiceMetricEvent.builder().build("namespace/size", dataSize.get()));
               serviceEmitter.emit(
                   ServiceMetricEvent.builder()
                                     .build("namespace/deltaTasksStarted", tasks - priorTasksStarted)
               );
               priorTasksStarted = tasks;
+              monitor(serviceEmitter);
             }
             catch (Exception e) {
               log.error(e, "Error emitting namespace stats");
@@ -136,6 +134,14 @@ public abstract class NamespaceExtractionCacheManager
         1,
         10, TimeUnit.MINUTES
     );
+  }
+
+  /**
+   * Optional monitoring for overriding classes. `super.monitor` does *NOT* need to be called by overriding methods
+   * @param serviceEmitter The emitter to emit to
+   */
+  protected void monitor(ServiceEmitter serviceEmitter) {
+    // Noop by default
   }
 
   protected boolean waitForServiceToEnd(long time, TimeUnit unit) throws InterruptedException
