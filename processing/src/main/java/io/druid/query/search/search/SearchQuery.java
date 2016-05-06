@@ -131,6 +131,21 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
     );
   }
 
+  public SearchQuery withDimFilter(DimFilter dimFilter)
+  {
+    return new SearchQuery(
+        getDataSource(),
+        dimFilter,
+        granularity,
+        limit,
+        getQuerySegmentSpec(),
+        dimensions,
+        querySpec,
+        sortSpec,
+        getContext()
+    );
+  }
+
   @JsonProperty("filter")
   public DimFilter getDimensionsFilter()
   {

@@ -342,34 +342,34 @@ public class SearchQueryRunnerTest
         true,
         null,
         true,
-        false
+        true
     );
 
-    checkSearchQuery(
-        Druids.newSearchQueryBuilder()
-              .dataSource(QueryRunnerTestHelper.dataSource)
-              .granularity(QueryRunnerTestHelper.allGran)
-              .filters(
-                  new ExtractionDimFilter(
-                      QueryRunnerTestHelper.qualityDimension,
-                      automotiveSnowman,
-                      lookupExtractionFn,
-                      null
-                  )
-              )
-              .intervals(QueryRunnerTestHelper.fullOnInterval)
-              .dimensions(
-                  new ExtractionDimensionSpec(
-                      QueryRunnerTestHelper.qualityDimension,
-                      null,
-                      lookupExtractionFn,
-                      null
-                  )
-              )
-              .query("☃")
-              .build(),
-        expectedHits
-    );
+    SearchQuery query = Druids.newSearchQueryBuilder()
+                              .dataSource(QueryRunnerTestHelper.dataSource)
+                              .granularity(QueryRunnerTestHelper.allGran)
+                              .filters(
+                                  new ExtractionDimFilter(
+                                      QueryRunnerTestHelper.qualityDimension,
+                                      automotiveSnowman,
+                                      lookupExtractionFn,
+                                      null
+                                  )
+                              )
+                              .intervals(QueryRunnerTestHelper.fullOnInterval)
+                              .dimensions(
+                                  new ExtractionDimensionSpec(
+                                      QueryRunnerTestHelper.qualityDimension,
+                                      null,
+                                      lookupExtractionFn,
+                                      null
+                                  )
+                              )
+                              .query("☃")
+                              .build();
+
+    checkSearchQuery(query, expectedHits);
+    checkSearchQuery(query, toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)), expectedHits);
   }
 
   @Test
@@ -559,31 +559,31 @@ public class SearchQueryRunnerTest
         runner.run(searchQuery, ImmutableMap.of()),
         Lists.<Result<SearchResultValue>>newArrayList()
     );
-    List<SearchHit> copy = ImmutableList.copyOf(expectedResults);
+    List<SearchHit> copy = Lists.newLinkedList(expectedResults);
     for (Result<SearchResultValue> result : results) {
       Assert.assertEquals(new DateTime("2011-01-12T00:00:00.000Z"), result.getTimestamp());
       Assert.assertTrue(result.getValue() instanceof Iterable);
 
       Iterable<SearchHit> resultValues = result.getValue();
       for (SearchHit resultValue : resultValues) {
-        int index = expectedResults.indexOf(resultValue);
+        int index = copy.indexOf(resultValue);
         if (index < 0) {
           fail(
-              copy, results,
+              expectedResults, results,
               "No result found containing " + resultValue.getDimension() + " and " + resultValue.getValue()
           );
         }
-        SearchHit expected = expectedResults.remove(index);
+        SearchHit expected = copy.remove(index);
         if (!resultValue.toString().equals(expected.toString())) {
           fail(
-              copy, results,
+              expectedResults, results,
               "Invalid count for " + resultValue + ".. which was expected to be " + expected.getCount()
           );
         }
       }
     }
-    if (!expectedResults.isEmpty()) {
-      fail(copy, results, "Some expected results are not shown: " + expectedResults);
+    if (!copy.isEmpty()) {
+      fail(expectedResults, results, "Some expected results are not shown: " + copy);
     }
   }
 
