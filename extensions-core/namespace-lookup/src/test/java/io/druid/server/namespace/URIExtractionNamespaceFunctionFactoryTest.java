@@ -45,6 +45,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.lang.reflect.Constructor;
@@ -92,8 +93,7 @@ public class URIExtractionNamespaceFunctionFactoryTest
       FAKE_SCHEME,
       new LocalFileTimestampVersionFinder()
       {
-        @Override
-        public URI getLatestVersion(URI uri, final @Nullable Pattern pattern)
+        URI fixURI(URI uri)
         {
           final URI newURI;
           try {
@@ -110,7 +110,19 @@ public class URIExtractionNamespaceFunctionFactoryTest
           catch (URISyntaxException e) {
             throw Throwables.propagate(e);
           }
-          return super.getLatestVersion(newURI, pattern);
+          return newURI;
+        }
+
+        @Override
+        public String getVersion(URI uri)
+        {
+          return super.getVersion(fixURI(uri));
+        }
+
+        @Override
+        public InputStream getInputStream(URI uri) throws IOException
+        {
+          return super.getInputStream(fixURI(uri));
         }
       }
   );

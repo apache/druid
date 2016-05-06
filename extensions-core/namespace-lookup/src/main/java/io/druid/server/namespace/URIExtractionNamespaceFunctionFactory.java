@@ -41,9 +41,6 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.net.URISyntaxException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
@@ -140,9 +137,10 @@ public class URIExtractionNamespaceFunctionFactory implements ExtractionNamespac
           );
         }
         final URIDataPuller puller = (URIDataPuller) pullerRaw;
-        final Pattern versionRegex;
         final URI uriBase;
+        final URI uri;
         if (doSearch) {
+          final Pattern versionRegex;
           uriBase = extractionNamespace.getUriPrefix();
 
           if (extractionNamespace.getFileRegex() != null) {
@@ -150,41 +148,27 @@ public class URIExtractionNamespaceFunctionFactory implements ExtractionNamespac
           } else {
             versionRegex = null;
           }
-        } else {
-          final URI rawURI = extractionNamespace.getUri();
-          final Path filePath = Paths.get(rawURI.getPath());
-          versionRegex = Pattern.compile(Pattern.quote(filePath.getFileName().toString()));
-          try {
-            uriBase = new URI(
-                rawURI.getScheme(),
-                rawURI.getUserInfo(),
-                rawURI.getHost(),
-                rawURI.getPort(),
-                filePath.getParent().toString(),
-                rawURI.getQuery(),
-                rawURI.getFragment()
+          uri = pullerRaw.getLatestVersion(
+              uriBase,
+              versionRegex
+          );
+
+          if (uri == null) {
+            throw new RuntimeException(
+                new FileNotFoundException(
+                    String.format(
+                        "Could not find match for pattern `%s` in [%s] for %s",
+                        versionRegex,
+                        originalUri,
+                        extractionNamespace
+                    )
+                )
             );
           }
-          catch (URISyntaxException e) {
-            throw Throwables.propagate(e);
-          }
+        } else {
+          uri = extractionNamespace.getUri();
         }
-        final URI uri = pullerRaw.getLatestVersion(
-            uriBase,
-            versionRegex
-        );
-        if (uri == null) {
-          throw new RuntimeException(
-              new FileNotFoundException(
-                  String.format(
-                      "Could not find match for pattern `%s` in [%s] for %s",
-                      versionRegex,
-                      originalUri,
-                      extractionNamespace
-                  )
-              )
-          );
-        }
+
         final String uriPath = uri.getPath();
 
         try {
