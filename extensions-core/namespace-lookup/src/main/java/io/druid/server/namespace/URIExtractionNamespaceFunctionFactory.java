@@ -137,11 +137,9 @@ public class URIExtractionNamespaceFunctionFactory implements ExtractionNamespac
           );
         }
         final URIDataPuller puller = (URIDataPuller) pullerRaw;
-        final URI uriBase;
         final URI uri;
         if (doSearch) {
           final Pattern versionRegex;
-          uriBase = extractionNamespace.getUriPrefix();
 
           if (extractionNamespace.getFileRegex() != null) {
             versionRegex = Pattern.compile(extractionNamespace.getFileRegex());
@@ -149,7 +147,7 @@ public class URIExtractionNamespaceFunctionFactory implements ExtractionNamespac
             versionRegex = null;
           }
           uri = pullerRaw.getLatestVersion(
-              uriBase,
+              extractionNamespace.getUriPrefix(),
               versionRegex
           );
 
