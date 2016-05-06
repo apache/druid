@@ -25,12 +25,8 @@ import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Key;
-import com.google.inject.Provides;
 import com.google.inject.TypeLiteral;
 import com.google.inject.multibindings.MapBinder;
-import com.google.inject.name.Named;
-import com.metamx.common.IAE;
-import io.druid.guice.Jerseys;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.PolyBind;
 import io.druid.initialization.DruidModule;
@@ -42,8 +38,6 @@ import io.druid.query.extraction.namespace.URIExtractionNamespace;
 import io.druid.server.namespace.cache.NamespaceExtractionCacheManager;
 import io.druid.server.namespace.cache.OffHeapNamespaceExtractionCacheManager;
 import io.druid.server.namespace.cache.OnHeapNamespaceExtractionCacheManager;
-
-import javax.annotation.Nullable;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -54,17 +48,6 @@ import java.util.concurrent.ConcurrentMap;
 public class NamespacedExtractionModule implements DruidModule
 {
   private static final String TYPE_PREFIX = "druid.query.extraction.namespace.cache.type";
-
-  public static final String NAMESPACE_VERSION_MAP = "namespaceVersionMap";
-  public static final String NAMESPACE_EXTRACTION_FUNCTION_CACHE = "namespaceExtractionFunctionCache";
-  public static final String NAMESPACE_REVERSE_EXTRACTION_FUNCTION_CACHE = "namespaceReverseExtractionFunctionCache";
-  public static final String DIM_EXTRACTION_NAMESPACE = "dimExtractionNamespace";
-  public static final String DIM_REVERSE_EXTRACTION_NAMESPACE = "dimReverseExtractionNamespace";
-
-  public static final String EXTRACTION_CACHE_MANAGER = "DruidExtractionCacheManager";
-
-  private final ConcurrentMap<String, Function<String, String>> fnCache = new ConcurrentHashMap<>();
-  private final ConcurrentMap<String, Function<String, List<String>>> reverseFnCache = new ConcurrentHashMap<>();
 
   @Override
   public List<? extends Module> getJacksonModules()
