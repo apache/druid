@@ -297,7 +297,9 @@ public class URIExtractionNamespaceFunctionFactoryTest
   {
     lifecycle.start();
     fnCache.clear();
-    tmpFileParent = temporaryFolder.newFolder();
+    tmpFileParent = new File(temporaryFolder.newFolder(), "☃");
+    Assert.assertTrue(tmpFileParent.mkdir());
+    Assert.assertTrue(tmpFileParent.isDirectory());
     tmpFile = Files.createTempFile(tmpFileParent.toPath(), "druidTestURIExtractionNS", suffix).toFile();
     final ObjectMapper mapper = new DefaultObjectMapper();
     try (OutputStream ostream = outStreamSupplier.apply(tmpFile)) {

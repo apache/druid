@@ -37,20 +37,20 @@ import io.druid.data.input.MapPopulator;
 import io.druid.query.extraction.namespace.ExtractionNamespaceFunctionFactory;
 import io.druid.query.extraction.namespace.URIExtractionNamespace;
 import io.druid.segment.loading.URIDataPuller;
-import org.joda.time.format.DateTimeFormatter;
-import org.joda.time.format.ISODateTimeFormat;
-
-import javax.annotation.Nullable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.regex.Pattern;
+import javax.annotation.Nullable;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.ISODateTimeFormat;
 
 /**
  *
@@ -151,9 +151,23 @@ public class URIExtractionNamespaceFunctionFactory implements ExtractionNamespac
             versionRegex = null;
           }
         } else {
-          final Path filePath = Paths.get(extractionNamespace.getUri().getPath());
+          final URI rawURI = extractionNamespace.getUri();
+          final Path filePath = Paths.get(rawURI.getPath());
           versionRegex = Pattern.compile(Pattern.quote(filePath.getFileName().toString()));
-          uriBase = filePath.getParent().toUri();
+          try {
+            uriBase = new URI(
+                rawURI.getScheme(),
+                rawURI.getUserInfo(),
+                rawURI.getHost(),
+                rawURI.getPort(),
+                filePath.getParent().toString(),
+                rawURI.getQuery(),
+                rawURI.getFragment()
+            );
+          }
+          catch (URISyntaxException e) {
+            throw Throwables.propagate(e);
+          }
         }
         final URI uri = pullerRaw.getLatestVersion(
             uriBase,
