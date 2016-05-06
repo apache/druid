@@ -273,15 +273,11 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
               Query<Result<SelectResultValue>> query, Map<String, Object> responseContext
           )
           {
-            if (!(query instanceof SelectQuery)) {
-              throw new ISE("Can only handle [%s], got [%s]", SelectQuery.class, query.getClass());
-            } else {
-              SelectQuery selectQuery = (SelectQuery) query;
-              if (selectQuery.getDimensionsFilter() != null) {
-                selectQuery = selectQuery.withDimFilter(selectQuery.getDimensionsFilter().optimize());
-              }
-              return runner.run(selectQuery, responseContext);
+            SelectQuery selectQuery = (SelectQuery) query;
+            if (selectQuery.getDimensionsFilter() != null) {
+              selectQuery = selectQuery.withDimFilter(selectQuery.getDimensionsFilter().optimize());
             }
+            return runner.run(selectQuery, responseContext);
           }
         }, this);
   }

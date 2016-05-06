@@ -252,15 +252,11 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
                   Query<Result<SearchResultValue>> query, Map<String, Object> responseContext
               )
               {
-                if (!(query instanceof SearchQuery)) {
-                  throw new ISE("Can only handle [%s], got [%s]", SearchQuery.class, query.getClass());
-                } else {
-                  SearchQuery searchQuery = (SearchQuery) query;
-                  if (searchQuery.getDimensionsFilter() != null) {
-                    searchQuery = searchQuery.withDimFilter(searchQuery.getDimensionsFilter().optimize());
-                  }
-                  return runner.run(searchQuery, responseContext);
+                SearchQuery searchQuery = (SearchQuery) query;
+                if (searchQuery.getDimensionsFilter() != null) {
+                  searchQuery = searchQuery.withDimFilter(searchQuery.getDimensionsFilter().optimize());
                 }
+                return runner.run(searchQuery, responseContext);
               }
             } , this),
         config

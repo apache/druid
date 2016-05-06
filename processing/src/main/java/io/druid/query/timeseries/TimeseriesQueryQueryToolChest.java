@@ -222,15 +222,11 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
               Query<Result<TimeseriesResultValue>> query, Map<String, Object> responseContext
           )
           {
-            if (!(query instanceof TimeseriesQuery)) {
-              throw new ISE("Can only handle [%s], got [%s]", TimeseriesQuery.class, query.getClass());
-            } else {
-              TimeseriesQuery timeseriesQuery = (TimeseriesQuery) query;
-              if (timeseriesQuery.getDimensionsFilter() != null) {
-                timeseriesQuery = timeseriesQuery.withDimFilter(timeseriesQuery.getDimensionsFilter().optimize());
-              }
-              return runner.run(timeseriesQuery, responseContext);
+            TimeseriesQuery timeseriesQuery = (TimeseriesQuery) query;
+            if (timeseriesQuery.getDimensionsFilter() != null) {
+              timeseriesQuery = timeseriesQuery.withDimFilter(timeseriesQuery.getDimensionsFilter().optimize());
             }
+            return runner.run(timeseriesQuery, responseContext);
           }
         }, this);
   }
