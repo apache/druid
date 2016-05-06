@@ -46,7 +46,7 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
-@JsonTypeName("namespace")
+@JsonTypeName("cachedNamespace")
 public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
 {
   private static final Logger LOG = new Logger(NamespaceLookupExtractorFactory.class);

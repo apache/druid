@@ -13,14 +13,15 @@ Make sure to [include](../../operations/including-extensions.html) `druid-namesp
 ## Configuration
 
 Namespaced lookups are appropriate for lookups which are not possible to pass at query time due to their size, 
-or are not desired to be passed at query time because the data is to reside in and be handled by the Druid servers. 
-Namespaced lookups can be specified as part of the runtime properties file. The property is a list of the namespaces 
-described as per the sections on this page. For example:
+or are not desired to be passed at query time because the data is to reside in and be handled by the Druid servers,
+and are small enough to reasonably populate on a node. This usually means tens to tens of thousands of entries per lookup.
+
+Namespaced lookups can be specified as part of the [cluster wide config for lookups](../../querying/lookups.html) as a type of `cachedNamespace`
 
  ```json
- druid.query.extraction.namespace.lookups=
-   [
-     {
+ {
+    "type": "cachedNamespace",
+    "extractionNamespace": {
        "type": "uri",
        "namespace": "some_uri_lookup",
        "uri": "file:/tmp/prefix/",
@@ -33,7 +34,14 @@ described as per the sections on this page. For example:
        },
        "pollPeriod": "PT5M"
      },
-     {
+     "firstCacheTimeout": 0
+ }
+ ```
+ 
+ ```json
+{
+    "type": "cachedNamespace",
+    "extractionNamespace": {
        "type": "jdbc",
        "namespace": "some_jdbc_lookup",
        "connectorConfig": {
@@ -46,9 +54,16 @@ described as per the sections on this page. For example:
        "keyColumn": "mykeyColumn",
        "valueColumn": "MyValueColumn",
        "tsColumn": "timeColumn"
-     }
-   ]
+    },
+    "firstCacheTimeout": 120000
+}
  ```
+
+The parameters are as follows
+|Property|Description|Required|Default|
+|--------|-----------|--------|-------|
+|`extractionNamespace`|Specifies how to populate the local cache. See below|Yes|-|
+|`firstCacheTimeout`|How long to wait (in ms) for the first run of the cache to populate. 0 indicates to not wait|No|`60000` (1 minute)|
 
 Proper functionality of Namespaced lookups requires the following extension to be loaded on the broker, peon, and historical nodes: 
 `druid-namespace-lookup`
