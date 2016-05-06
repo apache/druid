@@ -151,7 +151,7 @@ public class URIExtractionNamespaceFunctionFactory implements ExtractionNamespac
             versionRegex = null;
           }
         } else {
-          final Path filePath = Paths.get(extractionNamespace.getUri());
+          final Path filePath = Paths.get(extractionNamespace.getUri().getPath());
           versionRegex = Pattern.compile(Pattern.quote(filePath.getFileName().toString()));
           uriBase = filePath.getParent().toUri();
         }

@@ -41,20 +41,6 @@ import io.druid.server.namespace.cache.NamespaceExtractionCacheManager;
 import io.druid.server.namespace.cache.NamespaceExtractionCacheManagersTest;
 import io.druid.server.namespace.cache.OffHeapNamespaceExtractionCacheManager;
 import io.druid.server.namespace.cache.OnHeapNamespaceExtractionCacheManager;
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.Description;
-import org.joda.time.Period;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
@@ -63,6 +49,8 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -77,6 +65,19 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPOutputStream;
+import javax.annotation.Nullable;
+import org.hamcrest.BaseMatcher;
+import org.hamcrest.Description;
+import org.joda.time.Period;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
+import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  *
@@ -84,6 +85,36 @@ import java.util.zip.GZIPOutputStream;
 @RunWith(Parameterized.class)
 public class URIExtractionNamespaceFunctionFactoryTest
 {
+  private static final String FAKE_SCHEME = "wabblywoo";
+  private static final Map<String, SearchableVersionedDataFinder> FINDERS = ImmutableMap.<String, SearchableVersionedDataFinder>of(
+      "file",
+      new LocalFileTimestampVersionFinder(),
+      FAKE_SCHEME,
+      new LocalFileTimestampVersionFinder()
+      {
+        @Override
+        public URI getLatestVersion(URI uri, final @Nullable Pattern pattern)
+        {
+          final URI newURI;
+          try {
+            newURI = new URI(
+                "file",
+                uri.getUserInfo(),
+                uri.getHost(),
+                uri.getPort(),
+                uri.getPath(),
+                uri.getQuery(),
+                uri.getFragment()
+            );
+          }
+          catch (URISyntaxException e) {
+            throw Throwables.propagate(e);
+          }
+          return super.getLatestVersion(newURI, pattern);
+        }
+      }
+  );
+
   @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> getParameters() throws NoSuchMethodException
   {
@@ -241,12 +272,7 @@ public class URIExtractionNamespaceFunctionFactoryTest
     );
     namespaceFunctionFactoryMap.put(
         URIExtractionNamespace.class,
-        new URIExtractionNamespaceFunctionFactory(
-            ImmutableMap.<String, SearchableVersionedDataFinder>of(
-                "file",
-                new LocalFileTimestampVersionFinder()
-            )
-        )
+        new URIExtractionNamespaceFunctionFactory(FINDERS)
     );
   }
 
@@ -288,9 +314,7 @@ public class URIExtractionNamespaceFunctionFactoryTest
         )));
       }
     }
-    factory = new URIExtractionNamespaceFunctionFactory(
-        ImmutableMap.<String, SearchableVersionedDataFinder>of("file", new LocalFileTimestampVersionFinder())
-    );
+    factory = new URIExtractionNamespaceFunctionFactory(FINDERS);
     namespace = new URIExtractionNamespace(
         "ns",
         tmpFile.toURI(),
@@ -486,7 +510,7 @@ public class URIExtractionNamespaceFunctionFactoryTest
         namespace.getUri(),
         null,
         namespace.getNamespaceParseSpec(),
-        Period.millis((int)namespace.getPollMs()),
+        Period.millis((int) namespace.getPollMs()),
         null
     );
   }
@@ -500,7 +524,7 @@ public class URIExtractionNamespaceFunctionFactoryTest
         null,
         "",
         namespace.getNamespaceParseSpec(),
-        Period.millis((int)namespace.getPollMs()),
+        Period.millis((int) namespace.getPollMs()),
         null
     );
   }
@@ -514,7 +538,7 @@ public class URIExtractionNamespaceFunctionFactoryTest
         null,
         null,
         namespace.getNamespaceParseSpec(),
-        Period.millis((int)namespace.getPollMs()),
+        Period.millis((int) namespace.getPollMs()),
         ""
     );
   }
@@ -528,7 +552,7 @@ public class URIExtractionNamespaceFunctionFactoryTest
         namespace.getUri(),
         "",
         namespace.getNamespaceParseSpec(),
-        Period.millis((int)namespace.getPollMs()),
+        Period.millis((int) namespace.getPollMs()),
         ""
     );
   }
@@ -543,8 +567,32 @@ public class URIExtractionNamespaceFunctionFactoryTest
         namespace.getUri(),
         "[",
         namespace.getNamespaceParseSpec(),
-        Period.millis((int)namespace.getPollMs()),
+        Period.millis((int) namespace.getPollMs()),
         null
     );
+  }
+
+  @Test
+  public void testWeirdSchemaOnExactURI() throws Exception
+  {
+    final URIExtractionNamespace extractionNamespace = new URIExtractionNamespace(
+        namespace.getNamespace(),
+        new URI(
+            FAKE_SCHEME,
+            namespace.getUri().getUserInfo(),
+            namespace.getUri().getHost(),
+            namespace.getUri().getPort(),
+            namespace.getUri().getPath(),
+            namespace.getUri().getQuery(),
+            namespace.getUri().getFragment()
+        ),
+        null,
+        null,
+        namespace.getNamespaceParseSpec(),
+        Period.millis((int) namespace.getPollMs()),
+        null
+    );
+    final Map<String, String> map = new HashMap<>();
+    Assert.assertNotNull(factory.getCachePopulator(extractionNamespace, null, map).call());
   }
 }
