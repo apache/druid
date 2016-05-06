@@ -51,19 +51,21 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
 {
   private static final Logger LOG = new Logger(NamespaceLookupExtractorFactory.class);
 
-  private static long SCHEDULE_TIMEOUT = 60_000;
+  private static final long DEFAULT_SCHEDULE_TIMEOUT = 60_000;
 
   private final AtomicBoolean started = new AtomicBoolean(false);
   private final ReadWriteLock startStopSync = new ReentrantReadWriteLock();
   private final ExtractionNamespace extractionNamespace;
   private final NamespaceExtractionCacheManager manager;
   private final LookupIntrospectHandler lookupIntrospectHandler;
+  private final long firstCacheTimeout;
 
   private final String extractorID;
 
   @JsonCreator
   public NamespaceLookupExtractorFactory(
       @JsonProperty("extractionNamespace") ExtractionNamespace extractionNamespace,
+      @JsonProperty("firstCacheTimeout") Long firstCacheTimeout,
       @JacksonInject NamespaceExtractionCacheManager manager
   )
   {
@@ -71,6 +73,8 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
         extractionNamespace,
         "extractionNamespace should be specified"
     );
+    this.firstCacheTimeout = firstCacheTimeout == null ? DEFAULT_SCHEDULE_TIMEOUT : firstCacheTimeout;
+    Preconditions.checkArgument(this.firstCacheTimeout >= 0);
     this.manager = manager;
     this.extractorID = buildID();
     this.lookupIntrospectHandler = new LookupIntrospectHandler() {
@@ -104,6 +108,13 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
     };
   }
 
+  public NamespaceLookupExtractorFactory(
+      ExtractionNamespace extractionNamespace,
+      NamespaceExtractionCacheManager manager
+  ) {
+    this(extractionNamespace, null, manager);
+  }
+
   @Override
   public boolean start()
   {
@@ -114,7 +125,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
         LOG.warn("Already started!");
         return true;
       }
-      if (!manager.scheduleAndWait(extractorID, extractionNamespace, SCHEDULE_TIMEOUT)) {
+      if (!manager.scheduleAndWait(extractorID, extractionNamespace, firstCacheTimeout)) {
         LOG.warn("Failed to schedule lookup [%s]", extractorID);
         return false;
       }
@@ -163,6 +174,12 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
   public ExtractionNamespace getExtractionNamespace()
   {
     return extractionNamespace;
+  }
+
+  @JsonProperty
+  public long getFirstCacheTimeout()
+  {
+    return firstCacheTimeout;
   }
 
   private String buildID()
