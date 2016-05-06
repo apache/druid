@@ -96,7 +96,7 @@ The remapping values for each namespaced lookup can be specified by a json objec
     "format":"csv",
     "columns":["key","value"]
   },
-  "pollPeriod":"PT5M",
+  "pollPeriod":"PT5M"
 }
 ```
 
@@ -109,7 +109,7 @@ The remapping values for each namespaced lookup can be specified by a json objec
     "format":"csv",
     "columns":["key","value"]
   },
-  "pollPeriod":"PT5M",
+  "pollPeriod":"PT5M"
 }
 ```
 |Property|Description|Required|Default|
