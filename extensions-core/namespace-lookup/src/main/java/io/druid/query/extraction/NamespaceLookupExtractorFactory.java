@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.metamx.common.ISE;
 import com.metamx.common.StringUtils;
 import com.metamx.common.logger.Logger;
@@ -31,13 +32,8 @@ import io.druid.query.lookup.LookupExtractor;
 import io.druid.query.lookup.LookupExtractorFactory;
 import io.druid.query.lookup.LookupIntrospectHandler;
 import io.druid.server.namespace.cache.NamespaceExtractionCacheManager;
-
-import javax.annotation.Nullable;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.UUID;
@@ -45,6 +41,12 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import javax.annotation.Nullable;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 @JsonTypeName("cachedNamespace")
 public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
@@ -52,6 +54,19 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
   private static final Logger LOG = new Logger(NamespaceLookupExtractorFactory.class);
 
   private static final long DEFAULT_SCHEDULE_TIMEOUT = 60_000;
+  private static final byte[] CLASS_CACHE_KEY;
+
+  static {
+    try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
+      baos.write(StringUtils.toUtf8(NamespaceLookupExtractorFactory.class.getCanonicalName()));
+      baos.write(0xFF);
+      CLASS_CACHE_KEY = baos.toByteArray();
+    }
+    catch (IOException e) {
+      // Should never happen
+      throw Throwables.propagate(e);
+    }
+  }
 
   private final AtomicBoolean started = new AtomicBoolean(false);
   private final ReadWriteLock startStopSync = new ReentrantReadWriteLock();
@@ -59,6 +74,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
   private final NamespaceExtractionCacheManager manager;
   private final LookupIntrospectHandler lookupIntrospectHandler;
   private final long firstCacheTimeout;
+  private final boolean oneToOne;
 
   private final String extractorID;
 
@@ -66,6 +82,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
   public NamespaceLookupExtractorFactory(
       @JsonProperty("extractionNamespace") ExtractionNamespace extractionNamespace,
       @JsonProperty("firstCacheTimeout") Long firstCacheTimeout,
+      @JsonProperty("oneToOne") boolean oneToOne,
       @JacksonInject NamespaceExtractionCacheManager manager
   )
   {
@@ -75,9 +92,11 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
     );
     this.firstCacheTimeout = firstCacheTimeout == null ? DEFAULT_SCHEDULE_TIMEOUT : firstCacheTimeout;
     Preconditions.checkArgument(this.firstCacheTimeout >= 0);
+    this.oneToOne = oneToOne;
     this.manager = manager;
     this.extractorID = buildID();
-    this.lookupIntrospectHandler = new LookupIntrospectHandler() {
+    this.lookupIntrospectHandler = new LookupIntrospectHandler()
+    {
       @GET
       @Path("/keys")
       @Produces(MediaType.APPLICATION_JSON)
@@ -103,7 +122,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
 
       private Map<String, String> getLatest()
       {
-        return ((MapLookupExtractor)get()).getMap();
+        return ((MapLookupExtractor) get()).getMap();
       }
     };
   }
@@ -111,8 +130,9 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
   public NamespaceLookupExtractorFactory(
       ExtractionNamespace extractionNamespace,
       NamespaceExtractionCacheManager manager
-  ) {
-    this(extractionNamespace, null, manager);
+  )
+  {
+    this(extractionNamespace, null, false, manager);
   }
 
   @Override
@@ -159,6 +179,12 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
   {
     if (other != null && other instanceof NamespaceLookupExtractorFactory) {
       NamespaceLookupExtractorFactory that = (NamespaceLookupExtractorFactory) other;
+      if (isOneToOne() != ((NamespaceLookupExtractorFactory) other).isOneToOne()) {
+        return true;
+      }
+      if (getFirstCacheTimeout() != ((NamespaceLookupExtractorFactory) other).getFirstCacheTimeout()) {
+        return true;
+      }
       return !extractionNamespace.equals(that.extractionNamespace);
     }
     return true;
@@ -180,6 +206,12 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
   public long getFirstCacheTimeout()
   {
     return firstCacheTimeout;
+  }
+
+  @JsonProperty
+  public boolean isOneToOne()
+  {
+    return oneToOne;
   }
 
   private String buildID()
@@ -215,17 +247,18 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
       } while (!preVersion.equals(postVersion));
       final byte[] v = StringUtils.toUtf8(postVersion);
       final byte[] id = StringUtils.toUtf8(extractorID);
-      return new MapLookupExtractor(map, false)
+      return new MapLookupExtractor(map, isOneToOne())
       {
         @Override
         public byte[] getCacheKey()
         {
           return ByteBuffer
-              .allocate(id.length + 1 + v.length + 1)
+              .allocate(CLASS_CACHE_KEY.length + id.length + 1 + v.length + 1 + 1)
               .put(id)
               .put((byte) 0xFF)
               .put(v)
               .put((byte) 0xFF)
+              .put(isOneToOne() ? (byte) 1 : (byte) 0)
               .array();
         }
       };
