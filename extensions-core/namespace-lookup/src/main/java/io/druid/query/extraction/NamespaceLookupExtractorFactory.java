@@ -142,7 +142,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
     writeLock.lock();
     try {
       if (!started.compareAndSet(false, true)) {
-        LOG.warn("Already started!");
+        LOG.warn("Already started! [%s]", extractorID);
         return true;
       }
       if (!manager.scheduleAndWait(extractorID, extractionNamespace, firstCacheTimeout)) {
@@ -164,7 +164,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
     writeLock.lock();
     try {
       if (!started.compareAndSet(true, false)) {
-        LOG.warn("Not started!");
+        LOG.warn("Not started! [%s]", extractorID);
         return true;
       }
       return manager.checkedDelete(extractorID);
