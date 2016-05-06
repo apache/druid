@@ -25,6 +25,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
+import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.nary.BinaryFn;
 import com.metamx.emitter.service.ServiceMetricEvent;
@@ -222,7 +223,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
           )
           {
             if (!(query instanceof TimeseriesQuery)) {
-              return runner.run(query, responseContext);
+              throw new ISE("Can only handle [%s], got [%s]", TimeseriesQuery.class, query.getClass());
             } else {
               TimeseriesQuery timeseriesQuery = (TimeseriesQuery) query;
               if (timeseriesQuery.getDimensionsFilter() != null) {

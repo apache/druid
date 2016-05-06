@@ -29,6 +29,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
+import com.metamx.common.ISE;
 import com.metamx.common.StringUtils;
 import com.metamx.common.guava.Comparators;
 import com.metamx.common.guava.Sequence;
@@ -273,7 +274,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
           )
           {
             if (!(query instanceof SelectQuery)) {
-              return runner.run(query, responseContext);
+              throw new ISE("Can only handle [%s], got [%s]", SelectQuery.class, query.getClass());
             } else {
               SelectQuery selectQuery = (SelectQuery) query;
               if (selectQuery.getDimensionsFilter() != null) {

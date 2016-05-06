@@ -253,7 +253,7 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
               )
               {
                 if (!(query instanceof SearchQuery)) {
-                  return runner.run(query, responseContext);
+                  throw new ISE("Can only handle [%s], got [%s]", SearchQuery.class, query.getClass());
                 } else {
                   SearchQuery searchQuery = (SearchQuery) query;
                   if (searchQuery.getDimensionsFilter() != null) {
