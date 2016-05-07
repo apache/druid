@@ -477,8 +477,8 @@ public class SelectQueryRunnerTest
         Lists.<Result<SelectResultValue>>newArrayList()
     );
     Iterable<Result<SelectResultValue>> resultsOptimize = Sequences.toList(
-        toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)).run(query, Maps.newHashMap()),
-        Lists.<Result<SelectResultValue>>newArrayList()
+        toolChest.postMergeQueryDecoration(toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner))).
+                run(query, Maps.<String, Object>newHashMap()), Lists.<Result<SelectResultValue>>newArrayList()
     );
 
     final List<List<Map<String, Object>>> events = toEvents(

@@ -82,12 +82,15 @@ public class SearchQueryRunnerTest
   }
 
   private final QueryRunner runner;
+  private final QueryRunner decoratedRunner;
 
   public SearchQueryRunnerTest(
       QueryRunner runner
   )
   {
     this.runner = runner;
+    this.decoratedRunner = toolChest.postMergeQueryDecoration(
+            toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)));
   }
 
   @Test
@@ -369,7 +372,6 @@ public class SearchQueryRunnerTest
                               .build();
 
     checkSearchQuery(query, expectedHits);
-    checkSearchQuery(query, toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)), expectedHits);
   }
 
   @Test
@@ -551,6 +553,7 @@ public class SearchQueryRunnerTest
   private void checkSearchQuery(Query searchQuery, List<SearchHit> expectedResults)
   {
     checkSearchQuery(searchQuery, runner, expectedResults);
+    checkSearchQuery(searchQuery, decoratedRunner, expectedResults);
   }
 
   private void checkSearchQuery(Query searchQuery, QueryRunner runner, List<SearchHit> expectedResults)

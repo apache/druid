@@ -2328,8 +2328,8 @@ public class TimeseriesQueryRunnerTest
     TimeseriesQueryQueryToolChest toolChest = new TimeseriesQueryQueryToolChest(
         QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
     );
-    QueryRunner<Result<TimeseriesResultValue>> optimizedRunner = toolChest.mergeResults(
-        toolChest.preMergeQueryDecoration(runner));
+    QueryRunner<Result<TimeseriesResultValue>> optimizedRunner = toolChest.postMergeQueryDecoration(
+        toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner)));
     Iterable<Result<TimeseriesResultValue>> results2 = Sequences.toList(
         optimizedRunner.run(query, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
