@@ -80,7 +80,7 @@ public class ListeningAnnouncerConfig
   public String toString()
   {
     return "ListeningAnnouncerConfig{" +
-           "listenersPath='" + listenersPath + '\'' +
+           "listenersPath='" + getListenersPath() + '\'' +
            '}';
   }
 
