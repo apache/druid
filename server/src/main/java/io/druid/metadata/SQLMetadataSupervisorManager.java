@@ -84,16 +84,14 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
           @Override
           public Void withHandle(Handle handle) throws Exception
           {
-            final String version = new DateTime().toString();
             handle.createStatement(
                 String.format(
-                    "INSERT INTO %s (id, spec_id, version, payload) VALUES (:id, :spec_id, :version, :payload)",
+                    "INSERT INTO %s (spec_id, created_date, payload) VALUES (:spec_id, :created_date, :payload)",
                     getSupervisorsTable()
                 )
             )
-                  .bind("id", String.format("%s_%s", id, version))
                   .bind("spec_id", id)
-                  .bind("version", version)
+                  .bind("created_date", new DateTime().toString())
                   .bind("payload", jsonMapper.writeValueAsBytes(spec))
                   .execute();
 
@@ -115,7 +113,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
               {
                 return handle.createQuery(
                     String.format(
-                        "SELECT spec_id, version, payload FROM %1$s ORDER BY version DESC",
+                        "SELECT id, spec_id, created_date, payload FROM %1$s ORDER BY id DESC",
                         getSupervisorsTable()
                     )
                 ).map(
@@ -134,7 +132,7 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                           );
                           return Pair.of(
                               r.getString("spec_id"),
-                              new VersionedSupervisorSpec(payload, r.getString("version"))
+                              new VersionedSupervisorSpec(payload, r.getString("created_date"))
                           );
                         }
                         catch (IOException e) {
@@ -189,8 +187,8 @@ public class SQLMetadataSupervisorManager implements MetadataSupervisorManager
                     String.format(
                         "SELECT r.spec_id, r.payload "
                         + "FROM %1$s r "
-                        + "INNER JOIN(SELECT spec_id, max(version) as version FROM %1$s GROUP BY spec_id) latest "
-                        + "ON r.spec_id = latest.spec_id and r.version = latest.version",
+                        + "INNER JOIN(SELECT spec_id, max(id) as id FROM %1$s GROUP BY spec_id) latest "
+                        + "ON r.id = latest.id",
                         getSupervisorsTable()
                     )
                 ).map(
