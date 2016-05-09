@@ -159,9 +159,9 @@ library for Druid.
 To download Tranquility, issue the following commands in your terminal:
 
 ```bash
-curl -O http://static.druid.io/tranquility/releases/tranquility-distribution-0.7.4.tgz
-tar -xzf tranquility-distribution-0.7.4.tgz
-cd tranquility-distribution-0.7.4
+curl -O http://static.druid.io/tranquility/releases/tranquility-distribution-0.8.0.tgz
+tar -xzf tranquility-distribution-0.8.0.tgz
+cd tranquility-distribution-0.8.0
 ```
 
 We've included a configuration file in `conf-quickstart/tranquility/server.json` as part of the Druid distribution
