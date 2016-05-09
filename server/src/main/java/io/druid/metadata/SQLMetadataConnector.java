@@ -373,13 +373,13 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
         ImmutableList.of(
             String.format(
                 "CREATE TABLE %1$s (\n"
-                + "  id VARCHAR(255) NOT NULL,\n"
+                + "  id %2$s NOT NULL,\n"
                 + "  spec_id VARCHAR(255) NOT NULL,\n"
-                + "  version VARCHAR(255) NOT NULL,\n"
-                + "  payload %2$s NOT NULL,\n"
+                + "  created_date VARCHAR(255) NOT NULL,\n"
+                + "  payload %3$s NOT NULL,\n"
                 + "  PRIMARY KEY (id)\n"
                 + ")",
-                tableName, getPayloadType()
+                tableName, getSerialType(), getPayloadType()
             ),
             String.format("CREATE INDEX idx_%1$s_spec_id ON %1$s(spec_id)", tableName)
         )
