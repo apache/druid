@@ -356,6 +356,7 @@ public class URIExtractionNamespace implements ExtractionNamespace
     private final Parser<String, String> parser;
     private final List<String> columns;
     private final String delimiter;
+    private final String listDelimiter;
     private final String keyColumn;
     private final String valueColumn;
 
@@ -363,6 +364,7 @@ public class URIExtractionNamespace implements ExtractionNamespace
     public TSVFlatDataParser(
         @JsonProperty("columns") List<String> columns,
         @JsonProperty("delimiter") String delimiter,
+        @JsonProperty("listDelimiter") String listDelimiter,
         @JsonProperty("keyColumn") final String keyColumn,
         @JsonProperty("valueColumn") final String valueColumn
     )
@@ -373,7 +375,7 @@ public class URIExtractionNamespace implements ExtractionNamespace
       );
       final DelimitedParser delegate = new DelimitedParser(
           Optional.fromNullable(Strings.isNullOrEmpty(delimiter) ? null : delimiter),
-          Optional.<String>absent()
+          Optional.fromNullable(Strings.isNullOrEmpty(listDelimiter) ? null : listDelimiter)
       );
       Preconditions.checkArgument(
           !(Strings.isNullOrEmpty(keyColumn) ^ Strings.isNullOrEmpty(valueColumn)),
@@ -382,6 +384,7 @@ public class URIExtractionNamespace implements ExtractionNamespace
       delegate.setFieldNames(columns);
       this.columns = columns;
       this.delimiter = delimiter;
+      this.listDelimiter = listDelimiter;
       this.keyColumn = Strings.isNullOrEmpty(keyColumn) ? columns.get(0) : keyColumn;
       this.valueColumn = Strings.isNullOrEmpty(valueColumn) ? columns.get(1) : valueColumn;
       Preconditions.checkArgument(
@@ -419,6 +422,12 @@ public class URIExtractionNamespace implements ExtractionNamespace
     }
 
     @JsonProperty
+    public String getListDelimiter()
+    {
+      return listDelimiter;
+    }
+
+    @JsonProperty
     public String getDelimiter()
     {
       return delimiter;
@@ -434,9 +443,10 @@ public class URIExtractionNamespace implements ExtractionNamespace
     public String toString()
     {
       return String.format(
-          "TSVFlatDataParser = { columns = %s, delimiter = '%s', keyColumn = %s, valueColumn = %s }",
+          "TSVFlatDataParser = { columns = %s, delimiter = '%s', listDelimiter = '%s',keyColumn = %s, valueColumn = %s }",
           Arrays.toString(columns.toArray()),
           delimiter,
+          listDelimiter,
           keyColumn,
           valueColumn
       );
