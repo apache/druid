@@ -28,10 +28,14 @@ import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import com.metamx.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.lookup.LookupExtractionFn;
+import io.druid.query.lookup.LookupExtractor;
 import io.druid.segment.filter.InFilter;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 public class InDimFilter implements DimFilter
@@ -117,6 +121,33 @@ public class InDimFilter implements DimFilter
   @Override
   public DimFilter optimize()
   {
+    if (values.size() == 1) {
+      return new SelectorDimFilter(dimension, values.first(), extractionFn).optimize();
+    }
+    // Similar optimization as SelectorDimFilter
+    if (extractionFn instanceof LookupExtractionFn
+            && ((LookupExtractionFn) extractionFn).isOptimize()) {
+      LookupExtractionFn exFn = (LookupExtractionFn) extractionFn;
+      LookupExtractor lookup = exFn.getLookup();
+
+      final List<String> keys = new ArrayList<>();
+      for (String value : values) {
+        final String convertedValue = Strings.emptyToNull(value);
+        if (!exFn.isRetainMissingValue() && Objects.equals(convertedValue, exFn.getReplaceMissingValueWith())) {
+          return this;
+        }
+        keys.addAll(lookup.unapply(convertedValue));
+        if (exFn.isRetainMissingValue() && lookup.apply(convertedValue) == null) {
+          keys.add(convertedValue);
+        }
+      }
+
+      if (keys.isEmpty()) {
+        return this;
+      } else {
+        return new InDimFilter(dimension, keys, null).optimize();
+      }
+    }
     return this;
   }
 

@@ -106,10 +106,8 @@ public class SelectorDimFilter implements DimFilter
 
       if (keys.isEmpty()) {
         return this;
-      } else if (keys.size() == 1) {
-        return new SelectorDimFilter(dimension, keys.get(0), null);
       } else {
-        return new InDimFilter(dimension, keys, null);
+        return new InDimFilter(dimension, keys, null).optimize();
       }
     }
     return this;
