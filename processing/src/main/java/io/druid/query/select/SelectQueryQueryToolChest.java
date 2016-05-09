@@ -29,8 +29,10 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
+import com.metamx.common.ISE;
 import com.metamx.common.StringUtils;
 import com.metamx.common.guava.Comparators;
+import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.nary.BinaryFn;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.granularity.QueryGranularity;
@@ -261,9 +263,23 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
   }
 
   @Override
-  public QueryRunner<Result<SelectResultValue>> preMergeQueryDecoration(QueryRunner<Result<SelectResultValue>> runner)
+  public QueryRunner<Result<SelectResultValue>> preMergeQueryDecoration(final QueryRunner<Result<SelectResultValue>> runner)
   {
-    return intervalChunkingQueryRunnerDecorator.decorate(runner, this);
+    return intervalChunkingQueryRunnerDecorator.decorate(
+        new QueryRunner<Result<SelectResultValue>>()
+        {
+          @Override
+          public Sequence<Result<SelectResultValue>> run(
+              Query<Result<SelectResultValue>> query, Map<String, Object> responseContext
+          )
+          {
+            SelectQuery selectQuery = (SelectQuery) query;
+            if (selectQuery.getDimensionsFilter() != null) {
+              selectQuery = selectQuery.withDimFilter(selectQuery.getDimensionsFilter().optimize());
+            }
+            return runner.run(selectQuery, responseContext);
+          }
+        }, this);
   }
 
   @Override

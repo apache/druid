@@ -152,6 +152,20 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     );
   }
 
+  public TimeseriesQuery withDimFilter(DimFilter dimFilter)
+  {
+    return new TimeseriesQuery(
+        getDataSource(),
+        getQuerySegmentSpec(),
+        isDescending(),
+        dimFilter,
+        granularity,
+        aggregatorSpecs,
+        postAggregatorSpecs,
+        getContext()
+    );
+  }
+
   @Override
   public String toString()
   {
