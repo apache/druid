@@ -25,6 +25,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
+import com.metamx.common.ISE;
+import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.nary.BinaryFn;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.granularity.QueryGranularity;
@@ -210,9 +212,23 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   }
 
   @Override
-  public QueryRunner<Result<TimeseriesResultValue>> preMergeQueryDecoration(QueryRunner<Result<TimeseriesResultValue>> runner)
+  public QueryRunner<Result<TimeseriesResultValue>> preMergeQueryDecoration(final QueryRunner<Result<TimeseriesResultValue>> runner)
   {
-    return intervalChunkingQueryRunnerDecorator.decorate(runner, this);
+    return intervalChunkingQueryRunnerDecorator.decorate(
+        new QueryRunner<Result<TimeseriesResultValue>>()
+        {
+          @Override
+          public Sequence<Result<TimeseriesResultValue>> run(
+              Query<Result<TimeseriesResultValue>> query, Map<String, Object> responseContext
+          )
+          {
+            TimeseriesQuery timeseriesQuery = (TimeseriesQuery) query;
+            if (timeseriesQuery.getDimensionsFilter() != null) {
+              timeseriesQuery = timeseriesQuery.withDimFilter(timeseriesQuery.getDimensionsFilter().optimize());
+            }
+            return runner.run(timeseriesQuery, responseContext);
+          }
+        }, this);
   }
 
   @Override

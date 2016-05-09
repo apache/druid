@@ -424,9 +424,6 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
               @Override
               public Sequence<Row> run(Query<Row> query, Map<String, Object> responseContext)
               {
-                if (!(query instanceof GroupByQuery)) {
-                  return runner.run(query, responseContext);
-                }
                 GroupByQuery groupByQuery = (GroupByQuery) query;
                 if (groupByQuery.getDimFilter() != null){
                   groupByQuery = groupByQuery.withDimFilter(groupByQuery.getDimFilter().optimize());

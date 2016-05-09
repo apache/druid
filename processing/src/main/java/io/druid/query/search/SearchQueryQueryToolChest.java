@@ -241,10 +241,24 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   }
 
   @Override
-  public QueryRunner<Result<SearchResultValue>> preMergeQueryDecoration(QueryRunner<Result<SearchResultValue>> runner)
+  public QueryRunner<Result<SearchResultValue>> preMergeQueryDecoration(final QueryRunner<Result<SearchResultValue>> runner)
   {
     return new SearchThresholdAdjustingQueryRunner(
-        intervalChunkingQueryRunnerDecorator.decorate(runner, this),
+        intervalChunkingQueryRunnerDecorator.decorate(
+            new QueryRunner<Result<SearchResultValue>>()
+            {
+              @Override
+              public Sequence<Result<SearchResultValue>> run(
+                  Query<Result<SearchResultValue>> query, Map<String, Object> responseContext
+              )
+              {
+                SearchQuery searchQuery = (SearchQuery) query;
+                if (searchQuery.getDimensionsFilter() != null) {
+                  searchQuery = searchQuery.withDimFilter(searchQuery.getDimensionsFilter().optimize());
+                }
+                return runner.run(searchQuery, responseContext);
+              }
+            } , this),
         config
     );
   }

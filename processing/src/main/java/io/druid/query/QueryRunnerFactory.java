@@ -55,7 +55,7 @@ public interface QueryRunnerFactory<T, QueryType extends Query<T>>
    *
    * @param queryExecutor ExecutorService to be used for parallel processing
    * @param queryRunners Individual QueryRunner objects that produce some results
-   * @return a QueryRunner that, when asked, will use the ExecutorService to runt he base QueryRunners
+   * @return a QueryRunner that, when asked, will use the ExecutorService to run the base QueryRunners
    */
   public QueryRunner<T> mergeRunners(ExecutorService queryExecutor, Iterable<QueryRunner<T>> queryRunners);
 
