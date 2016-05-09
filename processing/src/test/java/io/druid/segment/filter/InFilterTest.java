@@ -35,10 +35,13 @@ import io.druid.data.input.impl.TimestampSpec;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavaScriptExtractionFn;
+import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.InDimFilter;
+import io.druid.query.lookup.LookupExtractionFn;
+import io.druid.query.lookup.LookupExtractor;
 import io.druid.segment.IndexBuilder;
 import io.druid.segment.StorageAdapter;
 import org.joda.time.DateTime;
@@ -258,6 +261,48 @@ public class InFilterTest extends BaseFilterTest
         toInFilterWithFn("dim1", yesNullFn, "NO"),
         ImmutableList.of("b", "c", "d", "e", "f")
     );
+  }
+
+  @Test
+  public void testMatchWithLookupExtractionFn() {
+    final Map<String, String> stringMap = ImmutableMap.of(
+        "a", "HELLO",
+        "10", "HELLO",
+        "def", "HELLO",
+        "c", "BYE"
+    );
+    LookupExtractor mapExtractor = new MapLookupExtractor(stringMap, false);
+    LookupExtractionFn lookupFn = new LookupExtractionFn(mapExtractor, false, "UNKNOWN", false, true);
+
+    assertFilterMatches(toInFilterWithFn("dim0", lookupFn, null, "HELLO"), ImmutableList.of("a"));
+    assertFilterMatches(toInFilterWithFn("dim0", lookupFn, "HELLO", "BYE"), ImmutableList.of("a", "c"));
+    assertFilterMatches(toInFilterWithFn("dim0", lookupFn, "UNKNOWN"), ImmutableList.of("b", "d", "e", "f"));
+    assertFilterMatches(toInFilterWithFn("dim1", lookupFn, "HELLO"), ImmutableList.of("b", "e"));
+    assertFilterMatches(toInFilterWithFn("dim1", lookupFn, "N/A"), ImmutableList.<String>of());
+    assertFilterMatches(toInFilterWithFn("dim2", lookupFn, "a"), ImmutableList.<String>of());
+    assertFilterMatches(toInFilterWithFn("dim2", lookupFn, "HELLO"), ImmutableList.of("a", "d"));
+    assertFilterMatches(toInFilterWithFn("dim2", lookupFn, "HELLO", "BYE", "UNKNOWN"),
+            ImmutableList.of("a", "b", "c", "d", "e", "f"));
+
+    final Map<String, String> stringMap2 = ImmutableMap.of(
+            "a", "e"
+    );
+    LookupExtractor mapExtractor2 = new MapLookupExtractor(stringMap2, false);
+    LookupExtractionFn lookupFn2 = new LookupExtractionFn(mapExtractor2, true, null, false, true);
+
+    assertFilterMatches(toInFilterWithFn("dim0", lookupFn2, null, "e"), ImmutableList.of("a", "e"));
+    assertFilterMatches(toInFilterWithFn("dim0", lookupFn2, "a"), ImmutableList.<String>of());
+
+    final Map<String, String> stringMap3 = ImmutableMap.of(
+            "c", "500",
+            "100", "e"
+    );
+    LookupExtractor mapExtractor3 = new MapLookupExtractor(stringMap3, false);
+    LookupExtractionFn lookupFn3 = new LookupExtractionFn(mapExtractor3, false, null, false, true);
+
+    assertFilterMatches(toInFilterWithFn("dim0", lookupFn3, null, "c"), ImmutableList.of("a", "b", "d", "e", "f"));
+    assertFilterMatches(toInFilterWithFn("dim0", lookupFn3, "e"), ImmutableList.<String>of());
+
   }
 
   private DimFilter toInFilter(String dim, String value, String... values)
