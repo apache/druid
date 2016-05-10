@@ -431,7 +431,7 @@ public class IndexGeneratorJobTest
     this.buildV9Directly = buildV9Directly;
   }
 
-  private void writeDataToLocalSequenceFile(File outputFile, List<String> data) throws IOException
+  public static void writeDataToLocalSequenceFile(File outputFile, List<String> data) throws IOException
   {
     Configuration conf = new Configuration();
     LocalFileSystem fs = FileSystem.getLocal(conf);

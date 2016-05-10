@@ -34,7 +34,8 @@ import java.io.IOException;
     @JsonSubTypes.Type(name="granularity", value=GranularityPathSpec.class),
     @JsonSubTypes.Type(name="static", value=StaticPathSpec.class),
     @JsonSubTypes.Type(name="dataSource", value=DatasourcePathSpec.class),
-    @JsonSubTypes.Type(name="multi", value=MultiplePathSpec.class)
+    @JsonSubTypes.Type(name="multi", value=MultiplePathSpec.class),
+    @JsonSubTypes.Type(name="partition", value=PartitionPathSpec.class)
 })
 public interface PathSpec
 {

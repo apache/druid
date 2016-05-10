@@ -19,18 +19,29 @@
 
 package io.druid.indexer;
 
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.metamx.common.RE;
+import com.metamx.common.logger.Logger;
+import com.metamx.common.parsers.ParseException;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.StringInputRowParser;
-import io.druid.java.util.common.RE;
-import io.druid.java.util.common.logger.Logger;
-import io.druid.java.util.common.parsers.ParseException;
+import io.druid.indexer.path.PartitionPathSpec;
 import io.druid.segment.indexing.granularity.GranularitySpec;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Mapper;
+import org.apache.hadoop.mapreduce.lib.input.FileSplit;
 import org.joda.time.DateTime;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<Object, Object, KEYOUT, VALUEOUT>
 {
@@ -40,6 +51,8 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
   private InputRowParser parser;
   protected GranularitySpec granularitySpec;
   private boolean reportParseExceptions;
+  private Map<String, String> partitionDimValues = null;
+  private Set<String> partitionDims = null;
 
   @Override
   protected void setup(Context context)
@@ -49,6 +62,36 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
     parser = config.getParser();
     granularitySpec = config.getGranularitySpec();
     reportParseExceptions = !config.isIgnoreInvalidRows();
+
+    if (config.getPathSpec() instanceof PartitionPathSpec) {
+      PartitionPathSpec partitionPathSpec = (PartitionPathSpec)config.getPathSpec();
+
+      InputSplit split = context.getInputSplit();
+      Class<? extends InputSplit> splitClass = split.getClass();
+
+      FileSplit fileSplit = null;
+      // to handle TaggedInputSplit case when MultipleInputs are used
+      if (splitClass.equals(FileSplit.class)) {
+        fileSplit = (FileSplit) split;
+      } else if (splitClass.getName().equals("org.apache.hadoop.mapreduce.lib.input.TaggedInputSplit")) {
+        try {
+          Method getInputSplitMethod = splitClass
+              .getDeclaredMethod("getInputSplit");
+          getInputSplitMethod.setAccessible(true);
+          fileSplit = (FileSplit) getInputSplitMethod.invoke(split);
+        } catch (Exception e) {
+          throw new IOException(e);
+        }
+      }
+
+      Path filePath = fileSplit.getPath();
+      partitionDimValues = partitionPathSpec.getPartitionValues(filePath);
+      if (partitionDimValues.size() == 0) {
+        partitionDimValues = null;
+      } else {
+        partitionDims = partitionDimValues.keySet();
+      }
+    }
   }
 
   public HadoopDruidIndexerConfig getConfig()
@@ -69,7 +112,8 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
     try {
       final InputRow inputRow;
       try {
-        inputRow = parseInputRow(value, parser);
+        inputRow = (partitionDimValues == null) ? parseInputRow(value, parser)
+                                             : mergePartitionDimValues(parseInputRow(value, parser));
       }
       catch (ParseException e) {
         if (reportParseExceptions) {
@@ -109,4 +153,37 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
   abstract protected void innerMap(InputRow inputRow, Object value, Context context, boolean reportParseExceptions)
       throws IOException, InterruptedException;
 
+  private List<String> mergedDimensions = null;
+
+  private InputRow mergePartitionDimValues(InputRow inputRow)
+  {
+    InputRow merged = inputRow;
+
+    // only for raw data case
+    if (inputRow instanceof MapBasedInputRow) {
+      MapBasedInputRow mapBasedInputRow = (MapBasedInputRow)inputRow;
+
+      if (mergedDimensions == null) {
+        List<String> orgDimensions = mapBasedInputRow.getDimensions();
+        mergedDimensions = Lists.newArrayListWithCapacity(orgDimensions.size() + partitionDims.size());
+        mergedDimensions.addAll(orgDimensions);
+        for (String partitionDimension : partitionDims) {
+          if (!mergedDimensions.contains(partitionDimension)) {
+            mergedDimensions.add(partitionDimension);
+          }
+        }
+      }
+
+      Map<String, Object> eventMap = Maps.newHashMap(mapBasedInputRow.getEvent());
+      eventMap.putAll(partitionDimValues);
+
+      merged = new MapBasedInputRow(
+          mapBasedInputRow.getTimestamp(),
+          mergedDimensions,
+          eventMap
+      );
+    }
+
+    return merged;
+  }
 }
