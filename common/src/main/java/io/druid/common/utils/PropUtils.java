@@ -19,6 +19,7 @@
 
 package io.druid.common.utils;
 
+import java.util.Map;
 import java.util.Properties;
 
 import io.druid.java.util.common.ISE;
@@ -50,8 +51,7 @@ public class PropUtils
     if (retVal == null) {
       if (defaultValue == null) {
         throw new ISE("Property[%s] not specified.", property);
-      }
-      else {
+      } else {
         return defaultValue;
       }
     }
@@ -60,7 +60,55 @@ public class PropUtils
       return Integer.parseInt(retVal);
     }
     catch (NumberFormatException e) {
-      throw new ISE(e, "Property[%s] is expected to be an int, it is not[%s].",property, retVal);
+      throw new ISE(e, "Property[%s] is expected to be an int, it is not[%s].", property, retVal);
+    }
+  }
+
+  public static String parseString(Map<String, ?> context, String key, String defaultValue)
+  {
+    if (context == null) {
+      return defaultValue;
+    }
+    Object val = context.get(key);
+    if (val == null) {
+      return defaultValue;
+    }
+    return String.valueOf(val);
+  }
+
+  public static int parseInt(Map<String, ?> context, String key, int defaultValue)
+  {
+    if (context == null) {
+      return defaultValue;
+    }
+    Object val = context.get(key);
+    if (val == null) {
+      return defaultValue;
+    }
+    if (val instanceof String) {
+      return Integer.parseInt((String) val);
+    } else if (val instanceof Number) {
+      return ((Number) val).intValue();
+    } else {
+      throw new ISE("Unknown type [%s]", val.getClass());
+    }
+  }
+
+  public static boolean parseBoolean(Map<String, ?> context, String key, boolean defaultValue)
+  {
+    if (context == null) {
+      return defaultValue;
+    }
+    Object val = context.get(key);
+    if (val == null) {
+      return defaultValue;
+    }
+    if (val instanceof String) {
+      return Boolean.parseBoolean((String) val);
+    } else if (val instanceof Boolean) {
+      return (boolean) val;
+    } else {
+      throw new ISE("Unknown type [%s]. Cannot parse!", val.getClass());
     }
   }
 }

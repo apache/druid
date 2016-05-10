@@ -22,6 +22,7 @@ package io.druid.guice;
 import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.multibindings.MapBinder;
+import io.druid.query.ResultWriter;
 import io.druid.segment.loading.DataSegmentArchiver;
 import io.druid.segment.loading.DataSegmentFinder;
 import io.druid.segment.loading.DataSegmentMover;
@@ -67,5 +68,10 @@ public class Binders
   public static MapBinder<String, TaskLogs> taskLogsBinder(Binder binder)
   {
     return PolyBind.optionBinder(binder, Key.get(TaskLogs.class));
+  }
+
+  public static MapBinder<String, ResultWriter> resultWriterPullerBinder(Binder binder)
+  {
+    return PolyBind.optionBinder(binder, Key.get(ResultWriter.class));
   }
 }

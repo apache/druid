@@ -39,6 +39,7 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.guice.annotations.Global;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.BaseQuery;
 import io.druid.query.CacheStrategy;
 import io.druid.query.DataSource;
@@ -50,6 +51,7 @@ import io.druid.query.QueryDataSource;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.SubqueryQueryRunner;
+import io.druid.query.TabularFormat;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.aggregation.MetricManipulatorFns;
@@ -484,5 +486,33 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
           }
         }
     );
+  }
+
+  @Override
+  public TabularFormat toTabularFormat(final Sequence<Row> sequence)
+  {
+    return new TabularFormat()
+    {
+      @Override
+      public Sequence<Map<String, Object>> getSequence()
+      {
+        return Sequences.map(
+            sequence, new Function<Row, Map<String, Object>>()
+            {
+              @Override
+              public Map<String, Object> apply(@Nullable Row input)
+              {
+                return ((MapBasedRow) input).getEvent();
+              }
+            }
+        );
+      }
+
+      @Override
+      public Map<String, Object> getMetaData()
+      {
+        return null;
+      }
+    };
   }
 }

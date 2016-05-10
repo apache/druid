@@ -23,7 +23,8 @@ package io.druid.common.utils;
  */
 public class StringUtils extends io.druid.java.util.common.StringUtils
 {
-  private static final byte[] EMPTY_BYTES = new byte[0];
+  public static final String EMPTY = "";
+  public static final byte[] EMPTY_BYTES = new byte[0];
 
   // should be used only for estimation
   // returns the same result with StringUtils.fromUtf8(value).length for valid string values
@@ -50,5 +51,10 @@ public class StringUtils extends io.druid.java.util.common.StringUtils
   public static byte[] toUtf8WithNullToEmpty(final String string)
   {
     return string == null ? EMPTY_BYTES : toUtf8(string);
+  }
+
+  public static boolean isNullOrEmpty(String value)
+  {
+    return value == null || value.isEmpty();
   }
 }

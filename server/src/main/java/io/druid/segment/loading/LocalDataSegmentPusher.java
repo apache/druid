@@ -20,22 +20,34 @@
 package io.druid.segment.loading;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
-
+import io.druid.common.utils.PropUtils;
+import io.druid.data.output.Formatter;
+import io.druid.data.output.Formatters;
 import io.druid.java.util.common.CompressionUtils;
+import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.query.ResultWriter;
+import io.druid.query.TabularFormat;
 import io.druid.segment.SegmentUtils;
 import io.druid.timeline.DataSegment;
+import org.apache.commons.io.FileUtils;
 
+import java.io.BufferedOutputStream;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.net.URI;
+import java.util.Map;
 
 /**
  */
-public class LocalDataSegmentPusher implements DataSegmentPusher
+public class LocalDataSegmentPusher implements DataSegmentPusher, ResultWriter
 {
   private static final Logger log = new Logger(LocalDataSegmentPusher.class);
 
@@ -114,5 +126,52 @@ public class LocalDataSegmentPusher implements DataSegmentPusher
   private ImmutableMap<String, Object> makeLoadSpec(File outFile)
   {
     return ImmutableMap.<String, Object>of("type", "local", "path", outFile.toString());
+  }
+
+  @Override
+  public void write(URI location, final TabularFormat result, final Map<String, String> context)
+      throws IOException
+  {
+    File targetDirectory = new File(location.getPath());
+    boolean cleanup = PropUtils.parseBoolean(context, "cleanup", false);
+    if (cleanup) {
+      FileUtils.deleteDirectory(targetDirectory);
+    }
+    if (targetDirectory.isFile()) {
+      throw new IllegalStateException("'resultDirectory' should not be a file");
+    }
+    if (!targetDirectory.exists() && !targetDirectory.mkdirs()) {
+      throw new IllegalStateException("failed to make target directory");
+    }
+    File dataFile = new File(targetDirectory, "data");
+
+    final byte[] newLine = System.lineSeparator().getBytes();
+    final Formatter formatter = Formatters.getFormatter(context, jsonMapper);
+    try (OutputStream output = new BufferedOutputStream(new FileOutputStream(dataFile))) {
+      result.getSequence().accumulate(
+          null, new Accumulator<Object, Map<String, Object>>()
+          {
+            @Override
+            public Object accumulate(Object accumulated, Map<String, Object> in)
+            {
+              try {
+                output.write(formatter.format(in));
+                output.write(newLine);
+              }
+              catch (Exception e) {
+                throw Throwables.propagate(e);
+              }
+              return null;
+            }
+          }
+      );
+    }
+    Map<String, Object> metaData = result.getMetaData();
+    if (metaData != null && !metaData.isEmpty()) {
+      File metaFile = new File(targetDirectory, ".meta");
+      try (OutputStream output = new FileOutputStream(metaFile)) {
+        jsonMapper.writeValue(output, metaData);
+      }
+    }
   }
 }

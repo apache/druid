@@ -22,6 +22,7 @@ package io.druid.query;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import io.druid.java.util.common.guava.Sequence;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.timeline.LogicalSegment;
 
@@ -168,5 +169,17 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
   public <T extends LogicalSegment> List<T> filterSegments(QueryType query, List<T> segments)
   {
     return segments;
+  }
+
+  /**
+   * converts result to tabular format to be stored file system.
+   * currently, only select and group-by query supports this.
+   *
+   * @param sequence
+   * @return
+   */
+  public TabularFormat toTabularFormat(Sequence<ResultType> sequence)
+  {
+    throw new UnsupportedOperationException("toTabularFormat");
   }
 }

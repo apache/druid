@@ -213,12 +213,8 @@ public class QueryResource
 
       final Map<String, Object> responseContext = new MapMaker().makeMap();
       final Sequence res = query.run(texasRanger, responseContext);
-      final Sequence results;
-      if (res == null) {
-        results = Sequences.empty();
-      } else {
-        results = res;
-      }
+
+      final Sequence results = toDispatchSequence(query, res);
 
       final Yielder yielder = results.toYielder(
           null,
@@ -436,5 +432,10 @@ public class QueryResource
                      .entity(newOutputWriter().writeValueAsBytes(QueryInterruptedException.wrapIfNeeded(e)))
                      .build();
     }
+  }
+
+  protected Sequence toDispatchSequence(Query query, Sequence res) throws IOException
+  {
+    return res == null ? Sequences.empty() : res;
   }
 }

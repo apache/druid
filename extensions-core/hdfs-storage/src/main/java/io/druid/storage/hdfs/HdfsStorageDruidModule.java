@@ -98,6 +98,8 @@ public class HdfsStorageDruidModule implements DruidModule
     Binders.dataSegmentKillerBinder(binder).addBinding(SCHEME).to(HdfsDataSegmentKiller.class).in(LazySingleton.class);
     Binders.dataSegmentFinderBinder(binder).addBinding(SCHEME).to(HdfsDataSegmentFinder.class).in(LazySingleton.class);
 
+    Binders.resultWriterPullerBinder(binder).addBinding(SCHEME).to(HdfsDataSegmentPusher.class).in(LazySingleton.class);
+
     final Configuration conf = new Configuration();
 
     // Set explicit CL. Otherwise it'll try to use thread context CL, which may not have all of our dependencies.

@@ -22,15 +22,23 @@ package io.druid.server;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.inject.Inject;
+import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.client.ServerViewUtil;
 import io.druid.client.TimelineServerView;
+import io.druid.common.utils.StringUtils;
+import io.druid.guice.LocalDataStorageDruidModule;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
+import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
+import io.druid.query.BaseQuery;
 import io.druid.query.Query;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChestWarehouse;
+import io.druid.query.ResultWriter;
+import io.druid.query.TabularFormat;
 import io.druid.server.http.security.StateResourceFilter;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.RequestLogger;
@@ -48,6 +56,9 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.util.Map;
 
 /**
  */
@@ -55,6 +66,9 @@ import java.io.InputStream;
 public class BrokerQueryResource extends QueryResource
 {
   private final TimelineServerView brokerServerView;
+  private static final EmittingLogger log = new EmittingLogger(BrokerQueryResource.class);
+
+  private final Map<String, ResultWriter> writerMap;
 
   @Inject
   public BrokerQueryResource(
@@ -67,11 +81,14 @@ public class BrokerQueryResource extends QueryResource
       RequestLogger requestLogger,
       QueryManager queryManager,
       AuthConfig authConfig,
-      TimelineServerView brokerServerView
+      TimelineServerView brokerServerView,
+      Map<String, ResultWriter> writerMap
   )
   {
     super(warehouse, config, jsonMapper, smileMapper, texasRanger, emitter, requestLogger, queryManager, authConfig);
     this.brokerServerView = brokerServerView;
+    this.writerMap = writerMap;
+    log.info("Supporting writer schemes.. " + writerMap.keySet());
   }
 
   @POST
@@ -101,5 +118,35 @@ public class BrokerQueryResource extends QueryResource
     catch (Exception e) {
       return context.gotError(e);
     }
+  }
+
+  @Override
+  protected Sequence toDispatchSequence(Query query, Sequence res) throws IOException
+  {
+    res = super.toDispatchSequence(query, res);
+    String forwardURL = BaseQuery.getResultForwardURL(query);
+    if (forwardURL != null && !StringUtils.isNullOrEmpty(forwardURL)) {
+      URI uri;
+      try {
+        uri = new URI(forwardURL);
+      }
+      catch (URISyntaxException e) {
+        log.warn("Invalid uri `" + forwardURL + "`", e);
+        return Sequences.empty();
+      }
+      String scheme = uri.getScheme() == null ? LocalDataStorageDruidModule.SCHEME : uri.getScheme();
+
+      ResultWriter writer = writerMap.get(scheme);
+      if (writer == null) {
+        log.warn("Unsupported scheme `" + scheme + "`");
+        return Sequences.empty();
+      }
+      TabularFormat result = warehouse.getToolChest(query).toTabularFormat(res);
+      writer.write(uri, result, BaseQuery.getResultForwardContext(query));
+
+      return Sequences.empty();
+    }
+
+    return res;
   }
 }
