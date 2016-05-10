@@ -38,6 +38,7 @@ import io.druid.curator.announcement.Announcer;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LifecycleModule;
+import io.druid.guice.ManageLifecycle;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Self;
 import io.druid.guice.annotations.Smile;
@@ -83,6 +84,8 @@ public class LookupModule implements DruidModule
     Jerseys.addResource(binder, LookupListeningResource.class);
     Jerseys.addResource(binder, LookupIntrospectionResource.class);
     LifecycleModule.register(binder, LookupResourceListenerAnnouncer.class);
+    // Nothing else starts this, so we bind it to get it to start
+    binder.bind(LookupResourceListenerAnnouncer.class).in(ManageLifecycle.class);
   }
 }
 
