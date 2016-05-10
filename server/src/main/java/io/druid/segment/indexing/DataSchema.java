@@ -30,12 +30,14 @@ import com.metamx.common.IAE;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
+import io.druid.data.input.impl.ParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -181,9 +183,28 @@ public class DataSchema
     if (!dataSource.equals(that.dataSource)) {
       return false;
     }
-    if (parser != null ? !parser.equals(that.parser) : that.parser != null) {
-      return false;
+
+    if (parser != null) {
+      if (that.parser == null) {
+        return false;
+      }
+
+      if(!checkParserEqualityWithoutParseSpec(parser, that.parser)) {
+        return false;
+      }
+
+      Map<String, Object> thisParseSpecMap = (Map<String, Object>) parser.get("parseSpec");
+      Map<String, Object> thatParseSpecMap = (Map<String, Object>) that.parser.get("parseSpec");
+      if(!ParseSpec.checkMapRepresentationEquality(jsonMapper, thisParseSpecMap, thatParseSpecMap)) {
+        return false;
+      }
+
+    } else {
+      if (that.parser != null) {
+        return false;
+      }
     }
+
     // Probably incorrect - comparing Object[] arrays with Arrays.equals
     if (!Arrays.equals(aggregators, that.aggregators)) {
       return false;
@@ -211,5 +232,15 @@ public class DataSchema
            ", aggregators=" + Arrays.toString(aggregators) +
            ", granularitySpec=" + granularitySpec +
            '}';
+  }
+
+  private static boolean checkParserEqualityWithoutParseSpec(Map<String, Object> parser1, Map<String, Object> parser2) {
+    Map<String, Object> noParseSpecMap1 = new HashMap<>();
+    Map<String, Object> noParseSpecMap2 = new HashMap<>();
+    noParseSpecMap1.putAll(parser1);
+    noParseSpecMap1.put("parseSpec", null);
+    noParseSpecMap2.putAll(parser2);
+    noParseSpecMap2.put("parseSpec", null);
+    return noParseSpecMap1.equals(noParseSpecMap2);
   }
 }

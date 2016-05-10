@@ -20,9 +20,11 @@ package io.druid.data.input.impl;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.metamx.common.parsers.Parser;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  */
@@ -46,6 +48,26 @@ public abstract class ParseSpec
   {
     this.timestampSpec = timestampSpec;
     this.dimensionsSpec = dimensionsSpec;
+  }
+
+  // Checks equality of two Maps representing ParseSpecs by serializing and reading the Maps as ParseSpec objects
+  public static boolean checkMapRepresentationEquality(
+      ObjectMapper jsonMapper,
+      Map<String, Object> lhs,
+      Map<String, Object> rhs
+  )
+  {
+    try {
+      String parseSpecStrLeft = jsonMapper.writeValueAsString(lhs);
+      String parseSpecStrRight = jsonMapper.writeValueAsString(rhs);
+      ParseSpec lhsSpec = jsonMapper.readValue(parseSpecStrLeft, ParseSpec.class);
+      ParseSpec rhsSpec = jsonMapper.readValue(parseSpecStrRight, ParseSpec.class);
+
+      return lhsSpec.equals(rhsSpec);
+    }
+    catch (Exception e) {
+      return false;
+    }
   }
 
   @JsonProperty
