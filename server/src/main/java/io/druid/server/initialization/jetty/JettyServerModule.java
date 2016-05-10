@@ -21,6 +21,7 @@ package io.druid.server.initialization.jetty;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
+import com.fasterxml.jackson.jaxrs.smile.JacksonSmileProvider;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
@@ -50,6 +51,7 @@ import io.druid.guice.LazySingleton;
 import io.druid.guice.annotations.JSR311Resource;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Self;
+import io.druid.guice.annotations.Smile;
 import io.druid.query.DruidMetrics;
 import io.druid.server.DruidNode;
 import io.druid.server.StatusResource;
@@ -141,6 +143,15 @@ public class JettyServerModule extends JerseyServletModule
   public JacksonJsonProvider getJacksonJsonProvider(@Json ObjectMapper objectMapper)
   {
     final JacksonJsonProvider provider = new JacksonJsonProvider();
+    provider.setMapper(objectMapper);
+    return provider;
+  }
+
+  @Provides
+  @Singleton
+  public JacksonSmileProvider getJacksonSmileProvider(@Smile ObjectMapper objectMapper)
+  {
+    final JacksonSmileProvider provider = new JacksonSmileProvider();
     provider.setMapper(objectMapper);
     return provider;
   }
