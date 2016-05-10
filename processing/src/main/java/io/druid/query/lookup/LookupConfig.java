@@ -62,4 +62,11 @@ public class LookupConfig
 
   }
 
+  @Override
+  public String toString()
+  {
+    return "LookupConfig{" +
+           "snapshotWorkingDir='" + getSnapshotWorkingDir() + '\'' +
+           '}';
+  }
 }
