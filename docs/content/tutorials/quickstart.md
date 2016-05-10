@@ -153,7 +153,7 @@ section if you'd like to load a different dataset.
 ## Load streaming data
 
 To load streaming data, we are going to push events into Druid
-over a simple HTTP API. We will do this use [Tranquility], a high level data producer
+over a simple HTTP API. To do this we will use [Tranquility], a high level data producer
 library for Druid.
 
 To download Tranquility, issue the following commands in your terminal:
