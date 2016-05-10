@@ -139,13 +139,12 @@ public class GraphiteEmitter implements Emitter
     public void run()
     {
       try {
-
-        if (!pickledGraphite.isConnected()) {
-          log.info("trying to connect to graphite server");
-          pickledGraphite.connect();
-        }
         while (eventsQueue.size() > 0 && !exec.isShutdown()) {
           try {
+            if (!pickledGraphite.isConnected()) {
+              log.info("trying to connect to graphite server");
+              pickledGraphite.connect();
+            }
             final GraphiteEvent graphiteEvent = eventsQueue.poll(
                 graphiteEmitterConfig.getWaitForEventTime(),
                 TimeUnit.MILLISECONDS
