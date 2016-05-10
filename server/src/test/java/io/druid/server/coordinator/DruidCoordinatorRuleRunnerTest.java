@@ -182,6 +182,8 @@ public class DruidCoordinatorRuleRunnerTest
             .withAvailableSegments(availableSegments)
             .withDatabaseRuleManager(databaseRuleManager)
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
+            .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
+            .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
             .withDynamicConfigs(new CoordinatorDynamicConfig.Builder().withMaxSegmentsToMove(5).build())
             .build();
 
@@ -195,6 +197,7 @@ public class DruidCoordinatorRuleRunnerTest
     Assert.assertTrue(stats.getPerTierStats().get("unassignedSize") == null);
 
     EasyMock.verify(mockPeon);
+    params.getBalancerStrategyFactory().close();
   }
 
   /**
@@ -276,6 +279,7 @@ public class DruidCoordinatorRuleRunnerTest
             .withAvailableSegments(availableSegments)
             .withDatabaseRuleManager(databaseRuleManager)
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
+            .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
             .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
             .build();
 
@@ -288,6 +292,7 @@ public class DruidCoordinatorRuleRunnerTest
     Assert.assertTrue(stats.getPerTierStats().get("unassignedSize") == null);
 
     EasyMock.verify(mockPeon);
+    params.getBalancerStrategyFactory().close();
   }
 
   /**
@@ -365,6 +370,7 @@ public class DruidCoordinatorRuleRunnerTest
             .withAvailableSegments(availableSegments)
             .withDatabaseRuleManager(databaseRuleManager)
             .withSegmentReplicantLookup(segmentReplicantLookup)
+            .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
             .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
             .build();
 
@@ -377,6 +383,7 @@ public class DruidCoordinatorRuleRunnerTest
     Assert.assertTrue(stats.getPerTierStats().get("unassignedSize") == null);
 
     EasyMock.verify(mockPeon);
+    params.getBalancerStrategyFactory().close();
   }
 
   @Test
@@ -429,6 +436,7 @@ public class DruidCoordinatorRuleRunnerTest
             .withAvailableSegments(availableSegments)
             .withDatabaseRuleManager(databaseRuleManager)
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
+            .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
             .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
             .build();
 
@@ -436,6 +444,7 @@ public class DruidCoordinatorRuleRunnerTest
 
     EasyMock.verify(emitter);
     EasyMock.verify(mockPeon);
+    params.getBalancerStrategyFactory().close();
   }
 
   @Test
@@ -548,6 +557,7 @@ public class DruidCoordinatorRuleRunnerTest
         .withAvailableSegments(availableSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
+        .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
         .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
         .build();
 
@@ -557,6 +567,7 @@ public class DruidCoordinatorRuleRunnerTest
     Assert.assertTrue(stats.getGlobalStats().get("deletedCount").get() == 12);
 
     EasyMock.verify(coordinator);
+    params.getBalancerStrategyFactory().close();
   }
 
   @Test
@@ -625,6 +636,7 @@ public class DruidCoordinatorRuleRunnerTest
         .withAvailableSegments(availableSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
+        .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
         .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
         .build();
 
@@ -635,6 +647,7 @@ public class DruidCoordinatorRuleRunnerTest
     Assert.assertTrue(stats.getGlobalStats().get("deletedCount").get() == 12);
 
     EasyMock.verify(mockPeon);
+    params.getBalancerStrategyFactory().close();
   }
 
   @Test
@@ -709,6 +722,7 @@ public class DruidCoordinatorRuleRunnerTest
         .withAvailableSegments(availableSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
+        .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
         .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
         .build();
 
@@ -719,6 +733,7 @@ public class DruidCoordinatorRuleRunnerTest
     Assert.assertTrue(stats.getGlobalStats().get("deletedCount").get() == 12);
 
     EasyMock.verify(mockPeon);
+    params.getBalancerStrategyFactory().close();
   }
 
   @Test
@@ -789,6 +804,7 @@ public class DruidCoordinatorRuleRunnerTest
         .withAvailableSegments(availableSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
+        .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
         .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
         .build();
 
@@ -799,6 +815,7 @@ public class DruidCoordinatorRuleRunnerTest
     Assert.assertTrue(stats.getGlobalStats().get("deletedCount").get() == 12);
 
     EasyMock.verify(mockPeon);
+    params.getBalancerStrategyFactory().close();
   }
 
   @Test
@@ -882,6 +899,7 @@ public class DruidCoordinatorRuleRunnerTest
         .withAvailableSegments(availableSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
+        .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
         .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
         .build();
 
@@ -892,6 +910,7 @@ public class DruidCoordinatorRuleRunnerTest
 
     EasyMock.verify(mockPeon);
     EasyMock.verify(anotherMockPeon);
+    params.getBalancerStrategyFactory().close();
   }
 
   /**
@@ -955,6 +974,8 @@ public class DruidCoordinatorRuleRunnerTest
             .withAvailableSegments(availableSegments)
             .withDatabaseRuleManager(databaseRuleManager)
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
+            .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
+            .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
             .build();
 
     DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
@@ -975,6 +996,7 @@ public class DruidCoordinatorRuleRunnerTest
         1,
         0
     );
+    afterParams.getBalancerStrategyFactory().close();
 
     afterParams = ruleRunner.run(
         new DruidCoordinatorRuntimeParams.Builder()
@@ -982,6 +1004,8 @@ public class DruidCoordinatorRuleRunnerTest
             .withEmitter(emitter)
             .withAvailableSegments(Arrays.asList(overFlowSegment))
             .withDatabaseRuleManager(databaseRuleManager)
+            .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
+            .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
             .build()
     );
@@ -992,6 +1016,7 @@ public class DruidCoordinatorRuleRunnerTest
     Assert.assertTrue(stats.getPerTierStats().get("unassignedSize") == null);
 
     EasyMock.verify(mockPeon);
+    afterParams.getBalancerStrategyFactory().close();
   }
 
   /**
@@ -1073,6 +1098,8 @@ public class DruidCoordinatorRuleRunnerTest
             .withDruidCluster(druidCluster)
             .withAvailableSegments(availableSegments)
             .withDatabaseRuleManager(databaseRuleManager)
+            .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
+            .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
             .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
             .build();
 
@@ -1086,6 +1113,7 @@ public class DruidCoordinatorRuleRunnerTest
     Assert.assertTrue(stats.getPerTierStats().get("unassignedSize") == null);
 
     EasyMock.verify(mockPeon);
+    params.getBalancerStrategyFactory().close();
   }
 
   @Test
@@ -1168,6 +1196,7 @@ public class DruidCoordinatorRuleRunnerTest
         .withAvailableSegments(longerAvailableSegments)
         .withDatabaseRuleManager(databaseRuleManager)
         .withSegmentReplicantLookup(segmentReplicantLookup)
+        .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
         .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
         .build();
 
@@ -1176,6 +1205,7 @@ public class DruidCoordinatorRuleRunnerTest
 
     Assert.assertTrue(stats.getPerTierStats().get("droppedCount").get("normal").get() == 24);
     EasyMock.verify(mockPeon);
+    params.getBalancerStrategyFactory().close();
   }
 
   private void mockCoordinator()

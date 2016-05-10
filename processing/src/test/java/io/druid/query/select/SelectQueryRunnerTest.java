@@ -99,16 +99,18 @@ public class SelectQueryRunnerTest
   );
   public static final String[] V_0112_0114 = ObjectArrays.concat(V_0112, V_0113, String.class);
 
+  private static final SelectQueryQueryToolChest toolChest = new SelectQueryQueryToolChest(
+      new DefaultObjectMapper(),
+      QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+  );
+
   @Parameterized.Parameters(name = "{0}:descending={1}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
     return QueryRunnerTestHelper.cartesian(
         QueryRunnerTestHelper.makeQueryRunners(
             new SelectQueryRunnerFactory(
-                new SelectQueryQueryToolChest(
-                    new DefaultObjectMapper(),
-                    QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-                ),
+                toolChest,
                 new SelectQueryEngine(),
                 QueryRunnerTestHelper.NOOP_QUERYWATCHER
             )
@@ -453,6 +455,61 @@ public class SelectQueryRunnerTest
       );
       verify(expectedResults, results);
     }
+  }
+
+  @Test
+  public void testSelectWithFilterLookupExtractionFn () {
+
+    Map<String, String> extractionMap = new HashMap<>();
+    extractionMap.put("total_market","replaced");
+    MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
+    LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, true);
+    SelectQuery query = newTestQuery()
+        .intervals(I_0112_0114)
+        .filters(new SelectorDimFilter(QueryRunnerTestHelper.marketDimension, "replaced", lookupExtractionFn))
+        .granularity(QueryRunnerTestHelper.dayGran)
+        .dimensionSpecs(DefaultDimensionSpec.toSpec(QueryRunnerTestHelper.qualityDimension))
+        .metrics(Lists.<String>newArrayList(QueryRunnerTestHelper.indexMetric))
+        .build();
+
+    Iterable<Result<SelectResultValue>> results = Sequences.toList(
+        runner.run(query, Maps.newHashMap()),
+        Lists.<Result<SelectResultValue>>newArrayList()
+    );
+    Iterable<Result<SelectResultValue>> resultsOptimize = Sequences.toList(
+        toolChest.postMergeQueryDecoration(toolChest.mergeResults(toolChest.preMergeQueryDecoration(runner))).
+                run(query, Maps.<String, Object>newHashMap()), Lists.<Result<SelectResultValue>>newArrayList()
+    );
+
+    final List<List<Map<String, Object>>> events = toEvents(
+        new String[]{
+            EventHolder.timestampKey + ":TIME",
+            null,
+            QueryRunnerTestHelper.qualityDimension + ":STRING",
+            null,
+            null,
+            QueryRunnerTestHelper.indexMetric + ":FLOAT"
+        },
+        // filtered values with day granularity
+        new String[]{
+            "2011-01-12T00:00:00.000Z	total_market	mezzanine	preferred	mpreferred	1000.000000",
+            "2011-01-12T00:00:00.000Z	total_market	premium	preferred	ppreferred	1000.000000"
+        },
+        new String[]{
+            "2011-01-13T00:00:00.000Z	total_market	mezzanine	preferred	mpreferred	1040.945505",
+            "2011-01-13T00:00:00.000Z	total_market	premium	preferred	ppreferred	1689.012875"
+        }
+    );
+
+    PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
+    List<Result<SelectResultValue>> expectedResults = toExpected(
+        events,
+        offset.startOffset(),
+        offset.threshold()
+    );
+
+    verify(expectedResults, results);
+    verify(expectedResults, resultsOptimize);
   }
 
   @Test

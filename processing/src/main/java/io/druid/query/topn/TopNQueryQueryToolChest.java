@@ -418,27 +418,23 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
               Query<Result<TopNResultValue>> query, Map<String, Object> responseContext
           )
           {
-            if (!(query instanceof TopNQuery)) {
-              return runner.run(query, responseContext);
+            TopNQuery topNQuery = (TopNQuery) query;
+            if (topNQuery.getDimensionsFilter() != null) {
+              topNQuery = topNQuery.withDimFilter(topNQuery.getDimensionsFilter().optimize());
+            }
+            final TopNQuery delegateTopNQuery = topNQuery;
+            if (TopNQueryEngine.canApplyExtractionInPost(delegateTopNQuery)) {
+              final DimensionSpec dimensionSpec = delegateTopNQuery.getDimensionSpec();
+              return runner.run(
+                  delegateTopNQuery.withDimensionSpec(
+                      new DefaultDimensionSpec(
+                          dimensionSpec.getDimension(),
+                          dimensionSpec.getOutputName()
+                      )
+                  ), responseContext
+              );
             } else {
-              TopNQuery topNQuery = (TopNQuery) query;
-              if (topNQuery.getDimensionsFilter() != null) {
-                topNQuery = topNQuery.withDimFilter(topNQuery.getDimensionsFilter().optimize());
-              }
-              final TopNQuery delegateTopNQuery = topNQuery;
-              if (TopNQueryEngine.canApplyExtractionInPost(delegateTopNQuery)) {
-                final DimensionSpec dimensionSpec = delegateTopNQuery.getDimensionSpec();
-                return runner.run(
-                    delegateTopNQuery.withDimensionSpec(
-                        new DefaultDimensionSpec(
-                            dimensionSpec.getDimension(),
-                            dimensionSpec.getOutputName()
-                        )
-                    ), responseContext
-                );
-              } else {
-                return runner.run(delegateTopNQuery, responseContext);
-              }
+              return runner.run(delegateTopNQuery, responseContext);
             }
           }
         }

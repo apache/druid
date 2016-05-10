@@ -164,6 +164,7 @@ truck,something3,buck
 |`keyColumn`|The name of the column containing the key|no|The first column|
 |`valueColumn`|The name of the column containing the value|no|The second column|
 |`delimiter`|The delimiter in the file|no|tab (`\t`)|
+|`listDelimiter`|The list delimiter in the file|no| (`\u0001`)|
 
 
 *example input*

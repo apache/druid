@@ -40,7 +40,7 @@ public class RetryPolicyConfig
     return minWait;
   }
 
-  RetryPolicyConfig setMinWait(Period minWait)
+  public RetryPolicyConfig setMinWait(Period minWait)
   {
     this.minWait = minWait;
     return this;
@@ -51,7 +51,7 @@ public class RetryPolicyConfig
     return maxWait;
   }
 
-  RetryPolicyConfig setMaxWait(Period maxWait)
+  public RetryPolicyConfig setMaxWait(Period maxWait)
   {
     this.maxWait = maxWait;
     return this;
@@ -62,7 +62,7 @@ public class RetryPolicyConfig
     return maxRetryCount;
   }
 
-  RetryPolicyConfig setMaxRetryCount(long maxRetryCount)
+  public RetryPolicyConfig setMaxRetryCount(long maxRetryCount)
   {
     this.maxRetryCount = maxRetryCount;
     return this;

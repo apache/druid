@@ -32,18 +32,15 @@ import io.druid.data.input.MapPopulator;
 import io.druid.query.extraction.namespace.ExtractionNamespaceCacheFactory;
 import io.druid.query.extraction.namespace.URIExtractionNamespace;
 import io.druid.segment.loading.URIDataPuller;
-import org.joda.time.format.DateTimeFormatter;
-import org.joda.time.format.ISODateTimeFormat;
-
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.regex.Pattern;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.ISODateTimeFormat;
 
 /**
  *
@@ -94,37 +91,36 @@ public class URIExtractionNamespaceCacheFactory implements ExtractionNamespaceCa
           );
         }
         final URIDataPuller puller = (URIDataPuller) pullerRaw;
-        final Pattern versionRegex;
-        final URI uriBase;
+        final URI uri;
         if (doSearch) {
-          uriBase = extractionNamespace.getUriPrefix();
+          final Pattern versionRegex;
 
           if (extractionNamespace.getFileRegex() != null) {
             versionRegex = Pattern.compile(extractionNamespace.getFileRegex());
           } else {
             versionRegex = null;
           }
-        } else {
-          final Path filePath = Paths.get(extractionNamespace.getUri());
-          versionRegex = Pattern.compile(Pattern.quote(filePath.getFileName().toString()));
-          uriBase = filePath.getParent().toUri();
-        }
-        final URI uri = pullerRaw.getLatestVersion(
-            uriBase,
-            versionRegex
-        );
-        if (uri == null) {
-          throw new RuntimeException(
-              new FileNotFoundException(
-                  String.format(
-                      "Could not find match for pattern `%s` in [%s] for %s",
-                      versionRegex,
-                      originalUri,
-                      extractionNamespace
-                  )
-              )
+          uri = pullerRaw.getLatestVersion(
+              extractionNamespace.getUriPrefix(),
+              versionRegex
           );
+
+          if (uri == null) {
+            throw new RuntimeException(
+                new FileNotFoundException(
+                    String.format(
+                        "Could not find match for pattern `%s` in [%s] for %s",
+                        versionRegex,
+                        originalUri,
+                        extractionNamespace
+                    )
+                )
+            );
+          }
+        } else {
+          uri = extractionNamespace.getUri();
         }
+
         final String uriPath = uri.getPath();
 
         try {

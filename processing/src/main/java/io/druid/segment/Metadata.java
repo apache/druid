@@ -20,6 +20,7 @@
 package io.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 
 import java.util.ArrayList;
@@ -41,6 +42,9 @@ public class Metadata
   @JsonProperty
   private AggregatorFactory[] aggregators;
 
+  @JsonProperty
+  private QueryGranularity queryGranularity;
+
   public Metadata()
   {
     container = new ConcurrentHashMap<>();
@@ -54,6 +58,17 @@ public class Metadata
   public Metadata setAggregators(AggregatorFactory[] aggregators)
   {
     this.aggregators = aggregators;
+    return this;
+  }
+
+  public QueryGranularity getQueryGranularity()
+  {
+    return queryGranularity;
+  }
+
+  public Metadata setQueryGranularity(QueryGranularity queryGranularity)
+  {
+    this.queryGranularity = queryGranularity;
     return this;
   }
 
@@ -96,17 +111,24 @@ public class Metadata
                                                    ? new ArrayList<AggregatorFactory[]>()
                                                    : null;
 
+    List<QueryGranularity> gransToMerge = new ArrayList<>();
+
     for (Metadata metadata : toBeMerged) {
       if (metadata != null) {
         foundSomeMetadata = true;
         if (aggregatorsToMerge != null) {
           aggregatorsToMerge.add(metadata.getAggregators());
         }
+
+        if (gransToMerge != null) {
+          gransToMerge.add(metadata.getQueryGranularity());
+        }
         mergedContainer.putAll(metadata.container);
       } else {
-        //if metadata and hence aggregators for some segment being merged are unknown then
-        //final merged segment should not have aggregators in the metadata
+        //if metadata and hence aggregators and queryGranularity for some segment being merged are unknown then
+        //final merged segment should not have same in metadata
         aggregatorsToMerge = null;
+        gransToMerge = null;
       }
     }
 
@@ -120,6 +142,11 @@ public class Metadata
     } else {
       result.setAggregators(overrideMergedAggregators);
     }
+
+    if (gransToMerge != null) {
+      result.setQueryGranularity(QueryGranularity.mergeQueryGranularities(gransToMerge));
+    }
+
     result.container.putAll(mergedContainer);
     return result;
 
@@ -141,7 +168,12 @@ public class Metadata
       return false;
     }
     // Probably incorrect - comparing Object[] arrays with Arrays.equals
-    return Arrays.equals(aggregators, metadata.aggregators);
+    if (!Arrays.equals(aggregators, metadata.aggregators)) {
+      return false;
+    }
+    return !(queryGranularity != null
+             ? !queryGranularity.equals(metadata.queryGranularity)
+             : metadata.queryGranularity != null);
 
   }
 
@@ -150,6 +182,7 @@ public class Metadata
   {
     int result = container.hashCode();
     result = 31 * result + (aggregators != null ? Arrays.hashCode(aggregators) : 0);
+    result = 31 * result + (queryGranularity != null ? queryGranularity.hashCode() : 0);
     return result;
   }
 
@@ -157,8 +190,10 @@ public class Metadata
   public String toString()
   {
     return "Metadata{" +
+
            "container=" + container +
            ", aggregators=" + Arrays.toString(aggregators) +
+           ", queryGranularity=" + queryGranularity +
            '}';
   }
 }

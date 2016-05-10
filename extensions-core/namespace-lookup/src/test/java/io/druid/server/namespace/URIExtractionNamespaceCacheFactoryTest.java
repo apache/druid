@@ -24,7 +24,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Sets;
 import com.metamx.common.IAE;
 import com.metamx.common.UOE;
 import com.metamx.common.lifecycle.Lifecycle;
@@ -41,28 +40,17 @@ import io.druid.server.namespace.cache.NamespaceExtractionCacheManager;
 import io.druid.server.namespace.cache.NamespaceExtractionCacheManagersTest;
 import io.druid.server.namespace.cache.OffHeapNamespaceExtractionCacheManager;
 import io.druid.server.namespace.cache.OnHeapNamespaceExtractionCacheManager;
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.Description;
-import org.joda.time.Period;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -76,6 +64,19 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.regex.Pattern;
 import java.util.zip.GZIPOutputStream;
+import javax.annotation.Nullable;
+import org.hamcrest.BaseMatcher;
+import org.hamcrest.Description;
+import org.joda.time.Period;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
+import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 /**
  *
@@ -83,6 +84,47 @@ import java.util.zip.GZIPOutputStream;
 @RunWith(Parameterized.class)
 public class URIExtractionNamespaceCacheFactoryTest
 {
+  private static final String FAKE_SCHEME = "wabblywoo";
+  private static final Map<String, SearchableVersionedDataFinder> FINDERS = ImmutableMap.<String, SearchableVersionedDataFinder>of(
+      "file",
+      new LocalFileTimestampVersionFinder(),
+      FAKE_SCHEME,
+      new LocalFileTimestampVersionFinder()
+      {
+        URI fixURI(URI uri)
+        {
+          final URI newURI;
+          try {
+            newURI = new URI(
+                "file",
+                uri.getUserInfo(),
+                uri.getHost(),
+                uri.getPort(),
+                uri.getPath(),
+                uri.getQuery(),
+                uri.getFragment()
+            );
+          }
+          catch (URISyntaxException e) {
+            throw Throwables.propagate(e);
+          }
+          return newURI;
+        }
+
+        @Override
+        public String getVersion(URI uri)
+        {
+          return super.getVersion(fixURI(uri));
+        }
+
+        @Override
+        public InputStream getInputStream(URI uri) throws IOException
+        {
+          return super.getInputStream(fixURI(uri));
+        }
+      }
+  );
+
   @Parameterized.Parameters(name = "{0}")
   public static Iterable<Object[]> getParameters() throws NoSuchMethodException
   {
@@ -230,12 +272,8 @@ public class URIExtractionNamespaceCacheFactoryTest
     );
     namespaceFunctionFactoryMap.put(
         URIExtractionNamespace.class,
-        new URIExtractionNamespaceCacheFactory(
-            ImmutableMap.<String, SearchableVersionedDataFinder>of(
-                "file",
-                new LocalFileTimestampVersionFinder()
-            )
-        )
+
+        new URIExtractionNamespaceCacheFactory(FINDERS)
     );
   }
 
@@ -258,7 +296,9 @@ public class URIExtractionNamespaceCacheFactoryTest
   public void setUp() throws Exception
   {
     lifecycle.start();
-    tmpFileParent = temporaryFolder.newFolder();
+    tmpFileParent = new File(temporaryFolder.newFolder(), "☃");
+    Assert.assertTrue(tmpFileParent.mkdir());
+    Assert.assertTrue(tmpFileParent.isDirectory());
     tmpFile = Files.createTempFile(tmpFileParent.toPath(), "druidTestURIExtractionNS", suffix).toFile();
     final ObjectMapper mapper = new DefaultObjectMapper();
     try (OutputStream ostream = outStreamSupplier.apply(tmpFile)) {
@@ -275,9 +315,7 @@ public class URIExtractionNamespaceCacheFactoryTest
         )));
       }
     }
-    factory = new URIExtractionNamespaceCacheFactory(
-        ImmutableMap.<String, SearchableVersionedDataFinder>of("file", new LocalFileTimestampVersionFinder())
-    );
+    factory = new URIExtractionNamespaceCacheFactory(FINDERS);
     namespace = new URIExtractionNamespace(
         tmpFile.toURI(),
         null, null,
@@ -443,7 +481,7 @@ public class URIExtractionNamespaceCacheFactoryTest
         namespace.getUri(),
         null,
         namespace.getNamespaceParseSpec(),
-        Period.millis((int)namespace.getPollMs()),
+        Period.millis((int) namespace.getPollMs()),
         null
     );
   }
@@ -456,7 +494,7 @@ public class URIExtractionNamespaceCacheFactoryTest
         null,
         "",
         namespace.getNamespaceParseSpec(),
-        Period.millis((int)namespace.getPollMs()),
+        Period.millis((int) namespace.getPollMs()),
         null
     );
   }
@@ -469,7 +507,7 @@ public class URIExtractionNamespaceCacheFactoryTest
         null,
         null,
         namespace.getNamespaceParseSpec(),
-        Period.millis((int)namespace.getPollMs()),
+        Period.millis((int) namespace.getPollMs()),
         ""
     );
   }
@@ -482,7 +520,7 @@ public class URIExtractionNamespaceCacheFactoryTest
         namespace.getUri(),
         "",
         namespace.getNamespaceParseSpec(),
-        Period.millis((int)namespace.getPollMs()),
+        Period.millis((int) namespace.getPollMs()),
         ""
     );
   }
@@ -496,8 +534,31 @@ public class URIExtractionNamespaceCacheFactoryTest
         namespace.getUri(),
         "[",
         namespace.getNamespaceParseSpec(),
-        Period.millis((int)namespace.getPollMs()),
+        Period.millis((int) namespace.getPollMs()),
         null
     );
+  }
+
+  @Test
+  public void testWeirdSchemaOnExactURI() throws Exception
+  {
+    final URIExtractionNamespace extractionNamespace = new URIExtractionNamespace(
+        new URI(
+            FAKE_SCHEME,
+            namespace.getUri().getUserInfo(),
+            namespace.getUri().getHost(),
+            namespace.getUri().getPort(),
+            namespace.getUri().getPath(),
+            namespace.getUri().getQuery(),
+            namespace.getUri().getFragment()
+        ),
+        null,
+        null,
+        namespace.getNamespaceParseSpec(),
+        Period.millis((int) namespace.getPollMs()),
+        null
+    );
+    final Map<String, String> map = new HashMap<>();
+    Assert.assertNotNull(factory.getCachePopulator(id, extractionNamespace, null, map).call());
   }
 }

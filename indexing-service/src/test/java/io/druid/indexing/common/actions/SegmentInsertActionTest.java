@@ -24,8 +24,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
-import io.druid.indexing.overlord.ObjectMetadata;
-import io.druid.indexing.overlord.SegmentPublishResult;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.LinearShardSpec;
 import org.hamcrest.CoreMatchers;
@@ -34,7 +32,8 @@ import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
-import org.skife.jdbi.v2.exceptions.CallbackFailedException;
+
+import java.util.Set;
 
 public class SegmentInsertActionTest
 {
@@ -104,47 +103,6 @@ public class SegmentInsertActionTest
   }
 
   @Test
-  public void testTransactional() throws Exception
-  {
-    final Task task = new NoopTask(null, 0, 0, null, null, null);
-    actionTestKit.getTaskLockbox().add(task);
-    actionTestKit.getTaskLockbox().lock(task, new Interval(INTERVAL));
-
-    SegmentPublishResult result1 = new SegmentInsertAction(
-        ImmutableSet.of(SEGMENT1),
-        new ObjectMetadata(null),
-        new ObjectMetadata(ImmutableList.of(1))
-    ).perform(
-        task,
-        actionTestKit.getTaskActionToolbox()
-    );
-    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(SEGMENT1), true), result1);
-
-    SegmentPublishResult result2 = new SegmentInsertAction(
-        ImmutableSet.of(SEGMENT2),
-        new ObjectMetadata(ImmutableList.of(1)),
-        new ObjectMetadata(ImmutableList.of(2))
-    ).perform(
-        task,
-        actionTestKit.getTaskActionToolbox()
-    );
-    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(SEGMENT2), true), result2);
-
-    Assert.assertEquals(
-        ImmutableSet.of(SEGMENT1, SEGMENT2),
-        ImmutableSet.copyOf(
-            actionTestKit.getMetadataStorageCoordinator()
-                         .getUsedSegmentsForInterval(DATA_SOURCE, INTERVAL)
-        )
-    );
-
-    Assert.assertEquals(
-        new ObjectMetadata(ImmutableList.of(2)),
-        actionTestKit.getMetadataStorageCoordinator().getDataSourceMetadata(DATA_SOURCE)
-    );
-  }
-
-  @Test
   public void testFailBadVersion() throws Exception
   {
     final Task task = new NoopTask(null, 0, 0, null, null, null);
@@ -154,26 +112,7 @@ public class SegmentInsertActionTest
 
     thrown.expect(IllegalStateException.class);
     thrown.expectMessage(CoreMatchers.startsWith("Segments not covered by locks for task"));
-    SegmentPublishResult result = action.perform(task, actionTestKit.getTaskActionToolbox());
-    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.of(SEGMENT3), true), result);
-  }
-
-  @Test
-  public void testFailTransactional() throws Exception
-  {
-    final Task task = new NoopTask(null, 0, 0, null, null, null);
-    actionTestKit.getTaskLockbox().add(task);
-    actionTestKit.getTaskLockbox().lock(task, new Interval(INTERVAL));
-
-    SegmentPublishResult result = new SegmentInsertAction(
-        ImmutableSet.of(SEGMENT1),
-        new ObjectMetadata(ImmutableList.of(1)),
-        new ObjectMetadata(ImmutableList.of(2))
-    ).perform(
-        task,
-        actionTestKit.getTaskActionToolbox()
-    );
-
-    Assert.assertEquals(new SegmentPublishResult(ImmutableSet.<DataSegment>of(), false), result);
+    final Set<DataSegment> segments = action.perform(task, actionTestKit.getTaskActionToolbox());
+    Assert.assertEquals(ImmutableSet.of(SEGMENT3), segments);
   }
 }

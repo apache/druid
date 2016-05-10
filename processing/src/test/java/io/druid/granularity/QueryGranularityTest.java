@@ -20,10 +20,19 @@
 package io.druid.granularity;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.jackson.DefaultObjectMapper;
-import org.joda.time.*;
+import org.joda.time.DateTime;
+import org.joda.time.DateTimeZone;
+import org.joda.time.Days;
+import org.joda.time.Hours;
+import org.joda.time.Minutes;
+import org.joda.time.Months;
+import org.joda.time.Period;
+import org.joda.time.Weeks;
+import org.joda.time.Years;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -696,6 +705,32 @@ public class QueryGranularityTest
 
     gran = mapper.readValue("\"fifteen_minute\"", QueryGranularity.class);
     Assert.assertEquals(new DurationGranularity(15 * 60 * 1000, null), gran);
+  }
+
+  @Test
+  public void testMerge()
+  {
+    Assert.assertNull(QueryGranularity.mergeQueryGranularities(null));
+    Assert.assertNull(QueryGranularity.mergeQueryGranularities(ImmutableList.<QueryGranularity>of()));
+    Assert.assertNull(QueryGranularity.mergeQueryGranularities(Lists.newArrayList(null, QueryGranularity.DAY)));
+    Assert.assertNull(QueryGranularity.mergeQueryGranularities(Lists.newArrayList(QueryGranularity.DAY, null)));
+    Assert.assertNull(
+        QueryGranularity.mergeQueryGranularities(
+            Lists.newArrayList(
+                QueryGranularity.DAY,
+                null,
+                QueryGranularity.DAY
+            )
+        )
+    );
+    Assert.assertNull(
+        QueryGranularity.mergeQueryGranularities(ImmutableList.of(QueryGranularity.ALL, QueryGranularity.DAY))
+    );
+
+    Assert.assertEquals(
+        QueryGranularity.ALL,
+        QueryGranularity.mergeQueryGranularities(ImmutableList.of(QueryGranularity.ALL, QueryGranularity.ALL))
+    );
   }
 
   private void assertSame(List<DateTime> expected, Iterable<Long> actual)

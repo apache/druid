@@ -21,7 +21,6 @@ package io.druid.server.coordinator;
 
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.metamx.common.guava.Comparators;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.client.DruidDataSource;
 import io.druid.metadata.MetadataRuleManager;
@@ -206,7 +205,6 @@ public class DruidCoordinatorRuntimeParams
       this.stats = new CoordinatorStats();
       this.coordinatorDynamicConfig = new CoordinatorDynamicConfig.Builder().build();
       this.balancerReferenceTimestamp = DateTime.now();
-      this.strategyFactory = new CostBalancerStrategyFactory(1);
     }
 
     Builder(

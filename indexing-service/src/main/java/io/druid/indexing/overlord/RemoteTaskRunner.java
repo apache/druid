@@ -44,6 +44,7 @@ import com.google.common.util.concurrent.ListenableScheduledFuture;
 import com.google.common.util.concurrent.ListeningScheduledExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.common.util.concurrent.SettableFuture;
+import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.RE;
 import com.metamx.common.lifecycle.LifecycleStart;
@@ -349,6 +350,12 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
   @Override
   public void registerListener(TaskRunnerListener listener, Executor executor)
   {
+    for (Pair<TaskRunnerListener, Executor> pair : listeners) {
+      if (pair.lhs.getListenerId().equals(listener.getListenerId())) {
+        throw new ISE("Listener [%s] already registered", listener.getListenerId());
+      }
+    }
+
     final Pair<TaskRunnerListener, Executor> listenerPair = Pair.of(listener, executor);
 
     synchronized (statusLock) {
@@ -360,7 +367,20 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
         );
       }
 
+      log.info("Registered listener [%s]", listener.getListenerId());
       listeners.add(listenerPair);
+    }
+  }
+
+  @Override
+  public void unregisterListener(String listenerId)
+  {
+    for (Pair<TaskRunnerListener, Executor> pair : listeners) {
+      if (pair.lhs.getListenerId().equals(listenerId)) {
+        listeners.remove(pair);
+        log.info("Unregistered listener [%s]", listenerId);
+        return;
+      }
     }
   }
 
@@ -797,6 +817,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
       RemoteTaskRunnerWorkItem newWorkItem = workItem.withWorker(theZkWorker.getWorker(), null);
       runningTasks.put(task.getId(), newWorkItem);
       log.info("Task %s switched from pending to running (on [%s])", task.getId(), newWorkItem.getWorker().getHost());
+      TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), TaskStatus.running(task.getId()));
 
       // Syncing state with Zookeeper - don't assign new tasks until the task we just assigned is actually running
       // on a worker - this avoids overflowing a worker with tasks
@@ -926,7 +947,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                       taskRunnerWorkItem = runningTasks.remove(taskId);
                       if (taskRunnerWorkItem != null) {
                         log.info("Task[%s] just disappeared!", taskId);
-                        taskRunnerWorkItem.setResult(TaskStatus.failure(taskRunnerWorkItem.getTaskId()));
+                        taskRunnerWorkItem.setResult(TaskStatus.failure(taskId));
+                        TaskRunnerUtils.notifyStatusChanged(listeners, taskId, TaskStatus.failure(taskId));
                       } else {
                         log.info("Task[%s] went bye bye.", taskId);
                       }
@@ -1048,7 +1070,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
                 log.info("Failing task[%s]", assignedTask);
                 RemoteTaskRunnerWorkItem taskRunnerWorkItem = runningTasks.remove(assignedTask);
                 if (taskRunnerWorkItem != null) {
-                  taskRunnerWorkItem.setResult(TaskStatus.failure(taskRunnerWorkItem.getTaskId()));
+                  taskRunnerWorkItem.setResult(TaskStatus.failure(assignedTask));
+                  TaskRunnerUtils.notifyStatusChanged(listeners, assignedTask, TaskStatus.failure(assignedTask));
                 } else {
                   log.warn("RemoteTaskRunner has no knowledge of task[%s]", assignedTask);
                 }
@@ -1119,6 +1142,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
 
     // Notify interested parties
     taskRunnerWorkItem.setResult(taskStatus);
+    TaskRunnerUtils.notifyStatusChanged(listeners, taskStatus.getId(), taskStatus);
   }
 
   @Override

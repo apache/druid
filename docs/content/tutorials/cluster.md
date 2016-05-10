@@ -338,9 +338,9 @@ can still be co-located. If you are running Tranquility (not server) with a stre
 Tranquility with the stream processor and not require Tranquility Server.
 
 ```bash
-curl -O http://static.druid.io/tranquility/releases/tranquility-distribution-0.7.4.tgz
-tar -xzf tranquility-distribution-0.7.4.tgz
-cd tranquility-distribution-0.7.4
+curl -O http://static.druid.io/tranquility/releases/tranquility-distribution-0.8.0.tgz
+tar -xzf tranquility-distribution-0.8.0.tgz
+cd tranquility-distribution-0.8.0
 bin/tranquility <server or kafka> -configFile <path_to_druid_distro>/conf/tranquility/<server or kafka>.json
 ```
 

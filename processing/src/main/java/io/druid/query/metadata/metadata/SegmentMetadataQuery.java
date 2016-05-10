@@ -54,7 +54,8 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     SIZE,
     INTERVAL,
     AGGREGATORS,
-    MINMAX;
+    MINMAX,
+    QUERYGRANULARITY;
 
     @JsonValue
     @Override
@@ -177,6 +178,11 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   public boolean hasAggregators()
   {
     return analysisTypes.contains(AnalysisType.AGGREGATORS);
+  }
+
+  public boolean hasQueryGranularity()
+  {
+    return analysisTypes.contains(AnalysisType.QUERYGRANULARITY);
   }
 
   public boolean hasMinMax()

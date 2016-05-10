@@ -122,7 +122,7 @@ class FunctionExpr implements Expr
   @Override
   public Number eval(Map<String, Number> bindings)
   {
-    return Parser.func.get(name).apply(args, bindings);
+    return Parser.func.get(name.toLowerCase()).apply(args, bindings);
   }
 }
 

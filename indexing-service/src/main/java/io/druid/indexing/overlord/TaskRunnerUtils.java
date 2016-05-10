@@ -22,6 +22,7 @@ package io.druid.indexing.overlord;
 import com.metamx.common.Pair;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.indexing.common.TaskLocation;
+import io.druid.indexing.common.TaskStatus;
 
 import java.util.concurrent.Executor;
 
@@ -53,6 +54,36 @@ public class TaskRunnerUtils
         log.makeAlert(e, "Unable to notify task listener")
            .addData("taskId", taskId)
            .addData("taskLocation", location)
+           .addData("listener", listener.toString())
+           .emit();
+      }
+    }
+  }
+
+  public static void notifyStatusChanged(
+      final Iterable<Pair<TaskRunnerListener, Executor>> listeners,
+      final String taskId,
+      final TaskStatus status
+  )
+  {
+    log.info("Task [%s] status changed to [%s].", taskId, status.getStatusCode());
+    for (final Pair<TaskRunnerListener, Executor> listener : listeners) {
+      try {
+        listener.rhs.execute(
+            new Runnable()
+            {
+              @Override
+              public void run()
+              {
+                listener.lhs.statusChanged(taskId, status);
+              }
+            }
+        );
+      }
+      catch (Exception e) {
+        log.makeAlert(e, "Unable to notify task listener")
+           .addData("taskId", taskId)
+           .addData("taskStatus", status.getStatusCode())
            .addData("listener", listener.toString())
            .emit();
       }

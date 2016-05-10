@@ -23,6 +23,8 @@ package io.druid.common.utils;
  */
 public class StringUtils extends com.metamx.common.StringUtils
 {
+  public static final String EMPTY = "";
+
   // should be used only for estimation
   // returns the same result with StringUtils.fromUtf8(value).length for valid string values
   // does not check validity of format and returns over-estimated result for invalid string (see UT)
