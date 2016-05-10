@@ -159,6 +159,8 @@ public class PartitionPathSpec implements PathSpec
     public boolean accept(Path path)
     {
       String pathName = path.getName();
+      if (pathName.split("=").length != 2)
+        return false;
       return pathName.startsWith(shouldBeStartWith);
     }
   }
@@ -170,7 +172,7 @@ public class PartitionPathSpec implements PathSpec
     {
       Path child = fileStatus.getPath();
       if (fileStatus.isDirectory()) {
-        String[] split = child.toString().split("=");
+        String[] split = child.getName().split("=");
         if (split.length == 2) {
           autoAddPath(paths, fs, child);
         }

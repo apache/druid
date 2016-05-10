@@ -149,6 +149,51 @@ public class PartitionPathSpecTest
     Assert.assertEquals("Did not find expected input paths", expected, actual);
   }
 
+  @Test
+  public void testAddInputPathWithNoPartitionColumns() throws Exception
+  {
+    UserGroupInformation.setLoginUser(UserGroupInformation.createUserForTesting("test", new String[]{"testGroup"}));
+    HadoopIngestionSpec spec = new HadoopIngestionSpec(
+        new DataSchema(
+            "foo",
+            null,
+            new AggregatorFactory[0],
+            new UniformGranularitySpec(
+                Granularity.DAY,
+                QueryGranularity.MINUTE,
+                ImmutableList.of(new Interval("2015-11-06T00:00Z/2015-11-07T00:00Z"))
+            ),
+            jsonMapper
+        ),
+        new HadoopIOConfig(null, null, null),
+        new HadoopTuningConfig(null, null, null, null, null, null, false, false, false, false, null, false, false, null, null, null)
+    );
+
+    Job job = Job.getInstance();
+    String formatStr = "file:%s/%s;org.apache.hadoop.mapreduce.lib.input.TextInputFormat";
+
+    testFolder.newFolder("test", "test1=abc", "test2=123");
+    testFolder.newFolder("test", "test1=abc", "test2=456");
+    testFolder.newFolder("test", "test1=def", "test2=123");
+    testFolder.newFile("test/test1=abc/test2=123/file1");
+    testFolder.newFile("test/test1=abc/test2=456/file2");
+    testFolder.newFile("test/test1=def/test2=123/file3");
+    testFolder.newFile("test/test1=def/test2=123/file4");
+
+    partitionPathSpec.setBasePath(testFolder.getRoot().getPath() + "/test");
+
+    partitionPathSpec.addInputPaths(HadoopDruidIndexerConfig.fromSpec(spec), job);
+
+    String actual = job.getConfiguration().get("mapreduce.input.multipleinputs.dir.formats");
+
+    String expected = Joiner.on(",").join(Lists.newArrayList(
+        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=123"),
+        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=456"),
+        String.format(formatStr, testFolder.getRoot(), "test/test1=def/test2=123")
+    ));
+
+    Assert.assertEquals("Did not find expected input paths", expected, actual);
+  }
   private void testSerde(
       String basePath,
       List<String> partitionColumns,
