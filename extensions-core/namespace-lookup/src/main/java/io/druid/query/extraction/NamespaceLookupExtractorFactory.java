@@ -20,6 +20,7 @@ package io.druid.query.extraction;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
@@ -68,11 +69,15 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
     }
   }
 
+  @JsonIgnore
   private final AtomicBoolean started = new AtomicBoolean(false);
+  @JsonIgnore
   private final ReadWriteLock startStopSync = new ReentrantReadWriteLock();
-  private final ExtractionNamespace extractionNamespace;
+  @JsonIgnore
   private final NamespaceExtractionCacheManager manager;
+  @JsonIgnore
   private final LookupIntrospectHandler lookupIntrospectHandler;
+  private final ExtractionNamespace extractionNamespace;
   private final long firstCacheTimeout;
   private final boolean oneToOne;
 

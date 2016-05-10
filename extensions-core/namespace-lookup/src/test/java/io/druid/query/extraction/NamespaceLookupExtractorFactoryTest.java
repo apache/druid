@@ -23,13 +23,25 @@ import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.inject.Binder;
+import com.google.inject.Injector;
+import com.google.inject.Key;
+import com.google.inject.Module;
 import com.metamx.common.ISE;
+import io.druid.guice.GuiceInjectors;
+import io.druid.guice.JsonConfigProvider;
+import io.druid.guice.annotations.Json;
+import io.druid.guice.annotations.Self;
+import io.druid.guice.annotations.Smile;
+import io.druid.initialization.Initialization;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.extraction.namespace.ExtractionNamespace;
 import io.druid.query.extraction.namespace.URIExtractionNamespace;
 import io.druid.query.lookup.LookupExtractor;
 import io.druid.query.lookup.LookupExtractorFactory;
+import io.druid.server.DruidNode;
 import io.druid.server.namespace.cache.NamespaceExtractionCacheManager;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
@@ -402,7 +414,6 @@ public class NamespaceLookupExtractorFactoryTest
     EasyMock.verify(en1, en2);
   }
 
-
   @Test(expected = ISE.class)
   public void testMustBeStarted()
   {
@@ -421,5 +432,31 @@ public class NamespaceLookupExtractorFactoryTest
     );
 
     namespaceLookupExtractorFactory.get();
+  }
+
+  // Note this does NOT catch problems with returning factories as failed in error messages.
+  @Test
+  public void testSerDe() throws Exception
+  {
+    final Injector injector = Initialization.makeInjectorWithModules(
+        GuiceInjectors.makeStartupInjector(),
+        ImmutableList.of(
+            new Module()
+            {
+              @Override
+              public void configure(Binder binder)
+              {
+                JsonConfigProvider.bindInstance(
+                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, null)
+                );
+              }
+            }
+        )
+    );
+    final ObjectMapper mapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
+    mapper.registerSubtypes(NamespaceLookupExtractorFactory.class);
+    final LookupExtractorFactory factory = mapper.readValue("{ \"type\": \"cachedNamespace\", \"extractionNamespace\": { \"type\": \"uri\", \"uriPrefix\": \"s3://bucket/prefix/\", \"fileRegex\": \"foo.*\\\\.gz\", \"namespaceParseSpec\": { \"format\": \"customJson\", \"keyFieldName\": \"someKey\", \"valueFieldName\": \"someVal\" }, \"pollPeriod\": \"PT5M\" } } }", LookupExtractorFactory.class);
+    Assert.assertTrue(factory instanceof NamespaceLookupExtractorFactory);
+    Assert.assertNotNull(mapper.writeValueAsString(factory));
   }
 }
