@@ -155,7 +155,7 @@ public class PartitionPathSpecTest
       Class inputFormat) throws Exception
   {
     StringBuilder sb = new StringBuilder();
-    sb.append("{\"basePathString\" : \"");
+    sb.append("{\"basePath\" : \"");
     sb.append(basePath);
     sb.append("\",");
     sb.append("\"partitionColumns\" : [\"");
