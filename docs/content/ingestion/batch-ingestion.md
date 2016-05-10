@@ -137,6 +137,28 @@ s3n://billy-bucket/the/data/is/here/y=2012/m=06/d=01/H=01
 s3n://billy-bucket/the/data/is/here/y=2012/m=06/d=01/H=23
 ```
 
+
+##### `partition`
+
+A type of inputSpec that expects data from partitioned table of most SQL on Hadoops like Hive and Impala: `.../partition_col1=XXX/partition_col2=XXX/...`.
+
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|basePath|String|Base path to find partitioned data directories|yes|
+|partitionColumns|List of String|List of Partition column names|no|
+
+If partitionColumns are not specified, automatically ingest columns and values from directory path by finding `x=y` pattern and considering x as column name and y as column value.
+All partition columns are ingested as dimensions.
+
+If `basePath` is test, `partitionColumns` are col1 and col2, and run with following input directories:
+```
+hdfs://xxx.xxx.xxx.xxx:9000/test/col1=a/col2=1
+hdfs://xxx.xxx.xxx.xxx:9000/test/col1=a/col2=2
+hdfs://xxx.xxx.xxx.xxx:9000/test/col1=b/col2=1
+hdfs://xxx.xxx.xxx.xxx:9000/test/col1=a/colx=1
+```
+first three directories are ingested with two additional dimensions `col1` and `col2` with corresponding values specified in the path, and last directory is ignored.
+
 ##### `dataSource`
 
 Read Druid segments. See [here](../ingestion/update-existing-data.html) for more information.

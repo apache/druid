@@ -43,19 +43,19 @@ public class PartitionPathSpec implements PathSpec
 {
   private static final Logger log = new Logger(PartitionPathSpec.class);
 
-  private String basePathString;
+  private String basePath;
   private List<String> partitionColumns;
   private Class<? extends InputFormat> inputFormat;
 
   @JsonProperty
-  public String getBasePathString()
+  public String getBasePath()
   {
-    return basePathString;
+    return basePath;
   }
 
-  public void setBasePathString(String basePathString)
+  public void setBasePath(String basePath)
   {
-    this.basePathString = basePathString;
+    this.basePath = basePath;
   }
 
   @JsonProperty
@@ -83,7 +83,7 @@ public class PartitionPathSpec implements PathSpec
   @Override
   public Job addInputPaths(HadoopDruidIndexerConfig config, Job job) throws IOException
   {
-    Path basePath = new Path(Preconditions.checkNotNull(this.basePathString));
+    Path basePath = new Path(Preconditions.checkNotNull(this.basePath));
     FileSystem fs = basePath.getFileSystem(job.getConfiguration());
     Set<String> paths = Sets.newTreeSet();
 
@@ -112,14 +112,13 @@ public class PartitionPathSpec implements PathSpec
   public Map<String, String> getPartitionValues(Path path)
   {
     String dirPath = path.getParent().toUri().getPath();
-    Path basePath = new Path(basePathString);
-    Preconditions.checkArgument(dirPath.startsWith(basePath.toString()));
-    if (dirPath.length() == basePath.toString().length())
+    Preconditions.checkArgument(dirPath.startsWith(basePath));
+    if (dirPath.length() == basePath.length())
     {
       return ImmutableMap.of();
     }
 
-    String targetToFindValues = dirPath.substring(basePathString.length() + 1);
+    String targetToFindValues = dirPath.substring(basePath.length() + 1);
     String[] partitions = targetToFindValues.split(Path.SEPARATOR);
     Map<String, String> values = Maps.newHashMap();
     for (String partition: partitions) {

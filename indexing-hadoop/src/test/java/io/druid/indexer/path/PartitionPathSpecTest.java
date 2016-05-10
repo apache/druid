@@ -73,8 +73,8 @@ public class PartitionPathSpecTest
   @Test
   public void testSetBasePathString()
   {
-    partitionPathSpec.setBasePathString(TEST_STRING_BASE_PATH);
-    Assert.assertEquals(TEST_STRING_BASE_PATH, partitionPathSpec.getBasePathString());
+    partitionPathSpec.setBasePath(TEST_STRING_BASE_PATH);
+    Assert.assertEquals(TEST_STRING_BASE_PATH, partitionPathSpec.getBasePath());
   }
 
   @Test
@@ -134,7 +134,7 @@ public class PartitionPathSpecTest
     testFolder.newFile("test/test1=def/testz=123/file4");
     testFolder.newFile("test/testz=def/test2=123/file4");
 
-    partitionPathSpec.setBasePathString(testFolder.getRoot().getPath() + "/test");
+    partitionPathSpec.setBasePath(testFolder.getRoot().getPath() + "/test");
 
     partitionPathSpec.addInputPaths(HadoopDruidIndexerConfig.fromSpec(spec), job);
 
@@ -170,7 +170,7 @@ public class PartitionPathSpecTest
 
     PartitionPathSpec pathSpec = (PartitionPathSpec) StaticPathSpecTest.readWriteRead(sb.toString(), jsonMapper);
     Assert.assertEquals(inputFormat, pathSpec.getInputFormat());
-    Assert.assertEquals(basePath, pathSpec.getBasePathString());
+    Assert.assertEquals(basePath, pathSpec.getBasePath());
     Assert.assertEquals(partitionColumns, pathSpec.getPartitionColumns());
   }
 }

@@ -180,7 +180,7 @@ public class IndexGeneratorJobPartitionDirTest
 
     HashMap<String, Object> inputSpec = new HashMap<>();
     inputSpec.put("type", "partition");
-    inputSpec.put("basePathString", dataRoot.getCanonicalPath());
+    inputSpec.put("basePath", dataRoot.getCanonicalPath());
     inputSpec.put("partitionColumns", ImmutableList.of("test1", "test2"));
 
     config = new HadoopDruidIndexerConfig(
