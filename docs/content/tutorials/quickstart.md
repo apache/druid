@@ -65,22 +65,22 @@ With Zookeeper running, return to the druid-0.9.0 directory. In that directory, 
 bin/init
 ```
 
-This will setup up some directories for you. Next, you can start up the Druid processes in different terminal windows.
+This will setup up some directories for you. Next, you can start up the Druid processes.
 This tutorial runs every Druid process on the same system. In a large distributed production cluster,
 many of these Druid processes can still be co-located together.
 
 ```bash
-java `cat conf-quickstart/druid/historical/jvm.config | xargs` -cp conf-quickstart/druid/_common:conf-quickstart/druid/historical:lib/* io.druid.cli.Main server historical
-java `cat conf-quickstart/druid/broker/jvm.config | xargs` -cp conf-quickstart/druid/_common:conf-quickstart/druid/broker:lib/* io.druid.cli.Main server broker
-java `cat conf-quickstart/druid/coordinator/jvm.config | xargs` -cp conf-quickstart/druid/_common:conf-quickstart/druid/coordinator:lib/* io.druid.cli.Main server coordinator
-java `cat conf-quickstart/druid/overlord/jvm.config | xargs` -cp conf-quickstart/druid/_common:conf-quickstart/druid/overlord:lib/* io.druid.cli.Main server overlord
-java `cat conf-quickstart/druid/middleManager/jvm.config | xargs` -cp conf-quickstart/druid/_common:conf-quickstart/druid/middleManager:lib/* io.druid.cli.Main server middleManager
+cp -R conf-quickstart/ conf
+./bin/historical.sh start
+./bin/broker.sh start
+./bin/coordinator.sh start
+./bin/overlord.sh start
+./bin/middleManager.sh start
 ```
 
-You should see a log message printed out for each service that starts up.
-
-Later on, if you'd like to stop the services, CTRL-C to exit from the running java processes. If you
-want a clean start after stopping the services, delete the `var` directory and run the `init` script again.
+You should see the logs for each service in the log/ directory.
+To stop each service, simply run the stop command on the service.
+Ex. `./bin/historical.sh stop `
 
 Once every service has started, you are now ready to load data.
 
