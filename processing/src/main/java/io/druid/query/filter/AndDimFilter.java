@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.RangeSet;
+import com.google.common.collect.TreeRangeSet;
 import io.druid.query.Druids;
 import io.druid.segment.filter.AndFilter;
 import io.druid.segment.filter.Filters;
@@ -70,6 +72,23 @@ public class AndDimFilter implements DimFilter
   public Filter toFilter()
   {
     return new AndFilter(Filters.toFilters(fields));
+  }
+
+  @Override
+  public RangeSet<String> getDimensionRangeSet(String dimension)
+  {
+    RangeSet<String> retSet = TreeRangeSet.create();
+    for (DimFilter field : fields) {
+      RangeSet<String> rangeSet = field.getDimensionRangeSet(dimension);
+      if (rangeSet != null) {
+        if (retSet.isEmpty()) {
+          retSet.addAll(rangeSet);
+        } else {
+          retSet.removeAll(rangeSet.complement());
+        }
+      }
+    }
+    return retSet;
   }
 
   @Override

@@ -29,6 +29,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -60,6 +61,7 @@ import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.Result;
 import io.druid.query.SegmentDescriptor;
 import io.druid.query.aggregation.MetricManipulatorFns;
+import io.druid.query.filter.DimFilter;
 import io.druid.query.spec.MultipleSpecificSegmentSpec;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
@@ -539,6 +541,14 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
         query.getResultOrdering(),
         Sequences.simple(sequencesByInterval)
     );
+  }
+
+  protected <T extends Comparable<T>> List<TimelineObjectHolder<String, ServerSelector>> filterSecondary (
+      List<TimelineObjectHolder<String, ServerSelector>> serverLookup,
+      RangeSet<String> filterRangeSet
+  )
+  {
+    return null;
   }
 
   private static class CachePopulator

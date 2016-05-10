@@ -25,6 +25,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Range;
+import com.google.common.collect.RangeSet;
+import com.google.common.collect.TreeRangeSet;
 import com.metamx.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.filter.DimensionPredicateFilter;
@@ -150,6 +153,17 @@ public class SelectorDimFilter implements DimFilter
       return false;
     }
     return extractionFn != null ? extractionFn.equals(that.extractionFn) : that.extractionFn == null;
+  }
+
+  @Override
+  public RangeSet<String> getDimensionRangeSet(String dimension)
+  {
+    if (!Objects.equals(getDimension(), dimension) || getExtractionFn() != null) {
+      return null;
+    }
+    RangeSet<String> retSet = TreeRangeSet.create();
+    retSet.add(Range.singleton(value));
+    return retSet;
   }
 
   @Override

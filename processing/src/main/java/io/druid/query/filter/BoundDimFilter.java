@@ -22,11 +22,16 @@ package io.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.BoundType;
+import com.google.common.collect.Range;
+import com.google.common.collect.RangeSet;
+import com.google.common.collect.TreeRangeSet;
 import com.metamx.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.filter.BoundFilter;
 
 import java.nio.ByteBuffer;
+import java.util.Objects;
 
 public class BoundDimFilter implements DimFilter
 {
@@ -163,6 +168,18 @@ public class BoundDimFilter implements DimFilter
   public Filter toFilter()
   {
     return new BoundFilter(this);
+  }
+
+  @Override
+  public RangeSet<String> getDimensionRangeSet(String dimension)
+  {
+    if (!Objects.equals(getDimension(), dimension) || getExtractionFn() != null) {
+      return null;
+    }
+    RangeSet<String> retSet = TreeRangeSet.create();
+    retSet.add(Range.range(getLower(), isLowerStrict() ? BoundType.OPEN : BoundType.CLOSED,
+                           getUpper(), isUpperStrict() ? BoundType.OPEN : BoundType.CLOSED));
+    return retSet;
   }
 
   @Override

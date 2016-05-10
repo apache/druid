@@ -19,6 +19,8 @@
 
 package io.druid.query.filter;
 
+import com.google.common.collect.RangeSet;
+
 import java.nio.ByteBuffer;
 
 /**
@@ -39,6 +41,12 @@ public class NoopDimFilter implements DimFilter
 
   @Override
   public Filter toFilter()
+  {
+    return null;
+  }
+
+  @Override
+  public RangeSet<String> getDimensionRangeSet(String dimension)
   {
     return null;
   }

@@ -75,6 +75,12 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   }
 
   @Override
+  public DimFilter getFilter()
+  {
+    return dimFilter;
+  }
+
+  @Override
   public String getType()
   {
     return Query.TIMESERIES;

@@ -21,6 +21,7 @@ package io.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.collect.RangeSet;
 
 /**
  */
@@ -56,4 +57,6 @@ public interface DimFilter
    * @return a Filter that implements this DimFilter, or null if this DimFilter is a no-op.
    */
   public Filter toFilter();
+
+  public RangeSet<String> getDimensionRangeSet (String dimension);
 }

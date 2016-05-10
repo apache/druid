@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.collect.RangeSet;
 import com.metamx.common.ISE;
 import com.metamx.common.StringUtils;
 import io.druid.js.JavaScriptConfig;
@@ -115,6 +116,12 @@ public class JavaScriptDimFilter implements DimFilter
     }
 
     return new JavaScriptFilter(dimension, predicate);
+  }
+
+  @Override
+  public RangeSet<String> getDimensionRangeSet(String dimension)
+  {
+    return null;
   }
 
   @Override

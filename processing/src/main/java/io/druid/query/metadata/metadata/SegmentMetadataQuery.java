@@ -30,6 +30,7 @@ import io.druid.query.DataSource;
 import io.druid.query.Query;
 import io.druid.query.TableDataSource;
 import io.druid.query.UnionDataSource;
+import io.druid.query.filter.DimFilter;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.Interval;
@@ -151,6 +152,12 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   public boolean hasFilters()
   {
     return false;
+  }
+
+  @Override
+  public DimFilter getFilter()
+  {
+    return null;
   }
 
   @Override

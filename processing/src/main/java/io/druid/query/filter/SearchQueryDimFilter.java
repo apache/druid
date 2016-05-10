@@ -21,6 +21,7 @@ package io.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.RangeSet;
 import com.metamx.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.search.search.SearchQuerySpec;
@@ -95,6 +96,12 @@ public class SearchQueryDimFilter implements DimFilter
   public Filter toFilter()
   {
     return new SearchQueryFilter(dimension, query, extractionFn);
+  }
+
+  @Override
+  public RangeSet<String> getDimensionRangeSet(String dimension)
+  {
+    return null;
   }
 
   @Override
