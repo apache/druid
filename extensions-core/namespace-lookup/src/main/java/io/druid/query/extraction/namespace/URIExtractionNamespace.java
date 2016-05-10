@@ -374,8 +374,8 @@ public class URIExtractionNamespace implements ExtractionNamespace
           "Must specify more than one column to have a key value pair"
       );
       final DelimitedParser delegate = new DelimitedParser(
-          Optional.fromNullable(Strings.isNullOrEmpty(delimiter) ? null : delimiter),
-          Optional.fromNullable(Strings.isNullOrEmpty(listDelimiter) ? null : listDelimiter)
+          Optional.fromNullable(Strings.emptyToNull(delimiter)),
+          Optional.fromNullable(Strings.emptyToNull(listDelimiter))
       );
       Preconditions.checkArgument(
           !(Strings.isNullOrEmpty(keyColumn) ^ Strings.isNullOrEmpty(valueColumn)),
