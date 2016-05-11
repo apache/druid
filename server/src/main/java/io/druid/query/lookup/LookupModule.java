@@ -57,12 +57,16 @@ import io.druid.server.metrics.MonitorsConfig;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import javax.ws.rs.Path;
 import org.apache.curator.utils.ZKPaths;
 
 public class LookupModule implements DruidModule
 {
+  // It ends with a `.`   so remove it
+  static final String DATASOURCE_PROPERTY_BASE = MonitorsConfig.METRIC_DIMENSION_PREFIX.substring(
+      0,
+      MonitorsConfig.METRIC_DIMENSION_PREFIX.length() - 1
+  );
   static final String PROPERTY_BASE = "druid.lookup";
   public static final String FAILED_UPDATES_KEY = "failedUpdates";
 
@@ -84,6 +88,7 @@ public class LookupModule implements DruidModule
   {
     JsonConfigProvider.bind(binder, PROPERTY_BASE, LookupConfig.class);
     LifecycleModule.register(binder, LookupReferencesManager.class);
+    JsonConfigProvider.bind(binder, DATASOURCE_PROPERTY_BASE, DataSourceNameHolder.class);
     JsonConfigProvider.bind(binder, PROPERTY_BASE, LookupListeningAnnouncerConfig.class);
     Jerseys.addResource(binder, LookupListeningResource.class);
     Jerseys.addResource(binder, LookupIntrospectionResource.class);
@@ -188,9 +193,8 @@ class LookupResourceListenerAnnouncer extends ListenerResourceAnnouncer
 
 class LookupListeningAnnouncerConfig extends ListeningAnnouncerConfig
 {
-  private static final String PROPERTY = MonitorsConfig.METRIC_DIMENSION_PREFIX + DruidMetrics.DATASOURCE;
   public static final String DEFAULT_TIER = "__default";
-  private final Properties properties;
+  private final DataSourceNameHolder dataSourceNameHolder;
   @JsonProperty("lookupTier")
   private String lookupTier = null;
   @JsonProperty("lookupTierIsDatasource")
@@ -199,11 +203,11 @@ class LookupListeningAnnouncerConfig extends ListeningAnnouncerConfig
   @JsonCreator
   public LookupListeningAnnouncerConfig(
       @JacksonInject ZkPathsConfig zkPathsConfig,
-      @JacksonInject Properties properties
+      @JacksonInject DataSourceNameHolder dataSourceNameHolder
   )
   {
     super(zkPathsConfig);
-    this.properties = properties;
+    this.dataSourceNameHolder = dataSourceNameHolder;
   }
 
   public String getLookupTier()
@@ -212,10 +216,11 @@ class LookupListeningAnnouncerConfig extends ListeningAnnouncerConfig
         !(lookupTierIsDatasource && null != lookupTier),
         "Cannot specify both `lookupTier` and `lookupTierIsDatasource`"
     );
-    final String lookupTier = lookupTierIsDatasource ? properties.getProperty(PROPERTY) : this.lookupTier;
+    final String lookupTier = lookupTierIsDatasource ? dataSourceNameHolder.dataSource : this.lookupTier;
     return Preconditions.checkNotNull(
         lookupTier == null ? DEFAULT_TIER : Strings.emptyToNull(lookupTier),
-        "Cannot have empty lookup tier from %s", lookupTierIsDatasource ? PROPERTY : LookupModule.PROPERTY_BASE
+        "Cannot have empty lookup tier from %s",
+        lookupTierIsDatasource ? LookupModule.DATASOURCE_PROPERTY_BASE : LookupModule.PROPERTY_BASE
     );
   }
 
@@ -223,4 +228,10 @@ class LookupListeningAnnouncerConfig extends ListeningAnnouncerConfig
   {
     return LookupModule.getTierListenerPath(getLookupTier());
   }
+}
+
+class DataSourceNameHolder
+{
+  @JsonProperty(DruidMetrics.DATASOURCE)
+  String dataSource = null;
 }

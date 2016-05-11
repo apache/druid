@@ -40,7 +40,7 @@ import org.junit.Test;
 public class LookupListeningAnnouncerConfigTest
 {
   private static final String propertyBase = "some.property";
-  private static final Injector injector = Initialization.makeInjectorWithModules(
+  private final Injector injector = Initialization.makeInjectorWithModules(
       GuiceInjectors.makeStartupInjector(),
       ImmutableList.of(
           new Module()
@@ -52,7 +52,8 @@ public class LookupListeningAnnouncerConfigTest
                   binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, null)
               );
             }
-          }
+          },
+          new LookupModule()
       )
   );
 
