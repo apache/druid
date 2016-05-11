@@ -128,6 +128,11 @@ public class DruidNode
     return port;
   }
 
+  public boolean isListening()
+  {
+    return port >= 0;
+  }
+
   /**
    * Returns host and port together as something that can be used as part of a URI.
    */

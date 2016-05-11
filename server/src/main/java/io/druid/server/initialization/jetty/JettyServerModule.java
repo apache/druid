@@ -158,6 +158,9 @@ public class JettyServerModule extends JerseyServletModule
 
   static Server makeJettyServer(DruidNode node, ServerConfig config)
   {
+    if (!node.isListening()) {
+      return new Server();  // return dummy to prevent NPE
+    }
     final QueuedThreadPool threadPool = new QueuedThreadPool();
     threadPool.setMinThreads(config.getNumThreads());
     threadPool.setMaxThreads(config.getNumThreads());
