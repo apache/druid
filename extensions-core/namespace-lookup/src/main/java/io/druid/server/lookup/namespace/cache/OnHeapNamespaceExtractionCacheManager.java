@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.server.namespace.cache;
+package io.druid.server.lookup.namespace.cache;
 
 import com.google.common.primitives.Chars;
 import com.google.common.util.concurrent.Striped;
@@ -27,8 +27,8 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import io.druid.query.extraction.namespace.ExtractionNamespace;
-import io.druid.query.extraction.namespace.ExtractionNamespaceCacheFactory;
+import io.druid.query.lookup.namespace.ExtractionNamespace;
+import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;

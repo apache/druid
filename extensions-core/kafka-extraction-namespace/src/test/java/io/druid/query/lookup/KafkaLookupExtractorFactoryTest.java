@@ -28,7 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.StringUtils;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.server.namespace.cache.NamespaceExtractionCacheManager;
+import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import kafka.consumer.ConsumerIterator;
 import kafka.consumer.KafkaStream;
 import kafka.consumer.TopicFilter;
@@ -72,7 +72,7 @@ public class KafkaLookupExtractorFactoryTest
           Object valueId, DeserializationContext ctxt, BeanProperty forProperty, Object beanInstance
       )
       {
-        if ("io.druid.server.namespace.cache.NamespaceExtractionCacheManager".equals(valueId)) {
+        if ("io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager".equals(valueId)) {
           return cacheManager;
         } else {
           return null;

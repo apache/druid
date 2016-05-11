@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.server.namespace.cache;
+package io.druid.server.lookup.namespace.cache;
 
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -25,8 +25,8 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
-import io.druid.query.extraction.namespace.ExtractionNamespace;
-import io.druid.query.extraction.namespace.ExtractionNamespaceCacheFactory;
+import io.druid.query.lookup.namespace.ExtractionNamespace;
+import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
 import io.druid.server.metrics.NoopServiceEmitter;
 import org.junit.Assert;
 import org.junit.Before;

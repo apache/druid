@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.query.extraction.namespace;
+package io.druid.query.lookup.namespace;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;

@@ -34,15 +34,15 @@ import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Self;
-import io.druid.guice.annotations.Smile;
 import io.druid.initialization.Initialization;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.query.extraction.namespace.ExtractionNamespace;
-import io.druid.query.extraction.namespace.URIExtractionNamespace;
+import io.druid.query.lookup.NamespaceLookupExtractorFactory;
+import io.druid.query.lookup.namespace.ExtractionNamespace;
+import io.druid.query.lookup.namespace.URIExtractionNamespace;
 import io.druid.query.lookup.LookupExtractor;
 import io.druid.query.lookup.LookupExtractorFactory;
 import io.druid.server.DruidNode;
-import io.druid.server.namespace.cache.NamespaceExtractionCacheManager;
+import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -75,7 +75,7 @@ public class NamespaceLookupExtractorFactoryTest
               Object valueId, DeserializationContext ctxt, BeanProperty forProperty, Object beanInstance
           )
           {
-            if ("io.druid.server.namespace.cache.NamespaceExtractionCacheManager".equals(valueId)) {
+            if ("io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager".equals(valueId)) {
               return cacheManager;
             }
             return null;

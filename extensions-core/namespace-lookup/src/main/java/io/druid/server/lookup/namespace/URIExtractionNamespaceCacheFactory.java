@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.server.namespace;
+package io.druid.server.lookup.namespace;
 
 import com.google.common.base.Throwables;
 import com.google.common.io.ByteSource;
@@ -29,8 +29,8 @@ import com.metamx.common.logger.Logger;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.SearchableVersionedDataFinder;
 import io.druid.data.input.MapPopulator;
-import io.druid.query.extraction.namespace.ExtractionNamespaceCacheFactory;
-import io.druid.query.extraction.namespace.URIExtractionNamespace;
+import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
+import io.druid.query.lookup.namespace.URIExtractionNamespace;
 import io.druid.segment.loading.URIDataPuller;
 import java.io.FileNotFoundException;
 import java.io.IOException;

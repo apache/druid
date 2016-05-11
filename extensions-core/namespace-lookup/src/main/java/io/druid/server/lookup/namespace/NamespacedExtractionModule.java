@@ -17,11 +17,10 @@
  * under the License.
  */
 
-package io.druid.server.namespace;
+package io.druid.server.lookup.namespace;
 
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Key;
@@ -30,17 +29,15 @@ import com.google.inject.multibindings.MapBinder;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.PolyBind;
 import io.druid.initialization.DruidModule;
-import io.druid.query.extraction.NamespaceLookupExtractorFactory;
-import io.druid.query.extraction.namespace.ExtractionNamespace;
-import io.druid.query.extraction.namespace.ExtractionNamespaceCacheFactory;
-import io.druid.query.extraction.namespace.JDBCExtractionNamespace;
-import io.druid.query.extraction.namespace.URIExtractionNamespace;
-import io.druid.server.namespace.cache.NamespaceExtractionCacheManager;
-import io.druid.server.namespace.cache.OffHeapNamespaceExtractionCacheManager;
-import io.druid.server.namespace.cache.OnHeapNamespaceExtractionCacheManager;
+import io.druid.query.lookup.NamespaceLookupExtractorFactory;
+import io.druid.query.lookup.namespace.ExtractionNamespace;
+import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
+import io.druid.query.lookup.namespace.JDBCExtractionNamespace;
+import io.druid.query.lookup.namespace.URIExtractionNamespace;
+import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
+import io.druid.server.lookup.namespace.cache.OffHeapNamespaceExtractionCacheManager;
+import io.druid.server.lookup.namespace.cache.OnHeapNamespaceExtractionCacheManager;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  *

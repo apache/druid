@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.server.namespace;
+package io.druid.server.lookup.namespace;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
@@ -30,16 +30,16 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.data.SearchableVersionedDataFinder;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.query.extraction.namespace.ExtractionNamespace;
-import io.druid.query.extraction.namespace.ExtractionNamespaceCacheFactory;
-import io.druid.query.extraction.namespace.URIExtractionNamespace;
-import io.druid.query.extraction.namespace.URIExtractionNamespaceTest;
+import io.druid.query.lookup.namespace.ExtractionNamespace;
+import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
+import io.druid.query.lookup.namespace.URIExtractionNamespace;
+import io.druid.query.lookup.namespace.URIExtractionNamespaceTest;
 import io.druid.segment.loading.LocalFileTimestampVersionFinder;
 import io.druid.server.metrics.NoopServiceEmitter;
-import io.druid.server.namespace.cache.NamespaceExtractionCacheManager;
-import io.druid.server.namespace.cache.NamespaceExtractionCacheManagersTest;
-import io.druid.server.namespace.cache.OffHeapNamespaceExtractionCacheManager;
-import io.druid.server.namespace.cache.OnHeapNamespaceExtractionCacheManager;
+import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
+import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManagersTest;
+import io.druid.server.lookup.namespace.cache.OffHeapNamespaceExtractionCacheManager;
+import io.druid.server.lookup.namespace.cache.OnHeapNamespaceExtractionCacheManager;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;

@@ -32,7 +32,7 @@ import com.metamx.common.StringUtils;
 import com.metamx.common.logger.Logger;
 import io.druid.guice.GuiceInjectors;
 import io.druid.initialization.Initialization;
-import io.druid.server.namespace.NamespacedExtractionModule;
+import io.druid.server.lookup.namespace.NamespacedExtractionModule;
 import kafka.admin.AdminUtils;
 import kafka.javaapi.producer.Producer;
 import kafka.producer.KeyedMessage;

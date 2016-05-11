@@ -17,23 +17,22 @@
  * under the License.
  */
 
-package io.druid.server.namespace;
+package io.druid.server.lookup.namespace;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Function;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.lifecycle.Lifecycle;
 import io.druid.data.SearchableVersionedDataFinder;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.query.extraction.namespace.ExtractionNamespace;
-import io.druid.query.extraction.namespace.ExtractionNamespaceCacheFactory;
-import io.druid.query.extraction.namespace.JDBCExtractionNamespace;
-import io.druid.query.extraction.namespace.URIExtractionNamespace;
-import io.druid.query.extraction.namespace.URIExtractionNamespaceTest;
+import io.druid.query.lookup.namespace.ExtractionNamespace;
+import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
+import io.druid.query.lookup.namespace.JDBCExtractionNamespace;
+import io.druid.query.lookup.namespace.URIExtractionNamespace;
+import io.druid.query.lookup.namespace.URIExtractionNamespaceTest;
 import io.druid.segment.loading.LocalFileTimestampVersionFinder;
 import io.druid.server.metrics.NoopServiceEmitter;
-import io.druid.server.namespace.cache.NamespaceExtractionCacheManager;
-import io.druid.server.namespace.cache.OnHeapNamespaceExtractionCacheManager;
+import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
+import io.druid.server.lookup.namespace.cache.OnHeapNamespaceExtractionCacheManager;
 import org.joda.time.Period;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -47,8 +46,6 @@ import java.io.FileWriter;
 import java.io.OutputStreamWriter;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 /**
  *

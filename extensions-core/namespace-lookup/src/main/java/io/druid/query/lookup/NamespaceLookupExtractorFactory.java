@@ -16,23 +16,23 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package io.druid.query.extraction;
+
+package io.druid.query.lookup;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
 import com.metamx.common.ISE;
 import com.metamx.common.StringUtils;
 import com.metamx.common.logger.Logger;
-import io.druid.query.extraction.namespace.ExtractionNamespace;
-import io.druid.query.lookup.LookupExtractor;
-import io.druid.query.lookup.LookupExtractorFactory;
-import io.druid.query.lookup.LookupIntrospectHandler;
-import io.druid.server.namespace.cache.NamespaceExtractionCacheManager;
+import io.druid.query.extraction.MapLookupExtractor;
+import io.druid.query.lookup.namespace.ExtractionNamespace;
+import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -132,6 +132,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
     };
   }
 
+  @VisibleForTesting
   public NamespaceLookupExtractorFactory(
       ExtractionNamespace extractionNamespace,
       NamespaceExtractionCacheManager manager

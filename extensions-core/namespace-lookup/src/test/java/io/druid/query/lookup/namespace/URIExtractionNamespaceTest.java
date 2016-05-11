@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.query.extraction.namespace;
+package io.druid.query.lookup.namespace;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;

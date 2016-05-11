@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.server.namespace.cache;
+package io.druid.server.lookup.namespace.cache;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
@@ -27,12 +27,8 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
-import io.druid.query.extraction.namespace.ExtractionNamespace;
-import io.druid.query.extraction.namespace.ExtractionNamespaceCacheFactory;
-import java.util.concurrent.atomic.AtomicLong;
-import org.mapdb.DB;
-import org.mapdb.DBMaker;
-
+import io.druid.query.lookup.namespace.ExtractionNamespace;
+import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
@@ -40,6 +36,8 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.Lock;
+import org.mapdb.DB;
+import org.mapdb.DBMaker;
 
 /**
  *
@@ -177,7 +175,8 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
   }
 
   @Override
-  protected void monitor(ServiceEmitter serviceEmitter) {
+  protected void monitor(ServiceEmitter serviceEmitter)
+  {
     serviceEmitter.emit(ServiceMetricEvent.builder().build("namespace/cache/diskSize", tmpFile.length()));
   }
 }

@@ -17,11 +17,8 @@
  * under the License.
  */
 
-package io.druid.query.extraction.namespace;
+package io.druid.query.lookup.namespace;
 
-import com.google.common.base.Function;
-
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
 

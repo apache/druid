@@ -11,12 +11,17 @@ Lookups are an <a href="../development/experimental.html">experimental</a> featu
 Make sure to [include](../../operations/including-extensions.html) `druid-namespace-lookup` as an extension.
 
 ## Configuration
+<div class="note caution">
+Static configuration is no longer supported. Only cluster wide configuration is supported
+</div>
 
-Namespaced lookups are appropriate for lookups which are not possible to pass at query time due to their size, 
+Cached namespace lookups are appropriate for lookups which are not possible to pass at query time due to their size, 
 or are not desired to be passed at query time because the data is to reside in and be handled by the Druid servers,
 and are small enough to reasonably populate on a node. This usually means tens to tens of thousands of entries per lookup.
 
-Namespaced lookups can be specified as part of the [cluster wide config for lookups](../../querying/lookups.html) as a type of `cachedNamespace`
+Cached namespace lookups all draw from the same cache pool, allowing each node to have a fixed cache pool that can be used by namespace lookups.
+
+Cached namespace lookups can be specified as part of the [cluster wide config for lookups](../../querying/lookups.html) as a type of `cachedNamespace`
 
  ```json
  {
@@ -55,7 +60,8 @@ Namespaced lookups can be specified as part of the [cluster wide config for look
        "valueColumn": "MyValueColumn",
        "tsColumn": "timeColumn"
     },
-    "firstCacheTimeout": 120000
+    "firstCacheTimeout": 120000,
+    "oneToOne":true
 }
  ```
 
@@ -64,6 +70,7 @@ The parameters are as follows
 |--------|-----------|--------|-------|
 |`extractionNamespace`|Specifies how to populate the local cache. See below|Yes|-|
 |`firstCacheTimeout`|How long to wait (in ms) for the first run of the cache to populate. 0 indicates to not wait|No|`60000` (1 minute)|
+|`oneToOne`|If the underlying map is injective (keys and values are unique) then optimizations can occur internally by setting this to `true`|No|`false`|
 
 Proper functionality of Namespaced lookups requires the following extension to be loaded on the broker, peon, and historical nodes: 
 `druid-namespace-lookup`
@@ -263,3 +270,7 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
   "pollPeriod":600000
 }
 ```
+
+# Introspection
+
+Cached namespace lookups have introspection points at `/keys` and `/values` which return a complete set of the keys and values (respectively) in the lookup.

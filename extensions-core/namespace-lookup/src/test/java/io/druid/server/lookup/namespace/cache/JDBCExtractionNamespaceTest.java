@@ -17,14 +17,12 @@
  * under the License.
  */
 
-package io.druid.server.namespace.cache;
+package io.druid.server.lookup.namespace.cache;
 
-import com.google.common.base.Function;
 import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Sets;
 import com.google.common.io.Closer;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
@@ -33,11 +31,11 @@ import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import io.druid.concurrent.Execs;
 import io.druid.metadata.TestDerbyConnector;
-import io.druid.query.extraction.namespace.ExtractionNamespace;
-import io.druid.query.extraction.namespace.ExtractionNamespaceCacheFactory;
-import io.druid.query.extraction.namespace.JDBCExtractionNamespace;
+import io.druid.query.lookup.namespace.ExtractionNamespace;
+import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
+import io.druid.query.lookup.namespace.JDBCExtractionNamespace;
 import io.druid.server.metrics.NoopServiceEmitter;
-import io.druid.server.namespace.JDBCExtractionNamespaceCacheFactory;
+import io.druid.server.lookup.namespace.JDBCExtractionNamespaceCacheFactory;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
@@ -51,12 +49,8 @@ import org.skife.jdbi.v2.Handle;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;

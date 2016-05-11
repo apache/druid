@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.server.namespace.cache;
+package io.druid.server.lookup.namespace.cache;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
@@ -30,13 +30,13 @@ import com.metamx.common.IAE;
 import com.metamx.common.lifecycle.Lifecycle;
 import io.druid.concurrent.Execs;
 import io.druid.data.SearchableVersionedDataFinder;
-import io.druid.query.extraction.namespace.ExtractionNamespace;
-import io.druid.query.extraction.namespace.ExtractionNamespaceCacheFactory;
-import io.druid.query.extraction.namespace.URIExtractionNamespace;
-import io.druid.query.extraction.namespace.URIExtractionNamespaceTest;
+import io.druid.query.lookup.namespace.ExtractionNamespace;
+import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
+import io.druid.query.lookup.namespace.URIExtractionNamespace;
+import io.druid.query.lookup.namespace.URIExtractionNamespaceTest;
 import io.druid.segment.loading.LocalFileTimestampVersionFinder;
 import io.druid.server.metrics.NoopServiceEmitter;
-import io.druid.server.namespace.URIExtractionNamespaceCacheFactory;
+import io.druid.server.lookup.namespace.URIExtractionNamespaceCacheFactory;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;

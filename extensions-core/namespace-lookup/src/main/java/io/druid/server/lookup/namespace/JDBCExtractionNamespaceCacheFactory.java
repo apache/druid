@@ -17,13 +17,13 @@
  * under the License.
  */
 
-package io.druid.server.namespace;
+package io.druid.server.lookup.namespace;
 
 import com.metamx.common.Pair;
 import com.metamx.common.logger.Logger;
 import io.druid.common.utils.JodaUtils;
-import io.druid.query.extraction.namespace.ExtractionNamespaceCacheFactory;
-import io.druid.query.extraction.namespace.JDBCExtractionNamespace;
+import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
+import io.druid.query.lookup.namespace.JDBCExtractionNamespace;
 import org.skife.jdbi.v2.DBI;
 import org.skife.jdbi.v2.Handle;
 import org.skife.jdbi.v2.StatementContext;

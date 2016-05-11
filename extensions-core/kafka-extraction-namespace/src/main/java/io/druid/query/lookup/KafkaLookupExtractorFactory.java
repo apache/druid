@@ -37,7 +37,7 @@ import com.metamx.common.StringUtils;
 import com.metamx.common.logger.Logger;
 import io.druid.concurrent.Execs;
 import io.druid.query.extraction.MapLookupExtractor;
-import io.druid.server.namespace.cache.NamespaceExtractionCacheManager;
+import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
