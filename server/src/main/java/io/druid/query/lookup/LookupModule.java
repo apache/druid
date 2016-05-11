@@ -26,6 +26,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HostAndPort;
@@ -43,6 +45,7 @@ import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Self;
 import io.druid.guice.annotations.Smile;
 import io.druid.initialization.DruidModule;
+import io.druid.query.DruidMetrics;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.ZkPathsConfig;
 import io.druid.server.listener.announcer.ListenerResourceAnnouncer;
@@ -50,16 +53,17 @@ import io.druid.server.listener.announcer.ListeningAnnouncerConfig;
 import io.druid.server.listener.resource.AbstractListenerHandler;
 import io.druid.server.listener.resource.ListenerResource;
 import io.druid.server.lookup.cache.LookupCoordinatorManager;
-import org.apache.curator.utils.ZKPaths;
-
-import javax.ws.rs.Path;
+import io.druid.server.metrics.MonitorsConfig;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
+import javax.ws.rs.Path;
+import org.apache.curator.utils.ZKPaths;
 
 public class LookupModule implements DruidModule
 {
-  private static final String PROPERTY_BASE = "druid.lookup";
+  static final String PROPERTY_BASE = "druid.lookup";
   public static final String FAILED_UPDATES_KEY = "failedUpdates";
 
   public static String getTierListenerPath(String tier)
@@ -184,31 +188,35 @@ class LookupResourceListenerAnnouncer extends ListenerResourceAnnouncer
 
 class LookupListeningAnnouncerConfig extends ListeningAnnouncerConfig
 {
+  private static final String PROPERTY = MonitorsConfig.METRIC_DIMENSION_PREFIX + DruidMetrics.DATASOURCE;
   public static final String DEFAULT_TIER = "__default";
+  private final Properties properties;
   @JsonProperty("lookupTier")
   private String lookupTier = null;
+  @JsonProperty("lookupTierIsDatasource")
+  private boolean lookupTierIsDatasource = false;
 
   @JsonCreator
-  public static LookupListeningAnnouncerConfig createLookupListeningAnnouncerConfig(
+  public LookupListeningAnnouncerConfig(
       @JacksonInject ZkPathsConfig zkPathsConfig,
-      @JsonProperty("lookupTier") String lookupTier
+      @JacksonInject Properties properties
   )
   {
-    final LookupListeningAnnouncerConfig lookupListeningAnnouncerConfig = new LookupListeningAnnouncerConfig(
-        zkPathsConfig);
-    lookupListeningAnnouncerConfig.lookupTier = lookupTier;
-    return lookupListeningAnnouncerConfig;
-  }
-
-  @Inject
-  public LookupListeningAnnouncerConfig(ZkPathsConfig zkPathsConfig)
-  {
     super(zkPathsConfig);
+    this.properties = properties;
   }
 
   public String getLookupTier()
   {
-    return lookupTier == null ? DEFAULT_TIER : lookupTier;
+    Preconditions.checkArgument(
+        !(lookupTierIsDatasource && null != lookupTier),
+        "Cannot specify both `lookupTier` and `lookupTierIsDatasource`"
+    );
+    final String lookupTier = lookupTierIsDatasource ? properties.getProperty(PROPERTY) : this.lookupTier;
+    return Preconditions.checkNotNull(
+        lookupTier == null ? DEFAULT_TIER : Strings.emptyToNull(lookupTier),
+        "Cannot have empty lookup tier from %s", lookupTierIsDatasource ? PROPERTY : LookupModule.PROPERTY_BASE
+    );
   }
 
   public String getLookupKey()
