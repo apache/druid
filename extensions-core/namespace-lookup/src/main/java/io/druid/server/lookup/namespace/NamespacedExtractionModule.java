@@ -52,7 +52,6 @@ public class NamespacedExtractionModule implements DruidModule
     return ImmutableList.<Module>of(
         new SimpleModule("DruidNamespacedExtractionModule")
             .registerSubtypes(
-                ExtractionNamespace.class,
                 NamespaceLookupExtractorFactory.class
             )
     );
