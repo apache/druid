@@ -189,12 +189,12 @@ public class IndexGeneratorJobPartitionDirTest
     mapper = HadoopDruidIndexerConfig.JSON_MAPPER;
     mapper.registerSubtypes(new NamedType(HashBasedNumberedShardSpec.class, "hashed"));
 
-    dataRoot = temporaryFolder.newFolder("data");
+    dataRoot = temporaryFolder.newFolder("data=hear");
     outputRoot = temporaryFolder.newFolder("output");
 
     for (Map.Entry<String, List<String>> entry: data.entrySet()) {
-      temporaryFolder.newFolder(("data/" + entry.getKey()).split("/"));
-      File dataFile = temporaryFolder.newFile("data/" + entry.getKey() + "/data");
+      temporaryFolder.newFolder(("data=hear/" + entry.getKey()).split("/"));
+      File dataFile = temporaryFolder.newFile("data=hear/" + entry.getKey() + "/data");
       FileUtils.writeLines(dataFile, entry.getValue());
     }
 
