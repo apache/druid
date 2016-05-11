@@ -21,9 +21,11 @@ package io.druid.timeline.partition;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.collect.RangeSet;
 import io.druid.data.input.InputRow;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * A Marker interface that exists to combine ShardSpec objects together for Jackson
@@ -41,4 +43,6 @@ public interface ShardSpec
   public int getPartitionNum();
 
   public ShardSpecLookup getLookup(List<ShardSpec> shardSpecs);
+
+  public Map<String, RangeSet<String>> getDomain();
 }

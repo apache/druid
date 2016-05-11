@@ -31,6 +31,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
+import com.google.common.collect.TreeRangeSet;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -68,6 +69,7 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.partition.PartitionChunk;
+import io.druid.timeline.partition.SingleDimensionShardData;
 import org.joda.time.Interval;
 
 import java.io.IOException;
@@ -221,14 +223,38 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     final List<TimelineObjectHolder<String, ServerSelector>> filteredServersLookup =
         toolChest.filterSegments(query, serversLookup);
 
+    List<String> dimensions = Lists.newArrayList();
+    Map<String, RangeSet<String>> dimensionRangeMap = Maps.newHashMap();
+    DimFilter filter = query.getFilter();
+    if (filter != null) {
+      for (String dimension : dimensions) {
+        dimensionRangeMap.put(dimension, filter.getDimensionRangeSet(dimension));
+      }
+    }
+
+    // Filter unneeded chunks based on partition dimension
     for (TimelineObjectHolder<String, ServerSelector> holder : filteredServersLookup) {
       for (PartitionChunk<ServerSelector> chunk : holder.getObject()) {
         ServerSelector selector = chunk.getObject();
-        final SegmentDescriptor descriptor = new SegmentDescriptor(
-            holder.getInterval(), holder.getVersion(), chunk.getChunkNumber()
-        );
+        boolean include = true;
 
-        segments.add(Pair.of(selector, descriptor));
+        if (filter != null) {
+          Map<String, RangeSet<String>> domain = selector.getSegment().getShardSpec().getDomain();
+          for (Map.Entry<String, RangeSet<String>> entry : domain.entrySet()) {
+            RangeSet<String> intersectRange = TreeRangeSet.create(dimensionRangeMap.get(entry.getKey()));
+            intersectRange.removeAll(entry.getValue().complement());
+            if (intersectRange.isEmpty()) {
+              include = false;
+            }
+          }
+        }
+
+        if (include) {
+          final SegmentDescriptor descriptor = new SegmentDescriptor(
+              holder.getInterval(), holder.getVersion(), chunk.getChunkNumber()
+          );
+          segments.add(Pair.of(selector, descriptor));
+        }
       }
     }
 
@@ -541,14 +567,6 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
         query.getResultOrdering(),
         Sequences.simple(sequencesByInterval)
     );
-  }
-
-  protected <T extends Comparable<T>> List<TimelineObjectHolder<String, ServerSelector>> filterSecondary (
-      List<TimelineObjectHolder<String, ServerSelector>> serverLookup,
-      RangeSet<String> filterRangeSet
-  )
-  {
-    return null;
   }
 
   private static class CachePopulator
