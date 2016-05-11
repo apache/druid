@@ -61,6 +61,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -291,9 +292,11 @@ public class IndexGeneratorJobPartitionDirTest
 
         Assert.assertEquals(dataSourceName, dataSegment.getDataSource());
         Assert.assertTrue(dataSegment.getDimensions().size() == 3);
-        Assert.assertEquals("host", dataSegment.getDimensions().get(0));
-        Assert.assertEquals("test1", dataSegment.getDimensions().get(1));
-        Assert.assertEquals("test2", dataSegment.getDimensions().get(2));
+        String[] dimensions = dataSegment.getDimensions().toArray(new String[dataSegment.getDimensions().size()]);
+        Arrays.sort(dimensions);
+        Assert.assertEquals("host", dimensions[0]);
+        Assert.assertEquals("test1", dimensions[1]);
+        Assert.assertEquals("test2", dimensions[2]);
         Assert.assertEquals("visited_num", dataSegment.getMetrics().get(0));
         Assert.assertEquals("unique_hosts", dataSegment.getMetrics().get(1));
 
