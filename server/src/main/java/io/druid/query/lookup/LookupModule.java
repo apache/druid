@@ -118,7 +118,8 @@ class LookupListeningResource extends ListenerResource
             for (final String name : lookups.keySet()) {
               final LookupExtractorFactory factory = lookups.get(name);
               try {
-                if (!manager.updateIfNew(name, factory)) {
+                // Only fail if it should have updated but didn't.
+                if (!manager.updateIfNew(name, factory) && factory.replaces(manager.get(name))) {
                   failedUpdates.put(name, factory);
                 }
               }
