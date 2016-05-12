@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.query.extraction;
+package io.druid.query.lookup;
 
 import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.DeserializationContext;
@@ -36,13 +36,11 @@ import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Self;
 import io.druid.initialization.Initialization;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.query.lookup.NamespaceLookupExtractorFactory;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.URIExtractionNamespace;
-import io.druid.query.lookup.LookupExtractor;
-import io.druid.query.lookup.LookupExtractorFactory;
 import io.druid.server.DruidNode;
 import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
+import java.util.concurrent.ConcurrentHashMap;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -51,8 +49,6 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
-
-import java.util.concurrent.ConcurrentHashMap;
 
 public class NamespaceLookupExtractorFactoryTest
 {
@@ -455,7 +451,10 @@ public class NamespaceLookupExtractorFactoryTest
     );
     final ObjectMapper mapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
     mapper.registerSubtypes(NamespaceLookupExtractorFactory.class);
-    final LookupExtractorFactory factory = mapper.readValue("{ \"type\": \"cachedNamespace\", \"extractionNamespace\": { \"type\": \"uri\", \"uriPrefix\": \"s3://bucket/prefix/\", \"fileRegex\": \"foo.*\\\\.gz\", \"namespaceParseSpec\": { \"format\": \"customJson\", \"keyFieldName\": \"someKey\", \"valueFieldName\": \"someVal\" }, \"pollPeriod\": \"PT5M\" } } }", LookupExtractorFactory.class);
+    final LookupExtractorFactory factory = mapper.readValue(
+        "{ \"type\": \"cachedNamespace\", \"extractionNamespace\": { \"type\": \"uri\", \"uriPrefix\": \"s3://bucket/prefix/\", \"fileRegex\": \"foo.*\\\\.gz\", \"namespaceParseSpec\": { \"format\": \"customJson\", \"keyFieldName\": \"someKey\", \"valueFieldName\": \"someVal\" }, \"pollPeriod\": \"PT5M\" } } }",
+        LookupExtractorFactory.class
+    );
     Assert.assertTrue(factory instanceof NamespaceLookupExtractorFactory);
     Assert.assertNotNull(mapper.writeValueAsString(factory));
   }

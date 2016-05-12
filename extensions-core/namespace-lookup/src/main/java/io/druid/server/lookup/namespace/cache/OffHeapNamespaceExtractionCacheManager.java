@@ -76,27 +76,32 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
         .commitFileSyncDisable()
         .cacheSize(10_000_000)
         .make();
-    lifecycle.addHandler(
-        new Lifecycle.Handler()
-        {
-          @Override
-          public void start() throws Exception
+    try {
+      lifecycle.addMaybeStartHandler(
+          new Lifecycle.Handler()
           {
-            // NOOP
-          }
+            @Override
+            public void start() throws Exception
+            {
+              // NOOP
+            }
 
-          @Override
-          public void stop()
-          {
-            if (!mmapDB.isClosed()) {
-              mmapDB.close();
-              if (!tmpFile.delete()) {
-                log.warn("Unable to delete file at [%s]", tmpFile.getAbsolutePath());
+            @Override
+            public void stop()
+            {
+              if (!mmapDB.isClosed()) {
+                mmapDB.close();
+                if (!tmpFile.delete()) {
+                  log.warn("Unable to delete file at [%s]", tmpFile.getAbsolutePath());
+                }
               }
             }
           }
-        }
-    );
+      );
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
   }
 
   @Override

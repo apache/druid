@@ -19,8 +19,6 @@
 
 package io.druid.server.lookup.namespace.cache;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -53,11 +51,6 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  *
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = OnHeapNamespaceExtractionCacheManager.class)
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "offHeap", value = OffHeapNamespaceExtractionCacheManager.class),
-    @JsonSubTypes.Type(name = "onHeap", value = OnHeapNamespaceExtractionCacheManager.class)
-})
 public abstract class NamespaceExtractionCacheManager
 {
   protected static class NamespaceImplData

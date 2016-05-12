@@ -44,7 +44,7 @@ import java.util.List;
  */
 public class NamespacedExtractionModule implements DruidModule
 {
-  private static final String TYPE_PREFIX = "druid.query.extraction.namespace.cache.type";
+  public static final String TYPE_PREFIX = "druid.query.extraction.namespace.cache.type";
 
   @Override
   public List<? extends Module> getJacksonModules()
@@ -80,12 +80,12 @@ public class NamespacedExtractionModule implements DruidModule
         TYPE_PREFIX,
         Key.get(NamespaceExtractionCacheManager.class),
         Key.get(OnHeapNamespaceExtractionCacheManager.class),
-        "onheap"
+        "onHeap"
     ).in(LazySingleton.class);
 
     PolyBind
         .optionBinder(binder, Key.get(NamespaceExtractionCacheManager.class))
-        .addBinding("offheap")
+        .addBinding("offHeap")
         .to(OffHeapNamespaceExtractionCacheManager.class)
         .in(LazySingleton.class);
 
