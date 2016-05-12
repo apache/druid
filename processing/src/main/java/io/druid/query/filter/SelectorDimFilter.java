@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 import com.metamx.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.lookup.LookupExtractionFn;
@@ -80,35 +81,7 @@ public class SelectorDimFilter implements DimFilter
   {
     if (this.getExtractionFn() instanceof LookupExtractionFn
         && ((LookupExtractionFn) this.getExtractionFn()).isOptimize()) {
-      LookupExtractionFn exFn = (LookupExtractionFn) this.getExtractionFn();
-      LookupExtractor lookup = exFn.getLookup();
-
-      final String convertedValue = Strings.emptyToNull(value);
-
-      // We cannot do an unapply()-based optimization if the selector value
-      // and the replaceMissingValuesWith value are the same, since we have to match on
-      // all values that are not present in the lookup.
-      if (!exFn.isRetainMissingValue() && Objects.equals(convertedValue, exFn.getReplaceMissingValueWith())) {
-        return this;
-      }
-
-      final String mappingForValue = lookup.apply(convertedValue);
-      final List<String> keys = new ArrayList<>();
-      keys.addAll(lookup.unapply(convertedValue));
-
-      // If retainMissingValues is true and the selector value is not in the lookup map,
-      // there may be row values that match the selector value but are not included
-      // in the lookup map. Match on the selector value as well.
-      // If the selector value is overwritten in the lookup map, don't add selector value to keys.
-      if (exFn.isRetainMissingValue() && mappingForValue == null) {
-        keys.add(convertedValue);
-      }
-
-      if (keys.isEmpty()) {
-        return this;
-      } else {
-        return new InDimFilter(dimension, keys, null).optimize();
-      }
+        return new InDimFilter(dimension, ImmutableList.of(value), extractionFn).optimize();
     }
     return this;
   }

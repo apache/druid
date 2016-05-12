@@ -121,10 +121,6 @@ public class InDimFilter implements DimFilter
   @Override
   public DimFilter optimize()
   {
-    if (values.size() == 1) {
-      return new SelectorDimFilter(dimension, values.first(), extractionFn).optimize();
-    }
-    // Similar optimization as SelectorDimFilter
     if (extractionFn instanceof LookupExtractionFn
             && ((LookupExtractionFn) extractionFn).isOptimize()) {
       LookupExtractionFn exFn = (LookupExtractionFn) extractionFn;
@@ -132,11 +128,20 @@ public class InDimFilter implements DimFilter
 
       final List<String> keys = new ArrayList<>();
       for (String value : values) {
+
+        // We cannot do an unapply()-based optimization if the selector value
+        // and the replaceMissingValuesWith value are the same, since we have to match on
+        // all values that are not present in the lookup.
         final String convertedValue = Strings.emptyToNull(value);
         if (!exFn.isRetainMissingValue() && Objects.equals(convertedValue, exFn.getReplaceMissingValueWith())) {
           return this;
         }
         keys.addAll(lookup.unapply(convertedValue));
+
+        // If retainMissingValues is true and the selector value is not in the lookup map,
+        // there may be row values that match the selector value but are not included
+        // in the lookup map. Match on the selector value as well.
+        // If the selector value is overwritten in the lookup map, don't add selector value to keys.
         if (exFn.isRetainMissingValue() && lookup.apply(convertedValue) == null) {
           keys.add(convertedValue);
         }
@@ -145,9 +150,10 @@ public class InDimFilter implements DimFilter
       if (keys.isEmpty()) {
         return this;
       } else {
-        return new InDimFilter(dimension, keys, null).optimize();
+        return new InDimFilter(dimension, keys, null);
       }
     }
+
     return this;
   }
 
