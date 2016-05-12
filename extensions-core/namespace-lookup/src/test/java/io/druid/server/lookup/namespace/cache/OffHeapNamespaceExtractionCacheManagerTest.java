@@ -42,7 +42,8 @@ public class OffHeapNamespaceExtractionCacheManagerTest
     final Injector injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(),
         ImmutableList.of(
-            new Module(){
+            new Module()
+            {
               @Override
               public void configure(Binder binder)
               {

@@ -34,18 +34,8 @@ import io.druid.metadata.TestDerbyConnector;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
 import io.druid.query.lookup.namespace.JDBCExtractionNamespace;
-import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.lookup.namespace.JDBCExtractionNamespaceCacheFactory;
-import org.joda.time.Period;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.skife.jdbi.v2.Handle;
-
+import io.druid.server.metrics.NoopServiceEmitter;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.Collection;
@@ -57,6 +47,15 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
+import org.joda.time.Period;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+import org.skife.jdbi.v2.Handle;
 
 /**
  *
@@ -199,7 +198,12 @@ public class JDBCExtractionNamespaceTest
                           final Map<String, String> cache
                       )
                       {
-                        final Callable<String> cachePopulator = super.getCachePopulator(id, namespace, lastVersion, cache);
+                        final Callable<String> cachePopulator = super.getCachePopulator(
+                            id,
+                            namespace,
+                            lastVersion,
+                            cache
+                        );
                         return new Callable<String>()
                         {
                           @Override

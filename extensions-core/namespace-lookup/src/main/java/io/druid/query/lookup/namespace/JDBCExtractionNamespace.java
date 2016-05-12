@@ -24,11 +24,10 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import io.druid.metadata.MetadataStorageConnectorConfig;
-import org.joda.time.Period;
-
 import javax.annotation.Nullable;
 import javax.validation.constraints.Min;
 import javax.validation.constraints.NotNull;
+import org.joda.time.Period;
 
 /**
  *

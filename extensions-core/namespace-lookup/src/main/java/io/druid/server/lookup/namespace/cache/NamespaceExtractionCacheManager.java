@@ -131,9 +131,11 @@ public abstract class NamespaceExtractionCacheManager
 
   /**
    * Optional monitoring for overriding classes. `super.monitor` does *NOT* need to be called by overriding methods
+   *
    * @param serviceEmitter The emitter to emit to
    */
-  protected void monitor(ServiceEmitter serviceEmitter) {
+  protected void monitor(ServiceEmitter serviceEmitter)
+  {
     // Noop by default
   }
 

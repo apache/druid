@@ -35,16 +35,8 @@ import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
 import io.druid.query.lookup.namespace.URIExtractionNamespace;
 import io.druid.query.lookup.namespace.URIExtractionNamespaceTest;
 import io.druid.segment.loading.LocalFileTimestampVersionFinder;
-import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.server.lookup.namespace.URIExtractionNamespaceCacheFactory;
-import org.joda.time.Period;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-
+import io.druid.server.metrics.NoopServiceEmitter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStream;
@@ -64,6 +56,13 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicLong;
+import org.joda.time.Period;
+import org.junit.After;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 /**
  *

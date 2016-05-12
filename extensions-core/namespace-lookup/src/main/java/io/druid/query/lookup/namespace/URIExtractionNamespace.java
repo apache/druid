@@ -40,11 +40,6 @@ import com.metamx.common.parsers.DelimitedParser;
 import com.metamx.common.parsers.JSONParser;
 import com.metamx.common.parsers.Parser;
 import io.druid.guice.annotations.Json;
-import org.joda.time.Period;
-
-import javax.annotation.Nullable;
-import javax.validation.constraints.Min;
-import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.net.URI;
 import java.util.Arrays;
@@ -52,6 +47,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
+import javax.annotation.Nullable;
+import javax.validation.constraints.Min;
+import javax.validation.constraints.NotNull;
+import org.joda.time.Period;
 
 /**
  *
