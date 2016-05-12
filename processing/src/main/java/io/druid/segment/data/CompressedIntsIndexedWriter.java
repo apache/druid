@@ -43,7 +43,8 @@ public class CompressedIntsIndexedWriter extends SingleValueIndexedIntsWriter
   public static CompressedIntsIndexedWriter create(
       final IOPeon ioPeon,
       final String filenameBase,
-      final CompressedObjectStrategy.CompressionStrategy compression
+      final CompressedObjectStrategy.CompressionStrategy compression,
+      final GenericIndexedWriterFactory genericIndexedWriterFactory
   )
   {
     return new CompressedIntsIndexedWriter(
@@ -51,7 +52,8 @@ public class CompressedIntsIndexedWriter extends SingleValueIndexedIntsWriter
         filenameBase,
         CompressedIntsIndexedSupplier.MAX_INTS_IN_BUFFER,
         IndexIO.BYTE_ORDER,
-        compression
+        compression,
+        genericIndexedWriterFactory
     );
   }
 
@@ -66,12 +68,13 @@ public class CompressedIntsIndexedWriter extends SingleValueIndexedIntsWriter
       final String filenameBase,
       final int chunkFactor,
       final ByteOrder byteOrder,
-      final CompressedObjectStrategy.CompressionStrategy compression
+      final CompressedObjectStrategy.CompressionStrategy compression,
+      final GenericIndexedWriterFactory genericIndexedWriterFactory
   )
   {
     this.chunkFactor = chunkFactor;
     this.compression = compression;
-    this.flattener = new GenericIndexedWriter<>(
+    this.flattener = genericIndexedWriterFactory.getGenericIndexedWriter(
         ioPeon, filenameBase, CompressedIntBufferObjectStrategy.getBufferForOrder(byteOrder, compression, chunkFactor)
     );
     this.endBuffer = IntBuffer.allocate(chunkFactor);

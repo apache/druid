@@ -41,7 +41,6 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.guava.Yielder;
 import com.metamx.common.guava.YieldingAccumulator;
-
 import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.InputRowParser;
@@ -65,7 +64,6 @@ import io.druid.query.groupby.GroupByQueryRunnerTest;
 import io.druid.query.select.SelectQueryEngine;
 import io.druid.query.select.SelectQueryQueryToolChest;
 import io.druid.query.select.SelectQueryRunnerFactory;
-import io.druid.segment.AbstractSegment;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexSpec;
@@ -73,9 +71,9 @@ import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
 import io.druid.segment.Segment;
 import io.druid.segment.column.ColumnConfig;
+import io.druid.segment.data.GenericIndexedWriterV1Factory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
-
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.LineIterator;
 import org.junit.rules.TemporaryFolder;
@@ -145,12 +143,13 @@ public class AggregationTestHelper
           {
             return 0;
           }
-        }
+        },
+        new GenericIndexedWriterV1Factory()
     );
 
     return new AggregationTestHelper(
         mapper,
-        new IndexMerger(mapper, indexIO),
+        new IndexMerger(mapper, indexIO, new GenericIndexedWriterV1Factory()),
         indexIO,
         factory.getToolchest(),
         factory,
@@ -189,12 +188,13 @@ public class AggregationTestHelper
           {
             return 0;
           }
-        }
+        },
+        new GenericIndexedWriterV1Factory()
     );
 
     return new AggregationTestHelper(
         mapper,
-        new IndexMerger(mapper, indexIO),
+        new IndexMerger(mapper, indexIO, new GenericIndexedWriterV1Factory()),
         indexIO,
         toolchest,
         factory,

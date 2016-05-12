@@ -43,24 +43,36 @@ public class GenericIndexedWriter<T> implements Closeable
 {
   private final IOPeon ioPeon;
   private final String filenameBase;
-  private final ObjectStrategy<T> strategy;
+  final ObjectStrategy<T> strategy;
 
-  private boolean objectsSorted = true;
-  private T prevObject = null;
+  private final int version;
+  boolean objectsSorted = true;
+  T prevObject = null;
 
-  private CountingOutputStream headerOut = null;
-  private CountingOutputStream valuesOut = null;
+  CountingOutputStream headerOut = null;
+  CountingOutputStream valuesOut = null;
   int numWritten = 0;
 
-  public GenericIndexedWriter(
+  private GenericIndexedWriter(
       IOPeon ioPeon,
       String filenameBase,
       ObjectStrategy<T> strategy
   )
   {
+    this(ioPeon, filenameBase, strategy, 0x1);
+  }
+
+  GenericIndexedWriter(
+      IOPeon ioPeon,
+      String filenameBase,
+      ObjectStrategy<T> strategy,
+      int version
+  )
+  {
     this.ioPeon = ioPeon;
     this.filenameBase = filenameBase;
     this.strategy = strategy;
+    this.version = version;
   }
 
   public void open() throws IOException
@@ -113,7 +125,7 @@ public class GenericIndexedWriter<T> implements Closeable
     OutputStream metaOut = ioPeon.makeOutputStream(makeFilename("meta"));
 
     try {
-      metaOut.write(0x1);
+      metaOut.write(version);
       metaOut.write(objectsSorted ? 0x1 : 0x0);
       metaOut.write(Ints.toByteArray((int) numBytesWritten + 4));
       metaOut.write(Ints.toByteArray(numWritten));

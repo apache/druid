@@ -20,7 +20,6 @@
 package io.druid.segment.data;
 
 import com.google.common.io.OutputSupplier;
-import io.druid.collections.ResourceHolder;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -31,14 +30,16 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.FloatBuffer;
 
 @RunWith(Parameterized.class)
 public class CompressedFloatsSupplierSerializerTest extends CompressionStrategyTest
 {
-  public CompressedFloatsSupplierSerializerTest(CompressedObjectStrategy.CompressionStrategy compressionStrategy)
+  public CompressedFloatsSupplierSerializerTest(
+      CompressedObjectStrategy.CompressionStrategy compressionStrategy,
+      GenericIndexedWriterFactory genericIndexedWriterFactory
+  )
   {
-    super(compressionStrategy);
+    super(compressionStrategy, genericIndexedWriterFactory);
   }
 
   @Test
@@ -48,7 +49,7 @@ public class CompressedFloatsSupplierSerializerTest extends CompressionStrategyT
     final int sizePer = 999;
     CompressedFloatsSupplierSerializer serializer = new CompressedFloatsSupplierSerializer(
         sizePer,
-        new GenericIndexedWriter<ResourceHolder<FloatBuffer>>(
+        genericIndexedWriterFactory.getGenericIndexedWriter(
             new IOPeonForTesting(),
             "test",
             CompressedFloatBufferObjectStrategy.getBufferForOrder(
@@ -100,7 +101,7 @@ public class CompressedFloatsSupplierSerializerTest extends CompressionStrategyT
     final int sizePer = 999;
     CompressedFloatsSupplierSerializer serializer = new CompressedFloatsSupplierSerializer(
         sizePer,
-        new GenericIndexedWriter<ResourceHolder<FloatBuffer>>(
+        genericIndexedWriterFactory.getGenericIndexedWriter(
             new IOPeonForTesting(),
             "test",
             CompressedFloatBufferObjectStrategy.getBufferForOrder(

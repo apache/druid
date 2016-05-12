@@ -42,12 +42,13 @@ public class CompressedLongsSupplierSerializer
       final IOPeon ioPeon,
       final String filenameBase,
       final ByteOrder order,
-      final CompressedObjectStrategy.CompressionStrategy compression
+      final CompressedObjectStrategy.CompressionStrategy compression,
+      final GenericIndexedWriterFactory genericIndexedWriterFactory
   ) throws IOException
   {
     final CompressedLongsSupplierSerializer retVal = new CompressedLongsSupplierSerializer(
         CompressedLongsIndexedSupplier.MAX_LONGS_IN_BUFFER,
-        new GenericIndexedWriter<ResourceHolder<LongBuffer>>(
+        genericIndexedWriterFactory.getGenericIndexedWriter(
             ioPeon,
             filenameBase,
             CompressedLongBufferObjectStrategy.getBufferForOrder(

@@ -62,6 +62,7 @@ import io.druid.segment.data.CompressedLongsIndexedSupplier;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressedVSizeIntsIndexedSupplier;
 import io.druid.segment.data.GenericIndexed;
+import io.druid.segment.data.GenericIndexedWriterFactory;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIterable;
@@ -112,9 +113,10 @@ public class IndexIO
   private final ObjectMapper mapper;
   private final DefaultIndexIOHandler defaultIndexIOHandler;
   private final ColumnConfig columnConfig;
+  private final GenericIndexedWriterFactory genericIndexedWriterFactory;
 
   @Inject
-  public IndexIO(ObjectMapper mapper, ColumnConfig columnConfig)
+  public IndexIO(ObjectMapper mapper, ColumnConfig columnConfig, GenericIndexedWriterFactory genericIndexedWriterFactory)
   {
     this.mapper = Preconditions.checkNotNull(mapper, "null ObjectMapper");
     this.columnConfig = Preconditions.checkNotNull(columnConfig, "null ColumnConfig");
@@ -132,7 +134,7 @@ public class IndexIO
                                .put(9, new V9IndexLoader(columnConfig))
                                .build();
 
-
+    this.genericIndexedWriterFactory = genericIndexedWriterFactory;
   }
 
   public void validateTwoSegments(File dir1, File dir2) throws IOException
@@ -270,7 +272,7 @@ public class IndexIO
       case 7:
         log.info("Old version, re-persisting.");
         QueryableIndex segmentToConvert = loadIndex(toConvert);
-        new IndexMerger(mapper, this).append(
+        new IndexMerger(mapper, this, genericIndexedWriterFactory).append(
             Arrays.<IndexableAdapter>asList(new QueryableIndexIndexableAdapter(segmentToConvert)),
             null,
             converted,
@@ -278,11 +280,11 @@ public class IndexIO
         );
         return true;
       case 8:
-        defaultIndexIOHandler.convertV8toV9(toConvert, converted, indexSpec);
+        defaultIndexIOHandler.convertV8toV9(toConvert, converted, indexSpec, genericIndexedWriterFactory);
         return true;
       default:
         if (forceIfCurrent) {
-          new IndexMerger(mapper, this).convert(toConvert, converted, indexSpec);
+          new IndexMerger(mapper, this, genericIndexedWriterFactory).convert(toConvert, converted, indexSpec);
           if (validate) {
             validateTwoSegments(toConvert, converted);
           }
@@ -528,7 +530,7 @@ public class IndexIO
       return retVal;
     }
 
-    public void convertV8toV9(File v8Dir, File v9Dir, IndexSpec indexSpec)
+    public void convertV8toV9(File v8Dir, File v9Dir, IndexSpec indexSpec, GenericIndexedWriterFactory genericIndexedWriterFactory)
         throws IOException
     {
       log.info("Converting v8[%s] to v9[%s]", v8Dir, v9Dir);
@@ -645,18 +647,18 @@ public class IndexIO
                 final List<String> nullList = Lists.newArrayList();
                 nullList.add(null);
 
-                dictionary = GenericIndexed.fromIterable(
+                dictionary = genericIndexedWriterFactory.getGenericIndexedFromIterable(
                     Iterables.concat(nullList, dictionary),
                     GenericIndexed.STRING_STRATEGY
                 );
 
-                bitmaps = GenericIndexed.fromIterable(
+                bitmaps = genericIndexedWriterFactory.getGenericIndexedFromIterable(
                     Iterables.concat(Arrays.asList(theNullSet), bitmaps),
                     bitmapSerdeFactory.getObjectStrategy()
                 );
               } else {
                 bumpedDictionary = false;
-                bitmaps = GenericIndexed.fromIterable(
+                bitmaps = genericIndexedWriterFactory.getGenericIndexedFromIterable(
                     Iterables.concat(
                         Arrays.asList(
                             bitmapFactory
@@ -711,7 +713,8 @@ public class IndexIO
                       dictionary.size(),
                       CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForValue(dictionary.size()),
                       BYTE_ORDER,
-                      compressionStrategy
+                      compressionStrategy,
+                      genericIndexedWriterFactory
                   )
               );
             } else {
@@ -723,7 +726,8 @@ public class IndexIO
                     multiValCol,
                     dictionary.size(),
                     BYTE_ORDER,
-                    compressionStrategy
+                    compressionStrategy,
+                    genericIndexedWriterFactory
                 )
             );
           } else {
@@ -839,7 +843,7 @@ public class IndexIO
       final GenericIndexed<String> dims8 = GenericIndexed.read(
           indexBuffer, GenericIndexed.STRING_STRATEGY
       );
-      final GenericIndexed<String> dims9 = GenericIndexed.fromIterable(
+      final GenericIndexed<String> dims9 = genericIndexedWriterFactory.getGenericIndexedFromIterable(
           Iterables.filter(
               dims8, new Predicate<String>()
               {
@@ -864,7 +868,7 @@ public class IndexIO
       Set<String> columns = Sets.newTreeSet();
       columns.addAll(Lists.newArrayList(dims9));
       columns.addAll(Lists.newArrayList(availableMetrics));
-      GenericIndexed<String> cols = GenericIndexed.fromIterable(columns, GenericIndexed.STRING_STRATEGY);
+      GenericIndexed<String> cols = genericIndexedWriterFactory.getGenericIndexedFromIterable(columns, GenericIndexed.STRING_STRATEGY);
 
       final String segmentBitmapSerdeFactoryString = mapper.writeValueAsString(segmentBitmapSerdeFactory);
 

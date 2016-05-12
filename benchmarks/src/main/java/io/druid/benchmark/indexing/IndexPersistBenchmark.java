@@ -36,6 +36,7 @@ import io.druid.segment.IndexMerger;
 import io.druid.segment.IndexMergerV9;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.column.ColumnConfig;
+import io.druid.segment.data.GenericIndexedWriterV1Factory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
@@ -96,10 +97,11 @@ public class IndexPersistBenchmark
           {
             return 0;
           }
-        }
+        },
+        new GenericIndexedWriterV1Factory()
     );
-    INDEX_MERGER = new IndexMerger(JSON_MAPPER, INDEX_IO);
-    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO);
+    INDEX_MERGER = new IndexMerger(JSON_MAPPER, INDEX_IO, new GenericIndexedWriterV1Factory());
+    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, new GenericIndexedWriterV1Factory());
   }
 
   @Setup

@@ -39,6 +39,9 @@ import io.druid.segment.data.ArrayIndexed;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.data.GenericIndexed;
+import io.druid.segment.data.GenericIndexedWriterFactory;
+import io.druid.segment.data.GenericIndexedWriterV1Factory;
+import io.druid.segment.data.GenericIndexedWriterV2Factory;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.RoaringBitmapSerdeFactory;
 import io.druid.segment.serde.BitmapIndexColumnPartSupplier;
@@ -70,23 +73,31 @@ public class ExtractionDimFilterTest
   public static Iterable<Object[]> constructorFeeder()
   {
     return ImmutableList.of(
-        new Object[]{new ConciseBitmapFactory(), new ConciseBitmapSerdeFactory()},
-        new Object[]{new RoaringBitmapFactory(), new RoaringBitmapSerdeFactory()}
+        new Object[]{new ConciseBitmapFactory(), new ConciseBitmapSerdeFactory(), new GenericIndexedWriterV1Factory()},
+        new Object[]{new ConciseBitmapFactory(), new ConciseBitmapSerdeFactory(), new GenericIndexedWriterV2Factory()},
+        new Object[]{new RoaringBitmapFactory(), new RoaringBitmapSerdeFactory(), new GenericIndexedWriterV1Factory()},
+        new Object[]{new RoaringBitmapFactory(), new RoaringBitmapSerdeFactory(), new GenericIndexedWriterV2Factory()}
     );
   }
 
-  public ExtractionDimFilterTest(BitmapFactory bitmapFactory, BitmapSerdeFactory bitmapSerdeFactory)
+  public ExtractionDimFilterTest(
+      BitmapFactory bitmapFactory,
+      BitmapSerdeFactory bitmapSerdeFactory,
+      GenericIndexedWriterFactory genericIndexedWriterFactory
+  )
   {
     final MutableBitmap mutableBitmap = bitmapFactory.makeEmptyMutableBitmap();
     mutableBitmap.add(1);
     this.foo1BitMap = bitmapFactory.makeImmutableBitmap(mutableBitmap);
     this.factory = bitmapFactory;
     this.serdeFactory = bitmapSerdeFactory;
+    this.genericIndexedWriterFactory = genericIndexedWriterFactory;
   }
 
   private final BitmapFactory factory;
   private final BitmapSerdeFactory serdeFactory;
   private final ImmutableBitmap foo1BitMap;
+  private final GenericIndexedWriterFactory genericIndexedWriterFactory;
 
   private final BitmapIndexSelector BITMAP_INDEX_SELECTOR = new BitmapIndexSelector()
   {
@@ -120,8 +131,14 @@ public class ExtractionDimFilterTest
     {
       return new BitmapIndexColumnPartSupplier(
           factory,
-          GenericIndexed.fromIterable(Arrays.asList(foo1BitMap), serdeFactory.getObjectStrategy()),
-          GenericIndexed.fromIterable(Arrays.asList("foo1"), GenericIndexed.STRING_STRATEGY)
+          genericIndexedWriterFactory.getGenericIndexedFromIterable(
+              Arrays.asList(foo1BitMap),
+              serdeFactory.getObjectStrategy()
+          ),
+          genericIndexedWriterFactory.getGenericIndexedFromIterable(
+              Arrays.asList("foo1"),
+              GenericIndexed.STRING_STRATEGY
+          )
       ).get();
     }
 

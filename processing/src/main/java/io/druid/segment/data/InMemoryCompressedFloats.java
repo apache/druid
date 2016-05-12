@@ -40,6 +40,7 @@ public class InMemoryCompressedFloats implements IndexedFloats
   public static final CompressedObjectStrategy.CompressionStrategy COMPRESSION = CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY;
   private final CompressedFloatBufferObjectStrategy strategy;
   private final int sizePer;
+  private final GenericIndexedWriterFactory genericIndexedWriterFactory;
 
   private List<byte[]> compressedBuffers = Lists.newArrayList();
   private int numInserted = 0;
@@ -53,7 +54,8 @@ public class InMemoryCompressedFloats implements IndexedFloats
 
   public InMemoryCompressedFloats(
       int sizePer,
-      ByteOrder order
+      ByteOrder order,
+      GenericIndexedWriterFactory genericIndexedWriterFactory
   )
   {
     this.sizePer = sizePer;
@@ -65,6 +67,7 @@ public class InMemoryCompressedFloats implements IndexedFloats
 
     endBuffer = FloatBuffer.allocate(sizePer);
     endBuffer.mark();
+    this.genericIndexedWriterFactory = genericIndexedWriterFactory;
   }
 
   @Override
@@ -173,7 +176,7 @@ public class InMemoryCompressedFloats implements IndexedFloats
     return new CompressedFloatsIndexedSupplier(
         numInserted,
         sizePer,
-        GenericIndexed.fromIterable(
+        genericIndexedWriterFactory.getGenericIndexedFromIterable(
             Iterables.<ResourceHolder<FloatBuffer>>concat(
                 Iterables.transform(
                     compressedBuffers,

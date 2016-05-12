@@ -19,9 +19,12 @@
 
 package io.druid.segment.data;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -33,19 +36,38 @@ import java.util.Map;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class GenericIndexedTest
 {
+
+  @Parameterized.Parameters(name = "{index}: GenericIndexedWriterFactory: {0}")
+  public static Iterable<Object[]> constructorFeeder()
+  {
+    return Lists.newArrayList(
+        new Object[]{new GenericIndexedWriterV1Factory()},
+        new Object[]{new GenericIndexedWriterV2Factory()}
+    );
+  }
+
+  private final GenericIndexedWriterFactory genericIndexedWriterFactory;
+
+  public GenericIndexedTest(GenericIndexedWriterFactory genericIndexedWriterFactory)
+  {
+    this.genericIndexedWriterFactory = genericIndexedWriterFactory;
+  }
+
   @Test(expected = UnsupportedOperationException.class)
   public void testNotSortedNoIndexOf() throws Exception
   {
-    GenericIndexed.fromArray(new String[]{"a", "c", "b"}, GenericIndexed.STRING_STRATEGY).indexOf("a");
+    genericIndexedWriterFactory.getGenericIndexedFromArray(new String[]{"a", "c", "b"}, GenericIndexed.STRING_STRATEGY)
+                               .indexOf("a");
   }
 
   @Test(expected = UnsupportedOperationException.class)
   public void testSerializationNotSortedNoIndexOf() throws Exception
   {
     serializeAndDeserialize(
-        GenericIndexed.fromArray(
+        genericIndexedWriterFactory.getGenericIndexedFromArray(
             new String[]{"a", "c", "b"}, GenericIndexed.STRING_STRATEGY
         )
     ).indexOf("a");
@@ -55,7 +77,10 @@ public class GenericIndexedTest
   public void testSanity() throws Exception
   {
     final String[] strings = {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"};
-    Indexed<String> indexed = GenericIndexed.fromArray(strings, GenericIndexed.STRING_STRATEGY);
+    Indexed<String> indexed = genericIndexedWriterFactory.getGenericIndexedFromArray(
+        strings,
+        GenericIndexed.STRING_STRATEGY
+    );
 
     checkBasicAPIs(strings, indexed, true);
 
@@ -70,7 +95,7 @@ public class GenericIndexedTest
     final String[] strings = {"a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l"};
 
     GenericIndexed<String> deserialized = serializeAndDeserialize(
-        GenericIndexed.fromArray(
+        genericIndexedWriterFactory.getGenericIndexedFromArray(
             strings, GenericIndexed.STRING_STRATEGY
         )
     );
@@ -88,7 +113,7 @@ public class GenericIndexedTest
     final String[] strings = {"a", "b", "c", "d", "e", "f", "g", "h", "i", "k", "j", "l"};
 
     GenericIndexed<String> deserialized = serializeAndDeserialize(
-        GenericIndexed.fromArray(
+        genericIndexedWriterFactory.getGenericIndexedFromArray(
             strings, GenericIndexed.STRING_STRATEGY
         )
     );

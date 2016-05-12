@@ -22,6 +22,7 @@ package io.druid.segment;
 import com.google.common.io.Files;
 import io.druid.segment.data.CompressedFloatsSupplierSerializer;
 import io.druid.segment.data.CompressedObjectStrategy;
+import io.druid.segment.data.GenericIndexedWriterFactory;
 import io.druid.segment.data.IOPeon;
 
 import java.io.File;
@@ -34,18 +35,21 @@ public class FloatMetricColumnSerializer implements MetricColumnSerializer
   private final String metricName;
   private final IOPeon ioPeon;
   private final File outDir;
+  private final GenericIndexedWriterFactory genericIndexedWriterFactory;
 
   private CompressedFloatsSupplierSerializer writer;
 
   public FloatMetricColumnSerializer(
       String metricName,
       File outDir,
-      IOPeon ioPeon
+      IOPeon ioPeon,
+      GenericIndexedWriterFactory genericIndexedWriterFactory
   )
   {
     this.metricName = metricName;
     this.ioPeon = ioPeon;
     this.outDir = outDir;
+    this.genericIndexedWriterFactory = genericIndexedWriterFactory;
   }
 
   @Override
@@ -53,7 +57,8 @@ public class FloatMetricColumnSerializer implements MetricColumnSerializer
   {
     writer = CompressedFloatsSupplierSerializer.create(
         ioPeon, String.format("%s_little", metricName), IndexIO.BYTE_ORDER,
-        CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
+        CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY,
+        genericIndexedWriterFactory
     );
 
     writer.open();

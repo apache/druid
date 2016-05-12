@@ -22,6 +22,7 @@ package io.druid.segment;
 import com.metamx.common.IAE;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressedVSizeIntsIndexedSupplier;
+import io.druid.segment.data.GenericIndexedWriterFactory;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIntsIterator;
 import io.druid.segment.data.IndexedIterable;
@@ -97,8 +98,9 @@ public class CompressedVSizeIndexedSupplier implements WritableSupplier<IndexedM
       Iterable<IndexedInts> objectsIterable,
       int maxValue,
       final ByteOrder byteOrder,
-      CompressedObjectStrategy.CompressionStrategy compression
-  )
+      CompressedObjectStrategy.CompressionStrategy compression,
+      final GenericIndexedWriterFactory genericIndexedWriterFactory
+      )
   {
     Iterator<IndexedInts> objects = objectsIterable.iterator();
     List<Integer> offsetList = new ArrayList<>();
@@ -120,14 +122,16 @@ public class CompressedVSizeIndexedSupplier implements WritableSupplier<IndexedM
         offsetMax,
         CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForValue(offsetMax),
         byteOrder,
-        compression
+        compression,
+        genericIndexedWriterFactory
     );
     CompressedVSizeIntsIndexedSupplier valuesSupplier = CompressedVSizeIntsIndexedSupplier.fromList(
         values,
         maxValue,
         CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForValue(maxValue),
         byteOrder,
-        compression
+        compression,
+        genericIndexedWriterFactory
     );
     return new CompressedVSizeIndexedSupplier(headerSupplier, valuesSupplier);
   }

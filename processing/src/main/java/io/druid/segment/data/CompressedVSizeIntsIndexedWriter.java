@@ -43,13 +43,15 @@ public class CompressedVSizeIntsIndexedWriter extends SingleValueIndexedIntsWrit
       final IOPeon ioPeon,
       final String filenameBase,
       final int maxValue,
-      final CompressedObjectStrategy.CompressionStrategy compression
+      final CompressedObjectStrategy.CompressionStrategy compression,
+      final GenericIndexedWriterFactory genericIndexedWriterFactory
   )
   {
     return new CompressedVSizeIntsIndexedWriter(
         ioPeon, filenameBase, maxValue,
         CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForValue(maxValue),
-        IndexIO.BYTE_ORDER, compression
+        IndexIO.BYTE_ORDER, compression,
+        genericIndexedWriterFactory
     );
   }
 
@@ -69,7 +71,8 @@ public class CompressedVSizeIntsIndexedWriter extends SingleValueIndexedIntsWrit
       final int maxValue,
       final int chunkFactor,
       final ByteOrder byteOrder,
-      final CompressedObjectStrategy.CompressionStrategy compression
+      final CompressedObjectStrategy.CompressionStrategy compression,
+      final GenericIndexedWriterFactory genericIndexedWriterFactory
   )
   {
     this.numBytes = VSizeIndexedInts.getNumBytesForMax(maxValue);
@@ -77,7 +80,7 @@ public class CompressedVSizeIntsIndexedWriter extends SingleValueIndexedIntsWrit
     this.chunkBytes = chunkFactor * numBytes + CompressedVSizeIntsIndexedSupplier.bufferPadding(numBytes);
     this.byteOrder = byteOrder;
     this.compression = compression;
-    this.flattener = new GenericIndexedWriter<>(
+    this.flattener = genericIndexedWriterFactory.getGenericIndexedWriter(
         ioPeon, filenameBase, CompressedByteBufferObjectStrategy.getBufferForOrder(byteOrder, compression, chunkBytes)
     );
     this.intBuffer = ByteBuffer.allocate(Ints.BYTES).order(byteOrder);

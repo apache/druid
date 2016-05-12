@@ -22,6 +22,7 @@ package io.druid.benchmark;
 import com.google.common.primitives.Ints;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressedVSizeIntsIndexedSupplier;
+import io.druid.segment.data.GenericIndexedWriterV1Factory;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.VSizeIndexedInts;
 import io.druid.segment.data.WritableSupplier;
@@ -72,7 +73,8 @@ public class CompressedIndexedIntsBenchmark
             Ints.asList(vals),
             bound - 1,
             CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForBytes(bytes),
-            ByteOrder.nativeOrder(), CompressedObjectStrategy.CompressionStrategy.LZ4
+            ByteOrder.nativeOrder(), CompressedObjectStrategy.CompressionStrategy.LZ4,
+            new GenericIndexedWriterV1Factory()
         )
     );
     this.compressed = CompressedVSizeIntsIndexedSupplier.fromByteBuffer(

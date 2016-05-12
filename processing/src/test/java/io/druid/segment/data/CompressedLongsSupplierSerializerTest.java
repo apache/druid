@@ -20,7 +20,6 @@
 package io.druid.segment.data;
 
 import com.google.common.io.OutputSupplier;
-import io.druid.collections.ResourceHolder;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -31,14 +30,16 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.LongBuffer;
 
 @RunWith(Parameterized.class)
 public class CompressedLongsSupplierSerializerTest extends CompressionStrategyTest
 {
-  public CompressedLongsSupplierSerializerTest(CompressedObjectStrategy.CompressionStrategy compressionStrategy)
+  public CompressedLongsSupplierSerializerTest(
+      CompressedObjectStrategy.CompressionStrategy compressionStrategy,
+      GenericIndexedWriterFactory genericIndexedWriterFactory
+  )
   {
-    super(compressionStrategy);
+    super(compressionStrategy, genericIndexedWriterFactory);
   }
 
   @Test
@@ -48,7 +49,7 @@ public class CompressedLongsSupplierSerializerTest extends CompressionStrategyTe
     final int sizePer = 999;
     CompressedLongsSupplierSerializer serializer = new CompressedLongsSupplierSerializer(
         sizePer,
-        new GenericIndexedWriter<ResourceHolder<LongBuffer>>(
+        genericIndexedWriterFactory.getGenericIndexedWriter(
             new IOPeonForTesting(),
             "test",
             CompressedLongBufferObjectStrategy.getBufferForOrder(order, compressionStrategy, sizePer)
@@ -95,7 +96,7 @@ public class CompressedLongsSupplierSerializerTest extends CompressionStrategyTe
     final int sizePer = 999;
     CompressedLongsSupplierSerializer serializer = new CompressedLongsSupplierSerializer(
         sizePer,
-        new GenericIndexedWriter<ResourceHolder<LongBuffer>>(
+        genericIndexedWriterFactory.getGenericIndexedWriter(
             new IOPeonForTesting(),
             "test",
             CompressedLongBufferObjectStrategy.getBufferForOrder(order, compressionStrategy, sizePer)

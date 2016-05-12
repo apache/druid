@@ -41,6 +41,7 @@ public class InMemoryCompressedLongs implements IndexedLongs
   public static final CompressedObjectStrategy.CompressionStrategy COMPRESSION = CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY;
   private final CompressedLongBufferObjectStrategy strategy;
   private final int sizePer;
+  private final GenericIndexedWriterFactory genericIndexedWriterFactory;
 
   private List<byte[]> compressedBuffers = Lists.newArrayList();
   private int numInserted = 0;
@@ -54,7 +55,8 @@ public class InMemoryCompressedLongs implements IndexedLongs
 
   public InMemoryCompressedLongs(
       int sizePer,
-      ByteOrder order
+      ByteOrder order,
+      final GenericIndexedWriterFactory genericIndexedWriterFactory
   )
   {
     this.sizePer = sizePer;
@@ -66,6 +68,7 @@ public class InMemoryCompressedLongs implements IndexedLongs
 
     endBuffer = LongBuffer.allocate(sizePer);
     endBuffer.mark();
+    this.genericIndexedWriterFactory = genericIndexedWriterFactory;
   }
 
   @Override
@@ -184,7 +187,7 @@ public class InMemoryCompressedLongs implements IndexedLongs
     return new CompressedLongsIndexedSupplier(
         numInserted,
         sizePer,
-        GenericIndexed.fromIterable(
+        genericIndexedWriterFactory.getGenericIndexedFromIterable(
             Iterables.<ResourceHolder<LongBuffer>>concat(
                 Iterables.transform(
                     compressedBuffers,

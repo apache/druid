@@ -57,6 +57,7 @@ import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexStorageAdapter;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.ColumnConfig;
+import io.druid.segment.data.GenericIndexedWriterV1Factory;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.AndFilter;
 import io.druid.segment.filter.DimensionPredicateFilter;
@@ -125,9 +126,10 @@ public class FilterPartitionBenchmark
           {
             return 0;
           }
-        }
+        },
+        new GenericIndexedWriterV1Factory()
     );
-    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO);
+    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, new GenericIndexedWriterV1Factory());
   }
 
   @Setup

@@ -49,7 +49,7 @@ import static org.junit.Assert.assertEquals;
 @RunWith(Parameterized.class)
 public class CompressedVSizeIndexedV3WriterTest
 {
-  @Parameterized.Parameters(name = "{index}: compression={0}, byteOrder={1}")
+  @Parameterized.Parameters(name = "{index}: compression={0}, byteOrder={1}, genericIndexedWriterFactory={2}")
   public static Iterable<Object[]> compressionStrategiesAndByteOrders()
   {
     Set<List<Object>> combinations = Sets.cartesianProduct(
@@ -57,15 +57,27 @@ public class CompressedVSizeIndexedV3WriterTest
         Sets.newHashSet(ByteOrder.BIG_ENDIAN, ByteOrder.LITTLE_ENDIAN)
     );
 
-    return Iterables.transform(
-        combinations, new Function<List, Object[]>()
-        {
-          @Override
-          public Object[] apply(List input)
-          {
-            return new Object[]{input.get(0), input.get(1)};
-          }
-        }
+    return Iterables.concat(
+        Iterables.transform(
+            combinations, new Function<List, Object[]>()
+            {
+              @Override
+              public Object[] apply(List input)
+              {
+                return new Object[]{input.get(0), input.get(1), new GenericIndexedWriterV1Factory()};
+              }
+            }
+        ),
+        Iterables.transform(
+            combinations, new Function<List, Object[]>()
+            {
+              @Override
+              public Object[] apply(List input)
+              {
+                return new Object[]{input.get(0), input.get(1), new GenericIndexedWriterV2Factory()};
+              }
+            }
+        )
     );
   }
 
@@ -81,15 +93,18 @@ public class CompressedVSizeIndexedV3WriterTest
   private final CompressedObjectStrategy.CompressionStrategy compressionStrategy;
   private final ByteOrder byteOrder;
   private final Random rand = new Random(0);
+  private final GenericIndexedWriterFactory genericIndexedWriterFactory;
   private List<int[]> vals;
 
   public CompressedVSizeIndexedV3WriterTest(
       CompressedObjectStrategy.CompressionStrategy compressionStrategy,
-      ByteOrder byteOrder
+      ByteOrder byteOrder,
+      GenericIndexedWriterFactory genericIndexedWriterFactory
   )
   {
     this.compressionStrategy = compressionStrategy;
     this.byteOrder = byteOrder;
+    this.genericIndexedWriterFactory = genericIndexedWriterFactory;
   }
 
   private void generateVals(final int totalSize, final int maxValue) throws IOException
@@ -105,14 +120,18 @@ public class CompressedVSizeIndexedV3WriterTest
     }
   }
 
-  private void checkSerializedSizeAndData(int offsetChunkFactor, int valueChunkFactor) throws Exception
+  private void checkSerializedSizeAndData(
+      int offsetChunkFactor,
+      int valueChunkFactor,
+      GenericIndexedWriterFactory genericIndexedWriterFactory
+  ) throws Exception
   {
     int maxValue = vals.size() > 0 ? getMaxValue(vals) : 0;
     CompressedIntsIndexedWriter offsetWriter = new CompressedIntsIndexedWriter(
-        ioPeon, "offset", offsetChunkFactor, byteOrder, compressionStrategy
+        ioPeon, "offset", offsetChunkFactor, byteOrder, compressionStrategy, genericIndexedWriterFactory
     );
     CompressedVSizeIntsIndexedWriter valueWriter = new CompressedVSizeIntsIndexedWriter(
-        ioPeon, "value", maxValue, valueChunkFactor, byteOrder, compressionStrategy
+        ioPeon, "value", maxValue, valueChunkFactor, byteOrder, compressionStrategy, genericIndexedWriterFactory
     );
     CompressedVSizeIndexedV3Writer writer = new CompressedVSizeIndexedV3Writer(offsetWriter, valueWriter);
     CompressedVSizeIndexedV3Supplier supplierFromIterable = CompressedVSizeIndexedV3Supplier.fromIterable(
@@ -126,7 +145,7 @@ public class CompressedVSizeIndexedV3WriterTest
                 return new ArrayBasedIndexedInts(input);
               }
             }
-        ), offsetChunkFactor, maxValue, byteOrder, compressionStrategy
+        ), offsetChunkFactor, maxValue, byteOrder, compressionStrategy, genericIndexedWriterFactory
     );
     writer.open();
     for (int[] val : vals) {
@@ -193,7 +212,7 @@ public class CompressedVSizeIndexedV3WriterTest
       for (int maxValue : MAX_VALUES) {
         final int valueChunk = CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForValue(maxValue);
         generateVals(rand.nextInt(valueChunk), maxValue);
-        checkSerializedSizeAndData(offsetChunk, valueChunk);
+        checkSerializedSizeAndData(offsetChunk, valueChunk, genericIndexedWriterFactory);
       }
     }
   }
@@ -206,7 +225,7 @@ public class CompressedVSizeIndexedV3WriterTest
       for (int maxValue : MAX_VALUES) {
         final int valueChunk = CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForValue(maxValue);
         generateVals((rand.nextInt(2) + 1) * valueChunk + rand.nextInt(valueChunk), maxValue);
-        checkSerializedSizeAndData(offsetChunk, valueChunk);
+        checkSerializedSizeAndData(offsetChunk, valueChunk, genericIndexedWriterFactory);
       }
     }
   }
@@ -215,6 +234,6 @@ public class CompressedVSizeIndexedV3WriterTest
   public void testEmpty() throws Exception
   {
     vals = new ArrayList<>();
-    checkSerializedSizeAndData(1, 2);
+    checkSerializedSizeAndData(1, 2, genericIndexedWriterFactory);
   }
 }

@@ -41,7 +41,8 @@ public class CompressedVSizeIndexedV3Writer extends MultiValueIndexedIntsWriter
       final IOPeon ioPeon,
       final String filenameBase,
       final int maxValue,
-      final CompressedObjectStrategy.CompressionStrategy compression
+      final CompressedObjectStrategy.CompressionStrategy compression,
+      final GenericIndexedWriterFactory genericIndexedWriterFactory
   )
   {
     return new CompressedVSizeIndexedV3Writer(
@@ -50,7 +51,8 @@ public class CompressedVSizeIndexedV3Writer extends MultiValueIndexedIntsWriter
             String.format("%s.offsets", filenameBase),
             CompressedIntsIndexedSupplier.MAX_INTS_IN_BUFFER,
             IndexIO.BYTE_ORDER,
-            compression
+            compression,
+            genericIndexedWriterFactory
         ),
         new CompressedVSizeIntsIndexedWriter(
             ioPeon,
@@ -58,7 +60,8 @@ public class CompressedVSizeIndexedV3Writer extends MultiValueIndexedIntsWriter
             maxValue,
             CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForValue(maxValue),
             IndexIO.BYTE_ORDER,
-            compression
+            compression,
+            genericIndexedWriterFactory
         )
     );
   }

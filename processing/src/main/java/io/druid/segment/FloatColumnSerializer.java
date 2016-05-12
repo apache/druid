@@ -21,6 +21,7 @@ package io.druid.segment;
 
 import io.druid.segment.data.CompressedFloatsSupplierSerializer;
 import io.druid.segment.data.CompressedObjectStrategy;
+import io.druid.segment.data.GenericIndexedWriterFactory;
 import io.druid.segment.data.IOPeon;
 
 import java.io.IOException;
@@ -32,10 +33,11 @@ public class FloatColumnSerializer implements GenericColumnSerializer
   public static FloatColumnSerializer create(
       IOPeon ioPeon,
       String filenameBase,
-      CompressedObjectStrategy.CompressionStrategy compression
+      CompressedObjectStrategy.CompressionStrategy compression,
+      GenericIndexedWriterFactory genericIndexedWriterFactory
   )
   {
-    return new FloatColumnSerializer(ioPeon, filenameBase, IndexIO.BYTE_ORDER, compression);
+    return new FloatColumnSerializer(ioPeon, filenameBase, IndexIO.BYTE_ORDER, compression, genericIndexedWriterFactory);
   }
 
   private final IOPeon ioPeon;
@@ -43,18 +45,21 @@ public class FloatColumnSerializer implements GenericColumnSerializer
   private final ByteOrder byteOrder;
   private final CompressedObjectStrategy.CompressionStrategy compression;
   private CompressedFloatsSupplierSerializer writer;
+  private final GenericIndexedWriterFactory genericIndexedWriterFactory;
 
   public FloatColumnSerializer(
       IOPeon ioPeon,
       String filenameBase,
       ByteOrder byteOrder,
-      CompressedObjectStrategy.CompressionStrategy compression
+      CompressedObjectStrategy.CompressionStrategy compression,
+      GenericIndexedWriterFactory genericIndexedWriterFactory
   )
   {
     this.ioPeon = ioPeon;
     this.filenameBase = filenameBase;
     this.byteOrder = byteOrder;
     this.compression = compression;
+    this.genericIndexedWriterFactory = genericIndexedWriterFactory;
   }
 
   @Override
@@ -64,7 +69,8 @@ public class FloatColumnSerializer implements GenericColumnSerializer
         ioPeon,
         String.format("%s.float_column", filenameBase),
         byteOrder,
-        compression
+        compression,
+        genericIndexedWriterFactory
     );
     writer.open();
   }
