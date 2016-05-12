@@ -29,6 +29,7 @@ import com.metamx.emitter.service.AlertEvent;
 import com.metamx.emitter.service.ServiceMetricEvent;
 
 import java.io.IOException;
+import java.net.SocketException;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
@@ -139,7 +140,6 @@ public class GraphiteEmitter implements Emitter
     public void run()
     {
       try {
-
         if (!pickledGraphite.isConnected()) {
           log.info("trying to connect to graphite server");
           pickledGraphite.connect();
@@ -168,6 +168,8 @@ public class GraphiteEmitter implements Emitter
             log.error(e, e.getMessage());
             if (e instanceof InterruptedException) {
               Thread.currentThread().interrupt();
+            } else if (e instanceof SocketException){
+              pickledGraphite.connect();
             }
           }
         }
