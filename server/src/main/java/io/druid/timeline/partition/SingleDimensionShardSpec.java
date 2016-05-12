@@ -122,7 +122,17 @@ public class SingleDimensionShardSpec implements ShardSpec
   public Map<String, RangeSet<String>> getDomain()
   {
     Map<String, RangeSet<String>> retMap = new HashMap<>();
-    retMap.put(dimension, ImmutableRangeSet.of(Range.closed(start, end)));
+    Range<String> range;
+    if (start == null && end == null) {
+      range = Range.all();
+    } else if (start == null) {
+      range = Range.atMost(end);
+    } else if (end == null) {
+      range = Range.atLeast(start);
+    } else {
+      range = Range.closed(start, end);
+    }
+    retMap.put(dimension, ImmutableRangeSet.of(range));
     return retMap;
   }
 

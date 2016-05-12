@@ -181,7 +181,7 @@ public class InDimFilter implements DimFilter
     }
     RangeSet<String> retSet = TreeRangeSet.create();
     for (String value : values) {
-      retSet.add(Range.singleton(value));
+      retSet.add(Range.singleton(Strings.nullToEmpty(value)));
     }
     return retSet;
   }

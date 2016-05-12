@@ -21,18 +21,27 @@ package io.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Lists;
 import com.google.common.collect.RangeSet;
+import com.sun.org.apache.xpath.internal.operations.And;
 import io.druid.query.Druids;
 import io.druid.segment.filter.NotFilter;
 
 import java.nio.ByteBuffer;
+import java.util.List;
 
 /**
  */
 public class NotDimFilter implements DimFilter
 {
   final private DimFilter field;
+
+  final private Function<DimFilter, DimFilter> negate =
+      new Function<DimFilter, DimFilter>() {
+        public DimFilter apply(DimFilter filter) { return Druids.newNotDimFilterBuilder().field(filter).build(); }
+      };
 
   @JsonCreator
   public NotDimFilter(
@@ -72,6 +81,17 @@ public class NotDimFilter implements DimFilter
   @Override
   public RangeSet<String> getDimensionRangeSet(String dimension)
   {
+    if (field instanceof AndDimFilter) {
+      List<DimFilter> fields = ((AndDimFilter) field).getFields();
+      return Druids.newOrDimFilterBuilder().fields(Lists.transform(fields, negate)).build().getDimensionRangeSet(dimension);
+    }
+    if (field instanceof OrDimFilter) {
+      List<DimFilter> fields = ((OrDimFilter) field).getFields();
+      return Druids.newAndDimFilterBuilder().fields(Lists.transform(fields, negate)).build().getDimensionRangeSet(dimension);
+    }
+    if (field instanceof NotDimFilter) {
+      return ((NotDimFilter) field).getField().getDimensionRangeSet(dimension);
+    }
     RangeSet<String> rangeSet = field.getDimensionRangeSet(dimension);
     return rangeSet == null ? null : rangeSet.complement();
   }

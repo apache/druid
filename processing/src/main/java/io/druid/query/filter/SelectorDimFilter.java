@@ -162,7 +162,7 @@ public class SelectorDimFilter implements DimFilter
       return null;
     }
     RangeSet<String> retSet = TreeRangeSet.create();
-    retSet.add(Range.singleton(value));
+    retSet.add(Range.singleton(Strings.nullToEmpty(value)));
     return retSet;
   }
 

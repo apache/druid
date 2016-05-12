@@ -77,12 +77,12 @@ public class AndDimFilter implements DimFilter
   @Override
   public RangeSet<String> getDimensionRangeSet(String dimension)
   {
-    RangeSet<String> retSet = TreeRangeSet.create();
+    RangeSet<String> retSet = null;
     for (DimFilter field : fields) {
       RangeSet<String> rangeSet = field.getDimensionRangeSet(dimension);
       if (rangeSet != null) {
-        if (retSet.isEmpty()) {
-          retSet.addAll(rangeSet);
+        if (retSet == null) {
+          retSet = TreeRangeSet.create(rangeSet);
         } else {
           retSet.removeAll(rangeSet.complement());
         }

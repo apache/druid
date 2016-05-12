@@ -173,12 +173,20 @@ public class BoundDimFilter implements DimFilter
   @Override
   public RangeSet<String> getDimensionRangeSet(String dimension)
   {
-    if (!Objects.equals(getDimension(), dimension) || getExtractionFn() != null) {
+    if (!Objects.equals(getDimension(), dimension) || getExtractionFn() != null || alphaNumeric) {
       return null;
     }
     RangeSet<String> retSet = TreeRangeSet.create();
-    retSet.add(Range.range(getLower(), isLowerStrict() ? BoundType.OPEN : BoundType.CLOSED,
-                           getUpper(), isUpperStrict() ? BoundType.OPEN : BoundType.CLOSED));
+    Range<String> range;
+    if (getLower() == null) {
+      range = isUpperStrict() ? Range.lessThan(getUpper()) : Range.atMost(getUpper());
+    } else if (getUpper() == null) {
+      range = isLowerStrict() ? Range.greaterThan(getLower()) : Range.atLeast(getLower());
+    } else {
+      range = Range.range(getLower(), isLowerStrict() ? BoundType.OPEN : BoundType.CLOSED,
+                          getUpper(), isUpperStrict() ? BoundType.OPEN : BoundType.CLOSED);
+    }
+    retSet.add(range);
     return retSet;
   }
 

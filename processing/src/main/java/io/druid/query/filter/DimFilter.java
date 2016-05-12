@@ -58,5 +58,14 @@ public interface DimFilter
    */
   public Filter toFilter();
 
+  /**
+   * Returns a RangeSet that represents the possible range of the input dimension for this DimFilter.This is
+   * applicable to filters that use dimensions such as select, in, bound, and logical filters such as and, or, not.
+   * Note that
+   *
+   * @param dimension name of the dimension to get range for
+   * @return a RangeSet that represent the possible range of the input dimension, or null if it is not possible to
+   * determine for this DimFilter.
+   */
   public RangeSet<String> getDimensionRangeSet (String dimension);
 }

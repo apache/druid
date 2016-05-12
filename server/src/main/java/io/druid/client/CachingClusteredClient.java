@@ -69,7 +69,6 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.partition.PartitionChunk;
-import io.druid.timeline.partition.SingleDimensionShardData;
 import org.joda.time.Interval;
 
 import java.io.IOException;
@@ -223,14 +222,8 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     final List<TimelineObjectHolder<String, ServerSelector>> filteredServersLookup =
         toolChest.filterSegments(query, serversLookup);
 
-    List<String> dimensions = Lists.newArrayList();
     Map<String, RangeSet<String>> dimensionRangeMap = Maps.newHashMap();
     DimFilter filter = query.getFilter();
-    if (filter != null) {
-      for (String dimension : dimensions) {
-        dimensionRangeMap.put(dimension, filter.getDimensionRangeSet(dimension));
-      }
-    }
 
     // Filter unneeded chunks based on partition dimension
     for (TimelineObjectHolder<String, ServerSelector> holder : filteredServersLookup) {
@@ -241,10 +234,15 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
         if (filter != null) {
           Map<String, RangeSet<String>> domain = selector.getSegment().getShardSpec().getDomain();
           for (Map.Entry<String, RangeSet<String>> entry : domain.entrySet()) {
-            RangeSet<String> intersectRange = TreeRangeSet.create(dimensionRangeMap.get(entry.getKey()));
-            intersectRange.removeAll(entry.getValue().complement());
-            if (intersectRange.isEmpty()) {
-              include = false;
+            if (dimensionRangeMap.get(entry.getKey()) == null) {
+              dimensionRangeMap.put(entry.getKey(), filter.getDimensionRangeSet(entry.getKey()));
+            }
+            if (dimensionRangeMap.get(entry.getKey()) != null) {
+              RangeSet<String> intersectRange = TreeRangeSet.create(dimensionRangeMap.get(entry.getKey()));
+              intersectRange.removeAll(entry.getValue().complement());
+              if (intersectRange.isEmpty()) {
+                include = false;
+              }
             }
           }
         }
