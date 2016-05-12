@@ -255,7 +255,8 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
 
     } else {
       final IncrementalIndex index = makeIncrementalIndex(
-          query, runner.run(
+          query,
+          runner.run(
               new GroupByQuery(
                   query.getDataSource(),
                   query.getQuerySegmentSpec(),
@@ -274,10 +275,13 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
                       "finalize", false,
                       //setting sort to false avoids unnecessary sorting while merging results. we only need to sort
                       //in the end when returning results to user.
-                      GroupByQueryHelper.CTX_KEY_SORT_RESULTS, false
+                      GroupByQueryHelper.CTX_KEY_SORT_RESULTS, false,
+                      //setting merge to false avoids unnecessary merging on lower-level queries. data nodes already
+                      //merge when they do factory.mergeRunners; no need for them to merge in toolchest.mergeResults
+                      GROUP_BY_MERGE_KEY, false
                   )
-              )
-              , context
+              ),
+              context
           )
       );
       return new ResourceClosingSequence<>(query.applyLimit(postAggregate(query, index)), index);
@@ -425,7 +429,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
               public Sequence<Row> run(Query<Row> query, Map<String, Object> responseContext)
               {
                 GroupByQuery groupByQuery = (GroupByQuery) query;
-                if (groupByQuery.getDimFilter() != null){
+                if (groupByQuery.getDimFilter() != null) {
                   groupByQuery = groupByQuery.withDimFilter(groupByQuery.getDimFilter().optimize());
                 }
                 final GroupByQuery delegateGroupByQuery = groupByQuery;
