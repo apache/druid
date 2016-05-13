@@ -40,6 +40,7 @@ public class CoordinatorDynamicConfigTest
                      + "  \"maxSegmentsToMove\": 1,\n"
                      + "  \"replicantLifetime\": 1,\n"
                      + "  \"replicationThrottleLimit\": 1,\n"
+                     + "  \"balancerComputeThreads\": 2, \n"
                      + "  \"emitBalancingStats\": true,\n"
                      + "  \"killDataSourceWhitelist\": [\"test\"]\n"
                      + "}\n";
@@ -56,7 +57,7 @@ public class CoordinatorDynamicConfigTest
     );
 
     Assert.assertEquals(
-        new CoordinatorDynamicConfig(1, 1, 1, 1, 1, 1, 1, true, ImmutableSet.of("test")),
+        new CoordinatorDynamicConfig(1, 1, 1, 1, 1, 1, 2, true, ImmutableSet.of("test")),
         actual
     );
   }
