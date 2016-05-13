@@ -57,10 +57,7 @@ public class CoordinatorDynamicConfig
     this.replicantLifetime = replicantLifetime;
     this.replicationThrottleLimit = replicationThrottleLimit;
     this.emitBalancingStats = emitBalancingStats;
-    this.balancerComputeThreads = Math.min(
-        Math.max(balancerComputeThreads, 1),
-        Math.max(Runtime.getRuntime().availableProcessors() - 1, 1)
-    );
+    this.balancerComputeThreads = Math.max(balancerComputeThreads, 1);
     this.killDataSourceWhitelist = killDataSourceWhitelist;
   }
 
