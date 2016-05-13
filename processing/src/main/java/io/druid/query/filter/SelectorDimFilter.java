@@ -27,14 +27,10 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.metamx.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
-import io.druid.query.lookup.LookupExtractionFn;
-import io.druid.query.lookup.LookupExtractor;
 import io.druid.segment.filter.DimensionPredicateFilter;
 import io.druid.segment.filter.SelectorFilter;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 
 /**
@@ -55,7 +51,7 @@ public class SelectorDimFilter implements DimFilter
     Preconditions.checkArgument(dimension != null, "dimension must not be null");
 
     this.dimension = dimension;
-    this.value = value;
+    this.value = Strings.nullToEmpty(value);
     this.extractionFn = extractionFn;
   }
 
@@ -79,11 +75,7 @@ public class SelectorDimFilter implements DimFilter
   @Override
   public DimFilter optimize()
   {
-    if (this.getExtractionFn() instanceof LookupExtractionFn
-        && ((LookupExtractionFn) this.getExtractionFn()).isOptimize()) {
-        return new InDimFilter(dimension, ImmutableList.of(value), extractionFn).optimize();
-    }
-    return this;
+    return new InDimFilter(dimension, ImmutableList.of(value), extractionFn).optimize();
   }
 
   @Override

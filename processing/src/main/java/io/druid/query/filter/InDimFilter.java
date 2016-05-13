@@ -121,8 +121,16 @@ public class InDimFilter implements DimFilter
   @Override
   public DimFilter optimize()
   {
+    InDimFilter inFilter = optimizeLookup();
+    if (inFilter.values.size() == 1) {
+      return new SelectorDimFilter(inFilter.dimension, inFilter.values.first(), inFilter.getExtractionFn());
+    }
+    return inFilter;
+  }
+
+  public InDimFilter optimizeLookup() {
     if (extractionFn instanceof LookupExtractionFn
-            && ((LookupExtractionFn) extractionFn).isOptimize()) {
+        && ((LookupExtractionFn) extractionFn).isOptimize()) {
       LookupExtractionFn exFn = (LookupExtractionFn) extractionFn;
       LookupExtractor lookup = exFn.getLookup();
 
@@ -153,7 +161,6 @@ public class InDimFilter implements DimFilter
         return new InDimFilter(dimension, keys, null);
       }
     }
-
     return this;
   }
 
