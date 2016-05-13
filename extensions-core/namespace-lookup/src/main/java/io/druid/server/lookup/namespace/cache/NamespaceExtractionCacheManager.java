@@ -235,6 +235,7 @@ public abstract class NamespaceExtractionCacheManager
       while (newVersion == null || newVersion.equals(oldVersion)) {
         if (System.currentTimeMillis() > timeout) {
           log.error("NamespaceLookupExtractorFactory[%s] - timeout during start", id);
+          delete(id);
           return false;
         }
 
@@ -243,6 +244,7 @@ public abstract class NamespaceExtractionCacheManager
         }
         catch (InterruptedException e) {
           log.error("NamespaceLookupExtractorFactory[%s] - interrupted during start", id);
+          delete(id);
           return false;
         }
         newVersion = getVersion(id);

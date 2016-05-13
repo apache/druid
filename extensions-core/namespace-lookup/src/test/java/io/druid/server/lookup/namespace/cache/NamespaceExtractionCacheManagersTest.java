@@ -22,19 +22,29 @@ package io.druid.server.lookup.namespace.cache;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
+import io.druid.data.SearchableVersionedDataFinder;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
+import io.druid.query.lookup.namespace.URIExtractionNamespace;
+import io.druid.segment.loading.LocalFileTimestampVersionFinder;
+import io.druid.server.lookup.namespace.URIExtractionNamespaceCacheFactory;
 import io.druid.server.metrics.NoopServiceEmitter;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -49,6 +59,13 @@ public class NamespaceExtractionCacheManagersTest
 {
   private static final Logger log = new Logger(NamespaceExtractionCacheManagersTest.class);
   private static final Lifecycle lifecycle = new Lifecycle();
+  private static final Map<String, SearchableVersionedDataFinder> PULLERS = ImmutableMap.<String, SearchableVersionedDataFinder>of(
+      "file",
+      new LocalFileTimestampVersionFinder()
+  );
+  private static final Map<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>> CACHE_FACTORIES = ImmutableMap.<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>>of(
+      URIExtractionNamespace.class, new URIExtractionNamespaceCacheFactory(PULLERS)
+  );
 
   @Parameterized.Parameters(name = "{0}")
   public static Collection<Object[]> getParameters()
@@ -59,7 +76,7 @@ public class NamespaceExtractionCacheManagersTest
             new OffHeapNamespaceExtractionCacheManager(
                 lifecycle,
                 new NoopServiceEmitter(),
-                ImmutableMap.<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>>of()
+                CACHE_FACTORIES
             )
         }
     );
@@ -68,7 +85,7 @@ public class NamespaceExtractionCacheManagersTest
             new OnHeapNamespaceExtractionCacheManager(
                 lifecycle,
                 new NoopServiceEmitter(),
-                ImmutableMap.<Class<? extends ExtractionNamespace>, ExtractionNamespaceCacheFactory<?>>of()
+                CACHE_FACTORIES
             )
         }
     );
@@ -154,6 +171,30 @@ public class NamespaceExtractionCacheManagersTest
   public void testNoDeleteNonexistant()
   {
     Assert.assertFalse(extractionCacheManager.delete("I don't exist"));
+  }
+
+  @Test
+  public void testDeleteOnScheduleFail() throws Exception
+  {
+    final String id = "SOME_ID";
+    Assert.assertFalse(extractionCacheManager.scheduleAndWait(
+        id,
+        new URIExtractionNamespace(
+            new URI("file://tmp/I_DONT_REALLY_EXIST" +
+                    UUID.randomUUID().toString()),
+            null,
+            null,
+            new URIExtractionNamespace.JSONFlatDataParser(
+                new DefaultObjectMapper(),
+                "key",
+                "val"
+            ),
+            Period.millis(10000),
+            null
+        ),
+        500
+    ));
+    Assert.assertEquals(ImmutableSet.of(), extractionCacheManager.getKnownIDs());
   }
 
   public static void waitFor(Future<?> future) throws InterruptedException
