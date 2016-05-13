@@ -194,7 +194,7 @@ public class NamespaceExtractionCacheManagersTest
         ),
         500
     ));
-    Assert.assertEquals(ImmutableSet.of(), extractionCacheManager.getKnownIDs());
+    Assert.assertEquals(ImmutableSet.copyOf(nsList), extractionCacheManager.getKnownIDs());
   }
 
   public static void waitFor(Future<?> future) throws InterruptedException

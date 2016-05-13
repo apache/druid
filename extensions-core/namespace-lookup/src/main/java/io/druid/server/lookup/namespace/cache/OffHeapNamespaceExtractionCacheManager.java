@@ -135,13 +135,16 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
     final Lock lock = nsLocks.get(namespaceKey);
     lock.lock();
     try {
-      super.delete(namespaceKey);
-      final String mmapDBkey = currentNamespaceCache.get(namespaceKey);
-      if (mmapDBkey != null) {
-        final long pre = tmpFile.length();
-        mmapDB.delete(mmapDBkey);
-        log.debug("MapDB file size: pre %d  post %d", pre, tmpFile.length());
-        return true;
+      if(super.delete(namespaceKey)) {
+        final String mmapDBkey = currentNamespaceCache.get(namespaceKey);
+        if (mmapDBkey != null) {
+          final long pre = tmpFile.length();
+          mmapDB.delete(mmapDBkey);
+          log.debug("MapDB file size: pre %d  post %d", pre, tmpFile.length());
+          return true;
+        } else {
+          return false;
+        }
       } else {
         return false;
       }

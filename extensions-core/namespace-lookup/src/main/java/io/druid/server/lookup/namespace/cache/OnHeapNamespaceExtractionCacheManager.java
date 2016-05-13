@@ -94,8 +94,7 @@ public class OnHeapNamespaceExtractionCacheManager extends NamespaceExtractionCa
     final Lock lock = nsLocks.get(namespaceKey);
     lock.lock();
     try {
-      super.delete(namespaceKey);
-      return mapMap.remove(namespaceKey) != null;
+      return super.delete(namespaceKey) && mapMap.remove(namespaceKey) != null;
     }
     finally {
       lock.unlock();
