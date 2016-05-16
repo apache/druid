@@ -23,7 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.jaxrs.json.JacksonJsonProvider;
 import com.fasterxml.jackson.jaxrs.smile.JacksonSmileProvider;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.google.inject.Binder;
 import com.google.inject.ConfigurationException;
@@ -52,26 +51,24 @@ import io.druid.guice.annotations.JSR311Resource;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Self;
 import io.druid.guice.annotations.Smile;
-import io.druid.query.DruidMetrics;
 import io.druid.server.DruidNode;
 import io.druid.server.StatusResource;
 import io.druid.server.initialization.ServerConfig;
+import io.druid.server.metrics.DataSourceTaskIdHolder;
 import io.druid.server.metrics.MetricsModule;
 import io.druid.server.metrics.MonitorsConfig;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
+import javax.servlet.ServletException;
 import org.eclipse.jetty.server.ConnectionFactory;
 import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.util.thread.QueuedThreadPool;
 import org.eclipse.jetty.util.thread.ScheduledExecutorScheduler;
-
-import javax.servlet.ServletException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  */
@@ -222,24 +219,20 @@ public class JettyServerModule extends JerseyServletModule
 
   @Provides
   @Singleton
-  public JettyMonitor getJettyMonitor(Properties props)
+  public JettyMonitor getJettyMonitor(
+      DataSourceTaskIdHolder dataSourceTaskIdHolder
+  )
   {
-    return new JettyMonitor(props);
+    return new JettyMonitor(dataSourceTaskIdHolder.getDataSource(), dataSourceTaskIdHolder.getTaskId());
   }
 
   public static class JettyMonitor extends AbstractMonitor
   {
     private final Map<String, String[]> dimensions;
 
-    public JettyMonitor(Properties props)
+    public JettyMonitor(String dataSource, String taskId)
     {
-      this.dimensions = MonitorsConfig.extractDimensions(
-          props,
-          Lists.newArrayList(
-              DruidMetrics.DATASOURCE,
-              DruidMetrics.TASK_ID
-          )
-      );
+      this.dimensions = MonitorsConfig.mapOfDimensionAndTaskID(dataSource, taskId);
     }
 
     @Override

@@ -19,6 +19,7 @@
 
 package io.druid.cli;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
@@ -26,7 +27,9 @@ import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import com.google.inject.Provides;
 import com.google.inject.multibindings.MapBinder;
+import com.google.inject.name.Named;
 import com.google.inject.name.Names;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
@@ -45,6 +48,7 @@ import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
 import io.druid.guice.NodeTypeConfig;
 import io.druid.guice.PolyBind;
+import io.druid.guice.annotations.Json;
 import io.druid.indexing.common.RetryPolicyConfig;
 import io.druid.indexing.common.RetryPolicyFactory;
 import io.druid.indexing.common.TaskToolboxFactory;
@@ -54,6 +58,7 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
+import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.TaskRunner;
@@ -62,6 +67,7 @@ import io.druid.indexing.overlord.ThreadPoolTaskRunner;
 import io.druid.indexing.worker.executor.ExecutorLifecycle;
 import io.druid.indexing.worker.executor.ExecutorLifecycleConfig;
 import io.druid.metadata.IndexerSQLMetadataStorageCoordinator;
+import io.druid.query.DruidMetrics;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.lookup.LookupModule;
 import io.druid.segment.loading.DataSegmentArchiver;
@@ -81,13 +87,14 @@ import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.QueryResource;
 import io.druid.server.initialization.jetty.ChatHandlerServerModule;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
-import org.eclipse.jetty.server.Server;
-
+import io.druid.server.metrics.MonitorsConfig;
 import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
+import org.eclipse.jetty.server.Server;
 
 /**
  */
@@ -222,6 +229,34 @@ public class CliPeon extends GuiceRunnable
             taskActionBinder.addBinding("remote")
                             .to(RemoteTaskActionClientFactory.class).in(LazySingleton.class);
 
+          }
+
+          @Provides
+          @LazySingleton
+          public Task readTask(@Json ObjectMapper mapper, ExecutorLifecycleConfig config)
+          {
+            try {
+              return mapper.readValue(config.getTaskFile(), Task.class);
+            }
+            catch (IOException e) {
+              throw Throwables.propagate(e);
+            }
+          }
+
+          @Provides
+          @LazySingleton
+          @Named(MonitorsConfig.METRIC_DIMENSION_PREFIX + DruidMetrics.DATASOURCE)
+          public String getDataSourceFromTask(final Task task)
+          {
+            return task.getDataSource();
+          }
+
+          @Provides
+          @LazySingleton
+          @Named(MonitorsConfig.METRIC_DIMENSION_PREFIX + DruidMetrics.ID)
+          public String getTaskIDFromTask(final Task task)
+          {
+            return task.getId();
           }
         },
         new IndexingServiceFirehoseModule(),

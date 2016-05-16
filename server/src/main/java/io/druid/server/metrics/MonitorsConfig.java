@@ -22,12 +22,12 @@ package io.druid.server.metrics;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Lists;
 import com.metamx.metrics.Monitor;
-
-import javax.validation.constraints.NotNull;
+import io.druid.query.DruidMetrics;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import javax.validation.constraints.NotNull;
 
 /**
  */
@@ -50,6 +50,22 @@ public class MonitorsConfig
     return "MonitorsConfig{" +
            "monitors=" + monitors +
            '}';
+  }
+
+
+  public static Map<String, String[]> mapOfDimensionAndTaskID(
+      final String dimension,
+      final String taskId
+  )
+  {
+    final Map<String, String[]> dimensionMap = new HashMap<>();
+    if (dimension != null) {
+      dimensionMap.put(DruidMetrics.DATASOURCE, new String[]{dimension});
+    }
+    if (taskId != null) {
+      dimensionMap.put(DruidMetrics.ID, new String[]{taskId});
+    }
+    return dimensionMap;
   }
 
   public static Map<String, String[]> extractDimensions(Properties props, List<String> dimensions)
