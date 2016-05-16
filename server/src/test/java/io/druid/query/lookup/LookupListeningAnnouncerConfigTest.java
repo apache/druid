@@ -24,6 +24,7 @@ import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
+import com.google.inject.name.Names;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.JsonConfigurator;
@@ -51,6 +52,10 @@ public class LookupListeningAnnouncerConfigTest
               JsonConfigProvider.bindInstance(
                   binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, null)
               );
+              binder.bind(Key.get(
+                  String.class,
+                  Names.named(MonitorsConfig.METRIC_DIMENSION_PREFIX + DruidMetrics.DATASOURCE)
+              )).toInstance("some_datasource");
             }
           },
           new LookupModule()
@@ -110,17 +115,15 @@ public class LookupListeningAnnouncerConfigTest
   @Test
   public void testDatasourceInjection()
   {
-    final String lookupTier = "some_tier";
     final JsonConfigurator configurator = injector.getBinding(JsonConfigurator.class).getProvider().get();
     properties.put(propertyBase + ".lookupTierIsDatasource", "true");
-    properties.put(MonitorsConfig.METRIC_DIMENSION_PREFIX + DruidMetrics.DATASOURCE, lookupTier);
     final JsonConfigProvider<LookupListeningAnnouncerConfig> configProvider = JsonConfigProvider.of(
         propertyBase,
         LookupListeningAnnouncerConfig.class
     );
     configProvider.inject(properties, configurator);
     final LookupListeningAnnouncerConfig config = configProvider.get().get();
-    Assert.assertEquals(lookupTier, config.getLookupTier());
+    Assert.assertEquals("some_datasource", config.getLookupTier());
   }
 
   @Test(expected = IllegalArgumentException.class)
