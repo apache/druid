@@ -21,14 +21,15 @@ package io.druid.server.metrics;
 
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
-import io.druid.query.DruidMetrics;
 
 public class DataSourceTaskIdHolder
 {
-  @Named(MonitorsConfig.METRIC_DIMENSION_PREFIX + DruidMetrics.DATASOURCE)
+  public static final String DATA_SOURCE_BINDING = "druidDataSource";
+  public static final String TASK_ID_BINDING = "druidTaskId";
+  @Named(DATA_SOURCE_BINDING)
   @Inject(optional = true)
   String dataSource = null;
-  @Named(MonitorsConfig.METRIC_DIMENSION_PREFIX + DruidMetrics.ID)
+  @Named(TASK_ID_BINDING)
   @Inject(optional = true)
   String taskId = null;
 

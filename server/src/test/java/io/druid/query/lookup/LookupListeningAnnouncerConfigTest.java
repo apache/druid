@@ -30,13 +30,13 @@ import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.JsonConfigurator;
 import io.druid.guice.annotations.Self;
 import io.druid.initialization.Initialization;
-import io.druid.query.DruidMetrics;
 import io.druid.server.DruidNode;
-import io.druid.server.metrics.MonitorsConfig;
-import java.util.Properties;
+import io.druid.server.metrics.DataSourceTaskIdHolder;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+
+import java.util.Properties;
 
 public class LookupListeningAnnouncerConfigTest
 {
@@ -54,7 +54,7 @@ public class LookupListeningAnnouncerConfigTest
               );
               binder.bind(Key.get(
                   String.class,
-                  Names.named(MonitorsConfig.METRIC_DIMENSION_PREFIX + DruidMetrics.DATASOURCE)
+                  Names.named(DataSourceTaskIdHolder.DATA_SOURCE_BINDING)
               )).toInstance("some_datasource");
             }
           },

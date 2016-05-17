@@ -29,7 +29,6 @@ import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.annotations.Self;
 import io.druid.initialization.Initialization;
-import io.druid.query.DruidMetrics;
 import io.druid.server.DruidNode;
 import org.junit.Assert;
 import org.junit.Test;
@@ -77,9 +76,9 @@ public class MetricsModuleTest
             );
             binder.bind(Key.get(
                 String.class,
-                Names.named(MonitorsConfig.METRIC_DIMENSION_PREFIX + DruidMetrics.DATASOURCE)
+                Names.named(DataSourceTaskIdHolder.DATA_SOURCE_BINDING)
             )).toInstance(dataSource);
-            binder.bind(Key.get(String.class, Names.named(MonitorsConfig.METRIC_DIMENSION_PREFIX + DruidMetrics.ID)))
+            binder.bind(Key.get(String.class, Names.named(DataSourceTaskIdHolder.TASK_ID_BINDING)))
                   .toInstance(taskId);
           }
         })
