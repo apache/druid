@@ -52,7 +52,7 @@ public class RegisteredLookupExtractionFnTest
     final LookupReferencesManager manager = EasyMock.createStrictMock(LookupReferencesManager.class);
     managerReturnsMap(manager);
     EasyMock.replay(manager);
-    final RegisteredLookupExtractionFn fn = RegisteredLookupExtractionFn.create(
+    final RegisteredLookupExtractionFn fn = new RegisteredLookupExtractionFn(
         manager,
         LOOKUP_NAME,
         true,
@@ -75,16 +75,16 @@ public class RegisteredLookupExtractionFnTest
     EasyMock.expect(manager.get(EasyMock.eq(LOOKUP_NAME))).andReturn(null).once();
     EasyMock.replay(manager);
 
-    expectedException.expectMessage("lookup [some lookup] not found");
+    expectedException.expectMessage("Lookup [some lookup] not found");
     try {
-      RegisteredLookupExtractionFn.create(
+      new RegisteredLookupExtractionFn(
           manager,
           LOOKUP_NAME,
           true,
           null,
           true,
           false
-      );
+      ).apply("foo");
     }
     finally {
       EasyMock.verify(manager);
@@ -95,7 +95,7 @@ public class RegisteredLookupExtractionFnTest
   public void testNullLookup()
   {
     expectedException.expectMessage("`lookup` required");
-    RegisteredLookupExtractionFn.create(
+    new RegisteredLookupExtractionFn(
         null,
         null,
         true,
@@ -113,7 +113,7 @@ public class RegisteredLookupExtractionFnTest
     final LookupReferencesManager manager = EasyMock.createStrictMock(LookupReferencesManager.class);
     managerReturnsMap(manager);
     EasyMock.replay(manager);
-    final RegisteredLookupExtractionFn fn = RegisteredLookupExtractionFn.create(
+    final RegisteredLookupExtractionFn fn = new RegisteredLookupExtractionFn(
         manager,
         LOOKUP_NAME,
         true,
@@ -141,7 +141,7 @@ public class RegisteredLookupExtractionFnTest
     final LookupReferencesManager manager = EasyMock.createStrictMock(LookupReferencesManager.class);
     managerReturnsMap(manager);
     EasyMock.replay(manager);
-    final RegisteredLookupExtractionFn fn = RegisteredLookupExtractionFn.create(
+    final RegisteredLookupExtractionFn fn = new RegisteredLookupExtractionFn(
         manager,
         LOOKUP_NAME,
         false,
@@ -151,7 +151,7 @@ public class RegisteredLookupExtractionFnTest
     );
     Assert.assertEquals(
         fn,
-        RegisteredLookupExtractionFn.create(
+        new RegisteredLookupExtractionFn(
             manager,
             LOOKUP_NAME,
             false,
@@ -162,7 +162,7 @@ public class RegisteredLookupExtractionFnTest
     );
     Assert.assertNotEquals(
         fn,
-        RegisteredLookupExtractionFn.create(
+        new RegisteredLookupExtractionFn(
             manager,
             LOOKUP_NAME,
             true,
@@ -174,7 +174,7 @@ public class RegisteredLookupExtractionFnTest
 
     Assert.assertNotEquals(
         fn,
-        RegisteredLookupExtractionFn.create(
+        new RegisteredLookupExtractionFn(
             manager,
             LOOKUP_NAME,
             false,
@@ -187,7 +187,7 @@ public class RegisteredLookupExtractionFnTest
 
     Assert.assertNotEquals(
         fn,
-        RegisteredLookupExtractionFn.create(
+        new RegisteredLookupExtractionFn(
             manager,
             LOOKUP_NAME,
             false,
@@ -199,7 +199,7 @@ public class RegisteredLookupExtractionFnTest
 
     Assert.assertNotEquals(
         fn,
-        RegisteredLookupExtractionFn.create(
+        new RegisteredLookupExtractionFn(
             manager,
             LOOKUP_NAME,
             false,
@@ -212,7 +212,7 @@ public class RegisteredLookupExtractionFnTest
 
     Assert.assertNotEquals(
         fn,
-        RegisteredLookupExtractionFn.create(
+        new RegisteredLookupExtractionFn(
             manager,
             LOOKUP_NAME,
             false,
