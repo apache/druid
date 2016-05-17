@@ -139,11 +139,9 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
 
   private LookupExtractionFn ensureDelegate()
   {
-    LookupExtractionFn delegate = this.delegate;
     if (null == delegate) {
       // http://www.javamex.com/tutorials/double_checked_locking.shtml
       synchronized (delegateLock) {
-        delegate = this.delegate;
         if (null == delegate) {
           delegate = new LookupExtractionFn(
               Preconditions.checkNotNull(manager.get(getLookup()), "Lookup [%s] not found", getLookup()).get(),
@@ -152,7 +150,6 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
               isInjective(),
               isOptimize()
           );
-          this.delegate = delegate;
         }
       }
     }
