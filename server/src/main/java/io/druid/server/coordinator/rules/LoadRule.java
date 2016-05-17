@@ -29,7 +29,7 @@ import io.druid.server.coordinator.CoordinatorStats;
 import io.druid.server.coordinator.DruidCoordinator;
 import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import io.druid.server.coordinator.LoadPeonCallback;
-import io.druid.server.coordinator.ReplicationThrottler;
+import io.druid.server.coordinator.SegmentProcessingThrottler;
 import io.druid.server.coordinator.ServerHolder;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
@@ -75,7 +75,7 @@ public abstract class LoadRule implements Rule
       final BalancerStrategy strategy = params.getBalancerStrategyFactory().createBalancerStrategy(referenceTimestamp);
       if (availableSegments.contains(segment)) {
         CoordinatorStats assignStats = assign(
-            params.getReplicationManager(),
+            params,
             tier,
             totalReplicantsInCluster,
             expectedReplicantsInTier,
@@ -98,7 +98,7 @@ public abstract class LoadRule implements Rule
   }
 
   private CoordinatorStats assign(
-      final ReplicationThrottler replicationManager,
+      final DruidCoordinatorRuntimeParams params,
       final String tier,
       final int totalReplicantsInCluster,
       final int expectedReplicantsInTier,
@@ -114,9 +114,9 @@ public abstract class LoadRule implements Rule
     int currReplicantsInTier = totalReplicantsInTier;
     int currTotalReplicantsInCluster = totalReplicantsInCluster;
     while (currReplicantsInTier < expectedReplicantsInTier) {
-      boolean replicate = currTotalReplicantsInCluster > 0;
+      final SegmentProcessingThrottler throttler = currTotalReplicantsInCluster > 0 ? params.getReplicantCreationThrottler() : params.getSegmentLoadingThrottler();
 
-      if (replicate && !replicationManager.canCreateReplicant(tier)) {
+      if (!throttler.canProcessingSegment(tier)) {
         break;
       }
 
@@ -132,11 +132,9 @@ public abstract class LoadRule implements Rule
         break;
       }
 
-      if (replicate) {
-        replicationManager.registerReplicantCreation(
+        throttler.register(
             tier, segment.getIdentifier(), holder.getServer().getHost()
         );
-      }
 
       holder.getPeon().loadSegment(
           segment,
@@ -145,7 +143,7 @@ public abstract class LoadRule implements Rule
             @Override
             public void execute()
             {
-              replicationManager.unregisterReplicantCreation(
+              throttler.unregister(
                   tier,
                   segment.getIdentifier(),
                   holder.getServer().getHost()
@@ -177,7 +175,7 @@ public abstract class LoadRule implements Rule
       }
     }
 
-    final ReplicationThrottler replicationManager = params.getReplicationManager();
+    final SegmentProcessingThrottler throttler = params.getReplicantTerminationThrottler();
 
     // Find all instances of this segment across tiers
     Map<String, Integer> replicantsByTier = params.getSegmentReplicantLookup().getClusterTiers(segment.getIdentifier());
@@ -205,12 +203,12 @@ public abstract class LoadRule implements Rule
 
         if (holder.isServingSegment(segment)) {
           if (expectedNumReplicantsForTier > 0) { // don't throttle unless we are removing extra replicants
-            if (!replicationManager.canDestroyReplicant(tier)) {
+            if (!throttler.canProcessingSegment(tier)) {
               serverQueue.add(holder);
               break;
             }
 
-            replicationManager.registerReplicantTermination(
+            throttler.register(
                 tier,
                 segment.getIdentifier(),
                 holder.getServer().getHost()
@@ -224,7 +222,7 @@ public abstract class LoadRule implements Rule
                 @Override
                 public void execute()
                 {
-                  replicationManager.unregisterReplicantTermination(
+                  throttler.unregister(
                       tier,
                       segment.getIdentifier(),
                       holder.getServer().getHost()

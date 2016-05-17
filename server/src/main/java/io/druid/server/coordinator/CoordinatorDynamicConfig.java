@@ -36,6 +36,7 @@ public class CoordinatorDynamicConfig
   private final int balancerComputeThreads;
   private final boolean emitBalancingStats;
   private final Set<String> killDataSourceWhitelist;
+  private final int loadingThrottleLimit;
 
   @JsonCreator
   public CoordinatorDynamicConfig(
@@ -47,8 +48,10 @@ public class CoordinatorDynamicConfig
       @JsonProperty("replicationThrottleLimit") int replicationThrottleLimit,
       @JsonProperty("balancerComputeThreads") int balancerComputeThreads,
       @JsonProperty("emitBalancingStats") boolean emitBalancingStats,
-      @JsonProperty("killDataSourceWhitelist") Set<String> killDataSourceWhitelist
-  )
+      @JsonProperty("killDataSourceWhitelist") Set<String> killDataSourceWhitelist,
+      @JsonProperty("loadingThrottleLimit") int loadingThrottleLimit
+
+      )
   {
     this.maxSegmentsToMove = maxSegmentsToMove;
     this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
@@ -59,6 +62,7 @@ public class CoordinatorDynamicConfig
     this.emitBalancingStats = emitBalancingStats;
     this.balancerComputeThreads = Math.max(balancerComputeThreads, 1);
     this.killDataSourceWhitelist = killDataSourceWhitelist;
+    this.loadingThrottleLimit = loadingThrottleLimit;
   }
 
   @JsonProperty
@@ -115,6 +119,12 @@ public class CoordinatorDynamicConfig
     return killDataSourceWhitelist;
   }
 
+  @JsonProperty
+  public int getLoadingThrottleLimit()
+  {
+    return loadingThrottleLimit;
+  }
+
   @Override
   public String toString()
   {
@@ -128,6 +138,7 @@ public class CoordinatorDynamicConfig
            ", balancerComputeThreads=" + balancerComputeThreads +
            ", emitBalancingStats=" + emitBalancingStats +
            ", killDataSourceWhitelist=" + killDataSourceWhitelist +
+           ", loadingThrottleLimit=" + loadingThrottleLimit +
            '}';
   }
 
@@ -167,6 +178,9 @@ public class CoordinatorDynamicConfig
     if (emitBalancingStats != that.emitBalancingStats) {
       return false;
     }
+    if (loadingThrottleLimit != that.loadingThrottleLimit) {
+      return false;
+    }
     return !(killDataSourceWhitelist != null
              ? !killDataSourceWhitelist.equals(that.killDataSourceWhitelist)
              : that.killDataSourceWhitelist != null);
@@ -185,6 +199,7 @@ public class CoordinatorDynamicConfig
     result = 31 * result + balancerComputeThreads;
     result = 31 * result + (emitBalancingStats ? 1 : 0);
     result = 31 * result + (killDataSourceWhitelist != null ? killDataSourceWhitelist.hashCode() : 0);
+    result = 31 * result + loadingThrottleLimit;
     return result;
   }
 
@@ -199,10 +214,11 @@ public class CoordinatorDynamicConfig
     private boolean emitBalancingStats;
     private int balancerComputeThreads;
     private Set<String> killDataSourceWhitelist;
+    private int loadingThrottleLimit;
 
     public Builder()
     {
-      this(15 * 60 * 1000L, 524288000L, 100, 5, 15, 10, 1, false, null);
+      this(15 * 60 * 1000L, 524288000L, 100, 5, 15, 10, 1, false, null, -1);
     }
 
     private Builder(
@@ -214,7 +230,8 @@ public class CoordinatorDynamicConfig
         int replicationThrottleLimit,
         int balancerComputeThreads,
         boolean emitBalancingStats,
-        Set<String> killDataSourceWhitelist
+        Set<String> killDataSourceWhitelist,
+        int loadingThrottleLimit
     )
     {
       this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
@@ -226,6 +243,7 @@ public class CoordinatorDynamicConfig
       this.emitBalancingStats = emitBalancingStats;
       this.balancerComputeThreads = balancerComputeThreads;
       this.killDataSourceWhitelist = killDataSourceWhitelist;
+      this.loadingThrottleLimit = loadingThrottleLimit;
     }
 
     public Builder withMillisToWaitBeforeDeleting(long millisToWaitBeforeDeleting)
@@ -276,6 +294,12 @@ public class CoordinatorDynamicConfig
       return this;
     }
 
+    public Builder withLoadingThrottleLimit(int loadingThrottleLimit)
+    {
+      this.loadingThrottleLimit = loadingThrottleLimit;
+      return this;
+    }
+
     public CoordinatorDynamicConfig build()
     {
       return new CoordinatorDynamicConfig(
@@ -287,7 +311,8 @@ public class CoordinatorDynamicConfig
           replicationThrottleLimit,
           balancerComputeThreads,
           emitBalancingStats,
-          killDataSourceWhitelist
+          killDataSourceWhitelist,
+          loadingThrottleLimit
       );
     }
   }

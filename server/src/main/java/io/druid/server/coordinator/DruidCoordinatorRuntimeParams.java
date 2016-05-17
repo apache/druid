@@ -43,12 +43,15 @@ public class DruidCoordinatorRuntimeParams
   private final Set<DruidDataSource> dataSources;
   private final Set<DataSegment> availableSegments;
   private final Map<String, LoadQueuePeon> loadManagementPeons;
-  private final ReplicationThrottler replicationManager;
+  private final SegmentProcessingThrottler replicantCreationThrottler;
+  private final SegmentProcessingThrottler replicantTerminationThrottler;
+  private final SegmentProcessingThrottler segmentLoadingThrottler;
   private final ServiceEmitter emitter;
   private final CoordinatorDynamicConfig coordinatorDynamicConfig;
   private final CoordinatorStats stats;
   private final DateTime balancerReferenceTimestamp;
   private final BalancerStrategyFactory strategyFactory;
+
 
   public DruidCoordinatorRuntimeParams(
       long startTime,
@@ -58,7 +61,9 @@ public class DruidCoordinatorRuntimeParams
       Set<DruidDataSource> dataSources,
       Set<DataSegment> availableSegments,
       Map<String, LoadQueuePeon> loadManagementPeons,
-      ReplicationThrottler replicationManager,
+      SegmentProcessingThrottler replicantCreationThrottler,
+      SegmentProcessingThrottler replicantTerminationThrottler,
+      SegmentProcessingThrottler segmentLoadingThrottler,
       ServiceEmitter emitter,
       CoordinatorDynamicConfig coordinatorDynamicConfig,
       CoordinatorStats stats,
@@ -73,7 +78,9 @@ public class DruidCoordinatorRuntimeParams
     this.dataSources = dataSources;
     this.availableSegments = availableSegments;
     this.loadManagementPeons = loadManagementPeons;
-    this.replicationManager = replicationManager;
+    this.replicantCreationThrottler = replicantCreationThrottler;
+    this.replicantTerminationThrottler = replicantTerminationThrottler;
+    this.segmentLoadingThrottler = segmentLoadingThrottler;
     this.emitter = emitter;
     this.coordinatorDynamicConfig = coordinatorDynamicConfig;
     this.stats = stats;
@@ -116,9 +123,19 @@ public class DruidCoordinatorRuntimeParams
     return loadManagementPeons;
   }
 
-  public ReplicationThrottler getReplicationManager()
+  public SegmentProcessingThrottler getReplicantCreationThrottler()
   {
-    return replicationManager;
+    return replicantCreationThrottler;
+  }
+
+  public SegmentProcessingThrottler getReplicantTerminationThrottler()
+  {
+    return replicantTerminationThrottler;
+  }
+
+  public SegmentProcessingThrottler getSegmentLoadingThrottler()
+  {
+    return segmentLoadingThrottler;
   }
 
   public ServiceEmitter getEmitter()
@@ -166,7 +183,9 @@ public class DruidCoordinatorRuntimeParams
         dataSources,
         availableSegments,
         loadManagementPeons,
-        replicationManager,
+        replicantCreationThrottler,
+        replicantTerminationThrottler,
+        segmentLoadingThrottler,
         emitter,
         coordinatorDynamicConfig,
         stats,
@@ -184,7 +203,9 @@ public class DruidCoordinatorRuntimeParams
     private final Set<DruidDataSource> dataSources;
     private final Set<DataSegment> availableSegments;
     private final Map<String, LoadQueuePeon> loadManagementPeons;
-    private ReplicationThrottler replicationManager;
+    private SegmentProcessingThrottler replicantCreationThrottler;
+    private SegmentProcessingThrottler replicantTerminationThrottler;
+    private SegmentProcessingThrottler segmentLoadingThrottler;
     private ServiceEmitter emitter;
     private CoordinatorDynamicConfig coordinatorDynamicConfig;
     private CoordinatorStats stats;
@@ -200,7 +221,9 @@ public class DruidCoordinatorRuntimeParams
       this.dataSources = Sets.newHashSet();
       this.availableSegments = Sets.newTreeSet(DruidCoordinator.SEGMENT_COMPARATOR);
       this.loadManagementPeons = Maps.newHashMap();
-      this.replicationManager = null;
+      this.replicantCreationThrottler = null;
+      this.replicantTerminationThrottler = null;
+      this.segmentLoadingThrottler = null;
       this.emitter = null;
       this.stats = new CoordinatorStats();
       this.coordinatorDynamicConfig = new CoordinatorDynamicConfig.Builder().build();
@@ -215,7 +238,9 @@ public class DruidCoordinatorRuntimeParams
         Set<DruidDataSource> dataSources,
         Set<DataSegment> availableSegments,
         Map<String, LoadQueuePeon> loadManagementPeons,
-        ReplicationThrottler replicationManager,
+        SegmentProcessingThrottler replicantCreationThrottler,
+        SegmentProcessingThrottler replicantTerminationThrottler,
+        SegmentProcessingThrottler segmentLoadingThrottler,
         ServiceEmitter emitter,
         CoordinatorDynamicConfig coordinatorDynamicConfig,
         CoordinatorStats stats,
@@ -230,7 +255,9 @@ public class DruidCoordinatorRuntimeParams
       this.dataSources = dataSources;
       this.availableSegments = availableSegments;
       this.loadManagementPeons = loadManagementPeons;
-      this.replicationManager = replicationManager;
+      this.replicantCreationThrottler = replicantCreationThrottler;
+      this.replicantTerminationThrottler = replicantTerminationThrottler;
+      this.segmentLoadingThrottler = segmentLoadingThrottler;
       this.emitter = emitter;
       this.coordinatorDynamicConfig = coordinatorDynamicConfig;
       this.stats = stats;
@@ -248,7 +275,9 @@ public class DruidCoordinatorRuntimeParams
           dataSources,
           availableSegments,
           loadManagementPeons,
-          replicationManager,
+          replicantCreationThrottler,
+          replicantTerminationThrottler,
+          segmentLoadingThrottler,
           emitter,
           coordinatorDynamicConfig,
           stats,
@@ -299,12 +328,23 @@ public class DruidCoordinatorRuntimeParams
       return this;
     }
 
-    public Builder withReplicationManager(ReplicationThrottler replicationManager)
+    public Builder withReplicantCreationThrottler(SegmentProcessingThrottler replicantCreationThrottler)
     {
-      this.replicationManager = replicationManager;
+      this.replicantCreationThrottler = replicantCreationThrottler;
       return this;
     }
 
+    public Builder withreplicantTerminationThrottler(SegmentProcessingThrottler replicantTerminationThrottler)
+    {
+      this.replicantTerminationThrottler = replicantTerminationThrottler;
+      return this;
+    }
+
+    public Builder withSegmentLoadingThrottler(SegmentProcessingThrottler segmentLoadingThrottler)
+    {
+      this.segmentLoadingThrottler = segmentLoadingThrottler;
+      return this;
+    }
     public Builder withEmitter(ServiceEmitter emitter)
     {
       this.emitter = emitter;

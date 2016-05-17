@@ -132,46 +132,60 @@ public class DruidCoordinatorBalancerProfiler
 
     DruidCoordinatorRuntimeParams params =
         DruidCoordinatorRuntimeParams.newBuilder()
-                                .withDruidCluster(
-                                    new DruidCluster(
-                                        ImmutableMap.<String, MinMaxPriorityQueue<ServerHolder>>of(
-                                            "normal",
-                                            MinMaxPriorityQueue.orderedBy(DruidCoordinatorBalancerTester.percentUsedComparator)
-                                                               .create(
-                                                                   serverHolderList
-                                                               )
-                                        )
-                                    )
-                                )
-                                .withLoadManagementPeons(
-                                    peonMap
-                                )
-                                .withAvailableSegments(segmentMap.values())
-                                .withDynamicConfigs(
-                                    new CoordinatorDynamicConfig.Builder().withMaxSegmentsToMove(
-                                        MAX_SEGMENTS_TO_MOVE
-                                    ).withReplicantLifetime(500)
-                                                                     .withReplicationThrottleLimit(5)
-                                                                     .build()
-                                )
-                                .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
-                                .withEmitter(emitter)
-                                .withDatabaseRuleManager(manager)
-                                .withReplicationManager(new ReplicationThrottler(2, 500))
-                                .withSegmentReplicantLookup(
-                                    SegmentReplicantLookup.make(
-                                        new DruidCluster(
-                                            ImmutableMap.<String, MinMaxPriorityQueue<ServerHolder>>of(
-                                                "normal",
-                                                MinMaxPriorityQueue.orderedBy(DruidCoordinatorBalancerTester.percentUsedComparator)
-                                                                   .create(
-                                                                       serverHolderList
-                                                                   )
-                                            )
-                                        )
-                                    )
-                                )
-                                .build();
+                                     .withDruidCluster(
+                                         new DruidCluster(
+                                             ImmutableMap.<String, MinMaxPriorityQueue<ServerHolder>>of(
+                                                 "normal",
+                                                 MinMaxPriorityQueue.orderedBy(DruidCoordinatorBalancerTester.percentUsedComparator)
+                                                                    .create(
+                                                                        serverHolderList
+                                                                    )
+                                             )
+                                         )
+                                     )
+                                     .withLoadManagementPeons(
+                                         peonMap
+                                     )
+                                     .withAvailableSegments(segmentMap.values())
+                                     .withDynamicConfigs(
+                                         new CoordinatorDynamicConfig.Builder().withMaxSegmentsToMove(
+                                             MAX_SEGMENTS_TO_MOVE
+                                         ).withReplicantLifetime(500)
+                                                                               .withReplicationThrottleLimit(5)
+                                                                               .build()
+                                     )
+                                     .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
+                                     .withEmitter(emitter)
+                                     .withDatabaseRuleManager(manager)
+                                     .withReplicantCreationThrottler(new SegmentProcessingThrottler(
+                                         2,
+                                         500,
+                                         "replicantCreation"
+                                     ))
+                                     .withreplicantTerminationThrottler(new SegmentProcessingThrottler(
+                                         2,
+                                         500,
+                                         "replicantTermination"
+                                     ))
+                                     .withSegmentLoadingThrottler(new SegmentProcessingThrottler(
+                                         2,
+                                         500,
+                                         "segmentLoading"
+                                     ))
+                                     .withSegmentReplicantLookup(
+                                         SegmentReplicantLookup.make(
+                                             new DruidCluster(
+                                                 ImmutableMap.<String, MinMaxPriorityQueue<ServerHolder>>of(
+                                                     "normal",
+                                                     MinMaxPriorityQueue.orderedBy(DruidCoordinatorBalancerTester.percentUsedComparator)
+                                                                        .create(
+                                                                            serverHolderList
+                                                                        )
+                                                 )
+                                             )
+                                         )
+                                     )
+                                     .build();
 
     DruidCoordinatorBalancerTester tester = new DruidCoordinatorBalancerTester(coordinator);
     DruidCoordinatorRuleRunner runner = new DruidCoordinatorRuleRunner(coordinator);
@@ -214,36 +228,36 @@ public class DruidCoordinatorBalancerProfiler
 
     DruidCoordinatorRuntimeParams params =
         DruidCoordinatorRuntimeParams.newBuilder()
-                                .withDruidCluster(
-                                    new DruidCluster(
-                                        ImmutableMap.<String, MinMaxPriorityQueue<ServerHolder>>of(
-                                            "normal",
-                                            MinMaxPriorityQueue.orderedBy(DruidCoordinatorBalancerTester.percentUsedComparator)
-                                                               .create(
-                                                                   Arrays.asList(
-                                                                       new ServerHolder(druidServer1, fromPeon),
-                                                                       new ServerHolder(druidServer2, toPeon)
-                                                                   )
-                                                               )
-                                        )
-                                    )
-                                )
-                                .withLoadManagementPeons(
-                                    ImmutableMap.<String, LoadQueuePeon>of(
-                                        "from",
-                                        fromPeon,
-                                        "to",
-                                        toPeon
-                                    )
-                                )
-                                .withAvailableSegments(segments.values())
-                                .withDynamicConfigs(
-                                    new CoordinatorDynamicConfig.Builder().withMaxSegmentsToMove(
-                                        MAX_SEGMENTS_TO_MOVE
-                                    ).build()
-                                )
-                                .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
-                                .build();
+                                     .withDruidCluster(
+                                         new DruidCluster(
+                                             ImmutableMap.<String, MinMaxPriorityQueue<ServerHolder>>of(
+                                                 "normal",
+                                                 MinMaxPriorityQueue.orderedBy(DruidCoordinatorBalancerTester.percentUsedComparator)
+                                                                    .create(
+                                                                        Arrays.asList(
+                                                                            new ServerHolder(druidServer1, fromPeon),
+                                                                            new ServerHolder(druidServer2, toPeon)
+                                                                        )
+                                                                    )
+                                             )
+                                         )
+                                     )
+                                     .withLoadManagementPeons(
+                                         ImmutableMap.<String, LoadQueuePeon>of(
+                                             "from",
+                                             fromPeon,
+                                             "to",
+                                             toPeon
+                                         )
+                                     )
+                                     .withAvailableSegments(segments.values())
+                                     .withDynamicConfigs(
+                                         new CoordinatorDynamicConfig.Builder().withMaxSegmentsToMove(
+                                             MAX_SEGMENTS_TO_MOVE
+                                         ).build()
+                                     )
+                                     .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
+                                     .build();
     DruidCoordinatorBalancerTester tester = new DruidCoordinatorBalancerTester(coordinator);
     watch.start();
     DruidCoordinatorRuntimeParams balanceParams = tester.run(params);

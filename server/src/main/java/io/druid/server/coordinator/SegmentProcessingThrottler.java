@@ -28,22 +28,23 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * The ReplicationThrottler is used to throttle the number of replicants that are created and destroyed.
+ * The SegmentProcessingThrottler is used to throttle the number of segments that are loaded, replicated and destroyed.
  */
-public class ReplicationThrottler
+public class SegmentProcessingThrottler
 {
-  private static final EmittingLogger log = new EmittingLogger(ReplicationThrottler.class);
+  private static final EmittingLogger log = new EmittingLogger(SegmentProcessingThrottler.class);
 
-  private final Map<String, Boolean> replicatingLookup = Maps.newHashMap();
-  private final Map<String, Boolean> terminatingLookup = Maps.newHashMap();
-  private final ReplicatorSegmentHolder currentlyReplicating = new ReplicatorSegmentHolder();
-  private final ReplicatorSegmentHolder currentlyTerminating = new ReplicatorSegmentHolder();
+  private final Map<String, Boolean> processingLookup = Maps.newHashMap();
+  private final ProcessingSegmentHolder currentlyProcessing = new ProcessingSegmentHolder();
 
   private volatile int maxReplicants;
   private volatile int maxLifetime;
+  private boolean enableThrottling;
+  private final String type;
 
-  public ReplicationThrottler(int maxReplicants, int maxLifetime)
+  public SegmentProcessingThrottler(int maxReplicants, int maxLifetime, String type)
   {
+    this.type = type;
     updateParams(maxReplicants, maxLifetime);
   }
 
@@ -51,76 +52,62 @@ public class ReplicationThrottler
   {
     this.maxReplicants = maxReplicants;
     this.maxLifetime = maxLifetime;
+    this.enableThrottling = maxReplicants > 0;
   }
 
-  public void updateReplicationState(String tier)
+  public void updateState(String tier)
   {
-    update(tier, currentlyReplicating, replicatingLookup, "create");
-  }
-
-  public void updateTerminationState(String tier)
-  {
-    update(tier, currentlyTerminating, terminatingLookup, "terminate");
-  }
-
-  private void update(String tier, ReplicatorSegmentHolder holder, Map<String, Boolean> lookup, String type)
-  {
-    int size = holder.getNumProcessing(tier);
+    int size = currentlyProcessing.getNumProcessing(tier);
     if (size != 0) {
       log.info(
-          "[%s]: Replicant %s queue still has %d segments. Lifetime[%d]. Segments %s",
+          "[%s]: Processing %s queue still has %d segments. Lifetime[%d]. Segments %s",
           tier,
           type,
           size,
-          holder.getLifetime(tier),
-          holder.getCurrentlyProcessingSegmentsAndHosts(tier)
+          currentlyProcessing.getLifetime(tier),
+          currentlyProcessing.getCurrentlyProcessingSegmentsAndHosts(tier)
       );
-      holder.reduceLifetime(tier);
-      lookup.put(tier, false);
+      currentlyProcessing.reduceLifetime(tier);
+      processingLookup.put(tier, false);
 
-      if (holder.getLifetime(tier) < 0) {
-        log.makeAlert("[%s]: Replicant %s queue stuck after %d+ runs!", tier, type, maxLifetime)
-           .addData("segments", holder.getCurrentlyProcessingSegmentsAndHosts(tier))
+      if (currentlyProcessing.getLifetime(tier) < 0) {
+        log.makeAlert("[%s]: Processing %s queue stuck after %d+ runs!", tier, type, maxLifetime)
+           .addData("segments", currentlyProcessing.getCurrentlyProcessingSegmentsAndHosts(tier))
            .emit();
       }
     } else {
-      log.info("[%s]: Replicant %s queue is empty.", tier, type);
-      lookup.put(tier, true);
-      holder.resetLifetime(tier);
+      log.info("[%s]: Processing %s queue is empty.", tier, type);
+      processingLookup.put(tier, true);
+      currentlyProcessing.resetLifetime(tier);
     }
   }
 
-  public boolean canCreateReplicant(String tier)
+  public boolean canProcessingSegment(String tier)
   {
-    return replicatingLookup.get(tier) && !currentlyReplicating.isAtMaxReplicants(tier);
+    return !enableThrottling || (processingLookup.get(tier) && !currentlyProcessing.isAtMaxReplicants(tier));
   }
 
-  public boolean canDestroyReplicant(String tier)
+  public void register(String tier, String segmentId, String serverId)
   {
-    return terminatingLookup.get(tier) && !currentlyTerminating.isAtMaxReplicants(tier);
+    currentlyProcessing.addSegment(tier, segmentId, serverId);
   }
 
-  public void registerReplicantCreation(String tier, String segmentId, String serverId)
+  public void unregister(String tier, String segmentId, String serverId)
   {
-    currentlyReplicating.addSegment(tier, segmentId, serverId);
+    currentlyProcessing.removeSegment(tier, segmentId, serverId);
   }
 
-  public void unregisterReplicantCreation(String tier, String segmentId, String serverId)
+  @Override
+  public String toString()
   {
-    currentlyReplicating.removeSegment(tier, segmentId, serverId);
+    return "SegmentProcessingThrottler{" +
+           "maxReplicants=" + maxReplicants +
+           ", maxLifetime=" + maxLifetime +
+           ", type='" + type + '\'' +
+           '}';
   }
 
-  public void registerReplicantTermination(String tier, String segmentId, String serverId)
-  {
-    currentlyTerminating.addSegment(tier, segmentId, serverId);
-  }
-
-  public void unregisterReplicantTermination(String tier, String segmentId, String serverId)
-  {
-    currentlyTerminating.removeSegment(tier, segmentId, serverId);
-  }
-
-  private class ReplicatorSegmentHolder
+  private class ProcessingSegmentHolder
   {
     private final Map<String, ConcurrentHashMap<String, String>> currentlyProcessingSegments = Maps.newHashMap();
     private final Map<String, Integer> lifetimes = Maps.newHashMap();
@@ -128,7 +115,7 @@ public class ReplicationThrottler
     public boolean isAtMaxReplicants(String tier)
     {
       final ConcurrentHashMap<String, String> segments = currentlyProcessingSegments.get(tier);
-      return (segments != null && segments.size() >= maxReplicants);
+      return segments != null && segments.size() >= maxReplicants;
     }
 
     public void addSegment(String tier, String segmentId, String serverId)

@@ -26,7 +26,7 @@ import io.druid.server.coordinator.CoordinatorStats;
 import io.druid.server.coordinator.DruidCluster;
 import io.druid.server.coordinator.DruidCoordinator;
 import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
-import io.druid.server.coordinator.ReplicationThrottler;
+import io.druid.server.coordinator.SegmentProcessingThrottler;
 import io.druid.server.coordinator.rules.Rule;
 import io.druid.timeline.DataSegment;
 import org.joda.time.DateTime;
@@ -40,32 +40,60 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
   private static final EmittingLogger log = new EmittingLogger(DruidCoordinatorRuleRunner.class);
   private static int MAX_MISSING_RULES = 10;
 
-  private final ReplicationThrottler replicatorThrottler;
+  private final SegmentProcessingThrottler replicantCreationThrottler;
+  private final SegmentProcessingThrottler replicantTerminationThrottler;
+  private final SegmentProcessingThrottler segmentLoadingThrottler;
 
   private final DruidCoordinator coordinator;
 
   public DruidCoordinatorRuleRunner(DruidCoordinator coordinator)
   {
     this(
-        new ReplicationThrottler(
+        new SegmentProcessingThrottler(
             coordinator.getDynamicConfigs().getReplicationThrottleLimit(),
-            coordinator.getDynamicConfigs().getReplicantLifetime()
+            coordinator.getDynamicConfigs().getReplicantLifetime(),
+            "replicantCreation"
+        ),
+        new SegmentProcessingThrottler(
+            coordinator.getDynamicConfigs().getReplicationThrottleLimit(),
+            coordinator.getDynamicConfigs().getReplicantLifetime(),
+            "replicantTermination"
+        ),
+        new SegmentProcessingThrottler(
+            coordinator.getDynamicConfigs().getLoadingThrottleLimit(),
+            coordinator.getDynamicConfigs().getReplicantLifetime(),
+            "loading"
         ),
         coordinator
     );
   }
 
-  public DruidCoordinatorRuleRunner(ReplicationThrottler replicatorThrottler, DruidCoordinator coordinator)
+  public DruidCoordinatorRuleRunner(SegmentProcessingThrottler replicantCreationThrottler,
+                                    SegmentProcessingThrottler replicantTerminationThrottler,
+                                    SegmentProcessingThrottler segmentLoadingThrottler,
+       DruidCoordinator coordinator)
   {
-    this.replicatorThrottler = replicatorThrottler;
+    this.replicantCreationThrottler = replicantCreationThrottler;
+    this.replicantTerminationThrottler = replicantTerminationThrottler;
+    this.segmentLoadingThrottler = segmentLoadingThrottler;
     this.coordinator = coordinator;
   }
 
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    replicatorThrottler.updateParams(
+    replicantCreationThrottler.updateParams(
         coordinator.getDynamicConfigs().getReplicationThrottleLimit(),
+        coordinator.getDynamicConfigs().getReplicantLifetime()
+    );
+
+    replicantTerminationThrottler.updateParams(
+        coordinator.getDynamicConfigs().getReplicationThrottleLimit(),
+        coordinator.getDynamicConfigs().getReplicantLifetime()
+    );
+
+    segmentLoadingThrottler.updateParams(
+        coordinator.getDynamicConfigs().getLoadingThrottleLimit(),
         coordinator.getDynamicConfigs().getReplicantLifetime()
     );
 
@@ -78,12 +106,15 @@ public class DruidCoordinatorRuleRunner implements DruidCoordinatorHelper
     }
 
     for (String tier : cluster.getTierNames()) {
-      replicatorThrottler.updateReplicationState(tier);
-      replicatorThrottler.updateTerminationState(tier);
+      replicantCreationThrottler.updateState(tier);
+      replicantTerminationThrottler.updateState(tier);
+      segmentLoadingThrottler.updateState(tier);
     }
 
     DruidCoordinatorRuntimeParams paramsWithReplicationManager = params.buildFromExisting()
-                                                                       .withReplicationManager(replicatorThrottler)
+                                                                       .withReplicantCreationThrottler(replicantCreationThrottler)
+                                                                       .withreplicantTerminationThrottler(replicantTerminationThrottler)
+                                                                       .withSegmentLoadingThrottler(segmentLoadingThrottler)
                                                                        .build();
 
     // Run through all matched rules for available segments

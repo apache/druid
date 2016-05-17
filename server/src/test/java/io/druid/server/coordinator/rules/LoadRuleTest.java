@@ -38,7 +38,7 @@ import io.druid.server.coordinator.DruidCluster;
 import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import io.druid.server.coordinator.LoadPeonCallback;
 import io.druid.server.coordinator.LoadQueuePeon;
-import io.druid.server.coordinator.ReplicationThrottler;
+import io.druid.server.coordinator.SegmentProcessingThrottler;
 import io.druid.server.coordinator.SegmentReplicantLookup;
 import io.druid.server.coordinator.ServerHolder;
 import io.druid.timeline.DataSegment;
@@ -72,7 +72,9 @@ public class LoadRuleTest
   );
 
   private LoadQueuePeon mockPeon;
-  private ReplicationThrottler throttler;
+  SegmentProcessingThrottler replicantCreationThrottler;
+  SegmentProcessingThrottler replicantTerminationThrottler;
+  SegmentProcessingThrottler segmentLoadingThrottler;
   private DataSegment segment;
 
 
@@ -82,10 +84,14 @@ public class LoadRuleTest
     EmittingLogger.registerEmitter(emitter);
     emitter.start();
     mockPeon = EasyMock.createMock(LoadQueuePeon.class);
-    throttler = new ReplicationThrottler(2, 1);
+    replicantCreationThrottler = new SegmentProcessingThrottler(2, 1,"replicantCreation");
+    replicantTerminationThrottler = new SegmentProcessingThrottler(2, 1, "replicantTermination");
+    segmentLoadingThrottler = new SegmentProcessingThrottler(3,1, "segmentLoading");
     for (String tier : Arrays.asList("hot", DruidServer.DEFAULT_TIER)) {
-      throttler.updateReplicationState(tier);
-      throttler.updateTerminationState(tier);
+      replicantCreationThrottler.updateState(tier);
+      replicantTerminationThrottler.updateState(tier);
+      segmentLoadingThrottler.updateState(tier);
+
     }
     segment = new DataSegment(
         "foo",
@@ -196,7 +202,9 @@ public class LoadRuleTest
         DruidCoordinatorRuntimeParams.newBuilder()
                                      .withDruidCluster(druidCluster)
                                      .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
-                                     .withReplicationManager(throttler)
+                                     .withReplicantCreationThrottler(replicantCreationThrottler)
+                                     .withreplicantTerminationThrottler(replicantTerminationThrottler)
+                                     .withSegmentLoadingThrottler(segmentLoadingThrottler)
                                      .withBalancerStrategyFactory(costBalancerStrategyFactory)
                                      .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                                      .withAvailableSegments(Arrays.asList(segment)).build(),
@@ -302,7 +310,9 @@ public class LoadRuleTest
         DruidCoordinatorRuntimeParams.newBuilder()
                                      .withDruidCluster(druidCluster)
                                      .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
-                                     .withReplicationManager(throttler)
+                                     .withReplicantCreationThrottler(replicantCreationThrottler)
+                                     .withreplicantTerminationThrottler(replicantTerminationThrottler)
+                                     .withSegmentLoadingThrottler(segmentLoadingThrottler)
                                      .withBalancerStrategyFactory(costBalancerStrategyFactory)
                                      .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                                      .withAvailableSegments(Arrays.asList(segment)).build(),
@@ -387,7 +397,9 @@ CostBalancerStrategyFactory costBalancerStrategyFactory = new CostBalancerStrate
         DruidCoordinatorRuntimeParams.newBuilder()
                                      .withDruidCluster(druidCluster)
                                      .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
-                                     .withReplicationManager(throttler)
+                                     .withReplicantCreationThrottler(replicantCreationThrottler)
+                                     .withreplicantTerminationThrottler(replicantTerminationThrottler)
+                                     .withSegmentLoadingThrottler(segmentLoadingThrottler)
                                      .withBalancerStrategyFactory(costBalancerStrategyFactory)
                                      .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                                      .withAvailableSegments(Arrays.asList(segment)).build(),
@@ -488,7 +500,9 @@ CostBalancerStrategyFactory costBalancerStrategyFactory = new CostBalancerStrate
         DruidCoordinatorRuntimeParams.newBuilder()
                                      .withDruidCluster(druidCluster)
                                      .withSegmentReplicantLookup(SegmentReplicantLookup.make(druidCluster))
-                                     .withReplicationManager(throttler)
+                                     .withReplicantCreationThrottler(replicantCreationThrottler)
+                                     .withreplicantTerminationThrottler(replicantTerminationThrottler)
+                                     .withSegmentLoadingThrottler(segmentLoadingThrottler)
                                      .withBalancerStrategyFactory(costBalancerStrategyFactory)
                                      .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
                                      .withAvailableSegments(Arrays.asList(segment)).build(),
