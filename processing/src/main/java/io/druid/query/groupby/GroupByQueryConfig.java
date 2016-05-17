@@ -34,6 +34,10 @@ public class GroupByQueryConfig
   @JsonProperty
   private int maxResults = 500000;
 
+  //max off-heap limit in bytes
+  @JsonProperty
+  private long maxOffheapSize = 1L<<34;
+
   public boolean isSingleThreaded()
   {
     return singleThreaded;
@@ -52,5 +56,15 @@ public class GroupByQueryConfig
   public int getMaxResults()
   {
     return maxResults;
+  }
+
+  public void setMaxOffheapSize(long maxOffheapSize)
+  {
+    this.maxOffheapSize = maxOffheapSize;
+  }
+
+  public long getMaxOffheapSize()
+  {
+    return maxOffheapSize;
   }
 }

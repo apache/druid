@@ -19,7 +19,6 @@
 
 package io.druid.segment.data;
 
-import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -33,7 +32,6 @@ import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
-import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -70,7 +68,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -130,17 +127,7 @@ public class IncrementalIndexTest
                   public IncrementalIndex createIndex(AggregatorFactory[] factories)
                   {
                     return new OffheapIncrementalIndex(
-                        0L, QueryGranularity.NONE, factories, 1000000,
-                        new StupidPool<ByteBuffer>(
-                            new Supplier<ByteBuffer>()
-                            {
-                              @Override
-                              public ByteBuffer get()
-                              {
-                                return ByteBuffer.allocate(256 * 1024);
-                              }
-                            }
-                        )
+                        0L, QueryGranularity.NONE, factories, 1L<<32
                     );
                   }
                 }
