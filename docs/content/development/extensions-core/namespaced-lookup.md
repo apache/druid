@@ -273,4 +273,4 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
 
 # Introspection
 
-Cached namespace lookups have introspection points at `/keys` and `/values` which return a complete set of the keys and values (respectively) in the lookup. Introspection to `/` returns the entire map.
+Cached namespace lookups have introspection points at `/keys` and `/values` which return a complete set of the keys and values (respectively) in the lookup. Introspection to `/` returns the entire map. Introspection to `/version` returns the version indicator for the lookup, or a 404 on a race condition during a delete.

@@ -27,12 +27,20 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableMap;
 import com.metamx.common.ISE;
 import com.metamx.common.StringUtils;
 import com.metamx.common.logger.Logger;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
+
+import javax.annotation.Nullable;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -42,12 +50,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import javax.annotation.Nullable;
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
 
 @JsonTypeName("cachedNamespace")
 public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
@@ -88,7 +90,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
       @JsonProperty("extractionNamespace") ExtractionNamespace extractionNamespace,
       @JsonProperty("firstCacheTimeout") Long firstCacheTimeout,
       @JsonProperty("oneToOne") boolean oneToOne,
-      @JacksonInject NamespaceExtractionCacheManager manager
+      @JacksonInject final NamespaceExtractionCacheManager manager
   )
   {
     this.extractionNamespace = Preconditions.checkNotNull(
@@ -116,6 +118,20 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
       public Response getValues()
       {
         return Response.ok(getLatest().values().toString()).build();
+      }
+
+      @GET
+      @Path("/version")
+      @Produces(MediaType.APPLICATION_JSON)
+      public Response getVersion()
+      {
+        final String version = manager.getVersion(extractorID);
+        if (null == version) {
+          // Handle race between delete and this method being called
+          return Response.status(Response.Status.NOT_FOUND).build();
+        } else {
+          return Response.ok(ImmutableMap.of("version", version)).build();
+        }
       }
 
       @GET
