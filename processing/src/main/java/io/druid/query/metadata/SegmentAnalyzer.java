@@ -30,7 +30,7 @@ import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.logger.Logger;
 import io.druid.common.utils.StringUtils;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.metadata.metadata.ColumnAnalysis;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
@@ -248,7 +248,7 @@ public class SegmentAnalyzer
       final long end = storageAdapter.getMaxTime().getMillis();
 
       final Sequence<Cursor> cursors =
-          storageAdapter.makeCursors(null, new Interval(start, end), QueryGranularity.ALL, false);
+          storageAdapter.makeCursors(null, new Interval(start, end), QueryGranularities.ALL, false);
 
       size = cursors.accumulate(
           0L,

@@ -30,7 +30,7 @@ import io.druid.data.input.impl.DelimitedParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
@@ -178,7 +178,7 @@ public class TestIndex
   {
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis())
-        .withQueryGranularity(QueryGranularity.NONE)
+        .withQueryGranularity(QueryGranularities.NONE)
         .withMetrics(METRIC_AGGS)
         .build();
     final IncrementalIndex retVal = new OnheapIncrementalIndex(schema, true, 10000);

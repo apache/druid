@@ -31,7 +31,7 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.FloatDimensionSchema;
 import io.druid.data.input.impl.LongDimensionSchema;
 import io.druid.data.input.impl.StringDimensionSchema;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
@@ -89,7 +89,7 @@ public class IncrementalIndexTest
     };
     final IncrementalIndexSchema schema = new IncrementalIndexSchema(
         0,
-        QueryGranularity.MINUTE,
+        QueryGranularities.MINUTE,
         dimensions,
         metrics
     );

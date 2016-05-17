@@ -22,7 +22,7 @@ package io.druid.query.timeseries;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.CacheStrategy;
 import io.druid.query.QueryRunnerTestHelper;
@@ -74,7 +74,7 @@ public class TimeseriesQueryQueryToolChestTest
                 ),
                 descending,
                 null,
-                QueryGranularity.ALL,
+                QueryGranularities.ALL,
                 ImmutableList.<AggregatorFactory>of(new CountAggregatorFactory("metric1")),
                 null,
                 null

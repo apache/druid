@@ -22,7 +22,7 @@ package io.druid.query.select;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.metamx.common.ISE;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.query.Result;
 import org.joda.time.DateTime;
 import org.junit.Assert;
@@ -44,7 +44,7 @@ public class SelectBinaryFnTest
   @Test
   public void testApply() throws Exception
   {
-    SelectBinaryFn binaryFn = new SelectBinaryFn(QueryGranularity.ALL, new PagingSpec(null, 5), false);
+    SelectBinaryFn binaryFn = new SelectBinaryFn(QueryGranularities.ALL, new PagingSpec(null, 5), false);
 
     Result<SelectResultValue> res1 = new Result<>(
         new DateTime("2013-01-01"),

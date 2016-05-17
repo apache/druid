@@ -25,7 +25,7 @@ import com.google.common.io.Files;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.data.input.MapBasedRow;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.query.aggregation.AggregationTestHelper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
@@ -69,7 +69,7 @@ public class OldApiSketchAggregationTest
         readFileFromClasspathAsString("simple_test_data_record_parser.json"),
         readFileFromClasspathAsString("oldapi/old_simple_test_data_aggregators.json"),
         0,
-        QueryGranularity.NONE,
+        QueryGranularities.NONE,
         5,
         readFileFromClasspathAsString("oldapi/old_simple_test_data_group_by_query.json")
     );
@@ -101,7 +101,7 @@ public class OldApiSketchAggregationTest
         readFileFromClasspathAsString("sketch_test_data_record_parser.json"),
         readFileFromClasspathAsString("oldapi/old_sketch_test_data_aggregators.json"),
         0,
-        QueryGranularity.NONE,
+        QueryGranularities.NONE,
         5,
         readFileFromClasspathAsString("oldapi/old_sketch_test_data_group_by_query.json")
     );

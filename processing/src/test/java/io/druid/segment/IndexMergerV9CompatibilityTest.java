@@ -28,7 +28,7 @@ import com.google.common.io.Files;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.data.CompressedObjectStrategy;
@@ -166,7 +166,7 @@ public class IndexMergerV9CompatibilityTest
   {
     toPersist = new OnheapIncrementalIndex(
         JodaUtils.MIN_INSTANT,
-        QueryGranularity.NONE,
+        QueryGranularities.NONE,
         DEFAULT_AGG_FACTORIES,
         1000000
     );

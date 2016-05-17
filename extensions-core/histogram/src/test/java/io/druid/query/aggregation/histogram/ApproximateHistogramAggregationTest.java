@@ -23,7 +23,7 @@ import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.data.input.MapBasedRow;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.query.aggregation.AggregationTestHelper;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -115,7 +115,7 @@ public class ApproximateHistogramAggregationTest
         parseSpec,
         metricSpec,
         0,
-        QueryGranularity.NONE,
+        QueryGranularities.NONE,
         50000,
         query
     );

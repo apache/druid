@@ -50,7 +50,7 @@ import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.InputRowParser;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
@@ -888,7 +888,7 @@ public class RealtimeIndexTaskTest
         "test_ds",
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("rows"), new LongSumAggregatorFactory("met1", "met1")},
-        new UniformGranularitySpec(Granularity.DAY, QueryGranularity.NONE, null),
+        new UniformGranularitySpec(Granularity.DAY, QueryGranularities.NONE, null),
         objectMapper
     );
     RealtimeIOConfig realtimeIOConfig = new RealtimeIOConfig(
@@ -1077,7 +1077,7 @@ public class RealtimeIndexTaskTest
                                       ImmutableList.<AggregatorFactory>of(
                                           new LongSumAggregatorFactory(metric, metric)
                                       )
-                                  ).granularity(QueryGranularity.ALL)
+                                  ).granularity(QueryGranularities.ALL)
                                   .intervals("2000/3000")
                                   .build();
 

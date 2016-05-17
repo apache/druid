@@ -22,6 +22,7 @@ package io.druid.segment.incremental;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.query.aggregation.AggregatorFactory;
 
 /**
@@ -76,7 +77,7 @@ public class IncrementalIndexSchema
     public Builder()
     {
       this.minTimestamp = 0L;
-      this.gran = QueryGranularity.NONE;
+      this.gran = QueryGranularities.NONE;
       this.dimensionsSpec = new DimensionsSpec(null, null, null);
       this.metrics = new AggregatorFactory[]{};
     }

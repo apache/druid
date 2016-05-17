@@ -29,7 +29,7 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -70,7 +70,7 @@ public class DataSchemaTest
             new DoubleSumAggregatorFactory("metric1", "col1"),
             new DoubleSumAggregatorFactory("metric2", "col2"),
         },
-        new ArbitraryGranularitySpec(QueryGranularity.DAY, ImmutableList.of(Interval.parse("2014/2015"))),
+        new ArbitraryGranularitySpec(QueryGranularities.DAY, ImmutableList.of(Interval.parse("2014/2015"))),
         jsonMapper
     );
 
@@ -99,7 +99,7 @@ public class DataSchemaTest
             new DoubleSumAggregatorFactory("metric1", "col1"),
             new DoubleSumAggregatorFactory("metric2", "col2"),
         },
-        new ArbitraryGranularitySpec(QueryGranularity.DAY, ImmutableList.of(Interval.parse("2014/2015"))),
+        new ArbitraryGranularitySpec(QueryGranularities.DAY, ImmutableList.of(Interval.parse("2014/2015"))),
         jsonMapper
     );
 
@@ -128,7 +128,7 @@ public class DataSchemaTest
             new DoubleSumAggregatorFactory("metric1", "col1"),
             new DoubleSumAggregatorFactory("metric2", "col2"),
         },
-        new ArbitraryGranularitySpec(QueryGranularity.DAY, ImmutableList.of(Interval.parse("2014/2015"))),
+        new ArbitraryGranularitySpec(QueryGranularities.DAY, ImmutableList.of(Interval.parse("2014/2015"))),
         jsonMapper
     );
     schema.getParser();
@@ -208,7 +208,7 @@ public class DataSchemaTest
     );
     Assert.assertEquals(
         actual.getGranularitySpec(),
-        new ArbitraryGranularitySpec(QueryGranularity.DAY, ImmutableList.of(Interval.parse("2014/2015")))
+        new ArbitraryGranularitySpec(QueryGranularities.DAY, ImmutableList.of(Interval.parse("2014/2015")))
     );
   }
 }
