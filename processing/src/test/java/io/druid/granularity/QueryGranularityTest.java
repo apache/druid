@@ -48,7 +48,7 @@ public class QueryGranularityTest
   @Test
   public void testIterableNone() throws Exception
   {
-    List<Long> millis = Lists.newArrayList(QueryGranularityUtil.NONE.iterable(0, 1000));
+    List<Long> millis = Lists.newArrayList(QueryGranularities.NONE.iterable(0, 1000));
     int count = 0;
     Assert.assertEquals(1000, millis.size());
     for (Long milli : millis) {
@@ -68,7 +68,7 @@ public class QueryGranularityTest
             new DateTime("2011-01-01T09:39:00.000Z"),
             new DateTime("2011-01-01T09:40:00.000Z")
         ),
-        QueryGranularityUtil.MINUTE.iterable(baseTime.getMillis(), baseTime.plus(Minutes.THREE).getMillis())
+        QueryGranularities.MINUTE.iterable(baseTime.getMillis(), baseTime.plus(Minutes.THREE).getMillis())
     );
   }
 
@@ -84,7 +84,7 @@ public class QueryGranularityTest
             new DateTime("2011-01-01T09:40:00.000Z"),
             new DateTime("2011-01-01T09:41:00.000Z")
         ),
-        QueryGranularityUtil.MINUTE.iterable(baseTime.getMillis(), baseTime.plus(Minutes.THREE).getMillis())
+        QueryGranularities.MINUTE.iterable(baseTime.getMillis(), baseTime.plus(Minutes.THREE).getMillis())
     );
   }
 
@@ -133,7 +133,7 @@ public class QueryGranularityTest
             new DateTime("2011-01-01T10:00:00.000Z"),
             new DateTime("2011-01-01T11:00:00.000Z")
         ),
-        QueryGranularityUtil.HOUR.iterable(baseTime.getMillis(), baseTime.plus(Hours.hours(3)).getMillis())
+        QueryGranularities.HOUR.iterable(baseTime.getMillis(), baseTime.plus(Hours.hours(3)).getMillis())
     );
   }
 
@@ -149,7 +149,7 @@ public class QueryGranularityTest
             new DateTime("2011-01-01T11:00:00.000Z"),
             new DateTime("2011-01-01T12:00:00.000Z")
         ),
-        QueryGranularityUtil.HOUR.iterable(baseTime.getMillis(), baseTime.plus(Hours.hours(3)).getMillis())
+        QueryGranularities.HOUR.iterable(baseTime.getMillis(), baseTime.plus(Hours.hours(3)).getMillis())
     );
   }
 
@@ -164,7 +164,7 @@ public class QueryGranularityTest
             new DateTime("2011-01-02T00:00:00.000Z"),
             new DateTime("2011-01-03T00:00:00.000Z")
         ),
-        QueryGranularityUtil.DAY.iterable(baseTime.getMillis(), baseTime.plus(Days.days(3)).getMillis())
+        QueryGranularities.DAY.iterable(baseTime.getMillis(), baseTime.plus(Days.days(3)).getMillis())
     );
   }
 
@@ -180,7 +180,7 @@ public class QueryGranularityTest
             new DateTime("2011-01-03T00:00:00.000Z"),
             new DateTime("2011-01-04T00:00:00.000Z")
         ),
-        QueryGranularityUtil.DAY.iterable(baseTime.getMillis(), baseTime.plus(Days.days(3)).getMillis())
+        QueryGranularities.DAY.iterable(baseTime.getMillis(), baseTime.plus(Days.days(3)).getMillis())
     );
   }
 
@@ -195,7 +195,7 @@ public class QueryGranularityTest
             new DateTime("2011-01-10T00:00:00.000Z"),
             new DateTime("2011-01-17T00:00:00.000Z")
         ),
-        QueryGranularityUtil.WEEK.iterable(baseTime.getMillis(), baseTime.plus(Weeks.THREE).getMillis())
+        QueryGranularities.WEEK.iterable(baseTime.getMillis(), baseTime.plus(Weeks.THREE).getMillis())
     );
   }
 
@@ -211,7 +211,7 @@ public class QueryGranularityTest
             new DateTime("2011-01-10T00:00:00.000Z"),
             new DateTime("2011-01-17T00:00:00.000Z")
         ),
-        QueryGranularityUtil.WEEK.iterable(baseTime.getMillis(), baseTime.plus(Weeks.THREE).getMillis())
+        QueryGranularities.WEEK.iterable(baseTime.getMillis(), baseTime.plus(Weeks.THREE).getMillis())
     );
   }
 
@@ -226,7 +226,7 @@ public class QueryGranularityTest
             new DateTime("2011-02-01T00:00:00.000Z"),
             new DateTime("2011-03-01T00:00:00.000Z")
         ),
-        QueryGranularityUtil.MONTH.iterable(baseTime.getMillis(), baseTime.plus(Months.THREE).getMillis())
+        QueryGranularities.MONTH.iterable(baseTime.getMillis(), baseTime.plus(Months.THREE).getMillis())
     );
   }
 
@@ -242,7 +242,7 @@ public class QueryGranularityTest
             new DateTime("2011-03-01T00:00:00.000Z"),
             new DateTime("2011-04-01T00:00:00.000Z")
         ),
-        QueryGranularityUtil.MONTH.iterable(baseTime.getMillis(), baseTime.plus(Months.THREE).getMillis())
+        QueryGranularities.MONTH.iterable(baseTime.getMillis(), baseTime.plus(Months.THREE).getMillis())
     );
   }
 
@@ -257,7 +257,7 @@ public class QueryGranularityTest
             new DateTime("2011-04-01T00:00:00.000Z"),
             new DateTime("2011-07-01T00:00:00.000Z")
         ),
-        QueryGranularityUtil.QUARTER.iterable(baseTime.getMillis(), baseTime.plus(Months.NINE).getMillis())
+        QueryGranularities.QUARTER.iterable(baseTime.getMillis(), baseTime.plus(Months.NINE).getMillis())
     );
   }
 
@@ -273,7 +273,7 @@ public class QueryGranularityTest
             new DateTime("2011-07-01T00:00:00.000Z"),
             new DateTime("2011-10-01T00:00:00.000Z")
         ),
-        QueryGranularityUtil.QUARTER.iterable(baseTime.getMillis(), baseTime.plus(Months.NINE).getMillis())
+        QueryGranularities.QUARTER.iterable(baseTime.getMillis(), baseTime.plus(Months.NINE).getMillis())
     );
   }
 
@@ -288,7 +288,7 @@ public class QueryGranularityTest
             new DateTime("2012-01-01T00:00:00.000Z"),
             new DateTime("2013-01-01T00:00:00.000Z")
         ),
-        QueryGranularityUtil.YEAR.iterable(baseTime.getMillis(), baseTime.plus(Years.THREE).getMillis())
+        QueryGranularities.YEAR.iterable(baseTime.getMillis(), baseTime.plus(Years.THREE).getMillis())
     );
   }
 
@@ -304,7 +304,7 @@ public class QueryGranularityTest
             new DateTime("2013-01-01T00:00:00.000Z"),
             new DateTime("2014-01-01T00:00:00.000Z")
         ),
-        QueryGranularityUtil.YEAR.iterable(baseTime.getMillis(), baseTime.plus(Years.THREE).getMillis())
+        QueryGranularities.YEAR.iterable(baseTime.getMillis(), baseTime.plus(Years.THREE).getMillis())
     );
   }
 
@@ -604,7 +604,7 @@ public class QueryGranularityTest
 
     assertSame(
         Lists.newArrayList(baseTime),
-        QueryGranularityUtil.ALL.iterable(baseTime.getMillis(), baseTime.plus(Days.days(3)).getMillis())
+        QueryGranularities.ALL.iterable(baseTime.getMillis(), baseTime.plus(Days.days(3)).getMillis())
     );
   }
 
@@ -615,7 +615,7 @@ public class QueryGranularityTest
 
     assertSame(
         Lists.newArrayList(baseTime),
-        QueryGranularityUtil.ALL.iterable(baseTime.getMillis(), baseTime.plus(Days.days(3)).getMillis())
+        QueryGranularities.ALL.iterable(baseTime.getMillis(), baseTime.plus(Days.days(3)).getMillis())
     );
   }
 
@@ -667,17 +667,17 @@ public class QueryGranularityTest
     ObjectMapper mapper = new DefaultObjectMapper();
 
     Assert.assertEquals(
-        QueryGranularityUtil.ALL,
+        QueryGranularities.ALL,
         mapper.readValue(
-        mapper.writeValueAsString(QueryGranularityUtil.ALL),
+        mapper.writeValueAsString(QueryGranularities.ALL),
         QueryGranularity.class
       )
     );
 
     Assert.assertEquals(
-        QueryGranularityUtil.NONE,
+        QueryGranularities.NONE,
         mapper.readValue(
-        mapper.writeValueAsString(QueryGranularityUtil.NONE),
+        mapper.writeValueAsString(QueryGranularities.NONE),
         QueryGranularity.class
       )
     );
@@ -688,19 +688,19 @@ public class QueryGranularityTest
   {
     ObjectMapper mapper = new DefaultObjectMapper();
 
-    Assert.assertEquals(QueryGranularityUtil.ALL, mapper.readValue("\"all\"", QueryGranularity.class));
-    Assert.assertEquals(QueryGranularityUtil.ALL, mapper.readValue("\"ALL\"", QueryGranularity.class));
-    Assert.assertEquals(QueryGranularityUtil.NONE, mapper.readValue("\"none\"", QueryGranularity.class));
-    Assert.assertEquals(QueryGranularityUtil.NONE, mapper.readValue("\"NONE\"", QueryGranularity.class));
+    Assert.assertEquals(QueryGranularities.ALL, mapper.readValue("\"all\"", QueryGranularity.class));
+    Assert.assertEquals(QueryGranularities.ALL, mapper.readValue("\"ALL\"", QueryGranularity.class));
+    Assert.assertEquals(QueryGranularities.NONE, mapper.readValue("\"none\"", QueryGranularity.class));
+    Assert.assertEquals(QueryGranularities.NONE, mapper.readValue("\"NONE\"", QueryGranularity.class));
 
-    Assert.assertEquals(QueryGranularityUtil.DAY, mapper.readValue("\"day\"", QueryGranularity.class));
-    Assert.assertEquals(QueryGranularityUtil.HOUR, mapper.readValue("\"hour\"", QueryGranularity.class));
-    Assert.assertEquals(QueryGranularityUtil.MINUTE, mapper.readValue("\"minute\"", QueryGranularity.class));
+    Assert.assertEquals(QueryGranularities.DAY, mapper.readValue("\"day\"", QueryGranularity.class));
+    Assert.assertEquals(QueryGranularities.HOUR, mapper.readValue("\"hour\"", QueryGranularity.class));
+    Assert.assertEquals(QueryGranularities.MINUTE, mapper.readValue("\"minute\"", QueryGranularity.class));
 
-    Assert.assertEquals(QueryGranularityUtil.WEEK, mapper.readValue("\"week\"", QueryGranularity.class));
-    Assert.assertEquals(QueryGranularityUtil.QUARTER, mapper.readValue("\"quarter\"", QueryGranularity.class));
-    Assert.assertEquals(QueryGranularityUtil.MONTH, mapper.readValue("\"month\"", QueryGranularity.class));
-    Assert.assertEquals(QueryGranularityUtil.YEAR, mapper.readValue("\"year\"", QueryGranularity.class));
+    Assert.assertEquals(QueryGranularities.WEEK, mapper.readValue("\"week\"", QueryGranularity.class));
+    Assert.assertEquals(QueryGranularities.QUARTER, mapper.readValue("\"quarter\"", QueryGranularity.class));
+    Assert.assertEquals(QueryGranularities.MONTH, mapper.readValue("\"month\"", QueryGranularity.class));
+    Assert.assertEquals(QueryGranularities.YEAR, mapper.readValue("\"year\"", QueryGranularity.class));
 
     QueryGranularity gran = mapper.readValue("\"thirty_minute\"", QueryGranularity.class);
     Assert.assertEquals(new DurationGranularity(30 * 60 * 1000, null), gran);
@@ -714,24 +714,24 @@ public class QueryGranularityTest
   {
     Assert.assertNull(QueryGranularity.mergeQueryGranularities(null));
     Assert.assertNull(QueryGranularity.mergeQueryGranularities(ImmutableList.<QueryGranularity>of()));
-    Assert.assertNull(QueryGranularity.mergeQueryGranularities(Lists.newArrayList(null, QueryGranularityUtil.DAY)));
-    Assert.assertNull(QueryGranularity.mergeQueryGranularities(Lists.newArrayList(QueryGranularityUtil.DAY, null)));
+    Assert.assertNull(QueryGranularity.mergeQueryGranularities(Lists.newArrayList(null, QueryGranularities.DAY)));
+    Assert.assertNull(QueryGranularity.mergeQueryGranularities(Lists.newArrayList(QueryGranularities.DAY, null)));
     Assert.assertNull(
         QueryGranularity.mergeQueryGranularities(
             Lists.newArrayList(
-                QueryGranularityUtil.DAY,
+                QueryGranularities.DAY,
                 null,
-                QueryGranularityUtil.DAY
+                QueryGranularities.DAY
             )
         )
     );
     Assert.assertNull(
-        QueryGranularity.mergeQueryGranularities(ImmutableList.of(QueryGranularityUtil.ALL, QueryGranularityUtil.DAY))
+        QueryGranularity.mergeQueryGranularities(ImmutableList.of(QueryGranularities.ALL, QueryGranularities.DAY))
     );
 
     Assert.assertEquals(
-        QueryGranularityUtil.ALL,
-        QueryGranularity.mergeQueryGranularities(ImmutableList.of(QueryGranularityUtil.ALL, QueryGranularityUtil.ALL))
+        QueryGranularities.ALL,
+        QueryGranularity.mergeQueryGranularities(ImmutableList.of(QueryGranularities.ALL, QueryGranularities.ALL))
     );
   }
 

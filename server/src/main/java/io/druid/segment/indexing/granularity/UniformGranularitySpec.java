@@ -27,7 +27,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.metamx.common.Granularity;
 import io.druid.granularity.QueryGranularity;
-import io.druid.granularity.QueryGranularityUtil;
+import io.druid.granularity.QueryGranularities;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -37,7 +37,7 @@ import java.util.SortedSet;
 public class UniformGranularitySpec implements GranularitySpec
 {
   private static final Granularity DEFAULT_SEGMENT_GRANULARITY = Granularity.DAY;
-  private static final QueryGranularity DEFAULT_QUERY_GRANULARITY = QueryGranularityUtil.NONE;
+  private static final QueryGranularity DEFAULT_QUERY_GRANULARITY = QueryGranularities.NONE;
 
   private final Granularity segmentGranularity;
   private final QueryGranularity queryGranularity;

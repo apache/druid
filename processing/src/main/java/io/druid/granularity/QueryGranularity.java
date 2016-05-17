@@ -44,11 +44,11 @@ public abstract class QueryGranularity
   {
     String name = str.toUpperCase();
     if (name.equals("ALL")) {
-      return QueryGranularityUtil.ALL;
+      return QueryGranularities.ALL;
     } else if (name.equals("NONE")) {
-      return QueryGranularityUtil.NONE;
-    } else if (QueryGranularityUtil.CALENDRIC_GRANULARITIES.containsKey(name)) {
-      return QueryGranularityUtil.CALENDRIC_GRANULARITIES.get(name);
+      return QueryGranularities.NONE;
+    } else if (QueryGranularities.CALENDRIC_GRANULARITIES.containsKey(name)) {
+      return QueryGranularities.CALENDRIC_GRANULARITIES.get(name);
     }
     return new DurationGranularity(convertValue(str), 0);
   }

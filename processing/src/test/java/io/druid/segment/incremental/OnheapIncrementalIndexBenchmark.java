@@ -36,7 +36,7 @@ import com.metamx.common.parsers.ParseException;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.granularity.QueryGranularity;
-import io.druid.granularity.QueryGranularityUtil;
+import io.druid.granularity.QueryGranularities;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.QueryRunner;
@@ -253,7 +253,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
         QueryGranularity.class,
         AggregatorFactory[].class,
         Integer.TYPE
-    ).newInstance(0, QueryGranularityUtil.NONE, factories, elementsPerThread * taskCount);
+    ).newInstance(0, QueryGranularities.NONE, factories, elementsPerThread * taskCount);
     final ArrayList<AggregatorFactory> queryAggregatorFactories = new ArrayList<>(dimensionCount + 1);
     queryAggregatorFactories.add(new CountAggregatorFactory("rows"));
     for (int i = 0; i < dimensionCount; ++i) {
@@ -340,7 +340,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
                   );
                   TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                                 .dataSource("xxx")
-                                                .granularity(QueryGranularityUtil.ALL)
+                                                .granularity(QueryGranularities.ALL)
                                                 .intervals(ImmutableList.of(queryInterval))
                                                 .aggregators(queryAggregatorFactories)
                                                 .build();
@@ -377,7 +377,7 @@ public class OnheapIncrementalIndexBenchmark extends AbstractBenchmark
     );
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("xxx")
-                                  .granularity(QueryGranularityUtil.ALL)
+                                  .granularity(QueryGranularities.ALL)
                                   .intervals(ImmutableList.of(queryInterval))
                                   .aggregators(queryAggregatorFactories)
                                   .build();

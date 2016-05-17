@@ -29,7 +29,7 @@ import com.metamx.common.Granularity;
 import com.metamx.common.ISE;
 import io.druid.granularity.DurationGranularity;
 import io.druid.granularity.QueryGranularity;
-import io.druid.granularity.QueryGranularityUtil;
+import io.druid.granularity.QueryGranularities;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
@@ -101,7 +101,7 @@ public class SegmentAllocateActionTest
     final SegmentIdentifier id1 = allocate(
         task,
         PARTY_TIME,
-        QueryGranularityUtil.NONE,
+        QueryGranularities.NONE,
         Granularity.HOUR,
         "s1",
         null
@@ -109,7 +109,7 @@ public class SegmentAllocateActionTest
     final SegmentIdentifier id2 = allocate(
         task,
         PARTY_TIME,
-        QueryGranularityUtil.NONE,
+        QueryGranularities.NONE,
         Granularity.HOUR,
         "s1",
         id1.getIdentifierAsString()
@@ -117,7 +117,7 @@ public class SegmentAllocateActionTest
     final SegmentIdentifier id3 = allocate(
         task,
         PARTY_TIME,
-        QueryGranularityUtil.NONE,
+        QueryGranularities.NONE,
         Granularity.HOUR,
         "s1",
         id2.getIdentifierAsString()
@@ -176,7 +176,7 @@ public class SegmentAllocateActionTest
     final SegmentIdentifier id1 = allocate(
         task,
         PARTY_TIME,
-        QueryGranularityUtil.NONE,
+        QueryGranularities.NONE,
         Granularity.HOUR,
         "s1",
         null
@@ -184,7 +184,7 @@ public class SegmentAllocateActionTest
     final SegmentIdentifier id2 = allocate(
         task,
         THE_DISTANT_FUTURE,
-        QueryGranularityUtil.NONE,
+        QueryGranularities.NONE,
         Granularity.HOUR,
         "s1",
         id1.getIdentifierAsString()
@@ -192,7 +192,7 @@ public class SegmentAllocateActionTest
     final SegmentIdentifier id3 = allocate(
         task,
         PARTY_TIME,
-        QueryGranularityUtil.NONE,
+        QueryGranularities.NONE,
         Granularity.HOUR,
         "s1",
         id2.getIdentifierAsString()
@@ -200,7 +200,7 @@ public class SegmentAllocateActionTest
     final SegmentIdentifier id4 = allocate(
         task,
         PARTY_TIME,
-        QueryGranularityUtil.NONE,
+        QueryGranularities.NONE,
         Granularity.HOUR,
         "s1",
         id1.getIdentifierAsString()
@@ -208,7 +208,7 @@ public class SegmentAllocateActionTest
     final SegmentIdentifier id5 = allocate(
         task,
         THE_DISTANT_FUTURE,
-        QueryGranularityUtil.NONE,
+        QueryGranularities.NONE,
         Granularity.HOUR,
         "s1",
         id1.getIdentifierAsString()
@@ -216,7 +216,7 @@ public class SegmentAllocateActionTest
     final SegmentIdentifier id6 = allocate(
         task,
         THE_DISTANT_FUTURE,
-        QueryGranularityUtil.NONE,
+        QueryGranularities.NONE,
         Granularity.MINUTE,
         "s1",
         id1.getIdentifierAsString()
@@ -224,7 +224,7 @@ public class SegmentAllocateActionTest
     final SegmentIdentifier id7 = allocate(
         task,
         THE_DISTANT_FUTURE,
-        QueryGranularityUtil.NONE,
+        QueryGranularities.NONE,
         Granularity.DAY,
         "s1",
         id1.getIdentifierAsString()
@@ -297,12 +297,12 @@ public class SegmentAllocateActionTest
 
     taskActionTestKit.getTaskLockbox().add(task);
 
-    final SegmentIdentifier id1 = allocate(task, PARTY_TIME, QueryGranularityUtil.NONE, Granularity.HOUR, "s1", null);
-    final SegmentIdentifier id2 = allocate(task, PARTY_TIME, QueryGranularityUtil.NONE, Granularity.HOUR, "s2", null);
+    final SegmentIdentifier id1 = allocate(task, PARTY_TIME, QueryGranularities.NONE, Granularity.HOUR, "s1", null);
+    final SegmentIdentifier id2 = allocate(task, PARTY_TIME, QueryGranularities.NONE, Granularity.HOUR, "s2", null);
     final SegmentIdentifier id3 = allocate(
         task,
         PARTY_TIME,
-        QueryGranularityUtil.NONE,
+        QueryGranularities.NONE,
         Granularity.HOUR,
         "s1",
         id1.getIdentifierAsString()
@@ -310,7 +310,7 @@ public class SegmentAllocateActionTest
     final SegmentIdentifier id4 = allocate(
         task,
         THE_DISTANT_FUTURE,
-        QueryGranularityUtil.NONE,
+        QueryGranularities.NONE,
         Granularity.HOUR,
         "s1",
         id3.getIdentifierAsString()
@@ -318,12 +318,12 @@ public class SegmentAllocateActionTest
     final SegmentIdentifier id5 = allocate(
         task,
         THE_DISTANT_FUTURE,
-        QueryGranularityUtil.NONE,
+        QueryGranularities.NONE,
         Granularity.HOUR,
         "s2",
         id2.getIdentifierAsString()
     );
-    final SegmentIdentifier id6 = allocate(task, PARTY_TIME, QueryGranularityUtil.NONE, Granularity.HOUR, "s1", null);
+    final SegmentIdentifier id6 = allocate(task, PARTY_TIME, QueryGranularities.NONE, Granularity.HOUR, "s1", null);
 
     final TaskLock partyLock = Iterables.getOnlyElement(
         FluentIterable.from(taskActionTestKit.getTaskLockbox().findLocksForTask(task))
@@ -430,7 +430,7 @@ public class SegmentAllocateActionTest
     final SegmentIdentifier id1 = allocate(
         task,
         PARTY_TIME,
-        QueryGranularityUtil.NONE,
+        QueryGranularities.NONE,
         Granularity.HOUR,
         "s1",
         null
@@ -438,7 +438,7 @@ public class SegmentAllocateActionTest
     final SegmentIdentifier id2 = allocate(
         task,
         PARTY_TIME,
-        QueryGranularityUtil.NONE,
+        QueryGranularities.NONE,
         Granularity.HOUR,
         "s1",
         id1.getIdentifierAsString()
@@ -491,7 +491,7 @@ public class SegmentAllocateActionTest
     final SegmentIdentifier id1 = allocate(
         task,
         PARTY_TIME,
-        QueryGranularityUtil.NONE,
+        QueryGranularities.NONE,
         Granularity.HOUR,
         "s1",
         null
@@ -499,7 +499,7 @@ public class SegmentAllocateActionTest
     final SegmentIdentifier id2 = allocate(
         task,
         PARTY_TIME,
-        QueryGranularityUtil.NONE,
+        QueryGranularities.NONE,
         Granularity.HOUR,
         "s1",
         id1.getIdentifierAsString()
@@ -549,7 +549,7 @@ public class SegmentAllocateActionTest
 
     taskActionTestKit.getTaskLockbox().add(task);
 
-    final SegmentIdentifier id1 = allocate(task, PARTY_TIME, QueryGranularityUtil.NONE, Granularity.DAY, "s1", null);
+    final SegmentIdentifier id1 = allocate(task, PARTY_TIME, QueryGranularities.NONE, Granularity.DAY, "s1", null);
 
     assertSameIdentifier(
         id1,
@@ -586,7 +586,7 @@ public class SegmentAllocateActionTest
 
     taskActionTestKit.getTaskLockbox().add(task);
 
-    final SegmentIdentifier id1 = allocate(task, PARTY_TIME, QueryGranularityUtil.NONE, Granularity.MINUTE, "s1", null);
+    final SegmentIdentifier id1 = allocate(task, PARTY_TIME, QueryGranularities.NONE, Granularity.MINUTE, "s1", null);
 
     assertSameIdentifier(
         id1,
@@ -623,7 +623,7 @@ public class SegmentAllocateActionTest
 
     taskActionTestKit.getTaskLockbox().add(task);
 
-    final SegmentIdentifier id1 = allocate(task, PARTY_TIME, QueryGranularityUtil.DAY, Granularity.DAY, "s1", null);
+    final SegmentIdentifier id1 = allocate(task, PARTY_TIME, QueryGranularities.DAY, Granularity.DAY, "s1", null);
 
     Assert.assertNull(id1);
   }
@@ -634,7 +634,7 @@ public class SegmentAllocateActionTest
     final Task task = new NoopTask(null, 0, 0, null, null, null);
     taskActionTestKit.getTaskLockbox().add(task);
 
-    final SegmentIdentifier id1 = allocate(task, PARTY_TIME, QueryGranularityUtil.DAY, Granularity.HOUR, "s1", null);
+    final SegmentIdentifier id1 = allocate(task, PARTY_TIME, QueryGranularities.DAY, Granularity.HOUR, "s1", null);
 
     Assert.assertNull(id1);
   }
@@ -663,7 +663,7 @@ public class SegmentAllocateActionTest
 
     taskActionTestKit.getTaskLockbox().add(task);
 
-    final SegmentIdentifier id1 = allocate(task, PARTY_TIME, QueryGranularityUtil.NONE, Granularity.HOUR, "s1", null);
+    final SegmentIdentifier id1 = allocate(task, PARTY_TIME, QueryGranularities.NONE, Granularity.HOUR, "s1", null);
 
     Assert.assertNull(id1);
   }
@@ -674,7 +674,7 @@ public class SegmentAllocateActionTest
     final SegmentAllocateAction action = new SegmentAllocateAction(
         DATA_SOURCE,
         PARTY_TIME,
-        QueryGranularityUtil.MINUTE,
+        QueryGranularities.MINUTE,
         Granularity.HOUR,
         "s1",
         "prev"

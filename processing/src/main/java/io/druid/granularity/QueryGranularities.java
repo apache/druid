@@ -24,7 +24,7 @@ import org.joda.time.Period;
 
 import java.util.Map;
 
-public class QueryGranularityUtil
+public class QueryGranularities
 {
   static final Map<String, PeriodGranularity> CALENDRIC_GRANULARITIES = ImmutableMap.of(
       "YEAR", new PeriodGranularity(new Period("P1Y"), null, null),
