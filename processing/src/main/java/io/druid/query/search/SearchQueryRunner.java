@@ -33,7 +33,7 @@ import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.EmittingLogger;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.query.Druids;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -165,7 +165,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
       dimsToSearch = dimensions;
     }
 
-    final Sequence<Cursor> cursors = adapter.makeCursors(filter, segment.getDataInterval(), QueryGranularity.ALL, descending);
+    final Sequence<Cursor> cursors = adapter.makeCursors(filter, segment.getDataInterval(), QueryGranularities.ALL, descending);
 
     final TreeMap<SearchHit, MutableInt> retVal = cursors.accumulate(
         Maps.<SearchHit, SearchHit, MutableInt>newTreeMap(query.getSort().getComparator()),

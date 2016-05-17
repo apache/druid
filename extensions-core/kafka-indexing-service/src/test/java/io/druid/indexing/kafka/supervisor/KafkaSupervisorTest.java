@@ -35,7 +35,7 @@ import io.druid.data.input.impl.JSONPathSpec;
 import io.druid.data.input.impl.StringDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.RealtimeIndexTask;
@@ -1014,7 +1014,7 @@ public class KafkaSupervisorTest extends EasyMockSupport
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
         new UniformGranularitySpec(
             Granularity.HOUR,
-            QueryGranularity.NONE,
+            QueryGranularities.NONE,
             ImmutableList.<Interval>of()
         ),
         objectMapper

@@ -27,7 +27,7 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.TestUtils;
@@ -126,7 +126,7 @@ public class IndexTaskTest
                 },
                 new UniformGranularitySpec(
                     Granularity.DAY,
-                    QueryGranularity.MINUTE,
+                    QueryGranularities.MINUTE,
                     Arrays.asList(new Interval("2014/2015"))
                 ),
                 jsonMapper
@@ -197,7 +197,7 @@ public class IndexTaskTest
                     new LongSumAggregatorFactory("val", "val")
                 },
                 new ArbitraryGranularitySpec(
-                    QueryGranularity.MINUTE,
+                    QueryGranularities.MINUTE,
                     Arrays.asList(new Interval("2014/2015"))
                 ),
                 jsonMapper
@@ -304,7 +304,7 @@ public class IndexTaskTest
                 },
                 new UniformGranularitySpec(
                     Granularity.HOUR,
-                    QueryGranularity.HOUR,
+                    QueryGranularities.HOUR,
                     Arrays.asList(new Interval("2015-03-01T08:00:00Z/2015-03-01T09:00:00Z"))
                 ),
                 jsonMapper

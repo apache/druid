@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
 import io.druid.query.Result;
@@ -95,7 +96,7 @@ public class SchemalessTestSimple
   }
 
   final String dataSource = "testing";
-  final QueryGranularity allGran = QueryGranularity.ALL;
+  final QueryGranularity allGran = QueryGranularities.ALL;
   final String dimensionValue = "dimension";
   final String valueValue = "value";
   final String marketDimension = "market";

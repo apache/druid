@@ -29,7 +29,7 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.guava.Yielder;
 import com.metamx.common.guava.YieldingAccumulator;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Druids;
 import io.druid.query.Query;
@@ -97,7 +97,7 @@ public class SpecificSegmentQueryRunnerTest
     final Map<String, Object> responseContext = Maps.newHashMap();
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("foo")
-                                  .granularity(QueryGranularity.ALL)
+                                  .granularity(QueryGranularities.ALL)
                                   .intervals(ImmutableList.of(new Interval("2012-01-01T00:00:00Z/P1D")))
                                   .aggregators(
                                       ImmutableList.<AggregatorFactory>of(
@@ -172,7 +172,7 @@ public class SpecificSegmentQueryRunnerTest
     final Map<String, Object> responseContext = Maps.newHashMap();
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("foo")
-                                  .granularity(QueryGranularity.ALL)
+                                  .granularity(QueryGranularities.ALL)
                                   .intervals(ImmutableList.of(new Interval("2012-01-01T00:00:00Z/P1D")))
                                   .aggregators(
                                       ImmutableList.<AggregatorFactory>of(

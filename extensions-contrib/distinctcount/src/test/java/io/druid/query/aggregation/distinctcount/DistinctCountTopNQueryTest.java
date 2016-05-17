@@ -25,7 +25,7 @@ import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequences;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -66,7 +66,7 @@ public class DistinctCountTopNQueryTest
     );
 
     IncrementalIndex index = new OnheapIncrementalIndex(
-        0, QueryGranularity.SECOND, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}, 1000
+        0, QueryGranularities.SECOND, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}, 1000
     );
     String visitor_id = "visitor_id";
     String client_type = "client_type";

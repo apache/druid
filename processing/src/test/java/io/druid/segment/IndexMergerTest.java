@@ -32,7 +32,7 @@ import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -184,7 +184,7 @@ public class IndexMergerTest
     );
 
     Assert.assertEquals(
-        QueryGranularity.NONE,
+        QueryGranularities.NONE,
         index.getMetadata().getQueryGranularity()
     );
   }
@@ -272,7 +272,7 @@ public class IndexMergerTest
             .setAggregators(
                 IncrementalIndexTest.getDefaultCombiningAggregatorFactories()
             )
-            .setQueryGranularity(QueryGranularity.NONE)
+            .setQueryGranularity(QueryGranularities.NONE)
             .putAll(metadataElems),
         index.getMetadata()
     );
@@ -287,7 +287,7 @@ public class IndexMergerTest
 
     IncrementalIndex toPersist2 = new OnheapIncrementalIndex(
         0L,
-        QueryGranularity.NONE,
+        QueryGranularities.NONE,
         new AggregatorFactory[]{new CountAggregatorFactory("count")},
         1000
     );
@@ -372,13 +372,13 @@ public class IndexMergerTest
   {
     final IncrementalIndex toPersist1 = new OnheapIncrementalIndex(
         0L,
-        QueryGranularity.NONE,
+        QueryGranularities.NONE,
         new AggregatorFactory[]{},
         10
     );
     final IncrementalIndex toPersist2 = new OnheapIncrementalIndex(
         0L,
-        QueryGranularity.NONE,
+        QueryGranularities.NONE,
         new AggregatorFactory[]{},
         10
     );
@@ -887,7 +887,7 @@ public class IndexMergerTest
             null
         ))
         .withMinTimestamp(0L)
-        .withQueryGranularity(QueryGranularity.NONE)
+        .withQueryGranularity(QueryGranularities.NONE)
         .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("count")})
         .build();
 
@@ -1103,7 +1103,7 @@ public class IndexMergerTest
 
     IncrementalIndex toPersistA = new OnheapIncrementalIndex(
         0L,
-        QueryGranularity.NONE,
+        QueryGranularities.NONE,
         new AggregatorFactory[]{new CountAggregatorFactory("count")},
         1000
     );
@@ -1128,7 +1128,7 @@ public class IndexMergerTest
 
     IncrementalIndex toPersistB = new OnheapIncrementalIndex(
         0L,
-        QueryGranularity.NONE,
+        QueryGranularities.NONE,
         new AggregatorFactory[]{new CountAggregatorFactory("count")},
         1000
     );
@@ -1248,7 +1248,7 @@ public class IndexMergerTest
 
     IncrementalIndex toPersistBA2 = new OnheapIncrementalIndex(
         0L,
-        QueryGranularity.NONE,
+        QueryGranularities.NONE,
         new AggregatorFactory[]{new CountAggregatorFactory("count")},
         1000
     );
@@ -1705,7 +1705,7 @@ public class IndexMergerTest
   {
     IncrementalIndex toPersist1 = new OnheapIncrementalIndex(
         0L,
-        QueryGranularity.NONE,
+        QueryGranularities.NONE,
         new AggregatorFactory[]{new CountAggregatorFactory("count")},
         1000
     );
@@ -1741,7 +1741,7 @@ public class IndexMergerTest
   {
     IncrementalIndex toPersist1 = new OnheapIncrementalIndex(
         0L,
-        QueryGranularity.NONE,
+        QueryGranularities.NONE,
         new AggregatorFactory[]{new CountAggregatorFactory("count")},
         1000
     );
@@ -1767,7 +1767,7 @@ public class IndexMergerTest
   {
     IncrementalIndexSchema schema = new IncrementalIndexSchema(
         0L,
-        QueryGranularity.NONE,
+        QueryGranularities.NONE,
         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(dims), null, null),
         new AggregatorFactory[]{new CountAggregatorFactory("count")}
     );

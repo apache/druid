@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.datasourcemetadata.DataSourceMetadataQuery;
@@ -341,7 +342,7 @@ public class Druids
       dataSource = null;
       querySegmentSpec = null;
       dimFilter = null;
-      granularity = QueryGranularity.ALL;
+      granularity = QueryGranularities.ALL;
       aggregatorSpecs = Lists.newArrayList();
       postAggregatorSpecs = Lists.newArrayList();
       context = null;
@@ -552,7 +553,7 @@ public class Druids
     {
       dataSource = null;
       dimFilter = null;
-      granularity = QueryGranularity.ALL;
+      granularity = QueryGranularities.ALL;
       limit = 0;
       querySegmentSpec = null;
       dimensions = null;
@@ -1088,7 +1089,7 @@ public class Druids
       querySegmentSpec = null;
       context = null;
       dimFilter = null;
-      granularity = QueryGranularity.ALL;
+      granularity = QueryGranularities.ALL;
       dimensions = Lists.newArrayList();
       metrics = Lists.newArrayList();
       pagingSpec = null;

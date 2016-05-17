@@ -23,7 +23,7 @@ import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.data.input.MapBasedRow;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.AggregatorsModule;
 import io.druid.query.aggregation.AggregationTestHelper;
 import org.junit.Assert;
@@ -88,7 +88,7 @@ public class HyperUniquesAggregationTest
         parseSpec,
         metricSpec,
         0,
-        QueryGranularity.NONE,
+        QueryGranularities.NONE,
         50000,
         query
     );

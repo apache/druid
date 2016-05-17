@@ -27,7 +27,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.common.Granularity;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
@@ -203,7 +203,7 @@ public class HadoopDruidIndexerConfigTest
             new AggregatorFactory[0],
             new UniformGranularitySpec(
                 Granularity.MINUTE,
-                QueryGranularity.MINUTE,
+                QueryGranularities.MINUTE,
                 ImmutableList.of(new Interval("2010-01-01/P1D"))
             ),
             jsonMapper
@@ -242,7 +242,7 @@ public class HadoopDruidIndexerConfigTest
     );
     final long timestamp = new DateTime("2010-01-01T01:00:01").getMillis();
     final Bucket expectedBucket = config.getBucket(new MapBasedInputRow(timestamp, dims, values)).get();
-    final long nextBucketTimestamp = QueryGranularity.MINUTE.next(QueryGranularity.MINUTE.truncate(timestamp));
+    final long nextBucketTimestamp = QueryGranularities.MINUTE.next(QueryGranularities.MINUTE.truncate(timestamp));
     // check that all rows having same set of dims and truncated timestamp hash to same bucket
     for (int i = 0; timestamp + i < nextBucketTimestamp; i++) {
       Assert.assertEquals(

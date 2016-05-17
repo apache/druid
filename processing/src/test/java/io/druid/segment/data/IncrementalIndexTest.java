@@ -37,7 +37,7 @@ import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.QueryRunner;
@@ -130,7 +130,7 @@ public class IncrementalIndexTest
                   public IncrementalIndex createIndex(AggregatorFactory[] factories)
                   {
                     return new OffheapIncrementalIndex(
-                        0L, QueryGranularity.NONE, factories, 1000000,
+                        0L, QueryGranularities.NONE, factories, 1000000,
                         new StupidPool<ByteBuffer>(
                             new Supplier<ByteBuffer>()
                             {
@@ -167,7 +167,7 @@ public class IncrementalIndexTest
     }
 
     return new OnheapIncrementalIndex(
-        0L, QueryGranularity.NONE, aggregatorFactories, 1000000
+        0L, QueryGranularities.NONE, aggregatorFactories, 1000000
     );
   }
 
@@ -308,7 +308,7 @@ public class IncrementalIndexTest
 
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("xxx")
-                                  .granularity(QueryGranularity.ALL)
+                                  .granularity(QueryGranularities.ALL)
                                   .intervals(ImmutableList.of(new Interval("2000/2030")))
                                   .aggregators(queryAggregatorFactories)
                                   .build();
@@ -458,7 +458,7 @@ public class IncrementalIndexTest
 
       final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                           .dataSource("xxx")
-                                          .granularity(QueryGranularity.ALL)
+                                          .granularity(QueryGranularities.ALL)
                                           .intervals(ImmutableList.of(queryInterval))
                                           .aggregators(queryAggregatorFactories)
                                           .build();
@@ -536,7 +536,7 @@ public class IncrementalIndexTest
     );
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("xxx")
-                                  .granularity(QueryGranularity.ALL)
+                                  .granularity(QueryGranularities.ALL)
                                   .intervals(ImmutableList.of(queryInterval))
                                   .aggregators(queryAggregatorFactories)
                                   .build();
@@ -611,7 +611,7 @@ public class IncrementalIndexTest
   public void testgetDimensions()
   {
     final IncrementalIndex<Aggregator> incrementalIndex = new OnheapIncrementalIndex(
-        new IncrementalIndexSchema.Builder().withQueryGranularity(QueryGranularity.NONE)
+        new IncrementalIndexSchema.Builder().withQueryGranularity(QueryGranularities.NONE)
                                             .withMetrics(
                                                 new AggregatorFactory[]{
                                                     new CountAggregatorFactory(
