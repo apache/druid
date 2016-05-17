@@ -20,14 +20,16 @@
 package io.druid.server.metrics;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.metrics.Monitor;
 import io.druid.query.DruidMetrics;
+
+import javax.validation.constraints.NotNull;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
-import javax.validation.constraints.NotNull;
 
 /**
  */
@@ -53,19 +55,19 @@ public class MonitorsConfig
   }
 
 
-  public static Map<String, String[]> mapOfDimensionAndTaskID(
-      final String dimension,
+  public static Map<String, String[]> mapOfDatasourceAndTaskID(
+      final String datasource,
       final String taskId
   )
   {
-    final Map<String, String[]> dimensionMap = new HashMap<>();
-    if (dimension != null) {
-      dimensionMap.put(DruidMetrics.DATASOURCE, new String[]{dimension});
+    final ImmutableMap.Builder<String, String[]> builder = ImmutableMap.builder();
+    if (datasource != null) {
+      builder.put(DruidMetrics.DATASOURCE, new String[]{datasource});
     }
     if (taskId != null) {
-      dimensionMap.put(DruidMetrics.ID, new String[]{taskId});
+      builder.put(DruidMetrics.ID, new String[]{taskId});
     }
-    return dimensionMap;
+    return builder.build();
   }
 
   public static Map<String, String[]> extractDimensions(Properties props, List<String> dimensions)

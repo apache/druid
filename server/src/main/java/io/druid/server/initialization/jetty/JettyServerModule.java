@@ -233,7 +233,7 @@ public class JettyServerModule extends JerseyServletModule
 
     public JettyMonitor(String dataSource, String taskId)
     {
-      this.dimensions = MonitorsConfig.mapOfDimensionAndTaskID(dataSource, taskId);
+      this.dimensions = MonitorsConfig.mapOfDatasourceAndTaskID(dataSource, taskId);
     }
 
     @Override

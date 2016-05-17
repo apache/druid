@@ -41,6 +41,7 @@ import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.ManageLifecycle;
 import io.druid.query.ExecutorServiceMonitor;
+
 import java.util.List;
 import java.util.Set;
 
@@ -110,7 +111,7 @@ public class MetricsModule implements Module
       DataSourceTaskIdHolder dataSourceTaskIdHolder
   )
   {
-    return new JvmMonitor(MonitorsConfig.mapOfDimensionAndTaskID(
+    return new JvmMonitor(MonitorsConfig.mapOfDatasourceAndTaskID(
         dataSourceTaskIdHolder.getDataSource(),
         dataSourceTaskIdHolder.getTaskId()
     ));
@@ -122,7 +123,7 @@ public class MetricsModule implements Module
       DataSourceTaskIdHolder dataSourceTaskIdHolder
   )
   {
-    return new JvmCpuMonitor(MonitorsConfig.mapOfDimensionAndTaskID(
+    return new JvmCpuMonitor(MonitorsConfig.mapOfDatasourceAndTaskID(
         dataSourceTaskIdHolder.getDataSource(),
         dataSourceTaskIdHolder.getTaskId()
     ));
@@ -134,7 +135,7 @@ public class MetricsModule implements Module
       DataSourceTaskIdHolder dataSourceTaskIdHolder
   )
   {
-    return new SysMonitor(MonitorsConfig.mapOfDimensionAndTaskID(
+    return new SysMonitor(MonitorsConfig.mapOfDatasourceAndTaskID(
         dataSourceTaskIdHolder.getDataSource(),
         dataSourceTaskIdHolder.getTaskId()
     ));
