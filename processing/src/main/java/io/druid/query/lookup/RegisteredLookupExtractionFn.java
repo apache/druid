@@ -33,8 +33,7 @@ import javax.annotation.Nullable;
 public class RegisteredLookupExtractionFn implements ExtractionFn
 {
   // Protected for moving to not-null by `delegateLock`
-  // THIS IS NOT `volatile` ON PURPOSE.
-  private LookupExtractionFn delegate = null;
+  private volatile LookupExtractionFn delegate = null;
   private final Object delegateLock = new Object();
   private final LookupReferencesManager manager;
   private final String lookup;
@@ -142,8 +141,7 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
   {
     LookupExtractionFn delegate = this.delegate;
     if (null == delegate) {
-      // Might have a few threads early on that get caught up here compared to a volatile delegate,
-      // but since apply is called A TON OF TIMES we have `this.delegate` allowed to be cached.
+      // http://www.javamex.com/tutorials/double_checked_locking.shtml
       synchronized (delegateLock) {
         delegate = this.delegate;
         if (null == delegate) {
