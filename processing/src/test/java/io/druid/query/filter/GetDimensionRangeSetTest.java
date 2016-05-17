@@ -10,6 +10,7 @@ import io.druid.query.extraction.IdentityExtractionFn;
 import io.druid.query.search.search.ContainsSearchQuerySpec;
 import org.junit.Assert;
 import org.junit.Test;
+import org.mozilla.javascript.tools.debugger.Dim;
 
 import java.util.Arrays;
 import java.util.List;
@@ -107,16 +108,56 @@ public class GetDimensionRangeSetTest
     DimFilter or4 = new OrDimFilter(ImmutableList.of(selector1, selector2, selector3, selector4, selector5));
     Assert.assertNull(or4.getDimensionRangeSet("dim1"));
     Assert.assertNull(or4.getDimensionRangeSet("dim2"));
+
+    DimFilter or5 = new OrDimFilter(ImmutableList.of(or1, or2, bound1));
+    RangeSet expected5 = rangeSet(ImmutableList.of(point(""), point("a"), point("filter"), Range.closed("from", "to"),
+                                                   point("z")));
+    Assert.assertEquals(expected5, or5.getDimensionRangeSet("dim1"));
   }
 
+  @Test
   public void testNotFilter () {
     DimFilter not1 = new NotDimFilter(selector1);
     RangeSet expected1 = rangeSet(ImmutableList.of(Range.lessThan("a"), Range.greaterThan("a")));
     Assert.assertEquals(expected1, not1.getDimensionRangeSet("dim1"));
+    Assert.assertNull(not1.getDimensionRangeSet("dim2"));
 
-  }
+    DimFilter not2 = new NotDimFilter(in3);
+    RangeSet expected2 = rangeSet(ImmutableList.of(Range.lessThan(""), Range.open("", "null"), Range.greaterThan("null")));
+    Assert.assertEquals(expected2, not2.getDimensionRangeSet("dim1"));
 
-  public void testCombinedFilter () {
+    DimFilter not3 = new NotDimFilter(bound1);
+    RangeSet expected3 = rangeSet(ImmutableList.of(Range.lessThan("from"), Range.greaterThan("to")));
+    Assert.assertEquals(expected3, not3.getDimensionRangeSet("dim1"));
+
+    DimFilter not4 = new NotDimFilter(not2);
+    RangeSet expected4 = rangeSet(ImmutableList.of(point(""), point("null")));
+    Assert.assertEquals(expected4, not4.getDimensionRangeSet("dim1"));
+
+    DimFilter or1 = new OrDimFilter(ImmutableList.of(selector1, selector2, bound1, bound3));
+    DimFilter not5 = new NotDimFilter(or1);
+    RangeSet expected5 = rangeSet(ImmutableList.of(Range.lessThan("a"), Range.open("a", "from")));
+    Assert.assertEquals(expected5, not5.getDimensionRangeSet("dim1"));
+    Assert.assertNull(not5.getDimensionRangeSet("dim2"));
+
+    DimFilter or2 = new OrDimFilter(ImmutableList.of(selector3, in3, bound2, bound4, other3));
+    DimFilter not6 = new NotDimFilter(or2);
+    RangeSet expected6a = rangeSet(ImmutableList.of(Range.greaterThan("tillend")));
+    RangeSet expected6b = rangeSet(ImmutableList.of(Range.atMost("again"), Range.atLeast("exclusive")));
+    Assert.assertEquals(expected6a, not6.getDimensionRangeSet("dim1"));
+    Assert.assertEquals(expected6b, not6.getDimensionRangeSet("dim2"));
+
+    DimFilter and1 = new AndDimFilter(ImmutableList.of(in1, bound1, bound2));
+    DimFilter not7 = new NotDimFilter(and1);
+    RangeSet expected7 = rangeSet(ImmutableList.of(Range.lessThan("testing"), Range.open("testing", "this"),
+                                                   Range.open("this", "tillend"), Range.greaterThan("tillend")));
+    Assert.assertEquals(expected7, not7.getDimensionRangeSet("dim1"));
+    Assert.assertNull(not7.getDimensionRangeSet("dim2"));
+
+    DimFilter and2 = new AndDimFilter(ImmutableList.of(bound1, bound2, bound3, bound4));
+    DimFilter not8 = new NotDimFilter(and2);
+    Assert.assertNull(not8.getDimensionRangeSet("dim1"));
+    Assert.assertNull(not8.getDimensionRangeSet("dim2"));
 
   }
 
