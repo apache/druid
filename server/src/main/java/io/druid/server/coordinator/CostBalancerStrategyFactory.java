@@ -35,9 +35,9 @@ public class CostBalancerStrategyFactory implements BalancerStrategyFactory
   }
 
   @Override
-  public BalancerStrategy createBalancerStrategy(DateTime referenceTimestamp)
+  public CostBalancerStrategy createBalancerStrategy(DateTime referenceTimestamp)
   {
-    return new CostBalancerStrategy(referenceTimestamp, exec);
+    return new CostBalancerStrategy(exec);
   }
 
   @Override

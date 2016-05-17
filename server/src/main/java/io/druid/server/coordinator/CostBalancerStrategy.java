@@ -19,44 +19,162 @@
 
 package io.druid.server.coordinator;
 
+import com.google.common.base.Predicates;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.Pair;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.timeline.DataSegment;
-import org.joda.time.DateTime;
+import org.apache.commons.math3.util.FastMath;
 import org.joda.time.Interval;
 
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
 
 public class CostBalancerStrategy implements BalancerStrategy
 {
   private static final EmittingLogger log = new EmittingLogger(CostBalancerStrategy.class);
-  private static final long DAY_IN_MILLIS = 1000 * 60 * 60 * 24;
-  private static final long SEVEN_DAYS_IN_MILLIS = 7 * DAY_IN_MILLIS;
-  private static final long THIRTY_DAYS_IN_MILLIS = 30 * DAY_IN_MILLIS;
-  private final long referenceTimestamp;
-  private final ListeningExecutorService exec;
 
-  public static long gapMillis(Interval interval1, Interval interval2)
+  private static final double HALF_LIFE = 24.0; // cost function half-life in hours
+  static final double LAMBDA = Math.log(2) / HALF_LIFE;
+  static final double INV_LAMBDA_SQUARE = 1 / (LAMBDA * LAMBDA);
+
+  private static final double MILLIS_IN_HOUR = 3_600_000.0;
+  private static final double MILLIS_FACTOR = MILLIS_IN_HOUR / LAMBDA;
+
+  /**
+   * This defines the unnormalized cost function between two segments.
+   *
+   * See https://github.com/druid-io/druid/pull/2972 for more details about the cost function.
+   *
+   * intervalCost: segments close together are more likely to be queried together
+   *
+   * multiplier: if two segments belong to the same data source, they are more likely to be involved
+   * in the same queries
+   *
+   * @param segmentA The first DataSegment.
+   * @param segmentB The second DataSegment.
+   *
+   * @return the joint cost of placing the two DataSegments together on one node.
+   */
+  public static double computeJointSegmentsCost(final DataSegment segmentA, final DataSegment segmentB)
   {
-    if (interval1.getStartMillis() > interval2.getEndMillis()) {
-      return interval1.getStartMillis() - interval2.getEndMillis();
-    } else if (interval2.getStartMillis() > interval1.getEndMillis()) {
-      return interval2.getStartMillis() - interval1.getEndMillis();
-    } else {
+    final Interval intervalA = segmentA.getInterval();
+    final Interval intervalB = segmentB.getInterval();
+
+    final double t0 = intervalA.getStartMillis();
+    final double t1 = (intervalA.getEndMillis() - t0) / MILLIS_FACTOR;
+    final double start = (intervalB.getStartMillis() - t0) / MILLIS_FACTOR;
+    final double end = (intervalB.getEndMillis() - t0) / MILLIS_FACTOR;
+
+    // constant cost-multiplier for segments of the same datsource
+    final double multiplier = segmentA.getDataSource().equals(segmentB.getDataSource()) ? 2.0 : 1.0;
+
+    return INV_LAMBDA_SQUARE * intervalCost(t1, start, end) * multiplier;
+  }
+
+  /**
+   * Computes the joint cost of two intervals X = [x_0 = 0, x_1) and Y = [y_0, y_1)
+   *
+   * cost(X, Y) = \int_{x_0}^{x_1} \int_{y_0}^{y_1} e^{-\lambda |x-y|}dxdy $$
+   *
+   * lambda = 1 in this particular implementation
+   *
+   * Other values of lambda can be calculated by multiplying inputs by lambda
+   * and multiplying the result by 1 / lambda ^ 2
+   *
+   * Interval start and end are all relative to x_0.
+   * Therefore this function assumes x_0 = 0, x1 >= 0, and y1 > y0
+   *
+   * @param x1 end of interval X
+   * @param y0 start of interval Y
+   * @param y1 end o interval Y
+   *
+   * @return joint cost of X and Y
+   */
+  public static double intervalCost(double x1, double y0, double y1)
+  {
+    if (x1 == 0 || y1 == y0) {
       return 0;
+    }
+
+    // cost(X, Y) = cost(Y, X), so we swap X and Y to
+    // have x_0 <= y_0 and simplify the calculations below
+    if (y0 < 0) {
+      // swap X and Y
+      double tmp = x1;
+      x1 = y1 - y0;
+      y1 = tmp - y0;
+      y0 = -y0;
+    }
+
+    // since x_0 <= y_0, Y must overlap X if y_0 < x_1
+    if (y0 < x1) {
+      /**
+       * We have two possible cases of overlap:
+       *
+       * X  = [ A )[ B )[ C )   or  [ A )[ B )
+       * Y  =      [   )                 [   )[ C )
+       *
+       * A is empty if y0 = 0
+       * C is empty if y1 = x1
+       *
+       * cost(X, Y) = cost(A, Y) + cost(B, C) + cost(B, B)
+       *
+       * cost(A, Y) and cost(B, C) can be calculated using the non-overlapping case,
+       * which reduces the overlapping case to computing
+       *
+       * cost(B, B) = \int_0^{\beta} \int_{0}^{\beta} e^{-|x-y|}dxdy
+       *            = 2 \cdot (\beta + e^{-\beta} - 1)
+       *
+       *            where \beta is the length of interval B
+       *
+       */
+      final double beta;  // b1 - y0, length of interval B
+      final double gamma; // c1 - y0, length of interval C
+      if (y1 <= x1) {
+        beta = y1 - y0;
+        gamma = x1 - y0;
+      } else {
+        beta = x1 - y0;
+        gamma = y1 - y0;
+      }
+      return intervalCost(y0, y0, y1) + // cost(A, Y)
+             intervalCost(beta, beta, gamma) + // cost(B, C)
+             2 * (beta + FastMath.exp(-beta) - 1); // cost(B, B)
+    } else {
+      /**
+       * In the case where there is no overlap:
+       *
+       * Given that x_0 <= y_0,
+       * then x <= y must be true for all x in [x_0, x_1] and y in [y_0, y_1).
+       *
+       * therefore,
+       *
+       * cost(X, Y) = \int_0^{x_1} \int_{y_0}^{y_1} e^{-|x-y|} dxdy
+       *            = \int_0^{x_1} \int_{y_0}^{y_1} e^{x-y} dxdy
+       *            = (e^{-y_1} - e^{-y_0}) - (e^{x_1-y_1} - e^{x_1-y_0})
+       *
+       * Note, this expression could be further reduced by factoring out (e^{x_1} - 1),
+       * but we prefer to keep the smaller values x_1 - y_0 and x_1 - y_1 in the exponent
+       * to avoid numerical overflow caused by calculating e^{x_1}
+       */
+      final double exy0 = FastMath.exp(x1 - y0);
+      final double exy1 = FastMath.exp(x1 - y1);
+      final double ey0 = FastMath.exp(0f - y0);
+      final double ey1 = FastMath.exp(0f - y1);
+
+      return (ey1 - ey0) - (exy1 - exy0);
     }
   }
 
-  public CostBalancerStrategy(DateTime referenceTimestamp, ListeningExecutorService exec)
+  private final ListeningExecutorService exec;
+
+  public CostBalancerStrategy(ListeningExecutorService exec)
   {
-    this.referenceTimestamp = referenceTimestamp.getMillis();
     this.exec = exec;
   }
 
@@ -81,51 +199,15 @@ public class CostBalancerStrategy implements BalancerStrategy
     return chooseBestServer(proposalSegment, serverHolders, true).rhs;
   }
 
-  /**
-   * This defines the unnormalized cost function between two segments.  There is a base cost given by
-   * the minimum size of the two segments and additional penalties.
-   * recencyPenalty: it is more likely that recent segments will be queried together
-   * dataSourcePenalty: if two segments belong to the same data source, they are more likely to be involved
-   * in the same queries
-   * gapPenalty: it is more likely that segments close together in time will be queried together
-   *
-   * @param segment1 The first DataSegment.
-   * @param segment2 The second DataSegment.
-   *
-   * @return The joint cost of placing the two DataSegments together on one node.
-   */
-  public double computeJointSegmentCosts(final DataSegment segment1, final DataSegment segment2)
+  static double computeJointSegmentsCost(final DataSegment segment, final Iterable<DataSegment> segmentSet)
   {
-    final long gapMillis = gapMillis(segment1.getInterval(), segment2.getInterval());
-
-    final double baseCost = Math.min(segment1.getSize(), segment2.getSize());
-    double recencyPenalty = 1;
-    double dataSourcePenalty = 1;
-    double gapPenalty = 1;
-
-    if (segment1.getDataSource().equals(segment2.getDataSource())) {
-      dataSourcePenalty = 2;
+    double totalCost = 0;
+    for (DataSegment s : segmentSet) {
+      totalCost += computeJointSegmentsCost(segment, s);
     }
-
-    double segment1diff = referenceTimestamp - segment1.getInterval().getEndMillis();
-    double segment2diff = referenceTimestamp - segment2.getInterval().getEndMillis();
-    if (segment1diff < SEVEN_DAYS_IN_MILLIS && segment2diff < SEVEN_DAYS_IN_MILLIS) {
-      recencyPenalty = (2 - segment1diff / SEVEN_DAYS_IN_MILLIS) * (2 - segment2diff / SEVEN_DAYS_IN_MILLIS);
-    }
-
-    /** gap is null if the two segment intervals overlap or if they're adjacent */
-    if (gapMillis == 0) {
-      gapPenalty = 2;
-    } else {
-      if (gapMillis < THIRTY_DAYS_IN_MILLIS) {
-        gapPenalty = 2 - gapMillis / THIRTY_DAYS_IN_MILLIS;
-      }
-    }
-
-    final double cost = baseCost * recencyPenalty * dataSourcePenalty * gapPenalty;
-
-    return cost;
+    return totalCost;
   }
+
 
   public BalancerSegmentHolder pickSegmentToMove(final List<ServerHolder> serverHolders)
   {
@@ -144,11 +226,9 @@ public class CostBalancerStrategy implements BalancerStrategy
   {
     double cost = 0;
     for (ServerHolder server : serverHolders) {
-      DataSegment[] segments = server.getServer().getSegments().values().toArray(new DataSegment[]{});
-      for (int i = 0; i < segments.length; ++i) {
-        for (int j = i; j < segments.length; ++j) {
-          cost += computeJointSegmentCosts(segments[i], segments[j]);
-        }
+      Iterable<DataSegment> segments = server.getServer().getSegments().values();
+      for (DataSegment s : segments) {
+        cost += computeJointSegmentsCost(s, segments);
       }
     }
     return cost;
@@ -169,7 +249,7 @@ public class CostBalancerStrategy implements BalancerStrategy
     double cost = 0;
     for (ServerHolder server : serverHolders) {
       for (DataSegment segment : server.getServer().getSegments().values()) {
-        cost += computeJointSegmentCosts(segment, segment);
+        cost += computeJointSegmentsCost(segment, segment);
       }
     }
     return cost;
@@ -211,17 +291,20 @@ public class CostBalancerStrategy implements BalancerStrategy
       }
 
       /** The contribution to the total cost of a given server by proposing to move the segment to that server is... */
-      double cost = 0f;
+      double cost = 0d;
+
       /**  the sum of the costs of other (exclusive of the proposalSegment) segments on the server */
-      for (DataSegment segment : server.getServer().getSegments().values()) {
-        if (!proposalSegment.equals(segment)) {
-          cost += computeJointSegmentCosts(proposalSegment, segment);
-        }
-      }
+      cost += computeJointSegmentsCost(
+          proposalSegment,
+          Iterables.filter(
+              server.getServer().getSegments().values(),
+              Predicates.not(Predicates.equalTo(proposalSegment))
+          )
+      );
+
       /**  plus the costs of segments that will be loaded */
-      for (DataSegment segment : server.getPeon().getSegmentsToLoad()) {
-        cost += computeJointSegmentCosts(proposalSegment, segment);
-      }
+      cost += computeJointSegmentsCost(proposalSegment, server.getPeon().getSegmentsToLoad());
+
       return cost;
     }
     return Double.POSITIVE_INFINITY;
