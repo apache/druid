@@ -26,7 +26,7 @@ import io.druid.data.input.impl.CSVParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularityUtil;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.segment.IndexIO;
@@ -73,7 +73,7 @@ public class IngestSegmentFirehoseTest
           ImmutableList.of("host"),
           ImmutableList.of("visited_sum", "unique_hosts"),
           null,
-          QueryGranularity.NONE
+          QueryGranularityUtil.NONE
       );
 
       int count = 0;
@@ -120,7 +120,7 @@ public class IngestSegmentFirehoseTest
 
     IncrementalIndex index = null;
     try {
-      index = new OnheapIncrementalIndex(0, QueryGranularity.NONE, aggregators, true, true, true, 5000);
+      index = new OnheapIncrementalIndex(0, QueryGranularityUtil.NONE, aggregators, true, true, true, 5000);
       for (String line : rows) {
         index.add(parser.parse(line));
       }

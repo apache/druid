@@ -40,7 +40,7 @@ import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularityUtil;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskToolboxFactory;
 import io.druid.indexing.common.TestUtils;
@@ -209,7 +209,7 @@ public class IngestSegmentFirehoseFactoryTimelineTest
   {
     final File persistDir = new File(tmpDir, UUID.randomUUID().toString());
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-        .withQueryGranularity(QueryGranularity.NONE)
+        .withQueryGranularity(QueryGranularityUtil.NONE)
         .withMinTimestamp(JodaUtils.MIN_INSTANT)
         .withDimensionsSpec(ROW_PARSER)
         .withMetrics(

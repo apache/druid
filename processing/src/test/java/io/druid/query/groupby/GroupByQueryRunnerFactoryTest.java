@@ -37,7 +37,7 @@ import io.druid.data.input.impl.CSVParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularityUtil;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -87,7 +87,7 @@ public class GroupByQueryRunnerFactoryTest
         .builder()
         .setDataSource("xx")
         .setQuerySegmentSpec(new LegacySegmentSpec("1970/3000"))
-        .setGranularity(QueryGranularity.ALL)
+        .setGranularity(QueryGranularityUtil.ALL)
         .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("tags", "tags")))
         .setAggregatorSpecs(
             Arrays.asList(
@@ -113,7 +113,7 @@ public class GroupByQueryRunnerFactoryTest
   {
     IncrementalIndex incrementalIndex = new OnheapIncrementalIndex(
         0,
-        QueryGranularity.NONE,
+        QueryGranularityUtil.NONE,
         new AggregatorFactory[]{
             new CountAggregatorFactory("count")
         },
