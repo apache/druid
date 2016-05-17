@@ -101,6 +101,8 @@ public class CostBalancerStrategy implements BalancerStrategy
       return 0;
     }
 
+    // cost(X, Y) = cost(Y, X), so we swap X and Y to
+    // have x_0 <= y_0 and simplify the calculations below
     if (y0 < 0) {
       // swap X and Y
       double tmp = x1;
@@ -109,19 +111,30 @@ public class CostBalancerStrategy implements BalancerStrategy
       y0 = -y0;
     }
 
-    // Y overlaps X
+    // since x_0 <= y_0, Y must overlap X if y_0 < x_1
     if (y0 < x1) {
       /**
-       * X   [ A )[ B )[ C )   or  [ A )[ B )
-       * Y        [   )                 [   )[ C )
+       * We have two possible cases of overlap:
        *
-       * A could be empty if y0 == 0
-       * C could be empty if y1 == x1
+       * X  = [ A )[ B )[ C )   or  [ A )[ B )
+       * Y  =      [   )                 [   )[ C )
+       *
+       * A is empty if y0 = 0
+       * C is empty if y1 = x1
        *
        * cost(X, Y) = cost(A, Y) + cost(B, C) + cost(B, B)
+       *
+       * cost(A, Y) and cost(B, C) can be calculated using the non-overlapping case,
+       * which reduces the overlapping case to computing
+       *
+       * cost(B, B) = \int_0^{\beta} \int_{0}^{\beta} e^{-|x-y|}dxdy
+       *            = 2 \cdot (\beta + e^{-\beta} - 1)
+       *
+       *            where \beta is the length of interval B
+       *
        */
-      final double beta;  // b1 - y0
-      final double gamma; // c1 - y0
+      final double beta;  // b1 - y0, length of interval B
+      final double gamma; // c1 - y0, length of interval C
       if (y1 <= x1) {
         beta = y1 - y0;
         gamma = x1 - y0;
@@ -129,11 +142,26 @@ public class CostBalancerStrategy implements BalancerStrategy
         beta = x1 - y0;
         gamma = y1 - y0;
       }
-      return intervalCost(y0, y0, y1) +
-             intervalCost(beta, beta, gamma) +
-             // cost of exactly overlapping intervals of size beta
-             2 * (beta + FastMath.exp(-beta) - 1);
+      return intervalCost(y0, y0, y1) + // cost(A, Y)
+             intervalCost(beta, beta, gamma) + // cost(B, C)
+             2 * (beta + FastMath.exp(-beta) - 1); // cost(B, B)
     } else {
+      /**
+       * In the case where there is no overlap:
+       *
+       * Given that x_0 <= y_0,
+       * then x <= y must be true for all x in [x_0, x_1] and y in [y_0, y_1).
+       *
+       * therefore,
+       *
+       * cost(X, Y) = \int_0^{x_1} \int_{y_0}^{y_1} e^{-|x-y|} dxdy
+       *            = \int_0^{x_1} \int_{y_0}^{y_1} e^{x-y} dxdy
+       *            = (e^{-y_1} - e^{-y_0}) - (e^{x_1-y_1} - e^{x_1-y_0})
+       *
+       * Note, this expression could be further reduced by factoring out (e^{x_1} - 1),
+       * but we prefer to keep the smaller values x_1 - y_0 and x_1 - y_1 in the exponent
+       * to avoid numerical overflow caused by calculating e^{x_1}
+       */
       final double exy0 = FastMath.exp(x1 - y0);
       final double exy1 = FastMath.exp(x1 - y1);
       final double ey0 = FastMath.exp(0f - y0);
