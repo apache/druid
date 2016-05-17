@@ -28,12 +28,14 @@ import com.metamx.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.concurrent.atomic.AtomicReference;
 import javax.annotation.Nullable;
 
 public class RegisteredLookupExtractionFn implements ExtractionFn
 {
-  private final AtomicReference<LookupExtractionFn> delegateRef = new AtomicReference<>(null);
+  // Protected for moving to not-null by `delegateLock`
+  // THIS IS NOT `volatile` ON PURPOSE.
+  private LookupExtractionFn delegate = null;
+  private final Object delegateLock = new Object();
   private final LookupReferencesManager manager;
   private final String lookup;
   private final boolean retainMissingValue;
@@ -138,10 +140,12 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
 
   private LookupExtractionFn ensureDelegate()
   {
-    LookupExtractionFn delegate = delegateRef.get();
+    LookupExtractionFn delegate = this.delegate;
     if (null == delegate) {
-      synchronized (delegateRef) {
-        delegate = delegateRef.get();
+      // Might have a few threads early on that get caught up here compared to a volatile delegate,
+      // but since apply is called A TON OF TIMES we have `this.delegate` allowed to be cached.
+      synchronized (delegateLock) {
+        delegate = this.delegate;
         if (null == delegate) {
           delegate = new LookupExtractionFn(
               Preconditions.checkNotNull(manager.get(getLookup()), "Lookup [%s] not found", getLookup()).get(),
@@ -150,7 +154,7 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
               isInjective(),
               isOptimize()
           );
-          delegateRef.set(delegate);
+          this.delegate = delegate;
         }
       }
     }
@@ -201,7 +205,7 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
   public String toString()
   {
     return "RegisteredLookupExtractionFn{" +
-           "delegateRef=" + delegateRef.get() +
+           "delegate=" + delegate +
            ", lookup='" + lookup + '\'' +
            ", retainMissingValue=" + retainMissingValue +
            ", replaceMissingValueWith='" + replaceMissingValueWith + '\'' +
