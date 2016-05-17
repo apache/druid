@@ -41,7 +41,7 @@ import io.druid.data.input.FirehoseV2;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.InputRowParser;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.BaseQuery;
 import io.druid.query.Query;
@@ -135,14 +135,14 @@ public class RealtimeManagerTest
         "test",
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.NONE, null),
+        new UniformGranularitySpec(Granularity.HOUR, QueryGranularities.NONE, null),
         jsonMapper
     );
     schema2 = new DataSchema(
         "testV2",
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.NONE, null),
+        new UniformGranularitySpec(Granularity.HOUR, QueryGranularities.NONE, null),
         jsonMapper
     );
     RealtimeIOConfig ioConfig = new RealtimeIOConfig(
@@ -280,7 +280,7 @@ public class RealtimeManagerTest
         "testing",
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("ignore")},
-        new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.NONE, null),
+        new UniformGranularitySpec(Granularity.HOUR, QueryGranularities.NONE, null),
         jsonMapper
     );
 

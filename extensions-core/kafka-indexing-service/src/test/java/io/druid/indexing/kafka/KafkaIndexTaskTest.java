@@ -19,7 +19,6 @@
 
 package io.druid.indexing.kafka;
 
-import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -56,7 +55,7 @@ import io.druid.data.input.impl.JSONPathFieldSpec;
 import io.druid.data.input.impl.JSONPathSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
@@ -198,7 +197,7 @@ public class KafkaIndexTaskTest
             Map.class
         ),
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new UniformGranularitySpec(Granularity.DAY, QueryGranularity.NONE, null),
+        new UniformGranularitySpec(Granularity.DAY, QueryGranularities.NONE, null),
         objectMapper
     );
   }
@@ -1442,7 +1441,7 @@ public class KafkaIndexTaskTest
                                       ImmutableList.<AggregatorFactory>of(
                                           new LongSumAggregatorFactory("rows", "rows")
                                       )
-                                  ).granularity(QueryGranularity.ALL)
+                                  ).granularity(QueryGranularities.ALL)
                                   .intervals("0000/3000")
                                   .build();
 

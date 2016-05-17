@@ -24,7 +24,7 @@ import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.metamx.common.Granularity;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -200,7 +200,7 @@ public class UniformGranularityTest
     notEqualsCheck(
         spec, new UniformGranularitySpec(
             Granularity.DAY,
-            QueryGranularity.ALL,
+            QueryGranularities.ALL,
             Lists.newArrayList(
                 new Interval("2012-01-08T00Z/2012-01-11T00Z"),
                 new Interval("2012-01-07T00Z/2012-01-08T00Z"),

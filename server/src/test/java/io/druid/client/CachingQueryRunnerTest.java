@@ -34,7 +34,7 @@ import com.metamx.common.guava.YieldingAccumulator;
 import io.druid.client.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.MapCache;
-import io.druid.granularity.AllGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.CacheStrategy;
 import io.druid.query.Druids;
@@ -98,7 +98,7 @@ public class CachingQueryRunnerTest
         .threshold(3)
         .intervals("2011-01-05/2011-01-10")
         .aggregators(AGGS)
-        .granularity(AllGranularity.ALL);
+        .granularity(QueryGranularities.ALL);
 
     QueryToolChest toolchest = new TopNQueryQueryToolChest(
         new TopNQueryConfig(),

@@ -27,7 +27,7 @@ import io.druid.data.input.impl.DelimitedParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.indexer.partitions.HashedPartitionsSpec;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -133,7 +133,7 @@ public class DetermineHashedPartitionsJobTest
             new AggregatorFactory[]{new DoubleSumAggregatorFactory("index", "index")},
             new UniformGranularitySpec(
                 Granularity.DAY,
-                QueryGranularity.NONE,
+                QueryGranularities.NONE,
                 ImmutableList.of(new Interval(interval))
             ),
             HadoopDruidIndexerConfig.JSON_MAPPER

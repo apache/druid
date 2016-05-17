@@ -27,7 +27,7 @@ import com.metamx.common.Granularity;
 import io.druid.client.indexing.ClientAppendQuery;
 import io.druid.client.indexing.ClientKillQuery;
 import io.druid.client.indexing.ClientMergeQuery;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.guice.FirehoseModule;
 import io.druid.indexer.HadoopIOConfig;
 import io.druid.indexer.HadoopIngestionSpec;
@@ -306,7 +306,7 @@ public class TaskSerdeTest
                 "foo",
                 null,
                 new AggregatorFactory[0],
-                new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.NONE, null),
+                new UniformGranularitySpec(Granularity.HOUR, QueryGranularities.NONE, null),
                 jsonMapper
             ),
             new RealtimeIOConfig(

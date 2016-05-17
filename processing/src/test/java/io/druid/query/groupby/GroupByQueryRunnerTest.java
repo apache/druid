@@ -36,7 +36,7 @@ import com.metamx.common.parsers.ParseException;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
 import io.druid.granularity.PeriodGranularity;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.BySegmentResultValue;
@@ -1250,7 +1250,7 @@ public class GroupByQueryRunnerTest
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
 
     final GroupByQuery fullQuery = builder.build();
-    final GroupByQuery allGranQuery = builder.copy().setGranularity(QueryGranularity.ALL).build();
+    final GroupByQuery allGranQuery = builder.copy().setGranularity(QueryGranularities.ALL).build();
 
     QueryRunner mergedRunner = factory.getToolchest().mergeResults(
         new QueryRunner<Row>()
@@ -1365,7 +1365,7 @@ public class GroupByQueryRunnerTest
                 new LongSumAggregatorFactory("idx", "index")
             )
         )
-        .setGranularity(QueryGranularity.DAY)
+        .setGranularity(QueryGranularities.DAY)
         .setLimit(limit)
         .addOrderByColumn("idx", OrderByColumnSpec.Direction.DESCENDING);
 
@@ -2305,7 +2305,7 @@ public class GroupByQueryRunnerTest
                 new DoubleSumAggregatorFactory("index", "index")
             )
         )
-        .setGranularity(QueryGranularity.ALL)
+        .setGranularity(QueryGranularities.ALL)
         .setHavingSpec(new GreaterThanHavingSpec("index", 310L))
         .setLimitSpec(
             new DefaultLimitSpec(
