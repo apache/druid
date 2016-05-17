@@ -23,11 +23,9 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.metamx.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
+import java.nio.ByteBuffer;
 import javax.annotation.Nullable;
 
 public class RegisteredLookupExtractionFn implements ExtractionFn
@@ -94,17 +92,15 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
   @Override
   public byte[] getCacheKey()
   {
-    try (final ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-      baos.write(StringUtils.toUtf8(getClass().getCanonicalName()));
-      baos.write(0xFF);
-      baos.write(StringUtils.toUtf8(getLookup()));
-      baos.write(0xFF);
-      baos.write(ensureDelegate().getCacheKey());
-      return baos.toByteArray();
-    }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
-    }
+    final byte[] keyPrefix = StringUtils.toUtf8(getClass().getCanonicalName());
+    final byte[] lookupName = StringUtils.toUtf8(getLookup());
+    final byte[] delegateKey = ensureDelegate().getCacheKey();
+    return ByteBuffer
+        .allocate(keyPrefix.length + 1 + lookupName.length + 1 + delegateKey.length)
+        .put(keyPrefix).put((byte) 0xFF)
+        .put(lookupName).put((byte) 0xFF)
+        .put(delegateKey)
+        .array();
   }
 
   @Override
