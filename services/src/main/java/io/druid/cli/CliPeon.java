@@ -88,13 +88,14 @@ import io.druid.server.QueryResource;
 import io.druid.server.initialization.jetty.ChatHandlerServerModule;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.metrics.MonitorsConfig;
+import org.eclipse.jetty.server.Server;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.Set;
-import org.eclipse.jetty.server.Server;
 
 /**
  */
