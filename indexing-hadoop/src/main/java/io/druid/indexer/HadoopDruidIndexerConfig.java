@@ -212,8 +212,8 @@ public class HadoopDruidIndexerConfig
 
   private volatile HadoopIngestionSpec schema;
   private volatile PathSpec pathSpec;
-  private volatile Map<DateTime, ShardSpecLookup> shardSpecLookups = Maps.newHashMap();
-  private volatile Map<DateTime, Map<ShardSpec, HadoopyShardSpec>> hadoopShardSpecLookup = Maps.newHashMap();
+  private final Map<DateTime, ShardSpecLookup> shardSpecLookups = Maps.newHashMap();
+  private final Map<DateTime, Map<ShardSpec, HadoopyShardSpec>> hadoopShardSpecLookup = Maps.newHashMap();
   private final QueryGranularity rollupGran;
 
   @JsonCreator
@@ -243,11 +243,11 @@ public class HadoopDruidIndexerConfig
           )
       );
 
-      Map<ShardSpec, HadoopyShardSpec> hadoopyShardSpecLookup = Maps.newHashMap();
+      Map<ShardSpec, HadoopyShardSpec> innerHadoopShardSpecLookup = Maps.newHashMap();
       for (HadoopyShardSpec hadoopyShardSpec : entry.getValue()) {
-        hadoopyShardSpecLookup.put(hadoopyShardSpec.getActualSpec(), hadoopyShardSpec);
+        innerHadoopShardSpecLookup.put(hadoopyShardSpec.getActualSpec(), hadoopyShardSpec);
       }
-      hadoopShardSpecLookup.put(entry.getKey(), hadoopyShardSpecLookup);
+      hadoopShardSpecLookup.put(entry.getKey(), innerHadoopShardSpecLookup);
 
     }
     this.rollupGran = spec.getDataSchema().getGranularitySpec().getQueryGranularity();
@@ -397,7 +397,7 @@ public class HadoopDruidIndexerConfig
     if (!timeBucket.isPresent()) {
       return Optional.absent();
     }
-    DateTime bucketStart = timeBucket.get().getStart();
+    final DateTime bucketStart = timeBucket.get().getStart();
     final ShardSpec actualSpec = shardSpecLookups.get(bucketStart)
                                                  .getShardSpec(
                                                      rollupGran.truncate(inputRow.getTimestampFromEpoch()),
