@@ -212,8 +212,8 @@ public class HadoopDruidIndexerConfig
 
   private volatile HadoopIngestionSpec schema;
   private volatile PathSpec pathSpec;
-  private volatile Map<DateTime, ShardSpecLookup> shardSpecLookups = Maps.newHashMap();
-  private volatile Map<ShardSpec, HadoopyShardSpec> hadoopShardSpecLookup = Maps.newHashMap();
+  private final Map<DateTime, ShardSpecLookup> shardSpecLookups = Maps.newHashMap();
+  private final Map<DateTime, Map<ShardSpec, HadoopyShardSpec>> hadoopShardSpecLookup = Maps.newHashMap();
   private final QueryGranularity rollupGran;
 
   @JsonCreator
@@ -242,9 +242,13 @@ public class HadoopDruidIndexerConfig
               )
           )
       );
+
+      Map<ShardSpec, HadoopyShardSpec> innerHadoopShardSpecLookup = Maps.newHashMap();
       for (HadoopyShardSpec hadoopyShardSpec : entry.getValue()) {
-        hadoopShardSpecLookup.put(hadoopyShardSpec.getActualSpec(), hadoopyShardSpec);
+        innerHadoopShardSpecLookup.put(hadoopyShardSpec.getActualSpec(), hadoopyShardSpec);
       }
+      hadoopShardSpecLookup.put(entry.getKey(), innerHadoopShardSpecLookup);
+
     }
     this.rollupGran = spec.getDataSchema().getGranularitySpec().getQueryGranularity();
   }
@@ -393,18 +397,18 @@ public class HadoopDruidIndexerConfig
     if (!timeBucket.isPresent()) {
       return Optional.absent();
     }
-
-    final ShardSpec actualSpec = shardSpecLookups.get(timeBucket.get().getStart())
+    final DateTime bucketStart = timeBucket.get().getStart();
+    final ShardSpec actualSpec = shardSpecLookups.get(bucketStart)
                                                  .getShardSpec(
                                                      rollupGran.truncate(inputRow.getTimestampFromEpoch()),
                                                      inputRow
                                                  );
-    final HadoopyShardSpec hadoopyShardSpec = hadoopShardSpecLookup.get(actualSpec);
+    final HadoopyShardSpec hadoopyShardSpec = hadoopShardSpecLookup.get(bucketStart).get(actualSpec);
 
     return Optional.of(
         new Bucket(
             hadoopyShardSpec.getShardNum(),
-            timeBucket.get().getStart(),
+            bucketStart,
             actualSpec.getPartitionNum()
         )
     );
