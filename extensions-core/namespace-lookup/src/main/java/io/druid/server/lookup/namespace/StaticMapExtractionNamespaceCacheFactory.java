@@ -29,7 +29,7 @@ import java.util.concurrent.Callable;
 public class StaticMapExtractionNamespaceCacheFactory
     implements ExtractionNamespaceCacheFactory<StaticMapExtractionNamespace>
 {
-  private final String VERSION = UUID.randomUUID().toString();
+  private final String version = UUID.randomUUID().toString();
 
   @Override
   public Callable<String> getCachePopulator(
@@ -44,11 +44,11 @@ public class StaticMapExtractionNamespaceCacheFactory
       @Override
       public String call() throws Exception
       {
-        if (VERSION.equals(lastVersion)) {
+        if (version.equals(lastVersion)) {
           return null;
         } else {
           swap.putAll(extractionNamespace.getMap());
-          return VERSION;
+          return version;
         }
       }
     };
@@ -56,6 +56,6 @@ public class StaticMapExtractionNamespaceCacheFactory
 
   String getVersion()
   {
-    return VERSION;
+    return version;
   }
 }
