@@ -170,23 +170,19 @@ public class DetermineHashedPartitionsJob implements Jobby
           log.info("Creating [%,d] shards", numberOfShards);
 
           List<HadoopyShardSpec> actualSpecs = Lists.newArrayListWithExpectedSize(numberOfShards);
-          if (numberOfShards == 1) {
-            actualSpecs.add(new HadoopyShardSpec(new NoneShardSpec(), shardCount++));
-          } else {
-            for (int i = 0; i < numberOfShards; ++i) {
-              actualSpecs.add(
-                  new HadoopyShardSpec(
-                      new HashBasedNumberedShardSpec(
-                          i,
-                          numberOfShards,
-                          null,
-                          HadoopDruidIndexerConfig.JSON_MAPPER
-                      ),
-                      shardCount++
-                  )
-              );
-              log.info("DateTime[%s], partition[%d], spec[%s]", bucket, i, actualSpecs.get(i));
-            }
+          for (int i = 0; i < numberOfShards; ++i) {
+            actualSpecs.add(
+                new HadoopyShardSpec(
+                    new HashBasedNumberedShardSpec(
+                        i,
+                        numberOfShards,
+                        null,
+                        HadoopDruidIndexerConfig.JSON_MAPPER
+                    ),
+                    shardCount++
+                )
+            );
+            log.info("DateTime[%s], partition[%d], spec[%s]", bucket, i, actualSpecs.get(i));
           }
 
           shardSpecs.put(bucket, actualSpecs);
