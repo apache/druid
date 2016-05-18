@@ -220,6 +220,61 @@ public class PartitionPathSpecTest
   }
 
   @Test
+  public void testAddInputPathFullPartition() throws Exception
+  {
+    UserGroupInformation.setLoginUser(UserGroupInformation.createUserForTesting("test", new String[]{"testGroup"}));
+    HadoopIngestionSpec spec = new HadoopIngestionSpec(
+        new DataSchema(
+            "foo",
+            null,
+            new AggregatorFactory[0],
+            new UniformGranularitySpec(
+                Granularity.DAY,
+                QueryGranularity.MINUTE,
+                ImmutableList.of(new Interval("2015-11-06T00:00Z/2015-11-07T00:00Z"))
+            ),
+            jsonMapper
+        ),
+        new HadoopIOConfig(null, null, null),
+        new HadoopTuningConfig(null, null, null, null, null, null, false, false, false, false, null, false, false, null, null, null)
+    );
+
+    partitionPathSpec.setPartitionColumns(TEST_STRING_SINGLE_PARTITON_COLS);
+    partitionPathSpec.setInputFormat(org.apache.hadoop.mapreduce.lib.input.TextInputFormat.class);
+
+    Job job = Job.getInstance();
+    String formatStr = "file:%s/%s;org.apache.hadoop.mapreduce.lib.input.TextInputFormat";
+
+    testFolder.newFolder("test", "test1=abc", "test2=123");
+    testFolder.newFolder("test", "test1=abc", "test2=456");
+    testFolder.newFile("test/test1=abc/test2=123/file1");
+    testFolder.newFile("test/test1=abc/test2=456/file2");
+
+    partitionPathSpec.setBasePath(testFolder.getRoot().getPath() + "/test/test1=abc");
+    partitionPathSpec.setIndexingPath(testFolder.getRoot().getPath() + "/test/test1=abc/test2=123");
+
+    partitionPathSpec.addInputPaths(HadoopDruidIndexerConfig.fromSpec(spec), job);
+
+    String actual = job.getConfiguration().get("mapreduce.input.multipleinputs.dir.formats");
+
+    String expected = Joiner.on(",").join(Lists.newArrayList(
+        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=123")
+    ));
+
+    Assert.assertEquals("Did not find expected input paths", expected, actual);
+
+    Map<String, String> columnsExpected = ImmutableMap.of(
+        "test2", "123"
+    );
+
+    Map<String, String> partitionColumns = partitionPathSpec.getPartitionValues(
+        new Path(String.format("file:%s/test/test1=abc/test2=123/file1",testFolder.getRoot()))
+    );
+
+    Assert.assertEquals(columnsExpected, partitionColumns);
+  }
+
+  @Test
   public void testAddInputPathPartialScan() throws Exception
   {
     UserGroupInformation.setLoginUser(UserGroupInformation.createUserForTesting("test", new String[]{"testGroup"}));

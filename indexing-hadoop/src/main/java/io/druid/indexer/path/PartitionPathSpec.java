@@ -111,24 +111,33 @@ public class PartitionPathSpec implements PathSpec
       {
         String targetToFindSkipColumns = indexingPath.toString().substring(basePath.toString().length() + 1);
         String[] skipColumnValues = targetToFindSkipColumns.split(Path.SEPARATOR);
+        Preconditions.checkArgument(skipColumnValues.length <= partitionColumns.size(),
+            "partition columns should include all the columns specified in indexingPath");
+
         for (String skipColumnValue: skipColumnValues)
         {
           String[] columnValuePair = skipColumnValue.split("=");
-          Preconditions.checkArgument(columnValuePair.length == 2);
+          Preconditions.checkArgument(columnValuePair.length == 2,
+              String.format("%s: indexingPath should not have non-partitioning directories", skipColumnValue));
           Preconditions.checkArgument(columnValuePair[0].equals(partitionColumns.get(indexingStartColumnIndex)));
           indexingStartColumnIndex++;
         }
       }
 
       // scan all the sub-directories under indexingPath and add them to input path
-      Path[] pathToFilter = statusToPath(fs.listStatus(indexingPath, new PartitionPathFilter(partitionColumns.get(indexingStartColumnIndex))));
+      if (indexingStartColumnIndex == partitionColumns.size())
+      {
+        paths.add(fs.getFileStatus(indexingPath).getPath().toString());
+      } else {
+        Path[] pathToFilter = statusToPath(fs.listStatus(indexingPath, new PartitionPathFilter(partitionColumns.get(indexingStartColumnIndex))));
 
-      for (int idx = indexingStartColumnIndex + 1; idx < partitionColumns.size(); idx++) {
-        pathToFilter = statusToPath(fs.listStatus(pathToFilter, new PartitionPathFilter(partitionColumns.get(idx))));
-      }
+        for (int idx = indexingStartColumnIndex + 1; idx < partitionColumns.size(); idx++) {
+          pathToFilter = statusToPath(fs.listStatus(pathToFilter, new PartitionPathFilter(partitionColumns.get(idx))));
+        }
 
-      for (Path path: pathToFilter) {
-        paths.add(path.toString());
+        for (Path path: pathToFilter) {
+          paths.add(path.toString());
+        }
       }
     } else {
       log.info("Automatically find the partition columns from directory names");
