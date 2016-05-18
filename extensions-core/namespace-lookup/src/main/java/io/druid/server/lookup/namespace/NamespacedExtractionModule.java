@@ -33,6 +33,7 @@ import io.druid.query.lookup.NamespaceLookupExtractorFactory;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
 import io.druid.query.lookup.namespace.JDBCExtractionNamespace;
+import io.druid.query.lookup.namespace.StaticMapExtractionNamespace;
 import io.druid.query.lookup.namespace.URIExtractionNamespace;
 import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import io.druid.server.lookup.namespace.cache.OffHeapNamespaceExtractionCacheManager;
@@ -96,6 +97,10 @@ public class NamespacedExtractionModule implements DruidModule
     getNamespaceFactoryMapBinder(binder)
         .addBinding(URIExtractionNamespace.class)
         .to(URIExtractionNamespaceCacheFactory.class)
+        .in(LazySingleton.class);
+    getNamespaceFactoryMapBinder(binder)
+        .addBinding(StaticMapExtractionNamespace.class)
+        .to(StaticMapExtractionNamespaceCacheFactory.class)
         .in(LazySingleton.class);
   }
 }

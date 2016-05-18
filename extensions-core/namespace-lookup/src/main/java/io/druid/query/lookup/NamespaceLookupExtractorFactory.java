@@ -31,6 +31,7 @@ import com.google.common.collect.ImmutableMap;
 import com.metamx.common.ISE;
 import com.metamx.common.StringUtils;
 import com.metamx.common.logger.Logger;
+import io.druid.common.utils.ServletResourceUtils;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
@@ -109,7 +110,12 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
       @Produces(MediaType.APPLICATION_JSON)
       public Response getKeys()
       {
-        return Response.ok(getLatest().keySet().toString()).build();
+        try {
+          return Response.ok(getLatest().keySet()).build();
+        }
+        catch (ISE e) {
+          return Response.status(Response.Status.NOT_FOUND).entity(ServletResourceUtils.sanitizeException(e)).build();
+        }
       }
 
       @GET
@@ -117,7 +123,12 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
       @Produces(MediaType.APPLICATION_JSON)
       public Response getValues()
       {
-        return Response.ok(getLatest().values().toString()).build();
+        try {
+          return Response.ok(getLatest().values()).build();
+        }
+        catch (ISE e) {
+          return Response.status(Response.Status.NOT_FOUND).entity(ServletResourceUtils.sanitizeException(e)).build();
+        }
       }
 
       @GET
@@ -138,7 +149,12 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
       @Produces(MediaType.APPLICATION_JSON)
       public Response getMap()
       {
-        return Response.ok(getLatest()).build();
+        try {
+          return Response.ok(getLatest()).build();
+        }
+        catch (ISE e) {
+          return Response.status(Response.Status.NOT_FOUND).entity(ServletResourceUtils.sanitizeException(e)).build();
+        }
       }
 
       private Map<String, String> getLatest()
@@ -275,11 +291,10 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
         public byte[] getCacheKey()
         {
           return ByteBuffer
-              .allocate(CLASS_CACHE_KEY.length + id.length + 1 + v.length + 1 + 1)
-              .put(id)
-              .put((byte) 0xFF)
-              .put(v)
-              .put((byte) 0xFF)
+              .allocate(CLASS_CACHE_KEY.length + 1 + id.length + 1 + v.length + 1 + 1)
+              .put(CLASS_CACHE_KEY).put((byte) 0xFF)
+              .put(id).put((byte) 0xFF)
+              .put(v).put((byte) 0xFF)
               .put(isOneToOne() ? (byte) 1 : (byte) 0)
               .array();
         }

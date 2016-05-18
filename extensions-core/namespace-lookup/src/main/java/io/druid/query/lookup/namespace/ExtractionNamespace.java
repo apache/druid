@@ -25,7 +25,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "jdbc", value = JDBCExtractionNamespace.class),
-    @JsonSubTypes.Type(name = "uri", value = URIExtractionNamespace.class)
+    @JsonSubTypes.Type(name = "uri", value = URIExtractionNamespace.class),
+    @JsonSubTypes.Type(name = StaticMapExtractionNamespace.TYPE_NAME, value = StaticMapExtractionNamespace.class)
 })
 /**
  * The ExtractionNamespace is a simple object for extracting namespaceLookup values from a source of data.

@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.InjectableValues;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
@@ -50,6 +51,7 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
+import javax.ws.rs.core.Response;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -477,5 +479,126 @@ public class NamespaceLookupExtractorFactoryTest
     ));
     map.put("firstCacheTimeout", "1");
     Assert.assertTrue(namespaceLookupExtractorFactory.replaces(mapper.convertValue(map, LookupExtractorFactory.class)));
+  }
+
+  @Test
+  public void testSimpleIntrospectionHandler() throws Exception
+  {
+    final Injector injector = Initialization.makeInjectorWithModules(
+        GuiceInjectors.makeStartupInjector(),
+        ImmutableList.of(
+            new Module()
+            {
+              @Override
+              public void configure(Binder binder)
+              {
+                JsonConfigProvider.bindInstance(
+                    binder, Key.get(DruidNode.class, Self.class), new DruidNode("test-inject", null, null)
+                );
+              }
+            }
+        )
+    );
+    final ObjectMapper mapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
+    mapper.registerSubtypes(NamespaceLookupExtractorFactory.class);
+    final String str = "{ \"type\": \"cachedNamespace\", \"extractionNamespace\": { \"type\": \"staticMap\", \"map\": {\"foo\":\"bar\"} } }";
+    final LookupExtractorFactory lookupExtractorFactory = mapper.readValue(str, LookupExtractorFactory.class);
+    Assert.assertTrue(lookupExtractorFactory.start());
+    try {
+      final LookupIntrospectHandler handler = lookupExtractorFactory.getIntrospectHandler();
+      Assert.assertNotNull(handler);
+      final Class<? extends LookupIntrospectHandler> clazz = handler.getClass();
+      Assert.assertNotNull(clazz.getMethod("getVersion").invoke(handler));
+      Assert.assertEquals(ImmutableSet.of("foo"), ((Response) clazz.getMethod("getKeys").invoke(handler)).getEntity());
+      Assert.assertEquals(
+          ImmutableSet.of("bar"),
+          ((Response) clazz.getMethod("getValues").invoke(handler)).getEntity()
+      );
+      Assert.assertEquals(
+          ImmutableMap.builder().put("foo", "bar").build(),
+          ((Response) clazz.getMethod("getMap").invoke(handler)).getEntity()
+      );
+    }
+    finally {
+      Assert.assertTrue(lookupExtractorFactory.close());
+    }
+  }
+
+  @Test
+  public void testExceptionalIntrospectionHandler() throws Exception
+  {
+    final NamespaceExtractionCacheManager manager = EasyMock.createStrictMock(NamespaceExtractionCacheManager.class);
+    final ExtractionNamespace extractionNamespace = EasyMock.createStrictMock(ExtractionNamespace.class);
+    EasyMock.expect(manager.scheduleAndWait(EasyMock.anyString(), EasyMock.eq(extractionNamespace), EasyMock.anyLong()))
+            .andReturn(true)
+            .once();
+    EasyMock.replay(manager);
+    final LookupExtractorFactory lookupExtractorFactory = new NamespaceLookupExtractorFactory(
+        extractionNamespace,
+        manager
+    );
+    Assert.assertTrue(lookupExtractorFactory.start());
+
+    final LookupIntrospectHandler handler = lookupExtractorFactory.getIntrospectHandler();
+    Assert.assertNotNull(handler);
+    final Class<? extends LookupIntrospectHandler> clazz = handler.getClass();
+
+    synchronized (manager) {
+      EasyMock.verify(manager);
+      EasyMock.reset(manager);
+      EasyMock.expect(manager.getVersion(EasyMock.anyString())).andReturn(null).once();
+      EasyMock.replay(manager);
+    }
+    final Response response = (Response) clazz.getMethod("getVersion").invoke(handler);
+    Assert.assertEquals(404, response.getStatus());
+
+
+    validateCode(
+        new ISE("some exception"),
+        404,
+        "getKeys",
+        handler,
+        manager,
+        clazz
+    );
+
+    validateCode(
+        new ISE("some exception"),
+        404,
+        "getValues",
+        handler,
+        manager,
+        clazz
+    );
+
+    validateCode(
+        new ISE("some exception"),
+        404,
+        "getMap",
+        handler,
+        manager,
+        clazz
+    );
+
+    EasyMock.verify(manager);
+  }
+
+  void validateCode(
+      Throwable thrown,
+      int expectedCode,
+      String method,
+      LookupIntrospectHandler handler,
+      NamespaceExtractionCacheManager manager,
+      Class<? extends LookupIntrospectHandler> clazz
+  ) throws Exception
+  {
+    synchronized (manager) {
+      EasyMock.verify(manager);
+      EasyMock.reset(manager);
+      EasyMock.expect(manager.getVersion(EasyMock.anyString())).andThrow(thrown).once();
+      EasyMock.replay(manager);
+    }
+    final Response response = (Response) clazz.getMethod(method).invoke(handler);
+    Assert.assertEquals(expectedCode, response.getStatus());
   }
 }
