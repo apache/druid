@@ -334,7 +334,11 @@ public class RealtimePlumber implements Plumber
                                           @Override
                                           public QueryRunner<T> apply(FireHydrant input)
                                           {
-                                            if (skipIncrementalSegment && !input.hasSwapped()) {
+                                            // Hydrant might swap at any point, but if it's swapped at the start
+                                            // then we know it's *definitely* swapped.
+                                            final boolean hydrantDefinitelySwapped = input.hasSwapped();
+
+                                            if (skipIncrementalSegment && !hydrantDefinitelySwapped) {
                                               return new NoopQueryRunner<T>();
                                             }
 
@@ -346,7 +350,7 @@ public class RealtimePlumber implements Plumber
                                                   segment.rhs
                                               );
 
-                                              if (input.hasSwapped() // only use caching if data is immutable
+                                              if (hydrantDefinitelySwapped // only use caching if data is immutable
                                                   && cache.isLocal() // hydrants may not be in sync between replicas, make sure cache is local
                                                   ) {
                                                 return new CachingQueryRunner<>(
