@@ -128,7 +128,7 @@ public class InDimFilter implements DimFilter
     return inFilter;
   }
 
-  public InDimFilter optimizeLookup() {
+  private InDimFilter optimizeLookup() {
     if (extractionFn instanceof LookupExtractionFn
         && ((LookupExtractionFn) extractionFn).isOptimize()) {
       LookupExtractionFn exFn = (LookupExtractionFn) extractionFn;
