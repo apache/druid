@@ -45,7 +45,7 @@ import java.util.List;
  */
 public class NamespacedExtractionModule implements DruidModule
 {
-  public static final String TYPE_PREFIX = "druid.query.extraction.namespace.cache.type";
+  public static final String TYPE_PREFIX = "druid.lookup.namespace.cache.type";
 
   @Override
   public List<? extends Module> getJacksonModules()

@@ -82,7 +82,7 @@ setting namespaces (broker, peon, historical)
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.query.extraction.namespace.cache.type`|Specifies the type of caching to be used by the namespaces. May be one of [`offHeap`, `onHeap`]. `offHeap` uses a temporary file for off-heap storage of the namespace (memory mapped files). `onHeap` stores all cache on the heap in standard java map types.|`onHeap`|
+|`druid.lookup.namespace.cache.type`|Specifies the type of caching to be used by the namespaces. May be one of [`offHeap`, `onHeap`]. `offHeap` uses a temporary file for off-heap storage of the namespace (memory mapped files). `onHeap` stores all cache on the heap in standard java map types.|`onHeap`|
 
 The cache is populated in different ways depending on the settings below. In general, most namespaces employ 
 a `pollPeriod` at the end of which time they poll the remote resource of interest for updates.
