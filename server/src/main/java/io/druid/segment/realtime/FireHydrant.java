@@ -36,7 +36,7 @@ public class FireHydrant
   private final int count;
   private volatile IncrementalIndex index;
   private volatile ReferenceCountingSegment adapter;
-  private Object swapLock = new Object();
+  private final Object swapLock = new Object();
 
   public FireHydrant(
       IncrementalIndex index,
@@ -82,16 +82,17 @@ public class FireHydrant
   public void swapSegment(Segment adapter)
   {
     synchronized (swapLock) {
-      if (this.adapter != null) {
+      ReferenceCountingSegment oldAdapter = this.adapter;
+      this.adapter = new ReferenceCountingSegment(adapter);
+      this.index = null;
+      if (oldAdapter != null) {
         try {
-          this.adapter.close();
+          oldAdapter.close();
         }
         catch (IOException e) {
           throw Throwables.propagate(e);
         }
       }
-      this.adapter = new ReferenceCountingSegment(adapter);
-      this.index = null;
     }
   }
 
