@@ -19,6 +19,7 @@
 
 package io.druid.query.lookup;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.BeanProperty;
 import com.fasterxml.jackson.databind.DeserializationContext;
 import com.fasterxml.jackson.databind.InjectableValues;
@@ -40,7 +41,6 @@ import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.URIExtractionNamespace;
 import io.druid.server.DruidNode;
 import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
-import java.util.concurrent.ConcurrentHashMap;
 import org.easymock.EasyMock;
 import org.joda.time.Period;
 import org.junit.Assert;
@@ -49,6 +49,10 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
+
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class NamespaceLookupExtractorFactoryTest
 {
@@ -451,11 +455,27 @@ public class NamespaceLookupExtractorFactoryTest
     );
     final ObjectMapper mapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
     mapper.registerSubtypes(NamespaceLookupExtractorFactory.class);
-    final LookupExtractorFactory factory = mapper.readValue(
-        "{ \"type\": \"cachedNamespace\", \"extractionNamespace\": { \"type\": \"uri\", \"uriPrefix\": \"s3://bucket/prefix/\", \"fileRegex\": \"foo.*\\\\.gz\", \"namespaceParseSpec\": { \"format\": \"customJson\", \"keyFieldName\": \"someKey\", \"valueFieldName\": \"someVal\" }, \"pollPeriod\": \"PT5M\" } } }",
-        LookupExtractorFactory.class
-    );
+    final String str = "{ \"type\": \"cachedNamespace\", \"extractionNamespace\": { \"type\": \"uri\", \"uriPrefix\": \"s3://bucket/prefix/\", \"fileRegex\": \"foo.*\\\\.gz\", \"namespaceParseSpec\": { \"format\": \"customJson\", \"keyFieldName\": \"someKey\", \"valueFieldName\": \"someVal\" }, \"pollPeriod\": \"PT5M\" } } }";
+    final LookupExtractorFactory factory = mapper.readValue(str, LookupExtractorFactory.class);
     Assert.assertTrue(factory instanceof NamespaceLookupExtractorFactory);
+    final NamespaceLookupExtractorFactory namespaceLookupExtractorFactory = (NamespaceLookupExtractorFactory) factory;
     Assert.assertNotNull(mapper.writeValueAsString(factory));
+    Assert.assertFalse(factory.replaces(mapper.readValue(
+        mapper.writeValueAsString(factory),
+        LookupExtractorFactory.class
+    )));
+    Assert.assertEquals(
+        URIExtractionNamespace.class,
+        namespaceLookupExtractorFactory.getExtractionNamespace().getClass()
+    );
+    Assert.assertFalse(namespaceLookupExtractorFactory.replaces(mapper.readValue(str, LookupExtractorFactory.class)));
+    final Map<String, Object> map = new HashMap<>(mapper.<Map<String, Object>>readValue(
+        str,
+        new TypeReference<Map<String, Object>>()
+        {
+        }
+    ));
+    map.put("firstCacheTimeout", "1");
+    Assert.assertTrue(namespaceLookupExtractorFactory.replaces(mapper.convertValue(map, LookupExtractorFactory.class)));
   }
 }

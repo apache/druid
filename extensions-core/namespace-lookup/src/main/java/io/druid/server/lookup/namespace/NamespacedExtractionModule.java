@@ -50,7 +50,7 @@ public class NamespacedExtractionModule implements DruidModule
   public List<? extends Module> getJacksonModules()
   {
     return ImmutableList.<Module>of(
-        new SimpleModule("DruidNamespacedExtractionModule")
+        new SimpleModule("DruidNamespacedCachedExtractionModule")
             .registerSubtypes(
                 NamespaceLookupExtractorFactory.class
             )

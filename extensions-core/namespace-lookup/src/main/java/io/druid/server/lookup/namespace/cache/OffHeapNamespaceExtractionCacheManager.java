@@ -87,7 +87,7 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
             }
 
             @Override
-            public void stop()
+            public synchronized void stop()
             {
               if (!mmapDB.isClosed()) {
                 mmapDB.close();
