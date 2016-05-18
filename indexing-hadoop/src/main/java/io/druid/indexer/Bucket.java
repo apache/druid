@@ -19,6 +19,7 @@
 
 package io.druid.indexer;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.metamx.common.Pair;
 import org.joda.time.DateTime;
 
@@ -120,5 +121,11 @@ public class Bucket
     buf.get(bytesLeft);
 
     return Pair.of(bucket, bytesLeft);    
+  }
+
+  @VisibleForTesting
+  protected int getShardNum()
+  {
+    return shardNum;
   }
 }
