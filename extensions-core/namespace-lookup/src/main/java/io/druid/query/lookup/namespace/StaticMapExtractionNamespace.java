@@ -32,15 +32,12 @@ public class StaticMapExtractionNamespace implements ExtractionNamespace
 {
   static final String TYPE_NAME = "staticMap";
   private final Map<String, String> map;
-  private final long pollMs;
 
   @JsonCreator
   public StaticMapExtractionNamespace(
-      @JsonProperty("pollMs") long pollMs,
       @JsonProperty("map") Map<String, String> map
   )
   {
-    this.pollMs = pollMs;
     this.map = Preconditions.checkNotNull(map, "`map` required");
   }
 
@@ -51,10 +48,10 @@ public class StaticMapExtractionNamespace implements ExtractionNamespace
   }
 
   @Override
-  @JsonProperty
   public long getPollMs()
   {
-    return pollMs;
+    // Load once and forget it
+    return 0;
   }
 
   @Override

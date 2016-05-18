@@ -43,15 +43,18 @@ public class StaticMapExtractionNamespaceTest
   @Test
   public void testSimpleSerDe() throws Exception
   {
-    final String str = "{\"type\":\"staticMap\", \"map\":" + MAP_STRING + ",\"pollMs\":3}";
+    final String str = "{\"type\":\"staticMap\", \"map\":" + MAP_STRING + "}";
     final StaticMapExtractionNamespace extractionNamespace = MAPPER.readValue(str, StaticMapExtractionNamespace.class);
     Assert.assertEquals(MAP, extractionNamespace.getMap());
-    Assert.assertEquals(3L, extractionNamespace.getPollMs());
+    Assert.assertEquals(0L, extractionNamespace.getPollMs());
     Assert.assertEquals(extractionNamespace, MAPPER.readValue(str, StaticMapExtractionNamespace.class));
-    Assert.assertNotEquals(extractionNamespace, new StaticMapExtractionNamespace(0, MAP));
     Assert.assertNotEquals(
         extractionNamespace,
-        new StaticMapExtractionNamespace(3, ImmutableMap.<String, String>of("foo", "not_bar"))
+        new StaticMapExtractionNamespace(ImmutableMap.<String, String>of("foo", "not_bar"))
+    );
+    Assert.assertNotEquals(
+        extractionNamespace,
+        new StaticMapExtractionNamespace(ImmutableMap.<String, String>of("not_foo", "bar"))
     );
   }
 }

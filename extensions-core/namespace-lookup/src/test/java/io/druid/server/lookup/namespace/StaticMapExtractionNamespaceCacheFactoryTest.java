@@ -35,7 +35,7 @@ public class StaticMapExtractionNamespaceCacheFactoryTest
   public void testSimplePopulator() throws Exception
   {
     final StaticMapExtractionNamespaceCacheFactory factory = new StaticMapExtractionNamespaceCacheFactory();
-    final StaticMapExtractionNamespace namespace = new StaticMapExtractionNamespace(0, MAP);
+    final StaticMapExtractionNamespace namespace = new StaticMapExtractionNamespace(MAP);
     final Map<String, String> cache = new HashMap<>();
     Assert.assertEquals(factory.getVersion(), factory.getCachePopulator(null, namespace, null, cache).call());
     Assert.assertEquals(MAP, cache);
