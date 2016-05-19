@@ -143,7 +143,13 @@ public class S3DataSegmentMover implements DataSegmentMover
                     if (!config.getDisableAcl()) {
                       target.setAcl(GSAccessControlList.REST_CANNED_BUCKET_OWNER_FULL_CONTROL);
                     }
-                    s3Client.moveObject(s3Bucket, s3Path, targetS3Bucket, target, false);
+                    final Object deletedException = s3Client
+                        .moveObject(s3Bucket, s3Path, targetS3Bucket, target, false)
+                        // See javadoc for moveObject
+                        .get("DeleteException");
+                    if (deletedException != null) {
+                      log.warn("File at [s3://%s/%s could not be removed: %s", s3Bucket, s3Path, deletedException);
+                    }
                   }
                 }
               } else {
