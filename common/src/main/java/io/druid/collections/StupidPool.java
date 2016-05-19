@@ -87,7 +87,7 @@ public class StupidPool<T>
     }
 
     @Override
-    public void close() throws IOException
+    public void close()
     {
       if (!closed.compareAndSet(false, true)) {
         log.warn(new ISE("Already Closed!"), "Already closed");

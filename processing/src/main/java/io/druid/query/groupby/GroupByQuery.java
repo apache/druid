@@ -27,6 +27,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Ordering;
+import com.google.common.primitives.Longs;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
@@ -52,6 +54,7 @@ import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import org.joda.time.Interval;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -216,6 +219,73 @@ public class GroupByQuery extends BaseQuery<Row>
   public String getType()
   {
     return GROUP_BY;
+  }
+
+  @Override
+  public Ordering getResultOrdering()
+  {
+    final Comparator naturalNullsFirst = Ordering.natural().nullsFirst();
+    final Ordering<Row> rowOrdering = getRowOrdering(false);
+
+    return Ordering.from(
+        new Comparator<Object>()
+        {
+          @Override
+          public int compare(Object lhs, Object rhs)
+          {
+            if (lhs instanceof Row) {
+              return rowOrdering.compare((Row) lhs, (Row) rhs);
+            } else {
+              // Probably bySegment queries
+              return naturalNullsFirst.compare(lhs, rhs);
+            }
+          }
+        }
+    );
+  }
+
+  public Ordering<Row> getRowOrdering(final boolean granular)
+  {
+    final Comparator naturalNullsFirst = Ordering.natural().nullsFirst();
+
+    return Ordering.from(
+        new Comparator<Row>()
+        {
+          @Override
+          public int compare(Row lhs, Row rhs)
+          {
+            final int timeCompare;
+
+            if (granular) {
+              timeCompare = Longs.compare(
+                  granularity.truncate(lhs.getTimestampFromEpoch()),
+                  granularity.truncate(rhs.getTimestampFromEpoch())
+              );
+            } else {
+              timeCompare = Longs.compare(
+                  lhs.getTimestampFromEpoch(),
+                  rhs.getTimestampFromEpoch()
+              );
+            }
+
+            if (timeCompare != 0) {
+              return timeCompare;
+            }
+
+            for (DimensionSpec dimension : dimensions) {
+              final int dimCompare = naturalNullsFirst.compare(
+                  lhs.getRaw(dimension.getOutputName()),
+                  rhs.getRaw(dimension.getOutputName())
+              );
+              if (dimCompare != 0) {
+                return dimCompare;
+              }
+            }
+
+            return 0;
+          }
+        }
+    );
   }
 
   public Sequence<Row> applyLimit(Sequence<Row> results)

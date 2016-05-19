@@ -92,6 +92,7 @@ import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryEngine;
 import io.druid.query.groupby.GroupByQueryQueryToolChest;
+import io.druid.query.groupby.GroupByQueryRunnerTest;
 import io.druid.query.search.SearchQueryQueryToolChest;
 import io.druid.query.search.SearchResultValue;
 import io.druid.query.search.search.SearchHit;
@@ -211,7 +212,6 @@ public class CachingClusteredClientTest
   private static final DateTimeZone TIMEZONE = DateTimeZone.forID("America/Los_Angeles");
   private static final QueryGranularity PT1H_TZ_GRANULARITY = new PeriodGranularity(new Period("PT1H"), null, TIMEZONE);
   private static final String TOP_DIM = "a_dim";
-  private static final Supplier<GroupByQueryConfig> GROUPBY_QUERY_CONFIG_SUPPLIER = Suppliers.ofInstance(new GroupByQueryConfig());
   static final QueryToolChestWarehouse WAREHOUSE = new MapQueryToolChestWarehouse(
       ImmutableMap.<Class<? extends Query>, QueryToolChest>builder()
                   .put(
@@ -241,25 +241,7 @@ public class CachingClusteredClientTest
                   )
                   .put(
                       GroupByQuery.class,
-                      new GroupByQueryQueryToolChest(
-                          GROUPBY_QUERY_CONFIG_SUPPLIER,
-                          jsonMapper,
-                          new GroupByQueryEngine(
-                              GROUPBY_QUERY_CONFIG_SUPPLIER,
-                              new StupidPool<>(
-                                  new Supplier<ByteBuffer>()
-                                  {
-                                    @Override
-                                    public ByteBuffer get()
-                                    {
-                                      return ByteBuffer.allocate(1024 * 1024);
-                                    }
-                                  }
-                              )
-                          ),
-                          TestQueryRunners.pool,
-                          QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-                      )
+                      GroupByQueryRunnerTest.makeQueryRunnerFactory(new GroupByQueryConfig()).getToolchest()
                   )
                   .put(TimeBoundaryQuery.class, new TimeBoundaryQueryQueryToolChest())
                   .build()
@@ -1301,35 +1283,9 @@ public class CachingClusteredClientTest
         )
     );
 
-    Supplier<GroupByQueryConfig> configSupplier = new Supplier<GroupByQueryConfig>()
-    {
-      @Override
-      public GroupByQueryConfig get()
-      {
-        return new GroupByQueryConfig();
-      }
-    };
     QueryRunner runner = new FinalizeResultsQueryRunner(
         client,
-        new GroupByQueryQueryToolChest(
-            configSupplier,
-            jsonMapper,
-            new GroupByQueryEngine(
-                configSupplier,
-                new StupidPool<>(
-                    new Supplier<ByteBuffer>()
-                    {
-                      @Override
-                      public ByteBuffer get()
-                      {
-                        return ByteBuffer.allocate(1024 * 1024);
-                      }
-                    }
-                )
-            ),
-            TestQueryRunners.pool,
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-        )
+        GroupByQueryRunnerTest.makeQueryRunnerFactory(new GroupByQueryConfig()).getToolchest()
     );
     HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedObjects(
@@ -2552,35 +2508,9 @@ public class CachingClusteredClientTest
         )
     );
 
-    Supplier<GroupByQueryConfig> configSupplier = new Supplier<GroupByQueryConfig>()
-    {
-      @Override
-      public GroupByQueryConfig get()
-      {
-        return new GroupByQueryConfig();
-      }
-    };
     QueryRunner runner = new FinalizeResultsQueryRunner(
         client,
-        new GroupByQueryQueryToolChest(
-            configSupplier,
-            jsonMapper,
-            new GroupByQueryEngine(
-                configSupplier,
-                new StupidPool<>(
-                    new Supplier<ByteBuffer>()
-                    {
-                      @Override
-                      public ByteBuffer get()
-                      {
-                        return ByteBuffer.allocate(1024 * 1024);
-                      }
-                    }
-                )
-            ),
-            TestQueryRunners.pool,
-            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-        )
+        GroupByQueryRunnerTest.makeQueryRunnerFactory(new GroupByQueryConfig()).getToolchest()
     );
     HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedObjects(

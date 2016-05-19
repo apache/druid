@@ -104,11 +104,9 @@ public class LoadBalancingPool<T> implements Supplier<ResourceHolder<T>>
 
     /**
      * Not idempotent, should only be called once when done using the resource
-     *
-     * @throws IOException
      */
     @Override
-    public void close() throws IOException
+    public void close()
     {
       // ensures count always gets adjusted while item is removed from the queue
       synchronized (this) {
