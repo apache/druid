@@ -26,7 +26,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.ISE;
 import com.metamx.common.StringUtils;
@@ -42,8 +41,6 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.UUID;
@@ -61,15 +58,8 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
   private static final byte[] CLASS_CACHE_KEY;
 
   static {
-    try (ByteArrayOutputStream baos = new ByteArrayOutputStream()) {
-      baos.write(StringUtils.toUtf8(NamespaceLookupExtractorFactory.class.getCanonicalName()));
-      baos.write(0xFF);
-      CLASS_CACHE_KEY = baos.toByteArray();
-    }
-    catch (IOException e) {
-      // Should never happen
-      throw Throwables.propagate(e);
-    }
+    final byte[] keyUtf8 = StringUtils.toUtf8(NamespaceLookupExtractorFactory.class.getCanonicalName());
+    CLASS_CACHE_KEY = ByteBuffer.allocate(keyUtf8.length + 1).put(keyUtf8).put((byte) 0xFF).array();
   }
 
   @JsonIgnore
