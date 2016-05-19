@@ -36,7 +36,9 @@ Core extensions are maintained by Druid committers.
 
 A number of community members have contributed their own extensions to Druid that are not packaged with the default Druid tarball. 
 Community extensions are not maintained by Druid committers, although we accept patches from community members using these extensions. 
-If you'd like to take on maintenance for a community extension, please post on [druid-development group](https://groups.google.com/forum/#!forum/druid-development) to let us know!    
+If you'd like to take on maintenance for a community extension, please post on [druid-development group](https://groups.google.com/forum/#!forum/druid-development) to let us know!
+    
+All of these community extensions can be downloaded using *pull-deps* with the coordinate io.druid.extensions.contrib:EXTENSION_NAME:LATEST_DRUID_STABLE_VERSION.
 
 |Name|Description|Docs|
 |----|-----------|----|
@@ -54,3 +56,7 @@ If you'd like to take on maintenance for a community extension, please post on [
 
 Please [let us know](https://groups.google.com/forum/#!forum/druid-development) if you'd like an extension to be promoted to core. 
 If we see a community extension actively supported by the community, we can promote it to core based on community feedback. 
+
+# Creating your own Extensions
+
+For information how to create your own extension, please see [here](../development/modules.html).
