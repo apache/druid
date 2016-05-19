@@ -1279,4 +1279,87 @@ public class DruidCoordinatorRuleRunnerTest
     EasyMock.expectLastCall().anyTimes();
     EasyMock.replay(coordinator);
   }
+
+  /**
+   * Nodes:
+   * hot - 2 nodes without Replication
+   *
+   * @throws Exception
+   */
+  @Test
+  public void testLoadingThrottle() throws Exception
+  {
+    EasyMock.expect(coordinator.getDynamicConfigs()).andReturn(
+        new CoordinatorDynamicConfig(
+            0, 0, 0, 0, 1, 24, 0, false, null, 10 // 10 is the loading throttling limit
+        )
+    ).anyTimes();
+    coordinator.removeSegment(EasyMock.<DataSegment>anyObject());
+    EasyMock.expectLastCall().anyTimes();
+    EasyMock.replay(coordinator);
+    mockPeon.loadSegment(EasyMock.<DataSegment>anyObject(), EasyMock.<LoadPeonCallback>anyObject());
+    EasyMock.expectLastCall().atLeastOnce();
+    EasyMock.expect(mockPeon.getSegmentsToLoad()).andReturn(Sets.<DataSegment>newHashSet()).atLeastOnce();
+    EasyMock.expect(mockPeon.getLoadQueueSize()).andReturn(0L).atLeastOnce();
+    EasyMock.replay(mockPeon);
+
+    EasyMock.expect(databaseRuleManager.getRulesWithDefault(EasyMock.<String>anyObject())).andReturn(
+        Lists.<Rule>newArrayList(
+            new IntervalLoadRule(
+                new Interval("2012-01-01T00:00:00.000Z/2013-01-01T00:00:00.000Z"),
+                ImmutableMap.<String, Integer>of("hot", 1)
+            )
+        )
+    ).atLeastOnce();
+    EasyMock.replay(databaseRuleManager);
+
+    DruidCluster druidCluster = new DruidCluster(
+        ImmutableMap.of(
+            "hot",
+            MinMaxPriorityQueue.orderedBy(Ordering.natural().reverse()).create(
+                Arrays.asList(
+                    new ServerHolder(
+                        new DruidServer(
+                            "serverHot",
+                            "hostHot",
+                            1000,
+                            "historical",
+                            "hot",
+                            0
+                        ).toImmutableDruidServer(),
+                        mockPeon
+                    ),
+                    new ServerHolder(
+                        new DruidServer(
+                            "serverHot2",
+                            "hostHot2",
+                            1000,
+                            "historical",
+                            "hot",
+                            0
+                        ).toImmutableDruidServer(),
+                        mockPeon
+                    )
+                )
+            )
+        )
+    );
+
+    DruidCoordinatorRuntimeParams params =
+        new DruidCoordinatorRuntimeParams.Builder()
+            .withDruidCluster(druidCluster)
+            .withAvailableSegments(availableSegments)
+            .withDatabaseRuleManager(databaseRuleManager)
+            .withSegmentReplicantLookup(SegmentReplicantLookup.make(new DruidCluster()))
+            .withBalancerStrategyFactory(new CostBalancerStrategyFactory(1))
+            .withBalancerReferenceTimestamp(new DateTime("2013-01-01"))
+            .build();
+
+    DruidCoordinatorRuntimeParams afterParams = ruleRunner.run(params);
+    CoordinatorStats stats = afterParams.getCoordinatorStats();
+
+    Assert.assertTrue(stats.getPerTierStats().get("assignedCount").get("hot").get() == 10);
+    Assert.assertTrue(stats.getPerTierStats().get("unassignedCount") == null);
+    Assert.assertTrue(stats.getPerTierStats().get("unassignedSize") == null);
+  }
 }

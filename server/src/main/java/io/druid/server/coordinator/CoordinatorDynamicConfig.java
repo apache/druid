@@ -26,6 +26,7 @@ import java.util.Set;
 public class CoordinatorDynamicConfig
 {
   public static final String CONFIG_KEY = "coordinator.config";
+  private static final int DEFAULT_LOADING_THROTTLE_LIMIT = -1;
 
   private final long millisToWaitBeforeDeleting;
   private final long mergeBytesLimit;
@@ -49,7 +50,7 @@ public class CoordinatorDynamicConfig
       @JsonProperty("balancerComputeThreads") int balancerComputeThreads,
       @JsonProperty("emitBalancingStats") boolean emitBalancingStats,
       @JsonProperty("killDataSourceWhitelist") Set<String> killDataSourceWhitelist,
-      @JsonProperty("loadingThrottleLimit") int loadingThrottleLimit
+      @JsonProperty("loadingThrottleLimit") Integer loadingThrottleLimit
 
       )
   {
@@ -62,7 +63,7 @@ public class CoordinatorDynamicConfig
     this.emitBalancingStats = emitBalancingStats;
     this.balancerComputeThreads = Math.max(balancerComputeThreads, 1);
     this.killDataSourceWhitelist = killDataSourceWhitelist;
-    this.loadingThrottleLimit = loadingThrottleLimit;
+    this.loadingThrottleLimit = loadingThrottleLimit == null ? DEFAULT_LOADING_THROTTLE_LIMIT : loadingThrottleLimit;
   }
 
   @JsonProperty

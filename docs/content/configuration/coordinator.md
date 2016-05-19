@@ -86,6 +86,7 @@ Issuing a GET request at the same URL will return the spec that is currently in 
 |`maxSegmentsToMove`|The maximum number of segments that can be moved at any given time.|5|
 |`replicantLifetime`|The maximum number of coordinator runs for a segment to be replicated before we start alerting.|15|
 |`replicationThrottleLimit`|The maximum number of segments that can be replicated at one time.|10|
+|`loadingThrottleLimit`|The maximum number of segments that can be loaded at one time.|-1 (Unlimited)|
 |`emitBalancingStats`|Boolean flag for whether or not we should emit balancing stats. This is an expensive operation.|false|
 |`killDataSourceWhitelist`|List of dataSources for which kill tasks are sent if property `druid.coordinator.kill.on` is true.|none|
 
