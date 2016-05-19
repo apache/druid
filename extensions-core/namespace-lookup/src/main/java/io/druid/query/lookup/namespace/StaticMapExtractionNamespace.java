@@ -66,9 +66,6 @@ public class StaticMapExtractionNamespace implements ExtractionNamespace
 
     StaticMapExtractionNamespace that = (StaticMapExtractionNamespace) o;
 
-    if (getPollMs() != that.getPollMs()) {
-      return false;
-    }
     return getMap().equals(that.getMap());
 
   }
@@ -76,8 +73,6 @@ public class StaticMapExtractionNamespace implements ExtractionNamespace
   @Override
   public int hashCode()
   {
-    int result = getMap().hashCode();
-    result = 31 * result + (int) (getPollMs() ^ (getPollMs() >>> 32));
-    return result;
+    return getMap().hashCode();
   }
 }
