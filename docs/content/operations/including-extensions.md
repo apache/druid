@@ -19,13 +19,13 @@ druid.extensions.loadList=["postgresql-metadata-storage", "druid-hdfs-storage"]
 These extensions are located in the `extensions` directory of the distribution.
 
 <div class="note info">
-Druid bundles two sets of configurations: one for the <a href="../tutorials/quickstart.md">quickstart</a> and 
+Druid bundles two sets of configurations: one for the <a href="../tutorials/quickstart.html">quickstart</a> and 
 one for a <a href="../tutorials/cluster.html">clustered configuration</a>. Make sure you are updating the correct 
 common.runtime.properties for your setup.
 </div>
 
 <div class="note caution">
-Because of licensing, the mysql-metadata-storage extension is not packaged with the default Druid tarball. In order to get it, you can download it from <a href="http://druid.io/downloads.html">druid.io]</a>, 
+Because of licensing, the mysql-metadata-storage extension is not packaged with the default Druid tarball. In order to get it, you can download it from <a href="http://druid.io/downloads.html">druid.io</a>, 
 then unpack and move it into the extensions directory. Make sure to include the name of the extension in the loadList configuration.
 </div>
 
