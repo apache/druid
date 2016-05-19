@@ -27,6 +27,11 @@ import com.google.common.base.Preconditions;
 
 import java.util.Map;
 
+/**
+ * This class is intended to be used in general cluster testing, and not as a serious lookup.
+ * Any desire to use a static map in a lookup in *general* should use `io.druid.query.extraction.MapLookupExtractor`
+ * Any desire to test the *caching mechanisms in this extension* can use this class.
+ */
 @JsonTypeName(StaticMapExtractionNamespace.TYPE_NAME)
 public class StaticMapExtractionNamespace implements ExtractionNamespace
 {
