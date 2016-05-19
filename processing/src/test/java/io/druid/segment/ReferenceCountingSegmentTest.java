@@ -43,7 +43,7 @@ public class ReferenceCountingSegmentTest
   public void setUp() throws Exception
   {
     segment = new ReferenceCountingSegment(
-        new Segment()
+        new AbstractSegment()
         {
           @Override
           public String getIdentifier()
