@@ -175,7 +175,7 @@ public class PartitionPathSpecTest
             new AggregatorFactory[0],
             new UniformGranularitySpec(
                 Granularity.DAY,
-                QueryGranularity.MINUTE,
+                QueryGranularities.MINUTE,
                 ImmutableList.of(new Interval("2015-11-06T00:00Z/2015-11-07T00:00Z"))
             ),
             jsonMapper
@@ -230,7 +230,7 @@ public class PartitionPathSpecTest
             new AggregatorFactory[0],
             new UniformGranularitySpec(
                 Granularity.DAY,
-                QueryGranularity.MINUTE,
+                QueryGranularities.MINUTE,
                 ImmutableList.of(new Interval("2015-11-06T00:00Z/2015-11-07T00:00Z"))
             ),
             jsonMapper
@@ -285,7 +285,7 @@ public class PartitionPathSpecTest
             new AggregatorFactory[0],
             new UniformGranularitySpec(
                 Granularity.DAY,
-                QueryGranularity.MINUTE,
+                QueryGranularities.MINUTE,
                 ImmutableList.of(new Interval("2015-11-06T00:00Z/2015-11-07T00:00Z"))
             ),
             jsonMapper
@@ -406,7 +406,7 @@ public class PartitionPathSpecTest
             new AggregatorFactory[0],
             new UniformGranularitySpec(
                 Granularity.DAY,
-                QueryGranularity.MINUTE,
+                QueryGranularities.MINUTE,
                 ImmutableList.of(new Interval("2015-11-06T00:00Z/2015-11-07T00:00Z"))
             ),
             jsonMapper
@@ -458,7 +458,7 @@ public class PartitionPathSpecTest
             new AggregatorFactory[0],
             new UniformGranularitySpec(
                 Granularity.DAY,
-                QueryGranularity.MINUTE,
+                QueryGranularities.MINUTE,
                 ImmutableList.of(new Interval("2015-11-06T00:00Z/2015-11-07T00:00Z"))
             ),
             jsonMapper
