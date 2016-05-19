@@ -19,18 +19,13 @@
 
 package io.druid.indexer;
 
-import com.google.common.base.Function;
-import com.google.common.base.Optional;
 import com.metamx.common.RE;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.StringInputRowParser;
-import io.druid.granularity.QueryGranularity;
-import io.druid.segment.indexing.granularity.GranularitySpec;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
-import org.joda.time.Interval;
 
 import java.io.IOException;
 
@@ -39,44 +34,15 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
   private static final Logger log = new Logger(HadoopDruidIndexerMapper.class);
 
   protected HadoopDruidIndexerConfig config;
-  private InputRowParser parser;
-  protected GranularitySpec granularitySpec;
 
-  protected Function<InputRow, Long> groupFunction;
+  private InputRowParser parser;
+
   @Override
   protected void setup(Context context)
       throws IOException, InterruptedException
   {
     config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
     parser = config.getParser();
-    granularitySpec = config.getGranularitySpec();
-    groupFunction = toTimestampFunction(granularitySpec);
-  }
-
-  private Function<InputRow, Long> toTimestampFunction(final GranularitySpec granularitySpec)
-  {
-    if (granularitySpec.bucketIntervals().isPresent()) {
-      return new Function<InputRow, Long>()
-      {
-        @Override
-        public Long apply(InputRow input)
-        {
-          long timestampFromEpoch = input.getTimestampFromEpoch();
-          Optional<Interval> interval = granularitySpec.bucketInterval(timestampFromEpoch);
-          return interval.isPresent() ? interval.get().getStartMillis() : null;
-        }
-      };
-    }
-    return new Function<InputRow, Long>()
-    {
-      private final QueryGranularity granularity = granularitySpec.getQueryGranularity();
-
-      @Override
-      public Long apply(InputRow input)
-      {
-        return granularity.truncate(input.getTimestampFromEpoch());
-      }
-    };
   }
 
   public HadoopDruidIndexerConfig getConfig()
@@ -101,7 +67,7 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
       }
       catch (Exception e) {
         if (config.isIgnoreInvalidRows()) {
-          log.debug(e, "Ignoring invalid row [%s] due to parsing error", value.toString());
+          log.debug(e, "Ignoring invalid row [%s] due to parsing error", value);
           context.getCounter(HadoopDruidIndexerConfig.IndexJobCounters.INVALID_ROW_COUNTER).increment(1);
           return; // we're ignoring this invalid row
         } else {
@@ -109,10 +75,7 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
         }
       }
 
-      Long groupTimestamp = groupFunction.apply(inputRow);
-      if (groupTimestamp != null) {
-        innerMap(inputRow, groupTimestamp, value, context);
-      }
+      innerMap(inputRow, value, context);
     }
     catch (RuntimeException e) {
       throw new RE(e, "Failure on row[%s]", value);
@@ -133,7 +96,7 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
     }
   }
 
-  abstract protected void innerMap(InputRow inputRow, long groupTimestamp, Object value, Context context)
+  abstract protected void innerMap(InputRow inputRow, Object value, Context context)
       throws IOException, InterruptedException;
 
 }

@@ -101,20 +101,6 @@ public class ArbitraryGranularitySpec implements GranularitySpec
   }
 
   @Override
-  public Optional<Interval> bucketInterval(long millis)
-  {
-    Interval current = null;
-    for (Interval interval : intervals) {
-      if (interval.contains(millis)) {
-        current = interval;
-      } else if (current != null) {
-        break;
-      }
-    }
-    return current == null ? Optional.<Interval>absent() : Optional.of(current);
-  }
-
-  @Override
   public Granularity getSegmentGranularity()
   {
     throw new UnsupportedOperationException();

@@ -20,6 +20,7 @@
 package io.druid.indexer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -36,6 +37,7 @@ import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
+import com.metamx.common.Pair;
 import com.metamx.common.logger.Logger;
 import io.druid.common.guava.ThreadRenamingRunnable;
 import io.druid.concurrent.Execs;
@@ -43,6 +45,7 @@ import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.Rows;
+import io.druid.granularity.QueryGranularity;
 import io.druid.indexer.hadoop.SegmentInputRow;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.BaseProgressIndicator;
@@ -51,6 +54,7 @@ import io.druid.segment.QueryableIndex;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
+import io.druid.segment.indexing.granularity.GranularitySpec;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configurable;
@@ -266,12 +270,26 @@ public class IndexGeneratorJob implements Jobby
     return newIndex;
   }
 
+
+  static class GroupingBucket extends Pair<Long, Optional<Bucket>>
+  {
+    public GroupingBucket(Long lhs, Optional<Bucket> rhs) { super(lhs, rhs); }
+
+    long timestamp() { return lhs; }
+
+    Optional<Bucket> bucket() { return rhs; }
+
+    byte[] bucketKey() { return rhs.get().toGroupKey(); }
+  }
+
   public static class IndexGeneratorMapper extends HadoopDruidIndexerMapper<BytesWritable, BytesWritable>
   {
     protected static final HashFunction hashFunction = Hashing.murmur3_128();
 
     protected AggregatorFactory[] aggregators;
     protected AggregatorFactory[] combiningAggs;
+
+    private Function<InputRow, GroupingBucket> groupFunction;
 
     @Override
     protected void setup(Context context)
@@ -283,61 +301,83 @@ public class IndexGeneratorJob implements Jobby
       for (int i = 0; i < aggregators.length; ++i) {
         combiningAggs[i] = aggregators[i].getCombiningFactory();
       }
+      groupFunction = toBucketingFunction(config.getGranularitySpec());
+    }
+
+    private Function<InputRow, GroupingBucket> toBucketingFunction(final GranularitySpec granularitySpec)
+    {
+      final QueryGranularity granularity = granularitySpec.getQueryGranularity();
+      if (granularitySpec.bucketIntervals().isPresent()) {
+        return new Function<InputRow, GroupingBucket>()
+        {
+          @Override
+          public GroupingBucket apply(InputRow input)
+          {
+            long groupTimestamp = granularity.truncate(input.getTimestampFromEpoch());
+            return new GroupingBucket(groupTimestamp, config.getBucket(input));
+          }
+        };
+      }
+
+      return new Function<InputRow, GroupingBucket>()
+      {
+        @Override
+        public GroupingBucket apply(InputRow input)
+        {
+          long groupTimestamp = granularity.truncate(input.getTimestampFromEpoch());
+          return new GroupingBucket(groupTimestamp, config.getBucket(input, new DateTime(groupTimestamp)));
+        }
+      };
     }
 
     @Override
-    protected void innerMap(
-        InputRow inputRow,
-        long groupTimestamp,
-        Object value,
-        Context context
-    ) throws IOException, InterruptedException
-    {
-      writeRow(inputRow, true, context);
-    }
-
-    protected void writeRow(InputRow inputRow, boolean truncateTime, Context context)
+    protected final void innerMap(InputRow inputRow, Object value, Context context)
         throws IOException, InterruptedException
     {
-      // Group by bucket, sort by timestamp
-      final Optional<Bucket> bucket = getConfig().getBucket(inputRow);
-
-      if (!bucket.isPresent()) {
-        throw new ISE("WTF?! No bucket found for row: %s", inputRow);
+      GroupingBucket grouping = groupFunction.apply(inputRow);
+      if (grouping.bucket().isPresent()) {
+        innerMap(inputRow, grouping, context);
       }
+    }
 
-      long timestampFromEpoch = inputRow.getTimestampFromEpoch();
-      if (truncateTime) {
-        timestampFromEpoch = granularitySpec.getQueryGranularity().truncate(timestampFromEpoch);
-      }
+    protected void innerMap(InputRow inputRow, GroupingBucket grouping, Context context)
+        throws IOException, InterruptedException
+    {
+      writeRow(inputRow, grouping.timestamp(), grouping.bucketKey(), context);
+    }
+
+    protected void writeRow(InputRow inputRow, long groupTimestamp, byte[] bucket, Context context)
+        throws IOException, InterruptedException
+    {
+      final List<Object> groupKey = Rows.toGroupKey(groupTimestamp, inputRow);
       final byte[] hashedDimensions = hashFunction.hashBytes(
-          HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsBytes(
-              Rows.toGroupKey(
-                  timestampFromEpoch,
-                  inputRow
-              )
-          )
+          HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsBytes(groupKey)
       ).asBytes();
 
       // type SegmentInputRow serves as a marker that these InputRow instances have already been combined
       // and they contain the columns as they show up in the segment after ingestion, not what you would see in raw
       // data
-      byte[] serializedInputRow = inputRow instanceof SegmentInputRow ?
-                                  InputRowSerde.toBytes(inputRow, combiningAggs)
-                                                                      :
-                                  InputRowSerde.toBytes(inputRow, aggregators);
+      byte[] serializedInputRow = serialize(inputRow);
 
       context.write(
           new SortableBytes(
-              bucket.get().toGroupKey(),
+              bucket,
               // sort rows by truncated timestamp and hashed dimensions to help reduce spilling on the reducer side
               ByteBuffer.allocate(Longs.BYTES + hashedDimensions.length)
-                        .putLong(timestampFromEpoch)
+                        .putLong(groupTimestamp)
                         .put(hashedDimensions)
                         .array()
           ).toBytesWritable(),
           new BytesWritable(serializedInputRow)
       );
+    }
+
+    protected byte[] serialize(InputRow inputRow)
+    {
+      return inputRow instanceof SegmentInputRow ?
+                                      InputRowSerde.toBytes(inputRow, combiningAggs)
+                                                                          :
+                                      InputRowSerde.toBytes(inputRow, aggregators);
     }
   }
 
@@ -812,7 +852,7 @@ public class IndexGeneratorJob implements Jobby
   {
     private static final int MIN_CHECK_INTERVAL = 1024;
 
-    private final Map<Long, IncrementalIndex> combiners = Maps.newHashMap();
+    private final Map<GroupingBucket, IncrementalIndex> combiners = Maps.newHashMap();
 
     private int counter;
     private int checkInterval;
@@ -830,24 +870,24 @@ public class IndexGeneratorJob implements Jobby
     protected void cleanup(Context context) throws IOException, InterruptedException
     {
       super.cleanup(context);
-      for (IncrementalIndex index : combiners.values()) {
-        flush(context, index);
+      for (Map.Entry<GroupingBucket, IncrementalIndex> entry : combiners.entrySet()) {
+        flush(context, entry.getKey(), entry.getValue());
       }
       combiners.clear();
     }
 
     @Override
-    protected void innerMap(InputRow inputRow, long timestamp, Object value, Context context)
+    protected void innerMap(InputRow inputRow, GroupingBucket grouping, Context context)
         throws IOException, InterruptedException
     {
-      IncrementalIndex target = combiners.get(timestamp);
+      IncrementalIndex target = combiners.get(grouping);
       if (target == null) {
-        combiners.put(timestamp, target = makeIncrementalIndex(timestamp, aggregators, config, null, false));
+        combiners.put(grouping, target = makeIncrementalIndex(grouping.timestamp(), aggregators, config, null, false));
       }
 
       if (!target.canAppendRow()) {
-        flush(context, target);
-        combiners.put(timestamp, target = makeIncrementalIndex(timestamp, aggregators, config, null, false));
+        flush(context, grouping, target);
+        combiners.put(grouping, target = makeIncrementalIndex(grouping.timestamp(), aggregators, config, null, false));
       }
       target.add(inputRow);
 
@@ -859,15 +899,15 @@ public class IndexGeneratorJob implements Jobby
     private void flushOldestIfNeeded(Context context) throws IOException, InterruptedException
     {
       while (totalRowsInMemory() > maxRowsInMemory) {
-        IncrementalIndex oldest = null;
-        for (IncrementalIndex index : combiners.values()) {
-          if (oldest == null || index.getLastAccessTime() < oldest.getLastAccessTime()) {
-            oldest = index;
+        Map.Entry<GroupingBucket, IncrementalIndex> oldest = null;
+        for (Map.Entry<GroupingBucket, IncrementalIndex> entry : combiners.entrySet()) {
+          if (oldest == null || entry.getValue().getLastAccessTime() < oldest.getValue().getLastAccessTime()) {
+            oldest = entry;
           }
         }
         if (oldest != null) {
-          flush(context, oldest);
-          combiners.remove(oldest.getInterval().getStartMillis());
+          flush(context, oldest.getKey(), oldest.getValue());
+          combiners.remove(oldest.getKey());
         }
       }
     }
@@ -881,10 +921,13 @@ public class IndexGeneratorJob implements Jobby
       return rows;
     }
 
-    private void flush(Context context, IncrementalIndex index) throws IOException, InterruptedException
+    private void flush(Context context, GroupingBucket grouping, IncrementalIndex index)
+        throws IOException, InterruptedException
     {
+      final long groupTimestamp = grouping.timestamp();
+      final byte[] bucketKey = grouping.bucketKey();
       for (Object row : index) {
-        writeRow((InputRow) row, false, context);
+        writeRow((InputRow) row, groupTimestamp, bucketKey, context);
       }
       index.close();
     }

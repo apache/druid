@@ -240,16 +240,10 @@ public class DetermineHashedPartitionsJob implements Jobby
     @Override
     protected void innerMap(
         InputRow inputRow,
-        long groupTimestamp,
         Object value,
         Context context
     ) throws IOException, InterruptedException
     {
-
-      final List<Object> groupKey = Rows.toGroupKey(
-          rollupGranularity.truncate(inputRow.getTimestampFromEpoch()),
-          inputRow
-      );
       Interval interval;
       if (determineIntervals) {
         interval = config.getGranularitySpec()
@@ -264,10 +258,15 @@ public class DetermineHashedPartitionsJob implements Jobby
                                                        .bucketInterval(new DateTime(inputRow.getTimestampFromEpoch()));
 
         if (!maybeInterval.isPresent()) {
-          throw new ISE("WTF?! No bucket found for timestamp: %s", inputRow.getTimestampFromEpoch());
+          return;
         }
         interval = maybeInterval.get();
       }
+
+      final List<Object> groupKey = Rows.toGroupKey(
+          rollupGranularity.truncate(inputRow.getTimestampFromEpoch()),
+          inputRow
+      );
       hyperLogLogs.get(interval)
                   .add(
                       hashFunction.hashBytes(HadoopDruidIndexerConfig.JSON_MAPPER.writeValueAsBytes(groupKey))

@@ -397,7 +397,12 @@ public class HadoopDruidIndexerConfig
     if (!timeBucket.isPresent()) {
       return Optional.absent();
     }
-    final DateTime bucketStart = timeBucket.get().getStart();
+    return getBucket(inputRow, timeBucket.get().getStart());
+
+  }
+
+  public Optional<Bucket> getBucket(InputRow inputRow, DateTime bucketStart)
+  {
     final ShardSpec actualSpec = shardSpecLookups.get(bucketStart)
                                                  .getShardSpec(
                                                      rollupGran.truncate(inputRow.getTimestampFromEpoch()),
@@ -412,7 +417,6 @@ public class HadoopDruidIndexerConfig
             actualSpec.getPartitionNum()
         )
     );
-
   }
 
   public Optional<Set<Interval>> getSegmentGranularIntervals()

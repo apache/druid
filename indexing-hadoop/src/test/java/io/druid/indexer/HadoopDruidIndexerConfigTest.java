@@ -254,34 +254,15 @@ public class HadoopDruidIndexerConfigTest
             jsonMapper
         ),
         new HadoopIOConfig(ImmutableMap.<String, Object>of("paths", "bar", "type", "static"), null, null),
-        new HadoopTuningConfig(
-            null,
-            null,
-            null,
-            ImmutableMap.<DateTime, List<HadoopyShardSpec>>of(new DateTime("2010-01-01T01:00:00"),
-                                                              Lists.newArrayList(new HadoopyShardSpec(
-                                                                  NoneShardSpec.instance(),
-                                                                  1
-                                                              )),
-                                                              new DateTime("2010-01-01T02:00:00"),
-                                                              Lists.newArrayList(new HadoopyShardSpec(
-                                                                  NoneShardSpec.instance(),
-                                                                  2
-                                                              ))
-            ),
-            null,
-            null,
-            false,
-            false,
-            false,
-            false,
-            null,
-            false,
-            false,
-            null,
-            null,
-            null
-        )
+        HadoopTuningConfig.makeDefaultTuningConfig()
+                          .withShardSpecs(
+                              ImmutableMap.<DateTime, List<HadoopyShardSpec>>of(
+                                  new DateTime("2010-01-01T01:00:00"),
+                                  Lists.newArrayList(new HadoopyShardSpec(NoneShardSpec.instance(), 1)),
+                                  new DateTime("2010-01-01T02:00:00"),
+                                  Lists.newArrayList(new HadoopyShardSpec(NoneShardSpec.instance(), 2))
+                              )
+                          )
     );
     HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(spec);
     final List<String> dims = Arrays.asList("diM1", "dIM2");
