@@ -23,13 +23,14 @@ import com.google.common.base.Charsets;
 import com.google.common.io.ByteSource;
 import com.google.common.io.LineProcessor;
 import com.metamx.common.parsers.Parser;
+
 import java.io.IOException;
 import java.util.Map;
 
 /**
  * Simple class that takes a `ByteSource` and uses a `Parser<K, V>` to populate a `Map<K, V>`
  * The `ByteSource` must be UTF-8 encoded
- *
+ * <p>
  * If this is handy for other use cases pleaes move this class into a common module
  */
 public class MapPopulator<K, V>

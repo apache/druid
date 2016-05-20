@@ -29,10 +29,11 @@ import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.annotations.Self;
 import io.druid.initialization.Initialization;
 import io.druid.server.DruidNode;
-import io.druid.server.lookup.namespace.NamespacedExtractionModule;
-import java.util.Properties;
+import io.druid.server.lookup.namespace.NamespaceExtractionModule;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.Properties;
 
 public class OffHeapNamespaceExtractionCacheManagerTest
 {
@@ -56,7 +57,7 @@ public class OffHeapNamespaceExtractionCacheManagerTest
     );
     final Properties properties = injector.getInstance(Properties.class);
     properties.clear();
-    properties.put(NamespacedExtractionModule.TYPE_PREFIX, "offHeap");
+    properties.put(NamespaceExtractionModule.TYPE_PREFIX, "offHeap");
     final NamespaceExtractionCacheManager manager = injector.getInstance(NamespaceExtractionCacheManager.class);
     Assert.assertEquals(OffHeapNamespaceExtractionCacheManager.class, manager.getClass());
   }

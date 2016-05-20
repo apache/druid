@@ -34,6 +34,13 @@ import io.druid.query.lookup.namespace.URIExtractionNamespace;
 import io.druid.segment.loading.LocalFileTimestampVersionFinder;
 import io.druid.server.lookup.namespace.URIExtractionNamespaceCacheFactory;
 import io.druid.server.metrics.NoopServiceEmitter;
+import org.joda.time.Period;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
+
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -44,12 +51,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import org.joda.time.Period;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
 
 /**
  *

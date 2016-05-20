@@ -38,12 +38,13 @@ import io.druid.query.lookup.namespace.URIExtractionNamespace;
 import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import io.druid.server.lookup.namespace.cache.OffHeapNamespaceExtractionCacheManager;
 import io.druid.server.lookup.namespace.cache.OnHeapNamespaceExtractionCacheManager;
+
 import java.util.List;
 
 /**
  *
  */
-public class NamespacedExtractionModule implements DruidModule
+public class NamespaceExtractionModule implements DruidModule
 {
   public static final String TYPE_PREFIX = "druid.lookup.namespace.cache.type";
 

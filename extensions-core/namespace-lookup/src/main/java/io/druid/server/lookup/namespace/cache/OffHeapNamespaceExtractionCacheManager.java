@@ -29,6 +29,9 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
+import org.mapdb.DB;
+import org.mapdb.DBMaker;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.Map;
@@ -36,8 +39,6 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.locks.Lock;
-import org.mapdb.DB;
-import org.mapdb.DBMaker;
 
 /**
  *
@@ -135,7 +136,7 @@ public class OffHeapNamespaceExtractionCacheManager extends NamespaceExtractionC
     final Lock lock = nsLocks.get(namespaceKey);
     lock.lock();
     try {
-      if(super.delete(namespaceKey)) {
+      if (super.delete(namespaceKey)) {
         final String mmapDBkey = currentNamespaceCache.get(namespaceKey);
         if (mmapDBkey != null) {
           final long pre = tmpFile.length();
