@@ -170,6 +170,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 
     if (null != priorIndex) {
       aggs = concurrentGet(priorIndex);
+      doAggregate(aggs, rowContainer, row, reportParseExceptions);
     } else {
       aggs = new Aggregator[metrics.length];
 
@@ -179,11 +180,11 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
         aggs[i] = agg.factorize(
             selectors.get(agg.getName())
         );
+        aggs[i].aggregate();
       }
       rowContainer.set(null);
 
       final Integer rowIndex = indexIncrement.getAndIncrement();
-
       concurrentSet(rowIndex, aggs);
 
       // Last ditch sanity checks
@@ -196,12 +197,23 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       } else {
         // We lost a race
         aggs = concurrentGet(prev);
+        doAggregate(aggs, rowContainer, row, reportParseExceptions);
         // Free up the misfire
         concurrentRemove(rowIndex);
         // This is expected to occur ~80% of the time in the worst scenarios
       }
     }
 
+    return numEntries.get();
+  }
+
+  private void doAggregate(
+      Aggregator[] aggs,
+      ThreadLocal<InputRow> rowContainer,
+      InputRow row,
+      boolean reportParseExceptions
+  )
+  {
     rowContainer.set(row);
 
     for (Aggregator agg : aggs) {
@@ -221,9 +233,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     }
 
     rowContainer.set(null);
-
-
-    return numEntries.get();
   }
 
   protected Aggregator[] concurrentGet(int offset)
