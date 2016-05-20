@@ -169,7 +169,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
         return true;
       }
       if (!manager.scheduleAndWait(extractorID, extractionNamespace, firstCacheTimeout)) {
-        LOG.warn("Failed to schedule lookup [%s]", extractorID);
+        LOG.error("Failed to schedule lookup [%s]", extractorID);
         return false;
       }
       LOG.debug("NamespaceLookupExtractorFactory[%s] started", extractorID);
