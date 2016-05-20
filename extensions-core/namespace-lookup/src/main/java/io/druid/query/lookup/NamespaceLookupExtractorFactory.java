@@ -21,7 +21,6 @@ package io.druid.query.lookup;
 
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.annotations.VisibleForTesting;
@@ -62,13 +61,9 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
     CLASS_CACHE_KEY = ByteBuffer.allocate(keyUtf8.length + 1).put(keyUtf8).put((byte) 0xFF).array();
   }
 
-  @JsonIgnore
   private final AtomicBoolean started = new AtomicBoolean(false);
-  @JsonIgnore
   private final ReadWriteLock startStopSync = new ReentrantReadWriteLock();
-  @JsonIgnore
   private final NamespaceExtractionCacheManager manager;
-  @JsonIgnore
   private final LookupIntrospectHandler lookupIntrospectHandler;
   private final ExtractionNamespace extractionNamespace;
   private final long firstCacheTimeout;
@@ -281,8 +276,8 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
         public byte[] getCacheKey()
         {
           return ByteBuffer
-              .allocate(CLASS_CACHE_KEY.length + 1 + id.length + 1 + v.length + 1 + 1)
-              .put(CLASS_CACHE_KEY).put((byte) 0xFF)
+              .allocate(CLASS_CACHE_KEY.length + id.length + 1 + v.length + 1 + 1)
+              .put(CLASS_CACHE_KEY)
               .put(id).put((byte) 0xFF)
               .put(v).put((byte) 0xFF)
               .put(isOneToOne() ? (byte) 1 : (byte) 0)
