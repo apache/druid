@@ -365,6 +365,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                   )
                               );
 
+                              command.add(String.format("-Ddruid.indexer.taskId=%s", task.getId()));
                               command.add(String.format("-Ddruid.host=%s", childHost));
                               command.add(String.format("-Ddruid.port=%d", childPort));
                               /**
