@@ -72,7 +72,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
   private final LookupIntrospectHandler lookupIntrospectHandler;
   private final ExtractionNamespace extractionNamespace;
   private final long firstCacheTimeout;
-  private final boolean oneToOne;
+  private final boolean injective;
 
   private final String extractorID;
 
@@ -80,7 +80,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
   public NamespaceLookupExtractorFactory(
       @JsonProperty("extractionNamespace") ExtractionNamespace extractionNamespace,
       @JsonProperty("firstCacheTimeout") Long firstCacheTimeout,
-      @JsonProperty("oneToOne") boolean oneToOne,
+      @JsonProperty("injective") boolean injective,
       @JacksonInject final NamespaceExtractionCacheManager manager
   )
   {
@@ -90,7 +90,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
     );
     this.firstCacheTimeout = firstCacheTimeout == null ? DEFAULT_SCHEDULE_TIMEOUT : firstCacheTimeout;
     Preconditions.checkArgument(this.firstCacheTimeout >= 0);
-    this.oneToOne = oneToOne;
+    this.injective = injective;
     this.manager = manager;
     this.extractorID = buildID();
     this.lookupIntrospectHandler = new LookupIntrospectHandler()
@@ -207,7 +207,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
   {
     if (other != null && other instanceof NamespaceLookupExtractorFactory) {
       NamespaceLookupExtractorFactory that = (NamespaceLookupExtractorFactory) other;
-      if (isOneToOne() != ((NamespaceLookupExtractorFactory) other).isOneToOne()) {
+      if (isInjective() != ((NamespaceLookupExtractorFactory) other).isInjective()) {
         return true;
       }
       if (getFirstCacheTimeout() != ((NamespaceLookupExtractorFactory) other).getFirstCacheTimeout()) {
@@ -237,9 +237,9 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
   }
 
   @JsonProperty
-  public boolean isOneToOne()
+  public boolean isInjective()
   {
-    return oneToOne;
+    return injective;
   }
 
   private String buildID()
@@ -275,7 +275,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
       } while (!preVersion.equals(postVersion));
       final byte[] v = StringUtils.toUtf8(postVersion);
       final byte[] id = StringUtils.toUtf8(extractorID);
-      return new MapLookupExtractor(map, isOneToOne())
+      return new MapLookupExtractor(map, isInjective())
       {
         @Override
         public byte[] getCacheKey()

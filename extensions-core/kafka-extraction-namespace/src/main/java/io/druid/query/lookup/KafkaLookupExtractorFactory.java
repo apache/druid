@@ -103,7 +103,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
       @JsonProperty("kafkaTopic") final String kafkaTopic,
       @JsonProperty("kafkaProperties") final Map<String, String> kafkaProperties,
       @JsonProperty("connectTimeout") @Min(0) long connectTimeout,
-      @JsonProperty("isOneToOne") boolean isOneToOne
+      @JsonProperty("isInjective") boolean isOneToOne
   )
   {
     this.kafkaTopic = Preconditions.checkNotNull(kafkaTopic, "kafkaTopic required");

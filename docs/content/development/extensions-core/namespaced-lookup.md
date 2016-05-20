@@ -61,7 +61,7 @@ Cached namespace lookups can be specified as part of the [cluster wide config fo
        "tsColumn": "timeColumn"
     },
     "firstCacheTimeout": 120000,
-    "oneToOne":true
+    "injective":true
 }
  ```
 
@@ -70,7 +70,7 @@ The parameters are as follows
 |--------|-----------|--------|-------|
 |`extractionNamespace`|Specifies how to populate the local cache. See below|Yes|-|
 |`firstCacheTimeout`|How long to wait (in ms) for the first run of the cache to populate. 0 indicates to not wait|No|`60000` (1 minute)|
-|`oneToOne`|If the underlying map is injective (keys and values are unique) then optimizations can occur internally by setting this to `true`|No|`false`|
+|`injective`|If the underlying map is injective (keys and values are unique) then optimizations can occur internally by setting this to `true`|No|`false`|
 
 Proper functionality of Namespaced lookups requires the following extension to be loaded on the broker, peon, and historical nodes: 
 `druid-namespace-lookup`
@@ -86,6 +86,10 @@ setting namespaces (broker, peon, historical)
 
 The cache is populated in different ways depending on the settings below. In general, most namespaces employ 
 a `pollPeriod` at the end of which time they poll the remote resource of interest for updates.
+
+`onHeap` uses `ConcurrentMap`s in the java heap, and thus affects garbage collection and heap sizing.
+`offHeap` uses a 10MB on-heap buffer and MapDB using memory-mapped files in the java temporary directory.
+So if total `cachedNamespace` lookup size is in excess of 10MB, the extra will be kept in memory as page cache, and paged in and out by general OS tunings.
 
 # Supported Lookups
 
