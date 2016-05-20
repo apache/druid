@@ -35,6 +35,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.query.lookup.namespace.ExtractionNamespace;
 import io.druid.query.lookup.namespace.ExtractionNamespaceCacheFactory;
+
 import java.util.Collection;
 import java.util.Map;
 import java.util.UUID;
@@ -70,6 +71,7 @@ public abstract class NamespaceExtractionCacheManager
     final ExtractionNamespace namespace;
     final String name;
     final AtomicBoolean enabled = new AtomicBoolean(false);
+    final CountDownLatch firstRun = new CountDownLatch(1);
   }
 
   private static final Logger log = new Logger(NamespaceExtractionCacheManager.class);
@@ -163,11 +165,16 @@ public abstract class NamespaceExtractionCacheManager
           return;
         }
         synchronized (namespaceDatum.enabled) {
-          if (!namespaceDatum.enabled.get()) {
-            // skip because it was disabled
-            return;
+          try {
+            if (!namespaceDatum.enabled.get()) {
+              // skip because it was disabled
+              return;
+            }
+            swapAndClearCache(id, cacheId);
           }
-          swapAndClearCache(id, cacheId);
+          finally {
+            namespaceDatum.firstRun.countDown();
+          }
         }
       }
     };
@@ -224,33 +231,24 @@ public abstract class NamespaceExtractionCacheManager
       long waitForFirstRun
   )
   {
-    String oldVersion = getVersion(id);
-
     if (scheduleOrUpdate(id, namespace)) {
-      // wait until the namespace registration is done
-      String newVersion = getVersion(id);
-      final long startLocking = System.currentTimeMillis();
-      final long timeout = startLocking + waitForFirstRun;
-
-      while (newVersion == null || newVersion.equals(oldVersion)) {
-        if (System.currentTimeMillis() > timeout) {
-          log.error("NamespaceLookupExtractorFactory[%s] - timeout during start", id);
-          delete(id);
-          return false;
-        }
-
-        try {
-          Thread.sleep(100);
-        }
-        catch (InterruptedException e) {
-          log.error("NamespaceLookupExtractorFactory[%s] - interrupted during start", id);
-          delete(id);
-          return false;
-        }
-        newVersion = getVersion(id);
-      }
+      log.debug("Scheduled new namespace [%s]: %s", id, namespace);
+    } else {
+      log.debug("Namespace [%s] already running: %s", id, namespace);
     }
-    return true;
+
+    final NamespaceImplData namespaceImplData = implData.get(id);
+    boolean success = false;
+    try {
+      success = namespaceImplData.firstRun.await(waitForFirstRun, TimeUnit.MILLISECONDS);
+    }
+    catch (InterruptedException e) {
+      log.error(e, "NamespaceLookupExtractorFactory[%s] - interrupted during start", id);
+    }
+    if (!success) {
+      delete(id);
+    }
+    return success;
   }
 
   private void cancelFuture(final NamespaceImplData implDatum)
