@@ -380,9 +380,6 @@ public class NamespaceLookupExtractorFactoryTest
         EasyMock.eq(extractionNamespace),
         EasyMock.eq(60000L)
     )).andReturn(false).once();
-    EasyMock.expect(
-        cacheManager.checkedDelete(EasyMock.anyString())
-    ).andReturn(false).once();
     EasyMock.replay(cacheManager);
 
     final NamespaceLookupExtractorFactory namespaceLookupExtractorFactory = new NamespaceLookupExtractorFactory(
@@ -390,7 +387,8 @@ public class NamespaceLookupExtractorFactoryTest
         cacheManager
     );
     Assert.assertFalse(namespaceLookupExtractorFactory.start());
-    Assert.assertFalse(namespaceLookupExtractorFactory.close());
+    // true because it never fully started
+    Assert.assertTrue(namespaceLookupExtractorFactory.close());
     EasyMock.verify(cacheManager);
   }
 

@@ -43,7 +43,6 @@ import javax.ws.rs.core.Response;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -61,7 +60,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
     CLASS_CACHE_KEY = ByteBuffer.allocate(keyUtf8.length + 1).put(keyUtf8).put((byte) 0xFF).array();
   }
 
-  private final AtomicBoolean started = new AtomicBoolean(false);
+  private volatile boolean started = false;
   private final ReadWriteLock startStopSync = new ReentrantReadWriteLock();
   private final NamespaceExtractionCacheManager manager;
   private final LookupIntrospectHandler lookupIntrospectHandler;
@@ -164,7 +163,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
     final Lock writeLock = startStopSync.writeLock();
     writeLock.lock();
     try {
-      if (!started.compareAndSet(false, true)) {
+      if (started) {
         LOG.warn("Already started! [%s]", extractorID);
         return true;
       }
@@ -173,6 +172,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
         return false;
       }
       LOG.debug("NamespaceLookupExtractorFactory[%s] started", extractorID);
+      started = true;
       return true;
     }
     finally {
@@ -186,10 +186,11 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
     final Lock writeLock = startStopSync.writeLock();
     writeLock.lock();
     try {
-      if (!started.compareAndSet(true, false)) {
+      if (!started) {
         LOG.warn("Not started! [%s]", extractorID);
         return true;
       }
+      started = false;
       return manager.checkedDelete(extractorID);
     }
     finally {
@@ -249,7 +250,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
     final Lock readLock = startStopSync.readLock();
     readLock.lock();
     try {
-      if (!started.get()) {
+      if (!started) {
         throw new ISE("Factory [%s] not started", extractorID);
       }
       String preVersion = null, postVersion = null;

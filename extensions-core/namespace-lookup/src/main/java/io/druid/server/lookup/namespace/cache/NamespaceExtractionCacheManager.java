@@ -238,6 +238,11 @@ public abstract class NamespaceExtractionCacheManager
     }
 
     final NamespaceImplData namespaceImplData = implData.get(id);
+    if (namespaceImplData == null) {
+      log.warn("NamespaceLookupExtractorFactory[%s] - deleted during start", id);
+      return false;
+    }
+
     boolean success = false;
     try {
       success = namespaceImplData.firstRun.await(waitForFirstRun, TimeUnit.MILLISECONDS);
