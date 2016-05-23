@@ -50,13 +50,6 @@ public class JettyBindings
                .toInstance(new QosFilterHolder(path, maxRequests));
   }
 
-  public static void addResponseHeaderFilter(Binder binder, String path, Map<String, String> headers)
-  {
-    Multibinder.newSetBinder(binder, ServletFilterHolder.class)
-               .addBinding()
-               .toInstance(new JettyResponseHeaderFilterHolder(path, headers));
-  }
-
   private static class QosFilterHolder implements ServletFilterHolder
   {
     private final String path;

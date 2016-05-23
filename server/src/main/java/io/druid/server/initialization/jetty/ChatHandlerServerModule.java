@@ -19,12 +19,12 @@
 
 package io.druid.server.initialization.jetty;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.inject.Binder;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import com.google.inject.multibindings.Multibinder;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import io.druid.guice.Jerseys;
@@ -36,6 +36,7 @@ import io.druid.guice.annotations.Self;
 import io.druid.segment.realtime.firehose.ChatHandlerResource;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.ServerConfig;
+import io.druid.server.metrics.DataSourceTaskIdHolder;
 import org.eclipse.jetty.server.Server;
 
 import java.util.Properties;
@@ -66,16 +67,7 @@ public class ChatHandlerServerModule implements Module
       JettyBindings.addQosFilter(binder, "/druid/worker/v1/chat/*", maxRequests);
     }
 
-    if (properties.containsKey(ChatHandlerResource.TASK_ID_PROPERTY)) {
-      JettyBindings.addResponseHeaderFilter(
-          binder,
-          "/druid/worker/v1/chat/*",
-          ImmutableMap.of(
-              ChatHandlerResource.TASK_ID_HEADER,
-              properties.getProperty(ChatHandlerResource.TASK_ID_PROPERTY)
-          )
-      );
-    }
+    Multibinder.newSetBinder(binder, ServletFilterHolder.class).addBinding().to(TaskIdResponseHeaderFilterHolder.class);
 
     /**
      * If "druid.indexer.task.chathandler.port" property is set then we assume that a separate Jetty Server with its
@@ -97,6 +89,15 @@ public class ChatHandlerServerModule implements Module
       binder.bind(DruidNode.class).annotatedWith(RemoteChatHandler.class).to(Key.get(DruidNode.class, Self.class));
       binder.bind(ServerConfig.class).annotatedWith(RemoteChatHandler.class).to(Key.get(ServerConfig.class));
     }
+  }
+
+  @Provides
+  @LazySingleton
+  public TaskIdResponseHeaderFilterHolder taskIdResponseHeaderFilterHolderBuilder(
+      final DataSourceTaskIdHolder taskIdHolder
+  )
+  {
+    return new TaskIdResponseHeaderFilterHolder("/druid/worker/v1/chat/*", taskIdHolder.getTaskId());
   }
 
   @Provides

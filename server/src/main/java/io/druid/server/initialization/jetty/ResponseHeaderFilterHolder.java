@@ -34,12 +34,12 @@ import java.util.EnumSet;
 import java.util.Enumeration;
 import java.util.Map;
 
-public class JettyResponseHeaderFilterHolder implements ServletFilterHolder
+public class ResponseHeaderFilterHolder implements ServletFilterHolder
 {
   private final String path;
   private final Map<String, String> headers;
 
-  public JettyResponseHeaderFilterHolder(String path, Map<String, String> headers)
+  public ResponseHeaderFilterHolder(String path, Map<String, String> headers)
   {
     this.path = path;
     this.headers = headers;
@@ -77,7 +77,7 @@ public class JettyResponseHeaderFilterHolder implements ServletFilterHolder
 
   private class ResponseHeaderFilter implements Filter
   {
-    private FilterConfig config;
+    private volatile FilterConfig config;
 
     @Override
     public void init(FilterConfig filterConfig) throws ServletException
