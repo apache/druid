@@ -8,7 +8,7 @@ layout: doc_page
 Lookups are an <a href="../experimental.html">experimental</a> feature.
 </div>
 
-Make sure to [include](../../operations/including-extensions.html) `druid-namespace-lookup` as an extension.
+Make sure to [include](../../operations/including-extensions.html) `druid-lookups-cached-global` as an extension.
 
 ## Configuration
 <div class="note caution">
@@ -73,7 +73,7 @@ The parameters are as follows
 |`injective`|If the underlying map is injective (keys and values are unique) then optimizations can occur internally by setting this to `true`|No|`false`|
 
 Proper functionality of Namespaced lookups requires the following extension to be loaded on the broker, peon, and historical nodes: 
-`druid-namespace-lookup`
+`druid-lookups-cached-global`
 
 ## Cache Settings
 

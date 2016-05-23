@@ -48,7 +48,7 @@
     </dependency>
     <dependency>
       <groupId>io.druid.extensions</groupId>
-      <artifactId>druid-namespace-lookup</artifactId>
+      <artifactId>druid-lookups-cached-global</artifactId>
       <version>${project.parent.version}</version>
     </dependency>
     <dependency>

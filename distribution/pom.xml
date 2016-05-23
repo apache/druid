@@ -85,7 +85,7 @@
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:mysql-metadata-storage</argument>
                                 <argument>-c</argument>
-                                <argument>io.druid.extensions:druid-namespace-lookup</argument>
+                                <argument>io.druid.extensions:druid-lookups-cached-global</argument>
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:postgresql-metadata-storage</argument>
                                 <argument>-c</argument>
