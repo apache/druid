@@ -140,9 +140,7 @@ public class CombiningSequence<T> implements Sequence<T>
       @Override
       public void close() throws IOException
       {
-        if (finalYielder != null) {
-          finalYielder.close();
-        }
+        yielder.close();
       }
     };
   }

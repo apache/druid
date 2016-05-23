@@ -23,23 +23,25 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.metamx.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
-
+import java.nio.ByteBuffer;
 import javax.annotation.Nullable;
 
 public class RegisteredLookupExtractionFn implements ExtractionFn
 {
-  private final LookupExtractionFn delegate;
-  private final String name;
-
-  RegisteredLookupExtractionFn(LookupExtractionFn delegate, String name)
-  {
-    this.delegate = delegate;
-    this.name = name;
-  }
+  // Protected for moving to not-null by `delegateLock`
+  private volatile LookupExtractionFn delegate = null;
+  private final Object delegateLock = new Object();
+  private final LookupReferencesManager manager;
+  private final String lookup;
+  private final boolean retainMissingValue;
+  private final String replaceMissingValueWith;
+  private final boolean injective;
+  private final boolean optimize;
 
   @JsonCreator
-  public static RegisteredLookupExtractionFn create(
+  public RegisteredLookupExtractionFn(
       @JacksonInject LookupReferencesManager manager,
       @JsonProperty("lookup") String lookup,
       @JsonProperty("retainMissingValue") final boolean retainMissingValue,
@@ -49,93 +51,105 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
   )
   {
     Preconditions.checkArgument(lookup != null, "`lookup` required");
-    final LookupExtractorFactory factory = manager.get(lookup);
-    Preconditions.checkNotNull(factory, "lookup [%s] not found", lookup);
-    return new RegisteredLookupExtractionFn(
-        new LookupExtractionFn(
-            factory.get(),
-            retainMissingValue,
-            replaceMissingValueWith,
-            injective,
-            optimize
-        ),
-        lookup
-    );
+    this.manager = manager;
+    this.replaceMissingValueWith = replaceMissingValueWith;
+    this.retainMissingValue = retainMissingValue;
+    this.injective = injective;
+    this.optimize = optimize;
+    this.lookup = lookup;
   }
 
   @JsonProperty("lookup")
   public String getLookup()
   {
-    return name;
+    return lookup;
   }
 
   @JsonProperty("retainMissingValue")
   public boolean isRetainMissingValue()
   {
-    return delegate.isRetainMissingValue();
+    return retainMissingValue;
   }
 
   @JsonProperty("replaceMissingValueWith")
   public String getReplaceMissingValueWith()
   {
-    return delegate.getReplaceMissingValueWith();
+    return replaceMissingValueWith;
   }
 
   @JsonProperty("injective")
   public boolean isInjective()
   {
-    return delegate.isInjective();
+    return injective;
   }
 
   @JsonProperty("optimize")
   public boolean isOptimize()
   {
-    return delegate.isOptimize();
+    return optimize;
   }
 
   @Override
   public byte[] getCacheKey()
   {
-    return delegate.getCacheKey();
+    final byte[] keyPrefix = StringUtils.toUtf8(getClass().getCanonicalName());
+    final byte[] lookupName = StringUtils.toUtf8(getLookup());
+    final byte[] delegateKey = ensureDelegate().getCacheKey();
+    return ByteBuffer
+        .allocate(keyPrefix.length + 1 + lookupName.length + 1 + delegateKey.length)
+        .put(keyPrefix).put((byte) 0xFF)
+        .put(lookupName).put((byte) 0xFF)
+        .put(delegateKey)
+        .array();
   }
 
   @Override
   public String apply(Object value)
   {
-    return delegate.apply(value);
+    return ensureDelegate().apply(value);
   }
 
   @Override
   public String apply(String value)
   {
-    return delegate.apply(value);
+    return ensureDelegate().apply(value);
   }
 
   @Override
   public String apply(long value)
   {
-    return delegate.apply(value);
+    return ensureDelegate().apply(value);
   }
 
   @Override
   public boolean preservesOrdering()
   {
-    return delegate.preservesOrdering();
+    return ensureDelegate().preservesOrdering();
   }
 
   @Override
   public ExtractionType getExtractionType()
   {
-    return delegate.getExtractionType();
+    return ensureDelegate().getExtractionType();
   }
 
-  @Override
-  public String toString()
+  private LookupExtractionFn ensureDelegate()
   {
-    return "RegisteredLookupExtractionFn{" +
-           "delegate=" + delegate +
-           ", name='" + name + '\'' +
-           '}';
+    if (null == delegate) {
+      // http://www.javamex.com/tutorials/double_checked_locking.shtml
+      synchronized (delegateLock) {
+        if (null == delegate) {
+          delegate = new LookupExtractionFn(
+              Preconditions.checkNotNull(manager.get(getLookup()), "Lookup [%s] not found", getLookup()).get(),
+              isRetainMissingValue(),
+              getReplaceMissingValueWith(),
+              isInjective(),
+              isOptimize()
+          );
+        }
+      }
+    }
+    return delegate;
   }
 
   @Override
@@ -150,18 +164,44 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
 
     RegisteredLookupExtractionFn that = (RegisteredLookupExtractionFn) o;
 
-    if (!delegate.equals(that.delegate)) {
+    if (isRetainMissingValue() != that.isRetainMissingValue()) {
       return false;
     }
-    return name.equals(that.name);
-
+    if (isInjective() != that.isInjective()) {
+      return false;
+    }
+    if (isOptimize() != that.isOptimize()) {
+      return false;
+    }
+    if (!getLookup().equals(that.getLookup())) {
+      return false;
+    }
+    return getReplaceMissingValueWith() != null
+           ? getReplaceMissingValueWith().equals(that.getReplaceMissingValueWith())
+           : that.getReplaceMissingValueWith() == null;
   }
 
   @Override
   public int hashCode()
   {
-    int result = delegate.hashCode();
-    result = 31 * result + name.hashCode();
+    int result = getLookup().hashCode();
+    result = 31 * result + (isRetainMissingValue() ? 1 : 0);
+    result = 31 * result + (getReplaceMissingValueWith() != null ? getReplaceMissingValueWith().hashCode() : 0);
+    result = 31 * result + (isInjective() ? 1 : 0);
+    result = 31 * result + (isOptimize() ? 1 : 0);
     return result;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "RegisteredLookupExtractionFn{" +
+           "delegate=" + delegate +
+           ", lookup='" + lookup + '\'' +
+           ", retainMissingValue=" + retainMissingValue +
+           ", replaceMissingValueWith='" + replaceMissingValueWith + '\'' +
+           ", injective=" + injective +
+           ", optimize=" + optimize +
+           '}';
   }
 }

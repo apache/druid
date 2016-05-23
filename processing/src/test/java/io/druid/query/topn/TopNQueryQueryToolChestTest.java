@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.metamx.common.guava.Sequence;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.CacheStrategy;
 import io.druid.query.Query;
@@ -71,7 +71,7 @@ public class TopNQueryQueryToolChestTest
                     )
                 ),
                 null,
-                QueryGranularity.ALL,
+                QueryGranularities.ALL,
                 ImmutableList.<AggregatorFactory>of(new CountAggregatorFactory("metric1")),
                 null,
                 null

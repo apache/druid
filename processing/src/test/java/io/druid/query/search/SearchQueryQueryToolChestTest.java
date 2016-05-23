@@ -21,7 +21,7 @@ package io.druid.query.search;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.CacheStrategy;
 import io.druid.query.Druids;
@@ -47,7 +47,7 @@ public class SearchQueryQueryToolChestTest
             new SearchQuery(
                 new TableDataSource("dummy"),
                 null,
-                QueryGranularity.ALL,
+                QueryGranularities.ALL,
                 1,
                 new MultipleIntervalSegmentSpec(
                     ImmutableList.of(

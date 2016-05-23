@@ -26,6 +26,7 @@ import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequences;
 import io.druid.granularity.PeriodGranularity;
 import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
@@ -112,7 +113,7 @@ public class TimeseriesQueryRunnerTest
   @Test
   public void testFullOnTimeseries()
   {
-    QueryGranularity gran = QueryGranularity.DAY;
+    QueryGranularity gran = QueryGranularities.DAY;
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
                                   .granularity(gran)
@@ -187,7 +188,7 @@ public class TimeseriesQueryRunnerTest
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource(QueryRunnerTestHelper.dataSource)
-                                  .granularity(QueryGranularity.ALL)
+                                  .granularity(QueryGranularities.ALL)
                                   .intervals(QueryRunnerTestHelper.fullOnInterval)
                                   .aggregators(
                                       Arrays.asList(
@@ -509,7 +510,7 @@ public class TimeseriesQueryRunnerTest
     TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
                                    .dataSource(QueryRunnerTestHelper.dataSource)
                                    .filters(QueryRunnerTestHelper.marketDimension, "spot", "upfront", "total_market")
-                                   .granularity(QueryGranularity.HOUR)
+                                   .granularity(QueryGranularities.HOUR)
                                    .intervals(
                                        Arrays.asList(
                                            new Interval(
@@ -530,7 +531,7 @@ public class TimeseriesQueryRunnerTest
                                    .build();
 
     List<Result<TimeseriesResultValue>> lotsOfZeroes = Lists.newArrayList();
-    for (final Long millis : QueryGranularity.HOUR.iterable(
+    for (final Long millis : QueryGranularities.HOUR.iterable(
         new DateTime("2011-04-14T01").getMillis(),
         new DateTime("2011-04-15").getMillis()
     )) {

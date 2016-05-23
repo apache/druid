@@ -48,7 +48,7 @@ import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.InputRowParser;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
@@ -1151,7 +1151,7 @@ public class TaskLifecycleTest
         "test_ds",
         null,
         new AggregatorFactory[]{new LongSumAggregatorFactory("count", "rows")},
-        new UniformGranularitySpec(Granularity.DAY, QueryGranularity.NONE, null),
+        new UniformGranularitySpec(Granularity.DAY, QueryGranularities.NONE, null),
         mapper
     );
     RealtimeIOConfig realtimeIOConfig = new RealtimeIOConfig(

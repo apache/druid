@@ -189,6 +189,7 @@ During `mvn install`, maven will install your extension to the local maven repos
 there. In the end, you should see your extension underneath `distribution/target/extensions` and within Druid tarball.
 
 ### Managing dependencies
+
 Managing library collisions can be daunting for extensions which draw in commonly used libraries. Here is a list of group IDs for libraries that are suggested to be specified with a `provided` scope to prevent collision with versions used in druid:
 ```
 "io.druid",

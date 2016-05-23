@@ -26,6 +26,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.module.SimpleModule;
+import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.net.HostAndPort;
@@ -50,16 +52,16 @@ import io.druid.server.listener.announcer.ListeningAnnouncerConfig;
 import io.druid.server.listener.resource.AbstractListenerHandler;
 import io.druid.server.listener.resource.ListenerResource;
 import io.druid.server.lookup.cache.LookupCoordinatorManager;
-import org.apache.curator.utils.ZKPaths;
-
-import javax.ws.rs.Path;
+import io.druid.server.metrics.DataSourceTaskIdHolder;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import javax.ws.rs.Path;
+import org.apache.curator.utils.ZKPaths;
 
 public class LookupModule implements DruidModule
 {
-  private static final String PROPERTY_BASE = "druid.lookup";
+  static final String PROPERTY_BASE = "druid.lookup";
   public static final String FAILED_UPDATES_KEY = "failedUpdates";
 
   public static String getTierListenerPath(String tier)
@@ -118,7 +120,8 @@ class LookupListeningResource extends ListenerResource
             for (final String name : lookups.keySet()) {
               final LookupExtractorFactory factory = lookups.get(name);
               try {
-                if (!manager.updateIfNew(name, factory)) {
+                // Only fail if it should have updated but didn't.
+                if (!manager.updateIfNew(name, factory) && factory.replaces(manager.get(name))) {
                   failedUpdates.put(name, factory);
                 }
               }
@@ -184,30 +187,34 @@ class LookupResourceListenerAnnouncer extends ListenerResourceAnnouncer
 class LookupListeningAnnouncerConfig extends ListeningAnnouncerConfig
 {
   public static final String DEFAULT_TIER = "__default";
+  private final DataSourceTaskIdHolder dataSourceTaskIdHolder;
   @JsonProperty("lookupTier")
   private String lookupTier = null;
+  @JsonProperty("lookupTierIsDatasource")
+  private boolean lookupTierIsDatasource = false;
 
   @JsonCreator
-  public static LookupListeningAnnouncerConfig createLookupListeningAnnouncerConfig(
+  public LookupListeningAnnouncerConfig(
       @JacksonInject ZkPathsConfig zkPathsConfig,
-      @JsonProperty("lookupTier") String lookupTier
+      @JacksonInject DataSourceTaskIdHolder dataSourceTaskIdHolder
   )
   {
-    final LookupListeningAnnouncerConfig lookupListeningAnnouncerConfig = new LookupListeningAnnouncerConfig(
-        zkPathsConfig);
-    lookupListeningAnnouncerConfig.lookupTier = lookupTier;
-    return lookupListeningAnnouncerConfig;
-  }
-
-  @Inject
-  public LookupListeningAnnouncerConfig(ZkPathsConfig zkPathsConfig)
-  {
     super(zkPathsConfig);
+    this.dataSourceTaskIdHolder = dataSourceTaskIdHolder;
   }
 
   public String getLookupTier()
   {
-    return lookupTier == null ? DEFAULT_TIER : lookupTier;
+    Preconditions.checkArgument(
+        !(lookupTierIsDatasource && null != lookupTier),
+        "Cannot specify both `lookupTier` and `lookupTierIsDatasource`"
+    );
+    final String lookupTier = lookupTierIsDatasource ? dataSourceTaskIdHolder.getDataSource() : this.lookupTier;
+    return Preconditions.checkNotNull(
+        lookupTier == null ? DEFAULT_TIER : Strings.emptyToNull(lookupTier),
+        "Cannot have empty lookup tier from %s",
+        lookupTierIsDatasource ? "bound value" : LookupModule.PROPERTY_BASE
+    );
   }
 
   public String getLookupKey()

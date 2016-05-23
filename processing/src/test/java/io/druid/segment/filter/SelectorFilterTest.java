@@ -209,11 +209,11 @@ public class SelectorFilterTest extends BaseFilterTest
     SelectorDimFilter optFilter4Optimized = new SelectorDimFilter("dim0", "5", null);
     SelectorDimFilter optFilter6Optimized = new SelectorDimFilter("dim0", "5", null);
 
-    Assert.assertTrue(optFilter1 == optFilter1.optimize());
+    Assert.assertTrue(optFilter1.equals(optFilter1.optimize()));
     Assert.assertTrue(optFilter2Optimized.equals(optFilter2.optimize()));
-    Assert.assertTrue(optFilter3 == optFilter3.optimize());
+    Assert.assertTrue(optFilter3.equals(optFilter3.optimize()));
     Assert.assertTrue(optFilter4Optimized.equals(optFilter4.optimize()));
-    Assert.assertTrue(optFilter5 == optFilter5.optimize());
+    Assert.assertTrue(optFilter5.equals(optFilter5.optimize()));
     Assert.assertTrue(optFilter6Optimized.equals(optFilter6.optimize()));
 
     assertFilterMatches(optFilter1, ImmutableList.of("0", "1", "2", "5"));

@@ -52,6 +52,11 @@
       <version>${project.parent.version}</version>
     </dependency>
     <dependency>
+      <groupId>io.druid</groupId>
+      <artifactId>druid-server</artifactId>
+      <version>${project.parent.version}</version>
+    </dependency>
+    <dependency>
       <groupId>com.github.wnameless</groupId>
       <artifactId>json-flattener</artifactId>
       <version>0.1.0</version>

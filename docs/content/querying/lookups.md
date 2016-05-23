@@ -291,8 +291,8 @@ To configure a Broker / Router / Historical / Peon to announce itself as part of
 
 |Property | Description | Default |
 |---------|-------------|---------|
-|`druid.lookup.tierName`| The tier for **lookups** for this node. This is independent of other tiers.|`__default`|
-
+|`druid.lookup.lookupTier`| The tier for **lookups** for this node. This is independent of other tiers.|`__default`|
+|`druid.lookup.lookupTierIsDatasource`|For some things like indexing service tasks, the datasource is passed in the runtime properties of a task. This option fetches the tierName from the same value as the datasource for the task. It is suggested to only use this as peon options for the indexing service, if at all. If true, `druid.lookup.lookupTier` MUST NOT be specified|`"false"`|
 
 ## Saving configuration across restarts
 

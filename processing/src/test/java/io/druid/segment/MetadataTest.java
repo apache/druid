@@ -21,7 +21,7 @@ package io.druid.segment;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
@@ -50,7 +50,7 @@ public class MetadataTest
             new LongSumAggregatorFactory("out", "in")
         };
     metadata.setAggregators(aggregators);
-    metadata.setQueryGranularity(QueryGranularity.ALL);
+    metadata.setQueryGranularity(QueryGranularities.ALL);
 
     Metadata other = jsonMapper.readValue(
         jsonMapper.writeValueAsString(metadata),
@@ -78,12 +78,12 @@ public class MetadataTest
     Metadata m1 = new Metadata();
     m1.put("k", "v");
     m1.setAggregators(aggs);
-    m1.setQueryGranularity(QueryGranularity.ALL);
+    m1.setQueryGranularity(QueryGranularities.ALL);
 
     Metadata m2 = new Metadata();
     m2.put("k", "v");
     m2.setAggregators(aggs);
-    m2.setQueryGranularity(QueryGranularity.ALL);
+    m2.setQueryGranularity(QueryGranularities.ALL);
 
     Metadata merged = new Metadata();
     merged.put("k", "v");
@@ -92,7 +92,7 @@ public class MetadataTest
             new LongMaxAggregatorFactory("n", "n")
         }
     );
-    merged.setQueryGranularity(QueryGranularity.ALL);
+    merged.setQueryGranularity(QueryGranularities.ALL);
     Assert.assertEquals(merged, Metadata.merge(ImmutableList.of(m1, m2), null));
 
     //merge check with one metadata being null
@@ -116,7 +116,7 @@ public class MetadataTest
         Metadata.merge(metadataToBeMerged, explicitAggs)
     );
 
-    merged.setQueryGranularity(QueryGranularity.ALL);
+    merged.setQueryGranularity(QueryGranularities.ALL);
     Assert.assertEquals(
         merged,
         Metadata.merge(ImmutableList.of(m1, m2), explicitAggs)

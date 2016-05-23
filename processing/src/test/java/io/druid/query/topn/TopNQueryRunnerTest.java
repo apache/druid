@@ -33,6 +33,7 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.collections.StupidPool;
 import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.BySegmentResultValue;
 import io.druid.query.BySegmentResultValueClass;
@@ -1520,7 +1521,7 @@ public class TopNQueryRunnerTest
         .postAggregators(Arrays.<PostAggregator>asList(QueryRunnerTestHelper.addRowsIndexConstant))
         .build();
 
-    QueryGranularity gran = QueryGranularity.DAY;
+    QueryGranularity gran = QueryGranularities.DAY;
     TimeseriesQuery tsQuery = Druids.newTimeseriesQueryBuilder()
                                     .dataSource(QueryRunnerTestHelper.dataSource)
                                     .granularity(gran)
@@ -3088,7 +3089,7 @@ public class TopNQueryRunnerTest
   {
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
-        .granularity(QueryGranularity.ALL)
+        .granularity(QueryGranularities.ALL)
         .dimension("partial_null_column")
         .metric(QueryRunnerTestHelper.uniqueMetric)
         .threshold(1000)
@@ -3125,7 +3126,7 @@ public class TopNQueryRunnerTest
   {
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
-        .granularity(QueryGranularity.ALL)
+        .granularity(QueryGranularities.ALL)
         .dimension("partial_null_column")
         .metric(QueryRunnerTestHelper.uniqueMetric)
         .filters(new SelectorDimFilter("partial_null_column", null, null))
@@ -3157,7 +3158,7 @@ public class TopNQueryRunnerTest
   {
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
-        .granularity(QueryGranularity.ALL)
+        .granularity(QueryGranularities.ALL)
         .dimension("partial_null_column")
         .metric(QueryRunnerTestHelper.uniqueMetric)
         .filters(new SelectorDimFilter("partial_null_column", "value", null))
@@ -3189,7 +3190,7 @@ public class TopNQueryRunnerTest
   {
     TopNQuery query = new TopNQueryBuilder()
         .dataSource(QueryRunnerTestHelper.dataSource)
-        .granularity(QueryGranularity.ALL)
+        .granularity(QueryGranularities.ALL)
         .dimension(QueryRunnerTestHelper.marketDimension)
         .metric(new AlphaNumericTopNMetricSpec(null))
         .threshold(2)

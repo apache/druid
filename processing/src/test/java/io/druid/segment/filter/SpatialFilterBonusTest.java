@@ -28,7 +28,7 @@ import com.metamx.collections.spatial.search.RectangularBound;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.QueryRunner;
@@ -118,7 +118,7 @@ public class SpatialFilterBonusTest
   {
     IncrementalIndex theIndex = new OnheapIncrementalIndex(
         new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
-                                            .withQueryGranularity(QueryGranularity.DAY)
+                                            .withQueryGranularity(QueryGranularities.DAY)
                                             .withMetrics(METRIC_AGGS)
                                             .withDimensionsSpec(
                                                 new DimensionsSpec(
@@ -257,7 +257,7 @@ public class SpatialFilterBonusTest
     try {
       IncrementalIndex first = new OnheapIncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
-                                              .withQueryGranularity(QueryGranularity.DAY)
+                                              .withQueryGranularity(QueryGranularities.DAY)
                                               .withMetrics(METRIC_AGGS)
                                               .withDimensionsSpec(
                                                   new DimensionsSpec(
@@ -277,7 +277,7 @@ public class SpatialFilterBonusTest
       );
       IncrementalIndex second = new OnheapIncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
-                                              .withQueryGranularity(QueryGranularity.DAY)
+                                              .withQueryGranularity(QueryGranularities.DAY)
                                               .withMetrics(METRIC_AGGS)
                                               .withDimensionsSpec(
                                                   new DimensionsSpec(
@@ -296,7 +296,7 @@ public class SpatialFilterBonusTest
       );
       IncrementalIndex third = new OnheapIncrementalIndex(
           new IncrementalIndexSchema.Builder().withMinTimestamp(DATA_INTERVAL.getStartMillis())
-                                              .withQueryGranularity(QueryGranularity.DAY)
+                                              .withQueryGranularity(QueryGranularities.DAY)
                                               .withMetrics(METRIC_AGGS)
                                               .withDimensionsSpec(
                                                   new DimensionsSpec(
@@ -457,7 +457,7 @@ public class SpatialFilterBonusTest
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
-                                  .granularity(QueryGranularity.ALL)
+                                  .granularity(QueryGranularities.ALL)
                                   .intervals(Arrays.asList(new Interval("2013-01-01/2013-01-07")))
                                   .filters(
                                       new SpatialDimFilter(
@@ -509,7 +509,7 @@ public class SpatialFilterBonusTest
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
-                                  .granularity(QueryGranularity.DAY)
+                                  .granularity(QueryGranularities.DAY)
                                   .intervals(Arrays.asList(new Interval("2013-01-01/2013-01-07")))
                                   .filters(
                                       new SpatialDimFilter(
@@ -597,7 +597,7 @@ public class SpatialFilterBonusTest
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("test")
-                                  .granularity(QueryGranularity.DAY)
+                                  .granularity(QueryGranularities.DAY)
                                   .intervals(Arrays.asList(new Interval("2013-01-01/2013-01-07")))
                                   .aggregators(
                                       Arrays.asList(

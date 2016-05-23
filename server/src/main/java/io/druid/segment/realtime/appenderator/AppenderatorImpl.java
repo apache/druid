@@ -409,7 +409,11 @@ public class AppenderatorImpl implements Appenderator
                                               @Override
                                               public QueryRunner<T> apply(final FireHydrant hydrant)
                                               {
-                                                if (skipIncrementalSegment && !hydrant.hasSwapped()) {
+                                                // Hydrant might swap at any point, but if it's swapped at the start
+                                                // then we know it's *definitely* swapped.
+                                                final boolean hydrantDefinitelySwapped = hydrant.hasSwapped();
+
+                                                if (skipIncrementalSegment && !hydrantDefinitelySwapped) {
                                                   return new NoopQueryRunner<>();
                                                 }
 
@@ -421,7 +425,7 @@ public class AppenderatorImpl implements Appenderator
                                                       segment.rhs
                                                   );
 
-                                                  if (hydrant.hasSwapped() // only use caching if data is immutable
+                                                  if (hydrantDefinitelySwapped // only use caching if data is immutable
                                                       && cache.isLocal() // hydrants may not be in sync between replicas, make sure cache is local
                                                       ) {
                                                     return new CachingQueryRunner<>(

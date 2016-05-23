@@ -274,7 +274,10 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
                       "finalize", false,
                       //setting sort to false avoids unnecessary sorting while merging results. we only need to sort
                       //in the end when returning results to user.
-                      GroupByQueryHelper.CTX_KEY_SORT_RESULTS, false
+                      GroupByQueryHelper.CTX_KEY_SORT_RESULTS, false,
+                      //no merging needed at historicals because GroupByQueryRunnerFactory.mergeRunners(..) would return
+                      //merged results
+                      GROUP_BY_MERGE_KEY, false
                   )
               )
               , context

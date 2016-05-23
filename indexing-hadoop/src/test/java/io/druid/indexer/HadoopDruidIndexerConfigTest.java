@@ -27,13 +27,14 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.common.Granularity;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.HashBasedNumberedShardSpec;
+import io.druid.timeline.partition.NoneShardSpec;
 import io.druid.timeline.partition.NumberedShardSpec;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
@@ -203,7 +204,7 @@ public class HadoopDruidIndexerConfigTest
             new AggregatorFactory[0],
             new UniformGranularitySpec(
                 Granularity.MINUTE,
-                QueryGranularity.MINUTE,
+                QueryGranularities.MINUTE,
                 ImmutableList.of(new Interval("2010-01-01/P1D"))
             ),
             jsonMapper
@@ -242,7 +243,7 @@ public class HadoopDruidIndexerConfigTest
     );
     final long timestamp = new DateTime("2010-01-01T01:00:01").getMillis();
     final Bucket expectedBucket = config.getBucket(new MapBasedInputRow(timestamp, dims, values)).get();
-    final long nextBucketTimestamp = QueryGranularity.MINUTE.next(QueryGranularity.MINUTE.truncate(timestamp));
+    final long nextBucketTimestamp = QueryGranularities.MINUTE.next(QueryGranularities.MINUTE.truncate(timestamp));
     // check that all rows having same set of dims and truncated timestamp hash to same bucket
     for (int i = 0; timestamp + i < nextBucketTimestamp; i++) {
       Assert.assertEquals(
@@ -250,6 +251,71 @@ public class HadoopDruidIndexerConfigTest
           config.getBucket(new MapBasedInputRow(timestamp + i, dims, values)).get().partitionNum
       );
     }
+
+  }
+
+  @Test
+  public void testNoneShardSpecBucketSelection()
+  {
+    HadoopIngestionSpec spec = new HadoopIngestionSpec(
+        new DataSchema(
+            "foo",
+            null,
+            new AggregatorFactory[0],
+            new UniformGranularitySpec(
+                Granularity.MINUTE,
+                QueryGranularities.MINUTE,
+                ImmutableList.of(new Interval("2010-01-01/P1D"))
+            ),
+            jsonMapper
+        ),
+        new HadoopIOConfig(ImmutableMap.<String, Object>of("paths", "bar", "type", "static"), null, null),
+        new HadoopTuningConfig(
+            null,
+            null,
+            null,
+            ImmutableMap.<DateTime, List<HadoopyShardSpec>>of(new DateTime("2010-01-01T01:00:00"),
+                                                              Lists.newArrayList(new HadoopyShardSpec(
+                                                                  NoneShardSpec.instance(),
+                                                                  1
+                                                              )),
+                                                              new DateTime("2010-01-01T02:00:00"),
+                                                              Lists.newArrayList(new HadoopyShardSpec(
+                                                                  NoneShardSpec.instance(),
+                                                                  2
+                                                              ))
+            ),
+            null,
+            null,
+            false,
+            false,
+            false,
+            false,
+            null,
+            false,
+            false,
+            null,
+            null,
+            null
+        )
+    );
+    HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromSpec(spec);
+    final List<String> dims = Arrays.asList("diM1", "dIM2");
+    final ImmutableMap<String, Object> values = ImmutableMap.<String, Object>of(
+        "Dim1",
+        "1",
+        "DiM2",
+        "2",
+        "dim1",
+        "3",
+        "dim2",
+        "4"
+    );
+    final long ts1 = new DateTime("2010-01-01T01:00:01").getMillis();
+    Assert.assertEquals(config.getBucket(new MapBasedInputRow(ts1, dims, values)).get().getShardNum(), 1);
+
+    final long ts2 = new DateTime("2010-01-01T02:00:01").getMillis();
+    Assert.assertEquals(config.getBucket(new MapBasedInputRow(ts2, dims, values)).get().getShardNum(), 2);
 
   }
 }

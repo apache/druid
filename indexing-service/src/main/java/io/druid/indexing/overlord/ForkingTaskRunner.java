@@ -347,7 +347,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                 }
                               }
 
-                              // Add dataSource and taskId for metrics
+                              // Add dataSource and taskId for metrics or logging
                               command.add(
                                   String.format(
                                       "-D%s%s=%s",
