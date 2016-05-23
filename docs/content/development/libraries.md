@@ -57,7 +57,7 @@ UIs
 Tools
 -----
 
-* [Insert Segments](../../operations/insert-segment-to-db.html) - A tool that can insert segments' metadata into Druid metadata storage.
+* [Insert Segments](../operations/insert-segment-to-db.html) - A tool that can insert segments' metadata into Druid metadata storage.
 
 Community Helper Libraries
 --------------------------
