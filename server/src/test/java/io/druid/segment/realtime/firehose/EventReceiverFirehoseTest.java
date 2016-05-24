@@ -32,6 +32,7 @@ import io.druid.server.metrics.EventReceiverFirehoseMetric;
 import io.druid.server.metrics.EventReceiverFirehoseRegister;
 import org.apache.commons.io.IOUtils;
 import org.easymock.EasyMock;
+import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -216,5 +217,23 @@ public class EventReceiverFirehoseTest
                     )
                 )
             );
+  }
+
+  @Test(timeout = 40_000L)
+  public void testShutdownWithPrevTime() throws Exception
+  {
+    firehose.shutdown(DateTime.now().minusMinutes(2).toString());
+    while (!firehose.isClosed()){
+      Thread.sleep(50);
+    }
+  }
+
+  @Test(timeout = 40_000L)
+  public void testShutdown() throws Exception
+  {
+    firehose.shutdown(DateTime.now().plusMillis(100).toString());
+    while (!firehose.isClosed()){
+     Thread.sleep(50);
+    }
   }
 }
