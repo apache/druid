@@ -29,6 +29,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The SegmentProcessingThrottler is used to throttle the number of segments that are loaded, replicated and destroyed.
+ * methods of this class are not thread safe.
  */
 public class SegmentProcessingThrottler
 {
@@ -91,7 +92,7 @@ public class SegmentProcessingThrottler
   {
     Boolean rv = processingLookup.get(tier);
     // this can be null if someone modified rule and added tier after the throttler state was updated.
-    // Default to true, so that segments get processed for this tier. 
+    // Default to true, so that segments get processed for this tier.
     return rv == null ? true : rv;
   }
 
