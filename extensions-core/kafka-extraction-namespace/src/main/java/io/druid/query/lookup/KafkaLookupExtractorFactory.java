@@ -37,7 +37,18 @@ import com.metamx.common.StringUtils;
 import com.metamx.common.logger.Logger;
 import io.druid.concurrent.Execs;
 import io.druid.query.extraction.MapLookupExtractor;
-import io.druid.server.namespace.cache.NamespaceExtractionCacheManager;
+import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
+import kafka.consumer.ConsumerConfig;
+import kafka.consumer.KafkaStream;
+import kafka.consumer.Whitelist;
+import kafka.javaapi.consumer.ConsumerConnector;
+import kafka.message.MessageAndMetadata;
+import kafka.serializer.Decoder;
+
+import javax.annotation.Nullable;
+import javax.validation.constraints.Min;
+import javax.ws.rs.GET;
+import javax.ws.rs.core.Response;
 import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.Map;
@@ -52,16 +63,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
-import javax.annotation.Nullable;
-import javax.validation.constraints.Min;
-import javax.ws.rs.GET;
-import javax.ws.rs.core.Response;
-import kafka.consumer.ConsumerConfig;
-import kafka.consumer.KafkaStream;
-import kafka.consumer.Whitelist;
-import kafka.javaapi.consumer.ConsumerConnector;
-import kafka.message.MessageAndMetadata;
-import kafka.serializer.Decoder;
 
 @JsonTypeName("kafka")
 public class KafkaLookupExtractorFactory implements LookupExtractorFactory
@@ -95,7 +96,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   private final long connectTimeout;
 
   @JsonProperty
-  private final boolean isOneToOne;
+  private final boolean injective;
 
   @JsonCreator
   public KafkaLookupExtractorFactory(
@@ -103,7 +104,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
       @JsonProperty("kafkaTopic") final String kafkaTopic,
       @JsonProperty("kafkaProperties") final Map<String, String> kafkaProperties,
       @JsonProperty("connectTimeout") @Min(0) long connectTimeout,
-      @JsonProperty("isOneToOne") boolean isOneToOne
+      @JsonProperty("injective") boolean injective
   )
   {
     this.kafkaTopic = Preconditions.checkNotNull(kafkaTopic, "kafkaTopic required");
@@ -114,7 +115,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     ));
     this.cacheManager = cacheManager;
     this.connectTimeout = connectTimeout;
-    this.isOneToOne = isOneToOne;
+    this.injective = injective;
   }
 
   public KafkaLookupExtractorFactory(
@@ -141,9 +142,9 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     return connectTimeout;
   }
 
-  public boolean isOneToOne()
+  public boolean isInjective()
   {
-    return isOneToOne;
+    return injective;
   }
 
   @Override
@@ -335,7 +336,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     return !(getKafkaTopic().equals(that.getKafkaTopic())
              && getKafkaProperties().equals(that.getKafkaProperties())
              && getConnectTimeout() == that.getConnectTimeout()
-             && isOneToOne() == that.isOneToOne()
+             && isInjective() == that.isInjective()
     );
   }
 
@@ -351,7 +352,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   {
     final Map<String, String> map = Preconditions.checkNotNull(mapRef.get(), "Not started");
     final long startCount = doubleEventCount.get();
-    return new MapLookupExtractor(map, isOneToOne())
+    return new MapLookupExtractor(map, isInjective())
     {
       @Override
       public byte[] getCacheKey()
