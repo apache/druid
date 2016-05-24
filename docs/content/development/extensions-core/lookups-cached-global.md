@@ -66,6 +66,7 @@ Cached namespace lookups can be specified as part of the [cluster wide config fo
  ```
 
 The parameters are as follows
+
 |Property|Description|Required|Default|
 |--------|-----------|--------|-------|
 |`extractionNamespace`|Specifies how to populate the local cache. See below|Yes|-|
