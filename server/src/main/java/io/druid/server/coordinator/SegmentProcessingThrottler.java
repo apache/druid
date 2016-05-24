@@ -82,9 +82,17 @@ public class SegmentProcessingThrottler
     }
   }
 
-  public boolean canProcessingSegment(String tier)
+  public boolean canProcessSegment(String tier)
   {
-    return !enableThrottling || (processingLookup.get(tier) && !currentlyProcessing.isAtMaxReplicants(tier));
+    return !enableThrottling || (getProcessingLookupValue(tier) && !currentlyProcessing.isAtMaxReplicants(tier));
+  }
+
+  private boolean getProcessingLookupValue(String tier)
+  {
+    Boolean rv = processingLookup.get(tier);
+    // this can be null if someone modified rule and added tier after the throttler state was updated.
+    // Default to true, so that segments get processed for this tier. 
+    return rv == null ? true : rv;
   }
 
   public void register(String tier, String segmentId, String serverId)

@@ -116,7 +116,7 @@ public abstract class LoadRule implements Rule
     while (currReplicantsInTier < expectedReplicantsInTier) {
       final SegmentProcessingThrottler throttler = currTotalReplicantsInCluster > 0 ? params.getReplicantCreationThrottler() : params.getSegmentLoadingThrottler();
 
-      if (!throttler.canProcessingSegment(tier)) {
+      if (!throttler.canProcessSegment(tier)) {
         break;
       }
 
@@ -203,7 +203,7 @@ public abstract class LoadRule implements Rule
 
         if (holder.isServingSegment(segment)) {
           if (expectedNumReplicantsForTier > 0) { // don't throttle unless we are removing extra replicants
-            if (!throttler.canProcessingSegment(tier)) {
+            if (!throttler.canProcessSegment(tier)) {
               serverQueue.add(holder);
               break;
             }
