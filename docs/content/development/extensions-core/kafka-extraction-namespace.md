@@ -16,7 +16,7 @@ If you need updates to populate as promptly as possible, it is possible to plug 
 {
   "type":"kafka",
   "kafkaTopic":"testTopic",
-  "kafkaProperties":{"zookeeper.connect","somehost:2181/kafka"}
+  "kafkaProperties":{"zookeeper.connect":"somehost:2181/kafka"}
 }
 ```
 
