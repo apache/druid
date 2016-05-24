@@ -28,7 +28,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.metamx.common.StringUtils;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.server.namespace.cache.NamespaceExtractionCacheManager;
+import io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager;
 import kafka.consumer.ConsumerIterator;
 import kafka.consumer.KafkaStream;
 import kafka.consumer.TopicFilter;
@@ -72,7 +72,7 @@ public class KafkaLookupExtractorFactoryTest
           Object valueId, DeserializationContext ctxt, BeanProperty forProperty, Object beanInstance
       )
       {
-        if ("io.druid.server.namespace.cache.NamespaceExtractionCacheManager".equals(valueId)) {
+        if ("io.druid.server.lookup.namespace.cache.NamespaceExtractionCacheManager".equals(valueId)) {
           return cacheManager;
         } else {
           return null;
@@ -505,6 +505,31 @@ public class KafkaLookupExtractorFactoryTest
         TOPIC,
         DEFAULT_PROPERTIES
     ).get();
+  }
+
+  @Test
+  public void testSerDe() throws Exception
+  {
+    final NamespaceExtractionCacheManager cacheManager = EasyMock.createStrictMock(NamespaceExtractionCacheManager.class);
+    final String kafkaTopic = "some_topic";
+    final Map<String, String> kafkaProperties = ImmutableMap.of("some_key", "some_value");
+    final long connectTimeout = 999;
+    final boolean injective = true;
+    final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
+        cacheManager,
+        kafkaTopic,
+        kafkaProperties,
+        connectTimeout,
+        injective
+    );
+    final KafkaLookupExtractorFactory otherFactory = mapper.readValue(
+        mapper.writeValueAsString(factory),
+        KafkaLookupExtractorFactory.class
+    );
+    Assert.assertEquals(kafkaTopic, otherFactory.getKafkaTopic());
+    Assert.assertEquals(kafkaProperties, otherFactory.getKafkaProperties());
+    Assert.assertEquals(connectTimeout, otherFactory.getConnectTimeout());
+    Assert.assertEquals(injective, otherFactory.isInjective());
   }
 
   @Test

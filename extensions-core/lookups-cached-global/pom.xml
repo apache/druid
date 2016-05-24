@@ -22,9 +22,9 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>io.druid.extensions</groupId>
-  <artifactId>druid-kafka-extraction-namespace</artifactId>
-  <name>druid-kafka-extraction-namespace</name>
-  <description>Extension to rename Druid dimension values using Kafka8</description>
+  <artifactId>druid-lookups-cached-global</artifactId>
+  <name>druid-lookups-cached-global</name>
+  <description>Extension to rename Druid dimension values using namespaces</description>
 
   <parent>
     <groupId>io.druid</groupId>
@@ -47,44 +47,23 @@
       <scope>provided</scope>
     </dependency>
     <dependency>
-      <groupId>io.druid.extensions</groupId>
-      <artifactId>druid-lookups-cached-global</artifactId>
-      <version>${project.parent.version}</version>
-    </dependency>
-    <dependency>
       <groupId>io.druid</groupId>
       <artifactId>druid-server</artifactId>
       <version>${project.parent.version}</version>
       <scope>provided</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.apache.kafka</groupId>
-      <artifactId>kafka_2.10</artifactId>
-      <version>0.8.2.1</version>
-      <exclusions>
-        <exclusion>
-          <groupId>log4j</groupId>
-          <artifactId>log4j</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.apache.zookeeper</groupId>
-          <artifactId>zookeeper</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>org.slf4j</groupId>
-          <artifactId>slf4j-api</artifactId>
-        </exclusion>
-        <exclusion>
-          <groupId>net.jpountz.lz4</groupId>
-          <artifactId>lz4</artifactId>
-        </exclusion>
-      </exclusions>
     </dependency>
 
     <!-- Tests -->
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>io.druid</groupId>
+      <artifactId>druid-server</artifactId>
+      <version>${project.parent.version}</version>
+      <type>test-jar</type>
       <scope>test</scope>
     </dependency>
     <dependency>
