@@ -177,6 +177,7 @@
         <module>extensions-contrib/influxdb-emitter</module>
         <!-- distribution packaging -->
         <module>distribution</module>
+        <module>assembly</module>
     </modules>
 
     <repositories>

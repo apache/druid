@@ -138,9 +138,12 @@ public class JobHelper
   )
       throws IOException
   {
-    String classpathProperty = System.getProperty("druid.hadoop.internal.classpath");
+    String classpathProperty = System.getProperty("druid.hadoop.user.classpath");
     if (classpathProperty == null) {
-      classpathProperty = System.getProperty("java.class.path");
+      classpathProperty = System.getProperty("druid.hadoop.internal.classpath");
+      if (classpathProperty == null) {
+        classpathProperty = System.getProperty("java.class.path");
+      }
     }
 
     String[] jarFiles = classpathProperty.split(File.pathSeparator);
@@ -282,7 +285,8 @@ public class JobHelper
   {
     // Snapshot jars are uploaded to non shared intermediate directory.
     final Path hdfsPath = new Path(intermediateClassPath, jarFile.getName());
-    // Prevent uploading same file multiple times in same run.
+
+    // existing is used to prevent uploading file multiple times in same run.
     if (!fs.exists(hdfsPath)) {
       uploadJar(jarFile, hdfsPath, fs);
     }
