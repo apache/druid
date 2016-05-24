@@ -67,7 +67,7 @@ public class CoordinatorDynamicConfigTest
   public void testBuilderDefaults()
   {
     Assert.assertEquals(
-        new CoordinatorDynamicConfig(900000, 524288000, 100, 5, 15, 10, 1, false, null, -1),
+        new CoordinatorDynamicConfig(900000, 524288000, 100, 5, 15, 10, 1, false, null, 0),
         new CoordinatorDynamicConfig.Builder().build()
     );
   }
@@ -75,8 +75,8 @@ public class CoordinatorDynamicConfigTest
   @Test
   public void testEqualsAndHashCodeSanity()
   {
-    CoordinatorDynamicConfig config1 = new CoordinatorDynamicConfig(900000, 524288000, 100, 5, 15, 10, 1, false, null, -1);
-    CoordinatorDynamicConfig config2 = new CoordinatorDynamicConfig(900000, 524288000, 100, 5, 15, 10, 1, false, null, -1);
+    CoordinatorDynamicConfig config1 = new CoordinatorDynamicConfig(900000, 524288000, 100, 5, 15, 10, 1, false, null, 4);
+    CoordinatorDynamicConfig config2 = new CoordinatorDynamicConfig(900000, 524288000, 100, 5, 15, 10, 1, false, null, 4);
 
     Assert.assertEquals(config1, config2);
     Assert.assertEquals(config1.hashCode(), config2.hashCode());

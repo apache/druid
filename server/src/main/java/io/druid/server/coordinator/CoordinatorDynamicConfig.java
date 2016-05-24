@@ -26,7 +26,7 @@ import java.util.Set;
 public class CoordinatorDynamicConfig
 {
   public static final String CONFIG_KEY = "coordinator.config";
-  private static final int DEFAULT_LOADING_THROTTLE_LIMIT = -1;
+  private static final int DEFAULT_LOADING_THROTTLE_LIMIT = 0;
 
   private final long millisToWaitBeforeDeleting;
   private final long mergeBytesLimit;
@@ -219,7 +219,7 @@ public class CoordinatorDynamicConfig
 
     public Builder()
     {
-      this(15 * 60 * 1000L, 524288000L, 100, 5, 15, 10, 1, false, null, -1);
+      this(15 * 60 * 1000L, 524288000L, 100, 5, 15, 10, 1, false, null, DEFAULT_LOADING_THROTTLE_LIMIT);
     }
 
     private Builder(
