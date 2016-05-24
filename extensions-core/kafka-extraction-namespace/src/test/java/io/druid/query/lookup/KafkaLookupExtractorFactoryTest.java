@@ -508,6 +508,31 @@ public class KafkaLookupExtractorFactoryTest
   }
 
   @Test
+  public void testSerDe() throws Exception
+  {
+    final NamespaceExtractionCacheManager cacheManager = EasyMock.createStrictMock(NamespaceExtractionCacheManager.class);
+    final String kafkaTopic = "some_topic";
+    final Map<String, String> kafkaProperties = ImmutableMap.of("some_key", "some_value");
+    final long connectTimeout = 999;
+    final boolean injective = true;
+    final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
+        cacheManager,
+        kafkaTopic,
+        kafkaProperties,
+        connectTimeout,
+        injective
+    );
+    final KafkaLookupExtractorFactory otherFactory = mapper.readValue(
+        mapper.writeValueAsString(factory),
+        KafkaLookupExtractorFactory.class
+    );
+    Assert.assertEquals(kafkaTopic, otherFactory.getKafkaTopic());
+    Assert.assertEquals(kafkaProperties, otherFactory.getKafkaProperties());
+    Assert.assertEquals(connectTimeout, otherFactory.getConnectTimeout());
+    Assert.assertEquals(injective, otherFactory.isInjective());
+  }
+
+  @Test
   public void testDefaultDecoder()
   {
     final String str = "some string";
