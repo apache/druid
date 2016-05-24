@@ -32,7 +32,7 @@ import java.util.Arrays;
 
 /**
  */
-public class SpatialFilter implements Filter
+public class SpatialFilter extends Filter.WithDictionary
 {
   private final String dimension;
   private final Bound bound;

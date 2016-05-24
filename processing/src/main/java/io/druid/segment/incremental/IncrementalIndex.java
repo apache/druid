@@ -29,6 +29,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
@@ -41,6 +42,8 @@ import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.granularity.QueryGranularity;
+import io.druid.math.expr.Expr;
+import io.druid.math.expr.Parser;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
@@ -50,6 +53,7 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.Metadata;
+import io.druid.segment.NumericColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
@@ -73,6 +77,7 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -251,6 +256,38 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
             }
           };
         }
+      }
+
+      @Override
+      public NumericColumnSelector makeMathExpressionSelector(String expression)
+      {
+        final Expr parsed = Parser.parse(expression);
+
+        final Set<String> required = Sets.newHashSet(Parser.findRequiredBindings(parsed));
+        final Map<String, Supplier<Number>> values = Maps.newHashMapWithExpectedSize(required.size());
+
+        for (final String columnName : required) {
+          values.put(
+              columnName, new Supplier<Number>()
+              {
+                @Override
+                public Number get()
+                {
+                  return in.get().getFloatMetric(columnName);
+                }
+              }
+          );
+        }
+        final Expr.NumericBinding binding = Parser.withSuppliers(values);
+
+        return new NumericColumnSelector()
+        {
+          @Override
+          public Number get()
+          {
+            return parsed.eval(binding);
+          }
+        };
       }
 
       @Override
@@ -754,7 +791,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
   public String getMetricType(String metric)
   {
-    final MetricDesc metricDesc = metricDescs.get(metric);
+    final MetricDesc metricDesc = getMetricDesc(metric);
     return metricDesc != null ? metricDesc.getType() : null;
   }
 
@@ -833,8 +870,12 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
   public Integer getMetricIndex(String metricName)
   {
-    MetricDesc metSpec = metricDescs.get(metricName);
+    MetricDesc metSpec = getMetricDesc(metricName);
     return metSpec == null ? null : metSpec.getIndex();
+  }
+
+  public MetricDesc getMetricDesc(String metricName) {
+    return metricDescs.get(metricName);
   }
 
   public ColumnCapabilities getCapabilities(String column)

@@ -30,7 +30,7 @@ import io.druid.query.filter.ValueMatcherFactory;
 
 /**
  */
-public class DimensionPredicateFilter implements Filter
+public class DimensionPredicateFilter extends Filter.WithDictionary
 {
   private final String dimension;
   private final Predicate<String> predicate;

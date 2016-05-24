@@ -19,8 +19,13 @@
 
 package io.druid.query.aggregation;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import com.metamx.common.Pair;
+import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.FloatColumnSelector;
+import io.druid.segment.LongColumnSelector;
+import io.druid.segment.NumericColumnSelector;
 
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -83,5 +88,67 @@ public class AggregatorUtil
       }
     }
     return new Pair(condensedAggs, condensedPostAggs);
+  }
+
+  public static Supplier<Number> asSupplier(final FloatColumnSelector selector) {
+    return new Supplier<Number>()
+    {
+      @Override
+      public Number get()
+      {
+        return (float)selector.get();
+      }
+    };
+  }
+
+  public static FloatColumnSelector getFloatColumnSelector(
+      ColumnSelectorFactory metricFactory,
+      String fieldName,
+      String fieldExpression
+  )
+  {
+    if (fieldName != null) {
+      return metricFactory.makeFloatColumnSelector(fieldName);
+    }
+    final NumericColumnSelector numeric = metricFactory.makeMathExpressionSelector(fieldExpression);
+    return new FloatColumnSelector()
+    {
+      @Override
+      public float get()
+      {
+        return numeric.get().floatValue();
+      }
+    };
+  }
+
+  public static Supplier<Number> asSupplier(final LongColumnSelector selector) {
+    return new Supplier<Number>()
+    {
+      @Override
+      public Number get()
+      {
+        return (long)selector.get();
+      }
+    };
+  }
+
+  public static LongColumnSelector getLongColumnSelector(
+      ColumnSelectorFactory metricFactory,
+      String fieldName,
+      String fieldExpression
+  )
+  {
+    if (fieldName != null) {
+      return metricFactory.makeLongColumnSelector(fieldName);
+    }
+    final NumericColumnSelector numeric = metricFactory.makeMathExpressionSelector(fieldExpression);
+    return new LongColumnSelector()
+    {
+      @Override
+      public long get()
+      {
+        return numeric.get().longValue();
+      }
+    };
   }
 }

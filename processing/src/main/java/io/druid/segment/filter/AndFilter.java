@@ -26,12 +26,18 @@ import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 
+import java.util.Arrays;
 import java.util.List;
 
 /**
  */
-public class AndFilter implements Filter
+public class AndFilter extends Filter.WithDictionary implements Filter.Relational
 {
+  public static Filter of(Filter... filters)
+  {
+    return filters == null ? null : filters.length == 1 ? filters[0] : new AndFilter(Arrays.asList(filters));
+  }
+
   private final List<Filter> filters;
 
   public AndFilter(
@@ -60,7 +66,7 @@ public class AndFilter implements Filter
   public ValueMatcher makeMatcher(ValueMatcherFactory factory)
   {
     if (filters.size() == 0) {
-      return new BooleanValueMatcher(false);
+      return BooleanValueMatcher.FALSE;
     }
 
     final ValueMatcher[] matchers = new ValueMatcher[filters.size()];
@@ -90,5 +96,28 @@ public class AndFilter implements Filter
         return true;
       }
     };
+  }
+
+  @Override
+  public boolean supportsBitmap()
+  {
+    for (Filter child : filters) {
+      if (!child.supportsBitmap()) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  @Override
+  public List<Filter> getChildren()
+  {
+    return filters;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "AND " + filters;
   }
 }

@@ -40,9 +40,9 @@ public class StartLimitedOffset implements Offset
   }
 
   @Override
-  public void increment()
+  public boolean increment()
   {
-    baseOffset.increment();
+    return baseOffset.increment();
   }
 
   @Override

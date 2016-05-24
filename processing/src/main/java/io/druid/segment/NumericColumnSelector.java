@@ -19,47 +19,9 @@
 
 package io.druid.segment;
 
-import io.druid.segment.data.IndexedInts;
-import io.druid.segment.data.Offset;
-
 /**
-*/
-class IndexedIntsOffset implements Offset
+ */
+public interface NumericColumnSelector
 {
-  int currRow;
-  private final IndexedInts invertedIndex;
-  private final int limit;
-
-  public IndexedIntsOffset(IndexedInts invertedIndex)
-  {
-    this.invertedIndex = invertedIndex;
-    this.limit = invertedIndex.size();
-    currRow = 0;
-  }
-
-  @Override
-  public boolean increment()
-  {
-    return ++currRow < limit;
-  }
-
-  @Override
-  public boolean withinBounds()
-  {
-    return currRow < limit;
-  }
-
-  @Override
-  public Offset clone()
-  {
-    final IndexedIntsOffset retVal = new IndexedIntsOffset(invertedIndex);
-    retVal.currRow = currRow;
-    return retVal;
-  }
-
-  @Override
-  public int getOffset()
-  {
-    return invertedIndex.get(currRow);
-  }
+  Number get();
 }

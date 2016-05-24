@@ -25,7 +25,7 @@ package io.druid.segment.data;
  */
 public interface Offset extends ReadableOffset
 {
-  void increment();
+  boolean increment();
 
   boolean withinBounds();
 

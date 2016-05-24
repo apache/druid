@@ -27,7 +27,7 @@ import io.druid.query.filter.ValueMatcherFactory;
 
 /**
  */
-public class SelectorFilter implements Filter
+public class SelectorFilter extends Filter.WithDictionary
 {
   private final String dimension;
   private final String value;
@@ -51,5 +51,14 @@ public class SelectorFilter implements Filter
   public ValueMatcher makeMatcher(ValueMatcherFactory factory)
   {
     return factory.makeValueMatcher(dimension, value);
+  }
+
+  @Override
+  public String toString()
+  {
+    return "SelectorFilter{" +
+           "dimension='" + dimension + '\'' +
+           ", value='" + value + '\'' +
+           '}';
   }
 }

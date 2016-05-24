@@ -340,6 +340,9 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
       // assumes the number of entries in each buffer is a power of 2
       final int bufferNum = index >> div;
 
+      if (bufferNum  <0) {
+        System.out.println("[CompressedVSizeIndexedInts/get] " + bufferNum);
+      }
       if (bufferNum != currIndex) {
         loadBuffer(bufferNum);
       }

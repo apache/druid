@@ -27,4 +27,5 @@ public interface ValueMatcherFactory
 {
   public ValueMatcher makeValueMatcher(String dimension, Comparable value);
   public ValueMatcher makeValueMatcher(String dimension, Predicate predicate);
+  public ValueMatcher makeValueMatcher(String expression);
 }

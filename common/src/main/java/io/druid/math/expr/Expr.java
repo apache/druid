@@ -22,13 +22,17 @@ package io.druid.math.expr;
 import com.google.common.math.LongMath;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  */
 public interface Expr
 {
-  Number eval(Map<String, Number> bindings);
+  Number eval(NumericBinding bindings);
+
+  interface NumericBinding
+  {
+    Number get(String name);
+  }
 }
 
 class LongExpr implements Expr
@@ -47,7 +51,7 @@ class LongExpr implements Expr
   }
 
   @Override
-  public Number eval(Map<String, Number> bindings)
+  public Number eval(NumericBinding bindings)
   {
     return value;
   }
@@ -69,7 +73,7 @@ class DoubleExpr implements Expr
   }
 
   @Override
-  public Number eval(Map<String, Number> bindings)
+  public Number eval(NumericBinding bindings)
   {
     return value;
   }
@@ -91,7 +95,7 @@ class IdentifierExpr implements Expr
   }
 
   @Override
-  public Number eval(Map<String, Number> bindings)
+  public Number eval(NumericBinding bindings)
   {
     Number val = bindings.get(value);
     if (val == null) {
@@ -104,8 +108,8 @@ class IdentifierExpr implements Expr
 
 class FunctionExpr implements Expr
 {
-  private final String name;
-  private final List<Expr> args;
+  final String name;
+  final List<Expr> args;
 
   public FunctionExpr(String name, List<Expr> args)
   {
@@ -120,7 +124,7 @@ class FunctionExpr implements Expr
   }
 
   @Override
-  public Number eval(Map<String, Number> bindings)
+  public Number eval(NumericBinding bindings)
   {
     return Parser.func.get(name.toLowerCase()).apply(args, bindings);
   }
@@ -128,7 +132,7 @@ class FunctionExpr implements Expr
 
 class UnaryMinusExpr implements Expr
 {
-  private final Expr expr;
+  final Expr expr;
 
   UnaryMinusExpr(Expr expr)
   {
@@ -136,7 +140,7 @@ class UnaryMinusExpr implements Expr
   }
 
   @Override
-  public Number eval(Map<String, Number> bindings)
+  public Number eval(NumericBinding bindings)
   {
     Number valObj = expr.eval(bindings);
     if (valObj instanceof Long) {
@@ -155,7 +159,7 @@ class UnaryMinusExpr implements Expr
 
 class UnaryNotExpr implements Expr
 {
-  private final Expr expr;
+  final Expr expr;
 
   UnaryNotExpr(Expr expr)
   {
@@ -163,7 +167,7 @@ class UnaryNotExpr implements Expr
   }
 
   @Override
-  public Number eval(Map<String, Number> bindings)
+  public Number eval(NumericBinding bindings)
   {
     Number valObj = expr.eval(bindings);
     return valObj.doubleValue() > 0 ? 0.0d : 1.0d;
@@ -210,7 +214,7 @@ class BinMinusExpr extends BinaryOpExprBase
   }
 
   @Override
-  public Number eval(Map<String, Number> bindings)
+  public Number eval(NumericBinding bindings)
   {
     Number leftVal = left.eval(bindings);
     Number rightVal = right.eval(bindings);
@@ -231,7 +235,7 @@ class BinPowExpr extends BinaryOpExprBase
   }
 
   @Override
-  public Number eval(Map<String, Number> bindings)
+  public Number eval(NumericBinding bindings)
   {
     Number leftVal = left.eval(bindings);
     Number rightVal = right.eval(bindings);
@@ -252,7 +256,7 @@ class BinMulExpr extends BinaryOpExprBase
   }
 
   @Override
-  public Number eval(Map<String, Number> bindings)
+  public Number eval(NumericBinding bindings)
   {
     Number leftVal = left.eval(bindings);
     Number rightVal = right.eval(bindings);
@@ -273,7 +277,7 @@ class BinDivExpr extends BinaryOpExprBase
   }
 
   @Override
-  public Number eval(Map<String, Number> bindings)
+  public Number eval(NumericBinding bindings)
   {
     Number leftVal = left.eval(bindings);
     Number rightVal = right.eval(bindings);
@@ -294,7 +298,7 @@ class BinModuloExpr extends BinaryOpExprBase
   }
 
   @Override
-  public Number eval(Map<String, Number> bindings)
+  public Number eval(NumericBinding bindings)
   {
     Number leftVal = left.eval(bindings);
     Number rightVal = right.eval(bindings);
@@ -315,7 +319,7 @@ class BinPlusExpr extends BinaryOpExprBase
   }
 
   @Override
-  public Number eval(Map<String, Number> bindings)
+  public Number eval(NumericBinding bindings)
   {
     Number leftVal = left.eval(bindings);
     Number rightVal = right.eval(bindings);
@@ -336,12 +340,12 @@ class BinLtExpr extends BinaryOpExprBase
   }
 
   @Override
-  public Number eval(Map<String, Number> bindings)
+  public Number eval(NumericBinding bindings)
   {
     Number leftVal = left.eval(bindings);
     Number rightVal = right.eval(bindings);
     if (isLong(leftVal, rightVal)) {
-      return leftVal.longValue() < rightVal.longValue() ? 1 : 0;
+      return leftVal.longValue() < rightVal.longValue() ? 1L : 0L;
     } else {
       return leftVal.doubleValue() < rightVal.doubleValue() ? 1.0d : 0.0d;
     }
@@ -357,12 +361,12 @@ class BinLeqExpr extends BinaryOpExprBase
   }
 
   @Override
-  public Number eval(Map<String, Number> bindings)
+  public Number eval(NumericBinding bindings)
   {
     Number leftVal = left.eval(bindings);
     Number rightVal = right.eval(bindings);
     if (isLong(leftVal, rightVal)) {
-      return leftVal.longValue() <= rightVal.longValue() ? 1 : 0;
+      return leftVal.longValue() <= rightVal.longValue() ? 1L : 0L;
     } else {
       return leftVal.doubleValue() <= rightVal.doubleValue() ? 1.0d : 0.0d;
     }
@@ -378,12 +382,12 @@ class BinGtExpr extends BinaryOpExprBase
   }
 
   @Override
-  public Number eval(Map<String, Number> bindings)
+  public Number eval(NumericBinding bindings)
   {
     Number leftVal = left.eval(bindings);
     Number rightVal = right.eval(bindings);
     if (isLong(leftVal, rightVal)) {
-      return leftVal.longValue() > rightVal.longValue() ? 1 : 0;
+      return leftVal.longValue() > rightVal.longValue() ? 1L : 0L;
     } else {
       return leftVal.doubleValue() > rightVal.doubleValue() ? 1.0d : 0.0d;
     }
@@ -399,12 +403,12 @@ class BinGeqExpr extends BinaryOpExprBase
   }
 
   @Override
-  public Number eval(Map<String, Number> bindings)
+  public Number eval(NumericBinding bindings)
   {
     Number leftVal = left.eval(bindings);
     Number rightVal = right.eval(bindings);
     if (isLong(leftVal, rightVal)) {
-      return leftVal.longValue() >= rightVal.longValue() ? 1 : 0;
+      return leftVal.longValue() >= rightVal.longValue() ? 1L : 0L;
     } else {
       return leftVal.doubleValue() >= rightVal.doubleValue() ? 1.0d : 0.0d;
     }
@@ -420,12 +424,12 @@ class BinEqExpr extends BinaryOpExprBase
   }
 
   @Override
-  public Number eval(Map<String, Number> bindings)
+  public Number eval(NumericBinding bindings)
   {
     Number leftVal = left.eval(bindings);
     Number rightVal = right.eval(bindings);
     if (isLong(leftVal, rightVal)) {
-      return leftVal.longValue() == rightVal.longValue() ? 1 : 0;
+      return leftVal.longValue() == rightVal.longValue() ? 1L : 0L;
     } else {
       return leftVal.doubleValue() == rightVal.doubleValue() ? 1.0d : 0.0d;
     }
@@ -441,12 +445,12 @@ class BinNeqExpr extends BinaryOpExprBase
   }
 
   @Override
-  public Number eval(Map<String, Number> bindings)
+  public Number eval(NumericBinding bindings)
   {
     Number leftVal = left.eval(bindings);
     Number rightVal = right.eval(bindings);
     if (isLong(leftVal, rightVal)) {
-      return leftVal.longValue() != rightVal.longValue() ? 1 : 0;
+      return leftVal.longValue() != rightVal.longValue() ? 1L : 0L;
     } else {
       return leftVal.doubleValue() != rightVal.doubleValue() ? 1.0d : 0.0d;
     }
@@ -462,7 +466,7 @@ class BinAndExpr extends BinaryOpExprBase
   }
 
   @Override
-  public Number eval(Map<String, Number> bindings)
+  public Number eval(NumericBinding bindings)
   {
     Number leftVal = left.eval(bindings);
     Number rightVal = right.eval(bindings);
@@ -470,7 +474,7 @@ class BinAndExpr extends BinaryOpExprBase
       long lval = leftVal.longValue();
       if (lval > 0) {
         long rval = rightVal.longValue();
-        return rval > 0 ? 1 : 0;
+        return rval > 0 ? 1L : 0L;
       } else {
         return 0;
       }
@@ -495,7 +499,7 @@ class BinOrExpr extends BinaryOpExprBase
   }
 
   @Override
-  public Number eval(Map<String, Number> bindings)
+  public Number eval(NumericBinding bindings)
   {
     Number leftVal = left.eval(bindings);
     Number rightVal = right.eval(bindings);
@@ -505,7 +509,7 @@ class BinOrExpr extends BinaryOpExprBase
         return 1;
       } else {
         long rval = rightVal.longValue();
-        return rval > 0 ? 1 : 0;
+        return rval > 0 ? 1L : 0L;
       }
     } else {
       double lval = leftVal.doubleValue();

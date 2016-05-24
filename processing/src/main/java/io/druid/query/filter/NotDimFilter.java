@@ -98,4 +98,8 @@ public class NotDimFilter implements DimFilter
   {
     return "!" + field;
   }
+
+  public static DimFilter of(DimFilter filter) {
+    return filter == null ? null : new NotDimFilter(filter);
+  }
 }

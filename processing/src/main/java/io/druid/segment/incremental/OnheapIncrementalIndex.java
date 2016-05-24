@@ -33,6 +33,7 @@ import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
+import io.druid.segment.NumericColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 
 import java.util.List;
@@ -497,6 +498,12 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
         );
         return prev != null ? prev : newSelector;
       }
+    }
+
+    @Override
+    public NumericColumnSelector makeMathExpressionSelector(String expression)
+    {
+      return delegate.makeMathExpressionSelector(expression);
     }
   }
 

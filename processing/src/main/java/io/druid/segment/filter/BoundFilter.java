@@ -33,7 +33,7 @@ import io.druid.segment.column.BitmapIndex;
 import java.util.Comparator;
 import java.util.Iterator;
 
-public class BoundFilter implements Filter
+public class BoundFilter extends Filter.WithDictionary
 {
   private final BoundDimFilter boundDimFilter;
   private final Comparator<String> comparator;
