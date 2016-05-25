@@ -86,7 +86,6 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
           break;
         case LIST:  // array case - only 1-depth array supported yet
           ListObjectInspector listObjectInspector = (ListObjectInspector)objectInspector;
-          Object listData = oip.getStructFieldData(input, field);
           map.put(field.getFieldName(),
               getListObject(listObjectInspector, oip.getStructFieldData(input, field)));
           break;
@@ -167,7 +166,7 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
   public static String typeStringFromParseSpec(ParseSpec parseSpec)
   {
     StringBuilder builder = new StringBuilder("struct<");
-    builder.append(parseSpec.getTimestampSpec()).append(":timestamp");
+    builder.append(parseSpec.getTimestampSpec()).append(":string");
     if (parseSpec.getDimensionsSpec().getDimensionNames().size() > 0)
     {
       builder.append(",");
