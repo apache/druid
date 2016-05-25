@@ -23,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.granularity.QueryGranularities;
+
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -47,7 +48,7 @@ import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
-public class IncrementalIndexAddRowsBenchmark
+public class IncrementalIndexRowTypeBenchmark
 {
   private IncrementalIndex incIndex;
   private IncrementalIndex incFloatIndex;
