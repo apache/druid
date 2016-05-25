@@ -33,6 +33,7 @@ import com.metamx.common.logger.Logger;
 import io.airlift.airline.Arguments;
 import io.airlift.airline.Command;
 import io.druid.guice.LazySingleton;
+import io.druid.guice.NodeTypeConfig;
 import io.druid.indexer.HadoopDruidDetermineConfigurationJob;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.HadoopDruidIndexerJob;
@@ -84,6 +85,8 @@ public class CliInternalHadoopIndexer extends GuiceRunnable
           {
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/internal-hadoop-indexer");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+            binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig("hadoop-indexer"));
+
 
             // bind metadata storage config based on HadoopIOConfig
             MetadataStorageUpdaterJobSpec metadataSpec = getHadoopDruidIndexerConfig().getSchema()

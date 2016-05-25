@@ -40,6 +40,7 @@ import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
+import io.druid.guice.NodeTypeConfig;
 import io.druid.guice.annotations.CoordinatorIndexingServiceHelper;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.metadata.MetadataRuleManagerConfig;
@@ -123,6 +124,8 @@ public class CliCoordinator extends ServerRunnable
             binder.bind(MetadataStorage.class)
                   .toProvider(MetadataStorageProvider.class)
                   .in(ManageLifecycle.class);
+
+            binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig("coordinator"));
 
             JsonConfigProvider.bind(binder, "druid.manager.segments", MetadataSegmentManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.manager.rules", MetadataRuleManagerConfig.class);

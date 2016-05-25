@@ -34,6 +34,7 @@ import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
+import io.druid.guice.NodeTypeConfig;
 import io.druid.guice.annotations.Self;
 import io.druid.guice.http.JettyHttpClientModule;
 import io.druid.query.lookup.LookupModule;
@@ -76,6 +77,8 @@ public class CliRouter extends ServerRunnable
           {
             binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/router");
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8888);
+
+            binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig("router"));
 
             JsonConfigProvider.bind(binder, "druid.router", TieredBrokerConfig.class);
 
