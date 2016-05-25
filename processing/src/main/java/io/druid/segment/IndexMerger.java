@@ -341,31 +341,21 @@ public class IndexMerger
 
     final List<String> mergedDimensions = getMergedDimensions(indexes);
 
-    final List<String> mergedMetrics = Lists.transform(
-        mergeIndexed(
-            Lists.newArrayList(
-                FunctionalIterable
-                    .create(indexes)
-                    .transform(
-                        new Function<IndexableAdapter, Iterable<String>>()
-                        {
-                          @Override
-                          public Iterable<String> apply(@Nullable IndexableAdapter input)
-                          {
-                            return input.getMetricNames();
-                          }
-                        }
-                    )
-            )
-        ),
-        new Function<String, String>()
-        {
-          @Override
-          public String apply(@Nullable String input)
-          {
-            return input;
-          }
-        }
+    final List<String> mergedMetrics = mergeIndexed(
+        Lists.newArrayList(
+            FunctionalIterable
+                .create(indexes)
+                .transform(
+                    new Function<IndexableAdapter, Iterable<String>>()
+                    {
+                      @Override
+                      public Iterable<String> apply(@Nullable IndexableAdapter input)
+                      {
+                        return input.getMetricNames();
+                      }
+                    }
+                )
+        )
     );
 
     final AggregatorFactory[] sortedMetricAggs = new AggregatorFactory[mergedMetrics.size()];
@@ -496,17 +486,7 @@ public class IndexMerger
               @Override
               public Iterable<String> apply(@Nullable IndexableAdapter input)
               {
-                return Iterables.transform(
-                    input.getMetricNames(),
-                    new Function<String, String>()
-                    {
-                      @Override
-                      public String apply(@Nullable String input)
-                      {
-                        return input;
-                      }
-                    }
-                );
+                return input.getMetricNames();
               }
             }
         )
