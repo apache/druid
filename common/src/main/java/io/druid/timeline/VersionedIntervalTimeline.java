@@ -422,9 +422,16 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
 
     for (Map.Entry<Interval, TreeMap<VersionType, TimelineEntry>> versionEntry : allTimelineEntries.entrySet()) {
       if (versionEntry.getKey().overlap(interval) != null) {
-        TimelineEntry timelineEntry = versionEntry.getValue().lastEntry().getValue();
-        if (timelineEntry.getPartitionHolder().isComplete() || incompleteOk) {
-          add(timeline, versionEntry.getKey(), timelineEntry);
+        if (incompleteOk) {
+          add(timeline, versionEntry.getKey(), versionEntry.getValue().lastEntry().getValue());
+        } else {
+          for (VersionType ver : versionEntry.getValue().descendingKeySet()) {
+            TimelineEntry timelineEntry = versionEntry.getValue().get(ver);
+            if (timelineEntry.getPartitionHolder().isComplete()) {
+              add(timeline, versionEntry.getKey(), timelineEntry);
+              break;
+            }
+          }
         }
       }
     }

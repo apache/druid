@@ -1504,7 +1504,68 @@ public class VersionedIntervalTimelineTest
 
     Assert.assertTrue(timeline.lookup(Interval.parse("1970/1980")).isEmpty());
   }
-  
+
+  // https://github.com/druid-io/druid/issues/3010
+  @Test
+  public void testRemoveIncompleteKeepsComplete() throws Exception
+  {
+    timeline = makeStringIntegerTimeline();
+
+    add("2011-04-01/2011-04-02", "1", IntegerPartitionChunk.make(null, 1, 0, 77));
+    add("2011-04-01/2011-04-02", "1", IntegerPartitionChunk.make(1, null, 1, 88));
+    add("2011-04-01/2011-04-02", "2", IntegerPartitionChunk.make(null, 1, 0, 99));
+
+    assertValues(
+        ImmutableList.of(
+            createExpected("2011-04-01/2011-04-02", "1",
+                           Arrays.<PartitionChunk<Integer>>asList(
+                               IntegerPartitionChunk.make(null, 1, 0, 77),
+                               IntegerPartitionChunk.make(1, null, 1, 88)
+                           )
+            )
+        ),
+        timeline.lookup(new Interval("2011-04-01/2011-04-02"))
+    );
+
+    add("2011-04-01/2011-04-02", "3", IntegerPartitionChunk.make(null, 1, 0, 110));
+
+    assertValues(
+        ImmutableList.of(
+            createExpected("2011-04-01/2011-04-02", "1",
+                           Arrays.<PartitionChunk<Integer>>asList(
+                               IntegerPartitionChunk.make(null, 1, 0, 77),
+                               IntegerPartitionChunk.make(1, null, 1, 88)
+                           )
+            )
+        ),
+        timeline.lookup(new Interval("2011-04-01/2011-04-02"))
+    );
+    assertValues(
+        Sets.newHashSet(
+            createExpected("2011-04-01/2011-04-02", "2",
+                           Arrays.<PartitionChunk<Integer>>asList(
+                               IntegerPartitionChunk.make(null, 1, 0, 99)
+                           )
+            )
+        ),
+        timeline.findOvershadowed()
+    );
+
+    testRemove();
+
+    assertValues(
+        ImmutableList.of(
+            createExpected("2011-04-01/2011-04-02", "1",
+                           Arrays.<PartitionChunk<Integer>>asList(
+                               IntegerPartitionChunk.make(null, 1, 0, 77),
+                               IntegerPartitionChunk.make(1, null, 1, 88)
+                           )
+            )
+        ),
+        timeline.lookup(new Interval("2011-04-01/2011-04-02"))
+    );
+  }
+
   private Pair<Interval, Pair<String, PartitionHolder<Integer>>> createExpected(
       String intervalString,
       String version,
