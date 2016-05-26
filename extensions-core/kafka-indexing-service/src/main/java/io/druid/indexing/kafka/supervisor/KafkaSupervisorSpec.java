@@ -24,7 +24,9 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
+import io.druid.guice.annotations.Json;
 import io.druid.indexing.kafka.KafkaIndexTaskClient;
+import io.druid.indexing.kafka.KafkaIndexTaskClientFactory;
 import io.druid.indexing.kafka.KafkaTuningConfig;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.TaskMaster;
@@ -42,7 +44,7 @@ public class KafkaSupervisorSpec implements SupervisorSpec
   private final TaskStorage taskStorage;
   private final TaskMaster taskMaster;
   private final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator;
-  private final KafkaIndexTaskClient kafkaIndexTaskClient;
+  private final KafkaIndexTaskClientFactory kafkaIndexTaskClientFactory;
   private final ObjectMapper mapper;
 
   @JsonCreator
@@ -53,8 +55,8 @@ public class KafkaSupervisorSpec implements SupervisorSpec
       @JacksonInject TaskStorage taskStorage,
       @JacksonInject TaskMaster taskMaster,
       @JacksonInject IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
-      @JacksonInject KafkaIndexTaskClient kafkaIndexTaskClient,
-      @JacksonInject ObjectMapper mapper
+      @JacksonInject KafkaIndexTaskClientFactory kafkaIndexTaskClientFactory,
+      @JacksonInject @Json ObjectMapper mapper
   )
   {
     this.dataSchema = Preconditions.checkNotNull(dataSchema, "dataSchema");
@@ -66,7 +68,7 @@ public class KafkaSupervisorSpec implements SupervisorSpec
     this.taskStorage = taskStorage;
     this.taskMaster = taskMaster;
     this.indexerMetadataStorageCoordinator = indexerMetadataStorageCoordinator;
-    this.kafkaIndexTaskClient = kafkaIndexTaskClient;
+    this.kafkaIndexTaskClientFactory = kafkaIndexTaskClientFactory;
     this.mapper = mapper;
   }
 
@@ -101,7 +103,7 @@ public class KafkaSupervisorSpec implements SupervisorSpec
         taskStorage,
         taskMaster,
         indexerMetadataStorageCoordinator,
-        kafkaIndexTaskClient,
+        kafkaIndexTaskClientFactory,
         mapper,
         this
     );

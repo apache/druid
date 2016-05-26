@@ -21,33 +21,45 @@ package io.druid.segment.realtime.firehose;
 
 import com.google.common.base.Optional;
 import com.google.inject.Inject;
+import io.druid.server.metrics.DataSourceTaskIdHolder;
 
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
-import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.HttpHeaders;
+import java.util.List;
 
 @Path("/druid/worker/v1")
 public class ChatHandlerResource
 {
+  public static final String TASK_ID_HEADER = "X-Druid-Task-Id";
+
   private final ChatHandlerProvider handlers;
+  private final String taskId;
 
   @Inject
-  public ChatHandlerResource(ChatHandlerProvider handlers)
+  public ChatHandlerResource(final ChatHandlerProvider handlers, final DataSourceTaskIdHolder taskIdHolder)
   {
     this.handlers = handlers;
+    this.taskId = taskIdHolder.getTaskId();
   }
 
   @Path("/chat/{id}")
-  public Object doTaskChat(
-      @PathParam("id") String handlerId
-  )
+  public Object doTaskChat(@PathParam("id") String handlerId, @Context HttpHeaders headers)
   {
+    if (taskId != null) {
+      List<String> requestTaskId = headers.getRequestHeader(TASK_ID_HEADER);
+      if (requestTaskId != null && !requestTaskId.contains(taskId)) {
+        return null;
+      }
+    }
+
     final Optional<ChatHandler> handler = handlers.get(handlerId);
 
     if (handler.isPresent()) {
       return handler.get();
-    } else {
-      return Response.status(Response.Status.NOT_FOUND).build();
     }
+
+    return null;
   }
 }
