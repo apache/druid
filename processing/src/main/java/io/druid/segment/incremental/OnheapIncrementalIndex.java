@@ -170,20 +170,13 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
 
     if (null != priorIndex) {
       aggs = concurrentGet(priorIndex);
+      doAggregate(aggs, rowContainer, row, reportParseExceptions);
     } else {
       aggs = new Aggregator[metrics.length];
-
-      rowContainer.set(row);
-      for (int i = 0; i < metrics.length; i++) {
-        final AggregatorFactory agg = metrics[i];
-        aggs[i] = agg.factorize(
-            selectors.get(agg.getName())
-        );
-      }
-      rowContainer.set(null);
+      factorizeAggs(metrics, aggs, rowContainer, row);
+      doAggregate(aggs, rowContainer, row, reportParseExceptions);
 
       final Integer rowIndex = indexIncrement.getAndIncrement();
-
       concurrentSet(rowIndex, aggs);
 
       // Last ditch sanity checks
@@ -196,12 +189,38 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       } else {
         // We lost a race
         aggs = concurrentGet(prev);
+        doAggregate(aggs, rowContainer, row, reportParseExceptions);
         // Free up the misfire
         concurrentRemove(rowIndex);
         // This is expected to occur ~80% of the time in the worst scenarios
       }
     }
 
+    return numEntries.get();
+  }
+
+  private void factorizeAggs(
+      AggregatorFactory[] metrics,
+      Aggregator[] aggs,
+      ThreadLocal<InputRow> rowContainer,
+      InputRow row
+  )
+  {
+    rowContainer.set(row);
+    for (int i = 0; i < metrics.length; i++) {
+      final AggregatorFactory agg = metrics[i];
+      aggs[i] = agg.factorize(selectors.get(agg.getName()));
+    }
+    rowContainer.set(null);
+  }
+
+  private void doAggregate(
+      Aggregator[] aggs,
+      ThreadLocal<InputRow> rowContainer,
+      InputRow row,
+      boolean reportParseExceptions
+  )
+  {
     rowContainer.set(row);
 
     for (Aggregator agg : aggs) {
@@ -221,9 +240,6 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     }
 
     rowContainer.set(null);
-
-
-    return numEntries.get();
   }
 
   protected Aggregator[] concurrentGet(int offset)
