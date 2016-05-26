@@ -1190,11 +1190,16 @@ public class LookupCoordinatorManagerTest
         discoverer,
         mapper,
         configManager,
-        lookupCoordinatorManagerConfig
+        new LookupCoordinatorManagerConfig(){
+          @Override
+          public long getPeriod(){
+            return 1;
+          }
+        }
     );
     manager.start();
     manager.start();
-    Assert.assertNull(manager.getKnownLookups());
+    Assert.assertFalse(manager.waitForBackgroundTermination(10));
     EasyMock.verify(configManager);
   }
 
@@ -1219,6 +1224,7 @@ public class LookupCoordinatorManagerTest
         lookupCoordinatorManagerConfig
     );
     manager.start();
+    Assert.assertFalse(manager.waitForBackgroundTermination(10));
     manager.stop();
     manager.stop();
     EasyMock.verify(configManager);
@@ -1245,6 +1251,7 @@ public class LookupCoordinatorManagerTest
         lookupCoordinatorManagerConfig
     );
     manager.start();
+    Assert.assertFalse(manager.waitForBackgroundTermination(10));
     manager.stop();
     expectedException.expect(new BaseMatcher<Throwable>()
     {
