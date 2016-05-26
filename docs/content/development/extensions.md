@@ -53,6 +53,7 @@ All of these community extensions can be downloaded using *pull-deps* with the c
 |druid-rocketmq|RocketMQ firehose.|[link](../development/extensions-contrib/rocketmq.html)|
 |graphite-emitter|Graphite metrics emitter|[link](../development/extensions-contrib/graphite.html)|
 |statsd-emitter|StatsD metrics emitter|[link](../development/extensions-contrib/statsd.html)|
+|druid-orc-extensions|Support for data in Apache Orc data format.|[link](../development/extensions-contrib/orc.html)|
 
 ## Promoting Community Extension to Core Extension
 

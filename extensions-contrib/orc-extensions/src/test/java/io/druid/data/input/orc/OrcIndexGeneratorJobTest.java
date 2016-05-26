@@ -149,7 +149,7 @@ public class OrcIndexGeneratorJobTest
       String[] lineSplit = line.split(",");
       ((BytesColumnVector) batch.cols[0]).setRef(idx, lineSplit[0].getBytes(), 0, lineSplit[0].length());
       ((BytesColumnVector) batch.cols[1]).setRef(idx, lineSplit[1].getBytes(), 0, lineSplit[1].length());
-      ((LongColumnVector) batch.cols[2]).fill(Long.parseLong(lineSplit[2]));
+      ((LongColumnVector) batch.cols[2]).vector[idx] = Long.parseLong(lineSplit[2]);
     }
     writer.addRowBatch(batch);
     writer.close();
@@ -243,6 +243,7 @@ public class OrcIndexGeneratorJobTest
       Assert.assertTrue(segmentOutputFolder.exists());
       Assert.assertEquals(shardInfo.length, segmentOutputFolder.list().length);
 
+      int rowCount = 0;
       for (int partitionNum = 0; partitionNum < shardInfo.length; ++partitionNum) {
         File individualSegmentFolder = new File(segmentOutputFolder, Integer.toString(partitionNum));
         Assert.assertTrue(individualSegmentFolder.exists());
@@ -279,18 +280,15 @@ public class OrcIndexGeneratorJobTest
         QueryableIndex index = HadoopDruidIndexerConfig.INDEX_IO.loadIndex(dir);
         QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(index);
 
-        Indexed<String> hostString = adapter.getDimValueLookup("host");
-        int hostIndex = adapter.getDimensionNames().indexOf("host");
-
         for(Rowboat row: adapter.getRows())
         {
           Object[] metrics = row.getMetrics();
-          int[][] dimInts = row.getDims();
-          String host = hostString.get(dimInts[hostIndex][0]);
 
+          rowCount++;
           Assert.assertTrue(metrics.length == 2);
         }
       }
+      Assert.assertEquals(rowCount, data.size());
     }
   }
 
