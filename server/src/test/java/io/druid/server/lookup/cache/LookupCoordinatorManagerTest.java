@@ -1199,6 +1199,8 @@ public class LookupCoordinatorManagerTest
     );
     manager.start();
     manager.start();
+    Assert.assertTrue(manager.backgroundManagerIsRunning());
+    Assert.assertNull(manager.getKnownLookups());
     Assert.assertFalse(manager.waitForBackgroundTermination(10));
     EasyMock.verify(configManager);
   }
@@ -1224,6 +1226,7 @@ public class LookupCoordinatorManagerTest
         lookupCoordinatorManagerConfig
     );
     manager.start();
+    Assert.assertTrue(manager.backgroundManagerIsRunning());
     Assert.assertFalse(manager.waitForBackgroundTermination(10));
     manager.stop();
     manager.stop();
@@ -1251,6 +1254,7 @@ public class LookupCoordinatorManagerTest
         lookupCoordinatorManagerConfig
     );
     manager.start();
+    Assert.assertTrue(manager.backgroundManagerIsRunning());
     Assert.assertFalse(manager.waitForBackgroundTermination(10));
     manager.stop();
     expectedException.expect(new BaseMatcher<Throwable>()
