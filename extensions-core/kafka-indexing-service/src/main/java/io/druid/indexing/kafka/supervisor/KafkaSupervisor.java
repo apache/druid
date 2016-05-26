@@ -38,6 +38,7 @@ import com.metamx.common.ISE;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.concurrent.Execs;
 import io.druid.indexing.common.TaskLocation;
+import io.druid.indexing.common.TaskInfoProvider;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
@@ -45,6 +46,7 @@ import io.druid.indexing.kafka.KafkaDataSourceMetadata;
 import io.druid.indexing.kafka.KafkaIOConfig;
 import io.druid.indexing.kafka.KafkaIndexTask;
 import io.druid.indexing.kafka.KafkaIndexTaskClient;
+import io.druid.indexing.kafka.KafkaIndexTaskClientFactory;
 import io.druid.indexing.kafka.KafkaPartitions;
 import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
@@ -156,6 +158,7 @@ public class KafkaSupervisor implements Supervisor
   private final String dataSource;
   private final KafkaSupervisorIOConfig ioConfig;
   private final String supervisorId;
+  private final TaskInfoProvider taskInfoProvider;
 
   private final ExecutorService exec;
   private final ScheduledExecutorService scheduledExec;
@@ -171,18 +174,17 @@ public class KafkaSupervisor implements Supervisor
   private volatile boolean stopped = false;
 
   public KafkaSupervisor(
-      TaskStorage taskStorage,
-      TaskMaster taskMaster,
-      IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
-      KafkaIndexTaskClient taskClient,
-      ObjectMapper mapper,
-      KafkaSupervisorSpec spec
+      final TaskStorage taskStorage,
+      final TaskMaster taskMaster,
+      final IndexerMetadataStorageCoordinator indexerMetadataStorageCoordinator,
+      final KafkaIndexTaskClientFactory taskClientFactory,
+      final ObjectMapper mapper,
+      final KafkaSupervisorSpec spec
   )
   {
     this.taskStorage = taskStorage;
     this.taskMaster = taskMaster;
     this.indexerMetadataStorageCoordinator = indexerMetadataStorageCoordinator;
-    this.taskClient = taskClient;
     this.sortingMapper = mapper.copy().configure(MapperFeature.SORT_PROPERTIES_ALPHABETICALLY, true);
     this.spec = spec;
 
@@ -191,6 +193,44 @@ public class KafkaSupervisor implements Supervisor
     this.supervisorId = String.format("KafkaSupervisor-%s", dataSource);
     this.exec = Execs.singleThreaded(supervisorId + "-%d");
     this.scheduledExec = Execs.scheduledSingleThreaded(supervisorId + "-Scheduler-%d");
+
+    this.taskInfoProvider = new TaskInfoProvider()
+    {
+      @Override
+      public TaskLocation getTaskLocation(final String id)
+      {
+        Preconditions.checkNotNull(id, "id");
+        Optional<TaskRunner> taskRunner = taskMaster.getTaskRunner();
+        if (taskRunner.isPresent()) {
+          Optional<? extends TaskRunnerWorkItem> item = Iterables.tryFind(
+              taskRunner.get().getRunningTasks(), new Predicate<TaskRunnerWorkItem>()
+              {
+                @Override
+                public boolean apply(TaskRunnerWorkItem taskRunnerWorkItem)
+                {
+                  return id.equals(taskRunnerWorkItem.getTaskId());
+                }
+              }
+          );
+
+          if (item.isPresent()) {
+            return item.get().getLocation();
+          }
+        } else {
+          log.error("Failed to get task runner because I'm not the leader!");
+        }
+
+        return TaskLocation.unknown();
+      }
+
+      @Override
+      public Optional<TaskStatus> getTaskStatus(String id)
+      {
+        return taskStorage.getStatus(id);
+      }
+    };
+
+    this.taskClient = taskClientFactory.build(taskInfoProvider);
   }
 
   @Override
@@ -363,7 +403,7 @@ public class KafkaSupervisor implements Supervisor
       // have, as replicas that are supposed to publish the same segment may not have read the same set of offsets.
       for (TaskGroup taskGroup : taskGroups.values()) {
         for (Map.Entry<String, TaskData> entry : taskGroup.tasks.entrySet()) {
-          if (getTaskLocation(entry.getKey()) == null) {
+          if (taskInfoProvider.getTaskLocation(entry.getKey()).equals(TaskLocation.unknown())) {
             killTask(entry.getKey());
           } else {
             entry.getValue().startTime = new DateTime(0);
@@ -708,14 +748,14 @@ public class KafkaSupervisor implements Supervisor
       }
 
       if (task.status.isRunnable()) {
-        TaskLocation location = getTaskLocation(taskId);
-        if (location == null) {
+        if (taskInfoProvider.getTaskLocation(taskId).equals(TaskLocation.unknown())) {
           log.info("Killing task [%s] which hasn't been assigned to a worker", taskId);
           killTask(taskId);
+          i.remove();
         } else {
           Map<Integer, Long> currentOffsets;
           try {
-            currentOffsets = taskClient.pause(location, taskId); // pause task and get offsets
+            currentOffsets = taskClient.pause(taskId); // pause task and get offsets
           }
           catch (Exception e) {
             log.warn(e, "Task [%s] failed to respond to [pause] in a timely manner, killing task", taskId);
@@ -744,16 +784,13 @@ public class KafkaSupervisor implements Supervisor
       TaskData task = taskEntry.getValue();
 
       if (task.status.isRunnable()) {
-        TaskLocation location = getTaskLocation(taskId);
-        if (location != null) {
-          try {
-            taskClient.setEndOffsets(location, taskId, endOffsets, true);
-          }
-          catch (Exception e) {
-            log.warn(e, "Task [%s] failed to respond to [set end offsets] in a timely manner, killing task", taskId);
-            killTask(taskId);
-            i.remove();
-          }
+        try {
+          taskClient.setEndOffsets(taskId, endOffsets, true);
+        }
+        catch (Exception e) {
+          log.warn(e, "Task [%s] failed to respond to [set end offsets] in a timely manner, killing task", taskId);
+          killTask(taskId);
+          i.remove();
         }
       }
     }
@@ -1090,10 +1127,9 @@ public class KafkaSupervisor implements Supervisor
 
   private void stopTask(final String id, final boolean publish)
   {
-    TaskLocation taskLocation = getTaskLocation(id);
-    if (taskLocation != null) {
+    if (!taskInfoProvider.getTaskLocation(id).equals(TaskLocation.unknown())) {
       try {
-        taskClient.stop(taskLocation, id, publish);
+        taskClient.stop(id, publish);
       }
       catch (Exception e) {
         log.warn(e, "Task [%s] failed to stop in a timely manner, killing task", id);
@@ -1116,22 +1152,20 @@ public class KafkaSupervisor implements Supervisor
 
   private DateTime getTaskStartTime(final String id)
   {
-    DateTime startTime = null;
-    TaskLocation taskLocation = getTaskLocation(id);
-    if (taskLocation != null) {
-      startTime = taskClient.getStartTime(taskLocation, id);
+    if (!taskInfoProvider.getTaskLocation(id).equals(TaskLocation.unknown())) {
+      DateTime startTime = taskClient.getStartTime(id, false);
+      log.debug("Received start time of [%s] from task [%s]", startTime, id);
+      return startTime;
     }
 
-    log.debug("Received start time of [%s] from task [%s]", startTime, id);
-    return startTime;
+    return null;
   }
 
   private Optional<KafkaIndexTask.Status> getTaskStatus(final String id)
   {
-    TaskLocation taskLocation = getTaskLocation(id);
-    if (taskLocation != null) {
+    if (!taskInfoProvider.getTaskLocation(id).equals(TaskLocation.unknown())) {
       try {
-        return Optional.of(taskClient.getStatus(taskLocation, id));
+        return Optional.of(taskClient.getStatus(id));
       }
       catch (Exception e) {
         log.warn(e, "Failed to get status for task [%s]", id);
@@ -1143,10 +1177,9 @@ public class KafkaSupervisor implements Supervisor
 
   private Map<Integer, Long> getCurrentOffsets(final String id, final boolean retry)
   {
-    TaskLocation taskLocation = getTaskLocation(id);
-    if (taskLocation != null) {
+    if (!taskInfoProvider.getTaskLocation(id).equals(TaskLocation.unknown())) {
       try {
-        return taskClient.getCurrentOffsets(taskLocation, id, retry);
+        return taskClient.getCurrentOffsets(id, retry);
       }
       catch (Exception e) {
         // this happens regularly if generateReport() is frequently hit and a task is in transition and isn't fatal so
@@ -1156,32 +1189,6 @@ public class KafkaSupervisor implements Supervisor
     }
 
     return ImmutableMap.of();
-  }
-
-  private TaskLocation getTaskLocation(final String id)
-  {
-    Preconditions.checkNotNull(id, "id");
-    Optional<TaskRunner> taskRunner = taskMaster.getTaskRunner();
-    if (taskRunner.isPresent()) {
-      Optional<? extends TaskRunnerWorkItem> item = Iterables.tryFind(
-          taskRunner.get().getRunningTasks(), new Predicate<TaskRunnerWorkItem>()
-          {
-            @Override
-            public boolean apply(TaskRunnerWorkItem taskRunnerWorkItem)
-            {
-              return id.equals(taskRunnerWorkItem.getTaskId());
-            }
-          }
-      );
-
-      if (item.isPresent() && item.get().getLocation() != TaskLocation.unknown()) {
-        return item.get().getLocation();
-      }
-    } else {
-      log.error("Failed to get task runner because I'm not the leader!");
-    }
-
-    return null;
   }
 
   private int getTaskGroupIdForPartition(int partition)
