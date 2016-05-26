@@ -106,7 +106,7 @@ For example, using Avro Hadoop parser with custom reader's schema file:
     },
     "tuningConfig" : {
        "jobProperties" : {
-          "avro.schema.path.input.value" : "/path/to/my/schema.avsc",
+          "avro.schema.path.input.value" : "/path/to/my/schema.avsc"
       }
     }
   }
