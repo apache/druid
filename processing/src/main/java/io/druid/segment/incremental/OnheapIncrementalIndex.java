@@ -173,16 +173,8 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       doAggregate(aggs, rowContainer, row, reportParseExceptions);
     } else {
       aggs = new Aggregator[metrics.length];
-
-      rowContainer.set(row);
-      for (int i = 0; i < metrics.length; i++) {
-        final AggregatorFactory agg = metrics[i];
-        aggs[i] = agg.factorize(
-            selectors.get(agg.getName())
-        );
-        aggs[i].aggregate();
-      }
-      rowContainer.set(null);
+      factorizeAggs(metrics, aggs, rowContainer, row);
+      doAggregate(aggs, rowContainer, row, reportParseExceptions);
 
       final Integer rowIndex = indexIncrement.getAndIncrement();
       concurrentSet(rowIndex, aggs);
@@ -205,6 +197,21 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
     }
 
     return numEntries.get();
+  }
+
+  private void factorizeAggs(
+      AggregatorFactory[] metrics,
+      Aggregator[] aggs,
+      ThreadLocal<InputRow> rowContainer,
+      InputRow row
+  )
+  {
+    rowContainer.set(row);
+    for (int i = 0; i < metrics.length; i++) {
+      final AggregatorFactory agg = metrics[i];
+      aggs[i] = agg.factorize(selectors.get(agg.getName()));
+    }
+    rowContainer.set(null);
   }
 
   private void doAggregate(
