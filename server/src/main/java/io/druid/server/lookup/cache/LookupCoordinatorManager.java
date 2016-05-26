@@ -630,7 +630,11 @@ public class LookupCoordinatorManager
       }
       started = false;
       executorService.shutdownNow();
-      backgroundManagerFuture = null;
+      final ListenableScheduledFuture backgroundManagerFuture = this.backgroundManagerFuture;
+      this.backgroundManagerFuture = null;
+      if (backgroundManagerFuture != null && !backgroundManagerFuture.cancel(true)) {
+        LOG.warn("Background lookup manager thread could not be cancelled");
+      }
       // NOTE: we can't un-watch the configuration key
       LOG.debug("Stopped");
     }

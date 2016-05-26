@@ -1230,6 +1230,8 @@ public class LookupCoordinatorManagerTest
     Assert.assertFalse(manager.waitForBackgroundTermination(10));
     manager.stop();
     manager.stop();
+    Assert.assertTrue(manager.waitForBackgroundTermination(10));
+    Assert.assertFalse(manager.backgroundManagerIsRunning());
     EasyMock.verify(configManager);
   }
 
