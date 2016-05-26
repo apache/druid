@@ -51,7 +51,6 @@ import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
-import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.task.AbstractTask;
@@ -73,6 +72,7 @@ import io.druid.segment.realtime.appenderator.SegmentsAndMetadata;
 import io.druid.segment.realtime.appenderator.TransactionalSegmentPublisher;
 import io.druid.segment.realtime.firehose.ChatHandler;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
+import io.druid.segment.realtime.plumber.RejectionPolicy;
 import io.druid.timeline.DataSegment;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
@@ -142,6 +142,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   private volatile Thread runThread = null;
   private volatile boolean stopRequested = false;
   private volatile boolean publishOnStop = false;
+  private volatile RejectionPolicy rejectionPolicy;
 
   // The pause lock and associated conditions are to support coordination between the Jetty threads and the main
   // ingestion loop. The goal is to provide callers of the API a guarantee that if pause() returns successfully
@@ -191,6 +192,7 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
     this.chatHandlerProvider = Optional.fromNullable(chatHandlerProvider);
 
     this.endOffsets.putAll(ioConfig.getEndPartitions().getPartitionOffsetMap());
+    rejectionPolicy = tuningConfig.getRejectionPolicyFactory().create(tuningConfig.getWindowPeriod());
   }
 
   private static String makeTaskId(String dataSource, int randomBits)
@@ -411,20 +413,25 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
               try {
                 final InputRow row = Preconditions.checkNotNull(parser.parse(ByteBuffer.wrap(record.value())), "row");
-                final SegmentIdentifier identifier = driver.add(
-                    row,
-                    sequenceNames.get(record.partition()),
-                    committerSupplier
-                );
 
-                if (identifier == null) {
-                  // Failure to allocate segment puts determinism at risk, bail out to be safe.
-                  // May want configurable behavior here at some point.
-                  // If we allow continuing, then consider blacklisting the interval for a while to avoid constant checks.
-                  throw new ISE("Could not allocate segment for row with timestamp[%s]", row.getTimestamp());
+                if (rejectionPolicy.accept(row.getTimestampFromEpoch())) {
+                  final SegmentIdentifier identifier = driver.add(
+                      row,
+                      sequenceNames.get(record.partition()),
+                      committerSupplier
+                  );
+
+                  if (identifier == null) {
+                    // Failure to allocate segment puts determinism at risk, bail out to be safe.
+                    // May want configurable behavior here at some point.
+                    // If we allow continuing, then consider blacklisting the interval for a while to avoid constant checks.
+                    throw new ISE("Could not allocate segment for row with timestamp[%s]", row.getTimestamp());
+                  }
+
+                  fireDepartmentMetrics.incrementProcessed();
+                } else {
+                  fireDepartmentMetrics.incrementThrownAway();
                 }
-
-                fireDepartmentMetrics.incrementProcessed();
               }
               catch (ParseException e) {
                 if (tuningConfig.isReportParseExceptions()) {

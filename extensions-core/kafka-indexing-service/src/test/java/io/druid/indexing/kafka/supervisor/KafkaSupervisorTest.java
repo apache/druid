@@ -162,6 +162,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
         null,
         true,
         false,
+        null,
+        null,
         null
     );
   }

@@ -1192,7 +1192,9 @@ public class KafkaIndexTaskTest
         null,
         buildV9Directly,
         reportParseExceptions,
-        handoffConditionTimeout
+        handoffConditionTimeout,
+        null,
+        null
     );
     return new KafkaIndexTask(
         taskId,
