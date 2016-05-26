@@ -388,7 +388,7 @@ public class AppenderatorTest
     );
   }
 
-  private static InputRow IR(String ts, String dim, long met)
+  static InputRow IR(String ts, String dim, long met)
   {
     return new MapBasedInputRow(
         new DateTime(ts).getMillis(),
