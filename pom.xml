@@ -823,5 +823,14 @@
                 </pluginManagement>
             </build>
         </profile>
+        <profile>
+            <id>java8</id>
+            <activation>
+                <jdk>1.8</jdk>
+            </activation>
+            <modules>
+                <module>extensions-core/caffeine-cache</module>
+            </modules>
+        </profile>
     </profiles>
 </project>
