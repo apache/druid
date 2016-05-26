@@ -1,3 +1,7 @@
+---
+layout: doc_page
+---
+
 Druid Caffeine Cache
 --------------------
 
