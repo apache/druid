@@ -551,6 +551,10 @@ public class LookupCoordinatorManager
                 LOG.info("Not started. Returning");
                 return;
               }
+              if (allLookupTiers == null) {
+                LOG.info("Not updating lookups because no data exists");
+                return;
+              }
               for (final String tier : allLookupTiers.keySet()) {
                 try {
                   final Map<String, Map<String, Object>> allLookups = allLookupTiers.get(tier);
