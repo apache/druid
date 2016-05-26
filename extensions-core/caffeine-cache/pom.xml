@@ -25,7 +25,7 @@
   <groupId>io.druid.extensions</groupId>
   <artifactId>druid-caffeine-cache</artifactId>
   <name>druid-caffeine-cache</name>
-  <description>druid-caffeine-cache</description>
+  <description>Local cache implementation for Druid using Caffeine https://github.com/ben-manes/caffeine as the underlying implementation</description>
 
   <parent>
     <groupId>io.druid</groupId>
@@ -33,29 +33,6 @@
     <version>0.9.1-SNAPSHOT</version>
     <relativePath>../../pom.xml</relativePath>
   </parent>
-
-  <licenses>
-    <license>
-      <name>Apache License, Version 2.0</name>
-      <url>http://www.apache.org/licenses/LICENSE-2.0</url>
-    </license>
-  </licenses>
-
-  <developers>
-    <developer>
-      <name>Charles Allen</name>
-      <email>charles.allen@metamarkets.com</email>
-      <organization>Metamarkets Group Inc.</organization>
-      <organizationUrl>https://www.metamarkets.com</organizationUrl>
-    </developer>
-  </developers>
-
-  <scm>
-    <connection>scm:git:ssh://git@github.com/metamx/druid-cache-caffeine.git</connection>
-    <developerConnection>scm:git:ssh://git@github.com/metamx/druid-cache-caffeine.git</developerConnection>
-    <url>https://github.com/metamx/druid-cache-caffeine.git</url>
-    <tag>HEAD</tag>
-  </scm>
 
   <dependencies>
     <dependency>
@@ -100,69 +77,4 @@
       </plugin>
     </plugins>
   </build>
-  <!-- see https://github.com/metamx/oss-parent -->
-  <profiles>
-    <profile>
-      <id>release</id>
-      <distributionManagement>
-        <repository>
-          <id>sonatype-nexus-staging</id>
-          <url>https://oss.sonatype.org/service/local/staging/deploy/maven2/</url>
-        </repository>
-      </distributionManagement>
-
-      <build>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-source-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>attach-sources</id>
-                <goals>
-                  <goal>jar-no-fork</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-javadoc-plugin</artifactId>
-            <executions>
-              <execution>
-                <id>attach-javadocs</id>
-                <goals>
-                  <goal>jar</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-gpg-plugin</artifactId>
-            <version>1.6</version>
-            <executions>
-              <execution>
-                <id>sign-artifacts</id>
-                <phase>verify</phase>
-                <goals>
-                  <goal>sign</goal>
-                </goals>
-              </execution>
-            </executions>
-          </plugin>
-          <plugin>
-            <groupId>org.sonatype.plugins</groupId>
-            <artifactId>nexus-staging-maven-plugin</artifactId>
-            <extensions>true</extensions>
-            <configuration>
-              <serverId>sonatype-nexus-staging</serverId>
-              <nexusUrl>https://oss.sonatype.org/</nexusUrl>
-              <autoReleaseAfterClose>false</autoReleaseAfterClose>
-            </configuration>
-          </plugin>
-        </plugins>
-      </build>
-    </profile>
-  </profiles>
 </project>
