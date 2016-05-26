@@ -40,7 +40,7 @@ public class CaffeineDruidModule implements DruidModule
   public List<? extends Module> getJacksonModules()
   {
     return ImmutableList.of(
-        new SimpleModule("DruidCaffeineCache-" + System.identityHashCode(this))
+        new SimpleModule("DruidCaffeineCache")
             .registerSubtypes(CaffeineCacheProvider.class)
     );
   }

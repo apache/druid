@@ -33,13 +33,14 @@ import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.JsonConfigurator;
 import io.druid.guice.ManageLifecycle;
 import io.druid.initialization.Initialization;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Test;
+
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.UUID;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
 
 public class CaffeineCacheTest
 {
@@ -47,7 +48,14 @@ public class CaffeineCacheTest
   private static final byte[] HO = "hooooooooooooooooooo".getBytes();
 
   private CaffeineCache cache;
-  private final CaffeineCacheConfig cacheConfig = new CaffeineCacheConfig();
+  private final CaffeineCacheConfig cacheConfig = new CaffeineCacheConfig()
+  {
+    @Override
+    public boolean isEvictOnClose()
+    {
+      return true;
+    }
+  };
 
   @Before
   public void setUp() throws Exception
@@ -120,10 +128,8 @@ public class CaffeineCacheTest
     put(cache, aKey, 1);
     Assert.assertEquals(1, get(cache, aKey));
 
-    /* Lazily deleted by LRU
     cache.close("a");
     Assert.assertNull(cache.get(aKey));
-    */
 
     final Cache.NamedKey hiKey = new Cache.NamedKey("the", HI);
     final Cache.NamedKey hoKey = new Cache.NamedKey("the", HO);
@@ -132,16 +138,15 @@ public class CaffeineCacheTest
     Assert.assertEquals(10, get(cache, hiKey));
     Assert.assertEquals(20, get(cache, hoKey));
     cache.close("the");
-    /* Lazily deleted by LRU
+
     Assert.assertNull(cache.get(hiKey));
     Assert.assertNull(cache.get(hoKey));
-    */
 
     Assert.assertNull(cache.get(new Cache.NamedKey("miss", HI)));
 
     final CacheStats stats = cache.getStats();
     Assert.assertEquals(3, stats.getNumHits());
-    Assert.assertEquals(2, stats.getNumMisses());
+    Assert.assertEquals(5, stats.getNumMisses());
   }
 
   @Test
