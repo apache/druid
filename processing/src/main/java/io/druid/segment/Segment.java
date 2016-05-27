@@ -31,4 +31,23 @@ public interface Segment extends Closeable
   public Interval getDataInterval();
   public QueryableIndex asQueryableIndex();
   public StorageAdapter asStorageAdapter();
+  
+  /**
+   * Request an implementation of a particular interface.
+   *
+   * If the passed-in interface is {@link QueryableIndex} or {@link StorageAdapter}, then this method behaves
+   * identically to {@link #asQueryableIndex()} or {@link #asStorageAdapter()}. Other interfaces are only
+   * expected to be requested by callers that have specific knowledge of extra features provided by specific
+   * segment types. For example, an extension might provide a custom Segment type that can offer both
+   * StorageAdapter and some new interface. That extension can also offer a Query that uses that new interface.
+   * 
+   * Implementations which accept classes other than {@link QueryableIndex} or {@link StorageAdapter} are limited 
+   * to using those classes within the extension. This means that one extension cannot rely on the `Segment.as` 
+   * behavior of another extension.
+   *
+   * @param clazz desired interface
+   * @param <T> desired interface
+   * @return instance of clazz, or null if the interface is not supported by this segment
+   */
+  public <T> T as(Class<T> clazz);
 }
