@@ -25,6 +25,8 @@ import io.druid.segment.IndexSpec;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.indexing.TuningConfig;
 import io.druid.segment.realtime.appenderator.AppenderatorConfig;
+import io.druid.segment.realtime.plumber.NoopRejectionPolicyFactory;
+import io.druid.segment.realtime.plumber.RejectionPolicyFactory;
 import org.joda.time.Period;
 
 import java.io.File;
@@ -42,6 +44,8 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
   private final boolean buildV9Directly;
   private final boolean reportParseExceptions;
   private final long handoffConditionTimeout;
+  private final RejectionPolicyFactory rejectionPolicyFactory;
+  private final Period windowPeriod;
 
   @JsonCreator
   public KafkaTuningConfig(
@@ -53,7 +57,9 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
       @JsonProperty("indexSpec") IndexSpec indexSpec,
       @JsonProperty("buildV9Directly") Boolean buildV9Directly,
       @JsonProperty("reportParseExceptions") Boolean reportParseExceptions,
-      @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout
+      @JsonProperty("handoffConditionTimeout") Long handoffConditionTimeout,
+      @JsonProperty("rejectionPolicy") RejectionPolicyFactory rejectionPolicyFactory,
+      @JsonProperty("windowPeriod") Period windowPeriod
   )
   {
     // Cannot be a static because default basePersistDirectory is unique per-instance
@@ -74,6 +80,10 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     this.handoffConditionTimeout = handoffConditionTimeout == null
                                    ? defaults.getHandoffConditionTimeout()
                                    : handoffConditionTimeout;
+    this.rejectionPolicyFactory = rejectionPolicyFactory == null
+                                  ? new NoopRejectionPolicyFactory()
+                                  : rejectionPolicyFactory;
+    this.windowPeriod = windowPeriod == null ? new Period("P1D") : windowPeriod;
   }
 
   @JsonProperty
@@ -130,6 +140,18 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
     return handoffConditionTimeout;
   }
 
+  @JsonProperty("rejectionPolicy")
+  public RejectionPolicyFactory getRejectionPolicyFactory()
+  {
+    return rejectionPolicyFactory;
+  }
+
+  @JsonProperty
+  public Period getWindowPeriod()
+  {
+    return windowPeriod;
+  }
+
   public KafkaTuningConfig withBasePersistDirectory(File dir)
   {
     return new KafkaTuningConfig(
@@ -141,7 +163,9 @@ public class KafkaTuningConfig implements TuningConfig, AppenderatorConfig
         indexSpec,
         buildV9Directly,
         reportParseExceptions,
-        handoffConditionTimeout
+        handoffConditionTimeout,
+        rejectionPolicyFactory,
+        windowPeriod
     );
   }
 }
