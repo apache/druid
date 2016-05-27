@@ -978,7 +978,8 @@ public class KafkaSupervisor implements Supervisor
         new KafkaPartitions(ioConfig.getTopic(), endPartitions),
         consumerProperties,
         true,
-        false
+        false,
+        null
     );
 
     for (int i = 0; i < replicas; i++) {

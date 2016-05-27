@@ -1063,7 +1063,8 @@ public class KafkaSupervisorTest extends EasyMockSupport
             endPartitions,
             ImmutableMap.<String, String>of(),
             true,
-            false
+            false,
+            null
         ),
         ImmutableMap.<String, Object>of(),
         null
