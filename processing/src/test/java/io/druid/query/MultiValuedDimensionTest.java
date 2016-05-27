@@ -28,6 +28,7 @@ import com.google.common.collect.Maps;
 import com.google.common.io.Files;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
+
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.CSVParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -55,9 +56,11 @@ import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexSegment;
+import io.druid.segment.Segment;
 import io.druid.segment.TestHelper;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
+
 import org.apache.commons.io.FileUtils;
 import org.joda.time.DateTime;
 import org.junit.AfterClass;
@@ -150,7 +153,7 @@ public class MultiValuedDimensionTest
         .build();
 
     Sequence<Row> result = helper.runQueryOnSegmentsObjs(
-        ImmutableList.of(
+        ImmutableList.<Segment>of(
             new QueryableIndexSegment("sid1", queryableIndex),
             new IncrementalIndexSegment(incrementalIndex, "sid2")
         ),
@@ -170,7 +173,7 @@ public class MultiValuedDimensionTest
     TestHelper.assertExpectedObjects(expectedResults, Sequences.toList(result, new ArrayList<Row>()), "");
 
     result = helper.runQueryOnSegmentsObjs(
-        ImmutableList.of(
+        ImmutableList.<Segment>of(
             new QueryableIndexSegment("sid1", queryableIndex),
             new IncrementalIndexSegment(incrementalIndex, "sid2")
         ),
@@ -201,7 +204,7 @@ public class MultiValuedDimensionTest
         .build();
 
     Sequence<Row> result = helper.runQueryOnSegmentsObjs(
-        ImmutableList.of(
+        ImmutableList.<Segment>of(
             new QueryableIndexSegment("sid1", queryableIndex),
             new IncrementalIndexSegment(incrementalIndex, "sid2")
         ),
@@ -249,7 +252,7 @@ public class MultiValuedDimensionTest
         .build();
 
     Sequence<Row> result = helper.runQueryOnSegmentsObjs(
-        ImmutableList.of(
+        ImmutableList.<Segment>of(
             new QueryableIndexSegment("sid1", queryableIndex),
             new IncrementalIndexSegment(incrementalIndex, "sid2")
         ),
