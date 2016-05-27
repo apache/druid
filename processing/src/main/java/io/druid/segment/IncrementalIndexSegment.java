@@ -21,13 +21,14 @@ package io.druid.segment;
 
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
+
 import org.joda.time.Interval;
 
 import java.io.IOException;
 
 /**
  */
-public class IncrementalIndexSegment implements Segment
+public class IncrementalIndexSegment extends AbstractSegment
 {
   private final IncrementalIndex index;
   private final String segmentIdentifier;

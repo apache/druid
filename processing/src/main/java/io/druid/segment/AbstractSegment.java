@@ -16,54 +16,18 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 package io.druid.segment;
 
-import org.joda.time.Interval;
-
-import java.io.IOException;
-
-/**
-*/
-public class QueryableIndexSegment extends AbstractSegment
+public abstract class AbstractSegment implements Segment
 {
-  private final QueryableIndex index;
-  private final String identifier;
-
-  public QueryableIndexSegment(final String segmentIdentifier, QueryableIndex index)
-  {
-    this.index = index;
-    identifier = segmentIdentifier;
-  }
-
   @Override
-  public String getIdentifier()
+  public <T> T as(Class<T> clazz)
   {
-    return identifier;
-  }
-
-  @Override
-  public Interval getDataInterval()
-  {
-    return index.getDataInterval();
-  }
-
-  @Override
-  public QueryableIndex asQueryableIndex()
-  {
-    return index;
-  }
-
-  @Override
-  public StorageAdapter asStorageAdapter()
-  {
-    return new QueryableIndexStorageAdapter(index);
-  }
-
-  @Override
-  public void close() throws IOException
-  {
-    // this is kinda nasty
-    index.close();
+    if (clazz.equals(QueryableIndex.class)) {
+      return (T) asQueryableIndex();
+    } else if (clazz.equals(StorageAdapter.class)) {
+      return (T) asStorageAdapter();
+    }
+    return null;
   }
 }

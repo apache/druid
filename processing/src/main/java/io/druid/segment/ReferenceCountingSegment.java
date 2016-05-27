@@ -20,13 +20,14 @@
 package io.druid.segment;
 
 import com.metamx.emitter.EmittingLogger;
+
 import org.joda.time.Interval;
 
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class ReferenceCountingSegment implements Segment
+public class ReferenceCountingSegment extends AbstractSegment
 {
   private static final EmittingLogger log = new EmittingLogger(ReferenceCountingSegment.class);
 
