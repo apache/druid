@@ -36,7 +36,7 @@ public class StaticMapExtractionNamespaceCacheFactoryTest
   {
     final StaticMapExtractionNamespaceCacheFactory factory = new StaticMapExtractionNamespaceCacheFactory();
     final StaticMapExtractionNamespace namespace = new StaticMapExtractionNamespace(MAP);
-    final Map<String, String> cache = new HashMap<>();
+    final Map<Object, String> cache = new HashMap<>();
     Assert.assertEquals(factory.getVersion(), factory.getCachePopulator(null, namespace, null, cache).call());
     Assert.assertEquals(MAP, cache);
     Assert.assertNull(factory.getCachePopulator(null, namespace, factory.getVersion(), cache).call());

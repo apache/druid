@@ -340,7 +340,7 @@ public class SearchQueryRunnerTest
     expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, automotiveSnowman, 93));
 
     final LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(
-        new MapLookupExtractor(ImmutableMap.of("automotive", automotiveSnowman), false),
+        new MapLookupExtractor(ImmutableMap.<Object, String>of("automotive", automotiveSnowman), false),
         true,
         null,
         true,

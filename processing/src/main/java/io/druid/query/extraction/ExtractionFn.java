@@ -22,6 +22,7 @@ package io.druid.query.extraction;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.query.lookup.LookupExtractionFn;
+import io.druid.query.lookup.MultiDimLookupExtractionFn;
 import io.druid.query.lookup.RegisteredLookupExtractionFn;
 
 /**
@@ -42,7 +43,8 @@ import io.druid.query.lookup.RegisteredLookupExtractionFn;
     @JsonSubTypes.Type(name = "stringFormat", value = StringFormatExtractionFn.class),
     @JsonSubTypes.Type(name = "upper", value = UpperExtractionFn.class),
     @JsonSubTypes.Type(name = "lower", value = LowerExtractionFn.class),
-    @JsonSubTypes.Type(name = "bucket", value = BucketExtractionFn.class)
+    @JsonSubTypes.Type(name = "bucket", value = BucketExtractionFn.class),
+    @JsonSubTypes.Type(name = "multilookup", value = MultiDimLookupExtractionFn.class)
 })
 /**
  * An ExtractionFn is a function that can be used to transform the values of a column (typically a dimension)

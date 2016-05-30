@@ -162,7 +162,7 @@ public class TimeFilteringTest extends BaseFilterTest
   @Test
   public void testTimeFilterWithExtractionFn()
   {
-    final Map<String, String> stringMap = new HashMap<>();
+    final Map<Object, String> stringMap = new HashMap<>();
     stringMap.put("0", "Monday");
     stringMap.put("1", "Tuesday");
     stringMap.put("2", "Wednesday");

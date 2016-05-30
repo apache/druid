@@ -79,7 +79,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   private final AtomicLong doubleEventCount = new AtomicLong(0L);
   private final NamespaceExtractionCacheManager cacheManager;
   private final String factoryId;
-  private final AtomicReference<Map<String, String>> mapRef = new AtomicReference<>(null);
+  private final AtomicReference<Map<Object, String>> mapRef = new AtomicReference<>(null);
   private final AtomicBoolean started = new AtomicBoolean(false);
 
   private volatile ListenableFuture<?> future = null;
@@ -180,7 +180,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
       kafkaProperties.setProperty("group.id", factoryId);
       final String topic = getKafkaTopic();
       LOG.debug("About to listen to topic [%s] with group.id [%s]", topic, factoryId);
-      final Map<String, String> map = cacheManager.getCacheMap(factoryId);
+      final Map<Object, String> map = cacheManager.getCacheMap(factoryId);
       mapRef.set(map);
       // Enable publish-subscribe
       kafkaProperties.setProperty("auto.offset.reset", "smallest");
@@ -346,7 +346,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   @Override
   public LookupExtractor get()
   {
-    final Map<String, String> map = Preconditions.checkNotNull(mapRef.get(), "Not started");
+    final Map<Object, String> map = Preconditions.checkNotNull(mapRef.get(), "Not started");
     final long startCount = doubleEventCount.get();
     return new MapLookupExtractor(map, isInjective())
     {
@@ -388,7 +388,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     return cacheManager;
   }
 
-  AtomicReference<Map<String, String>> getMapRef()
+  AtomicReference<Map<Object, String>> getMapRef()
   {
     return mapRef;
   }

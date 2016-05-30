@@ -36,7 +36,7 @@ import java.util.Map;
 
 public class RegisteredLookupExtractionFnTest
 {
-  private static Map<String, String> MAP = ImmutableMap.of(
+  private static Map<Object, String> MAP = ImmutableMap.<Object, String>of(
       "foo", "bar",
       "bat", "baz"
   );

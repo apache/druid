@@ -196,7 +196,7 @@ public class JDBCExtractionNamespaceTest
                           final String id,
                           final JDBCExtractionNamespace namespace,
                           final String lastVersion,
-                          final Map<String, String> cache
+                          final Map<Object, String> cache
                       )
                       {
                         final Callable<String> cachePopulator = super.getCachePopulator(
@@ -375,7 +375,7 @@ public class JDBCExtractionNamespaceTest
         new Period(0)
     );
     NamespaceExtractionCacheManagersTest.waitFor(extractionCacheManager.schedule(namespace, extractionNamespace));
-    final Map<String, String> map = extractionCacheManager.getCacheMap(namespace);
+    final Map<Object, String> map = extractionCacheManager.getCacheMap(namespace);
 
     for (Map.Entry<String, String> entry : renames.entrySet()) {
       String key = entry.getKey();
@@ -467,7 +467,7 @@ public class JDBCExtractionNamespaceTest
   {
     waitForUpdates(1_000L, 2L);
 
-    Map<String, String> map = extractionCacheManager.getCacheMap(namespace);
+    Map<Object, String> map = extractionCacheManager.getCacheMap(namespace);
 
     // rely on test timeout to break out of this loop
     while (!expected.equals(map.get(key))) {

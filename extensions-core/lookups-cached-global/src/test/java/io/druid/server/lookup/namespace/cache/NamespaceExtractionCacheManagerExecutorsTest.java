@@ -97,7 +97,7 @@ public class NamespaceExtractionCacheManagerExecutorsTest
           final String id,
           final URIExtractionNamespace extractionNamespace,
           final String lastVersion,
-          final Map<String, String> cache
+          final Map<Object, String> cache
       )
       {
         return new Callable<String>()

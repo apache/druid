@@ -43,7 +43,7 @@ import java.util.Map;
 @RunWith(JUnitParamsRunner.class)
 public class LookupDimensionSpecTest
 {
-  private static final Map<String, String> STRING_MAP = ImmutableMap.of("key", "value", "key2", "value2");
+  private static final Map<Object, String> STRING_MAP = ImmutableMap.<Object, String>of("key", "value", "key2", "value2");
   private static LookupExtractor MAP_LOOKUP_EXTRACTOR = new MapLookupExtractor(
       STRING_MAP, true);
 

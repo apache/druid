@@ -109,7 +109,7 @@ public class NamespaceExtractionCacheManagersTest
   {
     // prepopulate caches
     for (String ns : nsList) {
-      final ConcurrentMap<String, String> map = extractionCacheManager.getCacheMap(ns);
+      final ConcurrentMap<Object, String> map = extractionCacheManager.getCacheMap(ns);
       map.put("oldNameSeed1", "oldNameSeed2");
     }
   }
@@ -118,7 +118,7 @@ public class NamespaceExtractionCacheManagersTest
   public void testSimpleCacheCreate()
   {
     for (String ns : nsList) {
-      ConcurrentMap<String, String> map = extractionCacheManager.getCacheMap(ns);
+      ConcurrentMap<Object, String> map = extractionCacheManager.getCacheMap(ns);
       map.put("key", "val");
       Assert.assertEquals("val", map.get("key"));
       Assert.assertEquals("val", extractionCacheManager.getCacheMap(ns).get("key"));
@@ -129,13 +129,13 @@ public class NamespaceExtractionCacheManagersTest
   public void testSimpleCacheSwap()
   {
     for (String ns : nsList) {
-      ConcurrentMap<String, String> map = extractionCacheManager.getCacheMap(ns + "old_cache");
+      ConcurrentMap<Object, String> map = extractionCacheManager.getCacheMap(ns + "old_cache");
       map.put("key", "val");
       extractionCacheManager.swapAndClearCache(ns, ns + "old_cache");
       Assert.assertEquals("val", map.get("key"));
       Assert.assertEquals("val", extractionCacheManager.getCacheMap(ns).get("key"));
 
-      ConcurrentMap<String, String> map2 = extractionCacheManager.getCacheMap(ns + "cache");
+      ConcurrentMap<Object, String> map2 = extractionCacheManager.getCacheMap(ns + "cache");
       map2.put("key", "val2");
       Assert.assertTrue(extractionCacheManager.swapAndClearCache(ns, ns + "cache"));
       Assert.assertEquals("val2", map2.get("key"));
@@ -147,7 +147,7 @@ public class NamespaceExtractionCacheManagersTest
   public void testMissingCacheThrowsIAE()
   {
     for (String ns : nsList) {
-      ConcurrentMap<String, String> map = extractionCacheManager.getCacheMap(ns);
+      ConcurrentMap<Object, String> map = extractionCacheManager.getCacheMap(ns);
       map.put("key", "val");
       Assert.assertEquals("val", map.get("key"));
       Assert.assertEquals("val", extractionCacheManager.getCacheMap(ns).get("key"));

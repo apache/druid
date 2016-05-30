@@ -2311,7 +2311,7 @@ public class TimeseriesQueryRunnerTest
   @Test
   public void testTimeSeriesWithSelectionFilterLookupExtractionFn()
   {
-    Map<String, String> extractionMap = new HashMap<>();
+    Map<Object, String> extractionMap = new HashMap<>();
     extractionMap.put("spot","upfront");
 
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);

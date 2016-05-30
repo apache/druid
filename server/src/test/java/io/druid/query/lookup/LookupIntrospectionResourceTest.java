@@ -52,7 +52,7 @@ public class LookupIntrospectionResourceTest
   public void testNotImplementedIntrospectLookup()
   {
     EasyMock.expect(lookupExtractorFactory.getIntrospectHandler()).andReturn(null);
-    EasyMock.expect(lookupExtractorFactory.get()).andReturn(new MapLookupExtractor(ImmutableMap.<String, String>of(), false)).anyTimes();
+    EasyMock.expect(lookupExtractorFactory.get()).andReturn(new MapLookupExtractor(ImmutableMap.<Object, String>of(), false)).anyTimes();
     EasyMock.replay(lookupExtractorFactory);
     Assert.assertEquals(Response.status(Response.Status.NOT_FOUND).build().getStatus(), ((Response) lookupIntrospectionResource.introspectLookup("lookupId")).getStatus());
   }
@@ -67,7 +67,7 @@ public class LookupIntrospectionResourceTest
   @Test public void testExistingLookup()
   {
     EasyMock.expect(lookupExtractorFactory.getIntrospectHandler()).andReturn(lookupIntrospectHandler);
-    EasyMock.expect(lookupExtractorFactory.get()).andReturn(new MapLookupExtractor(ImmutableMap.<String, String>of(), false)).anyTimes();
+    EasyMock.expect(lookupExtractorFactory.get()).andReturn(new MapLookupExtractor(ImmutableMap.<Object, String>of(), false)).anyTimes();
     EasyMock.replay(lookupExtractorFactory);
     Assert.assertEquals(lookupIntrospectHandler, lookupIntrospectionResource.introspectLookup("lookupId"));
   }
@@ -86,7 +86,7 @@ public class LookupIntrospectionResourceTest
 
     LookupExtractorFactory lookupExtractorFactory1 = new LookupExtractorFactory()
     {
-      final LookupExtractor mapLookup = new MapLookupExtractor(ImmutableMap.<String, String>of("key", "value"), true);
+      final LookupExtractor mapLookup = new MapLookupExtractor(ImmutableMap.<Object, String>of("key", "value"), true);
 
       @Override
       public boolean start()

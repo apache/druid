@@ -176,7 +176,7 @@ public class LongFilteringTest extends BaseFilterTest
   @Test
   public void testLongFilterWithExtractionFn()
   {
-    final Map<String, String> stringMap = new HashMap<>();
+    final Map<Object, String> stringMap = new HashMap<>();
     stringMap.put("1", "Monday");
     stringMap.put("2", "Tuesday");
     stringMap.put("3", "Wednesday");

@@ -54,7 +54,7 @@ public class JDBCExtractionNamespaceCacheFactory
       final String id,
       final JDBCExtractionNamespace namespace,
       final String lastVersion,
-      final Map<String, String> cache
+      final Map<Object, String> cache
   )
   {
     final long lastCheck = lastVersion == null ? JodaUtils.MIN_INSTANT : Long.parseLong(lastVersion);

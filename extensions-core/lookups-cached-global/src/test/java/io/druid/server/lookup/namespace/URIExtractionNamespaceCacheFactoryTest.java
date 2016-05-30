@@ -340,7 +340,7 @@ public class URIExtractionNamespaceCacheFactoryTest
   {
     Assert.assertTrue(manager.getKnownIDs().isEmpty());
     NamespaceExtractionCacheManagersTest.waitFor(manager.schedule(id, namespace));
-    Map<String, String> map = manager.getCacheMap(id);
+    Map<Object, String> map = manager.getCacheMap(id);
     Assert.assertEquals("bar", map.get("foo"));
     Assert.assertEquals(null, map.get("baz"));
   }
@@ -359,7 +359,7 @@ public class URIExtractionNamespaceCacheFactoryTest
     );
     Assert.assertTrue(!manager.getKnownIDs().contains(regexID));
     NamespaceExtractionCacheManagersTest.waitFor(manager.schedule(regexID, namespace));
-    Map<String, String> map = manager.getCacheMap(regexID);
+    Map<Object, String> map = manager.getCacheMap(regexID);
     Assert.assertNotNull(map);
     Assert.assertEquals("bar", map.get("foo"));
     Assert.assertEquals(null, map.get("baz"));
@@ -388,7 +388,7 @@ public class URIExtractionNamespaceCacheFactoryTest
     }
 
     for (String id : ids) {
-      final Map<String, String> map = manager.getCacheMap(id);
+      final Map<Object, String> map = manager.getCacheMap(id);
       Assert.assertEquals("bar", map.get("foo"));
       Assert.assertEquals(null, map.get("baz"));
       manager.delete(id);
@@ -401,7 +401,7 @@ public class URIExtractionNamespaceCacheFactoryTest
   {
     Assert.assertTrue(manager.getKnownIDs().isEmpty());
 
-    ConcurrentMap<String, String> map = new ConcurrentHashMap<>();
+    ConcurrentMap<Object, String> map = new ConcurrentHashMap<>();
     Callable<String> populator = factory.getCachePopulator(id, namespace, null, map);
 
     String v = populator.call();
@@ -427,7 +427,7 @@ public class URIExtractionNamespaceCacheFactoryTest
         null
     );
     Assert.assertTrue(new File(namespace.getUri()).delete());
-    ConcurrentMap<String, String> map = new ConcurrentHashMap<>();
+    ConcurrentMap<Object, String> map = new ConcurrentHashMap<>();
     try {
       factory.getCachePopulator(id, badNamespace, null, map).call();
     }
@@ -452,7 +452,7 @@ public class URIExtractionNamespaceCacheFactoryTest
         null
     );
     Assert.assertTrue(new File(namespace.getUri()).delete());
-    ConcurrentMap<String, String> map = new ConcurrentHashMap<>();
+    ConcurrentMap<Object, String> map = new ConcurrentHashMap<>();
     expectedException.expect(new BaseMatcher<Throwable>()
     {
       @Override
@@ -559,7 +559,7 @@ public class URIExtractionNamespaceCacheFactoryTest
         Period.millis((int) namespace.getPollMs()),
         null
     );
-    final Map<String, String> map = new HashMap<>();
+    final Map<Object, String> map = new HashMap<>();
     Assert.assertNotNull(factory.getCachePopulator(id, extractionNamespace, null, map).call());
   }
 }

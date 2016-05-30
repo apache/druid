@@ -157,7 +157,12 @@ public class InDimFilter implements DimFilter
         if (!exFn.isRetainMissingValue() && Objects.equals(convertedValue, exFn.getReplaceMissingValueWith())) {
           return this;
         }
-        keys.addAll(lookup.unapply(convertedValue));
+        for (Object key: lookup.unapply(convertedValue))
+        {
+          if (key instanceof String) {
+            keys.add((String)key);
+          }
+        }
 
         // If retainMissingValues is true and the selector value is not in the lookup map,
         // there may be row values that match the selector value but are not included

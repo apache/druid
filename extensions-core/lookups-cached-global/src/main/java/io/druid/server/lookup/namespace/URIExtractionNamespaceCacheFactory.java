@@ -65,7 +65,7 @@ public class URIExtractionNamespaceCacheFactory implements ExtractionNamespaceCa
       final String id,
       final URIExtractionNamespace extractionNamespace,
       final String lastVersion,
-      final Map<String, String> cache
+      final Map<Object, String> cache
   )
   {
     final long lastCached = lastVersion == null ? JodaUtils.MIN_INSTANT : Long.parseLong(lastVersion);

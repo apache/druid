@@ -54,7 +54,7 @@ public class MapPopulator<K, V>
    *
    * @throws IOException
    */
-  public long populate(final ByteSource source, final Map<K, V> map) throws IOException
+  public long populate(final ByteSource source, final Map<Object, V> map) throws IOException
   {
     return source.asCharSource(Charsets.UTF_8).readLines(
         new LineProcessor<Long>()

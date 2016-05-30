@@ -31,7 +31,7 @@ public class MapLookupExtractorFactoryTest
 {
   private static final String KEY = "foo";
   private static final String VALUE = "bar";
-  private static final MapLookupExtractorFactory factory = new MapLookupExtractorFactory(ImmutableMap.of(KEY, VALUE), true);
+  private static final MapLookupExtractorFactory factory = new MapLookupExtractorFactory(ImmutableMap.<Object, String>of(KEY, VALUE), true);
 
   @Test
   public void testSimpleExtraction()
@@ -44,10 +44,10 @@ public class MapLookupExtractorFactoryTest
   public void testReplaces()
   {
     Assert.assertFalse(factory.replaces(factory));
-    Assert.assertFalse(factory.replaces(new MapLookupExtractorFactory(ImmutableMap.of(KEY, VALUE), true)));
-    Assert.assertTrue(factory.replaces(new MapLookupExtractorFactory(ImmutableMap.of(KEY, VALUE), false)));
-    Assert.assertTrue(factory.replaces(new MapLookupExtractorFactory(ImmutableMap.of(KEY + "1", VALUE), true)));
-    Assert.assertTrue(factory.replaces(new MapLookupExtractorFactory(ImmutableMap.of(KEY, VALUE + "1"), true)));
+    Assert.assertFalse(factory.replaces(new MapLookupExtractorFactory(ImmutableMap.<Object, String>of(KEY, VALUE), true)));
+    Assert.assertTrue(factory.replaces(new MapLookupExtractorFactory(ImmutableMap.<Object, String>of(KEY, VALUE), false)));
+    Assert.assertTrue(factory.replaces(new MapLookupExtractorFactory(ImmutableMap.<Object, String>of(KEY + "1", VALUE), true)));
+    Assert.assertTrue(factory.replaces(new MapLookupExtractorFactory(ImmutableMap.<Object, String>of(KEY, VALUE + "1"), true)));
     Assert.assertTrue(factory.replaces(null));
   }
 
@@ -56,7 +56,7 @@ public class MapLookupExtractorFactoryTest
   {
     ObjectMapper mapper = new DefaultObjectMapper();
     mapper.registerSubtypes(MapLookupExtractorFactory.class);
-    LookupExtractorFactory lookupExtractorFactory = new MapLookupExtractorFactory(ImmutableMap.of("key", "value"), true);
+    LookupExtractorFactory lookupExtractorFactory = new MapLookupExtractorFactory(ImmutableMap.<Object, String>of("key", "value"), true);
     Assert.assertEquals(lookupExtractorFactory, mapper.reader(LookupExtractorFactory.class).readValue(mapper.writeValueAsString(lookupExtractorFactory)));
   }
 }

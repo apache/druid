@@ -1076,7 +1076,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithRebucketRename()
   {
-    Map<String, String> map = new HashMap<>();
+    Map<Object, String> map = new HashMap<>();
     map.put("automotive", "automotive0");
     map.put("business", "business0");
     map.put("entertainment", "entertainment0");
@@ -1155,7 +1155,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithSimpleRenameRetainMissingNonInjective()
   {
-    Map<String, String> map = new HashMap<>();
+    Map<Object, String> map = new HashMap<>();
     map.put("automotive", "automotive0");
     map.put("business", "business0");
     map.put("entertainment", "entertainment0");
@@ -1234,7 +1234,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithSimpleRenameRetainMissing()
   {
-    Map<String, String> map = new HashMap<>();
+    Map<Object, String> map = new HashMap<>();
     map.put("automotive", "automotive0");
     map.put("business", "business0");
     map.put("entertainment", "entertainment0");
@@ -1313,7 +1313,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithSimpleRenameAndMissingString()
   {
-    Map<String, String> map = new HashMap<>();
+    Map<Object, String> map = new HashMap<>();
     map.put("automotive", "automotive0");
     map.put("business", "business0");
     map.put("entertainment", "entertainment0");
@@ -1391,7 +1391,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithSimpleRename()
   {
-    Map<String, String> map = new HashMap<>();
+    Map<Object, String> map = new HashMap<>();
     map.put("automotive", "automotive0");
     map.put("business", "business0");
     map.put("entertainment", "entertainment0");
@@ -2814,7 +2814,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithAlphaNumericDimensionOrder()
   {
-    Map<String, String> map = new HashMap<>();
+    Map<Object, String> map = new HashMap<>();
     map.put("automotive", "health105");
     map.put("business", "health20");
     map.put("entertainment", "travel47");
@@ -5478,7 +5478,7 @@ public class GroupByQueryRunnerTest
                     "alias",
                     new LookupExtractionFn(
                         new MapLookupExtractor(
-                            ImmutableMap.of(
+                            ImmutableMap.<Object, String>of(
                                 "mezzanine",
                                 "mezzanine0"
                             ),
@@ -5553,7 +5553,7 @@ public class GroupByQueryRunnerTest
                     "alias",
                     new LookupExtractionFn(
                         new MapLookupExtractor(
-                            ImmutableMap.of(
+                            ImmutableMap.<Object, String>of(
                                 "mezzanine",
                                 "mezzanine0"
                             ),
@@ -5598,7 +5598,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithExtractionDimFilter()
   {
-    Map<String, String> extractionMap = new HashMap<>();
+    Map<Object, String> extractionMap = new HashMap<>();
     extractionMap.put("automotive", "automotiveAndBusinessAndNewsAndMezzanine");
     extractionMap.put("business", "automotiveAndBusinessAndNewsAndMezzanine");
     extractionMap.put("mezzanine", "automotiveAndBusinessAndNewsAndMezzanine");
@@ -5665,7 +5665,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithExtractionDimFilterCaseMappingValueIsNullOrEmpty()
   {
-    Map<String, String> extractionMap = new HashMap<>();
+    Map<Object, String> extractionMap = new HashMap<>();
     extractionMap.put("automotive", "automotive0");
     extractionMap.put("business", "business0");
     extractionMap.put("entertainment", "entertainment0");
@@ -5711,7 +5711,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithExtractionDimFilterWhenSearchValueNotInTheMap()
   {
-    Map<String, String> extractionMap = new HashMap<>();
+    Map<Object, String> extractionMap = new HashMap<>();
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
     LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(mapLookupExtractor, false, null, true, false);
 
@@ -5750,7 +5750,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithExtractionDimFilterKeyisNull()
   {
-    Map<String, String> extractionMap = new HashMap<>();
+    Map<Object, String> extractionMap = new HashMap<>();
     extractionMap.put("", "NULLorEMPTY");
 
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
@@ -5794,7 +5794,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithAggregatorFilterAndExtractionFunction()
   {
-    Map<String, String> extractionMap = new HashMap<>();
+    Map<Object, String> extractionMap = new HashMap<>();
     extractionMap.put("automotive", "automotive0");
     extractionMap.put("business", "business0");
     extractionMap.put("entertainment", "entertainment0");
@@ -5861,7 +5861,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithExtractionDimFilterOptimazitionManyToOne()
   {
-    Map<String, String> extractionMap = new HashMap<>();
+    Map<Object, String> extractionMap = new HashMap<>();
     extractionMap.put("mezzanine", "newsANDmezzanine");
     extractionMap.put("news", "newsANDmezzanine");
 
@@ -5901,7 +5901,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithExtractionDimFilterNullDims()
   {
-    Map<String, String> extractionMap = new HashMap<>();
+    Map<Object, String> extractionMap = new HashMap<>();
     extractionMap.put("", "EMPTY");
 
     MapLookupExtractor mapLookupExtractor = new MapLookupExtractor(extractionMap, false);
@@ -6026,7 +6026,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testGroupByWithAllFiltersOnNullDimsWithExtractionFns()
   {
-    Map<String, String> extractionMap = new HashMap<>();
+    Map<Object, String> extractionMap = new HashMap<>();
     extractionMap.put("", "EMPTY");
     extractionMap.put(null, "EMPTY");
 

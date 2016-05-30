@@ -87,14 +87,14 @@ public class LookupExtractionFnTest
       return;
     }
     final LookupExtractionFn lookupExtractionFn1 = new LookupExtractionFn(
-        new MapLookupExtractor(ImmutableMap.of("foo", "bar"), false),
+        new MapLookupExtractor(ImmutableMap.<Object, String>of("foo", "bar"), false),
         retainMissing,
         replaceMissing,
         injective,
         false
     );
     final LookupExtractionFn lookupExtractionFn2 = new LookupExtractionFn(
-        new MapLookupExtractor(ImmutableMap.of("foo", "bar"), false),
+        new MapLookupExtractor(ImmutableMap.<Object, String>of("foo", "bar"), false),
         retainMissing,
         replaceMissing,
         injective,
@@ -103,7 +103,7 @@ public class LookupExtractionFnTest
 
 
     final LookupExtractionFn lookupExtractionFn3 = new LookupExtractionFn(
-        new MapLookupExtractor(ImmutableMap.of("foo", "bar2"), false),
+        new MapLookupExtractor(ImmutableMap.<Object, String>of("foo", "bar2"), false),
         retainMissing,
         replaceMissing,
         injective,
@@ -124,7 +124,7 @@ public class LookupExtractionFnTest
       return;
     }
     final LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(
-        new MapLookupExtractor(ImmutableMap.of("foo", "bar"), false),
+        new MapLookupExtractor(ImmutableMap.<Object, String>of("foo", "bar"), false),
         retainMissing,
         replaceMissing,
         injective,
@@ -151,7 +151,7 @@ public class LookupExtractionFnTest
   {
     if (retainMissing && !Strings.isNullOrEmpty(replaceMissing)) {
       final LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(
-          new MapLookupExtractor(ImmutableMap.of("foo", "bar"), false),
+          new MapLookupExtractor(ImmutableMap.<Object, String>of("foo", "bar"), false),
           retainMissing,
           Strings.emptyToNull(replaceMissing),
           injective,
@@ -169,11 +169,11 @@ public class LookupExtractionFnTest
       // skip
       return;
     }
-    final Map<String, String> weirdMap = Maps.newHashMap();
+    final Map<Object, String> weirdMap = Maps.newHashMap();
     weirdMap.put("foobar", null);
 
     final LookupExtractionFn lookupExtractionFn = new LookupExtractionFn(
-        new MapLookupExtractor(ImmutableMap.of("foo", "bar"), false),
+        new MapLookupExtractor(ImmutableMap.<Object, String>of("foo", "bar"), false),
         retainMissing,
         replaceMissing,
         injective,

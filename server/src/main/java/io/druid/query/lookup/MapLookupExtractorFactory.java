@@ -37,7 +37,7 @@ import java.util.Map;
 public class MapLookupExtractorFactory implements LookupExtractorFactory
 {
   @JsonProperty
-  private final Map<String, String> map;
+  private final Map<Object, String> map;
   @JsonProperty
   private final boolean isOneToOne;
   private final MapLookupExtractor lookupExtractor;
@@ -45,7 +45,7 @@ public class MapLookupExtractorFactory implements LookupExtractorFactory
 
   @JsonCreator
   public MapLookupExtractorFactory(
-      @JsonProperty("map") Map<String, String> map,
+      @JsonProperty("map") Map<Object, String> map,
       @JsonProperty("isOneToOne") boolean isOneToOne
   )
   {
@@ -122,8 +122,8 @@ public class MapLookupExtractorFactory implements LookupExtractorFactory
 
   public static class MapLookupIntrospectionHandler implements LookupIntrospectHandler
   {
-    final private Map<String, String> map;
-    public MapLookupIntrospectionHandler(Map<String, String> map)
+    final private Map<Object, String> map;
+    public MapLookupIntrospectionHandler(Map<Object, String> map)
     {
       this.map = map;
     }
