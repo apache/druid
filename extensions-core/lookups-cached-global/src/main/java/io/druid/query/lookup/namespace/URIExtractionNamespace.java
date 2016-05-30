@@ -33,6 +33,7 @@ import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.metamx.common.IAE;
 import com.metamx.common.UOE;
 import com.metamx.common.parsers.CSVParser;
@@ -40,6 +41,7 @@ import com.metamx.common.parsers.DelimitedParser;
 import com.metamx.common.parsers.JSONParser;
 import com.metamx.common.parsers.Parser;
 import io.druid.guice.annotations.Json;
+import org.apache.commons.collections.keyvalue.MultiKey;
 import org.joda.time.Period;
 
 import javax.annotation.Nullable;
@@ -190,40 +192,57 @@ public class URIExtractionNamespace implements ExtractionNamespace
     return result;
   }
 
-  private static class DelegateParser implements Parser<String, String>
+  private static class DelegateParser implements Parser<Object, String>
   {
     private final Parser<String, Object> delegate;
-    private final String key;
+    private final List<String> keys;
     private final String value;
 
     private DelegateParser(
         Parser<String, Object> delegate,
-        @NotNull String key,
+        @NotNull List<String> keys,
         @NotNull String value
     )
     {
       this.delegate = delegate;
-      this.key = key;
+      this.keys = keys;
       this.value = value;
     }
 
     @Override
-    public Map<String, String> parse(String input)
+    public Map<Object, String> parse(String input)
     {
       final Map<String, Object> inner = delegate.parse(input);
-      final String k = Preconditions.checkNotNull(
-          inner.get(key),
-          "Key column [%s] missing data in line [%s]",
-          key,
-          input
-      ).toString(); // Just in case is long
+      Object keyObject;
+      if (keys.size() > 1) {
+        final String[] keyArray = new String[keys.size()];
+        for (int idx = 0; idx < keys.size(); idx++) {
+          String key = keys.get(idx);
+          final String k = Preconditions.checkNotNull(
+              inner.get(key),
+              "Key column [%s] missing data in line [%s]",
+              key,
+              input
+          ).toString(); // Just in case is long
+          keyArray[idx] = k;
+        }
+        keyObject = new MultiKey(keyArray, false);
+      } else {
+        String key = keys.get(0);
+        keyObject = Preconditions.checkNotNull(
+            inner.get(key),
+            "Key column [%s] missing data in line [%s]",
+            key,
+            input
+        ).toString(); // Just in case is long
+      }
       final String val = Preconditions.checkNotNull(
           inner.get(value),
           "Value column [%s] missing data in line [%s]",
           value,
           input
       ).toString();
-      return ImmutableMap.<String, String>of(k, val);
+      return ImmutableMap.of(keyObject, val);
     }
 
     @Override
@@ -248,21 +267,21 @@ public class URIExtractionNamespace implements ExtractionNamespace
   })
   public static interface FlatDataParser
   {
-    Parser<String, String> getParser();
+    Parser<Object, String> getParser();
   }
 
   @JsonTypeName("csv")
   public static class CSVFlatDataParser implements FlatDataParser
   {
-    private final Parser<String, String> parser;
+    private final Parser<Object, String> parser;
     private final List<String> columns;
-    private final String keyColumn;
+    private final List<String> keyColumns;
     private final String valueColumn;
 
     @JsonCreator
     public CSVFlatDataParser(
         @JsonProperty("columns") List<String> columns,
-        @JsonProperty("keyColumn") final String keyColumn,
+        @JsonProperty("keyColumns") final List<String> keyColumns,
         @JsonProperty("valueColumn") final String valueColumn
     )
     {
@@ -272,16 +291,21 @@ public class URIExtractionNamespace implements ExtractionNamespace
       );
 
       Preconditions.checkArgument(
-          !(Strings.isNullOrEmpty(keyColumn) ^ Strings.isNullOrEmpty(valueColumn)),
+          !((keyColumns == null || keyColumns.size() == 0) ^ Strings.isNullOrEmpty(valueColumn)),
           "Must specify both `keyColumn` and `valueColumn` or neither `keyColumn` nor `valueColumn`"
       );
       this.columns = columns;
-      this.keyColumn = Strings.isNullOrEmpty(keyColumn) ? columns.get(0) : keyColumn;
-      this.valueColumn = Strings.isNullOrEmpty(valueColumn) ? columns.get(1) : valueColumn;
+      if (Strings.isNullOrEmpty(valueColumn)) {
+        this.keyColumns = columns.subList(0, columns.size() - 2);
+        this.valueColumn = columns.get(columns.size() - 1);
+      } else {
+        this.keyColumns = keyColumns;
+        this.valueColumn = valueColumn;
+      }
       Preconditions.checkArgument(
-          columns.contains(this.keyColumn),
-          "Column [%s] not found int columns: %s",
-          this.keyColumn,
+          columns.containsAll(this.keyColumns),
+          "key columns %s not found int columns: %s",
+          Arrays.toString(this.keyColumns.toArray()),
           Arrays.toString(columns.toArray())
       );
       Preconditions.checkArgument(
@@ -293,9 +317,18 @@ public class URIExtractionNamespace implements ExtractionNamespace
 
       this.parser = new DelegateParser(
           new CSVParser(Optional.<String>absent(), columns),
-          this.keyColumn,
+          this.keyColumns,
           this.valueColumn
       );
+    }
+
+    public CSVFlatDataParser(
+        List<String> columns,
+        final String keyColumn,
+        final String valueColumn
+    )
+    {
+      this(columns, keyColumn == null ? null : Lists.newArrayList(keyColumn), valueColumn);
     }
 
     @JsonProperty
@@ -305,9 +338,9 @@ public class URIExtractionNamespace implements ExtractionNamespace
     }
 
     @JsonProperty
-    public String getKeyColumn()
+    public List<String> getKeyColumns()
     {
-      return this.keyColumn;
+      return this.keyColumns;
     }
 
     @JsonProperty
@@ -317,7 +350,7 @@ public class URIExtractionNamespace implements ExtractionNamespace
     }
 
     @Override
-    public Parser<String, String> getParser()
+    public Parser<Object, String> getParser()
     {
       return parser;
     }
@@ -337,7 +370,7 @@ public class URIExtractionNamespace implements ExtractionNamespace
       if (!getColumns().equals(that.getColumns())) {
         return false;
       }
-      if (!getKeyColumn().equals(that.getKeyColumn())) {
+      if (!getKeyColumns().equals(that.getKeyColumns())) {
         return false;
       }
 
@@ -348,9 +381,9 @@ public class URIExtractionNamespace implements ExtractionNamespace
     public String toString()
     {
       return String.format(
-          "CSVFlatDataParser = { columns = %s, keyColumn = %s, valueColumn = %s }",
+          "CSVFlatDataParser = { columns = %s, keyColumns = %s, valueColumn = %s }",
           Arrays.toString(columns.toArray()),
-          keyColumn,
+          Arrays.toString(keyColumns.toArray()),
           valueColumn
       );
     }
@@ -359,11 +392,11 @@ public class URIExtractionNamespace implements ExtractionNamespace
   @JsonTypeName("tsv")
   public static class TSVFlatDataParser implements FlatDataParser
   {
-    private final Parser<String, String> parser;
+    private final Parser<Object, String> parser;
     private final List<String> columns;
     private final String delimiter;
+    private final List<String> keyColumns;
     private final String listDelimiter;
-    private final String keyColumn;
     private final String valueColumn;
 
     @JsonCreator
@@ -371,7 +404,7 @@ public class URIExtractionNamespace implements ExtractionNamespace
         @JsonProperty("columns") List<String> columns,
         @JsonProperty("delimiter") String delimiter,
         @JsonProperty("listDelimiter") String listDelimiter,
-        @JsonProperty("keyColumn") final String keyColumn,
+        @JsonProperty("keyColumns") final List<String> keyColumns,
         @JsonProperty("valueColumn") final String valueColumn
     )
     {
@@ -384,19 +417,24 @@ public class URIExtractionNamespace implements ExtractionNamespace
           Optional.fromNullable(Strings.emptyToNull(listDelimiter))
       );
       Preconditions.checkArgument(
-          !(Strings.isNullOrEmpty(keyColumn) ^ Strings.isNullOrEmpty(valueColumn)),
+          !((keyColumns == null || keyColumns.size() == 0) ^ Strings.isNullOrEmpty(valueColumn)),
           "Must specify both `keyColumn` and `valueColumn` or neither `keyColumn` nor `valueColumn`"
       );
       delegate.setFieldNames(columns);
       this.columns = columns;
       this.delimiter = delimiter;
+      if (Strings.isNullOrEmpty(valueColumn)) {
+        this.keyColumns = columns.subList(0, columns.size() - 2);
+        this.valueColumn = columns.get(columns.size() - 1);
+      } else {
+        this.keyColumns = keyColumns;
+        this.valueColumn = valueColumn;
+      }
       this.listDelimiter = listDelimiter;
-      this.keyColumn = Strings.isNullOrEmpty(keyColumn) ? columns.get(0) : keyColumn;
-      this.valueColumn = Strings.isNullOrEmpty(valueColumn) ? columns.get(1) : valueColumn;
       Preconditions.checkArgument(
-          columns.contains(this.keyColumn),
-          "Column [%s] not found int columns: %s",
-          this.keyColumn,
+          columns.containsAll(this.keyColumns),
+          "key columns %s not found int columns: %s",
+          Arrays.toString(this.keyColumns.toArray()),
           Arrays.toString(columns.toArray())
       );
       Preconditions.checkArgument(
@@ -406,7 +444,18 @@ public class URIExtractionNamespace implements ExtractionNamespace
           Arrays.toString(columns.toArray())
       );
 
-      this.parser = new DelegateParser(delegate, this.keyColumn, this.valueColumn);
+      this.parser = new DelegateParser(delegate, this.keyColumns, this.valueColumn);
+    }
+
+    public TSVFlatDataParser(
+        List<String> columns,
+        String delimiter,
+        final String listDelimiter,
+        final String keyColumn,
+        final String valueColumn
+    )
+    {
+      this(columns, delimiter, listDelimiter, keyColumn == null ? null : Lists.newArrayList(keyColumn), valueColumn);
     }
 
     @JsonProperty
@@ -416,9 +465,9 @@ public class URIExtractionNamespace implements ExtractionNamespace
     }
 
     @JsonProperty
-    public String getKeyColumn()
+    public List<String> getKeyColumns()
     {
-      return this.keyColumn;
+      return this.keyColumns;
     }
 
     @JsonProperty
@@ -440,7 +489,7 @@ public class URIExtractionNamespace implements ExtractionNamespace
     }
 
     @Override
-    public Parser<String, String> getParser()
+    public Parser<Object, String> getParser()
     {
       return parser;
     }
@@ -463,7 +512,7 @@ public class URIExtractionNamespace implements ExtractionNamespace
       if ((getDelimiter() == null) ? that.getDelimiter() == null : getDelimiter().equals(that.getDelimiter())) {
         return false;
       }
-      if (!getKeyColumn().equals(that.getKeyColumn())) {
+      if (!getKeyColumns().equals(that.getKeyColumns())) {
         return false;
       }
 
@@ -474,11 +523,11 @@ public class URIExtractionNamespace implements ExtractionNamespace
     public String toString()
     {
       return String.format(
-          "TSVFlatDataParser = { columns = %s, delimiter = '%s', listDelimiter = '%s',keyColumn = %s, valueColumn = %s }",
+          "TSVFlatDataParser = { columns = %s, delimiter = '%s', listDelimiter = '%s', keyColumns = %s, valueColumn = %s }",
           Arrays.toString(columns.toArray()),
           delimiter,
           listDelimiter,
-          keyColumn,
+          Arrays.toString(keyColumns.toArray()),
           valueColumn
       );
     }
@@ -487,32 +536,41 @@ public class URIExtractionNamespace implements ExtractionNamespace
   @JsonTypeName("customJson")
   public static class JSONFlatDataParser implements FlatDataParser
   {
-    private final Parser<String, String> parser;
-    private final String keyFieldName;
+    private final Parser<Object, String> parser;
+    private final List<String> keyFieldNames;
     private final String valueFieldName;
 
     @JsonCreator
     public JSONFlatDataParser(
         @JacksonInject @Json ObjectMapper jsonMapper,
-        @JsonProperty("keyFieldName") final String keyFieldName,
+        @JsonProperty("keyFieldNames") final List<String> keyFieldNames,
         @JsonProperty("valueFieldName") final String valueFieldName
     )
     {
-      Preconditions.checkArgument(!Strings.isNullOrEmpty(keyFieldName), "[keyFieldName] cannot be empty");
+      Preconditions.checkArgument(!(keyFieldNames == null || keyFieldNames.size() == 0), "[keyFieldNames] cannot be empty");
       Preconditions.checkArgument(!Strings.isNullOrEmpty(valueFieldName), "[valueFieldName] cannot be empty");
-      this.keyFieldName = keyFieldName;
+      this.keyFieldNames = keyFieldNames;
       this.valueFieldName = valueFieldName;
       this.parser = new DelegateParser(
-          new JSONParser(jsonMapper, ImmutableList.of(keyFieldName, valueFieldName)),
-          keyFieldName,
+          new JSONParser(jsonMapper, ImmutableList.<String>builder().addAll(keyFieldNames).add(valueFieldName).build()),
+          keyFieldNames,
           valueFieldName
       );
     }
 
-    @JsonProperty
-    public String getKeyFieldName()
+    public JSONFlatDataParser(
+        ObjectMapper jsonMapper,
+        final String keyFieldName,
+        final String valueFieldName
+    )
     {
-      return this.keyFieldName;
+      this(jsonMapper, keyFieldName == null ?  null : Lists.newArrayList(keyFieldName), valueFieldName);
+    }
+
+    @JsonProperty
+    public List<String> getKeyFieldNames()
+    {
+      return this.keyFieldNames;
     }
 
     @JsonProperty
@@ -522,7 +580,7 @@ public class URIExtractionNamespace implements ExtractionNamespace
     }
 
     @Override
-    public Parser<String, String> getParser()
+    public Parser<Object, String> getParser()
     {
       return this.parser;
     }
@@ -539,7 +597,7 @@ public class URIExtractionNamespace implements ExtractionNamespace
 
       JSONFlatDataParser that = (JSONFlatDataParser) o;
 
-      if (!getKeyFieldName().equals(that.getKeyFieldName())) {
+      if (!getKeyFieldNames().equals(that.getKeyFieldNames())) {
         return false;
       }
 
@@ -551,7 +609,7 @@ public class URIExtractionNamespace implements ExtractionNamespace
     {
       return String.format(
           "JSONFlatDataParser = { keyFieldName = %s, valueFieldName = %s }",
-          keyFieldName,
+          Arrays.toString(keyFieldNames.toArray()),
           valueFieldName
       );
     }
@@ -561,17 +619,17 @@ public class URIExtractionNamespace implements ExtractionNamespace
   public static class ObjectMapperFlatDataParser implements FlatDataParser
   {
 
-    private final Parser<String, String> parser;
+    private final Parser<Object, String> parser;
 
     @JsonCreator
     public ObjectMapperFlatDataParser(
         final @JacksonInject @Json ObjectMapper jsonMapper
     )
     {
-      parser = new Parser<String, String>()
+      parser = new Parser<Object, String>()
       {
         @Override
-        public Map<String, String> parse(String input)
+        public Map<Object, String> parse(String input)
         {
           try {
             return jsonMapper.readValue(
@@ -600,7 +658,7 @@ public class URIExtractionNamespace implements ExtractionNamespace
     }
 
     @Override
-    public Parser<String, String> getParser()
+    public Parser<Object, String> getParser()
     {
       return parser;
     }
