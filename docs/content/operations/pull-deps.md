@@ -34,7 +34,7 @@ Add a remote repository to the default remote repository list, which includes ht
 
 `-d` or `--defaultVersion`
 
-Version to use for extension coordinate that doesn't have a version information. For example, if extension coordinate is `io.druid.extensions:mysql-metadata-storage`, and default version is `0.9.0`, then this coordinate will be treated as `io.druid.extensions:mysql-metadata-storage:0.9.0`
+Version to use for extension coordinate that doesn't have a version information. For example, if extension coordinate is `io.druid.extensions:mysql-metadata-storage`, and default version is `#{DRUIDVERSION}`, then this coordinate will be treated as `io.druid.extensions:mysql-metadata-storage:#{DRUIDVERSION}`
 
 To run `pull-deps`, you should
 
@@ -44,10 +44,10 @@ To run `pull-deps`, you should
 
 Example:
 
-Suppose you want to download ```druid-rabbitmq```, ```mysql-metadata-storage``` and ```hadoop-client```(both 2.3.0 and 2.4.0) with a specific version, you can run `pull-deps` command with `-c io.druid.extensions:druid-examples:0.9.0`, `-c io.druid.extensions:mysql-metadata-storage:0.9.0`, `-h org.apache.hadoop:hadoop-client:2.3.0` and `-h org.apache.hadoop:hadoop-client:2.4.0`, an example command would be:
+Suppose you want to download ```druid-rabbitmq```, ```mysql-metadata-storage``` and ```hadoop-client```(both 2.3.0 and 2.4.0) with a specific version, you can run `pull-deps` command with `-c io.druid.extensions:druid-examples:#{DRUIDVERSION}`, `-c io.druid.extensions:mysql-metadata-storage:#{DRUIDVERSION}`, `-h org.apache.hadoop:hadoop-client:2.3.0` and `-h org.apache.hadoop:hadoop-client:2.4.0`, an example command would be:
 
 ```
-java -classpath "/my/druid/library/*" io.druid.cli.Main tools pull-deps --clean -c io.druid.extensions:mysql-metadata-storage:0.9.0 -c io.druid.extensions.contrib:druid-rabbitmq:0.9.0 -h org.apache.hadoop:hadoop-client:2.3.0 -h org.apache.hadoop:hadoop-client:2.4.0
+java -classpath "/my/druid/library/*" io.druid.cli.Main tools pull-deps --clean -c io.druid.extensions:mysql-metadata-storage:#{DRUIDVERSION} -c io.druid.extensions.contrib:druid-rabbitmq:#{DRUIDVERSION} -h org.apache.hadoop:hadoop-client:2.3.0 -h org.apache.hadoop:hadoop-client:2.4.0
 ```
 
 Because `--clean` is supplied, this command will first remove the directories specified at `druid.extensions.directory` and `druid.extensions.hadoopDependenciesDir`, then recreate them and start downloading the extensions there. After finishing downloading, if you go to the extension directories you specified, you will see
@@ -60,14 +60,14 @@ extensions
 │   ├── commons-digester-1.8.jar
 │   ├── commons-logging-1.1.1.jar
 │   ├── commons-validator-1.4.0.jar
-│   ├── druid-examples-0.9.0.jar
+│   ├── druid-examples-#{DRUIDVERSION}.jar
 │   ├── twitter4j-async-3.0.3.jar
 │   ├── twitter4j-core-3.0.3.jar
 │   └── twitter4j-stream-3.0.3.jar
 └── mysql-metadata-storage
     ├── jdbi-2.32.jar
     ├── mysql-connector-java-5.1.34.jar
-    └── mysql-metadata-storage-0.9.0.jar
+    └── mysql-metadata-storage-#{DRUIDVERSION}.jar
 ```
 
 ```
@@ -92,10 +92,10 @@ hadoop-dependencies/
     ..... lots of jars
 ```
 
-Note that if you specify `--defaultVersion`, you don't have to put version information in the coordinate. For example, if you want both `druid-rabbitmq` and `mysql-metadata-storage` to use version `0.9.0`,  you can change the command above to
+Note that if you specify `--defaultVersion`, you don't have to put version information in the coordinate. For example, if you want both `druid-rabbitmq` and `mysql-metadata-storage` to use version `#{DRUIDVERSION}`,  you can change the command above to
 
 ```
-java -classpath "/my/druid/library/*" io.druid.cli.Main tools pull-deps --defaultVersion 0.9.0 --clean -c io.druid.extensions:mysql-metadata-storage -c io.druid.extensions.contrib:druid-rabbitmq -h org.apache.hadoop:hadoop-client:2.3.0 -h org.apache.hadoop:hadoop-client:2.4.0
+java -classpath "/my/druid/library/*" io.druid.cli.Main tools pull-deps --defaultVersion #{DRUIDVERSION} --clean -c io.druid.extensions:mysql-metadata-storage -c io.druid.extensions.contrib:druid-rabbitmq -h org.apache.hadoop:hadoop-client:2.3.0 -h org.apache.hadoop:hadoop-client:2.4.0
 ```
 
 <div class="note info">
