@@ -51,7 +51,6 @@ import io.druid.indexing.appenderator.ActionBasedSegmentAllocator;
 import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
-import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.indexing.common.task.AbstractTask;
@@ -411,20 +410,27 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
 
               try {
                 final InputRow row = Preconditions.checkNotNull(parser.parse(ByteBuffer.wrap(record.value())), "row");
-                final SegmentIdentifier identifier = driver.add(
-                    row,
-                    sequenceNames.get(record.partition()),
-                    committerSupplier
-                );
 
-                if (identifier == null) {
-                  // Failure to allocate segment puts determinism at risk, bail out to be safe.
-                  // May want configurable behavior here at some point.
-                  // If we allow continuing, then consider blacklisting the interval for a while to avoid constant checks.
-                  throw new ISE("Could not allocate segment for row with timestamp[%s]", row.getTimestamp());
+                if (!ioConfig.getMinimumMessageTime().isPresent() ||
+                    !ioConfig.getMinimumMessageTime().get().isAfter(row.getTimestamp())) {
+
+                  final SegmentIdentifier identifier = driver.add(
+                      row,
+                      sequenceNames.get(record.partition()),
+                      committerSupplier
+                  );
+
+                  if (identifier == null) {
+                    // Failure to allocate segment puts determinism at risk, bail out to be safe.
+                    // May want configurable behavior here at some point.
+                    // If we allow continuing, then consider blacklisting the interval for a while to avoid constant checks.
+                    throw new ISE("Could not allocate segment for row with timestamp[%s]", row.getTimestamp());
+                  }
+
+                  fireDepartmentMetrics.incrementProcessed();
+                } else {
+                  fireDepartmentMetrics.incrementThrownAway();
                 }
-
-                fireDepartmentMetrics.incrementProcessed();
               }
               catch (ParseException e) {
                 if (tuningConfig.isReportParseExceptions()) {
