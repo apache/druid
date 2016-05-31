@@ -59,9 +59,9 @@ since you will be editing the configurations and then copying the modified distr
 of your servers.
 
 ```bash
-curl -O http://static.druid.io/artifacts/releases/druid-0.9.0-bin.tar.gz
-tar -xzf druid-0.9.0-bin.tar.gz
-cd druid-0.9.0
+curl -O http://static.druid.io/artifacts/releases/druid-#{DRUIDVERSION}-bin.tar.gz
+tar -xzf druid-#{DRUIDVERSION}-bin.tar.gz
+cd druid-#{DRUIDVERSION}
 ```
 
 In this package, you'll find:
@@ -286,7 +286,7 @@ server. If you have been editing the configurations on your local machine, you c
 copy them:
 
 ```bash
-rsync -az druid-0.9.0/ COORDINATION_SERVER:druid-0.9.0/
+rsync -az druid-#{DRUIDVERSION}/ COORDINATION_SERVER:druid-#{DRUIDVERSION}/
 ```
 
 Log on to your coordination server and install Zookeeper:
