@@ -30,16 +30,16 @@ import com.google.common.primitives.Ints;
 import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
+import net.jpountz.lz4.LZ4Compressor;
+import net.jpountz.lz4.LZ4Factory;
+import net.jpountz.lz4.LZ4FastDecompressor;
+
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.OptionalLong;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
-import javax.annotation.Nullable;
-import net.jpountz.lz4.LZ4Compressor;
-import net.jpountz.lz4.LZ4Factory;
-import net.jpountz.lz4.LZ4FastDecompressor;
 
 public class CaffeineCache implements io.druid.client.cache.Cache
 {
@@ -50,7 +50,7 @@ public class CaffeineCache implements io.druid.client.cache.Cache
   private static final LZ4Compressor LZ4_COMPRESSOR = LZ4_FACTORY.fastCompressor();
 
   private final Cache<NamedKey, byte[]> cache;
-  private final AtomicReference<CacheStats> priorStats = new AtomicReference<>(null);
+  private final AtomicReference<CacheStats> priorStats = new AtomicReference<>(CacheStats.empty());
   private final CaffeineCacheConfig config;
 
 
@@ -60,7 +60,7 @@ public class CaffeineCache implements io.druid.client.cache.Cache
   }
 
   // Used in testing
-  public static CaffeineCache create(final CaffeineCacheConfig config, @Nullable final Executor executor)
+  public static CaffeineCache create(final CaffeineCacheConfig config, final Executor executor)
   {
     Caffeine<Object, Object> builder = Caffeine.newBuilder().recordStats();
     if (config.getExpireAfter() >= 0) {
@@ -75,9 +75,7 @@ public class CaffeineCache implements io.druid.client.cache.Cache
                                                    + key.namespace.length() * Chars.BYTES
                                                    + FIXED_COST);
     }
-    if (executor != null) {
-      builder.executor(executor);
-    }
+    builder.executor(executor);
     return new CaffeineCache(builder.build(), config);
   }
 
@@ -146,12 +144,8 @@ public class CaffeineCache implements io.druid.client.cache.Cache
   {
     final CacheStats oldStats = priorStats.get();
     final CacheStats newStats = cache.stats();
-    final CacheStats deltaStats;
-    if (oldStats == null) {
-      deltaStats = newStats;
-    } else {
-      deltaStats = newStats.minus(oldStats);
-    }
+    final CacheStats deltaStats = newStats.minus(oldStats);
+
     final ServiceMetricEvent.Builder builder = ServiceMetricEvent.builder();
     emitter.emit(builder.build("query/cache/caffeine/delta/requests", deltaStats.requestCount()));
     emitter.emit(builder.build("query/cache/caffeine/total/requests", newStats.requestCount()));

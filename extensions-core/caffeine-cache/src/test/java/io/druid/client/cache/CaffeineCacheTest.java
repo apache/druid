@@ -22,7 +22,6 @@ package io.druid.client.cache;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
-import com.google.inject.Binder;
 import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Module;
@@ -41,6 +40,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.ForkJoinPool;
 
 public class CaffeineCacheTest
 {
@@ -68,18 +68,13 @@ public class CaffeineCacheTest
   {
     final CaffeineCacheConfig config = new CaffeineCacheConfig();
     Injector injector = Initialization.makeInjectorWithModules(
-        GuiceInjectors.makeStartupInjector(), ImmutableList.of(
-            new Module()
-            {
-              @Override
-              public void configure(Binder binder)
-              {
-                binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test/redis");
-                binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+        GuiceInjectors.makeStartupInjector(), ImmutableList.<Module>of(
+            binder -> {
+              binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test/redis");
+              binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
 
-                binder.bind(CaffeineCacheConfig.class).toInstance(config);
-                binder.bind(Cache.class).toProvider(CaffeineCacheProviderWithConfig.class).in(ManageLifecycle.class);
-              }
+              binder.bind(CaffeineCacheConfig.class).toInstance(config);
+              binder.bind(Cache.class).toProvider(CaffeineCacheProviderWithConfig.class).in(ManageLifecycle.class);
             }
         )
     );
@@ -101,17 +96,12 @@ public class CaffeineCacheTest
     System.setProperty(uuid + ".type", "caffeine");
     final Injector injector = Initialization.makeInjectorWithModules(
         GuiceInjectors.makeStartupInjector(), ImmutableList.<Module>of(
-            new Module()
-            {
-              @Override
-              public void configure(Binder binder)
-              {
-                binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test/redis");
-                binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
+            binder -> {
+              binder.bindConstant().annotatedWith(Names.named("serviceName")).to("druid/test/redis");
+              binder.bindConstant().annotatedWith(Names.named("servicePort")).to(0);
 
-                binder.bind(Cache.class).toProvider(CacheProvider.class);
-                JsonConfigProvider.bind(binder, uuid, CacheProvider.class);
-              }
+              binder.bind(Cache.class).toProvider(CacheProvider.class);
+              JsonConfigProvider.bind(binder, uuid, CacheProvider.class);
             }
         )
     );
@@ -435,7 +425,7 @@ public class CaffeineCacheTest
     final CaffeineCacheConfig config = caffeineCacheConfigJsonConfigProvider.get().get();
     Assert.assertEquals(10, config.getExpireAfter());
     Assert.assertEquals(100, config.getSizeInBytes());
-    Assert.assertNull(config.createExecutor());
+    Assert.assertEquals(ForkJoinPool.commonPool(), config.createExecutor());
   }
 
   @Test
@@ -462,7 +452,7 @@ public class CaffeineCacheTest
     final CaffeineCacheConfig config = caffeineCacheConfigJsonConfigProvider.get().get();
     Assert.assertEquals(-1, config.getExpireAfter());
     Assert.assertEquals(-1, config.getSizeInBytes());
-    Assert.assertNull(config.createExecutor());
+    Assert.assertEquals(ForkJoinPool.commonPool(), config.createExecutor());
   }
 
   public int get(Cache cache, Cache.NamedKey key)

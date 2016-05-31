@@ -22,6 +22,7 @@ package io.druid.client.cache;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import io.druid.concurrent.Execs;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ForkJoinPool;
 
 public enum CacheExecutorFactory
 {
@@ -29,7 +30,7 @@ public enum CacheExecutorFactory
     @Override
     public Executor createExecutor()
     {
-      return null;
+      return ForkJoinPool.commonPool();
     }
   },
   SINGLE_THREAD {
