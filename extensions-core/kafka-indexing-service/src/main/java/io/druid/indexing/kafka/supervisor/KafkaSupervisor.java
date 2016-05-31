@@ -37,8 +37,8 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.ISE;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.concurrent.Execs;
-import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskInfoProvider;
+import io.druid.indexing.common.TaskLocation;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.common.task.TaskResource;
@@ -113,11 +113,13 @@ public class KafkaSupervisor implements Supervisor
     final Map<Integer, Long> partitionOffsets;
 
     final Map<String, TaskData> tasks = new HashMap<>();
+    final Optional<DateTime> minimumMessageTime;
     DateTime completionTimeout; // is set after signalTasksToFinish(); if not done by timeout, take corrective action
 
-    public TaskGroup(Map<Integer, Long> partitionOffsets)
+    public TaskGroup(Map<Integer, Long> partitionOffsets, Optional<DateTime> minimumMessageTime)
     {
       this.partitionOffsets = partitionOffsets;
+      this.minimumMessageTime = minimumMessageTime;
     }
   }
 
@@ -450,6 +452,9 @@ public class KafkaSupervisor implements Supervisor
     }
     String partitionOffsetStr = sb.toString().substring(1);
 
+    Optional<DateTime> minimumMessageTime = taskGroups.get(groupId).minimumMessageTime;
+    String minMsgTimeStr = (minimumMessageTime.isPresent() ? String.valueOf(minimumMessageTime.get().getMillis()) : "");
+
     String dataSchema, tuningConfig;
     try {
       dataSchema = sortingMapper.writeValueAsString(spec.getDataSchema());
@@ -459,7 +464,8 @@ public class KafkaSupervisor implements Supervisor
       throw Throwables.propagate(e);
     }
 
-    String hashCode = DigestUtils.sha1Hex(dataSchema + tuningConfig + partitionOffsetStr).substring(0, 15);
+    String hashCode = DigestUtils.sha1Hex(dataSchema + tuningConfig + partitionOffsetStr + minMsgTimeStr)
+                                 .substring(0, 15);
 
     return Joiner.on("_").join("index_kafka", dataSource, hashCode);
   }
@@ -599,11 +605,19 @@ public class KafkaSupervisor implements Supervisor
                 log.debug("Creating new task group [%d]", taskGroupId);
                 taskGroups.put(
                     taskGroupId,
-                    new TaskGroup(kafkaTask.getIOConfig().getStartPartitions().getPartitionOffsetMap())
+                    new TaskGroup(
+                        kafkaTask.getIOConfig().getStartPartitions().getPartitionOffsetMap(),
+                        kafkaTask.getIOConfig().getMinimumMessageTime()
+                    )
                 );
               }
 
-              taskGroups.get(taskGroupId).tasks.put(taskId, new TaskData());
+              if (!isTaskCurrent(taskGroupId, taskId)) {
+                log.info("Stopping task [%s] which does not match the expected parameters and ingestion spec", taskId);
+                stopTask(taskId, false);
+              } else {
+                taskGroups.get(taskGroupId).tasks.put(taskId, new TaskData());
+              }
             }
           }
         }
@@ -635,7 +649,11 @@ public class KafkaSupervisor implements Supervisor
     }
 
     log.info("Creating new pending completion task group for discovered task [%s]", taskId);
-    TaskGroup newTaskGroup = new TaskGroup(startingPartitions);
+
+    // reading the minimumMessageTime from the publishing task and setting it here is not necessary as this task cannot
+    // change to a state where it will read any more events
+    TaskGroup newTaskGroup = new TaskGroup(startingPartitions, Optional.<DateTime>absent());
+
     newTaskGroup.tasks.put(taskId, new TaskData());
     newTaskGroup.completionTimeout = DateTime.now().plus(ioConfig.getCompletionTimeout());
 
@@ -889,7 +907,8 @@ public class KafkaSupervisor implements Supervisor
       TaskGroup taskGroup = taskGroupEntry.getValue();
 
       // Iterate the list of known tasks in this group and:
-      //   1) Kill any tasks which are not "current" (have the partitions and starting offsets in [taskGroups]
+      //   1) Kill any tasks which are not "current" (have the partitions, starting offsets, and minimumMessageTime
+      //      (if applicable) in [taskGroups])
       //   2) Remove any tasks that have failed from the list
       //   3) If any task completed successfully, stop all the tasks in this group and move to the next group
 
@@ -933,7 +952,12 @@ public class KafkaSupervisor implements Supervisor
     for (Integer groupId : partitionGroups.keySet()) {
       if (!taskGroups.containsKey(groupId)) {
         log.info("Creating new task group [%d] for partitions %s", groupId, partitionGroups.get(groupId).keySet());
-        taskGroups.put(groupId, new TaskGroup(generateStartingOffsetsForPartitionGroup(groupId)));
+
+        Optional<DateTime> minimumMessageTime = (ioConfig.getLateMessageRejectionPeriod().isPresent() ? Optional.of(
+            DateTime.now().minus(ioConfig.getLateMessageRejectionPeriod().get())
+        ) : Optional.<DateTime>absent());
+
+        taskGroups.put(groupId, new TaskGroup(generateStartingOffsetsForPartitionGroup(groupId), minimumMessageTime));
       }
     }
 
@@ -971,6 +995,7 @@ public class KafkaSupervisor implements Supervisor
     String sequenceName = generateSequenceName(groupId);
 
     Map<String, String> consumerProperties = Maps.newHashMap(ioConfig.getConsumerProperties());
+    DateTime minimumMessageTime = taskGroups.get(groupId).minimumMessageTime.orNull();
 
     KafkaIOConfig kafkaIOConfig = new KafkaIOConfig(
         sequenceName,
@@ -978,7 +1003,8 @@ public class KafkaSupervisor implements Supervisor
         new KafkaPartitions(ioConfig.getTopic(), endPartitions),
         consumerProperties,
         true,
-        false
+        false,
+        minimumMessageTime
     );
 
     for (int i = 0; i < replicas; i++) {
@@ -1098,7 +1124,8 @@ public class KafkaSupervisor implements Supervisor
 
   /**
    * Compares the sequence name from the task with one generated for the task's group ID and returns false if they do
-   * not match. The sequence name is generated from a hash of the dataSchema, tuningConfig, and starting offsets.
+   * not match. The sequence name is generated from a hash of the dataSchema, tuningConfig, starting offsets, and the
+   * minimumMessageTime if set.
    */
   private boolean isTaskCurrent(int taskGroupId, String taskId)
   {
