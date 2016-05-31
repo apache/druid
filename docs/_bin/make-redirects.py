@@ -9,13 +9,14 @@ def normalize_target(redirect):
   normalized = os.path.normpath(os.path.join(dirname, redirect["target"]))
   return normalized
 
-if len(sys.argv) != 2:
-  sys.stderr.write('need a docs directory\n')
+if len(sys.argv) != 3:
+  sys.stderr.write('usage: program <docs dir> <redirect.json>\n')
   sys.exit(1)
 
-directory = sys.argv[1]
+docs_directory = sys.argv[1]
+redirect_json = sys.argv[2]
 
-with open(os.path.join(directory, "_redirects.json"), 'r') as f:
+with open(redirect_json, 'r') as f:
   redirects = json.loads(f.read())
 
 all_sources = {}
@@ -28,8 +29,8 @@ for redirect in redirects:
 for redirect in redirects:
   source = redirect["source"]
   target = redirect["target"]
-  source_file = os.path.join(directory, "content", source)
-  target_file = os.path.join(directory, "content", normalize_target(redirect))
+  source_file = os.path.join(docs_directory, source)
+  target_file = os.path.join(docs_directory, normalize_target(redirect))
 
   # Ensure redirect source doesn't exist yet.
   if os.path.exists(source_file):

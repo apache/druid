@@ -73,15 +73,16 @@ remote=$(git -C "$druid" config --local --get "remote.$origin.url")
 git clone -q --depth 1 --branch $branch $remote "$src"
 
 if [ -n "$opt_docs" ] ; then
+  # Copy docs
   mkdir -p $target/docs/$version
   rsync -a --delete "$src/docs/content/" $target/docs/$version
 
   # Replace #{DRUIDVERSION} with current Druid version
   # Escaping of $version is weak here, but it should be fine for typical version strings
-  find "$target/docs" -name "*.md" -print0 | xargs -0 perl -pi -e's/\#\{DRUIDVERSION\}/'"$version"'/g'
+  find "$target/docs/$version" -name "*.md" -print0 | xargs -0 perl -pi -e's/\#\{DRUIDVERSION\}/'"$version"'/g'
 
   # Create redirects
-  "$target/docs/_bin/make-redirects.py" "$target/docs"
+  "$src/docs/_bin/make-redirects.py" "$target/docs/$version" "$src/docs/_redirects.json"
 fi
 
 # generate javadocs for releases (not for master)
