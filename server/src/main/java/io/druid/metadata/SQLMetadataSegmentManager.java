@@ -54,7 +54,6 @@ import org.skife.jdbi.v2.IDBI;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.TransactionStatus;
-import org.skife.jdbi.v2.exceptions.TransactionFailedException;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.tweak.ResultSetMapper;
 import org.skife.jdbi.v2.util.ByteArrayMapper;
@@ -161,7 +160,10 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     }
   }
 
-  private <T> T inReadOnlyTransaction(final TransactionCallback<T> callback)
+  protected static final <T> T inReadOnlyTransaction(
+      final SQLMetadataConnector connector,
+      final TransactionCallback<T> callback
+  )
   {
     return connector.getDBI().withHandle(
         new HandleCallback<T>()
@@ -174,10 +176,12 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
             connection.setReadOnly(true);
             try {
               return handle.inTransaction(callback);
-            } finally {
+            }
+            finally {
               try {
                 connection.setReadOnly(readOnly);
-              } catch (SQLException e) {
+              }
+              catch (SQLException e) {
                 // at least try to log it so we don't swallow exceptions
                 log.error(e, "Unable to reset connection read-only state");
               }
@@ -193,6 +197,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
     try {
       final IDBI dbi = connector.getDBI();
       VersionedIntervalTimeline<String, DataSegment> segmentTimeline = inReadOnlyTransaction(
+          connector,
           new TransactionCallback<VersionedIntervalTimeline<String, DataSegment>>()
           {
             @Override
@@ -475,6 +480,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
       // setting connection to read-only will allow some database such as MySQL
       // to automatically use read-only transaction mode, further optimizing the query
       final List<DataSegment> segments = inReadOnlyTransaction(
+          connector,
           new TransactionCallback<List<DataSegment>>()
           {
             @Override
@@ -568,6 +574,7 @@ public class SQLMetadataSegmentManager implements MetadataSegmentManager
   )
   {
     return inReadOnlyTransaction(
+        connector,
         new TransactionCallback<List<Interval>>()
         {
           @Override
