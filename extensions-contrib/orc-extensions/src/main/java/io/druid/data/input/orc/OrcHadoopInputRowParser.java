@@ -45,6 +45,7 @@ import org.apache.hadoop.hive.serde2.typeinfo.TypeInfoUtils;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
+import java.lang.reflect.Array;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
@@ -121,12 +122,13 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
   private Object[] getListObject(ListObjectInspector listObjectInspector, Object listObject)
   {
     List objectList = listObjectInspector.getList(listObject);
-    Object[] list = new Object[listObjectInspector.getListLength(objectList)];
+    Object[] list = null;
     ObjectInspector child = listObjectInspector.getListElementObjectInspector();
     switch(child.getCategory())
     {
       case PRIMITIVE:
         PrimitiveObjectInspector primitiveObjectInspector = (PrimitiveObjectInspector)child;
+        list = (Object[])Array.newInstance(primitiveObjectInspector.getJavaPrimitiveClass(), listObjectInspector.getListLength(objectList));
         for (int idx = 0; idx < list.length; idx++)
         {
           list[idx] = primitiveObjectInspector.getPrimitiveJavaObject(objectList.get(idx));
