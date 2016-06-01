@@ -28,6 +28,7 @@ import io.druid.server.coordinator.CoordinatorStats;
 import io.druid.server.coordinator.DruidCluster;
 import io.druid.server.coordinator.DruidCoordinator;
 import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
+import io.druid.server.coordinator.LoadQueuePeon;
 import io.druid.server.coordinator.ServerHolder;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
@@ -80,6 +81,19 @@ public class DruidCoordinatorCleanupOvershadowed implements DruidCoordinatorHelp
           for (DataSegment dataSegment : holder.getObject().payloads()) {
             coordinator.removeSegment(dataSegment);
             stats.addToGlobalStat("overShadowedCount", 1);
+          }
+        }
+
+        for (LoadQueuePeon loadQueue : coordinator.getLoadManagementPeons().values()) {
+          for (DataSegment dataSegment: loadQueue.getSegmentsToLoad()) {
+            timeline = timelines.get(dataSegment.getDataSource());
+            if (timeline == null) continue;
+            timeline.add(dataSegment.getInterval(), dataSegment.getVersion(), dataSegment.getShardSpec().createChunk(dataSegment));
+            if (timeline.findOvershadowed().contains(dataSegment)){
+              coordinator.removeSegment(dataSegment);
+              stats.addToGlobalStat("overShadowedCount", 1);
+            }
+            timeline.remove(dataSegment.getInterval(), dataSegment.getVersion(), dataSegment.getShardSpec().createChunk(dataSegment));
           }
         }
       }
