@@ -72,12 +72,21 @@ public class AuditEntry
     return auditInfo;
   }
 
+  /**
+  * @author gianm
+  * @param None
+  * @return returns payload as String
+  */
   @JsonProperty
   public String getPayload()
   {
     return payload;
   }
-
+  /**
+  * @author gianm
+  * @param None
+  * @return audit time as DateTime
+  */
   @JsonProperty
   public DateTime getAuditTime()
   {
