@@ -118,8 +118,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
           filter == null ? null : filter.getBitmapIndex(new ColumnSelectorBitmapIndexSelector(bitmapFactory, index));
 
       ImmutableBitmap timeFilteredBitmap;
-      if (!interval.contains(segment.getDataInterval()))
-      {
+      if (!interval.contains(segment.getDataInterval())) {
         MutableBitmap timeBitmap = bitmapFactory.makeEmptyMutableBitmap();
         final Column timeColumn = index.getColumn(Column.TIME_COLUMN_NAME);
         final GenericColumn timeValues = timeColumn.getGenericColumn();
