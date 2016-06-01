@@ -20,6 +20,8 @@
 package io.druid.server.http;
 
 import com.google.common.base.Function;
+import com.google.common.base.Optional;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.Iterables;
@@ -89,74 +91,69 @@ public class MetadataResource
   {
     Response.ResponseBuilder builder = Response.status(Response.Status.OK);
 
-    final Collection<DruidDataSource> druidDataSources;
-    if (authConfig.isEnabled()) {
-      // This is an experimental feature, see - https://github.com/druid-io/druid/pull/2424
-      final Map<Pair<Resource, Action>, Access> resourceAccessMap = new HashMap<>();
-      final AuthorizationInfo authorizationInfo = (AuthorizationInfo) req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN);
-      if (includeDisabled != null) {
-        return builder.entity(
-            Collections2.filter(
-                metadataSegmentManager.getAllDatasourceNames(),
-                new Predicate<String>()
-                {
-                  @Override
-                  public boolean apply(String input)
-                  {
-                    Resource resource = new Resource(input, ResourceType.DATASOURCE);
-                    Action action = Action.READ;
-                    Pair<Resource, Action> key = new Pair<>(resource, action);
-                    if (resourceAccessMap.containsKey(key)) {
-                      return resourceAccessMap.get(key).isAllowed();
-                    } else {
-                      Access access = authorizationInfo.isAuthorized(key.lhs, key.rhs);
-                      resourceAccessMap.put(key, access);
-                      return access.isAllowed();
-                    }
-                  }
-                }
-            )).build();
-      } else {
-        druidDataSources =
-            Collections2.filter(
-                metadataSegmentManager.getInventory(),
-                new Predicate<DruidDataSource>()
-                {
-                  @Override
-                  public boolean apply(DruidDataSource input)
-                  {
-                    Resource resource = new Resource(input.getName(), ResourceType.DATASOURCE);
-                    Action action = Action.READ;
-                    Pair<Resource, Action> key = new Pair<>(resource, action);
-                    if (resourceAccessMap.containsKey(key)) {
-                      return resourceAccessMap.get(key).isAllowed();
-                    } else {
-                      Access access = authorizationInfo.isAuthorized(key.lhs, key.rhs);
-                      resourceAccessMap.put(key, access);
-                      return access.isAllowed();
-                    }
-                  }
-                }
-            );
-      }
-    } else {
-      druidDataSources = metadataSegmentManager.getInventory();
-    }
+    // This is an experimental feature, see - https://github.com/druid-io/druid/pull/2424
+    final Optional<AuthorizationInfo> authorizationInfoOptional =
+        authConfig.isEnabled() ? Optional.of(
+            Preconditions.checkNotNull(
+                (AuthorizationInfo) req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN),
+                "Security is enabled but no authorization info found in the request"
+            )) :
+        Optional.<AuthorizationInfo>absent();
 
     if (includeDisabled != null) {
-      return builder.entity(
-          Collections2.transform(
-              druidDataSources,
-              new Function<DruidDataSource, String>()
+      final Collection<String> allDatasourceNames;
+      if (authorizationInfoOptional.isPresent()) {
+        final Map<Pair<Resource, Action>, Access> resourceAccessMap = new HashMap<>();
+        allDatasourceNames = Collections2.filter(
+            metadataSegmentManager.getAllDatasourceNames(),
+            new Predicate<String>()
+            {
+              @Override
+              public boolean apply(String input)
               {
-                @Override
-                public String apply(DruidDataSource input)
-                {
-                  return input.getName();
+                Resource resource = new Resource(input, ResourceType.DATASOURCE);
+                Action action = Action.READ;
+                Pair<Resource, Action> key = new Pair<>(resource, action);
+                if (resourceAccessMap.containsKey(key)) {
+                  return resourceAccessMap.get(key).isAllowed();
+                } else {
+                  Access access = authorizationInfoOptional.get().isAuthorized(key.lhs, key.rhs);
+                  resourceAccessMap.put(key, access);
+                  return access.isAllowed();
                 }
               }
-          )
-      ).build();
+            }
+        );
+      } else {
+        allDatasourceNames = metadataSegmentManager.getAllDatasourceNames();
+      }
+      return builder.entity(allDatasourceNames).build();
+    }
+    final Collection<DruidDataSource> druidDataSources;
+    if (authorizationInfoOptional.isPresent()) {
+      final Map<Pair<Resource, Action>, Access> resourceAccessMap = new HashMap<>();
+      druidDataSources = Collections2.filter(
+          metadataSegmentManager.getInventory(),
+          new Predicate<DruidDataSource>()
+          {
+            @Override
+            public boolean apply(DruidDataSource input)
+            {
+              Resource resource = new Resource(input.getName(), ResourceType.DATASOURCE);
+              Action action = Action.READ;
+              Pair<Resource, Action> key = new Pair<>(resource, action);
+              if (resourceAccessMap.containsKey(key)) {
+                return resourceAccessMap.get(key).isAllowed();
+              } else {
+                Access access = authorizationInfoOptional.get().isAuthorized(key.lhs, key.rhs);
+                resourceAccessMap.put(key, access);
+                return access.isAllowed();
+              }
+            }
+          }
+      );
+    } else {
+      druidDataSources = metadataSegmentManager.getInventory();
     }
     if (full != null) {
       return builder.entity(druidDataSources).build();
