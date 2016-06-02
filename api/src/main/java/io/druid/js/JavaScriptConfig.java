@@ -29,16 +29,18 @@ public class JavaScriptConfig
 
   private static final JavaScriptConfig DEFAULT = new JavaScriptConfig(false);
 
-  private final boolean disabled;
+  @JsonProperty
+  private boolean disabled = false;
 
-  public JavaScriptConfig(
-      @JsonProperty("disabled") boolean disabled
-  )
+  public JavaScriptConfig()
+  {
+  }
+
+  public JavaScriptConfig(boolean disabled)
   {
     this.disabled = disabled;
   }
 
-  @JsonProperty
   public boolean isDisabled()
   {
     return disabled;
