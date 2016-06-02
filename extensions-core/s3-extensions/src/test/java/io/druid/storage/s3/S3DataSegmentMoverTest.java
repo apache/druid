@@ -112,7 +112,7 @@ public class S3DataSegmentMoverTest
   }
   
   @Test
-  public void testIgnoresGoneButAllreadyMoved() throws Exception
+  public void testIgnoresGoneButAlreadyMoved() throws Exception
   {
     MockStorageService mockS3Client = new MockStorageService();
     S3DataSegmentMover mover = new S3DataSegmentMover(mockS3Client, new S3DataSegmentPusherConfig());
