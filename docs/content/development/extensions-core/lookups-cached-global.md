@@ -76,6 +76,37 @@ The parameters are as follows
 Proper functionality of Namespaced lookups requires the following extension to be loaded on the broker, peon, and historical nodes: 
 `druid-lookups-cached-global`
 
+## Example full dynamic config tree
+
+In a simple case where only one tier exists (`realtime_customer2`) with one lookup called `cachedNamespace`, the resulting configuration json looks similar to the following:
+
+```json
+{
+  "realtime_customer2": {
+    "country_code": {
+      "type": "cachedNamespace",
+      "extractionNamespace": {
+         "type": "jdbc",
+         "namespace": "some_jdbc_lookup",
+         "connectorConfig": {
+           "createTables": true,
+           "connectURI": "jdbc:mysql:\/\/localhost:3306\/druid",
+           "user": "druid",
+           "password": "diurd"
+         },
+         "table": "lookupTable",
+         "keyColumn": "country_id",
+         "valueColumn": "country_name",
+         "tsColumn": "timeColumn"
+      },
+      "firstCacheTimeout": 120000,
+      "injective":true
+    }
+  }
+}
+```
+
+
 ## Cache Settings
 
 Lookups are cached locally on historical nodes. The following are settings used by the nodes which service queries when 
