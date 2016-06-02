@@ -28,14 +28,16 @@ and such data belongs in the raw denormalized data for use in Druid.
 Very small lookups (count of keys on the order of a few dozen to a few hundred) can be passed at query time as a "map" 
 lookup as per [dimension specs](../querying/dimensionspecs.html).
 
-For static lookups defined in `runtime.properties` rather than embedded in the query, please look at the experimental [namespaced lookup extension](../development/extensions-core/namespaced-lookup.html).
+Other lookup types are available as extensions, including:
 
-For other additional lookups, please see our [extensions list](../development/extensions.html).
+- Globally cached lookups from local files, remote URIs, or JDBC through [lookups-cached-global](../development/extensions-core/lookups-cached-global.html).
+- Globally cached lookups from a Kafka topic through [kafka-extraction-namespace](../development/extensions-core/kafka-extraction-namespace.html).
 
-Dynamic configuration
+Dynamic Configuration
 ---------------------
 <div class="note caution">
-Dynamic lookup configuration is an <a href="../development/experimental.html">experimental</a> feature.
+Dynamic lookup configuration is an <a href="../development/experimental.html">experimental</a> feature. Static
+configuration is no longer supported.
 </div>
 The following documents the behavior of the cluster-wide config which is accessible through the coordinator.
 The configuration is propagated through the concept of "tier" of servers.
