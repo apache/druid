@@ -73,7 +73,6 @@ public class AuditEntry
   }
 
   /**
-  * @author gianm
   * @param None
   * @return returns payload as String
   */
@@ -83,7 +82,6 @@ public class AuditEntry
     return payload;
   }
   /**
-  * @author gianm
   * @param None
   * @return audit time as DateTime
   */
