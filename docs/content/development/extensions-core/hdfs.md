@@ -16,3 +16,19 @@ Make sure to [include](../../operations/including-extensions.html) `druid-hdfs-s
 |`druid.storage.storageDirectory`||Directory for storing segments.|Must be set.|
 
 If you are using the Hadoop indexer, set your output directory to be a location on Hadoop and it will work
+
+## Google Cloud Storage
+
+The HDFS extension can also be used for GCS as deep storage.
+
+### Configuration
+
+|Property|Possible Values|Description|Default|
+|--------|---------------|-----------|-------|
+|`druid.storage.type`|hdfs||Must be set.|
+|`druid.storage.storageDirectory`||gs://bucket/example/directory|Must be set.|
+
+All services that need to access GCS need to have the [GCS connector jar](https://cloud.google.com/hadoop/google-cloud-storage-connector#manualinstallation) in their class path. One option is to place this jar in <druid>/lib/ and <druid>/extensions/druid-hdfs-storage/
+
+Tested with Druid 0.9.0, Hadoop 2.7.2 and gcs-connector jar 1.4.4-hadoop2.
+
