@@ -2,7 +2,7 @@
 layout: doc_page
 ---
 
-# Namespaced Lookup
+# Globally Cached Lookups
 
 <div class="note caution">
 Lookups are an <a href="../experimental.html">experimental</a> feature.
@@ -12,16 +12,17 @@ Make sure to [include](../../operations/including-extensions.html) `druid-lookup
 
 ## Configuration
 <div class="note caution">
-Static configuration is no longer supported. Only cluster wide configuration is supported
+Static configuration is no longer supported. Lookups can be configured through
+<a href="../../querying/lookups.html#configuration">dynamic configuration</a>.
 </div>
 
-Cached namespace lookups are appropriate for lookups which are not possible to pass at query time due to their size, 
+Globally cached lookups are appropriate for lookups which are not possible to pass at query time due to their size,
 or are not desired to be passed at query time because the data is to reside in and be handled by the Druid servers,
 and are small enough to reasonably populate on a node. This usually means tens to tens of thousands of entries per lookup.
 
-Cached namespace lookups all draw from the same cache pool, allowing each node to have a fixed cache pool that can be used by namespace lookups.
+Globally cached lookups all draw from the same cache pool, allowing each node to have a fixed cache pool that can be used by cached lookups.
 
-Cached namespace lookups can be specified as part of the [cluster wide config for lookups](../../querying/lookups.html) as a type of `cachedNamespace`
+Globally cached lookups can be specified as part of the [cluster wide config for lookups](../../querying/lookups.html) as a type of `cachedNamespace`
 
  ```json
  {
@@ -73,7 +74,7 @@ The parameters are as follows
 
 If `firstCacheTimeout` is set to a non-zero value, it should be less than `druid.manager.lookups.hostUpdateTimeout`. If `firstCacheTimeout` is NOT set, then management is essentially asynchronous and does not know if a lookup succeeded or failed in starting. In such a case logs from the lookup nodes should be monitored for repeated failures.
 
-Proper functionality of Namespaced lookups requires the following extension to be loaded on the broker, peon, and historical nodes: 
+Proper functionality of globally cached lookups requires the following extension to be loaded on the broker, peon, and historical nodes:
 `druid-lookups-cached-global`
 
 ## Example configuration
@@ -148,9 +149,9 @@ So if total `cachedNamespace` lookup size is in excess of 10MB, the extra will b
 
 For additional lookups, please see our [extensions list](../extensions.html).
 
-## URI namespace update
+## URI lookup
 
-The remapping values for each namespaced lookup can be specified by a json object as per the following examples:
+The remapping values for each globally cached lookup can be specified by a json object as per the following examples:
 
 ```json
 {
@@ -296,7 +297,7 @@ The `simpleJson` lookupParseSpec does not take any parameters. It is simply a li
 }
 ```
 
-## JDBC namespaced lookup
+## JDBC lookup
 
 The JDBC lookups will poll a database to populate its local cache. If the `tsColumn` is set it must be able to accept comparisons in the format `'2015-01-01 00:00:00'`. For example, the following must be valid sql for the table `SELECT * FROM some_lookup_table WHERE timestamp_column >  '2015-01-01 00:00:00'`. If `tsColumn` is set, the caching service will attempt to only poll values that were written *after* the last sync. If `tsColumn` is not set, the entire table is pulled every time.
 
@@ -330,4 +331,4 @@ The JDBC lookups will poll a database to populate its local cache. If the `tsCol
 
 # Introspection
 
-Cached namespace lookups have introspection points at `/keys` and `/values` which return a complete set of the keys and values (respectively) in the lookup. Introspection to `/` returns the entire map. Introspection to `/version` returns the version indicator for the lookup.
+Globally cached lookups have introspection points at `/keys` and `/values` which return a complete set of the keys and values (respectively) in the lookup. Introspection to `/` returns the entire map. Introspection to `/version` returns the version indicator for the lookup.

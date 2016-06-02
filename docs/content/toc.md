@@ -42,6 +42,7 @@
     * [Context](../querying/query-context.html)
   * [Multi-value dimensions](../querying/multi-value-dimensions.html)
   * [SQL](../querying/sql.html)
+  * [Lookups](../querying/lookups.html)
   * [Joins](../querying/joins.html)
   * [Multitenancy](../querying/multitenancy.html)
   * [Caching](../querying/caching.html)
