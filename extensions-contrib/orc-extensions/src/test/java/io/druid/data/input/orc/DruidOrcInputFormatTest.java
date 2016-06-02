@@ -48,6 +48,7 @@ import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 
 public class DruidOrcInputFormatTest
 {
@@ -91,6 +92,7 @@ public class DruidOrcInputFormatTest
     Assert.assertEquals(new DateTime(timestamp), row.getTimestamp());
     Assert.assertEquals(parser.getParseSpec().getDimensionsSpec().getDimensionNames(), row.getDimensions());
     Assert.assertEquals(col1, row.getEvent().get("col1"));
+    Assert.assertEquals(Arrays.asList(col2), row.getDimension("col2"));
 
     reader.close();
   }

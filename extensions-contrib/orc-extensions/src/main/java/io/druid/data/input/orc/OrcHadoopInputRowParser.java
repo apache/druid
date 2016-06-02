@@ -119,20 +119,22 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
     }
   }
 
-  private Object[] getListObject(ListObjectInspector listObjectInspector, Object listObject)
+  private List getListObject(ListObjectInspector listObjectInspector, Object listObject)
   {
     List objectList = listObjectInspector.getList(listObject);
-    Object[] list = null;
+    List list = null;
     ObjectInspector child = listObjectInspector.getListElementObjectInspector();
     switch(child.getCategory())
     {
       case PRIMITIVE:
-        PrimitiveObjectInspector primitiveObjectInspector = (PrimitiveObjectInspector)child;
-        list = (Object[])Array.newInstance(primitiveObjectInspector.getJavaPrimitiveClass(), listObjectInspector.getListLength(objectList));
-        for (int idx = 0; idx < list.length; idx++)
-        {
-          list[idx] = primitiveObjectInspector.getPrimitiveJavaObject(objectList.get(idx));
-        }
+        final PrimitiveObjectInspector primitiveObjectInspector = (PrimitiveObjectInspector)child;
+        list = Lists.transform(objectList, new Function() {
+          @Nullable
+          @Override
+          public Object apply(@Nullable Object input) {
+            return primitiveObjectInspector.getPrimitiveJavaObject(input);
+          }
+        });
         break;
       default:
         break;
