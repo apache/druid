@@ -75,7 +75,6 @@ If there is an error while trying to delete a lookup from a node (or if a node i
 ## Bulk update
 Lookups can be updated in bulk by posting a JSON object to `/druid/coordinator/v1/lookups`. The format of the json object is as follows:
 
-
 ```json
 {
     "tierName": {
@@ -87,6 +86,7 @@ Lookups can be updated in bulk by posting a JSON object to `/druid/coordinator/v
 ```
 
 So a config might look something like:
+
 ```json
 {
     "__default": {
