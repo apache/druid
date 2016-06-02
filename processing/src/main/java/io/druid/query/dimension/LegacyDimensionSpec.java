@@ -53,6 +53,6 @@ public class LegacyDimensionSpec extends DefaultDimensionSpec
   @JsonCreator
   public LegacyDimensionSpec(Object dimension)
   {
-    super(Collections.singletonList(convertValue(dimension, "dimensions")), convertValue(dimension, "outputName"));
+    super(convertValue(dimension, "dimension"), convertValue(dimension, "outputName"));
   }
 }

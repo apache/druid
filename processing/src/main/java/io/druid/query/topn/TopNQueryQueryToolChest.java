@@ -435,7 +435,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
               return runner.run(
                   delegateTopNQuery.withDimensionSpec(
                       new DefaultDimensionSpec(
-                          dimensionSpec.getDimensions(),
+                          dimensionSpec.getDimensions().get(0),
                           dimensionSpec.getOutputName()
                       )
                   ), responseContext

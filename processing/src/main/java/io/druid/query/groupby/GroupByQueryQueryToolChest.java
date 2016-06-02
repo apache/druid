@@ -298,7 +298,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
                 for (DimensionSpec dimensionSpec : delegateGroupByQuery.getDimensions()) {
                   if (optimizedDimensions.contains(dimensionSpec.getDimensions())) {
                     dimensionSpecs.add(
-                        new DefaultDimensionSpec(dimensionSpec.getDimensions(), dimensionSpec.getOutputName())
+                        new DefaultDimensionSpec(dimensionSpec.getDimensions().get(0), dimensionSpec.getOutputName())
                     );
                   } else {
                     dimensionSpecs.add(dimensionSpec);

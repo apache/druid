@@ -51,8 +51,7 @@ public class DefaultDimensionSpec implements DimensionSpec
               @Override
               public DimensionSpec apply(String input)
               {
-                List<String> dimensions = ImmutableList.of(input);
-                return new DefaultDimensionSpec(dimensions, input);
+                return new DefaultDimensionSpec(input, input);
               }
             }
         )
@@ -60,37 +59,31 @@ public class DefaultDimensionSpec implements DimensionSpec
   }
 
   private static final byte CACHE_TYPE_ID = 0x0;
-  private final List<String> dimensions;
+  private final String dimension;
   private final String outputName;
 
   @JsonCreator
   public DefaultDimensionSpec(
-      @JsonProperty("dimensions") List<String> dimensions,
+      @JsonProperty("dimension") String dimension,
       @JsonProperty("outputName") String outputName
   )
   {
-    this.dimensions = dimensions;
-
-    // Do null check for legacy backwards compatibility, callers should be setting the value.
-    this.outputName = outputName == null ? dimensions.get(0) : outputName;
-  }
-
-  public DefaultDimensionSpec(
-      String dimension,
-      String outputName
-  )
-  {
-    this.dimensions = ImmutableList.of(dimension);
+    this.dimension = dimension;
 
     // Do null check for legacy backwards compatibility, callers should be setting the value.
     this.outputName = outputName == null ? dimension : outputName;
   }
 
   @Override
-  @JsonProperty
   public List<String> getDimensions()
   {
-    return dimensions;
+    return ImmutableList.of(dimension);
+  }
+
+  @JsonProperty
+  public String getDimension()
+  {
+    return dimension;
   }
 
   @Override
@@ -115,21 +108,12 @@ public class DefaultDimensionSpec implements DimensionSpec
   @Override
   public byte[] getCacheKey()
   {
-    int totalSize = 0;
-    byte[][] dimensionBytes = new byte[dimensions.size()][];
-    for (int idx = 0; idx < dimensions.size(); idx++) {
-      String dimension = dimensions.get(idx);
-      dimensionBytes[idx] = StringUtils.toUtf8(dimension);
-      totalSize += dimensionBytes[idx].length;
-    }
+    byte[] dimensionBytes = StringUtils.toUtf8(dimension);
 
-    ByteBuffer byteBuffer = ByteBuffer.allocate(1 + totalSize)
-        .put(CACHE_TYPE_ID);
-    for (int idx = 0; idx < dimensions.size(); idx++) {
-      byteBuffer.put(dimensionBytes[idx]);
-    }
-
-    return byteBuffer.array();
+    return ByteBuffer.allocate(1 + dimensionBytes.length)
+        .put(CACHE_TYPE_ID)
+        .put(dimensionBytes)
+        .array();
   }
 
   @Override
@@ -142,9 +126,9 @@ public class DefaultDimensionSpec implements DimensionSpec
   public String toString()
   {
     return "DefaultDimensionSpec{" +
-           "dimensions='" + dimensions + '\'' +
-           ", outputName='" + outputName + '\'' +
-           '}';
+        "dimension='" + dimension + '\'' +
+        ", outputName='" + outputName + '\'' +
+        '}';
   }
 
   @Override
@@ -156,7 +140,7 @@ public class DefaultDimensionSpec implements DimensionSpec
 
     DefaultDimensionSpec that = (DefaultDimensionSpec) o;
 
-    if (dimensions != null ? !dimensions.equals(that.dimensions) : that.dimensions != null) return false;
+    if (dimension != null ? !dimension.equals(that.dimension) : that.dimension != null) return false;
     if (outputName != null ? !outputName.equals(that.outputName) : that.outputName != null) return false;
 
     return true;
@@ -165,7 +149,7 @@ public class DefaultDimensionSpec implements DimensionSpec
   @Override
   public int hashCode()
   {
-    int result = dimensions != null ? dimensions.hashCode() : 0;
+    int result = dimension != null ? dimension.hashCode() : 0;
     result = 31 * result + (outputName != null ? outputName.hashCode() : 0);
     return result;
   }

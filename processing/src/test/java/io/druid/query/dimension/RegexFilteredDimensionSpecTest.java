@@ -42,7 +42,7 @@ public class RegexFilteredDimensionSpecTest
                      + "  \"type\": \"regexFiltered\",\n"
                      + "  \"delegate\": {\n"
                      + "    \"type\": \"default\",\n"
-                     + "    \"dimensions\": [\"foo\"],\n"
+                     + "    \"dimension\": \"foo\",\n"
                      + "    \"outputName\": \"bar\"\n"
                      + "  },\n"
                      + "  \"pattern\": \"xxx\"\n"
