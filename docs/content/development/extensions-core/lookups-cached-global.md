@@ -28,7 +28,6 @@ Cached namespace lookups can be specified as part of the [cluster wide config fo
     "type": "cachedNamespace",
     "extractionNamespace": {
        "type": "uri",
-       "namespace": "some_uri_lookup",
        "uri": "file:/tmp/prefix/",
        "namespaceParseSpec": {
          "format": "csv",
@@ -48,7 +47,6 @@ Cached namespace lookups can be specified as part of the [cluster wide config fo
     "type": "cachedNamespace",
     "extractionNamespace": {
        "type": "jdbc",
-       "namespace": "some_jdbc_lookup",
        "connectorConfig": {
          "createTables": true,
          "connectURI": "jdbc:mysql:\/\/localhost:3306\/druid",
@@ -87,7 +85,6 @@ In a simple case where only one tier exists (`realtime_customer2`) with one look
       "type": "cachedNamespace",
       "extractionNamespace": {
          "type": "jdbc",
-         "namespace": "some_jdbc_lookup",
          "connectorConfig": {
            "createTables": true,
            "connectURI": "jdbc:mysql:\/\/localhost:3306\/druid",

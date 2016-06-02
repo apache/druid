@@ -96,8 +96,22 @@ So a config might look something like:
           "map": {"77483": "United States"}
         },
         "site_id": {
-          "type": "map",
-          "map": {"1": "The Start"}
+          "type": "cachedNamespace",
+          "extractionNamespace": {
+            "type": "jdbc",
+            "connectorConfig": {
+              "createTables": true,
+              "connectURI": "jdbc:mysql:\/\/localhost:3306\/druid",
+              "user": "druid",
+              "password": "diurd"
+            },
+            "table": "lookupTable",
+            "keyColumn": "country_id",
+            "valueColumn": "country_name",
+            "tsColumn": "timeColumn"
+          },
+          "firstCacheTimeout": 120000,
+          "injective":true
         },
         "site_id_customer1": {
           "type": "map",
