@@ -157,8 +157,7 @@ public class InDimFilter implements DimFilter
         if (!exFn.isRetainMissingValue() && Objects.equals(convertedValue, exFn.getReplaceMissingValueWith())) {
           return this;
         }
-        for (Object key: lookup.unapply(convertedValue))
-        {
+        for (Object key: lookup.unapply(convertedValue)) {
           if (key instanceof String) {
             keys.add((String)key);
           }

@@ -1,0 +1,35 @@
+{
+  "queryType": "groupBy",
+  "dataSource": "test_datasource",
+  "granularity": "ALL",
+  "dimensions":[
+    {
+      "type":"extraction",
+      "dimensions":["product", "pty_country"],
+      "outputName":"multilookup",
+      "extractionFn": {
+        "type" : "multilookup",
+        "lookup" : {
+          "type" : "multiKeyMap",
+          "keyValueList" : [
+            ["product_1", "pty_country_16", "xxx"]
+          ],
+          "isOneToOne":false
+        },
+        "replaceMissingValueWith" : "a",
+        "numKeys" : 2
+      }
+    }
+  ],
+  "aggregations": [
+    {
+      "type": "count",
+      "name": "count"
+    }
+  ],
+  "postAggregations": [
+  ],
+  "intervals": [
+    "2014-10-19T00:00:00.000Z/2014-10-22T00:00:00.000Z"
+  ]
+}

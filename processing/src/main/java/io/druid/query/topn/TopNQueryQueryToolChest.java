@@ -145,20 +145,27 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
   @Override
   public ServiceMetricEvent.Builder makeMetricBuilder(TopNQuery query)
   {
-    return DruidMetrics.makePartialQueryTimeMetric(query)
-                       .setDimension(
-                           "threshold",
-                           String.valueOf(query.getThreshold())
-                       )
-                       .setDimension("dimension", query.getDimensionSpec().getDimension())
-                       .setDimension(
-                           "numMetrics",
-                           String.valueOf(query.getAggregatorSpecs().size())
-                       )
-                       .setDimension(
-                           "numComplexMetrics",
-                           String.valueOf(DruidMetrics.findNumComplexAggs(query.getAggregatorSpecs()))
-                       );
+    ServiceMetricEvent.Builder builder = DruidMetrics.makePartialQueryTimeMetric(query)
+        .setDimension(
+            "threshold",
+            String.valueOf(query.getThreshold())
+        )
+        .setDimension(
+            "numMetrics",
+            String.valueOf(query.getAggregatorSpecs().size())
+        )
+        .setDimension(
+            "numComplexMetrics",
+            String.valueOf(DruidMetrics.findNumComplexAggs(query.getAggregatorSpecs()))
+        );
+
+    int idx = 0;
+    for (String dimension: query.getDimensionSpec().getDimensions())
+    {
+      String dimName = String.format("dimension %s", idx++);
+      builder.setDimension(dimName, dimension);
+    }
+    return builder;
   }
 
   @Override
@@ -428,7 +435,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
               return runner.run(
                   delegateTopNQuery.withDimensionSpec(
                       new DefaultDimensionSpec(
-                          dimensionSpec.getDimension(),
+                          dimensionSpec.getDimensions(),
                           dimensionSpec.getOutputName()
                       )
                   ), responseContext

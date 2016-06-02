@@ -125,4 +125,10 @@ public interface ExtractionFn
   {
     MANY_TO_ONE, ONE_TO_ONE
   }
+
+  /**
+   * Number of input dimensions for the extraction function. Some extraction function may take multiple dimensions as inputs
+   * @return number of input dimensions
+   */
+  public int numberOfDimensionInputs();
 }

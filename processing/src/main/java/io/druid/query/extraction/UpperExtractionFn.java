@@ -72,6 +72,12 @@ public class UpperExtractionFn extends DimExtractionFn
   }
 
   @Override
+  public int numberOfDimensionInputs()
+  {
+    return 1;
+  }
+
+  @Override
   public byte[] getCacheKey()
   {
     byte[] localeBytes = StringUtils.toUtf8(Strings.nullToEmpty(localeString));

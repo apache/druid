@@ -98,6 +98,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
       throw new IAE("Should only have one interval, got[%s]", intervals);
     }
     final Interval interval = intervals.get(0);
+    boolean hasMultiDimSpec = false;
 
     // Closing this will cause segfaults in unit tests.
     final QueryableIndex index = segment.asQueryableIndex();
@@ -112,67 +113,76 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
         dimsToSearch = dimensions;
       }
 
-      final BitmapFactory bitmapFactory = index.getBitmapFactoryForDimensions();
-
-      final ImmutableBitmap baseFilter =
-          filter == null ? null : filter.getBitmapIndex(new ColumnSelectorBitmapIndexSelector(bitmapFactory, index));
-
-      ImmutableBitmap timeFilteredBitmap;
-      if (!interval.contains(segment.getDataInterval())) {
-        MutableBitmap timeBitmap = bitmapFactory.makeEmptyMutableBitmap();
-        final Column timeColumn = index.getColumn(Column.TIME_COLUMN_NAME);
-        final GenericColumn timeValues = timeColumn.getGenericColumn();
-
-        int startIndex = Math.max(0, getStartIndexOfTime(timeValues, interval.getStartMillis(), true));
-        int endIndex = Math.min(timeValues.length() - 1, getStartIndexOfTime(timeValues, interval.getEndMillis(), false));
-
-        for (int i = startIndex; i <= endIndex; i++) {
-          timeBitmap.add(i);
+      // Check first if the dimensionSpec has multi-dimension spec
+      for (DimensionSpec dimensionSpec: dimsToSearch) {
+        if (dimensionSpec.getDimensions().size() > 1) {
+          hasMultiDimSpec = true;
         }
-
-        final ImmutableBitmap finalTimeBitmap = bitmapFactory.makeImmutableBitmap(timeBitmap);
-        timeFilteredBitmap =
-            (baseFilter == null) ? finalTimeBitmap : finalTimeBitmap.intersection(baseFilter);
-      } else {
-        timeFilteredBitmap = baseFilter;
       }
+      // DimensionSpec with multiple dimensions are handled through cursor only
+      if (!hasMultiDimSpec) {
+        final BitmapFactory bitmapFactory = index.getBitmapFactoryForDimensions();
 
-      for (DimensionSpec dimension : dimsToSearch) {
-        final Column column = index.getColumn(dimension.getDimension());
-        if (column == null) {
-          continue;
+        final ImmutableBitmap baseFilter =
+            filter == null ? null : filter.getBitmapIndex(new ColumnSelectorBitmapIndexSelector(bitmapFactory, index));
+
+        ImmutableBitmap timeFilteredBitmap;
+        if (!interval.contains(segment.getDataInterval())) {
+          MutableBitmap timeBitmap = bitmapFactory.makeEmptyMutableBitmap();
+          final Column timeColumn = index.getColumn(Column.TIME_COLUMN_NAME);
+          final GenericColumn timeValues = timeColumn.getGenericColumn();
+
+          int startIndex = Math.max(0, getStartIndexOfTime(timeValues, interval.getStartMillis(), true));
+          int endIndex = Math.min(timeValues.length() - 1, getStartIndexOfTime(timeValues, interval.getEndMillis(), false));
+
+          for (int i = startIndex; i <= endIndex; i++) {
+            timeBitmap.add(i);
+          }
+
+          final ImmutableBitmap finalTimeBitmap = bitmapFactory.makeImmutableBitmap(timeBitmap);
+          timeFilteredBitmap =
+              (baseFilter == null) ? finalTimeBitmap : finalTimeBitmap.intersection(baseFilter);
+        } else {
+          timeFilteredBitmap = baseFilter;
         }
 
-        final BitmapIndex bitmapIndex = column.getBitmapIndex();
-        ExtractionFn extractionFn = dimension.getExtractionFn();
-        if (extractionFn == null) {
-          extractionFn = IdentityExtractionFn.getInstance();
-        }
-        if (bitmapIndex != null) {
-          for (int i = 0; i < bitmapIndex.getCardinality(); ++i) {
-            String dimVal = Strings.nullToEmpty(extractionFn.apply(bitmapIndex.getValue(i)));
-            if (!searchQuerySpec.accept(dimVal)) {
-              continue;
-            }
-            ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
-            if (timeFilteredBitmap != null) {
-              bitmap = bitmapFactory.intersection(Arrays.asList(timeFilteredBitmap, bitmap));
-            }
-            if (bitmap.size() > 0) {
-              MutableInt counter = new MutableInt(bitmap.size());
-              MutableInt prev = retVal.put(new SearchHit(dimension.getOutputName(), dimVal), counter);
-              if (prev != null) {
-                counter.add(prev.intValue());
+        for (DimensionSpec dimension : dimsToSearch) {
+          final Column column = index.getColumn(dimension.getDimensions().get(0));
+          if (column == null) {
+            continue;
+          }
+
+          final BitmapIndex bitmapIndex = column.getBitmapIndex();
+          ExtractionFn extractionFn = dimension.getExtractionFn();
+          if (extractionFn == null) {
+            extractionFn = IdentityExtractionFn.getInstance();
+          }
+          if (bitmapIndex != null) {
+            for (int i = 0; i < bitmapIndex.getCardinality(); ++i) {
+              String dimVal = Strings.nullToEmpty(extractionFn.apply(bitmapIndex.getValue(i)));
+              if (!searchQuerySpec.accept(dimVal)) {
+                continue;
               }
-              if (retVal.size() >= limit) {
-                return makeReturnResult(limit, retVal);
+              ImmutableBitmap bitmap = bitmapIndex.getBitmap(i);
+              if (baseFilter != null) {
+                bitmap = bitmapFactory.intersection(Arrays.asList(baseFilter, bitmap));
+              }
+              if (bitmap.size() > 0) {
+                MutableInt counter = new MutableInt(bitmap.size());
+                MutableInt prev = retVal.put(new SearchHit(dimension.getOutputName(), dimVal), counter);
+                if (prev != null) {
+                  counter.add(prev.intValue());
+                }
+                if (retVal.size() >= limit) {
+                  return makeReturnResult(limit, retVal);
+                }
               }
             }
           }
         }
-      }
 
-      return makeReturnResult(limit, retVal);
+        return makeReturnResult(limit, retVal);
+      }
     }
 
     final StorageAdapter adapter = segment.asStorageAdapter();

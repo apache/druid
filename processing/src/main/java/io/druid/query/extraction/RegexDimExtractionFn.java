@@ -127,6 +127,12 @@ public class RegexDimExtractionFn extends DimExtractionFn
   }
 
   @Override
+  public int numberOfDimensionInputs()
+  {
+    return 1;
+  }
+
+  @Override
   public String toString()
   {
     return String.format("regex(%s)", expr);

@@ -119,6 +119,12 @@ public class MultiDimLookupExtractionFn extends MultiInputFunctionalExtraction
   }
 
   @Override
+  public int numberOfDimensionInputs()
+  {
+    return numKeys;
+  }
+
+  @Override
   public boolean equals(Object o)
   {
     if (this == o) {

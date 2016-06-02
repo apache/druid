@@ -1,0 +1,18 @@
+{
+  "queryType": "search",
+  "dataSource": "test_datasource",
+  "granularity": "day",
+  "searchDimensions":[
+    "product", "pty_country"
+  ],
+  "query": {
+    "type": "insensitive_contains",
+    "value": "product_1"
+  },
+  "sort" : {
+    "type": "lexicographic"
+  },
+  "intervals": [
+    "2014-10-19T00:00:00.000Z/2014-10-22T00:00:00.000Z"
+  ]
+}

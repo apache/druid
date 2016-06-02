@@ -57,7 +57,7 @@ public class SelectQuerySpecTest
         + "\"descending\":true,"
         + "\"filter\":null,"
         + "\"granularity\":{\"type\":\"all\"},"
-        + "\"dimensions\":[{\"type\":\"default\",\"dimension\":\"market\",\"outputName\":\"market\"},{\"type\":\"default\",\"dimension\":\"quality\",\"outputName\":\"quality\"}],"
+        + "\"dimensions\":[{\"type\":\"default\",\"dimensions\":[\"market\"],\"outputName\":\"market\"},{\"type\":\"default\",\"dimensions\":[\"quality\"],\"outputName\":\"quality\"}],"
         + "\"metrics\":[\"index\"],"
         + "\"pagingSpec\":{\"pagingIdentifiers\":{},\"threshold\":3,\"fromNext\":false},"
         + "\"context\":null}";

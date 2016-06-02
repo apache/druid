@@ -30,17 +30,20 @@ import io.druid.query.filter.DimFilterUtils;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.lookup.LookupExtractor;
 import io.druid.query.lookup.LookupReferencesManager;
+import io.druid.query.lookup.MultiDimLookupExtractionFn;
 import io.druid.segment.DimensionSelector;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.Collections;
+import java.util.List;
 
 public class LookupDimensionSpec implements DimensionSpec
 {
   private static final byte CACHE_TYPE_ID = 0x4;
 
   @JsonProperty
-  private final String dimension;
+  private final List<String> dimensions;
 
   @JsonProperty
   private final String outputName;
@@ -64,7 +67,7 @@ public class LookupDimensionSpec implements DimensionSpec
 
   @JsonCreator
   public LookupDimensionSpec(
-      @JsonProperty("dimension") String dimension,
+      @JsonProperty("dimensions") List<String> dimensions,
       @JsonProperty("outputName") String outputName,
       @JsonProperty("lookup") LookupExtractor lookup,
       @JsonProperty("retainMissingValue") boolean retainMissingValue,
@@ -77,7 +80,7 @@ public class LookupDimensionSpec implements DimensionSpec
     this.retainMissingValue = retainMissingValue;
     this.optimize = optimize == null ? true : optimize;
     this.replaceMissingValueWith = Strings.emptyToNull(replaceMissingValueWith);
-    this.dimension = Preconditions.checkNotNull(dimension, "dimension can not be Null");
+    this.dimensions = Preconditions.checkNotNull(dimensions, "dimensions can not be Null");
     this.outputName = Preconditions.checkNotNull(outputName, "outputName can not be Null");
     this.lookupReferencesManager = lookupReferencesManager;
     this.name = name;
@@ -95,11 +98,34 @@ public class LookupDimensionSpec implements DimensionSpec
     }
   }
 
+  public LookupDimensionSpec(
+      String dimension,
+      String outputName,
+      LookupExtractor lookup,
+      boolean retainMissingValue,
+      String replaceMissingValueWith,
+      String name,
+      LookupReferencesManager lookupReferencesManager,
+      Boolean optimize
+  )
+  {
+    this(
+        Collections.singletonList(dimension),
+        outputName,
+        lookup,
+        retainMissingValue,
+        replaceMissingValueWith,
+        name,
+        lookupReferencesManager,
+        optimize
+        );
+  }
+
   @Override
   @JsonProperty
-  public String getDimension()
+  public List<String> getDimensions()
   {
-    return dimension;
+    return dimensions;
   }
 
   @Override
@@ -133,14 +159,20 @@ public class LookupDimensionSpec implements DimensionSpec
                                                 "Lookup [%s] not found",
                                                 name
                                             ).get();
+    return dimensions.size() == 1 ?
+        new LookupExtractionFn(
+            lookupExtractor,
+            retainMissingValue,
+            replaceMissingValueWith,
+            lookupExtractor.isOneToOne(),
+            optimize) :
+        new MultiDimLookupExtractionFn(
+            lookupExtractor,
+            replaceMissingValueWith,
+            optimize,
+            dimensions.size()
+        );
 
-    return new LookupExtractionFn(
-        lookupExtractor,
-        retainMissingValue,
-        replaceMissingValueWith,
-        lookupExtractor.isOneToOne(),
-        optimize
-    );
   }
 
   @Override
@@ -152,7 +184,13 @@ public class LookupDimensionSpec implements DimensionSpec
   @Override
   public byte[] getCacheKey()
   {
-    byte[] dimensionBytes = StringUtils.toUtf8(dimension);
+    int totalSize = 0;
+    byte[][] dimensionBytes = new byte[dimensions.size()][];
+    for (int idx = 0; idx < dimensions.size(); idx++) {
+      String dimension = dimensions.get(idx);
+      dimensionBytes[idx] = StringUtils.toUtf8(dimension);
+      totalSize += dimensionBytes[idx].length;
+    }
     byte[] dimExtractionFnBytes = Strings.isNullOrEmpty(name)
                                   ? getLookup().getCacheKey()
                                   : StringUtils.toUtf8(name);
@@ -160,15 +198,19 @@ public class LookupDimensionSpec implements DimensionSpec
     byte[] replaceWithBytes = StringUtils.toUtf8(Strings.nullToEmpty(replaceMissingValueWith));
 
 
-    return ByteBuffer.allocate(6
-                               + dimensionBytes.length
+    ByteBuffer buffer = ByteBuffer.allocate(5 + dimensionBytes.length
+                               + totalSize
                                + outputNameBytes.length
                                + dimExtractionFnBytes.length
                                + replaceWithBytes.length)
-                     .put(CACHE_TYPE_ID)
-                     .put(dimensionBytes)
-                     .put(DimFilterUtils.STRING_SEPARATOR)
-                     .put(outputNameBytes)
+                     .put(CACHE_TYPE_ID);
+    for (int idx = 0; idx < dimensions.size(); idx++)
+    {
+      buffer.put(dimensionBytes[idx])
+          .put(DimFilterUtils.STRING_SEPARATOR);
+    }
+
+    return     buffer.put(outputNameBytes)
                      .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(dimExtractionFnBytes)
                      .put(DimFilterUtils.STRING_SEPARATOR)
@@ -202,7 +244,7 @@ public class LookupDimensionSpec implements DimensionSpec
     if (optimize != that.optimize) {
       return false;
     }
-    if (!getDimension().equals(that.getDimension())) {
+    if (!getDimensions().equals(that.getDimensions())) {
       return false;
     }
     if (!getOutputName().equals(that.getOutputName())) {
@@ -223,7 +265,7 @@ public class LookupDimensionSpec implements DimensionSpec
   @Override
   public int hashCode()
   {
-    int result = getDimension().hashCode();
+    int result = getDimensions().hashCode();
     result = 31 * result + getOutputName().hashCode();
     result = 31 * result + (getLookup() != null ? getLookup().hashCode() : 0);
     result = 31 * result + (retainMissingValue ? 1 : 0);

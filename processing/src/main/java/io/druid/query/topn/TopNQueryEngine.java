@@ -92,9 +92,14 @@ public class TopNQueryEngine
   private Function<Cursor, Result<TopNResultValue>> getMapFn(TopNQuery query, final StorageAdapter adapter)
   {
     final Capabilities capabilities = adapter.getCapabilities();
-    final String dimension = query.getDimensionSpec().getDimension();
-
-    final int cardinality = adapter.getDimensionCardinality(dimension);
+    final List<String> dimensions = query.getDimensionSpec().getDimensions();
+    int cardinality = 1;
+    // Estimate the cardinality of dimensionSpec especially for multi-dimensional case
+    for (String dimension: dimensions)
+    {
+      int dimCardinality = adapter.getDimensionCardinality(dimension);
+      cardinality *= (dimCardinality > 0) ? dimCardinality : 1;
+    }
 
     int numBytesPerRecord = 0;
     for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {
@@ -105,12 +110,17 @@ public class TopNQueryEngine
     query.initTopNAlgorithmSelector(selector);
 
     final TopNAlgorithm topNAlgorithm;
-    if (
+
+    if (dimensions.size() > 1 && selector.isHasExtractionFn()) {
+      throw new UnsupportedOperationException("DimensionSpec with multiple dimensions should have extract function");
+    }
+
+    if (dimensions.size() == 1 &&
         selector.isHasExtractionFn() &&
-        // TimeExtractionTopNAlgorithm can work on any single-value dimension of type long.
-        // Once we have arbitrary dimension types following check should be replaced by checking
-        // that the column is of type long and single-value.
-        dimension.equals(Column.TIME_COLUMN_NAME)
+            // TimeExtractionTopNAlgorithm can work on any single-value dimension of type long.
+            // Once we have arbitrary dimension types following check should be replaced by checking
+            // that the column is of type long and single-value.
+            dimensions.get(0).equals(Column.TIME_COLUMN_NAME)
         ) {
       // A special TimeExtractionTopNAlgorithm is required, since DimExtractionTopNAlgorithm
       // currently relies on the dimension cardinality to support lexicographic sorting

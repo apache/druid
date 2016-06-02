@@ -59,7 +59,7 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
               @Override
               public String apply(DimensionSpec input)
               {
-                return input.getDimension();
+                return input.getDimensions().get(0);
               }
             }
         )

@@ -29,8 +29,6 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.common.IAE;
-import com.metamx.common.UOE;
 import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
@@ -66,9 +64,11 @@ import org.roaringbitmap.IntIterator;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  */
@@ -452,70 +452,177 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         DimensionSpec dimensionSpec
                     )
                     {
-                      final String dimension = dimensionSpec.getDimension();
+                      final List<String> dimensions = dimensionSpec.getDimensions();
                       final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
 
-                      final Column columnDesc = index.getColumn(dimension);
-                      if (columnDesc == null) {
-                        return NULL_DIMENSION_SELECTOR;
-                      }
+                      if (dimensions.size() == 1) {
+                        String dimension = dimensions.get(0);
+                        final Column columnDesc = index.getColumn(dimension);
+                        if (columnDesc == null) {
+                          return NULL_DIMENSION_SELECTOR;
+                        }
 
-                      if (dimension.equals(Column.TIME_COLUMN_NAME)) {
-                        return new SingleScanTimeDimSelector(
-                            makeLongColumnSelector(dimension),
-                            extractionFn,
-                            descending
-                        );
-                      }
+                        if (dimension.equals(Column.TIME_COLUMN_NAME)) {
+                          return new SingleScanTimeDimSelector(
+                              makeLongColumnSelector(dimension),
+                              extractionFn,
+                              descending
+                          );
+                        }
 
-                      DictionaryEncodedColumn<String> cachedColumn = dictionaryColumnCache.get(dimension);
-                      if (cachedColumn == null) {
-                        cachedColumn = columnDesc.getDictionaryEncoding();
-                        dictionaryColumnCache.put(dimension, cachedColumn);
-                      }
+                        DictionaryEncodedColumn<String> cachedColumn = dictionaryColumnCache.get(dimension);
+                        if (cachedColumn == null) {
+                          cachedColumn = columnDesc.getDictionaryEncoding();
+                          dictionaryColumnCache.put(dimension, cachedColumn);
+                        }
 
-                      final DictionaryEncodedColumn<String> column = cachedColumn;
+                        final DictionaryEncodedColumn<String> column = cachedColumn;
 
-                      if (column == null) {
-                        return NULL_DIMENSION_SELECTOR;
-                      } else if (columnDesc.getCapabilities().hasMultipleValues()) {
-                        return new DimensionSelector()
-                        {
-                          @Override
-                          public IndexedInts getRow()
+                        if (column == null) {
+                          return NULL_DIMENSION_SELECTOR;
+                        } else if (columnDesc.getCapabilities().hasMultipleValues()) {
+                          return new DimensionSelector()
                           {
-                            return column.getMultiValueRow(cursorOffset.getOffset());
-                          }
-
-                          @Override
-                          public int getValueCardinality()
-                          {
-                            return column.getCardinality();
-                          }
-
-                          @Override
-                          public String lookupName(int id)
-                          {
-                            final String value = column.lookupName(id);
-                            return extractionFn == null ?
-                                   value :
-                                   extractionFn.apply(value);
-                          }
-
-                          @Override
-                          public int lookupId(String name)
-                          {
-                            if (extractionFn != null) {
-                              throw new UnsupportedOperationException(
-                                  "cannot perform lookup when applying an extraction function"
-                              );
+                            @Override
+                            public IndexedInts getRow()
+                            {
+                              return column.getMultiValueRow(cursorOffset.getOffset());
                             }
-                            return column.lookupId(name);
-                          }
-                        };
+
+                            @Override
+                            public int getValueCardinality()
+                            {
+                              return column.getCardinality();
+                            }
+
+                            @Override
+                            public String lookupName(int id)
+                            {
+                              final String value = column.lookupName(id);
+                              return extractionFn == null ?
+                                  value :
+                                  extractionFn.apply(value);
+                            }
+
+                            @Override
+                            public int lookupId(String name)
+                            {
+                              if (extractionFn != null) {
+                                throw new UnsupportedOperationException(
+                                    "cannot perform lookup when applying an extraction function"
+                                );
+                              }
+                              return column.lookupId(name);
+                            }
+                          };
+                        } else {
+                          return new DimensionSelector()
+                          {
+                            @Override
+                            public IndexedInts getRow()
+                            {
+                              // using an anonymous class is faster than creating a class that stores a copy of the value
+                              return new IndexedInts()
+                              {
+                                @Override
+                                public int size()
+                                {
+                                  return 1;
+                                }
+
+                                @Override
+                                public int get(int index)
+                                {
+                                  return column.getSingleValueRow(cursorOffset.getOffset());
+                                }
+
+                                @Override
+                                public Iterator<Integer> iterator()
+                                {
+                                  return Iterators.singletonIterator(column.getSingleValueRow(cursorOffset.getOffset()));
+                                }
+
+                                @Override
+                                public void fill(int index, int[] toFill)
+                                {
+                                  throw new UnsupportedOperationException("fill not supported");
+                                }
+
+                                @Override
+                                public void close() throws IOException
+                                {
+
+                                }
+                              };
+                            }
+
+                            @Override
+                            public int getValueCardinality()
+                            {
+                              return column.getCardinality();
+                            }
+
+                            @Override
+                            public String lookupName(int id)
+                            {
+                              final String value = column.lookupName(id);
+                              return extractionFn == null ? value : extractionFn.apply(value);
+                            }
+
+                            @Override
+                            public int lookupId(String name)
+                            {
+                              if (extractionFn != null) {
+                                throw new UnsupportedOperationException(
+                                    "cannot perform lookup when applying an extraction function"
+                                );
+                              }
+                              return column.lookupId(name);
+                            }
+                          };
+                        }
                       } else {
+                        // multiple dimensions in dimension spec.
+                        if (extractionFn == null || dimensions.size() != extractionFn.numberOfDimensionInputs())
+                        {
+                          throw new UnsupportedOperationException(
+                              "number of dimensions between extractionFn() and input dimensions mismatch!"
+                          );
+                        }
+
+                        final Column[] columnDescs = new Column[dimensions.size()];
+                        final DictionaryEncodedColumn[] columns = new DictionaryEncodedColumn[dimensions.size()];
+
+                        int cardinality = 1;
+                        for (int idx = 0; idx < dimensions.size(); idx++)
+                        {
+                          String dimension = dimensions.get(idx);
+                          columnDescs[idx] = index.getColumn(dimension);
+                          if (columnDescs[idx] != null)
+                          {
+                            DictionaryEncodedColumn cachedColumn = dictionaryColumnCache.get(dimension);
+                            if (cachedColumn == null) {
+                              cachedColumn = columnDescs[idx].getDictionaryEncoding();
+                              dictionaryColumnCache.put(dimension, cachedColumn);
+                            }
+
+                            columns[idx] = cachedColumn;
+                            if (cachedColumn != null)
+                            {
+                              cardinality *= cachedColumn.getCardinality();
+                            }
+                          }
+                        }
+                        final int cardinalityEstimate = cardinality;
+
                         return new DimensionSelector()
                         {
+                          boolean valMade = false;
+                          int currentOffset = 0;
+                          List<Integer> vals = null;
+                          List<String> dimsExtractValues = Lists.newArrayList();
+                          Map<String, Integer> dimsExtractLookup = Maps.newHashMap();
+
                           @Override
                           public IndexedInts getRow()
                           {
@@ -525,19 +632,22 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                               @Override
                               public int size()
                               {
-                                return 1;
+                                fillValues();
+                                return vals.size();
                               }
 
                               @Override
                               public int get(int index)
                               {
-                                return column.getSingleValueRow(cursorOffset.getOffset());
+                                fillValues();
+                                return vals.get(index);
                               }
 
                               @Override
                               public Iterator<Integer> iterator()
                               {
-                                return Iterators.singletonIterator(column.getSingleValueRow(cursorOffset.getOffset()));
+                                fillValues();
+                                return vals.iterator();
                               }
 
                               @Override
@@ -557,28 +667,78 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                           @Override
                           public int getValueCardinality()
                           {
-                            return column.getCardinality();
+                            return cardinalityEstimate;
                           }
 
                           @Override
                           public String lookupName(int id)
                           {
-                            final String value = column.lookupName(id);
-                            return extractionFn == null ? value : extractionFn.apply(value);
+                            fillValues();
+                            return dimsExtractValues.get(id);
                           }
 
                           @Override
                           public int lookupId(String name)
                           {
-                            if (extractionFn != null) {
-                              throw new UnsupportedOperationException(
-                                  "cannot perform lookup when applying an extraction function"
-                              );
+                            throw new UnsupportedOperationException(
+                                "cannot perform lookup when applying an extraction function"
+                            );
+                          }
+
+                          private synchronized void fillValues()
+                          {
+                            if (!valMade || currentOffset != cursorOffset.getOffset())
+                            {
+                              List<Set<Comparable>> dimValues = Lists.newArrayListWithCapacity(dimensions.size());
+
+                              for (int idx = 0; idx < dimensions.size(); idx++)
+                              {
+                                Set<Comparable> valuesTmp;
+                                if (columnDescs[idx] == null || columns[idx] == null)
+                                {
+                                  valuesTmp = Sets.newHashSetWithExpectedSize(1);
+                                  valuesTmp.add(null);
+                                } else {
+                                  if (columnDescs[idx].getCapabilities().hasMultipleValues()) {
+                                    IndexedInts indexedInts = columns[idx].getMultiValueRow(cursorOffset.getOffset());
+                                    valuesTmp = Sets.newHashSetWithExpectedSize(indexedInts.size());
+                                    for (int valueIdx = 0; valueIdx < indexedInts.size(); valueIdx++)
+                                    {
+                                      valuesTmp.add(columns[idx].lookupName(indexedInts.get(valueIdx)));
+                                    }
+                                  } else {
+                                    valuesTmp = Sets.newHashSetWithExpectedSize(1);
+                                    valuesTmp.add(columns[idx].lookupName(columns[idx].getSingleValueRow(cursorOffset.getOffset())));
+                                  }
+                                }
+                                dimValues.add(valuesTmp);
+                              }
+
+                              Set<List<Comparable>> args = Sets.cartesianProduct(dimValues);
+                              List<Integer> valsTmp = Lists.newArrayListWithCapacity(args.size());
+
+                              for (List<Comparable> arg: args)
+                              {
+                                String fnReturn = extractionFn.apply(arg);
+                                Integer index = dimsExtractLookup.get(fnReturn);
+                                if (index == null) {
+                                  dimsExtractLookup.put(fnReturn, dimsExtractValues.size());
+                                  valsTmp.add(dimsExtractValues.size());
+                                  dimsExtractValues.add(fnReturn);
+                                } else {
+                                  valsTmp.add(index);
+                                }
+                              }
+                              vals = valsTmp == null ? Collections.EMPTY_LIST : valsTmp;
+
+                              valMade = true;
+                              currentOffset = cursorOffset.getOffset();
                             }
-                            return column.lookupId(name);
                           }
                         };
+
                       }
+
                     }
 
 

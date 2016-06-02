@@ -20,10 +20,14 @@
 package io.druid.segment.incremental;
 
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
+import com.google.common.primitives.Ints;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.granularity.QueryGranularity;
@@ -48,10 +52,12 @@ import io.druid.segment.NullDimensionSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.SingleScanTimeDimSelector;
 import io.druid.segment.StorageAdapter;
+import io.druid.segment.StringDimensionIndexer;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
+import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.ListIndexed;
 import io.druid.segment.filter.BooleanValueMatcher;
 import io.druid.segment.filter.Filters;
@@ -59,8 +65,11 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.io.IOException;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  */
@@ -338,28 +347,155 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
               @Override
               public DimensionSelector makeDimensionSelector(
-                  DimensionSpec dimensionSpec
+                  final DimensionSpec dimensionSpec
               )
               {
-                final String dimension = dimensionSpec.getDimension();
+                final List<String> dimensions = dimensionSpec.getDimensions();
                 final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
 
-                if (dimension.equals(Column.TIME_COLUMN_NAME)) {
-                  DimensionSelector selector = new SingleScanTimeDimSelector(
-                      makeLongColumnSelector(dimension),
-                      extractionFn,
-                      descending
+                Function<String, DimensionSelector> dimSelectorGenerator = new Function<String, DimensionSelector>()
+                {
+                  @Override
+                  public DimensionSelector apply(String dimension)
+                  {
+                    if (dimension.equals(Column.TIME_COLUMN_NAME)) {
+                      return new SingleScanTimeDimSelector(
+                          makeLongColumnSelector(dimension),
+                          extractionFn,
+                          descending
+                      );
+                    }
+
+                    IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimension);
+
+                    if (dimensionDesc == null) {
+                      return NULL_DIMENSION_SELECTOR;
+                    } else {
+                      return (DimensionSelector) dimensionDesc.getIndexer().makeColumnValueSelector(dimensionSpec, currEntry, dimensionDesc);
+                    }
+                  }
+                };
+
+                if (dimensions.size() == 1) {
+                  return dimensionSpec.decorate(dimSelectorGenerator.apply(dimensions.get(0)));
+                } else {
+                  Preconditions.checkArgument(extractionFn != null,
+                      "ExtractionFn should be specified with multiple dimensions");
+                  final List<DimensionSelector> selectors = Lists.transform(
+                      dimensions,
+                      dimSelectorGenerator
                   );
-                  return dimensionSpec.decorate(selector);
-                }
 
-                final IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimensionSpec.getDimension());
-                if (dimensionDesc == null) {
-                  return dimensionSpec.decorate(NULL_DIMENSION_SELECTOR);
-                }
+                  int cardinality = 1;
+                  for (DimensionSelector selector: selectors) {
+                    cardinality *= selector.getValueCardinality();
+                  }
+                  final int finalCardinality = cardinality;
 
-                final DimensionIndexer indexer = dimensionDesc.getIndexer();
-                return dimensionSpec.decorate((DimensionSelector) indexer.makeColumnValueSelector(dimensionSpec, currEntry, dimensionDesc));
+                  DimensionSelector combined = new DimensionSelector()
+                  {
+                    StringDimensionIndexer.DimensionDictionary dimLookup =
+                        new StringDimensionIndexer.DimensionDictionary();
+
+                    @Override
+                    public IndexedInts getRow()
+                    {
+                      final List<IndexedInts> rows = Lists.transform(
+                          selectors,
+                          new Function<DimensionSelector, IndexedInts>()
+                          {
+                            @Override
+                            public IndexedInts apply(DimensionSelector selector)
+                            {
+                              return selector.getRow();
+                            }
+                          }
+                      );
+
+                      int size = 1;
+                      for (IndexedInts row: rows) {
+                        size *= row.size();
+                      }
+                      final int finalSize = size;
+
+                      final List<Integer> vals = Lists.newArrayListWithCapacity(size);
+
+                      for (int idx = 0; idx < size; idx++) {
+                        List<String> args = Lists.newArrayListWithCapacity(rows.size());
+                        int index = idx;
+                        int indexInRow;
+                        for (int rowIdx = 0; rowIdx < rows.size(); rowIdx++)
+                        {
+                          DimensionSelector selector = selectors.get(rowIdx);
+                          IndexedInts row = rows.get(rowIdx);
+                          if (index == 0) {
+                            indexInRow = 0;
+                          } else {
+                            indexInRow = index % row.size();
+                            index = index / row.size();
+                          }
+                          args.add(selector.lookupName(row.get(indexInRow)));
+                        }
+                        vals.add(dimLookup.add(extractionFn.apply(args)));
+                      }
+
+                      return new IndexedInts()
+                      {
+                        @Override
+                        public int size()
+                        {
+                          return finalSize;
+                        }
+
+                        @Override
+                        public int get(int index)
+                        {
+                          return vals.get(index);
+                        }
+
+                        @Override
+                        public void fill(int index, int[] toFill)
+                        {
+                          throw new UnsupportedOperationException("fill not supported");
+                        }
+
+                        @Override
+                        public void close() throws IOException
+                        {
+
+                        }
+
+                        @Override
+                        public Iterator<Integer> iterator()
+                        {
+                          return vals.iterator();
+                        }
+                      };
+                    }
+
+                    @Override
+                    public int getValueCardinality()
+                    {
+                      return finalCardinality;
+                    }
+
+                    @Override
+                    public String lookupName(int id)
+                    {
+                      return dimLookup.getValue(id);
+                    }
+
+                    @Override
+                    public int lookupId(String name)
+                    {
+                      throw new UnsupportedOperationException(
+                          "cannot perform lookup when applying an extraction function"
+                      );
+                    }
+                  };
+
+                  return dimensionSpec.decorate(combined);
+                }
               }
 
               @Override

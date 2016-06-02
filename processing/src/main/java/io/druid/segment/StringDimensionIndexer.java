@@ -50,7 +50,7 @@ public class StringDimensionIndexer implements DimensionIndexer<Integer, int[], 
 {
   private static final Logger log = new Logger(StringDimensionIndexer.class);
 
-  private static class DimensionDictionary
+  public static class DimensionDictionary
   {
     private String minValue = null;
     private String maxValue = null;

@@ -133,6 +133,12 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
     return ensureDelegate().getExtractionType();
   }
 
+  @Override
+  public int numberOfDimensionInputs()
+  {
+    return 1;
+  }
+
   private LookupExtractionFn ensureDelegate()
   {
     if (null == delegate) {

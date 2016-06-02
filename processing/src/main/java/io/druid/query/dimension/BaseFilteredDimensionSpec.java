@@ -50,9 +50,9 @@ public abstract class BaseFilteredDimensionSpec implements DimensionSpec
   }
 
   @Override
-  public String getDimension()
+  public List<String> getDimensions()
   {
-    return delegate.getDimension();
+    return delegate.getDimensions();
   }
 
   @Override

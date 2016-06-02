@@ -22,6 +22,7 @@ package io.druid.query.dimension;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.metamx.common.StringUtils;
@@ -50,7 +51,8 @@ public class DefaultDimensionSpec implements DimensionSpec
               @Override
               public DimensionSpec apply(String input)
               {
-                return new DefaultDimensionSpec(input, input);
+                List<String> dimensions = ImmutableList.of(input);
+                return new DefaultDimensionSpec(dimensions, input);
               }
             }
         )
@@ -58,16 +60,27 @@ public class DefaultDimensionSpec implements DimensionSpec
   }
 
   private static final byte CACHE_TYPE_ID = 0x0;
-  private final String dimension;
+  private final List<String> dimensions;
   private final String outputName;
 
   @JsonCreator
   public DefaultDimensionSpec(
-      @JsonProperty("dimension") String dimension,
+      @JsonProperty("dimensions") List<String> dimensions,
       @JsonProperty("outputName") String outputName
   )
   {
-    this.dimension = dimension;
+    this.dimensions = dimensions;
+
+    // Do null check for legacy backwards compatibility, callers should be setting the value.
+    this.outputName = outputName == null ? dimensions.get(0) : outputName;
+  }
+
+  public DefaultDimensionSpec(
+      String dimension,
+      String outputName
+  )
+  {
+    this.dimensions = ImmutableList.of(dimension);
 
     // Do null check for legacy backwards compatibility, callers should be setting the value.
     this.outputName = outputName == null ? dimension : outputName;
@@ -75,9 +88,9 @@ public class DefaultDimensionSpec implements DimensionSpec
 
   @Override
   @JsonProperty
-  public String getDimension()
+  public List<String> getDimensions()
   {
-    return dimension;
+    return dimensions;
   }
 
   @Override
@@ -102,12 +115,21 @@ public class DefaultDimensionSpec implements DimensionSpec
   @Override
   public byte[] getCacheKey()
   {
-    byte[] dimensionBytes = StringUtils.toUtf8(dimension);
+    int totalSize = 0;
+    byte[][] dimensionBytes = new byte[dimensions.size()][];
+    for (int idx = 0; idx < dimensions.size(); idx++) {
+      String dimension = dimensions.get(idx);
+      dimensionBytes[idx] = StringUtils.toUtf8(dimension);
+      totalSize += dimensionBytes[idx].length;
+    }
 
-    return ByteBuffer.allocate(1 + dimensionBytes.length)
-                     .put(CACHE_TYPE_ID)
-                     .put(dimensionBytes)
-                     .array();
+    ByteBuffer byteBuffer = ByteBuffer.allocate(1 + totalSize)
+        .put(CACHE_TYPE_ID);
+    for (int idx = 0; idx < dimensions.size(); idx++) {
+      byteBuffer.put(dimensionBytes[idx]);
+    }
+
+    return byteBuffer.array();
   }
 
   @Override
@@ -120,7 +142,7 @@ public class DefaultDimensionSpec implements DimensionSpec
   public String toString()
   {
     return "DefaultDimensionSpec{" +
-           "dimension='" + dimension + '\'' +
+           "dimensions='" + dimensions + '\'' +
            ", outputName='" + outputName + '\'' +
            '}';
   }
@@ -134,7 +156,7 @@ public class DefaultDimensionSpec implements DimensionSpec
 
     DefaultDimensionSpec that = (DefaultDimensionSpec) o;
 
-    if (dimension != null ? !dimension.equals(that.dimension) : that.dimension != null) return false;
+    if (dimensions != null ? !dimensions.equals(that.dimensions) : that.dimensions != null) return false;
     if (outputName != null ? !outputName.equals(that.outputName) : that.outputName != null) return false;
 
     return true;
@@ -143,7 +165,7 @@ public class DefaultDimensionSpec implements DimensionSpec
   @Override
   public int hashCode()
   {
-    int result = dimension != null ? dimension.hashCode() : 0;
+    int result = dimensions != null ? dimensions.hashCode() : 0;
     result = 31 * result + (outputName != null ? outputName.hashCode() : 0);
     return result;
   }

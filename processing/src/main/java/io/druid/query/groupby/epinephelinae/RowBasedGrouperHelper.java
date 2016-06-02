@@ -27,6 +27,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Chars;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
@@ -57,9 +58,11 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 // this class contains shared code between GroupByMergingQueryRunnerV2 and GroupByRowProcessor
 public class RowBasedGrouperHelper
@@ -521,78 +524,173 @@ public class RowBasedGrouperHelper
         DimensionSpec dimensionSpec
     )
     {
-      final String dimension = dimensionSpec.getDimension();
+      final List<String> dimensions = dimensionSpec.getDimensions();
       final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
 
-      return new DimensionSelector()
-      {
-        @Override
-        public IndexedInts getRow()
+      if (dimensions.size() == 1) {
+        final String dimension = dimensions.get(0);
+
+        return new DimensionSelector()
         {
-          final List<String> dimensionValues = row.get().getDimension(dimension);
-          final ArrayList<Integer> vals = Lists.newArrayList();
-          if (dimensionValues != null) {
-            for (int i = 0; i < dimensionValues.size(); ++i) {
-              vals.add(i);
+          @Override
+          public IndexedInts getRow()
+          {
+            final List<String> dimensionValues = row.get().getDimension(dimension);
+            final ArrayList<Integer> vals = Lists.newArrayList();
+            if (dimensionValues != null) {
+              for (int i = 0; i < dimensionValues.size(); ++i) {
+                vals.add(i);
+              }
             }
+
+            return new IndexedInts()
+            {
+              @Override
+              public int size()
+              {
+                return vals.size();
+              }
+
+              @Override
+              public int get(int index)
+              {
+                return vals.get(index);
+              }
+
+              @Override
+              public Iterator<Integer> iterator()
+              {
+                return vals.iterator();
+              }
+
+              @Override
+              public void close() throws IOException
+              {
+
+              }
+
+              @Override
+              public void fill(int index, int[] toFill)
+              {
+                throw new UnsupportedOperationException("fill not supported");
+              }
+            };
           }
 
-          return new IndexedInts()
+          @Override
+          public int getValueCardinality()
           {
-            @Override
-            public int size()
-            {
-              return vals.size();
+            return DimensionSelector.CARDINALITY_UNKNOWN;
+          }
+
+          @Override
+          public String lookupName(int id)
+          {
+            final String value = row.get().getDimension(dimension).get(id);
+            return extractionFn == null ? value : extractionFn.apply(value);
+          }
+
+          @Override
+          public int lookupId(String name)
+          {
+            if (extractionFn != null) {
+              throw new UnsupportedOperationException("cannot perform lookup when applying an extraction function");
             }
-
-            @Override
-            public int get(int index)
-            {
-              return vals.get(index);
-            }
-
-            @Override
-            public Iterator<Integer> iterator()
-            {
-              return vals.iterator();
-            }
-
-            @Override
-            public void close() throws IOException
-            {
-
-            }
-
-            @Override
-            public void fill(int index, int[] toFill)
-            {
-              throw new UnsupportedOperationException("fill not supported");
-            }
-          };
-        }
-
-        @Override
-        public int getValueCardinality()
+            return row.get().getDimension(dimension).indexOf(name);
+          }
+        };
+      } else {
+        return new DimensionSelector()
         {
-          return DimensionSelector.CARDINALITY_UNKNOWN;
-        }
+          boolean extractValuesFilled = false;
+          List<String> dimsExtractValues = null;
+          Row currentRow = null;
+          ArrayList<Integer> vals;
 
-        @Override
-        public String lookupName(int id)
-        {
-          final String value = row.get().getDimension(dimension).get(id);
-          return extractionFn == null ? value : extractionFn.apply(value);
-        }
+          @Override
+          public IndexedInts getRow()
+          {
+            fillExtractValues();
 
-        @Override
-        public int lookupId(String name)
-        {
-          if (extractionFn != null) {
+            return new IndexedInts()
+            {
+              @Override
+              public int size()
+              {
+                return vals.size();
+              }
+
+              @Override
+              public int get(int index)
+              {
+                return vals.get(index);
+              }
+
+              @Override
+              public Iterator<Integer> iterator()
+              {
+                return vals.iterator();
+              }
+
+              @Override
+              public void close() throws IOException
+              {
+
+              }
+
+              @Override
+              public void fill(int index, int[] toFill)
+              {
+                throw new UnsupportedOperationException("fill not supported");
+              }
+            };
+          }
+
+          @Override
+          public int getValueCardinality()
+          {
+            return DimensionSelector.CARDINALITY_UNKNOWN;
+          }
+
+          @Override
+          public String lookupName(int id)
+          {
+            fillExtractValues();
+            return dimsExtractValues.get(id);
+          }
+
+          @Override
+          public int lookupId(String name)
+          {
             throw new UnsupportedOperationException("cannot perform lookup when applying an extraction function");
           }
-          return row.get().getDimension(dimension).indexOf(name);
-        }
-      };
+
+          private synchronized void fillExtractValues()
+          {
+            if (!extractValuesFilled || currentRow != row.get())
+            {
+              List<Set<String>> dimValues = Lists.newArrayListWithCapacity(dimensions.size());
+              for (String dimension: dimensions) {
+                List<String> dimensionValues = row.get().getDimension(dimension);
+                dimValues.add(new HashSet<>(dimensionValues));
+              }
+
+              Set<List<String>> args = Sets.cartesianProduct(dimValues);
+              dimsExtractValues = Lists.newArrayListWithCapacity(args.size());
+              for (List<String> arg: args) {
+                dimsExtractValues.add(extractionFn.apply(arg));
+              }
+              vals = Lists.newArrayList();
+              for (int i = 0; i < dimsExtractValues.size(); ++i) {
+                vals.add(i);
+              }
+
+              extractValuesFilled = true;
+              currentRow = row.get();
+            }
+          }
+        };
+      }
     }
 
     @Override
