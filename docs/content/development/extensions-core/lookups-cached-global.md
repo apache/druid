@@ -176,6 +176,7 @@ The remapping values for each namespaced lookup can be specified by a json objec
   "pollPeriod":"PT5M"
 }
 ```
+
 |Property|Description|Required|Default|
 |--------|-----------|--------|-------|
 |`pollPeriod`|Period between polling for updates|No|0 (only once)|
