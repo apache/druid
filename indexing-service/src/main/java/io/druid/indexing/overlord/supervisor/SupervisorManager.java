@@ -74,11 +74,13 @@ public class SupervisorManager
     return createAndStartSupervisorInternal(spec, true);
   }
 
-  public void stopAndRemoveSupervisor(String id)
+  public void stopAndRemoveSupervisor(String id, boolean writeTombstone)
   {
     Pair<Supervisor, SupervisorSpec> pair = supervisors.get(id);
     if (pair != null) {
-      metadataSupervisorManager.insert(id, new NoopSupervisorSpec()); // where NoopSupervisorSpec is a tombstone
+      if (writeTombstone) {
+        metadataSupervisorManager.insert(id, new NoopSupervisorSpec()); // where NoopSupervisorSpec is a tombstone
+      }
       pair.lhs.stop(true);
       supervisors.remove(id);
     }
@@ -125,12 +127,14 @@ public class SupervisorManager
   {
     String id = spec.getId();
     if (!supervisors.containsKey(id)) {
+      Supervisor supervisor = spec.createSupervisor();
+      supervisor.start(); // try starting the supervisor first so we don't persist a bad spec
+
       if (persistSpec) {
         metadataSupervisorManager.insert(id, spec);
       }
 
-      supervisors.put(id, Pair.of(spec.createSupervisor(), spec));
-      supervisors.get(id).lhs.start();
+      supervisors.put(id, Pair.of(supervisor, spec));
       return true;
     }
 
