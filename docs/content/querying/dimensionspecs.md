@@ -25,7 +25,7 @@ Returns dimension values transformed using the given [extraction function](#extr
 ```json
 {
   "type" : "extraction",
-  "dimension" : <dimension>,
+  "dimensions" : list of <dimension>s,
   "outputName" :  <output_name>,
   "extractionFn" : <extraction_function>
 }
@@ -33,7 +33,8 @@ Returns dimension values transformed using the given [extraction function](#extr
 
 ## Extraction Functions
 
-Extraction functions define the transformation applied to each dimension value.
+Extraction functions define the transformation applied to each dimension value 
+or group of dimension values from multiple dimensions.
 
 Transformations can be applied to both regular (string) dimensions, as well
 as the special `__time` dimension, which represents the current time bucket
@@ -205,6 +206,9 @@ about using Druid's JavaScript functionality.
 
 Lookups are a concept in Druid where dimension values are (optionally) replaced with new values. 
 For more documentation on using lookups, please see [here](../querying/lookups.html). 
+For the case that values from multiple dimensions consist of lookup key, 
+please use [lookup extraction function for multiple dimensions](#lookup-extraction-function-for-multiple-dimensions).
+
 Explicit lookups allow you to specify a set of keys and values to use when performing the extraction.
 
 ```json
@@ -326,11 +330,15 @@ The specification for dimension extraction using dimension specification named l
   "type":"registeredLookup",
   "lookup":"some_lookup_name",
   "retainMissingValue":true,
-  "injective":false
+  "injective":false,
+  "numKeys":1
 }
 ```
 
-All the flags for [lookup extraction function](#lookup-extraction-function) apply here as well.
+As lookup extraction function can have multiple dimensions [lookup extraction function for multiple dimensions](#lookup-extraction-function-for-multiple-dimensions), 
+numKeys should be specified when the size of key dimensions is larger than 1 (default value is 1).
+
+All the flags for [lookup extraction function](#lookup-extraction-function) and [lookup extraction function for multiple dimensions](#lookup-extraction-function-for-multiple-dimensions) apply here as well.
 
 In general, the dimension specification should be used. This dimension **extraction** implementation is made available for testing, validation, and transitioning from dimension extraction to the dimension specification style lookups.
 There is also a chance that a feature uses dimension extraction in such a way that it is not applied to dimension specification lookups. Such a scenario should be brought to the attention of the development mailing list.
@@ -437,6 +445,57 @@ The following extraction function creates buckets of 5 starting from 2. In this 
   "offset" : 2
 }
 ```
+
+### Lookup extraction function for multiple dimensions
+
+Special case lookup extraction function to handle the case when lookup key is consist of values from multiple dimensions.
+For lookup with single dimension key, please see [lookup extraction function](#lookup-extraction-function). 
+
+Explicit lookups allow you to specify a set of keys and values to use when performing the extraction.
+
+```json
+{
+  "type":"multilookup",
+  "lookup":{
+    "type":"multiKeyMap",
+    "keyValueList": [["1stKey", "2ndKey", "value"], ["1stKey2", "2ndKey2", "value2"]]
+  },
+  "numKeys": 2
+}
+```
+
+```json
+{
+  "type":"multilookup",
+  "lookup":{
+    "type":"multiKeyMap",
+    "keyValueList": [["1stKey", "2ndKey", "value"], ["1stKey2", "2ndKey2", "value2"]]
+  },
+  "replaceMissingValueWith":"MISSING",
+  "numKeys": 2
+}
+```
+
+```json
+{
+  "type":"multilookup",
+  "lookup":{"type":"namespace","namespace":"some_lookup"},
+  "numKeys": 2
+}
+```
+
+A lookup can be of type `namespace` or `multiKeyMap`. A `multiKeyMap` lookup is passed as part of the query. 
+A `namespace` lookup is populated on all the nodes which handle queries as per [lookups](../querying/lookups.html)
+
+Unlike [lookup extraction function](#lookup-extraction-function), 
+properties of `retainMissingValue` and `injective` are not supported as multiple dimension values are combined to make a lookup key.
+
+`replaceMissingValueWith` can be specified at query time to hint how to handle missing values. 
+Setting `replaceMissingValueWith` to `""` has the same effect as setting it to `null` or omitting the property. 
+The default value is `replaceMissingValueWith = null` which causes missing values to be treated as missing.
+ 
+A property of `injective` specifies if optimizations can be used which assume there is no combining of multiple names into one. For example: If ABC123 is the only key that maps to SomeCompany, that can be optimized since it is a unique lookup. But if both ABC123 and DEF456 BOTH map to SomeCompany, then that is NOT a unique lookup. Setting this value to true and setting `retainMissingValue` to FALSE (the default) may cause undesired behavior.
+
 
 ### Lookup DimensionSpecs
 
