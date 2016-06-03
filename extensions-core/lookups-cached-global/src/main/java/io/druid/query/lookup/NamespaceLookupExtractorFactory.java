@@ -153,7 +153,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
       NamespaceExtractionCacheManager manager
   )
   {
-    this(extractionNamespace, 0, false, manager);
+    this(extractionNamespace, 60000, false, manager);
   }
 
   @Override
