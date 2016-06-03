@@ -166,9 +166,16 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
         LOG.warn("Already started! [%s]", extractorID);
         return true;
       }
-      if (!manager.scheduleAndWait(extractorID, extractionNamespace, firstCacheTimeout)) {
-        LOG.error("Failed to schedule lookup [%s]", extractorID);
-        return false;
+      if(firstCacheTimeout > 0) {
+        if (!manager.scheduleAndWait(extractorID, extractionNamespace, firstCacheTimeout)) {
+          LOG.error("Failed to schedule and wait for lookup [%s]", extractorID);
+          return false;
+        }
+      } else {
+        if(!manager.scheduleOrUpdate(extractorID, extractionNamespace)) {
+          LOG.error("Failed to schedule lookup [%s]", extractorID);
+          return false;
+        }
       }
       LOG.debug("NamespaceLookupExtractorFactory[%s] started", extractorID);
       started = true;

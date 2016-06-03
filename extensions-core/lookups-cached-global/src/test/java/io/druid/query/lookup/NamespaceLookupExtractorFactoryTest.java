@@ -148,6 +148,64 @@ public class NamespaceLookupExtractorFactoryTest
   }
 
   @Test
+  public void testStartReturnsImmediately()
+  {
+    final ExtractionNamespace extractionNamespace = new ExtractionNamespace()
+    {
+      @Override
+      public long getPollMs()
+      {
+        return 0;
+      }
+    };
+    EasyMock.expect(cacheManager.scheduleOrUpdate(
+        EasyMock.anyString(),
+        EasyMock.eq(extractionNamespace)
+    )).andReturn(true).once();
+    EasyMock.expect(
+        cacheManager.checkedDelete(EasyMock.anyString())
+    ).andReturn(true).once();
+    EasyMock.replay(cacheManager);
+
+    final NamespaceLookupExtractorFactory namespaceLookupExtractorFactory = new NamespaceLookupExtractorFactory(
+        extractionNamespace,
+        0,
+        false,
+        cacheManager
+    );
+    Assert.assertTrue(namespaceLookupExtractorFactory.start());
+    Assert.assertTrue(namespaceLookupExtractorFactory.close());
+    EasyMock.verify(cacheManager);
+  }
+
+  @Test
+  public void testStartReturnsImmediatelyAndFails()
+  {
+    final ExtractionNamespace extractionNamespace = new ExtractionNamespace()
+    {
+      @Override
+      public long getPollMs()
+      {
+        return 0;
+      }
+    };
+    EasyMock.expect(cacheManager.scheduleOrUpdate(
+        EasyMock.anyString(),
+        EasyMock.eq(extractionNamespace)
+    )).andReturn(false).once();
+    EasyMock.replay(cacheManager);
+
+    final NamespaceLookupExtractorFactory namespaceLookupExtractorFactory = new NamespaceLookupExtractorFactory(
+        extractionNamespace,
+        0,
+        false,
+        cacheManager
+    );
+    Assert.assertFalse(namespaceLookupExtractorFactory.start());
+    EasyMock.verify(cacheManager);
+  }
+
+  @Test
   public void testSimpleStartStopStop()
   {
     final ExtractionNamespace extractionNamespace = new ExtractionNamespace()
