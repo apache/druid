@@ -20,12 +20,29 @@ while getopts ":adn" opt; do
 done
 shift $((OPTIND-1))
 
+# Set $version to Druid version (tag will be "druid-$version")
 if [ -z "$1" ]; then 
     version="latest"
 else
     version=$1
 fi
 
+# Set $origin to name of origin remote
+if [ -z "$2" ]; then
+    origin="origin"
+else
+    origin=$2
+fi
+
+# Use s3cmd if available, otherwise try awscli
+if command -v s3cmd >/dev/null 2>&1
+then
+  s3sync="s3cmd sync --delete-removed"
+else
+  s3sync="aws s3 sync --delete"
+fi
+
+# Location of git repository containing this script
 druid=$(git -C "$(dirname "$0")" rev-parse --show-toplevel)
 
 if [ -n "$(git -C "$druid" status --porcelain --untracked-files=no)" ]; then
@@ -52,12 +69,20 @@ echo "Working directory [$tmp]"
 
 git clone -q --depth 1 git@github.com:druid-io/druid-io.github.io.git "$target"
 
-remote=$(git -C "$druid" config --local --get remote.origin.url)
+remote=$(git -C "$druid" config --local --get "remote.$origin.url")
 git clone -q --depth 1 --branch $branch $remote "$src"
 
 if [ -n "$opt_docs" ] ; then
+  # Copy docs
   mkdir -p $target/docs/$version
   rsync -a --delete "$src/docs/content/" $target/docs/$version
+
+  # Replace #{DRUIDVERSION} with current Druid version
+  # Escaping of $version is weak here, but it should be fine for typical version strings
+  find "$target/docs/$version" -name "*.md" -print0 | xargs -0 perl -pi -e's/\#\{DRUIDVERSION\}/'"$version"'/g'
+
+  # Create redirects
+  "$src/docs/_bin/make-redirects.py" "$target/docs/$version" "$src/docs/_redirects.json"
 fi
 
 # generate javadocs for releases (not for master)
@@ -65,7 +90,7 @@ if [ "$version" != "latest" ] && [ -n "$opt_api" ] ; then
   (cd $src && mvn javadoc:aggregate)
   mkdir -p $target/api/$version
   if [ -z "$opt_dryrun" ]; then
-    s3cmd sync --delete-removed "$src/target/site/apidocs/" "s3://static.druid.io/api/$version/"
+    $s3sync "$src/target/site/apidocs/" "s3://static.druid.io/api/$version/"
   fi
 fi
 

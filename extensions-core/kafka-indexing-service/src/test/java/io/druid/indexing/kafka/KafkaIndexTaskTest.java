@@ -117,6 +117,7 @@ import org.apache.curator.test.TestingCluster;
 import org.apache.kafka.clients.producer.KafkaProducer;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.easymock.EasyMock;
+import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.After;
@@ -301,7 +302,8 @@ public class KafkaIndexTaskTest
             new KafkaPartitions("topic0", ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
-            false
+            false,
+            null
         ),
         null
     );
@@ -341,7 +343,8 @@ public class KafkaIndexTaskTest
             new KafkaPartitions("topic0", ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
-            false
+            false,
+            null
         ),
         null
     );
@@ -383,6 +386,59 @@ public class KafkaIndexTaskTest
   }
 
   @Test(timeout = 60_000L)
+  public void testRunWithMinimumMessageTime() throws Exception
+  {
+    final KafkaIndexTask task = createTask(
+        null,
+        new KafkaIOConfig(
+            "sequence0",
+            new KafkaPartitions("topic0", ImmutableMap.of(0, 0L)),
+            new KafkaPartitions("topic0", ImmutableMap.of(0, 5L)),
+            kafkaServer.consumerProperties(),
+            true,
+            false,
+            new DateTime("2010")
+        ),
+        null
+    );
+
+    final ListenableFuture<TaskStatus> future = runTask(task);
+
+    // Wait for the task to start reading
+    while (task.getStatus() != KafkaIndexTask.Status.READING) {
+      Thread.sleep(10);
+    }
+
+    // Insert data
+    try (final KafkaProducer<byte[], byte[]> kafkaProducer = kafkaServer.newProducer()) {
+      for (ProducerRecord<byte[], byte[]> record : RECORDS) {
+        kafkaProducer.send(record).get();
+      }
+    }
+
+    // Wait for task to exit
+    Assert.assertEquals(TaskStatus.Status.SUCCESS, future.get().getStatusCode());
+
+    // Check metrics
+    Assert.assertEquals(3, task.getFireDepartmentMetrics().processed());
+    Assert.assertEquals(0, task.getFireDepartmentMetrics().unparseable());
+    Assert.assertEquals(2, task.getFireDepartmentMetrics().thrownAway());
+
+    // Check published metadata
+    SegmentDescriptor desc1 = SD(task, "2010/P1D", 0);
+    SegmentDescriptor desc2 = SD(task, "2011/P1D", 0);
+    Assert.assertEquals(ImmutableSet.of(desc1, desc2), publishedDescriptors());
+    Assert.assertEquals(
+        new KafkaDataSourceMetadata(new KafkaPartitions("topic0", ImmutableMap.of(0, 5L))),
+        metadataStorageCoordinator.getDataSourceMetadata(DATA_SCHEMA.getDataSource())
+    );
+
+    // Check segments in deep storage
+    Assert.assertEquals(ImmutableList.of("c"), readSegmentDim1(desc1));
+    Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentDim1(desc2));
+  }
+
+  @Test(timeout = 60_000L)
   public void testRunOnNothing() throws Exception
   {
     // Insert data
@@ -400,7 +456,8 @@ public class KafkaIndexTaskTest
             new KafkaPartitions("topic0", ImmutableMap.of(0, 2L)),
             kafkaServer.consumerProperties(),
             true,
-            false
+            false,
+            null
         ),
         null
     );
@@ -439,7 +496,8 @@ public class KafkaIndexTaskTest
             new KafkaPartitions("topic0", ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
-            false
+            false,
+            null
         ),
         null
     );
@@ -489,7 +547,8 @@ public class KafkaIndexTaskTest
             new KafkaPartitions("topic0", ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
-            false
+            false,
+            null
         ),
         null
     );
@@ -538,7 +597,8 @@ public class KafkaIndexTaskTest
             new KafkaPartitions("topic0", ImmutableMap.of(0, 7L)),
             kafkaServer.consumerProperties(),
             true,
-            false
+            false,
+            null
         ),
         null
     );
@@ -569,7 +629,8 @@ public class KafkaIndexTaskTest
             new KafkaPartitions("topic0", ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
-            false
+            false,
+            null
         ),
         null
     );
@@ -581,7 +642,8 @@ public class KafkaIndexTaskTest
             new KafkaPartitions("topic0", ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
-            false
+            false,
+            null
         ),
         null
     );
@@ -633,7 +695,8 @@ public class KafkaIndexTaskTest
             new KafkaPartitions("topic0", ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
-            false
+            false,
+            null
         ),
         null
     );
@@ -645,7 +708,8 @@ public class KafkaIndexTaskTest
             new KafkaPartitions("topic0", ImmutableMap.of(0, 7L)),
             kafkaServer.consumerProperties(),
             true,
-            false
+            false,
+            null
         ),
         null
     );
@@ -698,7 +762,8 @@ public class KafkaIndexTaskTest
             new KafkaPartitions("topic0", ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             false,
-            false
+            false,
+            null
         ),
         null
     );
@@ -710,7 +775,8 @@ public class KafkaIndexTaskTest
             new KafkaPartitions("topic0", ImmutableMap.of(0, 7L)),
             kafkaServer.consumerProperties(),
             false,
-            false
+            false,
+            null
         ),
         null
     );
@@ -768,7 +834,8 @@ public class KafkaIndexTaskTest
             new KafkaPartitions("topic0", ImmutableMap.of(0, 5L, 1, 2L)),
             kafkaServer.consumerProperties(),
             true,
-            false
+            false,
+            null
         ),
         null
     );
@@ -823,7 +890,8 @@ public class KafkaIndexTaskTest
             new KafkaPartitions("topic0", ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
-            false
+            false,
+            null
         ),
         null
     );
@@ -835,7 +903,8 @@ public class KafkaIndexTaskTest
             new KafkaPartitions("topic0", ImmutableMap.of(1, 1L)),
             kafkaServer.consumerProperties(),
             true,
-            false
+            false,
+            null
         ),
         null
     );
@@ -889,7 +958,8 @@ public class KafkaIndexTaskTest
             new KafkaPartitions("topic0", ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
-            false
+            false,
+            null
         ),
         null
     );
@@ -922,7 +992,8 @@ public class KafkaIndexTaskTest
             new KafkaPartitions("topic0", ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
-            false
+            false,
+            null
         ),
         null
     );
@@ -972,7 +1043,8 @@ public class KafkaIndexTaskTest
             new KafkaPartitions("topic0", ImmutableMap.of(0, 5L)),
             kafkaServer.consumerProperties(),
             true,
-            false
+            false,
+            null
         ),
         null
     );
@@ -1053,7 +1125,8 @@ public class KafkaIndexTaskTest
             new KafkaPartitions("topic0", ImmutableMap.of(0, 3L)),
             kafkaServer.consumerProperties(),
             true,
-            true
+            true,
+            null
         ),
         null
     );

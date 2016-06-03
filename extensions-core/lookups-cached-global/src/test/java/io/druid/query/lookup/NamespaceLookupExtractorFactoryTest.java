@@ -148,6 +148,64 @@ public class NamespaceLookupExtractorFactoryTest
   }
 
   @Test
+  public void testStartReturnsImmediately()
+  {
+    final ExtractionNamespace extractionNamespace = new ExtractionNamespace()
+    {
+      @Override
+      public long getPollMs()
+      {
+        return 0;
+      }
+    };
+    EasyMock.expect(cacheManager.scheduleOrUpdate(
+        EasyMock.anyString(),
+        EasyMock.eq(extractionNamespace)
+    )).andReturn(true).once();
+    EasyMock.expect(
+        cacheManager.checkedDelete(EasyMock.anyString())
+    ).andReturn(true).once();
+    EasyMock.replay(cacheManager);
+
+    final NamespaceLookupExtractorFactory namespaceLookupExtractorFactory = new NamespaceLookupExtractorFactory(
+        extractionNamespace,
+        0,
+        false,
+        cacheManager
+    );
+    Assert.assertTrue(namespaceLookupExtractorFactory.start());
+    Assert.assertTrue(namespaceLookupExtractorFactory.close());
+    EasyMock.verify(cacheManager);
+  }
+
+  @Test
+  public void testStartReturnsImmediatelyAndFails()
+  {
+    final ExtractionNamespace extractionNamespace = new ExtractionNamespace()
+    {
+      @Override
+      public long getPollMs()
+      {
+        return 0;
+      }
+    };
+    EasyMock.expect(cacheManager.scheduleOrUpdate(
+        EasyMock.anyString(),
+        EasyMock.eq(extractionNamespace)
+    )).andReturn(false).once();
+    EasyMock.replay(cacheManager);
+
+    final NamespaceLookupExtractorFactory namespaceLookupExtractorFactory = new NamespaceLookupExtractorFactory(
+        extractionNamespace,
+        0,
+        false,
+        cacheManager
+    );
+    Assert.assertFalse(namespaceLookupExtractorFactory.start());
+    EasyMock.verify(cacheManager);
+  }
+
+  @Test
   public void testSimpleStartStopStop()
   {
     final ExtractionNamespace extractionNamespace = new ExtractionNamespace()
@@ -499,7 +557,7 @@ public class NamespaceLookupExtractorFactoryTest
     );
     final ObjectMapper mapper = injector.getInstance(Key.get(ObjectMapper.class, Json.class));
     mapper.registerSubtypes(NamespaceLookupExtractorFactory.class);
-    final String str = "{ \"type\": \"cachedNamespace\", \"extractionNamespace\": { \"type\": \"staticMap\", \"map\": {\"foo\":\"bar\"} } }";
+    final String str = "{ \"type\": \"cachedNamespace\", \"extractionNamespace\": { \"type\": \"staticMap\", \"map\": {\"foo\":\"bar\"} }, \"firstCacheTimeout\":10000 }";
     final LookupExtractorFactory lookupExtractorFactory = mapper.readValue(str, LookupExtractorFactory.class);
     Assert.assertTrue(lookupExtractorFactory.start());
     try {

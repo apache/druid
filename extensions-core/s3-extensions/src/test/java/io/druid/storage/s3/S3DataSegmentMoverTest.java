@@ -110,6 +110,52 @@ public class S3DataSegmentMoverTest
         ImmutableMap.<String, Object>of("baseKey", "targetBaseKey", "bucket", "archive")
     );
   }
+  
+  @Test
+  public void testIgnoresGoneButAlreadyMoved() throws Exception
+  {
+    MockStorageService mockS3Client = new MockStorageService();
+    S3DataSegmentMover mover = new S3DataSegmentMover(mockS3Client, new S3DataSegmentPusherConfig());
+    mover.move(new DataSegment(
+        "test",
+        new Interval("2013-01-01/2013-01-02"),
+        "1",
+        ImmutableMap.<String, Object>of(
+            "key",
+            "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
+            "bucket",
+            "DOES NOT EXIST"
+        ),
+        ImmutableList.of("dim1", "dim1"),
+        ImmutableList.of("metric1", "metric2"),
+        new NoneShardSpec(),
+        0,
+        1
+    ), ImmutableMap.<String, Object>of("bucket", "DOES NOT EXIST", "baseKey", "baseKey"));
+  }
+
+  @Test(expected = SegmentLoadingException.class)
+  public void testFailsToMoveMissing() throws Exception
+  {
+    MockStorageService mockS3Client = new MockStorageService();
+    S3DataSegmentMover mover = new S3DataSegmentMover(mockS3Client, new S3DataSegmentPusherConfig());
+    mover.move(new DataSegment(
+        "test",
+        new Interval("2013-01-01/2013-01-02"),
+        "1",
+        ImmutableMap.<String, Object>of(
+            "key",
+            "baseKey/test/2013-01-01T00:00:00.000Z_2013-01-02T00:00:00.000Z/1/0/index.zip",
+            "bucket",
+            "DOES NOT EXIST"
+        ),
+        ImmutableList.of("dim1", "dim1"),
+        ImmutableList.of("metric1", "metric2"),
+        new NoneShardSpec(),
+        0,
+        1
+    ), ImmutableMap.<String, Object>of("bucket", "DOES NOT EXIST", "baseKey", "baseKey2"));
+  }
 
   private class MockStorageService extends RestS3Service {
     Map<String, Set<String>> storage = Maps.newHashMap();

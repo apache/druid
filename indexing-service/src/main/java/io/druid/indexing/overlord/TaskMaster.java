@@ -53,7 +53,7 @@ import java.util.concurrent.locks.ReentrantLock;
 public class TaskMaster
 {
   private final LeaderSelector leaderSelector;
-  private final ReentrantLock giant = new ReentrantLock();
+  private final ReentrantLock giant = new ReentrantLock(true);
   private final Condition mayBeStopped = giant.newCondition();
   private final TaskActionClientFactory taskActionClientFactory;
   private final SupervisorManager supervisorManager;
@@ -145,6 +145,7 @@ public class TaskMaster
                 }
               }
               catch (InterruptedException e) {
+                log.debug("Interrupted while waiting");
                 // Suppress so we can bow out gracefully
               }
               finally {

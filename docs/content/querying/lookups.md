@@ -75,7 +75,6 @@ If there is an error while trying to delete a lookup from a node (or if a node i
 ## Bulk update
 Lookups can be updated in bulk by posting a JSON object to `/druid/coordinator/v1/lookups`. The format of the json object is as follows:
 
-
 ```json
 {
     "tierName": {
@@ -88,6 +87,7 @@ Lookups can be updated in bulk by posting a JSON object to `/druid/coordinator/v
 ```
 
 So a config might look something like:
+
 ```json
 {
     "__default": {
@@ -287,6 +287,16 @@ To configure a Broker / Router / Historical / Peon to announce itself as part of
 |---------|-------------|---------|
 |`druid.lookup.lookupTier`| The tier for **lookups** for this node. This is independent of other tiers.|`__default`|
 |`druid.lookup.lookupTierIsDatasource`|For some things like indexing service tasks, the datasource is passed in the runtime properties of a task. This option fetches the tierName from the same value as the datasource for the task. It is suggested to only use this as peon options for the indexing service, if at all. If true, `druid.lookup.lookupTier` MUST NOT be specified|`"false"`|
+
+To configure the behavior of the dynamic configuration manager, use the following properties on the coordinator:
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.manager.lookups.hostDeleteTimeout`|Timeout (in ms) PER HOST for processing DELETE requests for dropping lookups|`1000`(1 second)|
+|`druid.manager.lookups.hostUpdateTimeout`|Timeout (in ms) PER HOST for processing an update/add (POST) for new or updated lookups|`10000`(10 seconds)|
+|`druid.manager.lookups.updateAllTimeout`|Timeout (in ms) TOTAL for processing update/adds on ALL hosts. Safety valve in case too many hosts timeout on their update|`60000`(1 minute)|
+|`druid.manager.lookups.period`|How long to pause between management cycles|`30000`(30 seconds)|
+|`druid.manager.lookups.threadPoolSize`|Number of service nodes that can be managed concurrently|`10`|
 
 ## Saving configuration across restarts
 
