@@ -176,7 +176,6 @@ The remapping values for each namespaced lookup can be specified by a json objec
 ```
 |Property|Description|Required|Default|
 |--------|-----------|--------|-------|
-|`namespace`|The namespace to define|Yes||
 |`pollPeriod`|Period between polling for updates|No|0 (only once)|
 |`uri`|URI for the file of interest|No|Use `uriPrefix`|
 |`uriPrefix`|A URI which specifies a directory (or other searchable resource) in which to search for files|No|Use `uri`|
