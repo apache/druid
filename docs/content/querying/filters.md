@@ -273,12 +273,23 @@ Now suppose that the lower bound is `110` the filter will not match (`110 < 10K`
 
 #### Search Query Spec
 
+##### Contains
+
+|property|description|required?|
+|--------|-----------|---------|
+|type|This String should always be "contains".|yes|
+|value|A String value to run the search over.|yes|
+|caseSensitive|Whether two string should be compared as case sensitive or not|no (default == false)|
+
 ##### Insensitive Contains
 
 |property|description|required?|
 |--------|-----------|---------|
 |type|This String should always be "insensitive_contains".|yes|
 |value|A String value to run the search over.|yes|
+
+Note that an "insensitive_contains" search is equivalent to a "contains" search with "caseSensitive": false (or not
+provided).
 
 ##### Fragment
 
@@ -287,15 +298,6 @@ Now suppose that the lower bound is `110` the filter will not match (`110 < 10K`
 |type|This String should always be "fragment".|yes|
 |values|A JSON array of String values to run the search over.|yes|
 |caseSensitive|Whether strings should be compared as case sensitive or not. Default: false(insensitive)|no|
-
-##### Contains
-
-|property|description|required?|
-|--------|-----------|---------|
-|type|This String should always be "contains".|yes|
-|value|A String value to run the search over.|yes|
-|caseSensitive|Whether two string should be compared as case sensitive or not|yes|
-
 
 ### Filtering with Extraction Functions
 Some filters optionally support the use of extraction functions.
