@@ -20,11 +20,9 @@
 package io.druid.indexer.path;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
+import com.google.common.collect.*;
 import com.metamx.common.logger.Logger;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.hadoop.fs.FileStatus;
@@ -34,6 +32,7 @@ import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.Job;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
@@ -44,7 +43,7 @@ public class PartitionPathSpec implements PathSpec
   private static final Logger log = new Logger(PartitionPathSpec.class);
 
   private String basePath;
-  private String indexingPath;
+  private List<String> indexingPaths;
   private List<String> partitionColumns;
   private Class<? extends InputFormat> inputFormat;
 
@@ -60,14 +59,14 @@ public class PartitionPathSpec implements PathSpec
   }
 
   @JsonProperty
-  public String getIndexingPath()
+  public List<String> getIndexingPaths()
   {
-    return indexingPath;
+    return indexingPaths;
   }
 
-  public void setIndexingPath(String indexingPath)
+  public void setIndexingPaths(List<String> indexingPaths)
   {
-    this.indexingPath = indexingPath;
+    this.indexingPaths = indexingPaths;
   }
 
   @JsonProperty
@@ -96,52 +95,68 @@ public class PartitionPathSpec implements PathSpec
   public Job addInputPaths(HadoopDruidIndexerConfig config, Job job) throws IOException
   {
     Path basePath = new Path(Preconditions.checkNotNull(this.basePath));
-    Path indexingPath = this.indexingPath != null ?  new Path(this.indexingPath) : basePath;
-    Preconditions.checkArgument(indexingPath.toString().contains(basePath.toString()));
+    List<Path> indexingPaths = this.indexingPaths != null ?
+        Lists.transform(
+            this.indexingPaths,
+            new Function<String, Path>() {
+              @Nullable
+              @Override
+              public Path apply(@Nullable String input) {
+                return new Path(input);
+              }
+            }
+        )
+        : ImmutableList.of(basePath);
+    Preconditions.checkArgument(indexingPaths.toString().contains(basePath.toString()));
 
     FileSystem fs = basePath.getFileSystem(job.getConfiguration());
     Set<String> paths = Sets.newTreeSet();
 
     if (getPartitionColumns() != null) {
-      log.info("Checking the directory recursively if it has the same name as the given partition column");
-      int indexingStartColumnIndex = 0;
+      for (Path indexingPath: indexingPaths) {
+        log.info("Checking the directory recursively if it has the same name as the given partition column");
+        int indexingStartColumnIndex = 0;
 
-      // skip some partition columns for partial indexing of partitions
-      if (basePath.toString().length() != indexingPath.toString().length())
-      {
-        String targetToFindSkipColumns = indexingPath.toString().substring(basePath.toString().length() + 1);
-        String[] skipColumnValues = targetToFindSkipColumns.split(Path.SEPARATOR);
-        Preconditions.checkArgument(skipColumnValues.length <= partitionColumns.size(),
-            "partition columns should include all the columns specified in indexingPath");
-
-        for (String skipColumnValue: skipColumnValues)
+        // skip some partition columns for partial indexing of partitions
+        if (basePath.toString().length() != indexingPath.toString().length())
         {
-          String[] columnValuePair = skipColumnValue.split("=");
-          Preconditions.checkArgument(columnValuePair.length == 2,
-              String.format("%s: indexingPath should not have non-partitioning directories", skipColumnValue));
-          Preconditions.checkArgument(columnValuePair[0].equals(partitionColumns.get(indexingStartColumnIndex)));
-          indexingStartColumnIndex++;
+          String targetToFindSkipColumns = indexingPath.toString().substring(basePath.toString().length() + 1);
+          String[] skipColumnValues = targetToFindSkipColumns.split(Path.SEPARATOR);
+          Preconditions.checkArgument(skipColumnValues.length <= partitionColumns.size(),
+              "partition columns should include all the columns specified in indexingPaths");
+
+          for (String skipColumnValue: skipColumnValues)
+          {
+            String[] columnValuePair = skipColumnValue.split("=");
+            Preconditions.checkArgument(columnValuePair.length == 2,
+                String.format("%s: indexingPaths should not have non-partitioning directories", skipColumnValue));
+            Preconditions.checkArgument(columnValuePair[0].equals(partitionColumns.get(indexingStartColumnIndex)));
+            indexingStartColumnIndex++;
+          }
+        }
+
+        // scan all the sub-directories under indexingPaths and add them to input path
+        if (indexingStartColumnIndex == partitionColumns.size())
+        {
+          paths.add(fs.getFileStatus(indexingPath).getPath().toString());
+        } else {
+          Path[] pathToFilter = statusToPath(fs.listStatus(indexingPath, new PartitionPathFilter(partitionColumns.get(indexingStartColumnIndex))));
+
+          for (int idx = indexingStartColumnIndex + 1; idx < partitionColumns.size(); idx++) {
+            pathToFilter = statusToPath(fs.listStatus(pathToFilter, new PartitionPathFilter(partitionColumns.get(idx))));
+          }
+
+          for (Path path: pathToFilter) {
+            paths.add(path.toString());
+          }
         }
       }
 
-      // scan all the sub-directories under indexingPath and add them to input path
-      if (indexingStartColumnIndex == partitionColumns.size())
-      {
-        paths.add(fs.getFileStatus(indexingPath).getPath().toString());
-      } else {
-        Path[] pathToFilter = statusToPath(fs.listStatus(indexingPath, new PartitionPathFilter(partitionColumns.get(indexingStartColumnIndex))));
-
-        for (int idx = indexingStartColumnIndex + 1; idx < partitionColumns.size(); idx++) {
-          pathToFilter = statusToPath(fs.listStatus(pathToFilter, new PartitionPathFilter(partitionColumns.get(idx))));
-        }
-
-        for (Path path: pathToFilter) {
-          paths.add(path.toString());
-        }
-      }
     } else {
       log.info("Automatically find the partition columns from directory names");
-      autoAddPath(paths, fs, indexingPath);
+      for (Path indexingPath: indexingPaths) {
+        autoAddPath(paths, fs, indexingPath);
+      }
     }
 
     log.info("Appending path %s", paths);

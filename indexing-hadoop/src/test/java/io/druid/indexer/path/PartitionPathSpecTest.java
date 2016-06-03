@@ -91,13 +91,13 @@ public class PartitionPathSpecTest
   @Test
   public void testSerdeCustomInputFormat() throws Exception
   {
-    testSerde("/test/path", ImmutableList.of("test1", "test2"), TextInputFormat.class);
+    testSerde("/test/path", ImmutableList.of("test1", "test2"), ImmutableList.of("/test/path/a", "test/path/b"), TextInputFormat.class);
   }
 
   @Test
   public void testSerdeNoInputFormat() throws Exception
   {
-    testSerde("/test/path", ImmutableList.of("test1", "test2"), null);
+    testSerde("/test/path", ImmutableList.of("test1", "test2"), ImmutableList.of("/test/path/a", "test/path/b"), null);
   }
 
   @Test
@@ -251,14 +251,20 @@ public class PartitionPathSpecTest
     testFolder.newFile("test/test1=abc/test2=456/file2");
 
     partitionPathSpec.setBasePath(testFolder.getRoot().getPath() + "/test/test1=abc");
-    partitionPathSpec.setIndexingPath(testFolder.getRoot().getPath() + "/test/test1=abc/test2=123");
+    partitionPathSpec.setIndexingPaths(
+        ImmutableList.of(
+            testFolder.getRoot().getPath() + "/test/test1=abc/test2=123",
+            testFolder.getRoot().getPath() + "/test/test1=abc/test2=456"
+        )
+    );
 
     partitionPathSpec.addInputPaths(HadoopDruidIndexerConfig.fromSpec(spec), job);
 
     String actual = job.getConfiguration().get("mapreduce.input.multipleinputs.dir.formats");
 
     String expected = Joiner.on(",").join(Lists.newArrayList(
-        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=123")
+        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=123"),
+        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=456")
     ));
 
     Assert.assertEquals("Did not find expected input paths", expected, actual);
@@ -313,7 +319,12 @@ public class PartitionPathSpecTest
     testFolder.newFile("test/testz=def/test2=123/file4");
 
     partitionPathSpec.setBasePath(testFolder.getRoot().getPath() + "/test");
-    partitionPathSpec.setIndexingPath(testFolder.getRoot().getPath() + "/test/test1=abc");
+    partitionPathSpec.setIndexingPaths(
+        ImmutableList.of(
+            testFolder.getRoot().getPath() + "/test/test1=abc",
+            testFolder.getRoot().getPath() + "/test/test1=def"
+        )
+    );
 
     partitionPathSpec.addInputPaths(HadoopDruidIndexerConfig.fromSpec(spec), job);
 
@@ -321,7 +332,8 @@ public class PartitionPathSpecTest
 
     String expected = Joiner.on(",").join(Lists.newArrayList(
         String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=123"),
-        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=456")
+        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=456"),
+        String.format(formatStr, testFolder.getRoot(), "test/test1=def/test2=123")
     ));
 
     Assert.assertEquals("Did not find expected input paths", expected, actual);
@@ -479,7 +491,12 @@ public class PartitionPathSpecTest
     testFolder.newFile("test/test1=def/test2=123/file4");
 
     partitionPathSpec.setBasePath(testFolder.getRoot().getPath() + "/test");
-    partitionPathSpec.setIndexingPath(testFolder.getRoot().getPath() + "/test/test1=abc");
+    partitionPathSpec.setIndexingPaths(
+        ImmutableList.of(
+            testFolder.getRoot().getPath() + "/test/test1=abc",
+            testFolder.getRoot().getPath() + "/test/test1=def"
+        )
+    );
 
     partitionPathSpec.addInputPaths(HadoopDruidIndexerConfig.fromSpec(spec), job);
 
@@ -487,7 +504,8 @@ public class PartitionPathSpecTest
 
     String expected = Joiner.on(",").join(Lists.newArrayList(
         String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=123"),
-        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=456")
+        String.format(formatStr, testFolder.getRoot(), "test/test1=abc/test2=456"),
+        String.format(formatStr, testFolder.getRoot(), "test/test1=def/test2=123")
     ));
 
     Assert.assertEquals("Did not find expected input paths", expected, actual);
@@ -506,6 +524,7 @@ public class PartitionPathSpecTest
 
   private void testSerde(
       String basePath,
+      List<String> indexingPaths,
       List<String> partitionColumns,
       Class inputFormat) throws Exception
   {
@@ -513,6 +532,9 @@ public class PartitionPathSpecTest
     sb.append("{\"basePath\" : \"");
     sb.append(basePath);
     sb.append("\",");
+    sb.append("\"indexingPaths\" : [\"");
+    sb.append(StringUtils.join(indexingPaths, "\", \""));
+    sb.append("\"],");
     sb.append("\"partitionColumns\" : [\"");
     sb.append(StringUtils.join(partitionColumns, "\", \""));
     sb.append("\"],");
