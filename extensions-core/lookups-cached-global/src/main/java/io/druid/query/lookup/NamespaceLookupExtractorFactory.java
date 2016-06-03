@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Throwables;
 import com.metamx.common.ISE;
 import com.metamx.common.StringUtils;
 import com.metamx.common.logger.Logger;
@@ -95,7 +96,12 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
   public boolean start()
   {
     final Lock writeLock = startStopSync.writeLock();
-    writeLock.lock();
+    try {
+      writeLock.lockInterruptibly();
+    }
+    catch (InterruptedException e) {
+      throw Throwables.propagate(e);
+    }
     try {
       if (started) {
         LOG.warn("Already started! [%s]", extractorID);
@@ -125,7 +131,12 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
   public boolean close()
   {
     final Lock writeLock = startStopSync.writeLock();
-    writeLock.lock();
+    try {
+      writeLock.lockInterruptibly();
+    }
+    catch (InterruptedException e) {
+      throw Throwables.propagate(e);
+    }
     try {
       if (!started) {
         LOG.warn("Not started! [%s]", extractorID);
@@ -189,7 +200,12 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
   public LookupExtractor get()
   {
     final Lock readLock = startStopSync.readLock();
-    readLock.lock();
+    try {
+      readLock.lockInterruptibly();
+    }
+    catch (InterruptedException e) {
+      throw Throwables.propagate(e);
+    }
     try {
       if (!started) {
         throw new ISE("Factory [%s] not started", extractorID);
