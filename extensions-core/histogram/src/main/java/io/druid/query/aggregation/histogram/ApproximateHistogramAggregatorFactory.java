@@ -118,7 +118,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new ApproximateHistogramFoldingAggregatorFactory(name, name, resolution, numBuckets, lowerLimit, upperLimit);
+    return new ApproximateHistogramFoldingAggregatorFactory(name, name, resolution, numBuckets, lowerLimit, upperLimit, compact);
   }
 
   @Override
@@ -133,7 +133,8 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
           Math.max(resolution, castedOther.resolution),
           numBuckets,
           Math.min(lowerLimit, castedOther.lowerLimit),
-          Math.max(upperLimit, castedOther.upperLimit)
+          Math.max(upperLimit, castedOther.upperLimit),
+          compact
       );
 
     } else {

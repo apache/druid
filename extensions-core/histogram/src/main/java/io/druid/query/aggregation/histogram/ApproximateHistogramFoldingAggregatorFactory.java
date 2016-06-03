@@ -46,10 +46,11 @@ public class ApproximateHistogramFoldingAggregatorFactory extends ApproximateHis
       @JsonProperty("resolution") Integer resolution,
       @JsonProperty("numBuckets") Integer numBuckets,
       @JsonProperty("lowerLimit") Float lowerLimit,
-      @JsonProperty("upperLimit") Float upperLimit
+      @JsonProperty("upperLimit") Float upperLimit,
+      @JsonProperty("compact") boolean compact
   )
   {
-    super(name, fieldName, resolution, numBuckets, lowerLimit, upperLimit, false);
+    super(name, fieldName, resolution, numBuckets, lowerLimit, upperLimit, compact);
   }
 
   @Override
@@ -133,7 +134,15 @@ public class ApproximateHistogramFoldingAggregatorFactory extends ApproximateHis
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new ApproximateHistogramFoldingAggregatorFactory(name, name, resolution, numBuckets, lowerLimit, upperLimit);
+    return new ApproximateHistogramFoldingAggregatorFactory(
+        name,
+        name,
+        resolution,
+        numBuckets,
+        lowerLimit,
+        upperLimit,
+        compact
+    );
   }
 
   @Override
