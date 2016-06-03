@@ -967,6 +967,94 @@ public class KafkaSupervisorTest extends EasyMockSupport
   }
 
   @Test
+  public void testDiscoverExistingPublishingTaskWithDifferentPartitionAllocation() throws Exception
+  {
+    final TaskLocation location = new TaskLocation("testHost", 1234);
+
+    supervisor = getSupervisor(1, 1, true, "PT1H", null);
+    addSomeEvents(1);
+
+    Task task = createKafkaIndexTask(
+        "id1",
+        DATASOURCE,
+        "sequenceName-0",
+        new KafkaPartitions("topic", ImmutableMap.of(0, 0L, 2, 0L)),
+        new KafkaPartitions("topic", ImmutableMap.of(0, Long.MAX_VALUE, 2, Long.MAX_VALUE)),
+        null
+    );
+
+    Collection workItems = new ArrayList<>();
+    workItems.add(new TestTaskRunnerWorkItem(task.getId(), null, location));
+
+    Capture<KafkaIndexTask> captured = Capture.newInstance();
+    expect(taskMaster.getTaskQueue()).andReturn(Optional.of(taskQueue)).anyTimes();
+    expect(taskMaster.getTaskRunner()).andReturn(Optional.of(taskRunner)).anyTimes();
+    expect(taskRunner.getRunningTasks()).andReturn(workItems).anyTimes();
+    expect(taskStorage.getActiveTasks()).andReturn(ImmutableList.of(task)).anyTimes();
+    expect(taskStorage.getStatus("id1")).andReturn(Optional.of(TaskStatus.running("id1"))).anyTimes();
+    expect(taskStorage.getTask("id1")).andReturn(Optional.of(task)).anyTimes();
+    expect(indexerMetadataStorageCoordinator.getDataSourceMetadata(DATASOURCE)).andReturn(
+        new KafkaDataSourceMetadata(
+            null
+        )
+    ).anyTimes();
+    expect(taskClient.getStatus("id1")).andReturn(KafkaIndexTask.Status.PUBLISHING);
+    expect(taskClient.getCurrentOffsets("id1", false)).andReturn(ImmutableMap.of(0, 10L, 2, 30L));
+    expect(taskClient.getCurrentOffsets("id1", true)).andReturn(ImmutableMap.of(0, 10L, 2, 30L));
+    expect(taskQueue.add(capture(captured))).andReturn(true);
+
+    taskRunner.registerListener(anyObject(TaskRunnerListener.class), anyObject(Executor.class));
+    replayAll();
+
+    supervisor.start();
+    supervisor.runInternal();
+    SupervisorReport report = supervisor.getStatus();
+    verifyAll();
+
+    Assert.assertEquals(DATASOURCE, report.getId());
+    Assert.assertTrue(report.getPayload() instanceof KafkaSupervisorReport.KafkaSupervisorReportPayload);
+
+    KafkaSupervisorReport.KafkaSupervisorReportPayload payload = (KafkaSupervisorReport.KafkaSupervisorReportPayload)
+        report.getPayload();
+
+    Assert.assertEquals(DATASOURCE, payload.getDataSource());
+    Assert.assertEquals(3600L, (long) payload.getDurationSeconds());
+    Assert.assertEquals(NUM_PARTITIONS, (int) payload.getPartitions());
+    Assert.assertEquals(1, (int) payload.getReplicas());
+    Assert.assertEquals(KAFKA_TOPIC, payload.getTopic());
+    Assert.assertEquals(0, payload.getActiveTasks().size());
+    Assert.assertEquals(1, payload.getPublishingTasks().size());
+
+    KafkaSupervisorReport.TaskReportData publishingReport = payload.getPublishingTasks().get(0);
+
+    Assert.assertEquals("id1", publishingReport.getId());
+    Assert.assertEquals(ImmutableMap.of(0, 0L, 2, 0L), publishingReport.getStartingOffsets());
+    Assert.assertEquals(ImmutableMap.of(0, 10L, 2, 30L), publishingReport.getCurrentOffsets());
+
+    KafkaIndexTask capturedTask = captured.getValue();
+    Assert.assertEquals(dataSchema, capturedTask.getDataSchema());
+    Assert.assertEquals(tuningConfig, capturedTask.getTuningConfig());
+
+    KafkaIOConfig capturedTaskConfig = capturedTask.getIOConfig();
+    Assert.assertEquals(kafkaHost, capturedTaskConfig.getConsumerProperties().get("bootstrap.servers"));
+    Assert.assertEquals("myCustomValue", capturedTaskConfig.getConsumerProperties().get("myCustomKey"));
+    Assert.assertEquals("sequenceName-0", capturedTaskConfig.getBaseSequenceName());
+    Assert.assertTrue("isUseTransaction", capturedTaskConfig.isUseTransaction());
+    Assert.assertFalse("pauseAfterRead", capturedTaskConfig.isPauseAfterRead());
+
+    // check that the new task was created with starting offsets matching where the publishing task finished
+    Assert.assertEquals(KAFKA_TOPIC, capturedTaskConfig.getStartPartitions().getTopic());
+    Assert.assertEquals(10L, (long) capturedTaskConfig.getStartPartitions().getPartitionOffsetMap().get(0));
+    Assert.assertEquals(0L, (long) capturedTaskConfig.getStartPartitions().getPartitionOffsetMap().get(1));
+    Assert.assertEquals(30L, (long) capturedTaskConfig.getStartPartitions().getPartitionOffsetMap().get(2));
+
+    Assert.assertEquals(KAFKA_TOPIC, capturedTaskConfig.getEndPartitions().getTopic());
+    Assert.assertEquals(Long.MAX_VALUE, (long) capturedTaskConfig.getEndPartitions().getPartitionOffsetMap().get(0));
+    Assert.assertEquals(Long.MAX_VALUE, (long) capturedTaskConfig.getEndPartitions().getPartitionOffsetMap().get(1));
+    Assert.assertEquals(Long.MAX_VALUE, (long) capturedTaskConfig.getEndPartitions().getPartitionOffsetMap().get(2));
+  }
+
+  @Test
   public void testDiscoverExistingPublishingAndReadingTask() throws Exception
   {
     final TaskLocation location1 = new TaskLocation("testHost", 1234);
