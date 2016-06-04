@@ -63,13 +63,7 @@ public class SupervisorResource
           public Response apply(SupervisorManager manager)
           {
             if (manager.hasSupervisor(spec.getId())) {
-              return Response.status(Response.Status.CONFLICT)
-                             .entity(
-                                 ImmutableMap.of(
-                                     "error",
-                                     String.format("Supervisor already exists for [%s]", spec.getId())
-                                 )
-                             ).build();
+              manager.stopAndRemoveSupervisor(spec.getId(), false);
             }
 
             manager.createAndStartSupervisor(spec);
@@ -160,7 +154,7 @@ public class SupervisorResource
                              .build();
             }
 
-            manager.stopAndRemoveSupervisor(id);
+            manager.stopAndRemoveSupervisor(id, true);
             return Response.ok(ImmutableMap.of("id", id)).build();
           }
         }

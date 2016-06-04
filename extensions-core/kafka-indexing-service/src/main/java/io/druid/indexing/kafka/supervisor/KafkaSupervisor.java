@@ -559,18 +559,15 @@ public class KafkaSupervisor implements Supervisor
         KafkaIndexTask kafkaTask = (KafkaIndexTask) task;
         String taskId = task.getId();
 
-        // determine which task group this task belongs to and do a consistency check on partitions
-        Integer taskGroupId = null;
-        for (Integer partition : kafkaTask.getIOConfig().getStartPartitions().getPartitionOffsetMap().keySet()) {
-          if (taskGroupId == null) {
-            taskGroupId = getTaskGroupIdForPartition(partition);
-          } else if (!taskGroupId.equals(getTaskGroupIdForPartition(partition))) {
-            log.warn("Stopping task [%s] which does not match the expected partition allocation", taskId);
-            stopTask(taskId, false);
-            taskGroupId = null; // prevents the next block of code from adding the item to taskGroups
-            break;
-          }
-        }
+        // Determine which task group this task belongs to based on one of the partitions handled by this task. If we
+        // later determine that this task is actively reading, we will make sure that it matches our current partition
+        // allocation (getTaskGroupIdForPartition(partition) should return the same value for every partition being read
+        // by this task) and kill it if it is not compatible. If the task is instead found to be in the publishing
+        // state, we will permit it to complete even if it doesn't match our current partition allocation to support
+        // seamless schema migration.
+
+        Iterator<Integer> it = kafkaTask.getIOConfig().getStartPartitions().getPartitionOffsetMap().keySet().iterator();
+        Integer taskGroupId = (it.hasNext() ? getTaskGroupIdForPartition(it.next()) : null);
 
         if (taskGroupId != null) {
           // check to see if we already know about this task, either in [taskGroups] or in [pendingCompletionTaskGroups]
@@ -590,17 +587,29 @@ public class KafkaSupervisor implements Supervisor
               // update partitionGroups with the publishing task's offsets (if they are greater than what is existing)
               // so that the next tasks will start reading from where this task left off
               Map<Integer, Long> publishingTaskCurrentOffsets = getCurrentOffsets(taskId, true);
-              Map<Integer, Long> partitionOffsets = partitionGroups.get(taskGroupId);
-
               for (Map.Entry<Integer, Long> entry : publishingTaskCurrentOffsets.entrySet()) {
                 Integer partition = entry.getKey();
                 Long offset = entry.getValue();
+                Map<Integer, Long> partitionOffsets = partitionGroups.get(getTaskGroupIdForPartition(partition));
                 if (partitionOffsets.get(partition) == null || partitionOffsets.get(partition) < offset) {
                   partitionOffsets.put(partition, offset);
                 }
               }
 
             } else {
+              for (Integer partition : kafkaTask.getIOConfig().getStartPartitions().getPartitionOffsetMap().keySet()) {
+                if (!taskGroupId.equals(getTaskGroupIdForPartition(partition))) {
+                  log.warn("Stopping task [%s] which does not match the expected partition allocation", taskId);
+                  stopTask(taskId, false);
+                  taskGroupId = null;
+                  break;
+                }
+              }
+
+              if (taskGroupId == null) {
+                continue;
+              }
+
               if (!taskGroups.containsKey(taskGroupId)) {
                 log.debug("Creating new task group [%d]", taskGroupId);
                 taskGroups.put(
