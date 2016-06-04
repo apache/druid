@@ -19,6 +19,7 @@
 
 package io.druid.segment.data;
 
+import com.google.common.io.ByteSink;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
@@ -106,15 +107,15 @@ public class CompressedLongsSupplierSerializer
     ++numInserted;
   }
 
-  public void closeAndConsolidate(OutputSupplier<? extends OutputStream> consolidatedOut) throws IOException
+  public void closeAndConsolidate(ByteSink consolidatedOut) throws IOException
   {
     close();
-    try (OutputStream out = consolidatedOut.getOutput()) {
+    try (OutputStream out = consolidatedOut.openStream()) {
       out.write(CompressedLongsIndexedSupplier.version);
       out.write(Ints.toByteArray(numInserted));
       out.write(Ints.toByteArray(sizePer));
       out.write(new byte[]{compression.getId()});
-      ByteStreams.copy(flattener.combineStreams(), out);
+      flattener.combineStreams().copyTo(out);
     }
   }
 
@@ -141,7 +142,7 @@ public class CompressedLongsSupplierSerializer
     channel.write(ByteBuffer.wrap(Ints.toByteArray(numInserted)));
     channel.write(ByteBuffer.wrap(Ints.toByteArray(sizePer)));
     channel.write(ByteBuffer.wrap(new byte[]{compression.getId()}));
-    final ReadableByteChannel from = Channels.newChannel(flattener.combineStreams().getInput());
+    final ReadableByteChannel from = Channels.newChannel(flattener.combineStreams().openStream());
     ByteStreams.copy(from, channel);
   }
 }

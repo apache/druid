@@ -19,23 +19,15 @@
 
 package io.druid.segment.data;
 
-import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
-import com.google.common.io.Closeables;
-import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
-import com.metamx.common.guava.CloseQuietly;
-import io.druid.collections.ResourceHolder;
-import io.druid.collections.StupidResourceHolder;
 import io.druid.segment.CompressedPools;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.LongBuffer;
 import java.nio.channels.WritableByteChannel;
-import java.util.Iterator;
 
 /**
  */
@@ -98,7 +90,7 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
       final CompressionFactory.CompressionFormat compression = versionFromBuffer == LZF_VERSION ?
                                                     CompressionFactory.CompressionFormat.LZF :
                                                     CompressionFactory.CompressionFormat.forId(bufferToUse.get());
-      Supplier<IndexedLongs> supplier = compression.getLongs(totalSize, sizePer, bufferToUse, order);
+      Supplier<IndexedLongs> supplier = compression.getLongsSupplier(totalSize, sizePer, bufferToUse, order);
       return new CompressedLongsIndexedSupplier(
           totalSize,
           buffer,

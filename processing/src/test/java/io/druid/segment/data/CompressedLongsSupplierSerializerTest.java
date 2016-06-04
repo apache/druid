@@ -19,6 +19,7 @@
 
 package io.druid.segment.data;
 
+import com.google.common.io.ByteSink;
 import com.google.common.io.OutputSupplier;
 import io.druid.collections.ResourceHolder;
 import org.junit.Assert;
@@ -65,10 +66,10 @@ public class CompressedLongsSupplierSerializerTest extends CompressionStrategyTe
 
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     serializer.closeAndConsolidate(
-        new OutputSupplier<OutputStream>()
+        new ByteSink()
         {
           @Override
-          public OutputStream getOutput() throws IOException
+          public OutputStream openStream() throws IOException
           {
             return baos;
           }
@@ -105,10 +106,10 @@ public class CompressedLongsSupplierSerializerTest extends CompressionStrategyTe
     serializer.open();
     final ByteArrayOutputStream baos = new ByteArrayOutputStream();
     serializer.closeAndConsolidate(
-        new OutputSupplier<OutputStream>()
+        new ByteSink()
         {
           @Override
-          public OutputStream getOutput() throws IOException
+          public OutputStream openStream() throws IOException
           {
             return baos;
           }

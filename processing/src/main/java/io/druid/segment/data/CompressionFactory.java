@@ -14,7 +14,7 @@ public abstract class CompressionFactory
   {
     LZF((byte) 0x0) {
       @Override
-      public Supplier<IndexedLongs> getLongs(int totalSize, int sizePer, ByteBuffer buffer, ByteOrder order)
+      public Supplier<IndexedLongs> getLongsSupplier(int totalSize, int sizePer, ByteBuffer buffer, ByteOrder order)
       {
         return new BlockCompressionFormatSerde.BlockCompressedIndexedLongsSupplier(
             totalSize, sizePer, buffer, order, CompressedObjectStrategy.CompressionStrategy.LZF);
@@ -23,7 +23,7 @@ public abstract class CompressionFactory
 
     LZ4((byte) 0x1) {
       @Override
-      public Supplier<IndexedLongs> getLongs(int totalSize, int sizePer, ByteBuffer buffer, ByteOrder order)
+      public Supplier<IndexedLongs> getLongsSupplier(int totalSize, int sizePer, ByteBuffer buffer, ByteOrder order)
       {
         return new BlockCompressionFormatSerde.BlockCompressedIndexedLongsSupplier(
             totalSize, sizePer, buffer, order, CompressedObjectStrategy.CompressionStrategy.LZ4);
@@ -32,7 +32,7 @@ public abstract class CompressionFactory
 
     DELTA((byte) 0x2) {
       @Override
-      public Supplier<IndexedLongs> getLongs(int totalSize, int sizePer, ByteBuffer buffer, ByteOrder order)
+      public Supplier<IndexedLongs> getLongsSupplier(int totalSize, int sizePer, ByteBuffer buffer, ByteOrder order)
       {
         return new DeltaCompressionFormatSerde.DeltaCompressedIndexedLongsSupplier(totalSize, buffer, order);
       }
@@ -40,7 +40,7 @@ public abstract class CompressionFactory
 
     TABLE((byte) 0x3) {
       @Override
-      public Supplier<IndexedLongs> getLongs(int totalSize, int sizePer, ByteBuffer buffer, ByteOrder order)
+      public Supplier<IndexedLongs> getLongsSupplier(int totalSize, int sizePer, ByteBuffer buffer, ByteOrder order)
       {
         return new TableCompressionFormatSerde.TableCompressedIndexedLongsSupplier(totalSize, buffer, order);
       }
@@ -48,7 +48,7 @@ public abstract class CompressionFactory
 
     UNCOMPRESSED((byte) 0xFE) {
       @Override
-      public Supplier<IndexedLongs> getLongs(int totalSize, int sizePer, ByteBuffer buffer, ByteOrder order)
+      public Supplier<IndexedLongs> getLongsSupplier(int totalSize, int sizePer, ByteBuffer buffer, ByteOrder order)
       {
         return new UncompressedFormatSerde.UncompressedIndexedLongsSupplier(totalSize, buffer, order);
       }
@@ -56,7 +56,7 @@ public abstract class CompressionFactory
 
     UNCOMPRESSED_BLOCK((byte) 0xFF) {
       @Override
-      public Supplier<IndexedLongs> getLongs(int totalSize, int sizePer, ByteBuffer buffer, ByteOrder order)
+      public Supplier<IndexedLongs> getLongsSupplier(int totalSize, int sizePer, ByteBuffer buffer, ByteOrder order)
       {
         return new BlockUncompressedFormatSerde.BlockUncompressedIndexedLongsSupplier(totalSize, sizePer, buffer, order);
       }
@@ -87,6 +87,6 @@ public abstract class CompressionFactory
       return idMap.get(id);
     }
 
-    public abstract Supplier<IndexedLongs> getLongs(int totalSize, int sizePer, ByteBuffer buffer, ByteOrder order);
+    public abstract Supplier<IndexedLongs> getLongsSupplier(int totalSize, int sizePer, ByteBuffer buffer, ByteOrder order);
   }
 }

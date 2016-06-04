@@ -33,8 +33,10 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
+import com.google.common.io.ByteSink;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closer;
+import com.google.common.io.FileWriteMode;
 import com.google.common.io.Files;
 import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
@@ -864,7 +866,7 @@ public class IndexMerger
 
       final File timeFile = IndexIO.makeTimeFile(v8OutDir, IndexIO.BYTE_ORDER);
       timeFile.delete();
-      OutputSupplier<FileOutputStream> out = Files.newOutputStreamSupplier(timeFile, true);
+      ByteSink out = Files.asByteSink(timeFile, FileWriteMode.APPEND);
       timeWriter.closeAndConsolidate(out);
       IndexIO.checkFileSize(timeFile);
 
@@ -890,7 +892,7 @@ public class IndexMerger
 
       final File invertedFile = new File(v8OutDir, "inverted.drd");
       Files.touch(invertedFile);
-      out = Files.newOutputStreamSupplier(invertedFile, true);
+      out = Files.asByteSink(invertedFile, FileWriteMode.APPEND);
 
       final File geoFile = new File(v8OutDir, "spatial.drd");
       Files.touch(geoFile);
