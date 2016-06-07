@@ -62,11 +62,7 @@ public class SupervisorResource
           @Override
           public Response apply(SupervisorManager manager)
           {
-            if (manager.hasSupervisor(spec.getId())) {
-              manager.stopAndRemoveSupervisor(spec.getId(), false);
-            }
-
-            manager.createAndStartSupervisor(spec);
+            manager.createOrUpdateAndStartSupervisor(spec);
             return Response.ok(ImmutableMap.of("id", spec.getId())).build();
           }
         }
@@ -148,14 +144,13 @@ public class SupervisorResource
           @Override
           public Response apply(SupervisorManager manager)
           {
-            if (!manager.hasSupervisor(id)) {
+            if (manager.stopAndRemoveSupervisor(id)) {
+              return Response.ok(ImmutableMap.of("id", id)).build();
+            } else {
               return Response.status(Response.Status.NOT_FOUND)
                              .entity(ImmutableMap.of("error", String.format("[%s] does not exist", id)))
                              .build();
             }
-
-            manager.stopAndRemoveSupervisor(id, true);
-            return Response.ok(ImmutableMap.of("id", id)).build();
           }
         }
     );
