@@ -20,7 +20,10 @@ package io.druid.server.coordinator;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableSet;
 
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.Set;
 
 public class CoordinatorDynamicConfig
@@ -47,7 +50,11 @@ public class CoordinatorDynamicConfig
       @JsonProperty("replicationThrottleLimit") int replicationThrottleLimit,
       @JsonProperty("balancerComputeThreads") int balancerComputeThreads,
       @JsonProperty("emitBalancingStats") boolean emitBalancingStats,
-      @JsonProperty("killDataSourceWhitelist") Set<String> killDataSourceWhitelist
+
+      // Type is Object here so that we can support both string and list as
+      // coordinator console can not send array of strings in the update request.
+      // See https://github.com/druid-io/druid/issues/3055
+      @JsonProperty("killDataSourceWhitelist") Object killDataSourceWhitelist
   )
   {
     this.maxSegmentsToMove = maxSegmentsToMove;
@@ -58,7 +65,21 @@ public class CoordinatorDynamicConfig
     this.replicationThrottleLimit = replicationThrottleLimit;
     this.emitBalancingStats = emitBalancingStats;
     this.balancerComputeThreads = Math.max(balancerComputeThreads, 1);
-    this.killDataSourceWhitelist = killDataSourceWhitelist;
+
+    if (killDataSourceWhitelist instanceof String) {
+      String[] tmp = ((String) killDataSourceWhitelist).split(",");
+      this.killDataSourceWhitelist = new HashSet<>();
+      for (int i = 0; i < tmp.length; i++) {
+        String trimmed = tmp[i].trim();
+        if (!trimmed.isEmpty()) {
+          this.killDataSourceWhitelist.add(trimmed);
+        }
+      }
+    } else if (killDataSourceWhitelist instanceof Collection){
+      this.killDataSourceWhitelist = ImmutableSet.copyOf(((Collection) killDataSourceWhitelist));
+    } else {
+      this.killDataSourceWhitelist = ImmutableSet.of();
+    }
   }
 
   @JsonProperty
