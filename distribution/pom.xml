@@ -16,8 +16,7 @@
   ~ limitations under the License.
   -->
 
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
     <packaging>pom</packaging>
@@ -29,7 +28,7 @@
     <parent>
         <artifactId>druid</artifactId>
         <groupId>io.druid</groupId>
-        <version>0.9.1-SNAPSHOT</version>
+        <version>0.9.1-rc2-SNAPSHOT</version>
     </parent>
 
     <dependencies>
@@ -56,7 +55,7 @@
                             <executable>java</executable>
                             <arguments>
                                 <argument>-classpath</argument>
-                                <classpath/>
+                                <classpath />
                                 <argument>-Ddruid.extensions.loadList=[]</argument>
                                 <argument>-Ddruid.extensions.directory=${project.build.directory}/extensions</argument>
                                 <argument>-Ddruid.extensions.hadoopDependenciesDir=${project.build.directory}/hadoop-dependencies</argument>
