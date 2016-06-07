@@ -80,6 +80,7 @@ Lookups can be updated in bulk by posting a JSON object to `/druid/coordinator/v
 {
     "tierName": {
         "lookupExtractorFactoryName": {
+          "type": "someExtractorFactoryType",
           "someExtractorField": "someExtractorValue"
         }
     }
@@ -91,55 +92,54 @@ So a config might look something like:
 {
     "__default": {
         "country_code": {
-          "type": "simple_json",
-          "uri": "http://some.host.com/codes.json"
+          "type": "map",
+          "map": {"77483": "United States"}
         },
         "site_id": {
-            "type": "confidential_jdbc",
-            "auth": "/etc/jdbc.internal",
-            "table": "sites",
-            "key": "site_id",
-            "value": "site_name"
+          "type": "cachedNamespace",
+          "extractionNamespace": {
+            "type": "jdbc",
+            "connectorConfig": {
+              "createTables": true,
+              "connectURI": "jdbc:mysql:\/\/localhost:3306\/druid",
+              "user": "druid",
+              "password": "diurd"
+            },
+            "table": "lookupTable",
+            "keyColumn": "country_id",
+            "valueColumn": "country_name",
+            "tsColumn": "timeColumn"
+          },
+          "firstCacheTimeout": 120000,
+          "injective":true
         },
         "site_id_customer1": {
-            "type": "confidential_jdbc",
-            "auth": "/etc/jdbc.customer1",
-            "table": "sites",
-            "key": "site_id",
-            "value": "site_name"
+          "type": "map",
+          "map": {"847632": "Internal Use Only"}
         },
         "site_id_customer2": {
-            "type": "confidential_jdbc",
-            "auth": "/etc/jdbc.customer2",
-            "table": "sites",
-            "key": "site_id",
-            "value": "site_name"
+          "type": "map",
+          "map": {"AHF77": "Home"}
         }
     },
     "realtime_customer1": {
         "country_code": {
-          "type": "simple_json",
-          "uri": "http://some.host.com/codes.json"
+          "type": "map",
+          "map": {"77483": "United States"}
         },
         "site_id_customer1": {
-            "type": "confidential_jdbc",
-            "auth": "/etc/jdbc.customer1",
-            "table": "sites",
-            "key": "site_id",
-            "value": "site_name"
+          "type": "map",
+          "map": {"847632": "Internal Use Only"}
         }
     },
     "realtime_customer2": {
         "country_code": {
-          "type": "simple_json",
-          "uri": "http://some.host.com/codes.json"
+          "type": "map",
+          "map": {"77483": "United States"}
         },
         "site_id_customer2": {
-            "type": "confidential_jdbc",
-            "auth": "/etc/jdbc.customer2",
-            "table": "sites",
-            "key": "site_id",
-            "value": "site_name"
+          "type": "map",
+          "map": {"AHF77": "Home"}
         }
     }
 }
@@ -154,11 +154,8 @@ For example, a post to `/druid/coordinator/v1/lookups/realtime_customer1/site_id
 
 ```json
 {
-    "type": "confidential_jdbc",
-    "auth": "/etc/jdbc.customer1",
-    "table": "sites_updated",
-    "key": "site_id",
-    "value": "site_name"
+  "type": "map",
+  "map": {"847632": "Internal Use Only"}
 }
 ```
 
@@ -171,11 +168,8 @@ Using the prior example, a `GET` to `/druid/coordinator/v1/lookups/realtime_cust
 
 ```json
 {
-    "type": "confidential_jdbc",
-    "auth": "/etc/jdbc.customer2",
-    "table": "sites",
-    "key": "site_id",
-    "value": "site_name"
+  "type": "map",
+  "map": {"AHF77": "Home"}
 }
 ```
 
@@ -205,10 +199,10 @@ The return value will be a json map of the lookups to their extractor factories.
 ```json
 
 {
-    "some_lookup_name": {
-        "type": "simple_json",
-        "uri": "http://some.host.com/codes.json"
-    }
+  "some_lookup_name": {
+    "type": "map",
+    "map": {"77483": "United States"}
+  }
 }
 
 ```
@@ -220,8 +214,8 @@ The return value will be the json representation of the factory.
 
 ```json
 {
-    "type": "simple_json",
-    "uri": "http://some.host.com/codes.json"
+  "type": "map",
+  "map": {"77483", "United States"}
 }
 ```
 
@@ -232,8 +226,8 @@ The return value will be a JSON map in the following format:
 
 ```json
 {
-    "status": "accepted",
-    "failedUpdates": {}
+  "status": "accepted",
+  "failedUpdates": {}
 }
 
 ```
@@ -242,13 +236,13 @@ If a lookup cannot be started, or is left in an undefined state, the lookup in e
 
 ```json
 {
-    "status": "accepted",
-    "failedUpdates": {
-        "country_code": {
-            "type": "simple_json",
-            "uri": "http://some.host.com/codes.json"
-        }
+  "status": "accepted",
+  "failedUpdates": {
+    "country_code": {
+      "type": "map",
+      "map": {"77483": "United States"}
     }
+  }
 }
 
 ```
@@ -263,8 +257,8 @@ If `some_lookup_name` is desired to have the LookupExtractorFactory definition o
 
 ```json
 {
-    "type": "simple_json",
-    "uri": "http://some.host.com/codes.json"
+  "type": "map",
+  "map": {"77483": "United States"}
 }
 ```
 
@@ -273,10 +267,10 @@ Then a post to `/druid/listen/v1/lookups/some_lookup_name` will behave the same 
 ```json
 
 {
-    "some_lookup_name": {
-        "type": "simple_json",
-        "uri": "http://some.host.com/codes.json"
-    }
+  "some_lookup_name": {
+    "type": "map",
+    "map": {"77483": "United States"}
+  }
 }
 
 ```

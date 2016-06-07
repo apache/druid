@@ -28,7 +28,6 @@ Cached namespace lookups can be specified as part of the [cluster wide config fo
     "type": "cachedNamespace",
     "extractionNamespace": {
        "type": "uri",
-       "namespace": "some_uri_lookup",
        "uri": "file:/tmp/prefix/",
        "namespaceParseSpec": {
          "format": "csv",
@@ -48,7 +47,6 @@ Cached namespace lookups can be specified as part of the [cluster wide config fo
     "type": "cachedNamespace",
     "extractionNamespace": {
        "type": "jdbc",
-       "namespace": "some_jdbc_lookup",
        "connectorConfig": {
          "createTables": true,
          "connectURI": "jdbc:mysql:\/\/localhost:3306\/druid",
@@ -75,6 +73,58 @@ The parameters are as follows
 
 Proper functionality of Namespaced lookups requires the following extension to be loaded on the broker, peon, and historical nodes: 
 `druid-lookups-cached-global`
+
+## Example configuration
+
+In a simple case where only one [tier](../../querying/lookups.html#dynamic-configuration) exists (`realtime_customer2`) with one `cachedNamespace` lookup called `country_code`, the resulting configuration json looks similar to the following:
+
+```json
+{
+  "realtime_customer2": {
+    "country_code": {
+      "type": "cachedNamespace",
+      "extractionNamespace": {
+         "type": "jdbc",
+         "connectorConfig": {
+           "createTables": true,
+           "connectURI": "jdbc:mysql:\/\/localhost:3306\/druid",
+           "user": "druid",
+           "password": "diurd"
+         },
+         "table": "lookupTable",
+         "keyColumn": "country_id",
+         "valueColumn": "country_name",
+         "tsColumn": "timeColumn"
+      },
+      "firstCacheTimeout": 120000,
+      "injective":true
+    }
+  }
+}
+```
+
+Where the coordinator endpoint `/druid/coordinator/v1/lookups/realtime_customer2/country_code` should return
+
+```json
+{
+  "type": "cachedNamespace",
+  "extractionNamespace": {
+    "type": "jdbc",
+    "connectorConfig": {
+      "createTables": true,
+      "connectURI": "jdbc:mysql:\/\/localhost:3306\/druid",
+      "user": "druid",
+      "password": "diurd"
+    },
+    "table": "lookupTable",
+    "keyColumn": "country_id",
+    "valueColumn": "country_name",
+    "tsColumn": "timeColumn"
+  },
+  "firstCacheTimeout": 120000,
+  "injective":true
+}
+```
 
 ## Cache Settings
 
@@ -124,9 +174,9 @@ The remapping values for each namespaced lookup can be specified by a json objec
   "pollPeriod":"PT5M"
 }
 ```
+
 |Property|Description|Required|Default|
 |--------|-----------|--------|-------|
-|`namespace`|The namespace to define|Yes||
 |`pollPeriod`|Period between polling for updates|No|0 (only once)|
 |`uri`|URI for the file of interest|No|Use `uriPrefix`|
 |`uriPrefix`|A URI which specifies a directory (or other searchable resource) in which to search for files|No|Use `uri`|
