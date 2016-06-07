@@ -135,6 +135,12 @@ public class ListenerDiscovererTest extends CuratorTestBase
         ImmutableSet.of(HostAndPort.fromString(node.toString())),
         listenerDiscoverer.getNodes(listenerKey)
     );
+    // 2nd call of two concurrent getNewNodes should return no entry collection
+    listenerDiscoverer.getNewNodes(listenerKey);
+    Assert.assertEquals(
+        0,
+        listenerDiscoverer.getNewNodes(listenerKey).size()
+    );
     Assert.assertEquals(
         ImmutableSet.of(listenerKey, listenerTier),
         ImmutableSet.copyOf(listenerDiscoverer.discoverChildren(null))
