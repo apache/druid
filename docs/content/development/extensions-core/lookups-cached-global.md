@@ -78,7 +78,7 @@ Proper functionality of Namespaced lookups requires the following extension to b
 
 ## Example full dynamic config tree
 
-In a simple case where only one tier exists (`realtime_customer2`) with one `cachedNamespace` lookup called `country_code`, the resulting configuration json looks similar to the following:
+In a simple case where only one [tier](../../querying/lookups.html#dynamic-configuration) exists (`realtime_customer2`) with one `cachedNamespace` lookup called `country_code`, the resulting configuration json looks similar to the following:
 
 ```json
 {
