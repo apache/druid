@@ -76,7 +76,7 @@ If `firstCacheTimeout` is set to a non-zero value, it should be less than `druid
 Proper functionality of Namespaced lookups requires the following extension to be loaded on the broker, peon, and historical nodes: 
 `druid-lookups-cached-global`
 
-## Example full dynamic config tree
+## Example configuration
 
 In a simple case where only one [tier](../../querying/lookups.html#dynamic-configuration) exists (`realtime_customer2`) with one `cachedNamespace` lookup called `country_code`, the resulting configuration json looks similar to the following:
 
