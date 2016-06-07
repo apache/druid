@@ -154,19 +154,20 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
       // http://www.javamex.com/tutorials/double_checked_locking.shtml
       synchronized (delegateLock) {
         if (null == delegate) {
-          delegate = (getKeyNums() == 1) ? new LookupExtractionFn(
-              Preconditions.checkNotNull(manager.get(getLookup()), "Lookup [%s] not found", getLookup()).get(),
-              isRetainMissingValue(),
-              getReplaceMissingValueWith(),
-              isInjective(),
-              isOptimize()
-          )
+          delegate = (getKeyNums() == 1) ?
+              new LookupExtractionFn(
+                  Preconditions.checkNotNull(manager.get(getLookup()), "Lookup [%s] not found", getLookup()).get(),
+                  isRetainMissingValue(),
+                  getReplaceMissingValueWith(),
+                  isInjective(),
+                  isOptimize()
+              )
               :
-          new MultiDimLookupExtractionFn(
-              Preconditions.checkNotNull(manager.get(getLookup()), "Lookup [%s] not found", getLookup()).get(),
-              getReplaceMissingValueWith(),
-              isOptimize(),
-              getKeyNums()
+              new MultiDimLookupExtractionFn(
+                  Preconditions.checkNotNull(manager.get(getLookup()), "Lookup [%s] not found", getLookup()).get(),
+                  getReplaceMissingValueWith(),
+                  isOptimize(),
+                  getKeyNums()
               );
         }
       }
