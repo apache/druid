@@ -166,7 +166,7 @@ public class ListenerDiscoverer
           }
         }
     );
-    lastSeenMap = priorSeenMap;
+    lastSeenMap = currentMap;
     return retVal;
   }
 
