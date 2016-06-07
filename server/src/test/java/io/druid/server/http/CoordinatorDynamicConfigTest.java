@@ -42,7 +42,7 @@ public class CoordinatorDynamicConfigTest
                      + "  \"replicationThrottleLimit\": 1,\n"
                      + "  \"balancerComputeThreads\": 2, \n"
                      + "  \"emitBalancingStats\": true,\n"
-                     + "  \"killDataSourceWhitelist\": [\"test\"]\n"
+                     + "  \"killDataSourceWhitelist\": [\"test1\",\"test2\"]\n"
                      + "}\n";
 
     ObjectMapper mapper = TestHelper.getObjectMapper();
@@ -57,7 +57,39 @@ public class CoordinatorDynamicConfigTest
     );
 
     Assert.assertEquals(
-        new CoordinatorDynamicConfig(1, 1, 1, 1, 1, 1, 2, true, ImmutableSet.of("test")),
+        new CoordinatorDynamicConfig(1, 1, 1, 1, 1, 1, 2, true, ImmutableSet.of("test1", "test2")),
+        actual
+    );
+  }
+
+  @Test
+  public void testSerdeWithStringinKillDataSourceWhitelist() throws Exception
+  {
+    String jsonStr = "{\n"
+                     + "  \"millisToWaitBeforeDeleting\": 1,\n"
+                     + "  \"mergeBytesLimit\": 1,\n"
+                     + "  \"mergeSegmentsLimit\" : 1,\n"
+                     + "  \"maxSegmentsToMove\": 1,\n"
+                     + "  \"replicantLifetime\": 1,\n"
+                     + "  \"replicationThrottleLimit\": 1,\n"
+                     + "  \"balancerComputeThreads\": 2, \n"
+                     + "  \"emitBalancingStats\": true,\n"
+                     + "  \"killDataSourceWhitelist\": \" test1 ,test2 \"\n"
+                     + "}\n";
+
+    ObjectMapper mapper = TestHelper.getObjectMapper();
+    CoordinatorDynamicConfig actual = mapper.readValue(
+        mapper.writeValueAsString(
+            mapper.readValue(
+                jsonStr,
+                CoordinatorDynamicConfig.class
+            )
+        ),
+        CoordinatorDynamicConfig.class
+    );
+
+    Assert.assertEquals(
+        new CoordinatorDynamicConfig(1, 1, 1, 1, 1, 1, 2, true, ImmutableSet.of("test1", "test2")),
         actual
     );
   }
