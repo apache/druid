@@ -142,48 +142,6 @@ public class CliTierForkTest
     }
   }
 
-  @Test
-  public void testTaskProvider() throws Exception
-  {
-    final Task task = new NoopTask("task_id", 0, 0, null, null, null);
-    final ObjectMapper mapper = EasyMock.createStrictMock(ObjectMapper.class);
-    EasyMock.expect(mapper.readValue(EasyMock.anyObject(File.class), EasyMock.eq(Task.class))).andReturn(task).once();
-    EasyMock.replay(mapper);
-    final TaskProvider taskProvider = new TaskProvider(mapper, new ExecutorLifecycleConfig().setTaskFile(
-        temporaryFolder.newFile()
-    ));
-    Assert.assertEquals(task, taskProvider.get());
-  }
-
-
-  @Test
-  public void testTaskProviderExceptional() throws Exception
-  {
-    final String msg = "test exception";
-    final IOException ex = new IOException(msg);
-    expectedEx.expectCause(new BaseMatcher<Throwable>()
-    {
-      @Override
-      public void describeTo(Description description)
-      {
-
-      }
-
-      @Override
-      public boolean matches(Object o)
-      {
-        return ex == o;
-      }
-    });
-    final ObjectMapper mapper = EasyMock.createStrictMock(ObjectMapper.class);
-    EasyMock.expect(mapper.readValue(EasyMock.anyObject(File.class), EasyMock.eq(Task.class))).andThrow(ex).once();
-    EasyMock.replay(mapper);
-    final TaskProvider taskProvider = new TaskProvider(mapper, new ExecutorLifecycleConfig().setTaskFile(
-        temporaryFolder.newFile()
-    ));
-    taskProvider.get();
-  }
-
   @After
   public void tearDown()
   {

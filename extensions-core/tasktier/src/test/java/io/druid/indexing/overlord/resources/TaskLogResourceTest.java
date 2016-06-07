@@ -88,7 +88,7 @@ public class TaskLogResourceTest
     Assert.assertFalse(logFile.exists());
     Assert.assertTrue(logFile.createNewFile());
     final Response response = taskLogResource.getLog(-1);
-    Assert.assertEquals(Response.Status.BAD_REQUEST.getStatusCode(), response.getStatus());
+    Assert.assertEquals(Response.Status.OK.getStatusCode(), response.getStatus());
   }
 
   @Test

@@ -89,8 +89,6 @@ public class CliTierFork extends CliPeon
           @Override
           public void configure(Binder binder)
           {
-            binder.bind(Task.class).toProvider(TaskProvider.class).in(LazySingleton.class);
-
             binder.bind(PortWriter.class).in(ManageLifecycleLast.class);
             LifecycleModule.register(binder, PortWriter.class);
 
@@ -205,32 +203,4 @@ class ParentMonitorInputStreamFakerProvider implements Provider<ParentMonitorInp
 abstract class ParentMonitorInputStreamFaker extends InputStream
 {
 
-}
-
-class TaskProvider implements Provider<Task>
-{
-  private final ObjectMapper jsonMapper;
-  private final File taskJson;
-
-  @Inject
-  public TaskProvider(
-      @Json
-          ObjectMapper mapper,
-      ExecutorLifecycleConfig config
-  )
-  {
-    jsonMapper = mapper;
-    this.taskJson = config.getTaskFile();
-  }
-
-  @Override
-  public Task get()
-  {
-    try {
-      return jsonMapper.readValue(taskJson, Task.class);
-    }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
-    }
-  }
 }
