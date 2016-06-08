@@ -190,6 +190,47 @@ public class IndexMergerTest
   }
 
   @Test
+  public void testPersistDimensionWithSlash() throws Exception
+  {
+    final long timestamp = System.currentTimeMillis();
+
+    IncrementalIndex toPersist = IncrementalIndexTest.createIndex(null);
+    IncrementalIndexTest.populateIndex(timestamp, toPersist);
+    toPersist.add(new MapBasedInputRow(
+        timestamp,
+        Arrays.asList("dim1/sub1", "dim2"),
+        ImmutableMap.<String, Object>of("dim1/sub1", "1", "dim2", "2")
+    ));
+
+    final File tempDir = temporaryFolder.newFolder();
+    QueryableIndex index = closer.closeLater(
+        INDEX_IO.loadIndex(
+            INDEX_MERGER.persist(
+                toPersist,
+                tempDir,
+                indexSpec
+            )
+        )
+    );
+
+    Assert.assertEquals(2, index.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(Arrays.asList("dim1/sub1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
+    Assert.assertEquals(3, index.getColumnNames().size());
+
+    assertDimCompression(index, indexSpec.getDimensionCompressionStrategy());
+
+    Assert.assertArrayEquals(
+        IncrementalIndexTest.getDefaultCombiningAggregatorFactories(),
+        index.getMetadata().getAggregators()
+    );
+
+    Assert.assertEquals(
+        QueryGranularities.NONE,
+        index.getMetadata().getQueryGranularity()
+    );
+  }
+
+  @Test
   public void testPersistWithDifferentDims() throws Exception
   {
     IncrementalIndex toPersist = IncrementalIndexTest.createIndex(null);
