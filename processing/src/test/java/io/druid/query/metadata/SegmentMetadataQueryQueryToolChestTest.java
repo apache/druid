@@ -244,6 +244,15 @@ public class SegmentMetadataQueryQueryToolChestTest
     expectedLenient.put("baz", new LongMaxAggregatorFactory("baz", "baz"));
     Assert.assertNull(mergeStrict(analysis1, analysis2).getAggregators());
     Assert.assertEquals(expectedLenient, mergeLenient(analysis1, analysis2).getAggregators());
+
+    // Simulate multi-level merge
+    Assert.assertEquals(
+        expectedLenient,
+        mergeLenient(
+            mergeLenient(analysis1, analysis2),
+            mergeLenient(analysis1, analysis2)
+        ).getAggregators()
+    );
   }
 
   private static SegmentAnalysis mergeStrict(SegmentAnalysis analysis1, SegmentAnalysis analysis2)

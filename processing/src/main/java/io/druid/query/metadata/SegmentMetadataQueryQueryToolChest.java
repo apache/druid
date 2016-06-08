@@ -295,8 +295,10 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       // Merge each aggregator individually, ignoring nulls
       for (SegmentAnalysis analysis : ImmutableList.of(arg1, arg2)) {
         if (analysis.getAggregators() != null) {
-          for (AggregatorFactory aggregator : analysis.getAggregators().values()) {
-            AggregatorFactory merged = aggregators.get(aggregator.getName());
+          for (Map.Entry<String, AggregatorFactory> entry : analysis.getAggregators().entrySet()) {
+            final String aggregatorName = entry.getKey();
+            final AggregatorFactory aggregator = entry.getValue();
+            AggregatorFactory merged = aggregators.get(aggregatorName);
             if (merged != null) {
               try {
                 merged = merged.getMergingFactory(aggregator);
@@ -307,7 +309,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
             } else {
               merged = aggregator;
             }
-            aggregators.put(aggregator.getName(), merged);
+            aggregators.put(aggregatorName, merged);
           }
         }
       }
