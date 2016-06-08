@@ -47,7 +47,7 @@ import java.util.Iterator;
  */
 public class GenericIndexed<T> implements Indexed<T>
 {
-  private static final byte version = 0x1;
+  public static final byte version = 0x1;
 
   private int indexOffset;
 

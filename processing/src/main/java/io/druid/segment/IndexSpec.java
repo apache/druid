@@ -27,6 +27,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.CompressedObjectStrategy;
+import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
 
 import javax.annotation.Nullable;
@@ -123,9 +124,9 @@ public class IndexSpec
     return metricCompression;
   }
 
-  public CompressedObjectStrategy.CompressionStrategy getMetricCompressionStrategy()
+  public CompressionFactory.CompressionFormat getMetricCompressionStrategy()
   {
-    return CompressedObjectStrategy.CompressionStrategy.valueOf(
+    return CompressionFactory.CompressionFormat.valueOf(
         (metricCompression == null ? DEFAULT_METRIC_COMPRESSION : metricCompression).toUpperCase()
     );
   }

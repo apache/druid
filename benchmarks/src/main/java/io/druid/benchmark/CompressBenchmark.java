@@ -1,17 +1,8 @@
 package io.druid.benchmark;
 
 import com.google.common.io.Files;
-import com.google.common.io.OutputSupplier;
-import io.druid.collections.ResourceHolder;
-import io.druid.segment.data.CompressedLongBufferObjectStrategy;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
-import io.druid.segment.data.CompressedLongsSupplierSerializer;
-import io.druid.segment.data.CompressedObjectStrategy;
-import io.druid.segment.data.GenericIndexedWriter;
 import io.druid.segment.data.IndexedLongs;
-import io.druid.segment.data.TmpFileIOPeon;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.LineIterator;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.Mode;
 import org.openjdk.jmh.annotations.Param;
@@ -23,28 +14,16 @@ import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.options.Options;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.nio.LongBuffer;
-import java.nio.channels.FileChannel;
-import java.nio.file.StandardOpenOption;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.document.Document;
-import org.apache.lucene.document.NumericDocValuesField;
 import org.apache.lucene.index.DirectoryReader;
-import org.apache.lucene.index.IndexWriter;
-import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.LeafReader;
 import org.apache.lucene.index.NumericDocValues;
-import org.apache.lucene.store.Directory;
-import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.store.MMapDirectory;
 
 @State(Scope.Benchmark)
@@ -146,7 +125,7 @@ public class CompressBenchmark
 //    File outFile = new File(baseDir, arg + ".druid" + sizePer);
 //    outFile.delete();
 //    TmpFileIOPeon iopeon = new TmpFileIOPeon(true);
-//    CompressedLongsSupplierSerializer writer = new CompressedLongsSupplierSerializer(
+//    LongSupplierSerializer writer = new LongSupplierSerializer(
 //        sizePer,
 //        new GenericIndexedWriter<ResourceHolder<LongBuffer>>(
 //            iopeon,

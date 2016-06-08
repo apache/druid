@@ -21,8 +21,8 @@ package io.druid.segment;
 
 import com.google.common.io.FileWriteMode;
 import com.google.common.io.Files;
-import io.druid.segment.data.CompressedLongsSupplierSerializer;
-import io.druid.segment.data.CompressedObjectStrategy;
+import io.druid.segment.data.CompressionFactory;
+import io.druid.segment.data.LongSupplierSerializer;
 import io.druid.segment.data.IOPeon;
 
 import java.io.File;
@@ -36,7 +36,7 @@ public class LongMetricColumnSerializer implements MetricColumnSerializer
   private final IOPeon ioPeon;
   private final File outDir;
 
-  private CompressedLongsSupplierSerializer writer;
+  private LongSupplierSerializer writer;
 
   public LongMetricColumnSerializer(
       String metricName,
@@ -52,9 +52,8 @@ public class LongMetricColumnSerializer implements MetricColumnSerializer
   @Override
   public void open() throws IOException
   {
-    writer = CompressedLongsSupplierSerializer.create(
-        ioPeon, String.format("%s_little", metricName), IndexIO.BYTE_ORDER,
-        CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
+    writer = CompressionFactory.DEFAULT_COMPRESSION_FORMAT.getLongSerializer(
+        ioPeon, String.format("%s_little", metricName), IndexIO.BYTE_ORDER
     );
 
     writer.open();

@@ -29,7 +29,7 @@ import io.druid.common.utils.SerializerUtils;
 import io.druid.segment.data.CompressedFloatsIndexedSupplier;
 import io.druid.segment.data.CompressedFloatsSupplierSerializer;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
-import io.druid.segment.data.CompressedLongsSupplierSerializer;
+import io.druid.segment.data.LongSupplierSerializer;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.GenericIndexedWriter;
 import io.druid.segment.data.Indexed;
@@ -94,7 +94,7 @@ public class MetricHolder
   }
 
   public static void writeLongMetric(
-      ByteSink outSupplier, String name, CompressedLongsSupplierSerializer column
+      ByteSink outSupplier, String name, LongSupplierSerializer column
   ) throws IOException
   {
     outSupplier.write(version);

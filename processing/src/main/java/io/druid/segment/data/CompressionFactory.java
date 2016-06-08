@@ -2,7 +2,6 @@ package io.druid.segment.data;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
-import com.metamx.common.IAE;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -10,6 +9,8 @@ import java.util.Map;
 
 public abstract class CompressionFactory
 {
+  public static final CompressionFormat DEFAULT_COMPRESSION_FORMAT = CompressionFormat.LZ4;
+
   public enum CompressionFormat
   {
     LZF((byte) 0x0) {
@@ -18,6 +19,13 @@ public abstract class CompressionFactory
       {
         return new BlockCompressionFormatSerde.BlockCompressedIndexedLongsSupplier(
             totalSize, sizePer, buffer, order, CompressedObjectStrategy.CompressionStrategy.LZF);
+      }
+
+      @Override
+      public LongSupplierSerializer getLongSerializer(IOPeon ioPeon, String filenameBase, ByteOrder order)
+      {
+        return new BlockCompressionFormatSerde.BlockCompressedLongSupplierSerializer(
+            ioPeon, filenameBase, order, CompressedObjectStrategy.CompressionStrategy.LZF);
       }
     },
 
@@ -28,6 +36,13 @@ public abstract class CompressionFactory
         return new BlockCompressionFormatSerde.BlockCompressedIndexedLongsSupplier(
             totalSize, sizePer, buffer, order, CompressedObjectStrategy.CompressionStrategy.LZ4);
       }
+
+      @Override
+      public LongSupplierSerializer getLongSerializer(IOPeon ioPeon, String filenameBase, ByteOrder order)
+      {
+        return new BlockCompressionFormatSerde.BlockCompressedLongSupplierSerializer(
+            ioPeon, filenameBase, order, CompressedObjectStrategy.CompressionStrategy.LZ4);
+      }
     },
 
     DELTA((byte) 0x2) {
@@ -35,6 +50,12 @@ public abstract class CompressionFactory
       public Supplier<IndexedLongs> getLongsSupplier(int totalSize, int sizePer, ByteBuffer buffer, ByteOrder order)
       {
         return new DeltaCompressionFormatSerde.DeltaCompressedIndexedLongsSupplier(totalSize, buffer, order);
+      }
+
+      @Override
+      public LongSupplierSerializer getLongSerializer(IOPeon ioPeon, String filenameBase, ByteOrder order)
+      {
+        return new RACompressionFormatSerde.RACompressedLongSupplierSerializer(ioPeon, filenameBase, order);
       }
     },
 
@@ -44,21 +65,40 @@ public abstract class CompressionFactory
       {
         return new TableCompressionFormatSerde.TableCompressedIndexedLongsSupplier(totalSize, buffer, order);
       }
+
+      @Override
+      public LongSupplierSerializer getLongSerializer(IOPeon ioPeon, String filenameBase, ByteOrder order)
+      {
+        return new RACompressionFormatSerde.RACompressedLongSupplierSerializer(ioPeon, filenameBase, order);
+      }
     },
 
-    UNCOMPRESSED((byte) 0xFE) {
+    UNCOMPRESSED_NEW((byte) 0xFE) {
       @Override
       public Supplier<IndexedLongs> getLongsSupplier(int totalSize, int sizePer, ByteBuffer buffer, ByteOrder order)
       {
         return new UncompressedFormatSerde.UncompressedIndexedLongsSupplier(totalSize, buffer, order);
       }
+
+      @Override
+      public LongSupplierSerializer getLongSerializer(IOPeon ioPeon, String filenameBase, ByteOrder order)
+      {
+        return new UncompressedFormatSerde.UncompressedLongSupplierSerializer(ioPeon, filenameBase, order);
+      }
     },
 
-    UNCOMPRESSED_BLOCK((byte) 0xFF) {
+    UNCOMPRESSED((byte) 0xFF) {
       @Override
       public Supplier<IndexedLongs> getLongsSupplier(int totalSize, int sizePer, ByteBuffer buffer, ByteOrder order)
       {
         return new BlockUncompressedFormatSerde.BlockUncompressedIndexedLongsSupplier(totalSize, sizePer, buffer, order);
+      }
+
+      @Override
+      public LongSupplierSerializer getLongSerializer(IOPeon ioPeon, String filenameBase, ByteOrder order)
+      {
+        return new BlockCompressionFormatSerde.BlockCompressedLongSupplierSerializer(
+            ioPeon, filenameBase, order, CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED);
       }
     };
 
@@ -88,5 +128,7 @@ public abstract class CompressionFactory
     }
 
     public abstract Supplier<IndexedLongs> getLongsSupplier(int totalSize, int sizePer, ByteBuffer buffer, ByteOrder order);
+
+    public abstract LongSupplierSerializer getLongSerializer(IOPeon ioPeon, String filenameBase, ByteOrder order);
   }
 }

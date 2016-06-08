@@ -2,6 +2,7 @@ package io.druid.segment.data;
 
 import com.google.common.base.Supplier;
 import com.google.common.io.Closeables;
+import com.metamx.common.IAE;
 import com.metamx.common.guava.CloseQuietly;
 import io.druid.collections.ResourceHolder;
 
@@ -26,11 +27,15 @@ public class BlockUncompressedFormatSerde
       this.totalSize = totalSize;
       this.sizePer = sizePer;
 
-      buffer.position(buffer.position() + 6);
-      int size = buffer.getInt();
-      valuesOffset = buffer.position() + (size << 2);
-
-      buffer.order(order);
+      byte version = buffer.get();
+      if (version == GenericIndexed.version) {
+        buffer.position(buffer.position() + 5);
+        int size = buffer.getInt();
+        valuesOffset = buffer.position() + (size << 2);
+        buffer.order(order);
+      } else {
+        throw new IAE("Unknown version[%s]", version);
+      }
     }
 
     @Override
@@ -50,38 +55,22 @@ public class BlockUncompressedFormatSerde
       @Override
       public long get(int index)
       {
-        return buffer.getLong(valuesOffset + (index / sizePer + 1) * 4 + index * 8);
+        return buffer.getLong(valuesOffset + ((index / sizePer + 1) << 2) + (index << 3));
       }
 
       @Override
       public void fill(int index, long[] toFill)
       {
-//      if (totalSize - index < toFill.length) {
-//        throw new IndexOutOfBoundsException(
-//            String.format(
-//                "Cannot fill array of size[%,d] at index[%,d].  Max size[%,d]", toFill.length, index, totalSize
-//            )
-//        );
-//      }
-//
-//      int bufferNum = index / sizePer;
-//      int bufferIndex = index % sizePer;
-//
-//      int leftToFill = toFill.length;
-//      while (leftToFill > 0) {
-//        if (bufferNum != currIndex) {
-//          loadBuffer(bufferNum);
-//        }
-//
-//        buffer.mark();
-//        buffer.position(buffer.position() + bufferIndex);
-//        final int numToGet = Math.min(buffer.remaining(), leftToFill);
-//        buffer.get(toFill, toFill.length - leftToFill, numToGet);
-//        buffer.reset();
-//        leftToFill -= numToGet;
-//        ++bufferNum;
-//        bufferIndex = 0;
-//      }
+        if (totalSize - index < toFill.length) {
+          throw new IndexOutOfBoundsException(
+              String.format(
+                  "Cannot fill array of size[%,d] at index[%,d].  Max size[%,d]", toFill.length, index, totalSize
+              )
+          );
+        }
+        for (int i = 0; i < toFill.length; i++) {
+          toFill[i] = get(index + i);
+        }
       }
 
       @Override

@@ -54,6 +54,7 @@ import io.druid.segment.data.ByteBufferWriter;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressedVSizeIndexedV3Writer;
 import io.druid.segment.data.CompressedVSizeIntsIndexedWriter;
+import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.GenericIndexedWriter;
 import io.druid.segment.data.IOPeon;
@@ -726,7 +727,7 @@ public class IndexMergerV9 extends IndexMerger
   private LongColumnSerializer setupTimeWriter(final IOPeon ioPeon) throws IOException
   {
     LongColumnSerializer timeWriter = LongColumnSerializer.create(
-        ioPeon, "little_end_time", CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
+        ioPeon, "little_end_time", CompressionFactory.DEFAULT_COMPRESSION_FORMAT
     );
     // we will close this writer after we added all the timestamps
     timeWriter.open();
@@ -742,7 +743,7 @@ public class IndexMergerV9 extends IndexMerger
   ) throws IOException
   {
     ArrayList<GenericColumnSerializer> metWriters = Lists.newArrayListWithCapacity(mergedMetrics.size());
-    final CompressedObjectStrategy.CompressionStrategy metCompression = indexSpec.getMetricCompressionStrategy();
+    final CompressionFactory.CompressionFormat metCompression = indexSpec.getMetricCompressionStrategy();
     for (String metric : mergedMetrics) {
       ValueType type = metricsValueTypes.get(metric);
       GenericColumnSerializer writer;
@@ -751,7 +752,8 @@ public class IndexMergerV9 extends IndexMerger
           writer = LongColumnSerializer.create(ioPeon, metric, metCompression);
           break;
         case FLOAT:
-          writer = FloatColumnSerializer.create(ioPeon, metric, metCompression);
+          writer = FloatColumnSerializer.create(ioPeon, metric,
+                                                CompressedObjectStrategy.CompressionStrategy.forId(metCompression.getId()));
           break;
         case COMPLEX:
           final String typeName = metricTypeNames.get(metric);
