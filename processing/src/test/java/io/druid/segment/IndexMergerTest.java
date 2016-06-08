@@ -213,9 +213,9 @@ public class IndexMergerTest
         )
     );
 
-    Assert.assertEquals(2, index.getColumn(Column.TIME_COLUMN_NAME).getLength());
-    Assert.assertEquals(Arrays.asList("dim1", "dim1/sub1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
-    Assert.assertEquals(3, index.getColumnNames().size());
+    Assert.assertEquals(3, index.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(Arrays.asList("dim1", "dim2", "dim1/sub1"), Lists.newArrayList(index.getAvailableDimensions()));
+    Assert.assertEquals(4, index.getColumnNames().size());
 
     assertDimCompression(index, indexSpec.getDimensionCompressionStrategy());
 

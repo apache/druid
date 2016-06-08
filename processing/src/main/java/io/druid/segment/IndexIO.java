@@ -120,17 +120,17 @@ public class IndexIO
     this.columnConfig = Preconditions.checkNotNull(columnConfig, "null ColumnConfig");
     defaultIndexIOHandler = new DefaultIndexIOHandler(mapper);
     indexLoaders = ImmutableMap.<Integer, IndexLoader>builder()
-                               .put(0, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
-                               .put(1, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
-                               .put(2, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
-                               .put(3, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
-                               .put(4, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
-                               .put(5, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
-                               .put(6, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
-                               .put(7, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
-                               .put(8, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
-                               .put(9, new V9IndexLoader(columnConfig))
-                               .build();
+        .put(0, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
+        .put(1, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
+        .put(2, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
+        .put(3, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
+        .put(4, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
+        .put(5, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
+        .put(6, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
+        .put(7, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
+        .put(8, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
+        .put(9, new V9IndexLoader(columnConfig))
+        .build();
 
 
   }
@@ -589,7 +589,7 @@ public class IndexIO
 
           ByteBuffer dimBuffer = v8SmooshedFiles.mapFile(filename);
           String dimension = serializerUtils.readString(dimBuffer);
-          if (!filename.equals(String.format("dim_%s.drd", dimension))) {
+          if (!filename.equals(IndexIO.sanitizeFileName(String.format("dim_%s.drd", dimension)))) {
             throw new ISE("loaded dimension[%s] from file[%s]", dimension, filename);
           }
 
@@ -1088,7 +1088,7 @@ public class IndexIO
 
   public static File makeDimFile(File dir, String dimension)
   {
-    return new File(dir, String.format("dim_%s.drd", dimension));
+    return new File(dir, sanitizeFileName(String.format("dim_%s.drd", dimension)));
   }
 
   public static File makeTimeFile(File dir, ByteOrder order)
@@ -1098,6 +1098,11 @@ public class IndexIO
 
   public static File makeMetricFile(File dir, String metricName, ByteOrder order)
   {
-    return new File(dir, String.format("met_%s_%s.drd", metricName, order));
+    return new File(dir, sanitizeFileName(String.format("met_%s_%s.drd", metricName, order)));
+  }
+
+  public static String sanitizeFileName(String fileName)
+  {
+    return fileName.replace(File.separator, "↗");
   }
 }
