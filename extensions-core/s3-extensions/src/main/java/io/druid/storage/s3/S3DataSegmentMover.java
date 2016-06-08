@@ -155,7 +155,7 @@ public class S3DataSegmentMover implements DataSegmentMover
                       target,
                       false
                   );
-                  if (copyResult.containsKey("DeleteException")) {
+                  if (copyResult != null && copyResult.containsKey("DeleteException")) {
                     log.error("Error Deleting data after copy %s: %s", copyMsg, copyResult);
                     // Maybe retry deleting here?
                   } else {
