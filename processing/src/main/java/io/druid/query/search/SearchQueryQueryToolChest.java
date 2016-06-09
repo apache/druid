@@ -221,8 +221,9 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
                           {
                             if (input instanceof Map) {
                               return new SearchHit(
-                                  (String) ((Map) input).get("dimension"),
-                                  (String) ((Map) input).get("value")
+                                      (String) ((Map) input).get("dimension"),
+                                      (String) ((Map) input).get("value"),
+                                      (Integer) ((Map) input).get("count")
                               );
                             } else if (input instanceof SearchHit) {
                               return (SearchHit) input;
