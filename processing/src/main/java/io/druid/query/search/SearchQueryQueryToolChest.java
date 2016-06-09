@@ -62,7 +62,7 @@ import java.util.Map;
  */
 public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResultValue>, SearchQuery>
 {
-  private static final byte SEARCH_QUERY = 0x2;
+  private static final byte SEARCH_QUERY = 0x15;
   private static final TypeReference<Result<SearchResultValue>> TYPE_REFERENCE = new TypeReference<Result<SearchResultValue>>()
   {
   };
