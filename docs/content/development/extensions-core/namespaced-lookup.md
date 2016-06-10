@@ -2,6 +2,87 @@
 layout: doc_page
 ---
 
+<div class="note caution">
+This extension has been deprecated as of 0.9.1.
+</div>
+
+# Transitioning to lookups-cached-global
+
+New users should reference the exteion [lookups-cached-global](lookups-cached-global.html)
+
+## Moving to cluster wide configuration
+
+This module only supports static configurations, whereas the new [lookups-cached-global](lookups-cached-global.html) extension supports only dynamic cluster configuration.
+
+Most of the configurations can be used as-is and posted to the coordinator to the appropriate endpoint. Once the cluster is upgraded to 0.9.1, the json configuration can be propogated through the cluster as follows:
+
+The prior configuration of 
+
+```json
+{
+  "type": "uri",
+  "namespace": "some_uri_lookup",
+  "uri": "file:/tmp/prefix/",
+  "namespaceParseSpec": {
+    "format": "csv",
+    "columns": [
+      "key",
+      "value"
+    ]
+  },
+  "pollPeriod": "PT5M"
+}
+```
+
+will become a `lookups-cached-global` configuration like (notice most of the fields are simply copied into `extractionNamespace`)
+
+```json
+{
+  "type":"cachedNamespace",
+  "extractionNamespace": {
+    "type": "uri",
+    "uri": "file:/tmp/prefix/some_lookup.csv",
+    "namespaceParseSpec": {
+      "format": "csv",
+      "columns": [
+        "key",
+        "value"
+      ]
+    },
+    "pollPeriod": "PT5M"
+  }
+}
+```
+
+and POST'ed to `/druid/coordinator/v1/lookups/{tier}/{namespace}` on the coordinator. 
+
+## Moving queries
+
+Queries which use the new lookups can either use [dimension specifications with lookups](../../dimensionspecs.html#lookup-extraction-function) or dimension extraction functions with the [registered lookup](../../dimensionspecs.html#registered-lookup-extraction-function) type.
+
+The simplest change that can be mad is to take the prior extraction function definition like:
+
+```json
+"extractionFn":{
+  "type":"lookup",
+  "lookup":{
+    "type":"namespace",
+    "namespace":"some_uri_lookup"
+  }
+}
+```
+
+and change it to
+
+```json
+"extractionFn":{
+  "type":"registeredLookup",
+  "lookup":"some_uri_lookup"
+}
+```
+
+Once all your queries are using the "new" extraction syntax, you can remove the static configuration and reboot those nodes, or remove the static configuration when you next perform normal maintenance.
+
 # Namespaced Lookup
 
 <div class="note caution">
