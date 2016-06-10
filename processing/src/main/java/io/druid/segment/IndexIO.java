@@ -89,6 +89,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.AbstractList;
@@ -1126,6 +1128,14 @@ public class IndexIO
     final StringBuilder sb = new StringBuilder();
     final String sha1 = DigestUtils.sha1Hex(fileName).substring(0, 6);
     String fnameBase = fileName.replace(File.separator, "_");
+
+    try {
+      fnameBase = new URI(String.format("file:/%s", fnameBase)).toASCIIString().substring("file:/".length());
+    }
+    catch (URISyntaxException e) {
+      log.debug(e, "Unable to encode base name [%s]. Trying as hex of UTF-8.", fnameBase);
+      fnameBase = javax.xml.bind.DatatypeConverter.printHexBinary(StringUtils.toUtf8(fnameBase));
+    }
 
     // For REALLY long names we truncate
     byte[] fnameBytes;
