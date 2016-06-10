@@ -86,11 +86,16 @@ public class SearchBinaryFn
         continue;
       }
       if (prev.equals(searchHit)) {
-        if (prev.getCount() != null) {
+        if (prev.getCount() != null && searchHit.getCount() != null) {
           prev = new SearchHit(
               prev.getDimension(),
               prev.getValue(),
               prev.getCount() + searchHit.getCount()
+          );
+        } else {
+          prev = new SearchHit(
+                  prev.getDimension(),
+                  prev.getValue()
           );
         }
       } else {
