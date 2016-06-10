@@ -91,6 +91,7 @@
         <module>extensions-core/mysql-metadata-storage</module>
         <module>extensions-core/postgresql-metadata-storage</module>
         <module>extensions-core/lookups-cached-global</module>
+        <module>extensions-core/namespace-lookup</module> <!-- ONLY FOR 0.9.1 TRANSITION -->
         <module>extensions-core/s3-extensions</module>
         <!-- Community extensions -->
         <module>extensions-contrib/azure-extensions</module>
