@@ -51,7 +51,7 @@ public class VSizeIndexedIntsWriter extends SingleValueIndexedIntsWriter
   )
   {
     this.ioPeon = ioPeon;
-    this.valueFileName = IndexIO.sanitizeFileName(String.format("%s.values", filenameBase));
+    this.valueFileName = String.format("%s.values", IndexIO.sanitizeFileName(filenameBase));
     this.numBytes = VSizeIndexedInts.getNumBytesForMax(maxValue);
   }
 

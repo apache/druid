@@ -64,9 +64,9 @@ public class VSizeIndexedWriter extends MultiValueIndexedIntsWriter implements C
   )
   {
     this.ioPeon = ioPeon;
-    this.metaFileName = IndexIO.sanitizeFileName(String.format("%s.meta", filenameBase));
-    this.headerFileName = IndexIO.sanitizeFileName(String.format("%s.header", filenameBase));
-    this.valuesFileName = IndexIO.sanitizeFileName(String.format("%s.values", filenameBase));
+    this.metaFileName = String.format("%s.meta", IndexIO.sanitizeFileName(filenameBase));
+    this.headerFileName = String.format("%s.header", IndexIO.sanitizeFileName(filenameBase));
+    this.valuesFileName = String.format("%s.values", IndexIO.sanitizeFileName(filenameBase));
     this.maxId = maxId;
   }
 
@@ -133,7 +133,8 @@ public class VSizeIndexedWriter extends MultiValueIndexedIntsWriter implements C
     return ByteStreams.join(
         Iterables.transform(
             Arrays.asList(metaFileName, headerFileName, valuesFileName),
-            new Function<String,InputSupplier<InputStream>>() {
+            new Function<String, InputSupplier<InputStream>>()
+            {
 
               @Override
               public InputSupplier<InputStream> apply(final String input)

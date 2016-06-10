@@ -90,7 +90,7 @@ public class GenericIndexedWriter<T> implements Closeable
 
   private String makeFilename(String suffix)
   {
-    return IndexIO.sanitizeFileName(String.format("%s.%s", filenameBase, suffix));
+    return String.format("%s.%s", IndexIO.sanitizeFileName(filenameBase), suffix);
   }
 
   @Override

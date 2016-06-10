@@ -997,14 +997,14 @@ public class IndexMerger
       final ArrayList<String> expectedFiles = Lists.newArrayList(
           Iterables.concat(
               Arrays.asList(
-                  "index.drd", "inverted.drd", "spatial.drd", String.format("time_%s.drd", IndexIO.BYTE_ORDER)
+                  "index.drd", "inverted.drd", "spatial.drd", IndexIO.makeTimeFileName(IndexIO.BYTE_ORDER)
               ),
               Iterables.transform(mergedDimensions, new Function<String, String>()
               {
                 @Override
                 public String apply(String input)
                 {
-                  return IndexIO.sanitizeFileName(String.format("dim_%s.drd", input));
+                  return IndexIO.makeDimFileName(input);
                 }
               }),
               Iterables.transform(
@@ -1014,7 +1014,7 @@ public class IndexMerger
                     @Override
                     public String apply(@Nullable String input)
                     {
-                      return IndexIO.sanitizeFileName(String.format("met_%s_%s.drd", input, IndexIO.BYTE_ORDER));
+                      return IndexIO.makeMetricFileName(input, IndexIO.BYTE_ORDER);
                     }
                   })
           )

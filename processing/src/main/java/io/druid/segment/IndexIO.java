@@ -42,6 +42,7 @@ import com.metamx.collections.bitmap.MutableBitmap;
 import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
+import com.metamx.common.StringUtils;
 import com.metamx.common.io.smoosh.FileSmoosher;
 import com.metamx.common.io.smoosh.Smoosh;
 import com.metamx.common.io.smoosh.SmooshedFileMapper;
@@ -79,6 +80,7 @@ import io.druid.segment.serde.FloatGenericColumnSupplier;
 import io.druid.segment.serde.LongGenericColumnPartSerde;
 import io.druid.segment.serde.LongGenericColumnSupplier;
 import io.druid.segment.serde.SpatialIndexColumnPartSupplier;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.joda.time.Interval;
 
 import java.io.ByteArrayOutputStream;
@@ -86,6 +88,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.AbstractList;
@@ -589,7 +592,7 @@ public class IndexIO
 
           ByteBuffer dimBuffer = v8SmooshedFiles.mapFile(filename);
           String dimension = serializerUtils.readString(dimBuffer);
-          if (!filename.equals(IndexIO.sanitizeFileName(String.format("dim_%s.drd", dimension)))) {
+          if (!filename.equals(makeDimFileName(dimension))) {
             throw new ISE("loaded dimension[%s] from file[%s]", dimension, filename);
           }
 
@@ -1086,23 +1089,64 @@ public class IndexIO
     }
   }
 
+  public static String makeDimFileName(String dimension)
+  {
+    return String.format("dim_%s.drd", sanitizeFileName(dimension));
+  }
+
   public static File makeDimFile(File dir, String dimension)
   {
-    return new File(dir, sanitizeFileName(String.format("dim_%s.drd", dimension)));
+    return new File(dir, makeDimFileName(dimension));
+  }
+
+  public static String makeTimeFileName(ByteOrder order)
+  {
+    return String.format("time_%s.drd", order);
   }
 
   public static File makeTimeFile(File dir, ByteOrder order)
   {
-    return new File(dir, String.format("time_%s.drd", order));
+    return new File(dir, makeTimeFileName(order));
+  }
+
+  public static String makeMetricFileName(String metricName, ByteOrder order)
+  {
+    return String.format("met_%s_%s.drd", sanitizeFileName(metricName), order);
   }
 
   public static File makeMetricFile(File dir, String metricName, ByteOrder order)
   {
-    return new File(dir, sanitizeFileName(String.format("met_%s_%s.drd", metricName, order)));
+    return new File(dir, makeMetricFileName(metricName, order));
   }
 
   public static String sanitizeFileName(String fileName)
   {
-    return fileName.replace(File.separator, "↗");
+    String encoding = System.getProperty("file.encoding", "UTF-8");
+
+    final StringBuilder sb = new StringBuilder();
+    final String sha1 = DigestUtils.sha1Hex(fileName).substring(0, 6);
+    String fnameBase = fileName.replace(File.separator, "_");
+
+    // For REALLY long names we truncate
+    byte[] fnameBytes;
+    do {
+      try {
+        fnameBytes = fnameBase.getBytes(encoding);
+      }
+      catch (UnsupportedEncodingException e) {
+        log.debug(e, "Error coding [%s] in %s, defaulting to UTF-8", fnameBase, encoding);
+        fnameBytes = StringUtils.toUtf8(fnameBase);
+      }
+      if (fnameBytes.length > 100) {
+        if (fnameBase.length() > 1) {
+          fnameBase = fnameBase.substring(0, fnameBase.length() / 2);
+        } else {
+          // length of 1 but byte encoding is > 100... wtf kind of encoding allows that?
+          fnameBase = "";
+        }
+      }
+    } while (fnameBytes.length > 100 && !fnameBase.isEmpty());
+
+    return sb.append(fnameBase).append('.').append(sha1).toString();
   }
 }
