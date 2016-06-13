@@ -33,7 +33,7 @@ public class SearchQueryFilter extends DimensionPredicateFilter
 {
   @JsonCreator
   public SearchQueryFilter(
-      @JsonProperty("dimension") String dimension,
+      @JsonProperty("dimension") final String dimension,
       @JsonProperty("query") final SearchQuerySpec query,
       @JsonProperty("extractionFn") final ExtractionFn extractionFn
   )
@@ -46,6 +46,14 @@ public class SearchQueryFilter extends DimensionPredicateFilter
           public boolean apply(@Nullable String input)
           {
             return query.accept(input);
+          }
+
+          @Override
+          public String toString()
+          {
+            return "SearchQueryFilter{" +
+                   ", query=" + query +
+                   '}';
           }
         },
         extractionFn

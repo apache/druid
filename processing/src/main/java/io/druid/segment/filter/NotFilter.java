@@ -22,6 +22,7 @@ package io.druid.segment.filter;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
+import io.druid.query.filter.RowOffsetMatcherFactory;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 
@@ -60,5 +61,16 @@ public class NotFilter implements Filter
         return !baseMatcher.matches();
       }
     };
+  }
+
+  @Override
+  public boolean supportsBitmapIndex(BitmapIndexSelector selector)
+  {
+    return baseFilter.supportsBitmapIndex(selector);
+  }
+
+  public Filter getBaseFilter()
+  {
+    return baseFilter;
   }
 }

@@ -25,8 +25,10 @@ import com.metamx.collections.bitmap.ImmutableBitmap;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
+import io.druid.query.filter.RowOffsetMatcherFactory;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
+import io.druid.segment.column.ColumnCapabilities;
 
 /**
  */
@@ -34,6 +36,8 @@ public class DimensionPredicateFilter implements Filter
 {
   private final String dimension;
   private final Predicate<String> predicate;
+  private final String basePredicateString;
+  private final ExtractionFn extractionFn;
 
   public DimensionPredicateFilter(
       final String dimension,
@@ -43,6 +47,8 @@ public class DimensionPredicateFilter implements Filter
   {
     Preconditions.checkNotNull(predicate, "predicate");
     this.dimension = Preconditions.checkNotNull(dimension, "dimension");
+    this.basePredicateString = predicate.toString();
+    this.extractionFn = extractionFn;
 
     if (extractionFn == null) {
       this.predicate = predicate;
@@ -68,5 +74,21 @@ public class DimensionPredicateFilter implements Filter
   public ValueMatcher makeMatcher(ValueMatcherFactory factory)
   {
     return factory.makeValueMatcher(dimension, predicate);
+  }
+
+  @Override
+  public boolean supportsBitmapIndex(BitmapIndexSelector selector)
+  {
+    return selector.getBitmapIndex(dimension) != null;
+  }
+
+  @Override
+  public String toString()
+  {
+    if (extractionFn != null) {
+      return String.format("%s(%s) = %s", extractionFn, dimension, basePredicateString);
+    } else {
+      return String.format("%s = %s", dimension, basePredicateString);
+    }
   }
 }

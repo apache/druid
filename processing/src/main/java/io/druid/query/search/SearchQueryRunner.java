@@ -85,7 +85,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     }
 
     final SearchQuery query = (SearchQuery) input;
-    final Filter filter = Filters.toFilter(query.getDimensionsFilter());
+    final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getDimensionsFilter()));
     final List<DimensionSpec> dimensions = query.getDimensions();
     final SearchQuerySpec searchQuerySpec = query.getQuery();
     final int limit = query.getLimit();

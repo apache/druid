@@ -40,10 +40,12 @@ import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.guice.annotations.Global;
+import io.druid.query.Query;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.filter.Filter;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.StorageAdapter;
@@ -94,8 +96,10 @@ public class GroupByQueryEngine
       throw new IAE("Should only have one interval, got[%s]", intervals);
     }
 
+    Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getDimFilter()));
+
     final Sequence<Cursor> cursors = storageAdapter.makeCursors(
-        Filters.toFilter(query.getDimFilter()),
+        filter,
         intervals.get(0),
         query.getGranularity(),
         false
