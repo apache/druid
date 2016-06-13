@@ -8,13 +8,13 @@ This extension has been deprecated as of 0.9.1.
 
 # Transitioning to lookups-cached-global
 
-New users should reference the exteion [lookups-cached-global](lookups-cached-global.html)
+New users should reference the extension [lookups-cached-global](lookups-cached-global.html)
 
 ## Moving to cluster wide configuration
 
 This module only supports static configurations, whereas the new [lookups-cached-global](lookups-cached-global.html) extension supports only dynamic cluster configuration.
 
-Most of the configurations can be used as-is and posted to the coordinator to the appropriate endpoint. Once the cluster is upgraded to 0.9.1, the json configuration can be propogated through the cluster as follows:
+Most of the configurations can be used as-is and posted to the coordinator to the appropriate endpoint. Once the cluster is upgraded to 0.9.1, the json configuration can be propagated through the cluster as follows:
 
 The prior configuration of 
 
@@ -81,7 +81,7 @@ and change it to
 }
 ```
 
-Once all your queries are using the "new" extraction syntax, you can remove the static configuration and reboot those nodes, or remove the static configuration when you next perform normal maintenance.
+Once all your queries are using the "new" extraction syntax, you can remove the static configuration, remove the druid-names-space-lookup extension, and reboot those nodes, or remove them when you next perform normal maintenance.
 
 # Namespaced Lookup
 
