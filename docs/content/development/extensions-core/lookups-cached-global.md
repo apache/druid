@@ -16,6 +16,8 @@ Static configuration is no longer supported. Lookups can be configured through
 <a href="../../querying/lookups.html#configuration">dynamic configuration</a>.
 </div>
 
+If you are using the `druid-namespace-lookup` extension, please see the [documentation for the extension](namespaced-lookup.html) for instructions on migrating to the new framework.
+
 Globally cached lookups are appropriate for lookups which are not possible to pass at query time due to their size,
 or are not desired to be passed at query time because the data is to reside in and be handled by the Druid servers,
 and are small enough to reasonably populate on a node. This usually means tens to tens of thousands of entries per lookup.
