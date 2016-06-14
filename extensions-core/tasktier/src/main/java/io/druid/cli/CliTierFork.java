@@ -39,7 +39,6 @@ import io.druid.guice.annotations.RemoteChatHandler;
 import io.druid.guice.annotations.Self;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.config.TaskConfig;
-import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.PortWriter;
 import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.config.TierLocalTaskRunnerConfig;

@@ -19,7 +19,6 @@
 
 package io.druid.cli;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import com.google.inject.Binding;
@@ -36,7 +35,6 @@ import io.druid.indexing.overlord.BusyTask;
 import io.druid.indexing.overlord.config.TierLocalTaskRunnerConfig;
 import io.druid.indexing.overlord.resources.DeadhandResource;
 import io.druid.initialization.Initialization;
-import io.druid.jackson.DefaultObjectMapper;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.ServerConfig;
 import org.easymock.EasyMock;
