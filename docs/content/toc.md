@@ -1,4 +1,5 @@
 ---
+layout: toc
 ---
 
 ## Getting Started
