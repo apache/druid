@@ -44,10 +44,15 @@ public class S3TimestampVersionedDataFinder extends S3DataSegmentPuller implemen
   }
 
   /**
-   * Gets the key with the most recently modified timestamp. `pattern` is evaluated against the entire key.
+   * Gets the key with the most recently modified timestamp.
+   * `pattern` is evaluated against the entire key AFTER the path given in `uri`.
+   * The substring `pattern` is matched against will have a leading `/` removed.
+   * For example `s3://some_bucket/some_prefix/some_key` with a URI of `s3://some_bucket/some_prefix` will match against `some_key`.
+   * `s3://some_bucket/some_prefixsome_key` with a URI of `s3://some_bucket/some_prefix` will match against `some_key`
+   * `s3://some_bucket/some_prefix//some_key` with a URI of `s3://some_bucket/some_prefix` will match against `/some_key`
    *
    * @param uri     The URI of in the form of `s3://some_bucket/some_key`
-   * @param pattern The pattern matcher to determine if a *key* is of interest, or `null` to use the `uri` verbatim.
+   * @param pattern The pattern matcher to determine if a *key* is of interest, or `null` to match everything.
    *
    * @return A URI to the most recently modified object which matched the pattern.
    */
