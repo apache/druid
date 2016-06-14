@@ -67,7 +67,7 @@ public class S3TimestampVersionedDataFinder extends S3DataSegmentPuller implemen
               final S3Coords coords = new S3Coords(checkURI(uri));
               long mostRecent = Long.MIN_VALUE;
               URI latest = null;
-              S3Object[] objects = s3Client.listObjects(coords.bucket, coords.path, "/");
+              S3Object[] objects = s3Client.listObjects(coords.bucket, coords.path, null);
               if (objects == null) {
                 return null;
               }
