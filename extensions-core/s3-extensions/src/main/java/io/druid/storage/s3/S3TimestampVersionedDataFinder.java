@@ -44,13 +44,10 @@ public class S3TimestampVersionedDataFinder extends S3DataSegmentPuller implemen
   }
 
   /**
-   * Gets the latest version using the "parent" of uri as a prefix. The "parent" of uri is evaluated assuming '/'
-   * delimited paths. If the uri path ends with '/', the path is assumed to be the parent.
+   * Gets the key with the most recently modified timestamp. `pattern` is evaluated against the entire key.
    *
-   * @param uri     The URI of interest whose "parent" will be searched as a key prefix for the latest version
-   * @param pattern The pattern matcher to determine if a *key* is of interest. This will match against the portion of the key that is beyond the URI path,
-   *                not just the equivalent "filename" like some other implementations. A null value matches everything.
-   *                If there is a "/" delimiter between the uri path and the file match, it is ignore. Patterns should **not** account for a leading "/" unless there's a double "/" for some reason
+   * @param uri     The URI of in the form of `s3://some_bucket/some_key`
+   * @param pattern The pattern matcher to determine if a *key* is of interest, or `null` to use the `uri` verbatim.
    *
    * @return A URI to the most recently modified object which matched the pattern.
    */
