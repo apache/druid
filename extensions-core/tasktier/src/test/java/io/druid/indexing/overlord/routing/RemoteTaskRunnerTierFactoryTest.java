@@ -20,74 +20,162 @@
 package io.druid.indexing.overlord.routing;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
+import com.google.common.collect.ImmutableList;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.http.client.HttpClient;
+import io.druid.concurrent.Execs;
+import io.druid.indexing.overlord.RemoteTaskRunner;
+import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.autoscaling.PendingTaskBasedWorkerResourceManagementConfig;
 import io.druid.indexing.overlord.autoscaling.ResourceManagementSchedulerConfig;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.overlord.setup.WorkerBehaviorConfig;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.server.initialization.IndexerZkConfig;
+import io.druid.server.initialization.ZkPathsConfig;
 import org.apache.curator.framework.CuratorFramework;
 import org.easymock.EasyMock;
+import org.easymock.EasyMockRunner;
+import org.easymock.Mock;
+import org.easymock.MockType;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
+import java.util.concurrent.ScheduledExecutorService;
+
+@RunWith(EasyMockRunner.class)
 public class RemoteTaskRunnerTierFactoryTest
 {
-  final RemoteTaskRunnerConfig remoteTaskRunnerConfig = EasyMock.createStrictMock(RemoteTaskRunnerConfig.class);
-  final PendingTaskBasedWorkerResourceManagementConfig config = EasyMock.createStrictMock(
-      PendingTaskBasedWorkerResourceManagementConfig.class);
-  final Supplier<WorkerBehaviorConfig> workerConfigRef = Suppliers.ofInstance(EasyMock.createStrictMock(
-      WorkerBehaviorConfig.class));
-  final CuratorFramework curator = EasyMock.createStrictMock(CuratorFramework.class);
-  final IndexerZkConfig zkPaths = EasyMock.createStrictMock(IndexerZkConfig.class);
+  @Mock(type = MockType.STRICT)
+  PendingTaskBasedWorkerResourceManagementConfig config;
+
+  @Mock(type = MockType.STRICT)
+  WorkerBehaviorConfig workerBehaviorConfig;
+
+  @Mock(type = MockType.STRICT)
+  CuratorFramework curator;
+
+  @Mock(type = MockType.STRICT)
+  HttpClient httpClient;
+
+  @Mock(type = MockType.STRICT)
+  ResourceManagementSchedulerConfig resourceManagementSchedulerConfig;
+
+  final ScheduledExecutorService scheduledExecutorService = Execs.scheduledSingleThreaded("TestThread");
+  final ScheduledExecutorFactory executorFactory = new ScheduledExecutorFactory()
+  {
+    @Override
+    public ScheduledExecutorService create(int corePoolSize, String nameFormat)
+    {
+      return scheduledExecutorService;
+    }
+  };
+  IndexerZkConfig zkPaths = new IndexerZkConfig(new ZkPathsConfig(), null, null, null, null, null);
   final ObjectMapper jsonMapper = new DefaultObjectMapper();
-  final HttpClient httpClient = EasyMock.createStrictMock(HttpClient.class);
-  final ScheduledExecutorFactory executorFactory = EasyMock.createStrictMock(ScheduledExecutorFactory.class);
-  final ResourceManagementSchedulerConfig resourceManagementSchedulerConfig =
-      EasyMock.createStrictMock(ResourceManagementSchedulerConfig.class);
-  final RemoteTaskRunnerTierFactory factory = new RemoteTaskRunnerTierFactory(
-      remoteTaskRunnerConfig,
-      config,
-      workerConfigRef,
-      curator,
-      zkPaths,
-      jsonMapper,
-      httpClient,
-      executorFactory,
-      resourceManagementSchedulerConfig
-  );
+  final RemoteTaskRunnerConfig remoteTaskRunnerConfig = new RemoteTaskRunnerConfig();
 
   @Test
   public void testBuild() throws Exception
   {
+    final RemoteTaskRunnerTierFactory factory = new RemoteTaskRunnerTierFactory(
+        remoteTaskRunnerConfig,
+        config,
+        Suppliers.ofInstance(workerBehaviorConfig),
+        curator,
+        zkPaths,
+        jsonMapper,
+        httpClient,
+        executorFactory,
+        resourceManagementSchedulerConfig
+    );
 
+    EasyMock.expect(resourceManagementSchedulerConfig.isDoAutoscale()).andReturn(false).times(2);
+    EasyMock.replay(resourceManagementSchedulerConfig);
+    final TaskRunner runner = factory.build();
+    Assert.assertTrue(runner instanceof RemoteTaskRunner);
+    final RemoteTaskRunner rtr = (RemoteTaskRunner) runner;
+    Assert.assertEquals(ImmutableList.of(), rtr.getKnownTasks());
+    Assert.assertEquals(ImmutableList.of(), rtr.getLazyWorkers());
+    Assert.assertEquals(ImmutableList.of(), rtr.getPendingTaskPayloads());
+    Assert.assertEquals(ImmutableList.of(), rtr.getPendingTasks());
+    Assert.assertEquals(ImmutableList.of(), rtr.getRunningTasks());
+    Assert.assertEquals(ImmutableList.of(), rtr.getWorkers());
   }
 
   @Test
   public void testGetRemoteTaskRunnerConfig() throws Exception
   {
+    final RemoteTaskRunnerTierFactory factory = new RemoteTaskRunnerTierFactory(
+        remoteTaskRunnerConfig,
+        config,
+        Suppliers.ofInstance(workerBehaviorConfig),
+        curator,
+        zkPaths,
+        jsonMapper,
+        httpClient,
+        executorFactory,
+        resourceManagementSchedulerConfig
+    );
     Assert.assertEquals(remoteTaskRunnerConfig, factory.getRemoteTaskRunnerConfig());
   }
 
   @Test
   public void testGetZkPaths() throws Exception
   {
+    final RemoteTaskRunnerTierFactory factory = new RemoteTaskRunnerTierFactory(
+        remoteTaskRunnerConfig,
+        config,
+        Suppliers.ofInstance(workerBehaviorConfig),
+        curator,
+        zkPaths,
+        jsonMapper,
+        httpClient,
+        executorFactory,
+        resourceManagementSchedulerConfig
+    );
     Assert.assertEquals(zkPaths, factory.getZkPaths());
   }
 
   @Test
   public void testGetPendingConfig() throws Exception
   {
+    final RemoteTaskRunnerTierFactory factory = new RemoteTaskRunnerTierFactory(
+        remoteTaskRunnerConfig,
+        config,
+        Suppliers.ofInstance(workerBehaviorConfig),
+        curator,
+        zkPaths,
+        jsonMapper,
+        httpClient,
+        executorFactory,
+        resourceManagementSchedulerConfig
+    );
     Assert.assertEquals(config, factory.getPendingTaskBasedWorkerResourceManagementConfig());
   }
 
   @Test
   public void testGetResourceManagementSchedulerConfig() throws Exception
   {
+    final RemoteTaskRunnerTierFactory factory = new RemoteTaskRunnerTierFactory(
+        remoteTaskRunnerConfig,
+        config,
+        Suppliers.ofInstance(workerBehaviorConfig),
+        curator,
+        zkPaths,
+        jsonMapper,
+        httpClient,
+        executorFactory,
+        resourceManagementSchedulerConfig
+    );
     Assert.assertEquals(remoteTaskRunnerConfig, factory.getRemoteTaskRunnerConfig());
+  }
+
+  @After
+  public void tearDown()
+  {
+    scheduledExecutorService.shutdownNow();
   }
 }

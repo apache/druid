@@ -32,13 +32,18 @@ import io.druid.indexing.overlord.TaskRunner;
 import org.apache.curator.x.discovery.ServiceDiscovery;
 import org.apache.curator.x.discovery.ServiceInstance;
 import org.easymock.EasyMock;
+import org.easymock.EasyMockRunner;
+import org.easymock.Mock;
+import org.easymock.MockType;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 import org.joda.time.Duration;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 
+@RunWith(EasyMockRunner.class)
 public class DynamicUpstreamReporterTest
 {
   private static final String DEFAULT_UPSTREAM = "upstream_service";
@@ -46,9 +51,12 @@ public class DynamicUpstreamReporterTest
   TaskStatusReporterModule.DynamicUpstreamReporter reporter = null;
   final TaskMaster taskMaster = EasyMock.createStrictMock(TaskMaster.class);
   final HttpClient httpClient = EasyMock.createStrictMock(HttpClient.class);
-  final ServiceDiscovery<Void> serviceDiscovery = EasyMock.createStrictMock(ServiceDiscovery.class);
-  final ServiceInstance<Void> service = EasyMock.createStrictMock(ServiceInstance.class);
-  final TaskRunnerReporter runner = EasyMock.createStrictMock(TaskRunnerReporter.class);
+  @Mock(type = MockType.STRICT)
+  ServiceDiscovery<Void> serviceDiscovery;
+  @Mock(type = MockType.STRICT)
+  ServiceInstance<Void> service;
+  @Mock(type = MockType.STRICT)
+  TaskRunnerReporter runner;
   final TaskStatus status = TaskStatus.success("task_id");
 
   final
