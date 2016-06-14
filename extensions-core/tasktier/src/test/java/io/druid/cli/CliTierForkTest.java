@@ -31,17 +31,15 @@ import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.annotations.RemoteChatHandler;
 import io.druid.guice.annotations.Self;
-import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
+import io.druid.indexing.overlord.BusyTask;
 import io.druid.indexing.overlord.config.TierLocalTaskRunnerConfig;
 import io.druid.indexing.overlord.resources.DeadhandResource;
-import io.druid.indexing.worker.executor.ExecutorLifecycleConfig;
 import io.druid.initialization.Initialization;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.ServerConfig;
 import org.easymock.EasyMock;
-import org.hamcrest.BaseMatcher;
-import org.hamcrest.Description;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Rule;
@@ -64,9 +62,14 @@ public class CliTierForkTest
   @Test
   public void testGetModules() throws Exception
   {
+    final File lockFile = temporaryFolder.newFile();
+    Assert.assertTrue(lockFile.delete() || !lockFile.exists());
+    Assert.assertFalse(lockFile.exists());
+    final Task task = new BusyTask("taskId", lockFile.toString(), 100);
+
     final CliTierFork cliTierFork = new CliTierFork();
     cliTierFork.taskAndStatusFile = ImmutableList.of(
-        temporaryFolder.newFile().toString(),
+        temporaryFolder.newFile().toString(), // Should not actually read from this
         temporaryFolder.newFile().toString()
     );
     final Injector startupInjector = GuiceInjectors.makeStartupInjector();
@@ -94,6 +97,7 @@ public class CliTierForkTest
                         Key.get(ServerConfig.class, RemoteChatHandler.class),
                         new ServerConfig()
                     );
+                    binder.bind(Task.class).toInstance(task);
                   }
                 })
         )
