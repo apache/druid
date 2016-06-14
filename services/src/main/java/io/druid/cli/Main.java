@@ -109,6 +109,7 @@ public class Main
       System.out.println(e.getMessage());
       System.out.println("===");
       cli.parse(new String[]{"help"}).run();
+      System.exit(1);
     }
   }
 }
