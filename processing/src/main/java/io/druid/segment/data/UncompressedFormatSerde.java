@@ -2,10 +2,8 @@ package io.druid.segment.data;
 
 import com.google.common.base.Supplier;
 import com.google.common.io.ByteSink;
-import com.google.common.io.ByteSource;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.CountingOutputStream;
-import com.google.common.io.InputSupplier;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;

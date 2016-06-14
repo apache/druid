@@ -10,12 +10,17 @@ import java.nio.ByteOrder;
 
 /**
  * Currently this only support big endian
+ *
+ * Size 3 and 6 are not used due to performance reasons, consider enable them if compressed size becomes important
+ *
+ * Note 3 and 6 in the current state would cause IndexOutofBoundException at the end of file, which would enter the
+ * catch block in safeGetInt. This will have a significant performance impact due to java try catch optimization.
+ * Either change implementation or prevent the situation by writing some empty bytes when closing.
  */
 public class VSizeLongSerde
 {
 
-  //TODO handle potential buffer underflow
-  public static final int SUPPORTED_SIZE[] = {1, 2, 3, 4, 6, 8, 12, 16, 20, 24, 32, 40, 48, 56, 64};
+  public static final int SUPPORTED_SIZE[] = {1, 2, /*3,*/ 4, /*6,*/ 8, 12, 16, 20, 24, 32, 40, 48, 56, 64};
 
   public static int getBitsForMax(long value)
   {
@@ -40,9 +45,9 @@ public class VSizeLongSerde
     switch (longSize) {
       case 1: return new Size1Ser(output);
       case 2: return new Size2Ser(output);
-      case 3: return new Size3Ser(output);
+//      case 3: return new Size3Ser(output);
       case 4: return new Mult4Ser(output, 0);
-      case 6: return new Size6Ser(output);
+//      case 6: return new Size6Ser(output);
       case 8: return new Mult8Ser(output, 1);
       case 12: return new Mult4Ser(output, 1);
       case 16: return new Mult8Ser(output, 2);
@@ -63,9 +68,9 @@ public class VSizeLongSerde
     switch (longSize) {
       case 1: return new Size1Des(buffer, bufferOffset);
       case 2: return new Size2Des(buffer, bufferOffset);
-      case 3: return new Size3Des(buffer, bufferOffset);
+//      case 3: return new Size3Des(buffer, bufferOffset);
       case 4: return new Size4Des(buffer, bufferOffset);
-      case 6: return new Size6Des(buffer, bufferOffset);
+//      case 6: return new Size6Des(buffer, bufferOffset);
       case 8: return new Size8Des(buffer, bufferOffset);
       case 12: return new Size12Des(buffer, bufferOffset);
       case 16: return new Size16Des(buffer, bufferOffset);
@@ -81,11 +86,11 @@ public class VSizeLongSerde
     }
   }
 
-  interface LongSerializer extends Closeable {
+  public interface LongSerializer extends Closeable {
     void write (long value) throws IOException;
   }
 
-  private static class Size1Ser implements LongSerializer {
+  private static final class Size1Ser implements LongSerializer {
     OutputStream output;
     byte buffer = 0;
     int count = 0;
@@ -111,7 +116,7 @@ public class VSizeLongSerde
     }
   }
 
-  private static class Size2Ser implements LongSerializer {
+  private static final class Size2Ser implements LongSerializer {
     OutputStream output;
     byte buffer = 0;
     int count = 0;
@@ -137,7 +142,7 @@ public class VSizeLongSerde
     }
   }
 
-  private static class Size3Ser implements LongSerializer {
+  private static final class Size3Ser implements LongSerializer {
     OutputStream output;
     int buffer = 0;
     int count = 0;
@@ -169,7 +174,7 @@ public class VSizeLongSerde
     }
   }
 
-  private static class Size6Ser implements LongSerializer {
+  private static final class Size6Ser implements LongSerializer {
     OutputStream output;
     int buffer = 0;
     int count = 0;
@@ -201,7 +206,7 @@ public class VSizeLongSerde
     }
   }
 
-  private static class Mult4Ser implements LongSerializer {
+  private static final class Mult4Ser implements LongSerializer {
     OutputStream output;
     int numBytes;
     byte buffer = 0;
@@ -237,7 +242,7 @@ public class VSizeLongSerde
     }
   }
 
-  private static class Mult8Ser implements LongSerializer {
+  private static final class Mult8Ser implements LongSerializer {
     OutputStream output;
     int numBytes;
     public Mult8Ser(OutputStream output, int numBytes) {
@@ -258,11 +263,11 @@ public class VSizeLongSerde
     }
   }
 
-  interface LongDeserializer {
+  public interface LongDeserializer {
     long get (int index);
   }
 
-  private static class Size1Des implements LongDeserializer {
+  private static final class Size1Des implements LongDeserializer {
     final ByteBuffer buffer;
     final int offset;
     public Size1Des(ByteBuffer buffer, int bufferOffset) {
@@ -277,7 +282,7 @@ public class VSizeLongSerde
     }
   }
 
-  private static class Size2Des implements LongDeserializer {
+  private static final class Size2Des implements LongDeserializer {
     final ByteBuffer buffer;
     final int offset;
     public Size2Des(ByteBuffer buffer, int bufferOffset) {
@@ -292,7 +297,7 @@ public class VSizeLongSerde
     }
   }
 
-  private static class Size3Des implements LongDeserializer {
+  private static final class Size3Des implements LongDeserializer {
     final ByteBuffer buffer;
     final int offset;
     public Size3Des(ByteBuffer buffer, int bufferOffset) {
@@ -307,7 +312,7 @@ public class VSizeLongSerde
     }
   }
 
-  private static class Size4Des implements LongDeserializer {
+  private static final class Size4Des implements LongDeserializer {
     final ByteBuffer buffer;
     final int offset;
     public Size4Des(ByteBuffer buffer, int bufferOffset) {
@@ -322,7 +327,7 @@ public class VSizeLongSerde
     }
   }
 
-  private static class Size6Des implements LongDeserializer {
+  private static final class Size6Des implements LongDeserializer {
     final ByteBuffer buffer;
     final int offset;
     public Size6Des(ByteBuffer buffer, int bufferOffset) {
@@ -337,7 +342,7 @@ public class VSizeLongSerde
     }
   }
 
-  private static class Size8Des implements LongDeserializer {
+  private static final class Size8Des implements LongDeserializer {
     final ByteBuffer buffer;
     final int offset;
     public Size8Des(ByteBuffer buffer, int bufferOffset) {
@@ -351,7 +356,7 @@ public class VSizeLongSerde
     }
   }
 
-  private static class Size12Des implements LongDeserializer {
+  private static final class Size12Des implements LongDeserializer {
     final ByteBuffer buffer;
     final int offset;
     public Size12Des(ByteBuffer buffer, int bufferOffset) {
@@ -367,7 +372,7 @@ public class VSizeLongSerde
     }
   }
 
-  private static class Size16Des implements LongDeserializer {
+  private static final class Size16Des implements LongDeserializer {
     final ByteBuffer buffer;
     final int offset;
     public Size16Des(ByteBuffer buffer, int bufferOffset) {
@@ -380,7 +385,7 @@ public class VSizeLongSerde
     }
   }
 
-  private static class Size20Des implements LongDeserializer {
+  private static final class Size20Des implements LongDeserializer {
     final ByteBuffer buffer;
     final int offset;
     public Size20Des(ByteBuffer buffer, int bufferOffset) {
@@ -392,11 +397,11 @@ public class VSizeLongSerde
     {
       int shift = ((index + 1) & 1) << 2;
       int offset = (index * 5) >> 1;
-      return (safeGetInt(buffer, this.offset + offset) >> (shift + 8)) & 0xFFFFF;
+      return (safeGetInt(buffer, this.offset + offset - 1) >> shift) & 0xFFFFF;
     }
   }
 
-  private static class Size24Des implements LongDeserializer {
+  private static final class Size24Des implements LongDeserializer {
     final ByteBuffer buffer;
     final int offset;
     public Size24Des(ByteBuffer buffer, int bufferOffset) {
@@ -406,11 +411,11 @@ public class VSizeLongSerde
     @Override
     public long get(int index)
     {
-      return safeGetInt(buffer, offset + index * 3) >>> 8;
+      return safeGetInt(buffer, offset + index * 3 - 1) & 0xFFFFFF;
     }
   }
 
-  private static class Size32Des implements LongDeserializer {
+  private static final class Size32Des implements LongDeserializer {
     final ByteBuffer buffer;
     final int offset;
     public Size32Des(ByteBuffer buffer, int bufferOffset) {
@@ -424,7 +429,7 @@ public class VSizeLongSerde
     }
   }
 
-  private static class Size40Des implements LongDeserializer {
+  private static final class Size40Des implements LongDeserializer {
     final ByteBuffer buffer;
     final int offset;
     public Size40Des(ByteBuffer buffer, int bufferOffset) {
@@ -434,11 +439,11 @@ public class VSizeLongSerde
     @Override
     public long get(int index)
     {
-      return safeGetLong(buffer, offset + index * 5) >>> 24;
+      return safeGetLong(buffer, offset + index * 5 - 3) & 0xFFFFFFFFFFL;
     }
   }
 
-  private static class Size48Des implements LongDeserializer {
+  private static final class Size48Des implements LongDeserializer {
     final ByteBuffer buffer;
     final int offset;
     public Size48Des(ByteBuffer buffer, int bufferOffset) {
@@ -448,11 +453,11 @@ public class VSizeLongSerde
     @Override
     public long get(int index)
     {
-      return safeGetLong(buffer, offset + index * 6) >>> 16;
+      return safeGetLong(buffer, offset + index * 6 - 2) & 0xFFFFFFFFFFFFL;
     }
   }
 
-  private static class Size56Des implements LongDeserializer {
+  private static final class Size56Des implements LongDeserializer {
     final ByteBuffer buffer;
     final int offset;
     public Size56Des(ByteBuffer buffer, int bufferOffset) {
@@ -462,11 +467,11 @@ public class VSizeLongSerde
     @Override
     public long get(int index)
     {
-      return safeGetLong(buffer, offset + index * 7) >>> 8;
+      return safeGetLong(buffer, offset + index * 7 - 1) & 0xFFFFFFFFFFFFFFL;
     }
   }
 
-  private static class Size64Des implements LongDeserializer {
+  private static final class Size64Des implements LongDeserializer {
     final ByteBuffer buffer;
     final int offset;
     public Size64Des(ByteBuffer buffer, int bufferOffset) {
@@ -495,7 +500,7 @@ public class VSizeLongSerde
       if (index >= buffer.limit()) {
         throw ex;
       }
-      return (short)((safeGet(buffer, index * 2) << 8) | (safeGet(buffer, index * 2 + 1) & 0xFF));
+      return (short)((safeGet(buffer, index) << 8) | (safeGet(buffer, index + 1) & 0xFF));
     }
   }
 
@@ -520,7 +525,7 @@ public class VSizeLongSerde
       if (index >= buffer.limit()) {
         throw ex;
       }
-      return (((long)safeGet(buffer, index * 8) << 56) |
+      return (((long)safeGet(buffer, index) << 56) |
               (((long)safeGet(buffer, index + 1) & 0xFF) << 48) |
               (((long)safeGet(buffer, index + 2) & 0xFF) << 40) |
               (((long)safeGet(buffer, index + 3) & 0xFF) << 32) |

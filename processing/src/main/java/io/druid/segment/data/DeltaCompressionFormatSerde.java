@@ -57,7 +57,7 @@ public class DeltaCompressionFormatSerde
       return new DeltaCompressedIndexedLongs();
     }
 
-    private class DeltaCompressedIndexedLongs implements IndexedLongs
+    public class DeltaCompressedIndexedLongs implements IndexedLongs
     {
 
       @Override
@@ -98,6 +98,14 @@ public class DeltaCompressionFormatSerde
       @Override
       public void close() throws IOException
       {
+      }
+
+      public VSizeLongSerde.LongDeserializer getDes() {
+        return deserializer;
+      }
+
+      public long getBase() {
+        return base;
       }
     }
   }
@@ -142,7 +150,7 @@ public class DeltaCompressionFormatSerde
 
     public void add(long value) throws IOException
     {
-      serializer.write(value);
+      serializer.write(value - base);
       ++numInserted;
     }
 

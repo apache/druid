@@ -9,6 +9,8 @@ import java.util.Map;
 
 public abstract class CompressionFactory
 {
+
+  //TODO decide on default compression format
   public static final CompressionFormat DEFAULT_COMPRESSION_FORMAT = CompressionFormat.LZ4;
 
   public enum CompressionFormat

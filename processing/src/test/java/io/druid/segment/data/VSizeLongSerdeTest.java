@@ -33,7 +33,6 @@ public class VSizeLongSerdeTest
     Assert.assertEquals(1, VSizeLongSerde.getBitsForMax(2));
     Assert.assertEquals(2, VSizeLongSerde.getBitsForMax(3));
     Assert.assertEquals(4, VSizeLongSerde.getBitsForMax(16));
-    Assert.assertEquals(6, VSizeLongSerde.getBitsForMax(31));
     Assert.assertEquals(8, VSizeLongSerde.getBitsForMax(200));
     Assert.assertEquals(12, VSizeLongSerde.getBitsForMax(999));
     Assert.assertEquals(24, VSizeLongSerde.getBitsForMax(12345678));

@@ -27,8 +27,8 @@ public class RACompressionFormatSerde
     private int numInserted = 0;
 
     private BiMap<Long, Integer> uniqueValues = HashBiMap.create();
-    private long maxVal = 0;
-    private long minVal = 0;
+    private long maxVal = Long.MIN_VALUE;
+    private long minVal = Long.MAX_VALUE;
 
     private LongSupplierSerializer delegate;
 
@@ -63,7 +63,8 @@ public class RACompressionFormatSerde
       }
       if (value > maxVal) {
         maxVal = value;
-      } else if (value < minVal) {
+      }
+      if (value < minVal) {
         minVal = value;
       }
     }

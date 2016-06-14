@@ -43,17 +43,17 @@ import java.util.Set;
 public class IndexSpec
 {
   public static final String UNCOMPRESSED = "uncompressed";
-  public static final String DEFAULT_METRIC_COMPRESSION = CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY.name().toLowerCase();
+  public static final String DEFAULT_METRIC_COMPRESSION = CompressionFactory.DEFAULT_COMPRESSION_FORMAT.name().toLowerCase();
   public static final String DEFAULT_DIMENSION_COMPRESSION = CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY.name().toLowerCase();
 
   private static final Set<String> COMPRESSION_NAMES = Sets.newHashSet(
       Iterables.transform(
-          Arrays.asList(CompressedObjectStrategy.CompressionStrategy.values()),
-          new Function<CompressedObjectStrategy.CompressionStrategy, String>()
+          Arrays.asList(CompressionFactory.CompressionFormat.values()),
+          new Function<CompressionFactory.CompressionFormat, String>()
           {
             @Nullable
             @Override
-            public String apply(CompressedObjectStrategy.CompressionStrategy input)
+            public String apply(CompressionFactory.CompressionFormat input)
             {
               return input.name().toLowerCase();
             }

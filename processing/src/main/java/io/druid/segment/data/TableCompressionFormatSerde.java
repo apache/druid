@@ -16,8 +16,6 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
-import java.util.Map;
-import java.util.Set;
 
 /**
  * Storage Format v1 :
@@ -29,7 +27,7 @@ import java.util.Set;
 public class TableCompressionFormatSerde
 {
 
-  public static int MAX_TABLE_SIZE;
+  public static final int MAX_TABLE_SIZE = 256;
 
   public static class TableCompressedIndexedLongsSupplier implements Supplier<IndexedLongs>
   {
