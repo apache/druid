@@ -27,14 +27,17 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
 import io.druid.cli.CliOverlord;
+import io.druid.common.config.JacksonConfigManager;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.JsonConfigurator;
+import io.druid.guice.annotations.Self;
 import io.druid.indexing.overlord.TaskRunnerFactory;
 import io.druid.indexing.overlord.TierRoutingTaskRunner;
 import io.druid.indexing.overlord.TierRoutingTaskRunnerFactory;
 import io.druid.initialization.Initialization;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.server.DruidNode;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -49,7 +52,7 @@ public class TaskTierModuleTest
   public void testUpstreamNameHolder() throws Exception
   {
     final String name = "foo";
-    final TaskTierModule.UpstreamNameHolder upstreamNameHolder = new TaskTierModule.UpstreamNameHolder();
+    final UpstreamNameHolder upstreamNameHolder = new UpstreamNameHolder();
     upstreamNameHolder.upstreamServiceName = name;
     Assert.assertEquals(name, upstreamNameHolder.getUpstreamServiceName());
     final ObjectMapper mapper = new DefaultObjectMapper();
@@ -57,10 +60,10 @@ public class TaskTierModuleTest
         name,
         mapper.readValue(
             mapper.writeValueAsString(upstreamNameHolder),
-            TaskTierModule.UpstreamNameHolder.class
+            UpstreamNameHolder.class
         ).getUpstreamServiceName()
     );
-    final TaskTierModule.UpstreamNameHolderProvider provider = new TaskTierModule.UpstreamNameHolderProvider(
+    final UpstreamNameHolderProvider provider = new UpstreamNameHolderProvider(
         upstreamNameHolder);
     Assert.assertEquals(name, provider.get());
   }
@@ -91,10 +94,13 @@ public class TaskTierModuleTest
           @Override
           public void configure(Binder binder)
           {
-
+            JsonConfigProvider.bindInstance(
+                binder, Key.get(DruidNode.class, Self.class), new DruidNode("test", "localhost", null)
+            );
           }
         }
     ));
+    final JacksonConfigManager jacksonConfigManager = injector.getInstance(JacksonConfigManager.class);
     final TierRouteConfig routeConfig;
   }
 }
