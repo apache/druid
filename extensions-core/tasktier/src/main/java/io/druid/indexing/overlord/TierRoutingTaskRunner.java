@@ -30,6 +30,8 @@ import com.google.inject.Inject;
 import com.metamx.common.IAE;
 import com.metamx.common.Pair;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
+import com.metamx.common.lifecycle.LifecycleStart;
+import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.common.logger.Logger;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.task.Task;
@@ -170,12 +172,14 @@ public class TierRoutingTaskRunner implements TaskRunner, TaskLogStreamer
   }
 
   @Override
+  @LifecycleStart
   public void start()
   {
     managementStrategy.startManagement(null);
   }
 
   @Override
+  @LifecycleStop
   public void stop()
   {
     managementStrategy.stopManagement();
