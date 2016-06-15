@@ -43,7 +43,7 @@ public class TaskStatusPostToLeaderListenerResource
 
   @Inject
   public TaskStatusPostToLeaderListenerResource(
-      @Named(TaskStatusReporterModule.UPSTREAM_TASK_REPORTER_NAME) TaskStatusReporter upstreamReporter
+      @Named(TaskTierModule.UPSTREAM_TASK_REPORTER_NAME) TaskStatusReporter upstreamReporter
   )
   {
     this.upstreamReporter = upstreamReporter;

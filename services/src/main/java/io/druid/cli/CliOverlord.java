@@ -199,7 +199,7 @@ public class CliOverlord extends ServerRunnable
             );
 
             IndexingServiceModuleHelper.configureTaskRunnerConfigs(binder);
-            biddy.addBinding("local").to(ForkingTaskRunnerFactory.class);
+            biddy.addBinding("local").to(ForkingTaskRunnerFactory.class).in(LazySingleton.class);
             binder.bind(ForkingTaskRunnerFactory.class).in(LazySingleton.class);
 
             biddy.addBinding(RemoteTaskRunnerFactory.TYPE_NAME).to(RemoteTaskRunnerFactory.class).in(LazySingleton.class);

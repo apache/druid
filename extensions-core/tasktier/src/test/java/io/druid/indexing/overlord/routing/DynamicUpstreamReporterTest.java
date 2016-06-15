@@ -48,7 +48,7 @@ public class DynamicUpstreamReporterTest
 {
   private static final String DEFAULT_UPSTREAM = "upstream_service";
   final Object memoryBarrier = new Object();
-  TaskStatusReporterModule.DynamicUpstreamReporter reporter = null;
+  DynamicUpstreamReporter reporter = null;
   final TaskMaster taskMaster = EasyMock.createStrictMock(TaskMaster.class);
   final HttpClient httpClient = EasyMock.createStrictMock(HttpClient.class);
   @Mock(type = MockType.STRICT)
@@ -69,7 +69,7 @@ public class DynamicUpstreamReporterTest
     EasyMock.expect(runner.reportStatus(EasyMock.eq(status))).andReturn(true).anyTimes();
     EasyMock.expect(taskMaster.getTaskRunner()).andReturn(Optional.<TaskRunner>of(runner)).anyTimes();
     EasyMock.replay(serviceDiscovery, taskMaster, httpClient, runner);
-    reporter = new TaskStatusReporterModule.DynamicUpstreamReporter(
+    reporter = new DynamicUpstreamReporter(
         taskMaster,
         httpClient,
         serviceDiscovery,
@@ -109,7 +109,7 @@ public class DynamicUpstreamReporterTest
   @Test
   public void testReportStatusNullManager() throws Exception
   {
-    reporter = new TaskStatusReporterModule.DynamicUpstreamReporter(
+    reporter = new DynamicUpstreamReporter(
         null,
         httpClient,
         serviceDiscovery,

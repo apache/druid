@@ -59,7 +59,7 @@ public class TaskStatusPostToLeaderReporter implements TaskStatusReporter
   public TaskStatusPostToLeaderReporter(
       @Global HttpClient httpClient,
       ServiceDiscovery<Void> discovery,
-      @Named(TaskStatusReporterModule.UPSTREAM_SERVICE_NAME_CONSTANT_KEY) String upstreamService
+      @Named(TaskTierModule.UPSTREAM_SERVICE_NAME_CONSTANT_KEY) String upstreamService
   )
   {
     this.httpClient = httpClient;
