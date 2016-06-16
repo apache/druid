@@ -39,12 +39,17 @@ public class BucketExtractionFnTest
     Assert.assertEquals("0.5", extractionFn1.apply("100"));
     Assert.assertEquals("500.5", extractionFn1.apply(501));
     Assert.assertEquals("-399.5", extractionFn1.apply("-325"));
+    Assert.assertEquals("2400.5", extractionFn1.apply("2.42e3"));
+    Assert.assertEquals("-99.5", extractionFn1.apply("1.2e-1"));
+    Assert.assertEquals(null, extractionFn1.apply("should be null"));
+    Assert.assertEquals(null, extractionFn1.apply(""));
 
     BucketExtractionFn extractionFn2 = new BucketExtractionFn(3.0, 2.0);
     Assert.assertEquals("2", extractionFn2.apply("2"));
     Assert.assertEquals("2", extractionFn2.apply("3"));
     Assert.assertEquals("2", extractionFn2.apply("4.22"));
     Assert.assertEquals("-10", extractionFn2.apply("-8"));
+    Assert.assertEquals("71", extractionFn2.apply("7.1e1"));
   }
 
   @Test

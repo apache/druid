@@ -416,7 +416,7 @@ or without setting "locale" (in this case, the current value of the default loca
 
 ### Bucket Extraction Function
 
-Bucket extraction funciton is used to bucket numerical values in each range of the given size by converting them to the same base value. Non numeric values are converted to empty strings.
+Bucket extraction function is used to bucket numerical values in each range of the given size by converting them to the same base value. Non numeric values are converted to null.
 
 * `size` : the size of the buckets (optional, default 1)
 * `offset` : the offset for the buckets (optional, default 0)
