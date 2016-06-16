@@ -76,8 +76,7 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
   {
     Map<String, Object> map = Maps.newHashMap();
     List<? extends StructField> fields = oip.getAllStructFieldRefs();
-    for (StructField field: fields)
-    {
+    for (StructField field: fields) {
       ObjectInspector objectInspector = field.getFieldObjectInspector();
       switch(objectInspector.getCategory()) {
         case PRIMITIVE:
@@ -103,8 +102,7 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
 
   private void initialize()
   {
-    if (typeString == null)
-    {
+    if (typeString == null) {
       typeString = typeStringFromParseSpec(parseSpec);
     }
     TypeInfo typeInfo = TypeInfoUtils.getTypeInfoFromTypeString(typeString);
@@ -124,8 +122,7 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
     List objectList = listObjectInspector.getList(listObject);
     List list = null;
     ObjectInspector child = listObjectInspector.getListElementObjectInspector();
-    switch(child.getCategory())
-    {
+    switch(child.getCategory()) {
       case PRIMITIVE:
         final PrimitiveObjectInspector primitiveObjectInspector = (PrimitiveObjectInspector)child;
         list = Lists.transform(objectList, new Function() {
@@ -171,8 +168,7 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
   {
     StringBuilder builder = new StringBuilder("struct<");
     builder.append(parseSpec.getTimestampSpec()).append(":string");
-    if (parseSpec.getDimensionsSpec().getDimensionNames().size() > 0)
-    {
+    if (parseSpec.getDimensionsSpec().getDimensionNames().size() > 0) {
       builder.append(",");
       builder.append(StringUtils.join(parseSpec.getDimensionsSpec().getDimensionNames(), ":string,")).append(":string");
     }

@@ -32,7 +32,7 @@ For example of hadoop indexing:
       "inputSpec": {
         "type": "static",
         "inputFormat": "org.apache.hadoop.hive.ql.io.orc.OrcNewInputFormat",
-        "paths": "no_metrics"
+        "paths": "/data/path/in/HDFS/"
       },
       "metadataUpdateSpec": {
         "type": "postgresql",
