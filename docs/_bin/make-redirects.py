@@ -30,15 +30,16 @@ for redirect in redirects:
   source = redirect["source"]
   target = redirect["target"]
   source_file = os.path.join(docs_directory, source)
-  target_file = os.path.join(docs_directory, normalize_target(redirect))
 
   # Ensure redirect source doesn't exist yet.
   if os.path.exists(source_file):
     raise Exception('Redirect source is an actual file: ' + source)
 
-  # Ensure target *does* exist.
-  if not os.path.exists(target_file) and source not in all_sources:
-    raise Exception('Redirect target does not exist for source: ' + source)
+  # Ensure target *does* exist, if relative.
+  if not target.startswith("/"):
+    target_file = os.path.join(docs_directory, normalize_target(redirect))
+    if not os.path.exists(target_file) and source not in all_sources:
+      raise Exception('Redirect target does not exist for source: ' + source)
 
   # Write redirect file
   with open(source_file, 'w') as f:
