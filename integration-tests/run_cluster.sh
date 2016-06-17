@@ -22,7 +22,7 @@ mkdir -p $SHARED_DIR/tasklogs
 # install druid jars 
 rm -rf $SHARED_DIR/docker
 cp -R docker $SHARED_DIR/docker
-mvn dependency:copy-dependencies -DoutputDirectory=$SHARED_DIR/docker/lib
+mvn -B dependency:copy-dependencies -DoutputDirectory=$SHARED_DIR/docker/lib
 
 # Build Druid Cluster Image
 docker build -t druid/cluster $SHARED_DIR/docker
