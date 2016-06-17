@@ -5,7 +5,7 @@ layout: doc_page
 Druid vs Kudu
 =============
 
-Kudu's storage format enables single row updates, whereas updates to existing Druid segments requires recreating the segment, so theoretically    
+Kudu's storage format enables single row updates, whereas updates to existing Druid segments requires recreating the segment, so theoretically  
 the process for updating old values should be higher latency in Druid. However, the requirements in Kudu for maintaining extra head space to store 
 updates as well as organizing data by id instead of time has the potential to introduce some extra latency and accessing 
 of data that is not need to answer a query at query time. 
