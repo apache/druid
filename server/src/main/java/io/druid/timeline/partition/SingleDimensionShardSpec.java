@@ -20,16 +20,14 @@
 package io.druid.timeline.partition;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableRangeSet;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Range;
-import com.google.common.collect.RangeSet;
 import com.metamx.common.ISE;
 import io.druid.data.input.InputRow;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 
 /**
  * Class uses getters/setters to work around http://jira.codehaus.org/browse/MSHADE-92
@@ -119,9 +117,8 @@ public class SingleDimensionShardSpec implements ShardSpec
   }
 
   @Override
-  public Map<String, RangeSet<String>> getDomain()
+  public Map<String, Range<String>> getDomain()
   {
-    Map<String, RangeSet<String>> retMap = new HashMap<>();
     Range<String> range;
     if (start == null && end == null) {
       range = Range.all();
@@ -132,8 +129,7 @@ public class SingleDimensionShardSpec implements ShardSpec
     } else {
       range = Range.closed(start, end);
     }
-    retMap.put(dimension, ImmutableRangeSet.of(range));
-    return retMap;
+    return ImmutableMap.of(dimension, range);
   }
 
   public void setPartitionNum(int partitionNum)

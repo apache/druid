@@ -21,7 +21,7 @@ package io.druid.timeline.partition;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.RangeSet;
+import com.google.common.collect.Range;
 import io.druid.data.input.InputRow;
 
 import java.util.List;
@@ -75,7 +75,7 @@ public class NoneShardSpec implements ShardSpec
   }
 
   @Override
-  public Map<String, RangeSet<String>> getDomain()
+  public Map<String, Range<String>> getDomain()
   {
     return ImmutableMap.of();
   }

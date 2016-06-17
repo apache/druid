@@ -61,7 +61,11 @@ public interface DimFilter
   /**
    * Returns a RangeSet that represents the possible range of the input dimension for this DimFilter.This is
    * applicable to filters that use dimensions such as select, in, bound, and logical filters such as and, or, not.
-   * Note that
+   *
+   * Null represents that the range cannot be determined, and will be returned for filters such as javascript and regex
+   * where there's no easy way to determine the filtered range. It is treated the same way as an all range in most
+   * cases, however there are some subtle difference at logical filters such as not filter, where complement of all
+   * is nothing while complement of null is still null.
    *
    * @param dimension name of the dimension to get range for
    * @return a RangeSet that represent the possible range of the input dimension, or null if it is not possible to

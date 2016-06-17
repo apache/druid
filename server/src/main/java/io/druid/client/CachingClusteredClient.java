@@ -22,6 +22,7 @@ package io.druid.client;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
@@ -29,9 +30,9 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
-import com.google.common.collect.TreeRangeSet;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -222,8 +223,9 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     final List<TimelineObjectHolder<String, ServerSelector>> filteredServersLookup =
         toolChest.filterSegments(query, serversLookup);
 
-    Map<String, RangeSet<String>> dimensionRangeMap = Maps.newHashMap();
-    DimFilter filter = query.getFilter();
+    // Absent Optional indicate a null rangeset which represents range cannot be determined
+    final Map<String, Optional<RangeSet<String>>> dimensionRangeMap = Maps.newHashMap();
+    final DimFilter filter = query.getFilter();
 
     // Filter unneeded chunks based on partition dimension
     for (TimelineObjectHolder<String, ServerSelector> holder : filteredServersLookup) {
@@ -232,17 +234,16 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
         boolean include = true;
 
         if (filter != null) {
-          Map<String, RangeSet<String>> domain = selector.getSegment().getShardSpec().getDomain();
-          for (Map.Entry<String, RangeSet<String>> entry : domain.entrySet()) {
-            if (dimensionRangeMap.get(entry.getKey()) == null) {
-              dimensionRangeMap.put(entry.getKey(), filter.getDimensionRangeSet(entry.getKey()));
+          Map<String, Range<String>> domain = selector.getSegment().getShardSpec().getDomain();
+          for (Map.Entry<String, Range<String>> entry : domain.entrySet()) {
+            Optional<RangeSet<String>> optFilterRangeSet = dimensionRangeMap.get(entry.getKey());
+            if (optFilterRangeSet == null) {
+              RangeSet<String> filterRangeSet = filter.getDimensionRangeSet(entry.getKey());
+              optFilterRangeSet = filterRangeSet == null ? Optional.<RangeSet<String>>absent() : Optional.of(filterRangeSet);
+              dimensionRangeMap.put(entry.getKey(), optFilterRangeSet);
             }
-            if (dimensionRangeMap.get(entry.getKey()) != null) {
-              RangeSet<String> intersectRange = TreeRangeSet.create(dimensionRangeMap.get(entry.getKey()));
-              intersectRange.removeAll(entry.getValue().complement());
-              if (intersectRange.isEmpty()) {
-                include = false;
-              }
+            if (optFilterRangeSet.isPresent() && optFilterRangeSet.get().subRangeSet(entry.getValue()).isEmpty()) {
+              include = false;
             }
           }
         }

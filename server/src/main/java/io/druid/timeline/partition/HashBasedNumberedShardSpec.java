@@ -30,7 +30,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
-import com.google.common.collect.RangeSet;
+import com.google.common.collect.Range;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import io.druid.data.input.InputRow;
@@ -126,7 +126,7 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
   }
 
   @Override
-  public Map<String, RangeSet<String>> getDomain()
+  public Map<String, Range<String>> getDomain()
   {
     return ImmutableMap.of();
   }

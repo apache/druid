@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.RangeSet;
+import com.google.common.collect.Range;
 import io.druid.data.input.InputRow;
 
 import java.util.List;
@@ -61,7 +61,7 @@ public class LinearShardSpec implements ShardSpec
   }
 
   @Override
-  public Map<String, RangeSet<String>> getDomain()
+  public Map<String, Range<String>> getDomain()
   {
     return ImmutableMap.of();
   }

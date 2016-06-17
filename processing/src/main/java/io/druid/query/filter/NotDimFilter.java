@@ -38,7 +38,7 @@ public class NotDimFilter implements DimFilter
 {
   final private DimFilter field;
 
-  final private Function<DimFilter, DimFilter> negate =
+  private static final Function<DimFilter, DimFilter> NEGATE =
       new Function<DimFilter, DimFilter>() {
         public DimFilter apply(DimFilter filter) { return Druids.newNotDimFilterBuilder().field(filter).build(); }
       };
@@ -78,16 +78,27 @@ public class NotDimFilter implements DimFilter
     return new NotFilter(field.toFilter());
   }
 
+  /**
+   * There are some special cases involving null that require special casing for And and Or instead of simply taking
+   * the complement
+   *
+   * Example 1 : "NOT ( [0,INF) OR null)" The inside of NOT would evaluate to null, and the complement would also
+   * be null. However, by breaking the NOT, this statement is "NOT([0,INF)) AND NOT(null)", which means it should
+   * actually evaluate to (-INF, 0).
+   *
+   * Example 2 : "NOT ( [0,INF) AND null )" The inside of NOT would evaluate to [0,INF), and the complement would be
+   * (-INF, 0). However the statement is actually "NOT([0,INF)) OR NOT(null)", and it should be evaluated to null.
+   */
   @Override
   public RangeSet<String> getDimensionRangeSet(String dimension)
   {
     if (field instanceof AndDimFilter) {
       List<DimFilter> fields = ((AndDimFilter) field).getFields();
-      return Druids.newOrDimFilterBuilder().fields(Lists.transform(fields, negate)).build().getDimensionRangeSet(dimension);
+      return Druids.newOrDimFilterBuilder().fields(Lists.transform(fields, NEGATE)).build().getDimensionRangeSet(dimension);
     }
     if (field instanceof OrDimFilter) {
       List<DimFilter> fields = ((OrDimFilter) field).getFields();
-      return Druids.newAndDimFilterBuilder().fields(Lists.transform(fields, negate)).build().getDimensionRangeSet(dimension);
+      return Druids.newAndDimFilterBuilder().fields(Lists.transform(fields, NEGATE)).build().getDimensionRangeSet(dimension);
     }
     if (field instanceof NotDimFilter) {
       return ((NotDimFilter) field).getField().getDimensionRangeSet(dimension);
