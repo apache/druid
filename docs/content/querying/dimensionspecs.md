@@ -414,6 +414,23 @@ or without setting "locale" (in this case, the current value of the default loca
 }
 ```
 
+### Bucket Extraction Function
+
+Bucket extraction function is used to bucket numerical values in each range of the given size by converting them to the same base value. Non numeric values are converted to null.
+
+* `size` : the size of the buckets (optional, default 1)
+* `offset` : the offset for the buckets (optional, default 0)
+
+The following extraction function creates buckets of 5 starting from 2. In this case, values in the range of [2, 7) will be converted to 2, values in [7, 12) will be converted to 7, etc.
+
+```json
+{
+  "type" : "bucket",
+  "size" : 5,
+  "offset" : 2
+}
+```
+
 ### Lookup DimensionSpecs
 
 <div class="note caution">
