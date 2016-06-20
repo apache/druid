@@ -171,7 +171,7 @@ public class DetermineHashedPartitionsJob implements Jobby
 
           List<HadoopyShardSpec> actualSpecs = Lists.newArrayListWithExpectedSize(numberOfShards);
           if (numberOfShards == 1) {
-            actualSpecs.add(new HadoopyShardSpec(new NoneShardSpec(), shardCount++));
+            actualSpecs.add(new HadoopyShardSpec(NoneShardSpec.instance(), shardCount++));
           } else {
             for (int i = 0; i < numberOfShards; ++i) {
               actualSpecs.add(

@@ -94,7 +94,7 @@ public class LoadRuleTest
         Maps.<String, Object>newHashMap(),
         Lists.<String>newArrayList(),
         Lists.<String>newArrayList(),
-        new NoneShardSpec(),
+        NoneShardSpec.instance(),
         0,
         0
     );

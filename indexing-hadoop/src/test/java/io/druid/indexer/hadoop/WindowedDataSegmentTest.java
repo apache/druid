@@ -44,7 +44,7 @@ public class WindowedDataSegmentTest
       ),
       ImmutableList.of("host"),
       ImmutableList.of("visited_sum", "unique_hosts"),
-      new NoneShardSpec(),
+      NoneShardSpec.instance(),
       9,
       2
   );

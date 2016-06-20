@@ -45,7 +45,7 @@ public class RealtimeTuningConfig implements TuningConfig, AppenderatorConfig
   private static final VersioningPolicy defaultVersioningPolicy = new IntervalStartVersioningPolicy();
   private static final RejectionPolicyFactory defaultRejectionPolicyFactory = new ServerTimeRejectionPolicyFactory();
   private static final int defaultMaxPendingPersists = 0;
-  private static final ShardSpec defaultShardSpec = new NoneShardSpec();
+  private static final ShardSpec defaultShardSpec = NoneShardSpec.instance();
   private static final IndexSpec defaultIndexSpec = new IndexSpec();
   private static final Boolean defaultBuildV9Directly = Boolean.FALSE;
   private static final Boolean defaultReportParseExceptions = Boolean.FALSE;

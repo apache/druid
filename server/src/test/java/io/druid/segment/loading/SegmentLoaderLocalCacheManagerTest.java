@@ -146,7 +146,7 @@ public class SegmentLoaderLocalCacheManagerTest
                       .version("2015-05-27T03:38:35.683Z")
                       .dimensions(ImmutableList.<String>of())
                       .metrics(ImmutableList.<String>of())
-                      .shardSpec(new NoneShardSpec())
+                      .shardSpec(NoneShardSpec.instance())
                       .binaryVersion(9)
                       .size(0)
                       .build();

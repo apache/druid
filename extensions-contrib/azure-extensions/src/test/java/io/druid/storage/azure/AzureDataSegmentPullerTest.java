@@ -56,7 +56,7 @@ public class AzureDataSegmentPullerTest extends EasyMockSupport
       ImmutableMap.<String, Object>of("containerName", containerName, "blobPath", blobPath),
       null,
       null,
-      new NoneShardSpec(),
+      NoneShardSpec.instance(),
       0,
       1
   );

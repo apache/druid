@@ -57,7 +57,7 @@ public class MetadataSegmentManagerTest
       ),
       ImmutableList.of("dim1", "dim2", "dim3"),
       ImmutableList.of("count", "value"),
-      new NoneShardSpec(),
+      NoneShardSpec.instance(),
       0,
       1234L
   );
@@ -73,7 +73,7 @@ public class MetadataSegmentManagerTest
       ),
       ImmutableList.of("dim1", "dim2", "dim3"),
       ImmutableList.of("count", "value"),
-      new NoneShardSpec(),
+      NoneShardSpec.instance(),
       0,
       1234L
   );

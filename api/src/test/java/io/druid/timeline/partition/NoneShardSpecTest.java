@@ -11,8 +11,8 @@ public class NoneShardSpecTest
   @Test
   public void testEqualsAndHashCode()
   {
-    final ShardSpec one = new NoneShardSpec();
-    final ShardSpec two = new NoneShardSpec();
+    final ShardSpec one = NoneShardSpec.instance();
+    final ShardSpec two = NoneShardSpec.instance();
     Assert.assertEquals(one, two);
     Assert.assertEquals(one.hashCode(), two.hashCode());
   }

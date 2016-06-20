@@ -163,7 +163,7 @@ public class MultiSegmentSelectQueryTest
         interval.getStart(),
         interval.getEnd(),
         version,
-        new NoneShardSpec()
+        NoneShardSpec.instance()
     );
   }
 
