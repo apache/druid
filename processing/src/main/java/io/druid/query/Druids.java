@@ -775,6 +775,7 @@ public class Druids
     private DataSource dataSource;
     private QuerySegmentSpec querySegmentSpec;
     private String bound;
+    private DimFilter dimFilter;
     private Map<String, Object> context;
 
     public TimeBoundaryQueryBuilder()
@@ -782,6 +783,7 @@ public class Druids
       dataSource = null;
       querySegmentSpec = null;
       bound = null;
+      dimFilter = null;
       context = null;
     }
 
@@ -791,6 +793,7 @@ public class Druids
           dataSource,
           querySegmentSpec,
           bound,
+          dimFilter,
           context
       );
     }
@@ -837,6 +840,12 @@ public class Druids
     public TimeBoundaryQueryBuilder bound(String b)
     {
       bound = b;
+      return this;
+    }
+
+    public TimeBoundaryQueryBuilder filters(String dimensionName, String value)
+    {
+      dimFilter = new SelectorDimFilter(dimensionName, value, null);
       return this;
     }
 

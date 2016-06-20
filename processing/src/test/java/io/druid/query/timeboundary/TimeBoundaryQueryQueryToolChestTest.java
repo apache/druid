@@ -45,6 +45,7 @@ public class TimeBoundaryQueryQueryToolChestTest
       new TableDataSource("test"),
       null,
       null,
+      null,
       null
   );
 
@@ -52,6 +53,7 @@ public class TimeBoundaryQueryQueryToolChestTest
       new TableDataSource("test"),
       null,
       TimeBoundaryQuery.MAX_TIME,
+      null,
       null
   );
 
@@ -59,6 +61,7 @@ public class TimeBoundaryQueryQueryToolChestTest
       new TableDataSource("test"),
       null,
       TimeBoundaryQuery.MIN_TIME,
+      null,
       null
   );
 
@@ -179,6 +182,7 @@ public class TimeBoundaryQueryQueryToolChestTest
                         )
                     )
                 ),
+                null,
                 null,
                 null
             )

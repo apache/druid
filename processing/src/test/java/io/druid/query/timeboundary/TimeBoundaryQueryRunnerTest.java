@@ -22,6 +22,7 @@ package io.druid.query.timeboundary;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
+import com.google.common.collect.Iterables;
 import com.metamx.common.guava.Sequences;
 import io.druid.query.Druids;
 import io.druid.query.QueryRunner;
@@ -62,6 +63,31 @@ public class TimeBoundaryQueryRunnerTest
   )
   {
     this.runner = runner;
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  public void testFilteredTimeBoundaryQuery()
+  {
+    TimeBoundaryQuery timeBoundaryQuery = Druids.newTimeBoundaryQueryBuilder()
+                                                .dataSource("testing")
+                                                .filters("quality", "automotive")
+                                                .build();
+    HashMap<String,Object> context = new HashMap<String, Object>();
+    Iterable<Result<TimeBoundaryResultValue>> results = Sequences.toList(
+        runner.run(timeBoundaryQuery, context),
+        Lists.<Result<TimeBoundaryResultValue>>newArrayList()
+    );
+
+    /* If not, then no rows matched the filter--what is expected behavior in that case? */
+    Assert.assertTrue(Iterables.size(results) > 0);
+
+    TimeBoundaryResultValue val = results.iterator().next().getValue();
+    DateTime minTime = val.getMinTime();
+    DateTime maxTime = val.getMaxTime();
+
+    Assert.assertEquals(new DateTime("2011-01-12T00:00:00.000Z"), minTime);
+    Assert.assertEquals(new DateTime("2011-04-15T00:00:00.000Z"), maxTime);
   }
 
   @Test
@@ -152,7 +178,7 @@ public class TimeBoundaryQueryRunnerTest
         )
     );
 
-    TimeBoundaryQuery query = new TimeBoundaryQuery(new TableDataSource("test"), null, null, null);
+    TimeBoundaryQuery query = new TimeBoundaryQuery(new TableDataSource("test"), null, null, null, null);
     Iterable<Result<TimeBoundaryResultValue>> actual = query.mergeResults(results);
 
     Assert.assertTrue(actual.iterator().next().getValue().getMaxTime().equals(new DateTime("2012-02-01")));
@@ -163,7 +189,7 @@ public class TimeBoundaryQueryRunnerTest
   {
     List<Result<TimeBoundaryResultValue>> results = Lists.newArrayList();
 
-    TimeBoundaryQuery query = new TimeBoundaryQuery(new TableDataSource("test"), null, null, null);
+    TimeBoundaryQuery query = new TimeBoundaryQuery(new TableDataSource("test"), null, null, null, null);
     Iterable<Result<TimeBoundaryResultValue>> actual = query.mergeResults(results);
 
     Assert.assertFalse(actual.iterator().hasNext());

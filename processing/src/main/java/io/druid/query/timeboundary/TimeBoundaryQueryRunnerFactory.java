@@ -20,9 +20,12 @@
 package io.druid.query.timeboundary;
 
 import com.google.inject.Inject;
+import com.google.common.base.Function;
+import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.Sequence;
+import com.metamx.common.guava.Sequences;
 import io.druid.query.ChainedExecutionQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -30,13 +33,21 @@ import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryWatcher;
 import io.druid.query.Result;
+import io.druid.granularity.AllGranularity;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
+import io.druid.segment.filter.Filters;
+import io.druid.query.QueryRunnerHelper;
+import io.druid.segment.Cursor;
+import io.druid.segment.LongColumnSelector;
+import io.druid.segment.column.Column;
 import org.joda.time.DateTime;
 
 import java.util.Iterator;
 import java.util.Map;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
+
 
 /**
  */
@@ -104,14 +115,56 @@ public class TimeBoundaryQueryRunnerFactory
                     "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
                 );
               }
+              final DateTime minTime;
+              final DateTime maxTime;
 
-              final DateTime minTime = legacyQuery.getBound().equalsIgnoreCase(TimeBoundaryQuery.MAX_TIME)
-                                       ? null
-                                       : adapter.getMinTime();
-              final DateTime maxTime = legacyQuery.getBound().equalsIgnoreCase(TimeBoundaryQuery.MIN_TIME)
-                                       ? null
-                                       : adapter.getMaxTime();
+              Function<Cursor, Result<DateTime>> extractionFunction = new Function<Cursor, Result<DateTime>>()
+              {
+                @Override
+                public Result<DateTime> apply(Cursor cursor)
+                {
+                  if (cursor.isDone()) { return null; }
+                  final LongColumnSelector timestampColumnSelector = cursor.makeLongColumnSelector(Column.TIME_COLUMN_NAME);
+                  DateTime timestamp = new DateTime(timestampColumnSelector.get());
+                  return new Result<>(adapter.getInterval().getStart(), timestamp);
+                }
+              };
 
+              if (legacyQuery.getDimensionsFilter() != null) {
+                /* Should make a function? The only difference between these two parts is the descending boolean. */
+                final Sequence<Result<DateTime>> minResultSequence = QueryRunnerHelper.makeCursorBasedQuery(
+                    adapter, legacyQuery.getQuerySegmentSpec().getIntervals(),
+                    Filters.toFilter(legacyQuery.getDimensionsFilter()),
+                    false, new AllGranularity(), extractionFunction
+                );
+                List<Result<DateTime>> minResultList = Sequences.toList(minResultSequence, Lists.<Result<DateTime>>newArrayList());
+                if (minResultList.size() > 0) {
+                  minTime = minResultList.get(0).getValue();
+                }
+                else {
+                  minTime = null;
+                }
+
+                final Sequence<Result<DateTime>> maxResultSequence = QueryRunnerHelper.makeCursorBasedQuery(
+                    adapter, legacyQuery.getQuerySegmentSpec().getIntervals(),
+                    Filters.toFilter(legacyQuery.getDimensionsFilter()),
+                    true, new AllGranularity(), extractionFunction
+                );
+                List<Result<DateTime>> maxResultList = Sequences.toList(maxResultSequence, Lists.<Result<DateTime>>newArrayList());
+                if (maxResultList.size() > 0) {
+                  maxTime = maxResultList.get(0).getValue();
+                }
+                else {
+                  maxTime = null;
+                }
+              } else {
+                minTime = legacyQuery.getBound().equalsIgnoreCase(TimeBoundaryQuery.MAX_TIME)
+                          ? null
+                          : adapter.getMinTime();
+                maxTime = legacyQuery.getBound().equalsIgnoreCase(TimeBoundaryQuery.MIN_TIME)
+                          ? null
+                          : adapter.getMaxTime();
+              }
 
               return legacyQuery.buildResult(
                   adapter.getInterval().getStart(),
