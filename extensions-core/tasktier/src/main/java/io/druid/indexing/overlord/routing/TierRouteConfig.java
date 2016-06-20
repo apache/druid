@@ -22,6 +22,7 @@ package io.druid.indexing.overlord.routing;
 import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableMap;
 
@@ -32,7 +33,7 @@ import java.util.Set;
 
 public class TierRouteConfig
 {
-  // Fields exposed for unit tests
+  @VisibleForTesting
   @JsonProperty("tierMap")
   Map<String, Map<String, Object>> tierMap = ImmutableMap.of();
 
@@ -40,8 +41,7 @@ public class TierRouteConfig
   ObjectMapper mapper = null;
 
   public
-  @NotNull
-  TierTaskRunnerFactory getRouteFactory(@NotNull String tier)
+  TierTaskRunnerFactory getRouteFactory(String tier)
   {
     final Map<String, Object> map = tierMap.get(Preconditions.checkNotNull(tier, "tier"));
     if (map == null) {
