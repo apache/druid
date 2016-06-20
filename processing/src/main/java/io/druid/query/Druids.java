@@ -804,6 +804,7 @@ public class Druids
           .dataSource(builder.dataSource)
           .intervals(builder.querySegmentSpec)
           .bound(builder.bound)
+          .filters(builder.dimFilter)
           .context(builder.context);
     }
 
@@ -846,6 +847,18 @@ public class Druids
     public TimeBoundaryQueryBuilder filters(String dimensionName, String value)
     {
       dimFilter = new SelectorDimFilter(dimensionName, value, null);
+      return this;
+    }
+
+    public TimeBoundaryQueryBuilder filters(String dimensionName, String value, String... values)
+    {
+      dimFilter = new InDimFilter(dimensionName, Lists.asList(value, values), null);
+      return this;
+    }
+
+    public TimeBoundaryQueryBuilder filters(DimFilter f)
+    {
+      dimFilter = f;
       return this;
     }
 

@@ -221,7 +221,7 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
            ", querySegmentSpec=" + getQuerySegmentSpec() +
            ", duration=" + getDuration() +
            ", bound=" + bound +
-           ", dimFilter=" + dimFilter.toString() +
+           ", dimFilter=" + dimFilter +
            '}';
   }
 
