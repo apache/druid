@@ -108,7 +108,6 @@ public class SegmentMetadataUnionQueryTest
   @Test
   public void testSegmentMetadataUnionQuery()
   {
-    System.out.println();
     SegmentAnalysis expected = new SegmentAnalysis(
         QueryRunnerTestHelper.segmentId,
         Lists.newArrayList(new Interval("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z")),
@@ -135,7 +134,6 @@ public class SegmentMetadataUnionQueryTest
         .toInclude(new ListColumnIncluderator(Lists.newArrayList("placement")))
         .build();
     List result = Sequences.toList(runner.run(query, Maps.newHashMap()), Lists.<SegmentAnalysis>newArrayList());
-    System.out.println(result);
     TestHelper.assertExpectedObjects(ImmutableList.of(expected), result, "failed SegmentMetadata union query");
   }
 
