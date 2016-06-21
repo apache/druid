@@ -50,7 +50,7 @@ public class S3TimestampVersionedDataFinderTest
     object1.setKey(keyPrefix + "/renames-1.gz");
     object1.setLastModifiedDate(new Date(1));
 
-    EasyMock.expect(s3Client.listObjects(EasyMock.eq(bucket), EasyMock.anyString(), EasyMock.eq("/"))).andReturn(
+    EasyMock.expect(s3Client.listObjects(EasyMock.eq(bucket), EasyMock.anyString(), EasyMock.<String>isNull())).andReturn(
         new S3Object[]{object0, object1}
     ).once();
     S3TimestampVersionedDataFinder finder = new S3TimestampVersionedDataFinder(s3Client);
@@ -86,7 +86,7 @@ public class S3TimestampVersionedDataFinderTest
     object1.setKey(keyPrefix + "/renames-1.gz");
     object1.setLastModifiedDate(new Date(1));
 
-    EasyMock.expect(s3Client.listObjects(EasyMock.eq(bucket), EasyMock.anyString(), EasyMock.eq("/"))).andReturn(
+    EasyMock.expect(s3Client.listObjects(EasyMock.eq(bucket), EasyMock.anyString(), EasyMock.<String>isNull())).andReturn(
         null
     ).once();
     S3TimestampVersionedDataFinder finder = new S3TimestampVersionedDataFinder(s3Client);
@@ -116,7 +116,7 @@ public class S3TimestampVersionedDataFinderTest
     object0.setKey(keyPrefix + "/renames-0.gz");
     object0.setLastModifiedDate(new Date(0));
 
-    EasyMock.expect(s3Client.listObjects(EasyMock.eq(bucket), EasyMock.anyString(), EasyMock.eq("/"))).andReturn(
+    EasyMock.expect(s3Client.listObjects(EasyMock.eq(bucket), EasyMock.anyString(), EasyMock.<String>isNull())).andReturn(
         new S3Object[]{object0}
     ).once();
     S3TimestampVersionedDataFinder finder = new S3TimestampVersionedDataFinder(s3Client);
@@ -148,7 +148,7 @@ public class S3TimestampVersionedDataFinderTest
     object0.setKey(keyPrefix + "/renames-0.gz");
     object0.setLastModifiedDate(new Date(0));
 
-    EasyMock.expect(s3Client.listObjects(EasyMock.eq(bucket), EasyMock.anyString(), EasyMock.eq("/"))).andReturn(
+    EasyMock.expect(s3Client.listObjects(EasyMock.eq(bucket), EasyMock.anyString(), EasyMock.<String>isNull())).andReturn(
         new S3Object[]{object0}
     ).once();
     S3TimestampVersionedDataFinder finder = new S3TimestampVersionedDataFinder(s3Client);

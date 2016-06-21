@@ -21,8 +21,10 @@ package io.druid.indexing.kafka;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import io.druid.segment.indexing.IOConfig;
+import org.joda.time.DateTime;
 
 import java.util.Map;
 
@@ -37,6 +39,7 @@ public class KafkaIOConfig implements IOConfig
   private final Map<String, String> consumerProperties;
   private final boolean useTransaction;
   private final boolean pauseAfterRead;
+  private final Optional<DateTime> minimumMessageTime;
 
   @JsonCreator
   public KafkaIOConfig(
@@ -45,7 +48,8 @@ public class KafkaIOConfig implements IOConfig
       @JsonProperty("endPartitions") KafkaPartitions endPartitions,
       @JsonProperty("consumerProperties") Map<String, String> consumerProperties,
       @JsonProperty("useTransaction") Boolean useTransaction,
-      @JsonProperty("pauseAfterRead") Boolean pauseAfterRead
+      @JsonProperty("pauseAfterRead") Boolean pauseAfterRead,
+      @JsonProperty("minimumMessageTime") DateTime minimumMessageTime
   )
   {
     this.baseSequenceName = Preconditions.checkNotNull(baseSequenceName, "baseSequenceName");
@@ -54,6 +58,7 @@ public class KafkaIOConfig implements IOConfig
     this.consumerProperties = Preconditions.checkNotNull(consumerProperties, "consumerProperties");
     this.useTransaction = useTransaction != null ? useTransaction : DEFAULT_USE_TRANSACTION;
     this.pauseAfterRead = pauseAfterRead != null ? pauseAfterRead : DEFAULT_PAUSE_AFTER_READ;
+    this.minimumMessageTime = Optional.fromNullable(minimumMessageTime);
 
     Preconditions.checkArgument(
         startPartitions.getTopic().equals(endPartitions.getTopic()),
@@ -111,6 +116,12 @@ public class KafkaIOConfig implements IOConfig
     return pauseAfterRead;
   }
 
+  @JsonProperty
+  public Optional<DateTime> getMinimumMessageTime()
+  {
+    return minimumMessageTime;
+  }
+
   @Override
   public String toString()
   {
@@ -121,6 +132,7 @@ public class KafkaIOConfig implements IOConfig
            ", consumerProperties=" + consumerProperties +
            ", useTransaction=" + useTransaction +
            ", pauseAfterRead=" + pauseAfterRead +
+           ", minimumMessageTime=" + minimumMessageTime +
            '}';
   }
 }

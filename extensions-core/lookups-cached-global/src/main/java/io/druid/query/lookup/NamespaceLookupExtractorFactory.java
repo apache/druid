@@ -52,7 +52,6 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
 {
   private static final Logger LOG = new Logger(NamespaceLookupExtractorFactory.class);
 
-  private static final long DEFAULT_SCHEDULE_TIMEOUT = 60_000;
   private static final byte[] CLASS_CACHE_KEY;
 
   static {
@@ -73,7 +72,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
   @JsonCreator
   public NamespaceLookupExtractorFactory(
       @JsonProperty("extractionNamespace") ExtractionNamespace extractionNamespace,
-      @JsonProperty("firstCacheTimeout") Long firstCacheTimeout,
+      @JsonProperty("firstCacheTimeout") long firstCacheTimeout,
       @JsonProperty("injective") boolean injective,
       @JacksonInject final NamespaceExtractionCacheManager manager
   )
@@ -82,7 +81,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
         extractionNamespace,
         "extractionNamespace should be specified"
     );
-    this.firstCacheTimeout = firstCacheTimeout == null ? DEFAULT_SCHEDULE_TIMEOUT : firstCacheTimeout;
+    this.firstCacheTimeout = firstCacheTimeout;
     Preconditions.checkArgument(this.firstCacheTimeout >= 0);
     this.injective = injective;
     this.manager = manager;
@@ -154,7 +153,7 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
       NamespaceExtractionCacheManager manager
   )
   {
-    this(extractionNamespace, null, false, manager);
+    this(extractionNamespace, 60000, false, manager);
   }
 
   @Override
@@ -167,9 +166,16 @@ public class NamespaceLookupExtractorFactory implements LookupExtractorFactory
         LOG.warn("Already started! [%s]", extractorID);
         return true;
       }
-      if (!manager.scheduleAndWait(extractorID, extractionNamespace, firstCacheTimeout)) {
-        LOG.error("Failed to schedule lookup [%s]", extractorID);
-        return false;
+      if(firstCacheTimeout > 0) {
+        if (!manager.scheduleAndWait(extractorID, extractionNamespace, firstCacheTimeout)) {
+          LOG.error("Failed to schedule and wait for lookup [%s]", extractorID);
+          return false;
+        }
+      } else {
+        if(!manager.scheduleOrUpdate(extractorID, extractionNamespace)) {
+          LOG.error("Failed to schedule lookup [%s]", extractorID);
+          return false;
+        }
       }
       LOG.debug("NamespaceLookupExtractorFactory[%s] started", extractorID);
       started = true;

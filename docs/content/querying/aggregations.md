@@ -82,8 +82,8 @@ Computes an arbitrary JavaScript function over a set of columns (both metrics an
 
 All JavaScript functions must return numerical values.
 
-JavaScript aggregators are much slower than native Java aggregators and if performance is critical, you should implement 
-your functionality as a native Java aggregator.
+JavaScript aggregators are much slower than the native aggregators and if performance is critical, you should implement 
+your functionality as a native aggregator.
 
 ```json
 { "type": "javascript",
@@ -111,8 +111,8 @@ your functionality as a native Java aggregator.
 }
 ```
 
-The javascript aggregator is recommended for rapidly prototyping features. This aggregator will be much slower in production 
-use than a native Java aggregator.
+The JavaScript aggregator is recommended for rapidly prototyping features. This aggregator will be much slower in production 
+use than a native aggregator.
 
 ## Approximate Aggregations
 

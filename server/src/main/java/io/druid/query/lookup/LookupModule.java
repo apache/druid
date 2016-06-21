@@ -47,6 +47,7 @@ import io.druid.guice.annotations.Smile;
 import io.druid.initialization.DruidModule;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.ZkPathsConfig;
+import io.druid.server.initialization.jetty.JettyBindings;
 import io.druid.server.listener.announcer.ListenerResourceAnnouncer;
 import io.druid.server.listener.announcer.ListeningAnnouncerConfig;
 import io.druid.server.listener.resource.AbstractListenerHandler;
@@ -88,6 +89,11 @@ public class LookupModule implements DruidModule
     LifecycleModule.register(binder, LookupResourceListenerAnnouncer.class);
     // Nothing else starts this, so we bind it to get it to start
     binder.bind(LookupResourceListenerAnnouncer.class).in(ManageLifecycle.class);
+    JettyBindings.addQosFilter(
+        binder,
+        ListenerResource.BASE_PATH + "/" + LookupCoordinatorManager.LOOKUP_LISTEN_ANNOUNCE_KEY,
+        2 // 1 for "normal" operation and 1 for "emergency" or other
+    );
   }
 }
 

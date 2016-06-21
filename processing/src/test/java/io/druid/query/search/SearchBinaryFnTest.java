@@ -41,12 +41,15 @@ public class SearchBinaryFnTest
 {
   private final DateTime currTime = new DateTime();
 
-  private void assertSearchMergeResult(Object o1, Object o2)
+  private void assertSearchMergeResult(SearchResultValue o1, SearchResultValue o2)
   {
-    Iterator i1 = ((Iterable) o1).iterator();
-    Iterator i2 = ((Iterable) o2).iterator();
+    Iterator<SearchHit> i1 = ((Iterable) o1).iterator();
+    Iterator<SearchHit> i2 = ((Iterable) o2).iterator();
     while (i1.hasNext() && i2.hasNext()) {
-      Assert.assertEquals(i1.next(), i2.next());
+      SearchHit s1 = i1.next();
+      SearchHit s2 = i2.next();
+      Assert.assertEquals(s1, s2);
+      Assert.assertEquals(s1.getCount(), s2.getCount());
     }
     Assert.assertTrue(!i1.hasNext() && !i2.hasNext());
   }
@@ -333,6 +336,40 @@ public class SearchBinaryFnTest
     );
     Result<SearchResultValue> expected = r1;
     Result<SearchResultValue> actual = new SearchBinaryFn(new LexicographicSearchSortSpec(), QueryGranularities.ALL, 1).apply(r1, r2);
+    Assert.assertEquals(expected.getTimestamp(), actual.getTimestamp());
+    assertSearchMergeResult(expected.getValue(), actual.getValue());
+  }
+
+  @Test
+  public void testMergeCountWithNull() {
+    Result<SearchResultValue> r1 = new Result<SearchResultValue>(
+            currTime,
+            new SearchResultValue(
+                    ImmutableList.<SearchHit>of(
+                            new SearchHit(
+                                    "blah",
+                                    "foo"
+                            )
+                    )
+            )
+    );
+
+    Result<SearchResultValue> r2 = new Result<SearchResultValue>(
+            currTime,
+            new SearchResultValue(
+                    ImmutableList.<SearchHit>of(
+                            new SearchHit(
+                                    "blah",
+                                    "foo",
+                                    3
+                            )
+                    )
+            )
+    );
+
+    Result<SearchResultValue> expected = r1;
+
+    Result<SearchResultValue> actual = new SearchBinaryFn(new LexicographicSearchSortSpec(), QueryGranularities.ALL, Integer.MAX_VALUE).apply(r1, r2);
     Assert.assertEquals(expected.getTimestamp(), actual.getTimestamp());
     assertSearchMergeResult(expected.getValue(), actual.getValue());
   }

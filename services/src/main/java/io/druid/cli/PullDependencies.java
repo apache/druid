@@ -20,6 +20,7 @@
 package io.druid.cli;
 
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
@@ -133,6 +134,11 @@ public class PullDependencies implements Runnable
       */
   );
 
+  private static final List<String> DEFAULT_REMOTE_REPOSITORIES = ImmutableList.of(
+      "https://repo1.maven.org/maven2/",
+      "https://metamx.artifactoryonline.com/metamx/pub-libs-releases-local"
+  );
+
   private TeslaAether aether;
 
   @Inject
@@ -166,20 +172,23 @@ public class PullDependencies implements Runnable
 
   @Option(
       name = {"-l", "--localRepository"},
-      title = "A local repostiry that Maven will use to put downloaded files. Then pull-deps will lay these files out into the extensions directory as needed.",
+      title = "A local repository that Maven will use to put downloaded files. Then pull-deps will lay these files out into the extensions directory as needed.",
       required = false
   )
   public String localRepository = String.format("%s/%s", System.getProperty("user.home"), ".m2/repository");
 
   @Option(
       name = {"-r", "--remoteRepository"},
-      title = "Add a remote repository to the default remote repository list, which includes https://repo1.maven.org/maven2/ and https://metamx.artifactoryonline.com/metamx/pub-libs-releases-local",
+      title = "Add a remote repository. Unless --no-default-remote-repositories is provided, these will be used after https://repo1.maven.org/maven2/ and https://metamx.artifactoryonline.com/metamx/pub-libs-releases-local",
       required = false
   )
-  List<String> remoteRepositories = Lists.newArrayList(
-      "https://repo1.maven.org/maven2/",
-      "https://metamx.artifactoryonline.com/metamx/pub-libs-releases-local"
-  );
+  List<String> remoteRepositories = Lists.newArrayList();
+
+  @Option(
+      name = "--no-default-remote-repositories",
+      description = "Don't use the default remote repositories, only use the repositories provided directly via --remoteRepository",
+      required = false)
+  public boolean noDefaultRemoteRepositories = false;
 
   @Option(
       name = {"-d", "--defaultVersion"},
@@ -303,15 +312,15 @@ public class PullDependencies implements Runnable
               public boolean accept(DependencyNode node, List<DependencyNode> parents)
               {
                 String scope = node.getDependency().getScope();
-                if(scope != null) {
+                if (scope != null) {
                   scope = scope.toLowerCase();
-                  if(scope.equals("provided")) {
+                  if (scope.equals("provided")) {
                     return false;
                   }
-                  if(scope.equals("test")) {
+                  if (scope.equals("test")) {
                     return false;
                   }
-                  if(scope.equals("system")) {
+                  if (scope.equals("system")) {
                     return false;
                   }
                 }
@@ -370,7 +379,11 @@ public class PullDependencies implements Runnable
     alongside anything else that's grabbing System.out.  But who knows.
     */
 
-    List<String> remoteUriList = remoteRepositories;
+    final List<String> remoteUriList = Lists.newArrayList();
+    if (!noDefaultRemoteRepositories) {
+      remoteUriList.addAll(DEFAULT_REMOTE_REPOSITORIES);
+    }
+    remoteUriList.addAll(remoteRepositories);
 
     List<Repository> remoteRepositories = Lists.newArrayList();
     for (String uri : remoteUriList) {

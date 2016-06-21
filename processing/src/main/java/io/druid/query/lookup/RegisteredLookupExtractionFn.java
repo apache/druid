@@ -55,7 +55,7 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
     this.replaceMissingValueWith = replaceMissingValueWith;
     this.retainMissingValue = retainMissingValue;
     this.injective = injective;
-    this.optimize = optimize;
+    this.optimize = optimize == null ? true : optimize;
     this.lookup = lookup;
   }
 

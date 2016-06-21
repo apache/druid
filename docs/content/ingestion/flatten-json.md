@@ -85,12 +85,12 @@ To flatten this JSON, the parseSpec could be defined as follows:
       {
         "type": "path",
         "name": "world-hey",
-        "expr": "$.world.hey"
+        "expr": "$.world[0].hey"
       },
       {
         "type": "path",
         "name": "worldtree",
-        "expr": "$.world.tree"
+        "expr": "$.world[1].tree"
       },
       {
         "type": "path",
@@ -148,3 +148,4 @@ Note that:
 * Duplicate field definitions are not allowed, an exception will be thrown.
 * If auto field discovery is enabled, any discovered field with the same name as one already defined in the field specs will be skipped and not added twice.
 * The JSON input must be a JSON object at the root, not an array. e.g., {"valid": "true"} and {"valid":[1,2,3]} are supported but [{"invalid": "true"}] and [1,2,3] are not.
+* [http://jsonpath.herokuapp.com/](http://jsonpath.herokuapp.com/) is useful for testing the path expressions.

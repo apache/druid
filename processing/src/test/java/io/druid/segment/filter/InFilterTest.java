@@ -45,6 +45,7 @@ import io.druid.query.lookup.LookupExtractor;
 import io.druid.segment.IndexBuilder;
 import io.druid.segment.StorageAdapter;
 import org.joda.time.DateTime;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -79,12 +80,6 @@ public class InFilterTest extends BaseFilterTest
       PARSER.parse(ImmutableMap.<String, Object>of("dim0", "f", "dim1", "abc"))
   );
 
-  @Parameterized.Parameters(name = "{0}")
-  public static Collection<Object[]> constructorFeeder() throws IOException
-  {
-    return makeConstructors();
-  }
-
   public InFilterTest(
       String testName,
       IndexBuilder indexBuilder,
@@ -92,17 +87,13 @@ public class InFilterTest extends BaseFilterTest
       boolean optimize
   )
   {
-    super(ROWS, indexBuilder, finisher, optimize);
+    super(testName, ROWS, indexBuilder, finisher, optimize);
   }
 
-  @Before
-  public void setUp() throws IOException
+  @AfterClass
+  public static void tearDown() throws Exception
   {
-    final Pair<StorageAdapter, Closeable> pair = finisher.apply(
-        indexBuilder.tmpDir(temporaryFolder.newFolder()).add(ROWS)
-    );
-    this.adapter = pair.lhs;
-    this.closeable = pair.rhs;
+    BaseFilterTest.tearDown(InFilterTest.class.getName());
   }
 
   @Test

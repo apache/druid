@@ -1107,27 +1107,27 @@ public class CachingClusteredClientTest
         client,
         builder.build(),
         new Interval("2011-01-01/2011-01-02"),
-        makeSearchResults(new DateTime("2011-01-01"), "how", "howdy", "howwwwww", "howwy"),
+        makeSearchResults(new DateTime("2011-01-01"), "how", 1, "howdy", 2, "howwwwww", 3, "howwy", 4),
 
         new Interval("2011-01-02/2011-01-03"),
-        makeSearchResults(new DateTime("2011-01-02"), "how1", "howdy1", "howwwwww1", "howwy1"),
+        makeSearchResults(new DateTime("2011-01-02"), "how1", 1, "howdy1", 2, "howwwwww1", 3, "howwy1", 4),
 
         new Interval("2011-01-05/2011-01-10"),
         makeSearchResults(
-            new DateTime("2011-01-05"), "how2", "howdy2", "howwwwww2", "howww2",
-            new DateTime("2011-01-06"), "how3", "howdy3", "howwwwww3", "howww3",
-            new DateTime("2011-01-07"), "how4", "howdy4", "howwwwww4", "howww4",
-            new DateTime("2011-01-08"), "how5", "howdy5", "howwwwww5", "howww5",
-            new DateTime("2011-01-09"), "how6", "howdy6", "howwwwww6", "howww6"
+            new DateTime("2011-01-05"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
+            new DateTime("2011-01-06"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
+            new DateTime("2011-01-07"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
+            new DateTime("2011-01-08"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
+            new DateTime("2011-01-09"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4
         ),
 
         new Interval("2011-01-05/2011-01-10"),
         makeSearchResults(
-            new DateTime("2011-01-05T01"), "how2", "howdy2", "howwwwww2", "howww2",
-            new DateTime("2011-01-06T01"), "how3", "howdy3", "howwwwww3", "howww3",
-            new DateTime("2011-01-07T01"), "how4", "howdy4", "howwwwww4", "howww4",
-            new DateTime("2011-01-08T01"), "how5", "howdy5", "howwwwww5", "howww5",
-            new DateTime("2011-01-09T01"), "how6", "howdy6", "howwwwww6", "howww6"
+            new DateTime("2011-01-05T01"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
+            new DateTime("2011-01-06T01"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
+            new DateTime("2011-01-07T01"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
+            new DateTime("2011-01-08T01"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
+            new DateTime("2011-01-09T01"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4
         )
     );
 
@@ -1140,18 +1140,18 @@ public class CachingClusteredClientTest
     HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(
         makeSearchResults(
-            new DateTime("2011-01-01"), "how", "howdy", "howwwwww", "howwy",
-            new DateTime("2011-01-02"), "how1", "howdy1", "howwwwww1", "howwy1",
-            new DateTime("2011-01-05"), "how2", "howdy2", "howwwwww2", "howww2",
-            new DateTime("2011-01-05T01"), "how2", "howdy2", "howwwwww2", "howww2",
-            new DateTime("2011-01-06"), "how3", "howdy3", "howwwwww3", "howww3",
-            new DateTime("2011-01-06T01"), "how3", "howdy3", "howwwwww3", "howww3",
-            new DateTime("2011-01-07"), "how4", "howdy4", "howwwwww4", "howww4",
-            new DateTime("2011-01-07T01"), "how4", "howdy4", "howwwwww4", "howww4",
-            new DateTime("2011-01-08"), "how5", "howdy5", "howwwwww5", "howww5",
-            new DateTime("2011-01-08T01"), "how5", "howdy5", "howwwwww5", "howww5",
-            new DateTime("2011-01-09"), "how6", "howdy6", "howwwwww6", "howww6",
-            new DateTime("2011-01-09T01"), "how6", "howdy6", "howwwwww6", "howww6"
+            new DateTime("2011-01-01"), "how", 1, "howdy", 2, "howwwwww", 3, "howwy", 4,
+            new DateTime("2011-01-02"), "how1", 1, "howdy1", 2, "howwwwww1", 3, "howwy1", 4,
+            new DateTime("2011-01-05"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
+            new DateTime("2011-01-05T01"), "how2", 1, "howdy2", 2, "howwwwww2", 3, "howww2", 4,
+            new DateTime("2011-01-06"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
+            new DateTime("2011-01-06T01"), "how3", 1, "howdy3", 2, "howwwwww3", 3, "howww3", 4,
+            new DateTime("2011-01-07"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
+            new DateTime("2011-01-07T01"), "how4", 1, "howdy4", 2, "howwwwww4", 3, "howww4", 4,
+            new DateTime("2011-01-08"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
+            new DateTime("2011-01-08T01"), "how5", 1, "howdy5", 2, "howwwwww5", 3, "howww5", 4,
+            new DateTime("2011-01-09"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4,
+            new DateTime("2011-01-09T01"), "how6", 1, "howdy6", 2, "howwwwww6", 3, "howww6", 4
         ),
         runner.run(
             builder.intervals("2011-01-01/2011-01-10")
@@ -2118,7 +2118,7 @@ public class CachingClusteredClientTest
 
       List<SearchHit> values = Lists.newArrayList();
       while (index < objects.length && !(objects[index] instanceof DateTime)) {
-        values.add(new SearchHit(TOP_DIM, objects[index++].toString()));
+        values.add(new SearchHit(TOP_DIM, objects[index++].toString(), (Integer) objects[index++]));
       }
 
       retVal.add(new Result<>(timestamp, new SearchResultValue(values)));

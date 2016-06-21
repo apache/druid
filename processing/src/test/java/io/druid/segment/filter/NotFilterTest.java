@@ -35,6 +35,7 @@ import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.IndexBuilder;
 import io.druid.segment.StorageAdapter;
 import org.joda.time.DateTime;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -72,7 +73,13 @@ public class NotFilterTest extends BaseFilterTest
       boolean optimize
   )
   {
-    super(ROWS, indexBuilder, finisher, optimize);
+    super(testName, ROWS, indexBuilder, finisher, optimize);
+  }
+
+  @AfterClass
+  public static void tearDown() throws Exception
+  {
+    BaseFilterTest.tearDown(NotFilterTest.class.getName());
   }
 
   @Test

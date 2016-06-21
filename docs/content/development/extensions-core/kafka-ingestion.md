@@ -16,6 +16,12 @@ This service is provided in the `kafka-indexing-service` core extension (see
 currently designated as an *experimental feature* and is subject to the usual
 [experimental caveats](../experimental.html).
 
+<div class="note info">
+The Kafka indexing service uses the Java consumer that was introduced in Kafka 0.9. As there were protocol changes
+made in this version, Kafka 0.9 consumers are not compatible with older brokers. Ensure that your Kafka brokers are
+version 0.9 or better before using this service.
+</div>
+
 ## Submitting a Supervisor Spec
 
 The Kafka indexing service requires that the `kafka-indexing-service` extension be loaded on both the overlord and the
@@ -139,6 +145,7 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |`period`|ISO8601 Period|How often the supervisor will execute its management logic. Note that the supervisor will also run in response to certain events (such as tasks succeeding, failing, and reaching their taskDuration) so this value specifies the maximum time between iterations.|no (default == PT30S)|
 |`useEarliestOffset`|Boolean|If a supervisor is managing a dataSource for the first time, it will obtain a set of starting offsets from Kafka. This flag determines whether it retrieves the earliest or latest offsets in Kafka. Under normal circumstances, subsequent tasks will start from where the previous segments ended so this flag will only be used on first run.|no (default == false)|
 |`completionTimeout`|ISO8601 Period|The length of time to wait before declaring a publishing task as failed and terminating it. If this is set too low, your tasks may never publish. The publishing clock for a task begins roughly after `taskDuration` elapses.|no (default == PT30M)|
+|`lateMessageRejectionPeriod`|ISO8601 Period|Configure tasks to reject messages with timestamps earlier than this period before the task was created; for example if this is set to `PT1H` and the supervisor creates a task at *2016-01-01T12:00Z*, messages with timestamps earlier than *2016-01-01T11:00Z* will be dropped. This may help prevent concurrency issues if your data stream has late messages and you have multiple pipelines that need to operate on the same segments (e.g. a realtime and a nightly batch ingestion pipeline).|no (default == none)|
 
 ## Supervisor API
 
@@ -149,6 +156,15 @@ The following endpoints are available on the Overlord:
 POST /druid/indexer/v1/supervisor
 ```
 Use `Content-Type: application/json` and provide a supervisor spec in the request body.
+
+Calling this endpoint when there is already an existing supervisor for the same dataSource will cause:
+
+- The running supervisor to signal its managed tasks to stop reading and begin publishing.
+- The running supervisor to exit.
+- A new supervisor to be created using the configuration provided in the request body. This supervisor will retain the
+existing publishing tasks and will create new tasks starting at the offsets the publishing tasks ended on.
+
+Seamless schema migrations can thus be achieved by simply submitting the new schema using this endpoint.
 
 #### Shutdown Supervisor
 ```
@@ -238,11 +254,9 @@ return after all tasks have been signalled to stop but before the tasks finish p
 
 ### Schema/Configuration Changes
 
-Following from the previous section, schema and configuration changes are managed by first shutting down the supervisor
-with a call to the `POST /druid/indexer/v1/supervisor/<supervisorId>/shutdown` endpoint, waiting for the running tasks
-to complete, and then submitting the updated schema via the `POST /druid/indexer/v1/supervisor` create supervisor
-endpoint. The updated supervisor will begin reading from the offsets where the previous supervisor ended and no data
-will be lost. If the updated schema is posted before the previously running tasks have completed, the supervisor will
-detect that the tasks are no longer compatible with the new schema and will issue a shutdown command to the tasks which
-may result in the current segments not being published. If this happens, the tasks based on the updated schema will
-begin reading from the same starting offsets as the previous aborted tasks and no data will be lost.
+Schema and configuration changes are handled by submitting the new supervisor spec via the same
+`POST /druid/indexer/v1/supervisor` endpoint used to initially create the supervisor. The overlord will initiate a
+graceful shutdown of the existing supervisor which will cause the tasks being managed by that supervisor to stop reading
+and begin publishing their segments. A new supervisor will then be started which will create a new set of tasks that
+will start reading from the offsets where the previous now-publishing tasks left off, but using the updated schema.
+In this way, configuration changes can be applied without requiring any pause in ingestion.

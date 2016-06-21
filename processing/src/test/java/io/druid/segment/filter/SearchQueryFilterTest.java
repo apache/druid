@@ -40,6 +40,7 @@ import io.druid.query.search.search.SearchQuerySpec;
 import io.druid.segment.IndexBuilder;
 import io.druid.segment.StorageAdapter;
 import org.joda.time.DateTime;
+import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -81,7 +82,13 @@ public class SearchQueryFilterTest extends BaseFilterTest
       boolean optimize
   )
   {
-    super(ROWS, indexBuilder, finisher, optimize);
+    super(testName, ROWS, indexBuilder, finisher, optimize);
+  }
+
+  @AfterClass
+  public static void tearDown() throws Exception
+  {
+    BaseFilterTest.tearDown(SearchQueryFilterTest.class.getName());
   }
 
   private SearchQuerySpec specForValue(String value)

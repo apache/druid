@@ -28,10 +28,10 @@ import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.metadata.MetadataSupervisorManager;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Manages the creation and lifetime of {@link Supervisor}.
@@ -41,7 +41,10 @@ public class SupervisorManager
   private static final EmittingLogger log = new EmittingLogger(SupervisorManager.class);
 
   private final MetadataSupervisorManager metadataSupervisorManager;
-  private final Map<String, Pair<Supervisor, SupervisorSpec>> supervisors = new HashMap<>();
+  private final ConcurrentHashMap<String, Pair<Supervisor, SupervisorSpec>> supervisors = new ConcurrentHashMap<>();
+  private final Object lock = new Object();
+
+  private volatile boolean started = false;
 
   @Inject
   public SupervisorManager(MetadataSupervisorManager metadataSupervisorManager)
@@ -56,56 +59,71 @@ public class SupervisorManager
 
   public Optional<SupervisorSpec> getSupervisorSpec(String id)
   {
-    return supervisors.get(id) == null
-           ? Optional.<SupervisorSpec>absent()
-           : Optional.fromNullable(supervisors.get(id).rhs);
+    Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
+    return supervisor == null ? Optional.<SupervisorSpec>absent() : Optional.fromNullable(supervisor.rhs);
   }
 
-  public boolean hasSupervisor(String id)
+  public boolean createOrUpdateAndStartSupervisor(SupervisorSpec spec)
   {
-    return supervisors.containsKey(id);
-  }
-
-  public boolean createAndStartSupervisor(SupervisorSpec spec)
-  {
+    Preconditions.checkState(started, "SupervisorManager not started");
     Preconditions.checkNotNull(spec, "spec");
     Preconditions.checkNotNull(spec.getId(), "spec.getId()");
 
-    return createAndStartSupervisorInternal(spec, true);
+    synchronized (lock) {
+      Preconditions.checkState(started, "SupervisorManager not started");
+      possiblyStopAndRemoveSupervisorInternal(spec.getId(), false);
+      return createAndStartSupervisorInternal(spec, true);
+    }
   }
 
-  public void stopAndRemoveSupervisor(String id)
+  public boolean stopAndRemoveSupervisor(String id)
   {
-    Pair<Supervisor, SupervisorSpec> pair = supervisors.get(id);
-    if (pair != null) {
-      metadataSupervisorManager.insert(id, new NoopSupervisorSpec()); // where NoopSupervisorSpec is a tombstone
-      pair.lhs.stop(true);
-      supervisors.remove(id);
+    Preconditions.checkState(started, "SupervisorManager not started");
+    Preconditions.checkNotNull(id, "id");
+
+    synchronized (lock) {
+      Preconditions.checkState(started, "SupervisorManager not started");
+      return possiblyStopAndRemoveSupervisorInternal(id, true);
     }
   }
 
   @LifecycleStart
   public void start()
   {
+    Preconditions.checkState(!started, "SupervisorManager already started");
     log.info("Loading stored supervisors from database");
 
-    Map<String, SupervisorSpec> supervisors = metadataSupervisorManager.getLatest();
-    for (String id : supervisors.keySet()) {
-      SupervisorSpec spec = supervisors.get(id);
-      if (!(spec instanceof NoopSupervisorSpec)) {
-        createAndStartSupervisorInternal(spec, false);
+    synchronized (lock) {
+      Map<String, SupervisorSpec> supervisors = metadataSupervisorManager.getLatest();
+      for (String id : supervisors.keySet()) {
+        SupervisorSpec spec = supervisors.get(id);
+        if (!(spec instanceof NoopSupervisorSpec)) {
+          createAndStartSupervisorInternal(spec, false);
+        }
       }
+
+      started = true;
     }
   }
 
   @LifecycleStop
   public void stop()
   {
-    for (String id : supervisors.keySet()) {
-      supervisors.get(id).lhs.stop(false);
+    Preconditions.checkState(started, "SupervisorManager not started");
+
+    synchronized (lock) {
+      for (String id : supervisors.keySet()) {
+        try {
+          supervisors.get(id).lhs.stop(false);
+        }
+        catch (Exception e) {
+          log.warn(e, "Caught exception while stopping supervisor [%s]", id);
+        }
+      }
+      supervisors.clear();
+      started = false;
     }
 
-    supervisors.clear();
     log.info("SupervisorManager stopped.");
   }
 
@@ -116,24 +134,57 @@ public class SupervisorManager
 
   public Optional<SupervisorReport> getSupervisorStatus(String id)
   {
-    return supervisors.get(id) == null
-           ? Optional.<SupervisorReport>absent()
-           : Optional.fromNullable(supervisors.get(id).lhs.getStatus());
+    Pair<Supervisor, SupervisorSpec> supervisor = supervisors.get(id);
+    return supervisor == null ? Optional.<SupervisorReport>absent() : Optional.fromNullable(supervisor.lhs.getStatus());
   }
 
+  /**
+   * Stops a supervisor with a given id and then removes it from the list.
+   * <p>
+   * Caller should have acquired [lock] before invoking this method to avoid contention with other threads that may be
+   * starting and stopping supervisors.
+   *
+   * @return true if a supervisor was stopped, false if there was no supervisor with this id
+   */
+  private boolean possiblyStopAndRemoveSupervisorInternal(String id, boolean writeTombstone)
+  {
+    Pair<Supervisor, SupervisorSpec> pair = supervisors.get(id);
+    if (pair == null) {
+      return false;
+    }
+
+    if (writeTombstone) {
+      metadataSupervisorManager.insert(id, new NoopSupervisorSpec()); // where NoopSupervisorSpec is a tombstone
+    }
+    pair.lhs.stop(true);
+    supervisors.remove(id);
+
+    return true;
+  }
+
+  /**
+   * Creates a supervisor from the provided spec and starts it if there is not already a supervisor with that id.
+   * <p>
+   * Caller should have acquired [lock] before invoking this method to avoid contention with other threads that may be
+   * starting and stopping supervisors.
+   *
+   * @return true if a new supervisor was created, false if there was already an existing supervisor with this id
+   */
   private boolean createAndStartSupervisorInternal(SupervisorSpec spec, boolean persistSpec)
   {
     String id = spec.getId();
-    if (!supervisors.containsKey(id)) {
-      if (persistSpec) {
-        metadataSupervisorManager.insert(id, spec);
-      }
-
-      supervisors.put(id, Pair.of(spec.createSupervisor(), spec));
-      supervisors.get(id).lhs.start();
-      return true;
+    if (supervisors.containsKey(id)) {
+      return false;
     }
 
-    return false;
+    Supervisor supervisor = spec.createSupervisor();
+    supervisor.start(); // try starting the supervisor first so we don't persist a bad spec
+
+    if (persistSpec) {
+      metadataSupervisorManager.insert(id, spec);
+    }
+
+    supervisors.put(id, Pair.of(supervisor, spec));
+    return true;
   }
 }

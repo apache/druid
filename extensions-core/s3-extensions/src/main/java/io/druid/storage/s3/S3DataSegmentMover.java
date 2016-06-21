@@ -26,6 +26,7 @@ import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.MapUtils;
+import com.metamx.common.StringUtils;
 import com.metamx.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentMover;
 import io.druid.segment.loading.SegmentLoadingException;
@@ -82,21 +83,21 @@ public class S3DataSegmentMover implements DataSegmentMover
 
       return segment.withLoadSpec(
           ImmutableMap.<String, Object>builder()
-                      .putAll(
-                          Maps.filterKeys(
-                              loadSpec, new Predicate<String>()
-                          {
-                            @Override
-                            public boolean apply(String input)
-                            {
-                              return !(input.equals("bucket") || input.equals("key"));
-                            }
-                          }
-                          )
-                      )
-                      .put("bucket", targetS3Bucket)
-                      .put("key", targetS3Path)
-                      .build()
+              .putAll(
+                  Maps.filterKeys(
+                      loadSpec, new Predicate<String>()
+                      {
+                        @Override
+                        public boolean apply(String input)
+                        {
+                          return !(input.equals("bucket") || input.equals("key"));
+                        }
+                      }
+                  )
+              )
+              .put("bucket", targetS3Bucket)
+              .put("key", targetS3Path)
+              .build()
       );
     }
     catch (ServiceException e) {
@@ -118,32 +119,47 @@ public class S3DataSegmentMover implements DataSegmentMover
             @Override
             public Void call() throws Exception
             {
+              if (s3Bucket.equals(targetS3Bucket) && s3Path.equals(targetS3Path)) {
+                log.info("No need to move file[s3://%s/%s] onto itself", s3Bucket, s3Path);
+                return null;
+              }
               if (s3Client.isObjectInBucket(s3Bucket, s3Path)) {
-                if (s3Bucket.equals(targetS3Bucket) && s3Path.equals(targetS3Path)) {
-                  log.info("No need to move file[s3://%s/%s] onto itself", s3Bucket, s3Path);
+                final S3Object[] list = s3Client.listObjects(s3Bucket, s3Path, "");
+                if (list.length == 0) {
+                  // should never happen
+                  throw new ISE("Unable to list object [s3://%s/%s]", s3Bucket, s3Path);
+                }
+                final S3Object s3Object = list[0];
+                if (s3Object.getStorageClass() != null &&
+                    s3Object.getStorageClass().equals(S3Object.STORAGE_CLASS_GLACIER)) {
+                  log.warn("Cannot move file[s3://%s/%s] of storage class glacier, skipping.", s3Bucket, s3Path);
                 } else {
-                  final S3Object[] list = s3Client.listObjects(s3Bucket, s3Path, "");
-                  if (list.length == 0) {
-                    // should never happen
-                    throw new ISE("Unable to list object [s3://%s/%s]", s3Bucket, s3Path);
+                  final String copyMsg = StringUtils.safeFormat(
+                      "[s3://%s/%s] to [s3://%s/%s]", s3Bucket,
+                      s3Path,
+                      targetS3Bucket,
+                      targetS3Path
+                  );
+                  log.info(
+                      "Moving file %s",
+                      copyMsg
+                  );
+                  final S3Object target = new S3Object(targetS3Path);
+                  if (!config.getDisableAcl()) {
+                    target.setAcl(GSAccessControlList.REST_CANNED_BUCKET_OWNER_FULL_CONTROL);
                   }
-                  final S3Object s3Object = list[0];
-                  if (s3Object.getStorageClass() != null &&
-                      s3Object.getStorageClass().equals(S3Object.STORAGE_CLASS_GLACIER)) {
-                    log.warn("Cannot move file[s3://%s/%s] of storage class glacier, skipping.", s3Bucket, s3Path);
+                  final Map<String, Object> copyResult = s3Client.moveObject(
+                      s3Bucket,
+                      s3Path,
+                      targetS3Bucket,
+                      target,
+                      false
+                  );
+                  if (copyResult != null && copyResult.containsKey("DeleteException")) {
+                    log.error("Error Deleting data after copy %s: %s", copyMsg, copyResult);
+                    // Maybe retry deleting here?
                   } else {
-                    log.info(
-                        "Moving file[s3://%s/%s] to [s3://%s/%s]",
-                        s3Bucket,
-                        s3Path,
-                        targetS3Bucket,
-                        targetS3Path
-                    );
-                    final S3Object target = new S3Object(targetS3Path);
-                    if (!config.getDisableAcl()) {
-                      target.setAcl(GSAccessControlList.REST_CANNED_BUCKET_OWNER_FULL_CONTROL);
-                    }
-                    s3Client.moveObject(s3Bucket, s3Path, targetS3Bucket, target, false);
+                    log.debug("Finished moving file %s", copyMsg);
                   }
                 }
               } else {
@@ -157,8 +173,10 @@ public class S3DataSegmentMover implements DataSegmentMover
                 } else {
                   throw new SegmentLoadingException(
                       "Unable to move file [s3://%s/%s] to [s3://%s/%s], not present in either source or target location",
-                      s3Bucket, s3Path,
-                      targetS3Bucket, targetS3Path
+                      s3Bucket,
+                      s3Path,
+                      targetS3Bucket,
+                      targetS3Path
                   );
                 }
               }

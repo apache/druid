@@ -21,6 +21,7 @@ package io.druid.indexing.kafka.supervisor;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import org.joda.time.Duration;
 import org.joda.time.Period;
@@ -40,6 +41,7 @@ public class KafkaSupervisorIOConfig
   private final Duration period;
   private final Boolean useEarliestOffset;
   private final Duration completionTimeout;
+  private final Optional<Duration> lateMessageRejectionPeriod;
 
   @JsonCreator
   public KafkaSupervisorIOConfig(
@@ -51,7 +53,8 @@ public class KafkaSupervisorIOConfig
       @JsonProperty("startDelay") Period startDelay,
       @JsonProperty("period") Period period,
       @JsonProperty("useEarliestOffset") Boolean useEarliestOffset,
-      @JsonProperty("completionTimeout") Period completionTimeout
+      @JsonProperty("completionTimeout") Period completionTimeout,
+      @JsonProperty("lateMessageRejectionPeriod") Period lateMessageRejectionPeriod
   )
   {
     this.topic = Preconditions.checkNotNull(topic, "topic");
@@ -68,6 +71,9 @@ public class KafkaSupervisorIOConfig
     this.period = defaultDuration(period, "PT30S");
     this.useEarliestOffset = (useEarliestOffset != null ? useEarliestOffset : false);
     this.completionTimeout = defaultDuration(completionTimeout, "PT30M");
+    this.lateMessageRejectionPeriod = (lateMessageRejectionPeriod == null
+                                       ? Optional.<Duration>absent()
+                                       : Optional.of(lateMessageRejectionPeriod.toStandardDuration()));
   }
 
   @JsonProperty
@@ -122,6 +128,12 @@ public class KafkaSupervisorIOConfig
   public Duration getCompletionTimeout()
   {
     return completionTimeout;
+  }
+
+  @JsonProperty
+  public Optional<Duration> getLateMessageRejectionPeriod()
+  {
+    return lateMessageRejectionPeriod;
   }
 
   private static Duration defaultDuration(final Period period, final String theDefault)
