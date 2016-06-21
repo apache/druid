@@ -37,6 +37,7 @@ import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
 import io.druid.granularity.PeriodGranularity;
 import io.druid.granularity.QueryGranularities;
+import io.druid.granularity.QueryGranularity;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.BySegmentResultValue;
@@ -98,7 +99,6 @@ import org.joda.time.Interval;
 import org.joda.time.Period;
 import org.junit.Assert;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
@@ -1326,7 +1326,7 @@ public class GroupByQueryRunnerTest
             )
         )
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
-        .setLimit(Integer.valueOf(limit));
+        .setLimit(limit);
 
     final GroupByQuery fullQuery = builder.build();
 
@@ -1413,7 +1413,7 @@ public class GroupByQueryRunnerTest
             )
         )
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
-        .setLimit(Integer.valueOf(-1));
+        .setLimit(-1);
 
     builder.build();
   }
@@ -1421,6 +1421,7 @@ public class GroupByQueryRunnerTest
   @Test
   public void testMergeResultsWithOrderBy()
   {
+    QueryGranularity granularity = new PeriodGranularity(new Period("P1M"), null, null);
     LimitSpec[] orderBySpecs = new LimitSpec[]{
         new DefaultLimitSpec(OrderByColumnSpec.ascending("idx"), null),
         new DefaultLimitSpec(OrderByColumnSpec.ascending("rows", "idx"), null),
@@ -1474,11 +1475,77 @@ public class GroupByQueryRunnerTest
     );
 
     for (int i = 0; i < orderBySpecs.length; ++i) {
-      doTestMergeResultsWithOrderBy(orderBySpecs[i], expectedResults.get(i));
+      doTestMergeResultsWithOrderBy(granularity, orderBySpecs[i], expectedResults.get(i));
     }
   }
 
-  private void doTestMergeResultsWithOrderBy(LimitSpec orderBySpec, List<Row> expectedResults)
+  @Test
+  public void testMergeResultsWithOrderByWithGranularity()
+  {
+    final QueryGranularity granularity = new PeriodGranularity(new Period("P1D"), null, null);
+
+    LimitSpec limit;
+    List<Row> expected;
+
+    expected = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "entertainment", "rows", 1L, "idx", 166L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "automotive", "rows", 1L, "idx", 147L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel", "rows", 1L, "idx", 126L) );
+
+    limit = new DefaultLimitSpec(OrderByColumnSpec.descending("rows", "idx"), 5);
+
+    doTestMergeResultsWithOrderBy(granularity, limit, expected);
+
+    limit = new DefaultLimitSpec(OrderByColumnSpec.descending("rows", "idx"), 5, QueryGranularities.DAY, false);
+
+    doTestMergeResultsWithOrderBy(granularity, limit, expected);
+
+    expected = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-03", "alias", "mezzanine", "rows", 3L, "idx", 1973L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-03", "alias", "premium", "rows", 3L, "idx", 1911L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "entertainment", "rows", 1L, "idx", 166L));
+
+    limit = new DefaultLimitSpec(OrderByColumnSpec.descending("rows", "idx"), 5,
+                                 new PeriodGranularity(new Period("P2D"), null, null), false);
+    doTestMergeResultsWithOrderBy(granularity, limit, expected);
+  }
+
+  @Test
+  public void testMergeResultsWithOrderByWithGranularityPerGroup()
+  {
+    final QueryGranularity granularity = new PeriodGranularity(new Period("P1D"), null, null);
+
+    LimitSpec limit;
+    List<Row> expected;
+
+    expected = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-03", "alias", "mezzanine", "rows", 3L, "idx", 1973L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-03", "alias", "premium", "rows", 3L, "idx", 1911L));
+
+    limit = new DefaultLimitSpec(OrderByColumnSpec.descending("rows", "idx"), 2, null, true);
+
+    doTestMergeResultsWithOrderBy(granularity, limit, expected);
+
+    limit = new DefaultLimitSpec(OrderByColumnSpec.descending("rows", "idx"), 2, QueryGranularities.DAY, true);
+
+    doTestMergeResultsWithOrderBy(granularity, limit, expected);
+
+    expected = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium", "rows", 3L, "idx", 2505L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine", "rows", 3L, "idx", 2447L));
+
+    limit = new DefaultLimitSpec(OrderByColumnSpec.descending("rows", "idx"), 2,
+                                 new PeriodGranularity(new Period("P2D"), null, null), true);
+    doTestMergeResultsWithOrderBy(granularity, limit, expected);
+  }
+
+  private void doTestMergeResultsWithOrderBy(QueryGranularity granularity, LimitSpec orderBySpec, List<Row> expectedResults)
   {
     GroupByQuery.Builder builder = GroupByQuery
         .builder()
@@ -1491,7 +1558,7 @@ public class GroupByQueryRunnerTest
                 new LongSumAggregatorFactory("idx", "index")
             )
         )
-        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null))
+        .setGranularity(granularity)
         .setLimitSpec(orderBySpec);
 
     final GroupByQuery fullQuery = builder.build();
@@ -2161,7 +2228,6 @@ public class GroupByQueryRunnerTest
     TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
 
-  @Ignore
   @Test
   // This is a test to verify per limit groupings, but Druid currently does not support this functionality. At a point
   // in time when Druid does support this, we can re-evaluate this test.
@@ -2188,7 +2254,7 @@ public class GroupByQueryRunnerTest
                         "rows",
                         OrderByColumnSpec.Direction.DESCENDING
                     )
-                ), 2
+                ), 2, null, true
             )
         )
         .setAggregatorSpecs(

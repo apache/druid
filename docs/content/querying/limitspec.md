@@ -13,8 +13,18 @@ The default limit spec takes a limit and the list of columns to do an orderBy op
     "type"    : "default",
     "limit"   : <integer_value>,
     "columns" : [list of OrderByColumnSpec],
+    "regroupingGranularity" : [QueryGranularity],
+    "applyLimitPerGroup: <boolean_value>
 }
 ```
+
+|property|description|required?|
+|--------|-----------|---------|
+|type|This String should always be "default". |yes|
+|limit|Number of limit.|yes|
+|columns|Ordering to apply limit; see [OrderByColumnSpec]. |no|
+|regroupingGranularity|Granularity for reordering. see [Granularities](../querying/granularities.html).|no|
+|applyLimitPerGroup|Whether to apply limit to each group; User can possibly get up to <limit> * <number of groups> rows. |no|
 
 #### OrderByColumnSpec
 

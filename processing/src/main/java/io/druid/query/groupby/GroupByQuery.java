@@ -327,6 +327,8 @@ public class GroupByQuery extends BaseQuery<Row>
     private LimitSpec limitSpec = null;
     private List<OrderByColumnSpec> orderByColumnSpecs = Lists.newArrayList();
     private int limit = Integer.MAX_VALUE;
+    private QueryGranularity limitGranularity;
+    private boolean limitPerGroup;
 
     public Builder()
     {
@@ -546,6 +548,20 @@ public class GroupByQuery extends BaseQuery<Row>
       return this;
     }
 
+    public Builder setLimitGranularity(QueryGranularity limitGranularity)
+    {
+      this.limitGranularity = limitGranularity;
+
+      return this;
+    }
+
+    public Builder setLimitPerGroup(boolean limitPerGroup)
+    {
+      this.limitPerGroup = limitPerGroup;
+
+      return this;
+    }
+
     public Builder copy()
     {
       return new Builder(this);
@@ -558,7 +574,7 @@ public class GroupByQuery extends BaseQuery<Row>
         if (orderByColumnSpecs.isEmpty() && limit == Integer.MAX_VALUE) {
           theLimitSpec = new NoopLimitSpec();
         } else {
-          theLimitSpec = new DefaultLimitSpec(orderByColumnSpecs, limit);
+          theLimitSpec = new DefaultLimitSpec(orderByColumnSpecs, limit, limitGranularity, limitPerGroup);
         }
       } else {
         theLimitSpec = limitSpec;
