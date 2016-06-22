@@ -28,7 +28,6 @@ import com.google.inject.Key;
 import com.google.inject.Provider;
 import com.google.inject.name.Names;
 import io.druid.client.indexing.IndexingServiceSelectorConfig;
-import io.druid.guice.JacksonConfigProvider;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
@@ -46,7 +45,6 @@ public class TaskTierModule implements DruidModule
   public static final String UPSTREAM_TASK_REPORTER_NAME = "upstream";
   public static final String UPSTREAM_PROPERTY_KEY = "io.druid.index.tier.upstreamServiceName";
   public static final String POLYBIND_ROUTING_KEY = "routing";
-  public static final String ROUTING_CONFIG_KEY = "druid.tier.routing.config";
 
   @Override
   public List<? extends Module> getJacksonModules()
@@ -72,7 +70,6 @@ public class TaskTierModule implements DruidModule
     JsonConfigProvider.bind(binder, UPSTREAM_PROPERTY_KEY, UpstreamNameHolder.class);
     binder.bind(Key.get(String.class, Names.named(UPSTREAM_SERVICE_NAME_CONSTANT_KEY)))
           .toProvider(UpstreamNameHolderProvider.class);
-    JacksonConfigProvider.bind(binder, ROUTING_CONFIG_KEY, TierRouteConfig.class, null);
   }
 }
 
