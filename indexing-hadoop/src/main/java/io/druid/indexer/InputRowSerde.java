@@ -99,9 +99,8 @@ public class InputRowSerde
           // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
           if (reportParseExceptions) {
             throw new ParseException(e, "Encountered parse error for aggregator[%s]", agg.getName());
-          } else {
-            log.debug(e, "Encountered parse error, skipping aggregator[%s].", agg.getName());
           }
+          log.debug(e, "Encountered parse error, skipping aggregator[%s].", agg.getName());
         }
 
         String t = aggFactory.getTypeName();

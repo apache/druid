@@ -74,11 +74,11 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
       catch (ParseException e) {
         if (reportParseExceptions) {
           throw e;
-        } else {
-          log.debug(e, "Ignoring invalid row [%s] due to parsing error", value.toString());
-          context.getCounter(HadoopDruidIndexerConfig.IndexJobCounters.INVALID_ROW_COUNTER).increment(1);
-          return; // we're ignoring this invalid row
         }
+        log.debug(e, "Ignoring invalid row [%s] due to parsing error", value.toString());
+        context.getCounter(HadoopDruidIndexerConfig.IndexJobCounters.INVALID_ROW_COUNTER).increment(1);
+        return; // we're ignoring this invalid row
+
       }
 
       if (!granularitySpec.bucketIntervals().isPresent()
