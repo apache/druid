@@ -39,6 +39,7 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
   protected HadoopDruidIndexerConfig config;
   private InputRowParser parser;
   protected GranularitySpec granularitySpec;
+  private boolean reportParseExceptions;
 
   @Override
   protected void setup(Context context)
@@ -47,6 +48,7 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
     config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
     parser = config.getParser();
     granularitySpec = config.getGranularitySpec();
+    reportParseExceptions = !config.isIgnoreInvalidRows();
   }
 
   public HadoopDruidIndexerConfig getConfig()
@@ -65,20 +67,24 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
   ) throws IOException, InterruptedException
   {
     try {
-      final InputRow inputRow = parseInputRow(value, parser);
+      final InputRow inputRow;
+      try {
+        inputRow = parseInputRow(value, parser);
+      }
+      catch (ParseException e) {
+        if (reportParseExceptions) {
+          throw e;
+        } else {
+          log.debug(e, "Ignoring invalid row [%s] due to parsing error", value.toString());
+          context.getCounter(HadoopDruidIndexerConfig.IndexJobCounters.INVALID_ROW_COUNTER).increment(1);
+          return; // we're ignoring this invalid row
+        }
+      }
+
       if (!granularitySpec.bucketIntervals().isPresent()
           || granularitySpec.bucketInterval(new DateTime(inputRow.getTimestampFromEpoch()))
                             .isPresent()) {
-        innerMap(inputRow, value, context);
-      }
-    }
-    catch (ParseException e) {
-      if (config.isIgnoreInvalidRows()) {
-        log.debug(e, "Ignoring invalid row [%s] due to parsing error", value.toString());
-        context.getCounter(HadoopDruidIndexerConfig.IndexJobCounters.INVALID_ROW_COUNTER).increment(1);
-        return; // we're ignoring this invalid row
-      } else {
-        throw e;
+        innerMap(inputRow, value, context, reportParseExceptions);
       }
     }
     catch (RuntimeException e) {
@@ -100,7 +106,7 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
     }
   }
 
-  abstract protected void innerMap(InputRow inputRow, Object value, Context context)
+  abstract protected void innerMap(InputRow inputRow, Object value, Context context, boolean reportParseExceptions)
       throws IOException, InterruptedException;
 
 }

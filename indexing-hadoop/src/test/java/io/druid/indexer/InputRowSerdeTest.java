@@ -21,6 +21,7 @@ package io.druid.indexer;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.metamx.common.parsers.ParseException;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.jackson.AggregatorsModule;
@@ -72,10 +73,11 @@ public class InputRowSerdeTest
         new DoubleSumAggregatorFactory("agg_non_existing", "agg_non_existing_in"),
         new DoubleSumAggregatorFactory("m1out", "m1"),
         new LongSumAggregatorFactory("m2out", "m2"),
-        new HyperUniquesAggregatorFactory("m3out", "m3")
+        new HyperUniquesAggregatorFactory("m3out", "m3"),
+        new LongSumAggregatorFactory("unparseable", "m3") // Unparseable from String to Long
     };
 
-    byte[] data = InputRowSerde.toBytes(in, aggregatorFactories);
+    byte[] data = InputRowSerde.toBytes(in, aggregatorFactories, false); // Ignore Unparseable aggregator
     InputRow out = InputRowSerde.fromBytes(data, aggregatorFactories);
 
     Assert.assertEquals(timestamp, out.getTimestampFromEpoch());
@@ -88,5 +90,29 @@ public class InputRowSerdeTest
     Assert.assertEquals(5.0f, out.getFloatMetric("m1out"), 0.00001);
     Assert.assertEquals(100L, out.getLongMetric("m2out"));
     Assert.assertEquals(1, ((HyperLogLogCollector)out.getRaw("m3out")).estimateCardinality(), 0.001);
+    Assert.assertEquals(0L, out.getLongMetric("unparseable"));
+
+  }
+
+  @Test
+  public void testThrowParseExceptions(){
+    InputRow in = new MapBasedInputRow(
+        timestamp,
+        dims,
+        event
+    );
+    AggregatorFactory[] aggregatorFactories = new AggregatorFactory[] {
+        new DoubleSumAggregatorFactory("agg_non_existing", "agg_non_existing_in"),
+        new DoubleSumAggregatorFactory("m1out", "m1"),
+        new LongSumAggregatorFactory("m2out", "m2"),
+        new HyperUniquesAggregatorFactory("m3out", "m3"),
+        new LongSumAggregatorFactory("m3unparseable", "m3") // Unparseable from String to Long
+    };
+    try {
+      InputRowSerde.toBytes(in, aggregatorFactories, true);
+      Assert.fail("Should have thrown parseException");
+    } catch (ParseException e){
+      // expected
+    }
   }
 }
