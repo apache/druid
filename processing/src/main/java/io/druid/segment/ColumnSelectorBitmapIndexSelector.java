@@ -184,7 +184,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
     }
 
     if (!column.getCapabilities().hasBitmapIndexes()) {
-      return bitmapFactory.makeEmptyImmutableBitmap();
+      return null;
     }
 
     final BitmapIndex bitmapIndex = column.getBitmapIndex();
