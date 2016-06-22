@@ -21,6 +21,7 @@ package io.druid.indexer;
 
 import com.metamx.common.RE;
 import com.metamx.common.logger.Logger;
+import com.metamx.common.parsers.ParseException;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.StringInputRowParser;
@@ -64,24 +65,20 @@ public abstract class HadoopDruidIndexerMapper<KEYOUT, VALUEOUT> extends Mapper<
   ) throws IOException, InterruptedException
   {
     try {
-      final InputRow inputRow;
-      try {
-        inputRow = parseInputRow(value, parser);
-      }
-      catch (Exception e) {
-        if (config.isIgnoreInvalidRows()) {
-          log.debug(e, "Ignoring invalid row [%s] due to parsing error", value.toString());
-          context.getCounter(HadoopDruidIndexerConfig.IndexJobCounters.INVALID_ROW_COUNTER).increment(1);
-          return; // we're ignoring this invalid row
-        } else {
-          throw e;
-        }
-      }
-
+      final InputRow inputRow = parseInputRow(value, parser);
       if (!granularitySpec.bucketIntervals().isPresent()
           || granularitySpec.bucketInterval(new DateTime(inputRow.getTimestampFromEpoch()))
                             .isPresent()) {
         innerMap(inputRow, value, context);
+      }
+    }
+    catch (ParseException e) {
+      if (config.isIgnoreInvalidRows()) {
+        log.debug(e, "Ignoring invalid row [%s] due to parsing error", value.toString());
+        context.getCounter(HadoopDruidIndexerConfig.IndexJobCounters.INVALID_ROW_COUNTER).increment(1);
+        return; // we're ignoring this invalid row
+      } else {
+        throw e;
       }
     }
     catch (RuntimeException e) {
