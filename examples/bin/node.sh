@@ -3,7 +3,7 @@
 ## Initializtion script for druid nodes
 ## Runs druid nodes as a daemon and pipes logs to log/ directory
 
-usage="Usage: node.sh nodeType (start|stop)"
+usage="Usage: node.sh nodeType (start|stop|status)"
 
 if [ $# -le 1 ]; then
   echo $usage
@@ -13,10 +13,10 @@ fi
 nodeType=$1
 shift
 
-startStop=$1
+command=$1
 pid=var/druid/pids/$nodeType.pid
 
-case $startStop in
+case $command in
 
   (start)
 
@@ -46,6 +46,19 @@ case $startStop in
       rm -f $pid
     else
       echo No $nodeType node to stop
+    fi
+    ;;
+
+   (status)
+    if [ -f $pid ]; then
+      if kill -0 `cat $pid` > /dev/null 2>&1; then
+        echo RUNNING
+        exit 0
+      else
+        echo STOPPED
+      fi
+    else
+      echo STOPPED
     fi
     ;;
 
