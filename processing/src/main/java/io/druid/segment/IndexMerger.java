@@ -66,9 +66,9 @@ import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.ByteBufferWriter;
+import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.LongSupplierSerializer;
-import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.GenericIndexedWriter;
 import io.druid.segment.data.IOPeon;
@@ -766,8 +766,9 @@ public class IndexMerger
           rowMergerFn
       );
 
-      LongSupplierSerializer timeWriter = CompressionFactory.DEFAULT_COMPRESSION_FORMAT.getLongSerializer(
-          ioPeon, "little_end_time", IndexIO.BYTE_ORDER
+      LongSupplierSerializer timeWriter = CompressionFactory.getLongSerializer(
+          ioPeon, "little_end_time", IndexIO.BYTE_ORDER, CompressionFactory.DEFAULT_LONG_ENCODING,
+          CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
       );
 
       timeWriter.open();

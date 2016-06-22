@@ -50,7 +50,7 @@ public class HadoopConverterTaskSerDeTest
   private static final ShardSpec SHARD_SPEC = NoneShardSpec.instance();
   private static final int BINARY_VERSION = 34718;
   private static final long SEGMENT_SIZE = 7483901348790L;
-  private static final IndexSpec INDEX_SPEC = new IndexSpec(new ConciseBitmapSerdeFactory(), "lz4", "lzf");
+  private static final IndexSpec INDEX_SPEC = new IndexSpec(new ConciseBitmapSerdeFactory(), "lz4", "lzf", "longs");
   private static final DataSegment DATA_SEGMENT = new DataSegment(
       DATA_SOURCE,
       INTERVAL,

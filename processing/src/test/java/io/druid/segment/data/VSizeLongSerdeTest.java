@@ -7,13 +7,13 @@ import org.junit.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
 public class VSizeLongSerdeTest
 {
   private ByteBuffer buffer;
-  private ByteArrayOutputStream out;
+  private ByteArrayOutputStream outStream;
+  private ByteBuffer outBuffer;
   private long values0 [] = {0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1};
   private long values1 [] = {0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1};
   private long values2 [] = {12, 5, 2, 9, 3, 2, 5, 1, 0, 6, 13, 10, 15};
@@ -24,7 +24,8 @@ public class VSizeLongSerdeTest
 
   @Before
   public void setUp () {
-    out = new ByteArrayOutputStream();
+    outStream = new ByteArrayOutputStream();
+    outBuffer = ByteBuffer.allocate(500000);
   }
 
   @Test
@@ -79,35 +80,49 @@ public class VSizeLongSerdeTest
 
   public void testSerde (int longSize, long[] values) throws IOException
   {
-    out.reset();
-    out.write(1);
-    out.write(2);
-    VSizeLongSerde.LongSerializer ser = VSizeLongSerde.getSerializer(longSize, out);
+    outBuffer.rewind();
+    outStream.reset();
+    VSizeLongSerde.LongSerializer streamSer = VSizeLongSerde.getSerializer(longSize, outStream);
+    VSizeLongSerde.LongSerializer bufferSer = VSizeLongSerde.getSerializer(longSize, outBuffer, 0);
     for (long value : values) {
-      ser.write(value);
+      streamSer.write(value);
+      bufferSer.write(value);
     }
-    ser.close();
-    buffer = ByteBuffer.wrap(out.toByteArray());
-    Assert.assertEquals((values.length * longSize + 7) / 8, buffer.capacity() - 2);
-    VSizeLongSerde.LongDeserializer de = VSizeLongSerde.getDeserializer(longSize, buffer, 2);
+    streamSer.close();
+    bufferSer.close();
+
+    buffer = ByteBuffer.wrap(outStream.toByteArray());
+    Assert.assertEquals(VSizeLongSerde.getSerializedSize(longSize, values.length), buffer.capacity());
+    Assert.assertEquals(VSizeLongSerde.getSerializedSize(longSize, values.length), outBuffer.position());
+    VSizeLongSerde.LongDeserializer streamDes = VSizeLongSerde.getDeserializer(longSize, buffer, 0);
+    VSizeLongSerde.LongDeserializer bufferDes = VSizeLongSerde.getDeserializer(longSize, outBuffer, 0);
     for (int i = 0; i < values.length; i++) {
-      Assert.assertEquals(values[i], de.get(i));
+      Assert.assertEquals(values[i], streamDes.get(i));
+      Assert.assertEquals(values[i], bufferDes.get(i));
     }
   }
 
   public void testSerdeIncLoop (int longSize, long start, long end) throws IOException
   {
-    out.reset();
-    VSizeLongSerde.LongSerializer ser = VSizeLongSerde.getSerializer(longSize, out);
+    outBuffer.rewind();
+    outStream.reset();
+    VSizeLongSerde.LongSerializer streamSer = VSizeLongSerde.getSerializer(longSize, outStream);
+    VSizeLongSerde.LongSerializer bufferSer = VSizeLongSerde.getSerializer(longSize, outBuffer, 0);
     for (long i = start; i < end; i++) {
-      ser.write(i);
+      streamSer.write(i);
+      bufferSer.write(i);
     }
-    ser.close();
-    buffer = ByteBuffer.wrap(out.toByteArray());
-    Assert.assertEquals(((end - start) * longSize + 7) / 8, buffer.capacity());
-    VSizeLongSerde.LongDeserializer de = VSizeLongSerde.getDeserializer(longSize, buffer, 0);
+    streamSer.close();
+    bufferSer.close();
+
+    buffer = ByteBuffer.wrap(outStream.toByteArray());
+    Assert.assertEquals(VSizeLongSerde.getSerializedSize(longSize, (int)(end - start)), buffer.capacity());
+    Assert.assertEquals(VSizeLongSerde.getSerializedSize(longSize, (int)(end - start)), outBuffer.position());
+    VSizeLongSerde.LongDeserializer streamDes = VSizeLongSerde.getDeserializer(longSize, buffer, 0);
+    VSizeLongSerde.LongDeserializer bufferDes = VSizeLongSerde.getDeserializer(longSize, outBuffer, 0);
     for (int i = 0; i < end - start; i++) {
-      Assert.assertEquals(start + i, de.get(i));
+      Assert.assertEquals(start + i, streamDes.get(i));
+      Assert.assertEquals(start + i, bufferDes.get(i));
     }
   }
 

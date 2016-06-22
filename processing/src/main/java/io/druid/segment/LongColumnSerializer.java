@@ -19,6 +19,7 @@
 
 package io.druid.segment;
 
+import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.LongSupplierSerializer;
 import io.druid.segment.data.IOPeon;
@@ -32,38 +33,44 @@ public class LongColumnSerializer implements GenericColumnSerializer
   public static LongColumnSerializer create(
       IOPeon ioPeon,
       String filenameBase,
-      CompressionFactory.CompressionFormat compression
+      CompressedObjectStrategy.CompressionStrategy compression,
+      CompressionFactory.LongEncodingFormat encoding
   )
   {
-    return new LongColumnSerializer(ioPeon, filenameBase, IndexIO.BYTE_ORDER, compression);
+    return new LongColumnSerializer(ioPeon, filenameBase, IndexIO.BYTE_ORDER, compression, encoding);
   }
 
   private final IOPeon ioPeon;
   private final String filenameBase;
   private final ByteOrder byteOrder;
-  private final CompressionFactory.CompressionFormat compression;
+  private final CompressedObjectStrategy.CompressionStrategy compression;
+  private final CompressionFactory.LongEncodingFormat encoding;
   private LongSupplierSerializer writer;
 
   public LongColumnSerializer(
       IOPeon ioPeon,
       String filenameBase,
       ByteOrder byteOrder,
-      CompressionFactory.CompressionFormat compression
+      CompressedObjectStrategy.CompressionStrategy compression,
+      CompressionFactory.LongEncodingFormat encoding
   )
   {
     this.ioPeon = ioPeon;
     this.filenameBase = filenameBase;
     this.byteOrder = byteOrder;
     this.compression = compression;
+    this.encoding = encoding;
   }
 
   @Override
   public void open() throws IOException
   {
-    writer = compression.getLongSerializer(
+    writer = CompressionFactory.getLongSerializer(
         ioPeon,
         String.format("%s.long_column", filenameBase),
-        byteOrder
+        byteOrder,
+        encoding,
+        compression
     );
     writer.open();
   }

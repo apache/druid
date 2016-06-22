@@ -13,15 +13,16 @@ import java.io.IOException;
 import java.nio.ByteOrder;
 import java.nio.channels.WritableByteChannel;
 
-public class RACompressionFormatSerde
+public class IntermediateSerde
 {
 
-  public static class RACompressedLongSupplierSerializer implements LongSupplierSerializer {
+  public static class IntermediateLongSupplierSerializer implements LongSupplierSerializer {
 
     private final IOPeon ioPeon;
     private final String filenameBase;
     private final String tempFile;
     private final ByteOrder order;
+    private final CompressedObjectStrategy.CompressionStrategy compression;
     private CountingOutputStream tempOut = null;
 
     private int numInserted = 0;
@@ -32,16 +33,18 @@ public class RACompressionFormatSerde
 
     private LongSupplierSerializer delegate;
 
-    public RACompressedLongSupplierSerializer(
+    public IntermediateLongSupplierSerializer(
         IOPeon ioPeon,
         String filenameBase,
-        ByteOrder order
+        ByteOrder order,
+        CompressedObjectStrategy.CompressionStrategy compression
     )
     {
       this.ioPeon = ioPeon;
       this.tempFile = filenameBase + ".temp";
       this.filenameBase = filenameBase;
       this.order = order;
+      this.compression = compression;
     }
 
     public void open() throws IOException
@@ -58,7 +61,7 @@ public class RACompressionFormatSerde
     {
       tempOut.write(Longs.toByteArray(value));
       ++numInserted;
-      if (uniqueValues.size() <= TableCompressionFormatSerde.MAX_TABLE_SIZE && !uniqueValues.containsKey(value)) {
+      if (uniqueValues.size() <= TableEncodingFormatSerde.MAX_TABLE_SIZE && !uniqueValues.containsKey(value)) {
         uniqueValues.put(value, uniqueValues.size());
       }
       if (value > maxVal) {
@@ -71,23 +74,28 @@ public class RACompressionFormatSerde
 
     private void makeDelegate() throws IOException
     {
+      CompressionFactory.LongEncodingFormatWriter writer;
       long delta;
       try {
         delta = LongMath.checkedSubtract(maxVal, minVal);
       } catch (ArithmeticException e) {
         delta = -1;
       }
-      if (uniqueValues.size() <= TableCompressionFormatSerde.MAX_TABLE_SIZE) {
-        delegate = new TableCompressionFormatSerde.TableCompressedLongSupplierSerializer(
-            ioPeon, filenameBase, order, uniqueValues
-        );
+      if (uniqueValues.size() <= TableEncodingFormatSerde.MAX_TABLE_SIZE) {
+        writer = new TableEncodingFormatSerde.TableEncodingWriter(uniqueValues);
       } else if (delta != -1) {
-        delegate = new DeltaCompressionFormatSerde.DeltaCompressedLongSupplierSerializer(
-            ioPeon, filenameBase, order, minVal, delta
+        writer = new DeltaEncodingFormatSerde.DeltaEncodingWriter(minVal, delta);
+      } else {
+        writer = new LongsEncodingFormatSerde.LongsEncodingWriter(order);
+      }
+
+      if (compression == CompressedObjectStrategy.CompressionStrategy.NONE) {
+        delegate = new EntireLayoutSerde.EntireLayoutLongSerializer(
+            ioPeon, filenameBase, order, writer
         );
       } else {
-        delegate = new UncompressedFormatSerde.UncompressedLongSupplierSerializer(
-            ioPeon, filenameBase, order
+        delegate = new BlockLayoutSerde.BlockLayoutLongSupplierSerializer(
+            ioPeon, filenameBase, order, writer, compression
         );
       }
 

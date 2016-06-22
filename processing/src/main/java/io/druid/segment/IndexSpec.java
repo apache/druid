@@ -43,19 +43,20 @@ import java.util.Set;
 public class IndexSpec
 {
   public static final String UNCOMPRESSED = "uncompressed";
-  public static final String DEFAULT_METRIC_COMPRESSION = CompressionFactory.DEFAULT_COMPRESSION_FORMAT.name().toLowerCase();
+  public static final String DEFAULT_METRIC_COMPRESSION = CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY.name().toLowerCase();
+  public static final String DEFAULT_METRIC_LONG_ENCODING = CompressionFactory.DEFAULT_LONG_ENCODING.name().toLowerCase();
   public static final String DEFAULT_DIMENSION_COMPRESSION = CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY.name().toLowerCase();
 
   private static final Set<String> COMPRESSION_NAMES = Sets.newHashSet(
       Iterables.transform(
-          Arrays.asList(CompressionFactory.CompressionFormat.values()),
-          new Function<CompressionFactory.CompressionFormat, String>()
+          Arrays.asList(CompressedObjectStrategy.CompressionStrategy.values()),
+          new Function<CompressedObjectStrategy.CompressionStrategy, String>()
           {
             @Nullable
             @Override
-            public String apply(CompressionFactory.CompressionFormat input)
+            public String apply(CompressedObjectStrategy.CompressionStrategy strategy)
             {
-              return input.name().toLowerCase();
+              return strategy.name().toLowerCase();
             }
           }
       )
@@ -64,6 +65,7 @@ public class IndexSpec
   private final BitmapSerdeFactory bitmapSerdeFactory;
   private final String dimensionCompression;
   private final String metricCompression;
+  private final String metricLongEncoding;
 
 
   /**
@@ -71,7 +73,7 @@ public class IndexSpec
    */
   public IndexSpec()
   {
-    this(null, null, null);
+    this(null, null, null, null);
   }
 
   /**
@@ -92,7 +94,8 @@ public class IndexSpec
   public IndexSpec(
       @JsonProperty("bitmap") BitmapSerdeFactory bitmapSerdeFactory,
       @JsonProperty("dimensionCompression") String dimensionCompression,
-      @JsonProperty("metricCompression") String metricCompression
+      @JsonProperty("metricCompression") String metricCompression,
+      @JsonProperty("metricLongEncoding") String metricLongEncoding
   )
   {
     Preconditions.checkArgument(dimensionCompression == null || dimensionCompression.equals(UNCOMPRESSED) || COMPRESSION_NAMES.contains(dimensionCompression),
@@ -102,8 +105,9 @@ public class IndexSpec
                                 "Unknown compression type[%s]", metricCompression);
 
     this.bitmapSerdeFactory = bitmapSerdeFactory != null ? bitmapSerdeFactory : new ConciseBitmapSerdeFactory();
-    this.metricCompression = metricCompression;
     this.dimensionCompression = dimensionCompression;
+    this.metricCompression = metricCompression;
+    this.metricLongEncoding = metricLongEncoding;
   }
 
   @JsonProperty("bitmap")
@@ -124,9 +128,15 @@ public class IndexSpec
     return metricCompression;
   }
 
-  public CompressionFactory.CompressionFormat getMetricCompressionStrategy()
+  @JsonProperty("metricLongEncoding")
+  public String getMetricLongEncoding()
   {
-    return CompressionFactory.CompressionFormat.valueOf(
+    return metricLongEncoding;
+  }
+
+  public CompressedObjectStrategy.CompressionStrategy getMetricCompressionStrategy()
+  {
+    return CompressedObjectStrategy.CompressionStrategy.valueOf(
         (metricCompression == null ? DEFAULT_METRIC_COMPRESSION : metricCompression).toUpperCase()
     );
   }
@@ -136,6 +146,14 @@ public class IndexSpec
     return dimensionCompression == null ?
            dimensionCompressionStrategyForName(DEFAULT_DIMENSION_COMPRESSION) :
            dimensionCompressionStrategyForName(dimensionCompression);
+  }
+
+  public CompressionFactory.LongEncodingFormat getMetricLongEncodingFormat()
+  {
+    return CompressionFactory.LongEncodingFormat.valueOf(
+        (metricLongEncoding == null ? DEFAULT_METRIC_LONG_ENCODING : metricLongEncoding).toUpperCase()
+    );
+
   }
 
   private static CompressedObjectStrategy.CompressionStrategy dimensionCompressionStrategyForName(String compression)

@@ -5,6 +5,7 @@ import com.metamx.common.IAE;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
@@ -13,14 +14,13 @@ import java.nio.ByteOrder;
  *
  * Size 3 and 6 are not used due to performance reasons, consider enable them if compressed size becomes important
  *
- * Note 3 and 6 in the current state would cause IndexOutofBoundException at the end of file, which would enter the
- * catch block in safeGetInt. This will have a significant performance impact due to java try catch optimization.
- * Either change implementation or prevent the situation by writing some empty bytes when closing.
+ * An empty 4 bytes is written upon closing to avoid index out of bound exception for deserializers that shift bytes
  */
 public class VSizeLongSerde
 {
 
   public static final int SUPPORTED_SIZE[] = {1, 2, /*3,*/ 4, /*6,*/ 8, 12, 16, 20, 24, 32, 40, 48, 56, 64};
+  public static final byte EMPTY[] = {0, 0, 0, 0};
 
   public static int getBitsForMax(long value)
   {
@@ -41,6 +41,19 @@ public class VSizeLongSerde
     return 64;
   }
 
+  public static int getSerializedSize (int longSize, int numValues) {
+    return (longSize * numValues + 7)/8 + 4;
+  }
+
+  // block size should be power of 2 so get of indexedLong can be optimized using bit operators
+  public static int getBlockSize (int longSize, int bytes) {
+    int ret = 1;
+    while (getSerializedSize(longSize, ret) <= bytes) {
+      ret *= 2;
+    }
+    return ret / 2;
+  }
+
   public static LongSerializer getSerializer (int longSize, OutputStream output) {
     switch (longSize) {
       case 1: return new Size1Ser(output);
@@ -58,6 +71,28 @@ public class VSizeLongSerde
       case 48: return new Mult8Ser(output, 6);
       case 56: return new Mult8Ser(output, 7);
       case 64: return new Mult8Ser(output, 8);
+      default:
+        throw new IAE("Unsupported size %s", longSize);
+    }
+  }
+
+  public static LongSerializer getSerializer (int longSize, ByteBuffer buffer, int bufferOffset) {
+    switch (longSize) {
+      case 1: return new Size1Ser(buffer, bufferOffset);
+      case 2: return new Size2Ser(buffer, bufferOffset);
+//      case 3: return new Size3Ser(output);
+      case 4: return new Mult4Ser(buffer, bufferOffset, 0);
+//      case 6: return new Size6Ser(output);
+      case 8: return new Mult8Ser(buffer, bufferOffset, 1);
+      case 12: return new Mult4Ser(buffer, bufferOffset, 1);
+      case 16: return new Mult8Ser(buffer, bufferOffset, 2);
+      case 20: return new Mult4Ser(buffer, bufferOffset, 2);
+      case 24: return new Mult8Ser(buffer, bufferOffset, 3);
+      case 32: return new Mult8Ser(buffer, bufferOffset, 4);
+      case 40: return new Mult8Ser(buffer, bufferOffset, 5);
+      case 48: return new Mult8Ser(buffer, bufferOffset, 6);
+      case 56: return new Mult8Ser(buffer, bufferOffset, 7);
+      case 64: return new Mult8Ser(buffer, bufferOffset, 8);
       default:
         throw new IAE("Unsupported size %s", longSize);
     }
@@ -91,60 +126,92 @@ public class VSizeLongSerde
   }
 
   private static final class Size1Ser implements LongSerializer {
-    OutputStream output;
-    byte buffer = 0;
+    OutputStream output = null;
+    ByteBuffer buffer;
+    byte curByte = 0;
     int count = 0;
     public Size1Ser(OutputStream output) {
-     this.output = output;
+      this.output = output;
+      this.buffer = ByteBuffer.allocate(1);
+    }
+    public Size1Ser(ByteBuffer buffer, int offset) {
+      this.buffer = buffer;
+      this.buffer.position(offset);
     }
     @Override
     public void write(long value) throws IOException
     {
       if (count == 8) {
-        output.write(buffer);
+        buffer.put(curByte);
         count = 0;
+        if (!buffer.hasRemaining() && output != null) {
+          output.write(buffer.array());
+          buffer.rewind();
+        }
       }
-      buffer = (byte)((buffer << 1) | (value & 1));
+      curByte = (byte)((curByte << 1) | (value & 1));
       count++;
     }
 
     @Override
     public void close() throws IOException
     {
-      output.write(buffer << (8 - count));
-      output.flush();
+      buffer.put((byte)(curByte << (8 - count)));
+      if (output != null) {
+        output.write(buffer.array());
+        output.write(EMPTY);
+        output.flush();
+      } else {
+        buffer.putInt(0);
+      }
     }
   }
 
   private static final class Size2Ser implements LongSerializer {
-    OutputStream output;
-    byte buffer = 0;
+    OutputStream output = null;
+    ByteBuffer buffer;
+    byte curByte = 0;
     int count = 0;
     public Size2Ser(OutputStream output) {
       this.output = output;
+      this.buffer = ByteBuffer.allocate(1);
+    }
+    public Size2Ser(ByteBuffer buffer, int offset) {
+      this.buffer = buffer;
+      this.buffer.position(offset);
     }
     @Override
     public void write(long value) throws IOException
     {
       if (count == 8) {
-        output.write(buffer);
+        buffer.put(curByte);
         count = 0;
+        if (!buffer.hasRemaining() && output != null) {
+          output.write(buffer.array());
+          buffer.rewind();
+        }
       }
-      buffer = (byte)((buffer << 2) | (value & 3));
+      curByte = (byte)((curByte << 2) | (value & 3));
       count += 2;
     }
 
     @Override
     public void close() throws IOException
     {
-      output.write(buffer << (8 - count));
-      output.flush();
+      buffer.put((byte)(curByte << (8 - count)));
+      if (output != null) {
+        output.write(buffer.array());
+        output.write(EMPTY);
+        output.flush();
+      } else {
+        buffer.putInt(0);
+      }
     }
   }
 
   private static final class Size3Ser implements LongSerializer {
     OutputStream output;
-    int buffer = 0;
+    int curByte = 0;
     int count = 0;
     public Size3Ser(OutputStream output) {
       this.output = output;
@@ -153,12 +220,12 @@ public class VSizeLongSerde
     public void write(long value) throws IOException
     {
       if (count == 8) {
-        output.write(buffer >> 16);
-        output.write(buffer >> 8);
-        output.write(buffer);
+        output.write(curByte >> 16);
+        output.write(curByte >> 8);
+        output.write(curByte);
         count = 0;
       }
-      buffer = (int)((buffer << 3) | (value & 7));
+      curByte = (int)((curByte << 3) | (value & 7));
       count++;
     }
 
@@ -168,7 +235,7 @@ public class VSizeLongSerde
       int unwrittenBytes = (count * 3 - 1) / 8;
       int shift = 7 - ((count * 3 - 1) % 8);
       for (int i = unwrittenBytes; i >= 0; i--) {
-        output.write(buffer << shift >> (i * 8));
+        output.write(curByte << shift >> (i * 8));
       }
       output.flush();
     }
@@ -176,7 +243,7 @@ public class VSizeLongSerde
 
   private static final class Size6Ser implements LongSerializer {
     OutputStream output;
-    int buffer = 0;
+    int curByte = 0;
     int count = 0;
     public Size6Ser(OutputStream output) {
       this.output = output;
@@ -185,12 +252,12 @@ public class VSizeLongSerde
     public void write(long value) throws IOException
     {
       if (count == 4) {
-        output.write(buffer >> 16);
-        output.write(buffer >> 8);
-        output.write(buffer);
+        output.write(curByte >> 16);
+        output.write(curByte >> 8);
+        output.write(curByte);
         count = 0;
       }
-      buffer = (int)((buffer << 6) | (value & 0x7F));
+      curByte = (int)((curByte << 6) | (value & 0x7F));
       count++;
     }
 
@@ -200,19 +267,27 @@ public class VSizeLongSerde
       int unwrittenBytes = (count * 6 - 1) / 8;
       int shift = 7 - ((count * 6 - 1) % 8);
       for (int i = unwrittenBytes; i >= 0; i--) {
-        output.write(buffer << shift >> (i * 8));
+        output.write(curByte << shift >> (i * 8));
       }
       output.flush();
     }
   }
 
   private static final class Mult4Ser implements LongSerializer {
-    OutputStream output;
+
+    OutputStream output = null;
+    ByteBuffer buffer;
     int numBytes;
-    byte buffer = 0;
+    byte curByte = 0;
     boolean first = true;
     public Mult4Ser(OutputStream output, int numBytes) {
       this.output = output;
+      this.buffer = ByteBuffer.allocate(numBytes * 2 + 1);
+      this.numBytes = numBytes;
+    }
+    public Mult4Ser(ByteBuffer buffer, int offset, int numBytes) {
+      this.buffer = buffer;
+      this.buffer.position(offset);
       this.numBytes = numBytes;
     }
     @Override
@@ -221,45 +296,71 @@ public class VSizeLongSerde
       int shift = 0;
       if (first) {
         shift = 4;
-        buffer = (byte)value;
+        curByte = (byte)value;
         first = false;
       } else {
-        buffer = (byte)((buffer << 4) | ((value >> (numBytes << 3)) & 0xF));
-        output.write(buffer);
+        curByte = (byte)((curByte << 4) | ((value >> (numBytes << 3)) & 0xF));
+        buffer.put(curByte);
         first = true;
       }
       for (int i = numBytes - 1; i >= 0; i--) {
-        output.write((byte)(value >>> (i * 8 + shift)));
+        buffer.put((byte)(value >>> (i * 8 + shift)));
+      }
+      if (!buffer.hasRemaining() && output != null) {
+        output.write(buffer.array());
+        buffer.rewind();
       }
     }
     @Override
     public void close() throws IOException
     {
       if (!first) {
-        output.write(buffer << 4);
+        buffer.put((byte)(curByte << 4));
       }
-      output.flush();
+      if (output != null) {
+        output.write(buffer.array(), 0, buffer.position());
+        output.write(EMPTY);
+        output.flush();
+      } else {
+        buffer.putInt(0);
+      }
     }
   }
 
   private static final class Mult8Ser implements LongSerializer {
     OutputStream output;
+    ByteBuffer buffer;
     int numBytes;
     public Mult8Ser(OutputStream output, int numBytes) {
       this.output = output;
+      this.buffer = ByteBuffer.allocate(1);
+      this.numBytes = numBytes;
+    }
+    public Mult8Ser(ByteBuffer buffer, int offset, int numBytes) {
+      this.buffer = buffer;
+      this.buffer.position(offset);
       this.numBytes = numBytes;
     }
     @Override
     public void write(long value) throws IOException
     {
       for (int i = numBytes - 1; i >= 0; i--) {
-        output.write((byte)(value >>> (i * 8)));
+        buffer.put((byte)(value >>> (i * 8)));
+        if (output != null) {
+          output.write(buffer.array());
+          buffer.position(0);
+        }
       }
     }
     @Override
     public void close() throws IOException
     {
-      output.flush();
+      if (output != null) {
+        output.write(EMPTY);
+        output.flush();
+      } else {
+        buffer.putInt(0);
+      }
     }
   }
 
@@ -308,7 +409,7 @@ public class VSizeLongSerde
     public long get(int index)
     {
       int shift = 29 - (index & 7) * 3;
-      return (safeGetInt(buffer, offset + (index >> 3) * 3) >> shift) & 7;
+      return (buffer.getInt(offset + (index >> 3) * 3) >> shift) & 7;
     }
   }
 
@@ -338,7 +439,7 @@ public class VSizeLongSerde
     public long get(int index)
     {
       int shift = 26 - (index & 3) * 6;
-      return (safeGetInt(buffer, offset + (index >> 2) * 3) >> shift) & 0x3F;
+      return (buffer.getInt(offset + (index >> 2) * 3) >> shift) & 0x3F;
     }
   }
 
@@ -368,7 +469,7 @@ public class VSizeLongSerde
     {
       int shift = ((index + 1) & 1) << 2;
       int offset = (index * 3) >> 1;
-      return (safeGetShort(buffer, this.offset + offset) >> shift) & 0xFFF;
+      return (buffer.getShort(this.offset + offset) >> shift) & 0xFFF;
     }
   }
 
@@ -381,7 +482,7 @@ public class VSizeLongSerde
     }
     public long get(int index)
     {
-      return safeGetShort(buffer, offset + (index << 1)) & 0xFFFF;
+      return buffer.getShort(offset + (index << 1)) & 0xFFFF;
     }
   }
 
@@ -395,9 +496,9 @@ public class VSizeLongSerde
     @Override
     public long get(int index)
     {
-      int shift = ((index + 1) & 1) << 2;
+      int shift = (((index + 1) & 1) << 2) + 8;
       int offset = (index * 5) >> 1;
-      return (safeGetInt(buffer, this.offset + offset - 1) >> shift) & 0xFFFFF;
+      return (buffer.getInt(this.offset + offset) >> shift) & 0xFFFFF;
     }
   }
 
@@ -411,7 +512,7 @@ public class VSizeLongSerde
     @Override
     public long get(int index)
     {
-      return safeGetInt(buffer, offset + index * 3 - 1) & 0xFFFFFF;
+      return buffer.getInt(offset + index * 3) >>> 8;
     }
   }
 
@@ -425,7 +526,7 @@ public class VSizeLongSerde
     @Override
     public long get(int index)
     {
-      return safeGetInt(buffer, offset + (index << 2)) & 0xFFFFFFFFL;
+      return buffer.getInt(offset + (index << 2)) & 0xFFFFFFFFL;
     }
   }
 
@@ -439,7 +540,7 @@ public class VSizeLongSerde
     @Override
     public long get(int index)
     {
-      return safeGetLong(buffer, offset + index * 5 - 3) & 0xFFFFFFFFFFL;
+      return buffer.getLong(offset + index * 5) >>> 24;
     }
   }
 
@@ -453,7 +554,7 @@ public class VSizeLongSerde
     @Override
     public long get(int index)
     {
-      return safeGetLong(buffer, offset + index * 6 - 2) & 0xFFFFFFFFFFFFL;
+      return buffer.getLong(offset + index * 6) >>> 16;
     }
   }
 
@@ -467,7 +568,7 @@ public class VSizeLongSerde
     @Override
     public long get(int index)
     {
-      return safeGetLong(buffer, offset + index * 7 - 1) & 0xFFFFFFFFFFFFFFL;
+      return buffer.getLong(offset + index * 7) >>> 8;
     }
   }
 
@@ -481,58 +582,7 @@ public class VSizeLongSerde
     @Override
     public long get(int index)
     {
-      return safeGetLong(buffer, offset + (index << 3));
-    }
-  }
-
-  private static byte safeGet(ByteBuffer buffer, int index) {
-    try {
-      return buffer.get(index);
-    } catch (IndexOutOfBoundsException ex) {
-      return 0;
-    }
-  }
-
-  private static short safeGetShort(ByteBuffer buffer, int index) {
-    try {
-      return buffer.getShort(index);
-    } catch (IndexOutOfBoundsException ex) {
-      if (index >= buffer.limit()) {
-        throw ex;
-      }
-      return (short)((safeGet(buffer, index) << 8) | (safeGet(buffer, index + 1) & 0xFF));
-    }
-  }
-
-  private static int safeGetInt(ByteBuffer buffer, int index) {
-    try {
-      return buffer.getInt(index);
-    } catch (IndexOutOfBoundsException ex) {
-      if (index >= buffer.limit()) {
-        throw ex;
-      }
-      return ((safeGet(buffer, index) << 24) |
-              ((safeGet(buffer, index + 1) & 0xFF) << 16) |
-              ((safeGet(buffer, index + 2) & 0xFF) << 8) |
-              ((safeGet(buffer, index + 3) & 0xFF)));
-    }
-  }
-
-  private static long safeGetLong(ByteBuffer buffer, int index) {
-    try {
-      return buffer.getLong(index);
-    } catch (IndexOutOfBoundsException ex) {
-      if (index >= buffer.limit()) {
-        throw ex;
-      }
-      return (((long)safeGet(buffer, index) << 56) |
-              (((long)safeGet(buffer, index + 1) & 0xFF) << 48) |
-              (((long)safeGet(buffer, index + 2) & 0xFF) << 40) |
-              (((long)safeGet(buffer, index + 3) & 0xFF) << 32) |
-              (((long)safeGet(buffer, index + 4) & 0xFF) << 24) |
-              (((long)safeGet(buffer, index + 5) & 0xFF) << 16) |
-              (((long)safeGet(buffer, index + 6) & 0xFF) << 8) |
-              (((long)safeGet(buffer, index + 7) & 0xFF)));
+      return buffer.getLong(offset + (index << 3));
     }
   }
 

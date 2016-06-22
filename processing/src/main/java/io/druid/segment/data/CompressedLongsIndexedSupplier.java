@@ -35,7 +35,6 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
 {
   public static final byte LZF_VERSION = 0x1;
   public static final byte version = 0x2;
-  public static final int MAX_LONGS_IN_BUFFER = CompressedPools.BUFFER_SIZE / Longs.BYTES;
 
 
   private final int totalSize;
@@ -87,10 +86,18 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
     if (versionFromBuffer == LZF_VERSION || versionFromBuffer == version) {
       final int totalSize = bufferToUse.getInt();
       final int sizePer = bufferToUse.getInt();
-      final CompressionFactory.CompressionFormat compression = versionFromBuffer == LZF_VERSION ?
-                                                    CompressionFactory.CompressionFormat.LZF :
-                                                    CompressionFactory.CompressionFormat.forId(bufferToUse.get());
-      Supplier<IndexedLongs> supplier = compression.getLongsSupplier(totalSize, sizePer, bufferToUse, order);
+      CompressedObjectStrategy.CompressionStrategy compression = CompressedObjectStrategy.CompressionStrategy.LZF;
+      CompressionFactory.LongEncodingFormat format = CompressionFactory.DEFAULT_LONG_ENCODING;
+      if (versionFromBuffer == version) {
+        byte compressionId = bufferToUse.get();
+        if (compressionId >= (byte)0xFE) {
+          compression = CompressedObjectStrategy.CompressionStrategy.forId(compressionId);
+        } else {
+          compression = CompressedObjectStrategy.CompressionStrategy.forId((byte)(compressionId + 126));
+          format = CompressionFactory.LongEncodingFormat.forId(bufferToUse.get());
+        }
+      }
+      Supplier<IndexedLongs> supplier = CompressionFactory.getLongSupplier(totalSize, sizePer, bufferToUse, order, format, compression);
       return new CompressedLongsIndexedSupplier(
           totalSize,
           buffer,

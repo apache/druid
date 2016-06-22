@@ -41,6 +41,7 @@ import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.SimpleDictionaryEncodedColumn;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.CompressedObjectStrategy;
+import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.data.IncrementalIndexTest;
 import io.druid.segment.data.IndexedInts;
@@ -127,7 +128,8 @@ public class IndexMergerTest
       return new IndexSpec(
           bitmapSerdeFactory,
           compressionStrategy.name().toLowerCase(),
-          dimCompressionStrategy.name().toLowerCase()
+          dimCompressionStrategy.name().toLowerCase(),
+          CompressionFactory.LongEncodingFormat.LONGS.name().toLowerCase()
       );
     } else {
       return new IndexSpec();
@@ -603,7 +605,8 @@ public class IndexMergerTest
     IndexSpec newSpec = new IndexSpec(
         indexSpec.getBitmapSerdeFactory(),
         "lz4".equals(indexSpec.getDimensionCompression()) ? "lzf" : "lz4",
-        "lz4".equals(indexSpec.getMetricCompression()) ? "lzf" : "lz4"
+        "lz4".equals(indexSpec.getMetricCompression()) ? "lzf" : "lz4",
+        "longs"
     );
 
     AggregatorFactory[] mergedAggregators = new AggregatorFactory[]{new CountAggregatorFactory("count")};
@@ -739,7 +742,8 @@ public class IndexMergerTest
     IndexSpec newSpec = new IndexSpec(
         indexSpec.getBitmapSerdeFactory(),
         "lz4".equals(indexSpec.getDimensionCompression()) ? "lzf" : "lz4",
-        "lz4".equals(indexSpec.getMetricCompression()) ? "lzf" : "lz4"
+        "lz4".equals(indexSpec.getMetricCompression()) ? "lzf" : "lz4",
+        "longs"
     );
 
     QueryableIndex converted = closer.closeLater(

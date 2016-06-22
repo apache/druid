@@ -727,7 +727,8 @@ public class IndexMergerV9 extends IndexMerger
   private LongColumnSerializer setupTimeWriter(final IOPeon ioPeon) throws IOException
   {
     LongColumnSerializer timeWriter = LongColumnSerializer.create(
-        ioPeon, "little_end_time", CompressionFactory.DEFAULT_COMPRESSION_FORMAT
+        ioPeon, "little_end_time", CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY,
+        CompressionFactory.DEFAULT_LONG_ENCODING
     );
     // we will close this writer after we added all the timestamps
     timeWriter.open();
@@ -743,13 +744,14 @@ public class IndexMergerV9 extends IndexMerger
   ) throws IOException
   {
     ArrayList<GenericColumnSerializer> metWriters = Lists.newArrayListWithCapacity(mergedMetrics.size());
-    final CompressionFactory.CompressionFormat metCompression = indexSpec.getMetricCompressionStrategy();
+    final CompressedObjectStrategy.CompressionStrategy metCompression = indexSpec.getMetricCompressionStrategy();
+    final CompressionFactory.LongEncodingFormat metEncoding = indexSpec.getMetricLongEncodingFormat();
     for (String metric : mergedMetrics) {
       ValueType type = metricsValueTypes.get(metric);
       GenericColumnSerializer writer;
       switch (type) {
         case LONG:
-          writer = LongColumnSerializer.create(ioPeon, metric, metCompression);
+          writer = LongColumnSerializer.create(ioPeon, metric, metCompression, metEncoding);
           break;
         case FLOAT:
           writer = FloatColumnSerializer.create(ioPeon, metric,

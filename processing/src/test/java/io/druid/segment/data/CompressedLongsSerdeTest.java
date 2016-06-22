@@ -26,18 +26,21 @@ import java.util.concurrent.atomic.AtomicReference;
 @RunWith(Parameterized.class)
 public class CompressedLongsSerdeTest
 {
-  @Parameterized.Parameters(name="{0} {1}")
+  @Parameterized.Parameters(name="{0} {1} {2}")
   public static Iterable<Object[]> compressionStrategies()
   {
     List<Object[]> data = new ArrayList<>();
-    for (CompressionFactory.CompressionFormat format : CompressionFactory.CompressionFormat.values()) {
-      data.add(new Object[]{format, ByteOrder.BIG_ENDIAN});
-      data.add(new Object[]{format, ByteOrder.LITTLE_ENDIAN});
+    for (CompressionFactory.LongEncodingFormat format : CompressionFactory.LongEncodingFormat.values()) {
+      for (CompressedObjectStrategy.CompressionStrategy strategy : CompressedObjectStrategy.CompressionStrategy.values()) {
+        data.add(new Object[]{format, strategy, ByteOrder.BIG_ENDIAN});
+        data.add(new Object[]{format, strategy, ByteOrder.LITTLE_ENDIAN});
+      }
     }
     return data;
   }
 
-  protected final CompressionFactory.CompressionFormat compressionFormat;
+  protected final CompressionFactory.LongEncodingFormat encodingFormat;
+  protected final CompressedObjectStrategy.CompressionStrategy compressionStrategy;
   protected final ByteOrder order;
 
   private final long values0 [] = {};
@@ -50,9 +53,12 @@ public class CompressedLongsSerdeTest
   private final long values7 [] = {Long.MAX_VALUE, Long.MIN_VALUE, 12378, -12718243, -1236213, 12743153, 21364375452L,
                              65487435436632L, -43734526234564L};
 
-  public CompressedLongsSerdeTest(CompressionFactory.CompressionFormat compressionFormat, ByteOrder order)
+  public CompressedLongsSerdeTest(CompressionFactory.LongEncodingFormat encodingFormat,
+                                  CompressedObjectStrategy.CompressionStrategy compressionStrategy,
+                                  ByteOrder order)
   {
-    this.compressionFormat = compressionFormat;
+    this.encodingFormat = encodingFormat;
+    this.compressionStrategy = compressionStrategy;
     this.order = order;
   }
 
@@ -81,7 +87,8 @@ public class CompressedLongsSerdeTest
 
   public void testWithValues(long[] values) throws Exception
   {
-    LongSupplierSerializer serializer = compressionFormat.getLongSerializer(new IOPeonForTesting(), "test", order);
+    LongSupplierSerializer serializer = CompressionFactory.getLongSerializer(new IOPeonForTesting(), "test", order,
+                                                                             encodingFormat, compressionStrategy);
     serializer.open();
 
     for (long value : values) {

@@ -44,6 +44,8 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
   private static final Logger log = new Logger(CompressedObjectStrategy.class);
   public static final CompressionStrategy DEFAULT_COMPRESSION_STRATEGY = CompressionStrategy.LZ4;
 
+  // When adding compression strategy do not use id in the range [0x7C, 0xFD], since the id could be subtracted by 126
+  // to indicate whether an encoding format id is needed
   public static enum CompressionStrategy
   {
     LZF((byte) 0x0) {
@@ -74,6 +76,22 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
       }
     },
     UNCOMPRESSED((byte) 0xFF) {
+      @Override
+      public Decompressor getDecompressor()
+      {
+        return UncompressedDecompressor.defaultDecompressor;
+      }
+
+      @Override
+      public Compressor getCompressor()
+      {
+        return UncompressedCompressor.defaultCompressor;
+      }
+    },
+    /*
+    This value indicate no compression strategy should be used, and compression should not be block based
+     */
+    NONE((byte) 0xFE) {
       @Override
       public Decompressor getDecompressor()
       {

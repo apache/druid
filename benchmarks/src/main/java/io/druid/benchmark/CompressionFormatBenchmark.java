@@ -3,12 +3,11 @@ package io.druid.benchmark;
 import com.google.common.io.ByteSink;
 import com.google.common.io.Files;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
+import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.IndexedLongs;
 import io.druid.segment.data.LongSupplierSerializer;
 import io.druid.segment.data.TmpFileIOPeon;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.LineIterator;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -50,8 +49,11 @@ public class CompressionFormatBenchmark
   @Param({"reqInt", "bytesLong", "timestamp"})
   private static String file;
 
-  @Param({"lz4", "uncompressed", "uncompressed_new", "delta"})
+  @Param({"delta", "longs"})
   private static String format;
+
+  @Param({"lz4", "uncompressed", "none"})
+  private static String strategy;
 
   private File compFile;
   private ByteBuffer buffer;
@@ -81,14 +83,17 @@ public class CompressionFormatBenchmark
   {
     URL url = this.getClass().getClassLoader().getResource(file + ".gz");
     File inFile = new File(url.toURI());
-    compFile = new File(inFile.getParent(), file + "." + format);
-    CompressionFactory.CompressionFormat compressionFormat = CompressionFactory.CompressionFormat.valueOf(format.toUpperCase());
+    compFile = new File(inFile.getParent(), file + "." + format + "-" + strategy);
+    CompressionFactory.LongEncodingFormat encodingFormat = CompressionFactory.LongEncodingFormat.valueOf(format.toUpperCase());
+    CompressedObjectStrategy.CompressionStrategy compressionStrategy = CompressedObjectStrategy.CompressionStrategy.valueOf(strategy.toUpperCase());
     compFile.delete();
     TmpFileIOPeon iopeon = new TmpFileIOPeon(true);
-    LongSupplierSerializer writer = compressionFormat.getLongSerializer(
+    LongSupplierSerializer writer = CompressionFactory.getLongSerializer(
         iopeon,
         "long",
-        ByteOrder.nativeOrder()
+        ByteOrder.nativeOrder(),
+        encodingFormat,
+        compressionStrategy
     );
     GZIPInputStream gzip = new GZIPInputStream(new FileInputStream(inFile));
     BufferedReader br = new BufferedReader(new InputStreamReader(gzip));
