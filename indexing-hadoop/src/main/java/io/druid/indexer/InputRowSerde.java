@@ -28,6 +28,7 @@ import com.google.common.io.ByteArrayDataOutput;
 import com.google.common.io.ByteStreams;
 import com.metamx.common.IAE;
 import com.metamx.common.logger.Logger;
+import com.metamx.common.parsers.ParseException;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.query.aggregation.Aggregator;
@@ -50,7 +51,7 @@ public class InputRowSerde
 {
   private static final Logger log = new Logger(InputRowSerde.class);
 
-  public static final byte[] toBytes(final InputRow row, AggregatorFactory[] aggs)
+  public static final byte[] toBytes(final InputRow row, AggregatorFactory[] aggs, boolean reportParseExceptions)
   {
     try {
       ByteArrayDataOutput out = ByteStreams.newDataOutput();
@@ -91,7 +92,16 @@ public class InputRowSerde
                 true
             )
         );
-        agg.aggregate();
+        try {
+          agg.aggregate();
+        }
+        catch (ParseException e) {
+          // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
+          if (reportParseExceptions) {
+            throw new ParseException(e, "Encountered parse error for aggregator[%s]", agg.getName());
+          }
+          log.debug(e, "Encountered parse error, skipping aggregator[%s].", agg.getName());
+        }
 
         String t = aggFactory.getTypeName();
 

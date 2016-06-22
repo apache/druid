@@ -263,7 +263,8 @@ public class IndexGeneratorJob implements Jobby
     protected void innerMap(
         InputRow inputRow,
         Object value,
-        Context context
+        Context context,
+        boolean reportParseExceptions
     ) throws IOException, InterruptedException
     {
       // Group by bucket, sort by timestamp
@@ -287,9 +288,9 @@ public class IndexGeneratorJob implements Jobby
       // and they contain the columns as they show up in the segment after ingestion, not what you would see in raw
       // data
       byte[] serializedInputRow = inputRow instanceof SegmentInputRow ?
-                                  InputRowSerde.toBytes(inputRow, combiningAggs)
+                                  InputRowSerde.toBytes(inputRow, combiningAggs, reportParseExceptions)
                                                                       :
-                                  InputRowSerde.toBytes(inputRow, aggregators);
+                                  InputRowSerde.toBytes(inputRow, aggregators, reportParseExceptions);
 
       context.write(
           new SortableBytes(
@@ -369,9 +370,10 @@ public class IndexGeneratorJob implements Jobby
         context.progress();
         Row row = rows.next();
         InputRow inputRow = getInputRowFromRow(row, dimensions);
+        // reportParseExceptions is true as any unparseable data is already handled by the mapper.
         context.write(
             key,
-            new BytesWritable(InputRowSerde.toBytes(inputRow, combiningAggs))
+            new BytesWritable(InputRowSerde.toBytes(inputRow, combiningAggs, true))
         );
       }
       index.close();
