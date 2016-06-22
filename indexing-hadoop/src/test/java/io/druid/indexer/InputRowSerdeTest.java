@@ -106,7 +106,7 @@ public class InputRowSerdeTest
         new DoubleSumAggregatorFactory("m1out", "m1"),
         new LongSumAggregatorFactory("m2out", "m2"),
         new HyperUniquesAggregatorFactory("m3out", "m3"),
-        new LongSumAggregatorFactory("m3unparseable", "m3") // Unparseable from String to Long
+        new LongSumAggregatorFactory("unparseable", "m3") // Unparseable from String to Long
     };
     try {
       InputRowSerde.toBytes(in, aggregatorFactories, true);

@@ -370,10 +370,10 @@ public class IndexGeneratorJob implements Jobby
         context.progress();
         Row row = rows.next();
         InputRow inputRow = getInputRowFromRow(row, dimensions);
-        // reportParseExceptions is false as any unparseable data is already handled by the mapper.
+        // reportParseExceptions is true as any unparseable data is already handled by the mapper.
         context.write(
             key,
-            new BytesWritable(InputRowSerde.toBytes(inputRow, combiningAggs, false))
+            new BytesWritable(InputRowSerde.toBytes(inputRow, combiningAggs, true))
         );
       }
       index.close();

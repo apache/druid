@@ -159,8 +159,8 @@ public class IndexGeneratorCombinerTest
         )
     );
     List<BytesWritable> rows = Lists.newArrayList(
-        new BytesWritable(InputRowSerde.toBytes(row1, aggregators, false)),
-        new BytesWritable(InputRowSerde.toBytes(row2, aggregators, false))
+        new BytesWritable(InputRowSerde.toBytes(row1, aggregators, true)),
+        new BytesWritable(InputRowSerde.toBytes(row2, aggregators, true))
     );
 
     Reducer.Context context = EasyMock.createNiceMock(Reducer.Context.class);
