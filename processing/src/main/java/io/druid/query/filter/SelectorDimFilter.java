@@ -92,6 +92,12 @@ public class SelectorDimFilter implements DimFilter
         {
           return Objects.equals(valueOrNull, input);
         }
+
+        @Override
+        public String toString()
+        {
+          return value;
+        }
       };
       return new DimensionPredicateFilter(dimension, predicate, extractionFn);
     }

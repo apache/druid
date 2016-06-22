@@ -19,19 +19,25 @@
 
 package io.druid.segment.filter;
 
+import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import io.druid.query.filter.BitmapIndexSelector;
+import io.druid.query.filter.BooleanFilter;
 import io.druid.query.filter.Filter;
+import io.druid.query.filter.RowOffsetMatcherFactory;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  */
-public class AndFilter implements Filter
+public class AndFilter implements BooleanFilter
 {
+  private static final Joiner AND_JOINER = Joiner.on(" && ");
+
   private final List<Filter> filters;
 
   public AndFilter(
@@ -71,6 +77,69 @@ public class AndFilter implements Filter
     return makeMatcher(matchers);
   }
 
+  @Override
+  public ValueMatcher makeMatcher(
+      BitmapIndexSelector selector,
+      ValueMatcherFactory valueMatcherFactory,
+      RowOffsetMatcherFactory rowOffsetMatcherFactory
+  )
+  {
+    final List<ValueMatcher> matchers = new ArrayList<>();
+    final List<ImmutableBitmap> bitmaps = new ArrayList<>();
+
+    for (Filter filter : filters) {
+      if (filter.supportsBitmapIndex(selector)) {
+        bitmaps.add(filter.getBitmapIndex(selector));
+      } else {
+        ValueMatcher matcher = filter.makeMatcher(valueMatcherFactory);
+        matchers.add(matcher);
+      }
+    }
+
+    if (bitmaps.size() > 0) {
+      ImmutableBitmap combinedBitmap = selector.getBitmapFactory().intersection(bitmaps);
+      ValueMatcher offsetMatcher = rowOffsetMatcherFactory.makeRowOffsetMatcher(combinedBitmap);
+      matchers.add(0, offsetMatcher);
+    }
+
+    return new ValueMatcher()
+    {
+      @Override
+      public boolean matches()
+      {
+        for (ValueMatcher valueMatcher : matchers) {
+          if (!valueMatcher.matches()) {
+            return false;
+          }
+        }
+        return true;
+      }
+    };
+  }
+
+  @Override
+  public List<Filter> getFilters()
+  {
+    return filters;
+  }
+
+  @Override
+  public boolean supportsBitmapIndex(BitmapIndexSelector selector)
+  {
+    for (Filter filter : filters) {
+      if (!filter.supportsBitmapIndex(selector)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  @Override
+  public String toString()
+  {
+    return String.format("(%s)", AND_JOINER.join(filters));
+  }
+
   private ValueMatcher makeMatcher(final ValueMatcher[] baseMatchers)
   {
     if (baseMatchers.length == 1) {
@@ -91,4 +160,6 @@ public class AndFilter implements Filter
       }
     };
   }
+
+
 }

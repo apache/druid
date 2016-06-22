@@ -33,7 +33,6 @@ import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.ExtractionDimFilter;
 import io.druid.query.filter.InDimFilter;
-import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.lookup.LookupExtractor;

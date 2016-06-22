@@ -30,6 +30,7 @@ import io.druid.query.QueryRunnerHelper;
 import io.druid.query.Result;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.filter.Filter;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.LongColumnSelector;
@@ -82,10 +83,12 @@ public class SelectQueryEngine
     // should be rewritten with given interval
     final String segmentId = DataSegmentUtils.withInterval(dataSource, segment.getIdentifier(), intervals.get(0));
 
+    final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getDimensionsFilter()));
+
     return QueryRunnerHelper.makeCursorBasedQuery(
         adapter,
         query.getQuerySegmentSpec().getIntervals(),
-        Filters.toFilter(query.getDimensionsFilter()),
+        filter,
         query.isDescending(),
         query.getGranularity(),
         new Function<Cursor, Result<SelectResultValue>>()

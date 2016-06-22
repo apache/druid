@@ -19,36 +19,30 @@
 
 package io.druid.query.filter;
 
-import com.metamx.collections.bitmap.ImmutableBitmap;
+import java.util.List;
 
-/**
- */
-public interface Filter
+public interface BooleanFilter extends Filter
 {
-  /**
-   * Get a bitmap index, indicating rows that match this filter.
-   *
-   * @param selector Object used to retrieve bitmap indexes
-   * @return A bitmap indicating rows that match this filter.
-   */
-  public ImmutableBitmap getBitmapIndex(BitmapIndexSelector selector);
-
+  public List<Filter> getFilters();
 
   /**
    * Get a ValueMatcher that applies this filter to row values.
    *
-   * @param factory Object used to create ValueMatchers
-   * @return ValueMatcher that applies this filter to row values.
-   */
-  public ValueMatcher makeMatcher(ValueMatcherFactory factory);
-
-
-  /**
-   * Indicates whether this filter can return a bitmap index for filtering, based on
-   * the information provided by the input BitmapIndexSelector.
+   * Unlike makeMatcher(ValueMatcherFactory), this method allows the Filter to utilize bitmap indexes.
+   *
+   * An implementation should either:
+   * - return a ValueMatcher that checks row values, using the provided ValueMatcherFactory
+   * - or, if possible, get a bitmap index for this filter using the BitmapIndexSelector, and
+   *   return a ValueMatcher that checks the current row offset, created using the bitmap index.
    *
    * @param selector Object used to retrieve bitmap indexes
-   * @return true if this Filter can provide a bitmap index using the selector, false otherwise
+   * @param valueMatcherFactory Object used to create ValueMatchers
+   * @param rowOffsetMatcherFactory Object used to create RowOffsetMatchers
+   * @return ValueMatcher that applies this filter
    */
-  public boolean supportsBitmapIndex(BitmapIndexSelector selector);
+  public ValueMatcher makeMatcher(
+      BitmapIndexSelector selector,
+      ValueMatcherFactory valueMatcherFactory,
+      RowOffsetMatcherFactory rowOffsetMatcherFactory
+  );
 }

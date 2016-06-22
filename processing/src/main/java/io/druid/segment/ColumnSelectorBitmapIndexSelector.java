@@ -115,7 +115,56 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
   public BitmapIndex getBitmapIndex(String dimension)
   {
     final Column column = index.getColumn(dimension);
-    if (column != null && column.getCapabilities().hasBitmapIndexes()) {
+
+    if (column == null) {
+      // Create a BitmapIndex for null columns so that filters applied to null columns can use
+      // bitmap indexes. Filters check for the presence of a bitmap index, this is used to determine
+      // whether the filter is applied in the pre or post filtering stage.
+      return new BitmapIndex() {
+        @Override
+        public int getCardinality()
+        {
+          return 1;
+        }
+
+        @Override
+        public String getValue(int index)
+        {
+          return null;
+        }
+
+        @Override
+        public boolean hasNulls()
+        {
+          return true;
+        }
+
+        @Override
+        public BitmapFactory getBitmapFactory()
+        {
+          return bitmapFactory;
+        }
+
+        @Override
+        public int getIndex(String value)
+        {
+          // Return -2 for non-null values to match what the BitmapIndex implementation in BitmapIndexColumnPartSupplier
+          // would return for getIndex() when there is only a single index, for the null value.
+          // i.e., return an 'insertion point' of 1 for non-null values (see BitmapIndex interface)
+          return Strings.isNullOrEmpty(value) ? 0 : -2;
+        }
+
+        @Override
+        public ImmutableBitmap getBitmap(int idx)
+        {
+          if (idx == 0) {
+            return bitmapFactory.complement(bitmapFactory.makeEmptyImmutableBitmap(), getNumRows());
+          } else {
+            return bitmapFactory.makeEmptyImmutableBitmap();
+          }
+        }
+      };
+    } else if (column.getCapabilities().hasBitmapIndexes()) {
       return column.getBitmapIndex();
     } else {
       return null;
@@ -135,7 +184,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
     }
 
     if (!column.getCapabilities().hasBitmapIndexes()) {
-      return bitmapFactory.makeEmptyImmutableBitmap();
+      return null;
     }
 
     final BitmapIndex bitmapIndex = column.getBitmapIndex();
