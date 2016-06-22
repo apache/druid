@@ -36,6 +36,8 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
@@ -44,6 +46,7 @@ import java.util.concurrent.ForkJoinPool;
 
 public class CaffeineCacheTest
 {
+  private static final int RANDOM_SEED = 3478178;
   private static final byte[] HI = "hiiiiiiiiiiiiiiiiiii".getBytes();
   private static final byte[] HO = "hooooooooooooooooooo".getBytes();
 
@@ -169,7 +172,7 @@ public class CaffeineCacheTest
   }
 
   @Test
-  public void testSizeEviction() throws InterruptedException
+  public void testSizeEviction() throws Exception
   {
     final CaffeineCacheConfig config = new CaffeineCacheConfig()
     {
@@ -187,6 +190,7 @@ public class CaffeineCacheTest
     final Cache.NamedKey key1 = new Cache.NamedKey("the", s1);
     final Cache.NamedKey key2 = new Cache.NamedKey("the", s2);
     final CaffeineCache cache = CaffeineCache.create(config, Runnable::run);
+    forceRandomSeed(cache);
 
     Assert.assertNull(cache.get(key1));
     Assert.assertNull(cache.get(key2));
@@ -349,7 +353,7 @@ public class CaffeineCacheTest
     random.nextBytes(val2);
     final Cache.NamedKey key1 = new Cache.NamedKey("the", s1);
     final Cache.NamedKey key2 = new Cache.NamedKey("the", s2);
-    final Cache cache = CaffeineCache.create(config, Runnable::run);
+    final CaffeineCache cache = CaffeineCache.create(config, Runnable::run);
 
     CacheStats stats = cache.getStats();
     Assert.assertEquals(0L, stats.getNumEntries());
@@ -463,6 +467,18 @@ public class CaffeineCacheTest
   public void put(Cache cache, Cache.NamedKey key, Integer value)
   {
     cache.put(key, Ints.toByteArray(value));
+  }
+
+  // See 
+  public static void forceRandomSeed(CaffeineCache cache) throws Exception
+  {
+    final Map map = cache.getCache().asMap();
+    final Method getFrequencySketch = map.getClass().getDeclaredMethod("frequencySketch");
+    getFrequencySketch.setAccessible(true);
+    final Object frequencySketch = getFrequencySketch.invoke(map);
+    final Field seedField = frequencySketch.getClass().getDeclaredField("randomSeed");
+    seedField.setAccessible(true);
+    seedField.setInt(frequencySketch, RANDOM_SEED);
   }
 }
 
