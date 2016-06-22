@@ -45,6 +45,10 @@ public class InputRowSerdeTest
   private List<String> dims;
   private Map<String, Object> event;
 
+  {
+    new AggregatorsModule(); //registers ComplexMetric serde for hyperUnique
+  }
+
   public InputRowSerdeTest()
   {
     this.timestamp = System.currentTimeMillis();
@@ -61,7 +65,7 @@ public class InputRowSerdeTest
   @Test
   public void testSerde()
   {
-    new AggregatorsModule(); //registers ComplexMetric serde for hyperUnique
+
 
     InputRow in = new MapBasedInputRow(
         timestamp,
@@ -69,7 +73,7 @@ public class InputRowSerdeTest
         event
     );
 
-    AggregatorFactory[] aggregatorFactories = new AggregatorFactory[] {
+    AggregatorFactory[] aggregatorFactories = new AggregatorFactory[]{
         new DoubleSumAggregatorFactory("agg_non_existing", "agg_non_existing_in"),
         new DoubleSumAggregatorFactory("m1out", "m1"),
         new LongSumAggregatorFactory("m2out", "m2"),
@@ -89,30 +93,28 @@ public class InputRowSerdeTest
     Assert.assertEquals(0.0f, out.getFloatMetric("agg_non_existing"), 0.00001);
     Assert.assertEquals(5.0f, out.getFloatMetric("m1out"), 0.00001);
     Assert.assertEquals(100L, out.getLongMetric("m2out"));
-    Assert.assertEquals(1, ((HyperLogLogCollector)out.getRaw("m3out")).estimateCardinality(), 0.001);
+    Assert.assertEquals(1, ((HyperLogLogCollector) out.getRaw("m3out")).estimateCardinality(), 0.001);
     Assert.assertEquals(0L, out.getLongMetric("unparseable"));
 
   }
 
-  @Test
-  public void testThrowParseExceptions(){
+  @Test(expected = ParseException.class)
+  public void testThrowParseExceptions()
+  {
     InputRow in = new MapBasedInputRow(
         timestamp,
         dims,
         event
     );
-    AggregatorFactory[] aggregatorFactories = new AggregatorFactory[] {
+    AggregatorFactory[] aggregatorFactories = new AggregatorFactory[]{
         new DoubleSumAggregatorFactory("agg_non_existing", "agg_non_existing_in"),
         new DoubleSumAggregatorFactory("m1out", "m1"),
         new LongSumAggregatorFactory("m2out", "m2"),
         new HyperUniquesAggregatorFactory("m3out", "m3"),
         new LongSumAggregatorFactory("unparseable", "m3") // Unparseable from String to Long
     };
-    try {
-      InputRowSerde.toBytes(in, aggregatorFactories, true);
-      Assert.fail("Should have thrown parseException");
-    } catch (ParseException e){
-      // expected
-    }
+
+    InputRowSerde.toBytes(in, aggregatorFactories, true);
+
   }
 }
