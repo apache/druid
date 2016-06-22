@@ -22,6 +22,7 @@ import com.google.common.base.Function;
 import com.google.common.collect.Lists;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericRecord;
+import org.apache.avro.util.Utf8;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -103,6 +104,9 @@ public class GenericRecordAsMap implements Map<String, Object>
     }
     if (field instanceof ByteBuffer) {
       return Arrays.toString(((ByteBuffer) field).array());
+    }
+    if (field instanceof Utf8) {
+      return field.toString();
     }
     return field;
   }
