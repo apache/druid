@@ -33,7 +33,6 @@ import io.druid.js.JavaScriptConfig;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.filter.DimFilter;
-import io.druid.query.filter.RegexDimFilter;
 import io.druid.query.filter.SearchQueryDimFilter;
 import io.druid.query.search.search.ContainsSearchQuerySpec;
 import io.druid.query.search.search.SearchQuerySpec;

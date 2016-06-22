@@ -40,6 +40,21 @@ public class BitmapOffset implements Offset
 
   private volatile int val;
 
+  public static IntIterator getReverseBitmapOffsetIterator(ImmutableBitmap bitmapIndex)
+  {
+    ImmutableBitmap roaringBitmap = bitmapIndex;
+    if (!(bitmapIndex instanceof WrappedImmutableRoaringBitmap)) {
+      final BitmapFactory factory = RoaringBitmapSerdeFactory.bitmapFactory;
+      final MutableBitmap bitmap = factory.makeEmptyMutableBitmap();
+      final IntIterator iterator = bitmapIndex.iterator();
+      while (iterator.hasNext()) {
+        bitmap.add(iterator.next());
+      }
+      roaringBitmap = factory.makeImmutableBitmap(bitmap);
+    }
+    return ((WrappedImmutableRoaringBitmap) roaringBitmap).getBitmap().getReverseIntIterator();
+  }
+
   public BitmapOffset(BitmapFactory bitmapFactory, ImmutableBitmap bitmapIndex, boolean descending)
   {
     this.bitmapFactory = bitmapFactory;
@@ -53,18 +68,9 @@ public class BitmapOffset implements Offset
   {
     if (!descending) {
       return bitmapIndex.iterator();
+    } else {
+      return getReverseBitmapOffsetIterator(bitmapIndex);
     }
-    ImmutableBitmap roaringBitmap = bitmapIndex;
-    if (!(bitmapIndex instanceof WrappedImmutableRoaringBitmap)) {
-      final BitmapFactory factory = RoaringBitmapSerdeFactory.bitmapFactory;
-      final MutableBitmap bitmap = factory.makeEmptyMutableBitmap();
-      final IntIterator iterator = bitmapIndex.iterator();
-      while (iterator.hasNext()) {
-        bitmap.add(iterator.next());
-      }
-      roaringBitmap = factory.makeImmutableBitmap(bitmap);
-    }
-    return ((WrappedImmutableRoaringBitmap) roaringBitmap).getBitmap().getReverseIntIterator();
   }
 
   private BitmapOffset(BitmapOffset otherOffset)

@@ -17,42 +17,13 @@
  * under the License.
  */
 
-package io.druid.segment.filter;
+package io.druid.query.filter;
 
-import com.google.common.base.Predicate;
-import io.druid.query.extraction.ExtractionFn;
-
-import java.util.regex.Pattern;
+import com.metamx.collections.bitmap.ImmutableBitmap;
 
 /**
  */
-public class RegexFilter extends DimensionPredicateFilter
+public interface RowOffsetMatcherFactory
 {
-  public RegexFilter(
-      final String dimension,
-      final Pattern pattern,
-      final ExtractionFn extractionFn
-  )
-  {
-    super(
-        dimension,
-        new Predicate<String>()
-        {
-          @Override
-          public boolean apply(String input)
-          {
-            return (input != null) && pattern.matcher(input).find();
-          }
-
-          @Override
-          public String toString()
-          {
-            return "RegexFilter{" +
-                   "pattern='" + pattern + '\'' +
-                   '}';
-          }
-        },
-        extractionFn
-    );
-  }
+  public ValueMatcher makeRowOffsetMatcher(ImmutableBitmap bitmap);
 }
