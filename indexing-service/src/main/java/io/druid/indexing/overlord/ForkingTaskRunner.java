@@ -431,7 +431,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
 
                             // This will block for a while. So we append the thread information with more details
                             final String priorThreadName = Thread.currentThread().getName();
-                            Thread.currentThread().setName(priorThreadName + String.format("-[%s]", task.getId()));
+                            Thread.currentThread().setName(String.format("%s-[%s]", priorThreadName, task.getId()));
 
                             try (final OutputStream toLogfile = logSink.openStream()) {
                               ByteStreams.copy(processHolder.process.getInputStream(), toLogfile);
