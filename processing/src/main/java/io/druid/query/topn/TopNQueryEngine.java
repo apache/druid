@@ -64,7 +64,7 @@ public class TopNQueryEngine
     }
 
     final List<Interval> queryIntervals = query.getQuerySegmentSpec().getIntervals();
-    final Filter filter = Filters.toFilter(query.getDimensionsFilter());
+    final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getDimensionsFilter()));
     final QueryGranularity granularity = query.getGranularity();
     final Function<Cursor, Result<TopNResultValue>> mapFn = getMapFn(query, adapter);
 

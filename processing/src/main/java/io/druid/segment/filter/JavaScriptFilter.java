@@ -24,8 +24,10 @@ import com.metamx.collections.bitmap.ImmutableBitmap;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.JavaScriptDimFilter;
+import io.druid.query.filter.RowOffsetMatcherFactory;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
+import io.druid.segment.column.ColumnCapabilities;
 import org.mozilla.javascript.Context;
 
 public class JavaScriptFilter implements Filter
@@ -68,5 +70,11 @@ public class JavaScriptFilter implements Filter
   {
     // suboptimal, since we need create one context per call to predicate.apply()
     return factory.makeValueMatcher(dimension, predicate);
+  }
+
+  @Override
+  public boolean supportsBitmapIndex(BitmapIndexSelector selector)
+  {
+    return selector.getBitmapIndex(dimension) != null;
   }
 }
