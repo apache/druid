@@ -2678,7 +2678,11 @@ public class CachingClusteredClientTest
       @JsonProperty
       public ShardSpec getShardSpec()
       {
-        return baseSegment.getShardSpec();
+        try {
+          return baseSegment.getShardSpec();
+        } catch (IllegalStateException e) {
+          return NoneShardSpec.instance();
+        }
       }
 
       @Override
