@@ -21,11 +21,21 @@ package io.druid.data.output;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
-import com.metamx.common.logger.Logger;
+import io.druid.java.util.common.Pair;
+import io.druid.java.util.common.guava.Accumulator;
+import io.druid.java.util.common.logger.Logger;
+import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
 
+import java.io.Closeable;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.Map;
 
 /**
@@ -34,11 +44,133 @@ public class Formatters
 {
   private static final Logger log = new Logger(Formatter.class);
 
-  public static Formatter getFormatter(Map<String, String> context, ObjectMapper jsonMapper)
+  public static Pair<Closeable, Accumulator> toExporter(
+      Map<String, String> context,
+      OutputStream output,
+      ObjectMapper jsonMapper
+  )
+  {
+    if ("excel".equals(context.get("format"))) {
+      return toExcelExporter(context, output);
+    } else {
+      return toSimpleExporter(output, context, jsonMapper);
+    }
+  }
+
+  private static Pair<Closeable, Accumulator> toExcelExporter(Map<String, String> context, final OutputStream output)
+  {
+    final String[] dimensions = Formatters.toDimensionOrder(context.get("columns"));
+    final HSSFWorkbook wb = new HSSFWorkbook();
+    final Sheet sheet = wb.createSheet();
+
+    Closeable resource = new Closeable()
+    {
+      @Override
+      public void close() throws IOException
+      {
+        wb.write(output);
+      }
+    };
+    if (dimensions != null) {
+      Row r = sheet.createRow(0);
+      for (int i = 0; i < dimensions.length; i++) {
+        Cell c = r.createCell(i);
+        c.setCellValue(dimensions[i]);
+      }
+      return Pair.<Closeable, Accumulator>of(
+          resource, new Accumulator<Object, Map<String, Object>>()
+          {
+            private int rowNum = 1;
+
+            @Override
+            public Object accumulate(Object accumulated, Map<String, Object> in)
+            {
+              Row r = sheet.createRow(rowNum++);
+              for (int i = 0; i < dimensions.length; i++) {
+                Cell c = r.createCell(i);
+                Object o = in.get(dimensions[i]);
+                if (o instanceof Number) {
+                  c.setCellValue(((Number) o).doubleValue());
+                } else if (o instanceof String) {
+                  c.setCellValue((String) o);
+                } else if (o instanceof Date) {
+                  c.setCellValue((Date) o);
+                } else {
+                  c.setCellValue(String.valueOf(o));
+                }
+              }
+              return null;
+            }
+          }
+      );
+    }
+    return Pair.<Closeable, Accumulator>of(
+        resource, new Accumulator<Object, Map<String, Object>>()
+        {
+          private int rowNum = 0;
+
+          @Override
+          public Object accumulate(Object accumulated, Map<String, Object> in)
+          {
+            Row r = sheet.createRow(rowNum++);
+            int i = 0;
+            for (Object o : in.values()) {
+              Cell c = r.createCell(i++);
+              if (o instanceof Number) {
+                c.setCellValue(((Number) o).doubleValue());
+              } else if (o instanceof String) {
+                c.setCellValue((String) o);
+              } else if (o instanceof Date) {
+                c.setCellValue((Date) o);
+              } else {
+                c.setCellValue(String.valueOf(o));
+              }
+            }
+            return null;
+          }
+        }
+    );
+  }
+
+  private static Pair<Closeable, Accumulator> toSimpleExporter(
+      final OutputStream output,
+      Map<String, String> context,
+      ObjectMapper jsonMapper
+  )
+  {
+    Closeable resource = new Closeable()
+    {
+      @Override
+      public void close() throws IOException
+      {
+      }
+    };
+    final byte[] newLine = System.lineSeparator().getBytes();
+    final Formatter formatter = getFormatter(context, jsonMapper);
+    return Pair.<Closeable, Accumulator>of(
+        resource, new Accumulator<Object, Map<String, Object>>()
+        {
+          @Override
+          public Object accumulate(Object accumulated, Map<String, Object> in)
+          {
+            try {
+              output.write(formatter.format(in));
+              output.write(newLine);
+            }
+            catch (Exception e) {
+              throw Throwables.propagate(e);
+            }
+            return null;
+          }
+        }
+    );
+  }
+
+  private static Formatter getFormatter(Map<String, String> context, ObjectMapper jsonMapper)
   {
     String formatString = context.get("format");
     if (isNullOrEmpty(formatString) || formatString.equalsIgnoreCase("json")) {
-      return new JsonFormatter(jsonMapper);
+      return new Formatter.JsonFormatter(jsonMapper);
     }
     String separator;
     if (formatString.equalsIgnoreCase("csv")) {
@@ -47,11 +179,16 @@ public class Formatters
       separator = "\t";
     } else {
       log.warn("Invalid format " + formatString + ".. using json formatter instead");
-      return new JsonFormatter(jsonMapper);
+      return new Formatter.JsonFormatter(jsonMapper);
     }
     String nullValue = context.get("nullValue");
     String columns = context.get("columns");
 
+    return new Formatter.XSVFormatter(separator, nullValue, toDimensionOrder(columns));
+  }
+
+  private static String[] toDimensionOrder(String columns)
+  {
     String[] dimensions = null;
     if (!isNullOrEmpty(columns)) {
       dimensions = Iterables.toArray(
@@ -68,70 +205,11 @@ public class Formatters
           String.class
       );
     }
-
-    return new XSVFormatter(separator, nullValue, dimensions);
+    return dimensions;
   }
 
   private static boolean isNullOrEmpty(String string)
   {
     return string == null || string.isEmpty();
-  }
-
-  static class XSVFormatter implements Formatter
-  {
-    private final String separator;
-    private final String nullValue;
-    private final String[] dimensions;
-
-    public XSVFormatter(String separator)
-    {
-      this(separator, null, null);
-    }
-
-    public XSVFormatter(String separator, String nullValue, String[] dimensions)
-    {
-      this.separator = separator == null ? "," : separator;
-      this.nullValue = nullValue == null ? "NULL" : nullValue;
-      this.dimensions = dimensions;
-    }
-
-    @Override
-    public byte[] format(Map<String, Object> datum) throws IOException
-    {
-      StringBuilder builder = new StringBuilder();
-      if (dimensions == null) {
-        for (Object value : datum.values()) {
-          if (builder.length() > 0) {
-            builder.append(separator);
-          }
-          builder.append(value == null ? nullValue : String.valueOf(value));
-        }
-      } else {
-        for (String dimension : dimensions) {
-          Object value = datum.get(dimension);
-          if (builder.length() > 0) {
-            builder.append(separator);
-          }
-          builder.append(value == null ? nullValue : String.valueOf(value));
-        }
-      }
-      return builder.toString().getBytes();
-    }
-  }
-
-  static class JsonFormatter implements Formatter
-  {
-    private ObjectMapper jsonMapper;
-
-    public JsonFormatter(ObjectMapper jsonMapper)
-    {
-      this.jsonMapper = jsonMapper;
-    }
-
-    @Override
-    public byte[] format(Map<String, Object> datum) throws IOException
-    {
-      return jsonMapper.writeValueAsBytes(datum);
-    }
   }
 }

@@ -145,7 +145,7 @@
             <artifactId>commons-io</artifactId>
             <scope>provided</scope>
         </dependency>
-      
+
         <!-- Tests -->
         <dependency>
           <groupId>junit</groupId>
