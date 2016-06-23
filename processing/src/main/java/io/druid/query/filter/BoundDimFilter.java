@@ -142,18 +142,18 @@ public class BoundDimFilter implements DimFilter
         + lowerBytes.length
         + extractionFnBytes.length
     );
-    boundCacheBuffer.put(DimFilterCacheHelper.BOUND_CACHE_ID)
+    boundCacheBuffer.put(DimFilterUtils.BOUND_CACHE_ID)
                     .put(boundType)
                     .put(upperStrictByte)
                     .put(lowerStrictByte)
                     .put(AlphaNumericByte)
-                    .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                    .put(DimFilterUtils.STRING_SEPARATOR)
                     .put(dimensionBytes)
-                    .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                    .put(DimFilterUtils.STRING_SEPARATOR)
                     .put(upperBytes)
-                    .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                    .put(DimFilterUtils.STRING_SEPARATOR)
                     .put(lowerBytes)
-                    .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                    .put(DimFilterUtils.STRING_SEPARATOR)
                     .put(extractionFnBytes);
     return boundCacheBuffer.array();
   }

@@ -83,11 +83,11 @@ public class ExtractionDimFilter implements DimFilter
     byte[] valueBytes = value == null ? new byte[0] : StringUtils.toUtf8(value);
     byte[] extractionFnBytes = extractionFn.getCacheKey();
     return ByteBuffer.allocate(3 + dimensionBytes.length + valueBytes.length + extractionFnBytes.length)
-                     .put(DimFilterCacheHelper.EXTRACTION_CACHE_ID)
+                     .put(DimFilterUtils.EXTRACTION_CACHE_ID)
                      .put(dimensionBytes)
-                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                     .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(valueBytes)
-                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                     .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(extractionFnBytes)
                      .array();
   }

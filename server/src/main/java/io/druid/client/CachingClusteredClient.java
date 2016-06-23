@@ -30,7 +30,6 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FutureCallback;
@@ -63,13 +62,14 @@ import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.Result;
 import io.druid.query.SegmentDescriptor;
 import io.druid.query.aggregation.MetricManipulatorFns;
-import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.DimFilterUtils;
 import io.druid.query.spec.MultipleSpecificSegmentSpec;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.partition.PartitionChunk;
+import io.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
 import java.io.IOException;
@@ -222,38 +222,29 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     // Let tool chest filter out unneeded segments
     final List<TimelineObjectHolder<String, ServerSelector>> filteredServersLookup =
         toolChest.filterSegments(query, serversLookup);
-
-    // Absent Optional indicate a null rangeset which represents range cannot be determined
-    final Map<String, Optional<RangeSet<String>>> dimensionRangeMap = Maps.newHashMap();
-    final DimFilter filter = query.getFilter();
+    Map<String, Optional<RangeSet<String>>> dimensionRangeMap = Maps.newHashMap();
 
     // Filter unneeded chunks based on partition dimension
     for (TimelineObjectHolder<String, ServerSelector> holder : filteredServersLookup) {
-      for (PartitionChunk<ServerSelector> chunk : holder.getObject()) {
+      final Set<PartitionChunk<ServerSelector>> filteredChunks = DimFilterUtils.filterShards(
+          query.getFilter(),
+          holder.getObject(),
+          new Function<PartitionChunk<ServerSelector>, ShardSpec>()
+          {
+            @Override
+            public ShardSpec apply(PartitionChunk<ServerSelector> input)
+            {
+              return input.getObject().getSegment().getShardSpec();
+            }
+          },
+          dimensionRangeMap
+      );
+      for (PartitionChunk<ServerSelector> chunk : filteredChunks) {
         ServerSelector selector = chunk.getObject();
-        boolean include = true;
-
-        if (filter != null) {
-          Map<String, Range<String>> domain = selector.getSegment().getShardSpec().getDomain();
-          for (Map.Entry<String, Range<String>> entry : domain.entrySet()) {
-            Optional<RangeSet<String>> optFilterRangeSet = dimensionRangeMap.get(entry.getKey());
-            if (optFilterRangeSet == null) {
-              RangeSet<String> filterRangeSet = filter.getDimensionRangeSet(entry.getKey());
-              optFilterRangeSet = filterRangeSet == null ? Optional.<RangeSet<String>>absent() : Optional.of(filterRangeSet);
-              dimensionRangeMap.put(entry.getKey(), optFilterRangeSet);
-            }
-            if (optFilterRangeSet.isPresent() && optFilterRangeSet.get().subRangeSet(entry.getValue()).isEmpty()) {
-              include = false;
-            }
-          }
-        }
-
-        if (include) {
-          final SegmentDescriptor descriptor = new SegmentDescriptor(
-              holder.getInterval(), holder.getVersion(), chunk.getChunkNumber()
-          );
-          segments.add(Pair.of(selector, descriptor));
-        }
+        final SegmentDescriptor descriptor = new SegmentDescriptor(
+            holder.getInterval(), holder.getVersion(), chunk.getChunkNumber()
+        );
+        segments.add(Pair.of(selector, descriptor));
       }
     }
 

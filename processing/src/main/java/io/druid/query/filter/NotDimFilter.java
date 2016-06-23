@@ -25,7 +25,6 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.RangeSet;
-import com.sun.org.apache.xpath.internal.operations.And;
 import io.druid.query.Druids;
 import io.druid.segment.filter.NotFilter;
 
@@ -36,12 +35,12 @@ import java.util.List;
  */
 public class NotDimFilter implements DimFilter
 {
-  final private DimFilter field;
-
   private static final Function<DimFilter, DimFilter> NEGATE =
       new Function<DimFilter, DimFilter>() {
         public DimFilter apply(DimFilter filter) { return Druids.newNotDimFilterBuilder().field(filter).build(); }
       };
+
+  final private DimFilter field;
 
   @JsonCreator
   public NotDimFilter(
@@ -63,7 +62,7 @@ public class NotDimFilter implements DimFilter
   {
     byte[] subKey = field.getCacheKey();
 
-    return ByteBuffer.allocate(1 + subKey.length).put(DimFilterCacheHelper.NOT_CACHE_ID).put(subKey).array();
+    return ByteBuffer.allocate(1 + subKey.length).put(DimFilterUtils.NOT_CACHE_ID).put(subKey).array();
   }
 
   @Override

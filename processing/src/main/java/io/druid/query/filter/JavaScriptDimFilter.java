@@ -93,11 +93,11 @@ public class JavaScriptDimFilter implements DimFilter
     byte[] extractionFnBytes = extractionFn == null ? new byte[0] : extractionFn.getCacheKey();
 
     return ByteBuffer.allocate(3 + dimensionBytes.length + functionBytes.length + extractionFnBytes.length)
-                     .put(DimFilterCacheHelper.JAVASCRIPT_CACHE_ID)
+                     .put(DimFilterUtils.JAVASCRIPT_CACHE_ID)
                      .put(dimensionBytes)
-                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                     .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(functionBytes)
-                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                     .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(extractionFnBytes)
                      .array();
   }

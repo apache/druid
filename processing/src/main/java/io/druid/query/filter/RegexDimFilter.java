@@ -81,11 +81,11 @@ public class RegexDimFilter implements DimFilter
     byte[] extractionFnBytes = extractionFn == null ? new byte[0] : extractionFn.getCacheKey();
 
     return ByteBuffer.allocate(3 + dimensionBytes.length + patternBytes.length + extractionFnBytes.length)
-                     .put(DimFilterCacheHelper.REGEX_CACHE_ID)
+                     .put(DimFilterUtils.REGEX_CACHE_ID)
                      .put(dimensionBytes)
-                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                     .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(patternBytes)
-                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                     .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(extractionFnBytes)
                      .array();
   }

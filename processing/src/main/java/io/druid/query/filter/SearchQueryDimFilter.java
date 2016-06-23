@@ -77,11 +77,11 @@ public class SearchQueryDimFilter implements DimFilter
     byte[] extractionFnBytes = extractionFn == null ? new byte[0] : extractionFn.getCacheKey();
 
     return ByteBuffer.allocate(3 + dimensionBytes.length + queryBytes.length + extractionFnBytes.length)
-                     .put(DimFilterCacheHelper.SEARCH_QUERY_TYPE_ID)
+                     .put(DimFilterUtils.SEARCH_QUERY_TYPE_ID)
                      .put(dimensionBytes)
-                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                     .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(queryBytes)
-                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                     .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(extractionFnBytes)
                      .array();
   }

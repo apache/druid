@@ -109,11 +109,11 @@ public class InDimFilter implements DimFilter
                                                     + dimensionBytes.length
                                                     + valuesBytesSize
                                                     + extractionFnBytes.length)
-                                          .put(DimFilterCacheHelper.IN_CACHE_ID)
+                                          .put(DimFilterUtils.IN_CACHE_ID)
                                           .put(dimensionBytes)
-                                          .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                                          .put(DimFilterUtils.STRING_SEPARATOR)
                                           .put(extractionFnBytes)
-                                          .put(DimFilterCacheHelper.STRING_SEPARATOR);
+                                          .put(DimFilterUtils.STRING_SEPARATOR);
     for (byte[] bytes : valuesBytes) {
       filterCacheKey.put(bytes)
                     .put((byte) 0xFF);

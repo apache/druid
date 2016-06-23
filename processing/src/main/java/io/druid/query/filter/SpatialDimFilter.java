@@ -55,9 +55,9 @@ public class SpatialDimFilter implements DimFilter
     byte[] boundBytes = bound.getCacheKey();
 
     return ByteBuffer.allocate(2 + dimBytes.length + boundBytes.length)
-                     .put(DimFilterCacheHelper.SPATIAL_CACHE_ID)
+                     .put(DimFilterUtils.SPATIAL_CACHE_ID)
                      .put(dimBytes)
-                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                     .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(boundBytes)
                      .array();
   }

@@ -58,7 +58,7 @@ public class AndDimFilter implements DimFilter
   @Override
   public byte[] getCacheKey()
   {
-    return DimFilterCacheHelper.computeCacheKey(DimFilterCacheHelper.AND_CACHE_ID, fields);
+    return DimFilterUtils.computeCacheKey(DimFilterUtils.AND_CACHE_ID, fields);
   }
 
   @Override

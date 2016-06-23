@@ -58,7 +58,7 @@ public class OrDimFilter implements DimFilter
   @Override
   public byte[] getCacheKey()
   {
-    return DimFilterCacheHelper.computeCacheKey(DimFilterCacheHelper.OR_CACHE_ID, fields);
+    return DimFilterUtils.computeCacheKey(DimFilterUtils.OR_CACHE_ID, fields);
   }
 
   @Override
