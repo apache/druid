@@ -774,4 +774,26 @@ public class JobHelper
       }
     };
   }
+
+  public static boolean deleteWithRetry(final FileSystem fs, final Path path, final boolean recursive)
+  {
+    try {
+      return RetryUtils.retry(
+          new Callable<Boolean>()
+          {
+            @Override
+            public Boolean call() throws Exception
+            {
+              return fs.delete(path, recursive);
+            }
+          },
+          shouldRetryPredicate(),
+          NUM_RETRIES
+      );
+    }
+    catch (Exception e) {
+      log.error(e, "Failed to cleanup path[%s]", path);
+      throw Throwables.propagate(e);
+    }
+  }
 }

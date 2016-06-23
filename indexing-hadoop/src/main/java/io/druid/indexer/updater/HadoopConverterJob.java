@@ -147,8 +147,26 @@ public class HadoopConverterJob
   {
     final Path jobDir = getJobPath(job.getJobID(), job.getWorkingDirectory());
     final FileSystem fs = jobDir.getFileSystem(job.getConfiguration());
-    fs.delete(jobDir, true);
-    fs.delete(getJobClassPathDir(job.getJobName(), job.getWorkingDirectory()), true);
+    RuntimeException e = null;
+    try {
+      JobHelper.deleteWithRetry(fs, jobDir, true);
+    }
+    catch (RuntimeException ex) {
+      e = ex;
+    }
+    try {
+      JobHelper.deleteWithRetry(fs, getJobClassPathDir(job.getJobName(), job.getWorkingDirectory()), true);
+    }
+    catch (RuntimeException ex) {
+      if (e == null) {
+        e = ex;
+      } else {
+        e.addSuppressed(ex);
+      }
+    }
+    if (e != null) {
+      throw e;
+    }
   }
 
 
