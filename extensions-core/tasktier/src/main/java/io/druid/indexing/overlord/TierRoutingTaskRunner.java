@@ -24,8 +24,6 @@ import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteSource;
 import com.google.common.util.concurrent.ListenableFuture;
-import com.google.common.util.concurrent.ListeningScheduledExecutorService;
-import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.metamx.common.IAE;
 import com.metamx.common.Pair;
@@ -56,7 +54,6 @@ public class TierRoutingTaskRunner implements TaskRunner, TaskLogStreamer
 {
   private static final Logger LOG = new Logger(TierRoutingTaskRunner.class);
   private final ConcurrentMap<String, TaskRunner> runnerMap = new ConcurrentHashMap<>();
-  private final ListeningScheduledExecutorService scheduledExecutorService;
   final TierRoutingManagementStrategy managementStrategy;
 
   @Inject
@@ -65,15 +62,10 @@ public class TierRoutingTaskRunner implements TaskRunner, TaskLogStreamer
       ScheduledExecutorFactory managementExecutorServiceFactory
   )
   {
-    scheduledExecutorService = MoreExecutors.listeningDecorator(managementExecutorServiceFactory.create(
-        1,
-        "TierRoutingManagement--%d"
-    ));
-    managementStrategy = new TierRoutingManagementStrategy(runnerMap, configSupplier, scheduledExecutorService);
+    managementStrategy = new TierRoutingManagementStrategy(configSupplier, managementExecutorServiceFactory);
   }
 
-  // For Unit Tests
-  protected ConcurrentMap<String, TaskRunner> getRunnerMap()
+  public ConcurrentMap<String, TaskRunner> getRunnerMap()
   {
     return runnerMap;
   }
@@ -175,7 +167,7 @@ public class TierRoutingTaskRunner implements TaskRunner, TaskLogStreamer
   @LifecycleStart
   public void start()
   {
-    managementStrategy.startManagement(null);
+    managementStrategy.startManagement(this);
   }
 
   @Override
@@ -183,7 +175,6 @@ public class TierRoutingTaskRunner implements TaskRunner, TaskLogStreamer
   public void stop()
   {
     managementStrategy.stopManagement();
-    scheduledExecutorService.shutdown();
   }
 
   @Override

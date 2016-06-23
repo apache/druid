@@ -27,9 +27,11 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
+import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import io.druid.concurrent.Execs;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.overlord.TaskRunner;
+import io.druid.indexing.overlord.TierRoutingTaskRunner;
 import io.druid.indexing.overlord.routing.TierRouteConfig;
 import io.druid.indexing.overlord.routing.TierTaskRunnerFactory;
 import org.easymock.EasyMock;
@@ -39,18 +41,28 @@ import org.junit.Test;
 
 import javax.validation.constraints.NotNull;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 
 public class TierRoutingManagementStrategyTest
 {
   private static final String TIER = "test_tier";
-  private final ScheduledExecutorService scheduledExecutorService = Execs.scheduledSingleThreaded("routing-test-%s");
-  private final TaskRunner runner = EasyMock.createStrictMock(TaskRunner.class);
-  private final Object memoryBarrier = new Object();
-  private final ConcurrentHashMap<String, TaskRunner> taskRunnerMap = new ConcurrentHashMap<>();
+  private static final ScheduledExecutorFactory scheduledExecutorFactory = new ScheduledExecutorFactory()
+  {
+    @Override
+    public ScheduledExecutorService create(int corePoolSize, String nameFormat)
+    {
+      return Executors.newScheduledThreadPool(corePoolSize, Execs.makeThreadFactory(nameFormat));
+    }
+  };
+  private final TierRoutingTaskRunner runner = new TierRoutingTaskRunner(
+      Suppliers.ofInstance(new TierRouteConfig()),
+      scheduledExecutorFactory
+  );
+
+  private final TaskRunner foreignRunner = EasyMock.createStrictMock(TaskRunner.class);
   private final TierRouteConfig tierRouteConfig = new TierRouteConfig()
   {
     @Override
@@ -70,9 +82,7 @@ public class TierRoutingManagementStrategyTest
           @Override
           public TaskRunner build()
           {
-            synchronized (memoryBarrier) {
-              return runner;
-            }
+            return foreignRunner;
           }
         };
       } else {
@@ -82,19 +92,20 @@ public class TierRoutingManagementStrategyTest
   };
 
   private TierRoutingManagementStrategy strategy = new TierRoutingManagementStrategy(
-      taskRunnerMap,
       Suppliers.ofInstance(tierRouteConfig),
-      scheduledExecutorService
+      new ScheduledExecutorFactory()
+      {
+        @Override
+        public ScheduledExecutorService create(int corePoolSize, String nameFormat)
+        {
+          return Executors.newScheduledThreadPool(corePoolSize, Execs.makeThreadFactory(nameFormat));
+        }
+      }
   );
 
   @Test
   public void testStartManagement() throws Exception
   {
-    synchronized (memoryBarrier) {
-      runner.start();
-      EasyMock.expectLastCall().once();
-      EasyMock.replay(runner);
-    }
     final ExecutorService service = Execs.singleThreaded("TestWatcher");
     try {
       final Future<?> future = service.submit(new Runnable()
@@ -111,9 +122,8 @@ public class TierRoutingManagementStrategyTest
           }
         }
       });
-      strategy.startManagement(null);
+      strategy.startManagement(runner);
       future.get();
-      EasyMock.verify(runner);
     }
     finally {
       service.shutdownNow();
@@ -123,16 +133,24 @@ public class TierRoutingManagementStrategyTest
   @Test(expected = ISE.class)
   public void testMultipleStartsFails() throws Exception
   {
-    strategy.startManagement(null);
-    strategy.startManagement(null);
+    strategy.startManagement(runner);
+    strategy.startManagement(runner);
   }
 
-  @Test(expected = ISE.class)
-  public void testMultipleStartsFailsAfterStop() throws Exception
+  @Test
+  public void testMultipleStarts() throws Exception
   {
-    strategy.startManagement(null);
+    strategy.startManagement(runner);
     strategy.stopManagement();
-    strategy.startManagement(null);
+    strategy.startManagement(runner);
+    strategy.stopManagement();
+    strategy.startManagement(runner);
+    strategy.stopManagement();
+    strategy.startManagement(runner);
+    strategy.stopManagement();
+    strategy.startManagement(runner);
+    strategy.stopManagement();
+    strategy.startManagement(runner);
   }
 
 
@@ -140,43 +158,27 @@ public class TierRoutingManagementStrategyTest
   public void testStopManagement() throws Exception
   {
     testStartManagement();
-    synchronized (memoryBarrier) {
-      EasyMock.reset(runner);
-      runner.stop();
-      EasyMock.expectLastCall().once();
-      EasyMock.replay(runner);
-    }
     strategy.stopManagement();
-    Assert.assertTrue(scheduledExecutorService.isShutdown());
-    EasyMock.verify(runner);
   }
 
   @Test
   public void testStopManagementMultiple() throws Exception
   {
     testStartManagement();
-    synchronized (memoryBarrier) {
-      EasyMock.reset(runner);
-      runner.stop();
-      EasyMock.expectLastCall().once();
-      EasyMock.replay(runner);
-    }
     strategy.stopManagement();
     strategy.stopManagement();
-    EasyMock.verify(runner);
   }
 
   @Test
   public void testGetEmptyStats() throws Exception
   {
     testStartManagement();
-    synchronized (memoryBarrier) {
-      EasyMock.reset(runner);
-      EasyMock.expect(runner.getScalingStats()).andReturn(Optional.<ScalingStats>absent()).once();
-      EasyMock.replay(runner);
-    }
+    EasyMock.reset(foreignRunner);
+    EasyMock.expect(foreignRunner.getScalingStats()).andReturn(Optional.<ScalingStats>absent()).once();
+    EasyMock.replay(foreignRunner);
     Assert.assertNull(strategy.getStats());
-    EasyMock.verify(runner);
+    EasyMock.verify(foreignRunner);
+    EasyMock.reset(foreignRunner);
   }
 
   @Test
@@ -184,26 +186,28 @@ public class TierRoutingManagementStrategyTest
   {
     testStartManagement();
     final ScalingStats.ScalingEvent event = EasyMock.createStrictMock(ScalingStats.ScalingEvent.class);
-    synchronized (memoryBarrier) {
+    synchronized (this) {
       final ScalingStats stats = new ScalingStats(0);
       stats.addAllEvents(ImmutableList.of(event));
-      EasyMock.reset(runner);
-      EasyMock.expect(runner.getScalingStats()).andReturn(Optional.of(stats)).once();
-      EasyMock.replay(runner);
+      EasyMock.reset(foreignRunner);
+      EasyMock.expect(foreignRunner.getScalingStats()).andReturn(Optional.of(stats)).once();
+      EasyMock.replay(foreignRunner);
     }
     final ScalingStats stats = strategy.getStats();
-    EasyMock.verify(runner);
     Assert.assertFalse(stats.toList().isEmpty());
     Assert.assertEquals(event, stats.toList().get(0));
+    EasyMock.verify(foreignRunner);
+    // Reset for teardown
+    EasyMock.reset(foreignRunner);
   }
 
   @Test
   public void testGetRunner() throws Exception
   {
-    final TaskRunner defaultRunner = EasyMock.createStrictMock(TaskRunner.class);
-    taskRunnerMap.put(TierRoutingManagementStrategy.DEFAULT_ROUTE, defaultRunner);
     testStartManagement();
-    Assert.assertEquals(runner, strategy.getRunner(
+    final TaskRunner defaultRunner = EasyMock.createStrictMock(TaskRunner.class);
+    runner.getRunnerMap().put(TierRoutingManagementStrategy.DEFAULT_ROUTE, defaultRunner);
+    Assert.assertEquals(foreignRunner, strategy.getRunner(
         new NoopTask("task_id", 0, 0, "YES", null, ImmutableMap.<String, Object>of(
             TierRoutingManagementStrategy.ROUTING_TARGET_CONTEXT_KEY,
             TIER
@@ -221,8 +225,6 @@ public class TierRoutingManagementStrategyTest
   @After
   public void tearDown()
   {
-    if (!scheduledExecutorService.isShutdown()) {
-      scheduledExecutorService.shutdownNow();
-    }
+    strategy.stopManagement();
   }
 }

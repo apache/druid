@@ -23,9 +23,16 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
+import com.google.common.base.Throwables;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.ImmutableList;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningScheduledExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.ISE;
+import com.metamx.common.concurrent.ScheduledExecutorFactory;
 import com.metamx.common.logger.Logger;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.TaskRunner;
@@ -35,122 +42,160 @@ import io.druid.indexing.overlord.routing.TierTaskRunnerFactory;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class TierRoutingManagementStrategy implements ResourceManagementStrategy<TierRoutingTaskRunner>
 {
   private static final Logger LOG = new Logger(TierRoutingManagementStrategy.class);
   public static final String ROUTING_TARGET_CONTEXT_KEY = "io.druid.index.tier.target";
   public static final String DEFAULT_ROUTE = "__default";
+  private final ReadWriteLock startStopStateLock = new ReentrantReadWriteLock(true);
   private final Supplier<TierRouteConfig> configSupplier;
-  private final ConcurrentMap<String, TaskRunner> runnerMap;
+  private final ScheduledExecutorFactory managementExecutorServiceFactory;
   private final AtomicBoolean started = new AtomicBoolean(false);
-  private final ScheduledExecutorService managementExecutorService;
   private final AtomicLong numberOfUpdates = new AtomicLong(0L);
+  private final AtomicLong managementEpoch = new AtomicLong(0L);
+  private volatile TierRoutingTaskRunner runner = null;
+  private volatile ListeningScheduledExecutorService managementExecutorService = null;
 
   public TierRoutingManagementStrategy(
-      ConcurrentMap<String, TaskRunner> runnerMap,
       Supplier<TierRouteConfig> configSupplier,
-      ScheduledExecutorService managementExecutorService
+      ScheduledExecutorFactory managementExecutorServiceFactory
   )
   {
-    this.runnerMap = runnerMap;
     this.configSupplier = configSupplier;
-    this.managementExecutorService = managementExecutorService;
+    this.managementExecutorServiceFactory = managementExecutorServiceFactory;
   }
 
   @Override
   // State is communicated via configSupplier and runnerMap
-  public synchronized void startManagement(TierRoutingTaskRunner unused)
+  public void startManagement(final TierRoutingTaskRunner runner)
   {
-    if (!started.compareAndSet(false, true)) {
-      throw new ISE("Already started");
+    try {
+      startStopStateLock.writeLock().lockInterruptibly();
     }
-    if (managementExecutorService.isShutdown()) {
-      started.set(false);
-      throw new ISE("Already stopped");
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw Throwables.propagate(e);
     }
-    managementExecutorService.scheduleWithFixedDelay(
-        new Runnable()
-        {
-          final AtomicReference<TierRouteConfig> priorConfig = new AtomicReference<>(null);
-
-          @Override
-          public void run()
+    try {
+      if (!started.compareAndSet(false, true)) {
+        throw new ISE("Already started");
+      }
+      this.runner = runner;
+      managementExecutorService = MoreExecutors.listeningDecorator(managementExecutorServiceFactory.create(
+          1,
+          "TierRoutingManagement--%d"
+      ));
+      final ListenableFuture future = managementExecutorService.scheduleWithFixedDelay(
+          new Runnable()
           {
-            try {
-              // Local management monitors for config changes.
-              final TierRouteConfig config = configSupplier.get();
-              if (config == null) {
-                throw new ISE("No config found");
-              }
+            final AtomicReference<TierRouteConfig> priorConfig = new AtomicReference<>(null);
 
-              final TierRouteConfig prior = priorConfig.get();
-              if (prior == config) {
-                LOG.debug("No change in config since last check, skipping update");
-                return;
+            @Override
+            public void run()
+            {
+              try {
+                startStopStateLock.readLock().lockInterruptibly();
               }
-
-              if (!priorConfig.compareAndSet(prior, config)) {
-                LOG.warn(
-                    "Tier routing config was updated in a racy way... leaving config [%s] and skipping update",
-                    prior
-                );
-                return;
+              catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw Throwables.propagate(e);
               }
-
-              for (String tier : config.getTiers()) {
-                if (runnerMap.containsKey(tier)) {
-                  LOG.debug("Tier [%s] already in map", tier);
-                  continue;
+              try {
+                if (!started.get()) {
+                  LOG.debug("Management not started, returning");
+                  return;
                 }
-                final TierTaskRunnerFactory runnerFactory = config.getRouteFactory(tier);
-                final TaskRunner runner = runnerFactory.build();
-                if (runnerMap.putIfAbsent(tier, runner) != null) {
-                  LOG.warn("Tier [%s] lost a race condition, ignoring runner already in map", tier);
-                  continue;
+                // Local management monitors for config changes.
+                final TierRouteConfig config = configSupplier.get();
+
+                final TierRouteConfig prior = priorConfig.get();
+                if (prior == config) {
+                  LOG.debug("No change in config since last check, skipping update");
+                  return;
                 }
-                try {
-                  synchronized (TierRoutingManagementStrategy.this) {
-                    if (started.get()) {
-                      runner.start();
-                    } else {
-                      LOG.warn("Tier [%s] trying to start after shutdown", tier);
-                      if (!runnerMap.remove(tier, runner)) {
-                        // This shouldn't happen, but is here as a super safeguard
-                        LOG.warn("Someone else will have to cleanup the runner for tier [%s], they won a race", tier);
-                      }
-                    }
+
+                if (!priorConfig.compareAndSet(prior, config)) {
+                  LOG.warn(
+                      "Tier routing config was updated in a racy way... leaving config [%s] and skipping update",
+                      prior
+                  );
+                  return;
+                }
+
+
+                final ConcurrentMap<String, TaskRunner> runnerMap = runner.getRunnerMap();
+
+                for (String tier : config.getTiers()) {
+                  if (runnerMap.containsKey(tier)) {
+                    LOG.debug("Tier [%s] already in map", tier);
+                    continue;
+                  }
+                  final TierTaskRunnerFactory runnerFactory = config.getRouteFactory(tier);
+                  final TaskRunner runner = runnerFactory.build();
+                  if (runnerMap.putIfAbsent(tier, runner) != null) {
+                    LOG.warn("Tier [%s] lost a race condition, ignoring runner already in map", tier);
+                    continue;
+                  }
+                  try {
+                    runner.start();
+                  }
+                  catch (Exception e) {
+                    LOG.error(e, "Error starting tier [%s], continuing", tier);
                   }
                 }
-                catch (Exception e) {
-                  LOG.error(e, "Error starting tier [%s], continuing", tier);
+                // TODO: what about tiers that vanish from config? I'm inclined to leave them running in case the vanishing was an error
+                // Restarting JVM should take care of such a case
+              }
+              catch (Exception e) {
+                LOG.error(e, "Tier routing management encountered exception. Trying again");
+              }
+              finally {
+                startStopStateLock.readLock().unlock();
+                // Used in unit tests
+                synchronized (numberOfUpdates) {
+                  numberOfUpdates.incrementAndGet();
+                  numberOfUpdates.notifyAll();
                 }
               }
-              // TODO: what about tiers that vanish from config? I'm inclined to leave them running in case the vanishing was an error
-              // Restarting JVM should take care of such a case
             }
-            catch (Exception e) {
-              LOG.error(e, "Tier routing management encountered exception. Trying again");
-            }
-            finally {
-              // Used in unit tests
-              synchronized (numberOfUpdates) {
-                numberOfUpdates.incrementAndGet();
-                numberOfUpdates.notifyAll();
-              }
-            }
+          },
+          0,
+          10, // TODO: make this configurable
+          TimeUnit.SECONDS
+      );
+
+      Futures.addCallback(future, new FutureCallback()
+      {
+        @Override
+        public void onSuccess(@Nullable Object result)
+        {
+          LOG.info("Success");
+        }
+
+        @Override
+        public void onFailure(Throwable t)
+        {
+          if (t instanceof CancellationException) {
+            LOG.debug("Management thread cancelled");
+          } else {
+            LOG.error(t, "Unhandled exception in management thread for runner %s", runner);
           }
-        },
-        0,
-        10, // TODO: make this configurable
-        TimeUnit.SECONDS
-    );
+        }
+      });
+      LOG.info("Started management of %s", runner);
+    }
+    finally {
+      startStopStateLock.writeLock().unlock();
+    }
   }
 
   @VisibleForTesting
@@ -165,81 +210,125 @@ public class TierRoutingManagementStrategy implements ResourceManagementStrategy
   }
 
   @Override
-  public synchronized void stopManagement()
+  public void stopManagement()
   {
-    if (!started.compareAndSet(true, false)) {
-      LOG.warn("Ignoring repeated stop request");
-      return;
-    }
-    managementExecutorService.shutdown();
     try {
-      if (!managementExecutorService.awaitTermination(10, TimeUnit.SECONDS)) {
-        LOG.warn("Could not shut down all tasks. Continuing anyways");
-      }
+      startStopStateLock.writeLock().lockInterruptibly();
     }
     catch (InterruptedException e) {
       Thread.currentThread().interrupt();
-      LOG.error(e, "Interrupted");
+      throw Throwables.propagate(e);
     }
-    for (String tier : runnerMap.keySet()) {
-      final TaskRunner runner = runnerMap.get(tier);
-      if (runner == null) {
-        LOG.warn("Race condition for tier [%s]", tier);
-        continue;
+    try {
+      if (!started.compareAndSet(true, false)) {
+        LOG.warn("Ignoring repeated stop request");
+        return;
       }
+      managementExecutorService.shutdownNow();
       try {
-        runner.stop();
+        if (!managementExecutorService.awaitTermination(10, TimeUnit.SECONDS)) {
+          LOG.warn("Could not shut down all management tasks! Continuing anyways");
+        }
+        managementExecutorService = null;
       }
-      catch (Exception e) {
-        LOG.error(e, "Error shutting down runner for tier [%s]", tier);
+      catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        LOG.error(e, "Interrupted");
       }
-      runnerMap.remove(tier);
+      final ConcurrentMap<String, TaskRunner> runnerMap = runner.getRunnerMap();
+
+      for (String tier : runnerMap.keySet()) {
+        final TaskRunner runner = runnerMap.remove(tier);
+        if (runner == null) {
+          LOG.warn("Race condition for tier [%s]", tier);
+          continue;
+        }
+        try {
+          runner.stop();
+        }
+        catch (Exception e) {
+          LOG.error(e, "Error shutting down runner for tier [%s]", tier);
+        }
+      }
+      LOG.info("Stopped management");
+    }
+    finally {
+      startStopStateLock.writeLock().unlock();
     }
   }
 
   @Override
-  public synchronized ScalingStats getStats()
+  public ScalingStats getStats()
   {
-    final ScalingStats stats = new ScalingStats(0);
-    final AtomicBoolean foundSomething = new AtomicBoolean(false);
-    stats.addAllEvents(ImmutableList.copyOf(
-        FluentIterable
-            .from(runnerMap.values())
-            .transformAndConcat(new Function<TaskRunner, List<ScalingStats.ScalingEvent>>()
-            {
-              @Nullable
-              @Override
-              public List<ScalingStats.ScalingEvent> apply(@Nullable TaskRunner runner)
+    try {
+      startStopStateLock.readLock().lockInterruptibly();
+    }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw Throwables.propagate(e);
+    }
+    try {
+      if (!started.get()) {
+        throw new IllegalStateException("Management not started");
+      }
+      final ScalingStats stats = new ScalingStats(0);
+      final AtomicBoolean foundSomething = new AtomicBoolean(false);
+      stats.addAllEvents(ImmutableList.copyOf(
+          FluentIterable
+              .from(runner.getRunnerMap().values())
+              .transformAndConcat(new Function<TaskRunner, List<ScalingStats.ScalingEvent>>()
               {
-                if (runner == null) {
-                  return ImmutableList.of();
+                @Nullable
+                @Override
+                public List<ScalingStats.ScalingEvent> apply(@Nullable TaskRunner otherRunner)
+                {
+                  if (otherRunner == null) {
+                    return ImmutableList.of();
+                  }
+                  final Optional<ScalingStats> stats = otherRunner.getScalingStats();
+                  if (stats.isPresent()) {
+                    foundSomething.set(true);
+                    return stats.get().toList();
+                  } else {
+                    return ImmutableList.of();
+                  }
                 }
-                final Optional<ScalingStats> stats = runner.getScalingStats();
-                if (stats.isPresent()) {
-                  foundSomething.set(true);
-                  return stats.get().toList();
-                } else {
-                  return ImmutableList.of();
-                }
-              }
-            })
-    ));
-    return foundSomething.get() ? stats : null;
+              })
+      ));
+      return foundSomething.get() ? stats : null;
+    }
+    finally {
+      startStopStateLock.readLock().unlock();
+    }
   }
 
   public TaskRunner getRunner(Task task)
   {
-    final Object tierobj = task.getContextValue(ROUTING_TARGET_CONTEXT_KEY);
-    final String tier;
-    if (tierobj == null) {
-      LOG.debug("No route context found for task [%s]. Using default [%s]", task.getId(), DEFAULT_ROUTE);
-      tier = DEFAULT_ROUTE;
-    } else {
-      tier = tierobj.toString();
+    try {
+      startStopStateLock.readLock().lockInterruptibly();
     }
+    catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw Throwables.propagate(e);
+    }
+    try {
+      if (!started.get()) {
+        throw new IllegalStateException("Management not started");
+      }
+      final Object tierobj = task.getContextValue(ROUTING_TARGET_CONTEXT_KEY);
+      final String tier;
+      if (tierobj == null) {
+        LOG.debug("No route context found for task [%s]. Using default [%s]", task.getId(), DEFAULT_ROUTE);
+        tier = DEFAULT_ROUTE;
+      } else {
+        tier = tierobj.toString();
+      }
 
-    LOG.info("Using tier [%s] for task [%s]", tier, task.getId());
-
-    return runnerMap.get(tier);
+      LOG.info("Using tier [%s] for task [%s]", tier, task.getId());
+      return runner.getRunnerMap().get(tier);
+    }
+    finally {
+      startStopStateLock.readLock().unlock();
+    }
   }
 }
