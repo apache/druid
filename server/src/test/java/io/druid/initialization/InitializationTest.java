@@ -113,7 +113,8 @@ public class InitializationTest
   @Test
   public void test04DuplicateClassLoaderExtensions() throws Exception
   {
-    Initialization.getLoadersMap().put("xyz", (URLClassLoader) Initialization.class.getClassLoader());
+    final File extensionDir = temporaryFolder.newFolder();
+    Initialization.getLoadersMap().put(extensionDir, (URLClassLoader) Initialization.class.getClassLoader());
 
     Collection<DruidModule> modules = Initialization.getFromExtensions(new ExtensionsConfig(), DruidModule.class);
 
