@@ -72,7 +72,8 @@ public class Main
                DruidJsonValidator.class,
                PullDependencies.class,
                CreateTables.class,
-               InsertSegment.class
+               InsertSegment.class,
+               DumpSegment.class
            );
 
     builder.withGroup("index")
