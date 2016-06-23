@@ -799,7 +799,7 @@ public class DruidCoordinator
               new DruidCoordinatorCleanupUnneeded(DruidCoordinator.this),
               new DruidCoordinatorCleanupOvershadowed(DruidCoordinator.this),
               new DruidCoordinatorBalancer(DruidCoordinator.this),
-              new DruidCoordinatorLogger()
+              new DruidCoordinatorLogger(DruidCoordinator.this)
           ),
           startingLeaderCounter
       );
