@@ -78,13 +78,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  */
 public class Initialization
 {
   private static final Logger log = new Logger(Initialization.class);
-  private static final Map<String, URLClassLoader> loadersMap = Maps.newHashMap();
+  private static final ConcurrentMap<File, URLClassLoader> loadersMap = new ConcurrentHashMap<>();
 
   private final static Map<Class, Set> extensionsMap = Maps.<Class, Set>newHashMap();
 
@@ -114,7 +116,7 @@ public class Initialization
   /**
    * Used for testing only
    */
-  static Map<String, URLClassLoader> getLoadersMap()
+  static Map<File, URLClassLoader> getLoadersMap()
   {
     return loadersMap;
   }
@@ -274,8 +276,8 @@ public class Initialization
         log.info("added URL[%s]", url);
         urls[i++] = url;
       }
-      loader = new URLClassLoader(urls, Initialization.class.getClassLoader());
-      loadersMap.put(extension.getName(), loader);
+      loadersMap.putIfAbsent(extension, new URLClassLoader(urls, Initialization.class.getClassLoader()));
+      loader = loadersMap.get(extension);
     }
     return loader;
   }
