@@ -25,6 +25,10 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
@@ -40,16 +44,22 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import javax.validation.constraints.NotNull;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class TierRoutingManagementStrategyTest
 {
   private static final String TIER = "test_tier";
-  private static final ScheduledExecutorFactory scheduledExecutorFactory = new ScheduledExecutorFactory()
+  private static final ScheduledExecutorFactory SCHEDULED_EXECUTOR_FACTORY = new ScheduledExecutorFactory()
   {
     @Override
     public ScheduledExecutorService create(int corePoolSize, String nameFormat)
@@ -59,7 +69,7 @@ public class TierRoutingManagementStrategyTest
   };
   private final TierRoutingTaskRunner runner = new TierRoutingTaskRunner(
       Suppliers.ofInstance(new TierRouteConfig()),
-      scheduledExecutorFactory
+      SCHEDULED_EXECUTOR_FACTORY
   );
 
   private final TaskRunner foreignRunner = EasyMock.createStrictMock(TaskRunner.class);
@@ -91,7 +101,7 @@ public class TierRoutingManagementStrategyTest
     }
   };
 
-  private TierRoutingManagementStrategy strategy = new TierRoutingManagementStrategy(
+  private final TierRoutingManagementStrategy strategy = new TierRoutingManagementStrategy(
       Suppliers.ofInstance(tierRouteConfig),
       new ScheduledExecutorFactory()
       {
@@ -176,9 +186,17 @@ public class TierRoutingManagementStrategyTest
     EasyMock.reset(foreignRunner);
     EasyMock.expect(foreignRunner.getScalingStats()).andReturn(Optional.<ScalingStats>absent()).once();
     EasyMock.replay(foreignRunner);
+    runner.getRunnerMap().put("some_tier", foreignRunner);
     Assert.assertNull(strategy.getStats());
     EasyMock.verify(foreignRunner);
     EasyMock.reset(foreignRunner);
+  }
+
+  @Test
+  public void testGetNoStats() throws Exception
+  {
+    testStartManagement();
+    Assert.assertNull(strategy.getStats());
   }
 
   @Test
@@ -193,6 +211,7 @@ public class TierRoutingManagementStrategyTest
       EasyMock.expect(foreignRunner.getScalingStats()).andReturn(Optional.of(stats)).once();
       EasyMock.replay(foreignRunner);
     }
+    runner.getRunnerMap().put("some_tier", foreignRunner);
     final ScalingStats stats = strategy.getStats();
     Assert.assertFalse(stats.toList().isEmpty());
     Assert.assertEquals(event, stats.toList().get(0));
@@ -207,6 +226,7 @@ public class TierRoutingManagementStrategyTest
     testStartManagement();
     final TaskRunner defaultRunner = EasyMock.createStrictMock(TaskRunner.class);
     runner.getRunnerMap().put(TierRoutingManagementStrategy.DEFAULT_ROUTE, defaultRunner);
+    runner.getRunnerMap().put(TIER, foreignRunner);
     Assert.assertEquals(foreignRunner, strategy.getRunner(
         new NoopTask("task_id", 0, 0, "YES", null, ImmutableMap.<String, Object>of(
             TierRoutingManagementStrategy.ROUTING_TARGET_CONTEXT_KEY,
@@ -220,6 +240,102 @@ public class TierRoutingManagementStrategyTest
     Assert.assertEquals(defaultRunner, strategy.getRunner(
         new NoopTask("task_id", 0, 0, "YES", null, null)
     ));
+  }
+
+  @Test
+  public void testConcurrency() throws Exception
+  {
+    final int numTests = 100;
+    final ListeningExecutorService executorService = MoreExecutors.listeningDecorator(Execs.multiThreaded(
+        numTests,
+        "test-hammer-%d"
+    ));
+    final ArrayList<ListenableFuture<?>> futures = new ArrayList<>(numTests);
+    final CyclicBarrier barrier = new CyclicBarrier(numTests);
+    final Random random = new Random(374898704198L);
+    final List<? extends Runnable> tasks = ImmutableList.of(
+        new Runnable()
+        {
+          @Override
+          public void run()
+          {
+            try {
+              strategy.startManagement(runner);
+            }
+            catch (ISE e) {
+              if (!"Already started".equals(e.getMessage())) {
+                throw e;
+              }
+            }
+          }
+        },
+        new Runnable()
+        {
+          @Override
+          public void run()
+          {
+            strategy.stopManagement();
+          }
+        },
+        new Runnable()
+        {
+          @Override
+          public void run()
+          {
+            try {
+              strategy.getStats();
+            }
+            catch (ISE e) {
+              if (!"Management not started".equals(e.getMessage())) {
+                throw e;
+              }
+            }
+          }
+        },
+        new Runnable()
+        {
+          @Override
+          public void run()
+          {
+            try {
+              strategy.getRunner(new NoopTask("task_id", 0, 0, "YES", null, ImmutableMap.<String, Object>of(
+                  TierRoutingManagementStrategy.ROUTING_TARGET_CONTEXT_KEY,
+                  TIER
+              )));
+            }
+            catch (ISE e) {
+              if (!"Management not started".equals(e.getMessage())) {
+                throw e;
+              }
+            }
+          }
+        }
+    );
+    for (int i = 0; i < numTests; ++i) {
+      final Runnable task = tasks.get(random.nextInt(tasks.size()));
+      futures.add(executorService.submit(new Runnable()
+      {
+        @Override
+        public void run()
+        {
+          try {
+            barrier.await();
+          }
+          catch (InterruptedException | BrokenBarrierException e) {
+            throw Throwables.propagate(e);
+          }
+          for (int j = 0; j < 1000; ++j) {
+            task.run();
+          }
+        }
+      }));
+    }
+    try {
+      Futures.allAsList(futures).get(1, TimeUnit.MINUTES);
+    }
+    finally {
+      executorService.shutdownNow();
+    }
   }
 
   @After

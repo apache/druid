@@ -89,10 +89,11 @@ public class TierRoutingManagementStrategy implements ResourceManagementStrategy
       if (!started.compareAndSet(false, true)) {
         throw new ISE("Already started");
       }
+      final long managementEpoch = this.managementEpoch.getAndIncrement();
       this.runner = runner;
       managementExecutorService = MoreExecutors.listeningDecorator(managementExecutorServiceFactory.create(
           1,
-          "TierRoutingManagement--%d"
+          String.format("TierRoutingManagement-%d-%%d", managementEpoch)
       ));
       final ListenableFuture future = managementExecutorService.scheduleWithFixedDelay(
           new Runnable()
@@ -112,6 +113,15 @@ public class TierRoutingManagementStrategy implements ResourceManagementStrategy
               try {
                 if (!started.get()) {
                   LOG.debug("Management not started, returning");
+                  return;
+                }
+                final long actualEpoch = TierRoutingManagementStrategy.this.managementEpoch.get();
+                if (!(managementEpoch == actualEpoch)) {
+                  LOG.info(
+                      "Management epoch [%d] is stale. Current epoch is [%d]. Skipping management for this thread",
+                      managementEpoch,
+                      actualEpoch
+                  );
                   return;
                 }
                 // Local management monitors for config changes.
@@ -269,7 +279,7 @@ public class TierRoutingManagementStrategy implements ResourceManagementStrategy
     }
     try {
       if (!started.get()) {
-        throw new IllegalStateException("Management not started");
+        throw new ISE("Management not started");
       }
       final ScalingStats stats = new ScalingStats(0);
       final AtomicBoolean foundSomething = new AtomicBoolean(false);
@@ -313,7 +323,7 @@ public class TierRoutingManagementStrategy implements ResourceManagementStrategy
     }
     try {
       if (!started.get()) {
-        throw new IllegalStateException("Management not started");
+        throw new ISE("Management not started");
       }
       final Object tierobj = task.getContextValue(ROUTING_TARGET_CONTEXT_KEY);
       final String tier;
