@@ -71,5 +71,5 @@ public interface DimFilter
    * @return a RangeSet that represent the possible range of the input dimension, or null if it is not possible to
    * determine for this DimFilter.
    */
-  public RangeSet<String> getDimensionRangeSet (String dimension);
+  public RangeSet<String> getDimensionRangeSet(String dimension);
 }

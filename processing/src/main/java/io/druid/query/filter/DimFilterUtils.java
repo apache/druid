@@ -74,33 +74,39 @@ public class DimFilterUtils
   }
 
   /**
-   * Filter the given iterable of objects by removing any object whose ShardSpec does not fit in the rangeset of the
-   * dimFilter {@link DimFilter#getDimensionRangeSet(String)}. If you use the same dimFilter for multiple Iterable
-   * of objects, use {@link #filterShards(DimFilter, Iterable, Function, Map)} instead with a cached map to save
+   * Filter the given iterable of objects by removing any object whose ShardSpec, obtained from the converter function,
+   * does not fit in the rangeset of the dimFilter {@link DimFilter#getDimensionRangeSet(String)}. A set will be
+   * returned containing the filtered objects, in the same order as they are passed in.
+   *
+   * If you use the same dimFilter for multiple Iterables of objects, consider using
+   * {@link #filterShards(DimFilter, Iterable, Function, Map)} instead with a cached map to save
    * redundant calls of {@link DimFilter#getDimensionRangeSet(String)} on the same dimension.
    */
-  public static <T> Set<T> filterShards (DimFilter dimFilter, Iterable<T> input, Function<T, ShardSpec> function)
+  public static <T> Set<T> filterShards(DimFilter dimFilter, Iterable<T> input, Function<T, ShardSpec> converter)
   {
-    return filterShards(dimFilter, input, function, new HashMap<String, Optional<RangeSet<String>>>());
+    return filterShards(dimFilter, input, converter, new HashMap<String, Optional<RangeSet<String>>>());
   }
 
-  public static <T> Set<T> filterShards (DimFilter dimFilter, Iterable<T> input, Function<T, ShardSpec> function,
-                                         Map<String, Optional<RangeSet<String>>> dimensionRangeMap)
+  /**
+   * DimensionRangedCache can be re-used between calls with the same dimFilter.
+   */
+  public static <T> Set<T> filterShards(DimFilter dimFilter, Iterable<T> input, Function<T, ShardSpec> converter,
+                                        Map<String, Optional<RangeSet<String>>> dimensionRangeCache)
   {
     Set<T> retSet = Sets.newLinkedHashSet();
 
     for (T obj : input) {
-      ShardSpec shard = function.apply(obj);
+      ShardSpec shard = converter.apply(obj);
       boolean include = true;
 
       if (dimFilter != null && shard != null) {
         Map<String, Range<String>> domain = shard.getDomain();
         for (Map.Entry<String, Range<String>> entry : domain.entrySet()) {
-          Optional<RangeSet<String>> optFilterRangeSet = dimensionRangeMap.get(entry.getKey());
+          Optional<RangeSet<String>> optFilterRangeSet = dimensionRangeCache.get(entry.getKey());
           if (optFilterRangeSet == null) {
             RangeSet<String> filterRangeSet = dimFilter.getDimensionRangeSet(entry.getKey());
             optFilterRangeSet = Optional.fromNullable(filterRangeSet);
-            dimensionRangeMap.put(entry.getKey(), optFilterRangeSet);
+            dimensionRangeCache.put(entry.getKey(), optFilterRangeSet);
           }
           if (optFilterRangeSet.isPresent() && optFilterRangeSet.get().subRangeSet(entry.getValue()).isEmpty()) {
             include = false;

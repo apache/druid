@@ -28,7 +28,6 @@ import io.druid.query.extraction.IdentityExtractionFn;
 import io.druid.query.search.search.ContainsSearchQuerySpec;
 import org.junit.Assert;
 import org.junit.Test;
-import org.mozilla.javascript.tools.debugger.Dim;
 
 import java.util.Arrays;
 import java.util.List;

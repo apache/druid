@@ -81,13 +81,13 @@ public class DimFilterUtilsTest
     EasyMock.replay(filter1, filter2, shard1, shard2, shard3, shard4, shard5, shard6, shard7);
 
     Set<ShardSpec> expected1 = ImmutableSet.of(shard1, shard4, shard5, shard6, shard7);
-    assetFilterResult(filter1, shards, expected1);
+    assertFilterResult(filter1, shards, expected1);
 
     Set<ShardSpec> expected2 = ImmutableSet.of(shard3, shard6, shard7);
-    assetFilterResult(filter2, shards, expected2);
+    assertFilterResult(filter2, shards, expected2);
   }
 
-  private void assetFilterResult(DimFilter filter, Iterable<ShardSpec> input, Set<ShardSpec> expected) {
+  private void assertFilterResult(DimFilter filter, Iterable<ShardSpec> input, Set<ShardSpec> expected) {
     Set<ShardSpec> result = DimFilterUtils.filterShards(filter, input, CONVERTER);
     Assert.assertEquals(expected, result);
 
@@ -99,7 +99,7 @@ public class DimFilterUtilsTest
     Assert.assertEquals(expected, result);
   }
 
-  private static RangeSet<String> rangeSet (List<Range<String>> ranges) {
+  private static RangeSet<String> rangeSet(List<Range<String>> ranges) {
     ImmutableRangeSet.Builder<String> builder = ImmutableRangeSet.builder();
     for (Range<String> range : ranges) {
       builder.add(range);
@@ -107,7 +107,7 @@ public class DimFilterUtilsTest
     return builder.build();
   }
 
-  private static ShardSpec shardSpec (String dimension, Range<String> range) {
+  private static ShardSpec shardSpec(String dimension, Range<String> range) {
     ShardSpec shard = EasyMock.createMock(ShardSpec.class);
     EasyMock.expect(shard.getDomain())
             .andReturn(ImmutableMap.of(dimension, range))

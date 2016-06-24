@@ -1439,8 +1439,8 @@ public class CachingClusteredClientTest
   }
 
   @Test
-  public void testTimeSeriesWithFilter () {
-
+  public void testTimeSeriesWithFilter() throws Exception
+  {
     DimFilter filter = Druids.newAndDimFilterBuilder()
                              .fields(
                                  Arrays.asList(
@@ -1511,8 +1511,8 @@ public class CachingClusteredClientTest
   }
 
   @Test
-  public void testSingleDimensionPruning () {
-
+  public void testSingleDimensionPruning() throws Exception
+  {
     DimFilter filter = Druids.newAndDimFilterBuilder()
                              .fields(
                                  Arrays.asList(
@@ -1650,10 +1650,11 @@ public class CachingClusteredClientTest
     );
   }
 
-  public void parseResults (
+  public void parseResults(
       final List<Interval> queryIntervals,
       final List<List<Iterable<Result<Object>>>> expectedResults,
-      Object... args)
+      Object... args
+  )
   {
     if (args.length % 2 != 0) {
       throw new ISE("args.length must be divisible by two, was %d", args.length);

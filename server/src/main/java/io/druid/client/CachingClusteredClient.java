@@ -222,7 +222,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     // Let tool chest filter out unneeded segments
     final List<TimelineObjectHolder<String, ServerSelector>> filteredServersLookup =
         toolChest.filterSegments(query, serversLookup);
-    Map<String, Optional<RangeSet<String>>> dimensionRangeMap = Maps.newHashMap();
+    Map<String, Optional<RangeSet<String>>> dimensionRangeCache = Maps.newHashMap();
 
     // Filter unneeded chunks based on partition dimension
     for (TimelineObjectHolder<String, ServerSelector> holder : filteredServersLookup) {
@@ -237,7 +237,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
               return input.getObject().getSegment().getShardSpec();
             }
           },
-          dimensionRangeMap
+          dimensionRangeCache
       );
       for (PartitionChunk<ServerSelector> chunk : filteredChunks) {
         ServerSelector selector = chunk.getObject();
