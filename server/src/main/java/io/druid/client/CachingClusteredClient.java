@@ -22,6 +22,7 @@ package io.druid.client;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.base.Optional;
 import com.google.common.base.Supplier;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
@@ -29,6 +30,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.RangeSet;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
@@ -60,12 +62,14 @@ import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.Result;
 import io.druid.query.SegmentDescriptor;
 import io.druid.query.aggregation.MetricManipulatorFns;
+import io.druid.query.filter.DimFilterUtils;
 import io.druid.query.spec.MultipleSpecificSegmentSpec;
 import io.druid.server.coordination.DruidServerMetadata;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineLookup;
 import io.druid.timeline.TimelineObjectHolder;
 import io.druid.timeline.partition.PartitionChunk;
+import io.druid.timeline.partition.ShardSpec;
 import org.joda.time.Interval;
 
 import java.io.IOException;
@@ -218,14 +222,28 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     // Let tool chest filter out unneeded segments
     final List<TimelineObjectHolder<String, ServerSelector>> filteredServersLookup =
         toolChest.filterSegments(query, serversLookup);
+    Map<String, Optional<RangeSet<String>>> dimensionRangeCache = Maps.newHashMap();
 
+    // Filter unneeded chunks based on partition dimension
     for (TimelineObjectHolder<String, ServerSelector> holder : filteredServersLookup) {
-      for (PartitionChunk<ServerSelector> chunk : holder.getObject()) {
+      final Set<PartitionChunk<ServerSelector>> filteredChunks = DimFilterUtils.filterShards(
+          query.getFilter(),
+          holder.getObject(),
+          new Function<PartitionChunk<ServerSelector>, ShardSpec>()
+          {
+            @Override
+            public ShardSpec apply(PartitionChunk<ServerSelector> input)
+            {
+              return input.getObject().getSegment().getShardSpec();
+            }
+          },
+          dimensionRangeCache
+      );
+      for (PartitionChunk<ServerSelector> chunk : filteredChunks) {
         ServerSelector selector = chunk.getObject();
         final SegmentDescriptor descriptor = new SegmentDescriptor(
             holder.getInterval(), holder.getVersion(), chunk.getChunkNumber()
         );
-
         segments.add(Pair.of(selector, descriptor));
       }
     }

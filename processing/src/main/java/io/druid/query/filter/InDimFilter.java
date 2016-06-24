@@ -26,6 +26,9 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Range;
+import com.google.common.collect.RangeSet;
+import com.google.common.collect.TreeRangeSet;
 import com.metamx.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.lookup.LookupExtractionFn;
@@ -106,11 +109,11 @@ public class InDimFilter implements DimFilter
                                                     + dimensionBytes.length
                                                     + valuesBytesSize
                                                     + extractionFnBytes.length)
-                                          .put(DimFilterCacheHelper.IN_CACHE_ID)
+                                          .put(DimFilterUtils.IN_CACHE_ID)
                                           .put(dimensionBytes)
-                                          .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                                          .put(DimFilterUtils.STRING_SEPARATOR)
                                           .put(extractionFnBytes)
-                                          .put(DimFilterCacheHelper.STRING_SEPARATOR);
+                                          .put(DimFilterUtils.STRING_SEPARATOR);
     for (byte[] bytes : valuesBytes) {
       filterCacheKey.put(bytes)
                     .put((byte) 0xFF);
@@ -168,6 +171,19 @@ public class InDimFilter implements DimFilter
   public Filter toFilter()
   {
     return new InFilter(dimension, values, extractionFn);
+  }
+
+  @Override
+  public RangeSet<String> getDimensionRangeSet(String dimension)
+  {
+    if (!Objects.equals(getDimension(), dimension) || getExtractionFn() != null) {
+      return null;
+    }
+    RangeSet<String> retSet = TreeRangeSet.create();
+    for (String value : values) {
+      retSet.add(Range.singleton(Strings.nullToEmpty(value)));
+    }
+    return retSet;
   }
 
   @Override

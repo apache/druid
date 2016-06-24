@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.metamx.common.StringUtils;
-import io.druid.query.filter.DimFilterCacheHelper;
+import io.druid.query.filter.DimFilterUtils;
 import io.druid.segment.DimensionSelector;
 
 import java.nio.ByteBuffer;
@@ -119,10 +119,10 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
                                           .put(CACHE_TYPE_ID)
                                           .put(delegateCacheKey)
                                           .put((byte) (isWhitelist ? 1 : 0))
-                                          .put(DimFilterCacheHelper.STRING_SEPARATOR);
+                                          .put(DimFilterUtils.STRING_SEPARATOR);
     for (byte[] bytes : valuesBytes) {
       filterCacheKey.put(bytes)
-                    .put(DimFilterCacheHelper.STRING_SEPARATOR);
+                    .put(DimFilterUtils.STRING_SEPARATOR);
     }
     return filterCacheKey.array();
   }
