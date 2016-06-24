@@ -23,6 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.RangeSet;
+import com.google.common.collect.TreeRangeSet;
 import io.druid.query.Druids;
 import io.druid.segment.filter.Filters;
 import io.druid.segment.filter.OrFilter;
@@ -56,7 +58,7 @@ public class OrDimFilter implements DimFilter
   @Override
   public byte[] getCacheKey()
   {
-    return DimFilterCacheHelper.computeCacheKey(DimFilterCacheHelper.OR_CACHE_ID, fields);
+    return DimFilterUtils.computeCacheKey(DimFilterUtils.OR_CACHE_ID, fields);
   }
 
   @Override
@@ -70,6 +72,21 @@ public class OrDimFilter implements DimFilter
   public Filter toFilter()
   {
     return new OrFilter(Filters.toFilters(fields));
+  }
+
+  @Override
+  public RangeSet<String> getDimensionRangeSet(String dimension)
+  {
+    RangeSet<String> retSet = TreeRangeSet.create();
+    for (DimFilter field : fields) {
+      RangeSet<String> rangeSet = field.getDimensionRangeSet(dimension);
+      if (rangeSet == null) {
+        return null;
+      } else {
+        retSet.addAll(rangeSet);
+      }
+    }
+    return retSet;
   }
 
   @Override

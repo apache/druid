@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.metamx.common.StringUtils;
-import io.druid.query.filter.DimFilterCacheHelper;
+import io.druid.query.filter.DimFilterUtils;
 import io.druid.segment.DimensionSelector;
 
 import java.nio.ByteBuffer;
@@ -89,7 +89,7 @@ public class RegexFilteredDimensionSpec extends BaseFilteredDimensionSpec
     return ByteBuffer.allocate(2 + delegateCacheKey.length + regexBytes.length)
                      .put(CACHE_TYPE_ID)
                      .put(delegateCacheKey)
-                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                     .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(regexBytes)
                      .array();
   }

@@ -20,10 +20,14 @@
 package io.druid.timeline.partition;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Range;
 import com.metamx.common.ISE;
 import io.druid.data.input.InputRow;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Class uses getters/setters to work around http://jira.codehaus.org/browse/MSHADE-92
@@ -110,6 +114,22 @@ public class SingleDimensionShardSpec implements ShardSpec
         throw new ISE("row[%s] doesn't fit in any shard[%s]", row, shardSpecs);
       }
     };
+  }
+
+  @Override
+  public Map<String, Range<String>> getDomain()
+  {
+    Range<String> range;
+    if (start == null && end == null) {
+      range = Range.all();
+    } else if (start == null) {
+      range = Range.atMost(end);
+    } else if (end == null) {
+      range = Range.atLeast(start);
+    } else {
+      range = Range.closed(start, end);
+    }
+    return ImmutableMap.of(dimension, range);
   }
 
   public void setPartitionNum(int partitionNum)

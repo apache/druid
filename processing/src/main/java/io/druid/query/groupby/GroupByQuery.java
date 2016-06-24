@@ -213,6 +213,12 @@ public class GroupByQuery extends BaseQuery<Row>
   }
 
   @Override
+  public DimFilter getFilter()
+  {
+    return dimFilter;
+  }
+
+  @Override
   public String getType()
   {
     return GROUP_BY;

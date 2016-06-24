@@ -22,9 +22,12 @@ package io.druid.timeline.partition;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Range;
 import io.druid.data.input.InputRow;
 
 import java.util.List;
+import java.util.Map;
 
 public class LinearShardSpec implements ShardSpec
 {
@@ -55,6 +58,12 @@ public class LinearShardSpec implements ShardSpec
         return shardSpecs.get(0);
       }
     };
+  }
+
+  @Override
+  public Map<String, Range<String>> getDomain()
+  {
+    return ImmutableMap.of();
   }
 
   @Override

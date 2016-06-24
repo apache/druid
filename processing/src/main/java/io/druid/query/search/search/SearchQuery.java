@@ -79,6 +79,12 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   }
 
   @Override
+  public DimFilter getFilter()
+  {
+    return dimFilter;
+  }
+
+  @Override
   public String getType()
   {
     return Query.SEARCH;

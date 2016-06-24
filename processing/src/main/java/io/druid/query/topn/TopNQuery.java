@@ -92,6 +92,12 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
   }
 
   @Override
+  public DimFilter getFilter()
+  {
+    return dimFilter;
+  }
+
+  @Override
   public String getType()
   {
     return TOPN;

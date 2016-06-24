@@ -22,6 +22,7 @@ package io.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.RangeSet;
 import com.metamx.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 
@@ -82,11 +83,11 @@ public class ExtractionDimFilter implements DimFilter
     byte[] valueBytes = value == null ? new byte[0] : StringUtils.toUtf8(value);
     byte[] extractionFnBytes = extractionFn.getCacheKey();
     return ByteBuffer.allocate(3 + dimensionBytes.length + valueBytes.length + extractionFnBytes.length)
-                     .put(DimFilterCacheHelper.EXTRACTION_CACHE_ID)
+                     .put(DimFilterUtils.EXTRACTION_CACHE_ID)
                      .put(dimensionBytes)
-                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                     .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(valueBytes)
-                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                     .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(extractionFnBytes)
                      .array();
   }
@@ -101,6 +102,12 @@ public class ExtractionDimFilter implements DimFilter
   public Filter toFilter()
   {
     return new SelectorDimFilter(dimension, value, extractionFn).toFilter();
+  }
+
+  @Override
+  public RangeSet<String> getDimensionRangeSet(String dimension)
+  {
+    return null;
   }
 
   @Override
