@@ -113,7 +113,8 @@ public class InitializationTest
   @Test
   public void test04DuplicateClassLoaderExtensions() throws Exception
   {
-    Initialization.getLoadersMap().put("xyz", (URLClassLoader) Initialization.class.getClassLoader());
+    final File extensionDir = temporaryFolder.newFolder();
+    Initialization.getLoadersMap().put(extensionDir, (URLClassLoader) Initialization.class.getClassLoader());
 
     Collection<DruidModule> modules = Initialization.getFromExtensions(new ExtensionsConfig(), DruidModule.class);
 
@@ -424,6 +425,29 @@ public class InitializationTest
                         Sets.newHashSet(urLsForClasspath.subList(3, 6)));
 
 
+  }
+
+  @Test
+  public void testExtensionsWithSameDirName() throws Exception
+  {
+    final String extensionName = "some_extension";
+    final File tmpDir1 = temporaryFolder.newFolder();
+    final File tmpDir2 = temporaryFolder.newFolder();
+    final File extension1 = new File(tmpDir1, extensionName);
+    final File extension2 = new File(tmpDir2, extensionName);
+    Assert.assertTrue(extension1.mkdir());
+    Assert.assertTrue(extension2.mkdir());
+    final File jar1 = new File(extension1, "jar1.jar");
+    final File jar2 = new File(extension2, "jar2.jar");
+
+    Assert.assertTrue(jar1.createNewFile());
+    Assert.assertTrue(jar2.createNewFile());
+
+    final ClassLoader classLoader1 = Initialization.getClassLoaderForExtension(extension1);
+    final ClassLoader classLoader2 = Initialization.getClassLoaderForExtension(extension2);
+
+    Assert.assertArrayEquals(new URL[]{jar1.toURL()}, ((URLClassLoader) classLoader1).getURLs());
+    Assert.assertArrayEquals(new URL[]{jar2.toURL()}, ((URLClassLoader) classLoader2).getURLs());
   }
 
   public static class TestDruidModule implements DruidModule
