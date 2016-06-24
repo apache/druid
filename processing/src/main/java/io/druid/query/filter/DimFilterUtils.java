@@ -75,12 +75,17 @@ public class DimFilterUtils
 
   /**
    * Filter the given iterable of objects by removing any object whose ShardSpec, obtained from the converter function,
-   * does not fit in the rangeset of the dimFilter {@link DimFilter#getDimensionRangeSet(String)}. A set will be
-   * returned containing the filtered objects, in the same order as they are passed in.
+   * does not fit in the RangeSet of the dimFilter {@link DimFilter#getDimensionRangeSet(String)}. The returned set
+   * contains the filtered objects in the same order as they appear in input.
    *
-   * If you use the same dimFilter for multiple Iterables of objects, consider using
-   * {@link #filterShards(DimFilter, Iterable, Function, Map)} instead with a cached map to save
-   * redundant calls of {@link DimFilter#getDimensionRangeSet(String)} on the same dimension.
+   * If you plan to call this multiple times with the same dimFilter, consider using
+   * {@link #filterShards(DimFilter, Iterable, Function, Map)} instead with a cached map
+   *
+   * @param dimFilter The filter to use
+   * @param input The iterable of objects to be filtered
+   * @param converter The function to convert T to ShardSpec that can be filtered by
+   * @param <T> This can be any type, as long as transform function is provided to convert this to ShardSpec
+   * @return The set of filtered object, in the same order as input
    */
   public static <T> Set<T> filterShards(DimFilter dimFilter, Iterable<T> input, Function<T, ShardSpec> converter)
   {
@@ -88,7 +93,20 @@ public class DimFilterUtils
   }
 
   /**
-   * DimensionRangedCache can be re-used between calls with the same dimFilter.
+   * Filter the given iterable of objects by removing any object whose ShardSpec, obtained from the converter function,
+   * does not fit in the RangeSet of the dimFilter {@link DimFilter#getDimensionRangeSet(String)}. The returned set
+   * contains the filtered objects in the same order as they appear in input.
+   *
+   * DimensionRangedCache stores the RangeSets of different dimensions for the dimFilter. It should be re-used
+   * between calls with the same dimFilter to save redundant calls of {@link DimFilter#getDimensionRangeSet(String)}
+   * on same dimensions.
+   *
+   * @param dimFilter The filter to use
+   * @param input The iterable of objects to be filtered
+   * @param converter The function to convert T to ShardSpec that can be filtered by
+   * @param dimensionRangeCache The cache of RangeSets of different dimensions for the dimFilter
+   * @param <T> This can be any type, as long as transform function is provided to convert this to ShardSpec
+   * @return The set of filtered object, in the same order as input
    */
   public static <T> Set<T> filterShards(DimFilter dimFilter, Iterable<T> input, Function<T, ShardSpec> converter,
                                         Map<String, Optional<RangeSet<String>>> dimensionRangeCache)
