@@ -132,7 +132,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
           if (metadata == null) {
             metadata = segment.asStorageAdapter().getMetadata();
           }
-          queryGranularity = metadata.getQueryGranularity();
+          queryGranularity = metadata != null ? metadata.getQueryGranularity() : null;
         } else {
           queryGranularity = null;
         }
