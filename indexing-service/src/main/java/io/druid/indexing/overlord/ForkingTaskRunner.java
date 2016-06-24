@@ -428,6 +428,11 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                             boolean runFailed = true;
 
                             final ByteSink logSink = Files.asByteSink(logFile, FileWriteMode.APPEND);
+
+                            // This will block for a while. So we append the thread information with more details
+                            final String priorThreadName = Thread.currentThread().getName();
+                            Thread.currentThread().setName(String.format("%s-[%s]", priorThreadName, task.getId()));
+
                             try (final OutputStream toLogfile = logSink.openStream()) {
                               ByteStreams.copy(processHolder.process.getInputStream(), toLogfile);
                               final int statusCode = processHolder.process.waitFor();
@@ -437,6 +442,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               }
                             }
                             finally {
+                              Thread.currentThread().setName(priorThreadName);
                               // Upload task logs
                               taskLogPusher.pushTaskLog(task.getId(), logFile);
                             }
