@@ -93,13 +93,8 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
     //check that stupid pool gives buffers that can hold at least one row's aggregators
     ResourceHolder<ByteBuffer> bb = bufferPool.take();
     if (bb.get().capacity() < aggsTotalSize) {
-      RuntimeException ex = new IAE("bufferPool buffers capacity must be >= [%s]", aggsTotalSize);
-      try {
-        bb.close();
-      } catch(IOException ioe){
-        ex.addSuppressed(ioe);
-      }
-      throw ex;
+      bb.close();
+      throw new IAE("bufferPool buffers capacity must be >= [%s]", aggsTotalSize);
     }
     aggBuffers.add(bb);
   }
@@ -372,19 +367,8 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
 
     RuntimeException ex = null;
     for (ResourceHolder<ByteBuffer> buffHolder : aggBuffers) {
-      try {
-        buffHolder.close();
-      } catch(IOException ioe) {
-        if (ex == null) {
-          ex = Throwables.propagate(ioe);
-        } else {
-          ex.addSuppressed(ioe);
-        }
-      }
+      buffHolder.close();
     }
     aggBuffers.clear();
-    if (ex != null) {
-      throw ex;
-    }
   }
 }

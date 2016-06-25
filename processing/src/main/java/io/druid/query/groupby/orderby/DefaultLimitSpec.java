@@ -24,9 +24,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.metamx.common.ISE;
@@ -36,6 +39,7 @@ import io.druid.data.input.Row;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.ordering.StringComparators;
 import io.druid.query.ordering.StringComparators.StringComparator;
 
 import javax.annotation.Nullable;
@@ -44,6 +48,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  */
@@ -80,10 +85,42 @@ public class DefaultLimitSpec implements LimitSpec
 
   @Override
   public Function<Sequence<Row>, Sequence<Row>> build(
-      List<DimensionSpec> dimensions, List<AggregatorFactory> aggs, List<PostAggregator> postAggs
+      List<DimensionSpec> dimensions,
+      List<AggregatorFactory> aggs,
+      List<PostAggregator> postAggs
   )
   {
-    if (columns.isEmpty()) {
+    // Can avoid materialization if the natural ordering is good enough.
+
+    boolean materializationNeeded = false;
+
+    if (dimensions.size() < columns.size()) {
+      materializationNeeded = true;
+    }
+
+    final Set<String> aggAndPostAggNames = Sets.newHashSet();
+    for (AggregatorFactory agg : aggs) {
+      aggAndPostAggNames.add(agg.getName());
+    }
+    for (PostAggregator postAgg : postAggs) {
+      aggAndPostAggNames.add(postAgg.getName());
+    }
+
+    if (!materializationNeeded) {
+      for (int i = 0; i < columns.size(); i++) {
+        final OrderByColumnSpec columnSpec = columns.get(i);
+
+        if (columnSpec.getDirection() != OrderByColumnSpec.Direction.ASCENDING
+            || !columnSpec.getDimensionComparator().equals(StringComparators.LEXICOGRAPHIC)
+            || !columnSpec.getDimension().equals(dimensions.get(i).getOutputName())
+            || aggAndPostAggNames.contains(columnSpec.getDimension())) {
+          materializationNeeded = true;
+          break;
+        }
+      }
+    }
+
+    if (!materializationNeeded) {
       return new LimitingFn(limit);
     }
 

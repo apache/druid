@@ -74,7 +74,7 @@ public class GroupByQueryRunnerFactoryTest
   @Test
   public void testMergeRunnersEnsureGroupMerging() throws Exception
   {
-    QueryRunnerFactory factory = createFactory();
+    QueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(new GroupByQueryConfig());
     QueryRunner mergedRunner = factory.mergeRunners(
         Executors.newSingleThreadExecutor(),
         ImmutableList.of(
@@ -146,43 +146,5 @@ public class GroupByQueryRunnerFactoryTest
     closerRule.closeLater(incrementalIndex);
 
     return new IncrementalIndexSegment(incrementalIndex, "test");
-  }
-
-  private GroupByQueryRunnerFactory createFactory()
-  {
-    ObjectMapper mapper = new DefaultObjectMapper();
-
-    Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(new GroupByQueryConfig());
-    StupidPool<ByteBuffer> pool = new StupidPool<>(
-        new Supplier<ByteBuffer>()
-        {
-          @Override
-          public ByteBuffer get()
-          {
-            return ByteBuffer.allocate(1024 * 1024);
-          }
-        });
-
-    QueryWatcher noopQueryWatcher = new QueryWatcher()
-    {
-      @Override
-      public void registerQuery(Query query, ListenableFuture future)
-      {
-
-      }
-    };
-
-    GroupByQueryEngine engine = new GroupByQueryEngine(configSupplier, pool);
-    GroupByQueryQueryToolChest toolchest = new GroupByQueryQueryToolChest(
-        configSupplier, mapper, engine, pool,
-        QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
-    );
-    return new GroupByQueryRunnerFactory(
-        engine,
-        noopQueryWatcher,
-        configSupplier,
-        toolchest,
-        pool
-    );
   }
 }

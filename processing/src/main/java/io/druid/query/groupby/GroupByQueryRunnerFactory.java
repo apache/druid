@@ -19,26 +19,20 @@
 
 package io.druid.query.groupby;
 
-import com.google.common.base.Supplier;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
-import com.metamx.common.logger.Logger;
-import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
-import io.druid.guice.annotations.Global;
-import io.druid.query.GroupByMergedQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
-import io.druid.query.QueryWatcher;
+import io.druid.query.groupby.strategy.GroupByStrategySelector;
 import io.druid.segment.Segment;
 import io.druid.segment.StorageAdapter;
 
-import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
@@ -46,41 +40,42 @@ import java.util.concurrent.ExecutorService;
  */
 public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupByQuery>
 {
-  private static final Logger log = new Logger(GroupByQueryRunnerFactory.class);
-  private final GroupByQueryEngine engine;
-  private final QueryWatcher queryWatcher;
-  private final Supplier<GroupByQueryConfig> config;
+  private final GroupByStrategySelector strategySelector;
   private final GroupByQueryQueryToolChest toolChest;
-  private final StupidPool<ByteBuffer> computationBufferPool;
 
   @Inject
   public GroupByQueryRunnerFactory(
-      GroupByQueryEngine engine,
-      QueryWatcher queryWatcher,
-      Supplier<GroupByQueryConfig> config,
-      GroupByQueryQueryToolChest toolChest,
-      @Global StupidPool<ByteBuffer> computationBufferPool
+      GroupByStrategySelector strategySelector,
+      GroupByQueryQueryToolChest toolChest
   )
   {
-    this.engine = engine;
-    this.queryWatcher = queryWatcher;
-    this.config = config;
+    this.strategySelector = strategySelector;
     this.toolChest = toolChest;
-    this.computationBufferPool = computationBufferPool;
   }
 
   @Override
   public QueryRunner<Row> createRunner(final Segment segment)
   {
-    return new GroupByQueryRunner(segment, engine);
+    return new GroupByQueryRunner(segment, strategySelector);
   }
 
   @Override
-  public QueryRunner<Row> mergeRunners(final ExecutorService exec, Iterable<QueryRunner<Row>> queryRunners)
+  public QueryRunner<Row> mergeRunners(final ExecutorService exec, final Iterable<QueryRunner<Row>> queryRunners)
   {
     // mergeRunners should take ListeningExecutorService at some point
     final ListeningExecutorService queryExecutor = MoreExecutors.listeningDecorator(exec);
-    return new GroupByMergedQueryRunner(queryExecutor, config, queryWatcher, computationBufferPool, queryRunners);
+
+    return new QueryRunner<Row>()
+    {
+      @Override
+      public Sequence<Row> run(Query<Row> query, Map<String, Object> responseContext)
+      {
+        return strategySelector.strategize((GroupByQuery) query).mergeRunners(queryExecutor, queryRunners).run(
+            query,
+            responseContext
+        );
+      }
+    };
   }
 
   @Override
@@ -92,12 +87,12 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
   private static class GroupByQueryRunner implements QueryRunner<Row>
   {
     private final StorageAdapter adapter;
-    private final GroupByQueryEngine engine;
+    private final GroupByStrategySelector strategySelector;
 
-    public GroupByQueryRunner(Segment segment, final GroupByQueryEngine engine)
+    public GroupByQueryRunner(Segment segment, final GroupByStrategySelector strategySelector)
     {
       this.adapter = segment.asStorageAdapter();
-      this.engine = engine;
+      this.strategySelector = strategySelector;
     }
 
     @Override
@@ -107,7 +102,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
         throw new ISE("Got a [%s] which isn't a %s", input.getClass(), GroupByQuery.class);
       }
 
-      return engine.process((GroupByQuery) input, adapter);
+      return strategySelector.strategize((GroupByQuery) input).process((GroupByQuery) input, adapter);
     }
   }
 }

@@ -54,9 +54,9 @@ public class DefaultLimitSpecTest
   public DefaultLimitSpecTest()
   {
     testRowsList = ImmutableList.of(
-        createRow("2011-04-01", "k1", 9.0d, "k2", 2L, "k3", 3L),
-        createRow("2011-04-01", "k1", 10.0d, "k2", 1L, "k3", 2L),
-        createRow("2011-04-01", "k1", 20.0d, "k2", 3L, "k3", 1L)
+        createRow("2011-04-01", "k1", 10.0, "k2", 1L, "k3", 2L),
+        createRow("2011-04-01", "k1", 20.0, "k2", 3L, "k3", 1L),
+        createRow("2011-04-01", "k1", 9.0, "k2", 2L, "k3", 3L)
     );
 
     testRowsSequence = Sequences.simple(testRowsList);
@@ -119,6 +119,28 @@ public class DefaultLimitSpecTest
   }
 
   @Test
+  public void testSortDimensionDescending()
+  {
+    DefaultLimitSpec limitSpec = new DefaultLimitSpec(
+        ImmutableList.of(new OrderByColumnSpec("k1", OrderByColumnSpec.Direction.DESCENDING)),
+        2
+    );
+
+    Function<Sequence<Row>, Sequence<Row>> limitFn = limitSpec.build(
+        ImmutableList.<DimensionSpec>of(new DefaultDimensionSpec("k1", "k1")),
+        ImmutableList.<AggregatorFactory>of(),
+        ImmutableList.<PostAggregator>of()
+    );
+
+    // Note: This test encodes the fact that limitSpec sorts numbers like strings; we might want to change this
+    // in the future.
+    Assert.assertEquals(
+        ImmutableList.of(testRowsList.get(2), testRowsList.get(1)),
+        Sequences.toList(limitFn.apply(testRowsSequence), new ArrayList<Row>())
+    );
+  }
+
+  @Test
   public void testBuildWithExplicitOrder()
   {
     DefaultLimitSpec limitSpec = new DefaultLimitSpec(
@@ -140,7 +162,7 @@ public class DefaultLimitSpecTest
         )
     );
     Assert.assertEquals(
-        ImmutableList.of(testRowsList.get(1), testRowsList.get(2)),
+        ImmutableList.of(testRowsList.get(0), testRowsList.get(1)),
         Sequences.toList(limitFn.apply(testRowsSequence), new ArrayList<Row>())
     );
 
@@ -157,7 +179,7 @@ public class DefaultLimitSpecTest
         )
     );
     Assert.assertEquals(
-        ImmutableList.of(testRowsList.get(0), testRowsList.get(1)),
+        ImmutableList.of(testRowsList.get(2), testRowsList.get(0)),
         Sequences.toList(limitFn.apply(testRowsSequence), new ArrayList<Row>())
     );
 
@@ -180,7 +202,7 @@ public class DefaultLimitSpecTest
         )
     );
     Assert.assertEquals(
-        ImmutableList.of(testRowsList.get(0), testRowsList.get(1)),
+        ImmutableList.of(testRowsList.get(2), testRowsList.get(0)),
         Sequences.toList(limitFn.apply(testRowsSequence), new ArrayList<Row>())
     );
   }

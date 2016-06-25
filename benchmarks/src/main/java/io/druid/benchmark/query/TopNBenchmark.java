@@ -30,12 +30,13 @@ import com.metamx.common.logger.Logger;
 import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
+import io.druid.collections.StupidPool;
 import io.druid.concurrent.Execs;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.offheap.OffheapBufferPool;
+import io.druid.offheap.OffheapBufferGenerator;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -236,7 +237,7 @@ public class TopNBenchmark
     }
 
     factory = new TopNQueryRunnerFactory(
-        new OffheapBufferPool(250000000, Integer.MAX_VALUE),
+        new StupidPool<>(new OffheapBufferGenerator("compute", 250000000), Integer.MAX_VALUE),
         new TopNQueryQueryToolChest(new TopNQueryConfig(), QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator()),
         QueryBenchmarkUtil.NOOP_QUERYWATCHER
     );

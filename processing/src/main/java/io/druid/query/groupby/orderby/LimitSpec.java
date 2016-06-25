@@ -38,6 +38,15 @@ import java.util.List;
 })
 public interface LimitSpec
 {
+  /**
+   * Returns a function that applies a limit to an input sequence that is assumed to be sorted on dimensions.
+   *
+   * @param dimensions query dimensions
+   * @param aggs       query aggregators
+   * @param postAggs   query postAggregators
+   *
+   * @return limit function
+   */
   public Function<Sequence<Row>, Sequence<Row>> build(
       List<DimensionSpec> dimensions,
       List<AggregatorFactory> aggs,

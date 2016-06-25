@@ -17,16 +17,32 @@
  * under the License.
  */
 
-package io.druid.collections;
+package io.druid.query.groupby.strategy;
 
-import java.io.Closeable;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.metamx.common.guava.Sequence;
+import io.druid.data.input.Row;
+import io.druid.query.QueryRunner;
+import io.druid.query.groupby.GroupByQuery;
+import io.druid.segment.StorageAdapter;
 
-/**
- */
-public interface ResourceHolder<T> extends Closeable
+import java.util.Map;
+
+public interface GroupByStrategy
 {
-  T get();
+  Sequence<Row> mergeResults(
+      QueryRunner<Row> baseRunner,
+      GroupByQuery query,
+      Map<String, Object> responseContext
+  );
 
-  @Override
-  void close();
+  QueryRunner<Row> mergeRunners(
+      ListeningExecutorService exec,
+      Iterable<QueryRunner<Row>> queryRunners
+  );
+
+  Sequence<Row> process(
+      GroupByQuery query,
+      StorageAdapter storageAdapter
+  );
 }

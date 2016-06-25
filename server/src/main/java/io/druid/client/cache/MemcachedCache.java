@@ -473,9 +473,6 @@ public class MemcachedCache implements Cache
         return null;
       }
     }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
-    }
   }
 
   @Override
@@ -492,9 +489,6 @@ public class MemcachedCache implements Cache
       // operation did not get queued in time (queue is full)
       errorCount.incrementAndGet();
       log.warn(e, "Unable to queue cache operation");
-    }
-    catch (IOException e) {
-      Throwables.propagate(e);
     }
   }
 
@@ -588,9 +582,6 @@ public class MemcachedCache implements Cache
         log.warn(e, "Exception pulling item from cache");
         return results;
       }
-    }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
     }
   }
 

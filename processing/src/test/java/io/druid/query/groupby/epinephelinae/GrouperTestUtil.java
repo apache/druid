@@ -17,16 +17,22 @@
  * under the License.
  */
 
-package io.druid.collections;
+package io.druid.query.groupby.epinephelinae;
 
-import java.io.Closeable;
-
-/**
- */
-public interface ResourceHolder<T> extends Closeable
+public class GrouperTestUtil
 {
-  T get();
+  private GrouperTestUtil()
+  {
+    // No instantiation
+  }
 
-  @Override
-  void close();
+  public static Grouper.KeySerde<Integer> intKeySerde()
+  {
+    return IntKeySerde.INSTANCE;
+  }
+
+  public static TestColumnSelectorFactory newColumnSelectorFactory()
+  {
+    return new TestColumnSelectorFactory();
+  }
 }

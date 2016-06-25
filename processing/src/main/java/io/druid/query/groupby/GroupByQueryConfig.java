@@ -20,11 +20,15 @@
 package io.druid.query.groupby;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.query.groupby.strategy.GroupByStrategySelector;
 
 /**
  */
 public class GroupByQueryConfig
 {
+  @JsonProperty
+  private String defaultStrategy = GroupByStrategySelector.STRATEGY_V1;
+
   @JsonProperty
   private boolean singleThreaded = false;
 
@@ -33,6 +37,26 @@ public class GroupByQueryConfig
 
   @JsonProperty
   private int maxResults = 500000;
+
+  @JsonProperty
+  // Not documented, only used for tests to force spilling
+  private int bufferGrouperMaxSize = Integer.MAX_VALUE;
+
+  @JsonProperty
+  private int bufferGrouperInitialBuckets = -1;
+
+  @JsonProperty
+  // Size of on-heap string dictionary for merging, per-query; when exceeded, partial results will be spilled to disk
+  private long maxMergingDictionarySize = 25_000_000L;
+
+  @JsonProperty
+  // Max on-disk temporary storage, per-query; when exceeded, the query fails
+  private long maxOnDiskStorage = 0L;
+
+  public String getDefaultStrategy()
+  {
+    return defaultStrategy;
+  }
 
   public boolean isSingleThreaded()
   {
@@ -62,5 +86,25 @@ public class GroupByQueryConfig
   public void setMaxResults(int maxResults)
   {
     this.maxResults = maxResults;
+  }
+
+  public int getBufferGrouperMaxSize()
+  {
+    return bufferGrouperMaxSize;
+  }
+
+  public int getBufferGrouperInitialBuckets()
+  {
+    return bufferGrouperInitialBuckets;
+  }
+
+  public long getMaxMergingDictionarySize()
+  {
+    return maxMergingDictionarySize;
+  }
+
+  public long getMaxOnDiskStorage()
+  {
+    return maxOnDiskStorage;
   }
 }

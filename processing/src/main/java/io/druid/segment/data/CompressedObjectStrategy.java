@@ -209,13 +209,8 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
     @Override
     public byte[] compress(byte[] bytes)
     {
-
       try (final ResourceHolder<BufferRecycler> bufferRecycler = CompressedPools.getBufferRecycler()) {
         return LZFEncoder.encode(bytes, 0, bytes.length, bufferRecycler.get());
-      }
-      catch (IOException e) {
-        log.error(e, "Error compressing data");
-        throw Throwables.propagate(e);
       }
     }
   }
@@ -231,7 +226,14 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
     {
       // Since decompressed size is NOT known, must use lz4Safe
       // lz4Safe.decompress does not modify buffer positions
-      final int numDecompressedBytes = lz4Safe.decompress(in, in.position(), numBytes, out, out.position(), out.remaining());
+      final int numDecompressedBytes = lz4Safe.decompress(
+          in,
+          in.position(),
+          numBytes,
+          out,
+          out.position(),
+          out.remaining()
+      );
       out.limit(out.position() + numDecompressedBytes);
     }
 
@@ -298,7 +300,7 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
       }
 
       @Override
-      public void close() throws IOException
+      public void close()
       {
         bufHolder.close();
       }

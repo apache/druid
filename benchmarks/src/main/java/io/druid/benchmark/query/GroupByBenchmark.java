@@ -20,6 +20,7 @@
 package io.druid.benchmark.query;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
 import com.google.common.collect.Lists;
@@ -32,13 +33,16 @@ import com.metamx.common.logger.Logger;
 import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
+import io.druid.collections.BlockingPool;
+import io.druid.collections.StupidPool;
 import io.druid.concurrent.Execs;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.offheap.OffheapBufferPool;
+import io.druid.offheap.OffheapBufferGenerator;
+import io.druid.query.DruidProcessingConfig;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -54,6 +58,9 @@ import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryEngine;
 import io.druid.query.groupby.GroupByQueryQueryToolChest;
 import io.druid.query.groupby.GroupByQueryRunnerFactory;
+import io.druid.query.groupby.strategy.GroupByStrategySelector;
+import io.druid.query.groupby.strategy.GroupByStrategyV1;
+import io.druid.query.groupby.strategy.GroupByStrategyV2;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.segment.IncrementalIndexSegment;
@@ -67,7 +74,6 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
-
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -83,6 +89,7 @@ import org.openjdk.jmh.infra.Blackhole;
 
 import java.io.File;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -100,11 +107,20 @@ public class GroupByBenchmark
   @Param({"4"})
   private int numSegments;
 
+  @Param({"4"})
+  private int numProcessingThreads;
+
+  @Param({"-1"})
+  private int initialBuckets;
+
   @Param({"100000"})
   private int rowsPerSegment;
 
   @Param({"basic.A"})
   private String schemaAndQuery;
+
+  @Param({"v1", "v2"})
+  private String defaultStrategy;
 
   private static final Logger log = new Logger(GroupByBenchmark.class);
   private static final int RNG_SEED = 9999;
@@ -186,7 +202,7 @@ public class GroupByBenchmark
     if (ComplexMetrics.getSerdeForType("hyperUnique") == null) {
       ComplexMetrics.registerSerde("hyperUnique", new HyperUniquesSerde(Hashing.murmur3_128()));
     }
-    executorService = Execs.multiThreaded(numSegments, "GroupByThreadPool");
+    executorService = Execs.multiThreaded(numProcessingThreads, "GroupByThreadPool[%d]");
 
     setupQueries();
 
@@ -237,25 +253,75 @@ public class GroupByBenchmark
       qIndexes.add(qIndex);
     }
 
-    OffheapBufferPool bufferPool = new OffheapBufferPool(250000000, Integer.MAX_VALUE);
-    OffheapBufferPool bufferPool2 = new OffheapBufferPool(250000000, Integer.MAX_VALUE);
-    final GroupByQueryConfig config = new GroupByQueryConfig();
+    StupidPool<ByteBuffer> bufferPool = new StupidPool<>(
+        new OffheapBufferGenerator("compute", 250000000),
+        Integer.MAX_VALUE
+    );
+    BlockingPool<ByteBuffer> mergePool = new BlockingPool<>(
+        new OffheapBufferGenerator("merge", 250000000),
+        1
+    );
+    final GroupByQueryConfig config = new GroupByQueryConfig()
+    {
+      @Override
+      public String getDefaultStrategy()
+      {
+        return defaultStrategy;
+      }
+
+      @Override
+      public int getBufferGrouperInitialBuckets()
+      {
+        return initialBuckets;
+      }
+    };
     config.setSingleThreaded(false);
-    config.setMaxIntermediateRows(1000000);
-    config.setMaxResults(1000000);
+    config.setMaxIntermediateRows(Integer.MAX_VALUE);
+    config.setMaxResults(Integer.MAX_VALUE);
+
+    DruidProcessingConfig druidProcessingConfig = new DruidProcessingConfig()
+    {
+      @Override
+      public int getNumThreads()
+      {
+        // Used by "v2" strategy for concurrencyHint
+        return numProcessingThreads;
+      }
+
+      @Override
+      public String getFormatString()
+      {
+        return null;
+      }
+    };
 
     final Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(config);
-    final GroupByQueryEngine engine = new GroupByQueryEngine(configSupplier, bufferPool);
+    final GroupByStrategySelector strategySelector = new GroupByStrategySelector(
+        configSupplier,
+        new GroupByStrategyV1(
+            configSupplier,
+            new GroupByQueryEngine(configSupplier, bufferPool),
+            QueryBenchmarkUtil.NOOP_QUERYWATCHER,
+            bufferPool
+        ),
+        new GroupByStrategyV2(
+            druidProcessingConfig,
+            configSupplier,
+            bufferPool,
+            mergePool,
+            new ObjectMapper(new SmileFactory()),
+            QueryBenchmarkUtil.NOOP_QUERYWATCHER
+        )
+    );
 
     factory = new GroupByQueryRunnerFactory(
-        engine,
-        QueryBenchmarkUtil.NOOP_QUERYWATCHER,
-        configSupplier,
+        strategySelector,
         new GroupByQueryQueryToolChest(
-            configSupplier, JSON_MAPPER, engine, bufferPool2,
+            configSupplier,
+            strategySelector,
+            bufferPool,
             QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator()
-        ),
-        bufferPool2
+        )
     );
   }
 

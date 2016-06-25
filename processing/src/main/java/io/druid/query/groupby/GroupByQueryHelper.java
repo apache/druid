@@ -24,9 +24,12 @@ import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.Accumulator;
+import com.metamx.common.guava.Sequence;
+import com.metamx.common.guava.Sequences;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.MapBasedRow;
+import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
@@ -158,5 +161,43 @@ public class GroupByQueryHelper
       }
     };
     return new Pair<>(init, accumulator);
+  }
+
+  // Used by GroupByQueryQueryToolChest, GroupByStrategyV1
+  public static IncrementalIndex makeIncrementalIndex(
+      GroupByQuery query,
+      GroupByQueryConfig config,
+      StupidPool<ByteBuffer> bufferPool,
+      Sequence<Row> rows
+  )
+  {
+    Pair<IncrementalIndex, Accumulator<IncrementalIndex, Row>> indexAccumulatorPair = GroupByQueryHelper.createIndexAccumulatorPair(
+        query,
+        config,
+        bufferPool
+    );
+
+    return rows.accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
+  }
+
+  // Used by GroupByQueryQueryToolChest, GroupByStrategyV1
+  public static Sequence<Row> postAggregate(final GroupByQuery query, IncrementalIndex index)
+  {
+    return Sequences.map(
+        Sequences.simple(index.iterableWithPostAggregations(query.getPostAggregatorSpecs(), query.isDescending())),
+        new Function<Row, Row>()
+        {
+          @Override
+          public Row apply(Row input)
+          {
+            final MapBasedRow row = (MapBasedRow) input;
+            return new MapBasedRow(
+                query.getGranularity()
+                     .toDateTime(row.getTimestampFromEpoch()),
+                row.getEvent()
+            );
+          }
+        }
+    );
   }
 }
