@@ -30,12 +30,14 @@ import com.metamx.common.concurrent.ExecutorServiceConfig;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import io.druid.client.cache.CacheConfig;
+import io.druid.collections.BlockingPool;
 import io.druid.collections.StupidPool;
 import io.druid.common.utils.VMUtils;
 import io.druid.guice.annotations.BackgroundCaching;
 import io.druid.guice.annotations.Global;
+import io.druid.guice.annotations.Merging;
 import io.druid.guice.annotations.Processing;
-import io.druid.offheap.OffheapBufferPool;
+import io.druid.offheap.OffheapBufferGenerator;
 import io.druid.query.DruidProcessingConfig;
 import io.druid.query.ExecutorServiceMonitor;
 import io.druid.query.MetricsEmittingExecutorService;
@@ -104,29 +106,51 @@ public class DruidProcessingModule implements Module
   @Global
   public StupidPool<ByteBuffer> getIntermediateResultsPool(DruidProcessingConfig config)
   {
-    try {
-      long maxDirectMemory = VMUtils.getMaxDirectMemory();
+    verifyDirectMemory(config);
+    return new StupidPool<>(
+        new OffheapBufferGenerator("intermediate processing", config.intermediateComputeSizeBytes()),
+        config.poolCacheMaxCount()
+    );
+  }
 
-      final long memoryNeeded = (long) config.intermediateComputeSizeBytes() * (config.getNumThreads() + 1);
+  @Provides
+  @LazySingleton
+  @Merging
+  public BlockingPool<ByteBuffer> getMergeBufferPool(DruidProcessingConfig config)
+  {
+    verifyDirectMemory(config);
+    return new BlockingPool<>(
+        new OffheapBufferGenerator("result merging", config.intermediateComputeSizeBytes()),
+        config.getNumMergeBuffers()
+    );
+  }
+
+  private void verifyDirectMemory(DruidProcessingConfig config)
+  {
+    try {
+      final long maxDirectMemory = VMUtils.getMaxDirectMemory();
+      final long memoryNeeded = (long) config.intermediateComputeSizeBytes() *
+                                (config.getNumMergeBuffers() + config.getNumThreads() + 1);
+
       if (maxDirectMemory < memoryNeeded) {
         throw new ProvisionException(
             String.format(
-                "Not enough direct memory.  Please adjust -XX:MaxDirectMemorySize, druid.processing.buffer.sizeBytes, or druid.processing.numThreads: "
-                + "maxDirectMemory[%,d], memoryNeeded[%,d] = druid.processing.buffer.sizeBytes[%,d] * ( druid.processing.numThreads[%,d] + 1 )",
+                "Not enough direct memory.  Please adjust -XX:MaxDirectMemorySize, druid.processing.buffer.sizeBytes, druid.processing.numThreads, or druid.processing.numMergeBuffers: "
+                + "maxDirectMemory[%,d], memoryNeeded[%,d] = druid.processing.buffer.sizeBytes[%,d] * (druid.processing.numMergeBuffers[%,d] + druid.processing.numThreads[%,d] + 1)",
                 maxDirectMemory,
                 memoryNeeded,
                 config.intermediateComputeSizeBytes(),
+                config.getNumMergeBuffers(),
                 config.getNumThreads()
             )
         );
       }
     }
     catch (UnsupportedOperationException e) {
-      log.info(e.getMessage());
+      log.info(
+          "Could not verify that you have enough direct memory, so I hope you do! Error message was: %s",
+          e.getMessage()
+      );
     }
-
-    return new OffheapBufferPool(config.intermediateComputeSizeBytes(), config.poolCacheMaxCount());
   }
-
-
 }
