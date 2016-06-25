@@ -17,16 +17,18 @@
  * under the License.
  */
 
-package io.druid.collections;
+package io.druid.guice.annotations;
 
-import java.io.Closeable;
+import com.google.inject.BindingAnnotation;
 
-/**
- */
-public interface ResourceHolder<T> extends Closeable
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+
+@BindingAnnotation
+@Target({ElementType.FIELD, ElementType.PARAMETER, ElementType.METHOD})
+@Retention(RetentionPolicy.RUNTIME)
+public @interface Merging
 {
-  T get();
-
-  @Override
-  void close();
 }
