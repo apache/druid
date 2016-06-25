@@ -752,7 +752,7 @@ public class TaskLifecycleTest
                                 .version("2011-04-6T16:52:46.119-05:00")
                                 .dimensions(ImmutableList.<String>of())
                                 .metrics(ImmutableList.<String>of())
-                                .shardSpec(new NoneShardSpec())
+                                .shardSpec(NoneShardSpec.instance())
                                 .binaryVersion(9)
                                 .size(0)
                                 .build();

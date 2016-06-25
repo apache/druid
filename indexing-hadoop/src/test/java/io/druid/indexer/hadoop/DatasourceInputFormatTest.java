@@ -73,7 +73,7 @@ public class DatasourceInputFormatTest
                 ),
                 ImmutableList.of("host"),
                 ImmutableList.of("visited_sum", "unique_hosts"),
-                new NoneShardSpec(),
+                NoneShardSpec.instance(),
                 9,
                 2
             )
@@ -89,7 +89,7 @@ public class DatasourceInputFormatTest
                 ),
                 ImmutableList.of("host"),
                 ImmutableList.of("visited_sum", "unique_hosts"),
-                new NoneShardSpec(),
+                NoneShardSpec.instance(),
                 9,
                 11
             )
@@ -105,7 +105,7 @@ public class DatasourceInputFormatTest
                 ),
                 ImmutableList.of("host"),
                 ImmutableList.of("visited_sum", "unique_hosts"),
-                new NoneShardSpec(),
+                NoneShardSpec.instance(),
                 9,
                 4
             )

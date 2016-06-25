@@ -47,7 +47,7 @@ public class HadoopConverterTaskSerDeTest
   private static final Map<String, Object> LOAD_SPEC = ImmutableMap.<String, Object>of("someKey", "someVal");
   private static final List<String> DIMENSIONS = ImmutableList.of("dim1", "dim2");
   private static final List<String> METRICS = ImmutableList.of("metric1", "metric2");
-  private static final ShardSpec SHARD_SPEC = new NoneShardSpec();
+  private static final ShardSpec SHARD_SPEC = NoneShardSpec.instance();
   private static final int BINARY_VERSION = 34718;
   private static final long SEGMENT_SIZE = 7483901348790L;
   private static final IndexSpec INDEX_SPEC = new IndexSpec(new ConciseBitmapSerdeFactory(), "lz4", "lzf");

@@ -79,7 +79,7 @@ public class DruidCoordinatorRuleRunnerTest
               Maps.<String, Object>newHashMap(),
               Lists.<String>newArrayList(),
               Lists.<String>newArrayList(),
-              new NoneShardSpec(),
+              NoneShardSpec.instance(),
               IndexIO.CURRENT_VERSION_ID,
               1
           )
@@ -992,7 +992,7 @@ public class DruidCoordinatorRuleRunnerTest
         Maps.<String, Object>newHashMap(),
         Lists.<String>newArrayList(),
         Lists.<String>newArrayList(),
-        new NoneShardSpec(),
+        NoneShardSpec.instance(),
         1,
         0
     );
@@ -1140,7 +1140,7 @@ public class DruidCoordinatorRuleRunnerTest
         Maps.<String, Object>newHashMap(),
         Lists.<String>newArrayList(),
         Lists.<String>newArrayList(),
-        new NoneShardSpec(),
+        NoneShardSpec.instance(),
         1,
         0
     );
