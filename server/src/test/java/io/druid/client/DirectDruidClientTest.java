@@ -110,7 +110,7 @@ public class DirectDruidClientTest
             Maps.<String, Object>newHashMap(),
             Lists.<String>newArrayList(),
             Lists.<String>newArrayList(),
-            new NoneShardSpec(),
+            NoneShardSpec.instance(),
             0,
             0L
         ),
@@ -220,7 +220,7 @@ public class DirectDruidClientTest
             Maps.<String, Object>newHashMap(),
             Lists.<String>newArrayList(),
             Lists.<String>newArrayList(),
-            new NoneShardSpec(),
+            NoneShardSpec.instance(),
             0,
             0L
         ),
@@ -287,7 +287,7 @@ public class DirectDruidClientTest
         Maps.<String, Object>newHashMap(),
         Lists.<String>newArrayList(),
         Lists.<String>newArrayList(),
-        new NoneShardSpec(),
+        NoneShardSpec.instance(),
         0,
         0L
     );

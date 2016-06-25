@@ -358,7 +358,7 @@ public class BrokerServerViewTest extends CuratorTestBase
                       .version(version)
                       .dimensions(ImmutableList.<String>of())
                       .metrics(ImmutableList.<String>of())
-                      .shardSpec(new NoneShardSpec())
+                      .shardSpec(NoneShardSpec.instance())
                       .binaryVersion(9)
                       .size(0)
                       .build();

@@ -418,7 +418,7 @@ public class ZkCoordinatorTest extends CuratorTestBase
         ImmutableMap.<String, Object>of("version", version, "interval", interval, "cacheDir", infoDir),
         Arrays.asList("dim1", "dim2", "dim3"),
         Arrays.asList("metric1", "metric2"),
-        new NoneShardSpec(),
+        NoneShardSpec.instance(),
         IndexIO.CURRENT_VERSION_ID,
         123L
     );

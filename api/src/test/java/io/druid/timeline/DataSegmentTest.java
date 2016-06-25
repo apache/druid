@@ -100,7 +100,7 @@ public class DataSegmentTest
         loadSpec,
         Arrays.asList("dim1", "dim2"),
         Arrays.asList("met1", "met2"),
-        new NoneShardSpec(),
+        NoneShardSpec.instance(),
         TEST_VERSION,
         1
     );
@@ -152,7 +152,7 @@ public class DataSegmentTest
                                            .dataSource("foo")
                                            .interval(new Interval("2012-01-01/2012-01-02"))
                                            .version(new DateTime("2012-01-01T11:22:33.444Z").toString())
-                                           .shardSpec(new NoneShardSpec())
+                                           .shardSpec(NoneShardSpec.instance())
                                            .build();
 
     Assert.assertEquals(

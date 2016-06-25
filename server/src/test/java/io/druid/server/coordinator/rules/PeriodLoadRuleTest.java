@@ -38,7 +38,7 @@ public class PeriodLoadRuleTest
   private final static DataSegment.Builder builder = DataSegment.builder()
                                                             .dataSource("test")
                                                             .version(new DateTime().toString())
-                                                            .shardSpec(new NoneShardSpec());
+                                                            .shardSpec(NoneShardSpec.instance());
 
   @Test
   public void testAppliesToAll()

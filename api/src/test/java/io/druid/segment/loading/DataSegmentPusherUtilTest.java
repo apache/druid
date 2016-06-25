@@ -43,7 +43,7 @@ public class DataSegmentPusherUtilTest
                 loadSpec,
                 Arrays.asList("dim1", "dim2"),
                 Arrays.asList("met1", "met2"),
-                new NoneShardSpec(),
+                NoneShardSpec.instance(),
                 null,
                 1
         );
