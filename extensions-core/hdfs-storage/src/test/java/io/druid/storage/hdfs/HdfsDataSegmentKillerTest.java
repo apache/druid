@@ -122,7 +122,7 @@ public class HdfsDataSegmentKillerTest
         ),
         ImmutableList.of("product"),
         ImmutableList.of("visited_sum", "unique_hosts"),
-        new NoneShardSpec(),
+        NoneShardSpec.instance(),
         9,
         12334
     );

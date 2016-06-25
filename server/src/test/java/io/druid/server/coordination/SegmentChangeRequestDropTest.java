@@ -52,7 +52,7 @@ public class SegmentChangeRequestDropTest
         loadSpec,
         Arrays.asList("dim1", "dim2"),
         Arrays.asList("met1", "met2"),
-        new NoneShardSpec(),
+        NoneShardSpec.instance(),
         IndexIO.CURRENT_VERSION_ID,
         1
     );

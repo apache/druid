@@ -320,7 +320,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
                       .interval(mergedInterval)
                       .version(version)
                       .binaryVersion(IndexIO.CURRENT_VERSION_ID)
-                      .shardSpec(new NoneShardSpec())
+                      .shardSpec(NoneShardSpec.instance())
                       .dimensions(Lists.newArrayList(mergedDimensions))
                       .metrics(Lists.newArrayList(mergedMetrics))
                       .build();

@@ -645,7 +645,7 @@ public class DeterminePartitionsJob implements Jobby
             final ShardSpec shardSpec;
 
             if (currentDimPartitions.partitions.isEmpty()) {
-              shardSpec = new NoneShardSpec();
+              shardSpec = NoneShardSpec.instance();
             } else {
               if (currentDimPartition.rows < config.getTargetPartitionSize() * SHARD_COMBINE_THRESHOLD) {
                 // Combine with previous shard

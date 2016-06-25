@@ -54,7 +54,7 @@ public class LocalDataSegmentPusherTest
       null,
       null,
       null,
-      new NoneShardSpec(),
+      NoneShardSpec.instance(),
       null,
       -1
   );

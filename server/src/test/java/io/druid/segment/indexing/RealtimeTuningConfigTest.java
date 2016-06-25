@@ -69,7 +69,7 @@ public class RealtimeTuningConfigTest
     Assert.assertEquals(0, config.getHandoffConditionTimeout());
     Assert.assertEquals(new IndexSpec(), config.getIndexSpec());
     Assert.assertEquals(new Period("PT10M"), config.getIntermediatePersistPeriod());
-    Assert.assertEquals(new NoneShardSpec(), config.getShardSpec());
+    Assert.assertEquals(NoneShardSpec.instance(), config.getShardSpec());
     Assert.assertEquals(0, config.getMaxPendingPersists());
     Assert.assertEquals(75000, config.getMaxRowsInMemory());
     Assert.assertEquals(0, config.getMergeThreadPriority());
@@ -111,7 +111,7 @@ public class RealtimeTuningConfigTest
     Assert.assertEquals(100, config.getHandoffConditionTimeout());
     Assert.assertEquals(new IndexSpec(), config.getIndexSpec());
     Assert.assertEquals(new Period("PT1H"), config.getIntermediatePersistPeriod());
-    Assert.assertEquals(new NoneShardSpec(), config.getShardSpec());
+    Assert.assertEquals(NoneShardSpec.instance(), config.getShardSpec());
     Assert.assertEquals(100, config.getMaxPendingPersists());
     Assert.assertEquals(100, config.getMaxRowsInMemory());
     Assert.assertEquals(100, config.getMergeThreadPriority());
