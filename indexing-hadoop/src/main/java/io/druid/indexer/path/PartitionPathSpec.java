@@ -22,7 +22,11 @@ package io.druid.indexer.path;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.*;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.metamx.common.logger.Logger;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import org.apache.hadoop.fs.FileStatus;
@@ -118,15 +122,13 @@ public class PartitionPathSpec implements PathSpec
         int indexingStartColumnIndex = 0;
 
         // skip some partition columns for partial indexing of partitions
-        if (basePath.toString().length() != indexingPath.toString().length())
-        {
+        if (basePath.toString().length() != indexingPath.toString().length()) {
           String targetToFindSkipColumns = indexingPath.toString().substring(basePath.toString().length() + 1);
           String[] skipColumnValues = targetToFindSkipColumns.split(Path.SEPARATOR);
           Preconditions.checkArgument(skipColumnValues.length <= partitionColumns.size(),
               "partition columns should include all the columns specified in indexingPaths");
 
-          for (String skipColumnValue: skipColumnValues)
-          {
+          for (String skipColumnValue: skipColumnValues) {
             String[] columnValuePair = skipColumnValue.split("=");
             Preconditions.checkArgument(columnValuePair.length == 2,
                 String.format("%s: indexingPaths should not have non-partitioning directories", skipColumnValue));
@@ -136,8 +138,7 @@ public class PartitionPathSpec implements PathSpec
         }
 
         // scan all the sub-directories under indexingPaths and add them to input path
-        if (indexingStartColumnIndex == partitionColumns.size())
-        {
+        if (indexingStartColumnIndex == partitionColumns.size()) {
           paths.add(fs.getFileStatus(indexingPath).getPath().toString());
         } else {
           Path[] pathToFilter = statusToPath(fs.listStatus(indexingPath, new PartitionPathFilter(partitionColumns.get(indexingStartColumnIndex))));
@@ -169,8 +170,7 @@ public class PartitionPathSpec implements PathSpec
   {
     String dirPath = path.getParent().toUri().getPath();
     Preconditions.checkArgument(dirPath.startsWith(basePath));
-    if (dirPath.length() == basePath.length())
-    {
+    if (dirPath.length() == basePath.length()) {
       return ImmutableMap.of();
     }
 
@@ -179,8 +179,7 @@ public class PartitionPathSpec implements PathSpec
     Map<String, String> values = Maps.newHashMap();
     for (String partition: partitions) {
       String[] keyValue = partition.split("=");
-      if (keyValue.length == 2)
-      {
+      if (keyValue.length == 2) {
         values.put(keyValue[0], keyValue[1]);
       }
     }
@@ -224,8 +223,7 @@ public class PartitionPathSpec implements PathSpec
   private void autoAddPath(Set<String> paths, FileSystem fs, Path path) throws IOException
   {
     boolean hasFile = false;
-    for (FileStatus fileStatus: fs.listStatus(path))
-    {
+    for (FileStatus fileStatus: fs.listStatus(path)) {
       Path child = fileStatus.getPath();
       if (fileStatus.isDirectory()) {
         String[] split = child.getName().split("=");
