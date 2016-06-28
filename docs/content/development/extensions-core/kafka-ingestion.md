@@ -237,7 +237,7 @@ scenario (correctness-wise) but requires additional worker capacity to support. 
 
 When a supervisor spec is submitted via the `POST /druid/indexer/v1/supervisor` endpoint, it is persisted in the
 configured metadata database. There can only be a single supervisor per dataSource, and submitting a second spec for
-the same dataSource will fail with a `409 Conflict` if one already exists.
+the same dataSource will overwrite the previous one.
 
 When an overlord gains leadership, either by being started or as a result of another overlord failing, it will spawn
 a supervisor for each supervisor spec in the metadata database. The supervisor will then discover running Kafka indexing
