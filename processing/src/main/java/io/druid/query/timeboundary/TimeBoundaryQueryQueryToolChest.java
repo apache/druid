@@ -59,6 +59,32 @@ public class TimeBoundaryQueryQueryToolChest
   };
 
   @Override
+  public <T extends LogicalSegment> List<T> filterSegments(TimeBoundaryQuery query, List<T> segments)
+  {
+    if (segments.size() <= 1 || query.hasFilters()) {
+      return segments;
+    }
+
+    final T min = query.isMaxTime() ? null : segments.get(0);
+    final T max = query.isMinTime() ? null : segments.get(segments.size() - 1);
+
+    return Lists.newArrayList(
+        Iterables.filter(
+            segments,
+            new Predicate<T>()
+            {
+              @Override
+              public boolean apply(T input)
+              {
+                return (min != null && input.getInterval().overlaps(min.getInterval())) ||
+                       (max != null && input.getInterval().overlaps(max.getInterval()));
+              }
+            }
+        )
+    );
+  }
+
+  @Override
   public QueryRunner<Result<TimeBoundaryResultValue>> mergeResults(
       final QueryRunner<Result<TimeBoundaryResultValue>> runner
   )
