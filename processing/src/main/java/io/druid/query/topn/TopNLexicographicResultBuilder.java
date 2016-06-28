@@ -81,7 +81,7 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
 
   @Override
   public TopNResultBuilder addEntry(
-      String dimName,
+      Comparable dimName,
       Object dimValIndex,
       Object[] metricVals
   )
@@ -186,7 +186,7 @@ public class TopNLexicographicResultBuilder implements TopNResultBuilder
     );
   }
 
-  private boolean shouldAdd(String dimName)
+  private boolean shouldAdd(Comparable dimName)
   {
     final boolean belowThreshold = pQueue.size() < threshold;
     final boolean belowMax = belowThreshold

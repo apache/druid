@@ -31,6 +31,9 @@ import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ColumnCapabilitiesImpl;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import org.junit.Assert;
 import org.junit.Test;
@@ -49,6 +52,7 @@ public class CardinalityAggregatorTest
     private final List<Integer[]> column;
     private final Map<String, Integer> ids;
     private final Map<Integer, String> lookup;
+    private final ColumnCapabilitiesImpl capabilities;
 
     private int pos = 0;
 
@@ -56,6 +60,12 @@ public class CardinalityAggregatorTest
     {
       this.lookup = Maps.newHashMap();
       this.ids = Maps.newHashMap();
+      this.capabilities = new ColumnCapabilitiesImpl();
+      ValueType type = ValueType.STRING;
+
+      capabilities.setHasBitmapIndexes(type == ValueType.STRING);
+      capabilities.setDictionaryEncoded(type == ValueType.STRING);
+      capabilities.setType(type);
 
       int index = 0;
       for (String[] multiValue : values) {
@@ -159,6 +169,12 @@ public class CardinalityAggregatorTest
     public int lookupId(String s)
     {
       return ids.get(s);
+    }
+
+    @Override
+    public ColumnCapabilities getDimCapabilities()
+    {
+      return capabilities;
     }
   }
 

@@ -27,6 +27,7 @@ import com.metamx.common.ISE;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
+import io.druid.data.input.impl.DimensionSchema;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.FloatDimensionSchema;
 import io.druid.data.input.impl.LongDimensionSchema;
@@ -75,10 +76,10 @@ public class IncrementalIndexTest
   public static Collection<?> constructorFeeder() throws IOException
   {
     DimensionsSpec dimensions = new DimensionsSpec(
-        Arrays.asList(
+        Arrays.<DimensionSchema>asList(
             new StringDimensionSchema("string"),
-            new FloatDimensionSchema("float"),
-            new LongDimensionSchema("long")
+            new StringDimensionSchema("float"),
+            new StringDimensionSchema("long")
         ), null, null
     );
     AggregatorFactory[] metrics = {
@@ -103,7 +104,7 @@ public class IncrementalIndexTest
                 @Override
                 public IncrementalIndex createIndex()
                 {
-                  return new OnheapIncrementalIndex(schema, false, true, sortFacts, 1000);
+                  return new OnheapIncrementalIndex(schema, false, true, sortFacts, false, 1000);
                 }
               }
           }
@@ -215,8 +216,8 @@ public class IncrementalIndexTest
     Row row = index.iterator().next();
 
     Assert.assertArrayEquals(new String[]{"", "", "A"}, (Object[]) row.getRaw("string"));
-    Assert.assertArrayEquals(new Float[]{null, null, Float.MAX_VALUE}, (Object[]) row.getRaw("float"));
-    Assert.assertArrayEquals(new Long[]{null, null, Long.MIN_VALUE}, (Object[]) row.getRaw("long"));
+    Assert.assertArrayEquals(new String[]{"", "", String.valueOf(Float.MAX_VALUE)}, (Object[]) row.getRaw("float"));
+    Assert.assertArrayEquals(new String[]{"", "", String.valueOf(Long.MIN_VALUE)}, (Object[]) row.getRaw("long"));
   }
 
   @Test

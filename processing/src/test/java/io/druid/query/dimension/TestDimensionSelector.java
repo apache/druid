@@ -20,6 +20,9 @@
 package io.druid.query.dimension;
 
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ColumnCapabilitiesImpl;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.ArrayBasedIndexedInts;
 import io.druid.segment.data.IndexedInts;
 
@@ -61,4 +64,13 @@ class TestDimensionSelector implements DimensionSelector
     return name.charAt(0) - 'a';
   }
 
+  @Override
+  public ColumnCapabilities getDimCapabilities()
+  {
+    ColumnCapabilitiesImpl capabilities = new ColumnCapabilitiesImpl();
+    capabilities.setDictionaryEncoded(true);
+    capabilities.setHasBitmapIndexes(true);
+    capabilities.setType(ValueType.STRING);
+    return capabilities;
+  }
 }

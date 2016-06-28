@@ -22,7 +22,6 @@ package io.druid.query.select;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
@@ -32,6 +31,7 @@ import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.Filter;
 import io.druid.segment.Cursor;
+import io.druid.segment.DimensionHandler;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
@@ -39,11 +39,11 @@ import io.druid.segment.Segment;
 import io.druid.timeline.DataSegmentUtils;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.Column;
-import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -64,7 +64,7 @@ public class SelectQueryEngine
     // at the point where this code is called, only one datasource should exist.
     String dataSource = Iterables.getOnlyElement(query.getDataSource().getNames());
 
-    final Iterable<DimensionSpec> dims;
+    final List<DimensionSpec> dims;
     if (query.getDimensions() == null || query.getDimensions().isEmpty()) {
       dims = DefaultDimensionSpec.toSpec(adapter.getAvailableDimensions());
     } else {
@@ -104,10 +104,14 @@ public class SelectQueryEngine
 
             final LongColumnSelector timestampColumnSelector = cursor.makeLongColumnSelector(Column.TIME_COLUMN_NAME);
 
-            final Map<String, DimensionSelector> dimSelectors = Maps.newHashMap();
+            final Map<String, DimensionHandler> handlerMap = adapter.getDimensionHandlers();
+            List<DimensionHandler> handlerList = new ArrayList<DimensionHandler>();
+            List<DimensionSelector> selectorList = new ArrayList<DimensionSelector>();
+
             for (DimensionSpec dim : dims) {
               final DimensionSelector dimSelector = cursor.makeDimensionSelector(dim);
-              dimSelectors.put(dim.getOutputName(), dimSelector);
+              selectorList.add(dimSelector);
+              handlerList.add(handlerMap.get(dim.getDimension()));
             }
 
             final Map<String, ObjectColumnSelector> metSelectors = Maps.newHashMap();
@@ -125,25 +129,17 @@ public class SelectQueryEngine
               final Map<String, Object> theEvent = Maps.newLinkedHashMap();
               theEvent.put(EventHolder.timestampKey, new DateTime(timestampColumnSelector.get()));
 
-              for (Map.Entry<String, DimensionSelector> dimSelector : dimSelectors.entrySet()) {
-                final String dim = dimSelector.getKey();
-                final DimensionSelector selector = dimSelector.getValue();
 
-                if (selector == null) {
-                  theEvent.put(dim, null);
+              for (int i = 0; i < dims.size(); i++) {
+                final String outputName = dims.get(i).getOutputName();
+                final DimensionSelector selector = selectorList.get(i);
+                final DimensionHandler handler = handlerList.get(i);
+
+                if (handler == null) {
+                  theEvent.put(outputName, null);
                 } else {
-                  final IndexedInts vals = selector.getRow();
-
-                  if (vals.size() == 1) {
-                    final String dimVal = selector.lookupName(vals.get(0));
-                    theEvent.put(dim, dimVal);
-                  } else {
-                    List<String> dimVals = Lists.newArrayList();
-                    for (int i = 0; i < vals.size(); ++i) {
-                      dimVals.add(selector.lookupName(vals.get(i)));
-                    }
-                    theEvent.put(dim, dimVals);
-                  }
+                  Object dimVals = handler.getRowValuesForSelect(selector);
+                  theEvent.put(outputName, dimVals);
                 }
               }
 

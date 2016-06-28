@@ -149,7 +149,8 @@ public class TopNBinaryFnTest
         new NumericTopNMetricSpec("index"),
         2,
         aggregatorFactories,
-        postAggregators
+        postAggregators,
+        null
     ).apply(
         result1,
         result2
@@ -231,7 +232,8 @@ public class TopNBinaryFnTest
         new NumericTopNMetricSpec("index"),
         2,
         aggregatorFactories,
-        postAggregators
+        postAggregators,
+        null
     ).apply(
         result1,
         result2
@@ -276,7 +278,8 @@ public class TopNBinaryFnTest
         new NumericTopNMetricSpec("index"),
         2,
         aggregatorFactories,
-        postAggregators
+        postAggregators,
+        null
     ).apply(
         result1,
         result2
@@ -372,7 +375,8 @@ public class TopNBinaryFnTest
         new NumericTopNMetricSpec("addrowsindexconstant"),
         3,
         aggregatorFactories,
-        postAggregators
+        postAggregators,
+        null
     ).apply(
         result1,
         result2
@@ -454,7 +458,8 @@ public class TopNBinaryFnTest
         new NumericTopNMetricSpec("index"),
         2,
         aggregatorFactories,
-        postAggregators
+        postAggregators,
+        null
     ).apply(
         result1,
         result2
@@ -512,7 +517,8 @@ public class TopNBinaryFnTest
         new LexicographicTopNMetricSpec(null),
         2,
         aggregatorFactories,
-        postAggregators
+        postAggregators,
+        null
     ).apply(
         result1,
         result2

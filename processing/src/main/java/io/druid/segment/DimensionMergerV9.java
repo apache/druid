@@ -17,27 +17,22 @@
  * under the License.
  */
 
-package io.druid.query.topn;
+package io.druid.segment;
 
-import io.druid.query.Result;
-
-import java.util.Iterator;
+import io.druid.segment.column.ColumnDescriptor;
 
 /**
+ * Processing related interface
+ *
+ * DimensionMerger subclass to be used with IndexMergerV9.
  */
-public interface TopNResultBuilder
+public interface DimensionMergerV9 extends DimensionMerger
 {
-  public TopNResultBuilder addEntry(
-      Comparable dimName,
-      Object dimValIndex,
-      Object[] metricVals
-  );
-
-  public TopNResultBuilder addEntry(
-      DimensionAndMetricValueExtractor dimensionAndMetricValueExtractor
-  );
-
-  public Iterator<DimValHolder> getTopNIterator();
-
-  public Result<TopNResultValue> build();
+  /**
+   * Return a ColumnDescriptor containing ColumnPartSerde objects appropriate for
+   * this DimensionMerger's value metadata, sequence of row values, and index structures.
+   *
+   * @return ColumnDescriptor that IndexMergerV9 will use to build a column.
+   */
+  public ColumnDescriptor makeColumnDescriptor();
 }

@@ -24,6 +24,8 @@ import io.druid.segment.data.Indexed;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
+import java.util.Map;
+
 /**
  */
 public interface StorageAdapter extends CursorFactory
@@ -48,6 +50,7 @@ public interface StorageAdapter extends CursorFactory
   public Comparable getMaxValue(String column);
   public Capabilities getCapabilities();
   public ColumnCapabilities getColumnCapabilities(String column);
+  public Map<String, DimensionHandler> getDimensionHandlers();
 
   /**
    * Like {@link ColumnCapabilities#getType()}, but may return a more descriptive string for complex columns.

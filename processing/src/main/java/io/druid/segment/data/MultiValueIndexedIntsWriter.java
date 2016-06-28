@@ -19,10 +19,12 @@
 
 package io.druid.segment.data;
 
+import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
 import com.metamx.common.IAE;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 public abstract class MultiValueIndexedIntsWriter implements IndexedIntsWriter
@@ -36,6 +38,13 @@ public abstract class MultiValueIndexedIntsWriter implements IndexedIntsWriter
       addValues(Ints.asList((int[]) obj));
     } else if (obj instanceof List) {
       addValues((List<Integer>) obj);
+    } else if (obj instanceof Comparable[]) {
+      Comparable[] comparables = (Comparable[]) obj;
+      List<Integer> intList = new ArrayList<>();
+      for (Comparable comp : comparables) {
+        intList.add((Integer) comp);
+      }
+      addValues(intList);
     } else {
       throw new IAE("unsupported multi-value type: " + obj.getClass());
     }

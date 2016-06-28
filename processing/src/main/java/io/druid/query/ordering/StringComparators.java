@@ -34,23 +34,23 @@ public class StringComparators
 {
   public static final String LEXICOGRAPHIC_NAME = "lexicographic";
   public static final String ALPHANUMERIC_NAME = "alphanumeric";
-  
-  public static final LexicographicComparator LEXICOGRAPHIC = new LexicographicComparator();
+
+  public static final ToStringLexicographicComparator LEXICOGRAPHIC = new ToStringLexicographicComparator();
   public static final AlphanumericComparator ALPHANUMERIC = new AlphanumericComparator();
-    
-  @JsonTypeInfo(use=Id.NAME, include=As.PROPERTY, property="type", defaultImpl = LexicographicComparator.class)
+
+  @JsonTypeInfo(use=Id.NAME, include=As.PROPERTY, property="type", defaultImpl = ToStringLexicographicComparator.class)
   @JsonSubTypes(value = {
-      @JsonSubTypes.Type(name = StringComparators.LEXICOGRAPHIC_NAME, value = LexicographicComparator.class),
+      @JsonSubTypes.Type(name = StringComparators.LEXICOGRAPHIC_NAME, value = ToStringLexicographicComparator.class),
       @JsonSubTypes.Type(name = StringComparators.ALPHANUMERIC_NAME, value = AlphanumericComparator.class)
   })
-  public static interface StringComparator extends Comparator<String>
+  public static interface StringComparator extends Comparator<Comparable>
   {
   }
-  
-  public static class LexicographicComparator implements StringComparator
+
+  public static class ToStringLexicographicComparator implements StringComparator
   {
     @Override
-    public int compare(String s, String s2)
+    public int compare(Comparable s, Comparable s2)
     {
       // Avoid conversion to bytes for equal references
       if(s == s2){
@@ -65,11 +65,11 @@ public class StringComparators
       }
 
       return UnsignedBytes.lexicographicalComparator().compare(
-          StringUtils.toUtf8(s),
-          StringUtils.toUtf8(s2)
+          StringUtils.toUtf8(s.toString()),
+          StringUtils.toUtf8(s2.toString())
       );
     }
-    
+
     @Override
     public boolean equals(Object o)
     {
@@ -79,22 +79,42 @@ public class StringComparators
       if (o == null || getClass() != o.getClass()) {
         return false;
       }
-      
+
       return true;
     }
-    
+
     @Override
     public String toString()
     {
       return StringComparators.LEXICOGRAPHIC_NAME;
     }
   }
-  
+
   public static class AlphanumericComparator implements StringComparator
   {
+
+    public int compare(Comparable o1, Comparable o2)
+    {
+      if (o1 == null) {
+        if (o2 == null) {
+          return 0;
+        } else {
+          return -1;
+        }
+      }
+      if (o2 == null) {
+        return 1;
+      }
+      if (o1 instanceof String) {
+        return compareString((String) o1, (String) o2);
+      } else {
+        return o1.compareTo(o2);
+      }
+    }
+
     // This code is based on https://github.com/amjjd/java-alphanum, see
     // NOTICE file for more information
-    public int compare(String str1, String str2)
+    private int compareString(String str1, String str2)
     {
       int[] pos =
       { 0, 0 };
