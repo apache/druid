@@ -117,6 +117,7 @@ public class IncrementalIndexReadBenchmark
         true,
         false,
         true,
+        false,
         rowsPerSegment
     );
   }

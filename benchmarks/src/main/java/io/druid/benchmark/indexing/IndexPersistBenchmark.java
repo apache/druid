@@ -160,6 +160,7 @@ public class IndexPersistBenchmark
         true,
         false,
         true,
+        false,
         rowsPerSegment
     );
   }

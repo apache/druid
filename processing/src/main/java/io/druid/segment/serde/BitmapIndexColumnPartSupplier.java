@@ -90,12 +90,6 @@ public class BitmapIndexColumnPartSupplier implements Supplier<BitmapIndex>
         final ImmutableBitmap bitmap = bitmaps.get(idx);
         return bitmap == null ? bitmapFactory.makeEmptyImmutableBitmap() : bitmap;
       }
-
-      @Override
-      public ImmutableBitmap getBitmapFromValue(String value)
-      {
-        return getBitmap(getIndex(value));
-      }
     };
   }
 }

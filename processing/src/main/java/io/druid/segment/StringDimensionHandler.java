@@ -164,7 +164,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, String>
 
     if (row == null || row.size() == 0) {
       ByteBuffer newKey = oldKey.duplicate();
-      newKey.putInt(selector.getValueCardinality());
+      newKey.putInt(-1);
       buffers = updateFn.apply(newKey);
     } else {
       for (int dimValue : row) {
@@ -180,7 +180,7 @@ public class StringDimensionHandler implements DimensionHandler<Integer, String>
   public void addValueToEventFromGroupByKey(ByteBuffer key, DimensionSelector selector, Map<String, Object> event, String outputName)
   {
     int dimVal = key.getInt();
-    if (dimVal != selector.getValueCardinality()) {
+    if (dimVal != -1) {
       event.put(outputName, selector.lookupName(dimVal));
     }
   }

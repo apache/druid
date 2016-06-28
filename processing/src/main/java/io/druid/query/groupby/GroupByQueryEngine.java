@@ -75,7 +75,7 @@ public class GroupByQueryEngine
   private final Supplier<GroupByQueryConfig> config;
   private final StupidPool<ByteBuffer> intermediateResultsBufferPool;
 
-  private static final DimensionHandler TIME_AND_NULL_DIMENSION_HANDLER = new StringDimensionHandler("time-null");
+  public static final DimensionHandler TIME_AND_NULL_DIMENSION_HANDLER = new StringDimensionHandler("time-null");
 
   /*
    * Relative reads change the current position of a ByteBuffer.
@@ -360,13 +360,13 @@ public class GroupByQueryEngine
     }
   }
 
-  private static class GroupByDimensionInfo
+  public static class GroupByDimensionInfo
   {
-    final DimensionSelector selector;
-    final String outputName;
-    final String originalName;
-    final ColumnCapabilities capabilities;
-    final DimensionHandler handler;
+    public final DimensionSelector selector;
+    public final String outputName;
+    public final String originalName;
+    public final ColumnCapabilities capabilities;
+    public final DimensionHandler handler;
 
     public GroupByDimensionInfo(
         DimensionSelector selector,

@@ -181,6 +181,7 @@ public class FilterPartitionBenchmark
         true,
         false,
         true,
+        false,
         rowsPerSegment
     );
   }

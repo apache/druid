@@ -254,6 +254,7 @@ public class TopNBenchmark
         true,
         false,
         true,
+        false,
         rowsPerSegment
     );
   }

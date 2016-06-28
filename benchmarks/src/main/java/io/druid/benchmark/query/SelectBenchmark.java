@@ -246,6 +246,7 @@ public class SelectBenchmark
         true,
         false,
         true,
+        false,
         rowsPerSegment
     );
   }

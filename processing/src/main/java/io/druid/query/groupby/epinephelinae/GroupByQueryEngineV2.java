@@ -35,10 +35,13 @@ import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
+import io.druid.query.groupby.GroupByQueryEngine;
 import io.druid.query.groupby.strategy.GroupByStrategyV2;
 import io.druid.segment.Cursor;
+import io.druid.segment.DimensionHandler;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.data.EmptyIndexedInts;
@@ -119,7 +122,8 @@ public class GroupByQueryEngineV2
                                 cursor,
                                 bufferHolder.get(),
                                 keySerde,
-                                fudgeTimestamp
+                                fudgeTimestamp,
+                                storageAdapter
                             );
                           }
 
@@ -157,6 +161,8 @@ public class GroupByQueryEngineV2
     private final ByteBuffer keyBuffer;
     private final int[] stack;
     private final IndexedInts[] valuess;
+    private final GroupByQueryEngine.GroupByDimensionInfo[] dimInfo;
+    private final StorageAdapter adapter;
 
     private int stackp = Integer.MIN_VALUE;
     private boolean currentRowWasPartiallyAggregated = false;
@@ -168,7 +174,8 @@ public class GroupByQueryEngineV2
         final Cursor cursor,
         final ByteBuffer buffer,
         final Grouper.KeySerde<ByteBuffer> keySerde,
-        final DateTime fudgeTimestamp
+        final DateTime fudgeTimestamp,
+        final StorageAdapter adapter
     )
     {
       final int dimCount = query.getDimensions().size();
@@ -179,10 +186,32 @@ public class GroupByQueryEngineV2
       this.buffer = buffer;
       this.keySerde = keySerde;
       this.keyBuffer = ByteBuffer.allocate(keySerde.keySize());
+      this.adapter = adapter;
       this.selectors = new DimensionSelector[dimCount];
+
+      this.dimInfo = new GroupByQueryEngine.GroupByDimensionInfo[dimCount];
+      List<DimensionSpec> dimensionSpecs = query.getDimensions();
+      Map<String, DimensionHandler> handlerMap = adapter.getDimensionHandlers();
       for (int i = 0; i < dimCount; i++) {
-        this.selectors[i] = cursor.makeDimensionSelector(query.getDimensions().get(i));
+        DimensionSelector selector = cursor.makeDimensionSelector(query.getDimensions().get(i));
+        DimensionSpec dimSpec = dimensionSpecs.get(i);
+        String dimName = dimSpec.getDimension();
+        DimensionHandler handler = handlerMap.get(dimName);
+        if (handler == null) {
+          handler = GroupByQueryEngine.TIME_AND_NULL_DIMENSION_HANDLER;
+        }
+
+        GroupByQueryEngine.GroupByDimensionInfo info = new GroupByQueryEngine.GroupByDimensionInfo(
+            selector,
+            dimSpec.getOutputName(),
+            dimName,
+            adapter.getColumnCapabilities(dimName),
+            handler
+        );
+
+        this.dimInfo[i] = info;
       }
+
       this.stack = new int[dimCount];
       this.valuess = new IndexedInts[dimCount];
 
@@ -296,6 +325,12 @@ outer:
               Map<String, Object> theMap = Maps.newLinkedHashMap();
 
               // Add dimensions.
+              for (int i = 0; i < dimInfo.length; i++) {
+                final GroupByQueryEngine.GroupByDimensionInfo info = dimInfo[i];
+                final DimensionHandler dimHandler = info.handler;
+                dimHandler.addValueToEventFromGroupByKey(keyBuffer, info.selector, theMap, info.outputName);
+              }
+              /*
               for (int i = 0; i < selectors.length; i++) {
                 final int id = entry.getKey().getInt(Ints.BYTES * i);
 
@@ -306,6 +341,7 @@ outer:
                   );
                 }
               }
+              */
 
               // Add aggregations.
               for (int i = 0; i < entry.getValues().length; i++) {
