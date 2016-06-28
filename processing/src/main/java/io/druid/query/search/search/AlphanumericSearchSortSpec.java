@@ -27,10 +27,10 @@ import java.util.Comparator;
 
 /**
  */
-public class LexicographicSearchSortSpec implements SearchSortSpec
+public class AlphanumericSearchSortSpec implements SearchSortSpec
 {
   @JsonCreator
-  public LexicographicSearchSortSpec(
+  public AlphanumericSearchSortSpec(
   )
   {
   }
@@ -41,39 +41,38 @@ public class LexicographicSearchSortSpec implements SearchSortSpec
     return new Comparator<SearchHit>()
     {
       @Override
-      public int compare(SearchHit searchHit, SearchHit searchHit1)
+      public int compare(SearchHit searchHit1, SearchHit searchHit2)
       {
-        int retVal = StringComparators.LEXICOGRAPHIC.compare(
-            searchHit.getValue(), searchHit1.getValue());
-
+        int retVal = StringComparators.ALPHANUMERIC.compare(
+            searchHit1.getValue(), searchHit2.getValue());
         if (retVal == 0) {
           retVal = StringComparators.LEXICOGRAPHIC.compare(
-              searchHit.getDimension(), searchHit1.getDimension());
+              searchHit1.getDimension(), searchHit2.getDimension());
         }
         return retVal;
       }
     };
   }
 
-  @Override
-  public byte[] getCacheKey()
-  {
-    return toString().getBytes();
-  }
-
   public String toString()
   {
-    return "lexicographicSort";
+    return "alphanumericSort";
   }
 
   @Override
   public boolean equals(Object other) {
-    return this == other || other instanceof LexicographicSearchSortSpec;
+    return this == other || other instanceof AlphanumericSearchSortSpec;
   }
 
   @Override
   public int hashCode()
   {
     return 0;
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return toString().getBytes();
   }
 }

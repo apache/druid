@@ -19,7 +19,7 @@
 
 package io.druid.query.search.search;
 
-import com.google.common.primitives.Ints;
+import io.druid.query.ordering.StringComparators;
 
 import java.util.Comparator;
 
@@ -38,14 +38,10 @@ public class StrlenSearchSortSpec implements SearchSortSpec
       @Override
       public int compare(SearchHit s, SearchHit s1)
       {
-        final String v1 = s.getValue();
-        final String v2 = s1.getValue();
-        int res = Ints.compare(v1.length(), v2.length());
+        int res = StringComparators.STRLEN.compare(s.getValue(), s1.getValue());
         if (res == 0) {
-          res = v1.compareTo(v2);
-        }
-        if (res == 0) {
-          res = s.getDimension().compareTo(s1.getDimension());
+          res = StringComparators.LEXICOGRAPHIC.compare(
+              s.getDimension(), s1.getDimension());
         }
         return res;
       }
@@ -61,5 +57,16 @@ public class StrlenSearchSortSpec implements SearchSortSpec
   public String toString()
   {
     return "stringLengthSort";
+  }
+
+  @Override
+  public boolean equals(Object other) {
+    return this == other || other instanceof StrlenSearchSortSpec;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return 0;
   }
 }

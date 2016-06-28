@@ -17,24 +17,29 @@
  * under the License.
  */
 
-package io.druid.query.search.search;
+package io.druid.query.search;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-
-import java.util.Comparator;
+import io.druid.query.search.search.AlphanumericSearchSortSpec;
+import io.druid.query.search.search.SearchHit;
+import io.druid.query.search.search.SearchSortSpec;
+import org.junit.Assert;
+import org.junit.Test;
 
 /**
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = LexicographicSearchSortSpec.class)
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "lexicographic", value = LexicographicSearchSortSpec.class),
-    @JsonSubTypes.Type(name = "alphanumeric", value = AlphanumericSearchSortSpec.class),
-    @JsonSubTypes.Type(name = "strlen", value = StrlenSearchSortSpec.class)
-})
-public interface SearchSortSpec
+public class AlphanumericSearchSortSpecTest
 {
-  Comparator<SearchHit> getComparator();
+  @Test
+  public void testComparator()
+  {
+    SearchSortSpec spec = new AlphanumericSearchSortSpec();
 
-  byte[] getCacheKey();
+    SearchHit hit1 = new SearchHit("test", "a100");
+    SearchHit hit2 = new SearchHit("test", "a9");
+    SearchHit hit3 = new SearchHit("test", "b0");
+
+    Assert.assertTrue(spec.getComparator().compare(hit1, hit2) > 0);
+    Assert.assertTrue(spec.getComparator().compare(hit3, hit1) > 0);
+    Assert.assertTrue(spec.getComparator().compare(hit3, hit2) > 0);
+  }
 }

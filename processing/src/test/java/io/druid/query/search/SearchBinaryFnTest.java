@@ -22,6 +22,7 @@ package io.druid.query.search;
 import com.google.common.collect.ImmutableList;
 import io.druid.granularity.QueryGranularities;
 import io.druid.query.Result;
+import io.druid.query.search.search.AlphanumericSearchSortSpec;
 import io.druid.query.search.search.LexicographicSearchSortSpec;
 import io.druid.query.search.search.SearchHit;
 import io.druid.query.search.search.StrlenSearchSortSpec;
@@ -273,6 +274,33 @@ public class SearchBinaryFnTest
     Assert.assertEquals(expected.getTimestamp(), actual.getTimestamp());
     assertSearchMergeResult(expected.getValue(), actual.getValue());
   }
+
+  @Test
+  public void testAlphanumericMerge()
+  {
+    AlphanumericSearchSortSpec searchSortSpec = new AlphanumericSearchSortSpec();
+    Comparator<SearchHit> c = searchSortSpec.getComparator();
+
+    Result<SearchResultValue> r1 = new Result<SearchResultValue>(
+        currTime,
+        new SearchResultValue(toHits(c, "blah:a100", "blah:a9", "alah:a100"))
+    );
+
+    Result<SearchResultValue> r2 = new Result<SearchResultValue>(
+        currTime,
+        new SearchResultValue(toHits(c, "blah:b0", "alah:c3"))
+    );
+
+    Result<SearchResultValue> expected = new Result<SearchResultValue>(
+        currTime,
+        new SearchResultValue(toHits(c, "blah:a9", "alah:a100", "blah:a100", "blah:b0", "alah:c3"))
+    );
+
+    Result<SearchResultValue> actual = new SearchBinaryFn(
+        searchSortSpec, QueryGranularity.ALL, Integer.MAX_VALUE).apply(r1, r2);
+    Assert.assertEquals(expected.getTimestamp(), actual.getTimestamp());
+    assertSearchMergeResult(expected.getValue(), actual.getValue());
+  }  
 
   // merge function expects input to be sorted as per comparator
   private List<SearchHit> toHits(Comparator<SearchHit> comparator, String... hits) {

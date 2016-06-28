@@ -25,6 +25,8 @@ import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.As;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
+import com.google.common.collect.Ordering;
+import com.google.common.primitives.Ints;
 import com.google.common.primitives.UnsignedBytes;
 import com.metamx.common.IAE;
 import com.metamx.common.StringUtils;
@@ -34,14 +36,17 @@ public class StringComparators
 {
   public static final String LEXICOGRAPHIC_NAME = "lexicographic";
   public static final String ALPHANUMERIC_NAME = "alphanumeric";
-  
+  public static final String STRLEN_NAME = "strlen";
+
   public static final LexicographicComparator LEXICOGRAPHIC = new LexicographicComparator();
   public static final AlphanumericComparator ALPHANUMERIC = new AlphanumericComparator();
-    
+  public static final StrlenComparator STRLEN = new StrlenComparator();
+
   @JsonTypeInfo(use=Id.NAME, include=As.PROPERTY, property="type", defaultImpl = LexicographicComparator.class)
   @JsonSubTypes(value = {
       @JsonSubTypes.Type(name = StringComparators.LEXICOGRAPHIC_NAME, value = LexicographicComparator.class),
-      @JsonSubTypes.Type(name = StringComparators.ALPHANUMERIC_NAME, value = AlphanumericComparator.class)
+      @JsonSubTypes.Type(name = StringComparators.ALPHANUMERIC_NAME, value = AlphanumericComparator.class),
+      @JsonSubTypes.Type(name = StringComparators.STRLEN_NAME, value = StrlenComparator.class)
   })
   public static interface StringComparator extends Comparator<String>
   {
@@ -49,6 +54,16 @@ public class StringComparators
   
   public static class LexicographicComparator implements StringComparator
   {
+    private static final Ordering<String> ORDERING = Ordering.from(new Comparator<String>()
+    {
+      @Override
+      public int compare(String s, String s2)
+      {
+        return UnsignedBytes.lexicographicalComparator().compare(
+                StringUtils.toUtf8(s), StringUtils.toUtf8(s2));
+      }
+    }).nullsFirst();
+    
     @Override
     public int compare(String s, String s2)
     {
@@ -56,18 +71,8 @@ public class StringComparators
       if(s == s2){
         return 0;
       }
-      // null first
-      if (s == null) {
-        return -1;
-      }
-      if (s2 == null) {
-        return 1;
-      }
 
-      return UnsignedBytes.lexicographicalComparator().compare(
-          StringUtils.toUtf8(s),
-          StringUtils.toUtf8(s2)
-      );
+      return ORDERING.compare(s, s2);
     }
     
     @Override
@@ -101,6 +106,9 @@ public class StringComparators
 
       if (str1 == null)
       {
+        if (str2 == null) {
+          return 0;
+        }
         return -1;
       } else if (str2 == null)
       {
@@ -272,7 +280,7 @@ public class StringComparators
       // compare the substrings
       return String.CASE_INSENSITIVE_ORDER.compare(str0.substring(start0, pos[0]), str1.substring(start1, pos[1]));
     }
-    
+
     @Override
     public boolean equals(Object o)
     {
@@ -282,14 +290,55 @@ public class StringComparators
       if (o == null || getClass() != o.getClass()) {
         return false;
       }
-      
+
       return true;
     }
-    
+
     @Override
     public String toString()
     {
       return StringComparators.ALPHANUMERIC_NAME;
+    }
+  }
+
+  public static class StrlenComparator implements StringComparator
+  {
+    private static final Ordering<String> ORDERING = Ordering.from(new Comparator<String>()
+    {
+      @Override
+      public int compare(String s, String s2)
+      {
+        return Ints.compare(s.length(), s2.length());
+      }
+    }).nullsFirst().compound(Ordering.natural());
+    
+    @Override
+    public int compare(String s, String s2)
+    {
+      if (s == s2) {
+        return 0;
+      }
+      
+      return ORDERING.compare(s, s2);
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      return true;
+    }
+
+    @Override
+    public String toString()
+    {
+      return StringComparators.STRLEN_NAME;
     }
   }
 
@@ -299,6 +348,8 @@ public class StringComparators
       return LEXICOGRAPHIC;
     } else if (type.equals(StringComparators.ALPHANUMERIC_NAME)) {
       return ALPHANUMERIC;
+    } else if (type.equals(StringComparators.STRLEN_NAME)) {
+      return STRLEN;
     } else {
       throw new IAE("Unknown string comparator[%s]", type);
     }
