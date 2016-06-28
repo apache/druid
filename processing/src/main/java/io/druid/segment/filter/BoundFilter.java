@@ -38,7 +38,7 @@ import java.util.Iterator;
 public class BoundFilter implements Filter
 {
   private final BoundDimFilter boundDimFilter;
-  private final Comparator<String> comparator;
+  private final Comparator<Comparable> comparator;
   private final ExtractionFn extractionFn;
 
   public BoundFilter(final BoundDimFilter boundDimFilter)

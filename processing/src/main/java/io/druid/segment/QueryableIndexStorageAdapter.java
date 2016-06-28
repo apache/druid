@@ -156,23 +156,23 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   @Override
   public Comparable getMinValue(String dimension)
   {
-    Column column = index.getColumn(dimension);
-    if (column != null && column.getCapabilities().hasBitmapIndexes()) {
-      BitmapIndex bitmap = column.getBitmapIndex();
-      return bitmap.getCardinality() > 0 ? bitmap.getValue(0) : null;
+    DimensionColumnReader reader = index.getDimensionReaders().get(dimension);
+    if (reader == null) {
+      return null;
     }
-    return null;
+
+    return reader.getMinValue();
   }
 
   @Override
   public Comparable getMaxValue(String dimension)
   {
-    Column column = index.getColumn(dimension);
-    if (column != null && column.getCapabilities().hasBitmapIndexes()) {
-      BitmapIndex bitmap = column.getBitmapIndex();
-      return bitmap.getCardinality() > 0 ? bitmap.getValue(bitmap.getCardinality() - 1) : null;
+    DimensionColumnReader reader = index.getDimensionReaders().get(dimension);
+    if (reader == null) {
+      return null;
     }
-    return null;
+
+    return reader.getMaxValue();
   }
 
   @Override
@@ -189,6 +189,12 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       return null;
     }
     return columnObj.getCapabilities();
+  }
+
+  @Override
+  public Map<String, DimensionHandler> getDimensionHandlers()
+  {
+    return index.getDimensionHandlers();
   }
 
   @Override
@@ -231,7 +237,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
     final ColumnSelectorBitmapIndexSelector selector = new ColumnSelectorBitmapIndexSelector(
         index.getBitmapFactoryForDimensions(),
-        index
+        index,
+        index.getDimensionReaders()
     );
 
 
@@ -327,7 +334,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
   private static class CursorSequenceBuilder
   {
-    private final ColumnSelector index;
+    private final QueryableIndex index;
     private final Interval interval;
     private final QueryGranularity gran;
     private final Offset offset;
@@ -338,7 +345,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     private final ColumnSelectorBitmapIndexSelector bitmapIndexSelector;
 
     public CursorSequenceBuilder(
-        ColumnSelector index,
+        QueryableIndex index,
         Interval interval,
         QueryGranularity gran,
         Offset offset,
@@ -364,10 +371,10 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     {
       final Offset baseOffset = offset.clone();
 
-      final Map<String, DictionaryEncodedColumn> dictionaryColumnCache = Maps.newHashMap();
       final Map<String, GenericColumn> genericColumnCache = Maps.newHashMap();
       final Map<String, ComplexColumn> complexColumnCache = Maps.newHashMap();
       final Map<String, Object> objectColumnCache = Maps.newHashMap();
+      final Map<String, Closeable> dimensionColumnCache = Maps.newHashMap();
 
       final GenericColumn timestamps = index.getColumn(Column.TIME_COLUMN_NAME).getGenericColumn();
 
@@ -429,20 +436,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         DimensionSpec dimensionSpec
                     )
                     {
-                      return dimensionSpec.decorate(makeDimensionSelectorUndecorated(dimensionSpec));
-                    }
-
-                    private DimensionSelector makeDimensionSelectorUndecorated(
-                        DimensionSpec dimensionSpec
-                    )
-                    {
                       final String dimension = dimensionSpec.getDimension();
                       final ExtractionFn extractionFn = dimensionSpec.getExtractionFn();
-
-                      final Column columnDesc = index.getColumn(dimension);
-                      if (columnDesc == null) {
-                        return NULL_DIMENSION_SELECTOR;
-                      }
 
                       if (dimension.equals(Column.TIME_COLUMN_NAME)) {
                         return new SingleScanTimeDimSelector(
@@ -452,119 +447,26 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         );
                       }
 
-                      DictionaryEncodedColumn cachedColumn = dictionaryColumnCache.get(dimension);
-                      if (cachedColumn == null) {
-                        cachedColumn = columnDesc.getDictionaryEncoding();
-                        dictionaryColumnCache.put(dimension, cachedColumn);
-                      }
-
-                      final DictionaryEncodedColumn column = cachedColumn;
-
-                      if (column == null) {
+                      final Column columnDesc = index.getColumn(dimension);
+                      if (columnDesc == null) {
                         return NULL_DIMENSION_SELECTOR;
-                      } else if (columnDesc.getCapabilities().hasMultipleValues()) {
-                        return new DimensionSelector()
-                        {
-                          @Override
-                          public IndexedInts getRow()
-                          {
-                            return column.getMultiValueRow(cursorOffset.getOffset());
-                          }
-
-                          @Override
-                          public int getValueCardinality()
-                          {
-                            return column.getCardinality();
-                          }
-
-                          @Override
-                          public String lookupName(int id)
-                          {
-                            final String value = column.lookupName(id);
-                            return extractionFn == null ?
-                                   value :
-                                   extractionFn.apply(value);
-                          }
-
-                          @Override
-                          public int lookupId(String name)
-                          {
-                            if (extractionFn != null) {
-                              throw new UnsupportedOperationException(
-                                  "cannot perform lookup when applying an extraction function"
-                              );
-                            }
-                            return column.lookupId(name);
-                          }
-                        };
-                      } else {
-                        return new DimensionSelector()
-                        {
-                          @Override
-                          public IndexedInts getRow()
-                          {
-                            // using an anonymous class is faster than creating a class that stores a copy of the value
-                            return new IndexedInts()
-                            {
-                              @Override
-                              public int size()
-                              {
-                                return 1;
-                              }
-
-                              @Override
-                              public int get(int index)
-                              {
-                                return column.getSingleValueRow(cursorOffset.getOffset());
-                              }
-
-                              @Override
-                              public Iterator<Integer> iterator()
-                              {
-                                return Iterators.singletonIterator(column.getSingleValueRow(cursorOffset.getOffset()));
-                              }
-
-                              @Override
-                              public void fill(int index, int[] toFill)
-                              {
-                                throw new UnsupportedOperationException("fill not supported");
-                              }
-
-                              @Override
-                              public void close() throws IOException
-                              {
-
-                              }
-                            };
-                          }
-
-                          @Override
-                          public int getValueCardinality()
-                          {
-                            return column.getCardinality();
-                          }
-
-                          @Override
-                          public String lookupName(int id)
-                          {
-                            final String value = column.lookupName(id);
-                            return extractionFn == null ? value : extractionFn.apply(value);
-                          }
-
-                          @Override
-                          public int lookupId(String name)
-                          {
-                            if (extractionFn != null) {
-                              throw new UnsupportedOperationException(
-                                  "cannot perform lookup when applying an extraction function"
-                              );
-                            }
-                            return column.lookupId(name);
-                          }
-                        };
                       }
-                    }
 
+                      String dimName = dimensionSpec.getDimension();
+                      DimensionHandler handler = index.getDimensionHandlers().get(dimName);
+                      if (handler == null) {
+                        return NULL_DIMENSION_SELECTOR;
+                      }
+
+                      DimensionColumnReader reader = index.getDimensionReaders().get(dimension);
+                      DimensionSelector selector = reader.makeDimensionSelector(
+                          dimensionSpec,
+                          cursorOffsetHolder,
+                          dimensionColumnCache
+                      );
+
+                      return dimensionSpec.decorate(selector);
+                    }
 
                     @Override
                     public FloatColumnSelector makeFloatColumnSelector(String columnName)
@@ -597,7 +499,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         @Override
                         public float get()
                         {
-                          return metricVals.getFloatSingleValueRow(cursorOffset.getOffset());
+                          return metricVals.getFloatSingleValueRow(cursorOffsetHolder.get().getOffset());
                         }
                       };
                     }
@@ -633,7 +535,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         @Override
                         public long get()
                         {
-                          return metricVals.getLongSingleValueRow(cursorOffset.getOffset());
+                          return metricVals.getLongSingleValueRow(cursorOffsetHolder.get().getOffset());
                         }
                       };
                     }
@@ -690,7 +592,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                             @Override
                             public Float get()
                             {
-                              return columnVals.getFloatSingleValueRow(cursorOffset.getOffset());
+                              return columnVals.getFloatSingleValueRow(cursorOffsetHolder.get().getOffset());
                             }
                           };
                         }
@@ -706,7 +608,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                             @Override
                             public Long get()
                             {
-                              return columnVals.getLongSingleValueRow(cursorOffset.getOffset());
+                              return columnVals.getLongSingleValueRow(cursorOffsetHolder.get().getOffset());
                             }
                           };
                         }
@@ -722,7 +624,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                             @Override
                             public String get()
                             {
-                              return columnVals.getStringSingleValueRow(cursorOffset.getOffset());
+                              return columnVals.getStringSingleValueRow(cursorOffsetHolder.get().getOffset());
                             }
                           };
                         }
@@ -742,7 +644,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                             @Override
                             public Object get()
                             {
-                              final IndexedInts multiValueRow = columnVals.getMultiValueRow(cursorOffset.getOffset());
+                              final IndexedInts multiValueRow = columnVals.getMultiValueRow(cursorOffsetHolder.get().getOffset());
                               if (multiValueRow.size() == 0) {
                                 return null;
                               } else if (multiValueRow.size() == 1) {
@@ -768,7 +670,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                             @Override
                             public String get()
                             {
-                              return columnVals.lookupName(columnVals.getSingleValueRow(cursorOffset.getOffset()));
+                              return columnVals.lookupName(columnVals.getSingleValueRow(cursorOffsetHolder.get().getOffset()));
                             }
                           };
                         }
@@ -786,7 +688,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         @Override
                         public Object get()
                         {
-                          return columnVals.getRowValue(cursorOffset.getOffset());
+                          return columnVals.getRowValue(cursorOffsetHolder.get().getOffset());
                         }
                       };
                     }
@@ -936,9 +838,6 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
             public void close() throws IOException
             {
               CloseQuietly.close(timestamps);
-              for (DictionaryEncodedColumn column : dictionaryColumnCache.values()) {
-                CloseQuietly.close(column);
-              }
               for (GenericColumn column : genericColumnCache.values()) {
                 CloseQuietly.close(column);
               }
@@ -949,6 +848,9 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                 if (column instanceof Closeable) {
                   CloseQuietly.close((Closeable) column);
                 }
+              }
+              for (Closeable column : dimensionColumnCache.values()) {
+                CloseQuietly.close(column);
               }
             }
           }
@@ -1165,7 +1067,8 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
 
     @Override
-    public Offset clone() {
+    public Offset clone()
+    {
       throw new IllegalStateException("clone");
     }
   }

@@ -19,6 +19,8 @@
 
 package io.druid.query.topn;
 
+import com.google.common.base.Function;
+import com.google.common.collect.Maps;
 import com.metamx.common.guava.nary.BinaryFn;
 import io.druid.granularity.AllGranularity;
 import io.druid.granularity.QueryGranularity;
@@ -27,6 +29,10 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.segment.DimensionHandler;
+import io.druid.segment.DimensionHandlerUtil;
+import io.druid.segment.StringDimensionHandler;
+import io.druid.segment.column.ValueType;
 import org.joda.time.DateTime;
 
 import java.util.Comparator;
@@ -47,6 +53,8 @@ public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<To
   private final List<AggregatorFactory> aggregations;
   private final List<PostAggregator> postAggregations;
   private final Comparator comparator;
+  private final Map<String, ValueType> typeHints;
+  private final Function valueTransformer;
 
   public TopNBinaryFn(
       final TopNResultMerger merger,
@@ -55,7 +63,8 @@ public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<To
       final TopNMetricSpec topNMetricSpec,
       final int threshold,
       final List<AggregatorFactory> aggregatorSpecs,
-      final List<PostAggregator> postAggregatorSpecs
+      final List<PostAggregator> postAggregatorSpecs,
+      final Map<String, ValueType> typeHints
   )
   {
     this.merger = merger;
@@ -72,6 +81,28 @@ public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<To
 
     this.dimension = dimSpec.getOutputName();
     this.comparator = topNMetricSpec.getComparator(aggregatorSpecs, postAggregatorSpecs);
+    this.typeHints = typeHints;
+    ValueType dimType = null;
+    if(this.typeHints != null) {
+      String dimName = dimSpec.getDimension();
+      dimType = this.typeHints.get(dimName);
+    }
+
+    if (dimType == null) {
+      valueTransformer = StringDimensionHandler.STRING_TRANSFORMER;
+    } else {
+      valueTransformer = DimensionHandlerUtil.getTransformerForType(dimType);
+    }
+  }
+
+  private DimensionAndMetricValueExtractor getExtractorWithOverride(String dimension,
+                                                                    Object overrideVal,
+                                                                    DimensionAndMetricValueExtractor originalExtractor)
+  {
+    Map<String, Object> newMap = Maps.newHashMap(originalExtractor.getBaseObject());
+    newMap.put(dimension, overrideVal);
+    DimensionAndMetricValueExtractor newExtractor = new DimensionAndMetricValueExtractor(newMap);
+    return newExtractor;
   }
 
   @Override
@@ -84,16 +115,27 @@ public class TopNBinaryFn implements BinaryFn<Result<TopNResultValue>, Result<To
       return merger.getResult(arg1, comparator);
     }
 
-    Map<String, DimensionAndMetricValueExtractor> retVals = new LinkedHashMap<>();
+    Map<Object, DimensionAndMetricValueExtractor> retVals = new LinkedHashMap<>();
 
     TopNResultValue arg1Vals = arg1.getValue();
     TopNResultValue arg2Vals = arg2.getValue();
 
     for (DimensionAndMetricValueExtractor arg1Val : arg1Vals) {
-      retVals.put(arg1Val.getStringDimensionValue(dimension), arg1Val);
+      Object dimVal1 = arg1Val.getDimensionValue(dimension);
+      Object transformedDimVal1 = valueTransformer.apply(dimVal1);
+      if (dimVal1 != transformedDimVal1) {
+        arg1Val = getExtractorWithOverride(dimension, transformedDimVal1, arg1Val);
+        dimVal1 = transformedDimVal1;
+      }
+      retVals.put(dimVal1, arg1Val);
     }
     for (DimensionAndMetricValueExtractor arg2Val : arg2Vals) {
-      final String dimensionValue = arg2Val.getStringDimensionValue(dimension);
+      Object dimensionValue = arg2Val.getDimensionValue(dimension);
+      Object transformedValue = valueTransformer.apply(dimensionValue);
+      if (dimensionValue != transformedValue) {
+        arg2Val = getExtractorWithOverride(dimension, transformedValue, arg2Val);
+        dimensionValue = transformedValue;
+      }
       DimensionAndMetricValueExtractor arg1Val = retVals.get(dimensionValue);
 
       if (arg1Val != null) {

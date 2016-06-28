@@ -22,6 +22,10 @@ package io.druid.segment;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ColumnCapabilitiesImpl;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 
 import java.io.IOException;
@@ -38,6 +42,7 @@ public class SingleScanTimeDimSelector implements DimensionSelector
   private String currentValue = null;
   private long currentTimestamp = Long.MIN_VALUE;
   private int index = -1;
+  private final ColumnCapabilitiesImpl capabilities;
 
 
   // Use a special DimSelector for projected time columns
@@ -53,6 +58,8 @@ public class SingleScanTimeDimSelector implements DimensionSelector
     this.extractionFn = extractionFn;
     this.selector = selector;
     this.descending = descending;
+    this.capabilities = new ColumnCapabilitiesImpl();
+    capabilities.setType(ValueType.STRING);
   }
 
   @Override
@@ -147,5 +154,11 @@ public class SingleScanTimeDimSelector implements DimensionSelector
   public int lookupId(String name)
   {
     throw new UnsupportedOperationException("time column does not support lookups");
+  }
+
+  @Override
+  public ColumnCapabilities getDimCapabilities()
+  {
+    return capabilities;
   }
 }

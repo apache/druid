@@ -28,11 +28,13 @@ import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.ordering.StringComparators;
 
+import io.druid.segment.column.ValueType;
 import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 /**
  */
@@ -40,7 +42,7 @@ public class LexicographicTopNMetricSpec implements TopNMetricSpec
 {
   private static final byte CACHE_TYPE_ID = 0x1;
 
-  private static Comparator<String> comparator = StringComparators.LEXICOGRAPHIC;
+  private static Comparator<Comparable> comparator = StringComparators.LEXICOGRAPHIC;
 
   private final String previousStop;
 

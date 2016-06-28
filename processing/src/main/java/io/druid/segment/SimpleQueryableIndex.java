@@ -20,9 +20,12 @@
 package io.druid.segment;
 
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Maps;
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.common.io.smoosh.SmooshedFileMapper;
 import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import org.joda.time.Interval;
 
@@ -40,6 +43,8 @@ public class SimpleQueryableIndex implements QueryableIndex
   private final Map<String, Column> columns;
   private final SmooshedFileMapper fileMapper;
   private final Metadata metadata;
+  private final Map<String, DimensionHandler> dimensionHandlers;
+  private final Map<String, DimensionColumnReader> dimensionReaders;
 
   public SimpleQueryableIndex(
       Interval dataInterval,
@@ -59,6 +64,10 @@ public class SimpleQueryableIndex implements QueryableIndex
     this.columns = columns;
     this.fileMapper = fileMapper;
     this.metadata = metadata;
+
+    dimensionHandlers = Maps.newLinkedHashMap();
+    dimensionReaders = Maps.newLinkedHashMap();
+    initDimensionHandlers();
   }
 
   @Override
@@ -107,5 +116,29 @@ public class SimpleQueryableIndex implements QueryableIndex
   public Metadata getMetadata()
   {
     return metadata;
+  }
+
+  @Override
+  public Map<String, DimensionHandler> getDimensionHandlers()
+  {
+    return dimensionHandlers;
+  }
+
+
+  public Map<String, DimensionColumnReader> getDimensionReaders()
+  {
+    return dimensionReaders;
+  }
+
+
+  private void initDimensionHandlers()
+  {
+    for (String dim : availableDimensions) {
+      ColumnCapabilities capabilities = getColumn(dim).getCapabilities();
+      DimensionHandler handler = DimensionHandlerUtil.getHandlerFromCapabilities(dim, capabilities);
+      DimensionColumnReader reader = handler.makeColumnReader(getColumn(dim));
+      dimensionHandlers.put(dim, handler);
+      dimensionReaders.put(dim, reader);
+    }
   }
 }

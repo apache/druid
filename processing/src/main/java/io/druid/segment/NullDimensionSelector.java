@@ -21,6 +21,9 @@ package io.druid.segment;
 
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterators;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ColumnCapabilitiesImpl;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 
 import java.io.IOException;
@@ -28,6 +31,16 @@ import java.util.Iterator;
 
 public class NullDimensionSelector implements DimensionSelector
 {
+  private final ColumnCapabilitiesImpl capabilities;
+
+  public NullDimensionSelector()
+  {
+
+    this.capabilities = new ColumnCapabilitiesImpl();
+    capabilities.setType(ValueType.STRING);
+    capabilities.setHasBitmapIndexes(true);
+    capabilities.setDictionaryEncoded(true);
+  }
 
   private static final IndexedInts SINGLETON = new IndexedInts() {
     @Override
@@ -80,5 +93,11 @@ public class NullDimensionSelector implements DimensionSelector
   public int lookupId(String name)
   {
     return Strings.isNullOrEmpty(name) ? 0 : -1;
+  }
+
+  @Override
+  public ColumnCapabilities getDimCapabilities()
+  {
+    return capabilities;
   }
 }

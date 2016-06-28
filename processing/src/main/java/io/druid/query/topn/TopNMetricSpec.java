@@ -24,10 +24,12 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.segment.column.ValueType;
 import org.joda.time.DateTime;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 /**
  */

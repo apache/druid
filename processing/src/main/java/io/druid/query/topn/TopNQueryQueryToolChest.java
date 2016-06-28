@@ -52,6 +52,7 @@ import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
+import io.druid.segment.column.ValueType;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -136,7 +137,8 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
             query.getTopNMetricSpec(),
             query.getThreshold(),
             query.getAggregatorSpecs(),
-            query.getPostAggregatorSpecs()
+            query.getPostAggregatorSpecs(),
+            (Map<String, ValueType>) query.getContextValue("typeHints")
         );
       }
     };

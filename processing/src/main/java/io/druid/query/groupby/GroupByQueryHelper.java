@@ -31,8 +31,10 @@ import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
+import io.druid.query.BaseQuery;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.incremental.OffheapIncrementalIndex;
@@ -40,6 +42,7 @@ import io.druid.segment.incremental.OnheapIncrementalIndex;
 
 import java.nio.ByteBuffer;
 import java.util.List;
+import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -112,6 +115,13 @@ public class GroupByQueryHelper
           sortResults,
           Math.min(query.getContextValue(CTX_KEY_MAX_RESULTS, config.getMaxResults()), config.getMaxResults())
       );
+    }
+
+    Map<String, ValueType> typeHints = BaseQuery.getContextTypeHints(query);
+    if (typeHints != null) {
+      for (String dimName : typeHints.keySet()) {
+        index.specifyDimensionCapability(dimName, typeHints.get(dimName));
+      }
     }
 
     Accumulator<IncrementalIndex, T> accumulator = new Accumulator<IncrementalIndex, T>()

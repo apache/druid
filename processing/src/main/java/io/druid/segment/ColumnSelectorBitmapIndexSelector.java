@@ -33,6 +33,7 @@ import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedIterable;
 
 import java.util.Iterator;
+import java.util.Map;
 
 /**
  */
@@ -40,14 +41,17 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
 {
   private final BitmapFactory bitmapFactory;
   private final ColumnSelector index;
+  private final Map<String, DimensionColumnReader> dimReaders;
 
   public ColumnSelectorBitmapIndexSelector(
       final BitmapFactory bitmapFactory,
-      final ColumnSelector index
+      final ColumnSelector index,
+      final Map<String, DimensionColumnReader> dimReaders
   )
   {
     this.bitmapFactory = bitmapFactory;
     this.index = index;
+    this.dimReaders = dimReaders;
   }
 
   @Override
@@ -57,39 +61,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
     if (columnDesc == null || !columnDesc.getCapabilities().isDictionaryEncoded()) {
       return null;
     }
-    final DictionaryEncodedColumn column = columnDesc.getDictionaryEncoding();
-    return new Indexed<String>()
-    {
-      @Override
-      public Class<? extends String> getClazz()
-      {
-        return String.class;
-      }
-
-      @Override
-      public int size()
-      {
-        return column.getCardinality();
-      }
-
-      @Override
-      public String get(int index)
-      {
-        return column.lookupName(index);
-      }
-
-      @Override
-      public int indexOf(String value)
-      {
-        return column.lookupId(value);
-      }
-
-      @Override
-      public Iterator<String> iterator()
-      {
-        return IndexedIterable.create(this).iterator();
-      }
-    };
+    return dimReaders.get(dimension).getSortedIndexedValues();
   }
 
   @Override
@@ -187,8 +159,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
       return null;
     }
 
-    final BitmapIndex bitmapIndex = column.getBitmapIndex();
-    return bitmapIndex.getBitmap(bitmapIndex.getIndex(value));
+    return dimReaders.get(dimension).getBitmapIndex(value);
   }
 
   @Override

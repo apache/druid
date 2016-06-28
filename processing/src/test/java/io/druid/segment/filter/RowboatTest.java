@@ -19,7 +19,9 @@
 
 package io.druid.segment.filter;
 
+import io.druid.segment.DimensionHandler;
 import io.druid.segment.Rowboat;
+import io.druid.segment.StringDimensionHandler;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -28,21 +30,31 @@ import org.junit.Test;
  */
 public class RowboatTest
 {
+  private static DimensionHandler[] getDefaultHandlers(int size) {
+    DimensionHandler[] handlers = new DimensionHandler[size];
+    for (int i = 0; i < size; i++) {
+      handlers[i] = new StringDimensionHandler(String.valueOf(i));
+    }
+    return handlers;
+  }
+
   @Test
   public void testRowboatCompare()
   {
-    Rowboat rb1 = new Rowboat(12345L, new int[][]{new int[]{1}, new int[]{2}}, new Object[]{new Integer(7)}, 5);
-    Rowboat rb2 = new Rowboat(12345L, new int[][]{new int[]{1}, new int[]{2}}, new Object[]{new Integer(7)}, 5);
+    DimensionHandler[] handlers = getDefaultHandlers(3);
+    Rowboat rb1 = new Rowboat(12345L, new int[][]{new int[]{1}, new int[]{2}}, new Object[]{new Integer(7)}, 5, handlers);
+    Rowboat rb2 = new Rowboat(12345L, new int[][]{new int[]{1}, new int[]{2}}, new Object[]{new Integer(7)}, 5, handlers);
     Assert.assertEquals(0, rb1.compareTo(rb2));
 
-    Rowboat rb3 = new Rowboat(12345L, new int[][]{new int[]{3}, new int[]{2}}, new Object[]{new Integer(7)}, 5);
+    Rowboat rb3 = new Rowboat(12345L, new int[][]{new int[]{3}, new int[]{2}}, new Object[]{new Integer(7)}, 5, handlers);
     Assert.assertNotEquals(0, rb1.compareTo(rb3));
   }
-
 
   @Test
   public void testBiggerCompare()
   {
+    DimensionHandler[] handlers = getDefaultHandlers(14);
+
     Rowboat rb1 = new Rowboat(
         0,
         new int[][]{
@@ -62,7 +74,8 @@ public class RowboatTest
             new int[]{0}
         },
         new Object[]{1.0, 47.0, "someMetric"},
-        0
+        0,
+        handlers
     );
 
     Rowboat rb2 = new Rowboat(
@@ -84,7 +97,8 @@ public class RowboatTest
             new int[]{0}
         },
         new Object[]{1.0, 47.0, "someMetric"},
-        0
+        0,
+        handlers
     );
 
     Assert.assertNotEquals(0, rb1.compareTo(rb2));
@@ -93,18 +107,22 @@ public class RowboatTest
   @Test
   public void testToString()
   {
+    DimensionHandler[] handlers = getDefaultHandlers(2);
+
     Assert.assertEquals(
         "Rowboat{timestamp=1970-01-01T00:00:00.000Z, dims=[[1], [2]], metrics=[someMetric], comprisedRows={}}",
-        new Rowboat(0, new int[][]{new int[]{1}, new int[]{2}}, new Object[]{"someMetric"}, 5).toString()
+        new Rowboat(0, new int[][]{new int[]{1}, new int[]{2}}, new Object[]{"someMetric"}, 5, handlers).toString()
     );
   }
 
   @Test
   public void testLotsONullString()
   {
+    DimensionHandler[] handlers = getDefaultHandlers(0);
+
     Assert.assertEquals(
         "Rowboat{timestamp=1970-01-01T00:00:00.000Z, dims=null, metrics=null, comprisedRows={}}",
-        new Rowboat(0, null, null, 5).toString()
+        new Rowboat(0, null, null, 5, handlers).toString()
     );
   }
 }

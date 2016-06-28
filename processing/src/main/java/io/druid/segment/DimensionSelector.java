@@ -17,7 +17,10 @@
  * under the License.
  */
 
-package io.druid.segment;import io.druid.segment.data.IndexedInts;
+package io.druid.segment;
+
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.data.IndexedInts;
 
 /**
  */
@@ -79,4 +82,11 @@ public interface DimensionSelector
    * @return the id for the given field name
    */
   public int lookupId(String name);
+
+  /**
+   * Get the capabilities for this selector's dimension.
+   *
+   * @return capabilities
+   */
+  public ColumnCapabilities getDimCapabilities();
 }

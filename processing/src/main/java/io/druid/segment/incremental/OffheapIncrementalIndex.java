@@ -80,7 +80,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       StupidPool<ByteBuffer> bufferPool
   )
   {
-    super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions, sortFacts);
+    super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions, sortFacts, false);
     this.maxRowCount = maxRowCount;
     this.bufferPool = bufferPool;
 
@@ -151,12 +151,6 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   }
 
   @Override
-  protected DimDim makeDimDim(String dimension, Object lock)
-  {
-    return new OnheapIncrementalIndex.OnHeapDimDim(lock);
-  }
-
-  @Override
   protected BufferAggregator[] initAggs(
       AggregatorFactory[] metrics, Supplier<InputRow> rowSupplier, boolean deserializeComplexMetrics
   )
@@ -170,7 +164,8 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       ColumnSelectorFactory columnSelectorFactory = makeColumnSelectorFactory(
           agg,
           rowSupplier,
-          deserializeComplexMetrics
+          deserializeComplexMetrics,
+          getColumnCapabilities()
       );
 
       selectors.put(
@@ -221,7 +216,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
           for (int i = 0; i < metrics.length; i++) {
             final AggregatorFactory agg = metrics[i];
             getAggs()[i] = agg.factorizeBuffered(
-                makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics)
+                makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics, getColumnCapabilities())
             );
           }
           rowContainer.set(null);
