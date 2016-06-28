@@ -92,6 +92,33 @@ public class TimeBoundaryQueryRunnerFactory
       this.adapter = segment.asStorageAdapter();
     }
 
+    private Function<Cursor, Result<DateTime>> skipToFirstMatching = new Function<Cursor, Result<DateTime>>()
+    {
+      @Override
+      public Result<DateTime> apply(Cursor cursor)
+      {
+        if (cursor.isDone()) { return null; }
+        final LongColumnSelector timestampColumnSelector = cursor.makeLongColumnSelector(Column.TIME_COLUMN_NAME);
+        DateTime timestamp = new DateTime(timestampColumnSelector.get());
+        return new Result<>(adapter.getInterval().getStart(), timestamp);
+      }
+    };
+
+    private DateTime getTimeBoundary(StorageAdapter adapter, TimeBoundaryQuery legacyQuery, boolean descending)
+    {
+      final Sequence<Result<DateTime>> resultSequence = QueryRunnerHelper.makeCursorBasedQuery(
+          adapter, legacyQuery.getQuerySegmentSpec().getIntervals(),
+          Filters.toFilter(legacyQuery.getDimensionsFilter()),
+          descending, new AllGranularity(), skipToFirstMatching
+      );
+      List<Result<DateTime>> resultList = Sequences.toList(resultSequence, Lists.<Result<DateTime>>newArrayList());
+      if (resultList.size() > 0) {
+        return resultList.get(0).getValue();
+      }
+
+      return null;
+    }
+
     @Override
     public Sequence<Result<TimeBoundaryResultValue>> run(
         final Query<Result<TimeBoundaryResultValue>> input,
@@ -118,45 +145,9 @@ public class TimeBoundaryQueryRunnerFactory
               final DateTime minTime;
               final DateTime maxTime;
 
-              Function<Cursor, Result<DateTime>> extractionFunction = new Function<Cursor, Result<DateTime>>()
-              {
-                @Override
-                public Result<DateTime> apply(Cursor cursor)
-                {
-                  if (cursor.isDone()) { return null; }
-                  final LongColumnSelector timestampColumnSelector = cursor.makeLongColumnSelector(Column.TIME_COLUMN_NAME);
-                  DateTime timestamp = new DateTime(timestampColumnSelector.get());
-                  return new Result<>(adapter.getInterval().getStart(), timestamp);
-                }
-              };
-
               if (legacyQuery.getDimensionsFilter() != null) {
-                /* Should make a function? The only difference between these two parts is the descending boolean. */
-                final Sequence<Result<DateTime>> minResultSequence = QueryRunnerHelper.makeCursorBasedQuery(
-                    adapter, legacyQuery.getQuerySegmentSpec().getIntervals(),
-                    Filters.toFilter(legacyQuery.getDimensionsFilter()),
-                    false, new AllGranularity(), extractionFunction
-                );
-                List<Result<DateTime>> minResultList = Sequences.toList(minResultSequence, Lists.<Result<DateTime>>newArrayList());
-                if (minResultList.size() > 0) {
-                  minTime = minResultList.get(0).getValue();
-                }
-                else {
-                  minTime = null;
-                }
-
-                final Sequence<Result<DateTime>> maxResultSequence = QueryRunnerHelper.makeCursorBasedQuery(
-                    adapter, legacyQuery.getQuerySegmentSpec().getIntervals(),
-                    Filters.toFilter(legacyQuery.getDimensionsFilter()),
-                    true, new AllGranularity(), extractionFunction
-                );
-                List<Result<DateTime>> maxResultList = Sequences.toList(maxResultSequence, Lists.<Result<DateTime>>newArrayList());
-                if (maxResultList.size() > 0) {
-                  maxTime = maxResultList.get(0).getValue();
-                }
-                else {
-                  maxTime = null;
-                }
+                minTime = getTimeBoundary(adapter, legacyQuery, false);
+                maxTime = getTimeBoundary(adapter, legacyQuery, true);
               } else {
                 minTime = legacyQuery.getBound().equalsIgnoreCase(TimeBoundaryQuery.MAX_TIME)
                           ? null

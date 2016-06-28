@@ -82,7 +82,6 @@ public class QueryRunnerTestHelper
 
   public static final String segmentId = "testSegment";
   public static final String dataSource = "testing";
-  public static final String truncatedDataSource = "testing2";
   public static final UnionDataSource unionDataSource = new UnionDataSource(
       Lists.transform(
           Lists.newArrayList(dataSource, dataSource, dataSource, dataSource), new Function<String, TableDataSource>()

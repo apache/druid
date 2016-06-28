@@ -78,94 +78,41 @@ public class TimeBoundaryQueryQueryToolChestTest
     };
   }
 
-  @Test
-  public void testFilterSegments() throws Exception
+  public void arbitraryFilterSegmentsTest(TimeBoundaryQuery query) throws Exception
   {
-    List<LogicalSegment> segments = new TimeBoundaryQueryQueryToolChest().filterSegments(
-        TIME_BOUNDARY_QUERY,
-        Arrays.asList(
-            createLogicalSegment(new Interval("2013-01-01/P1D")),
-            createLogicalSegment(new Interval("2013-01-01T01/PT1H")),
-            createLogicalSegment(new Interval("2013-01-01T02/PT1H")),
-            createLogicalSegment(new Interval("2013-01-02/P1D")),
-            createLogicalSegment(new Interval("2013-01-03T01/PT1H")),
-            createLogicalSegment(new Interval("2013-01-03T02/PT1H")),
-            createLogicalSegment(new Interval("2013-01-03/P1D"))
-        )
-    );
-
-    Assert.assertEquals(6, segments.size());
-
-    List<LogicalSegment> expected = Arrays.asList(
+    List inputSegments = Arrays.asList(
         createLogicalSegment(new Interval("2013-01-01/P1D")),
         createLogicalSegment(new Interval("2013-01-01T01/PT1H")),
         createLogicalSegment(new Interval("2013-01-01T02/PT1H")),
+        createLogicalSegment(new Interval("2013-01-02/P1D")),
         createLogicalSegment(new Interval("2013-01-03T01/PT1H")),
         createLogicalSegment(new Interval("2013-01-03T02/PT1H")),
         createLogicalSegment(new Interval("2013-01-03/P1D"))
     );
+    List<LogicalSegment> segments = new TimeBoundaryQueryQueryToolChest().filterSegments(
+        query, inputSegments
+    );
 
-    for (int i = 0; i < segments.size(); i++) {
-       Assert.assertEquals(segments.get(i).getInterval(), expected.get(i).getInterval());
-    }
+    Assert.assertEquals(7, segments.size());
+    Assert.assertEquals(inputSegments, segments);
+  }
+
+  @Test
+  public void testFilterSegments() throws Exception
+  {
+    arbitraryFilterSegmentsTest(TIME_BOUNDARY_QUERY);
   }
 
   @Test
   public void testMaxTimeFilterSegments() throws Exception
   {
-    List<LogicalSegment> segments = new TimeBoundaryQueryQueryToolChest().filterSegments(
-        MAXTIME_BOUNDARY_QUERY,
-        Arrays.asList(
-            createLogicalSegment(new Interval("2013-01-01/P1D")),
-            createLogicalSegment(new Interval("2013-01-01T01/PT1H")),
-            createLogicalSegment(new Interval("2013-01-01T02/PT1H")),
-            createLogicalSegment(new Interval("2013-01-02/P1D")),
-            createLogicalSegment(new Interval("2013-01-03T01/PT1H")),
-            createLogicalSegment(new Interval("2013-01-03T02/PT1H")),
-            createLogicalSegment(new Interval("2013-01-03/P1D"))
-        )
-    );
-
-    Assert.assertEquals(3, segments.size());
-
-    List<LogicalSegment> expected = Arrays.asList(
-        createLogicalSegment(new Interval("2013-01-03T01/PT1H")),
-        createLogicalSegment(new Interval("2013-01-03T02/PT1H")),
-        createLogicalSegment(new Interval("2013-01-03/P1D"))
-    );
-
-    for (int i = 0; i < segments.size(); i++) {
-      Assert.assertEquals(segments.get(i).getInterval(), expected.get(i).getInterval());
-    }
+    arbitraryFilterSegmentsTest(MAXTIME_BOUNDARY_QUERY);
   }
 
   @Test
   public void testMinTimeFilterSegments() throws Exception
   {
-    List<LogicalSegment> segments = new TimeBoundaryQueryQueryToolChest().filterSegments(
-        MINTIME_BOUNDARY_QUERY,
-        Arrays.asList(
-            createLogicalSegment(new Interval("2013-01-01/P1D")),
-            createLogicalSegment(new Interval("2013-01-01T01/PT1H")),
-            createLogicalSegment(new Interval("2013-01-01T02/PT1H")),
-            createLogicalSegment(new Interval("2013-01-02/P1D")),
-            createLogicalSegment(new Interval("2013-01-03T01/PT1H")),
-            createLogicalSegment(new Interval("2013-01-03T02/PT1H")),
-            createLogicalSegment(new Interval("2013-01-03/P1D"))
-        )
-    );
-
-    Assert.assertEquals(3, segments.size());
-
-    List<LogicalSegment> expected = Arrays.asList(
-        createLogicalSegment(new Interval("2013-01-01/P1D")),
-        createLogicalSegment(new Interval("2013-01-01T01/PT1H")),
-        createLogicalSegment(new Interval("2013-01-01T02/PT1H"))
-    );
-
-    for (int i = 0; i < segments.size(); i++) {
-      Assert.assertEquals(segments.get(i).getInterval(), expected.get(i).getInterval());
-    }
+    arbitraryFilterSegmentsTest(MINTIME_BOUNDARY_QUERY);
   }
 
   @Test
