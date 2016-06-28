@@ -339,10 +339,17 @@ public class IndexTask extends AbstractFixedIntervalTask
     final List<DataSegment> pushedSegments = new CopyOnWriteArrayList<DataSegment>();
     final DataSegmentPusher wrappedDataSegmentPusher = new DataSegmentPusher()
     {
+      @Deprecated
       @Override
       public String getPathForHadoop(String dataSource)
       {
-        return toolbox.getSegmentPusher().getPathForHadoop(dataSource);
+        return getPathForHadoop();
+      }
+
+      @Override
+      public String getPathForHadoop()
+      {
+        return toolbox.getSegmentPusher().getPathForHadoop();
       }
 
       @Override
