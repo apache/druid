@@ -58,8 +58,15 @@ public class AzureDataSegmentPusher implements DataSegmentPusher
     this.jsonMapper = jsonMapper;
   }
 
+  @Deprecated
   @Override
   public String getPathForHadoop(String dataSource)
+  {
+    return getPathForHadoop();
+  }
+
+  @Override
+  public String getPathForHadoop()
   {
     return null;
   }

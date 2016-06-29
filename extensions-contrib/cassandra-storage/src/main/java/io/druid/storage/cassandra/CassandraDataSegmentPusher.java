@@ -58,17 +58,24 @@ public class CassandraDataSegmentPusher extends CassandraStorage implements Data
 	}
 
   @Override
-  public String getPathForHadoop(String dataSource)
+  public String getPathForHadoop()
   {
     throw new UnsupportedOperationException("Cassandra storage does not support indexing via Hadoop");
   }
 
+  @Deprecated
   @Override
-	public DataSegment push(final File indexFilesDir, DataSegment segment) throws IOException
-	{
-		log.info("Writing [%s] to C*", indexFilesDir);
-		String key = JOINER.join(
-		    config.getKeyspace().isEmpty() ? null : config.getKeyspace(),
+  public String getPathForHadoop(String dataSource)
+  {
+    return getPathForHadoop();
+  }
+
+  @Override
+  public DataSegment push(final File indexFilesDir, DataSegment segment) throws IOException
+  {
+    log.info("Writing [%s] to C*", indexFilesDir);
+    String key = JOINER.join(
+        config.getKeyspace().isEmpty() ? null : config.getKeyspace(),
 		    DataSegmentPusherUtil.getStorageDir(segment)
 		    );
 

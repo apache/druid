@@ -32,8 +32,15 @@ public class TestDataSegmentPusher implements DataSegmentPusher
 {
   private final Set<DataSegment> pushedSegments = Sets.newConcurrentHashSet();
 
+  @Deprecated
   @Override
   public String getPathForHadoop(String dataSource)
+  {
+    return getPathForHadoop();
+  }
+
+  @Override
+  public String getPathForHadoop()
   {
     throw new UnsupportedOperationException();
   }
