@@ -367,6 +367,7 @@ public class GroupByQueryEngine
     public final String originalName;
     public final ColumnCapabilities capabilities;
     public final DimensionHandler handler;
+    public final int keySize;
 
     public GroupByDimensionInfo(
         DimensionSelector selector,
@@ -381,6 +382,7 @@ public class GroupByQueryEngine
       this.originalName = originalName;
       this.capabilities = capabilities;
       this.handler = handler;
+      this.keySize = handler.getEncodedValueSize();
     }
   }
 

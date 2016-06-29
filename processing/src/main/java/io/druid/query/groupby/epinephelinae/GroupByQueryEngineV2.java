@@ -194,6 +194,7 @@ public class GroupByQueryEngineV2
       Map<String, DimensionHandler> handlerMap = adapter.getDimensionHandlers();
       for (int i = 0; i < dimCount; i++) {
         DimensionSelector selector = cursor.makeDimensionSelector(query.getDimensions().get(i));
+        this.selectors[i] = selector;
         DimensionSpec dimSpec = dimensionSpecs.get(i);
         String dimName = dimSpec.getDimension();
         DimensionHandler handler = handlerMap.get(dimName);
@@ -325,11 +326,14 @@ outer:
               Map<String, Object> theMap = Maps.newLinkedHashMap();
 
               // Add dimensions.
+              int pos = 0;
               for (int i = 0; i < dimInfo.length; i++) {
                 final GroupByQueryEngine.GroupByDimensionInfo info = dimInfo[i];
                 final DimensionHandler dimHandler = info.handler;
-                dimHandler.addValueToEventFromGroupByKey(keyBuffer, info.selector, theMap, info.outputName);
+                dimHandler.addValueToEventFromGroupByKey(entry.getKey(), info.selector, theMap, info.outputName, pos);
+                pos += info.keySize;
               }
+
               /*
               for (int i = 0; i < selectors.length; i++) {
                 final int id = entry.getKey().getInt(Ints.BYTES * i);
@@ -342,6 +346,7 @@ outer:
                 }
               }
               */
+
 
               // Add aggregations.
               for (int i = 0; i < entry.getValues().length; i++) {

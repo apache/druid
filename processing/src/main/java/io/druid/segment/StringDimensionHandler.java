@@ -180,7 +180,16 @@ public class StringDimensionHandler implements DimensionHandler<Integer, String>
   public void addValueToEventFromGroupByKey(ByteBuffer key, DimensionSelector selector, Map<String, Object> event, String outputName)
   {
     int dimVal = key.getInt();
-    if (dimVal != -1) {
+    if (dimVal > -1) {
+      event.put(outputName, selector.lookupName(dimVal));
+    }
+  }
+
+  @Override
+  public void addValueToEventFromGroupByKey(ByteBuffer key, DimensionSelector selector, Map<String, Object> event, String outputName, int position)
+  {
+    int dimVal = key.getInt(position);
+    if (dimVal > -1) {
       event.put(outputName, selector.lookupName(dimVal));
     }
   }

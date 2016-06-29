@@ -216,7 +216,7 @@ public interface DimensionHandler<EncodedType extends Comparable<EncodedType>, A
    * @param outputName The output name for this handler's dimension for the query containing "event"
    */
   public void addValueToEventFromGroupByKey(ByteBuffer key, DimensionSelector selector, Map<String, Object> event, String outputName);
-
+  public void addValueToEventFromGroupByKey(ByteBuffer key, DimensionSelector selector, Map<String, Object> event, String outputName, int position);
 
   /**
    * Read the current row from a DimensionSelector and return an Iterable containing String representations of each
