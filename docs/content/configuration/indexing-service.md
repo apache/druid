@@ -82,7 +82,7 @@ The following configs only apply if the overlord is running in remote mode:
 |`druid.indexer.runner.maxZnodeBytes`|The maximum size Znode in bytes that can be created in Zookeeper.|524288|
 |`druid.indexer.runner.taskCleanupTimeout`|How long to wait before failing a task after a middle manager is disconnected from Zookeeper.|PT15M|
 |`druid.indexer.runner.taskShutdownLinkTimeout`|How long to wait on a shutdown request to a middle manager before timing out|PT1M|
-|`druid.indexer.runner.pendingTasksRunnerNumThreads`|Number of threads to allocate pending-tasks to workers, must be at least 1.|3|
+|`druid.indexer.runner.pendingTasksRunnerNumThreads`|Number of threads to allocate pending-tasks to workers, must be at least 1.|1|
 
 There are additional configs for autoscaling (if it is enabled):
 
@@ -186,6 +186,8 @@ Workers are assigned tasks until capacity.
 |--------|-----------|-------|
 |`type`|`fillCapacity`.|required; must be `fillCapacity`|
 
+Note that, if `druid.indexer.runner.pendingTasksRunnerNumThreads` is set to n (> 1) then it means to fill n workers upto capacity simultaneously and then moving on.
+
 ##### Fill Capacity With Affinity
 
 An affinity config can be provided.
@@ -196,6 +198,8 @@ An affinity config can be provided.
 |`affinity`|JSON object mapping a datasource String name to a list of indexing service middle manager host:port String values. Druid doesn't perform DNS resolution, so the 'host' value must match what is configured on the middle manager and what the middle manager announces itself as (examine the Overlord logs to see what your middle manager announces itself as).|{}|
 
 Tasks will try to be assigned to preferred workers. Fill capacity strategy is used if no preference for a datasource specified.
+
+Note that, if `druid.indexer.runner.pendingTasksRunnerNumThreads` is set to n (> 1) then it means to fill n preferred workers upto capacity simultaneously and then moving on.
 
 ##### Equal Distribution
 
