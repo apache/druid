@@ -66,6 +66,7 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.column.ValueType;
 
 import java.io.Closeable;
 import java.io.File;
@@ -139,6 +140,8 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
     for (int i = 0; i < query.getAggregatorSpecs().size(); i++) {
       combiningAggregatorFactories[i] = query.getAggregatorSpecs().get(i).getCombiningFactory();
     }
+
+    Map<String, ValueType> typeHints = BaseQuery.getContextTypeHints(query);
 
     final GroupByMergingKeySerdeFactory keySerdeFactory = new GroupByMergingKeySerdeFactory(
         query.getDimensions().size(),

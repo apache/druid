@@ -257,7 +257,7 @@ outer:
 
           for (int i = 0; i < dimInfo.length; i++) {
             final GroupByQueryEngine.GroupByDimensionInfo info = dimInfo[i];
-            info.handler.fishyFunction(keyBuffer, keyBufferPositions[i], dimInfo, stack, valuess, i);
+            info.handler.fishyFunction(keyBuffer, keyBufferPositions[i], dimInfo, stack, valuess, i, true);
           }
 
           /*
@@ -301,14 +301,12 @@ outer:
                 valuess[stackp].get(stack[stackp])
             );
             */
-
-
             stack[stackp]++;
 
             // Reset later slots
             for (int i = stackp + 1; i < stack.length; i++) {
               final GroupByQueryEngine.GroupByDimensionInfo info = dimInfo[i];
-              info.handler.fishyFunction(keyBuffer, keyBufferPositions[i], dimInfo, stack, valuess, i);
+              info.handler.fishyFunction(keyBuffer, keyBufferPositions[i], dimInfo, stack, valuess, i, false);
 
               /*
               final int position = Ints.BYTES * i;

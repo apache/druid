@@ -197,11 +197,13 @@ public class StringDimensionHandler implements DimensionHandler<Integer, String>
   }
 
   @Override
-  public void fishyFunction(ByteBuffer keyBuffer, int bufPosition, GroupByQueryEngine.GroupByDimensionInfo[] dimInfo, int[] stack, IndexedInts[] valuess, int dimIndex)
+  public void fishyFunction(ByteBuffer keyBuffer, int bufPosition, GroupByQueryEngine.GroupByDimensionInfo[] dimInfo, int[] stack, IndexedInts[] valuess, int dimIndex, boolean readNewValues)
   {
     final GroupByQueryEngine.GroupByDimensionInfo info = dimInfo[dimIndex];
 
-    valuess[dimIndex] = info.selector == null ? EmptyIndexedInts.EMPTY_INDEXED_INTS : info.selector.getRow();
+    if (readNewValues) {
+      valuess[dimIndex] = info.selector == null ? EmptyIndexedInts.EMPTY_INDEXED_INTS : info.selector.getRow();
+    }
 
     if (valuess[dimIndex].size() == 0) {
       stack[dimIndex] = 0;
@@ -210,21 +212,6 @@ public class StringDimensionHandler implements DimensionHandler<Integer, String>
       stack[dimIndex] = 1;
       keyBuffer.putInt(bufPosition, valuess[dimIndex].get(0));
     }
-
-    /*
-    final DimensionSelector selector = selectors[i];
-
-            valuess[i] = selector == null ? EmptyIndexedInts.EMPTY_INDEXED_INTS : selector.getRow();
-
-            final int position = Ints.BYTES * i;
-            if (valuess[i].size() == 0) {
-              stack[i] = 0;
-              keyBuffer.putInt(position, -1);
-            } else {
-              stack[i] = 1;
-              keyBuffer.putInt(position, valuess[i].get(0));
-            }
-     */
   }
 
   @Override
