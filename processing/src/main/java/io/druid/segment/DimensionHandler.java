@@ -23,10 +23,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.metamx.common.io.smoosh.FileSmoosher;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.groupby.GroupByQueryEngine;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IOPeon;
+import io.druid.segment.data.IndexedInts;
 
 import java.io.File;
 import java.nio.ByteBuffer;
@@ -217,6 +219,9 @@ public interface DimensionHandler<EncodedType extends Comparable<EncodedType>, A
    */
   public void addValueToEventFromGroupByKey(ByteBuffer key, DimensionSelector selector, Map<String, Object> event, String outputName);
   public void addValueToEventFromGroupByKey(ByteBuffer key, DimensionSelector selector, Map<String, Object> event, String outputName, int position);
+  public void fishyFunction(ByteBuffer keyBuffer, int bufPosition, GroupByQueryEngine.GroupByDimensionInfo[] dimInfo, int[] stack, IndexedInts[] valuess, int dimIndex);
+  public void fishyFunction2(ByteBuffer keyBuffer, int bufPosition, GroupByQueryEngine.GroupByDimensionInfo[] dimInfo, int[] stack, IndexedInts[] valuess, int dimIndex);
+
 
   /**
    * Read the current row from a DimensionSelector and return an Iterable containing String representations of each

@@ -51,6 +51,7 @@ import io.druid.common.guava.FileOutputSupplier;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.groupby.GroupByQueryEngine;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
@@ -62,6 +63,7 @@ import io.druid.segment.data.ByteBufferWriter;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressedVSizeIndexedV3Writer;
 import io.druid.segment.data.CompressedVSizeIntsIndexedWriter;
+import io.druid.segment.data.EmptyIndexedInts;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.GenericIndexedWriter;
 import io.druid.segment.data.IOPeon;
@@ -192,6 +194,46 @@ public class StringDimensionHandler implements DimensionHandler<Integer, String>
     if (dimVal > -1) {
       event.put(outputName, selector.lookupName(dimVal));
     }
+  }
+
+  @Override
+  public void fishyFunction(ByteBuffer keyBuffer, int bufPosition, GroupByQueryEngine.GroupByDimensionInfo[] dimInfo, int[] stack, IndexedInts[] valuess, int dimIndex)
+  {
+    final GroupByQueryEngine.GroupByDimensionInfo info = dimInfo[dimIndex];
+
+    valuess[dimIndex] = info.selector == null ? EmptyIndexedInts.EMPTY_INDEXED_INTS : info.selector.getRow();
+
+    if (valuess[dimIndex].size() == 0) {
+      stack[dimIndex] = 0;
+      keyBuffer.putInt(bufPosition, -1);
+    } else {
+      stack[dimIndex] = 1;
+      keyBuffer.putInt(bufPosition, valuess[dimIndex].get(0));
+    }
+
+    /*
+    final DimensionSelector selector = selectors[i];
+
+            valuess[i] = selector == null ? EmptyIndexedInts.EMPTY_INDEXED_INTS : selector.getRow();
+
+            final int position = Ints.BYTES * i;
+            if (valuess[i].size() == 0) {
+              stack[i] = 0;
+              keyBuffer.putInt(position, -1);
+            } else {
+              stack[i] = 1;
+              keyBuffer.putInt(position, valuess[i].get(0));
+            }
+     */
+  }
+
+  @Override
+  public void fishyFunction2(ByteBuffer keyBuffer, int bufPosition, GroupByQueryEngine.GroupByDimensionInfo[] dimInfo, int[] stack, IndexedInts[] valuess, int dimIndex)
+  {
+    keyBuffer.putInt(
+        bufPosition,
+        valuess[dimIndex].get(stack[dimIndex])
+    );
   }
 
   @Override

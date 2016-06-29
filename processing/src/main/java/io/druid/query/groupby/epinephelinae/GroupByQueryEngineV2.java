@@ -90,7 +90,6 @@ public class GroupByQueryEngineV2
         false
     );
 
-    final Grouper.KeySerde<ByteBuffer> keySerde = new GroupByEngineKeySerde(query.getDimensions().size());
     final ResourceHolder<ByteBuffer> bufferHolder = intermediateResultsBufferPool.take();
 
     final String fudgeTimestampString = Strings.emptyToNull(
@@ -121,7 +120,6 @@ public class GroupByQueryEngineV2
                                 config,
                                 cursor,
                                 bufferHolder.get(),
-                                keySerde,
                                 fudgeTimestamp,
                                 storageAdapter
                             );
@@ -162,6 +160,7 @@ public class GroupByQueryEngineV2
     private final int[] stack;
     private final IndexedInts[] valuess;
     private final GroupByQueryEngine.GroupByDimensionInfo[] dimInfo;
+    private final int[] keyBufferPositions;
     private final StorageAdapter adapter;
 
     private int stackp = Integer.MIN_VALUE;
@@ -173,7 +172,6 @@ public class GroupByQueryEngineV2
         final GroupByQueryConfig config,
         final Cursor cursor,
         final ByteBuffer buffer,
-        final Grouper.KeySerde<ByteBuffer> keySerde,
         final DateTime fudgeTimestamp,
         final StorageAdapter adapter
     )
@@ -184,11 +182,11 @@ public class GroupByQueryEngineV2
       this.config = config;
       this.cursor = cursor;
       this.buffer = buffer;
-      this.keySerde = keySerde;
-      this.keyBuffer = ByteBuffer.allocate(keySerde.keySize());
       this.adapter = adapter;
       this.selectors = new DimensionSelector[dimCount];
 
+      this.keyBufferPositions = new int[dimCount];
+      int curPos = 0;
       this.dimInfo = new GroupByQueryEngine.GroupByDimensionInfo[dimCount];
       List<DimensionSpec> dimensionSpecs = query.getDimensions();
       Map<String, DimensionHandler> handlerMap = adapter.getDimensionHandlers();
@@ -211,7 +209,11 @@ public class GroupByQueryEngineV2
         );
 
         this.dimInfo[i] = info;
+        this.keyBufferPositions[i] = curPos;
+        curPos += info.keySize;
       }
+      this.keySerde = new GroupByEngineKeySerde(curPos);
+      this.keyBuffer = ByteBuffer.allocate(keySerde.keySize());
 
       this.stack = new int[dimCount];
       this.valuess = new IndexedInts[dimCount];
@@ -253,6 +255,12 @@ outer:
           // Set up stack, valuess, and first grouping in keyBuffer for this row
           stackp = stack.length - 1;
 
+          for (int i = 0; i < dimInfo.length; i++) {
+            final GroupByQueryEngine.GroupByDimensionInfo info = dimInfo[i];
+            info.handler.fishyFunction(keyBuffer, keyBufferPositions[i], dimInfo, stack, valuess, i);
+          }
+
+          /*
           for (int i = 0; i < selectors.length; i++) {
             final DimensionSelector selector = selectors[i];
 
@@ -267,6 +275,7 @@ outer:
               keyBuffer.putInt(position, valuess[i].get(0));
             }
           }
+          */
         }
 
         // Aggregate groupings for this row
@@ -285,14 +294,23 @@ outer:
 
           if (stackp >= 0 && stack[stackp] < valuess[stackp].size()) {
             // Load next value for current slot
+            dimInfo[stackp].handler.fishyFunction2(keyBuffer, keyBufferPositions[stackp], dimInfo, stack, valuess, stackp);
+            /*
             keyBuffer.putInt(
                 Ints.BYTES * stackp,
                 valuess[stackp].get(stack[stackp])
             );
+            */
+
+
             stack[stackp]++;
 
             // Reset later slots
             for (int i = stackp + 1; i < stack.length; i++) {
+              final GroupByQueryEngine.GroupByDimensionInfo info = dimInfo[i];
+              info.handler.fishyFunction(keyBuffer, keyBufferPositions[i], dimInfo, stack, valuess, i);
+
+              /*
               final int position = Ints.BYTES * i;
               if (valuess[i].size() == 0) {
                 stack[i] = 0;
@@ -301,6 +319,7 @@ outer:
                 stack[i] = 1;
                 keyBuffer.putInt(position, valuess[i].get(0));
               }
+              */
             }
 
             stackp = stack.length - 1;
@@ -386,9 +405,10 @@ outer:
   {
     private final int keySize;
 
-    public GroupByEngineKeySerde(final int dimCount)
+    public GroupByEngineKeySerde(final int keySize)
     {
-      this.keySize = dimCount * Ints.BYTES;
+      this.keySize = keySize;
+      //this.keySize = keySize * Ints.BYTES;
     }
 
     @Override
