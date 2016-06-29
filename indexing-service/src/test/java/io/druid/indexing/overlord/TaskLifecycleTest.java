@@ -456,9 +456,16 @@ public class TaskLifecycleTest
     return new DataSegmentPusher()
     {
       @Override
-      public String getPathForHadoop(String dataSource)
+      public String getPathForHadoop()
       {
         throw new UnsupportedOperationException();
+      }
+
+      @Deprecated
+      @Override
+      public String getPathForHadoop(String dataSource)
+      {
+        return getPathForHadoop();
       }
 
       @Override
@@ -993,8 +1000,15 @@ public class TaskLifecycleTest
   {
     dataSegmentPusher = new DataSegmentPusher()
     {
+      @Deprecated
       @Override
       public String getPathForHadoop(String s)
+      {
+        return getPathForHadoop();
+      }
+
+      @Override
+      public String getPathForHadoop()
       {
         throw new UnsupportedOperationException();
       }
