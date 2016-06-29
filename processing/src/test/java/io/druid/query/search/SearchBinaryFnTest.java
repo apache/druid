@@ -297,7 +297,7 @@ public class SearchBinaryFnTest
     );
 
     Result<SearchResultValue> actual = new SearchBinaryFn(
-        searchSortSpec, QueryGranularity.ALL, Integer.MAX_VALUE).apply(r1, r2);
+        searchSortSpec, QueryGranularities.ALL, Integer.MAX_VALUE).apply(r1, r2);
     Assert.assertEquals(expected.getTimestamp(), actual.getTimestamp());
     assertSearchMergeResult(expected.getValue(), actual.getValue());
   }  
