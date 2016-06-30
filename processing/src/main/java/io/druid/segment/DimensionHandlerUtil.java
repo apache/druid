@@ -43,6 +43,16 @@ public final class DimensionHandlerUtil
     return handler;
   }
 
+  public static DimensionHandler getHandlerFromType(String dimensionName, ValueType type)
+  {
+    switch (type) {
+      case STRING:
+        return new StringDimensionHandler(dimensionName);
+      default:
+        throw new IAE("Invalid column type: " + type);
+    }
+  }
+
   public static Function getTransformerForType(ValueType type)
   {
     Function valueTransformer;

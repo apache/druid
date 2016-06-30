@@ -62,6 +62,8 @@ import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.strategy.GroupByStrategyV2;
 import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.DimensionHandler;
+import io.druid.segment.DimensionHandlerUtil;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
@@ -73,6 +75,8 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -142,10 +146,10 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
     }
 
     Map<String, ValueType> typeHints = BaseQuery.getContextTypeHints(query);
-
     final GroupByMergingKeySerdeFactory keySerdeFactory = new GroupByMergingKeySerdeFactory(
-        query.getDimensions().size(),
-        config.getMaxMergingDictionarySize() / concurrencyHint
+        query.getDimensions(),
+        config.getMaxMergingDictionarySize() / concurrencyHint,
+        typeHints
     );
     final GroupByMergingColumnSelectorFactory columnSelectorFactory = new GroupByMergingColumnSelectorFactory();
 
@@ -455,19 +459,25 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
 
   private static class GroupByMergingKeySerdeFactory implements Grouper.KeySerdeFactory<GroupByMergingKey>
   {
-    private final int dimCount;
     private final long maxDictionarySize;
+    private final List<DimensionSpec> dimensions;
+    private final Map<String, ValueType> typeHints;
 
-    public GroupByMergingKeySerdeFactory(int dimCount, long maxDictionarySize)
+    public GroupByMergingKeySerdeFactory(List<DimensionSpec> dimensions, long maxDictionarySize, Map<String, ValueType> typeHints)
     {
-      this.dimCount = dimCount;
+      this.dimensions = dimensions;
       this.maxDictionarySize = maxDictionarySize;
+      if (typeHints == null) {
+        this.typeHints = new HashMap<>();
+      } else {
+        this.typeHints = typeHints;
+      }
     }
 
     @Override
     public Grouper.KeySerde<GroupByMergingKey> factorize()
     {
-      return new GroupByMergingKeySerde(dimCount, maxDictionarySize);
+      return new GroupByMergingKeySerde(dimensions, maxDictionarySize, typeHints);
     }
   }
 
@@ -481,6 +491,9 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
     private final ByteBuffer keyBuffer;
     private final List<String> dictionary = Lists.newArrayList();
     private final Map<String, Integer> reverseDictionary = Maps.newHashMap();
+    private final List<DimensionSpec> dimensions;
+    private final Map<String, ValueType> typeHints;
+    private final Map<String, DimensionHandler> handlerMap;
 
     // Size limiting for the dictionary, in (roughly estimated) bytes.
     private final long maxDictionarySize;
@@ -489,11 +502,14 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
     // dictionary id -> its position if it were sorted by dictionary value
     private int[] sortableIds = null;
 
-    public GroupByMergingKeySerde(final int dimCount, final long maxDictionarySize)
+    public GroupByMergingKeySerde(final List<DimensionSpec> dimensions, final long maxDictionarySize, Map<String, ValueType> typeHints)
     {
-      this.dimCount = dimCount;
+      this.dimensions = dimensions;
+      this.dimCount = dimensions.size();
+      this.typeHints = typeHints;
       this.maxDictionarySize = maxDictionarySize;
-      this.keySize = Longs.BYTES + dimCount * Ints.BYTES;
+      this.handlerMap = makeHandlerMap();
+      this.keySize = getKeySize();
       this.keyBuffer = ByteBuffer.allocate(keySize);
     }
 
@@ -609,6 +625,30 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
         currentEstimatedSize += additionalEstimatedSize;
       }
       return idx;
+    }
+
+    private Map<String, DimensionHandler> makeHandlerMap()
+    {
+      Map<String, DimensionHandler> handlerMap = new LinkedHashMap<>();
+      for (DimensionSpec dimension : dimensions) {
+        String dimName = dimension.getDimension();
+        ValueType type = typeHints.get(dimName);
+        if (type == null) {
+          type = ValueType.STRING;
+        }
+        DimensionHandler handler = DimensionHandlerUtil.getHandlerFromType(dimName, type);
+        handlerMap.put(dimName, handler);
+      }
+      return handlerMap;
+    }
+
+    private int getKeySize()
+    {
+      int keySize = Longs.BYTES;
+      for (DimensionHandler handler : handlerMap.values()) {
+        keySize += handler.getEncodedValueSize();
+      }
+      return keySize;
     }
   }
 
