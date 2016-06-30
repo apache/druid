@@ -754,8 +754,7 @@ public class IndexMergerV9 extends IndexMerger
           writer = LongColumnSerializer.create(ioPeon, metric, metCompression, metEncoding);
           break;
         case FLOAT:
-          writer = FloatColumnSerializer.create(ioPeon, metric,
-                                                CompressedObjectStrategy.CompressionStrategy.forId(metCompression.getId()));
+          writer = FloatColumnSerializer.create(ioPeon, metric, metCompression);
           break;
         case COMPLEX:
           final String typeName = metricTypeNames.get(metric);

@@ -90,14 +90,21 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
       CompressionFactory.LongEncodingFormat format = CompressionFactory.DEFAULT_LONG_ENCODING;
       if (versionFromBuffer == version) {
         byte compressionId = bufferToUse.get();
-        if (compressionId >= (byte)0xFE) {
+        if (compressionId >= (byte) 0xFE) {
           compression = CompressedObjectStrategy.CompressionStrategy.forId(compressionId);
         } else {
-          compression = CompressedObjectStrategy.CompressionStrategy.forId((byte)(compressionId + 126));
+          compression = CompressedObjectStrategy.CompressionStrategy.forId((byte) (compressionId + 126));
           format = CompressionFactory.LongEncodingFormat.forId(bufferToUse.get());
         }
       }
-      Supplier<IndexedLongs> supplier = CompressionFactory.getLongSupplier(totalSize, sizePer, bufferToUse, order, format, compression);
+      Supplier<IndexedLongs> supplier = CompressionFactory.getLongSupplier(
+          totalSize,
+          sizePer,
+          bufferToUse,
+          order,
+          format,
+          compression
+      );
       return new CompressedLongsIndexedSupplier(
           totalSize,
           buffer,

@@ -1,3 +1,22 @@
+/*
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package io.druid.benchmark;
 
 import com.google.common.io.Files;
@@ -46,7 +65,7 @@ public class VSizeSerdeBenchmark
   private VSizeLongSerde.LongDeserializer d56;
   private VSizeLongSerde.LongDeserializer d64;
   private long sum;
-  
+
   @Setup
   public void setup() throws IOException, URISyntaxException
   {
@@ -75,105 +94,104 @@ public class VSizeSerdeBenchmark
   }
 
   @Benchmark
-  public void read1() {
+  public void read1()
+  {
     for (int i = 0; i < 5000000; i++) {
       sum += d1.get(i);
     }
   }
 
   @Benchmark
-  public void read2() {
+  public void read2()
+  {
     for (int i = 0; i < 5000000; i++) {
       sum += d2.get(i);
     }
   }
 
-//  @Benchmark
-//  public void read3() {
-//    for (int i = 0; i < 5000000; i++) {
-//      sum += d3.get(i);
-//    }
-//  }
-
   @Benchmark
-  public void read4() {
+  public void read4()
+  {
     for (int i = 0; i < 5000000; i++) {
       sum += d4.get(i);
     }
   }
 
-//  @Benchmark
-//  public void read6() {
-//    for (int i = 0; i < 5000000; i++) {
-//      sum += d6.get(i);
-//    }
-//  }
-
   @Benchmark
-  public void read8() {
+  public void read8()
+  {
     for (int i = 0; i < 5000000; i++) {
       sum += d8.get(i);
     }
   }
 
   @Benchmark
-  public void readd12() {
+  public void readd12()
+  {
     for (int i = 0; i < 5000000; i++) {
       sum += d12.get(i);
     }
   }
 
   @Benchmark
-  public void readd16() {
+  public void readd16()
+  {
     for (int i = 0; i < 5000000; i++) {
       sum += d16.get(i);
     }
   }
 
   @Benchmark
-  public void readd20() {
+  public void readd20()
+  {
     for (int i = 0; i < 5000000; i++) {
       sum += d20.get(i);
     }
   }
 
   @Benchmark
-  public void readd24() {
+  public void readd24()
+  {
     for (int i = 0; i < 5000000; i++) {
       sum += d24.get(i);
     }
   }
 
   @Benchmark
-  public void readd32() {
+  public void readd32()
+  {
     for (int i = 0; i < 5000000; i++) {
       sum += d32.get(i);
     }
   }
 
   @Benchmark
-  public void readd40() {
+  public void readd40()
+  {
     for (int i = 0; i < 5000000; i++) {
       sum += d40.get(i);
     }
   }
 
   @Benchmark
-  public void readd48() {
+  public void readd48()
+  {
     for (int i = 0; i < 5000000; i++) {
       sum += d48.get(i);
     }
   }
 
   @Benchmark
-  public void readd56() {
+  public void readd56()
+  {
     for (int i = 0; i < 5000000; i++) {
       sum += d56.get(i);
     }
   }
 
   @Benchmark
-  public void readd64() {
+  public void readd64()
+  {
     for (int i = 0; i < 5000000; i++) {
       sum += d64.get(i);
     }

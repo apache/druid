@@ -1,3 +1,22 @@
+/*
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package io.druid.segment.data;
 
 import com.google.common.base.Supplier;
@@ -26,7 +45,7 @@ import java.util.concurrent.atomic.AtomicReference;
 @RunWith(Parameterized.class)
 public class CompressedLongsSerdeTest
 {
-  @Parameterized.Parameters(name="{0} {1} {2}")
+  @Parameterized.Parameters(name = "{0} {1} {2}")
   public static Iterable<Object[]> compressionStrategies()
   {
     List<Object[]> data = new ArrayList<>();
@@ -43,19 +62,23 @@ public class CompressedLongsSerdeTest
   protected final CompressedObjectStrategy.CompressionStrategy compressionStrategy;
   protected final ByteOrder order;
 
-  private final long values0 [] = {};
-  private final long values1 [] = {0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1};
-  private final long values2 [] = {12, 5, 2, 9, 3, 2, 5, 1, 0, 6, 13, 10, 15};
-  private final long values3 [] = {1, 1, 1, 1, 1, 11, 11, 11, 11};
-  private final long values4 [] = {200, 200, 200, 401, 200, 301, 200, 200, 200, 404, 200, 200, 200, 200};
-  private final long values5 [] = {123, 632, 12, 39, 536, 0, 1023, 52, 777, 526, 214, 562, 823, 346};
-  private final long values6 [] = {1000000, 1000001, 1000002, 1000003, 1000004, 1000005, 1000006, 1000007, 1000008};
-  private final long values7 [] = {Long.MAX_VALUE, Long.MIN_VALUE, 12378, -12718243, -1236213, 12743153, 21364375452L,
-                             65487435436632L, -43734526234564L};
+  private final long values0[] = {};
+  private final long values1[] = {0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1};
+  private final long values2[] = {12, 5, 2, 9, 3, 2, 5, 1, 0, 6, 13, 10, 15};
+  private final long values3[] = {1, 1, 1, 1, 1, 11, 11, 11, 11};
+  private final long values4[] = {200, 200, 200, 401, 200, 301, 200, 200, 200, 404, 200, 200, 200, 200};
+  private final long values5[] = {123, 632, 12, 39, 536, 0, 1023, 52, 777, 526, 214, 562, 823, 346};
+  private final long values6[] = {1000000, 1000001, 1000002, 1000003, 1000004, 1000005, 1000006, 1000007, 1000008};
+  private final long values7[] = {
+      Long.MAX_VALUE, Long.MIN_VALUE, 12378, -12718243, -1236213, 12743153, 21364375452L,
+      65487435436632L, -43734526234564L
+  };
 
-  public CompressedLongsSerdeTest(CompressionFactory.LongEncodingFormat encodingFormat,
-                                  CompressedObjectStrategy.CompressionStrategy compressionStrategy,
-                                  ByteOrder order)
+  public CompressedLongsSerdeTest(
+      CompressionFactory.LongEncodingFormat encodingFormat,
+      CompressedObjectStrategy.CompressionStrategy compressionStrategy,
+      ByteOrder order
+  )
   {
     this.encodingFormat = encodingFormat;
     this.compressionStrategy = compressionStrategy;
@@ -78,7 +101,7 @@ public class CompressedLongsSerdeTest
   @Test
   public void testChunkSerde() throws Exception
   {
-    long chunk [] = new long[10000];
+    long chunk[] = new long[10000];
     for (int i = 0; i < 10000; i++) {
       chunk[i] = i;
     }
@@ -88,7 +111,8 @@ public class CompressedLongsSerdeTest
   public void testWithValues(long[] values) throws Exception
   {
     LongSupplierSerializer serializer = CompressionFactory.getLongSerializer(new IOPeonForTesting(), "test", order,
-                                                                             encodingFormat, compressionStrategy);
+                                                                             encodingFormat, compressionStrategy
+    );
     serializer.open();
 
     for (long value : values) {
@@ -171,8 +195,10 @@ public class CompressedLongsSerdeTest
 
   // This test attempts to cause a race condition with the DirectByteBuffers, it's non-deterministic in causing it,
   // which sucks but I can't think of a way to deterministically cause it...
-  private void testConcurrentThreadReads(final Supplier<IndexedLongs> supplier,
-                                        final IndexedLongs indexed, final long[] vals) throws Exception
+  private void testConcurrentThreadReads(
+      final Supplier<IndexedLongs> supplier,
+      final IndexedLongs indexed, final long[] vals
+  ) throws Exception
   {
     final AtomicReference<String> reason = new AtomicReference<String>("none");
 

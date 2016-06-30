@@ -1,3 +1,22 @@
+/*
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package io.druid.benchmark;
 
 import com.google.common.io.ByteSink;
@@ -40,8 +59,8 @@ import java.util.zip.GZIPInputStream;
 
 @State(Scope.Benchmark)
 @Fork(value = 1)
-@Warmup(iterations = 10)
-@Measurement(iterations = 10)
+@Warmup(iterations = 1)
+@Measurement(iterations = 1)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 public class CompressionFormatBenchmark
@@ -98,9 +117,11 @@ public class CompressionFormatBenchmark
     GZIPInputStream gzip = new GZIPInputStream(new FileInputStream(inFile));
     BufferedReader br = new BufferedReader(new InputStreamReader(gzip));
 
-    try (FileChannel output = FileChannel.open(compFile.toPath(),
-                                               StandardOpenOption.CREATE_NEW,
-                                               StandardOpenOption.WRITE)){
+    try (FileChannel output = FileChannel.open(
+        compFile.toPath(),
+        StandardOpenOption.CREATE_NEW,
+        StandardOpenOption.WRITE
+    )) {
       writer.open();
       String line;
       while ((line = br.readLine()) != null) {
@@ -118,14 +139,16 @@ public class CompressionFormatBenchmark
           }
       );
       output.write(ByteBuffer.wrap(baos.toByteArray()));
-    } finally {
+    }
+    finally {
       iopeon.cleanup();
       br.close();
     }
   }
 
   @Benchmark
-  public void readContinuous() {
+  public void readContinuous()
+  {
     sum = 0;
     for (int i = 0; i < count; i++) {
       sum += indexedLongs.get(i);
@@ -133,7 +156,8 @@ public class CompressionFormatBenchmark
   }
 
   @Benchmark
-  public void readSkipping() {
+  public void readSkipping()
+  {
     sum = 0;
     for (int i = 0; i < count; i += rand.nextInt(10000)) {
       sum += indexedLongs.get(i);

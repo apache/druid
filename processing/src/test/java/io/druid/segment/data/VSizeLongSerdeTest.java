@@ -1,3 +1,22 @@
+/*
+ * Licensed to Metamarkets Group Inc. (Metamarkets) under one
+ * or more contributor license agreements. See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership. Metamarkets licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at
+ *
+ * http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied. See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 package io.druid.segment.data;
 
 
@@ -14,22 +33,24 @@ public class VSizeLongSerdeTest
   private ByteBuffer buffer;
   private ByteArrayOutputStream outStream;
   private ByteBuffer outBuffer;
-  private long values0 [] = {0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1};
-  private long values1 [] = {0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1};
-  private long values2 [] = {12, 5, 2, 9, 3, 2, 5, 1, 0, 6, 13, 10, 15};
-  private long values3 [] = {1, 1, 1, 1, 1, 11, 11, 11, 11};
-  private long values4 [] = {200, 200, 200, 401, 200, 301, 200, 200, 200, 404, 200, 200, 200, 200};
-  private long values5 [] = {123, 632, 12, 39, 536, 0, 1023, 52, 777, 526, 214, 562, 823, 346};
-  private long values6 [] = {1000000, 1000001, 1000002, 1000003, 1000004, 1000005, 1000006, 1000007, 1000008};
+  private long values0[] = {0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1};
+  private long values1[] = {0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1};
+  private long values2[] = {12, 5, 2, 9, 3, 2, 5, 1, 0, 6, 13, 10, 15};
+  private long values3[] = {1, 1, 1, 1, 1, 11, 11, 11, 11};
+  private long values4[] = {200, 200, 200, 401, 200, 301, 200, 200, 200, 404, 200, 200, 200, 200};
+  private long values5[] = {123, 632, 12, 39, 536, 0, 1023, 52, 777, 526, 214, 562, 823, 346};
+  private long values6[] = {1000000, 1000001, 1000002, 1000003, 1000004, 1000005, 1000006, 1000007, 1000008};
 
   @Before
-  public void setUp () {
+  public void setUp()
+  {
     outStream = new ByteArrayOutputStream();
     outBuffer = ByteBuffer.allocate(500000);
   }
 
   @Test
-  public void testGetBitsForMax () {
+  public void testGetBitsForMax()
+  {
     Assert.assertEquals(1, VSizeLongSerde.getBitsForMax(1));
     Assert.assertEquals(1, VSizeLongSerde.getBitsForMax(2));
     Assert.assertEquals(2, VSizeLongSerde.getBitsForMax(3));
@@ -42,7 +63,7 @@ public class VSizeLongSerdeTest
   }
 
   @Test
-  public void testSerdeValues () throws IOException
+  public void testSerdeValues() throws IOException
   {
     for (int i : VSizeLongSerde.SUPPORTED_SIZE) {
       testSerde(i, values0);
@@ -66,7 +87,7 @@ public class VSizeLongSerdeTest
   }
 
   @Test
-  public void testSerdeLoop () throws IOException
+  public void testSerdeLoop() throws IOException
   {
     for (int i : VSizeLongSerde.SUPPORTED_SIZE) {
       if (i >= 8) {
@@ -78,7 +99,7 @@ public class VSizeLongSerdeTest
     }
   }
 
-  public void testSerde (int longSize, long[] values) throws IOException
+  public void testSerde(int longSize, long[] values) throws IOException
   {
     outBuffer.rewind();
     outStream.reset();
@@ -102,7 +123,7 @@ public class VSizeLongSerdeTest
     }
   }
 
-  public void testSerdeIncLoop (int longSize, long start, long end) throws IOException
+  public void testSerdeIncLoop(int longSize, long start, long end) throws IOException
   {
     outBuffer.rewind();
     outStream.reset();
@@ -116,8 +137,8 @@ public class VSizeLongSerdeTest
     bufferSer.close();
 
     buffer = ByteBuffer.wrap(outStream.toByteArray());
-    Assert.assertEquals(VSizeLongSerde.getSerializedSize(longSize, (int)(end - start)), buffer.capacity());
-    Assert.assertEquals(VSizeLongSerde.getSerializedSize(longSize, (int)(end - start)), outBuffer.position());
+    Assert.assertEquals(VSizeLongSerde.getSerializedSize(longSize, (int) (end - start)), buffer.capacity());
+    Assert.assertEquals(VSizeLongSerde.getSerializedSize(longSize, (int) (end - start)), outBuffer.position());
     VSizeLongSerde.LongDeserializer streamDes = VSizeLongSerde.getDeserializer(longSize, buffer, 0);
     VSizeLongSerde.LongDeserializer bufferDes = VSizeLongSerde.getDeserializer(longSize, outBuffer, 0);
     for (int i = 0; i < end - start; i++) {
