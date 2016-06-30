@@ -42,10 +42,11 @@ public class CompressedFloatsSupplierSerializer
       IOPeon ioPeon,
       final String filenameBase,
       final ByteOrder order,
-      final CompressedObjectStrategy.CompressionStrategy compression
+      final CompressedObjectStrategy.CompressionStrategy compression,
+      final GenericIndexedWriterFactory genericIndexedWriterFactory
   ) throws IOException
   {
-    return create(ioPeon, filenameBase, CompressedFloatsIndexedSupplier.MAX_FLOATS_IN_BUFFER, order, compression);
+    return create(ioPeon, filenameBase, CompressedFloatsIndexedSupplier.MAX_FLOATS_IN_BUFFER, order, compression, genericIndexedWriterFactory);
   }
 
   public static CompressedFloatsSupplierSerializer create(
@@ -53,12 +54,13 @@ public class CompressedFloatsSupplierSerializer
       final String filenameBase,
       final int sizePer,
       final ByteOrder order,
-      final CompressedObjectStrategy.CompressionStrategy compression
+      final CompressedObjectStrategy.CompressionStrategy compression,
+      final GenericIndexedWriterFactory genericIndexedWriterFactory
   ) throws IOException
   {
     final CompressedFloatsSupplierSerializer retVal = new CompressedFloatsSupplierSerializer(
         sizePer,
-        new GenericIndexedWriter<ResourceHolder<FloatBuffer>>(
+        genericIndexedWriterFactory.getGenericIndexedWriter(
             ioPeon, filenameBase, CompressedFloatBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)
         ),
         compression

@@ -45,7 +45,13 @@ public class InMemoryCompressedFloatsTest
         0.0f, 0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.9f, 0.10f, 0.11f, 0.12f, 0.13f, 0.14f, 0.15f
     };
 
-    floats = new InMemoryCompressedFloats(5, ByteOrder.nativeOrder());
+    floats = new InMemoryCompressedFloats(5, ByteOrder.nativeOrder(), new GenericIndexedWriterV1Factory());
+
+    for (int i = 0; i < vals.length; i++) {
+      Assert.assertEquals(i, floats.add(vals[i]));
+    }
+
+    floats = new InMemoryCompressedFloats(5, ByteOrder.nativeOrder(), new GenericIndexedWriterV2Factory());
 
     for (int i = 0; i < vals.length; i++) {
       Assert.assertEquals(i, floats.add(vals[i]));

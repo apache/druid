@@ -21,7 +21,6 @@ package io.druid.segment;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
-import com.google.common.math.DoubleMath;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.data.input.MapBasedRow;
@@ -29,7 +28,7 @@ import io.druid.data.input.Row;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Result;
 import io.druid.segment.column.ColumnConfig;
-import org.joda.time.DateTime;
+import io.druid.segment.data.GenericIndexedWriterV1Factory;
 import org.junit.Assert;
 
 import java.util.Iterator;
@@ -55,10 +54,11 @@ public class TestHelper
           {
             return 0;
           }
-        }
+        },
+        new GenericIndexedWriterV1Factory()
     );
-    INDEX_MERGER = new IndexMerger(JSON_MAPPER, INDEX_IO);
-    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO);
+    INDEX_MERGER = new IndexMerger(JSON_MAPPER, INDEX_IO, new GenericIndexedWriterV1Factory());
+    INDEX_MERGER_V9 = new IndexMergerV9(JSON_MAPPER, INDEX_IO, new GenericIndexedWriterV1Factory());
   }
 
   public static ObjectMapper getTestObjectMapper()

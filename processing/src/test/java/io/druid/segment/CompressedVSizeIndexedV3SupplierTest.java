@@ -23,19 +23,28 @@ import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressedVSizeIndexedSupplierTest;
+import io.druid.segment.data.GenericIndexedWriterFactory;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedMultivalue;
 import io.druid.segment.data.VSizeIndexedInts;
 import io.druid.segment.data.WritableSupplier;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Arrays;
 
+@RunWith(Parameterized.class)
 public class CompressedVSizeIndexedV3SupplierTest extends CompressedVSizeIndexedSupplierTest
 {
+  public CompressedVSizeIndexedV3SupplierTest(GenericIndexedWriterFactory genericIndexedWriterFactory)
+  {
+    super(genericIndexedWriterFactory);
+  }
+
   @Before
   public void setUpSimple(){
     vals = Arrays.asList(
@@ -57,7 +66,8 @@ public class CompressedVSizeIndexedV3SupplierTest extends CompressedVSizeIndexed
               }
             }
         ), 2, 20, ByteOrder.nativeOrder(),
-        CompressedObjectStrategy.CompressionStrategy.LZ4
+        CompressedObjectStrategy.CompressionStrategy.LZ4,
+        genericIndexedWriterFactory
     );
   }
 

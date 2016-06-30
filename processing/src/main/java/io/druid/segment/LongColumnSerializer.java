@@ -21,6 +21,7 @@ package io.druid.segment;
 
 import io.druid.segment.data.CompressedLongsSupplierSerializer;
 import io.druid.segment.data.CompressedObjectStrategy;
+import io.druid.segment.data.GenericIndexedWriterFactory;
 import io.druid.segment.data.IOPeon;
 
 import java.io.IOException;
@@ -32,29 +33,33 @@ public class LongColumnSerializer implements GenericColumnSerializer
   public static LongColumnSerializer create(
       IOPeon ioPeon,
       String filenameBase,
-      CompressedObjectStrategy.CompressionStrategy compression
+      CompressedObjectStrategy.CompressionStrategy compression,
+      GenericIndexedWriterFactory genericIndexedWriterFactory
   )
   {
-    return new LongColumnSerializer(ioPeon, filenameBase, IndexIO.BYTE_ORDER, compression);
+    return new LongColumnSerializer(ioPeon, filenameBase, IndexIO.BYTE_ORDER, compression, genericIndexedWriterFactory);
   }
 
   private final IOPeon ioPeon;
   private final String filenameBase;
   private final ByteOrder byteOrder;
   private final CompressedObjectStrategy.CompressionStrategy compression;
+  private final GenericIndexedWriterFactory genericIndexedWriterFactory;
   private CompressedLongsSupplierSerializer writer;
 
   public LongColumnSerializer(
       IOPeon ioPeon,
       String filenameBase,
       ByteOrder byteOrder,
-      CompressedObjectStrategy.CompressionStrategy compression
+      CompressedObjectStrategy.CompressionStrategy compression,
+      GenericIndexedWriterFactory genericIndexedWriterFactory
   )
   {
     this.ioPeon = ioPeon;
     this.filenameBase = filenameBase;
     this.byteOrder = byteOrder;
     this.compression = compression;
+    this.genericIndexedWriterFactory = genericIndexedWriterFactory;
   }
 
   @Override
@@ -64,7 +69,8 @@ public class LongColumnSerializer implements GenericColumnSerializer
         ioPeon,
         String.format("%s.long_column", filenameBase),
         byteOrder,
-        compression
+        compression,
+        genericIndexedWriterFactory
     );
     writer.open();
   }

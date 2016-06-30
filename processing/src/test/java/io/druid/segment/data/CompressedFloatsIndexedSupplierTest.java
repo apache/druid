@@ -46,9 +46,12 @@ import java.util.concurrent.atomic.AtomicReference;
 @RunWith(Parameterized.class)
 public class CompressedFloatsIndexedSupplierTest extends CompressionStrategyTest
 {
-  public CompressedFloatsIndexedSupplierTest(CompressedObjectStrategy.CompressionStrategy compressionStrategy)
+  public CompressedFloatsIndexedSupplierTest(
+      CompressedObjectStrategy.CompressionStrategy compressionStrategy,
+      GenericIndexedWriterFactory genericIndexedWriterFactory
+  )
   {
-    super(compressionStrategy);
+    super(compressionStrategy, genericIndexedWriterFactory);
   }
 
   private IndexedFloats indexed;
@@ -82,7 +85,8 @@ public class CompressedFloatsIndexedSupplierTest extends CompressionStrategyTest
         FloatBuffer.wrap(vals),
         chunkSize,
         ByteOrder.nativeOrder(),
-        compressionStrategy
+        compressionStrategy,
+        genericIndexedWriterFactory
     );
 
     indexed = supplier.get();
@@ -103,7 +107,7 @@ public class CompressedFloatsIndexedSupplierTest extends CompressionStrategyTest
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final CompressedFloatsIndexedSupplier theSupplier = CompressedFloatsIndexedSupplier.fromFloatBuffer(
-        FloatBuffer.wrap(vals), chunkSize, ByteOrder.nativeOrder(), compressionStrategy
+        FloatBuffer.wrap(vals), chunkSize, ByteOrder.nativeOrder(), compressionStrategy, genericIndexedWriterFactory
     );
     theSupplier.writeToChannel(Channels.newChannel(baos));
 
@@ -118,8 +122,8 @@ public class CompressedFloatsIndexedSupplierTest extends CompressionStrategyTest
   {
     vals = new float[totalSize];
     Random rand = new Random(0);
-    for(int i = 0; i < vals.length; ++i) {
-      vals[i] = (float)rand.nextGaussian();
+    for (int i = 0; i < vals.length; ++i) {
+      vals[i] = (float) rand.nextGaussian();
     }
 
     makeWithSerde(chunkSize);

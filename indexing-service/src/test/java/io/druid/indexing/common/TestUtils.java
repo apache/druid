@@ -32,6 +32,7 @@ import io.druid.segment.IndexMergerV9;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.realtime.firehose.ChatHandlerProvider;
 import io.druid.segment.realtime.firehose.NoopChatHandlerProvider;
+import io.druid.segment.data.GenericIndexedWriterV1Factory;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -57,10 +58,11 @@ public class TestUtils
           {
             return 0;
           }
-        }
+        },
+        new GenericIndexedWriterV1Factory()
     );
-    indexMerger = new IndexMerger(jsonMapper, indexIO);
-    indexMergerV9 = new IndexMergerV9(jsonMapper, indexIO);
+    indexMerger = new IndexMerger(jsonMapper, indexIO, new GenericIndexedWriterV1Factory());
+    indexMergerV9 = new IndexMergerV9(jsonMapper, indexIO, new GenericIndexedWriterV1Factory());
 
     final List<? extends Module> list = new ServerModule().getJacksonModules();
     for (Module module : list) {

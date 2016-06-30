@@ -50,7 +50,7 @@ import java.util.concurrent.atomic.AtomicReference;
 @RunWith(Parameterized.class)
 public class CompressedVSizeIntsIndexedSupplierTest extends CompressionStrategyTest
 {
-  @Parameterized.Parameters(name = "{index}: compression={0}, byteOrder={1}")
+  @Parameterized.Parameters(name = "{index}: compression={0}, byteOrder={1}, genericIndexedWriterFactory={2}")
   public static Iterable<Object[]> compressionStrategies()
   {
     final Iterable<CompressedObjectStrategy.CompressionStrategy> compressionStrategies = Iterables.transform(
@@ -70,23 +70,39 @@ public class CompressedVSizeIntsIndexedSupplierTest extends CompressionStrategyT
         Sets.newHashSet(ByteOrder.BIG_ENDIAN, ByteOrder.LITTLE_ENDIAN)
     );
 
-    return Iterables.transform(
-        combinations, new Function<List, Object[]>()
-        {
-          @Override
-          public Object[] apply(List input)
-          {
-            return new Object[]{input.get(0), input.get(1)};
-          }
-        }
+    return Iterables.concat(
+        Iterables.transform(
+            combinations, new Function<List, Object[]>()
+            {
+              @Override
+              public Object[] apply(List input)
+              {
+                return new Object[]{input.get(0), input.get(1), new GenericIndexedWriterV1Factory()};
+              }
+            }
+        ),
+        Iterables.transform(
+            combinations, new Function<List, Object[]>()
+            {
+              @Override
+              public Object[] apply(List input)
+              {
+                return new Object[]{input.get(0), input.get(1), new GenericIndexedWriterV2Factory()};
+              }
+            }
+        )
     );
   }
 
-  private static final int[] MAX_VALUES = new int[] { 0xFF, 0xFFFF, 0xFFFFFF, 0x0FFFFFFF };
+  private static final int[] MAX_VALUES = new int[]{0xFF, 0xFFFF, 0xFFFFFF, 0x0FFFFFFF};
 
-  public CompressedVSizeIntsIndexedSupplierTest(CompressedObjectStrategy.CompressionStrategy compressionStrategy, ByteOrder byteOrder)
+  public CompressedVSizeIntsIndexedSupplierTest(
+      CompressedObjectStrategy.CompressionStrategy compressionStrategy,
+      ByteOrder byteOrder,
+      GenericIndexedWriterFactory genericIndexedWriterFactory
+  )
   {
-    super(compressionStrategy);
+    super(compressionStrategy, genericIndexedWriterFactory);
     this.byteOrder = byteOrder;
   }
 
@@ -122,7 +138,8 @@ public class CompressedVSizeIntsIndexedSupplierTest extends CompressionStrategyT
         Ints.max(vals),
         chunkSize,
         ByteOrder.nativeOrder(),
-        compressionStrategy
+        compressionStrategy,
+        genericIndexedWriterFactory
     );
 
     indexed = supplier.get();
@@ -141,7 +158,7 @@ public class CompressedVSizeIntsIndexedSupplierTest extends CompressionStrategyT
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final CompressedVSizeIntsIndexedSupplier theSupplier = CompressedVSizeIntsIndexedSupplier.fromList(
-        Ints.asList(vals), Ints.max(vals), chunkSize, byteOrder, compressionStrategy
+        Ints.asList(vals), Ints.max(vals), chunkSize, byteOrder, compressionStrategy, genericIndexedWriterFactory
     );
     theSupplier.writeToChannel(Channels.newChannel(baos));
 
@@ -156,7 +173,7 @@ public class CompressedVSizeIntsIndexedSupplierTest extends CompressionStrategyT
   {
     vals = new int[totalSize];
     Random rand = new Random(0);
-    for(int i = 0; i < vals.length; ++i) {
+    for (int i = 0; i < vals.length; ++i) {
       // VSizeIndexed only allows positive values
       vals[i] = rand.nextInt(maxValue);
     }
@@ -207,12 +224,13 @@ public class CompressedVSizeIntsIndexedSupplierTest extends CompressionStrategyT
   @Test
   public void testChunkTooBig() throws Exception
   {
-    for(int maxValue : MAX_VALUES) {
+    for (int maxValue : MAX_VALUES) {
       final int maxChunkSize = CompressedVSizeIntsIndexedSupplier.maxIntsInBufferForValue(maxValue);
       try {
         setupLargeChunks(maxChunkSize + 1, 10 * (maxChunkSize + 1), maxValue);
         Assert.fail();
-      } catch(IllegalArgumentException e) {
+      }
+      catch (IllegalArgumentException e) {
         Assert.assertTrue("chunk too big for maxValue " + maxValue, true);
       }
     }

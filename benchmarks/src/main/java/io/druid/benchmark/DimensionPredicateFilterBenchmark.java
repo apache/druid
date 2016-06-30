@@ -103,7 +103,8 @@ public class DimensionPredicateFilterBenchmark
                             }
                           }
                       ),
-        GenericIndexed.STRING_STRATEGY
+        GenericIndexed.STRING_STRATEGY,
+        (byte) 0x1
     );
     final BitmapIndex bitmapIndex = new BitmapIndexColumnPartSupplier(
         bitmapFactory,
@@ -121,7 +122,8 @@ public class DimensionPredicateFilterBenchmark
                                 }
                               }
                           ),
-            serdeFactory.getObjectStrategy()
+            serdeFactory.getObjectStrategy(),
+            (byte) 0x1
         ),
         dictionary
     ).get();

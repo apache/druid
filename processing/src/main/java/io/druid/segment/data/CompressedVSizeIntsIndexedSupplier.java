@@ -182,7 +182,8 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
       final int maxValue,
       final int chunkFactor,
       final ByteOrder byteOrder,
-      CompressedObjectStrategy.CompressionStrategy compression
+      CompressedObjectStrategy.CompressionStrategy compression,
+      final GenericIndexedWriterFactory genericIndexedWriterFactory
   )
   {
     final int numBytes = VSizeIndexedInts.getNumBytesForMax(maxValue);
@@ -198,7 +199,7 @@ public class CompressedVSizeIntsIndexedSupplier implements WritableSupplier<Inde
         list.size(),
         chunkFactor,
         numBytes,
-        GenericIndexed.fromIterable(
+        genericIndexedWriterFactory.getGenericIndexedFromIterable(
             new Iterable<ResourceHolder<ByteBuffer>>()
             {
               @Override

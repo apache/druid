@@ -110,12 +110,12 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
     baseIntBuffers.writeToChannel(channel);
   }
 
-  public CompressedIntsIndexedSupplier convertByteOrder(ByteOrder order)
+  public CompressedIntsIndexedSupplier convertByteOrder(ByteOrder order, GenericIndexedWriterFactory genericIndexedWriterFactory)
   {
     return new CompressedIntsIndexedSupplier(
         totalSize,
         sizePer,
-        GenericIndexed.fromIterable(baseIntBuffers, CompressedIntBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)),
+        genericIndexedWriterFactory.getGenericIndexedFromIterable(baseIntBuffers, CompressedIntBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)),
         compression
     );
   }
@@ -147,13 +147,14 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
     throw new IAE("Unknown version[%s]", versionFromBuffer);
   }
 
-  public static CompressedIntsIndexedSupplier fromIntBuffer(IntBuffer buffer, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression)
+  public static CompressedIntsIndexedSupplier fromIntBuffer(IntBuffer buffer, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression, final GenericIndexedWriterFactory genericIndexedWriterFactory)
   {
-    return fromIntBuffer(buffer, MAX_INTS_IN_BUFFER, byteOrder, compression);
+    return fromIntBuffer(buffer, MAX_INTS_IN_BUFFER, byteOrder, compression, genericIndexedWriterFactory);
   }
 
   public static CompressedIntsIndexedSupplier fromIntBuffer(
-      final IntBuffer buffer, final int chunkFactor, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression
+      final IntBuffer buffer, final int chunkFactor, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression,
+       final GenericIndexedWriterFactory genericIndexedWriterFactory
   )
   {
     Preconditions.checkArgument(
@@ -163,7 +164,7 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
     return new CompressedIntsIndexedSupplier(
         buffer.remaining(),
         chunkFactor,
-        GenericIndexed.fromIterable(
+        genericIndexedWriterFactory.getGenericIndexedFromIterable(
             new Iterable<ResourceHolder<IntBuffer>>()
             {
               @Override
@@ -207,7 +208,7 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
   }
 
   public static CompressedIntsIndexedSupplier fromList(
-      final List<Integer> list , final int chunkFactor, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression
+      final List<Integer> list , final int chunkFactor, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression, final GenericIndexedWriterFactory genericIndexedWriterFactory
   )
   {
     Preconditions.checkArgument(
@@ -217,7 +218,7 @@ public class CompressedIntsIndexedSupplier implements WritableSupplier<IndexedIn
     return new CompressedIntsIndexedSupplier(
         list.size(),
         chunkFactor,
-        GenericIndexed.fromIterable(
+        genericIndexedWriterFactory.getGenericIndexedFromIterable(
             new Iterable<ResourceHolder<IntBuffer>>()
             {
               @Override

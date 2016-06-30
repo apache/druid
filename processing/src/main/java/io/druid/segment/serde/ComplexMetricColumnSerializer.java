@@ -24,6 +24,7 @@ import io.druid.segment.IndexIO;
 import io.druid.segment.MetricColumnSerializer;
 import io.druid.segment.MetricHolder;
 import io.druid.segment.data.GenericIndexedWriter;
+import io.druid.segment.data.GenericIndexedWriterFactory;
 import io.druid.segment.data.IOPeon;
 
 import java.io.File;
@@ -37,6 +38,7 @@ public class ComplexMetricColumnSerializer implements MetricColumnSerializer
   private final ComplexMetricSerde serde;
   private final IOPeon ioPeon;
   private final File outDir;
+  private final GenericIndexedWriterFactory genericIndexedWriterFactory;
 
   private GenericIndexedWriter writer;
 
@@ -44,20 +46,22 @@ public class ComplexMetricColumnSerializer implements MetricColumnSerializer
       String metricName,
       File outDir,
       IOPeon ioPeon,
-      ComplexMetricSerde serde
+      ComplexMetricSerde serde,
+      GenericIndexedWriterFactory genericIndexedWriterFactory
   )
   {
     this.metricName = metricName;
     this.serde = serde;
     this.ioPeon = ioPeon;
     this.outDir = outDir;
+    this.genericIndexedWriterFactory = genericIndexedWriterFactory;
   }
 
   @SuppressWarnings(value = "unchecked")
   @Override
   public void open() throws IOException
   {
-    writer = new GenericIndexedWriter(
+    writer = genericIndexedWriterFactory.getGenericIndexedWriter(
         ioPeon, String.format("%s_%s", metricName, outDir.getName()), serde.getObjectStrategy()
     );
 

@@ -76,8 +76,9 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
     final int div = Integer.numberOfTrailingZeros(sizePer);
     final int rem = sizePer - 1;
     final boolean powerOf2 = sizePer == (1 << div);
-    if(powerOf2) {
-      return new CompressedIndexedLongs() {
+    if (powerOf2) {
+      return new CompressedIndexedLongs()
+      {
         @Override
         public long get(int index)
         {
@@ -111,12 +112,15 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
     baseLongBuffers.writeToChannel(channel);
   }
 
-  public CompressedLongsIndexedSupplier convertByteOrder(ByteOrder order)
+  public CompressedLongsIndexedSupplier convertByteOrder(ByteOrder order, final GenericIndexedWriterFactory genericIndexedWriterFactory)
   {
     return new CompressedLongsIndexedSupplier(
         totalSize,
         sizePer,
-        GenericIndexed.fromIterable(baseLongBuffers, CompressedLongBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)),
+        genericIndexedWriterFactory.getGenericIndexedFromIterable(
+            baseLongBuffers,
+            CompressedLongBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)
+        ),
         compression
     );
   }
@@ -136,12 +140,16 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
     if (versionFromBuffer == version) {
       final int totalSize = buffer.getInt();
       final int sizePer = buffer.getInt();
-      final CompressedObjectStrategy.CompressionStrategy compression = CompressedObjectStrategy.CompressionStrategy.forId(buffer.get());
+      final CompressedObjectStrategy.CompressionStrategy compression = CompressedObjectStrategy.CompressionStrategy.forId(
+          buffer.get());
       return new CompressedLongsIndexedSupplier(
           totalSize,
           sizePer,
-        GenericIndexed.read(buffer, CompressedLongBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)),
-        compression
+          GenericIndexed.read(
+              buffer,
+              CompressedLongBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)
+          ),
+          compression
       );
     } else if (versionFromBuffer == LZF_VERSION) {
       final int totalSize = buffer.getInt();
@@ -150,7 +158,10 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
       return new CompressedLongsIndexedSupplier(
           totalSize,
           sizePer,
-          GenericIndexed.read(buffer, CompressedLongBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)),
+          GenericIndexed.read(
+              buffer,
+              CompressedLongBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)
+          ),
           compression
       );
     }
@@ -158,13 +169,22 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
     throw new IAE("Unknown version[%s]", versionFromBuffer);
   }
 
-  public static CompressedLongsIndexedSupplier fromLongBuffer(LongBuffer buffer, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression)
+  public static CompressedLongsIndexedSupplier fromLongBuffer(
+      LongBuffer buffer,
+      final ByteOrder byteOrder,
+      CompressedObjectStrategy.CompressionStrategy compression,
+      final GenericIndexedWriterFactory genericIndexedWriterFactory
+  )
   {
-    return fromLongBuffer(buffer, MAX_LONGS_IN_BUFFER, byteOrder, compression);
+    return fromLongBuffer(buffer, MAX_LONGS_IN_BUFFER, byteOrder, compression, genericIndexedWriterFactory);
   }
 
   public static CompressedLongsIndexedSupplier fromLongBuffer(
-      final LongBuffer buffer, final int chunkFactor, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression
+      final LongBuffer buffer,
+      final int chunkFactor,
+      final ByteOrder byteOrder,
+      CompressedObjectStrategy.CompressionStrategy compression,
+      final GenericIndexedWriterFactory genericIndexedWriterFactory
   )
   {
     Preconditions.checkArgument(
@@ -174,7 +194,7 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
     return new CompressedLongsIndexedSupplier(
         buffer.remaining(),
         chunkFactor,
-        GenericIndexed.fromIterable(
+        genericIndexedWriterFactory.getGenericIndexedFromIterable(
             new Iterable<ResourceHolder<LongBuffer>>()
             {
               @Override
@@ -218,7 +238,11 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
   }
 
   public static CompressedLongsIndexedSupplier fromList(
-      final List<Long> list , final int chunkFactor, final ByteOrder byteOrder, CompressedObjectStrategy.CompressionStrategy compression
+      final List<Long> list,
+      final int chunkFactor,
+      final ByteOrder byteOrder,
+      CompressedObjectStrategy.CompressionStrategy compression,
+      final GenericIndexedWriterFactory genericIndexedWriterFactory
   )
   {
     Preconditions.checkArgument(
@@ -228,7 +252,7 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
     return new CompressedLongsIndexedSupplier(
         list.size(),
         chunkFactor,
-        GenericIndexed.fromIterable(
+        genericIndexedWriterFactory.getGenericIndexedFromIterable(
             new Iterable<ResourceHolder<LongBuffer>>()
             {
               @Override

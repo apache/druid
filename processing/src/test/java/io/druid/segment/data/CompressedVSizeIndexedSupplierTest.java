@@ -21,11 +21,14 @@ package io.druid.segment.data;
 
 import com.google.common.base.Function;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import io.druid.segment.CompressedVSizeIndexedSupplier;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -38,11 +41,28 @@ import java.util.List;
 
 /**
  */
+@RunWith(Parameterized.class)
 public class CompressedVSizeIndexedSupplierTest
 {
   protected List<int[]> vals;
 
   protected WritableSupplier<IndexedMultivalue<IndexedInts>> indexedSupplier;
+
+  protected final GenericIndexedWriterFactory genericIndexedWriterFactory;
+
+  @Parameterized.Parameters(name = "genericIndexedWriterFactory={0}")
+  public static Iterable<Object[]> compressionStrategies()
+  {
+    return Lists.newArrayList(
+        new Object[]{new GenericIndexedWriterV2Factory()},
+        new Object[]{new GenericIndexedWriterV2Factory()}
+    );
+  }
+
+  public CompressedVSizeIndexedSupplierTest(final GenericIndexedWriterFactory genericIndexedWriterFactory)
+  {
+    this.genericIndexedWriterFactory = genericIndexedWriterFactory;
+  }
 
   @Before
   public void setUpSimple()
@@ -66,7 +86,8 @@ public class CompressedVSizeIndexedSupplierTest
               }
             }
         ), 20, ByteOrder.nativeOrder(),
-        CompressedObjectStrategy.CompressionStrategy.LZ4
+        CompressedObjectStrategy.CompressionStrategy.LZ4,
+        genericIndexedWriterFactory
     );
   }
 

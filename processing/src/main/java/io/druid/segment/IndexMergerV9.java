@@ -56,6 +56,7 @@ import io.druid.segment.data.CompressedVSizeIndexedV3Writer;
 import io.druid.segment.data.CompressedVSizeIntsIndexedWriter;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.GenericIndexedWriter;
+import io.druid.segment.data.GenericIndexedWriterFactory;
 import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedIntsWriter;
@@ -96,10 +97,11 @@ public class IndexMergerV9 extends IndexMerger
   @Inject
   public IndexMergerV9(
       ObjectMapper mapper,
-      IndexIO indexIO
+      IndexIO indexIO,
+      GenericIndexedWriterFactory genericIndexedWriterFactory
   )
   {
-    super(mapper, indexIO);
+    super(mapper, indexIO, genericIndexedWriterFactory);
   }
 
   @Override
@@ -302,8 +304,8 @@ public class IndexMergerV9 extends IndexMerger
       finalDimensions.add(mergedDimensions.get(i));
     }
 
-    GenericIndexed<String> cols = GenericIndexed.fromIterable(finalColumns, GenericIndexed.STRING_STRATEGY);
-    GenericIndexed<String> dims = GenericIndexed.fromIterable(finalDimensions, GenericIndexed.STRING_STRATEGY);
+    GenericIndexed<String> cols = genericIndexedWriterFactory.getGenericIndexedFromIterable(finalColumns, GenericIndexed.STRING_STRATEGY);
+    GenericIndexed<String> dims = genericIndexedWriterFactory.getGenericIndexedFromIterable(finalDimensions, GenericIndexed.STRING_STRATEGY);
 
     final String bitmapSerdeFactoryType = mapper.writeValueAsString(indexSpec.getBitmapSerdeFactory());
     final long numBytes = cols.getSerializedSize()
@@ -617,7 +619,7 @@ public class IndexMergerV9 extends IndexMerger
     ArrayList<GenericIndexedWriter<ImmutableBitmap>> writers = Lists.newArrayListWithCapacity(mergedDimensions.size());
     final BitmapSerdeFactory bitmapSerdeFactory = indexSpec.getBitmapSerdeFactory();
     for (String dimension : mergedDimensions) {
-      GenericIndexedWriter<ImmutableBitmap> writer = new GenericIndexedWriter<>(
+      GenericIndexedWriter<ImmutableBitmap> writer = genericIndexedWriterFactory.getGenericIndexedWriter(
           ioPeon, String.format("%s.inverted", dimension), bitmapSerdeFactory.getObjectStrategy()
       );
       writer.open();
@@ -726,7 +728,7 @@ public class IndexMergerV9 extends IndexMerger
   private LongColumnSerializer setupTimeWriter(final IOPeon ioPeon) throws IOException
   {
     LongColumnSerializer timeWriter = LongColumnSerializer.create(
-        ioPeon, "little_end_time", CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
+        ioPeon, "little_end_time", CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY, genericIndexedWriterFactory
     );
     // we will close this writer after we added all the timestamps
     timeWriter.open();
@@ -748,10 +750,10 @@ public class IndexMergerV9 extends IndexMerger
       GenericColumnSerializer writer;
       switch (type) {
         case LONG:
-          writer = LongColumnSerializer.create(ioPeon, metric, metCompression);
+          writer = LongColumnSerializer.create(ioPeon, metric, metCompression, genericIndexedWriterFactory);
           break;
         case FLOAT:
-          writer = FloatColumnSerializer.create(ioPeon, metric, metCompression);
+          writer = FloatColumnSerializer.create(ioPeon, metric, metCompression, genericIndexedWriterFactory);
           break;
         case COMPLEX:
           final String typeName = metricTypeNames.get(metric);
@@ -759,7 +761,7 @@ public class IndexMergerV9 extends IndexMerger
           if (serde == null) {
             throw new ISE("Unknown type[%s]", typeName);
           }
-          writer = ComplexColumnSerializer.create(ioPeon, metric, serde);
+          writer = ComplexColumnSerializer.create(ioPeon, metric, serde, genericIndexedWriterFactory);
           break;
         default:
           throw new ISE("Unknown type[%s]", type);
@@ -789,11 +791,11 @@ public class IndexMergerV9 extends IndexMerger
       IndexedIntsWriter writer;
       if (capabilities.hasMultipleValues()) {
         writer = (dimCompression != null)
-                 ? CompressedVSizeIndexedV3Writer.create(ioPeon, filenameBase, cardinality, dimCompression)
+                 ? CompressedVSizeIndexedV3Writer.create(ioPeon, filenameBase, cardinality, dimCompression, genericIndexedWriterFactory)
                  : new VSizeIndexedWriter(ioPeon, filenameBase, cardinality);
       } else {
         writer = (dimCompression != null)
-                 ? CompressedVSizeIntsIndexedWriter.create(ioPeon, filenameBase, cardinality, dimCompression)
+                 ? CompressedVSizeIntsIndexedWriter.create(ioPeon, filenameBase, cardinality, dimCompression, genericIndexedWriterFactory)
                  : new VSizeIndexedIntsWriter(ioPeon, filenameBase, cardinality);
       }
       writer.open();
@@ -811,7 +813,7 @@ public class IndexMergerV9 extends IndexMerger
   {
     ArrayList<GenericIndexedWriter<String>> dimValueWriters = Lists.newArrayListWithCapacity(mergedDimensions.size());
     for (String dimension : mergedDimensions) {
-      final GenericIndexedWriter<String> writer = new GenericIndexedWriter<>(
+      final GenericIndexedWriter<String> writer = genericIndexedWriterFactory.getGenericIndexedWriter(
           ioPeon, String.format("%s.dim_values", dimension), GenericIndexed.STRING_STRATEGY
       );
       writer.open();

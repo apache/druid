@@ -21,6 +21,7 @@ package io.druid.segment.serde;
 
 import io.druid.segment.GenericColumnSerializer;
 import io.druid.segment.data.GenericIndexedWriter;
+import io.druid.segment.data.GenericIndexedWriterFactory;
 import io.druid.segment.data.IOPeon;
 
 import java.io.IOException;
@@ -31,33 +32,37 @@ public class ComplexColumnSerializer implements GenericColumnSerializer
   public static ComplexColumnSerializer create(
       IOPeon ioPeon,
       String filenameBase,
-      ComplexMetricSerde serde
+      ComplexMetricSerde serde,
+      GenericIndexedWriterFactory genericIndexedWriterFactory
   )
   {
-    return new ComplexColumnSerializer(ioPeon, filenameBase, serde);
+    return new ComplexColumnSerializer(ioPeon, filenameBase, serde, genericIndexedWriterFactory);
   }
 
   private final IOPeon ioPeon;
   private final String filenameBase;
   private final ComplexMetricSerde serde;
+  private final GenericIndexedWriterFactory genericIndexedWriterFactory;
   private GenericIndexedWriter writer;
 
   public ComplexColumnSerializer(
       IOPeon ioPeon,
       String filenameBase,
-      ComplexMetricSerde serde
+      ComplexMetricSerde serde,
+      GenericIndexedWriterFactory genericIndexedWriterFactory
   )
   {
     this.ioPeon = ioPeon;
     this.filenameBase = filenameBase;
     this.serde = serde;
+    this.genericIndexedWriterFactory = genericIndexedWriterFactory;
   }
 
   @SuppressWarnings(value = "unchecked")
   @Override
   public void open() throws IOException
   {
-    writer = new GenericIndexedWriter(
+    writer = genericIndexedWriterFactory.getGenericIndexedWriter(
         ioPeon, String.format("%s.complex_column", filenameBase), serde.getObjectStrategy()
     );
     writer.open();

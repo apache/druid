@@ -40,6 +40,7 @@ import io.druid.guice.DruidProcessingModule;
 import io.druid.guice.DruidSecondaryModule;
 import io.druid.guice.ExtensionsConfig;
 import io.druid.guice.FirehoseModule;
+import io.druid.guice.GenericIndexedWriterFactoryModule;
 import io.druid.guice.IndexingServiceDiscoveryModule;
 import io.druid.guice.JacksonConfigManagerModule;
 import io.druid.guice.JavaScriptModule;
@@ -76,6 +77,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -349,7 +351,8 @@ public class Initialization
         new FirehoseModule(),
         new ParsersModule(),
         new JavaScriptModule(),
-        new StartupLoggingModule()
+        new StartupLoggingModule(),
+        new GenericIndexedWriterFactoryModule(baseInjector.getInstance(Properties.class))
     );
 
     ModuleList actualModules = new ModuleList(baseInjector);

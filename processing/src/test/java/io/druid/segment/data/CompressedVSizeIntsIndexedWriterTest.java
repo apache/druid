@@ -45,7 +45,7 @@ import static org.junit.Assert.assertEquals;
 @RunWith(Parameterized.class)
 public class CompressedVSizeIntsIndexedWriterTest
 {
-  @Parameterized.Parameters(name = "{index}: compression={0}, byteOrder={1}")
+  @Parameterized.Parameters(name = "{index}: compression={0}, byteOrder={1}, genericIndexedWriterFactory={2}")
   public static Iterable<Object[]> compressionStrategiesAndByteOrders()
   {
     Set<List<Object>> combinations = Sets.cartesianProduct(
@@ -53,15 +53,27 @@ public class CompressedVSizeIntsIndexedWriterTest
         Sets.newHashSet(ByteOrder.BIG_ENDIAN, ByteOrder.LITTLE_ENDIAN)
     );
 
-    return Iterables.transform(
-        combinations, new Function<List, Object[]>()
-        {
-          @Override
-          public Object[] apply(List input)
-          {
-            return new Object[]{input.get(0), input.get(1)};
-          }
-        }
+    return Iterables.concat(
+        Iterables.transform(
+            combinations, new Function<List, Object[]>()
+            {
+              @Override
+              public Object[] apply(List input)
+              {
+                return new Object[]{input.get(0), input.get(1), new GenericIndexedWriterV1Factory()};
+              }
+            }
+        ),
+        Iterables.transform(
+            combinations, new Function<List, Object[]>()
+            {
+              @Override
+              public Object[] apply(List input)
+              {
+                return new Object[]{input.get(0), input.get(1), new GenericIndexedWriterV2Factory()};
+              }
+            }
+        )
     );
   }
 
@@ -71,15 +83,18 @@ public class CompressedVSizeIntsIndexedWriterTest
   private final CompressedObjectStrategy.CompressionStrategy compressionStrategy;
   private final ByteOrder byteOrder;
   private final Random rand = new Random(0);
+  private final GenericIndexedWriterFactory genericIndexedWriterFactory;
   private int[] vals;
 
   public CompressedVSizeIntsIndexedWriterTest(
       CompressedObjectStrategy.CompressionStrategy compressionStrategy,
-      ByteOrder byteOrder
+      ByteOrder byteOrder,
+       GenericIndexedWriterFactory genericIndexedWriterFactory
   )
   {
     this.compressionStrategy = compressionStrategy;
     this.byteOrder = byteOrder;
+    this.genericIndexedWriterFactory = genericIndexedWriterFactory;
   }
 
   @Before
@@ -105,10 +120,21 @@ public class CompressedVSizeIntsIndexedWriterTest
   private void checkSerializedSizeAndData(int chunkSize) throws Exception
   {
     CompressedVSizeIntsIndexedWriter writer = new CompressedVSizeIntsIndexedWriter(
-        ioPeon, "test", vals.length > 0 ? Ints.max(vals) : 0, chunkSize, byteOrder, compressionStrategy
+        ioPeon,
+        "test",
+        vals.length > 0 ? Ints.max(vals) : 0,
+        chunkSize,
+        byteOrder,
+        compressionStrategy,
+        genericIndexedWriterFactory
     );
     CompressedVSizeIntsIndexedSupplier supplierFromList = CompressedVSizeIntsIndexedSupplier.fromList(
-        Ints.asList(vals), vals.length > 0 ? Ints.max(vals) : 0, chunkSize, byteOrder, compressionStrategy
+        Ints.asList(vals),
+        vals.length > 0 ? Ints.max(vals) : 0,
+        chunkSize,
+        byteOrder,
+        compressionStrategy,
+        genericIndexedWriterFactory
     );
     writer.open();
     for (int val : vals) {

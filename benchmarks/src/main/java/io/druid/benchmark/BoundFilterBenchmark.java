@@ -22,10 +22,7 @@ package io.druid.benchmark;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.FluentIterable;
-import com.google.common.io.BaseEncoding;
-import com.google.common.primitives.Ints;
 import com.metamx.collections.bitmap.BitmapFactory;
-import com.metamx.collections.bitmap.ConciseBitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.bitmap.MutableBitmap;
 import com.metamx.collections.bitmap.RoaringBitmapFactory;
@@ -34,7 +31,6 @@ import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BoundDimFilter;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.data.BitmapSerdeFactory;
-import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.RoaringBitmapSerdeFactory;
@@ -167,7 +163,8 @@ public class BoundFilterBenchmark
                             }
                           }
                       ),
-        GenericIndexed.STRING_STRATEGY
+        GenericIndexed.STRING_STRATEGY,
+        (byte) 0x1
     );
     final BitmapIndex bitmapIndex = new BitmapIndexColumnPartSupplier(
         bitmapFactory,
@@ -185,7 +182,8 @@ public class BoundFilterBenchmark
                                 }
                               }
                           ),
-            serdeFactory.getObjectStrategy()
+            serdeFactory.getObjectStrategy(),
+            (byte) 0x1
         ),
         dictionary
     ).get();

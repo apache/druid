@@ -109,12 +109,22 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
     baseFloatBuffers.writeToChannel(channel);
   }
 
-  public CompressedFloatsIndexedSupplier convertByteOrder(ByteOrder order)
+  public CompressedFloatsIndexedSupplier convertByteOrder(
+      ByteOrder order,
+      GenericIndexedWriterFactory genericIndexedWriterFactory
+  )
   {
     return new CompressedFloatsIndexedSupplier(
         totalSize,
         sizePer,
-        GenericIndexed.fromIterable(baseFloatBuffers, CompressedFloatBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)),
+        genericIndexedWriterFactory.getGenericIndexedFromIterable(
+            baseFloatBuffers,
+            CompressedFloatBufferObjectStrategy.getBufferForOrder(
+                order,
+                compression,
+                sizePer
+            )
+        ),
         compression
     );
   }
@@ -172,13 +182,22 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
     throw new IAE("Unknown version[%s]", versionFromBuffer);
   }
 
-  public static CompressedFloatsIndexedSupplier fromFloatBuffer(FloatBuffer buffer, final ByteOrder order, CompressedObjectStrategy.CompressionStrategy compression)
+  public static CompressedFloatsIndexedSupplier fromFloatBuffer(
+      FloatBuffer buffer,
+      final ByteOrder order,
+      CompressedObjectStrategy.CompressionStrategy compression,
+      final GenericIndexedWriterFactory genericIndexedWriterFactory
+  )
   {
-    return fromFloatBuffer(buffer, MAX_FLOATS_IN_BUFFER, order, compression);
+    return fromFloatBuffer(buffer, MAX_FLOATS_IN_BUFFER, order, compression, genericIndexedWriterFactory);
   }
 
   public static CompressedFloatsIndexedSupplier fromFloatBuffer(
-      final FloatBuffer buffer, final int chunkFactor, final ByteOrder order, final CompressedObjectStrategy.CompressionStrategy compression
+      final FloatBuffer buffer,
+      final int chunkFactor,
+      final ByteOrder order,
+      final CompressedObjectStrategy.CompressionStrategy compression,
+      final GenericIndexedWriterFactory genericIndexedWriterFactory
   )
   {
     Preconditions.checkArgument(
@@ -188,7 +207,7 @@ public class CompressedFloatsIndexedSupplier implements Supplier<IndexedFloats>
     return new CompressedFloatsIndexedSupplier(
         buffer.remaining(),
         chunkFactor,
-        GenericIndexed.fromIterable(
+        genericIndexedWriterFactory.getGenericIndexedFromIterable(
             new Iterable<ResourceHolder<FloatBuffer>>()
             {
               @Override

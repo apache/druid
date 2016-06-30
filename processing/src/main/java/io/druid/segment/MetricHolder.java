@@ -31,6 +31,7 @@ import io.druid.segment.data.CompressedLongsIndexedSupplier;
 import io.druid.segment.data.CompressedLongsSupplierSerializer;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.GenericIndexedWriter;
+import io.druid.segment.data.GenericIndexedWriterFactory;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedFloats;
 import io.druid.segment.data.IndexedLongs;
@@ -231,17 +232,17 @@ public class MetricHolder
     return complexType;
   }
 
-  public MetricHolder convertByteOrder(ByteOrder order)
+  public MetricHolder convertByteOrder(ByteOrder order, final GenericIndexedWriterFactory genericIndexedWriterFactory)
   {
     MetricHolder retVal;
     switch (type) {
       case LONG:
         retVal = new MetricHolder(name, typeName);
-        retVal.longType = longType.convertByteOrder(order);
+        retVal.longType = longType.convertByteOrder(order, genericIndexedWriterFactory);
         return retVal;
       case FLOAT:
         retVal = new MetricHolder(name, typeName);
-        retVal.floatType = floatType.convertByteOrder(order);
+        retVal.floatType = floatType.convertByteOrder(order, genericIndexedWriterFactory);
         return retVal;
       case COMPLEX:
         return this;

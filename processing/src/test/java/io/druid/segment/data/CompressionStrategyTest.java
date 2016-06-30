@@ -48,27 +48,45 @@ import java.util.concurrent.TimeUnit;
 @RunWith(Parameterized.class)
 public class CompressionStrategyTest
 {
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name = "{index}: compressionStrategy: {0}, genericIndexedWriterFactory: {1}")
   public static Iterable<Object[]> compressionStrategies()
   {
-    return Iterables.transform(
-        Arrays.asList(CompressedObjectStrategy.CompressionStrategy.values()),
-        new Function<CompressedObjectStrategy.CompressionStrategy, Object[]>()
-        {
-          @Override
-          public Object[] apply(CompressedObjectStrategy.CompressionStrategy compressionStrategy)
-          {
-            return new Object[]{compressionStrategy};
-          }
-        }
+    return Iterables.concat(
+        Iterables.transform(
+            Arrays.asList(CompressedObjectStrategy.CompressionStrategy.values()),
+            new Function<CompressedObjectStrategy.CompressionStrategy, Object[]>()
+            {
+              @Override
+              public Object[] apply(CompressedObjectStrategy.CompressionStrategy compressionStrategy)
+              {
+                return new Object[] {compressionStrategy, new GenericIndexedWriterV1Factory()};
+              }
+            }
+        ),
+        Iterables.transform(
+            Arrays.asList(CompressedObjectStrategy.CompressionStrategy.values()),
+            new Function<CompressedObjectStrategy.CompressionStrategy, Object[]>()
+            {
+              @Override
+              public Object[] apply(CompressedObjectStrategy.CompressionStrategy compressionStrategy)
+              {
+                return new Object[] {compressionStrategy, new GenericIndexedWriterV2Factory()};
+              }
+            }
+        )
     );
   }
 
   protected final CompressedObjectStrategy.CompressionStrategy compressionStrategy;
+  protected final GenericIndexedWriterFactory genericIndexedWriterFactory;
 
-  public CompressionStrategyTest(CompressedObjectStrategy.CompressionStrategy compressionStrategy)
+  public CompressionStrategyTest(
+      CompressedObjectStrategy.CompressionStrategy compressionStrategy,
+      GenericIndexedWriterFactory genericIndexedWriterFactory
+  )
   {
     this.compressionStrategy = compressionStrategy;
+    this.genericIndexedWriterFactory = genericIndexedWriterFactory;
   }
 
   // MUST be smaller than CompressedPools.BUFFER_SIZE
@@ -163,7 +181,8 @@ public class CompressionStrategyTest
   {
     final int numThreads = 20;
 
-    ListeningExecutorService threadPoolExecutor = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(numThreads));
+    ListeningExecutorService threadPoolExecutor = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(
+        numThreads));
     List<ListenableFuture<?>> results = new ArrayList<>();
     for (int i = 0; i < numThreads; ++i) {
       results.add(

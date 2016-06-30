@@ -45,7 +45,18 @@ public class InMemoryCompressedLongsTest
 
     longs = new InMemoryCompressedLongs(
         5,
-        ByteOrder.nativeOrder()
+        ByteOrder.nativeOrder(),
+        new GenericIndexedWriterV1Factory()
+    );
+
+    for (int i = 0; i < vals.length; i++) {
+      Assert.assertEquals(i, longs.add(vals[i]));
+    }
+
+    longs = new InMemoryCompressedLongs(
+        5,
+        ByteOrder.nativeOrder(),
+        new GenericIndexedWriterV2Factory()
     );
 
     for (int i = 0; i < vals.length; i++) {

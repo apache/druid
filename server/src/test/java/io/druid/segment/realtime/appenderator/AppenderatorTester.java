@@ -50,6 +50,7 @@ import io.druid.query.timeseries.TimeseriesQueryRunnerFactory;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexMerger;
 import io.druid.segment.column.ColumnConfig;
+import io.druid.segment.data.GenericIndexedWriterV1Factory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.RealtimeTuningConfig;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -148,9 +149,10 @@ public class AppenderatorTester implements AutoCloseable
           {
             return 0;
           }
-        }
+        },
+        new GenericIndexedWriterV1Factory()
     );
-    indexMerger = new IndexMerger(objectMapper, indexIO);
+    indexMerger = new IndexMerger(objectMapper, indexIO, new GenericIndexedWriterV1Factory());
 
     emitter = new ServiceEmitter(
         "test",

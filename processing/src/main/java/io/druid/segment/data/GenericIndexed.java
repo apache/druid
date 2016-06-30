@@ -19,6 +19,7 @@
 
 package io.druid.segment.data;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import com.metamx.common.IAE;
@@ -35,34 +36,47 @@ import java.util.Iterator;
 /**
  * A generic, flat storage mechanism.  Use static methods fromArray() or fromIterable() to construct.  If input
  * is sorted, supports binary search index lookups.  If input is not sorted, only supports array-like index lookups.
- *
- * V1 Storage Format:
- *
- * byte 1: version (0x1)
+ * <p/>
+ * Storage Format:
+ * <p/>
+ * byte 1: version (0x1 or 0x2)
  * byte 2 == 0x1 =&gt; allowReverseLookup
  * bytes 3-6 =&gt; numBytesUsed
  * bytes 7-10 =&gt; numElements
  * bytes 10-((numElements * 4) + 10): integers representing *end* offsets of byte serialized values
- * bytes ((numElements * 4) + 10)-(numBytesUsed + 2): 4-byte integer representing length of value, followed by bytes for value
+ * bytes ((numElements * 4) + 10)-(numBytesUsed + 2):
+ * For version 0x1: 4-byte integer representing length of value, followed by bytes for value
+ * For version 0x2: consecutive bytes for the values
  */
 public class GenericIndexed<T> implements Indexed<T>
 {
-  private static final byte version = 0x1;
+  private static final byte version1 = 0x1;
+  private static final byte version2 = 0x2; //current version used for writing
 
   private int indexOffset;
 
-  public static <T> GenericIndexed<T> fromArray(T[] objects, ObjectStrategy<T> strategy)
+  public static <T> GenericIndexed<T> fromArray(T[] objects, ObjectStrategy<T> strategy, final byte version)
   {
-    return fromIterable(Arrays.asList(objects), strategy);
+    return fromIterable(Arrays.asList(objects), strategy, version);
   }
 
-  public static <T> GenericIndexed<T> fromIterable(Iterable<T> objectsIterable, ObjectStrategy<T> strategy)
+  public static <T> GenericIndexed<T> fromIterable(
+      Iterable<T> objectsIterable,
+      ObjectStrategy<T> strategy,
+      final byte version
+  )
   {
+    Preconditions.checkArgument(
+        version == version1 || version == version2,
+        String.format("Unknown GenericIndexed version [%d]", version)
+    );
+    final int valueLength = version == version2 ? 0 : 4;
+
     Iterator<T> objects = objectsIterable.iterator();
     if (!objects.hasNext()) {
       final ByteBuffer buffer = ByteBuffer.allocate(4).putInt(0);
       buffer.flip();
-      return new GenericIndexed<T>(buffer, strategy, true);
+      return new GenericIndexed<T>(buffer, strategy, true, version);
     }
 
     boolean allowReverseLookup = true;
@@ -81,9 +95,12 @@ public class GenericIndexed<T> implements Indexed<T>
         }
 
         final byte[] bytes = strategy.toBytes(next);
-        offset += 4 + bytes.length;
+
+        offset += valueLength + bytes.length;
         headerBytes.write(Ints.toByteArray(offset));
-        valueBytes.write(Ints.toByteArray(bytes.length));
+        if (version == version1) {
+          valueBytes.write(Ints.toByteArray(bytes.length));
+        }
         valueBytes.write(bytes);
 
         if (prevVal instanceof Closeable) {
@@ -106,7 +123,7 @@ public class GenericIndexed<T> implements Indexed<T>
     theBuffer.put(valueBytes.toByteArray());
     theBuffer.flip();
 
-    return new GenericIndexed<T>(theBuffer.asReadOnlyBuffer(), strategy, allowReverseLookup);
+    return new GenericIndexed<T>(theBuffer.asReadOnlyBuffer(), strategy, allowReverseLookup, version);
   }
 
   @Override
@@ -133,6 +150,7 @@ public class GenericIndexed<T> implements Indexed<T>
    * that values-not-found will return some negative number.
    *
    * @param value value to search for
+   *
    * @return index of value, or negative number equal to (-(insertion point) - 1).
    */
   @Override
@@ -155,25 +173,39 @@ public class GenericIndexed<T> implements Indexed<T>
   private final int valuesOffset;
   private final BufferIndexed bufferIndexed;
 
+  private final byte version;
+
   GenericIndexed(
       ByteBuffer buffer,
       ObjectStrategy<T> strategy,
-      boolean allowReverseLookup
+      boolean allowReverseLookup,
+      byte version
   )
   {
     this.theBuffer = buffer;
     this.strategy = strategy;
     this.allowReverseLookup = allowReverseLookup;
+    this.version = version;
 
     size = theBuffer.getInt();
     indexOffset = theBuffer.position();
     valuesOffset = theBuffer.position() + (size << 2);
-    bufferIndexed = new BufferIndexed();
+    if (version == version2) {
+      bufferIndexed = new BufferIndexed(0);
+    } else {
+      bufferIndexed = new BufferIndexed(4);
+    }
   }
 
   class BufferIndexed implements Indexed<T>
   {
     int lastReadSize;
+    final int valueLength;
+
+    BufferIndexed(int valueLength)
+    {
+      this.valueLength = valueLength;
+    }
 
     @Override
     public Class<? extends T> getClazz()
@@ -206,11 +238,11 @@ public class GenericIndexed<T> implements Indexed<T>
       final int endOffset;
 
       if (index == 0) {
-        startOffset = 4;
+        startOffset = valueLength;
         endOffset = copyBuffer.getInt(indexOffset);
       } else {
         copyBuffer.position(indexOffset + ((index - 1) * 4));
-        startOffset = copyBuffer.getInt() + 4;
+        startOffset = copyBuffer.getInt() + valueLength;
         endOffset = copyBuffer.getInt();
       }
 
@@ -229,9 +261,11 @@ public class GenericIndexed<T> implements Indexed<T>
 
     /**
      * This method makes no guarantees with respect to thread safety
+     *
      * @return the size in bytes of the last value read
      */
-    public int getLastValueSize() {
+    public int getLastValueSize()
+    {
       return lastReadSize;
     }
 
@@ -293,20 +327,33 @@ public class GenericIndexed<T> implements Indexed<T>
   public GenericIndexed<T>.BufferIndexed singleThreaded()
   {
     final ByteBuffer copyBuffer = theBuffer.asReadOnlyBuffer();
-    return new BufferIndexed() {
-      @Override
-      public T get(int index)
+
+    if (version == version2) {
+      return new BufferIndexed(0)
       {
-        return _get(copyBuffer, index);
-      }
-    };
+        @Override
+        public T get(int index)
+        {
+          return _get(copyBuffer, index);
+        }
+      };
+    } else {
+      return new BufferIndexed(4)
+      {
+        @Override
+        public T get(int index)
+        {
+          return _get(copyBuffer, index);
+        }
+      };
+    }
   }
 
   public static <T> GenericIndexed<T> read(ByteBuffer buffer, ObjectStrategy<T> strategy)
   {
-    byte versionFromBuffer = buffer.get();
+    final byte versionFromBuffer = buffer.get();
 
-    if (version == versionFromBuffer) {
+    if (versionFromBuffer == version1 || versionFromBuffer == version2) {
       boolean allowReverseLookup = buffer.get() == 0x1;
       int size = buffer.getInt();
       ByteBuffer bufferToUse = buffer.asReadOnlyBuffer();
@@ -316,7 +363,8 @@ public class GenericIndexed<T> implements Indexed<T>
       return new GenericIndexed<T>(
           bufferToUse,
           strategy,
-          allowReverseLookup
+          allowReverseLookup,
+          versionFromBuffer
       );
     }
 

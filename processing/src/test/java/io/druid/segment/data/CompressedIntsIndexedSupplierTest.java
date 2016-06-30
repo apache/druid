@@ -43,9 +43,12 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public class CompressedIntsIndexedSupplierTest extends CompressionStrategyTest
 {
-  public CompressedIntsIndexedSupplierTest(CompressedObjectStrategy.CompressionStrategy compressionStrategy)
+  public CompressedIntsIndexedSupplierTest(
+      CompressedObjectStrategy.CompressionStrategy compressionStrategy,
+      GenericIndexedWriterFactory genericIndexedWriterFactory
+  )
   {
-    super(compressionStrategy);
+    super(compressionStrategy, genericIndexedWriterFactory);
   }
 
   private IndexedInts indexed;
@@ -77,7 +80,8 @@ public class CompressedIntsIndexedSupplierTest extends CompressionStrategyTest
         IntBuffer.wrap(vals),
         chunkSize,
         ByteOrder.nativeOrder(),
-        compressionStrategy
+        compressionStrategy,
+        genericIndexedWriterFactory
     );
 
     indexed = supplier.get();
@@ -96,7 +100,7 @@ public class CompressedIntsIndexedSupplierTest extends CompressionStrategyTest
 
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     final CompressedIntsIndexedSupplier theSupplier = CompressedIntsIndexedSupplier.fromIntBuffer(
-        IntBuffer.wrap(vals), chunkSize, ByteOrder.nativeOrder(), compressionStrategy
+        IntBuffer.wrap(vals), chunkSize, ByteOrder.nativeOrder(), compressionStrategy, genericIndexedWriterFactory
     );
     theSupplier.writeToChannel(Channels.newChannel(baos));
 
@@ -111,7 +115,7 @@ public class CompressedIntsIndexedSupplierTest extends CompressionStrategyTest
   {
     vals = new int[totalSize];
     Random rand = new Random(0);
-    for(int i = 0; i < vals.length; ++i) {
+    for (int i = 0; i < vals.length; ++i) {
       vals[i] = rand.nextInt();
     }
 

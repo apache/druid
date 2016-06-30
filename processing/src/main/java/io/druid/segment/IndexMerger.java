@@ -68,6 +68,7 @@ import io.druid.segment.data.CompressedLongsSupplierSerializer;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.GenericIndexedWriter;
+import io.druid.segment.data.GenericIndexedWriterFactory;
 import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
@@ -118,16 +119,18 @@ public class IndexMerger
 
   protected final ObjectMapper mapper;
   protected final IndexIO indexIO;
+  protected final GenericIndexedWriterFactory genericIndexedWriterFactory;
 
   @Inject
   public IndexMerger(
       ObjectMapper mapper,
-      IndexIO indexIO
+      IndexIO indexIO,
+      GenericIndexedWriterFactory genericIndexedWriterFactory
   )
   {
     this.mapper = Preconditions.checkNotNull(mapper, "null ObjectMapper");
     this.indexIO = Preconditions.checkNotNull(indexIO, "null IndexIO");
-
+    this.genericIndexedWriterFactory = Preconditions.checkNotNull(genericIndexedWriterFactory, "null GenericIndexedWriterFactory");
   }
 
   public File persist(
@@ -637,8 +640,8 @@ public class IndexMerger
            FileChannel channel = fileOutputStream.getChannel()) {
         channel.write(ByteBuffer.wrap(new byte[]{IndexIO.V8_VERSION}));
 
-        GenericIndexed.fromIterable(mergedDimensions, GenericIndexed.STRING_STRATEGY).writeToChannel(channel);
-        GenericIndexed.fromIterable(mergedMetrics, GenericIndexed.STRING_STRATEGY).writeToChannel(channel);
+        genericIndexedWriterFactory.getGenericIndexedFromIterable(mergedDimensions, GenericIndexed.STRING_STRATEGY).writeToChannel(channel);
+        genericIndexedWriterFactory.getGenericIndexedFromIterable(mergedMetrics, GenericIndexed.STRING_STRATEGY).writeToChannel(channel);
 
         DateTime minTime = new DateTime(JodaUtils.MAX_INSTANT);
         DateTime maxTime = new DateTime(JodaUtils.MIN_INSTANT);
@@ -673,7 +676,7 @@ public class IndexMerger
       for (String dimension : mergedDimensions) {
         nullRowsList.add(indexSpec.getBitmapSerdeFactory().getBitmapFactory().makeEmptyMutableBitmap());
 
-        final GenericIndexedWriter<String> writer = new GenericIndexedWriter<String>(
+        final GenericIndexedWriter<String> writer = genericIndexedWriterFactory.getGenericIndexedWriter(
             ioPeon, dimension, GenericIndexed.STRING_STRATEGY
         );
         writer.open();
@@ -764,7 +767,7 @@ public class IndexMerger
       );
 
       CompressedLongsSupplierSerializer timeWriter = CompressedLongsSupplierSerializer.create(
-          ioPeon, "little_end_time", IndexIO.BYTE_ORDER, CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
+          ioPeon, "little_end_time", IndexIO.BYTE_ORDER, CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY, genericIndexedWriterFactory
       );
 
       timeWriter.open();
@@ -781,10 +784,10 @@ public class IndexMerger
         ValueType type = valueTypes.get(metric);
         switch (type) {
           case LONG:
-            metWriters.add(new LongMetricColumnSerializer(metric, v8OutDir, ioPeon));
+            metWriters.add(new LongMetricColumnSerializer(metric, v8OutDir, ioPeon, genericIndexedWriterFactory));
             break;
           case FLOAT:
-            metWriters.add(new FloatMetricColumnSerializer(metric, v8OutDir, ioPeon));
+            metWriters.add(new FloatMetricColumnSerializer(metric, v8OutDir, ioPeon, genericIndexedWriterFactory));
             break;
           case COMPLEX:
             final String typeName = metricTypeNames.get(metric);
@@ -794,7 +797,7 @@ public class IndexMerger
               throw new ISE("Unknown type[%s]", typeName);
             }
 
-            metWriters.add(new ComplexMetricColumnSerializer(metric, v8OutDir, ioPeon, serde));
+            metWriters.add(new ComplexMetricColumnSerializer(metric, v8OutDir, ioPeon, serde, genericIndexedWriterFactory));
             break;
           default:
             throw new ISE("Unknown type[%s]", type);
@@ -910,7 +913,7 @@ public class IndexMerger
         log.info("Starting dimension[%s] with cardinality[%,d]", dimension, dimVals.size());
 
         final BitmapSerdeFactory bitmapSerdeFactory = indexSpec.getBitmapSerdeFactory();
-        GenericIndexedWriter<ImmutableBitmap> writer = new GenericIndexedWriter<>(
+        GenericIndexedWriter<ImmutableBitmap> writer = genericIndexedWriterFactory.getGenericIndexedWriter(
             ioPeon, dimension, bitmapSerdeFactory.getObjectStrategy()
         );
         writer.open();
@@ -1038,13 +1041,13 @@ public class IndexMerger
       createIndexDrdFile(
           IndexIO.V8_VERSION,
           v8OutDir,
-          GenericIndexed.fromIterable(mergedDimensions, GenericIndexed.STRING_STRATEGY),
-          GenericIndexed.fromIterable(mergedMetrics, GenericIndexed.STRING_STRATEGY),
+          genericIndexedWriterFactory.getGenericIndexedFromIterable(mergedDimensions, GenericIndexed.STRING_STRATEGY),
+          genericIndexedWriterFactory.getGenericIndexedFromIterable(mergedMetrics, GenericIndexed.STRING_STRATEGY),
           dataInterval,
           indexSpec.getBitmapSerdeFactory()
       );
 
-      indexIO.getDefaultIndexIOHandler().convertV8toV9(v8OutDir, outDir, indexSpec);
+      indexIO.getDefaultIndexIOHandler().convertV8toV9(v8OutDir, outDir, indexSpec, genericIndexedWriterFactory);
       return outDir;
     }
     finally {
