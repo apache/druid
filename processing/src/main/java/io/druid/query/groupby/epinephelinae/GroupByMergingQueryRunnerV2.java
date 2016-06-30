@@ -376,13 +376,13 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
   private static class GroupByMergingKey implements Comparable<GroupByMergingKey>
   {
     private final long timestamp;
-    private final String[] dimensions;
+    private final Comparable[] dimensions;
 
     @JsonCreator
     public GroupByMergingKey(
         // Using short key names to reduce serialized size when spilling to disk.
         @JsonProperty("t") long timestamp,
-        @JsonProperty("d") String[] dimensions
+        @JsonProperty("d") Comparable[] dimensions
     )
     {
       this.timestamp = timestamp;
@@ -396,7 +396,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
     }
 
     @JsonProperty("d")
-    public String[] getDimensions()
+    public Comparable[] getDimensions()
     {
       return dimensions;
     }

@@ -224,6 +224,17 @@ public class StringDimensionHandler implements DimensionHandler<Integer, String>
   }
 
   @Override
+  public void groupByMergeKeySerde1(
+  )
+  {
+    final int id = addToDictionary(key.getDimensions()[i]);
+    if (id < 0) {
+      return null;
+    }
+    keyBuffer.putInt(id);
+  }
+
+  @Override
   public Iterable<String> getStringIterableFromSelector(final DimensionSelector selector)
   {
     // This is faster than Iterables.transform() on the IndexedInts row, avoids integer boxing

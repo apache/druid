@@ -217,10 +217,42 @@ public interface DimensionHandler<EncodedType extends Comparable<EncodedType>, A
    * @param event      Map representing a single result event for a GroupBy query.
    * @param outputName The output name for this handler's dimension for the query containing "event"
    */
-  public void addValueToEventFromGroupByKey(ByteBuffer key, DimensionSelector selector, Map<String, Object> event, String outputName);
-  public void addValueToEventFromGroupByKey(ByteBuffer key, DimensionSelector selector, Map<String, Object> event, String outputName, int position);
-  public void fishyFunction(ByteBuffer keyBuffer, int bufPosition, GroupByQueryEngine.GroupByDimensionInfo[] dimInfo, int[] stack, IndexedInts[] valuess, int dimIndex, boolean readNewValues);
-  public void fishyFunction2(ByteBuffer keyBuffer, int bufPosition, GroupByQueryEngine.GroupByDimensionInfo[] dimInfo, int[] stack, IndexedInts[] valuess, int dimIndex);
+  public void addValueToEventFromGroupByKey(
+      ByteBuffer key,
+      DimensionSelector selector,
+      Map<String, Object> event,
+      String outputName
+  );
+
+  public void addValueToEventFromGroupByKey(
+      ByteBuffer key,
+      DimensionSelector selector,
+      Map<String, Object> event,
+      String outputName,
+      int position
+  );
+
+  public void fishyFunction(
+      ByteBuffer keyBuffer,
+      int bufPosition,
+      GroupByQueryEngine.GroupByDimensionInfo[] dimInfo,
+      int[] stack,
+      IndexedInts[] valuess,
+      int dimIndex,
+      boolean readNewValues
+  );
+
+  public void fishyFunction2(
+      ByteBuffer keyBuffer,
+      int bufPosition,
+      GroupByQueryEngine.GroupByDimensionInfo[] dimInfo,
+      int[] stack,
+      IndexedInts[] valuess,
+      int dimIndex
+  );
+
+  public void groupByMergeKeySerde1(
+  );
 
 
   /**
