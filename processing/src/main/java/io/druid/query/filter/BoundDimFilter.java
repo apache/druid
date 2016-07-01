@@ -22,11 +22,16 @@ package io.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.BoundType;
+import com.google.common.collect.Range;
+import com.google.common.collect.RangeSet;
+import com.google.common.collect.TreeRangeSet;
 import com.metamx.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.filter.BoundFilter;
 
 import java.nio.ByteBuffer;
+import java.util.Objects;
 
 public class BoundDimFilter implements DimFilter
 {
@@ -137,18 +142,18 @@ public class BoundDimFilter implements DimFilter
         + lowerBytes.length
         + extractionFnBytes.length
     );
-    boundCacheBuffer.put(DimFilterCacheHelper.BOUND_CACHE_ID)
+    boundCacheBuffer.put(DimFilterUtils.BOUND_CACHE_ID)
                     .put(boundType)
                     .put(upperStrictByte)
                     .put(lowerStrictByte)
                     .put(AlphaNumericByte)
-                    .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                    .put(DimFilterUtils.STRING_SEPARATOR)
                     .put(dimensionBytes)
-                    .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                    .put(DimFilterUtils.STRING_SEPARATOR)
                     .put(upperBytes)
-                    .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                    .put(DimFilterUtils.STRING_SEPARATOR)
                     .put(lowerBytes)
-                    .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                    .put(DimFilterUtils.STRING_SEPARATOR)
                     .put(extractionFnBytes);
     return boundCacheBuffer.array();
   }
@@ -163,6 +168,26 @@ public class BoundDimFilter implements DimFilter
   public Filter toFilter()
   {
     return new BoundFilter(this);
+  }
+
+  @Override
+  public RangeSet<String> getDimensionRangeSet(String dimension)
+  {
+    if (!Objects.equals(getDimension(), dimension) || getExtractionFn() != null || alphaNumeric) {
+      return null;
+    }
+    RangeSet<String> retSet = TreeRangeSet.create();
+    Range<String> range;
+    if (getLower() == null) {
+      range = isUpperStrict() ? Range.lessThan(getUpper()) : Range.atMost(getUpper());
+    } else if (getUpper() == null) {
+      range = isLowerStrict() ? Range.greaterThan(getLower()) : Range.atLeast(getLower());
+    } else {
+      range = Range.range(getLower(), isLowerStrict() ? BoundType.OPEN : BoundType.CLOSED,
+                          getUpper(), isUpperStrict() ? BoundType.OPEN : BoundType.CLOSED);
+    }
+    retSet.add(range);
+    return retSet;
   }
 
   @Override

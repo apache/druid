@@ -62,9 +62,16 @@ public class S3DataSegmentPusher implements DataSegmentPusher
   }
 
   @Override
+  public String getPathForHadoop()
+  {
+    return String.format("s3n://%s/%s", config.getBucket(), config.getBaseKey());
+  }
+
+  @Deprecated
+  @Override
   public String getPathForHadoop(String dataSource)
   {
-    return String.format("s3n://%s/%s/%s", config.getBucket(), config.getBaseKey(), dataSource);
+    return getPathForHadoop();
   }
 
   @Override

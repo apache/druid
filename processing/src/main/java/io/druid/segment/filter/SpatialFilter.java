@@ -24,11 +24,11 @@ import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.spatial.search.Bound;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
+import io.druid.query.filter.RowOffsetMatcherFactory;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
+import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.incremental.SpatialDimensionRowTransformer;
-
-import java.util.Arrays;
 
 /**
  */
@@ -72,5 +72,11 @@ public class SpatialFilter implements Filter
           }
         }
     );
+  }
+
+  @Override
+  public boolean supportsBitmapIndex(BitmapIndexSelector selector)
+  {
+    return selector.getBitmapIndex(dimension) != null;
   }
 }

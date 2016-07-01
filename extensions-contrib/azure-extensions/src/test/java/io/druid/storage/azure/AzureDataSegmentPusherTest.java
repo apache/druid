@@ -60,7 +60,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
       ImmutableMap.<String, Object>of("containerName", containerName, "blobPath", blobPath),
       null,
       null,
-      new NoneShardSpec(),
+      NoneShardSpec.instance(),
       0,
       1
   );
@@ -99,7 +99,7 @@ public class AzureDataSegmentPusherTest extends EasyMockSupport
         Maps.<String, Object>newHashMap(),
         Lists.<String>newArrayList(),
         Lists.<String>newArrayList(),
-        new NoneShardSpec(),
+        NoneShardSpec.instance(),
         0,
         size
     );

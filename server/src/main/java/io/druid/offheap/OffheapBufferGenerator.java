@@ -21,34 +21,34 @@ package io.druid.offheap;
 
 import com.google.common.base.Supplier;
 import com.metamx.common.logger.Logger;
-import io.druid.collections.StupidPool;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicLong;
 
-
-public class OffheapBufferPool extends StupidPool<ByteBuffer>
+public class OffheapBufferGenerator implements Supplier<ByteBuffer>
 {
-  private static final Logger log = new Logger(OffheapBufferPool.class);
+  private static final Logger log = new Logger(OffheapBufferGenerator.class);
 
-  public OffheapBufferPool(final int computationBufferSize, final int cacheMaxCount)
+  private final String description;
+  private final int computationBufferSize;
+  private final AtomicLong count = new AtomicLong(0);
+
+  public OffheapBufferGenerator(String description, int computationBufferSize)
   {
-    super(
-        new Supplier<ByteBuffer>()
-        {
-          final AtomicLong count = new AtomicLong(0);
+    this.description = description;
+    this.computationBufferSize = computationBufferSize;
+  }
 
-          @Override
-          public ByteBuffer get()
-          {
-            log.info(
-                "Allocating new intermediate processing buffer[%,d] of size[%,d]",
-                count.getAndIncrement(), computationBufferSize
-            );
-            return ByteBuffer.allocateDirect(computationBufferSize);
-          }
-        },
-        cacheMaxCount
+  @Override
+  public ByteBuffer get()
+  {
+    log.info(
+        "Allocating new %s buffer[%,d] of size[%,d]",
+        description,
+        count.getAndIncrement(),
+        computationBufferSize
     );
+
+    return ByteBuffer.allocateDirect(computationBufferSize);
   }
 }

@@ -21,6 +21,8 @@ package io.druid.query.search.search;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 
+import io.druid.query.ordering.StringComparators;
+
 import java.util.Comparator;
 
 /**
@@ -41,9 +43,12 @@ public class LexicographicSearchSortSpec implements SearchSortSpec
       @Override
       public int compare(SearchHit searchHit, SearchHit searchHit1)
       {
-        int retVal = searchHit.getValue().compareTo(searchHit1.getValue());
+        int retVal = StringComparators.LEXICOGRAPHIC.compare(
+            searchHit.getValue(), searchHit1.getValue());
+
         if (retVal == 0) {
-          retVal = searchHit.getDimension().compareTo(searchHit1.getDimension());
+          retVal = StringComparators.LEXICOGRAPHIC.compare(
+              searchHit.getDimension(), searchHit1.getDimension());
         }
         return retVal;
       }
@@ -63,6 +68,12 @@ public class LexicographicSearchSortSpec implements SearchSortSpec
 
   @Override
   public boolean equals(Object other) {
-    return (other instanceof LexicographicSearchSortSpec);
+    return this == other || other instanceof LexicographicSearchSortSpec;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return 0;
   }
 }

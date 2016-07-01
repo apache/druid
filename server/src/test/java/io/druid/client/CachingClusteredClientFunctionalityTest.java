@@ -147,7 +147,7 @@ public class CachingClusteredClientFunctionalityTest {
                 .dataSource("test")
                 .interval(interval)
                 .version(version)
-                .shardSpec(new NoneShardSpec())
+                .shardSpec(NoneShardSpec.instance())
                 .build(),
             new TierSelectorStrategy() {
               @Override

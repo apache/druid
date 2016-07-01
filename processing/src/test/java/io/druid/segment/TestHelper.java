@@ -21,15 +21,19 @@ package io.druid.segment;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
+import com.google.common.math.DoubleMath;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
+import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.Result;
 import io.druid.segment.column.ColumnConfig;
+import org.joda.time.DateTime;
 import org.junit.Assert;
 
 import java.util.Iterator;
+import java.util.Map;
 
 /**
  */
@@ -132,8 +136,8 @@ public class TestHelper
 
       if (expectedNext instanceof Row) {
         // HACK! Special casing for groupBy
-        Assert.assertEquals(failMsg, expectedNext, next);
-        Assert.assertEquals(failMsg, expectedNext, next2);
+        assertRow(failMsg, (Row) expectedNext, (Row) next);
+        assertRow(failMsg, (Row) expectedNext, (Row) next2);
       } else {
         assertResult(failMsg, (Result) expectedNext, (Result) next);
         assertResult(
@@ -180,12 +184,16 @@ public class TestHelper
       final Object next2 = resultsIter2.next();
 
       String failMsg = msg + "-" + index++;
-      Assert.assertEquals(failMsg, expectedNext, next);
-      Assert.assertEquals(
-          String.format("%s: Second iterator bad, multiple calls to iterator() should be safe", failMsg),
-          expectedNext,
-          next2
-      );
+      String failMsg2 = String.format("%s: Second iterator bad, multiple calls to iterator() should be safe", failMsg);
+
+      if (expectedNext instanceof Row) {
+        // HACK! Special casing for groupBy
+        assertRow(failMsg, (Row) expectedNext, (Row) next);
+        assertRow(failMsg2, (Row) expectedNext, (Row) next2);
+      } else {
+        Assert.assertEquals(failMsg, expectedNext, next);
+        Assert.assertEquals(failMsg2, expectedNext, next2);
+      }
     }
 
     if (resultsIter.hasNext()) {
@@ -214,5 +222,36 @@ public class TestHelper
   private static void assertResult(String msg, Result<?> expected, Result actual)
   {
     Assert.assertEquals(msg, expected, actual);
+  }
+
+  private static void assertRow(String msg, Row expected, Row actual)
+  {
+    // Custom equals check to get fuzzy comparison of numerics, useful because different groupBy strategies don't
+    // always generate exactly the same results (different merge ordering / float vs double)
+    Assert.assertEquals(String.format("%s: timestamp", msg), expected.getTimestamp(), actual.getTimestamp());
+
+    final Map<String, Object> expectedMap = ((MapBasedRow) expected).getEvent();
+    final Map<String, Object> actualMap = ((MapBasedRow) actual).getEvent();
+
+    Assert.assertEquals(String.format("%s: map keys", msg), expectedMap.keySet(), actualMap.keySet());
+    for (final String key : expectedMap.keySet()) {
+      final Object expectedValue = expectedMap.get(key);
+      final Object actualValue = actualMap.get(key);
+
+      if (expectedValue instanceof Float || expectedValue instanceof Double) {
+        Assert.assertEquals(
+            String.format("%s: key[%s]", msg, key),
+            ((Number) expectedValue).doubleValue(),
+            ((Number) actualValue).doubleValue(),
+            ((Number) expectedValue).doubleValue() * 1e-6
+        );
+      } else {
+        Assert.assertEquals(
+            String.format("%s: key[%s]", msg, key),
+            expectedValue,
+            actualValue
+        );
+      }
+    }
   }
 }

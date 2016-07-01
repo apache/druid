@@ -29,7 +29,7 @@ import java.util.regex.Pattern;
 public class RegexFilter extends DimensionPredicateFilter
 {
   public RegexFilter(
-      String dimension,
+      final String dimension,
       final Pattern pattern,
       final ExtractionFn extractionFn
   )
@@ -42,6 +42,14 @@ public class RegexFilter extends DimensionPredicateFilter
           public boolean apply(String input)
           {
             return (input != null) && pattern.matcher(input).find();
+          }
+
+          @Override
+          public String toString()
+          {
+            return "RegexFilter{" +
+                   "pattern='" + pattern + '\'' +
+                   '}';
           }
         },
         extractionFn

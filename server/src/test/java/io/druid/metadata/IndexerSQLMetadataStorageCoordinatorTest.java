@@ -78,7 +78,7 @@ public class IndexerSQLMetadataStorageCoordinatorTest
       ImmutableMap.<String, Object>of(),
       ImmutableList.of("dim1"),
       ImmutableList.of("m1"),
-      new NoneShardSpec(),
+      NoneShardSpec.instance(),
       9,
       100
   );

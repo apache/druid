@@ -61,6 +61,7 @@ import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryEngine;
 import io.druid.query.groupby.GroupByQueryQueryToolChest;
 import io.druid.query.groupby.GroupByQueryRunnerFactory;
+import io.druid.query.groupby.GroupByQueryRunnerTest;
 import io.druid.query.select.SelectQueryEngine;
 import io.druid.query.select.SelectQueryQueryToolChest;
 import io.druid.query.select.SelectQueryRunnerFactory;
@@ -133,39 +134,7 @@ public class AggregationTestHelper
   )
   {
     ObjectMapper mapper = new DefaultObjectMapper();
-
-    Supplier<GroupByQueryConfig> configSupplier = Suppliers.ofInstance(new GroupByQueryConfig());
-    StupidPool<ByteBuffer> pool = new StupidPool<>(
-        new Supplier<ByteBuffer>()
-        {
-          @Override
-          public ByteBuffer get()
-          {
-            return ByteBuffer.allocate(1024 * 1024);
-          }
-        });
-
-    QueryWatcher noopQueryWatcher = new QueryWatcher()
-    {
-      @Override
-      public void registerQuery(Query query, ListenableFuture future)
-      {
-
-      }
-    };
-
-    GroupByQueryEngine engine = new GroupByQueryEngine(configSupplier, pool);
-    GroupByQueryQueryToolChest toolchest = new GroupByQueryQueryToolChest(
-        configSupplier, mapper, engine, pool,
-        NoopIntervalChunkingQueryRunnerDecorator()
-    );
-    GroupByQueryRunnerFactory factory = new GroupByQueryRunnerFactory(
-        engine,
-        noopQueryWatcher,
-        configSupplier,
-        toolchest,
-        pool
-    );
+    GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(new GroupByQueryConfig());
 
     IndexIO indexIO = new IndexIO(
         mapper,
@@ -183,7 +152,7 @@ public class AggregationTestHelper
         mapper,
         new IndexMerger(mapper, indexIO),
         indexIO,
-        toolchest,
+        factory.getToolchest(),
         factory,
         tempFolder,
         jsonModulesToRegister

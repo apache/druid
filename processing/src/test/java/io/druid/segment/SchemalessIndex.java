@@ -445,7 +445,7 @@ public class SchemalessIndex
           Ordering.natural().nullsFirst()
       );
 
-      ShardSpec noneShardSpec = new NoneShardSpec();
+      ShardSpec noneShardSpec = NoneShardSpec.instance();
 
       for (int i = 0; i < intervals.size(); i++) {
         timeline.add(intervals.get(i), i, noneShardSpec.createChunk(filesToMap.get(i)));

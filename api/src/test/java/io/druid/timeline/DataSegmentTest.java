@@ -24,6 +24,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Range;
 import com.google.common.collect.Sets;
 import io.druid.TestObjectMapper;
 import io.druid.data.input.InputRow;
@@ -76,6 +77,12 @@ public class DataSegmentTest
       {
         return null;
       }
+
+      @Override
+      public Map<String, Range<String>> getDomain()
+      {
+        return ImmutableMap.of();
+      }
     };
   }
 
@@ -93,7 +100,7 @@ public class DataSegmentTest
         loadSpec,
         Arrays.asList("dim1", "dim2"),
         Arrays.asList("met1", "met2"),
-        new NoneShardSpec(),
+        NoneShardSpec.instance(),
         TEST_VERSION,
         1
     );
@@ -145,7 +152,7 @@ public class DataSegmentTest
                                            .dataSource("foo")
                                            .interval(new Interval("2012-01-01/2012-01-02"))
                                            .version(new DateTime("2012-01-01T11:22:33.444Z").toString())
-                                           .shardSpec(new NoneShardSpec())
+                                           .shardSpec(NoneShardSpec.instance())
                                            .build();
 
     Assert.assertEquals(

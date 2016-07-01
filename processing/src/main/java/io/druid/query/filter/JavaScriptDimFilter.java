@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.collect.RangeSet;
 import com.metamx.common.ISE;
 import com.metamx.common.StringUtils;
 import io.druid.js.JavaScriptConfig;
@@ -92,11 +93,11 @@ public class JavaScriptDimFilter implements DimFilter
     byte[] extractionFnBytes = extractionFn == null ? new byte[0] : extractionFn.getCacheKey();
 
     return ByteBuffer.allocate(3 + dimensionBytes.length + functionBytes.length + extractionFnBytes.length)
-                     .put(DimFilterCacheHelper.JAVASCRIPT_CACHE_ID)
+                     .put(DimFilterUtils.JAVASCRIPT_CACHE_ID)
                      .put(dimensionBytes)
-                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                     .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(functionBytes)
-                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                     .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(extractionFnBytes)
                      .array();
   }
@@ -115,6 +116,12 @@ public class JavaScriptDimFilter implements DimFilter
     }
 
     return new JavaScriptFilter(dimension, predicate);
+  }
+
+  @Override
+  public RangeSet<String> getDimensionRangeSet(String dimension)
+  {
+    return null;
   }
 
   @Override

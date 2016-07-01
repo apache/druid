@@ -20,10 +20,8 @@
 package io.druid.segment.filter;
 
 import com.google.common.base.Function;
-import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.metamx.common.Pair;
 import io.druid.data.input.InputRow;
@@ -36,9 +34,7 @@ import io.druid.js.JavaScriptConfig;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.extraction.MapLookupExtractor;
-import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
-import io.druid.query.filter.Filter;
 import io.druid.query.filter.InDimFilter;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.lookup.LookupExtractor;
@@ -54,7 +50,6 @@ import org.junit.runners.Parameterized;
 
 import java.io.Closeable;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;

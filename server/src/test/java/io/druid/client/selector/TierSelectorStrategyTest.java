@@ -123,7 +123,7 @@ public class TierSelectorStrategyTest
             com.google.common.collect.Maps.<String, Object>newHashMap(),
             Lists.<String>newArrayList(),
             Lists.<String>newArrayList(),
-            new NoneShardSpec(),
+            NoneShardSpec.instance(),
             0,
             0L
         ),
