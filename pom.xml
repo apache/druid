@@ -104,9 +104,6 @@
         <module>extensions-contrib/distinctcount</module>
         <module>extensions-contrib/parquet-extensions</module>
         <module>extensions-contrib/statsd-emitter</module>
-
-        <!-- distribution packaging -->
-        <module>distribution</module>
     </modules>
 
     <dependencyManagement>
@@ -840,6 +837,18 @@
             </activation>
             <modules>
                 <module>extensions-core/caffeine-cache</module>
+                <!-- distribution packaging -->
+                <module>distribution</module>
+            </modules>
+        </profile>
+        <profile>
+            <id>java7</id>
+            <activation>
+                <jdk>1.7</jdk>
+            </activation>
+            <modules>
+                <!-- distribution packaging -->
+                <module>distribution</module>
             </modules>
         </profile>
     </profiles>

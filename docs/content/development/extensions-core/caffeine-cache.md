@@ -5,7 +5,7 @@ layout: doc_page
 Druid Caffeine Cache
 --------------------
 
-A highly performant local cache implementation for Druid based on [Caffeine](https://github.com/ben-manes/caffeine). Requires a JRE with a fix for https://bugs.openjdk.java.net/browse/JDK-8078490
+A highly performant local cache implementation for Druid based on [Caffeine](https://github.com/ben-manes/caffeine). Requires a JRE8u60 or higher
 
 # Configuration
 Below are the configuration options known to this module:
