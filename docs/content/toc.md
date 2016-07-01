@@ -81,10 +81,7 @@ layout: toc
   * [Broker](/docs/VERSION/configuration/broker.html)
   * [Realtime](/docs/VERSION/configuration/realtime.html)
   * [Configuring Logging](/docs/VERSION/configuration/logging.html)
-  * [Production Cluster Configuration](/docs/VERSION/configuration/production-cluster.html)
-  * [Production Hadoop Configuration](/docs/VERSION/configuration/hadoop.html)
-  * [Production Zookeeper Configuration](/docs/VERSION/configuration/zookeeper.html)
-
+  
 ## Development
   * [Overview](/docs/VERSION/development/overview.html)
   * [Libraries](/docs/VERSION/development/libraries.html)
