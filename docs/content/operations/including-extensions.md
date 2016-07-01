@@ -39,24 +39,20 @@ for the (hypothetical) extension *com.example:druid-example-extension:1.0.0*, ru
 
 ```
 java \
-  -cp "dist/druid/lib/*" \
-  -Ddruid.extensions.directory="extensions-tmp" \
-  -Ddruid.extensions.hadoopDependenciesDir="hadoop-dependencies-tmp" \
+  -cp "lib/*" \
+  -Ddruid.extensions.directory="extensions" \
+  -Ddruid.extensions.hadoopDependenciesDir="hadoop-dependencies" \
   io.druid.cli.Main tools pull-deps \
   --no-default-hadoop \
   -c "com.example:druid-example-extension:1.0.0"
 ```
 
-You can install downloaded extensions by copying them into `extensions`. For example,
-
-```
-cp -R extensions-tmp/druid-example-extension extensions/druid-example-extension
-```
-
 You only have to install the extension once. Then, add `"druid-example-extension"` to 
-`druid.extensions.loadList` in common.runtime.properties to instruct Druid to load the extension. If 
-you used *pull-deps*, then once an extension is installed, you can remove the `extensions-tmp` and 
-`hadoop-dependencies-tmp` directories that it created.
+`druid.extensions.loadList` in common.runtime.properties to instruct Druid to load the extension.
+
+<div class="note info">
+Please make sure all the Extensions related configuration properties listed <a href="../configuration/index.html">here</a> are set correctly.
+</div>
 
 <div class="note info">
 The Maven groupId for almost every <a href="../development/extensions.html#community-extensions">community extension</a> is io.druid.extensions.contrib. The artifactId is the name 
