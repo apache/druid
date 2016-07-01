@@ -19,9 +19,8 @@
 
 package io.druid.segment.filter;
 
-import com.google.common.base.Predicate;
 import io.druid.query.extraction.ExtractionFn;
-import io.druid.query.filter.DruidPredicate;
+import io.druid.query.filter.DruidCompositePredicate;
 
 import java.util.regex.Pattern;
 
@@ -37,7 +36,7 @@ public class RegexFilter extends DimensionPredicateFilter
   {
     super(
         dimension,
-        new DruidPredicate()
+        new DruidCompositePredicate()
         {
           @Override
           public boolean applyLong(long value)

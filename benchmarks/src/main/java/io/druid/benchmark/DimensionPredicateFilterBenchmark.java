@@ -21,7 +21,6 @@ package io.druid.benchmark;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.FluentIterable;
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
@@ -29,7 +28,7 @@ import com.metamx.collections.bitmap.MutableBitmap;
 import com.metamx.collections.bitmap.RoaringBitmapFactory;
 import com.metamx.collections.spatial.ImmutableRTree;
 import io.druid.query.filter.BitmapIndexSelector;
-import io.druid.query.filter.DruidPredicate;
+import io.druid.query.filter.DruidCompositePredicate;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.GenericIndexed;
@@ -49,7 +48,6 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -65,7 +63,7 @@ public class DimensionPredicateFilterBenchmark
 
   private static final DimensionPredicateFilter IS_EVEN = new DimensionPredicateFilter(
       "foo",
-      new DruidPredicate()
+      new DruidCompositePredicate()
       {
         @Override
         public boolean applyLong(long value)

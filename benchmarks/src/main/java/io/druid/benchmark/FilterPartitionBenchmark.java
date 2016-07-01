@@ -21,7 +21,6 @@ package io.druid.benchmark;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
-import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.hash.Hashing;
@@ -45,7 +44,7 @@ import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
-import io.druid.query.filter.DruidPredicate;
+import io.druid.query.filter.DruidCompositePredicate;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
@@ -562,7 +561,7 @@ public class FilterPartitionBenchmark
   {
     public NoBitmapDimensionPredicateFilter(
         final String dimension,
-        final DruidPredicate predicate,
+        final DruidCompositePredicate predicate,
         final ExtractionFn extractionFn
     )
     {
@@ -596,7 +595,7 @@ public class FilterPartitionBenchmark
         return new NoBitmapSelectorFilter(dimension, value);
       } else {
         final String valueOrNull = Strings.emptyToNull(value);
-        final DruidPredicate predicate = new DruidPredicate()
+        final DruidCompositePredicate predicate = new DruidCompositePredicate()
         {
           @Override
           public boolean applyLong(long value)

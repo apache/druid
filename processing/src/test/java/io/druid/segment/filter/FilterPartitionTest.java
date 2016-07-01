@@ -21,7 +21,6 @@ package io.druid.segment.filter;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -36,16 +35,13 @@ import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.js.JavaScriptConfig;
-import io.druid.query.aggregation.Aggregator;
-import io.druid.query.aggregation.CountAggregatorFactory;
-import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.DimFilter;
-import io.druid.query.filter.DruidPredicate;
+import io.druid.query.filter.DruidCompositePredicate;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
@@ -93,7 +89,7 @@ public class FilterPartitionTest extends BaseFilterTest
   {
     public NoBitmapDimensionPredicateFilter(
         final String dimension,
-        final DruidPredicate predicate,
+        final DruidCompositePredicate predicate,
         final ExtractionFn extractionFn
     )
     {
@@ -127,7 +123,7 @@ public class FilterPartitionTest extends BaseFilterTest
         return new NoBitmapSelectorFilter(dimension, value);
       } else {
         final String valueOrNull = Strings.emptyToNull(value);
-        final DruidPredicate predicate = new DruidPredicate()
+        final DruidCompositePredicate predicate = new DruidCompositePredicate()
         {
           @Override
           public boolean applyLong(long value)

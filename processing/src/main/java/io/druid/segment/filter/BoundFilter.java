@@ -24,7 +24,7 @@ import com.metamx.collections.bitmap.ImmutableBitmap;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BoundDimFilter;
-import io.druid.query.filter.DruidPredicate;
+import io.druid.query.filter.DruidCompositePredicate;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
@@ -160,9 +160,9 @@ public class BoundFilter implements Filter
     return selector.getBitmapIndex(boundDimFilter.getDimension()) != null;
   }
 
-  private DruidPredicate getPredicate()
+  private DruidCompositePredicate getPredicate()
   {
-    return new DruidPredicate()
+    return new DruidCompositePredicate()
     {
       @Override
       public boolean applyLong(long value)

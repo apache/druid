@@ -22,8 +22,8 @@ package io.druid.query.filter;
 import com.google.common.base.Predicate;
 
 /**
- * Compound predicate class that accepts all supported types
+ * Composite predicate class that can accept all supported types
  */
-public interface DruidPredicate extends Predicate<Object>, DruidLongPredicate
+public interface DruidCompositePredicate extends Predicate<Object>, DruidLongPredicate
 {
 }

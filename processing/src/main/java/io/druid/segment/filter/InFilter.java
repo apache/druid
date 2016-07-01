@@ -26,8 +26,7 @@ import com.google.common.collect.Iterables;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
-import io.druid.query.filter.DruidLongPredicate;
-import io.druid.query.filter.DruidPredicate;
+import io.druid.query.filter.DruidCompositePredicate;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
@@ -104,10 +103,10 @@ public class InFilter implements Filter
     return selector.getBitmapIndex(dimension) != null;
   }
 
-  private DruidPredicate getPredicate()
+  private DruidCompositePredicate getPredicate()
   {
     if (extractionFn == null) {
-      return new DruidPredicate()
+      return new DruidCompositePredicate()
       {
         @Override
         public boolean apply(Object inputObj)
@@ -123,7 +122,7 @@ public class InFilter implements Filter
         }
       };
     } else {
-      return new DruidPredicate()
+      return new DruidCompositePredicate()
       {
         @Override
         public boolean apply(Object inputObj)

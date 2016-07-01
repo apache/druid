@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.collect.RangeSet;
 import com.metamx.common.ISE;
 import com.metamx.common.StringUtils;
@@ -165,7 +164,7 @@ public class JavaScriptDimFilter implements DimFilter
     return result;
   }
 
-  public static class JavaScriptPredicate implements DruidPredicate
+  public static class JavaScriptPredicate implements DruidCompositePredicate
   {
     final ScriptableObject scope;
     final Function fnApply;

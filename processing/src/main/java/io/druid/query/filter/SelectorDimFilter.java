@@ -22,7 +22,6 @@ package io.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
@@ -88,7 +87,7 @@ public class SelectorDimFilter implements DimFilter
       return new SelectorFilter(dimension, value);
     } else {
       final String valueOrNull = Strings.emptyToNull(value);
-      final DruidPredicate predicate = new DruidPredicate()
+      final DruidCompositePredicate predicate = new DruidCompositePredicate()
       {
         @Override
         public boolean applyLong(long value)
