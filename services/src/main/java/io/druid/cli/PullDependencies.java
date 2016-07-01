@@ -461,6 +461,10 @@ public class PullDependencies implements Runnable
 
   private void createRootExtensionsDirectory(File atLocation)
   {
+    if (atLocation.isDirectory()) {
+      log.info("Root extension directory [%s] already exists, skip creating");
+      return;
+    }
     if (!atLocation.mkdirs()) {
       throw new ISE(
           String.format(

@@ -157,9 +157,9 @@ public class PullDependenciesTest
   }
 
   /**
-   * If --clean is not specified and something already exists at druid.extensions.directory, ISE should be thrown
+   * If --clean is not specified and root extension directory already exists, skip creating.
    */
-  @Test(expected = ISE.class)
+  @Test()
   public void testPullDependencies_root_extension_dir_exists()
   {
     rootExtensionsDir.mkdir();
@@ -167,13 +167,32 @@ public class PullDependenciesTest
   }
 
   /**
-   * If --clean is not specified and something already exists at druid.extensions.hadoopDependenciesDir,
-   * ISE should be thrown
+   * A file exists on the root extension directory path, but it's not a directory, throw ISE.
    */
   @Test(expected = ISE.class)
+  public void testPullDependencies_root_extension_dir_bad_state() throws IOException
+  {
+    Assert.assertTrue(rootExtensionsDir.createNewFile());
+    pullDependencies.run();
+  }
+
+  /**
+   * If --clean is not specified and hadoop dependencies directory already exists, skip creating.
+   */
+  @Test()
   public void testPullDependencies_root_hadoop_dependencies_dir_exists()
   {
     rootHadoopDependenciesDir.mkdir();
+    pullDependencies.run();
+  }
+
+  /**
+   * A file exists on the root hadoop dependencies directory path, but it's not a directory, throw ISE.
+   */
+  @Test(expected = ISE.class)
+  public void testPullDependencies_root_hadoop_dependencies_dir_bad_state() throws IOException
+  {
+    Assert.assertTrue(rootHadoopDependenciesDir.createNewFile());
     pullDependencies.run();
   }
 
