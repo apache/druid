@@ -33,6 +33,7 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
@@ -48,10 +49,12 @@ import io.druid.segment.SingleScanTimeDimSelector;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.ListIndexed;
 import io.druid.segment.filter.BooleanValueMatcher;
+import io.druid.segment.filter.Filters;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
 import org.joda.time.DateTime;
@@ -599,6 +602,12 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
                 return null;
               }
+
+              @Override
+              public ColumnCapabilities getColumnCapabilities(String columnName)
+              {
+                return index.getCapabilities(columnName);
+              }
             };
           }
         }
@@ -645,6 +654,18 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     }
   }
 
+  private static LongColumnSelector getTimeLongColumnSelector(final IncrementalIndexStorageAdapter.EntryHolder holder)
+  {
+    return new LongColumnSelector()
+    {
+      @Override
+      public long get()
+      {
+        return holder.getKey().getTimestamp();
+      }
+    };
+  }
+
   private class EntryHolderValueMatcherFactory implements ValueMatcherFactory
   {
     private final EntryHolder holder;
@@ -659,6 +680,10 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     @Override
     public ValueMatcher makeValueMatcher(String dimension, final Comparable value)
     {
+      if (dimension.equals(Column.TIME_COLUMN_NAME)) {
+        return Filters.getLongValueMatcher(getTimeLongColumnSelector(holder), value);
+      }
+
       IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimension);
       if (dimensionDesc == null) {
         return new BooleanValueMatcher(isComparableNullOrEmpty(value));
@@ -701,7 +726,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     }
 
     @Override
-    public ValueMatcher makeValueMatcher(String dimension, final Predicate predicate)
+    public ValueMatcher makeValueMatcher(String dimension, final Predicate<Object> predicate)
     {
       IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimension);
       if (dimensionDesc == null) {
@@ -728,6 +753,19 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
           return false;
         }
       };
+    }
+
+    @Override
+    public ValueMatcher makeLongValueMatcher(String dimension, DruidLongPredicate predicate)
+    {
+      return Filters.getLongPredicateMatcher(getTimeLongColumnSelector(holder), predicate);
+    }
+
+    @Override
+    public ValueType getTypeForDimension(String dimension)
+    {
+      ColumnCapabilities capabilities = index.getCapabilities(dimension);
+      return capabilities == null ? ValueType.STRING : capabilities.getType();
     }
   }
 

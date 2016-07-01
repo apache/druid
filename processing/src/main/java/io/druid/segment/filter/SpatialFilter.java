@@ -58,7 +58,7 @@ public class SpatialFilter implements Filter
   {
     return factory.makeValueMatcher(
         dimension,
-        new Predicate()
+        new Predicate<Object>()
         {
           @Override
           public boolean apply(Object input)

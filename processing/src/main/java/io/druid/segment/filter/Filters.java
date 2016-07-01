@@ -27,13 +27,20 @@ import com.google.common.collect.Lists;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.common.IAE;
 import com.metamx.common.guava.FunctionalIterable;
+import com.metamx.common.parsers.ParseException;
 import io.druid.query.Query;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BooleanFilter;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.Filter;
+import io.druid.query.filter.ValueMatcher;
+import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.LongColumnSelector;
 import io.druid.segment.column.BitmapIndex;
+import io.druid.segment.column.Column;
 import io.druid.segment.data.Indexed;
+import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -94,7 +101,7 @@ public class Filters
   public static ImmutableBitmap matchPredicate(
       final String dimension,
       final BitmapIndexSelector selector,
-      final Predicate<String> predicate
+      final Predicate<Object> predicate
   )
   {
     Preconditions.checkNotNull(dimension, "dimension");
@@ -155,6 +162,45 @@ public class Filters
           }
         }
     );
+  }
+
+  public static ValueMatcher getLongValueMatcher(
+      final LongColumnSelector longSelector,
+      Comparable value
+  )
+  {
+    try {
+      if (value == null) {
+        return new BooleanValueMatcher(false);
+      }
+      final long longValue = Long.parseLong(value.toString());
+      return new ValueMatcher()
+      {
+        @Override
+        public boolean matches()
+        {
+          return longSelector.get() == longValue;
+        }
+      };
+    }
+    catch (NumberFormatException nfe) {
+      return new BooleanValueMatcher(false);
+    }
+  }
+
+  public static ValueMatcher getLongPredicateMatcher(
+      final LongColumnSelector longSelector,
+      final DruidLongPredicate predicate
+  )
+  {
+    return new ValueMatcher()
+    {
+      @Override
+      public boolean matches()
+      {
+        return predicate.applyLong(longSelector.get());
+      }
+    };
   }
 
   public static Filter convertToCNFFromQueryContext(Query query, Filter filter)

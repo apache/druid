@@ -20,14 +20,10 @@
 package io.druid.query.filter;
 
 import com.google.common.base.Predicate;
-import io.druid.segment.column.ValueType;
 
 /**
+ * Compound predicate class that accepts all supported types
  */
-public interface ValueMatcherFactory
+public interface DruidPredicate extends Predicate<Object>, DruidLongPredicate
 {
-  public ValueMatcher makeValueMatcher(String dimension, Comparable value);
-  public ValueMatcher makeValueMatcher(String dimension, Predicate<Object> predicate);
-  public ValueMatcher makeLongValueMatcher(String dimension, DruidLongPredicate predicate);
-  public ValueType getTypeForDimension(String dimension);
 }

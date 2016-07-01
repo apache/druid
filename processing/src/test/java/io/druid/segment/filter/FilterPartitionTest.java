@@ -45,6 +45,7 @@ import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.DruidPredicate;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
@@ -60,6 +61,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -91,7 +93,7 @@ public class FilterPartitionTest extends BaseFilterTest
   {
     public NoBitmapDimensionPredicateFilter(
         final String dimension,
-        final Predicate<String> predicate,
+        final DruidPredicate predicate,
         final ExtractionFn extractionFn
     )
     {
@@ -125,10 +127,16 @@ public class FilterPartitionTest extends BaseFilterTest
         return new NoBitmapSelectorFilter(dimension, value);
       } else {
         final String valueOrNull = Strings.emptyToNull(value);
-        final Predicate<String> predicate = new Predicate<String>()
+        final DruidPredicate predicate = new DruidPredicate()
         {
           @Override
-          public boolean apply(String input)
+          public boolean applyLong(long value)
+          {
+            return Objects.equals(valueOrNull, String.valueOf(value));
+          }
+
+          @Override
+          public boolean apply(@Nullable Object input)
           {
             return Objects.equals(valueOrNull, input);
           }

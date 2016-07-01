@@ -20,14 +20,17 @@
 package io.druid.segment.filter;
 
 import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import io.druid.query.filter.BitmapIndexSelector;
+import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.JavaScriptDimFilter;
 import io.druid.query.filter.RowOffsetMatcherFactory;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ValueType;
 import org.mozilla.javascript.Context;
 
 public class JavaScriptFilter implements Filter
@@ -49,10 +52,10 @@ public class JavaScriptFilter implements Filter
   {
     final Context cx = Context.enter();
     try {
-      final Predicate<String> contextualPredicate = new Predicate<String>()
+      final Predicate<Object> contextualPredicate = new Predicate<Object>()
       {
         @Override
-        public boolean apply(String input)
+        public boolean apply(Object input)
         {
           return predicate.applyInContext(cx, input);
         }
@@ -69,7 +72,15 @@ public class JavaScriptFilter implements Filter
   public ValueMatcher makeMatcher(ValueMatcherFactory factory)
   {
     // suboptimal, since we need create one context per call to predicate.apply()
-    return factory.makeValueMatcher(dimension, predicate);
+    ValueType type = factory.getTypeForDimension(dimension);
+    switch (type) {
+      case STRING:
+        return factory.makeValueMatcher(dimension, predicate);
+      case LONG:
+        return factory.makeLongValueMatcher(dimension, predicate);
+      default:
+        throw new UnsupportedOperationException("invalid type: " + type);
+    }
   }
 
   @Override

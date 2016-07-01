@@ -165,7 +165,7 @@ public class JavaScriptDimFilter implements DimFilter
     return result;
   }
 
-  public static class JavaScriptPredicate implements Predicate<String>
+  public static class JavaScriptPredicate implements DruidPredicate
   {
     final ScriptableObject scope;
     final Function fnApply;
@@ -191,7 +191,7 @@ public class JavaScriptDimFilter implements DimFilter
     }
 
     @Override
-    public boolean apply(final String input)
+    public boolean apply(final Object input)
     {
       // one and only one context per thread
       final Context cx = Context.enter();
@@ -203,12 +203,19 @@ public class JavaScriptDimFilter implements DimFilter
       }
     }
 
-    public boolean applyInContext(Context cx, String input)
+    @Override
+    public boolean applyLong(long value)
+    {
+      // Can't avoid boxing here because the Mozilla JS Function.call() only accepts Object[]
+      return apply(value);
+    }
+
+    public boolean applyInContext(Context cx, Object input)
     {
       if (extractionFn != null) {
         input = extractionFn.apply(input);
       }
-      return Context.toBoolean(fnApply.call(cx, scope, scope, new String[]{input}));
+      return Context.toBoolean(fnApply.call(cx, scope, scope, new Object[]{input}));
     }
 
     @Override

@@ -29,6 +29,7 @@ import com.metamx.collections.bitmap.MutableBitmap;
 import com.metamx.collections.bitmap.RoaringBitmapFactory;
 import com.metamx.collections.spatial.ImmutableRTree;
 import io.druid.query.filter.BitmapIndexSelector;
+import io.druid.query.filter.DruidPredicate;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.GenericIndexed;
@@ -48,6 +49,7 @@ import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -63,16 +65,22 @@ public class DimensionPredicateFilterBenchmark
 
   private static final DimensionPredicateFilter IS_EVEN = new DimensionPredicateFilter(
       "foo",
-      new Predicate<String>()
+      new DruidPredicate()
       {
         @Override
-        public boolean apply(String input)
+        public boolean applyLong(long value)
+        {
+          return false;
+        }
+
+        @Override
+        public boolean apply(Object input)
         {
           if (input == null) {
             return false;
           }
 
-          return Integer.parseInt(input) % 2 == 0;
+          return Integer.parseInt(input.toString()) % 2 == 0;
         }
       },
       null

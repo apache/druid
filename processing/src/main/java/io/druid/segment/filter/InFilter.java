@@ -26,11 +26,12 @@ import com.google.common.collect.Iterables;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
+import io.druid.query.filter.DruidLongPredicate;
+import io.druid.query.filter.DruidPredicate;
 import io.druid.query.filter.Filter;
-import io.druid.query.filter.RowOffsetMatcherFactory;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
-import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ValueType;
 
 import java.util.Set;
 
@@ -69,12 +70,13 @@ public class InFilter implements Filter
       return Filters.matchPredicate(
           dimension,
           selector,
-          new Predicate<String>()
+          new Predicate<Object>()
           {
             @Override
-            public boolean apply(String input)
+            public boolean apply(Object inputObj)
             {
               // InDimFilter converts all null "values" to empty.
+              String input = inputObj == null ? null : inputObj.toString();
               return values.contains(Strings.nullToEmpty(extractionFn.apply(input)));
             }
           }
@@ -85,24 +87,56 @@ public class InFilter implements Filter
   @Override
   public ValueMatcher makeMatcher(ValueMatcherFactory factory)
   {
-    return factory.makeValueMatcher(
-        dimension, new Predicate<String>()
-        {
-          @Override
-          public boolean apply(String input)
-          {
-            if (extractionFn != null) {
-              input = extractionFn.apply(input);
-            }
-            return values.contains(Strings.nullToEmpty(input));
-          }
-        }
-    );
+    ValueType type = factory.getTypeForDimension(dimension);
+    switch (type) {
+      case STRING:
+        return factory.makeValueMatcher(dimension, getPredicate());
+      case LONG:
+        return factory.makeLongValueMatcher(dimension, getPredicate());
+      default:
+        throw new UnsupportedOperationException("invalid type: " + type);
+    }
   }
 
   @Override
   public boolean supportsBitmapIndex(BitmapIndexSelector selector)
   {
     return selector.getBitmapIndex(dimension) != null;
+  }
+
+  private DruidPredicate getPredicate()
+  {
+    if (extractionFn == null) {
+      return new DruidPredicate()
+      {
+        @Override
+        public boolean apply(Object inputObj)
+        {
+          String input = inputObj == null ? null : inputObj.toString();
+          return values.contains(Strings.nullToEmpty(input));
+        }
+
+        @Override
+        public boolean applyLong(long value)
+        {
+          return values.contains(String.valueOf(value));
+        }
+      };
+    } else {
+      return new DruidPredicate()
+      {
+        @Override
+        public boolean apply(Object inputObj)
+        {
+          return values.contains(Strings.nullToEmpty(extractionFn.apply(inputObj)));
+        }
+
+        @Override
+        public boolean applyLong(long value)
+        {
+          return values.contains(extractionFn.apply(value));
+        }
+      };
+    }
   }
 }

@@ -25,10 +25,14 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.column.Column;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.BooleanValueMatcher;
 import io.druid.segment.filter.Filters;
@@ -221,6 +225,13 @@ public class FilteredAggregatorFactory extends AggregatorFactory
     @Override
     public ValueMatcher makeValueMatcher(final String dimension, final Comparable value)
     {
+      if (getTypeForDimension(dimension) == ValueType.LONG) {
+        return Filters.getLongValueMatcher(
+            columnSelectorFactory.makeLongColumnSelector(dimension),
+            value
+        );
+      }
+
       final DimensionSelector selector = columnSelectorFactory.makeDimensionSelector(
           new DefaultDimensionSpec(dimension, dimension)
       );
@@ -257,7 +268,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
     }
 
     @Override
-    public ValueMatcher makeValueMatcher(final String dimension, final Predicate predicate)
+    public ValueMatcher makeValueMatcher(final String dimension, final Predicate<Object> predicate)
     {
       final DimensionSelector selector = columnSelectorFactory.makeDimensionSelector(
           new DefaultDimensionSpec(dimension, dimension)
@@ -298,6 +309,28 @@ public class FilteredAggregatorFactory extends AggregatorFactory
           }
         }
       };
+    }
+
+    @Override
+    public ValueMatcher makeLongValueMatcher(String dimension, DruidLongPredicate predicate)
+    {
+      return Filters.getLongPredicateMatcher(
+          columnSelectorFactory.makeLongColumnSelector(dimension),
+          predicate
+      );
+    }
+
+    @Override
+    public ValueType getTypeForDimension(String dimension)
+    {
+      // FilteredAggregatorFactory is sometimes created from a ColumnSelectorFactory that
+      // has no knowledge of column capabilities/types.
+      // Default to LONG for __time, STRING for everything else.
+      if (dimension.equals(Column.TIME_COLUMN_NAME)) {
+        return ValueType.LONG;
+      }
+      ColumnCapabilities capabilities = columnSelectorFactory.getColumnCapabilities(dimension);
+      return capabilities == null ? ValueType.STRING : capabilities.getType();
     }
   }
 }

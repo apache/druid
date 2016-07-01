@@ -19,15 +19,10 @@
 
 package io.druid.query.filter;
 
-import com.google.common.base.Predicate;
-import io.druid.segment.column.ValueType;
-
 /**
+ * LongPredicate is only supported in Java 8+, so use this to avoid boxing when a long predicate is needed.
  */
-public interface ValueMatcherFactory
+public interface DruidLongPredicate
 {
-  public ValueMatcher makeValueMatcher(String dimension, Comparable value);
-  public ValueMatcher makeValueMatcher(String dimension, Predicate<Object> predicate);
-  public ValueMatcher makeLongValueMatcher(String dimension, DruidLongPredicate predicate);
-  public ValueType getTypeForDimension(String dimension);
+  boolean applyLong(long value);
 }

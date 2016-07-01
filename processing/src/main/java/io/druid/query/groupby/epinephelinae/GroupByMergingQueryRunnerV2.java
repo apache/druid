@@ -66,6 +66,7 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.column.ColumnCapabilities;
 
 import java.io.Closeable;
 import java.io.File;
@@ -668,6 +669,12 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
           return row.get().getRaw(columnName);
         }
       };
+    }
+
+    @Override
+    public ColumnCapabilities getColumnCapabilities(String columnName)
+    {
+      throw new UnsupportedOperationException();
     }
   }
 }

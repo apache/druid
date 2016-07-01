@@ -88,10 +88,16 @@ public class SelectorDimFilter implements DimFilter
       return new SelectorFilter(dimension, value);
     } else {
       final String valueOrNull = Strings.emptyToNull(value);
-      final Predicate<String> predicate = new Predicate<String>()
+      final DruidPredicate predicate = new DruidPredicate()
       {
         @Override
-        public boolean apply(String input)
+        public boolean applyLong(long value)
+        {
+          return Objects.equals(valueOrNull, String.valueOf(value));
+        }
+
+        @Override
+        public boolean apply(Object input)
         {
           return Objects.equals(valueOrNull, input);
         }
