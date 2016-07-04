@@ -70,7 +70,8 @@ public class IndexGeneratorCombinerTest
                             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
                             null,
                             ImmutableList.of("timestamp", "host", "visited")
-                        )
+                        ),
+                        null
                     ),
                     Map.class
                 ),
