@@ -92,14 +92,16 @@ public class TimeBoundaryQueryRunnerFactory
       this.adapter = segment.asStorageAdapter();
     }
 
-    private Function<Cursor, Result<DateTime>> skipToFirstMatching = new Function<Cursor, Result<DateTime>>()
+    private final Function<Cursor, Result<DateTime>> skipToFirstMatching = new Function<Cursor, Result<DateTime>>()
     {
       @Override
       public Result<DateTime> apply(Cursor cursor)
       {
-        if (cursor.isDone()) { return null; }
+        if (cursor.isDone()) {
+          return null;
+        }
         final LongColumnSelector timestampColumnSelector = cursor.makeLongColumnSelector(Column.TIME_COLUMN_NAME);
-        DateTime timestamp = new DateTime(timestampColumnSelector.get());
+        final DateTime timestamp = new DateTime(timestampColumnSelector.get());
         return new Result<>(adapter.getInterval().getStart(), timestamp);
       }
     };
@@ -111,7 +113,10 @@ public class TimeBoundaryQueryRunnerFactory
           Filters.toFilter(legacyQuery.getDimensionsFilter()),
           descending, new AllGranularity(), skipToFirstMatching
       );
-      List<Result<DateTime>> resultList = Sequences.toList(resultSequence, Lists.<Result<DateTime>>newArrayList());
+      final List<Result<DateTime>> resultList = Sequences.toList(
+          Sequences.limit(resultSequence, 1),
+          Lists.<Result<DateTime>>newArrayList()
+      );
       if (resultList.size() > 0) {
         return resultList.get(0).getValue();
       }
