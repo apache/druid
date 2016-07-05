@@ -37,7 +37,6 @@ public class Queries
   )
   {
     Preconditions.checkNotNull(aggFactories, "aggregations cannot be null");
-    Preconditions.checkArgument(aggFactories.size() > 0, "Must have at least one AggregatorFactory");
 
     final Set<String> aggNames = Sets.newHashSet();
     for (AggregatorFactory aggFactory : aggFactories) {

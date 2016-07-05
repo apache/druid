@@ -98,13 +98,12 @@ public class GroupByQuery extends BaseQuery<Row>
     for (DimensionSpec spec : this.dimensions) {
       Preconditions.checkArgument(spec != null, "dimensions has null DimensionSpec");
     }
-    this.aggregatorSpecs = aggregatorSpecs;
+    this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.<AggregatorFactory>of() : aggregatorSpecs;
     this.postAggregatorSpecs = postAggregatorSpecs == null ? ImmutableList.<PostAggregator>of() : postAggregatorSpecs;
     this.havingSpec = havingSpec;
     this.limitSpec = (limitSpec == null) ? new NoopLimitSpec() : limitSpec;
 
     Preconditions.checkNotNull(this.granularity, "Must specify a granularity");
-    Preconditions.checkNotNull(this.aggregatorSpecs, "Must specify at least one aggregator");
     Queries.verifyAggregations(this.aggregatorSpecs, this.postAggregatorSpecs);
 
     Function<Sequence<Row>, Sequence<Row>> postProcFn =

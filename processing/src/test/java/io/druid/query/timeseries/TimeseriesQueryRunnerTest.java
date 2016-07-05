@@ -184,6 +184,40 @@ public class TimeseriesQueryRunnerTest
   }
 
   @Test
+  public void testTimeseriesNoAggregators()
+  {
+    QueryGranularity gran = QueryGranularities.DAY;
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.dataSource)
+                                  .granularity(gran)
+                                  .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                  .descending(descending)
+                                  .build();
+
+    Iterable<Result<TimeseriesResultValue>> results = Sequences.toList(
+        runner.run(query, CONTEXT),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+
+    final DateTime expectedLast = descending ?
+                                  QueryRunnerTestHelper.earliest :
+                                  QueryRunnerTestHelper.last;
+
+    Result lastResult = null;
+    for (Result<TimeseriesResultValue> result : results) {
+      DateTime current = result.getTimestamp();
+      Assert.assertFalse(
+          String.format("Timestamp[%s] > expectedLast[%s]", current, expectedLast),
+          descending ? current.isBefore(expectedLast) : current.isAfter(expectedLast)
+      );
+      Assert.assertEquals(ImmutableMap.of(), result.getValue().getBaseObject());
+      lastResult = result;
+    }
+
+    Assert.assertEquals(lastResult.toString(), expectedLast, lastResult.getTimestamp());
+  }
+
+  @Test
   public void testFullOnTimeseriesMaxMin()
   {
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
