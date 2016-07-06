@@ -97,7 +97,7 @@ public class PooledTopNAlgorithm
       numBytesPerRecord += aggregatorSizes[i];
     }
 
-    final int numValuesPerPass = numBytesToWorkWith / numBytesPerRecord;
+    final int numValuesPerPass = numBytesPerRecord > 0 ? numBytesToWorkWith / numBytesPerRecord : cardinality;
 
     return PooledTopNParams.builder()
                            .withDimSelector(dimSelector)

@@ -73,7 +73,7 @@ public class TopNQuery extends BaseQuery<Result<TopNResultValue>>
 
     this.dimFilter = dimFilter;
     this.granularity = granularity;
-    this.aggregatorSpecs = aggregatorSpecs;
+    this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.<AggregatorFactory>of() : aggregatorSpecs;
     this.postAggregatorSpecs = postAggregatorSpecs == null ? ImmutableList.<PostAggregator>of() : postAggregatorSpecs;
 
     Preconditions.checkNotNull(dimensionSpec, "dimensionSpec can't be null");
