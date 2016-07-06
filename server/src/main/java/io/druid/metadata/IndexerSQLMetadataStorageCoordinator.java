@@ -833,10 +833,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
   }
 
+  @Override
   public List<DataSegment> getUnusedSegmentsForInterval(final String dataSource, final Interval interval)
   {
-    List<DataSegment> matchingSegments = SQLMetadataSegmentManager.inReadOnlyTransaction(
-        connector,
+    List<DataSegment> matchingSegments = connector.inReadOnlyTransaction(
         new TransactionCallback<List<DataSegment>>()
         {
           @Override
@@ -849,10 +849,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                         dbTables.getSegmentsTable()
                     )
                 )
+                .setFetchSize(connector.getStreamingFetchSize())
                 .bind("dataSource", dataSource)
                 .bind("start", interval.getStart().toString())
                 .bind("end", interval.getEnd().toString())
-                .setFetchSize(connector.getStreamingFetchSize())
                 .map(ByteArrayMapper.FIRST)
                 .fold(
                     Lists.<DataSegment>newArrayList(),
