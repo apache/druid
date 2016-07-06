@@ -833,13 +833,14 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
   }
 
+  @Override
   public List<DataSegment> getUnusedSegmentsForInterval(final String dataSource, final Interval interval)
   {
-    List<DataSegment> matchingSegments = connector.getDBI().withHandle(
-        new HandleCallback<List<DataSegment>>()
+    List<DataSegment> matchingSegments = connector.inReadOnlyTransaction(
+        new TransactionCallback<List<DataSegment>>()
         {
           @Override
-          public List<DataSegment> withHandle(Handle handle) throws IOException, SQLException
+          public List<DataSegment> inTransaction(final Handle handle, final TransactionStatus status) throws Exception
           {
             return handle
                 .createQuery(
@@ -848,6 +849,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                         dbTables.getSegmentsTable()
                     )
                 )
+                .setFetchSize(connector.getStreamingFetchSize())
                 .bind("dataSource", dataSource)
                 .bind("start", interval.getStart().toString())
                 .bind("end", interval.getEnd().toString())

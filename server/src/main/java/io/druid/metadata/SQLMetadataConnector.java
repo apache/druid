@@ -39,6 +39,7 @@ import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.util.ByteArrayMapper;
 import org.skife.jdbi.v2.util.IntegerMapper;
 
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.SQLRecoverableException;
 import java.sql.SQLTransientException;
@@ -563,6 +564,36 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
     return dataSource;
   }
 
+  protected final <T> T inReadOnlyTransaction(
+      final TransactionCallback<T> callback
+  )
+  {
+    return getDBI().withHandle(
+        new HandleCallback<T>()
+        {
+          @Override
+          public T withHandle(Handle handle) throws Exception
+          {
+            final Connection connection = handle.getConnection();
+            final boolean readOnly = connection.isReadOnly();
+            connection.setReadOnly(true);
+            try {
+              return handle.inTransaction(callback);
+            }
+            finally {
+              try {
+                connection.setReadOnly(readOnly);
+              }
+              catch (SQLException e) {
+                // at least try to log it so we don't swallow exceptions
+                log.error(e, "Unable to reset connection read-only state");
+              }
+            }
+          }
+        }
+    );
+  }
+
   private void createAuditTable(final String tableName)
   {
     createTable(
@@ -595,5 +626,4 @@ public abstract class SQLMetadataConnector implements MetadataStorageConnector
       createAuditTable(tablesConfigSupplier.get().getAuditTable());
     }
   }
-
 }
