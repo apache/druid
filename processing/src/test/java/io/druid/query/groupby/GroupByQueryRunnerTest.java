@@ -334,6 +334,43 @@ public class GroupByQueryRunnerTest
   }
 
   @Test
+  public void testGroupByNoAggregators()
+  {
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive"),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business"),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "entertainment"),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health"),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine"),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news"),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium"),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology"),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel"),
+
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "automotive"),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "business"),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "entertainment"),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "health"),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "mezzanine"),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "news"),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "premium"),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "technology"),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "alias", "travel")
+    );
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
   public void testMultiValueDimension()
   {
     GroupByQuery query = GroupByQuery
