@@ -19,6 +19,8 @@
 
 package io.druid.segment.data;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Ordering;
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
@@ -32,8 +34,28 @@ import java.nio.ByteBuffer;
  */
 public class RoaringBitmapSerdeFactory implements BitmapSerdeFactory
 {
-  public static final ObjectStrategy<ImmutableBitmap> objectStrategy = new ImmutableRoaringBitmapObjectStrategy();
-  public static final BitmapFactory bitmapFactory = new RoaringBitmapFactory();
+  private static final boolean DEFAULT_COMPRESS_RUN_ON_SERIALIZATION = true;
+  private static final ObjectStrategy<ImmutableBitmap> objectStrategy = new ImmutableRoaringBitmapObjectStrategy();
+
+  private final boolean compressRunOnSerialization;
+  private final BitmapFactory bitmapFactory;
+
+  @JsonCreator
+  public RoaringBitmapSerdeFactory(
+      @JsonProperty("compressRunOnSerialization") Boolean compressRunOnSerialization
+  )
+  {
+    this.compressRunOnSerialization = compressRunOnSerialization == null
+                                      ? DEFAULT_COMPRESS_RUN_ON_SERIALIZATION
+                                      : compressRunOnSerialization;
+    this.bitmapFactory = new RoaringBitmapFactory(this.compressRunOnSerialization);
+  }
+
+  @JsonProperty
+  public boolean getCompressRunOnSerialization()
+  {
+    return compressRunOnSerialization;
+  }
 
   @Override
   public ObjectStrategy<ImmutableBitmap> getObjectStrategy()
