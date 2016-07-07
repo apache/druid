@@ -400,6 +400,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
     this.metadata = new Metadata()
         .setAggregators(getCombiningAggregators(metrics))
+        .setTimestampSpec(incrementalIndexSchema.getTimestampSpec())
         .setQueryGranularity(this.gran);
 
     this.aggs = initAggs(metrics, rowSupplier, deserializeComplexMetrics);

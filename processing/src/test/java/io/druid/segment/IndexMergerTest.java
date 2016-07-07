@@ -1765,12 +1765,12 @@ public class IndexMergerTest
 
   private IncrementalIndex getIndexWithDims(List<String> dims)
   {
-    IncrementalIndexSchema schema = new IncrementalIndexSchema(
-        0L,
-        QueryGranularities.NONE,
-        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(dims), null, null),
-        new AggregatorFactory[]{new CountAggregatorFactory("count")}
-    );
+    IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
+        .withMinTimestamp(0L)
+        .withQueryGranularity(QueryGranularities.NONE)
+        .withDimensionsSpec(new DimensionsSpec(DimensionsSpec.getDefaultSchemas(dims), null, null))
+        .withMetrics(new AggregatorFactory[]{new CountAggregatorFactory("count")})
+        .build();
 
     return new OnheapIncrementalIndex(schema, true, 1000);
   }
