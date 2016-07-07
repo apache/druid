@@ -20,6 +20,7 @@
 package io.druid.query.aggregation;
 
 import com.metamx.common.Pair;
+import io.druid.collections.SerializablePair;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.column.Column;
@@ -41,7 +42,7 @@ public class LastAggregationTest
 
   private long[] longValues = {62, 8, 54, 2};
   private float[] floatValues = {1.1f, 2.7f, 3.5f, 1.3f};
-  private long[] times = {1467225096, 146722598, 1467225099, 1467225111};
+  private long[] times = {1467225096, 1467225098, 1467225099, 1467225111};
 
   public LastAggregationTest() throws Exception
   {
@@ -156,8 +157,8 @@ public class LastAggregationTest
   @Test
   public void testCombine()
   {
-    Pair pair1 = new Pair<>(1467225000L, 3.621);
-    Pair pair2 = new Pair<>(1467240000L, 785.4);
+    SerializablePair pair1 = new SerializablePair<>(1467225000L, 3.621);
+    SerializablePair pair2 = new SerializablePair<>(1467240000L, 785.4);
     Assert.assertEquals(pair2, doubleLastAggFactory.combine(pair1, pair2));
   }
 

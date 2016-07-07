@@ -25,8 +25,8 @@ import com.google.common.base.Preconditions;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
-import com.metamx.common.Pair;
 import com.metamx.common.StringUtils;
+import io.druid.collections.SerializablePair;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.Column;
@@ -35,9 +35,14 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 public class LastAggregatorFactory extends AggregatorFactory
 {
+  private static final byte CACHE_TYPE_ID = 0x11;
+  private static final String TYPE_LONG = "long";
+  private static final String TYPE_DOUBLE = "double";
+
   private final String fieldName;
   private final String name;
   private final String value;
@@ -51,7 +56,10 @@ public class LastAggregatorFactory extends AggregatorFactory
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null aggregator name");
     Preconditions.checkNotNull(fieldName, "Must have a valid, non-null fieldName");
-    Preconditions.checkArgument(value.equals("long") || value.equals("double"), "Must have a valid, non-null type");
+    Preconditions.checkArgument(
+        value.equals(TYPE_LONG) || value.equals(TYPE_DOUBLE),
+        "Must have a valid, non-null type"
+    );
 
     this.name = name;
     this.fieldName = fieldName;
@@ -61,12 +69,12 @@ public class LastAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    if (value.equals("long")) {
+    if (value.equals(TYPE_LONG)) {
       return new LongLastAggregator(
           name, metricFactory.makeLongColumnSelector(fieldName),
           metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME)
       );
-    } else if (value.equals("double")) {
+    } else if (value.equals(TYPE_DOUBLE)) {
       return new DoubleLastAggregator(
           name, metricFactory.makeFloatColumnSelector(fieldName),
           metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME)
@@ -78,12 +86,12 @@ public class LastAggregatorFactory extends AggregatorFactory
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    if (value.equals("long")) {
+    if (value.equals(TYPE_LONG)) {
       return new LongLastBufferAggregator(
           metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME),
           metricFactory.makeLongColumnSelector(fieldName)
       );
-    } else if (value.equals("double")) {
+    } else if (value.equals(TYPE_DOUBLE)) {
       return new DoubleLastBufferAggregator(
           metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME),
           metricFactory.makeFloatColumnSelector(fieldName)
@@ -100,7 +108,7 @@ public class LastAggregatorFactory extends AggregatorFactory
       @Override
       public int compare(Object o1, Object o2)
       {
-        return Longs.compare(((Pair<Long, Object>) o1).lhs, ((Pair<Long, Object>) o2).lhs);
+        return Longs.compare(((SerializablePair<Long, Object>) o1).lhs, ((SerializablePair<Long, Object>) o2).lhs);
       }
     };
   }
@@ -108,35 +116,78 @@ public class LastAggregatorFactory extends AggregatorFactory
   @Override
   public Object combine(Object lhs, Object rhs)
   {
-    return (((Pair<Long, Object>) lhs).lhs > ((Pair<Long, Object>) rhs).lhs) ? lhs : rhs;
+    return (((SerializablePair<Long, Object>) lhs).lhs > ((SerializablePair<Long, Object>) rhs).lhs) ? lhs : rhs;
   }
 
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new LastAggregatorFactory(name, name, value) {
+    return new LastAggregatorFactory(name, name, value)
+    {
       @Override
       public Aggregator factorize(ColumnSelectorFactory metricFactory)
       {
         final ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(name);
-        if (value.equals("long")) {
-          return new LongLastAggregator(name, null, null) {
+        if (value.equals(TYPE_LONG)) {
+          return new LongLastAggregator(name, null, null)
+          {
             @Override
             public void aggregate()
             {
-              Pair<Long, Long> pair = (Pair<Long, Long>)selector.get();
-              lastTime = pair.lhs;
-              lastValue = pair.rhs;
+              SerializablePair<Long, Long> pair = (SerializablePair<Long, Long>) selector.get();
+              if (pair.rhs >= lastTime) {
+                lastTime = pair.lhs;
+                lastValue = pair.rhs;
+              }
             }
           };
-        } else if (value.equals("double")) {
-          return new DoubleLastAggregator(name, null, null) {
+        } else if (value.equals(TYPE_DOUBLE)) {
+          return new DoubleLastAggregator(name, null, null)
+          {
             @Override
             public void aggregate()
             {
-              Pair<Long, Double> pair = (Pair<Long, Double>)selector.get();
-              lastTime = pair.lhs;
-              lastValue = pair.rhs;
+              SerializablePair<Long, Long> pair = (SerializablePair<Long, Long>) selector.get();
+              if (pair.rhs >= lastTime) {
+                lastTime = pair.lhs;
+                lastValue = pair.rhs;
+              }
+            }
+          };
+        }
+        throw new IAE("undefined type");
+      }
+
+      @Override
+      public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
+      {
+        final ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(name);
+        if (value.equals(TYPE_LONG)) {
+          return new LongLastBufferAggregator(null, null)
+          {
+            @Override
+            public void aggregate(ByteBuffer buf, int position)
+            {
+              SerializablePair<Long, Long> pair = (SerializablePair<Long, Long>) selector.get();
+              long lastTime = buf.getLong(position);
+              if (pair.lhs >= lastTime) {
+                buf.putLong(position, pair.lhs);
+                buf.putLong(position + Longs.BYTES, pair.rhs);
+              }
+            }
+          };
+        } else if (value.equals(TYPE_DOUBLE)) {
+          return new DoubleLastBufferAggregator(null, null)
+          {
+            @Override
+            public void aggregate(ByteBuffer buf, int position)
+            {
+              SerializablePair<Long, Double> pair = (SerializablePair<Long, Double>) selector.get();
+              long lastTime = buf.getLong(position);
+              if (pair.lhs >= lastTime) {
+                buf.putLong(position, pair.lhs);
+                buf.putDouble(position + Longs.BYTES, pair.rhs);
+              }
             }
           };
         }
@@ -165,13 +216,19 @@ public class LastAggregatorFactory extends AggregatorFactory
   @Override
   public Object deserialize(Object object)
   {
-    return object;
+    Map map = (Map) object;
+    if (value.equals(TYPE_LONG)) {
+      return new SerializablePair<>(((Number) map.get("lhs")).longValue(), ((Number) map.get("rhs")).longValue());
+    } else if (value.equals(TYPE_DOUBLE)) {
+      return new SerializablePair<>(((Number) map.get("lhs")).longValue(), ((Number) map.get("rhs")).doubleValue());
+    }
+    throw new IAE("undefined type");
   }
 
   @Override
   public Object finalizeComputation(Object object)
   {
-    return ((Pair<Long, Object>) object).rhs;
+    return ((SerializablePair<Long, Object>) object).rhs;
   }
 
   @Override
@@ -203,21 +260,22 @@ public class LastAggregatorFactory extends AggregatorFactory
   public byte[] getCacheKey()
   {
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
-    return ByteBuffer.allocate(1 + fieldNameBytes.length).put((byte) 0x11).put(fieldNameBytes).array();
+
+    return ByteBuffer.allocate(1 + fieldNameBytes.length).put(CACHE_TYPE_ID).put(fieldNameBytes).array();
   }
 
   @Override
   public String getTypeName()
   {
-    return value.equals("double") ? "float" : value;
+    return value.equals(TYPE_DOUBLE) ? "float" : value;
   }
 
   @Override
   public int getMaxIntermediateSize()
   {
-    if (value.equals("long")) {
+    if (value.equals(TYPE_LONG)) {
       return Longs.BYTES * 2;
-    } else if (value.equals("double")) {
+    } else if (value.equals(TYPE_DOUBLE)) {
       return Longs.BYTES + Doubles.BYTES;
     }
     throw new IAE("undefined type");
@@ -226,10 +284,10 @@ public class LastAggregatorFactory extends AggregatorFactory
   @Override
   public Object getAggregatorStartValue()
   {
-    if (value.equals("long")) {
-      return new Pair<>(-1L, 0L);
-    } else if (value.equals("double")) {
-      return new Pair<>(-1L, 0D);
+    if (value.equals(TYPE_LONG)) {
+      return new SerializablePair<>(Long.MIN_VALUE, 0L);
+    } else if (value.equals(TYPE_DOUBLE)) {
+      return new SerializablePair<>(Long.MIN_VALUE, 0D);
     }
     throw new IAE("undefined type");
   }

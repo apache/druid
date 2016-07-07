@@ -17,22 +17,27 @@
  * under the License.
  */
 
-package io.druid.benchmark.aggregator;
+package io.druid.collections;
 
-import org.openjdk.jmh.annotations.Measurement;
-import org.openjdk.jmh.annotations.Scope;
-import org.openjdk.jmh.annotations.Setup;
-import org.openjdk.jmh.annotations.State;
-import org.openjdk.jmh.annotations.Warmup;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.metamx.common.Pair;
 
-@State(Scope.Benchmark)
-@Warmup(iterations = 10)
-@Measurement(iterations = 10)
-public class LongMaxBenchmark
+public class SerializablePair<T1, T2> extends Pair<T1, T2>
 {
-  @Setup
-  public void setup()
+  public SerializablePair(@JsonProperty T1 lhs, @JsonProperty T2 rhs)
   {
+    super(lhs, rhs);
+  }
 
+  @JsonProperty
+  public T1 getLhs()
+  {
+    return lhs;
+  }
+
+  @JsonProperty
+  public T2 getRhs()
+  {
+    return rhs;
   }
 }

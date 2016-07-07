@@ -20,7 +20,7 @@
 package io.druid.query.aggregation;
 
 import com.google.common.primitives.Longs;
-import com.metamx.common.Pair;
+import io.druid.collections.SerializablePair;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 
@@ -40,15 +40,17 @@ public class DoubleFirstBufferAggregator implements BufferAggregator
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    buf.putLong(position, -1);
-    buf.putLong(position + Longs.BYTES, 0);
+    buf.putLong(position, Long.MAX_VALUE);
+    buf.putDouble(position + Longs.BYTES, 0);
   }
 
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    if (buf.getLong(position) == -1) {
-      buf.putLong(position, timeSelector.get());
+    long time = timeSelector.get();
+    long firstTime = buf.getLong(position);
+    if (time < firstTime) {
+      buf.putLong(position, time);
       buf.putDouble(position + Longs.BYTES, valueSelector.get());
     }
   }
@@ -56,7 +58,7 @@ public class DoubleFirstBufferAggregator implements BufferAggregator
   @Override
   public Object get(ByteBuffer buf, int position)
   {
-    return new Pair<>(buf.getLong(position), buf.getDouble(position + Longs.BYTES));
+    return new SerializablePair<>(buf.getLong(position), buf.getDouble(position + Longs.BYTES));
   }
 
   @Override

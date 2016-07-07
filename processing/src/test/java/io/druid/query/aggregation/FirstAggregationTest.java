@@ -20,6 +20,7 @@
 package io.druid.query.aggregation;
 
 import com.metamx.common.Pair;
+import io.druid.collections.SerializablePair;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.column.Column;
@@ -41,14 +42,14 @@ public class FirstAggregationTest
 
   private long[] longValues = {62, 8, 54, 2};
   private float[] floatValues = {1.1f, 2.7f, 3.5f, 1.3f};
-  private long[] times = {1467225096, 146722598, 1467225099, 1467225111};
+  private long[] times = {1467225096, 1467225098, 1467225099, 1467225111};
 
   public FirstAggregationTest() throws Exception
   {
     String doubleSpecJson = "{\"type\": \"first\", \"name\": \"billy\", \"fieldName\": \"nilly\", \"value\": \"double\"}";
     String longSpecJson = "{\"type\": \"first\", \"name\": \"bill\", \"fieldName\": \"nnn\", \"value\": \"long\"}";
-    doubleFirstAggFactory = new DefaultObjectMapper().readValue(doubleSpecJson , FirstAggregatorFactory.class);
-    longFirstAggFactory = new DefaultObjectMapper().readValue(longSpecJson , FirstAggregatorFactory.class);
+    doubleFirstAggFactory = new DefaultObjectMapper().readValue(doubleSpecJson, FirstAggregatorFactory.class);
+    longFirstAggFactory = new DefaultObjectMapper().readValue(longSpecJson, FirstAggregatorFactory.class);
   }
 
   @Before
@@ -76,21 +77,22 @@ public class FirstAggregationTest
     aggregate(timeSelector, floatSelector, agg);
     aggregate(timeSelector, floatSelector, agg);
 
-    Pair<Long, Double> result = (Pair<Long, Double>)agg.get();
+    Pair<Long, Double> result = (Pair<Long, Double>) agg.get();
 
     Assert.assertEquals(times[0], result.lhs.longValue());
     Assert.assertEquals(floatValues[0], result.rhs, 0.0001);
-    Assert.assertEquals((long)floatValues[0], agg.getLong());
+    Assert.assertEquals((long) floatValues[0], agg.getLong());
     Assert.assertEquals(floatValues[0], agg.getFloat(), 0.0001);
 
     agg.reset();
-    Assert.assertEquals(0, ((Pair<Long, Double>)agg.get()).rhs, 0.0001);
+    Assert.assertEquals(0, ((Pair<Long, Double>) agg.get()).rhs, 0.0001);
   }
 
   @Test
   public void testDoubleFirstBufferAggregator()
   {
-    DoubleFirstBufferAggregator agg = (DoubleFirstBufferAggregator) doubleFirstAggFactory.factorizeBuffered(colSelectorFactory);
+    DoubleFirstBufferAggregator agg = (DoubleFirstBufferAggregator) doubleFirstAggFactory.factorizeBuffered(
+        colSelectorFactory);
 
     ByteBuffer buffer = ByteBuffer.wrap(new byte[doubleFirstAggFactory.getMaxIntermediateSize()]);
     agg.init(buffer, 0);
@@ -100,7 +102,7 @@ public class FirstAggregationTest
     aggregate(timeSelector, floatSelector, agg, buffer, 0);
     aggregate(timeSelector, floatSelector, agg, buffer, 0);
 
-    Pair<Long, Double> result = (Pair<Long, Double>)agg.get(buffer, 0);
+    Pair<Long, Double> result = (Pair<Long, Double>) agg.get(buffer, 0);
 
     Assert.assertEquals(times[0], result.lhs.longValue());
     Assert.assertEquals(floatValues[0], result.rhs, 0.0001);
@@ -120,7 +122,7 @@ public class FirstAggregationTest
     aggregate(timeSelector, longSelector, agg);
     aggregate(timeSelector, longSelector, agg);
 
-    Pair<Long, Long> result = (Pair<Long, Long>)agg.get();
+    Pair<Long, Long> result = (Pair<Long, Long>) agg.get();
 
     Assert.assertEquals(times[0], result.lhs.longValue());
     Assert.assertEquals(longValues[0], result.rhs.longValue());
@@ -128,7 +130,7 @@ public class FirstAggregationTest
     Assert.assertEquals(longValues[0], agg.getFloat(), 0.0001);
 
     agg.reset();
-    Assert.assertEquals(0, ((Pair<Long, Long>)agg.get()).rhs.longValue());
+    Assert.assertEquals(0, ((Pair<Long, Long>) agg.get()).rhs.longValue());
   }
 
   @Test
@@ -144,7 +146,7 @@ public class FirstAggregationTest
     aggregate(timeSelector, longSelector, agg, buffer, 0);
     aggregate(timeSelector, longSelector, agg, buffer, 0);
 
-    Pair<Long, Long> result = (Pair<Long, Long>)agg.get(buffer, 0);
+    Pair<Long, Long> result = (Pair<Long, Long>) agg.get(buffer, 0);
 
     Assert.assertEquals(times[0], result.lhs.longValue());
     Assert.assertEquals(longValues[0], result.rhs.longValue());
@@ -155,8 +157,8 @@ public class FirstAggregationTest
   @Test
   public void testCombine()
   {
-    Pair pair1 = new Pair<>(1467225000L, 3.621);
-    Pair pair2 = new Pair<>(1467240000L, 785.4);
+    SerializablePair pair1 = new SerializablePair<>(1467225000L, 3.621);
+    SerializablePair pair2 = new SerializablePair<>(1467240000L, 785.4);
     Assert.assertEquals(pair1, doubleFirstAggFactory.combine(pair1, pair2));
   }
 
@@ -176,14 +178,24 @@ public class FirstAggregationTest
     Assert.assertFalse(one.equals(three));
   }
 
-  private void aggregate(TestLongColumnSelector timeSelector, TestFloatColumnSelector selector, DoubleFirstAggregator agg)
+  private void aggregate(
+      TestLongColumnSelector timeSelector,
+      TestFloatColumnSelector selector,
+      DoubleFirstAggregator agg
+  )
   {
     agg.aggregate();
     timeSelector.increment();
     selector.increment();
   }
 
-  private void aggregate(TestLongColumnSelector timeSelector, TestFloatColumnSelector selector, DoubleFirstBufferAggregator agg, ByteBuffer buff, int position)
+  private void aggregate(
+      TestLongColumnSelector timeSelector,
+      TestFloatColumnSelector selector,
+      DoubleFirstBufferAggregator agg,
+      ByteBuffer buff,
+      int position
+  )
   {
     agg.aggregate(buff, position);
     timeSelector.increment();
@@ -197,7 +209,13 @@ public class FirstAggregationTest
     selector.increment();
   }
 
-  private void aggregate(TestLongColumnSelector timeSelector, TestLongColumnSelector selector, LongFirstBufferAggregator agg, ByteBuffer buff, int position)
+  private void aggregate(
+      TestLongColumnSelector timeSelector,
+      TestLongColumnSelector selector,
+      LongFirstBufferAggregator agg,
+      ByteBuffer buff,
+      int position
+  )
   {
     agg.aggregate(buff, position);
     timeSelector.increment();
