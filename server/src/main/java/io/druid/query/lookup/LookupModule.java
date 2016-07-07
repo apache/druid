@@ -47,6 +47,7 @@ import io.druid.guice.annotations.Smile;
 import io.druid.initialization.DruidModule;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.ZkPathsConfig;
+import io.druid.server.initialization.jetty.JettyBindings;
 import io.druid.server.listener.announcer.ListenerResourceAnnouncer;
 import io.druid.server.listener.announcer.ListeningAnnouncerConfig;
 import io.druid.server.listener.resource.AbstractListenerHandler;
