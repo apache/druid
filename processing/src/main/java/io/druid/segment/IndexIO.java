@@ -1125,7 +1125,6 @@ public class IndexIO
   {
     String encoding = System.getProperty("file.encoding", "UTF-8");
 
-    final StringBuilder sb = new StringBuilder();
     final String sha1 = DigestUtils.sha1Hex(fileName).substring(0, 6);
     String fnameBase = fileName.replace(File.separator, "_");
 
@@ -1149,6 +1148,7 @@ public class IndexIO
       }
       if (fnameBytes.length > 100) {
         if (fnameBase.length() > 1) {
+          // We loop around until the bytes are fewer than 100
           fnameBase = fnameBase.substring(0, fnameBase.length() / 2);
         } else {
           // length of 1 but byte encoding is > 100... wtf kind of encoding allows that?
@@ -1157,6 +1157,6 @@ public class IndexIO
       }
     } while (fnameBytes.length > 100 && !fnameBase.isEmpty());
 
-    return sb.append(fnameBase).append('.').append(sha1).toString();
+    return fnameBase + '.' + sha1;
   }
 }
