@@ -46,6 +46,8 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
+import io.druid.query.aggregation.FirstAggregatorFactory;
+import io.druid.query.aggregation.LastAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
@@ -440,6 +442,51 @@ public class TopNQueryRunnerTest
                         .put("market", "upfront")
                         .put(QueryRunnerTestHelper.uniqueMetric, QueryRunnerTestHelper.UNIQUES_2)
                         .put(QueryRunnerTestHelper.hyperUniqueFinalizingPostAggMetric, QueryRunnerTestHelper.UNIQUES_2)
+                        .build()
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testTopNOverFirstLastAggregator()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryRunnerTestHelper.allGran)
+        .dimension(QueryRunnerTestHelper.marketDimension)
+        .metric("last")
+        .threshold(3)
+        .intervals(QueryRunnerTestHelper.fullOnInterval)
+        .aggregators(
+            Arrays.<AggregatorFactory>asList(
+                new FirstAggregatorFactory("first", "index", "long"),
+                new LastAggregatorFactory("last", "index", "long")
+            )
+        )
+        .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-01-12T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "spot")
+                        .put("first", 100L)
+                        .put("last", 120L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "total_market")
+                        .put("first", 1000L)
+                        .put("last", 1029L)
+                        .build(),
+                    ImmutableMap.<String, Object>builder()
+                        .put("market", "upfront")
+                        .put("first", 800L)
+                        .put("last", 780L)
                         .build()
                 )
             )

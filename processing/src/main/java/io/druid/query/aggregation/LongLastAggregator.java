@@ -19,7 +19,7 @@
 
 package io.druid.query.aggregation;
 
-import com.metamx.common.Pair;
+import io.druid.collections.SerializablePair;
 import io.druid.segment.LongColumnSelector;
 
 public class LongLastAggregator implements Aggregator
@@ -43,21 +43,24 @@ public class LongLastAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    lastTime = timeSelector.get();
-    lastValue = valueSelector.get();
+    long time = timeSelector.get();
+    if (time >= lastTime) {
+      lastTime = timeSelector.get();
+      lastValue = valueSelector.get();
+    }
   }
 
   @Override
   public void reset()
   {
-    lastTime = -1;
+    lastTime = Long.MIN_VALUE;
     lastValue = 0;
   }
 
   @Override
   public Object get()
   {
-    return new Pair<>(lastTime, lastValue);
+    return new SerializablePair<>(lastTime, lastValue);
   }
 
   @Override

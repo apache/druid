@@ -50,8 +50,6 @@ import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryToolChest;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.aggregation.FirstAggregatorFactory;
-import io.druid.query.aggregation.LastAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
 import io.druid.query.dimension.DefaultDimensionSpec;
@@ -106,8 +104,8 @@ import java.util.concurrent.TimeUnit;
 
 @State(Scope.Benchmark)
 @Fork(jvmArgsPrepend = "-server", value = 1)
-@Warmup(iterations = 0)
-@Measurement(iterations = 1)
+@Warmup(iterations = 10)
+@Measurement(iterations = 25)
 public class GroupByBenchmark
 {
   @Param({"4"})

@@ -1573,14 +1573,7 @@ public class GroupByQueryRunnerTest
         .builder()
         .setDataSource(QueryRunnerTestHelper.dataSource)
         .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
-        .setDimensions(
-            Arrays.<DimensionSpec>asList(
-                new DefaultDimensionSpec(
-                    QueryRunnerTestHelper.marketDimension,
-                    QueryRunnerTestHelper.marketDimension
-                )
-            )
-        )
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("market", "market")))
         .setAggregatorSpecs(
             Arrays.asList(
                 new FirstAggregatorFactory("first", "index", "long"),
@@ -5168,6 +5161,49 @@ public class GroupByQueryRunnerTest
     );
 
     // Subqueries are handled by the ToolChest
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
+  public void testSubqueryWithFirstLast()
+  {
+    GroupByQuery subquery = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
+        .setDimensions(ImmutableList.<DimensionSpec>of(new DefaultDimensionSpec("market", "market")))
+        .setAggregatorSpecs(
+            ImmutableList.<AggregatorFactory>of(
+                QueryRunnerTestHelper.rowsCount,
+                new FirstAggregatorFactory("innerfirst", "index", "long"),
+                new LastAggregatorFactory("innerlast", "index", "long")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(subquery)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
+        .setDimensions(Lists.<DimensionSpec>newArrayList())
+        .setAggregatorSpecs(
+            ImmutableList.<AggregatorFactory>of(
+                new FirstAggregatorFactory("first", "innerfirst", "long"),
+                new LastAggregatorFactory("last", "innerlast", "long")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.monthGran)
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-01-01", "first", 100L, "last", 943L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-02-01", "first", 132L, "last", 1101L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-03-01", "first", 153L, "last", 1063L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "first", 135L, "last", 780L)
+    );
+
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
