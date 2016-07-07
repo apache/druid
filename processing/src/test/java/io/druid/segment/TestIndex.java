@@ -178,6 +178,7 @@ public class TestIndex
   {
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(new DateTime("2011-01-12T00:00:00.000Z").getMillis())
+        .withTimestampSpec(new TimestampSpec("ds", "auto", null))
         .withQueryGranularity(QueryGranularities.NONE)
         .withMetrics(METRIC_AGGS)
         .build();
