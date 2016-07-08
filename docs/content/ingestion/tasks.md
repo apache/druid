@@ -116,16 +116,29 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 
 #### IndexSpec
 
-The indexSpec defines segment storage format options to be used at indexing
-time, such as bitmap type, and column compression formats.
+The indexSpec defines segment storage format options to be used at indexing time, such as bitmap type and column
+compression formats. The indexSpec is optional and default parameters will be used if not specified.
 
-The indexSpec is optional and default parameters will be used if not specified.
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|bitmap|Object|Compression format for bitmap indexes. Should be a JSON object; see below for options.|no (defaults to Concise)|
+|dimensionCompression|String|Compression format for dimension columns. Choose from `LZ4`, `LZF`, or `uncompressed`.|no (default == `LZ4`)|
+|metricCompression|String|Compression format for metric columns. Choose from `LZ4`, `LZF`, or `uncompressed`.|no (default == `LZ4`)|
 
-|property|description|possible values|default|required?|
-|--------|-----------|---------------|-------|---------|
-|bitmap|type of bitmap compression to use for inverted indices.|`"concise"`, `"roaring"`|`"concise"`|no|
-|dimensionCompression|compression format for dimension columns|`"uncompressed"`, `"lz4"`, `"lzf"`|`"lz4"`|no|
-|metricCompression|compression format for metric columns, defaults to LZ4|`"lz4"`, `"lzf"`|`"lz4"`|no|
+##### Bitmap types
+
+For Concise bitmaps:
+
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|type|String|Must be `concise`.|yes|
+
+For Roaring bitmaps:
+
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|type|String|Must be `roaring`.|yes|
+|compressRunOnSerialization|Boolean|Use a run-length encoding where it is estimated as more space efficient.|no (default == `true`)|
 
 Segment Merging Tasks
 ---------------------

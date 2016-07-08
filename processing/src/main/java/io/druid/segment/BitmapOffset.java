@@ -32,6 +32,7 @@ import org.roaringbitmap.IntIterator;
 public class BitmapOffset implements Offset
 {
   private static final int INVALID_VALUE = -1;
+  private static final BitmapFactory ROARING_BITMAP_FACTORY = new RoaringBitmapSerdeFactory(false).getBitmapFactory();
 
   private final IntIterator itr;
   private final BitmapFactory bitmapFactory;
@@ -44,13 +45,12 @@ public class BitmapOffset implements Offset
   {
     ImmutableBitmap roaringBitmap = bitmapIndex;
     if (!(bitmapIndex instanceof WrappedImmutableRoaringBitmap)) {
-      final BitmapFactory factory = RoaringBitmapSerdeFactory.bitmapFactory;
-      final MutableBitmap bitmap = factory.makeEmptyMutableBitmap();
+      final MutableBitmap bitmap = ROARING_BITMAP_FACTORY.makeEmptyMutableBitmap();
       final IntIterator iterator = bitmapIndex.iterator();
       while (iterator.hasNext()) {
         bitmap.add(iterator.next());
       }
-      roaringBitmap = factory.makeImmutableBitmap(bitmap);
+      roaringBitmap = ROARING_BITMAP_FACTORY.makeImmutableBitmap(bitmap);
     }
     return ((WrappedImmutableRoaringBitmap) roaringBitmap).getBitmap().getReverseIntIterator();
   }

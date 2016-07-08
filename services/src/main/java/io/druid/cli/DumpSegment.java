@@ -320,7 +320,7 @@ public class DumpSegment extends GuiceRunnable
     if (bitmapFactory instanceof ConciseBitmapFactory) {
       bitmapSerdeFactory = new ConciseBitmapSerdeFactory();
     } else if (bitmapFactory instanceof RoaringBitmapFactory) {
-      bitmapSerdeFactory = new RoaringBitmapSerdeFactory();
+      bitmapSerdeFactory = new RoaringBitmapSerdeFactory(null);
     } else {
       throw new ISE(
           "Don't know which BitmapSerdeFactory to use for BitmapFactory[%s]!",
