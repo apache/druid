@@ -167,7 +167,7 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
   public static String typeStringFromParseSpec(ParseSpec parseSpec)
   {
     StringBuilder builder = new StringBuilder("struct<");
-    builder.append(parseSpec.getTimestampSpec()).append(":string");
+    builder.append(parseSpec.getTimestampSpec().getTimestampColumn()).append(":string");
     if (parseSpec.getDimensionsSpec().getDimensionNames().size() > 0) {
       builder.append(",");
       builder.append(StringUtils.join(parseSpec.getDimensionsSpec().getDimensionNames(), ":string,")).append(":string");
@@ -194,5 +194,22 @@ public class OrcHadoopInputRowParser implements InputRowParser<OrcStruct>
     ));
 
     return table;
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (!(o instanceof OrcHadoopInputRowParser))
+      return false;
+
+    OrcHadoopInputRowParser other = (OrcHadoopInputRowParser)o;
+
+    if (!parseSpec.equals(other.parseSpec))
+      return false;
+
+    if (!typeString.equals(other.typeString))
+      return false;
+
+    return true;
   }
 }

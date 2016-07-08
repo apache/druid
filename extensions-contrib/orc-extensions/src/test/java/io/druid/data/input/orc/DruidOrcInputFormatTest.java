@@ -42,6 +42,7 @@ import org.apache.orc.TypeDescription;
 import org.apache.orc.Writer;
 import org.joda.time.DateTime;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -58,22 +59,32 @@ public class DruidOrcInputFormatTest
   String col1 = "bar";
   String[] col2 = {"dat1", "dat2", "dat3"};
   double val1 = 1.1;
+  Job job;
+  HadoopDruidIndexerConfig config;
+  File testFile;
+  Path path;
+  FileSplit split;
 
-  @Test
-  public void test() throws IOException, InterruptedException
+  @Before
+  public void setUp() throws IOException
   {
     Configuration conf = new Configuration();
-    Job job = Job.getInstance(conf);
+    job = Job.getInstance(conf);
 
-    HadoopDruidIndexerConfig config = HadoopDruidIndexerConfig.fromFile(new File(
+    config = HadoopDruidIndexerConfig.fromFile(new File(
         "example/hadoop_orc_job.json"));
 
     config.intoConfiguration(job);
 
-    File testFile = makeOrcFile();
-    Path path = new Path(testFile.getAbsoluteFile().toURI());
-    FileSplit split = new FileSplit(path, 0, testFile.length(), null);
+    testFile = makeOrcFile();
+    path = new Path(testFile.getAbsoluteFile().toURI());
+    split = new FileSplit(path, 0, testFile.length(), null);
 
+  }
+
+  @Test
+  public void testRead() throws IOException, InterruptedException
+  {
     InputFormat inputFormat = ReflectionUtils.newInstance(OrcNewInputFormat.class, job.getConfiguration());
 
     TaskAttemptContext context = new TaskAttemptContextImpl(job.getConfiguration(), new TaskAttemptID());
