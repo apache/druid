@@ -91,7 +91,7 @@ public class IndexMergerTest
                     false
                 ),
                 ImmutableSet.of(
-                    new RoaringBitmapSerdeFactory(),
+                    new RoaringBitmapSerdeFactory(null),
                     new ConciseBitmapSerdeFactory()
                 ),
                 ImmutableSet.of(
