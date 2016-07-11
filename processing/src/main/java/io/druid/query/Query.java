@@ -28,6 +28,7 @@ import io.druid.query.filter.DimFilter;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.query.search.search.SearchQuery;
+import io.druid.query.select.SelectMetaQuery;
 import io.druid.query.select.SelectQuery;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.query.timeboundary.TimeBoundaryQuery;
@@ -47,6 +48,7 @@ import java.util.Map;
     @JsonSubTypes.Type(name = Query.GROUP_BY, value = GroupByQuery.class),
     @JsonSubTypes.Type(name = Query.SEGMENT_METADATA, value = SegmentMetadataQuery.class),
     @JsonSubTypes.Type(name = Query.SELECT, value = SelectQuery.class),
+    @JsonSubTypes.Type(name = Query.SELECT_META, value = SelectMetaQuery.class),
     @JsonSubTypes.Type(name = Query.TOPN, value = TopNQuery.class),
     @JsonSubTypes.Type(name = Query.DATASOURCE_METADATA, value = DataSourceMetadataQuery.class)
 
@@ -59,6 +61,7 @@ public interface Query<T>
   String GROUP_BY = "groupBy";
   String SEGMENT_METADATA = "segmentMetadata";
   String SELECT = "select";
+  String SELECT_META = "selectMeta";
   String TOPN = "topN";
   String DATASOURCE_METADATA = "dataSourceMetadata";
 

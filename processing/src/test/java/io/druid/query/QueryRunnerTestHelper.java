@@ -317,6 +317,18 @@ public class QueryRunnerTestHelper
     };
   }
 
+  public static <T, QueryType extends Query<T>> List<Object[]> makeQueryRunnersWithName(
+      QueryRunnerFactory<T, QueryType> factory
+  )
+      throws IOException
+  {
+    List runners = makeQueryRunners(factory);
+    return Arrays.asList(
+        new Object[] {runners.get(0), "incremental"},
+        new Object[] {runners.get(1), "mmaped"},
+        new Object[] {runners.get(2), "merged"});
+  }
+
   public static <T, QueryType extends Query<T>> List<QueryRunner<T>> makeQueryRunners(
       QueryRunnerFactory<T, QueryType> factory
   )
