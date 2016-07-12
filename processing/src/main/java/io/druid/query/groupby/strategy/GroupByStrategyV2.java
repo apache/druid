@@ -21,6 +21,7 @@ package io.druid.query.groupby.strategy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -55,6 +56,8 @@ import io.druid.segment.StorageAdapter;
 import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class GroupByStrategyV2 implements GroupByStrategy
@@ -115,14 +118,33 @@ public class GroupByStrategyV2 implements GroupByStrategy
     final QueryGranularity gran = query.getGranularity();
     final String fudgeTimestamp;
     if (query.getContextValue(CTX_KEY_FUDGE_TIMESTAMP, "").isEmpty() && gran instanceof AllGranularity) {
-      final long timeStart = query.getIntervals().get(0).getStartMillis();
-      fudgeTimestamp = String.valueOf(
-          new DateTime(gran.iterable(timeStart, timeStart + 1).iterator().next()).getMillis()
-      );
+      fudgeTimestamp = String.valueOf(query.getIntervals().get(0).getStartMillis());
     } else {
       fudgeTimestamp = query.getContextValue(CTX_KEY_FUDGE_TIMESTAMP, "");
     }
 
+    // Maybe apply postAggregators.
+    final Function<Row, Row> function;
+    if (query.getPostAggregatorSpecs().isEmpty()) {
+      function = Functions.identity();
+    } else {
+      function = new Function<Row, Row>()
+      {
+        @Override
+        public Row apply(final Row row)
+        {
+          Map<String, Object> event = ((MapBasedRow) row).getEvent();
+          boolean updateInplace = MapBasedRow.supportInplaceUpdate(event);
+          if (!updateInplace) {
+            event = Maps.newLinkedHashMap(event);
+          }
+          for (PostAggregator postAggregator : query.getPostAggregatorSpecs()) {
+            event.put(postAggregator.getName(), postAggregator.compute(event));
+          }
+          return updateInplace ? row : new MapBasedRow(row.getTimestamp(), event);
+        }
+      };
+    }
     return query.applyLimit(
         Sequences.map(
             mergingQueryRunner.run(
@@ -148,32 +170,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
                 ),
                 responseContext
             ),
-            new Function<Row, Row>()
-            {
-              @Override
-              public Row apply(final Row row)
-              {
-                // Maybe apply postAggregators.
-
-                if (query.getPostAggregatorSpecs().isEmpty()) {
-                  return row;
-                }
-
-                final Map<String, Object> newMap;
-
-                if (query.getPostAggregatorSpecs().isEmpty()) {
-                  newMap = ((MapBasedRow) row).getEvent();
-                } else {
-                  newMap = Maps.newLinkedHashMap(((MapBasedRow) row).getEvent());
-
-                  for (PostAggregator postAggregator : query.getPostAggregatorSpecs()) {
-                    newMap.put(postAggregator.getName(), postAggregator.compute(newMap));
-                  }
-                }
-
-                return new MapBasedRow(row.getTimestamp(), newMap);
-              }
-            }
+            function
         )
     );
   }

@@ -25,10 +25,13 @@ import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.AllGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.groupby.GroupByQuery;
 import org.joda.time.DateTime;
 
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 public class GroupByBinaryFnV2 implements BinaryFn<Row, Row, Row>
@@ -49,28 +52,22 @@ public class GroupByBinaryFnV2 implements BinaryFn<Row, Row, Row>
       return arg1;
     }
 
-    final Map<String, Object> newMap = Maps.newHashMapWithExpectedSize(
-        query.getDimensions().size()
-        + query.getAggregatorSpecs().size()
-    );
-
-    // Add dimensions
-    for (DimensionSpec dimension : query.getDimensions()) {
-      newMap.put(dimension.getOutputName(), arg1.getRaw(dimension.getOutputName()));
+    Map<String, Object> event = ((MapBasedRow) arg1).getEvent();
+    if (!MapBasedRow.supportInplaceUpdate(event)) {
+      event = Maps.newLinkedHashMap(event);
     }
-
     // Add aggregations
     for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {
-      newMap.put(
-          aggregatorFactory.getName(),
+      final String name = aggregatorFactory.getName();
+      event.put(
+          name,
           aggregatorFactory.combine(
-              arg1.getRaw(aggregatorFactory.getName()),
-              arg2.getRaw(aggregatorFactory.getName())
+              arg1.getRaw(name),
+              arg2.getRaw(name)
           )
       );
     }
-
-    return new MapBasedRow(adjustTimestamp(arg1), newMap);
+    return new MapBasedRow(adjustTimestamp(arg1), event);
   }
 
   private DateTime adjustTimestamp(final Row row)

@@ -75,6 +75,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -335,13 +336,17 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       {
         Row preRow = preCompute.apply(input);
         if (preRow instanceof MapBasedRow) {
-          MapBasedRow preMapRow = (MapBasedRow) preRow;
-          Map<String, Object> event = Maps.newHashMap(preMapRow.getEvent());
-          for (String dim : optimizedDims) {
-            final Object eventVal = event.get(dim);
-            event.put(dim, extractionFnMap.get(dim).apply(eventVal));
+          Map<String, Object> event = ((MapBasedRow) preRow).getEvent();
+          boolean updateInplace = MapBasedRow.supportInplaceUpdate(event);
+          if (!updateInplace) {
+            event = Maps.newLinkedHashMap(event);
           }
-          return new MapBasedRow(preMapRow.getTimestamp(), event);
+          for (Map.Entry<String, ExtractionFn> entry : extractionFnMap.entrySet()) {
+            final String dim = entry.getKey();
+            final ExtractionFn function = entry.getValue();
+            event.put(dim, function.apply(event.get(dim)));
+          }
+          return updateInplace ? preRow : new MapBasedRow(preRow.getTimestamp(), event);
         } else {
           return preRow;
         }

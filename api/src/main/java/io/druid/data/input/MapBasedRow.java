@@ -30,6 +30,8 @@ import org.joda.time.DateTime;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -38,6 +40,11 @@ import java.util.regex.Pattern;
  */
 public class MapBasedRow implements Row
 {
+  public static boolean supportInplaceUpdate(Map event)
+  {
+    return event instanceof HashMap || event instanceof LinkedHashMap;
+  }
+
   private static final Logger log = new Logger(MapBasedRow.class);
   private static final Function<Object, String> TO_STRING_INCLUDING_NULL = new Function<Object, String>() {
     @Override
