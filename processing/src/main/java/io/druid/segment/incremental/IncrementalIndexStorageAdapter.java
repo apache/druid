@@ -33,6 +33,7 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.filter.DruidCompositePredicate;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
@@ -726,7 +727,20 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     }
 
     @Override
-    public ValueMatcher makeValueMatcher(String dimension, final Predicate<Object> predicate)
+    public ValueMatcher makeValueMatcher(String dimension, final DruidCompositePredicate predicate)
+    {
+      ValueType type = getTypeForDimension(dimension);
+      switch (type) {
+        case LONG:
+          return makeLongValueMatcher(dimension, predicate);
+        case STRING:
+          return makeStringValueMatcher(dimension, predicate);
+        default:
+          throw new UnsupportedOperationException("Invalid type: " + type);
+      }
+    }
+
+    private ValueMatcher makeStringValueMatcher(String dimension, final Predicate<Object> predicate)
     {
       IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimension);
       if (dimensionDesc == null) {
@@ -755,14 +769,13 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
       };
     }
 
-    @Override
-    public ValueMatcher makeLongValueMatcher(String dimension, DruidLongPredicate predicate)
+    private ValueMatcher makeLongValueMatcher(String dimension, DruidLongPredicate predicate)
     {
+      // __time is the only long column currently supported
       return Filters.getLongPredicateMatcher(getTimeLongColumnSelector(holder), predicate);
     }
 
-    @Override
-    public ValueType getTypeForDimension(String dimension)
+    private ValueType getTypeForDimension(String dimension)
     {
       ColumnCapabilities capabilities = index.getCapabilities(dimension);
       return capabilities == null ? ValueType.STRING : capabilities.getType();

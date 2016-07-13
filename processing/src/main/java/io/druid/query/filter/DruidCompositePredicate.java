@@ -23,6 +23,13 @@ import com.google.common.base.Predicate;
 
 /**
  * Composite predicate class that can accept all supported types
+ *
+ * The apply() method inherited from Predicate<Object> is intended for String values
+ * and any other non-primitive Object types.
+ *
+ * The applyLong() method inherited from DruidLongPredicate is intended for long primitive values.
+ *
+ * A separate method is present for each supported primitive type to avoid boxing (for performance reasons)
  */
 public interface DruidCompositePredicate extends Predicate<Object>, DruidLongPredicate
 {

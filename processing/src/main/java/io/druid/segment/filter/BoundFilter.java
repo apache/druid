@@ -143,15 +143,7 @@ public class BoundFilter implements Filter
   @Override
   public ValueMatcher makeMatcher(ValueMatcherFactory factory)
   {
-    ValueType type = factory.getTypeForDimension(boundDimFilter.getDimension());
-    switch(type) {
-      case STRING:
-        return factory.makeValueMatcher(boundDimFilter.getDimension(), getPredicate());
-      case LONG:
-        return factory.makeLongValueMatcher(boundDimFilter.getDimension(), getPredicate());
-      default:
-        throw new UnsupportedOperationException("invalid type: " + type);
-    }
+    return factory.makeValueMatcher(boundDimFilter.getDimension(), getPredicate());
   }
 
   @Override

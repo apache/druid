@@ -38,6 +38,7 @@ import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BooleanFilter;
+import io.druid.query.filter.DruidCompositePredicate;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.RowOffsetMatcherFactory;
@@ -1049,7 +1050,20 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
 
     @Override
-    public ValueMatcher makeValueMatcher(String dimension, final Predicate<Object> predicate)
+    public ValueMatcher makeValueMatcher(String dimension, final DruidCompositePredicate predicate)
+    {
+      ValueType type = getTypeForDimension(dimension);
+      switch (type) {
+        case LONG:
+          return makeLongValueMatcher(dimension, predicate);
+        case STRING:
+          return makeStringValueMatcher(dimension, predicate);
+        default:
+          throw new UnsupportedOperationException("Invalid type: " + type);
+      }
+    }
+
+    private ValueMatcher makeStringValueMatcher(String dimension, final Predicate<Object> predicate)
     {
       final DimensionSelector selector = cursor.makeDimensionSelector(
           new DefaultDimensionSpec(dimension, dimension)
@@ -1076,8 +1090,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       };
     }
 
-    @Override
-    public ValueMatcher makeLongValueMatcher(String dimension, DruidLongPredicate predicate)
+    private ValueMatcher makeLongValueMatcher(String dimension, final DruidLongPredicate predicate)
     {
       return Filters.getLongPredicateMatcher(
           cursor.makeLongColumnSelector(dimension),
@@ -1085,8 +1098,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       );
     }
 
-    @Override
-    public ValueType getTypeForDimension(String dimension)
+    private ValueType getTypeForDimension(String dimension)
     {
       ColumnCapabilities capabilities = getColumnCapabilites(index, dimension);
       return capabilities == null ? ValueType.STRING : capabilities.getType();

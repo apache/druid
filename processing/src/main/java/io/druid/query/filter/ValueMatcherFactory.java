@@ -53,40 +53,15 @@ public interface ValueMatcherFactory
   /**
    * Create a ValueMatcher that applies a predicate to row values.
    *
-   * The input predicate should accept String and Object inputs.
+   * The caller provides a predicate that can accept all value types supported by Druid.
+   * See {@link DruidCompositePredicate} for more information on the typing expectations for the predicate.
    *
-   * This predicate matcher is intended to be used for String dimensions and any dimensions with non-primitive types.
+   * The ValueMatcherFactory implementation should decide what typed apply() method to use
+   * within the returned ValueMatcher, based on the type of the specified dimension.
    *
    * @param dimension The dimension to filter.
    * @param predicate Predicate to apply to row values
-   * @return An object that applies a predicate to String or non-primitive Object values
+   * @return An object that applies a predicate to row values
    */
-  public ValueMatcher makeValueMatcher(String dimension, Predicate<Object> predicate);
-
-
-  /**
-   * Create a ValueMatcher that applies a predicate to row values.
-   *
-   * The input predicate should accept long primitives.
-   *
-   * This predicate matcher is intended for long columns.
-   * A separate method/predicate type is used to avoid primitive boxing.
-   *
-   * @param dimension The dimension to filter.
-   * @param predicate Predicate to apply to long row values
-   * @return An object that applies a predicate to long values
-   */
-  public ValueMatcher makeLongValueMatcher(String dimension, DruidLongPredicate predicate);
-
-
-  /**
-   * Gets the ValueType of a dimension.
-   *
-   * Used by Filters to determine whether they should create a String/Object predicate
-   * or a primitive-matching predicate.
-   *
-   * @param dimension Get the type of this dimension
-   * @return The ValueType of the dimension.
-   */
-  public ValueType getTypeForDimension(String dimension);
+  public ValueMatcher makeValueMatcher(String dimension, DruidCompositePredicate predicate);
 }

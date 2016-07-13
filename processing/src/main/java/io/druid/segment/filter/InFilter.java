@@ -86,15 +86,7 @@ public class InFilter implements Filter
   @Override
   public ValueMatcher makeMatcher(ValueMatcherFactory factory)
   {
-    ValueType type = factory.getTypeForDimension(dimension);
-    switch (type) {
-      case STRING:
-        return factory.makeValueMatcher(dimension, getPredicate());
-      case LONG:
-        return factory.makeLongValueMatcher(dimension, getPredicate());
-      default:
-        throw new UnsupportedOperationException("invalid type: " + type);
-    }
+    return factory.makeValueMatcher(dimension, getPredicate());
   }
 
   @Override

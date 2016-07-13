@@ -78,15 +78,7 @@ public class DimensionPredicateFilter implements Filter
   @Override
   public ValueMatcher makeMatcher(ValueMatcherFactory factory)
   {
-    ValueType type = factory.getTypeForDimension(dimension);
-    switch (type) {
-      case STRING:
-        return factory.makeValueMatcher(dimension, predicate);
-      case LONG:
-        return factory.makeLongValueMatcher(dimension, predicate);
-      default:
-        throw new UnsupportedOperationException("invalid type: " + type);
-    }
+    return factory.makeValueMatcher(dimension, predicate);
   }
 
   @Override

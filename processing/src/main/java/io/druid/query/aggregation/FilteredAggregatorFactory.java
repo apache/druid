@@ -25,6 +25,7 @@ import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.DruidCompositePredicate;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
@@ -267,8 +268,20 @@ public class FilteredAggregatorFactory extends AggregatorFactory
       };
     }
 
-    @Override
-    public ValueMatcher makeValueMatcher(final String dimension, final Predicate<Object> predicate)
+    public ValueMatcher makeValueMatcher(final String dimension, final DruidCompositePredicate predicate)
+    {
+      ValueType type = getTypeForDimension(dimension);
+      switch (type) {
+        case LONG:
+          return makeLongValueMatcher(dimension, predicate);
+        case STRING:
+          return makeStringValueMatcher(dimension, predicate);
+        default:
+          throw new UnsupportedOperationException("Invalid type: " + type);
+      }
+    }
+
+    public ValueMatcher makeStringValueMatcher(final String dimension, final Predicate<Object> predicate)
     {
       final DimensionSelector selector = columnSelectorFactory.makeDimensionSelector(
           new DefaultDimensionSpec(dimension, dimension)
@@ -311,8 +324,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
       };
     }
 
-    @Override
-    public ValueMatcher makeLongValueMatcher(String dimension, DruidLongPredicate predicate)
+    private ValueMatcher makeLongValueMatcher(String dimension, DruidLongPredicate predicate)
     {
       return Filters.getLongPredicateMatcher(
           columnSelectorFactory.makeLongColumnSelector(dimension),
@@ -320,8 +332,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
       );
     }
 
-    @Override
-    public ValueType getTypeForDimension(String dimension)
+    private ValueType getTypeForDimension(String dimension)
     {
       // FilteredAggregatorFactory is sometimes created from a ColumnSelectorFactory that
       // has no knowledge of column capabilities/types.

@@ -71,16 +71,7 @@ public class JavaScriptFilter implements Filter
   @Override
   public ValueMatcher makeMatcher(ValueMatcherFactory factory)
   {
-    // suboptimal, since we need create one context per call to predicate.apply()
-    ValueType type = factory.getTypeForDimension(dimension);
-    switch (type) {
-      case STRING:
-        return factory.makeValueMatcher(dimension, predicate);
-      case LONG:
-        return factory.makeLongValueMatcher(dimension, predicate);
-      default:
-        throw new UnsupportedOperationException("invalid type: " + type);
-    }
+    return factory.makeValueMatcher(dimension, predicate);
   }
 
   @Override
