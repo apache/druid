@@ -674,6 +674,9 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
     @Override
     public ColumnCapabilities getColumnCapabilities(String columnName)
     {
+      // getColumnCapabilities() is only used by FilteredAggregatorFactory for determining dimension types.
+      // Since FilteredAggregatorFactory only works with ColumnSelectorFactory implementations
+      // that support makeDimensionSelector(), this method is also left unsupported.
       throw new UnsupportedOperationException();
     }
   }
