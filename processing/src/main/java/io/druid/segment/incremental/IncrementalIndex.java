@@ -1084,6 +1084,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
    * also keeps compare result cache if user specified `compareCacheEntry` in dimension descriptor
    * with positive value n, cache uses approximately n ^ 2 / 8 bytes
    *
+   * useful only for low cardinality dimensions
+   *
    * with 1024, (1024 ^ 2) / 2 / 4 = 128KB will be used for cache
    * `/ 2` comes from that a.compareTo(b) = -b.compareTo(a)
    * `/ 4` comes from that each entry is stored by using 2 bits
@@ -1098,7 +1100,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     NullValueConverterDimDim(DimDim delegate, int compareCacheEntry)
     {
       this.delegate = delegate;
-      this.compareCacheEntry = Math.min(compareCacheEntry, 4096);  // max 2M
+      this.compareCacheEntry = compareCacheEntry = Math.min(compareCacheEntry, 8192);  // occupies max 8M
       this.cache = compareCacheEntry > 0 ? new byte[(compareCacheEntry * (compareCacheEntry - 1) + 8) / 8] : null;
     }
 
@@ -1156,7 +1158,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       if (cache != null && lhsIdx < compareCacheEntry && rhsIdx < compareCacheEntry) {
         final boolean leftToRight = lhsIdx > rhsIdx;
         final int[] cacheIndex = toIndex(lhsIdx, rhsIdx, leftToRight);
-        byte encoded = getCache(cacheIndex);
+        final byte encoded = getCache(cacheIndex);
         if (encoded == ENCODED_NOT_EVAL) {
           final int compare = delegate.compare(lhsIdx, rhsIdx);
           setCache(cacheIndex, encode(compare, leftToRight));

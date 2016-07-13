@@ -27,7 +27,18 @@ public class StringDimensionSchema extends DimensionSchema
 {
   @JsonCreator
   public static StringDimensionSchema create(String name) {
-    return new StringDimensionSchema(name, -1);
+    int index = name.indexOf("?");
+    int compareCacheEntry = -1;
+    if (index > 0) {
+      try {
+        compareCacheEntry = Integer.parseInt(name.substring(index + 1));
+        name = name.substring(0, index);
+      }
+      catch (NumberFormatException e) {
+        // ignore
+      }
+    }
+    return new StringDimensionSchema(name, compareCacheEntry);
   }
 
   private final int compareCacheEntry;
