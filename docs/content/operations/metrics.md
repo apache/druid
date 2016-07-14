@@ -103,7 +103,7 @@ These metrics are only available if the RealtimeMetricsMonitor is included in th
 |`ingest/persists/count`|Number of times persist occurred.|dataSource.|Depends on configuration.|
 |`ingest/persists/time`|Milliseconds spent doing intermediate persist.|dataSource.|Depends on configuration. Generally a few minutes at most.|
 |`ingest/persists/cpu`|Cpu time in Nanoseconds spent on doing intermediate persist.|dataSource.|Depends on configuration. Generally a few minutes at most.|
-|`ingest/persists/backPressure`|Number of persists pending.|dataSource.|0|
+|`ingest/persists/backPressure`|Milliseconds spent creating persist tasks and blocking waiting for them to finish.|dataSource.|0 or very low|
 |`ingest/persists/failed`|Number of persists that failed.|dataSource.|0|
 |`ingest/handoff/failed`|Number of handoffs that failed.|dataSource.|0|
 |`ingest/merge/time`|Milliseconds spent merging intermediate segments|dataSource.|Depends on configuration. Generally a few minutes at most.|
