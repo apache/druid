@@ -20,14 +20,12 @@
 package io.druid.benchmark.datagen;
 
 import com.google.common.base.Function;
-import com.google.common.base.Predicate;
-import com.google.common.collect.Iterables;
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -79,7 +77,9 @@ public class BenchmarkDataGenerator
     this.seed = seed;
 
     this.startTime = interval.getStartMillis();
-    this.endTime = interval.getEndMillis();
+    this.endTime = interval.getEndMillis() - 1;
+
+    Preconditions.checkArgument(endTime >= startTime, "endTime >= startTime");
 
     long timeDelta = endTime - startTime;
     this.timestampIncrement = timeDelta / (numRows * 1.0);
@@ -104,7 +104,7 @@ public class BenchmarkDataGenerator
     this.currentTime = startTime;
 
     dimensionNames = new ArrayList<>();
-    for (BenchmarkColumnSchema schema: columnSchemas) {
+    for (BenchmarkColumnSchema schema : columnSchemas) {
       if (!schema.isMetric()) {
         dimensionNames.add(schema.getName());
       }
