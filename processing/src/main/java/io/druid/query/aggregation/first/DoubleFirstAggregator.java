@@ -17,22 +17,24 @@
  * under the License.
  */
 
-package io.druid.query.aggregation;
+package io.druid.query.aggregation.first;
 
 import io.druid.collections.SerializablePair;
+import io.druid.query.aggregation.Aggregator;
+import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 
-public class LongFirstAggregator implements Aggregator
+public class DoubleFirstAggregator implements Aggregator
 {
 
-  private final LongColumnSelector valueSelector;
+  private final FloatColumnSelector valueSelector;
   private final LongColumnSelector timeSelector;
   private final String name;
 
   long firstTime;
-  long firstValue;
+  double firstValue;
 
-  public LongFirstAggregator(String name, LongColumnSelector valueSelector, LongColumnSelector timeSelector)
+  public DoubleFirstAggregator(String name, FloatColumnSelector valueSelector, LongColumnSelector timeSelector)
   {
     this.name = name;
     this.valueSelector = valueSelector;
@@ -85,6 +87,7 @@ public class LongFirstAggregator implements Aggregator
   @Override
   public long getLong()
   {
-    return firstValue;
+    return (long) firstValue;
   }
 }
+

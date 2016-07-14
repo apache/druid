@@ -17,65 +17,76 @@
  * under the License.
  */
 
-package io.druid.query.aggregation;
+package io.druid.query.aggregation.last;
 
-import com.google.common.primitives.Longs;
 import io.druid.collections.SerializablePair;
+import io.druid.query.aggregation.Aggregator;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 
-import java.nio.ByteBuffer;
-
-public class DoubleLastBufferAggregator implements BufferAggregator
+public class DoubleLastAggregator implements Aggregator
 {
-  private final LongColumnSelector timeSelector;
+
   private final FloatColumnSelector valueSelector;
+  private final LongColumnSelector timeSelector;
+  private final String name;
 
-  public DoubleLastBufferAggregator(LongColumnSelector timeSelector, FloatColumnSelector valueSelector)
+  long lastTime;
+  double lastValue;
+
+  public DoubleLastAggregator(String name, FloatColumnSelector valueSelector, LongColumnSelector timeSelector)
   {
-    this.timeSelector = timeSelector;
+    this.name = name;
     this.valueSelector = valueSelector;
+    this.timeSelector = timeSelector;
+
+    reset();
   }
 
   @Override
-  public void init(ByteBuffer buf, int position)
-  {
-    buf.putLong(position, Long.MIN_VALUE);
-    buf.putDouble(position + Longs.BYTES, 0);
-  }
-
-  @Override
-  public void aggregate(ByteBuffer buf, int position)
+  public void aggregate()
   {
     long time = timeSelector.get();
-    long lastTime = buf.getLong(position);
     if (time >= lastTime) {
-      buf.putLong(position, time);
-      buf.putDouble(position + Longs.BYTES, valueSelector.get());
+      lastTime = timeSelector.get();
+      lastValue = valueSelector.get();
     }
   }
 
   @Override
-  public Object get(ByteBuffer buf, int position)
+  public void reset()
   {
-    return new SerializablePair<>(buf.getLong(position), buf.getDouble(position + Longs.BYTES));
+    lastTime = Long.MIN_VALUE;
+    lastValue = 0;
   }
 
   @Override
-  public float getFloat(ByteBuffer buf, int position)
+  public Object get()
   {
-    return (float) buf.getDouble(position + Longs.BYTES);
+    return new SerializablePair<>(lastTime, lastValue);
   }
 
   @Override
-  public long getLong(ByteBuffer buf, int position)
+  public float getFloat()
   {
-    return (long) buf.getDouble(position + Longs.BYTES);
+    return (float) lastValue;
+  }
+
+  @Override
+  public String getName()
+  {
+    return name;
   }
 
   @Override
   public void close()
   {
-    // no resources to cleanup
+
+  }
+
+  @Override
+  public long getLong()
+  {
+    return (long) lastValue;
   }
 }

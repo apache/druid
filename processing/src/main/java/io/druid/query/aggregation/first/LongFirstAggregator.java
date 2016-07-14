@@ -17,21 +17,23 @@
  * under the License.
  */
 
-package io.druid.query.aggregation;
+package io.druid.query.aggregation.first;
 
 import io.druid.collections.SerializablePair;
+import io.druid.query.aggregation.Aggregator;
 import io.druid.segment.LongColumnSelector;
 
-public class LongLastAggregator implements Aggregator
+public class LongFirstAggregator implements Aggregator
 {
+
   private final LongColumnSelector valueSelector;
   private final LongColumnSelector timeSelector;
   private final String name;
 
-  long lastTime;
-  long lastValue;
+  long firstTime;
+  long firstValue;
 
-  public LongLastAggregator(String name, LongColumnSelector valueSelector, LongColumnSelector timeSelector)
+  public LongFirstAggregator(String name, LongColumnSelector valueSelector, LongColumnSelector timeSelector)
   {
     this.name = name;
     this.valueSelector = valueSelector;
@@ -44,29 +46,29 @@ public class LongLastAggregator implements Aggregator
   public void aggregate()
   {
     long time = timeSelector.get();
-    if (time >= lastTime) {
-      lastTime = timeSelector.get();
-      lastValue = valueSelector.get();
+    if (time < firstTime) {
+      firstTime = time;
+      firstValue = valueSelector.get();
     }
   }
 
   @Override
   public void reset()
   {
-    lastTime = Long.MIN_VALUE;
-    lastValue = 0;
+    firstTime = Long.MAX_VALUE;
+    firstValue = 0;
   }
 
   @Override
   public Object get()
   {
-    return new SerializablePair<>(lastTime, lastValue);
+    return new SerializablePair<>(firstTime, firstValue);
   }
 
   @Override
   public float getFloat()
   {
-    return (float) lastValue;
+    return (float) firstValue;
   }
 
   @Override
@@ -84,6 +86,6 @@ public class LongLastAggregator implements Aggregator
   @Override
   public long getLong()
   {
-    return lastValue;
+    return firstValue;
   }
 }

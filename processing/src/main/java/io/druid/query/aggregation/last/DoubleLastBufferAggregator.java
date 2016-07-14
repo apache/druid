@@ -17,21 +17,22 @@
  * under the License.
  */
 
-package io.druid.query.aggregation;
+package io.druid.query.aggregation.last;
 
 import com.google.common.primitives.Longs;
 import io.druid.collections.SerializablePair;
+import io.druid.query.aggregation.BufferAggregator;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 
 import java.nio.ByteBuffer;
 
-public class DoubleFirstBufferAggregator implements BufferAggregator
+public class DoubleLastBufferAggregator implements BufferAggregator
 {
   private final LongColumnSelector timeSelector;
   private final FloatColumnSelector valueSelector;
 
-  public DoubleFirstBufferAggregator(LongColumnSelector timeSelector, FloatColumnSelector valueSelector)
+  public DoubleLastBufferAggregator(LongColumnSelector timeSelector, FloatColumnSelector valueSelector)
   {
     this.timeSelector = timeSelector;
     this.valueSelector = valueSelector;
@@ -40,7 +41,7 @@ public class DoubleFirstBufferAggregator implements BufferAggregator
   @Override
   public void init(ByteBuffer buf, int position)
   {
-    buf.putLong(position, Long.MAX_VALUE);
+    buf.putLong(position, Long.MIN_VALUE);
     buf.putDouble(position + Longs.BYTES, 0);
   }
 
@@ -48,8 +49,8 @@ public class DoubleFirstBufferAggregator implements BufferAggregator
   public void aggregate(ByteBuffer buf, int position)
   {
     long time = timeSelector.get();
-    long firstTime = buf.getLong(position);
-    if (time < firstTime) {
+    long lastTime = buf.getLong(position);
+    if (time >= lastTime) {
       buf.putLong(position, time);
       buf.putDouble(position + Longs.BYTES, valueSelector.get());
     }
