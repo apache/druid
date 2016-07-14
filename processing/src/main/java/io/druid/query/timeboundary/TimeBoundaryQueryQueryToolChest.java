@@ -109,7 +109,7 @@ public class TimeBoundaryQueryQueryToolChest
   @Override
   public ServiceMetricEvent.Builder makeMetricBuilder(TimeBoundaryQuery query)
   {
-    return new ServiceMetricEvent.Builder()
+    return DruidMetrics.makePartialQueryTimeMetric(query)
             .setDimension(DruidMetrics.DATASOURCE, DataSourceUtil.getMetricName(query.getDataSource()))
             .setDimension(DruidMetrics.TYPE, query.getType());
   }

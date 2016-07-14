@@ -28,6 +28,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.guice.http.DruidHttpClientConfig;
+import io.druid.query.QueryToolChestWarehouse;
 import io.druid.server.AsyncQueryForwardingServlet;
 import io.druid.server.initialization.jetty.JettyServerInitUtils;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
@@ -46,6 +47,7 @@ import org.eclipse.jetty.servlet.ServletHolder;
  */
 public class RouterJettyServerInitializer implements JettyServerInitializer
 {
+  private final QueryToolChestWarehouse warehouse;
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
   private final QueryHostFinder hostFinder;
@@ -56,6 +58,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
 
   @Inject
   public RouterJettyServerInitializer(
+      QueryToolChestWarehouse warehouse,
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper smileMapper,
       QueryHostFinder hostFinder,
@@ -65,6 +68,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
       RequestLogger requestLogger
   )
   {
+    this.warehouse = warehouse;
     this.jsonMapper = jsonMapper;
     this.smileMapper = smileMapper;
     this.hostFinder = hostFinder;
@@ -82,6 +86,7 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
     root.addServlet(new ServletHolder(new DefaultServlet()), "/*");
 
     final AsyncQueryForwardingServlet asyncQueryForwardingServlet = new AsyncQueryForwardingServlet(
+        warehouse,
         jsonMapper,
         smileMapper,
         hostFinder,

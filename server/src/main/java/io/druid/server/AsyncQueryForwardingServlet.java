@@ -32,6 +32,7 @@ import io.druid.guice.annotations.Smile;
 import io.druid.guice.http.DruidHttpClientConfig;
 import io.druid.query.DruidMetrics;
 import io.druid.query.Query;
+import io.druid.query.QueryToolChestWarehouse;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.router.QueryHostFinder;
 import io.druid.server.router.Router;
@@ -88,6 +89,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
     response.flushBuffer();
   }
 
+  private final QueryToolChestWarehouse warehouse;
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
   private final QueryHostFinder hostFinder;
@@ -99,6 +101,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
   private HttpClient broadcastClient;
 
   public AsyncQueryForwardingServlet(
+      QueryToolChestWarehouse warehouse,
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper smileMapper,
       QueryHostFinder hostFinder,
@@ -108,6 +111,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
       RequestLogger requestLogger
   )
   {
+    this.warehouse = warehouse;
     this.jsonMapper = jsonMapper;
     this.smileMapper = smileMapper;
     this.hostFinder = hostFinder;
@@ -342,7 +346,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
       final long requestTime = System.currentTimeMillis() - start;
       try {
         emitter.emit(
-            DruidMetrics.makeQueryTimeMetric(jsonMapper, query, req.getRemoteAddr())
+            DruidMetrics.makeQueryTimeMetric(warehouse.getToolChest(query), jsonMapper, query, req.getRemoteAddr())
                         .build("query/time", requestTime)
         );
 

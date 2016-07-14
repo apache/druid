@@ -144,7 +144,6 @@ public class CPUTimeMetricQueryRunner<T> implements QueryRunner<T>
               final long cpuTime = cpuTimeAccumulator.get();
               if (cpuTime > 0) {
                 final ServiceMetricEvent.Builder builder = Preconditions.checkNotNull(builderFn.apply(query));
-                builder.setDimension(DruidMetrics.ID, Strings.nullToEmpty(query.getId()));
                 emitter.emit(builder.build("query/cpu/time", cpuTimeAccumulator.get() / 1000));
               }
             }
