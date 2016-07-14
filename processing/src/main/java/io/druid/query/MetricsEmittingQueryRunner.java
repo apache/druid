@@ -104,8 +104,6 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
       builder.setDimension(userDimension.getKey(), userDimension.getValue());
     }
 
-    builder.setDimension(DruidMetrics.ID, Strings.nullToEmpty(query.getId()));
-
     return new Sequence<T>()
     {
       @Override
