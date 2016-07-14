@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.query.aggregation;
+package io.druid.query.aggregation.first;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -27,6 +27,10 @@ import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
 import com.metamx.common.StringUtils;
 import io.druid.collections.SerializablePair;
+import io.druid.query.aggregation.Aggregator;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
+import io.druid.query.aggregation.BufferAggregator;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.Column;
@@ -37,9 +41,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
-public class LastAggregatorFactory extends AggregatorFactory
+public class FirstAggregatorFactory extends AggregatorFactory
 {
-  private static final byte CACHE_TYPE_ID = 0x11;
+  private static final byte CACHE_TYPE_ID = 0x10;
   private static final String TYPE_LONG = "long";
   private static final String TYPE_DOUBLE = "double";
 
@@ -48,7 +52,7 @@ public class LastAggregatorFactory extends AggregatorFactory
   private final String value;
 
   @JsonCreator
-  public LastAggregatorFactory(
+  public FirstAggregatorFactory(
       @JsonProperty("name") String name,
       @JsonProperty("fieldName") final String fieldName,
       @JsonProperty("value") String value
@@ -70,12 +74,12 @@ public class LastAggregatorFactory extends AggregatorFactory
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     if (value.equals(TYPE_LONG)) {
-      return new LongLastAggregator(
+      return new LongFirstAggregator(
           name, metricFactory.makeLongColumnSelector(fieldName),
           metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME)
       );
     } else if (value.equals(TYPE_DOUBLE)) {
-      return new DoubleLastAggregator(
+      return new DoubleFirstAggregator(
           name, metricFactory.makeFloatColumnSelector(fieldName),
           metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME)
       );
@@ -87,12 +91,12 @@ public class LastAggregatorFactory extends AggregatorFactory
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
     if (value.equals(TYPE_LONG)) {
-      return new LongLastBufferAggregator(
+      return new LongFirstBufferAggregator(
           metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME),
           metricFactory.makeLongColumnSelector(fieldName)
       );
     } else if (value.equals(TYPE_DOUBLE)) {
-      return new DoubleLastBufferAggregator(
+      return new DoubleFirstBufferAggregator(
           metricFactory.makeLongColumnSelector(Column.TIME_COLUMN_NAME),
           metricFactory.makeFloatColumnSelector(fieldName)
       );
@@ -116,41 +120,41 @@ public class LastAggregatorFactory extends AggregatorFactory
   @Override
   public Object combine(Object lhs, Object rhs)
   {
-    return (((SerializablePair<Long, Object>) lhs).lhs > ((SerializablePair<Long, Object>) rhs).lhs) ? lhs : rhs;
+    return (((SerializablePair<Long, Object>) lhs).lhs <= ((SerializablePair<Long, Object>) rhs).lhs) ? lhs : rhs;
   }
 
   @Override
   public AggregatorFactory getCombiningFactory()
   {
-    return new LastAggregatorFactory(name, name, value)
+    return new FirstAggregatorFactory(name, name, value)
     {
       @Override
       public Aggregator factorize(ColumnSelectorFactory metricFactory)
       {
         final ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(name);
         if (value.equals(TYPE_LONG)) {
-          return new LongLastAggregator(name, null, null)
+          return new LongFirstAggregator(name, null, null)
           {
             @Override
             public void aggregate()
             {
               SerializablePair<Long, Long> pair = (SerializablePair<Long, Long>) selector.get();
-              if (pair.rhs >= lastTime) {
-                lastTime = pair.lhs;
-                lastValue = pair.rhs;
+              if (pair.lhs < firstTime) {
+                firstTime = pair.lhs;
+                firstValue = pair.rhs;
               }
             }
           };
         } else if (value.equals(TYPE_DOUBLE)) {
-          return new DoubleLastAggregator(name, null, null)
+          return new DoubleFirstAggregator(name, null, null)
           {
             @Override
             public void aggregate()
             {
-              SerializablePair<Long, Long> pair = (SerializablePair<Long, Long>) selector.get();
-              if (pair.rhs >= lastTime) {
-                lastTime = pair.lhs;
-                lastValue = pair.rhs;
+              SerializablePair<Long, Double> pair = (SerializablePair<Long, Double>) selector.get();
+              if (pair.lhs < firstTime) {
+                firstTime = pair.lhs;
+                firstValue = pair.rhs;
               }
             }
           };
@@ -163,28 +167,28 @@ public class LastAggregatorFactory extends AggregatorFactory
       {
         final ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(name);
         if (value.equals(TYPE_LONG)) {
-          return new LongLastBufferAggregator(null, null)
+          return new LongFirstBufferAggregator(null, null)
           {
             @Override
             public void aggregate(ByteBuffer buf, int position)
             {
               SerializablePair<Long, Long> pair = (SerializablePair<Long, Long>) selector.get();
-              long lastTime = buf.getLong(position);
-              if (pair.lhs >= lastTime) {
+              long firstTime = buf.getLong(position);
+              if (pair.lhs < firstTime) {
                 buf.putLong(position, pair.lhs);
                 buf.putLong(position + Longs.BYTES, pair.rhs);
               }
             }
           };
         } else if (value.equals(TYPE_DOUBLE)) {
-          return new DoubleLastBufferAggregator(null, null)
+          return new DoubleFirstBufferAggregator(null, null)
           {
             @Override
             public void aggregate(ByteBuffer buf, int position)
             {
               SerializablePair<Long, Double> pair = (SerializablePair<Long, Double>) selector.get();
-              long lastTime = buf.getLong(position);
-              if (pair.lhs >= lastTime) {
+              long firstTime = buf.getLong(position);
+              if (pair.lhs < firstTime) {
                 buf.putLong(position, pair.lhs);
                 buf.putDouble(position + Longs.BYTES, pair.rhs);
               }
@@ -210,7 +214,7 @@ public class LastAggregatorFactory extends AggregatorFactory
   @Override
   public List<AggregatorFactory> getRequiredColumns()
   {
-    return Arrays.<AggregatorFactory>asList(new LastAggregatorFactory(fieldName, fieldName, value));
+    return Arrays.<AggregatorFactory>asList(new FirstAggregatorFactory(fieldName, fieldName, value));
   }
 
   @Override
@@ -285,9 +289,9 @@ public class LastAggregatorFactory extends AggregatorFactory
   public Object getAggregatorStartValue()
   {
     if (value.equals(TYPE_LONG)) {
-      return new SerializablePair<>(Long.MIN_VALUE, 0L);
+      return new SerializablePair<>(Long.MAX_VALUE, 0L);
     } else if (value.equals(TYPE_DOUBLE)) {
-      return new SerializablePair<>(Long.MIN_VALUE, 0D);
+      return new SerializablePair<>(Long.MAX_VALUE, 0D);
     }
     throw new IAE("undefined type");
   }
@@ -302,7 +306,7 @@ public class LastAggregatorFactory extends AggregatorFactory
       return false;
     }
 
-    LastAggregatorFactory that = (LastAggregatorFactory) o;
+    FirstAggregatorFactory that = (FirstAggregatorFactory) o;
 
     if (!fieldName.equals(that.fieldName)) {
       return false;
@@ -310,8 +314,11 @@ public class LastAggregatorFactory extends AggregatorFactory
     if (!name.equals(that.name)) {
       return false;
     }
-    return value.equals(that.value);
+    if (!value.equals(that.value)) {
+      return false;
+    }
 
+    return true;
   }
 
   @Override
@@ -326,7 +333,7 @@ public class LastAggregatorFactory extends AggregatorFactory
   @Override
   public String toString()
   {
-    return "LastAggregatorFactory{" +
+    return "FirstAggregatorFactory{" +
            "name='" + name + '\'' +
            ", fieldName='" + fieldName + '\'' +
            ", value='" + value + '\'' +
