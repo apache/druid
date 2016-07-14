@@ -100,7 +100,9 @@ public class IngestSegmentFirehoseFactoryTimelineTest
               DimensionsSpec.getDefaultSchemas(Arrays.asList(DIMENSIONS)),
               null,
               null
-          )
+          ),
+          null,
+          null
       )
   );
 

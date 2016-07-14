@@ -298,7 +298,9 @@ public class IngestSegmentFirehoseFactoryTest
                     DimensionsSpec.getDefaultSchemas(ImmutableList.<String>of()),
                     ImmutableList.of(DIM_FLOAT_NAME, DIM_LONG_NAME),
                     ImmutableList.<SpatialDimensionSchema>of()
-                )
+                ),
+                null,
+                null
             )
         )
     )) {
@@ -416,7 +418,9 @@ public class IngestSegmentFirehoseFactoryTest
               DimensionsSpec.getDefaultSchemas(ImmutableList.of(DIM_NAME)),
               ImmutableList.of(DIM_FLOAT_NAME, DIM_LONG_NAME),
               ImmutableList.<SpatialDimensionSchema>of()
-          )
+          ),
+          null,
+          null
       )
   );
 
