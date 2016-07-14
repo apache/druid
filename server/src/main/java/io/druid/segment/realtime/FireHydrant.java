@@ -20,6 +20,7 @@
 package io.druid.segment.realtime;
 
 import com.google.common.base.Throwables;
+import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import io.druid.segment.IncrementalIndexSegment;
 import io.druid.segment.ReferenceCountingSegment;
@@ -34,9 +35,10 @@ import java.io.IOException;
 public class FireHydrant
 {
   private final int count;
+  private final Object swapLock = new Object();
+
   private volatile IncrementalIndex index;
   private volatile ReferenceCountingSegment adapter;
-  private Object swapLock = new Object();
 
   public FireHydrant(
       IncrementalIndex index,
@@ -79,9 +81,17 @@ public class FireHydrant
     return index == null;
   }
 
-  public void swapSegment(Segment adapter)
+  public void swapSegment(Segment newAdapter)
   {
     synchronized (swapLock) {
+      if (adapter != null && newAdapter != null && !newAdapter.getIdentifier().equals(adapter.getIdentifier())) {
+        // Sanity check: identifier should not change
+        throw new ISE(
+            "WTF?! Cannot swap identifier[%s] -> [%s]!",
+            adapter.getIdentifier(),
+            newAdapter.getIdentifier()
+        );
+      }
       if (this.adapter != null) {
         try {
           this.adapter.close();
@@ -90,7 +100,7 @@ public class FireHydrant
           throw Throwables.propagate(e);
         }
       }
-      this.adapter = new ReferenceCountingSegment(adapter);
+      this.adapter = new ReferenceCountingSegment(newAdapter);
       this.index = null;
     }
   }
