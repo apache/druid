@@ -75,7 +75,8 @@ public class JobHelperTest
                             new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
                             null,
                             ImmutableList.of("timestamp", "host", "visited_num")
-                        )
+                        ),
+                        null
                     ),
                     Map.class
                 ),

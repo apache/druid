@@ -135,8 +135,11 @@ public class RealtimePlumberSchoolTest
             new StringInputRowParser(
                 new JSONParseSpec(
                     new TimestampSpec("timestamp", "auto", null),
-                    new DimensionsSpec(null, null, null)
-                )
+                    new DimensionsSpec(null, null, null),
+                    null,
+                    null
+                ),
+                null
             ),
             Map.class
         ),
@@ -151,8 +154,11 @@ public class RealtimePlumberSchoolTest
             new StringInputRowParser(
                 new JSONParseSpec(
                     new TimestampSpec("timestamp", "auto", null),
-                    new DimensionsSpec(null, null, null)
-                )
+                    new DimensionsSpec(null, null, null),
+                    null,
+                    null
+                ),
+                null
             ),
             Map.class
         ),

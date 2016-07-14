@@ -117,7 +117,8 @@ public class IndexTaskTest
                             ),
                             null,
                             Arrays.asList("ts", "dim", "val")
-                        )
+                        ),
+                        null
                     ),
                     Map.class
                 ),
@@ -189,7 +190,8 @@ public class IndexTaskTest
                             ),
                             null,
                             Arrays.asList("ts", "dim", "val")
-                        )
+                        ),
+                        null
                     ),
                     Map.class
                 ),
@@ -302,7 +304,8 @@ public class IndexTaskTest
                             ),
                             null,
                             Arrays.asList("ts", "dim", "val")
-                        )
+                        ),
+                        null
                     ),
                     Map.class
                 ),

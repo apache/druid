@@ -66,7 +66,8 @@ public class FileIteratingFirehoseTest
               new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("x")), null, null),
               ",",
               ImmutableList.of("ts", "x")
-          )
+          ),
+          null
       );
 
       final FileIteratingFirehose firehose = new FileIteratingFirehose(lineIterators.iterator(), parser);

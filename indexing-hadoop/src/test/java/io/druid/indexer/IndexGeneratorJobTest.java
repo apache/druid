@@ -143,7 +143,8 @@ public class IndexGeneratorJobTest
                         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
                         null,
                         ImmutableList.of("timestamp", "host", "visited_num")
-                    )
+                    ),
+                    null
                 ),
                 null,
                 aggs1,
@@ -233,7 +234,8 @@ public class IndexGeneratorJobTest
                         new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
                         null,
                         ImmutableList.of("timestamp", "host", "visited_num")
-                    )
+                    ),
+                    null
                 ),
                 null,
                 aggs1,
@@ -316,8 +318,11 @@ public class IndexGeneratorJobTest
                 new StringInputRowParser(
                     new JSONParseSpec(
                         new TimestampSpec("ts", "yyyyMMddHH", null),
-                        new DimensionsSpec(null, null, null)
-                    )
+                        new DimensionsSpec(null, null, null),
+                        null,
+                        null
+                    ),
+                    null
                 ),
                 1, // force 1 row max per index for easier testing
                 aggs2,
@@ -345,8 +350,11 @@ public class IndexGeneratorJobTest
                 new StringInputRowParser(
                     new JSONParseSpec(
                         new TimestampSpec("ts", "yyyyMMddHH", null),
-                        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("B", "F", "M", "Q", "X", "Y")), null, null)
-                    )
+                        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("B", "F", "M", "Q", "X", "Y")), null, null),
+                        null,
+                        null
+                    ),
+                    null
                 ),
                 1, // force 1 row max per index for easier testing
                 aggs2,

@@ -86,8 +86,11 @@ public class FireDepartmentTest
                             DimensionsSpec.getDefaultSchemas(Arrays.asList("dim1", "dim2")),
                             null,
                             null
-                        )
-                    )
+                        ),
+                        null,
+                        null
+                    ),
+                    null
                 ),
                 Map.class
             ),
