@@ -71,6 +71,7 @@ public class JavaScriptFilter implements Filter
   @Override
   public ValueMatcher makeMatcher(ValueMatcherFactory factory)
   {
+    // suboptimal, since we need create one context per call to predicate.apply()
     return factory.makeValueMatcher(dimension, predicate);
   }
 

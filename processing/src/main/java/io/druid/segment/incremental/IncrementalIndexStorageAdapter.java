@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.primitives.Ints;
+import com.metamx.common.UOE;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.granularity.QueryGranularity;
@@ -217,11 +218,6 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
         new Function<Long, Cursor>()
         {
           EntryHolder currEntry = new EntryHolder();
-          private final ValueMatcher filterMatcher;
-
-          {
-            filterMatcher = makeFilterMatcher(filter, currEntry);
-          }
 
           @Override
           public Cursor apply(@Nullable final Long input)
@@ -230,6 +226,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
             return new Cursor()
             {
+              private final ValueMatcher filterMatcher = makeFilterMatcher(filter, this, currEntry);
               private Iterator<Map.Entry<IncrementalIndex.TimeAndDims, Integer>> baseIter;
               private ConcurrentNavigableMap<IncrementalIndex.TimeAndDims, Integer> cursorMap;
               final DateTime time;
@@ -623,11 +620,11 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     return value == null;
   }
 
-  private ValueMatcher makeFilterMatcher(final Filter filter, final EntryHolder holder)
+  private ValueMatcher makeFilterMatcher(final Filter filter, final Cursor cursor, final EntryHolder holder)
   {
     return filter == null
            ? new BooleanValueMatcher(true)
-           : filter.makeMatcher(new EntryHolderValueMatcherFactory(holder));
+           : filter.makeMatcher(new CursorAndEntryHolderValueMatcherFactory(cursor, holder));
   }
 
   private static class EntryHolder
@@ -655,34 +652,26 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     }
   }
 
-  private static LongColumnSelector getTimeLongColumnSelector(final IncrementalIndexStorageAdapter.EntryHolder holder)
-  {
-    return new LongColumnSelector()
-    {
-      @Override
-      public long get()
-      {
-        return holder.getKey().getTimestamp();
-      }
-    };
-  }
 
-  private class EntryHolderValueMatcherFactory implements ValueMatcherFactory
+  private class CursorAndEntryHolderValueMatcherFactory implements ValueMatcherFactory
   {
     private final EntryHolder holder;
+    private final Cursor cursor;
 
-    public EntryHolderValueMatcherFactory(
+    public CursorAndEntryHolderValueMatcherFactory(
+        Cursor cursor,
         EntryHolder holder
     )
     {
+      this.cursor = cursor;
       this.holder = holder;
     }
 
     @Override
     public ValueMatcher makeValueMatcher(String dimension, final Comparable value)
     {
-      if (dimension.equals(Column.TIME_COLUMN_NAME)) {
-        return Filters.getLongValueMatcher(getTimeLongColumnSelector(holder), value);
+      if (getTypeForDimension(dimension) == ValueType.LONG) {
+        return Filters.getLongValueMatcher(cursor.makeLongColumnSelector(dimension), value);
       }
 
       IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimension);
@@ -736,7 +725,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
         case STRING:
           return makeStringValueMatcher(dimension, predicate);
         default:
-          throw new UnsupportedOperationException("Invalid type: " + type);
+          throw new UOE("Cannot make ValueMatcher for type[%s]", type);
       }
     }
 
@@ -771,8 +760,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
 
     private ValueMatcher makeLongValueMatcher(String dimension, DruidLongPredicate predicate)
     {
-      // __time is the only long column currently supported
-      return Filters.getLongPredicateMatcher(getTimeLongColumnSelector(holder), predicate);
+      return Filters.getLongPredicateMatcher(cursor.makeLongColumnSelector(dimension), predicate);
     }
 
     private ValueType getTypeForDimension(String dimension)

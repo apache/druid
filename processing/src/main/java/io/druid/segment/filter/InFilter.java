@@ -23,6 +23,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.Iterables;
+import com.google.common.primitives.Longs;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
@@ -30,23 +31,36 @@ import io.druid.query.filter.DruidCompositePredicate;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
-import io.druid.segment.column.ValueType;
 
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Set;
 
 /**
  */
 public class InFilter implements Filter
 {
+  // determined through benchmark that binary search on long[] is faster than HashSet until ~16 elements
+  // Hashing threshold is not applied to String for now, String still uses ImmutableSortedSet
+  public static final int HASHING_THRESHOLD = 16;
+
   private final String dimension;
   private final Set<String> values;
   private final ExtractionFn extractionFn;
+
+  private final boolean useHash;
+  private final long[] longArray;
+  private final HashSet<Long> longHashSet;
 
   public InFilter(String dimension, Set<String> values, ExtractionFn extractionFn)
   {
     this.dimension = dimension;
     this.values = values;
     this.extractionFn = extractionFn;
+    this.useHash = values.size() > HASHING_THRESHOLD;
+    this.longHashSet = useHash ? new HashSet<Long>() : null;
+    this.longArray = useHash ? null : new long[values.size()];
+    setLongValues();
   }
 
   @Override
@@ -98,21 +112,39 @@ public class InFilter implements Filter
   private DruidCompositePredicate getPredicate()
   {
     if (extractionFn == null) {
-      return new DruidCompositePredicate()
-      {
-        @Override
-        public boolean apply(Object inputObj)
+      if (useHash) {
+        return new DruidCompositePredicate()
         {
-          String input = inputObj == null ? null : inputObj.toString();
-          return values.contains(Strings.nullToEmpty(input));
-        }
+          @Override
+          public boolean apply(Object inputObj)
+          {
+            String input = inputObj == null ? null : inputObj.toString();
+            return values.contains(Strings.nullToEmpty(input));
+          }
 
-        @Override
-        public boolean applyLong(long value)
+          @Override
+          public boolean applyLong(long value)
+          {
+            return longHashSet.contains(value);
+          }
+        };
+      } else {
+        return new DruidCompositePredicate()
         {
-          return values.contains(String.valueOf(value));
-        }
-      };
+          @Override
+          public boolean apply(Object inputObj)
+          {
+            String input = inputObj == null ? null : inputObj.toString();
+            return values.contains(Strings.nullToEmpty(input));
+          }
+
+          @Override
+          public boolean applyLong(long value)
+          {
+            return Arrays.binarySearch(longArray, value) >= 0;
+          }
+        };
+      }
     } else {
       return new DruidCompositePredicate()
       {
@@ -128,6 +160,25 @@ public class InFilter implements Filter
           return values.contains(extractionFn.apply(value));
         }
       };
+    }
+  }
+
+  private void setLongValues()
+  {
+    int idx = 0;
+    for (String value : values) {
+      Long longValue = Longs.tryParse(value);
+      if (longValue != null) {
+        if (useHash) {
+          longHashSet.add(longValue);
+        } else {
+          longArray[idx] = longValue;
+        }
+        idx++;
+      }
+    }
+    if (!useHash) {
+      Arrays.sort(longArray);
     }
   }
 }

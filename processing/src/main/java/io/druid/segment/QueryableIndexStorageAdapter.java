@@ -29,6 +29,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.metamx.collections.bitmap.ImmutableBitmap;
+import com.metamx.common.IAE;
+import com.metamx.common.UOE;
 import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
@@ -1059,7 +1061,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
         case STRING:
           return makeStringValueMatcher(dimension, predicate);
         default:
-          throw new UnsupportedOperationException("Invalid type: " + type);
+          throw new UOE("Cannot make ValueMatcher for type[%s]", type);
       }
     }
 

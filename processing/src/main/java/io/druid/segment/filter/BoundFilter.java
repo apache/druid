@@ -57,15 +57,7 @@ public class BoundFilter implements Filter
       return Filters.matchPredicate(
           boundDimFilter.getDimension(),
           selector,
-          new Predicate<Object>()
-          {
-            @Override
-            public boolean apply(Object inputObj)
-            {
-              String input = inputObj == null ? null : inputObj.toString();
-              return doesMatch(input);
-            }
-          }
+          getPredicate()
       );
     } else {
       final BitmapIndex bitmapIndex = selector.getBitmapIndex(boundDimFilter.getDimension());
@@ -159,6 +151,8 @@ public class BoundFilter implements Filter
       @Override
       public boolean applyLong(long value)
       {
+        // When BoundFilter has a 'numeric' comparator (see https://github.com/druid-io/druid/issues/2989)
+        // this should be optimized to compare on longs instead of using string conversion.
         return doesMatch(String.valueOf(value));
       }
 

@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+import com.metamx.common.UOE;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.DruidCompositePredicate;
@@ -277,7 +278,7 @@ public class FilteredAggregatorFactory extends AggregatorFactory
         case STRING:
           return makeStringValueMatcher(dimension, predicate);
         default:
-          throw new UnsupportedOperationException("Invalid type: " + type);
+          throw new UOE("Cannot make ValueMatcher for type[%s]", type);
       }
     }
 

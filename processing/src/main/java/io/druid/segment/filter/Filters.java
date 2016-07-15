@@ -24,6 +24,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
+import com.google.common.primitives.Longs;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.common.IAE;
 import com.metamx.common.guava.FunctionalIterable;
@@ -169,23 +170,23 @@ public class Filters
       Comparable value
   )
   {
-    try {
-      if (value == null) {
-        return new BooleanValueMatcher(false);
-      }
-      final long longValue = Long.parseLong(value.toString());
-      return new ValueMatcher()
-      {
-        @Override
-        public boolean matches()
-        {
-          return longSelector.get() == longValue;
-        }
-      };
-    }
-    catch (NumberFormatException nfe) {
+    if (value == null) {
       return new BooleanValueMatcher(false);
     }
+
+    final Long longValue = Longs.tryParse(value.toString());
+    if (longValue == null) {
+      return new BooleanValueMatcher(false);
+    }
+
+    return new ValueMatcher()
+    {
+      @Override
+      public boolean matches()
+      {
+        return longSelector.get() == longValue;
+      }
+    };
   }
 
   public static ValueMatcher getLongPredicateMatcher(

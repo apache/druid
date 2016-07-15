@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
+import com.google.common.primitives.Longs;
 import com.metamx.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.filter.DimensionPredicateFilter;
@@ -87,12 +88,13 @@ public class SelectorDimFilter implements DimFilter
       return new SelectorFilter(dimension, value);
     } else {
       final String valueOrNull = Strings.emptyToNull(value);
+      final Long valueAsLong = Longs.tryParse(value);
       final DruidCompositePredicate predicate = new DruidCompositePredicate()
       {
         @Override
-        public boolean applyLong(long value)
+        public boolean applyLong(long input)
         {
-          return Objects.equals(valueOrNull, String.valueOf(value));
+          return input == valueAsLong;
         }
 
         @Override
