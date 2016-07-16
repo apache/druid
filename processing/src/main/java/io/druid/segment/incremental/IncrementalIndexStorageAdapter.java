@@ -34,8 +34,8 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
-import io.druid.query.filter.DruidCompositePredicate;
 import io.druid.query.filter.DruidLongPredicate;
+import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
@@ -716,20 +716,20 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     }
 
     @Override
-    public ValueMatcher makeValueMatcher(String dimension, final DruidCompositePredicate predicate)
+    public ValueMatcher makeValueMatcher(String dimension, final DruidPredicateFactory predicateFactory)
     {
       ValueType type = getTypeForDimension(dimension);
       switch (type) {
         case LONG:
-          return makeLongValueMatcher(dimension, predicate);
+          return makeLongValueMatcher(dimension, predicateFactory.makeLongPredicate());
         case STRING:
-          return makeStringValueMatcher(dimension, predicate);
+          return makeStringValueMatcher(dimension, predicateFactory.makeStringPredicate());
         default:
           throw new UOE("Cannot make ValueMatcher for type[%s]", type);
       }
     }
 
-    private ValueMatcher makeStringValueMatcher(String dimension, final Predicate<Object> predicate)
+    private ValueMatcher makeStringValueMatcher(String dimension, final Predicate<String> predicate)
     {
       IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(dimension);
       if (dimensionDesc == null) {
@@ -749,7 +749,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
           }
 
           for (int dimVal : dims[dimIndex]) {
-            if (predicate.apply(dimDim.getValue(dimVal))) {
+            if (predicate.apply((String) dimDim.getValue(dimVal))) {
               return true;
             }
           }

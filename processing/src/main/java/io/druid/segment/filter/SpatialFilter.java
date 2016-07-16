@@ -19,14 +19,18 @@
 package io.druid.segment.filter;
 
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.spatial.search.Bound;
 import io.druid.query.filter.BitmapIndexSelector;
-import io.druid.query.filter.DruidCompositePredicate;
+import io.druid.query.filter.DruidLongPredicate;
+import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.incremental.SpatialDimensionRowTransformer;
+
+import javax.annotation.Nullable;
 
 /**
  */
@@ -56,24 +60,37 @@ public class SpatialFilter implements Filter
   {
     return factory.makeValueMatcher(
         dimension,
-        new DruidCompositePredicate()
+        new DruidPredicateFactory()
         {
           @Override
-          public boolean applyLong(long value)
+          public Predicate<String> makeStringPredicate()
           {
-            // SpatialFilter does not currently support longs
-            return false;
+            return new Predicate<String>()
+            {
+              @Override
+              public boolean apply(String input)
+              {
+                if (input == null) {
+                  return false;
+                }
+                final float[] coordinate = SpatialDimensionRowTransformer.decode(input);
+                return bound.contains(coordinate);
+              }
+            };
           }
 
           @Override
-          public boolean apply(Object input)
+          public DruidLongPredicate makeLongPredicate()
           {
-            if (input instanceof String) {
-              final float[] coordinate = SpatialDimensionRowTransformer.decode((String) input);
-              return bound.contains(coordinate);
-            } else {
-              return false;
-            }
+            return new DruidLongPredicate()
+            {
+              @Override
+              public boolean applyLong(long input)
+              {
+                // SpatialFilter does not currently support longs
+                return false;
+              }
+            };
           }
         }
     );

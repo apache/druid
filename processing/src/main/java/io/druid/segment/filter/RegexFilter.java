@@ -19,8 +19,10 @@
 
 package io.druid.segment.filter;
 
+import com.google.common.base.Predicate;
 import io.druid.query.extraction.ExtractionFn;
-import io.druid.query.filter.DruidCompositePredicate;
+import io.druid.query.filter.DruidLongPredicate;
+import io.druid.query.filter.DruidPredicateFactory;
 
 import java.util.regex.Pattern;
 
@@ -36,18 +38,32 @@ public class RegexFilter extends DimensionPredicateFilter
   {
     super(
         dimension,
-        new DruidCompositePredicate()
+        new DruidPredicateFactory()
         {
           @Override
-          public boolean applyLong(long value)
+          public Predicate<String> makeStringPredicate()
           {
-            return pattern.matcher(String.valueOf(value)).find();
+            return new Predicate<String>()
+            {
+              @Override
+              public boolean apply(String input)
+              {
+                return (input != null) && pattern.matcher(input).find();
+              }
+            };
           }
 
           @Override
-          public boolean apply(Object inputObj)
+          public DruidLongPredicate makeLongPredicate()
           {
-            return (inputObj != null) && pattern.matcher(inputObj.toString()).find();
+            return new DruidLongPredicate()
+            {
+              @Override
+              public boolean applyLong(long input)
+              {
+                return pattern.matcher(String.valueOf(input)).find();
+              }
+            };
           }
 
           @Override

@@ -26,8 +26,8 @@ import com.google.common.base.Strings;
 import com.metamx.common.UOE;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.filter.DimFilter;
-import io.druid.query.filter.DruidCompositePredicate;
 import io.druid.query.filter.DruidLongPredicate;
+import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.ColumnSelectorFactory;
@@ -269,20 +269,20 @@ public class FilteredAggregatorFactory extends AggregatorFactory
       };
     }
 
-    public ValueMatcher makeValueMatcher(final String dimension, final DruidCompositePredicate predicate)
+    public ValueMatcher makeValueMatcher(final String dimension, final DruidPredicateFactory predicateFactory)
     {
       ValueType type = getTypeForDimension(dimension);
       switch (type) {
         case LONG:
-          return makeLongValueMatcher(dimension, predicate);
+          return makeLongValueMatcher(dimension, predicateFactory.makeLongPredicate());
         case STRING:
-          return makeStringValueMatcher(dimension, predicate);
+          return makeStringValueMatcher(dimension, predicateFactory.makeStringPredicate());
         default:
           throw new UOE("Cannot make ValueMatcher for type[%s]", type);
       }
     }
 
-    public ValueMatcher makeStringValueMatcher(final String dimension, final Predicate<Object> predicate)
+    public ValueMatcher makeStringValueMatcher(final String dimension, final Predicate<String> predicate)
     {
       final DimensionSelector selector = columnSelectorFactory.makeDimensionSelector(
           new DefaultDimensionSpec(dimension, dimension)

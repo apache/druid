@@ -102,7 +102,7 @@ public class Filters
   public static ImmutableBitmap matchPredicate(
       final String dimension,
       final BitmapIndexSelector selector,
-      final Predicate<Object> predicate
+      final Predicate<String> predicate
   )
   {
     Preconditions.checkNotNull(dimension, "dimension");

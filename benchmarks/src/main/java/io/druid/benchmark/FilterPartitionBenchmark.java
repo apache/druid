@@ -21,6 +21,7 @@ package io.druid.benchmark;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.hash.Hashing;
@@ -44,7 +45,8 @@ import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
-import io.druid.query.filter.DruidCompositePredicate;
+import io.druid.query.filter.DruidLongPredicate;
+import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
@@ -84,7 +86,6 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.Warmup;
 import org.openjdk.jmh.infra.Blackhole;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -561,11 +562,11 @@ public class FilterPartitionBenchmark
   {
     public NoBitmapDimensionPredicateFilter(
         final String dimension,
-        final DruidCompositePredicate predicate,
+        final DruidPredicateFactory predicateFactory,
         final ExtractionFn extractionFn
     )
     {
-      super(dimension, predicate, extractionFn);
+      super(dimension, predicateFactory, extractionFn);
     }
 
     @Override
@@ -595,21 +596,37 @@ public class FilterPartitionBenchmark
         return new NoBitmapSelectorFilter(dimension, value);
       } else {
         final String valueOrNull = Strings.emptyToNull(value);
-        final DruidCompositePredicate predicate = new DruidCompositePredicate()
+
+        final DruidPredicateFactory predicateFactory = new DruidPredicateFactory()
         {
           @Override
-          public boolean applyLong(long value)
+          public Predicate<String> makeStringPredicate()
           {
-            return false;
+            return new Predicate<String>()
+            {
+              @Override
+              public boolean apply(String input)
+              {
+                return Objects.equals(valueOrNull, input);
+              }
+            };
           }
 
           @Override
-          public boolean apply(@Nullable Object input)
+          public DruidLongPredicate makeLongPredicate()
           {
-            return Objects.equals(valueOrNull, input);
+            return new DruidLongPredicate()
+            {
+              @Override
+              public boolean applyLong(long input)
+              {
+                return false;
+              }
+            };
           }
         };
-        return new NoBitmapDimensionPredicateFilter(dimension, predicate, extractionFn);
+
+        return new NoBitmapDimensionPredicateFilter(dimension, predicateFactory, extractionFn);
       }
     }
   }

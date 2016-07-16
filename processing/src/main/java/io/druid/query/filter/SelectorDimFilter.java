@@ -22,6 +22,7 @@ package io.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Range;
@@ -33,6 +34,7 @@ import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.filter.DimensionPredicateFilter;
 import io.druid.segment.filter.SelectorFilter;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
@@ -89,27 +91,47 @@ public class SelectorDimFilter implements DimFilter
     } else {
       final String valueOrNull = Strings.emptyToNull(value);
       final Long valueAsLong = Longs.tryParse(value);
-      final DruidCompositePredicate predicate = new DruidCompositePredicate()
+
+      final DruidPredicateFactory predicateFactory = new DruidPredicateFactory()
       {
         @Override
-        public boolean applyLong(long input)
+        public Predicate<String> makeStringPredicate()
         {
-          return input == valueAsLong;
+          return new Predicate<String>()
+          {
+            @Override
+            public boolean apply(String input)
+            {
+              return Objects.equals(valueOrNull, input);
+            }
+          };
         }
 
         @Override
-        public boolean apply(Object input)
+        public DruidLongPredicate makeLongPredicate()
         {
-          return Objects.equals(valueOrNull, input);
-        }
-
-        @Override
-        public String toString()
-        {
-          return value;
+          if (valueAsLong == null) {
+            return new DruidLongPredicate()
+            {
+              @Override
+              public boolean applyLong(long input)
+              {
+                return false;
+              }
+            };
+          } else {
+            return new DruidLongPredicate()
+            {
+              @Override
+              public boolean applyLong(long input)
+              {
+                return input == valueAsLong;
+              }
+            };
+          }
         }
       };
-      return new DimensionPredicateFilter(dimension, predicate, extractionFn);
+      return new DimensionPredicateFilter(dimension, predicateFactory, extractionFn);
     }
   }
 

@@ -53,15 +53,15 @@ public interface ValueMatcherFactory
   /**
    * Create a ValueMatcher that applies a predicate to row values.
    *
-   * The caller provides a predicate that can accept all value types supported by Druid.
-   * See {@link DruidCompositePredicate} for more information on the typing expectations for the predicate.
+   * The caller provides a predicate factory that can create a predicate for each value type supported by Druid.
+   * See {@link DruidPredicateFactory} for more information.
    *
-   * The ValueMatcherFactory implementation should decide what typed apply() method to use
-   * within the returned ValueMatcher, based on the type of the specified dimension.
+   * When creating the ValueMatcher, the ValueMatcherFactory implementation should decide what type of predicate
+   * to create from the predicate factory based on the ValueType of the specified dimension.
    *
    * @param dimension The dimension to filter.
-   * @param predicate Predicate to apply to row values
+   * @param predicateFactory Predicate factory
    * @return An object that applies a predicate to row values
    */
-  public ValueMatcher makeValueMatcher(String dimension, DruidCompositePredicate predicate);
+  public ValueMatcher makeValueMatcher(String dimension, DruidPredicateFactory predicateFactory);
 }

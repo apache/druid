@@ -40,8 +40,8 @@ import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BooleanFilter;
-import io.druid.query.filter.DruidCompositePredicate;
 import io.druid.query.filter.DruidLongPredicate;
+import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.RowOffsetMatcherFactory;
 import io.druid.query.filter.ValueMatcher;
@@ -1052,20 +1052,20 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
     }
 
     @Override
-    public ValueMatcher makeValueMatcher(String dimension, final DruidCompositePredicate predicate)
+    public ValueMatcher makeValueMatcher(String dimension, final DruidPredicateFactory predicateFactory)
     {
       ValueType type = getTypeForDimension(dimension);
       switch (type) {
         case LONG:
-          return makeLongValueMatcher(dimension, predicate);
+          return makeLongValueMatcher(dimension, predicateFactory.makeLongPredicate());
         case STRING:
-          return makeStringValueMatcher(dimension, predicate);
+          return makeStringValueMatcher(dimension, predicateFactory.makeStringPredicate());
         default:
           throw new UOE("Cannot make ValueMatcher for type[%s]", type);
       }
     }
 
-    private ValueMatcher makeStringValueMatcher(String dimension, final Predicate<Object> predicate)
+    private ValueMatcher makeStringValueMatcher(String dimension, final Predicate<String> predicate)
     {
       final DimensionSelector selector = cursor.makeDimensionSelector(
           new DefaultDimensionSpec(dimension, dimension)

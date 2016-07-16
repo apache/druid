@@ -21,6 +21,7 @@ package io.druid.benchmark;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.google.common.collect.FluentIterable;
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
@@ -28,7 +29,8 @@ import com.metamx.collections.bitmap.MutableBitmap;
 import com.metamx.collections.bitmap.RoaringBitmapFactory;
 import com.metamx.collections.spatial.ImmutableRTree;
 import io.druid.query.filter.BitmapIndexSelector;
-import io.druid.query.filter.DruidCompositePredicate;
+import io.druid.query.filter.DruidLongPredicate;
+import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.GenericIndexed;
@@ -63,22 +65,35 @@ public class DimensionPredicateFilterBenchmark
 
   private static final DimensionPredicateFilter IS_EVEN = new DimensionPredicateFilter(
       "foo",
-      new DruidCompositePredicate()
+      new DruidPredicateFactory()
       {
         @Override
-        public boolean applyLong(long value)
+        public Predicate<String> makeStringPredicate()
         {
-          return false;
+          return new Predicate<String>()
+          {
+            @Override
+            public boolean apply(String input)
+            {
+              if (input == null) {
+                return false;
+              }
+              return Integer.parseInt(input.toString()) % 2 == 0;
+            }
+          };
         }
 
         @Override
-        public boolean apply(Object input)
+        public DruidLongPredicate makeLongPredicate()
         {
-          if (input == null) {
-            return false;
-          }
-
-          return Integer.parseInt(input.toString()) % 2 == 0;
+          return new DruidLongPredicate()
+          {
+            @Override
+            public boolean applyLong(long input)
+            {
+              return false;
+            }
+          };
         }
       },
       null

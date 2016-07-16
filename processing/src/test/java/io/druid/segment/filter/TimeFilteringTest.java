@@ -35,7 +35,6 @@ import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.extraction.TimeFormatExtractionFn;
 import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
-import io.druid.query.filter.ExtractionDimFilter;
 import io.druid.query.filter.InDimFilter;
 import io.druid.query.filter.JavaScriptDimFilter;
 import io.druid.query.filter.RegexDimFilter;
@@ -44,7 +43,6 @@ import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.lookup.LookupExtractor;
 import io.druid.query.search.search.ContainsSearchQuerySpec;
-import io.druid.query.search.search.SearchQuerySpec;
 import io.druid.segment.IndexBuilder;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.Column;
@@ -131,8 +129,8 @@ public class TimeFilteringTest extends BaseFilterTest
     );
 
     // cross the hashing threshold to test hashset implementation, filter on even values
-    List<String> infilterValues = new ArrayList<>(InFilter.HASHING_THRESHOLD * 2);
-    for (int i = 0; i < InFilter.HASHING_THRESHOLD * 2; i++) {
+    List<String> infilterValues = new ArrayList<>(InFilter.LONG_HASHING_THRESHOLD * 2);
+    for (int i = 0; i < InFilter.LONG_HASHING_THRESHOLD * 2; i++) {
       infilterValues.add(String.valueOf(i*2));
     }
     assertFilterMatches(
