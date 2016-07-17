@@ -23,9 +23,9 @@ package io.druid.math.expr;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.metamx.common.logger.Logger;
-import com.google.common.collect.Lists;
 import io.druid.data.input.Row;
 import io.druid.math.expr.antlr.ExprLexer;
 import io.druid.math.expr.antlr.ExprParser;
@@ -48,7 +48,7 @@ public class Parser
     for (Class clazz : Function.class.getClasses()) {
       if (!Modifier.isAbstract(clazz.getModifiers()) && Function.class.isAssignableFrom(clazz)) {
         try {
-          Function function = (Function)clazz.newInstance();
+          Function function = (Function) clazz.newInstance();
           functionMap.put(function.name().toLowerCase(), function);
         }
         catch (Exception e) {
@@ -79,7 +79,7 @@ public class Parser
 
   public static List<String> findRequiredBindings(Expr parsed)
   {
-    return findRecursive( parsed, Lists.<String>newArrayList());
+    return findRecursive(parsed, Lists.<String>newArrayList());
   }
 
   private static List<String> findRecursive(Expr expr, List<String> found)
@@ -102,14 +102,14 @@ public class Parser
     return found;
   }
 
-  public static Expr.NumericBinding withMap(final Map<String, Number> bindings)
+  public static Expr.NumericBinding withMap(final Map<String, ?> bindings)
   {
     return new Expr.NumericBinding()
     {
       @Override
       public Number get(String name)
       {
-        return bindings.get(name);
+        return (Number) bindings.get(name);
       }
     };
   }

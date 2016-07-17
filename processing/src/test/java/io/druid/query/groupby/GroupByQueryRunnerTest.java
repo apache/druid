@@ -68,6 +68,7 @@ import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
+import io.druid.query.aggregation.post.MathPostAggregator;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
@@ -3257,7 +3258,7 @@ public class GroupByQueryRunnerTest
             )
         );
 
-    final GroupByQuery fullQuery = builder.build();
+    GroupByQuery fullQuery = builder.build();
 
     QueryRunner mergedRunner = factory.getToolchest().mergeResults(
         new QueryRunner<Row>()
@@ -3366,7 +3367,7 @@ public class GroupByQueryRunnerTest
             )
         );
 
-    final GroupByQuery fullQuery = builder.build();
+    GroupByQuery fullQuery = builder.build();
 
     QueryRunner mergedRunner = factory.getToolchest().mergeResults(
         new QueryRunner<Row>()
@@ -3395,6 +3396,22 @@ public class GroupByQueryRunnerTest
 
     Map<String, Object> context = Maps.newHashMap();
     // add an extra layer of merging, simulate broker forwarding query to historical
+    TestHelper.assertExpectedObjects(
+        expectedResults,
+        factory.getToolchest().postMergeQueryDecoration(
+            factory.getToolchest().mergeResults(
+                factory.getToolchest().preMergeQueryDecoration(mergedRunner)
+            )
+        ).run(fullQuery, context),
+        "merged"
+    );
+
+    fullQuery = fullQuery.withPostAggregatorSpecs(
+        Arrays.<PostAggregator>asList(
+            new MathPostAggregator("rows_times_10", "rows * 10.0")
+        )
+    );
+
     TestHelper.assertExpectedObjects(
         expectedResults,
         factory.getToolchest().postMergeQueryDecoration(
