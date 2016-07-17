@@ -103,7 +103,13 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     // Closing this will cause segfaults in unit tests.
     final QueryableIndex index = segment.asQueryableIndex();
 
+    FALLBACK_TO_CURSOR:
     if (index != null) {
+      final BitmapFactory bitmapFactory = index.getBitmapFactoryForDimensions();
+      final ColumnSelectorBitmapIndexSelector selector = new ColumnSelectorBitmapIndexSelector(bitmapFactory, index);
+      if (filter != null && !filter.supportsBitmapIndex(selector)) {
+        break FALLBACK_TO_CURSOR;
+      }
       final TreeMap<SearchHit, MutableInt> retVal = Maps.newTreeMap(query.getSort().getComparator());
 
       Iterable<DimensionSpec> dimsToSearch;
@@ -113,10 +119,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
         dimsToSearch = dimensions;
       }
 
-      final BitmapFactory bitmapFactory = index.getBitmapFactoryForDimensions();
-
-      final ImmutableBitmap baseFilter =
-          filter == null ? null : filter.getBitmapIndex(new ColumnSelectorBitmapIndexSelector(bitmapFactory, index));
+      final ImmutableBitmap baseFilter = filter == null ? null : filter.getBitmapIndex(selector);
 
       ImmutableBitmap timeFilteredBitmap;
       if (!interval.contains(segment.getDataInterval())) {

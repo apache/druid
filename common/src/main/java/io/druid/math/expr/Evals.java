@@ -20,7 +20,10 @@
 package io.druid.math.expr;
 
 import com.google.common.base.Strings;
+import com.google.common.base.Function;
+import com.google.common.primitives.Longs;
 import io.druid.common.guava.GuavaUtils;
+import io.druid.data.input.impl.DimensionSchema;
 import io.druid.java.util.common.logger.Logger;
 
 import java.util.Arrays;
@@ -111,5 +114,69 @@ public class Evals
   public static boolean asBoolean(String x)
   {
     return !Strings.isNullOrEmpty(x) && Boolean.valueOf(x);
+  }
+
+  public static boolean asBoolean(Number x)
+  {
+    if (x == null) {
+      return false;
+    } else if (x instanceof Integer) {
+      return x.intValue() > 0;
+    } else if (x instanceof Long) {
+      return x.longValue() > 0;
+    } else if (x instanceof Float) {
+      return x.floatValue() > 0;
+    }
+    return x.doubleValue() > 0;
+  }
+
+  public static Function<Comparable, Number> asNumberFunc(DimensionSchema.ValueType type)
+  {
+    switch (type) {
+      case FLOAT:
+        return new Function<Comparable, Number>()
+        {
+          @Override
+          public Number apply(Comparable input)
+          {
+            return input == null ? 0F : (Float) input;
+          }
+        };
+      case LONG:
+        return new Function<Comparable, Number>()
+        {
+          @Override
+          public Number apply(Comparable input)
+          {
+            return input == null ? 0L : (Long) input;
+          }
+        };
+      case STRING:
+        return new Function<Comparable, Number>()
+        {
+          @Override
+          public Number apply(Comparable input)
+          {
+            return toNumeric(input);
+          }
+        };
+    }
+    throw new UnsupportedOperationException("Unsupported type " + type);
+  }
+
+  private static Number toNumeric(Object value)
+  {
+    if (value == null || value instanceof Number) {
+      return (Number) value;
+    }
+    final String stringVal = String.valueOf(value).trim();
+    if (stringVal.isEmpty()) {
+      return null;
+    }
+    Long longValue = Longs.tryParse(stringVal);
+    if (longValue != null) {
+      return longValue;
+    }
+    return Double.valueOf(stringVal);
   }
 }

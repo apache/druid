@@ -40,6 +40,7 @@ import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.ExpressionFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.spec.LegacySegmentSpec;
@@ -96,6 +97,9 @@ public class SelectQueryRunnerTest
       "2011-01-13T00:00:00.000Z	upfront	premium	preferred	ppreferred	1564.617729	value"
   };
 
+  public static final QuerySegmentSpec I_0112_0113 = new LegacySegmentSpec(
+      new Interval("2011-01-12/2011-01-13")
+  );
   public static final QuerySegmentSpec I_0112_0114 = new LegacySegmentSpec(
       new Interval("2011-01-12/2011-01-14")
   );
@@ -163,6 +167,52 @@ public class SelectQueryRunnerTest
         offset.threshold()
     );
     verify(expectedResults, populateNullColumnAtLastForQueryableIndexCase(results, "null_column"));
+  }
+
+  @Test
+  public void testFilterOnMetric()
+  {
+    SelectQuery query = newTestQuery()
+        .filters(new ExpressionFilter("index > 100 && index < 1000"))
+        .intervals(I_0112_0113)
+        .build();
+
+    List<Result<SelectResultValue>> results = Sequences.toList(
+        runner.run(query, Maps.newHashMap()),
+        Lists.<Result<SelectResultValue>>newArrayList()
+    );
+    Assert.assertEquals(1, results.size());
+
+    List<EventHolder> result = results.get(0).getValue().getEvents();
+    List<EventHolder> expected;
+    if (!descending) {
+      expected = Arrays.asList(
+          new EventHolder(
+              "testSegment", 0, ImmutableMap.<String, Object>of(
+              "timestamp", "2011-01-12", "market", "upfront", "quality", "mezzanine", "index", 800F
+          )
+          ),
+          new EventHolder(
+              "testSegment", 1, ImmutableMap.<String, Object>of(
+              "timestamp", "2011-01-12", "market", "upfront", "quality", "premium", "index", 800F
+          )
+          )
+      );
+    } else {
+      expected = Arrays.asList(
+          new EventHolder(
+              "testSegment", -1, ImmutableMap.<String, Object>of(
+              "timestamp", "2011-01-12", "market", "upfront", "quality", "premium", "index", 800F
+          )
+          ),
+          new EventHolder(
+              "testSegment", -2, ImmutableMap.<String, Object>of(
+              "timestamp", "2011-01-12", "market", "upfront", "quality", "mezzanine", "index", 800F
+          )
+          )
+      );
+    }
+    verify(expected, result);
   }
 
   @Test
@@ -714,41 +764,51 @@ public class SelectQueryRunnerTest
 
       Assert.assertEquals(expected.getTimestamp(), actual.getTimestamp());
 
-      for (Map.Entry<String, Integer> entry : expected.getValue().getPagingIdentifiers().entrySet()) {
-        Assert.assertEquals(entry.getValue(), actual.getValue().getPagingIdentifiers().get(entry.getKey()));
+      SelectResultValue e = expected.getValue();
+      SelectResultValue r = actual.getValue();
+      for (Map.Entry<String, Integer> entry : e.getPagingIdentifiers().entrySet()) {
+        Assert.assertEquals(entry.getValue(), r.getPagingIdentifiers().get(entry.getKey()));
       }
 
-      Assert.assertEquals(expected.getValue().getDimensions(), actual.getValue().getDimensions());
-      Assert.assertEquals(expected.getValue().getMetrics(), actual.getValue().getMetrics());
+      Assert.assertEquals(e.getDimensions(), r.getDimensions());
+      Assert.assertEquals(e.getMetrics(), r.getMetrics());
 
-      Iterator<EventHolder> expectedEvts = expected.getValue().getEvents().iterator();
-      Iterator<EventHolder> actualEvts = actual.getValue().getEvents().iterator();
-
-      while (expectedEvts.hasNext()) {
-        EventHolder exHolder = expectedEvts.next();
-        EventHolder acHolder = actualEvts.next();
-
-        Assert.assertEquals(exHolder.getTimestamp(), acHolder.getTimestamp());
-        Assert.assertEquals(exHolder.getOffset(), acHolder.getOffset());
-
-        for (Map.Entry<String, Object> ex : exHolder.getEvent().entrySet()) {
-          Object actVal = acHolder.getEvent().get(ex.getKey());
-
-          // work around for current II limitations
-          if (acHolder.getEvent().get(ex.getKey()) instanceof Double) {
-            actVal = ((Double) actVal).floatValue();
-          }
-          Assert.assertEquals("invalid value for " + ex.getKey(), ex.getValue(), actVal);
-        }
-      }
-
-      if (actualEvts.hasNext()) {
-        throw new ISE("This event iterator should be exhausted!");
-      }
+      verify(e.getEvents(), r.getEvents());
     }
 
     if (actualIter.hasNext()) {
       throw new ISE("This iterator should be exhausted!");
+    }
+  }
+
+  private static void verify(List<EventHolder> expected, List<EventHolder> actual)
+  {
+    Iterator<EventHolder> expectedEvts = expected.iterator();
+    Iterator<EventHolder> actualEvts = actual.iterator();
+
+    while (expectedEvts.hasNext()) {
+      EventHolder exHolder = expectedEvts.next();
+      EventHolder acHolder = actualEvts.next();
+
+      Assert.assertEquals(exHolder.getTimestamp(), acHolder.getTimestamp());
+      Assert.assertEquals(exHolder.getOffset(), acHolder.getOffset());
+
+      for (Map.Entry<String, Object> ex : exHolder.getEvent().entrySet()) {
+        if (ex.getKey().equals("timestamp")) {
+          continue; // already done above
+        }
+        Object actVal = acHolder.getEvent().get(ex.getKey());
+
+        // work around for current II limitations
+        if (acHolder.getEvent().get(ex.getKey()) instanceof Double) {
+          actVal = ((Double) actVal).floatValue();
+        }
+        Assert.assertEquals("invalid value for " + ex.getKey(), ex.getValue(), actVal);
+      }
+    }
+
+    if (actualEvts.hasNext()) {
+      throw new ISE("This event iterator should be exhausted!");
     }
   }
 

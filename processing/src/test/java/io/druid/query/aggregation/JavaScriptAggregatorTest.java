@@ -79,7 +79,7 @@ public class JavaScriptAggregatorTest
     }
 
     @Override
-    public NumericColumnSelector makeMathExpressionSelector(String expression)
+    public NumericColumnSelector makeExpressionSelector(String expression)
     {
       return null;
     }

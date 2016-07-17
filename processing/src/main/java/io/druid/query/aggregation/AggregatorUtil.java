@@ -19,6 +19,7 @@
 
 package io.druid.query.aggregation;
 
+import com.google.common.base.Supplier;
 import com.google.common.collect.Lists;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.FloatColumnSelector;
@@ -100,7 +101,7 @@ public class AggregatorUtil
       return metricFactory.makeFloatColumnSelector(fieldName);
     }
     if (fieldName == null && fieldExpression != null) {
-      final NumericColumnSelector numeric = metricFactory.makeMathExpressionSelector(fieldExpression);
+      final NumericColumnSelector numeric = metricFactory.makeExpressionSelector(fieldExpression);
       return new FloatColumnSelector()
       {
         @Override
@@ -125,7 +126,7 @@ public class AggregatorUtil
       return metricFactory.makeLongColumnSelector(fieldName);
     }
     if (fieldName == null && fieldExpression != null) {
-      final NumericColumnSelector numeric = metricFactory.makeMathExpressionSelector(fieldExpression);
+      final NumericColumnSelector numeric = metricFactory.makeExpressionSelector(fieldExpression);
       return new LongColumnSelector()
       {
         @Override
@@ -137,5 +138,29 @@ public class AggregatorUtil
       };
     }
     throw new IllegalArgumentException("Must have a valid, non-null fieldName or expression");
+  }
+
+  public static Supplier<Number> asSupplier(final FloatColumnSelector selector)
+  {
+    return new Supplier<Number>()
+    {
+      @Override
+      public Number get()
+      {
+        return selector.get();
+      }
+    };
+  }
+
+  public static Supplier<Number> asSupplier(final LongColumnSelector selector)
+  {
+    return new Supplier<Number>()
+    {
+      @Override
+      public Number get()
+      {
+        return selector.get();
+      }
+    };
   }
 }

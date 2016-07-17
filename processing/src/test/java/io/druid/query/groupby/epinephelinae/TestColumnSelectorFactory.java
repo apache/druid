@@ -90,7 +90,7 @@ public class TestColumnSelectorFactory implements ColumnSelectorFactory
   }
 
   @Override
-  public NumericColumnSelector makeMathExpressionSelector(String expression)
+  public NumericColumnSelector makeExpressionSelector(String expression)
   {
     throw new UnsupportedOperationException("expression is not supported in current context");
   }

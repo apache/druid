@@ -25,7 +25,7 @@ import com.google.common.collect.RangeSet;
 
 /**
  */
-@JsonTypeInfo(use=JsonTypeInfo.Id.NAME, property="type")
+@JsonTypeInfo(use=JsonTypeInfo.Id.NAME, property="type",defaultImpl = ExpressionFilter.class)
 @JsonSubTypes(value={
     @JsonSubTypes.Type(name="and", value=AndDimFilter.class),
     @JsonSubTypes.Type(name="or", value=OrDimFilter.class),
@@ -39,7 +39,8 @@ import com.google.common.collect.RangeSet;
     @JsonSubTypes.Type(name="in", value=InDimFilter.class),
     @JsonSubTypes.Type(name="bound", value=BoundDimFilter.class),
     @JsonSubTypes.Type(name="interval", value=IntervalDimFilter.class),
-    @JsonSubTypes.Type(name="like", value=LikeDimFilter.class)
+    @JsonSubTypes.Type(name="like", value=LikeDimFilter.class),
+    @JsonSubTypes.Type(name="expression", value=ExpressionFilter.class)
 })
 public interface DimFilter
 {

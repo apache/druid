@@ -60,4 +60,14 @@ public interface ValueMatcherFactory
    * @return An object that applies a predicate to row values
    */
   public ValueMatcher makeValueMatcher(String dimension, DruidPredicateFactory predicateFactory);
+
+  /**
+   * Create a ValueMatcher that applies expression to row values.
+   *
+   * The matcher returned does not use any type of index to evaluate result.
+   *
+   * @param expression
+   * @return
+   */
+  public ValueMatcher makeExpressionMatcher(String expression);
 }

@@ -22,18 +22,22 @@ package io.druid.segment.incremental;
 import com.google.common.base.Function;
 import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
+import com.google.common.base.Suppliers;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 
+import io.druid.data.input.impl.DimensionSchema;
 import io.druid.granularity.QueryGranularity;
+import io.druid.math.expr.Evals;
 import io.druid.math.expr.Expr;
 import io.druid.math.expr.Parser;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.dimension.DefaultDimensionSpec;
+import io.druid.query.aggregation.AggregatorUtil;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.DruidLongPredicate;
@@ -562,7 +566,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
               }
 
               @Override
-              public NumericColumnSelector makeMathExpressionSelector(String expression)
+              public NumericColumnSelector makeExpressionSelector(String expression)
               {
                 final Expr parsed = Parser.parse(expression);
 
@@ -722,6 +726,77 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
     {
       ColumnCapabilities capabilities = index.getCapabilities(dimension);
       return capabilities == null ? ValueType.STRING : capabilities.getType();
+    }
+
+    @Override
+    public ValueMatcher makeExpressionMatcher(String expression)
+    {
+      final Expr parsed = Parser.parse(expression);
+
+      final Map<String, Supplier<Number>> values = Maps.newHashMap();
+      for (String column : Parser.findRequiredBindings(parsed)) {
+        IncrementalIndex.DimensionDesc dimensionDesc = index.getDimension(column);
+        if (dimensionDesc != null) {
+          if (dimensionDesc.getCapabilities().hasMultipleValues()) {
+            throw new IllegalArgumentException("multi-valued dimension");
+          }
+          final int dimIndex = dimensionDesc.getIndex();
+          final DimensionIndexer indexer = dimensionDesc.getIndexer();
+          final Supplier<Comparable> supplier = new Supplier<Comparable>()
+          {
+            @Override
+            public Comparable get()
+            {
+              final Object[] dims = holder.getKey().getDims();
+              if (dimIndex < dims.length && dims[dimIndex] != null &&
+                  indexer.getLengthOfUnsortedEncodedArray(dims[dimIndex]) == 1) {
+                return indexer.convertUnsortedEncodedArrayToActualValue(dims[dimIndex], 0);
+              }
+              return null;
+            }
+          };
+          DimensionSchema.ValueType type = dimensionDesc.getCapabilities().getType().asDimensionType();
+          values.put(column, Suppliers.compose(Evals.asNumberFunc(type), supplier));
+          continue;
+        }
+        IncrementalIndex.MetricDesc metricDesc = index.getMetric(column);
+        if (metricDesc != null) {
+          final int metricIndex = metricDesc.getIndex();
+          final ValueType type = ValueType.valueOf(metricDesc.getType().toUpperCase());
+          if (type == ValueType.FLOAT) {
+            final FloatColumnSelector selector = new FloatColumnSelector()
+            {
+              @Override
+              public float get()
+              {
+                return index.getMetricFloatValue(holder.getValue(), metricIndex);
+              }
+            };
+            values.put(column, AggregatorUtil.asSupplier(selector));
+          } else if (type == ValueType.LONG) {
+            final LongColumnSelector selector = new LongColumnSelector()
+            {
+              @Override
+              public long get()
+              {
+                return index.getMetricLongValue(holder.getValue(), metricIndex);
+              }
+            };
+            values.put(column, AggregatorUtil.asSupplier(selector));
+          } else {
+            throw new UnsupportedOperationException("Unsupported type " + type);
+          }
+        }
+      }
+
+      final Expr.ObjectBinding binding = Parser.withSuppliers(values);
+      return new ValueMatcher() {
+        @Override
+        public boolean matches()
+        {
+          return parsed.eval(binding).asBoolean();
+        }
+      };
     }
   }
 

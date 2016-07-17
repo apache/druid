@@ -777,7 +777,7 @@ public class RowBasedGrouperHelper
     }
 
     @Override
-    public NumericColumnSelector makeMathExpressionSelector(String expression)
+    public NumericColumnSelector makeExpressionSelector(String expression)
     {
       final Expr parsed = Parser.parse(expression);
 
