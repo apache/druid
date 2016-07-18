@@ -34,8 +34,10 @@ import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -50,18 +52,15 @@ public class InFilter implements Filter
   private final Set<String> values;
   private final ExtractionFn extractionFn;
 
-  private final boolean useLongHash;
-  private final long[] longArray;
-  private final HashSet<Long> longHashSet;
+  private boolean useLongHash;
+  private long[] longArray;
+  private HashSet<Long> longHashSet;
 
   public InFilter(String dimension, Set<String> values, ExtractionFn extractionFn)
   {
     this.dimension = dimension;
     this.values = values;
     this.extractionFn = extractionFn;
-    this.useLongHash = values.size() > LONG_HASHING_THRESHOLD;
-    this.longHashSet = useLongHash ? new HashSet<Long>() : null;
-    this.longArray = useLongHash ? null : new long[values.size()];
     setLongValues();
   }
 
@@ -169,19 +168,22 @@ public class InFilter implements Filter
 
   private void setLongValues()
   {
-    int idx = 0;
+    List<Long> longs = new ArrayList<>();
     for (String value : values) {
       Long longValue = Longs.tryParse(value);
       if (longValue != null) {
-        if (useLongHash) {
-          longHashSet.add(longValue);
-        } else {
-          longArray[idx] = longValue;
-        }
-        idx++;
+        longs.add(longValue);
       }
     }
-    if (!useLongHash) {
+
+    useLongHash = longs.size() > LONG_HASHING_THRESHOLD;
+    if (useLongHash) {
+      longHashSet = new HashSet<Long>(longs);
+    } else {
+      longArray = new long[longs.size()];
+      for (int i = 0; i < longs.size(); i++) {
+        longArray[i] = longs.get(i).longValue();
+      }
       Arrays.sort(longArray);
     }
   }

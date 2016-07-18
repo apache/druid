@@ -34,7 +34,6 @@ import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.filter.DimensionPredicateFilter;
 import io.druid.segment.filter.SelectorFilter;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
@@ -120,12 +119,14 @@ public class SelectorDimFilter implements DimFilter
               }
             };
           } else {
+            // store the primitive, so we don't unbox for every comparison
+            final long unboxedLong = valueAsLong.longValue();
             return new DruidLongPredicate()
             {
               @Override
               public boolean applyLong(long input)
               {
-                return input == valueAsLong;
+                return input == unboxedLong;
               }
             };
           }

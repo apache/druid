@@ -725,7 +725,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
         case STRING:
           return makeStringValueMatcher(dimension, predicateFactory.makeStringPredicate());
         default:
-          throw new UOE("Cannot make ValueMatcher for type[%s]", type);
+          return new BooleanValueMatcher(predicateFactory.makeStringPredicate().apply(null));
       }
     }
 

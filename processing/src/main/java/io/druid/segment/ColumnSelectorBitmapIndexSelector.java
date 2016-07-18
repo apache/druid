@@ -25,12 +25,15 @@ import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.common.guava.CloseQuietly;
 import io.druid.query.filter.BitmapIndexSelector;
+import io.druid.query.filter.Filter;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.GenericColumn;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedIterable;
+import io.druid.segment.filter.Filters;
 
 import java.util.Iterator;
 
@@ -115,12 +118,14 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
   public BitmapIndex getBitmapIndex(String dimension)
   {
     final Column column = index.getColumn(dimension);
-
-    if (column == null) {
-      // Create a BitmapIndex for null columns so that filters applied to null columns can use
+    if (column == null || !columnSupportsFiltering(column)) {
+      // for missing columns and columns with types that do not support filtering,
+      // treat the column as if it were a String column full of nulls.
+      // Create a BitmapIndex so that filters applied to null columns can use
       // bitmap indexes. Filters check for the presence of a bitmap index, this is used to determine
       // whether the filter is applied in the pre or post filtering stage.
-      return new BitmapIndex() {
+      return new BitmapIndex()
+      {
         @Override
         public int getCardinality()
         {
@@ -175,7 +180,7 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
   public ImmutableBitmap getBitmapIndex(String dimension, String value)
   {
     final Column column = index.getColumn(dimension);
-    if (column == null) {
+    if (column == null || !columnSupportsFiltering(column)) {
       if (Strings.isNullOrEmpty(value)) {
         return bitmapFactory.complement(bitmapFactory.makeEmptyImmutableBitmap(), getNumRows());
       } else {
@@ -200,5 +205,11 @@ public class ColumnSelectorBitmapIndexSelector implements BitmapIndexSelector
     }
 
     return column.getSpatialIndex().getRTree();
+  }
+
+  private static boolean columnSupportsFiltering(Column column)
+  {
+    ValueType columnType = column.getCapabilities().getType();
+    return Filters.FILTERABLE_TYPES.contains(columnType);
   }
 }

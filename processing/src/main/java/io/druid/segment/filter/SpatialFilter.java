@@ -30,8 +30,6 @@ import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.segment.incremental.SpatialDimensionRowTransformer;
 
-import javax.annotation.Nullable;
-
 /**
  */
 public class SpatialFilter implements Filter

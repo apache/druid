@@ -40,10 +40,12 @@ import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 
@@ -51,6 +53,7 @@ import java.util.List;
  */
 public class Filters
 {
+  public static final List<ValueType> FILTERABLE_TYPES = Arrays.asList(ValueType.STRING, ValueType.LONG);
   private static final String CTX_KEY_USE_FILTER_CNF = "useFilterCNF";
 
   /**
@@ -181,10 +184,13 @@ public class Filters
 
     return new ValueMatcher()
     {
+      // store the primitive, so we don't unbox for every comparison
+      final long unboxedLong = longValue.longValue();
+
       @Override
       public boolean matches()
       {
-        return longSelector.get() == longValue;
+        return longSelector.get() == unboxedLong;
       }
     };
   }
