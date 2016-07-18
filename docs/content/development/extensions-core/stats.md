@@ -87,7 +87,7 @@ To acquire standard deviation from variance, user can use "stddev" post aggregat
       "name": "index_var",
       "fieldName": "index_var"
     }
-  ]
+  ],
   "intervals": [
     "2016-03-01T00:00:00.000/2013-03-20T00:00:00.000"
   ]
