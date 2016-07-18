@@ -30,8 +30,8 @@ import io.druid.server.coordinator.DruidCoordinatorConfig;
 import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
 import org.joda.time.Interval;
 
+import java.util.Collection;
 import java.util.List;
-import java.util.Set;
 
 /**
  */
@@ -81,7 +81,17 @@ public class DruidCoordinatorSegmentKiller implements DruidCoordinatorHelper
   @Override
   public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
   {
-    Set<String> whitelist = params.getCoordinatorDynamicConfig().getKillDataSourceWhitelist();
+    boolean killAllDataSources = params.getCoordinatorDynamicConfig().isKillAllDataSources();
+    Collection<String> whitelist = params.getCoordinatorDynamicConfig().getKillDataSourceWhitelist();
+
+    if (killAllDataSources && whitelist != null && !whitelist.isEmpty()) {
+      log.error("killAllDataSources can't be true when killDataSourceWhitelist is non-empty, No kill tasks are scheduled.");
+      return params;
+    }
+
+    if (killAllDataSources) {
+      whitelist = segmentManager.getAllDatasourceNames();
+    }
 
     if (whitelist != null && whitelist.size() > 0 && (lastKillTime + period) < System.currentTimeMillis()) {
       lastKillTime = System.currentTimeMillis();
