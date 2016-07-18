@@ -122,7 +122,7 @@ public class GroupByQueryEngine
                           @Override
                           public RowIterator make()
                           {
-                            return new RowIterator(query, cursor, bufferHolder.get(), config.get());
+                            return new RowIterator(query, cursor, bufferHolder.get(), config.get(), false);
                           }
 
                           @Override
@@ -147,15 +147,13 @@ public class GroupByQueryEngine
     );
   }
 
-  private static class RowUpdater
+  private static abstract class RowUpdater
   {
     private final ByteBuffer metricValues;
     private final BufferAggregator[] aggregators;
     private final PositionMaintainer positionMaintainer;
 
-    private final Map<ByteBuffer, Integer> positions = Maps.newTreeMap();
-    // GroupBy queries tend to do a lot of reads from this. We co-store a hash map to make those reads go faster.
-    private final Map<ByteBuffer, Integer> positionsHash = Maps.newHashMap();
+    protected final Map<ByteBuffer, Integer> positions = Maps.newTreeMap();
 
     public RowUpdater(
         ByteBuffer metricValues,
@@ -168,15 +166,13 @@ public class GroupByQueryEngine
       this.positionMaintainer = positionMaintainer;
     }
 
-    public int getNumRows()
-    {
+    protected int getNumRows() {
       return positions.size();
     }
 
-    public Map<ByteBuffer, Integer> getPositions()
-    {
-      return positions;
-    }
+    protected abstract Map<ByteBuffer, Integer> getPositions();
+
+    protected abstract void putPosition(ByteBuffer key, int position);
 
     private List<ByteBuffer> updateValues(
         ByteBuffer key,
@@ -209,7 +205,7 @@ public class GroupByQueryEngine
         return retVal;
       } else {
         key.clear();
-        Integer position = positionsHash.get(key);
+        Integer position = positions.get(key);
         int[] increments = positionMaintainer.getIncrements();
         int thePosition;
 
@@ -223,8 +219,8 @@ public class GroupByQueryEngine
             return Lists.newArrayList(keyCopy);
           }
 
-          positions.put(keyCopy, position);
-          positionsHash.put(keyCopy, position);
+          putPosition(keyCopy, position);
+
           thePosition = position;
           for (int i = 0; i < aggregators.length; ++i) {
             aggregators[i].init(metricValues, thePosition);
@@ -239,6 +235,55 @@ public class GroupByQueryEngine
         }
         return null;
       }
+    }
+  }
+
+  private static class UnsortedRowUpdater extends RowUpdater
+  {
+    public UnsortedRowUpdater(
+        ByteBuffer metricValues,
+        BufferAggregator[] aggregators,
+        PositionMaintainer positionMaintainer
+    )
+    {
+      super(metricValues, aggregators, positionMaintainer);
+    }
+
+    protected final Map<ByteBuffer, Integer> getPositions()
+    {
+      return positions;
+    }
+
+    protected final void putPosition(ByteBuffer key, int position)
+    {
+      positions.put(key, position);
+    }
+  }
+
+  private static class SortedUpdater extends RowUpdater
+  {
+    private final Map<ByteBuffer, Integer> sortedPositions = Maps.newTreeMap();
+
+    public SortedUpdater(
+        ByteBuffer metricValues,
+        BufferAggregator[] aggregators,
+        PositionMaintainer positionMaintainer
+    )
+    {
+      super(metricValues, aggregators, positionMaintainer);
+    }
+
+    @Override
+    protected final Map<ByteBuffer, Integer> getPositions()
+    {
+      return sortedPositions;
+    }
+
+    @Override
+    protected final void putPosition(ByteBuffer key, int position)
+    {
+      positions.put(key, position);
+      sortedPositions.put(key, position);
     }
   }
 
@@ -296,6 +341,8 @@ public class GroupByQueryEngine
     private final Cursor cursor;
     private final ByteBuffer metricsBuffer;
     private final int maxIntermediateRows;
+    private final GroupByQueryConfig config;
+    private final boolean sort;
 
     private final List<DimensionSpec> dimensionSpecs;
     private final List<DimensionSelector> dimensions;
@@ -308,18 +355,25 @@ public class GroupByQueryEngine
     private List<ByteBuffer> unprocessedKeys;
     private Iterator<Row> delegate;
 
-    public RowIterator(GroupByQuery query, final Cursor cursor, ByteBuffer metricsBuffer, GroupByQueryConfig config)
+    public RowIterator(
+        GroupByQuery query,
+        final Cursor cursor,
+        ByteBuffer metricsBuffer,
+        GroupByQueryConfig config,
+        boolean sort
+    )
     {
       this.query = query;
       this.cursor = cursor;
       this.metricsBuffer = metricsBuffer;
-
       this.maxIntermediateRows = Math.min(
           query.getContextValue(
               CTX_KEY_MAX_INTERMEDIATE_ROWS,
               config.getMaxIntermediateRows()
           ), config.getMaxIntermediateRows()
       );
+      this.config = config;
+      this.sort = sort;
 
       unprocessedKeys = null;
       delegate = Iterators.emptyIterator();
@@ -366,7 +420,9 @@ public class GroupByQueryEngine
       }
 
       final PositionMaintainer positionMaintainer = new PositionMaintainer(0, sizesRequired, metricsBuffer.remaining());
-      final RowUpdater rowUpdater = new RowUpdater(metricsBuffer, aggregators, positionMaintainer);
+      final RowUpdater rowUpdater = sort
+                                    ? new SortedUpdater(metricsBuffer, aggregators, positionMaintainer)
+                                    : new UnsortedRowUpdater(metricsBuffer, aggregators, positionMaintainer);
       if (unprocessedKeys != null) {
         for (ByteBuffer key : unprocessedKeys) {
           final List<ByteBuffer> unprocUnproc = rowUpdater.updateValues(key, ImmutableList.<DimensionSelector>of());
