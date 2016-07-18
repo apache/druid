@@ -67,6 +67,7 @@
         <jackson.version>2.4.6</jackson.version>
         <log4j.version>2.5</log4j.version>
         <slf4j.version>1.7.12</slf4j.version>
+        <!-- If compiling with different hadoop version also modify default hadoop coordinates in TaskConfig.java -->
         <hadoop.compile.version>2.3.0</hadoop.compile.version>
     </properties>
 
