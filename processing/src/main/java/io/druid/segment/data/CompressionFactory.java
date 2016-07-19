@@ -40,7 +40,7 @@ import java.util.Map;
  * Byte 2 - 5 : number of values
  * Byte 6 - 9 : size per block (even if block format isn't used, this is needed for backward compatibility)
  * Byte 10 : compression strategy ( < -2 if there is an encoding format following, to get the strategy id add 126 to it)
- * Byte 11 : encoding format (optional)
+ * Byte 11(optional) : encoding format
  * <p>
  * Encoding specific header (described below)
  * <p>
@@ -212,35 +212,35 @@ public abstract class CompressionFactory
 
   public static Supplier<IndexedLongs> getLongSupplier(
       int totalSize, int sizePer, ByteBuffer fromBuffer, ByteOrder order,
-      LongEncodingFormat format,
+      LongEncodingFormat encoding,
       CompressedObjectStrategy.CompressionStrategy strategy
   )
   {
     if (strategy == CompressedObjectStrategy.CompressionStrategy.NONE) {
-      return new EntireLayoutIndexedLongSupplier(totalSize, format.getReader(fromBuffer, order));
+      return new EntireLayoutIndexedLongSupplier(totalSize, encoding.getReader(fromBuffer, order));
     } else {
       return new BlockLayoutIndexedLongsSupplier(totalSize, sizePer, fromBuffer, order,
-                                                 format.getReader(fromBuffer, order), strategy
+                                                 encoding.getReader(fromBuffer, order), strategy
       );
     }
   }
 
   public static LongSupplierSerializer getLongSerializer(
       IOPeon ioPeon, String filenameBase, ByteOrder order,
-      LongEncodingFormat format,
+      LongEncodingFormat encoding,
       CompressedObjectStrategy.CompressionStrategy strategy
   )
   {
-    if (format == LongEncodingFormat.TABLE || format == LongEncodingFormat.DELTA) {
+    if (encoding == LongEncodingFormat.TABLE || encoding == LongEncodingFormat.DELTA) {
       return new IntermediateLongSupplierSerializer(ioPeon, filenameBase, order, strategy);
     }
     if (strategy == CompressedObjectStrategy.CompressionStrategy.NONE) {
       return new EntireLayoutLongSerializer(
-          ioPeon, filenameBase, order, format.getWriter(order)
+          ioPeon, filenameBase, order, encoding.getWriter(order)
       );
     } else {
       return new BlockLayoutLongSupplierSerializer(
-          ioPeon, filenameBase, order, format.getWriter(order), strategy
+          ioPeon, filenameBase, order, encoding.getWriter(order), strategy
       );
     }
   }

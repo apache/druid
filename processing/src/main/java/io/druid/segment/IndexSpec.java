@@ -25,6 +25,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import io.druid.segment.data.BitmapSerde;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
@@ -44,7 +45,7 @@ public class IndexSpec
 {
   public static final String UNCOMPRESSED = "uncompressed";
   public static final String DEFAULT_METRIC_COMPRESSION = CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY.name().toLowerCase();
-  public static final String DEFAULT_METRIC_LONG_ENCODING = CompressionFactory.DEFAULT_LONG_ENCODING.name().toLowerCase();
+  public static final String DEFAULT_LONG_ENCODING = CompressionFactory.DEFAULT_LONG_ENCODING.name().toLowerCase();
   public static final String DEFAULT_DIMENSION_COMPRESSION = CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY.name().toLowerCase();
 
   private static final Set<String> COMPRESSION_NAMES = Sets.newHashSet(
@@ -65,7 +66,7 @@ public class IndexSpec
   private final BitmapSerdeFactory bitmapSerdeFactory;
   private final String dimensionCompression;
   private final String metricCompression;
-  private final String metricLongEncoding;
+  private final String longEncoding;
 
 
   /**
@@ -82,20 +83,23 @@ public class IndexSpec
    *
    * @param bitmapSerdeFactory type of bitmap to use (e.g. roaring or concise), null to use the default.
    *                           Defaults to the bitmap type specified by the (deprecated) "druid.processing.bitmap.type"
-   *                           setting, or, if none was set, uses the default @{link BitmapSerde.DefaultBitmapSerdeFactory}
+   *                           setting, or, if none was set, uses the default {@link BitmapSerde.DefaultBitmapSerdeFactory}
    *
-   * @param dimensionCompression compression format for dimension columns, null to use the default
-   *                             Defaults to @{link CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY}
+   * @param dimensionCompression compression format for dimension columns, null to use the default.
+   *                             Defaults to {@link CompressedObjectStrategy#DEFAULT_COMPRESSION_STRATEGY}
    *
    * @param metricCompression compression format for metric columns, null to use the default.
-   *                          Defaults to @{link CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY}
+   *                          Defaults to {@link CompressedObjectStrategy#DEFAULT_COMPRESSION_STRATEGY}
+   *
+   * @param longEncoding encoding format for metric and dimension columns with type long, null to use the default.
+   *                     Defaults to {@link CompressionFactory#DEFAULT_LONG_ENCODING}
    */
   @JsonCreator
   public IndexSpec(
       @JsonProperty("bitmap") BitmapSerdeFactory bitmapSerdeFactory,
       @JsonProperty("dimensionCompression") String dimensionCompression,
       @JsonProperty("metricCompression") String metricCompression,
-      @JsonProperty("metricLongEncoding") String metricLongEncoding
+      @JsonProperty("longEncoding") String longEncoding
   )
   {
     Preconditions.checkArgument(dimensionCompression == null || dimensionCompression.equals(UNCOMPRESSED) || COMPRESSION_NAMES.contains(dimensionCompression),
@@ -107,7 +111,7 @@ public class IndexSpec
     this.bitmapSerdeFactory = bitmapSerdeFactory != null ? bitmapSerdeFactory : new ConciseBitmapSerdeFactory();
     this.dimensionCompression = dimensionCompression;
     this.metricCompression = metricCompression;
-    this.metricLongEncoding = metricLongEncoding;
+    this.longEncoding = longEncoding;
   }
 
   @JsonProperty("bitmap")
@@ -128,10 +132,10 @@ public class IndexSpec
     return metricCompression;
   }
 
-  @JsonProperty("metricLongEncoding")
-  public String getMetricLongEncoding()
+  @JsonProperty("longEncoding")
+  public String getLongEncoding()
   {
-    return metricLongEncoding;
+    return longEncoding;
   }
 
   public CompressedObjectStrategy.CompressionStrategy getMetricCompressionStrategy()
@@ -148,10 +152,10 @@ public class IndexSpec
            dimensionCompressionStrategyForName(dimensionCompression);
   }
 
-  public CompressionFactory.LongEncodingFormat getMetricLongEncodingFormat()
+  public CompressionFactory.LongEncodingFormat getLongEncodingFormat()
   {
     return CompressionFactory.LongEncodingFormat.valueOf(
-        (metricLongEncoding == null ? DEFAULT_METRIC_LONG_ENCODING : metricLongEncoding).toUpperCase()
+        (longEncoding == null ? DEFAULT_LONG_ENCODING : longEncoding).toUpperCase()
     );
 
   }

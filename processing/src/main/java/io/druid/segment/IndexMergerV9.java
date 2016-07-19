@@ -745,7 +745,7 @@ public class IndexMergerV9 extends IndexMerger
   {
     ArrayList<GenericColumnSerializer> metWriters = Lists.newArrayListWithCapacity(mergedMetrics.size());
     final CompressedObjectStrategy.CompressionStrategy metCompression = indexSpec.getMetricCompressionStrategy();
-    final CompressionFactory.LongEncodingFormat metEncoding = indexSpec.getMetricLongEncodingFormat();
+    final CompressionFactory.LongEncodingFormat metEncoding = indexSpec.getLongEncodingFormat();
     for (String metric : mergedMetrics) {
       ValueType type = metricsValueTypes.get(metric);
       GenericColumnSerializer writer;

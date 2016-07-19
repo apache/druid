@@ -87,14 +87,14 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
       final int totalSize = bufferToUse.getInt();
       final int sizePer = bufferToUse.getInt();
       CompressedObjectStrategy.CompressionStrategy compression = CompressedObjectStrategy.CompressionStrategy.LZF;
-      CompressionFactory.LongEncodingFormat format = CompressionFactory.DEFAULT_LONG_ENCODING;
+      CompressionFactory.LongEncodingFormat encoding = CompressionFactory.DEFAULT_LONG_ENCODING;
       if (versionFromBuffer == version) {
         byte compressionId = bufferToUse.get();
         if (compressionId >= (byte) 0xFE) {
           compression = CompressedObjectStrategy.CompressionStrategy.forId(compressionId);
         } else {
           compression = CompressedObjectStrategy.CompressionStrategy.forId((byte) (compressionId + 126));
-          format = CompressionFactory.LongEncodingFormat.forId(bufferToUse.get());
+          encoding = CompressionFactory.LongEncodingFormat.forId(bufferToUse.get());
         }
       }
       Supplier<IndexedLongs> supplier = CompressionFactory.getLongSupplier(
@@ -102,7 +102,7 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
           sizePer,
           bufferToUse,
           order,
-          format,
+          encoding,
           compression
       );
       return new CompressedLongsIndexedSupplier(

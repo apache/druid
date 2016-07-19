@@ -34,13 +34,13 @@ public class IndexSpecTest
   {
     final ObjectMapper objectMapper = new DefaultObjectMapper();
     final String json = "{ \"bitmap\" : { \"type\" : \"roaring\" }, \"dimensionCompression\" : \"lz4\", \"metricCompression\" : \"lzf\""
-                        + ", \"metricLongEncoding\" : \"delta\" }";
+                        + ", \"longEncoding\" : \"delta\" }";
 
     final IndexSpec spec = objectMapper.readValue(json, IndexSpec.class);
     Assert.assertEquals(new RoaringBitmapSerdeFactory(null), spec.getBitmapSerdeFactory());
     Assert.assertEquals(CompressedObjectStrategy.CompressionStrategy.LZ4, spec.getDimensionCompressionStrategy());
     Assert.assertEquals(CompressedObjectStrategy.CompressionStrategy.LZF, spec.getMetricCompressionStrategy());
-    Assert.assertEquals(CompressionFactory.LongEncodingFormat.DELTA, spec.getMetricLongEncodingFormat());
+    Assert.assertEquals(CompressionFactory.LongEncodingFormat.DELTA, spec.getLongEncodingFormat());
 
     Assert.assertEquals(spec, objectMapper.readValue(objectMapper.writeValueAsBytes(spec), IndexSpec.class));
   }
@@ -64,6 +64,6 @@ public class IndexSpecTest
     final IndexSpec spec = new IndexSpec();
     Assert.assertEquals(CompressedObjectStrategy.CompressionStrategy.LZ4, spec.getDimensionCompressionStrategy());
     Assert.assertEquals(CompressedObjectStrategy.CompressionStrategy.LZ4, spec.getMetricCompressionStrategy());
-    Assert.assertEquals(CompressionFactory.LongEncodingFormat.LONGS, spec.getMetricLongEncodingFormat());
+    Assert.assertEquals(CompressionFactory.LongEncodingFormat.LONGS, spec.getLongEncodingFormat());
   }
 }

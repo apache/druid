@@ -44,11 +44,11 @@ public class VSizeLongSerde
     if (value < 0) {
       throw new IAE("maxValue[%s] must be positive", value);
     }
-    byte numBytes = 0;
+    byte numBits = 0;
     long maxValue = 1;
     for (int i = 0; i < SUPPORTED_SIZE.length; i++) {
-      while (numBytes < SUPPORTED_SIZE[i] && maxValue < Long.MAX_VALUE / 2) {
-        numBytes++;
+      while (numBits < SUPPORTED_SIZE[i] && maxValue < Long.MAX_VALUE / 2) {
+        numBits++;
         maxValue *= 2;
       }
       if (value <= maxValue || maxValue >= Long.MAX_VALUE / 2) {
@@ -141,6 +141,9 @@ public class VSizeLongSerde
     }
   }
 
+
+  // LongDeserializers were adapted from Apache Lucene DirectReader, see:
+  // https://github.com/apache/lucene-solr/blob/master/lucene/core/src/java/org/apache/lucene/util/packed/DirectReader.java
   public static LongDeserializer getDeserializer(int longSize, ByteBuffer buffer, int bufferOffset)
   {
     buffer.order(ByteOrder.BIG_ENDIAN);
