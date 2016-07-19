@@ -45,6 +45,10 @@ public class SelectorDimFilter implements DimFilter
   private final String value;
   private final ExtractionFn extractionFn;
 
+  private boolean longsInitialized = false;
+  private Long valueAsLong;
+
+
   @JsonCreator
   public SelectorDimFilter(
       @JsonProperty("dimension") String dimension,
@@ -89,7 +93,6 @@ public class SelectorDimFilter implements DimFilter
       return new SelectorFilter(dimension, value);
     } else {
       final String valueOrNull = Strings.emptyToNull(value);
-      final Long valueAsLong = Longs.tryParse(value);
 
       final DruidPredicateFactory predicateFactory = new DruidPredicateFactory()
       {
@@ -109,6 +112,8 @@ public class SelectorDimFilter implements DimFilter
         @Override
         public DruidLongPredicate makeLongPredicate()
         {
+          initLongValue();
+
           if (valueAsLong == null) {
             return new DruidLongPredicate()
             {
@@ -203,5 +208,15 @@ public class SelectorDimFilter implements DimFilter
     result = 31 * result + (value != null ? value.hashCode() : 0);
     result = 31 * result + (extractionFn != null ? extractionFn.hashCode() : 0);
     return result;
+  }
+
+
+  private void initLongValue()
+  {
+    if (longsInitialized) {
+      return;
+    }
+    valueAsLong = Longs.tryParse(value);
+    longsInitialized = true;
   }
 }

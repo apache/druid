@@ -33,7 +33,6 @@ import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 
-import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -52,6 +51,7 @@ public class InFilter implements Filter
   private final Set<String> values;
   private final ExtractionFn extractionFn;
 
+  private boolean longsInitialized = false;
   private boolean useLongHash;
   private long[] longArray;
   private HashSet<Long> longHashSet;
@@ -61,7 +61,6 @@ public class InFilter implements Filter
     this.dimension = dimension;
     this.values = values;
     this.extractionFn = extractionFn;
-    setLongValues();
   }
 
   @Override
@@ -112,7 +111,7 @@ public class InFilter implements Filter
           return new Predicate<String>()
           {
             @Override
-            public boolean apply(@Nullable String input)
+            public boolean apply(String input)
             {
               return values.contains(Strings.nullToEmpty(extractionFn.apply(input)));
             }
@@ -121,7 +120,7 @@ public class InFilter implements Filter
           return new Predicate<String>()
           {
             @Override
-            public boolean apply(@Nullable String input)
+            public boolean apply(String input)
             {
               return values.contains(Strings.nullToEmpty(input));
             }
@@ -132,6 +131,8 @@ public class InFilter implements Filter
       @Override
       public DruidLongPredicate makeLongPredicate()
       {
+        setLongValues();
+
         if (extractionFn != null) {
           return new DruidLongPredicate()
           {
@@ -168,6 +169,10 @@ public class InFilter implements Filter
 
   private void setLongValues()
   {
+    if (longsInitialized) {
+      return;
+    }
+
     List<Long> longs = new ArrayList<>();
     for (String value : values) {
       Long longValue = Longs.tryParse(value);
@@ -186,5 +191,7 @@ public class InFilter implements Filter
       }
       Arrays.sort(longArray);
     }
+
+    longsInitialized = true;
   }
 }

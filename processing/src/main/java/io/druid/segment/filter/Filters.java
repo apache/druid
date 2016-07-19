@@ -53,7 +53,7 @@ import java.util.List;
  */
 public class Filters
 {
-  public static final List<ValueType> FILTERABLE_TYPES = Arrays.asList(ValueType.STRING, ValueType.LONG);
+  public static final List<ValueType> FILTERABLE_TYPES = ImmutableList.of(ValueType.STRING, ValueType.LONG);
   private static final String CTX_KEY_USE_FILTER_CNF = "useFilterCNF";
 
   /**
