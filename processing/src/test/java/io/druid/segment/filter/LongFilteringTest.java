@@ -22,6 +22,10 @@ package io.druid.segment.filter;
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.Pair;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -56,12 +60,19 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.RunnableFuture;
+import java.util.concurrent.TimeUnit;
 
 @RunWith(Parameterized.class)
 public class LongFilteringTest extends BaseFilterTest
 {
   private static final String COUNT_COLUMN = "count";
   private static final String TIMESTAMP_COLUMN = "ts";
+  private static int EXECUTOR_NUM_THREADS = 16;
+  private static int EXECUTOR_NUM_TASKS = 2000;
 
   private static final InputRowParser<Map<String, Object>> PARSER = new MapInputRowParser(
       new TimeAndDimsParseSpec(
@@ -137,7 +148,7 @@ public class LongFilteringTest extends BaseFilterTest
     // cross the hashing threshold to test hashset implementation, filter on even values
     List<String> infilterValues = new ArrayList<>(InDimFilter.LONG_HASHING_THRESHOLD * 2);
     for (int i = 0; i < InDimFilter.LONG_HASHING_THRESHOLD * 2; i++) {
-      infilterValues.add(String.valueOf(i*2));
+      infilterValues.add(String.valueOf(i * 2));
     }
     assertFilterMatches(
         new InDimFilter(COUNT_COLUMN, infilterValues, null),
@@ -225,6 +236,30 @@ public class LongFilteringTest extends BaseFilterTest
     );
   }
 
+  @Test
+  public void testSelectorAndInFilterMultithreaded()
+  {
+    assertFilterMatchesMultithreaded(
+        new SelectorDimFilter(COUNT_COLUMN, "3", null),
+        ImmutableList.<String>of("3")
+    );
+
+    assertFilterMatchesMultithreaded(
+        new InDimFilter(COUNT_COLUMN, Arrays.asList("2", "4", "8"), null),
+        ImmutableList.<String>of("2", "4")
+    );
+
+    // cross the hashing threshold to test hashset implementation, filter on even values
+    List<String> infilterValues = new ArrayList<>(InDimFilter.LONG_HASHING_THRESHOLD * 2);
+    for (int i = 0; i < InDimFilter.LONG_HASHING_THRESHOLD * 2; i++) {
+      infilterValues.add(String.valueOf(i * 2));
+    }
+    assertFilterMatchesMultithreaded(
+        new InDimFilter(COUNT_COLUMN, infilterValues, null),
+        ImmutableList.<String>of("2", "4", "6")
+    );
+  }
+
   private void assertFilterMatches(
       final DimFilter filter,
       final List<String> expectedRows
@@ -232,5 +267,54 @@ public class LongFilteringTest extends BaseFilterTest
   {
     Assert.assertEquals(filter.toString(), expectedRows, selectColumnValuesMatchingFilter(filter, "dim0"));
     Assert.assertEquals(filter.toString(), expectedRows.size(), selectCountUsingFilteredAggregator(filter));
+  }
+
+  private void assertFilterMatchesMultithreaded(
+      final DimFilter filter,
+      final List<String> expectedRows
+  )
+  {
+    testWithExecutor(filter, expectedRows);
+  }
+
+  private Runnable makeFilterRunner(
+      final DimFilter filter,
+      final List<String> expectedRows
+  )
+  {
+    return new Runnable()
+    {
+      @Override
+      public void run()
+      {
+        Assert.assertEquals(filter.toString(), expectedRows, selectColumnValuesMatchingFilter(filter, "dim0"));
+        Assert.assertEquals(filter.toString(), expectedRows.size(), selectCountUsingFilteredAggregator(filter));
+      }
+    };
+  }
+
+  private void testWithExecutor(
+      final DimFilter filter,
+      final List<String> expectedRows
+  )
+  {
+    ListeningExecutorService executor = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(EXECUTOR_NUM_THREADS));
+
+    List<ListenableFuture<?>> futures = new ArrayList<>();
+
+    for (int i = 0; i < EXECUTOR_NUM_TASKS; i++) {
+      Runnable runnable = makeFilterRunner(filter, expectedRows);
+      ListenableFuture fut = executor.submit(runnable);
+      futures.add(fut);
+    }
+
+    try {
+      Futures.allAsList(futures).get(60, TimeUnit.SECONDS);
+    }
+    catch (Exception ex) {
+      Assert.fail(ex.getMessage());
+    }
+
+    executor.shutdown();
   }
 }
