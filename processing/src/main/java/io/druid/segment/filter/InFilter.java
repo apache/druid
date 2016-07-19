@@ -22,8 +22,8 @@ package io.druid.segment.filter;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
-import com.google.common.primitives.Longs;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
@@ -33,34 +33,28 @@ import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 /**
  */
 public class InFilter implements Filter
 {
-  // determined through benchmark that binary search on long[] is faster than HashSet until ~16 elements
-  // Hashing threshold is not applied to String for now, String still uses ImmutableSortedSet
-  public static final int LONG_HASHING_THRESHOLD = 16;
-
   private final String dimension;
   private final Set<String> values;
   private final ExtractionFn extractionFn;
+  private final Supplier<DruidLongPredicate> longPredicateSupplier;
 
-  private boolean longsInitialized = false;
-  private boolean useLongHash;
-  private long[] longArray;
-  private HashSet<Long> longHashSet;
-
-  public InFilter(String dimension, Set<String> values, ExtractionFn extractionFn)
+  public InFilter(
+      String dimension,
+      Set<String> values,
+      Supplier<DruidLongPredicate> longPredicateSupplier,
+      ExtractionFn extractionFn
+  )
   {
     this.dimension = dimension;
     this.values = values;
     this.extractionFn = extractionFn;
+    this.longPredicateSupplier = longPredicateSupplier;
   }
 
   @Override
@@ -131,8 +125,6 @@ public class InFilter implements Filter
       @Override
       public DruidLongPredicate makeLongPredicate()
       {
-        setLongValues();
-
         if (extractionFn != null) {
           return new DruidLongPredicate()
           {
@@ -143,55 +135,9 @@ public class InFilter implements Filter
             }
           };
         } else {
-          if (useLongHash) {
-            return new DruidLongPredicate()
-            {
-              @Override
-              public boolean applyLong(long input)
-              {
-                return longHashSet.contains(input);
-              }
-            };
-          } else {
-            return new DruidLongPredicate()
-            {
-              @Override
-              public boolean applyLong(long input)
-              {
-                return Arrays.binarySearch(longArray, input) >= 0;
-              }
-            };
-          }
+          return longPredicateSupplier.get();
         }
       }
     };
-  }
-
-  private void setLongValues()
-  {
-    if (longsInitialized) {
-      return;
-    }
-
-    List<Long> longs = new ArrayList<>();
-    for (String value : values) {
-      Long longValue = Longs.tryParse(value);
-      if (longValue != null) {
-        longs.add(longValue);
-      }
-    }
-
-    useLongHash = longs.size() > LONG_HASHING_THRESHOLD;
-    if (useLongHash) {
-      longHashSet = new HashSet<Long>(longs);
-    } else {
-      longArray = new long[longs.size()];
-      for (int i = 0; i < longs.size(); i++) {
-        longArray[i] = longs.get(i).longValue();
-      }
-      Arrays.sort(longArray);
-    }
-
-    longsInitialized = true;
   }
 }

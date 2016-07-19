@@ -45,8 +45,9 @@ public class SelectorDimFilter implements DimFilter
   private final String value;
   private final ExtractionFn extractionFn;
 
-  private boolean longsInitialized = false;
-  private Long valueAsLong;
+  private Object initLock = new Object();
+  private volatile boolean longsInitialized = false;
+  private volatile Long valueAsLong;
 
 
   @JsonCreator
@@ -216,7 +217,12 @@ public class SelectorDimFilter implements DimFilter
     if (longsInitialized) {
       return;
     }
-    valueAsLong = Longs.tryParse(value);
-    longsInitialized = true;
+    synchronized (initLock) {
+      if (longsInitialized) {
+        return;
+      }
+      valueAsLong = Longs.tryParse(value);
+      longsInitialized = true;
+    }
   }
 }
