@@ -17,7 +17,7 @@
         "intervals" : ["2015-09-12/2015-09-13"]
       },
       "parser" : {
-        "type" : "string",
+        "type" : "hadoopyString",
         "parseSpec" : {
           "format" : "json",
           "dimensionsSpec" : {
