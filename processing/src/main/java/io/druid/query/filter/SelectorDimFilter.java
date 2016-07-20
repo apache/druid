@@ -45,7 +45,7 @@ public class SelectorDimFilter implements DimFilter
   private final String value;
   private final ExtractionFn extractionFn;
 
-  private Object initLock = new Object();
+  private final Object initLock = new Object();
   private volatile boolean longsInitialized = false;
   private volatile Long valueAsLong;
 
