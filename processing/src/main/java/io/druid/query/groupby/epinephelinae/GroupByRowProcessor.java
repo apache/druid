@@ -347,7 +347,7 @@ public class GroupByRowProcessor
         @Override
         public int getValueCardinality()
         {
-          throw new UnsupportedOperationException("value cardinality is unknown in incremental index");
+          throw new UnsupportedOperationException("value cardinality is unknown");
         }
 
         @Override
