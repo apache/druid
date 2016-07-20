@@ -252,6 +252,10 @@ public class QueryResourceTest
             // WRITE corresponds to cancellation of query
             if (action.equals(Action.READ)) {
               try {
+                // Countdown startAwaitLatch as we want query cancellation to happen
+                // after we enter isAuthorized method so that we can handle the
+                // InterruptedException here because of query cancellation
+                startAwaitLatch.countDown();
                 waitForCancellationLatch.await();
               }
               catch (InterruptedException e) {
@@ -295,7 +299,6 @@ public class QueryResourceTest
           public void run()
           {
             try {
-              startAwaitLatch.countDown();
               Response response = queryResource.doPost(
                   new ByteArrayInputStream(queryString.getBytes("UTF-8")),
                   null,
