@@ -150,11 +150,13 @@ class IdentifierExpr implements Expr
 class FunctionExpr implements Expr
 {
   final String name;
+  final Function func;
   final List<Expr> args;
 
-  public FunctionExpr(String name, List<Expr> args)
+  public FunctionExpr(String name, Function func, List<Expr> args)
   {
     this.name = name;
+    this.func = func;
     this.args = args;
   }
 
@@ -167,7 +169,7 @@ class FunctionExpr implements Expr
   @Override
   public ExprEval eval(ObjectBinding bindings)
   {
-    return Parser.getFunction(name).apply(args, bindings);
+    return func.apply(args, bindings);
   }
 
   @Override

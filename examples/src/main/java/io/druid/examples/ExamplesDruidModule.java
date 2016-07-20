@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.Module;
 import com.fasterxml.jackson.databind.jsontype.NamedType;
 import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.inject.Binder;
+import io.druid.examples.function.GuavaDoubleMath;
 import io.druid.examples.twitter.TwitterSpritzerFirehoseFactory;
 import io.druid.initialization.DruidModule;
 
@@ -38,9 +39,8 @@ public class ExamplesDruidModule implements DruidModule
   {
     return Arrays.<Module>asList(
         new SimpleModule("ExamplesModule")
-            .registerSubtypes(
-                new NamedType(TwitterSpritzerFirehoseFactory.class, "twitzer")
-            )
+            .registerSubtypes(new NamedType(TwitterSpritzerFirehoseFactory.class, "twitzer"))
+            .registerSubtypes(new NamedType(GuavaDoubleMath.class, "guavaDoubleMath"))
     );
   }
 

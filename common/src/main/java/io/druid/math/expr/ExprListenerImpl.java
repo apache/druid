@@ -289,10 +289,11 @@ public class ExprListenerImpl extends ExprBaseListener
       throw new RuntimeException("function " + fnName + " is not defined.");
     }
 
+    Function supplier = Parser.getFunction(fnName);
     List<Expr> args = ctx.getChildCount() > 3 ? (List<Expr>) nodes.get(ctx.getChild(2)) : Collections.<Expr>emptyList();
     nodes.put(
         ctx,
-        new FunctionExpr(fnName, args)
+        new FunctionExpr(fnName, supplier, args)
     );
   }
 

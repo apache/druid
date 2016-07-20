@@ -19,16 +19,14 @@
 
 package io.druid.math.expr;
 
-
 import com.google.common.base.Supplier;
 import com.google.common.base.Suppliers;
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import com.google.common.collect.Lists;
-
 import io.druid.java.util.common.IAE;
 import io.druid.java.util.common.logger.Logger;
+import io.druid.math.expr.Function.FunctionFactory;
 import io.druid.math.expr.antlr.ExprLexer;
 import io.druid.math.expr.antlr.ExprParser;
 import org.antlr.v4.runtime.ANTLRInputStream;
@@ -44,30 +42,39 @@ import java.util.Set;
 public class Parser
 {
   private static final Logger log = new Logger(Parser.class);
-  private static final Map<String, Supplier<Function>> func;
+
+  private static final Map<String, Supplier<Function>> functions = Maps.newHashMap();
 
   static {
-    Map<String, Supplier<Function>> functionMap = Maps.newHashMap();
-    for (Class clazz : Function.class.getClasses()) {
+    register(BuiltinFunctions.class);
+  }
+
+  public static void register(Class parent)
+  {
+    for (Class clazz : parent.getClasses()) {
       if (!Modifier.isAbstract(clazz.getModifiers()) && Function.class.isAssignableFrom(clazz)) {
         try {
-          Function function = (Function)clazz.newInstance();
-          if (function instanceof Function.FunctionFactory) {
-            functionMap.put(function.name().toLowerCase(), (Supplier<Function>) function);
-          } else {
-            functionMap.put(function.name().toLowerCase(), Suppliers.ofInstance(function));
+          Function function = (Function) clazz.newInstance();
+          String name = function.name().toLowerCase();
+          if (functions.containsKey(name)) {
+            throw new IllegalArgumentException("function '" + name + "' should not be overridden");
+          }
+          Supplier<Function> supplier = function instanceof FunctionFactory ? (FunctionFactory) function
+                                                                            : Suppliers.ofInstance(function);
+          functions.put(name, supplier);
+          if (parent != BuiltinFunctions.class) {
+            log.info("user defined function '" + name + "' is registered with class " + clazz.getName());
           }
         }
         catch (Exception e) {
-          log.info("failed to instantiate " + clazz.getName() + ".. ignoring", e);
+          log.info(e, "failed to instantiate " + clazz.getName() + ".. ignoring");
         }
       }
     }
-    func = ImmutableMap.copyOf(functionMap);
   }
 
   public static Function getFunction(String name) {
-    Supplier<Function> supplier = func.get(name.toLowerCase());
+    Supplier<Function> supplier = functions.get(name.toLowerCase());
     if (supplier == null) {
       throw new IAE("Invalid function name '%s'", name);
     }
@@ -76,25 +83,29 @@ public class Parser
 
   public static boolean hasFunction(String name)
   {
-    return func.containsKey(name.toLowerCase());
+    return functions.containsKey(name.toLowerCase());
   }
 
   public static Expr parse(String in)
   {
     return parse(in, true);
   }
-
   public static Expr parse(String in, boolean withFlatten)
+  {
+    ParseTree parseTree = parseTree(in);
+    ParseTreeWalker walker = new ParseTreeWalker();
+    ExprListenerImpl listener = new ExprListenerImpl(parseTree);
+    walker.walk(listener, parseTree);
+    return withFlatten ? flatten(listener.getAST()) : listener.getAST();
+  }
+
+  public static ParseTree parseTree(String in)
   {
     ExprLexer lexer = new ExprLexer(new ANTLRInputStream(in));
     CommonTokenStream tokens = new CommonTokenStream(lexer);
     ExprParser parser = new ExprParser(tokens);
     parser.setBuildParseTree(true);
-    ParseTree parseTree = parser.expr();
-    ParseTreeWalker walker = new ParseTreeWalker();
-    ExprListenerImpl listener = new ExprListenerImpl(parseTree);
-    walker.walk(listener, parseTree);
-    return withFlatten ? flatten(listener.getAST()) : listener.getAST();
+    return parser.expr();
   }
 
   public static Expr flatten(Expr expr)
@@ -135,7 +146,7 @@ public class Parser
       if (Evals.isAllConstants(flattening)) {
         expr = expr.eval(null).toExpr();
       } else if (flattened) {
-        expr = new FunctionExpr(functionExpr.name, flattening);
+        expr = new FunctionExpr(functionExpr.name, functionExpr.func, flattening);
       }
     }
     return expr;
