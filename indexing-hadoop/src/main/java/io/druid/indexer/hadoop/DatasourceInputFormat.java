@@ -89,7 +89,9 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
         totalSize += segment.getSegment().getSize();
       }
       int mapTask = ((JobConf)conf).getNumMapTasks();
-      maxSize = totalSize / mapTask;
+      if (mapTask > 0) {
+        maxSize = totalSize / mapTask;
+      }
     }
 
     if (maxSize > 0) {
