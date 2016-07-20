@@ -41,6 +41,7 @@ import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Merging;
 import io.druid.guice.annotations.Smile;
 import io.druid.query.DruidProcessingConfig;
+import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryWatcher;
@@ -51,6 +52,7 @@ import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.epinephelinae.GroupByBinaryFnV2;
 import io.druid.query.groupby.epinephelinae.GroupByMergingQueryRunnerV2;
 import io.druid.query.groupby.epinephelinae.GroupByQueryEngineV2;
+import io.druid.query.groupby.epinephelinae.GroupByRowProcessor;
 import io.druid.segment.StorageAdapter;
 import org.joda.time.DateTime;
 
@@ -176,6 +178,21 @@ public class GroupByStrategyV2 implements GroupByStrategy
             }
         )
     );
+  }
+
+  @Override
+  public Sequence<Row> processSubqueryResult(
+      GroupByQuery subquery, GroupByQuery query, Sequence<Row> subqueryResult
+  )
+  {
+    Sequence<Row> results = GroupByRowProcessor.process(
+        query,
+        subqueryResult,
+        configSupplier.get(),
+        mergeBufferPool,
+        spillMapper
+    );
+    return mergeResults(new NoopQueryRunner<>(results), query, null);
   }
 
   @Override

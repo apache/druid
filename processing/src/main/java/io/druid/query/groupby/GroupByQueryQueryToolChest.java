@@ -167,94 +167,10 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
           runner,
           context
       );
-      final Set<AggregatorFactory> aggs = Sets.newHashSet();
-
-      // Nested group-bys work by first running the inner query and then materializing the results in an incremental
-      // index which the outer query is then run against. To build the incremental index, we use the fieldNames from
-      // the aggregators for the outer query to define the column names so that the index will match the query. If
-      // there are multiple types of aggregators in the outer query referencing the same fieldName, we will try to build
-      // multiple columns of the same name using different aggregator types and will fail. Here, we permit multiple
-      // aggregators of the same type referencing the same fieldName (and skip creating identical columns for the
-      // subsequent ones) and return an error if the aggregator types are different.
-      for (AggregatorFactory aggregatorFactory : query.getAggregatorSpecs()) {
-        for (final AggregatorFactory transferAgg : aggregatorFactory.getRequiredColumns()) {
-          if (Iterables.any(aggs, new Predicate<AggregatorFactory>()
-          {
-            @Override
-            public boolean apply(AggregatorFactory agg)
-            {
-              return agg.getName().equals(transferAgg.getName()) && !agg.equals(transferAgg);
-            }
-          })) {
-            throw new IAE("Inner aggregator can currently only be referenced by a single type of outer aggregator" +
-                          " for '%s'", transferAgg.getName());
-          }
-
-          aggs.add(transferAgg);
-        }
-      }
-
-      // We need the inner incremental index to have all the columns required by the outer query
-      final GroupByQuery innerQuery = new GroupByQuery.Builder(subquery)
-          .setAggregatorSpecs(Lists.newArrayList(aggs))
-          .setInterval(subquery.getIntervals())
-          .setPostAggregatorSpecs(Lists.<PostAggregator>newArrayList())
-          .build();
-
-      final GroupByQuery outerQuery = new GroupByQuery.Builder(query)
-          .setLimitSpec(query.getLimitSpec().merge(subquery.getLimitSpec()))
-          .build();
-
-      final IncrementalIndex innerQueryResultIndex = makeIncrementalIndex(
-          innerQuery.withOverriddenContext(
-              ImmutableMap.<String, Object>of(
-                  GroupByQueryHelper.CTX_KEY_SORT_RESULTS, true
-              )
-          ),
-          subqueryResult
-      );
-
-      //Outer query might have multiple intervals, but they are expected to be non-overlapping and sorted which
-      //is ensured by QuerySegmentSpec.
-      //GroupByQueryEngine can only process one interval at a time, so we need to call it once per interval
-      //and concatenate the results.
-      final GroupByStrategy strategy = strategySelector.strategize(query);
-      final IncrementalIndex outerQueryResultIndex = makeIncrementalIndex(
-          outerQuery,
-          Sequences.concat(
-              Sequences.map(
-                  Sequences.simple(outerQuery.getIntervals()),
-                  new Function<Interval, Sequence<Row>>()
-                  {
-                    @Override
-                    public Sequence<Row> apply(Interval interval)
-                    {
-                      return strategy.process(
-                          outerQuery.withQuerySegmentSpec(
-                              new MultipleIntervalSegmentSpec(ImmutableList.of(interval))
-                          ),
-                          new IncrementalIndexStorageAdapter(innerQueryResultIndex)
-                      );
-                    }
-                  }
-              )
-          )
-      );
-
-      innerQueryResultIndex.close();
-
-      return new ResourceClosingSequence<>(
-          outerQuery.applyLimit(GroupByQueryHelper.postAggregate(query, outerQueryResultIndex)),
-          outerQueryResultIndex
-      );
+      return strategySelector.strategize(query).processSubqueryResult(subquery, query, subqueryResult);
     } else {
       return strategySelector.strategize(query).mergeResults(runner, query, context);
     }
-  }
-
-  private IncrementalIndex makeIncrementalIndex(GroupByQuery query, Sequence<Row> rows)
-  {
-    return GroupByQueryHelper.makeIncrementalIndex(query, configSupplier.get(), bufferPool, rows);
   }
 
   @Override

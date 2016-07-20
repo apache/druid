@@ -420,7 +420,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
     }
   }
 
-  private static class GroupByMergingKey implements Comparable<GroupByMergingKey>
+  static class GroupByMergingKey implements Comparable<GroupByMergingKey>
   {
     private final long timestamp;
     private final String[] dimensions;
@@ -504,7 +504,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
     }
   }
 
-  private static class GroupByMergingKeySerdeFactory implements Grouper.KeySerdeFactory<GroupByMergingKey>
+  static class GroupByMergingKeySerdeFactory implements Grouper.KeySerdeFactory<GroupByMergingKey>
   {
     private final int dimCount;
     private final long maxDictionarySize;
@@ -522,7 +522,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
     }
   }
 
-  private static class GroupByMergingKeySerde implements Grouper.KeySerde<GroupByMergingKey>
+  static class GroupByMergingKeySerde implements Grouper.KeySerde<GroupByMergingKey>
   {
     // Entry in dictionary, node pointer in reverseDictionary, hash + k/v/next pointer in reverseDictionary nodes
     private static final int ROUGH_OVERHEAD_PER_DICTIONARY_ENTRY = Longs.BYTES * 5 + Ints.BYTES;
