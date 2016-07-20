@@ -83,6 +83,16 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
     logger.info("segments to read [%s]", segmentsStr);
 
     long maxSize = conf.getLong(CONF_MAX_SPLIT_SIZE, 0);
+    if (maxSize < 0) {
+      long totalSize = 0;
+      for (WindowedDataSegment segment : segments) {
+        totalSize += segment.getSegment().getSize();
+      }
+      int mapTask = ((JobConf)conf).getNumMapTasks();
+      if (mapTask > 0) {
+        maxSize = totalSize / mapTask;
+      }
+    }
 
     if (maxSize > 0) {
       //combining is to happen, let us sort the segments list by size so that they
