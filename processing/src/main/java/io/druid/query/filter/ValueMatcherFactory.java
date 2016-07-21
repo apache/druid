@@ -20,11 +20,48 @@
 package io.druid.query.filter;
 
 import com.google.common.base.Predicate;
+import io.druid.segment.column.ValueType;
 
 /**
+ * A ValueMatcherFactory is an object associated with a collection of rows (e.g., an IncrementalIndexStorageAdapter)
+ * that generates ValueMatchers for filtering on the associated collection of rows.
+ *
+ * A ValueMatcher is an object that decides whether a row value matches a value or predicate
+ * associated with the ValueMatcher.
+ *
+ * The ValueMatcher is expected to track the current row to be matched with a stateful
+ * object (e.g., a ColumnSelectorFactory). The ValueMatcher has no responsibility for moving the current
+ * "row pointer", this is handled outside of the ValueMatcher.
+ *
+ * The ValueMatcherFactory/ValueMatcher classes are used for filtering rows during column scans.
  */
 public interface ValueMatcherFactory
 {
+  /**
+   * Create a ValueMatcher that compares row values to the provided value.
+   *
+   * An implementation of this method should be able to handle dimensions of various types.
+   *
+   * @param dimension The dimension to filter.
+   * @param value     The value to match against.
+   *
+   * @return An object that matches row values on the provided value.
+   */
   public ValueMatcher makeValueMatcher(String dimension, Comparable value);
-  public ValueMatcher makeValueMatcher(String dimension, Predicate predicate);
+
+
+  /**
+   * Create a ValueMatcher that applies a predicate to row values.
+   *
+   * The caller provides a predicate factory that can create a predicate for each value type supported by Druid.
+   * See {@link DruidPredicateFactory} for more information.
+   *
+   * When creating the ValueMatcher, the ValueMatcherFactory implementation should decide what type of predicate
+   * to create from the predicate factory based on the ValueType of the specified dimension.
+   *
+   * @param dimension The dimension to filter.
+   * @param predicateFactory Predicate factory
+   * @return An object that applies a predicate to row values
+   */
+  public ValueMatcher makeValueMatcher(String dimension, DruidPredicateFactory predicateFactory);
 }

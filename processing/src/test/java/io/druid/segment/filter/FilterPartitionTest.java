@@ -36,15 +36,14 @@ import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.js.JavaScriptConfig;
-import io.druid.query.aggregation.Aggregator;
-import io.druid.query.aggregation.CountAggregatorFactory;
-import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.DruidLongPredicate;
+import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
@@ -91,11 +90,11 @@ public class FilterPartitionTest extends BaseFilterTest
   {
     public NoBitmapDimensionPredicateFilter(
         final String dimension,
-        final Predicate<String> predicate,
+        final DruidPredicateFactory predicateFactory,
         final ExtractionFn extractionFn
     )
     {
-      super(dimension, predicate, extractionFn);
+      super(dimension, predicateFactory, extractionFn);
     }
 
     @Override
@@ -125,15 +124,36 @@ public class FilterPartitionTest extends BaseFilterTest
         return new NoBitmapSelectorFilter(dimension, value);
       } else {
         final String valueOrNull = Strings.emptyToNull(value);
-        final Predicate<String> predicate = new Predicate<String>()
+        final DruidPredicateFactory predicateFactory = new DruidPredicateFactory()
         {
           @Override
-          public boolean apply(String input)
+          public Predicate<String> makeStringPredicate()
           {
-            return Objects.equals(valueOrNull, input);
+            return new Predicate<String>()
+            {
+              @Override
+              public boolean apply(String input)
+              {
+                return Objects.equals(valueOrNull, input);
+              }
+            };
+          }
+
+          @Override
+          public DruidLongPredicate makeLongPredicate()
+          {
+            return new DruidLongPredicate()
+            {
+              @Override
+              public boolean applyLong(long input)
+              {
+                return Objects.equals(valueOrNull, String.valueOf(input));
+              }
+            };
           }
         };
-        return new NoBitmapDimensionPredicateFilter(dimension, predicate, extractionFn);
+
+        return new NoBitmapDimensionPredicateFilter(dimension, predicateFactory, extractionFn);
       }
     }
   }

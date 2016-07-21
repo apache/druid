@@ -22,15 +22,16 @@ package io.druid.segment.filter;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
 import com.google.common.collect.Iterables;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
+import io.druid.query.filter.DruidLongPredicate;
+import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
-import io.druid.query.filter.RowOffsetMatcherFactory;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
-import io.druid.segment.column.ColumnCapabilities;
 
 import java.util.Set;
 
@@ -41,12 +42,19 @@ public class InFilter implements Filter
   private final String dimension;
   private final Set<String> values;
   private final ExtractionFn extractionFn;
+  private final Supplier<DruidLongPredicate> longPredicateSupplier;
 
-  public InFilter(String dimension, Set<String> values, ExtractionFn extractionFn)
+  public InFilter(
+      String dimension,
+      Set<String> values,
+      Supplier<DruidLongPredicate> longPredicateSupplier,
+      ExtractionFn extractionFn
+  )
   {
     this.dimension = dimension;
     this.values = values;
     this.extractionFn = extractionFn;
+    this.longPredicateSupplier = longPredicateSupplier;
   }
 
   @Override
@@ -69,15 +77,7 @@ public class InFilter implements Filter
       return Filters.matchPredicate(
           dimension,
           selector,
-          new Predicate<String>()
-          {
-            @Override
-            public boolean apply(String input)
-            {
-              // InDimFilter converts all null "values" to empty.
-              return values.contains(Strings.nullToEmpty(extractionFn.apply(input)));
-            }
-          }
+          getPredicateFactory().makeStringPredicate()
       );
     }
   }
@@ -85,24 +85,59 @@ public class InFilter implements Filter
   @Override
   public ValueMatcher makeMatcher(ValueMatcherFactory factory)
   {
-    return factory.makeValueMatcher(
-        dimension, new Predicate<String>()
-        {
-          @Override
-          public boolean apply(String input)
-          {
-            if (extractionFn != null) {
-              input = extractionFn.apply(input);
-            }
-            return values.contains(Strings.nullToEmpty(input));
-          }
-        }
-    );
+    return factory.makeValueMatcher(dimension, getPredicateFactory());
   }
 
   @Override
   public boolean supportsBitmapIndex(BitmapIndexSelector selector)
   {
     return selector.getBitmapIndex(dimension) != null;
+  }
+
+  private DruidPredicateFactory getPredicateFactory()
+  {
+    return new DruidPredicateFactory()
+    {
+      @Override
+      public Predicate<String> makeStringPredicate()
+      {
+        if (extractionFn != null) {
+          return new Predicate<String>()
+          {
+            @Override
+            public boolean apply(String input)
+            {
+              return values.contains(Strings.nullToEmpty(extractionFn.apply(input)));
+            }
+          };
+        } else {
+          return new Predicate<String>()
+          {
+            @Override
+            public boolean apply(String input)
+            {
+              return values.contains(Strings.nullToEmpty(input));
+            }
+          };
+        }
+      }
+
+      @Override
+      public DruidLongPredicate makeLongPredicate()
+      {
+        if (extractionFn != null) {
+          return new DruidLongPredicate()
+          {
+            @Override
+            public boolean applyLong(long input)
+            {
+              return values.contains(extractionFn.apply(input));
+            }
+          };
+        } else {
+          return longPredicateSupplier.get();
+        }
+      }
+    };
   }
 }

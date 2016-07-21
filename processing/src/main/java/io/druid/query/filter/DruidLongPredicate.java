@@ -17,19 +17,12 @@
  * under the License.
  */
 
-package io.druid.segment;
-
-import io.druid.query.dimension.DimensionSpec;
-import io.druid.segment.column.ColumnCapabilities;
+package io.druid.query.filter;
 
 /**
- * Factory class for MetricSelectors
+ * LongPredicate is only supported in Java 8+, so use this to avoid boxing when a long predicate is needed.
  */
-public interface ColumnSelectorFactory
+public interface DruidLongPredicate
 {
-  public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec);
-  public FloatColumnSelector makeFloatColumnSelector(String columnName);
-  public LongColumnSelector makeLongColumnSelector(String columnName);
-  public ObjectColumnSelector makeObjectColumnSelector(String columnName);
-  public ColumnCapabilities getColumnCapabilities(String columnName);
+  boolean applyLong(long input);
 }

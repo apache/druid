@@ -43,7 +43,10 @@ import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BitmapIndexSelector;
+import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.DruidLongPredicate;
+import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
@@ -56,9 +59,11 @@ import io.druid.segment.LongColumnSelector;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.QueryableIndexStorageAdapter;
 import io.druid.segment.StorageAdapter;
+import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.AndFilter;
+import io.druid.segment.filter.BoundFilter;
 import io.druid.segment.filter.DimensionPredicateFilter;
 import io.druid.segment.filter.Filters;
 import io.druid.segment.filter.OrFilter;
@@ -67,6 +72,7 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
+import org.joda.time.Interval;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -108,6 +114,10 @@ public class FilterPartitionBenchmark
   private IncrementalIndex incIndex;
   private QueryableIndex qIndex;
   private File indexFile;
+
+  private Filter timeFilterNone;
+  private Filter timeFilterHalf;
+  private Filter timeFilterAll;
 
   private BenchmarkSchemaInfo schemaInfo;
 
@@ -168,6 +178,38 @@ public class FilterPartitionBenchmark
         new IndexSpec()
     );
     qIndex = INDEX_IO.loadIndex(indexFile);
+
+    Interval interval = schemaInfo.getDataInterval();
+    timeFilterNone = new BoundFilter(new BoundDimFilter(
+        Column.TIME_COLUMN_NAME,
+        String.valueOf(Long.MAX_VALUE),
+        String.valueOf(Long.MAX_VALUE),
+        true,
+        true,
+        true,
+        null
+    ));
+
+    long halfEnd = (interval.getEndMillis() + interval.getStartMillis()) / 2;
+    timeFilterHalf = new BoundFilter(new BoundDimFilter(
+        Column.TIME_COLUMN_NAME,
+        String.valueOf(interval.getStartMillis()),
+        String.valueOf(halfEnd),
+        true,
+        true,
+        true,
+        null
+    ));
+
+    timeFilterAll = new BoundFilter(new BoundDimFilter(
+        Column.TIME_COLUMN_NAME,
+        String.valueOf(interval.getStartMillis()),
+        String.valueOf(interval.getEndMillis()),
+        true,
+        true,
+        true,
+        null
+    ));
   }
 
   private IncrementalIndex makeIncIndex()
@@ -207,6 +249,51 @@ public class FilterPartitionBenchmark
   {
     StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
     Sequence<Cursor> cursors = sa.makeCursors(null, schemaInfo.getDataInterval(), QueryGranularities.ALL, false);
+
+    Sequence<List<Long>> longListSeq = readCursorsLong(cursors, blackhole);
+    List<Long> strings = Sequences.toList(Sequences.limit(longListSeq, 1), Lists.<List<Long>>newArrayList()).get(0);
+    for (Long st : strings) {
+      blackhole.consume(st);
+    }
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void timeFilterNone(Blackhole blackhole) throws Exception
+  {
+    StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
+    Sequence<Cursor> cursors = sa.makeCursors(timeFilterNone, schemaInfo.getDataInterval(), QueryGranularities.ALL, false);
+
+    Sequence<List<Long>> longListSeq = readCursorsLong(cursors, blackhole);
+    List<Long> strings = Sequences.toList(Sequences.limit(longListSeq, 1), Lists.<List<Long>>newArrayList()).get(0);
+    for (Long st : strings) {
+      blackhole.consume(st);
+    }
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void timeFilterHalf(Blackhole blackhole) throws Exception
+  {
+    StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
+    Sequence<Cursor> cursors = sa.makeCursors(timeFilterHalf, schemaInfo.getDataInterval(), QueryGranularities.ALL, false);
+
+    Sequence<List<Long>> longListSeq = readCursorsLong(cursors, blackhole);
+    List<Long> strings = Sequences.toList(Sequences.limit(longListSeq, 1), Lists.<List<Long>>newArrayList()).get(0);
+    for (Long st : strings) {
+      blackhole.consume(st);
+    }
+  }
+
+  @Benchmark
+  @BenchmarkMode(Mode.AverageTime)
+  @OutputTimeUnit(TimeUnit.MICROSECONDS)
+  public void timeFilterAll(Blackhole blackhole) throws Exception
+  {
+    StorageAdapter sa = new QueryableIndexStorageAdapter(qIndex);
+    Sequence<Cursor> cursors = sa.makeCursors(timeFilterAll, schemaInfo.getDataInterval(), QueryGranularities.ALL, false);
 
     Sequence<List<Long>> longListSeq = readCursorsLong(cursors, blackhole);
     List<Long> strings = Sequences.toList(Sequences.limit(longListSeq, 1), Lists.<List<Long>>newArrayList()).get(0);
@@ -442,7 +529,6 @@ public class FilterPartitionBenchmark
           public List<Long> apply(Cursor input)
           {
             List<Long> longvals = new ArrayList<Long>();
-
             LongColumnSelector selector = input.makeLongColumnSelector("sumLongSequential");
             while (!input.isDone()) {
               long rowval = selector.get();
@@ -476,11 +562,11 @@ public class FilterPartitionBenchmark
   {
     public NoBitmapDimensionPredicateFilter(
         final String dimension,
-        final Predicate<String> predicate,
+        final DruidPredicateFactory predicateFactory,
         final ExtractionFn extractionFn
     )
     {
-      super(dimension, predicate, extractionFn);
+      super(dimension, predicateFactory, extractionFn);
     }
 
     @Override
@@ -510,21 +596,37 @@ public class FilterPartitionBenchmark
         return new NoBitmapSelectorFilter(dimension, value);
       } else {
         final String valueOrNull = Strings.emptyToNull(value);
-        final Predicate<String> predicate = new Predicate<String>()
+
+        final DruidPredicateFactory predicateFactory = new DruidPredicateFactory()
         {
           @Override
-          public boolean apply(String input)
+          public Predicate<String> makeStringPredicate()
           {
-            return Objects.equals(valueOrNull, input);
+            return new Predicate<String>()
+            {
+              @Override
+              public boolean apply(String input)
+              {
+                return Objects.equals(valueOrNull, input);
+              }
+            };
           }
 
           @Override
-          public String toString()
+          public DruidLongPredicate makeLongPredicate()
           {
-            return value;
+            return new DruidLongPredicate()
+            {
+              @Override
+              public boolean applyLong(long input)
+              {
+                return false;
+              }
+            };
           }
         };
-        return new NoBitmapDimensionPredicateFilter(dimension, predicate, extractionFn);
+
+        return new NoBitmapDimensionPredicateFilter(dimension, predicateFactory, extractionFn);
       }
     }
   }

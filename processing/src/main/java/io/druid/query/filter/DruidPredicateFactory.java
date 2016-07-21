@@ -17,19 +17,13 @@
  * under the License.
  */
 
-package io.druid.segment;
+package io.druid.query.filter;
 
-import io.druid.query.dimension.DimensionSpec;
-import io.druid.segment.column.ColumnCapabilities;
+import com.google.common.base.Predicate;
 
-/**
- * Factory class for MetricSelectors
- */
-public interface ColumnSelectorFactory
+public interface DruidPredicateFactory
 {
-  public DimensionSelector makeDimensionSelector(DimensionSpec dimensionSpec);
-  public FloatColumnSelector makeFloatColumnSelector(String columnName);
-  public LongColumnSelector makeLongColumnSelector(String columnName);
-  public ObjectColumnSelector makeObjectColumnSelector(String columnName);
-  public ColumnCapabilities getColumnCapabilities(String columnName);
+  public Predicate<String> makeStringPredicate();
+
+  public DruidLongPredicate makeLongPredicate();
 }

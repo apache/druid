@@ -332,3 +332,40 @@ The following matches dimension values in `[product_1, product_3, product_5]` fo
     }
 }
 ```
+
+### Filtering on the Timestamp Column
+Filters can also be applied to the timestamp column. The timestamp column has long millisecond values.
+
+To refer to the timestamp column, use the string `__time` as the dimension name.
+
+The filter parameters (e.g., the selector value for the SelectorFilter) should be provided as Strings.
+
+If the user wishes to interpret the timestamp with a specific format, timezone, or locale, the [Time Format Extraction Function](./dimensionspecs.html#time-format-extraction-function) is useful.
+
+Note that the timestamp column does not have a bitmap index. Thus, filtering on timestamp in a query requires a scan of the column, and performance will be affected accordingly. If possible, excluding time ranges by specifying the query interval will be faster.
+
+**Example**
+
+Filtering on a long timestamp value:
+```json
+"filter": {
+  "type": "selector",
+  "dimension": "__time",
+  "value": "124457387532"
+}
+```
+
+Filtering on day of week:
+```json
+"filter": {
+  "type": "selector",
+  "dimension": "__time",
+  "value": "Friday",
+  "extractionFn": {
+    "type": "timeFormat",
+    "format": "EEEE",
+    "timeZone": "America/New_York",
+    "locale": "en"
+  }
+}
+```
