@@ -20,14 +20,19 @@
 package io.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
 import com.google.common.collect.BoundType;
 import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
+import com.google.common.primitives.Longs;
 import com.metamx.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.ordering.StringComparators;
 import io.druid.segment.filter.BoundFilter;
 
 import java.nio.ByteBuffer;
@@ -40,8 +45,10 @@ public class BoundDimFilter implements DimFilter
   private final String lower;
   private final boolean lowerStrict;
   private final boolean upperStrict;
-  private final boolean alphaNumeric;
+  private final Boolean alphaNumeric;
   private final ExtractionFn extractionFn;
+  private final String ordering;
+  private final Supplier<DruidLongPredicate> longPredicateSupplier;
 
   @JsonCreator
   public BoundDimFilter(
@@ -50,8 +57,9 @@ public class BoundDimFilter implements DimFilter
       @JsonProperty("upper") String upper,
       @JsonProperty("lowerStrict") Boolean lowerStrict,
       @JsonProperty("upperStrict") Boolean upperStrict,
-      @JsonProperty("alphaNumeric") Boolean alphaNumeric,
-      @JsonProperty("extractionFn") ExtractionFn extractionFn
+      @Deprecated @JsonProperty("alphaNumeric") Boolean alphaNumeric,
+      @JsonProperty("extractionFn") ExtractionFn extractionFn,
+      @JsonProperty("ordering") String ordering
   )
   {
     this.dimension = Preconditions.checkNotNull(dimension, "dimension can not be null");
@@ -60,8 +68,31 @@ public class BoundDimFilter implements DimFilter
     this.lower = lower;
     this.lowerStrict = (lowerStrict == null) ? false : lowerStrict;
     this.upperStrict = (upperStrict == null) ? false : upperStrict;
-    this.alphaNumeric = (alphaNumeric == null) ? false : alphaNumeric;
+    this.alphaNumeric = alphaNumeric;
+
+    if (ordering == null) {
+      if (alphaNumeric == null || !alphaNumeric) {
+        this.ordering = StringComparators.LEXICOGRAPHIC_NAME;
+      } else {
+        this.ordering = StringComparators.ALPHANUMERIC_NAME;
+      }
+    } else {
+      this.ordering = ordering.toLowerCase();
+      Preconditions.checkState(
+          StringComparators.isOrderingValid(this.ordering),
+          "ordering must be one of the following: " + StringComparators.ORDERINGS.toString()
+      );
+
+      if (alphaNumeric != null) {
+        boolean orderingIsAlphanumeric = this.ordering.equals(StringComparators.ALPHANUMERIC_NAME);
+        Preconditions.checkState(
+            this.alphaNumeric == orderingIsAlphanumeric,
+            "mismatch between alphanumeric and ordering property"
+        );
+      }
+    }
     this.extractionFn = extractionFn;
+    this.longPredicateSupplier = makeLongPredicateSupplier();
   }
 
   @JsonProperty
@@ -94,8 +125,9 @@ public class BoundDimFilter implements DimFilter
     return upperStrict;
   }
 
-  @JsonProperty
-  public boolean isAlphaNumeric()
+  @Deprecated
+  @JsonIgnore
+  public Boolean isAlphaNumeric()
   {
     return alphaNumeric;
   }
@@ -114,6 +146,17 @@ public class BoundDimFilter implements DimFilter
   public ExtractionFn getExtractionFn()
   {
     return extractionFn;
+  }
+
+  @JsonProperty
+  public String getOrdering()
+  {
+    return ordering;
+  }
+
+  public Supplier<DruidLongPredicate> getLongPredicateSupplier()
+  {
+    return longPredicateSupplier;
   }
 
   @Override
@@ -135,12 +178,15 @@ public class BoundDimFilter implements DimFilter
 
     byte[] extractionFnBytes = extractionFn == null ? new byte[0] : extractionFn.getCacheKey();
 
+    byte[] orderingBytes = StringUtils.toUtf8(ordering);
+
     ByteBuffer boundCacheBuffer = ByteBuffer.allocate(
-        9
+        10
         + dimensionBytes.length
         + upperBytes.length
         + lowerBytes.length
         + extractionFnBytes.length
+        + orderingBytes.length
     );
     boundCacheBuffer.put(DimFilterUtils.BOUND_CACHE_ID)
                     .put(boundType)
@@ -154,7 +200,9 @@ public class BoundDimFilter implements DimFilter
                     .put(DimFilterUtils.STRING_SEPARATOR)
                     .put(lowerBytes)
                     .put(DimFilterUtils.STRING_SEPARATOR)
-                    .put(extractionFnBytes);
+                    .put(extractionFnBytes)
+                    .put(DimFilterUtils.STRING_SEPARATOR)
+                    .put(orderingBytes);
     return boundCacheBuffer.array();
   }
 
@@ -208,9 +256,6 @@ public class BoundDimFilter implements DimFilter
     if (isUpperStrict() != that.isUpperStrict()) {
       return false;
     }
-    if (isAlphaNumeric() != that.isAlphaNumeric()) {
-      return false;
-    }
     if (!getDimension().equals(that.getDimension())) {
       return false;
     }
@@ -220,9 +265,12 @@ public class BoundDimFilter implements DimFilter
     if (getLower() != null ? !getLower().equals(that.getLower()) : that.getLower() != null) {
       return false;
     }
-    return getExtractionFn() != null
-           ? getExtractionFn().equals(that.getExtractionFn())
-           : that.getExtractionFn() == null;
+    if (getExtractionFn() != null
+        ? !getExtractionFn().equals(that.getExtractionFn())
+        : that.getExtractionFn() != null) {
+      return false;
+    }
+    return getOrdering().equals(that.getOrdering());
 
   }
 
@@ -234,8 +282,89 @@ public class BoundDimFilter implements DimFilter
     result = 31 * result + (getLower() != null ? getLower().hashCode() : 0);
     result = 31 * result + (isLowerStrict() ? 1 : 0);
     result = 31 * result + (isUpperStrict() ? 1 : 0);
-    result = 31 * result + (isAlphaNumeric() ? 1 : 0);
     result = 31 * result + (getExtractionFn() != null ? getExtractionFn().hashCode() : 0);
+    result = 31 * result + getOrdering().hashCode();
     return result;
   }
+
+  private Supplier<DruidLongPredicate> makeLongPredicateSupplier()
+  {
+    return new Supplier<DruidLongPredicate>()
+    {
+      private final Object initLock = new Object();
+      private volatile boolean longsInitialized = false;
+      private volatile boolean hasLowerLongBoundVolatile;
+      private volatile boolean hasUpperLongBoundVolatile;
+      private volatile long lowerLongBoundVolatile;
+      private volatile long upperLongBoundVolatile;
+
+      @Override
+      public DruidLongPredicate get()
+      {
+        initLongData();
+
+        return new DruidLongPredicate()
+        {
+          private final boolean hasLowerLongBound = hasLowerLongBoundVolatile;
+          private final boolean hasUpperLongBound = hasUpperLongBoundVolatile;
+          private final long lowerLongBound = hasLowerLongBound ? lowerLongBoundVolatile : 0L;
+          private final long upperLongBound = hasUpperLongBound ? upperLongBoundVolatile : 0L;
+
+          @Override
+          public boolean applyLong(long input)
+          {
+            int lowerComparing = 1;
+            int upperComparing = 1;
+            if (hasLowerLongBound) {
+              lowerComparing = Long.compare(input, lowerLongBound);
+            }
+            if (hasUpperLongBound) {
+              upperComparing = Long.compare(upperLongBound, input);
+            }
+            if (lowerStrict && upperStrict) {
+              return ((lowerComparing > 0)) && (upperComparing > 0);
+            } else if (lowerStrict) {
+              return (lowerComparing > 0) && (upperComparing >= 0);
+            } else if (upperStrict) {
+              return (lowerComparing >= 0) && (upperComparing > 0);
+            }
+            return (lowerComparing >= 0) && (upperComparing >= 0);
+          }
+        };
+      }
+
+      private void initLongData()
+      {
+        if (longsInitialized) {
+          return;
+        }
+
+        synchronized (initLock) {
+          if (longsInitialized) {
+            return;
+          }
+
+          Long lowerLong = Longs.tryParse(Strings.nullToEmpty(lower));
+          if (hasLowerBound() && lowerLong != null) {
+            hasLowerLongBoundVolatile = true;
+            lowerLongBoundVolatile = lowerLong;
+          } else {
+            hasLowerLongBoundVolatile = false;
+          }
+
+          Long upperLong = Longs.tryParse(Strings.nullToEmpty(upper));
+          if (hasUpperBound() && upperLong != null) {
+            hasUpperLongBoundVolatile = true;
+            upperLongBoundVolatile = upperLong;
+          } else {
+            hasUpperLongBoundVolatile = false;
+          }
+
+          longsInitialized = true;
+        }
+      }
+    };
+  }
+
+
 }

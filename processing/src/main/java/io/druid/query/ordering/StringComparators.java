@@ -19,12 +19,16 @@
 
 package io.druid.query.ordering;
 
+import java.math.BigDecimal;
+import java.util.Arrays;
 import java.util.Comparator;
+import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.As;
 import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.UnsignedBytes;
@@ -36,22 +40,29 @@ public class StringComparators
 {
   public static final String LEXICOGRAPHIC_NAME = "lexicographic";
   public static final String ALPHANUMERIC_NAME = "alphanumeric";
+  public static final String NUMERIC_NAME = "numeric";
   public static final String STRLEN_NAME = "strlen";
+
+  public static final List<String> ORDERINGS = ImmutableList.of(
+      LEXICOGRAPHIC_NAME, ALPHANUMERIC_NAME, NUMERIC_NAME, STRLEN_NAME
+  );
 
   public static final LexicographicComparator LEXICOGRAPHIC = new LexicographicComparator();
   public static final AlphanumericComparator ALPHANUMERIC = new AlphanumericComparator();
+  public static final NumericComparator NUMERIC = new NumericComparator();
   public static final StrlenComparator STRLEN = new StrlenComparator();
 
   @JsonTypeInfo(use=Id.NAME, include=As.PROPERTY, property="type", defaultImpl = LexicographicComparator.class)
   @JsonSubTypes(value = {
       @JsonSubTypes.Type(name = StringComparators.LEXICOGRAPHIC_NAME, value = LexicographicComparator.class),
       @JsonSubTypes.Type(name = StringComparators.ALPHANUMERIC_NAME, value = AlphanumericComparator.class),
-      @JsonSubTypes.Type(name = StringComparators.STRLEN_NAME, value = StrlenComparator.class)
+      @JsonSubTypes.Type(name = StringComparators.STRLEN_NAME, value = StrlenComparator.class),
+      @JsonSubTypes.Type(name = StringComparators.NUMERIC_NAME, value = NumericComparator.class),
   })
   public static interface StringComparator extends Comparator<String>
   {
   }
-  
+
   public static class LexicographicComparator implements StringComparator
   {
     private static final Ordering<String> ORDERING = Ordering.from(new Comparator<String>()
@@ -342,16 +353,86 @@ public class StringComparators
     }
   }
 
+  private static BigDecimal convertStringToBigDecimal(String input) {
+    // treat unparseable Strings as nulls
+    BigDecimal bd = null;
+    try {
+      bd = new BigDecimal(input);
+    } catch (NullPointerException | NumberFormatException ex) {
+    }
+    return bd;
+  }
+
+  public static class NumericComparator implements StringComparator
+  {
+    @Override
+    public int compare(String o1, String o2)
+    {
+      if (o1 == o2) {
+        return 0;
+      }
+
+      BigDecimal bd1 = convertStringToBigDecimal(o1);
+      BigDecimal bd2 = convertStringToBigDecimal(o2);
+
+      if (bd1 != null && bd2 != null) {
+        return bd1.compareTo(bd2);
+      }
+
+      if (bd1 == null && bd2 == null) {
+        // both Strings are unparseable, just compare lexicographically to have a well-defined ordering
+        return StringComparators.LEXICOGRAPHIC.compare(o1, o2);
+      }
+
+      if (bd1 == null) {
+        return -1;
+      } else {
+        return 1;
+      }
+    }
+
+    @Override
+    public String toString()
+    {
+      return StringComparators.NUMERIC_NAME;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      return true;
+    }
+  }
+
   public static StringComparator makeComparator(String type)
   {
-    if (type.equals(StringComparators.LEXICOGRAPHIC_NAME)) {
-      return LEXICOGRAPHIC;
-    } else if (type.equals(StringComparators.ALPHANUMERIC_NAME)) {
-      return ALPHANUMERIC;
-    } else if (type.equals(StringComparators.STRLEN_NAME)) {
-      return STRLEN;
-    } else {
-      throw new IAE("Unknown string comparator[%s]", type);
+    switch (type) {
+      case StringComparators.LEXICOGRAPHIC_NAME:
+        return LEXICOGRAPHIC;
+      case StringComparators.ALPHANUMERIC_NAME:
+        return ALPHANUMERIC;
+      case StringComparators.STRLEN_NAME:
+        return STRLEN;
+      case StringComparators.NUMERIC_NAME:
+        return NUMERIC;
+      default:
+        throw new IAE("Unknown string comparator[%s]", type);
     }
+  }
+
+  public static boolean isOrderingValid(String ordering)
+  {
+    if (ordering == null) {
+      return false;
+    }
+
+    return ORDERINGS.contains(ordering);
   }
 }

@@ -20,6 +20,9 @@
 package io.druid.segment.filter;
 
 import com.google.common.base.Predicate;
+import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
+import com.google.common.primitives.Longs;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
@@ -41,19 +44,20 @@ public class BoundFilter implements Filter
   private final Comparator<String> comparator;
   private final ExtractionFn extractionFn;
 
+  private final Supplier<DruidLongPredicate> longPredicateSupplier;
+
   public BoundFilter(final BoundDimFilter boundDimFilter)
   {
     this.boundDimFilter = boundDimFilter;
-    this.comparator = boundDimFilter.isAlphaNumeric()
-                      ? StringComparators.ALPHANUMERIC
-                      : StringComparators.LEXICOGRAPHIC;
+    this.comparator = StringComparators.makeComparator(boundDimFilter.getOrdering());
     this.extractionFn = boundDimFilter.getExtractionFn();
+    this.longPredicateSupplier = boundDimFilter.getLongPredicateSupplier();
   }
 
   @Override
   public ImmutableBitmap getBitmapIndex(final BitmapIndexSelector selector)
   {
-    if (boundDimFilter.isAlphaNumeric() || extractionFn != null) {
+    if (!boundDimFilter.getOrdering().equals(StringComparators.LEXICOGRAPHIC_NAME) || extractionFn != null) {
       return Filters.matchPredicate(
           boundDimFilter.getDimension(),
           selector,
@@ -151,39 +155,48 @@ public class BoundFilter implements Filter
       @Override
       public Predicate<String> makeStringPredicate()
       {
-        return new Predicate<String>()
-        {
-          @Override
-          public boolean apply(String input)
+        if (extractionFn != null) {
+          return new Predicate<String>()
           {
-            return doesMatch(input);
-          }
-        };
+            @Override
+            public boolean apply(String input)
+            {
+              return doesMatch(extractionFn.apply(input));
+            }
+          };
+        } else {
+          return new Predicate<String>()
+          {
+            @Override
+            public boolean apply(String input)
+            {
+              return doesMatch(input);
+            }
+          };
+        }
       }
 
       @Override
       public DruidLongPredicate makeLongPredicate()
       {
-        return new DruidLongPredicate()
-        {
-          @Override
-          public boolean applyLong(long input)
+        if (extractionFn != null) {
+          return new DruidLongPredicate()
           {
-            // When BoundFilter has a 'numeric' comparator (see https://github.com/druid-io/druid/issues/2989)
-            // this should be optimized to compare on longs instead of using string conversion.
-            return doesMatch(String.valueOf(input));
-          }
-        };
+            @Override
+            public boolean applyLong(long input)
+            {
+              return doesMatch(extractionFn.apply(input));
+            }
+          };
+        } else {
+          return longPredicateSupplier.get();
+        }
       }
     };
   }
 
   private boolean doesMatch(String input)
   {
-    if (extractionFn != null) {
-      input = extractionFn.apply(input);
-    }
-
     if (input == null) {
       return (!boundDimFilter.hasLowerBound()
               || (boundDimFilter.getLower().isEmpty() && !boundDimFilter.isLowerStrict())) // lower bound allows null

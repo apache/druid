@@ -50,6 +50,7 @@ import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
+import io.druid.query.ordering.StringComparators;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.IndexIO;
@@ -186,8 +187,9 @@ public class FilterPartitionBenchmark
         String.valueOf(Long.MAX_VALUE),
         true,
         true,
-        true,
-        null
+        null,
+        null,
+        StringComparators.ALPHANUMERIC_NAME
     ));
 
     long halfEnd = (interval.getEndMillis() + interval.getStartMillis()) / 2;
@@ -197,8 +199,9 @@ public class FilterPartitionBenchmark
         String.valueOf(halfEnd),
         true,
         true,
-        true,
-        null
+        null,
+        null,
+        StringComparators.ALPHANUMERIC_NAME
     ));
 
     timeFilterAll = new BoundFilter(new BoundDimFilter(
@@ -207,8 +210,9 @@ public class FilterPartitionBenchmark
         String.valueOf(interval.getEndMillis()),
         true,
         true,
-        true,
-        null
+        null,
+        null,
+        StringComparators.ALPHANUMERIC_NAME
     ));
   }
 

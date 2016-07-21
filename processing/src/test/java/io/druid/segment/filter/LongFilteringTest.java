@@ -44,6 +44,7 @@ import io.druid.query.filter.SearchQueryDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.lookup.LookupExtractor;
+import io.druid.query.ordering.StringComparators;
 import io.druid.query.search.search.ContainsSearchQuerySpec;
 import io.druid.segment.IndexBuilder;
 import io.druid.segment.StorageAdapter;
@@ -131,12 +132,12 @@ public class LongFilteringTest extends BaseFilterTest
     );
 
     assertFilterMatches(
-        new BoundDimFilter(COUNT_COLUMN, "2", "5", false, false, true, null),
+        new BoundDimFilter(COUNT_COLUMN, "2", "5", false, false, null, null, StringComparators.NUMERIC_NAME),
         ImmutableList.<String>of("2", "3", "4", "5")
     );
 
     assertFilterMatches(
-        new BoundDimFilter(COUNT_COLUMN, "1", "4", true, true, true, null),
+        new BoundDimFilter(COUNT_COLUMN, "1", "4", true, true, null, null, StringComparators.NUMERIC_NAME),
         ImmutableList.<String>of("2", "3")
     );
 
@@ -195,11 +196,11 @@ public class LongFilteringTest extends BaseFilterTest
     );
 
     assertFilterMatches(
-        new BoundDimFilter(COUNT_COLUMN, "Fridax", "Fridaz", false, false, true, exfn),
+        new BoundDimFilter(COUNT_COLUMN, "Fridax", "Fridaz", false, false, null, exfn, StringComparators.ALPHANUMERIC_NAME),
         ImmutableList.<String>of("5")
     );
     assertFilterMatches(
-        new BoundDimFilter(COUNT_COLUMN, "Friday", "Friday", true, true, true, exfn),
+        new BoundDimFilter(COUNT_COLUMN, "Friday", "Friday", true, true, null, exfn, StringComparators.ALPHANUMERIC_NAME),
         ImmutableList.<String>of()
     );
 

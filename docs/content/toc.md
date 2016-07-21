@@ -47,6 +47,7 @@ layout: toc
   * [Joins](/docs/VERSION/querying/joins.html)
   * [Multitenancy](/docs/VERSION/querying/multitenancy.html)
   * [Caching](/docs/VERSION/querying/caching.html)
+  * [Sorting Orders](/docs/VERSION/querying/sorting-orders.html)
 
 ## Design
   * [Overview](/docs/VERSION/design/design.html)

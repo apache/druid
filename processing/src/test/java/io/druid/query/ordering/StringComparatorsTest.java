@@ -20,6 +20,7 @@
 package io.druid.query.ordering;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -120,6 +121,30 @@ public class StringComparatorsTest
   }
 
   @Test
+  public void testNumericComparator()
+  {
+    commonTest(StringComparators.NUMERIC);
+
+    Assert.assertTrue(StringComparators.NUMERIC.compare("-1230.452487532", "6893") < 0);
+
+    List<String> values = Arrays.asList("-1", "-1.10", "-1.2", "-100", "-2", "0", "1", "1.10", "1.2", "2", "100");
+    Collections.sort(values, StringComparators.NUMERIC);
+
+    Assert.assertEquals(
+        Arrays.asList("-100", "-2", "-1.2", "-1.10", "-1", "0", "1", "1.10", "1.2", "2", "100"),
+        values
+    );
+
+    Assert.assertTrue(StringComparators.NUMERIC.compare(null, "1001") < 0);
+    Assert.assertTrue(StringComparators.NUMERIC.compare("1001", null) > 0);
+
+    Assert.assertTrue(StringComparators.NUMERIC.compare("-500000000.14124", "CAN'T TOUCH THIS") > 0);
+    Assert.assertTrue(StringComparators.NUMERIC.compare("CAN'T PARSE THIS", "-500000000.14124") < 0);
+
+    Assert.assertTrue(StringComparators.NUMERIC.compare("CAN'T PARSE THIS", "CAN'T TOUCH THIS") < 0);
+  }
+
+  @Test
   public void testLexicographicComparatorSerdeTest() throws IOException
   {
     ObjectMapper jsonMapper = new DefaultObjectMapper();
@@ -153,5 +178,17 @@ public class StringComparatorsTest
     Assert.assertEquals(expectJsonSpec, jsonSpec);
     Assert.assertEquals(StringComparators.STRLEN
         , jsonMapper.readValue(expectJsonSpec, StringComparators.StrlenComparator.class));
+  }
+
+  @Test
+  public void testNumericComparatorSerdeTest() throws IOException
+  {
+    ObjectMapper jsonMapper = new DefaultObjectMapper();
+    String expectJsonSpec = "{\"type\":\"numeric\"}";
+
+    String jsonSpec = jsonMapper.writeValueAsString(StringComparators.NUMERIC);
+    Assert.assertEquals(expectJsonSpec, jsonSpec);
+    Assert.assertEquals(StringComparators.NUMERIC
+        , jsonMapper.readValue(expectJsonSpec, StringComparators.NumericComparator.class));
   }
 }

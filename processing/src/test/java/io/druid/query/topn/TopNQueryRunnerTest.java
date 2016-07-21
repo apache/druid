@@ -3251,6 +3251,39 @@ public class TopNQueryRunnerTest
   }
 
   @Test
+  public void testNumericDimensionTopNWithNullPreviousStop()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryGranularities.ALL)
+        .dimension(QueryRunnerTestHelper.marketDimension)
+        .metric(new NumericDimensionTopNMetricSpec(null))
+        .threshold(2)
+        .intervals(QueryRunnerTestHelper.secondOnly)
+        .aggregators(Lists.<AggregatorFactory>newArrayList(QueryRunnerTestHelper.rowsCount))
+        .build();
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-04-02T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.asList(
+                    ImmutableMap.<String, Object>of(
+                        "market", "spot",
+                        "rows", 9L
+                    ),
+                    ImmutableMap.<String, Object>of(
+                        "market", "total_market",
+                        "rows", 2L
+                    )
+                )
+            )
+        )
+    );
+    TestHelper.assertExpectedResults(expectedResults, runner.run(query, new HashMap<String, Object>()));
+  }
+
+
+  @Test
   public void testTopNWithExtractionFilter()
   {
     Map<String, String> extractionMap = new HashMap<>();

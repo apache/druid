@@ -24,8 +24,10 @@ OrderByColumnSpecs indicate how to do order by operations. Each order-by conditi
 {
     "dimension" : "<Any dimension or metric name>",
     "direction" : <"ascending"|"descending">,
-    "dimensionOrder" : <"lexicographic(default)"|"alphanumeric"|"strlen">
+    "dimensionOrder" : <"lexicographic"(default)|"alphanumeric"|"strlen"|"numeric">
 }
 ```
 
 If only the dimension is provided (as a JSON string), the default order-by is ascending.
+
+See [Sorting Orders](./sorting-orders.html) for more information on the sorting orders specified by "dimensionOrder".

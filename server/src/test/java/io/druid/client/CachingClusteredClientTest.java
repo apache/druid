@@ -97,6 +97,7 @@ import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryEngine;
 import io.druid.query.groupby.GroupByQueryQueryToolChest;
 import io.druid.query.groupby.GroupByQueryRunnerTest;
+import io.druid.query.ordering.StringComparators;
 import io.druid.query.search.SearchQueryQueryToolChest;
 import io.druid.query.search.SearchResultValue;
 import io.druid.query.search.search.SearchHit;
@@ -1403,14 +1404,20 @@ public class CachingClusteredClientTest
                                      Druids.newOrDimFilterBuilder().fields(
                                          Arrays.asList(
                                              new SelectorDimFilter("dim0", "1", null),
-                                             new BoundDimFilter("dim0", "222", "333", false, false, false, null)
+                                             new BoundDimFilter("dim0", "222", "333", false, false, false, null,
+                                                                StringComparators.LEXICOGRAPHIC_NAME
+                                             )
                                          )
                                      ).build(),
                                      Druids.newAndDimFilterBuilder().fields(
                                          Arrays.asList(
                                              new InDimFilter("dim1", Arrays.asList("0", "1", "2", "3", "4"), null),
-                                             new BoundDimFilter("dim1", "0", "3", false, true, false, null),
-                                             new BoundDimFilter("dim1", "1", "9999", true, false, false, null)
+                                             new BoundDimFilter("dim1", "0", "3", false, true, false, null,
+                                                                StringComparators.LEXICOGRAPHIC_NAME
+                                             ),
+                                             new BoundDimFilter("dim1", "1", "9999", true, false, false, null,
+                                                                StringComparators.LEXICOGRAPHIC_NAME
+                                             )
                                          )
                                      ).build()
                                  )
@@ -1475,14 +1482,20 @@ public class CachingClusteredClientTest
                                      Druids.newOrDimFilterBuilder().fields(
                                          Arrays.asList(
                                              new SelectorDimFilter("dim1", "a", null),
-                                             new BoundDimFilter("dim1", "from", "to", false, false, false, null)
+                                             new BoundDimFilter("dim1", "from", "to", false, false, false, null,
+                                                                StringComparators.LEXICOGRAPHIC_NAME
+                                             )
                                          )
                                      ).build(),
                                      Druids.newAndDimFilterBuilder().fields(
                                          Arrays.asList(
                                              new InDimFilter("dim2", Arrays.asList("a", "c", "e", "g"), null),
-                                             new BoundDimFilter("dim2", "aaa", "hi", false, false, false, null),
-                                             new BoundDimFilter("dim2", "e", "zzz", true, true, false, null)
+                                             new BoundDimFilter("dim2", "aaa", "hi", false, false, false, null,
+                                                                StringComparators.LEXICOGRAPHIC_NAME
+                                             ),
+                                             new BoundDimFilter("dim2", "e", "zzz", true, true, false, null,
+                                                                StringComparators.LEXICOGRAPHIC_NAME
+                                             )
                                          )
                                      ).build()
                                  )

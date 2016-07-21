@@ -39,6 +39,7 @@ import io.druid.query.filter.ExtractionDimFilter;
 import io.druid.query.filter.RegexDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.search.search.FragmentSearchQuerySpec;
+import io.druid.query.search.search.NumericSearchSortSpec;
 import io.druid.query.search.search.SearchHit;
 import io.druid.query.search.search.SearchQuery;
 import io.druid.query.search.search.SearchQueryConfig;
@@ -578,6 +579,31 @@ public class SearchQueryRunnerTest
         expectedHits
     );
   }
+
+  @Test
+  public void testSearchWithNumericSort()
+  {
+    SearchQuery searchQuery = Druids.newSearchQueryBuilder()
+                                    .dataSource(QueryRunnerTestHelper.dataSource)
+                                    .granularity(QueryRunnerTestHelper.allGran)
+                                    .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                    .query("a")
+                                    .sortSpec(new NumericSearchSortSpec())
+                                    .build();
+
+    List<SearchHit> expectedHits = Lists.newLinkedList();
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.placementishDimension, "a", 93));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "automotive", 93));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "entertainment", 93));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "health", 93));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "mezzanine", 279));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.marketDimension, "total_market", 186));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "travel", 93));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.partialNullDimension, "value", 186));
+
+    checkSearchQuery(searchQuery, expectedHits);
+  }
+
 
   private void checkSearchQuery(Query searchQuery, List<SearchHit> expectedResults)
   {

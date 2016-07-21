@@ -47,6 +47,7 @@ import io.druid.query.filter.NotDimFilter;
 import io.druid.query.filter.RegexDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.lookup.LookupExtractionFn;
+import io.druid.query.ordering.StringComparators;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.segment.TestHelper;
 import org.joda.time.DateTime;
@@ -2238,7 +2239,8 @@ public class TimeseriesQueryRunnerTest
                                                   true,
                                                   null,
                                                   null,
-                                                  null
+                                                  null,
+                                                  StringComparators.LEXICOGRAPHIC_NAME
                                               ),
                                               new BoundDimFilter(
                                                   QueryRunnerTestHelper.marketDimension,
@@ -2247,7 +2249,8 @@ public class TimeseriesQueryRunnerTest
                                                   null,
                                                   true,
                                                   null,
-                                                  null
+                                                  null,
+                                                  StringComparators.LEXICOGRAPHIC_NAME
                                               ),
                                               (DimFilter) new BoundDimFilter(
                                                   QueryRunnerTestHelper.marketDimension,
@@ -2256,7 +2259,8 @@ public class TimeseriesQueryRunnerTest
                                                   null,
                                                   null,
                                                   null,
-                                                  null
+                                                  null,
+                                                  StringComparators.LEXICOGRAPHIC_NAME
                                               )
                                           )
                                       )
