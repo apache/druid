@@ -43,7 +43,7 @@ This is a type of `inputSpec` that reads data already stored inside Druid.
 |-----|----|-----------|--------|
 |type|String.|This should always be 'dataSource'.|yes|
 |ingestionSpec|JSON object.|Specification of Druid segments to be loaded. See below.|yes|
-|maxSplitSize|Number|Enables combining multiple segments into single Hadoop InputSplit according to size of segments. Default is none. |no|
+|maxSplitSize|Number|Enables combining multiple segments into single Hadoop InputSplit according to size of segments. With -1, druid calculates max split size based on user specified number of map task(mapred.map.tasks or mapreduce.job.maps). By default, one split is made for one segment. |no|
 
 Here is what goes inside `ingestionSpec`:
 
