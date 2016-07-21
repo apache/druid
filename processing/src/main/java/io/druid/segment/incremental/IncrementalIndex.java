@@ -254,6 +254,16 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       }
 
       @Override
+      public ColumnCapabilities getColumnCapabilities(String columnName)
+      {
+        // This ColumnSelectorFactory implementation has no knowledge of column capabilities.
+        // However, this method may still be called by FilteredAggregatorFactory's ValueMatcherFactory
+        // to check column types.
+        // Just return null, the caller will assume default types in that case.
+        return null;
+      }
+
+      @Override
       public DimensionSelector makeDimensionSelector(
           DimensionSpec dimensionSpec
       )
@@ -428,6 +438,11 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       }
       columnCapabilities.put(dimSchema.getName(), capabilities);
     }
+
+    //__time capabilites
+    ColumnCapabilitiesImpl timeCapabilities = new ColumnCapabilitiesImpl();
+    timeCapabilities.setType(ValueType.LONG);
+    columnCapabilities.put(Column.TIME_COLUMN_NAME, timeCapabilities);
 
     // This should really be more generic
     List<SpatialDimensionSchema> spatialDimensions = dimensionsSpec.getSpatialDimensions();
