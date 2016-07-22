@@ -28,19 +28,9 @@ import java.util.Map;
 */
 public class NoopQueryRunner<T> implements QueryRunner<T>
 {
-  private final Sequence<T> results;
-
-  public NoopQueryRunner() {
-    results = Sequences.empty();
-  }
-
-  public NoopQueryRunner(Sequence<T> results) {
-    this.results = results;
-  }
-
   @Override
   public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
   {
-    return results;
+    return Sequences.empty();
   }
 }

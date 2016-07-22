@@ -185,14 +185,21 @@ public class GroupByStrategyV2 implements GroupByStrategy
       GroupByQuery subquery, GroupByQuery query, Sequence<Row> subqueryResult
   )
   {
-    Sequence<Row> results = GroupByRowProcessor.process(
+    final Sequence<Row> results = GroupByRowProcessor.process(
         query,
         subqueryResult,
         configSupplier.get(),
         mergeBufferPool,
         spillMapper
     );
-    return mergeResults(new NoopQueryRunner<>(results), query, null);
+    return mergeResults(new QueryRunner<Row>()
+    {
+      @Override
+      public Sequence<Row> run(Query<Row> query, Map<String, Object> responseContext)
+      {
+        return results;
+      }
+    }, query, null);
   }
 
   @Override

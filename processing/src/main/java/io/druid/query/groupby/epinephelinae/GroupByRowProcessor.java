@@ -45,6 +45,7 @@ import io.druid.query.QueryContextKeys;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
@@ -59,6 +60,7 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.BooleanValueMatcher;
@@ -386,6 +388,16 @@ public class GroupByRowProcessor
     @Override
     public LongColumnSelector makeLongColumnSelector(final String columnName)
     {
+      if (columnName.equals(Column.TIME_COLUMN_NAME)) {
+        return new LongColumnSelector()
+        {
+          @Override
+          public long get()
+          {
+            return row.getTimestampFromEpoch();
+          }
+        };
+      }
       return new LongColumnSelector()
       {
         @Override
@@ -434,34 +446,63 @@ public class GroupByRowProcessor
     @Override
     public ValueMatcher makeValueMatcher(final String dimension, final Comparable value)
     {
-      return new ValueMatcher()
-      {
-        @Override
-        public boolean matches()
+      if (dimension.equals(Column.TIME_COLUMN_NAME)) {
+        return new ValueMatcher()
         {
-          return row.getDimension(dimension).contains(value);
-        }
-      };
+          @Override
+          public boolean matches()
+          {
+            return value.equals(row.getTimestampFromEpoch());
+          }
+        };
+      } else {
+        return new ValueMatcher()
+        {
+          @Override
+          public boolean matches()
+          {
+            return row.getDimension(dimension).contains(value);
+          }
+        };
+      }
     }
 
+    // There is no easy way to determine the dimension value type from the map based row, so this defaults all
+    // dimensions (except time) to string, and provide the string value matcher. This has some performance impact
+    // on filtering, but should provide the same result. It should be changed to support dimension types when better
+    // type hinting is implemented
     @Override
     public ValueMatcher makeValueMatcher(final String dimension, final DruidPredicateFactory predicateFactory)
     {
-      return new ValueMatcher()
-      {
-        Predicate<String> predicate = predicateFactory.makeStringPredicate();
-        @Override
-        public boolean matches()
+      if (dimension.equals(Column.TIME_COLUMN_NAME)) {
+        return new ValueMatcher()
         {
-          List<String> values = row.getDimension(dimension);
-          for (String value : values) {
-            if (predicate.apply(value)) {
-              return true;
-            }
+          DruidLongPredicate predicate = predicateFactory.makeLongPredicate();
+
+          @Override
+          public boolean matches()
+          {
+            return predicate.applyLong(row.getTimestampFromEpoch());
           }
-          return false;
-        }
-      };
+        };
+      } else {
+        return new ValueMatcher()
+        {
+          Predicate<String> predicate = predicateFactory.makeStringPredicate();
+
+          @Override
+          public boolean matches()
+          {
+            List<String> values = row.getDimension(dimension);
+            for (String value : values) {
+              if (predicate.apply(value)) {
+                return true;
+              }
+            }
+            return false;
+          }
+        };
+      }
     }
   }
 }

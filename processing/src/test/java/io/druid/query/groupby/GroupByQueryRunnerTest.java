@@ -4424,6 +4424,55 @@ public class GroupByQueryRunnerTest
   }
 
   @Test
+  public void testSubqueryWithOuterTimeFilter()
+  {
+    final GroupByQuery subquery = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("market", "market"),
+                                                         new DefaultDimensionSpec("quality", "quality")))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("index", "index")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    final DimFilter fridayFilter = new SelectorDimFilter(Column.TIME_COLUMN_NAME, "Friday", new TimeFormatExtractionFn("EEEE", null, null));
+    final DimFilter firstDaysFilter = new InDimFilter(Column.TIME_COLUMN_NAME, ImmutableList.of("1", "2", "3"),  new TimeFormatExtractionFn("d", null, null));
+    final GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(subquery)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
+        .setDimensions(Lists.<DimensionSpec>newArrayList())
+        .setDimFilter(firstDaysFilter)
+        .setAggregatorSpecs(
+            ImmutableList.<AggregatorFactory>of(
+              new FilteredAggregatorFactory(QueryRunnerTestHelper.rowsCount, fridayFilter)
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-02-01", "rows", 0L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-02-02", "rows", 0L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-02-03", "rows", 0L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-03-01", "rows", 0L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-03-02", "rows", 0L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-03-03", "rows", 0L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "rows", 13L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-02", "rows", 0L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-03", "rows", 0L)
+    );
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
   public void testSubqueryWithOuterJavascriptAggregators()
   {
     final GroupByQuery subquery = GroupByQuery
