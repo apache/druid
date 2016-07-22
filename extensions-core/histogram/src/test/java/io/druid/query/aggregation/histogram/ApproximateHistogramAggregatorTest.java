@@ -23,11 +23,29 @@ import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.TestFloatColumnSelector;
 import org.junit.Assert;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 
+@RunWith(Parameterized.class)
 public class ApproximateHistogramAggregatorTest
 {
+  @Parameterized.Parameters
+  public static Iterable<Object[]> constructorFeeder() throws IOException
+  {
+    return Arrays.asList(new Object[]{false}, new Object[]{true});
+  }
+
+  private final boolean compact;
+
+  public ApproximateHistogramAggregatorTest(boolean compact)
+  {
+    this.compact = compact;
+  }
+
   private void aggregateBuffer(TestFloatColumnSelector selector, BufferAggregator agg, ByteBuffer buf, int position)
   {
     agg.aggregate(buf, position);
@@ -44,7 +62,7 @@ public class ApproximateHistogramAggregatorTest
     final TestFloatColumnSelector selector = new TestFloatColumnSelector(values);
 
     ApproximateHistogramAggregatorFactory factory = new ApproximateHistogramAggregatorFactory(
-        "billy", "billy", resolution, numBuckets, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY, false
+        "billy", "billy", resolution, numBuckets, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY, compact
     );
     ApproximateHistogramBufferAggregator agg = new ApproximateHistogramBufferAggregator(selector, resolution, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY);
 

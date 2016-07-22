@@ -88,7 +88,8 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
         metricFactory.makeFloatColumnSelector(fieldName),
         resolution,
         lowerLimit,
-        upperLimit
+        upperLimit,
+        compact
     );
   }
 
@@ -183,7 +184,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   @Override
   public Object finalizeComputation(Object object)
   {
-    return ((ApproximateHistogram) object).toHistogram(numBuckets);
+    return ((ApproximateHistogramHolder) object).toHistogram(numBuckets);
   }
 
   @JsonProperty
@@ -223,6 +224,12 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
     return numBuckets;
   }
 
+  @JsonProperty
+  public boolean isCompact()
+  {
+    return compact;
+  }
+
   @Override
   public List<String> requiredFields()
   {
@@ -246,7 +253,7 @@ public class ApproximateHistogramAggregatorFactory extends AggregatorFactory
   @Override
   public String getTypeName()
   {
-    return "approximateHistogram";
+    return compact ? "approximateCompactHistogram" : "approximateHistogram";
   }
 
   @Override

@@ -26,7 +26,7 @@ import java.nio.ByteBuffer;
 
 public class ApproximateHistogramFoldingBufferAggregator implements BufferAggregator
 {
-  private final ObjectColumnSelector<ApproximateHistogram> selector;
+  private final ObjectColumnSelector<ApproximateHistogramHolder> selector;
   private final int resolution;
   private final float upperLimit;
   private final float lowerLimit;
@@ -35,7 +35,7 @@ public class ApproximateHistogramFoldingBufferAggregator implements BufferAggreg
   private long[] tmpBufferB;
 
   public ApproximateHistogramFoldingBufferAggregator(
-      ObjectColumnSelector<ApproximateHistogram> selector,
+      ObjectColumnSelector<ApproximateHistogramHolder> selector,
       int resolution,
       float lowerLimit,
       float upperLimit
@@ -70,7 +70,7 @@ public class ApproximateHistogramFoldingBufferAggregator implements BufferAggreg
     ApproximateHistogram h0 = new ApproximateHistogram().fromBytesDense(mutationBuffer);
     h0.setLowerLimit(lowerLimit);
     h0.setUpperLimit(upperLimit);
-    ApproximateHistogram hNext = selector.get();
+    ApproximateHistogramHolder hNext = selector.get();
     h0.foldFast(hNext, tmpBufferP, tmpBufferB);
 
     mutationBuffer.position(position);

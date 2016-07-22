@@ -50,7 +50,8 @@ import java.util.List;
 public class ApproximateHistogramGroupByQueryTest
 {
   private final QueryRunner<Row> runner;
-  private GroupByQueryRunnerFactory factory;
+  private final GroupByQueryRunnerFactory factory;
+  private final boolean compact;
 
   @Parameterized.Parameters
   public static Iterable<Object[]> constructorFeeder() throws IOException
@@ -86,17 +87,20 @@ public class ApproximateHistogramGroupByQueryTest
     for (GroupByQueryConfig config : configs) {
       final GroupByQueryRunnerFactory factory = GroupByQueryRunnerTest.makeQueryRunnerFactory(config);
       for (QueryRunner<Row> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
-        constructors.add(new Object[]{factory, runner});
+        for (boolean compact : new boolean[] {false, true}) {
+          constructors.add(new Object[]{factory, runner, compact});
+        }
       }
     }
 
     return constructors;
   }
 
-  public ApproximateHistogramGroupByQueryTest(GroupByQueryRunnerFactory factory, QueryRunner runner)
+  public ApproximateHistogramGroupByQueryTest(GroupByQueryRunnerFactory factory, QueryRunner runner, boolean compact)
   {
     this.factory = factory;
     this.runner = runner;
+    this.compact = compact;
   }
 
   @Test
@@ -109,7 +113,7 @@ public class ApproximateHistogramGroupByQueryTest
         5,
         Float.NEGATIVE_INFINITY,
         Float.POSITIVE_INFINITY,
-        false
+        compact
     );
 
     GroupByQuery query = new GroupByQuery.Builder()
@@ -184,7 +188,7 @@ public class ApproximateHistogramGroupByQueryTest
         5,
         Float.NEGATIVE_INFINITY,
         Float.POSITIVE_INFINITY,
-        false
+        compact
     );
 
     GroupByQuery query = new GroupByQuery.Builder()

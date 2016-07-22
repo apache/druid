@@ -19,6 +19,12 @@
 
 package io.druid.query.aggregation.histogram;
 
+import io.druid.data.input.InputRow;
+import io.druid.segment.serde.ComplexMetricExtractor;
+
+import java.util.Iterator;
+import java.util.List;
+
 /**
  */
 public class ApproximateHistogramCompactFoldingSerde extends ApproximateHistogramFoldingSerde
@@ -33,5 +39,43 @@ public class ApproximateHistogramCompactFoldingSerde extends ApproximateHistogra
   public Class<? extends ApproximateHistogramHolder> getClazz()
   {
     return ApproximateCompactHistogram.class;
+  }
+
+  @Override
+  public ComplexMetricExtractor getExtractor()
+  {
+    return new ComplexMetricExtractor()
+    {
+      @Override
+      public Class<ApproximateCompactHistogram> extractedClass()
+      {
+        return ApproximateCompactHistogram.class;
+      }
+
+      @Override
+      public ApproximateCompactHistogram extractValue(InputRow inputRow, String metricName)
+      {
+        Object rawValue = inputRow.getRaw(metricName);
+
+        if (rawValue instanceof ApproximateCompactHistogram) {
+          return (ApproximateCompactHistogram) rawValue;
+        } else {
+          List<String> dimValues = inputRow.getDimension(metricName);
+          if (dimValues != null && dimValues.size() > 0) {
+            Iterator<String> values = dimValues.iterator();
+
+            ApproximateCompactHistogram h = new ApproximateCompactHistogram();
+
+            while (values.hasNext()) {
+              float value = Float.parseFloat(values.next());
+              h.offer(value);
+            }
+            return h;
+          } else {
+            return new ApproximateCompactHistogram(0);
+          }
+        }
+      }
+    };
   }
 }

@@ -29,7 +29,7 @@ import java.util.Arrays;
  */
 public class ApproximateCompactHistogram extends ApproximateHistogramHolder
 {
-  private static final long INVERTED_FLAG_BIT = 1L;
+  private static final byte INVERTED_FLAG_BIT = 0x01;
 
   private static final byte[] MASKS = new byte[]{
       0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, (byte) 0x80
@@ -92,23 +92,22 @@ public class ApproximateCompactHistogram extends ApproximateHistogramHolder
     VLongUtils.writeVInt(buf, (size << 1) + (exact ? 0 : 1));
     VLongUtils.writeVInt(buf, binCount);
 
-    for (int x = 0; x < binCount; ) {
+    for (int x = 0; x < binCount; x += 8) {
       byte maker = 0;
       final int limit = Math.min(binCount, x + 8);
       for (int i = x; i < limit; i++) {
         buf.putFloat(positions[i]);
-        if (bins[i] > 1) {
-          maker |= MASKS[x % 8];
+        if (bins[i] != 1L) {
+          maker |= MASKS[i % 8];
         }
       }
       buf.put(maker);
       for (int i = x; i < limit; i++) {
-        if (bins[i] > 1) {
+        if (bins[i] != 1L) {
           boolean approximate = (bins[i] & APPROX_FLAG_BIT) != 0;
           VLongUtils.writeVLong(buf, (bins[i] << 1) + (approximate ? 1 : 0));
         }
       }
-      x = limit;
     }
 
     if (!exact) {
@@ -129,7 +128,7 @@ public class ApproximateCompactHistogram extends ApproximateHistogramHolder
     final boolean exact = (size & INVERTED_FLAG_BIT) == 0;
     float[] positions = new float[binCount];
     long[] bins = new long[binCount];
-    for (int x = 0; x < binCount; ) {
+    for (int x = 0; x < binCount; x += 8) {
       final int limit = Math.min(binCount, x + 8);
       for (int i = x; i < limit; i++) {
         positions[i] = buf.getFloat();
@@ -149,7 +148,6 @@ public class ApproximateCompactHistogram extends ApproximateHistogramHolder
           bins[i] = value;
         }
       }
-      x = limit;
     }
 
     float min, max;
