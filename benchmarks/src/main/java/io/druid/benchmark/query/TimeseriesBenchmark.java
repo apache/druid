@@ -109,7 +109,7 @@ public class TimeseriesBenchmark
   @Param({"750000"})
   private int rowsPerSegment;
 
-  @Param({"basic.A", "basic.timeFilter", "basic.timeFilterAlphanumeric"})
+  @Param({"basic.A", "basic.timeFilter", "basic.timeFilterAlphanumeric", "basic.timeFilterByInterval"})
   private String schemaAndQuery;
 
   private static final Logger log = new Logger(TimeseriesBenchmark.class);
