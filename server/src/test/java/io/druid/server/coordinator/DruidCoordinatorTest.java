@@ -27,6 +27,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.MapMaker;
 import com.google.common.collect.Maps;
 import com.metamx.common.concurrent.ScheduledExecutorFactory;
+import com.metamx.emitter.EmittingLogger;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.ImmutableDruidDataSource;
@@ -131,14 +132,20 @@ public class DruidCoordinatorTest extends CuratorTestBase
         false,
         false
     );
-    pathChildrenCache = new PathChildrenCache(curator, LOADPATH, true, true, Execs.singleThreaded("coordinator_test_path_children_cache-%d"));
+    pathChildrenCache = new PathChildrenCache(
+        curator,
+        LOADPATH,
+        true,
+        true,
+        Execs.singleThreaded("coordinator_test_path_children_cache-%d")
+    );
     loadQueuePeon = new LoadQueuePeon(
-      curator,
-      LOADPATH,
-      objectMapper,
-      Execs.scheduledSingleThreaded("coordinator_test_load_queue_peon_scheduled-%d"),
-      Execs.singleThreaded("coordinator_test_load_queue_peon-%d"),
-      druidCoordinatorConfig
+        curator,
+        LOADPATH,
+        objectMapper,
+        Execs.scheduledSingleThreaded("coordinator_test_load_queue_peon_scheduled-%d"),
+        Execs.singleThreaded("coordinator_test_load_queue_peon-%d"),
+        druidCoordinatorConfig
     );
     druidNode = new DruidNode("hey", "what", 1234);
     loadManagementPeons = new MapMaker().makeMap();
@@ -152,6 +159,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
     };
     leaderAnnouncerLatch = new CountDownLatch(1);
     leaderUnannouncerLatch = new CountDownLatch(1);
+    final NoopServiceEmitter serviceEmitter = new NoopServiceEmitter();
+    EmittingLogger.registerEmitter(serviceEmitter);
     coordinator = new DruidCoordinator(
         druidCoordinatorConfig,
         new ZkPathsConfig()
@@ -168,11 +177,12 @@ public class DruidCoordinatorTest extends CuratorTestBase
         serverInventoryView,
         metadataRuleManager,
         curator,
-        new NoopServiceEmitter(),
+        serviceEmitter,
         scheduledExecutorFactory,
         null,
         taskMaster,
-        new NoopServiceAnnouncer(){
+        new NoopServiceAnnouncer()
+        {
           @Override
           public void announce(DruidNode node)
           {
@@ -265,12 +275,14 @@ public class DruidCoordinatorTest extends CuratorTestBase
   }
 
   @Test(timeout = 60_000L)
-  public void testCoordinatorRun() throws Exception{
+  public void testCoordinatorRun() throws Exception
+  {
     String dataSource = "dataSource1";
-    String tier= "hot";
+    String tier = "hot";
+    String fullTier = "full";
 
     // Setup MetadataRuleManager
-    Rule foreverLoadRule = new ForeverLoadRule(ImmutableMap.of(tier, 2));
+    Rule foreverLoadRule = new ForeverLoadRule(ImmutableMap.of(tier, 2, fullTier, 1));
     EasyMock.expect(metadataRuleManager.getRulesWithDefault(EasyMock.anyString()))
             .andReturn(ImmutableList.of(foreverLoadRule)).atLeastOnce();
 
@@ -283,7 +295,17 @@ public class DruidCoordinatorTest extends CuratorTestBase
     DruidDataSource[] druidDataSources = {
         new DruidDataSource(dataSource, Collections.<String, String>emptyMap())
     };
-    final DataSegment dataSegment = new DataSegment(dataSource, new Interval("2010-01-01/P1D"), "v1", null, null, null, null, 0x9, 0);
+    final DataSegment dataSegment = new DataSegment(
+        dataSource,
+        new Interval("2010-01-01/P1D"),
+        "v1",
+        null,
+        null,
+        null,
+        null,
+        0x9,
+        1
+    );
     druidDataSources[0].addSegment("0", dataSegment);
 
     EasyMock.expect(databaseSegmentManager.isStarted()).andReturn(true).anyTimes();
@@ -296,11 +318,20 @@ public class DruidCoordinatorTest extends CuratorTestBase
             .andReturn(ImmutableSet.of(dataSegment)).atLeastOnce();
     EasyMock.replay(immutableDruidDataSource);
 
+    final LoadQueuePeon server2Peon = EasyMock.createNiceMock(LoadQueuePeon.class);
+    EasyMock.expect(server2Peon.getSegmentsToLoad()).andReturn(ImmutableSet.<DataSegment>of()).anyTimes();
+    EasyMock.expect(server2Peon.getSegmentsToDrop()).andReturn(ImmutableSet.<DataSegment>of()).anyTimes();
+    EasyMock.replay(server2Peon);
+
     // Setup ServerInventoryView
     druidServer = new DruidServer("server1", "localhost", 5L, "historical", tier, 0);
     loadManagementPeons.put("server1", loadQueuePeon);
+    loadManagementPeons.put("server2", server2Peon);
     EasyMock.expect(serverInventoryView.getInventory()).andReturn(
-        ImmutableList.of(druidServer)
+        ImmutableList.of(
+            druidServer,
+            new DruidServer("server2", "localhost", 0, "historical", fullTier, 0)
+        )
     ).atLeastOnce();
     serverInventoryView.start();
     EasyMock.expectLastCall().atLeastOnce();
@@ -321,21 +352,21 @@ public class DruidCoordinatorTest extends CuratorTestBase
 
     final CountDownLatch assignSegmentLatch = new CountDownLatch(1);
     pathChildrenCache.getListenable().addListener(
-      new PathChildrenCacheListener()
-      {
-        @Override
-        public void childEvent(
-            CuratorFramework curatorFramework, PathChildrenCacheEvent pathChildrenCacheEvent
-        ) throws Exception
+        new PathChildrenCacheListener()
         {
-          if(pathChildrenCacheEvent.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED)){
-            //Coordinator should try to assign segment to druidServer historical
-            //Simulate historical loading segment
-            druidServer.addDataSegment(dataSegment.getIdentifier(), dataSegment);
-            assignSegmentLatch.countDown();
+          @Override
+          public void childEvent(
+              CuratorFramework curatorFramework, PathChildrenCacheEvent pathChildrenCacheEvent
+          ) throws Exception
+          {
+            if (pathChildrenCacheEvent.getType().equals(PathChildrenCacheEvent.Type.CHILD_ADDED)) {
+              //Coordinator should try to assign segment to druidServer historical
+              //Simulate historical loading segment
+              druidServer.addDataSegment(dataSegment.getIdentifier(), dataSegment);
+              assignSegmentLatch.countDown();
+            }
           }
         }
-      }
     );
     pathChildrenCache.start();
 
@@ -364,7 +395,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
 
     Map<String, CountingMap<String>> replicationStatus = coordinator.getReplicationStatus();
     Assert.assertNotNull(replicationStatus);
-    Assert.assertEquals(1, replicationStatus.entrySet().size());
+    Assert.assertEquals(2, replicationStatus.entrySet().size());
 
     CountingMap<String> dataSourceMap = replicationStatus.get(tier);
     Assert.assertNotNull(dataSourceMap);
@@ -372,7 +403,12 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Assert.assertNotNull(dataSourceMap.get(dataSource));
     // Simulated the adding of segment to druidServer during SegmentChangeRequestLoad event
     // The load rules asks for 2 replicas, therefore 1 replica should still be pending
-    while(dataSourceMap.get(dataSource).get() != 1L) {
+    while (dataSourceMap.get(dataSource).get() != 1L) {
+      Thread.sleep(50);
+    }
+
+    // The full tier will never load up, so it should always have 1 replica pending
+    while (replicationStatus.get(fullTier).get(dataSource).get() != 1) {
       Thread.sleep(50);
     }
 
