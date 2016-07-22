@@ -92,5 +92,6 @@ public class BenchmarkSchemas
         basicSchemaDataInterval
     );
     SCHEMA_MAP.put("basic", basicSchema);
+    SCHEMA_MAP.put("nested", basicSchema);
   }
 }

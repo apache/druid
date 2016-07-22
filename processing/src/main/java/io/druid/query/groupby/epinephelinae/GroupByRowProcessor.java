@@ -45,6 +45,7 @@ import io.druid.query.QueryContextKeys;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
@@ -58,6 +59,7 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.BooleanValueMatcher;
 import io.druid.segment.filter.Filters;
@@ -412,6 +414,12 @@ public class GroupByRowProcessor
         }
       };
     }
+
+    @Override
+    public ColumnCapabilities getColumnCapabilities(String columnName)
+    {
+      return null;
+    }
   }
 
   private static class RowBasedValueMatcherFactory implements ValueMatcherFactory
@@ -437,10 +445,11 @@ public class GroupByRowProcessor
     }
 
     @Override
-    public ValueMatcher makeValueMatcher(final String dimension, final Predicate predicate)
+    public ValueMatcher makeValueMatcher(final String dimension, final DruidPredicateFactory predicateFactory)
     {
       return new ValueMatcher()
       {
+        Predicate<String> predicate = predicateFactory.makeStringPredicate();
         @Override
         public boolean matches()
         {
@@ -455,6 +464,4 @@ public class GroupByRowProcessor
       };
     }
   }
-
-  ;
 }

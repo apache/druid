@@ -116,7 +116,7 @@ public class GroupByBenchmark
   @Param({"100000"})
   private int rowsPerSegment;
 
-  @Param({"basic.A"})
+  @Param({"nested.A"})
   private String schemaAndQuery;
 
   @Param({"v1", "v2"})
@@ -190,7 +190,47 @@ public class GroupByBenchmark
       basicQueries.put("A", queryA);
     }
 
+    Map<String, GroupByQuery> nestedQueries = new LinkedHashMap<>();
+    { // nested.A
+      QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(basicSchema.getDataInterval()));
+      List<AggregatorFactory> queryAggs = new ArrayList<>();
+      queryAggs.add(new LongSumAggregatorFactory(
+          "sumLongSequential",
+          "sumLongSequential"
+      ));
+
+      GroupByQuery subqueryA = GroupByQuery
+          .builder()
+          .setDataSource("blah")
+          .setQuerySegmentSpec(intervalSpec)
+          .setDimensions(Lists.<DimensionSpec>newArrayList(
+              new DefaultDimensionSpec("dimSequential", null),
+              new DefaultDimensionSpec("dimZipf", null)
+          ))
+          .setAggregatorSpecs(
+              queryAggs
+          )
+          .setGranularity(QueryGranularities.DAY)
+          .build();
+
+      GroupByQuery queryA = GroupByQuery
+          .builder()
+          .setDataSource(subqueryA)
+          .setQuerySegmentSpec(intervalSpec)
+          .setDimensions(Lists.<DimensionSpec>newArrayList(
+              new DefaultDimensionSpec("dimSequential", null)
+          ))
+          .setAggregatorSpecs(
+              queryAggs
+          )
+          .setGranularity(QueryGranularities.WEEK)
+          .build();
+
+      nestedQueries.put("A", queryA);
+    }
+
     SCHEMA_QUERY_MAP.put("basic", basicQueries);
+    SCHEMA_QUERY_MAP.put("nested", nestedQueries);
   }
 
 
@@ -257,9 +297,11 @@ public class GroupByBenchmark
         new OffheapBufferGenerator("compute", 250000000),
         Integer.MAX_VALUE
     );
+
+    // limit of 2 is required since we simulate both historical merge and broker merge in the same process
     BlockingPool<ByteBuffer> mergePool = new BlockingPool<>(
         new OffheapBufferGenerator("merge", 250000000),
-        1
+        2
     );
     final GroupByQueryConfig config = new GroupByQueryConfig()
     {
