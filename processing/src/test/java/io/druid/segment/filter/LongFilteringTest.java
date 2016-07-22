@@ -238,7 +238,7 @@ public class LongFilteringTest extends BaseFilterTest
   }
 
   @Test
-  public void testSelectorAndInFilterMultithreaded()
+  public void testMultithreaded()
   {
     assertFilterMatchesMultithreaded(
         new SelectorDimFilter(COUNT_COLUMN, "3", null),
@@ -258,6 +258,11 @@ public class LongFilteringTest extends BaseFilterTest
     assertFilterMatchesMultithreaded(
         new InDimFilter(COUNT_COLUMN, infilterValues, null),
         ImmutableList.<String>of("2", "4", "6")
+    );
+
+    assertFilterMatches(
+        new BoundDimFilter(COUNT_COLUMN, "2", "5", false, false, null, null, StringComparators.NUMERIC_NAME),
+        ImmutableList.<String>of("2", "3", "4", "5")
     );
   }
 

@@ -73,6 +73,7 @@ import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 import io.druid.segment.serde.ComplexMetrics;
+import org.joda.time.Interval;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -210,6 +211,23 @@ public class TimeseriesBenchmark
                 .build();
 
       basicQueries.put("timeFilterAlphanumeric", timeFilterQuery);
+    }
+    {
+      QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(new Interval(200000, 300000)));
+      List<AggregatorFactory> queryAggs = new ArrayList<>();
+      LongSumAggregatorFactory lsaf = new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential");
+      queryAggs.add(lsaf);
+
+      TimeseriesQuery timeFilterQuery =
+          Druids.newTimeseriesQueryBuilder()
+                .dataSource("blah")
+                .granularity(QueryGranularities.ALL)
+                .intervals(intervalSpec)
+                .aggregators(queryAggs)
+                .descending(false)
+                .build();
+
+      basicQueries.put("timeFilterByInterval", timeFilterQuery);
     }
 
 

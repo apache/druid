@@ -174,14 +174,13 @@ public class BoundDimFilter implements DimFilter
 
     byte lowerStrictByte = (this.isLowerStrict() == false) ? 0x0 : (byte) 1;
     byte upperStrictByte = (this.isUpperStrict() == false) ? 0x0 : (byte) 1;
-    byte AlphaNumericByte = (this.isAlphaNumeric() == false) ? 0x0 : (byte) 1;
 
     byte[] extractionFnBytes = extractionFn == null ? new byte[0] : extractionFn.getCacheKey();
 
     byte[] orderingBytes = StringUtils.toUtf8(ordering);
 
     ByteBuffer boundCacheBuffer = ByteBuffer.allocate(
-        10
+        9
         + dimensionBytes.length
         + upperBytes.length
         + lowerBytes.length
@@ -192,7 +191,6 @@ public class BoundDimFilter implements DimFilter
                     .put(boundType)
                     .put(upperStrictByte)
                     .put(lowerStrictByte)
-                    .put(AlphaNumericByte)
                     .put(DimFilterUtils.STRING_SEPARATOR)
                     .put(dimensionBytes)
                     .put(DimFilterUtils.STRING_SEPARATOR)
@@ -221,7 +219,7 @@ public class BoundDimFilter implements DimFilter
   @Override
   public RangeSet<String> getDimensionRangeSet(String dimension)
   {
-    if (!Objects.equals(getDimension(), dimension) || getExtractionFn() != null || alphaNumeric) {
+    if (!Objects.equals(getDimension(), dimension) || getExtractionFn() != null || !ordering.equals(StringComparators.LEXICOGRAPHIC_NAME)) {
       return null;
     }
     RangeSet<String> retSet = TreeRangeSet.create();
@@ -329,6 +327,7 @@ public class BoundDimFilter implements DimFilter
               return (lowerComparing >= 0) && (upperComparing > 0);
             }
             return (lowerComparing >= 0) && (upperComparing >= 0);
+
           }
         };
       }
