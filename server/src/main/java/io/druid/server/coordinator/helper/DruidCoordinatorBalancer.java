@@ -133,9 +133,9 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
           }
         }
       }
-      if(unmoved == maxSegmentsToMove) {
+      if (unmoved == maxSegmentsToMove) {
         // Cluster should be alive and constantly adjusting
-        log.warn("No good moves found in tier [%s]", tier);
+        log.info("No good moves found in tier [%s]", tier);
       }
       stats.addToTieredStat("unmovedCount", tier, unmoved);
       stats.addToTieredStat("movedCount", tier, currentlyMovingSegments.get(tier).size());
@@ -143,7 +143,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
         strategy.emitStats(tier, stats, serverHolderList);
       }
       log.info(
-          "[%s]: Segments Moved: [%d] Segments Let Alone [%d]",
+          "[%s]: Segments Moved: [%d] Segments Let Alone: [%d]",
           tier,
           currentlyMovingSegments.get(tier).size(),
           unmoved
