@@ -188,8 +188,17 @@ public class BoundFilter implements Filter
               return doesMatch(extractionFn.apply(input));
             }
           };
-        } else {
+        } else if (boundDimFilter.getOrdering().equals(StringComparators.NUMERIC_NAME)){
           return longPredicateSupplier.get();
+        } else {
+          return new DruidLongPredicate()
+          {
+            @Override
+            public boolean applyLong(long input)
+            {
+              return doesMatch(String.valueOf(input));
+            }
+          };
         }
       }
     };
