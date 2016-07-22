@@ -60,7 +60,7 @@ public class OssDataSegmentKiller implements DataSegmentKiller {
 
         //  remove desc data file
         if (ossClient.doesObjectExist(bucket, descPath)) {
-            log.info("removing descriptor file[%s/%s] from oss", bucket, descPath);
+            log.info("removing descriptor file [%s/%s] from oss", bucket, descPath);
             ossClient.deleteObject(bucket, descPath);
         }
     }

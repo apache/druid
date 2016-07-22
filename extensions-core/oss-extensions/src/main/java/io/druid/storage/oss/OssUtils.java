@@ -27,6 +27,8 @@ import io.druid.segment.loading.DataSegmentPusherUtil;
 import io.druid.timeline.DataSegment;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.concurrent.Callable;
 
 /**
@@ -111,5 +113,21 @@ public class OssUtils {
      */
     public static String descriptorPathForSegmentPath(String key) {
         return key.substring(0, key.lastIndexOf("/")) + "/descriptor.json";
+    }
+
+    /**
+     * @param bucket
+     * @param key
+     *
+     * @return
+     */
+    public static URI getURI(String bucket, String key) {
+
+        try {
+            return new URI("oss://" + bucket + "/" + key);
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }

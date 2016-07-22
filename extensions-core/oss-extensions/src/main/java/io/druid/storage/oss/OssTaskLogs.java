@@ -105,6 +105,6 @@ public class OssTaskLogs implements TaskLogs {
     }
 
     private String getTaskLogKey(String taskid) {
-        return String.format("%s/%s/log", config.getLogBucket(), taskid);
+        return String.format("oss://%s/%s/log", config.getLogBucket(), taskid);
     }
 }

@@ -20,7 +20,7 @@
       "metricsSpec" : [],
       "granularitySpec" : {
         "type" : "uniform",
-        "segmentGranularity" : "FIVE_MINUTE",
+        "segmentGranularity" : "MINUTE",
         "queryGranularity" : "MINUTE"
       }
     },
@@ -47,8 +47,8 @@
     "tuningConfig": {
       "type" : "realtime",
       "maxRowsInMemory": 10,
-      "intermediatePersistPeriod": "PT2m",
-      "windowPeriod": "PT1m",
+      "intermediatePersistPeriod": "PT30s",
+      "windowPeriod": "PT30s",
       "basePersistDirectory": "\/Volumes\/data\/vmshare\/druid-test\/data"
     }
   }

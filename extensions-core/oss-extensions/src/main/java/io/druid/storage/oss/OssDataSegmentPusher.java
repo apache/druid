@@ -23,7 +23,6 @@ import com.aliyun.oss.OSSClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
 import com.metamx.common.CompressionUtils;
@@ -75,7 +74,7 @@ public class OssDataSegmentPusher implements DataSegmentPusher {
         //  get data full key
         final String key = OssUtils.constructSegmentPath(config.getBaseKey(), inSegment);
 
-        log.info("copying segment [%s] to oss at location [%s]", inSegment.getIdentifier(), key);
+        log.info("copying segment [%s] to oss at location [%s] ...", inSegment.getIdentifier(), key);
 
         //  temp file for data zip
         final File zipOutFile = File.createTempFile("druid", "index.zip");
@@ -89,9 +88,9 @@ public class OssDataSegmentPusher implements DataSegmentPusher {
                         @Override
                         public DataSegment call() throws Exception {
 
-                            log.info("pushing index file [%s] ...", zipOutFile.getAbsolutePath());
+                            log.info("pushing index file [%s] to oss [%s] ...", zipOutFile.getAbsolutePath(), key);
 
-                            //  push data to oss
+                            //  push index file to oss
                             ossClient.putObject(config.getBucket(), key, zipOutFile);
 
                             //  return data segment, include type/bucket/key info
@@ -108,12 +107,14 @@ public class OssDataSegmentPusher implements DataSegmentPusher {
                                     )
                                     .withBinaryVersion(SegmentUtils.getVersionFromDir(indexFilesDir));
 
+                            //  get descriptor file from insegment
                             File descriptorFile = File.createTempFile("druid", "descriptor.json");
-                            Files.copy(ByteStreams.newInputStreamSupplier(jsonMapper.writeValueAsBytes(inSegment)), descriptorFile);
+                            Files.write(jsonMapper.writeValueAsBytes(inSegment), descriptorFile);
 
-                            log.info("pushing descriptor file [%s] ...", descriptorFile.getAbsolutePath());
-                            ossClient.putObject(config.getBucket(), OssUtils.descriptorPathForSegmentPath(key), descriptorFile);
-
+                            //  push descriptor file to oss
+                            String descKey = OssUtils.descriptorPathForSegmentPath(key);
+                            log.info("pushing descriptor file [%s] to oss [%s] ...", descriptorFile.getAbsolutePath(), descKey);
+                            ossClient.putObject(config.getBucket(), descKey, descriptorFile);
 
                             //  delete data index and descriptor file
                             log.info("deleting index file [%s] ...", zipOutFile);

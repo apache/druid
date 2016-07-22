@@ -48,7 +48,7 @@ public class OssLoadSpec implements LoadSpec {
             @JacksonInject OssDataSegmentPuller puller,
             @JsonProperty(OssDataSegmentPuller.BUCKET) String bucket,
             @JsonProperty(OssDataSegmentPuller.KEY) String key) {
-        
+
         Preconditions.checkNotNull(bucket);
         Preconditions.checkNotNull(key);
         this.bucket = bucket;
@@ -58,6 +58,6 @@ public class OssLoadSpec implements LoadSpec {
 
     @Override
     public LoadSpecResult loadSegment(File outDir) throws SegmentLoadingException {
-        return new LoadSpecResult(puller.getSegmentFiles(new OssDataSegmentPuller.OssCoords(bucket, key), outDir).size());
+        return new LoadSpecResult(puller.getSegmentFiles(OssUtils.getURI(bucket, key), outDir).size());
     }
 }
