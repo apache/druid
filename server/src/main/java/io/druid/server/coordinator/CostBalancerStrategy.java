@@ -284,30 +284,32 @@ public class CostBalancerStrategy implements BalancerStrategy
   {
     final long proposalSegmentSize = proposalSegment.getSize();
 
-    if (includeCurrentServer || !server.isServingSegment(proposalSegment)) {
-      /** Don't calculate cost if the server doesn't have enough space or is loading the segment */
-      if (proposalSegmentSize > server.getAvailableSize() || server.isLoadingSegment(proposalSegment)) {
-        return Double.POSITIVE_INFINITY;
-      }
-
-      /** The contribution to the total cost of a given server by proposing to move the segment to that server is... */
-      double cost = 0d;
-
-      /**  the sum of the costs of other (exclusive of the proposalSegment) segments on the server */
-      cost += computeJointSegmentsCost(
-          proposalSegment,
-          Iterables.filter(
-              server.getServer().getSegments().values(),
-              Predicates.not(Predicates.equalTo(proposalSegment))
-          )
-      );
-
-      /**  plus the costs of segments that will be loaded */
-      cost += computeJointSegmentsCost(proposalSegment, server.getPeon().getSegmentsToLoad());
-
-      return cost;
+    // (optional) Don't include server if it is already serving segment
+    if (!includeCurrentServer && server.isServingSegment(proposalSegment)) {
+      return Double.POSITIVE_INFINITY;
     }
-    return Double.POSITIVE_INFINITY;
+
+    // Don't calculate cost if the server doesn't have enough space or is loading the segment
+    if (proposalSegmentSize > server.getAvailableSize() || server.isLoadingSegment(proposalSegment)) {
+      return Double.POSITIVE_INFINITY;
+    }
+
+    // The contribution to the total cost of a given server by proposing to move the segment to that server is...
+    double cost = 0d;
+
+    // the sum of the costs of other (exclusive of the proposalSegment) segments on the server
+    cost += computeJointSegmentsCost(
+        proposalSegment,
+        Iterables.filter(
+            server.getServer().getSegments().values(),
+            Predicates.not(Predicates.equalTo(proposalSegment))
+        )
+    );
+
+    //  plus the costs of segments that will be loaded
+    cost += computeJointSegmentsCost(proposalSegment, server.getPeon().getSegmentsToLoad());
+
+    return cost;
   }
 
   /**
