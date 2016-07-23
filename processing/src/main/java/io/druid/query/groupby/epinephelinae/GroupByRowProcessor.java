@@ -477,7 +477,7 @@ public class GroupByRowProcessor
       if (dimension.equals(Column.TIME_COLUMN_NAME)) {
         return new ValueMatcher()
         {
-          DruidLongPredicate predicate = predicateFactory.makeLongPredicate();
+          final DruidLongPredicate predicate = predicateFactory.makeLongPredicate();
 
           @Override
           public boolean matches()
@@ -488,7 +488,7 @@ public class GroupByRowProcessor
       } else {
         return new ValueMatcher()
         {
-          Predicate<String> predicate = predicateFactory.makeStringPredicate();
+          final Predicate<String> predicate = predicateFactory.makeStringPredicate();
 
           @Override
           public boolean matches()

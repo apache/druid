@@ -116,7 +116,7 @@ public class GroupByBenchmark
   @Param({"100000"})
   private int rowsPerSegment;
 
-  @Param({"nested.A"})
+  @Param({"basic.A", "basic.nested"})
   private String schemaAndQuery;
 
   @Param({"v1", "v2"})
@@ -190,8 +190,7 @@ public class GroupByBenchmark
       basicQueries.put("A", queryA);
     }
 
-    Map<String, GroupByQuery> nestedQueries = new LinkedHashMap<>();
-    { // nested.A
+    { // basic.nested
       QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(basicSchema.getDataInterval()));
       List<AggregatorFactory> queryAggs = new ArrayList<>();
       queryAggs.add(new LongSumAggregatorFactory(
@@ -226,11 +225,10 @@ public class GroupByBenchmark
           .setGranularity(QueryGranularities.WEEK)
           .build();
 
-      nestedQueries.put("A", queryA);
+      basicQueries.put("nested", queryA);
     }
 
     SCHEMA_QUERY_MAP.put("basic", basicQueries);
-    SCHEMA_QUERY_MAP.put("nested", nestedQueries);
   }
 
 
