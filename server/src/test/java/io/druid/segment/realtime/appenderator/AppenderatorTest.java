@@ -203,6 +203,7 @@ public class AppenderatorTest
       appenderator.add(IDENTIFIERS.get(2), IR("2001", "foo", 8), Suppliers.ofInstance(Committers.nil()));
       appenderator.add(IDENTIFIERS.get(2), IR("2001T01", "foo", 16), Suppliers.ofInstance(Committers.nil()));
       appenderator.add(IDENTIFIERS.get(2), IR("2001T02", "foo", 32), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(2), IR("2001T03", "foo", 64), Suppliers.ofInstance(Committers.nil()));
 
       // Query1: 2000/2001
       final TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
@@ -254,7 +255,7 @@ public class AppenderatorTest
               ),
               new Result<>(
                   new DateTime("2001"),
-                  new TimeseriesResultValue(ImmutableMap.<String, Object>of("count", 3L, "met", 56L))
+                  new TimeseriesResultValue(ImmutableMap.<String, Object>of("count", 4L, "met", 120L))
               )
           ),
           results2
@@ -288,6 +289,40 @@ public class AppenderatorTest
           ),
           results3
       );
+
+      // Query4: 2000/2001T01, 2001T03/2001T04
+      final TimeseriesQuery query4 = Druids.newTimeseriesQueryBuilder()
+                                           .dataSource(AppenderatorTester.DATASOURCE)
+                                           .intervals(
+                                               ImmutableList.of(
+                                                   new Interval("2000/2001T01"),
+                                                   new Interval("2001T03/2001T04")
+                                               )
+                                           )
+                                           .aggregators(
+                                               Arrays.<AggregatorFactory>asList(
+                                                   new LongSumAggregatorFactory("count", "count"),
+                                                   new LongSumAggregatorFactory("met", "met")
+                                               )
+                                           )
+                                           .granularity(QueryGranularities.DAY)
+                                           .build();
+
+      final List<Result<TimeseriesResultValue>> results4 = Lists.newArrayList();
+      Sequences.toList(query4.run(appenderator, ImmutableMap.<String, Object>of()), results4);
+      Assert.assertEquals(
+          ImmutableList.of(
+              new Result<>(
+                  new DateTime("2000"),
+                  new TimeseriesResultValue(ImmutableMap.<String, Object>of("count", 3L, "met", 7L))
+              ),
+              new Result<>(
+                  new DateTime("2001"),
+                  new TimeseriesResultValue(ImmutableMap.<String, Object>of("count", 2L, "met", 72L))
+              )
+          ),
+          results4
+      );
     }
   }
 
@@ -303,6 +338,8 @@ public class AppenderatorTest
       appenderator.add(IDENTIFIERS.get(1), IR("2000", "foo", 4), Suppliers.ofInstance(Committers.nil()));
       appenderator.add(IDENTIFIERS.get(2), IR("2001", "foo", 8), Suppliers.ofInstance(Committers.nil()));
       appenderator.add(IDENTIFIERS.get(2), IR("2001T01", "foo", 16), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(2), IR("2001T02", "foo", 32), Suppliers.ofInstance(Committers.nil()));
+      appenderator.add(IDENTIFIERS.get(2), IR("2001T03", "foo", 64), Suppliers.ofInstance(Committers.nil()));
 
       // Query1: segment #2
       final TimeseriesQuery query1 = Druids.newTimeseriesQueryBuilder()
@@ -334,13 +371,13 @@ public class AppenderatorTest
           ImmutableList.of(
               new Result<>(
                   new DateTime("2001"),
-                  new TimeseriesResultValue(ImmutableMap.<String, Object>of("count", 2L, "met", 24L))
+                  new TimeseriesResultValue(ImmutableMap.<String, Object>of("count", 4L, "met", 120L))
               )
           ),
           results1
       );
 
-      // Query1: segment #2, partial
+      // Query2: segment #2, partial
       final TimeseriesQuery query2 = Druids.newTimeseriesQueryBuilder()
                                            .dataSource(AppenderatorTester.DATASOURCE)
                                            .aggregators(
@@ -374,6 +411,47 @@ public class AppenderatorTest
               )
           ),
           results2
+      );
+
+      // Query3: segment #2, two disjoint intervals
+      final TimeseriesQuery query3 = Druids.newTimeseriesQueryBuilder()
+                                           .dataSource(AppenderatorTester.DATASOURCE)
+                                           .aggregators(
+                                               Arrays.<AggregatorFactory>asList(
+                                                   new LongSumAggregatorFactory("count", "count"),
+                                                   new LongSumAggregatorFactory("met", "met")
+                                               )
+                                           )
+                                           .granularity(QueryGranularities.DAY)
+                                           .intervals(
+                                               new MultipleSpecificSegmentSpec(
+                                                   ImmutableList.of(
+                                                       new SegmentDescriptor(
+                                                           new Interval("2001/PT1H"),
+                                                           IDENTIFIERS.get(2).getVersion(),
+                                                           IDENTIFIERS.get(2).getShardSpec().getPartitionNum()
+                                                       ),
+                                                       new SegmentDescriptor(
+                                                           new Interval("2001T03/PT1H"),
+                                                           IDENTIFIERS.get(2).getVersion(),
+                                                           IDENTIFIERS.get(2).getShardSpec().getPartitionNum()
+                                                       )
+                                                   )
+                                               )
+                                           )
+                                           .build();
+
+      final List<Result<TimeseriesResultValue>> results3 = Lists.newArrayList();
+      Sequences.toList(query3.run(appenderator, ImmutableMap.<String, Object>of()), results3);
+      Assert.assertEquals(
+          "query2",
+          ImmutableList.of(
+              new Result<>(
+                  new DateTime("2001"),
+                  new TimeseriesResultValue(ImmutableMap.<String, Object>of("count", 2L, "met", 72L))
+              )
+          ),
+          results3
       );
     }
   }
