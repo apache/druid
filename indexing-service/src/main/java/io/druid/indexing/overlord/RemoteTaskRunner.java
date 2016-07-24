@@ -511,7 +511,7 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
             response.getContent()
         );
 
-        if (!response.getStatus().equals(HttpResponseStatus.ACCEPTED)) {
+        if (!HttpResponseStatus.OK.equals(response.getStatus())) {
           log.error("Shutdown failed for %s! Are you sure the task was running?", taskId);
         }
       }
