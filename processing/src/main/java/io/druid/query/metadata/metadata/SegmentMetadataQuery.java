@@ -57,6 +57,7 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     INTERVAL,
     AGGREGATORS,
     MINMAX,
+    TIMESTAMPSPEC,
     QUERYGRANULARITY;
 
     @JsonValue
@@ -186,6 +187,11 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   public boolean hasAggregators()
   {
     return analysisTypes.contains(AnalysisType.AGGREGATORS);
+  }
+
+  public boolean hasTimestampSpec()
+  {
+    return analysisTypes.contains(AnalysisType.TIMESTAMPSPEC);
   }
 
   public boolean hasQueryGranularity()

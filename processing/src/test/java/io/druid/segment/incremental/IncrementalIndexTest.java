@@ -87,12 +87,12 @@ public class IncrementalIndexTest
             new SelectorDimFilter("billy", "A", null)
         )
     };
-    final IncrementalIndexSchema schema = new IncrementalIndexSchema(
-        0,
-        QueryGranularities.MINUTE,
-        dimensions,
-        metrics
-    );
+    final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
+        .withMinTimestamp(0)
+        .withQueryGranularity(QueryGranularities.MINUTE)
+        .withDimensionsSpec(dimensions)
+        .withMetrics(metrics)
+        .build();
 
     final List<Object[]> constructors = Lists.newArrayList();
     for (final Boolean sortFacts : ImmutableList.of(false, true)) {

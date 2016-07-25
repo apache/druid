@@ -21,6 +21,7 @@ package io.druid.segment;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
+import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -78,11 +79,13 @@ public class MetadataTest
     Metadata m1 = new Metadata();
     m1.put("k", "v");
     m1.setAggregators(aggs);
+    m1.setTimestampSpec(new TimestampSpec("ds", "auto", null));
     m1.setQueryGranularity(QueryGranularities.ALL);
 
     Metadata m2 = new Metadata();
     m2.put("k", "v");
     m2.setAggregators(aggs);
+    m2.setTimestampSpec(new TimestampSpec("ds", "auto", null));
     m2.setQueryGranularity(QueryGranularities.ALL);
 
     Metadata merged = new Metadata();
@@ -92,6 +95,7 @@ public class MetadataTest
             new LongMaxAggregatorFactory("n", "n")
         }
     );
+    merged.setTimestampSpec(new TimestampSpec("ds", "auto", null));
     merged.setQueryGranularity(QueryGranularities.ALL);
     Assert.assertEquals(merged, Metadata.merge(ImmutableList.of(m1, m2), null));
 
@@ -102,6 +106,7 @@ public class MetadataTest
     metadataToBeMerged.add(null);
 
     merged.setAggregators(null);
+    merged.setTimestampSpec(null);
     merged.setQueryGranularity(null);
     Assert.assertEquals(merged, Metadata.merge(metadataToBeMerged, null));
 
@@ -116,6 +121,7 @@ public class MetadataTest
         Metadata.merge(metadataToBeMerged, explicitAggs)
     );
 
+    merged.setTimestampSpec(new TimestampSpec("ds", "auto", null));
     merged.setQueryGranularity(QueryGranularities.ALL);
     Assert.assertEquals(
         merged,

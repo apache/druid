@@ -232,6 +232,7 @@ public class Sink implements Iterable<FireHydrant>
   {
     final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(minTimestamp)
+        .withTimestampSpec(schema.getParser())
         .withQueryGranularity(schema.getGranularitySpec().getQueryGranularity())
         .withDimensionsSpec(schema.getParser())
         .withMetrics(schema.getAggregators())

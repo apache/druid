@@ -86,6 +86,7 @@ public class SegmentMetadataQueryQueryToolChestTest
         ), 71982,
         100,
         null,
+        null,
         null
     );
 
@@ -115,6 +116,7 @@ public class SegmentMetadataQueryQueryToolChestTest
             "foo", new LongSumAggregatorFactory("foo", "foo"),
             "baz", new DoubleSumAggregatorFactory("baz", "baz")
         ),
+        null,
         null
     );
     final SegmentAnalysis analysis2 = new SegmentAnalysis(
@@ -127,6 +129,7 @@ public class SegmentMetadataQueryQueryToolChestTest
             "foo", new LongSumAggregatorFactory("foo", "foo"),
             "bar", new DoubleSumAggregatorFactory("bar", "bar")
         ),
+        null,
         null
     );
 
@@ -158,6 +161,7 @@ public class SegmentMetadataQueryQueryToolChestTest
         0,
         0,
         null,
+        null,
         null
     );
     final SegmentAnalysis analysis2 = new SegmentAnalysis(
@@ -170,6 +174,7 @@ public class SegmentMetadataQueryQueryToolChestTest
             "foo", new LongSumAggregatorFactory("foo", "foo"),
             "bar", new DoubleSumAggregatorFactory("bar", "bar")
         ),
+        null,
         null
     );
 
@@ -193,6 +198,7 @@ public class SegmentMetadataQueryQueryToolChestTest
         0,
         0,
         null,
+        null,
         null
     );
     final SegmentAnalysis analysis2 = new SegmentAnalysis(
@@ -201,6 +207,7 @@ public class SegmentMetadataQueryQueryToolChestTest
         Maps.<String, ColumnAnalysis>newHashMap(),
         0,
         0,
+        null,
         null,
         null
     );
@@ -222,6 +229,7 @@ public class SegmentMetadataQueryQueryToolChestTest
             "foo", new LongSumAggregatorFactory("foo", "foo"),
             "bar", new DoubleSumAggregatorFactory("bar", "bar")
         ),
+        null,
         null
     );
     final SegmentAnalysis analysis2 = new SegmentAnalysis(
@@ -235,6 +243,7 @@ public class SegmentMetadataQueryQueryToolChestTest
             "bar", new DoubleMaxAggregatorFactory("bar", "bar"),
             "baz", new LongMaxAggregatorFactory("baz", "baz")
         ),
+        null,
         null
     );
 

@@ -21,8 +21,9 @@ package io.druid.segment.incremental;
 
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.InputRowParser;
-import io.druid.granularity.QueryGranularity;
+import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularities;
+import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 
 /**
@@ -30,18 +31,21 @@ import io.druid.query.aggregation.AggregatorFactory;
 public class IncrementalIndexSchema
 {
   private final long minTimestamp;
+  private final TimestampSpec timestampSpec;
   private final QueryGranularity gran;
   private final DimensionsSpec dimensionsSpec;
   private final AggregatorFactory[] metrics;
 
   public IncrementalIndexSchema(
       long minTimestamp,
+      TimestampSpec timestampSpec,
       QueryGranularity gran,
       DimensionsSpec dimensionsSpec,
       AggregatorFactory[] metrics
   )
   {
     this.minTimestamp = minTimestamp;
+    this.timestampSpec = timestampSpec;
     this.gran = gran;
     this.dimensionsSpec = dimensionsSpec;
     this.metrics = metrics;
@@ -50,6 +54,11 @@ public class IncrementalIndexSchema
   public long getMinTimestamp()
   {
     return minTimestamp;
+  }
+
+  public TimestampSpec getTimestampSpec()
+  {
+    return timestampSpec;
   }
 
   public QueryGranularity getGran()
@@ -70,6 +79,7 @@ public class IncrementalIndexSchema
   public static class Builder
   {
     private long minTimestamp;
+    private TimestampSpec timestampSpec;
     private QueryGranularity gran;
     private DimensionsSpec dimensionsSpec;
     private AggregatorFactory[] metrics;
@@ -85,6 +95,24 @@ public class IncrementalIndexSchema
     public Builder withMinTimestamp(long minTimestamp)
     {
       this.minTimestamp = minTimestamp;
+      return this;
+    }
+
+    public Builder withTimestampSpec(TimestampSpec timestampSpec)
+    {
+      this.timestampSpec = timestampSpec;
+      return this;
+    }
+
+    public Builder withTimestampSpec(InputRowParser parser)
+    {
+      if (parser != null
+          && parser.getParseSpec() != null
+          && parser.getParseSpec().getTimestampSpec() != null) {
+        this.timestampSpec = parser.getParseSpec().getTimestampSpec();
+      } else {
+        this.timestampSpec = new TimestampSpec(null, null, null);
+      }
       return this;
     }
 
@@ -122,7 +150,7 @@ public class IncrementalIndexSchema
     public IncrementalIndexSchema build()
     {
       return new IncrementalIndexSchema(
-          minTimestamp, gran, dimensionsSpec, metrics
+          minTimestamp, timestampSpec, gran, dimensionsSpec, metrics
       );
     }
   }

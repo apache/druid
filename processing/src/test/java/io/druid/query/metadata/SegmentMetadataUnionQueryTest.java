@@ -126,6 +126,7 @@ public class SegmentMetadataUnionQueryTest
         mmap ? 287928 : 291020,
         4836,
         null,
+        null,
         null
     );
     SegmentMetadataQuery query = new Druids.SegmentMetadataQueryBuilder()

@@ -20,6 +20,7 @@
 package io.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 
@@ -43,6 +44,9 @@ public class Metadata
   private AggregatorFactory[] aggregators;
 
   @JsonProperty
+  private TimestampSpec timestampSpec;
+
+  @JsonProperty
   private QueryGranularity queryGranularity;
 
   public Metadata()
@@ -58,6 +62,17 @@ public class Metadata
   public Metadata setAggregators(AggregatorFactory[] aggregators)
   {
     this.aggregators = aggregators;
+    return this;
+  }
+
+  public TimestampSpec getTimestampSpec()
+  {
+    return timestampSpec;
+  }
+
+  public Metadata setTimestampSpec(TimestampSpec timestampSpec)
+  {
+    this.timestampSpec = timestampSpec;
     return this;
   }
 
@@ -111,6 +126,7 @@ public class Metadata
                                                    ? new ArrayList<AggregatorFactory[]>()
                                                    : null;
 
+    List<TimestampSpec> timestampSpecsToMerge = new ArrayList<>();
     List<QueryGranularity> gransToMerge = new ArrayList<>();
 
     for (Metadata metadata : toBeMerged) {
@@ -118,6 +134,10 @@ public class Metadata
         foundSomeMetadata = true;
         if (aggregatorsToMerge != null) {
           aggregatorsToMerge.add(metadata.getAggregators());
+        }
+
+        if (timestampSpecsToMerge != null && metadata.getTimestampSpec() != null) {
+          timestampSpecsToMerge.add(metadata.getTimestampSpec());
         }
 
         if (gransToMerge != null) {
@@ -128,6 +148,7 @@ public class Metadata
         //if metadata and hence aggregators and queryGranularity for some segment being merged are unknown then
         //final merged segment should not have same in metadata
         aggregatorsToMerge = null;
+        timestampSpecsToMerge = null;
         gransToMerge = null;
       }
     }
@@ -141,6 +162,10 @@ public class Metadata
       result.setAggregators(AggregatorFactory.mergeAggregators(aggregatorsToMerge));
     } else {
       result.setAggregators(overrideMergedAggregators);
+    }
+
+    if (timestampSpecsToMerge != null) {
+      result.setTimestampSpec(TimestampSpec.mergeTimestampSpec(timestampSpecsToMerge));
     }
 
     if (gransToMerge != null) {
@@ -171,9 +196,12 @@ public class Metadata
     if (!Arrays.equals(aggregators, metadata.aggregators)) {
       return false;
     }
-    return !(queryGranularity != null
-             ? !queryGranularity.equals(metadata.queryGranularity)
-             : metadata.queryGranularity != null);
+    if (timestampSpec != null ? !timestampSpec.equals(metadata.timestampSpec) : metadata.timestampSpec != null) {
+      return false;
+    }
+    return queryGranularity != null
+           ? queryGranularity.equals(metadata.queryGranularity)
+           : metadata.queryGranularity == null;
 
   }
 
@@ -181,7 +209,8 @@ public class Metadata
   public int hashCode()
   {
     int result = container.hashCode();
-    result = 31 * result + (aggregators != null ? Arrays.hashCode(aggregators) : 0);
+    result = 31 * result + Arrays.hashCode(aggregators);
+    result = 31 * result + (timestampSpec != null ? timestampSpec.hashCode() : 0);
     result = 31 * result + (queryGranularity != null ? queryGranularity.hashCode() : 0);
     return result;
   }
@@ -190,9 +219,9 @@ public class Metadata
   public String toString()
   {
     return "Metadata{" +
-
            "container=" + container +
            ", aggregators=" + Arrays.toString(aggregators) +
+           ", timestampSpec=" + timestampSpec +
            ", queryGranularity=" + queryGranularity +
            '}';
   }

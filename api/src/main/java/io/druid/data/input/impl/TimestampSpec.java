@@ -23,7 +23,9 @@ import com.google.common.base.Function;
 import com.metamx.common.parsers.TimestampParser;
 import org.joda.time.DateTime;
 
+import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 /**
  */
@@ -128,6 +130,26 @@ public class TimestampSpec
     int result = timestampColumn.hashCode();
     result = 31 * result + timestampFormat.hashCode();
     result = 31 * result + (missingValue != null ? missingValue.hashCode() : 0);
+    return result;
+  }
+
+  //simple merge strategy on timestampSpec that checks if all are equal or else
+  //returns null. this can be improved in future but is good enough for most use-cases.
+  public static TimestampSpec mergeTimestampSpec(List<TimestampSpec> toMerge) {
+    if (toMerge == null || toMerge.size() == 0) {
+      return null;
+    }
+
+    TimestampSpec result = toMerge.get(0);
+    for (int i = 1; i < toMerge.size(); i++) {
+      if (toMerge.get(i) == null) {
+        continue;
+      }
+      if (!Objects.equals(result, toMerge.get(i))) {
+        return null;
+      }
+    }
+
     return result;
   }
 }
