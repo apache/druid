@@ -42,7 +42,11 @@ public class DruidProcessingConfigTest
 
     Assert.assertEquals(1024 * 1024 * 1024, config.intermediateComputeSizeBytes());
     Assert.assertEquals(Integer.MAX_VALUE, config.poolCacheMaxCount());
-    Assert.assertTrue(config.getNumThreads() < Runtime.getRuntime().availableProcessors());
+    if (Runtime.getRuntime().availableProcessors() == 1) {
+      Assert.assertTrue(config.getNumThreads() == 1);
+    } else {
+      Assert.assertTrue(config.getNumThreads() < Runtime.getRuntime().availableProcessors());
+    }
     Assert.assertEquals(0, config.columnCacheSizeBytes());
     Assert.assertFalse(config.isFifo());
 
