@@ -21,6 +21,7 @@ package io.druid.query.metadata.metadata;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import org.joda.time.Interval;
@@ -37,6 +38,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
   private final long size;
   private final long numRows;
   private final Map<String, AggregatorFactory> aggregators;
+  private final TimestampSpec timestampSpec;
   private final QueryGranularity queryGranularity;
 
   @JsonCreator
@@ -47,6 +49,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
       @JsonProperty("size") long size,
       @JsonProperty("numRows") long numRows,
       @JsonProperty("aggregators") Map<String, AggregatorFactory> aggregators,
+      @JsonProperty("timestampSpec") TimestampSpec timestampSpec,
       @JsonProperty("queryGranularity") QueryGranularity queryGranularity
   )
   {
@@ -56,6 +59,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
     this.size = size;
     this.numRows = numRows;
     this.aggregators = aggregators;
+    this.timestampSpec = timestampSpec;
     this.queryGranularity = queryGranularity;
   }
 
@@ -90,6 +94,12 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
   }
 
   @JsonProperty
+  public TimestampSpec getTimestampSpec()
+  {
+    return timestampSpec;
+  }
+
+  @JsonProperty
   public QueryGranularity getQueryGranularity()
   {
     return queryGranularity;
@@ -111,6 +121,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
            ", size=" + size +
            ", numRows=" + numRows +
            ", aggregators=" + aggregators +
+           ", timestampSpec=" + timestampSpec +
            ", queryGranularity=" + queryGranularity +
            '}';
   }
@@ -134,6 +145,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
            Objects.equals(interval, that.interval) &&
            Objects.equals(columns, that.columns) &&
            Objects.equals(aggregators, that.aggregators) &&
+           Objects.equals(timestampSpec, that.timestampSpec) &&
            Objects.equals(queryGranularity, that.queryGranularity);
   }
 
@@ -144,7 +156,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
   @Override
   public int hashCode()
   {
-    return Objects.hash(id, interval, columns, size, numRows, aggregators, queryGranularity);
+    return Objects.hash(id, interval, columns, size, numRows, aggregators, timestampSpec, queryGranularity);
   }
 
   @Override

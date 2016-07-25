@@ -126,6 +126,10 @@ dimension columns.
 
 * `intervals` in the result will contain the list of intervals associated with the queried segments.
 
+#### timestampSpec
+
+* `timestampSpec` in the result will contain timestampSpec of data stored in segments. this can be null if timestampSpec of segments was unknown or unmergeable (if merging is enabled).
+
 #### queryGranularity
 
 * `queryGranularity` in the result will contain query granularity of data stored in segments. this can be null if query granularity of segments was unknown or unmergeable (if merging is enabled).

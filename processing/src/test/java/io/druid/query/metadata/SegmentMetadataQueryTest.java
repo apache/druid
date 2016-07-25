@@ -28,6 +28,7 @@ import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.guava.Sequences;
 import io.druid.common.utils.JodaUtils;
+import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.BySegmentResultValue;
@@ -181,6 +182,7 @@ public class SegmentMetadataQueryTest
         ), mmap1 ? 71982 : 72755,
         1209,
         null,
+        null,
         null
     );
     expectedSegmentAnalysis2 = new SegmentAnalysis(
@@ -222,6 +224,7 @@ public class SegmentMetadataQueryTest
         // null_column will be included only for incremental index, which makes a little bigger result than expected
         ), mmap2 ? 71982 : 72755,
         1209,
+        null,
         null,
         null
     );
@@ -269,6 +272,7 @@ public class SegmentMetadataQueryTest
         ),
         0,
         expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
+        null,
         null,
         null
     );
@@ -336,6 +340,7 @@ public class SegmentMetadataQueryTest
         ),
         0,
         expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
+        null,
         null,
         null
     );
@@ -453,6 +458,7 @@ public class SegmentMetadataQueryTest
         expectedSegmentAnalysis1.getSize() + expectedSegmentAnalysis2.getSize(),
         expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
         null,
+        null,
         null
     );
 
@@ -502,6 +508,7 @@ public class SegmentMetadataQueryTest
         ),
         0,
         expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
+        null,
         null,
         null
     );
@@ -564,6 +571,7 @@ public class SegmentMetadataQueryTest
         0,
         expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
         expectedAggregators,
+        null,
         null
     );
 
@@ -600,6 +608,63 @@ public class SegmentMetadataQueryTest
     exec.shutdownNow();
   }
 
+  @Test
+  public void testSegmentMetadataQueryWithTimestampSpecMerge()
+  {
+    SegmentAnalysis mergedSegmentAnalysis = new SegmentAnalysis(
+        differentIds ? "merged" : "testSegment",
+        null,
+        ImmutableMap.of(
+            "placement",
+            new ColumnAnalysis(
+                ValueType.STRING.toString(),
+                false,
+                0,
+                0,
+                null,
+                null,
+                null
+            )
+        ),
+        0,
+        expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
+        null,
+        new TimestampSpec("ds", "auto", null),
+        null
+    );
+
+    QueryToolChest toolChest = FACTORY.getToolchest();
+
+    ExecutorService exec = Executors.newCachedThreadPool();
+    QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
+        toolChest.mergeResults(
+            FACTORY.mergeRunners(
+                MoreExecutors.sameThreadExecutor(),
+                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(
+                    toolChest.preMergeQueryDecoration(runner1),
+                    toolChest.preMergeQueryDecoration(runner2)
+                )
+            )
+        ),
+        toolChest
+    );
+
+    TestHelper.assertExpectedObjects(
+        ImmutableList.of(mergedSegmentAnalysis),
+        myRunner.run(
+            Druids.newSegmentMetadataQueryBuilder()
+                  .dataSource("testing")
+                  .intervals("2013/2014")
+                  .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
+                  .analysisTypes(SegmentMetadataQuery.AnalysisType.TIMESTAMPSPEC)
+                  .merge(true)
+                  .build(),
+            Maps.newHashMap()
+        ),
+        "failed SegmentMetadata merging query"
+    );
+    exec.shutdownNow();
+  }
 
   @Test
   public void testSegmentMetadataQueryWithQueryGranularityMerge()
@@ -621,6 +686,7 @@ public class SegmentMetadataQueryTest
         ),
         0,
         expectedSegmentAnalysis1.getNumRows() + expectedSegmentAnalysis2.getNumRows(),
+        null,
         null,
         QueryGranularities.NONE
     );
