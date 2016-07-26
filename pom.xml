@@ -69,6 +69,7 @@
         <slf4j.version>1.7.12</slf4j.version>
         <!-- If compiling with different hadoop version also modify default hadoop coordinates in TaskConfig.java -->
         <hadoop.compile.version>2.3.0</hadoop.compile.version>
+        <hive.version>2.0.0</hive.version>
     </properties>
 
     <modules>
@@ -106,6 +107,7 @@
         <module>extensions-contrib/distinctcount</module>
         <module>extensions-contrib/parquet-extensions</module>
         <module>extensions-contrib/statsd-emitter</module>
+        <module>extensions-contrib/orc-extensions</module>
     </modules>
 
     <dependencyManagement>
