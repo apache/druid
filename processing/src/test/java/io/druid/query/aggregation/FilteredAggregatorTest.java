@@ -258,7 +258,7 @@ public class FilteredAggregatorTest
 
     factory = new FilteredAggregatorFactory(
         new DoubleSumAggregatorFactory("billy", "value"),
-        new BoundDimFilter("dim", "a", "a", false, false, true, null, StringComparators.ALPHANUMERIC_NAME)
+        new BoundDimFilter("dim", "a", "a", false, false, true, null, StringComparators.ALPHANUMERIC)
     );
     selector = new TestFloatColumnSelector(values);
     validateFilteredAggs(factory, values, selector);
@@ -313,7 +313,7 @@ public class FilteredAggregatorTest
     factory = new FilteredAggregatorFactory(
         new DoubleSumAggregatorFactory("billy", "value"),
         new BoundDimFilter("dim", "aAARDVARK", "aAARDVARK", false, false, true, extractionFn,
-                           StringComparators.ALPHANUMERIC_NAME
+                           StringComparators.ALPHANUMERIC
         )
     );
     selector = new TestFloatColumnSelector(values);

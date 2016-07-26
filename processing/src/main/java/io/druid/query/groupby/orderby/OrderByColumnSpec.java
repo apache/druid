@@ -30,7 +30,7 @@ import com.metamx.common.ISE;
 import com.metamx.common.StringUtils;
 
 import io.druid.query.ordering.StringComparators;
-import io.druid.query.ordering.StringComparators.StringComparator;
+import io.druid.query.ordering.StringComparator;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
@@ -202,7 +202,7 @@ public class OrderByColumnSpec
     }
 
     String dimensionOrderString = dimensionOrderObj.toString().toLowerCase();
-    return StringComparators.makeComparator(dimensionOrderString);
+    return StringComparator.fromString(dimensionOrderString);
   }
 
   @Override

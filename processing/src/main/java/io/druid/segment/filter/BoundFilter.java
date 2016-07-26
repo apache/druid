@@ -49,7 +49,7 @@ public class BoundFilter implements Filter
   public BoundFilter(final BoundDimFilter boundDimFilter)
   {
     this.boundDimFilter = boundDimFilter;
-    this.comparator = StringComparators.makeComparator(boundDimFilter.getOrdering());
+    this.comparator = boundDimFilter.getOrdering();
     this.extractionFn = boundDimFilter.getExtractionFn();
     this.longPredicateSupplier = boundDimFilter.getLongPredicateSupplier();
   }

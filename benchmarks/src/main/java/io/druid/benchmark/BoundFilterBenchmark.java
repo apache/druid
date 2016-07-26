@@ -77,7 +77,7 @@ public class BoundFilterBenchmark
           false,
           false,
           null,
-          StringComparators.LEXICOGRAPHIC_NAME
+          StringComparators.LEXICOGRAPHIC
       )
   );
 
@@ -90,7 +90,7 @@ public class BoundFilterBenchmark
           false,
           false,
           null,
-          StringComparators.LEXICOGRAPHIC_NAME
+          StringComparators.LEXICOGRAPHIC
       )
   );
 
@@ -103,7 +103,7 @@ public class BoundFilterBenchmark
           false,
           false,
           null,
-          StringComparators.LEXICOGRAPHIC_NAME
+          StringComparators.LEXICOGRAPHIC
       )
   );
 
@@ -116,7 +116,7 @@ public class BoundFilterBenchmark
           false,
           true,
           null,
-          StringComparators.ALPHANUMERIC_NAME
+          StringComparators.ALPHANUMERIC
       )
   );
 
@@ -129,7 +129,7 @@ public class BoundFilterBenchmark
           false,
           true,
           null,
-          StringComparators.ALPHANUMERIC_NAME
+          StringComparators.ALPHANUMERIC
       )
   );
 
@@ -142,7 +142,7 @@ public class BoundFilterBenchmark
           false,
           true,
           null,
-          StringComparators.ALPHANUMERIC_NAME
+          StringComparators.ALPHANUMERIC
       )
   );
 

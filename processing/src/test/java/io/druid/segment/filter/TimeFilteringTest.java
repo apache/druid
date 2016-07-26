@@ -116,11 +116,11 @@ public class TimeFilteringTest extends BaseFilterTest
     );
 
     assertFilterMatches(
-        new BoundDimFilter(Column.TIME_COLUMN_NAME, "0", "4", false, false, null, null, StringComparators.NUMERIC_NAME),
+        new BoundDimFilter(Column.TIME_COLUMN_NAME, "0", "4", false, false, null, null, StringComparators.NUMERIC),
         ImmutableList.<String>of("0", "1", "2", "3", "4")
     );
     assertFilterMatches(
-        new BoundDimFilter(Column.TIME_COLUMN_NAME, "0", "4", true, true, null, null, StringComparators.NUMERIC_NAME),
+        new BoundDimFilter(Column.TIME_COLUMN_NAME, "0", "4", true, true, null, null, StringComparators.NUMERIC),
         ImmutableList.<String>of("1", "2", "3")
     );
 
@@ -179,11 +179,11 @@ public class TimeFilteringTest extends BaseFilterTest
     );
 
     assertFilterMatches(
-        new BoundDimFilter(Column.TIME_COLUMN_NAME, "Fridax", "Fridaz", false, false, null, exfn, StringComparators.ALPHANUMERIC_NAME),
+        new BoundDimFilter(Column.TIME_COLUMN_NAME, "Fridax", "Fridaz", false, false, null, exfn, StringComparators.ALPHANUMERIC),
         ImmutableList.<String>of("4")
     );
     assertFilterMatches(
-        new BoundDimFilter(Column.TIME_COLUMN_NAME, "Friday", "Friday", true, true, null, exfn, StringComparators.ALPHANUMERIC_NAME),
+        new BoundDimFilter(Column.TIME_COLUMN_NAME, "Friday", "Friday", true, true, null, exfn, StringComparators.ALPHANUMERIC),
         ImmutableList.<String>of()
     );
 

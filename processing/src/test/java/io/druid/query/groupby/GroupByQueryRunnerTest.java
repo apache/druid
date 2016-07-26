@@ -5517,7 +5517,7 @@ public class GroupByQueryRunnerTest
         false,
         true,
         extractionFn,
-        StringComparators.ALPHANUMERIC_NAME
+        StringComparators.ALPHANUMERIC
     ));
     superFilterList.add(new RegexDimFilter("quality", "super-mezzanine", extractionFn));
     superFilterList.add(new SearchQueryDimFilter(
@@ -5576,7 +5576,7 @@ public class GroupByQueryRunnerTest
     superFilterList.add(new SelectorDimFilter("null_column", "EMPTY", extractionFn));
     superFilterList.add(new InDimFilter("null_column", Arrays.asList("NOT-EMPTY", "FOOBAR", "EMPTY"), extractionFn));
     superFilterList.add(new BoundDimFilter("null_column", "EMPTY", "EMPTY", false, false, true, extractionFn,
-                                           StringComparators.ALPHANUMERIC_NAME
+                                           StringComparators.ALPHANUMERIC
     ));
     superFilterList.add(new RegexDimFilter("null_column", "EMPTY", extractionFn));
     superFilterList.add(new SearchQueryDimFilter(

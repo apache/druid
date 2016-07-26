@@ -32,6 +32,7 @@ import com.google.common.collect.TreeRangeSet;
 import com.google.common.primitives.Longs;
 import com.metamx.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.ordering.StringComparator;
 import io.druid.query.ordering.StringComparators;
 import io.druid.segment.filter.BoundFilter;
 
@@ -45,9 +46,8 @@ public class BoundDimFilter implements DimFilter
   private final String lower;
   private final boolean lowerStrict;
   private final boolean upperStrict;
-  private final Boolean alphaNumeric;
   private final ExtractionFn extractionFn;
-  private final String ordering;
+  private final StringComparator ordering;
   private final Supplier<DruidLongPredicate> longPredicateSupplier;
 
   @JsonCreator
@@ -59,7 +59,7 @@ public class BoundDimFilter implements DimFilter
       @JsonProperty("upperStrict") Boolean upperStrict,
       @Deprecated @JsonProperty("alphaNumeric") Boolean alphaNumeric,
       @JsonProperty("extractionFn") ExtractionFn extractionFn,
-      @JsonProperty("ordering") String ordering
+      @JsonProperty("ordering") StringComparator ordering
   )
   {
     this.dimension = Preconditions.checkNotNull(dimension, "dimension can not be null");
@@ -68,25 +68,21 @@ public class BoundDimFilter implements DimFilter
     this.lower = lower;
     this.lowerStrict = (lowerStrict == null) ? false : lowerStrict;
     this.upperStrict = (upperStrict == null) ? false : upperStrict;
-    this.alphaNumeric = alphaNumeric;
 
+    // For backwards compatibility, we retain the 'alphaNumeric' property. It will be used if the new 'ordering'
+    // property is missing. If both 'ordering' and 'alphaNumeric' are present, make sure they are consistent.
     if (ordering == null) {
       if (alphaNumeric == null || !alphaNumeric) {
-        this.ordering = StringComparators.LEXICOGRAPHIC_NAME;
+        this.ordering = StringComparators.LEXICOGRAPHIC;
       } else {
-        this.ordering = StringComparators.ALPHANUMERIC_NAME;
+        this.ordering = StringComparators.ALPHANUMERIC;
       }
     } else {
-      this.ordering = ordering.toLowerCase();
-      Preconditions.checkState(
-          StringComparators.isOrderingValid(this.ordering),
-          "ordering must be one of the following: " + StringComparators.ORDERINGS.toString()
-      );
-
+      this.ordering = ordering;
       if (alphaNumeric != null) {
-        boolean orderingIsAlphanumeric = this.ordering.equals(StringComparators.ALPHANUMERIC_NAME);
+        boolean orderingIsAlphanumeric = this.ordering.equals(StringComparators.ALPHANUMERIC);
         Preconditions.checkState(
-            this.alphaNumeric == orderingIsAlphanumeric,
+            alphaNumeric == orderingIsAlphanumeric,
             "mismatch between alphanumeric and ordering property"
         );
       }
@@ -125,13 +121,6 @@ public class BoundDimFilter implements DimFilter
     return upperStrict;
   }
 
-  @Deprecated
-  @JsonIgnore
-  public Boolean isAlphaNumeric()
-  {
-    return alphaNumeric;
-  }
-
   public boolean hasLowerBound()
   {
     return lower != null;
@@ -149,7 +138,7 @@ public class BoundDimFilter implements DimFilter
   }
 
   @JsonProperty
-  public String getOrdering()
+  public StringComparator getOrdering()
   {
     return ordering;
   }
@@ -177,7 +166,7 @@ public class BoundDimFilter implements DimFilter
 
     byte[] extractionFnBytes = extractionFn == null ? new byte[0] : extractionFn.getCacheKey();
 
-    byte[] orderingBytes = StringUtils.toUtf8(ordering);
+    byte[] orderingBytes = StringUtils.toUtf8(ordering.toString());
 
     ByteBuffer boundCacheBuffer = ByteBuffer.allocate(
         9
@@ -219,9 +208,12 @@ public class BoundDimFilter implements DimFilter
   @Override
   public RangeSet<String> getDimensionRangeSet(String dimension)
   {
-    if (!Objects.equals(getDimension(), dimension) || getExtractionFn() != null || !ordering.equals(StringComparators.LEXICOGRAPHIC_NAME)) {
+    if (!(Objects.equals(getDimension(), dimension)
+          && getExtractionFn() == null
+          && ordering.equals(StringComparators.LEXICOGRAPHIC))) {
       return null;
     }
+
     RangeSet<String> retSet = TreeRangeSet.create();
     Range<String> range;
     if (getLower() == null) {

@@ -20,21 +20,12 @@
 package io.druid.query.ordering;
 
 import java.math.BigDecimal;
-import java.util.Arrays;
 import java.util.Comparator;
-import java.util.List;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.annotation.JsonTypeInfo.As;
-import com.fasterxml.jackson.annotation.JsonTypeInfo.Id;
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.UnsignedBytes;
-import com.metamx.common.IAE;
 import com.metamx.common.StringUtils;
-
 
 public class StringComparators
 {
@@ -43,27 +34,12 @@ public class StringComparators
   public static final String NUMERIC_NAME = "numeric";
   public static final String STRLEN_NAME = "strlen";
 
-  public static final List<String> ORDERINGS = ImmutableList.of(
-      LEXICOGRAPHIC_NAME, ALPHANUMERIC_NAME, NUMERIC_NAME, STRLEN_NAME
-  );
+  public static final StringComparator LEXICOGRAPHIC = new LexicographicComparator();
+  public static final StringComparator ALPHANUMERIC = new AlphanumericComparator();
+  public static final StringComparator NUMERIC = new NumericComparator();
+  public static final StringComparator STRLEN = new StrlenComparator();
 
-  public static final LexicographicComparator LEXICOGRAPHIC = new LexicographicComparator();
-  public static final AlphanumericComparator ALPHANUMERIC = new AlphanumericComparator();
-  public static final NumericComparator NUMERIC = new NumericComparator();
-  public static final StrlenComparator STRLEN = new StrlenComparator();
-
-  @JsonTypeInfo(use=Id.NAME, include=As.PROPERTY, property="type", defaultImpl = LexicographicComparator.class)
-  @JsonSubTypes(value = {
-      @JsonSubTypes.Type(name = StringComparators.LEXICOGRAPHIC_NAME, value = LexicographicComparator.class),
-      @JsonSubTypes.Type(name = StringComparators.ALPHANUMERIC_NAME, value = AlphanumericComparator.class),
-      @JsonSubTypes.Type(name = StringComparators.STRLEN_NAME, value = StrlenComparator.class),
-      @JsonSubTypes.Type(name = StringComparators.NUMERIC_NAME, value = NumericComparator.class),
-  })
-  public static interface StringComparator extends Comparator<String>
-  {
-  }
-
-  public static class LexicographicComparator implements StringComparator
+  public static class LexicographicComparator extends StringComparator
   {
     private static final Ordering<String> ORDERING = Ordering.from(new Comparator<String>()
     {
@@ -85,7 +61,7 @@ public class StringComparators
 
       return ORDERING.compare(s, s2);
     }
-    
+
     @Override
     public boolean equals(Object o)
     {
@@ -98,7 +74,7 @@ public class StringComparators
       
       return true;
     }
-    
+
     @Override
     public String toString()
     {
@@ -106,7 +82,7 @@ public class StringComparators
     }
   }
   
-  public static class AlphanumericComparator implements StringComparator
+  public static class AlphanumericComparator extends StringComparator
   {
     // This code is based on https://github.com/amjjd/java-alphanum, see
     // NOTICE file for more information
@@ -312,7 +288,7 @@ public class StringComparators
     }
   }
 
-  public static class StrlenComparator implements StringComparator
+  public static class StrlenComparator extends StringComparator
   {
     private static final Ordering<String> ORDERING = Ordering.from(new Comparator<String>()
     {
@@ -363,7 +339,7 @@ public class StringComparators
     return bd;
   }
 
-  public static class NumericComparator implements StringComparator
+  public static class NumericComparator extends StringComparator
   {
     @Override
     public int compare(String o1, String o2)
@@ -409,30 +385,5 @@ public class StringComparators
 
       return true;
     }
-  }
-
-  public static StringComparator makeComparator(String type)
-  {
-    switch (type) {
-      case StringComparators.LEXICOGRAPHIC_NAME:
-        return LEXICOGRAPHIC;
-      case StringComparators.ALPHANUMERIC_NAME:
-        return ALPHANUMERIC;
-      case StringComparators.STRLEN_NAME:
-        return STRLEN;
-      case StringComparators.NUMERIC_NAME:
-        return NUMERIC;
-      default:
-        throw new IAE("Unknown string comparator[%s]", type);
-    }
-  }
-
-  public static boolean isOrderingValid(String ordering)
-  {
-    if (ordering == null) {
-      return false;
-    }
-
-    return ORDERINGS.contains(ordering);
   }
 }

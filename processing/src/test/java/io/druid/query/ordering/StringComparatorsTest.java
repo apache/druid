@@ -32,11 +32,10 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
 import io.druid.jackson.DefaultObjectMapper;
-import io.druid.query.ordering.StringComparators.StringComparator;
+import io.druid.query.ordering.StringComparator;
 
 public class StringComparatorsTest
 {
-  
   private void commonTest(StringComparator comparator)
   {
     // equality test
@@ -149,11 +148,15 @@ public class StringComparatorsTest
   {
     ObjectMapper jsonMapper = new DefaultObjectMapper();
     String expectJsonSpec = "{\"type\":\"lexicographic\"}";
-    
+
     String jsonSpec = jsonMapper.writeValueAsString(StringComparators.LEXICOGRAPHIC);
     Assert.assertEquals(expectJsonSpec, jsonSpec);
     Assert.assertEquals(StringComparators.LEXICOGRAPHIC
-        , jsonMapper.readValue(expectJsonSpec, StringComparators.LexicographicComparator.class));
+        , jsonMapper.readValue(expectJsonSpec, StringComparator.class));
+
+    String makeFromJsonSpec = "\"lexicographic\"";
+    Assert.assertEquals(StringComparators.LEXICOGRAPHIC
+        , jsonMapper.readValue(makeFromJsonSpec, StringComparator.class));
   }
   
   @Test
@@ -161,11 +164,15 @@ public class StringComparatorsTest
   {
     ObjectMapper jsonMapper = new DefaultObjectMapper();
     String expectJsonSpec = "{\"type\":\"alphanumeric\"}";
-    
+
     String jsonSpec = jsonMapper.writeValueAsString(StringComparators.ALPHANUMERIC);
     Assert.assertEquals(expectJsonSpec, jsonSpec);
     Assert.assertEquals(StringComparators.ALPHANUMERIC
-        , jsonMapper.readValue(expectJsonSpec, StringComparators.AlphanumericComparator.class));
+        , jsonMapper.readValue(expectJsonSpec, StringComparator.class));
+
+    String makeFromJsonSpec = "\"alphanumeric\"";
+    Assert.assertEquals(StringComparators.ALPHANUMERIC
+        , jsonMapper.readValue(makeFromJsonSpec, StringComparator.class));
   }
   
   @Test
@@ -177,7 +184,11 @@ public class StringComparatorsTest
     String jsonSpec = jsonMapper.writeValueAsString(StringComparators.STRLEN);
     Assert.assertEquals(expectJsonSpec, jsonSpec);
     Assert.assertEquals(StringComparators.STRLEN
-        , jsonMapper.readValue(expectJsonSpec, StringComparators.StrlenComparator.class));
+        , jsonMapper.readValue(expectJsonSpec, StringComparator.class));
+
+    String makeFromJsonSpec = "\"strlen\"";
+    Assert.assertEquals(StringComparators.STRLEN
+        , jsonMapper.readValue(makeFromJsonSpec, StringComparator.class));
   }
 
   @Test
@@ -189,6 +200,10 @@ public class StringComparatorsTest
     String jsonSpec = jsonMapper.writeValueAsString(StringComparators.NUMERIC);
     Assert.assertEquals(expectJsonSpec, jsonSpec);
     Assert.assertEquals(StringComparators.NUMERIC
-        , jsonMapper.readValue(expectJsonSpec, StringComparators.NumericComparator.class));
+        , jsonMapper.readValue(expectJsonSpec, StringComparator.class));
+
+    String makeFromJsonSpec = "\"numeric\"";
+    Assert.assertEquals(StringComparators.NUMERIC
+        , jsonMapper.readValue(makeFromJsonSpec, StringComparator.class));
   }
 }

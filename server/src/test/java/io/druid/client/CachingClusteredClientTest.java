@@ -1405,7 +1405,7 @@ public class CachingClusteredClientTest
                                          Arrays.asList(
                                              new SelectorDimFilter("dim0", "1", null),
                                              new BoundDimFilter("dim0", "222", "333", false, false, false, null,
-                                                                StringComparators.LEXICOGRAPHIC_NAME
+                                                                StringComparators.LEXICOGRAPHIC
                                              )
                                          )
                                      ).build(),
@@ -1413,10 +1413,10 @@ public class CachingClusteredClientTest
                                          Arrays.asList(
                                              new InDimFilter("dim1", Arrays.asList("0", "1", "2", "3", "4"), null),
                                              new BoundDimFilter("dim1", "0", "3", false, true, false, null,
-                                                                StringComparators.LEXICOGRAPHIC_NAME
+                                                                StringComparators.LEXICOGRAPHIC
                                              ),
                                              new BoundDimFilter("dim1", "1", "9999", true, false, false, null,
-                                                                StringComparators.LEXICOGRAPHIC_NAME
+                                                                StringComparators.LEXICOGRAPHIC
                                              )
                                          )
                                      ).build()
@@ -1483,7 +1483,7 @@ public class CachingClusteredClientTest
                                          Arrays.asList(
                                              new SelectorDimFilter("dim1", "a", null),
                                              new BoundDimFilter("dim1", "from", "to", false, false, false, null,
-                                                                StringComparators.LEXICOGRAPHIC_NAME
+                                                                StringComparators.LEXICOGRAPHIC
                                              )
                                          )
                                      ).build(),
@@ -1491,10 +1491,10 @@ public class CachingClusteredClientTest
                                          Arrays.asList(
                                              new InDimFilter("dim2", Arrays.asList("a", "c", "e", "g"), null),
                                              new BoundDimFilter("dim2", "aaa", "hi", false, false, false, null,
-                                                                StringComparators.LEXICOGRAPHIC_NAME
+                                                                StringComparators.LEXICOGRAPHIC
                                              ),
                                              new BoundDimFilter("dim2", "e", "zzz", true, true, false, null,
-                                                                StringComparators.LEXICOGRAPHIC_NAME
+                                                                StringComparators.LEXICOGRAPHIC
                                              )
                                          )
                                      ).build()

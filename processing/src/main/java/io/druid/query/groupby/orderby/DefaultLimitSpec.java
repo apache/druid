@@ -40,7 +40,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.ordering.StringComparators;
-import io.druid.query.ordering.StringComparators.StringComparator;
+import io.druid.query.ordering.StringComparator;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;

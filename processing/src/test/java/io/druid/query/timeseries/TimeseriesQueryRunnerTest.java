@@ -2240,7 +2240,7 @@ public class TimeseriesQueryRunnerTest
                                                   null,
                                                   null,
                                                   null,
-                                                  StringComparators.LEXICOGRAPHIC_NAME
+                                                  StringComparators.LEXICOGRAPHIC
                                               ),
                                               new BoundDimFilter(
                                                   QueryRunnerTestHelper.marketDimension,
@@ -2250,7 +2250,7 @@ public class TimeseriesQueryRunnerTest
                                                   true,
                                                   null,
                                                   null,
-                                                  StringComparators.LEXICOGRAPHIC_NAME
+                                                  StringComparators.LEXICOGRAPHIC
                                               ),
                                               (DimFilter) new BoundDimFilter(
                                                   QueryRunnerTestHelper.marketDimension,
@@ -2260,7 +2260,7 @@ public class TimeseriesQueryRunnerTest
                                                   null,
                                                   null,
                                                   null,
-                                                  StringComparators.LEXICOGRAPHIC_NAME
+                                                  StringComparators.LEXICOGRAPHIC
                                               )
                                           )
                                       )

@@ -189,7 +189,7 @@ public class FilterPartitionBenchmark
         true,
         null,
         null,
-        StringComparators.ALPHANUMERIC_NAME
+        StringComparators.ALPHANUMERIC
     ));
 
     long halfEnd = (interval.getEndMillis() + interval.getStartMillis()) / 2;
@@ -201,7 +201,7 @@ public class FilterPartitionBenchmark
         true,
         null,
         null,
-        StringComparators.ALPHANUMERIC_NAME
+        StringComparators.ALPHANUMERIC
     ));
 
     timeFilterAll = new BoundFilter(new BoundDimFilter(
@@ -212,7 +212,7 @@ public class FilterPartitionBenchmark
         true,
         null,
         null,
-        StringComparators.ALPHANUMERIC_NAME
+        StringComparators.ALPHANUMERIC
     ));
   }
 

@@ -132,12 +132,12 @@ public class LongFilteringTest extends BaseFilterTest
     );
 
     assertFilterMatches(
-        new BoundDimFilter(COUNT_COLUMN, "2", "5", false, false, null, null, StringComparators.NUMERIC_NAME),
+        new BoundDimFilter(COUNT_COLUMN, "2", "5", false, false, null, null, StringComparators.NUMERIC),
         ImmutableList.<String>of("2", "3", "4", "5")
     );
 
     assertFilterMatches(
-        new BoundDimFilter(COUNT_COLUMN, "1", "4", true, true, null, null, StringComparators.NUMERIC_NAME),
+        new BoundDimFilter(COUNT_COLUMN, "1", "4", true, true, null, null, StringComparators.NUMERIC),
         ImmutableList.<String>of("2", "3")
     );
 
@@ -196,11 +196,11 @@ public class LongFilteringTest extends BaseFilterTest
     );
 
     assertFilterMatches(
-        new BoundDimFilter(COUNT_COLUMN, "Fridax", "Fridaz", false, false, null, exfn, StringComparators.ALPHANUMERIC_NAME),
+        new BoundDimFilter(COUNT_COLUMN, "Fridax", "Fridaz", false, false, null, exfn, StringComparators.ALPHANUMERIC),
         ImmutableList.<String>of("5")
     );
     assertFilterMatches(
-        new BoundDimFilter(COUNT_COLUMN, "Friday", "Friday", true, true, null, exfn, StringComparators.ALPHANUMERIC_NAME),
+        new BoundDimFilter(COUNT_COLUMN, "Friday", "Friday", true, true, null, exfn, StringComparators.ALPHANUMERIC),
         ImmutableList.<String>of()
     );
 
@@ -261,7 +261,7 @@ public class LongFilteringTest extends BaseFilterTest
     );
 
     assertFilterMatches(
-        new BoundDimFilter(COUNT_COLUMN, "2", "5", false, false, null, null, StringComparators.NUMERIC_NAME),
+        new BoundDimFilter(COUNT_COLUMN, "2", "5", false, false, null, null, StringComparators.NUMERIC),
         ImmutableList.<String>of("2", "3", "4", "5")
     );
   }

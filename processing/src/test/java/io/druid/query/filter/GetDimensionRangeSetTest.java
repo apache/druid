@@ -45,16 +45,16 @@ public class GetDimensionRangeSetTest
   private final DimFilter in2 = new InDimFilter("dim2", ImmutableList.of("again"), null);
   private final DimFilter in3 = new InDimFilter("dim1", Arrays.asList("null", null), null);
   private final DimFilter bound1 = new BoundDimFilter("dim1", "from", "to", false, false, false, null,
-                                                      StringComparators.LEXICOGRAPHIC_NAME
+                                                      StringComparators.LEXICOGRAPHIC
   );
   private final DimFilter bound2 = new BoundDimFilter("dim1", null, "tillend", false, false, false, null,
-                                                      StringComparators.LEXICOGRAPHIC_NAME
+                                                      StringComparators.LEXICOGRAPHIC
   );
   private final DimFilter bound3 = new BoundDimFilter("dim1", "notincluded", null, true, false, false, null,
-                                                      StringComparators.LEXICOGRAPHIC_NAME
+                                                      StringComparators.LEXICOGRAPHIC
   );
   private final DimFilter bound4 = new BoundDimFilter("dim2", "again", "exclusive", true, true, false, null,
-                                                      StringComparators.LEXICOGRAPHIC_NAME
+                                                      StringComparators.LEXICOGRAPHIC
   );
   private final DimFilter other1 = new RegexDimFilter("someDim", "pattern", null);
   private final DimFilter other2 = new JavaScriptDimFilter("someOtherDim", "function(x) { return x }", null,

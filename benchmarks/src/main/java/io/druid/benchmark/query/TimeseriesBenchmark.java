@@ -178,7 +178,7 @@ public class TimeseriesBenchmark
       List<AggregatorFactory> queryAggs = new ArrayList<>();
       LongSumAggregatorFactory lsaf = new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential");
       BoundDimFilter timeFilter = new BoundDimFilter(Column.TIME_COLUMN_NAME, "200000", "300000", false, false, null, null,
-                                                     StringComparators.NUMERIC_NAME);
+                                                     StringComparators.NUMERIC);
       queryAggs.add(new FilteredAggregatorFactory(lsaf, timeFilter));
 
       TimeseriesQuery timeFilterQuery =
@@ -198,7 +198,7 @@ public class TimeseriesBenchmark
       List<AggregatorFactory> queryAggs = new ArrayList<>();
       LongSumAggregatorFactory lsaf = new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential");
       BoundDimFilter timeFilter = new BoundDimFilter(Column.TIME_COLUMN_NAME, "200000", "300000", false, false, null, null,
-                                                     StringComparators.ALPHANUMERIC_NAME);
+                                                     StringComparators.ALPHANUMERIC);
       queryAggs.add(new FilteredAggregatorFactory(lsaf, timeFilter));
 
       TimeseriesQuery timeFilterQuery =
