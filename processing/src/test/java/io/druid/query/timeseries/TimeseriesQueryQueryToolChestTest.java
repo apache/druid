@@ -77,6 +77,7 @@ public class TimeseriesQueryQueryToolChestTest
                 QueryGranularities.ALL,
                 ImmutableList.<AggregatorFactory>of(new CountAggregatorFactory("metric1")),
                 null,
+                null,
                 null
             )
         );

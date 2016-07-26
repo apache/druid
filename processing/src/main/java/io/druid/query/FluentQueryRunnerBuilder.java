@@ -109,8 +109,9 @@ public class FluentQueryRunnerBuilder<T>
     public FluentQueryRunner postProcess(PostProcessingOperator<T> postProcessing)
     {
       return from(
-          postProcessing != null ?
-             postProcessing.postProcess(baseRunner) : baseRunner
+          toolChest.finalQueryDecoration(
+              postProcessing != null ? postProcessing.postProcess(baseRunner) : baseRunner
+          )
       );
     }
 

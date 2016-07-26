@@ -20,7 +20,9 @@
 package io.druid.query;
 
 import com.google.common.collect.Lists;
+import io.druid.common.utils.StringUtils;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.filter.DimFilterUtils;
 
 import java.nio.ByteBuffer;
 import java.util.List;
@@ -47,4 +49,24 @@ public class QueryCacheHelper
     return retVal.array();
   }
 
+  public static byte[] computeCacheBytes(List<String> strings)
+  {
+    if (strings == null || strings.isEmpty()) {
+      return new byte[0];
+    }
+    int length = 0;
+    byte[][] cache = new byte[strings.size()][];
+    for (int i = 0; i < cache.length; i++) {
+      cache[i] = StringUtils.toUtf8WithNullToEmpty(strings.get(i));
+      length += cache[i].length;
+    }
+    ByteBuffer buffer = ByteBuffer.allocate(length + cache.length - 1);
+    for (int i = 0; i < cache.length; i++) {
+      if (buffer.position() > 0) {
+        buffer.put(DimFilterUtils.STRING_SEPARATOR);
+      }
+      buffer.put(cache[i]);
+    }
+    return buffer.array();
+  }
 }

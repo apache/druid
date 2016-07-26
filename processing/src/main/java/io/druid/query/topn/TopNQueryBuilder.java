@@ -70,6 +70,7 @@ public class TopNQueryBuilder
   private QueryGranularity granularity;
   private List<AggregatorFactory> aggregatorSpecs;
   private List<PostAggregator> postAggregatorSpecs;
+  private List<String> outputColumns;
   private Map<String, Object> context;
 
   public TopNQueryBuilder()
@@ -131,6 +132,11 @@ public class TopNQueryBuilder
     return postAggregatorSpecs;
   }
 
+  public List<String> getOutputColumns()
+  {
+    return outputColumns;
+  }
+
   public Map<String, Object> getContext()
   {
     return context;
@@ -148,6 +154,7 @@ public class TopNQueryBuilder
         granularity,
         aggregatorSpecs,
         postAggregatorSpecs,
+        outputColumns,
         context
     );
   }
@@ -164,6 +171,7 @@ public class TopNQueryBuilder
         .granularity(query.getGranularity())
         .aggregators(query.getAggregatorSpecs())
         .postAggregators(query.getPostAggregatorSpecs())
+        .outputColumns(query.getOutputColumns())
         .context(query.getContext());
   }
 
@@ -179,6 +187,7 @@ public class TopNQueryBuilder
         .granularity(builder.granularity)
         .aggregators(builder.aggregatorSpecs)
         .postAggregators(builder.postAggregatorSpecs)
+        .outputColumns(builder.outputColumns)
         .context(builder.context);
   }
 
@@ -284,6 +293,12 @@ public class TopNQueryBuilder
   public TopNQueryBuilder postAggregators(List<PostAggregator> p)
   {
     postAggregatorSpecs = p;
+    return this;
+  }
+
+  public TopNQueryBuilder outputColumns(List<String> o)
+  {
+    outputColumns = o;
     return this;
   }
 

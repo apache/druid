@@ -28,6 +28,7 @@ import io.druid.granularity.QueryGranularities;
 import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.Druids;
+import io.druid.query.FluentQueryRunnerBuilder;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.Result;
@@ -72,6 +73,9 @@ public class TimeseriesQueryRunnerTest
 {
 
   public static final Map<String, Object> CONTEXT = ImmutableMap.of();
+
+  private static TimeseriesQueryQueryToolChest toolChest =
+      new TimeseriesQueryQueryToolChest(QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator());
 
   @Parameterized.Parameters(name="{0}:descending={1}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
@@ -1142,6 +1146,38 @@ public class TimeseriesQueryRunnerTest
         runner.run(query, CONTEXT),
         Lists.<Result<TimeseriesResultValue>>newArrayList()
     );
+    assertExpectedResults(expectedResults, results);
+
+    query = query.withOutputColumns(Arrays.asList("rows", "index"));
+    // with projection processor
+    QueryRunner project = new FluentQueryRunnerBuilder(toolChest)
+        .create(runner)
+        .applyPreMergeDecoration()
+        .mergeResults()
+        .postProcess(null);
+
+    expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-04-01"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "rows", 1L,
+                    "index", new Float(135.885094).doubleValue()
+                )
+            )
+        ),
+        new Result<>(
+            new DateTime("2011-04-02"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "rows", 1L,
+                    "index", new Float(147.425935).doubleValue()
+                )
+            )
+        )
+    );
+
+    results = Sequences.toList(project.run(query, CONTEXT), Lists.<Result<TimeseriesResultValue>>newArrayList());
     assertExpectedResults(expectedResults, results);
   }
 

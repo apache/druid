@@ -154,6 +154,11 @@ public abstract class QueryToolChest<ResultType, QueryType extends Query<ResultT
     return runner;
   }
 
+  public QueryRunner<ResultType> finalQueryDecoration(QueryRunner<ResultType> runner)
+  {
+    return runner;
+  }
+
   /**
    * This method is called to allow the query to prune segments that it does not believe need to actually
    * be queried.  It can use whatever criteria it wants in order to do the pruning, it just needs to

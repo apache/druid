@@ -28,6 +28,7 @@ import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.granularity.QueryGranularity;
 import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.java.util.common.guava.nary.BinaryFn;
 import io.druid.query.CacheStrategy;
 import io.druid.query.DruidMetrics;
@@ -138,15 +139,23 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
         final byte[] granularityBytes = query.getGranularity().cacheKey();
         final byte descending = query.isDescending() ? (byte) 1 : 0;
         final byte skipEmptyBuckets = query.isSkipEmptyBuckets() ? (byte) 1 : 0;
+        final byte[] outputColumnsBytes = QueryCacheHelper.computeCacheBytes(query.getOutputColumns());
 
         return ByteBuffer
-            .allocate(3 + granularityBytes.length + filterBytes.length + aggregatorBytes.length)
+            .allocate(
+                3
+                + granularityBytes.length
+                + filterBytes.length
+                + aggregatorBytes.length
+                + outputColumnsBytes.length
+            )
             .put(TIMESERIES_QUERY)
             .put(descending)
             .put(skipEmptyBuckets)
             .put(granularityBytes)
             .put(filterBytes)
             .put(aggregatorBytes)
+            .put(outputColumnsBytes)
             .array();
       }
 
@@ -274,6 +283,43 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
             result.getTimestamp(),
             new TimeseriesResultValue(values)
         );
+      }
+    };
+  }
+
+  @Override
+  public QueryRunner<Result<TimeseriesResultValue>> finalQueryDecoration(final QueryRunner<Result<TimeseriesResultValue>> runner)
+  {
+    return new QueryRunner<Result<TimeseriesResultValue>>()
+    {
+      @Override
+      public Sequence<Result<TimeseriesResultValue>> run(
+          Query<Result<TimeseriesResultValue>> query, Map<String, Object> responseContext
+      )
+      {
+        final List<String> outputColumns = ((TimeseriesQuery)query).getOutputColumns();
+        final Sequence<Result<TimeseriesResultValue>> input = runner.run(query, responseContext);
+        if (outputColumns != null) {
+          return Sequences.map(
+              input, new Function<Result<TimeseriesResultValue>, Result<TimeseriesResultValue>>()
+              {
+                @Override
+                public Result<TimeseriesResultValue> apply(Result<TimeseriesResultValue> input)
+                {
+                  DateTime timestamp = input.getTimestamp();
+                  TimeseriesResultValue value = input.getValue();
+                  Map<String, Object> original = value.getBaseObject();
+                  Map<String, Object> retained = Maps.newHashMapWithExpectedSize(outputColumns.size());
+                  for (String retain : outputColumns) {
+                    retained.put(retain, original.get(retain));
+                  }
+                  return new Result(timestamp, new TimeseriesResultValue(retained));
+                }
+              }
+          );
+        } else {
+          return input;
+        }
       }
     };
   }

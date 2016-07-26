@@ -46,6 +46,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   private final QueryGranularity granularity;
   private final List<AggregatorFactory> aggregatorSpecs;
   private final List<PostAggregator> postAggregatorSpecs;
+  private final List<String> outputColumns;
 
   @JsonCreator
   public TimeseriesQuery(
@@ -56,6 +57,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
       @JsonProperty("granularity") QueryGranularity granularity,
       @JsonProperty("aggregations") List<AggregatorFactory> aggregatorSpecs,
       @JsonProperty("postAggregations") List<PostAggregator> postAggregatorSpecs,
+      @JsonProperty("outputColumns") List<String> outputColumns,
       @JsonProperty("context") Map<String, Object> context
   )
   {
@@ -64,6 +66,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     this.granularity = granularity;
     this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.<AggregatorFactory>of() : aggregatorSpecs;
     this.postAggregatorSpecs = postAggregatorSpecs == null ? ImmutableList.<PostAggregator>of() : postAggregatorSpecs;
+    this.outputColumns = outputColumns;
 
     Queries.verifyAggregations(this.aggregatorSpecs, this.postAggregatorSpecs);
   }
@@ -110,6 +113,12 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     return postAggregatorSpecs;
   }
 
+  @JsonProperty("outputColumns")
+  public List<String> getOutputColumns()
+  {
+    return outputColumns;
+  }
+
   public boolean isSkipEmptyBuckets()
   {
     return getContextBoolean("skipEmptyBuckets", false);
@@ -125,6 +134,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
         granularity,
         aggregatorSpecs,
         postAggregatorSpecs,
+        outputColumns,
         getContext()
     );
   }
@@ -140,6 +150,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
         granularity,
         aggregatorSpecs,
         postAggregatorSpecs,
+        outputColumns,
         getContext()
     );
   }
@@ -154,6 +165,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
         granularity,
         aggregatorSpecs,
         postAggregatorSpecs,
+        outputColumns,
         computeOverridenContext(contextOverrides)
     );
   }
@@ -168,6 +180,22 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
         granularity,
         aggregatorSpecs,
         postAggregatorSpecs,
+        outputColumns,
+        getContext()
+    );
+  }
+
+  public TimeseriesQuery withOutputColumns(List<String> outputColumns)
+  {
+    return new TimeseriesQuery(
+        getDataSource(),
+        getQuerySegmentSpec(),
+        isDescending(),
+        dimFilter,
+        granularity,
+        aggregatorSpecs,
+        postAggregatorSpecs,
+        outputColumns,
         getContext()
     );
   }
@@ -183,6 +211,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
         ", granularity='" + granularity + '\'' +
         ", aggregatorSpecs=" + aggregatorSpecs +
         ", postAggregatorSpecs=" + postAggregatorSpecs +
+        ", outputColumns=" + outputColumns +
         ", context=" + getContext() +
         '}';
   }
@@ -214,6 +243,9 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     if (postAggregatorSpecs != null ? !postAggregatorSpecs.equals(that.postAggregatorSpecs) : that.postAggregatorSpecs != null) {
       return false;
     }
+    if (outputColumns != null ? !outputColumns.equals(that.outputColumns) : that.outputColumns != null) {
+      return false;
+    }
 
     return true;
   }
@@ -226,6 +258,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     result = 31 * result + (granularity != null ? granularity.hashCode() : 0);
     result = 31 * result + (aggregatorSpecs != null ? aggregatorSpecs.hashCode() : 0);
     result = 31 * result + (postAggregatorSpecs != null ? postAggregatorSpecs.hashCode() : 0);
+    result = 31 * result + (outputColumns != null ? outputColumns.hashCode() : 0);
     return result;
   }
 }

@@ -39,6 +39,7 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.guice.annotations.Global;
 import io.druid.java.util.common.ISE;
 import io.druid.java.util.common.guava.Sequence;
+import io.druid.java.util.common.guava.Sequences;
 import io.druid.query.BaseQuery;
 import io.druid.query.CacheStrategy;
 import io.druid.query.DataSource;
@@ -354,6 +355,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         }
         final byte[] havingBytes = query.getHavingSpec() == null ? new byte[]{} : query.getHavingSpec().getCacheKey();
         final byte[] limitBytes = query.getLimitSpec().getCacheKey();
+        final byte[] outputColumnsBytes = QueryCacheHelper.computeCacheBytes(query.getOutputColumns());
 
         ByteBuffer buffer = ByteBuffer
             .allocate(
@@ -364,6 +366,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
                 + dimensionsBytesSize
                 + havingBytes.length
                 + limitBytes.length
+                + outputColumnsBytes.length
             )
             .put(GROUPBY_QUERY)
             .put(CACHE_STRATEGY_VERSION)
@@ -378,6 +381,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
         return buffer
             .put(havingBytes)
             .put(limitBytes)
+            .put(outputColumnsBytes)
             .array();
       }
 
@@ -484,5 +488,40 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
           }
         }
     );
+  }
+
+  @Override
+  public QueryRunner<Row> finalQueryDecoration(final QueryRunner<Row> runner)
+  {
+    return new QueryRunner<Row>()
+    {
+      @Override
+      public Sequence<Row> run(
+          Query<Row> query, Map<String, Object> responseContext
+      )
+      {
+        final List<String> outputColumns = ((GroupByQuery)query).getOutputColumns();
+        final Sequence<Row> result = runner.run(query, responseContext);
+        if (outputColumns != null) {
+          return Sequences.map(
+              result, new Function<Row, Row>()
+              {
+                @Override
+                public Row apply(Row input)
+                {
+                  DateTime timestamp = input.getTimestamp();
+                  Map<String, Object> retained = Maps.newHashMapWithExpectedSize(outputColumns.size());
+                  for (String retain : outputColumns) {
+                    retained.put(retain, input.getRaw(retain));
+                  }
+                  return new MapBasedRow(timestamp, retained);
+                }
+              }
+          );
+        } else {
+          return result;
+        }
+      }
+    };
   }
 }

@@ -45,6 +45,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
   private final List<DimensionSpec> dimensions;
   private final List<String> metrics;
   private final PagingSpec pagingSpec;
+  private final List<String> outputColumns;
 
   @JsonCreator
   public SelectQuery(
@@ -56,6 +57,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
       @JsonProperty("dimensions") List<DimensionSpec> dimensions,
       @JsonProperty("metrics") List<String> metrics,
       @JsonProperty("pagingSpec") PagingSpec pagingSpec,
+      @JsonProperty("outputColumns") List<String> outputColumns,
       @JsonProperty("context") Map<String, Object> context
   )
   {
@@ -64,6 +66,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
     this.granularity = granularity;
     this.dimensions = dimensions;
     this.metrics = metrics;
+    this.outputColumns = outputColumns;
     this.pagingSpec = pagingSpec;
 
     Preconditions.checkNotNull(pagingSpec, "must specify a pagingSpec");
@@ -128,6 +131,12 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
     return metrics;
   }
 
+  @JsonProperty
+  public List<String> getOutputColumns()
+  {
+    return outputColumns;
+  }
+
   public PagingOffset getPagingOffset(String identifier)
   {
     return pagingSpec.getOffset(identifier, isDescending());
@@ -144,6 +153,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
         dimensions,
         metrics,
         pagingSpec,
+        outputColumns,
         getContext()
     );
   }
@@ -160,6 +170,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
         dimensions,
         metrics,
         pagingSpec,
+        outputColumns,
         getContext()
     );
   }
@@ -175,6 +186,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
         dimensions,
         metrics,
         pagingSpec,
+        outputColumns,
         computeOverridenContext(contextOverrides)
     );
   }
@@ -190,6 +202,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
         dimensions,
         metrics,
         pagingSpec,
+        outputColumns,
         getContext()
     );
   }
@@ -205,6 +218,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
         dimensions,
         metrics,
         pagingSpec,
+        outputColumns,
         getContext()
     );
   }
@@ -221,6 +235,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
            ", dimensions=" + dimensions +
            ", metrics=" + metrics +
            ", pagingSpec=" + pagingSpec +
+           ", outputColumns=" + outputColumns +
            '}';
   }
 
@@ -254,6 +269,9 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
     if (pagingSpec != null ? !pagingSpec.equals(that.pagingSpec) : that.pagingSpec != null) {
       return false;
     }
+    if (outputColumns != null ? !outputColumns.equals(that.outputColumns) : that.outputColumns != null) {
+      return false;
+    }
 
     return true;
   }
@@ -267,6 +285,7 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
     result = 31 * result + (dimensions != null ? dimensions.hashCode() : 0);
     result = 31 * result + (metrics != null ? metrics.hashCode() : 0);
     result = 31 * result + (pagingSpec != null ? pagingSpec.hashCode() : 0);
+    result = 31 * result + (outputColumns != null ? outputColumns.hashCode() : 0);
     return result;
   }
 }

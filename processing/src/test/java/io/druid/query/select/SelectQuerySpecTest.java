@@ -60,6 +60,7 @@ public class SelectQuerySpecTest
         + "\"dimensions\":[{\"type\":\"default\",\"dimension\":\"market\",\"outputName\":\"market\"},{\"type\":\"default\",\"dimension\":\"quality\",\"outputName\":\"quality\"}],"
         + "\"metrics\":[\"index\"],"
         + "\"pagingSpec\":{\"pagingIdentifiers\":{},\"threshold\":3,\"fromNext\":false},"
+        + "\"outputColumns\":null,"
         + "\"context\":null}";
 
     SelectQuery query = new SelectQuery(
@@ -71,6 +72,7 @@ public class SelectQuerySpecTest
         DefaultDimensionSpec.toSpec(Arrays.<String>asList("market", "quality")),
         Arrays.<String>asList("index"),
         new PagingSpec(null, 3),
+        null,
         null
     );
 

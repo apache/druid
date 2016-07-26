@@ -74,6 +74,7 @@ public class GroupByQuery extends BaseQuery<Row>
   private final List<DimensionSpec> dimensions;
   private final List<AggregatorFactory> aggregatorSpecs;
   private final List<PostAggregator> postAggregatorSpecs;
+  private final List<String> outputColumns;
 
   private final Function<Sequence<Row>, Sequence<Row>> limitFn;
 
@@ -88,6 +89,7 @@ public class GroupByQuery extends BaseQuery<Row>
       @JsonProperty("postAggregations") List<PostAggregator> postAggregatorSpecs,
       @JsonProperty("having") HavingSpec havingSpec,
       @JsonProperty("limitSpec") LimitSpec limitSpec,
+      @JsonProperty("outputColumns") List<String> outputColumns,
       @JsonProperty("context") Map<String, Object> context
   )
   {
@@ -102,6 +104,7 @@ public class GroupByQuery extends BaseQuery<Row>
     this.postAggregatorSpecs = postAggregatorSpecs == null ? ImmutableList.<PostAggregator>of() : postAggregatorSpecs;
     this.havingSpec = havingSpec;
     this.limitSpec = (limitSpec == null) ? new NoopLimitSpec() : limitSpec;
+    this.outputColumns = outputColumns;
 
     Preconditions.checkNotNull(this.granularity, "Must specify a granularity");
     Queries.verifyAggregations(this.aggregatorSpecs, this.postAggregatorSpecs);
@@ -151,6 +154,7 @@ public class GroupByQuery extends BaseQuery<Row>
       HavingSpec havingSpec,
       LimitSpec orderBySpec,
       Function<Sequence<Row>, Sequence<Row>> limitFn,
+      List<String> outputColumns,
       Map<String, Object> context
   )
   {
@@ -164,6 +168,7 @@ public class GroupByQuery extends BaseQuery<Row>
     this.havingSpec = havingSpec;
     this.limitSpec = orderBySpec;
     this.limitFn = limitFn;
+    this.outputColumns = outputColumns;
   }
 
   @JsonProperty("filter")
@@ -206,6 +211,12 @@ public class GroupByQuery extends BaseQuery<Row>
   public LimitSpec getLimitSpec()
   {
     return limitSpec;
+  }
+
+  @JsonProperty
+  public List<String> getOutputColumns()
+  {
+    return outputColumns;
   }
 
   @Override
@@ -312,6 +323,7 @@ public class GroupByQuery extends BaseQuery<Row>
         havingSpec,
         limitSpec,
         limitFn,
+        outputColumns,
         computeOverridenContext(contextOverride)
     );
   }
@@ -330,6 +342,7 @@ public class GroupByQuery extends BaseQuery<Row>
         havingSpec,
         limitSpec,
         limitFn,
+        outputColumns,
         getContext()
     );
   }
@@ -347,6 +360,7 @@ public class GroupByQuery extends BaseQuery<Row>
         getHavingSpec(),
         getLimitSpec(),
         limitFn,
+        getOutputColumns(),
         getContext()
     );
   }
@@ -365,6 +379,7 @@ public class GroupByQuery extends BaseQuery<Row>
         havingSpec,
         limitSpec,
         limitFn,
+        outputColumns,
         getContext()
     );
   }
@@ -382,6 +397,7 @@ public class GroupByQuery extends BaseQuery<Row>
         getHavingSpec(),
         getLimitSpec(),
         limitFn,
+        getOutputColumns(),
         getContext()
     );
   }
@@ -398,6 +414,24 @@ public class GroupByQuery extends BaseQuery<Row>
         getPostAggregatorSpecs(),
         getHavingSpec(),
         limitSpec,
+        getOutputColumns(),
+        getContext()
+    );
+  }
+
+  public GroupByQuery withOutputColumns(final List<String> outputColumns)
+  {
+    return new GroupByQuery(
+        getDataSource(),
+        getQuerySegmentSpec(),
+        getDimFilter(),
+        getGranularity(),
+        getDimensions(),
+        getAggregatorSpecs(),
+        getPostAggregatorSpecs(),
+        getHavingSpec(),
+        getLimitSpec(),
+        outputColumns,
         getContext()
     );
   }
@@ -415,6 +449,7 @@ public class GroupByQuery extends BaseQuery<Row>
         getHavingSpec(),
         getLimitSpec(),
         limitFn,
+        getOutputColumns(),
         getContext()
     );
   }
@@ -432,6 +467,7 @@ public class GroupByQuery extends BaseQuery<Row>
         getHavingSpec(),
         getLimitSpec(),
         limitFn,
+        getOutputColumns(),
         getContext()
     );
   }
@@ -445,6 +481,7 @@ public class GroupByQuery extends BaseQuery<Row>
     private List<DimensionSpec> dimensions;
     private List<AggregatorFactory> aggregatorSpecs;
     private List<PostAggregator> postAggregatorSpecs;
+    private List<String> outputColumns;
     private HavingSpec havingSpec;
 
     private Map<String, Object> context;
@@ -468,6 +505,7 @@ public class GroupByQuery extends BaseQuery<Row>
       aggregatorSpecs = query.getAggregatorSpecs();
       postAggregatorSpecs = query.getPostAggregatorSpecs();
       havingSpec = query.getHavingSpec();
+      outputColumns = query.getOutputColumns();
       context = query.getContext();
     }
 
@@ -483,6 +521,7 @@ public class GroupByQuery extends BaseQuery<Row>
       postAggregatorSpecs = builder.postAggregatorSpecs;
       havingSpec = builder.havingSpec;
       limit = builder.limit;
+      outputColumns = builder.outputColumns;
 
       context = builder.context;
     }
@@ -553,6 +592,12 @@ public class GroupByQuery extends BaseQuery<Row>
     {
       ensureFluentLimitsNotSet();
       this.limitSpec = limitSpec;
+      return this;
+    }
+
+    public Builder setOutputColumns(List<String> outputColumns)
+    {
+      this.outputColumns = outputColumns;
       return this;
     }
 
@@ -694,6 +739,7 @@ public class GroupByQuery extends BaseQuery<Row>
           postAggregatorSpecs,
           havingSpec,
           theLimitSpec,
+          outputColumns,
           context
       );
     }
@@ -712,6 +758,7 @@ public class GroupByQuery extends BaseQuery<Row>
            ", aggregatorSpecs=" + aggregatorSpecs +
            ", postAggregatorSpecs=" + postAggregatorSpecs +
            ", havingSpec=" + havingSpec +
+           ", outputColumns=" + outputColumns +
            '}';
   }
 
@@ -753,6 +800,9 @@ public class GroupByQuery extends BaseQuery<Row>
         : that.postAggregatorSpecs != null) {
       return false;
     }
+    if (outputColumns != null ? !outputColumns.equals(that.outputColumns) : that.outputColumns != null) {
+      return false;
+    }
 
     return true;
   }
@@ -768,6 +818,7 @@ public class GroupByQuery extends BaseQuery<Row>
     result = 31 * result + (dimensions != null ? dimensions.hashCode() : 0);
     result = 31 * result + (aggregatorSpecs != null ? aggregatorSpecs.hashCode() : 0);
     result = 31 * result + (postAggregatorSpecs != null ? postAggregatorSpecs.hashCode() : 0);
+    result = 31 * result + (outputColumns != null ? outputColumns.hashCode() : 0);
     return result;
   }
 }

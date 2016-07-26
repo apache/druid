@@ -101,6 +101,7 @@ public class GroupByStrategyV1 implements GroupByStrategy
                 // Don't do "having" clause until the end of this method.
                 null,
                 null,
+                null,
                 query.getContext()
             ).withOverriddenContext(
                 ImmutableMap.<String, Object>of(

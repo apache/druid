@@ -333,6 +333,7 @@ public class Druids
     private QueryGranularity granularity;
     private List<AggregatorFactory> aggregatorSpecs;
     private List<PostAggregator> postAggregatorSpecs;
+    private List<String> outputColumns;
     private Map<String, Object> context;
 
     private boolean descending;
@@ -358,6 +359,7 @@ public class Druids
           granularity,
           aggregatorSpecs,
           postAggregatorSpecs,
+          outputColumns,
           context
       );
     }
@@ -372,6 +374,7 @@ public class Druids
           .granularity(query.getGranularity())
           .aggregators(query.getAggregatorSpecs())
           .postAggregators(query.getPostAggregatorSpecs())
+          .outputColumns(query.getOutputColumns())
           .context(query.getContext());
     }
 
@@ -503,6 +506,12 @@ public class Druids
     public TimeseriesQueryBuilder postAggregators(List<PostAggregator> p)
     {
       postAggregatorSpecs = p;
+      return this;
+    }
+
+    public TimeseriesQueryBuilder outputColumns(List<String> o)
+    {
+      outputColumns = o;
       return this;
     }
 
@@ -1104,6 +1113,7 @@ public class Druids
     private List<DimensionSpec> dimensions;
     private List<String> metrics;
     private PagingSpec pagingSpec;
+    private List<String> outputColumns;
 
     public SelectQueryBuilder()
     {
@@ -1125,7 +1135,10 @@ public class Druids
           descending,
           dimFilter,
           granularity,
-          dimensions, metrics, pagingSpec,
+          dimensions,
+          metrics,
+          pagingSpec,
+          outputColumns,
           context
       );
     }
@@ -1135,6 +1148,13 @@ public class Druids
       return new SelectQueryBuilder()
           .dataSource(builder.dataSource)
           .intervals(builder.querySegmentSpec)
+          .descending(builder.descending)
+          .filters(builder.dimFilter)
+          .granularity(builder.granularity)
+          .dimensionSpecs(builder.dimensions)
+          .metrics(builder.metrics)
+          .pagingSpec(builder.pagingSpec)
+          .outputColumns(builder.outputColumns)
           .context(builder.context);
     }
 
@@ -1231,6 +1251,12 @@ public class Druids
     public SelectQueryBuilder pagingSpec(PagingSpec p)
     {
       pagingSpec = p;
+      return this;
+    }
+
+    public SelectQueryBuilder outputColumns(List<String> o)
+    {
+      outputColumns = o;
       return this;
     }
   }

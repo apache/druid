@@ -313,11 +313,12 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
         final byte[] filterBytes = dimFilter == null ? new byte[]{} : dimFilter.getCacheKey();
         final byte[] aggregatorBytes = QueryCacheHelper.computeAggregatorBytes(query.getAggregatorSpecs());
         final byte[] granularityBytes = query.getGranularity().cacheKey();
+        final byte[] outputColumnsBytes = QueryCacheHelper.computeCacheBytes(query.getOutputColumns());
 
         return ByteBuffer
             .allocate(
                 1 + dimensionSpecBytes.length + metricSpecBytes.length + 4 +
-                granularityBytes.length + filterBytes.length + aggregatorBytes.length
+                granularityBytes.length + filterBytes.length + aggregatorBytes.length + outputColumnsBytes.length
             )
             .put(TOPN_QUERY)
             .put(dimensionSpecBytes)
@@ -326,6 +327,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
             .put(granularityBytes)
             .put(filterBytes)
             .put(aggregatorBytes)
+            .put(outputColumnsBytes)
             .array();
       }
 
@@ -592,5 +594,46 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
           }
       );
     }
+  }
+
+  @Override
+  public QueryRunner<Result<TopNResultValue>> finalQueryDecoration(final QueryRunner<Result<TopNResultValue>> runner)
+  {
+    return new QueryRunner<Result<TopNResultValue>>()
+    {
+      @Override
+      public Sequence<Result<TopNResultValue>> run(
+          Query<Result<TopNResultValue>> query, Map<String, Object> responseContext
+      )
+      {
+        final List<String> outputColumns = ((TopNQuery)query).getOutputColumns();
+        final Sequence<Result<TopNResultValue>> result = runner.run(query, responseContext);
+        if (outputColumns != null) {
+          return Sequences.map(
+              result, new Function<Result<TopNResultValue>, Result<TopNResultValue>>()
+              {
+                @Override
+                public Result<TopNResultValue> apply(Result<TopNResultValue> input)
+                {
+                  DateTime timestamp = input.getTimestamp();
+                  List<DimensionAndMetricValueExtractor> values = input.getValue().getValue();
+                  List<DimensionAndMetricValueExtractor> processed = Lists.newArrayListWithExpectedSize(values.size());
+                  for (DimensionAndMetricValueExtractor holder : values) {
+                    Map<String, Object> original = holder.getBaseObject();
+                    Map<String, Object> retained = Maps.newHashMapWithExpectedSize(outputColumns.size());
+                    for (String retain : outputColumns) {
+                      retained.put(retain, original.get(retain));
+                    }
+                    processed.add(new DimensionAndMetricValueExtractor(retained));
+                  }
+                  return new Result(timestamp, new TopNResultValue(processed));
+                }
+              }
+          );
+        } else {
+          return result;
+        }
+      }
+    };
   }
 }

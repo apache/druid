@@ -376,6 +376,36 @@ public class GroupByQueryRunnerTest
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "");
+
+    query = query.withOutputColumns(Arrays.asList("alias", "rows"));
+    QueryRunner<Row> decorated = factory.getToolchest().finalQueryDecoration(
+        GroupByQueryRunnerTestHelper.toMergeRunner(factory, runner)
+    );
+
+    expectedResults = GroupByQueryRunnerTestHelper.createExpectedRows(
+        new String[]{"__time", "alias", "rows"},
+        new Object[]{"2011-04-01", "automotive", 1L},
+        new Object[]{"2011-04-01", "business", 1L},
+        new Object[]{"2011-04-01", "entertainment", 1L},
+        new Object[]{"2011-04-01", "health", 1L},
+        new Object[]{"2011-04-01", "mezzanine", 3L},
+        new Object[]{"2011-04-01", "news", 1L},
+        new Object[]{"2011-04-01", "premium", 3L},
+        new Object[]{"2011-04-01", "technology", 1L},
+        new Object[]{"2011-04-01", "travel", 1L},
+        new Object[]{"2011-04-02", "automotive", 1L},
+        new Object[]{"2011-04-02", "business", 1L},
+        new Object[]{"2011-04-02", "entertainment", 1L},
+        new Object[]{"2011-04-02", "health", 1L},
+        new Object[]{"2011-04-02", "mezzanine", 3L},
+        new Object[]{"2011-04-02", "news", 1L},
+        new Object[]{"2011-04-02", "premium", 3L},
+        new Object[]{"2011-04-02", "technology", 1L},
+        new Object[]{"2011-04-02", "travel", 1L}
+    );
+
+    results = Sequences.toList(decorated.run(query, Maps.<String, Object>newHashMap()), Lists.<Row>newArrayList());
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
 
   @Test
