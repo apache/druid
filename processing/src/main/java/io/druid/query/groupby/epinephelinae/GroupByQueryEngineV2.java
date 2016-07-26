@@ -314,6 +314,14 @@ outer:
 
               return new MapBasedRow(timestamp, theMap);
             }
+          },
+          new Closeable()
+          {
+            @Override
+            public void close() throws IOException
+            {
+              grouper.close();
+            }
           }
       );
 

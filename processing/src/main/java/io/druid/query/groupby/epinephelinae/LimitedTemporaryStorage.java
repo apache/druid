@@ -59,10 +59,19 @@ public class LimitedTemporaryStorage implements Closeable
     this.maxBytesUsed = maxBytesUsed;
   }
 
+  /**
+   * Create a new temporary file. All methods of the returned output stream may throw
+   * {@link TemporaryStorageFullException} if the temporary storage area fills up.
+   *
+   * @return output stream to the file
+   *
+   * @throws TemporaryStorageFullException if the temporary storage area is full
+   * @throws IOException                   if something goes wrong while creating the file
+   */
   public LimitedOutputStream createFile() throws IOException
   {
     if (bytesUsed.get() >= maxBytesUsed) {
-      throwFullError();
+      throw new TemporaryStorageFullException(maxBytesUsed);
     }
 
     synchronized (files) {
@@ -158,14 +167,9 @@ public class LimitedTemporaryStorage implements Closeable
     private void grab(int n) throws IOException
     {
       if (bytesUsed.addAndGet(n) > maxBytesUsed) {
-        throwFullError();
+        throw new TemporaryStorageFullException(maxBytesUsed);
       }
     }
 
-  }
-
-  private void throwFullError() throws IOException
-  {
-    throw new IOException(String.format("Cannot write to disk, hit limit of %,d bytes.", maxBytesUsed));
   }
 }
