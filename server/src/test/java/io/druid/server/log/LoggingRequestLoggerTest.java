@@ -31,6 +31,7 @@ import io.druid.query.LegacyDataSource;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QuerySegmentWalker;
+import io.druid.query.filter.DimFilter;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.server.QueryStats;
 import io.druid.server.RequestLogLine;
@@ -191,6 +192,12 @@ class FakeQuery extends BaseQuery
   public boolean hasFilters()
   {
     return false;
+  }
+
+  @Override
+  public DimFilter getFilter()
+  {
+    throw new UnsupportedOperationException("shouldn't be here");
   }
 
   @Override
