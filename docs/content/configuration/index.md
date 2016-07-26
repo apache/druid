@@ -163,7 +163,7 @@ The Druid servers [emit various metrics](../operations/metrics.html) and alerts 
 
 #### Graphite Emitter
 
-To use graphite as emitter set `druid.emitter=graphite`. For configuration details please follow this [link](https://github.com/druid-io/druid/tree/master/extensions/graphite-emitter/README.md).
+To use graphite as emitter set `druid.emitter=graphite`. For configuration details please follow this [link](../development/extensions-contrib/graphite.html).
 
 
 ### Metadata Storage
@@ -245,9 +245,9 @@ You can enable caching of results at the broker, historical, or realtime level u
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.cache.type`|`local`, `memcached`|The type of cache to use for queries.|`local`|
-|`druid.(broker|historical|realtime).cache.unCacheable`|All druid query types|All query types to not cache.|["groupBy", "select"]|
-|`druid.(broker|historical|realtime).cache.useCache`|Whether to use cache for getting query results.|false|
-|`druid.(broker|historical|realtime).cache.populateCache`|Whether to populate cache.|false|
+|<code>druid.(broker&#124;historical&#124;realtime).cache.unCacheable</code>|All druid query types|All query types to not cache.|["groupBy", "select"]|
+|<code>druid.(broker&#124;historical&#124;realtime).cache.useCache</code>|Whether to use cache for getting query results.|false|
+|<code>druid.(broker&#124;historical&#124;realtime).cache.populateCache</code>|Whether to populate cache.|false|
 
 #### Local Cache
 
