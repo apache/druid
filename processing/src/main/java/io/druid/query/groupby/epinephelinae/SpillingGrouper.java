@@ -93,7 +93,15 @@ public class SpillingGrouper<KeyType extends Comparable<KeyType>> implements Gro
       return true;
     } else {
       // Warning: this can potentially block up a processing thread for a while.
-      spill();
+      try {
+        spill();
+      }
+      catch (TemporaryStorageFullException e) {
+        return false;
+      }
+      catch (IOException e) {
+        throw Throwables.propagate(e);
+      }
       return grouper.aggregate(key, keyHash);
     }
   }
@@ -154,14 +162,16 @@ public class SpillingGrouper<KeyType extends Comparable<KeyType>> implements Gro
     return Groupers.mergeIterators(iterators, sorted);
   }
 
-  private void spill()
+  private void spill() throws IOException
   {
+    final File outFile;
+
     try (
         final LimitedTemporaryStorage.LimitedOutputStream out = temporaryStorage.createFile();
         final LZ4BlockOutputStream compressedOut = new LZ4BlockOutputStream(out);
         final JsonGenerator jsonGenerator = spillMapper.getFactory().createGenerator(compressedOut)
     ) {
-      files.add(out.getFile());
+      outFile = out.getFile();
       final Iterator<Entry<KeyType>> it = grouper.iterator(true);
       while (it.hasNext()) {
         if (Thread.interrupted()) {
@@ -171,10 +181,8 @@ public class SpillingGrouper<KeyType extends Comparable<KeyType>> implements Gro
         jsonGenerator.writeObject(it.next());
       }
     }
-    catch (IOException e) {
-      throw Throwables.propagate(e);
-    }
 
+    files.add(outFile);
     grouper.reset();
   }
 
