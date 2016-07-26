@@ -24,8 +24,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
-import com.google.common.collect.Interner;
-import com.google.common.collect.Interners;
 import com.google.common.collect.MapMaker;
 import com.google.inject.Inject;
 import com.metamx.common.Pair;
@@ -45,7 +43,6 @@ import java.util.concurrent.Executor;
 public class SingleServerInventoryView extends ServerInventoryView<DataSegment> implements FilteredServerInventoryView
 {
   private static final EmittingLogger log = new EmittingLogger(SingleServerInventoryView.class);
-  private static final Interner<DataSegment> DATA_SEGMENT_INTERNER = Interners.newWeakInterner();
 
   final private ConcurrentMap<SegmentCallback, Predicate<Pair<DruidServerMetadata, DataSegment>>> segmentPredicates = new MapMaker()
       .makeMap();
@@ -167,9 +164,4 @@ public class SingleServerInventoryView extends ServerInventoryView<DataSegment> 
     }
   }
 
-  @Override
-  protected DataSegment internInventory(DataSegment sample)
-  {
-    return DATA_SEGMENT_INTERNER.intern(sample);
-  }
 }
