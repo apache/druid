@@ -113,7 +113,7 @@ Every request is emitted to some external location.
 
 #### SLF4J Request Logging
 
-Every request is logged via SLF4j. Queries are serialized into JSON in the log message regardless of the slf4j format specification.
+Every request is logged via SLF4J. Queries are serialized into JSON in the log message regardless of the SJF4J format specification. They will be logged under the class `io.druid.server.log.LoggingRequestLogger`.
 
 |Property|Description|Default|
 |--------|-----------|-------|

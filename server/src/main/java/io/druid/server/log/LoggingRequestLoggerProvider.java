@@ -31,10 +31,13 @@ public class LoggingRequestLoggerProvider implements RequestLoggerProvider
   @JacksonInject
   @Json
   public ObjectMapper mapper;
+
   @JsonProperty
   public boolean setMDC = false;
+
   @JsonProperty
   public boolean setContextMDC = false;
+
   @Override
   public RequestLogger get()
   {

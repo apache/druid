@@ -31,9 +31,11 @@ import java.util.Map;
 
 public class LoggingRequestLogger implements RequestLogger
 {
-  final ObjectMapper mapper;
-  final boolean setMDC;
-  final boolean setContextMDC;
+  private static final Logger LOG = new Logger(LoggingRequestLogger.class);
+
+  private final ObjectMapper mapper;
+  private final boolean setMDC;
+  private final boolean setContextMDC;
 
   public LoggingRequestLogger(
       ObjectMapper mapper,
@@ -46,17 +48,11 @@ public class LoggingRequestLogger implements RequestLogger
     this.setContextMDC = setContextMDC;
   }
 
-  private static final Logger LOG = new Logger(LoggingRequestLogger.class);
-
   @Override
   public void log(RequestLogLine requestLogLine) throws IOException
   {
-    final Map mdc;
-    if (setMDC) {
-      mdc = MDC.getCopyOfContextMap();
-    } else {
-      mdc = null;
-    }
+    final Map mdc = MDC.getCopyOfContextMap();
+    // MDC must be set during the `LOG.info` call at the end of the try block.
     try {
       if (setMDC) {
         try {
@@ -67,7 +63,6 @@ public class LoggingRequestLogger implements RequestLogger
           MDC.put("hasFilters", Boolean.toString(query.hasFilters()));
           MDC.put("remoteAddr", requestLogLine.getRemoteAddr());
           MDC.put("duration", query.getDuration().toString());
-          MDC.put("resultOrdering", query.getResultOrdering().toString());
           MDC.put("descending", Boolean.toString(query.isDescending()));
           if (setContextMDC) {
             final Iterable<Map.Entry<String, Object>> entries = query.getContext() == null
@@ -83,11 +78,17 @@ public class LoggingRequestLogger implements RequestLogger
         }
       }
       final String line = requestLogLine.getLine(mapper);
+
+      // MDC must be set here
       LOG.info("%s", line);
     }
     finally {
-      if (setMDC && mdc != null) {
-        MDC.setContextMap(mdc);
+      if (setMDC) {
+        if (mdc != null) {
+          MDC.setContextMap(mdc);
+        } else {
+          MDC.clear();
+        }
       }
     }
   }
