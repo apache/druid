@@ -226,6 +226,7 @@ public class IndexGeneratorJob implements Jobby
         .withDimensionsSpec(config.getSchema().getDataSchema().getParser())
         .withQueryGranularity(config.getSchema().getDataSchema().getGranularitySpec().getQueryGranularity())
         .withMetrics(aggs)
+        .withRollup(config.getSchema().getDataSchema().getGranularitySpec().isRollup())
         .build();
 
     OnheapIncrementalIndex newIndex = new OnheapIncrementalIndex(
@@ -514,13 +515,14 @@ public class IndexGeneratorJob implements Jobby
         ProgressIndicator progressIndicator
     ) throws IOException
     {
+      boolean rollup = config.getSchema().getDataSchema().getGranularitySpec().isRollup();
       if (config.isBuildV9Directly()) {
         return HadoopDruidIndexerConfig.INDEX_MERGER_V9.mergeQueryableIndex(
-            indexes, aggs, file, config.getIndexSpec(), progressIndicator
+            indexes, rollup, aggs, file, config.getIndexSpec(), progressIndicator
         );
       } else {
         return HadoopDruidIndexerConfig.INDEX_MERGER.mergeQueryableIndex(
-            indexes, aggs, file, config.getIndexSpec(), progressIndicator
+            indexes, rollup, aggs, file, config.getIndexSpec(), progressIndicator
         );
       }
     }

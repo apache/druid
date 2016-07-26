@@ -159,7 +159,10 @@ Append tasks append a list of segments together into a single segment (one after
 
 ### Merge Task
 
-Merge tasks merge a list of segments together. Any common timestamps are merged. The grammar is:
+Merge tasks merge a list of segments together. Any common timestamps are merged.
+If rollup is disabled as part of ingestion, common timestamps are not merged and rows are reorderded by their timestamp.
+
+The grammar is:
 
 ```json
 {
@@ -167,6 +170,7 @@ Merge tasks merge a list of segments together. Any common timestamps are merged.
     "id": <task_id>,
     "dataSource": <task_datasource>,
     "aggregations": <list of aggregators>,
+    "rollup": <whether or not to rollup data during a merge>,
     "segments": <JSON list of DataSegment objects to merge>
 }
 ```

@@ -439,6 +439,7 @@ public class SpatialFilterBonusTest
                   INDEX_IO.loadIndex(secondFile),
                   INDEX_IO.loadIndex(thirdFile)
               ),
+              true,
               METRIC_AGGS,
               mergedFile,
               indexSpec

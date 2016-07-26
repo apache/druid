@@ -25,6 +25,7 @@ import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -73,8 +74,12 @@ import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
+import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -353,12 +358,12 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
   private final long minTimestamp;
   private final QueryGranularity gran;
+  private final boolean rollup;
   private final List<Function<InputRow, InputRow>> rowTransformers;
   private final AggregatorFactory[] metrics;
   private final AggregatorType[] aggs;
   private final boolean deserializeComplexMetrics;
   private final boolean reportParseExceptions;
-  private final boolean sortFacts;
   private final Metadata metadata;
 
   private final Map<String, MetricDesc> metricDescs;
@@ -396,22 +401,22 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   public IncrementalIndex(
       final IncrementalIndexSchema incrementalIndexSchema,
       final boolean deserializeComplexMetrics,
-      final boolean reportParseExceptions,
-      final boolean sortFacts
+      final boolean reportParseExceptions
   )
   {
     this.minTimestamp = incrementalIndexSchema.getMinTimestamp();
     this.gran = incrementalIndexSchema.getGran();
+    this.rollup = incrementalIndexSchema.isRollup();
     this.metrics = incrementalIndexSchema.getMetrics();
     this.rowTransformers = new CopyOnWriteArrayList<>();
     this.deserializeComplexMetrics = deserializeComplexMetrics;
     this.reportParseExceptions = reportParseExceptions;
-    this.sortFacts = sortFacts;
 
     this.metadata = new Metadata()
         .setAggregators(getCombiningAggregators(metrics))
         .setTimestampSpec(incrementalIndexSchema.getTimestampSpec())
-        .setQueryGranularity(this.gran);
+        .setQueryGranularity(this.gran)
+        .setRollup(this.rollup);
 
     this.aggs = initAggs(metrics, rowSupplier, deserializeComplexMetrics);
     this.columnCapabilities = Maps.newHashMap();
@@ -452,7 +457,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     }
   }
 
-  private DimDim newDimDim(String dimension, ValueType type) {
+  private DimDim newDimDim(String dimension, ValueType type)
+  {
     DimDim newDimDim;
     switch (type) {
       case LONG:
@@ -473,7 +479,12 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   // use newDimDim() to create a DimDim, makeDimDim() provides the subclass-specific implementation
   protected abstract DimDim makeDimDim(String dimension, Object lock);
 
-  public abstract ConcurrentMap<TimeAndDims, Integer> getFacts();
+  public boolean isRollup()
+  {
+    return rollup;
+  }
+
+  public abstract FactsHolder getFacts();
 
   public abstract boolean canAppendRow();
 
@@ -579,7 +590,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
    *
    * @return the number of rows in the data set after adding the InputRow
    */
-  public int add(InputRow row) throws IndexSizeExceededException {
+  public int add(InputRow row) throws IndexSizeExceededException
+  {
     TimeAndDims key = toTimeAndDims(row);
     final int rv = addToFacts(
         metrics,
@@ -694,20 +706,12 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
 
   private long getMinTimeMillis()
   {
-    if (sortFacts) {
-      return ((ConcurrentNavigableMap<TimeAndDims, Integer>) getFacts()).firstKey().getTimestamp();
-    } else {
-      throw new UnsupportedOperationException("can't get minTime from unsorted facts data.");
-    }
+    return getFacts().getMinTimeMillis();
   }
 
   private long getMaxTimeMillis()
   {
-    if (sortFacts) {
-      return ((ConcurrentNavigableMap<TimeAndDims, Integer>) getFacts()).lastKey().getTimestamp();
-    } else {
-      throw new UnsupportedOperationException("can't get maxTime from unsorted facts data.");
-    }
+    return getFacts().getMaxTimeMillis();
   }
 
   private int[] getDimVals(final DimDim dimLookup, final List<Comparable> dimValues)
@@ -858,15 +862,6 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     return columnCapabilities.get(column);
   }
 
-  public ConcurrentNavigableMap<TimeAndDims, Integer> getSubMap(TimeAndDims start, TimeAndDims end)
-  {
-    if (sortFacts) {
-      return ((ConcurrentNavigableMap<TimeAndDims, Integer>) getFacts()).subMap(start, end);
-    } else {
-      throw new UnsupportedOperationException("can't get subMap from unsorted facts data.");
-    }
-  }
-
   public Metadata getMetadata()
   {
     return metadata;
@@ -896,15 +891,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       {
         final List<DimensionDesc> dimensions = getDimensions();
 
-        Map<TimeAndDims, Integer> facts = null;
-        if (descending && sortFacts) {
-          facts = ((ConcurrentNavigableMap<TimeAndDims, Integer>) getFacts()).descendingMap();
-        } else {
-          facts = getFacts();
-        }
-
         return Iterators.transform(
-            facts.entrySet().iterator(),
+            getFacts().iterator(descending),
             new Function<Map.Entry<TimeAndDims, Integer>, Row>()
             {
               @Override
@@ -1318,6 +1306,290 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       }
 
       return retVal;
+    }
+  }
+
+  public static class FactsEntry implements Map.Entry<TimeAndDims, Integer>
+  {
+    TimeAndDims key = null;
+    Integer value = null;
+
+    public FactsEntry(TimeAndDims key, Integer value)
+    {
+      this.key = key;
+      this.value = value;
+    }
+
+    public TimeAndDims getKey()
+    {
+      return key;
+    }
+
+    public Integer getValue()
+    {
+      return value;
+    }
+
+    @Override
+    public Integer setValue(Integer value)
+    {
+      return value;
+    }
+
+    @Override
+    public boolean equals(Object o)
+    {
+      if (this == o) {
+        return true;
+      }
+      if (o == null || getClass() != o.getClass()) {
+        return false;
+      }
+
+      FactsEntry that = (FactsEntry) o;
+
+      if (key != null ? !key.equals(that.key) : that.key != null) {
+        return false;
+      }
+      return value != null ? value.equals(that.value) : that.value == null;
+    }
+
+    @Override
+    public int hashCode()
+    {
+      int result = key != null ? key.hashCode() : 0;
+      result = 31 * result + (value != null ? value.hashCode() : 0);
+      return result;
+    }
+  }
+
+  interface FactsHolder
+  {
+    /**
+     * @return the previous value associated with the specified key, or
+     * {@code null} if there was no mapping for the key.
+     */
+    Integer getRowIndexForRollup(TimeAndDims key);
+
+    long getMinTimeMillis();
+
+    long getMaxTimeMillis();
+
+    Iterable<Map.Entry<TimeAndDims, Integer>> entrySet();
+
+    Iterator<Map.Entry<TimeAndDims, Integer>> iterator(boolean descending);
+
+    Iterable<Map.Entry<TimeAndDims, Integer>> timeRangeIterable(boolean descending, long timeStart, long timeEnd);
+
+    Iterable<TimeAndDims> keySet();
+
+    /**
+     * @return the previous value associated with the specified key, or
+     * {@code null} if there was no mapping for the key.
+     */
+    Integer putIfAbsent(TimeAndDims key, Integer rowIndex);
+
+    void clear();
+  }
+
+  static class RollupFactsHolder implements FactsHolder
+  {
+    private final boolean sortFacts;
+    private final ConcurrentMap<TimeAndDims, Integer> facts;
+
+    public RollupFactsHolder(boolean sortFacts, Comparator<TimeAndDims> timeAndDimsComparator)
+    {
+      this.sortFacts = sortFacts;
+      if (sortFacts) {
+        this.facts = new ConcurrentSkipListMap<>(timeAndDimsComparator);
+      } else {
+        this.facts = new ConcurrentHashMap<>();
+      }
+    }
+
+    @Override
+    public Integer getRowIndexForRollup(TimeAndDims key)
+    {
+      return facts.get(key);
+    }
+
+    @Override
+    public long getMinTimeMillis()
+    {
+      if (sortFacts) {
+        return ((ConcurrentNavigableMap<TimeAndDims, Integer>) facts).firstKey().getTimestamp();
+      } else {
+        throw new UnsupportedOperationException("can't get minTime from unsorted facts data.");
+      }
+    }
+
+    @Override
+    public long getMaxTimeMillis()
+    {
+      if (sortFacts) {
+        return ((ConcurrentNavigableMap<TimeAndDims, Integer>) facts).lastKey().getTimestamp();
+      } else {
+        throw new UnsupportedOperationException("can't get maxTime from unsorted facts data.");
+      }
+    }
+
+    public Iterable<Map.Entry<TimeAndDims, Integer>> entrySet() {
+      return facts.entrySet();
+    }
+
+    @Override
+    public Iterator<Map.Entry<TimeAndDims, Integer>> iterator(boolean descending)
+    {
+      if (descending && sortFacts) {
+        return ((ConcurrentNavigableMap<TimeAndDims, Integer>) facts).descendingMap().entrySet().iterator();
+      }
+      return entrySet().iterator();
+    }
+
+    @Override
+    public Iterable<Map.Entry<TimeAndDims, Integer>> timeRangeIterable(boolean descending, long timeStart, long timeEnd)
+    {
+      if (!sortFacts) {
+        throw new UnsupportedOperationException("can't get timeRange from unsorted facts data.");
+      }
+      TimeAndDims start = new TimeAndDims(timeStart, new int[][]{});
+      TimeAndDims end = new TimeAndDims(timeEnd, new int[][]{});
+      ConcurrentNavigableMap<TimeAndDims, Integer> subMap =
+          ((ConcurrentNavigableMap<TimeAndDims, Integer>) facts).subMap(start, end);
+      final Map<TimeAndDims, Integer> rangeMap = descending ? subMap.descendingMap() : subMap;
+      return rangeMap.entrySet();
+    }
+
+    @Override
+    public Iterable<TimeAndDims> keySet()
+    {
+      return facts.keySet();
+    }
+
+    @Override
+    public Integer putIfAbsent(TimeAndDims key, Integer rowIndex)
+    {
+      return facts.putIfAbsent(key, rowIndex);
+    }
+
+    @Override
+    public void clear()
+    {
+      facts.clear();
+    }
+  }
+
+  static class PlainFactsHolder implements FactsHolder
+  {
+    private final boolean sortFacts;
+    private final ConcurrentMap<Long, Queue<Map.Entry<TimeAndDims, Integer>>> facts;
+
+    public PlainFactsHolder(boolean sortFacts)
+    {
+      this.sortFacts = sortFacts;
+      if (sortFacts) {
+        this.facts = new ConcurrentSkipListMap<>(new Comparator<Long>()
+        {
+          @Override
+          public int compare(Long lhs, Long rhs)
+          {
+            return Longs.compare(lhs, rhs);
+          }
+        });
+      } else {
+        this.facts = new ConcurrentHashMap<>();
+      }
+    }
+
+    @Override
+    public Integer getRowIndexForRollup(TimeAndDims key)
+    {
+      // always return null to indicate that no prior key cause we always add new row
+      return null;
+    }
+
+    @Override
+    public long getMinTimeMillis()
+    {
+      if (sortFacts) {
+        return ((ConcurrentNavigableMap<Long, Queue<Map.Entry<TimeAndDims, Integer>>>) facts).firstKey();
+      } else {
+        throw new UnsupportedOperationException("can't get minTime from unsorted facts data.");
+      }
+    }
+
+    @Override
+    public long getMaxTimeMillis()
+    {
+      if (sortFacts) {
+        return ((ConcurrentNavigableMap<Long, Queue<Map.Entry<TimeAndDims, Integer>>>) facts).lastKey();
+      } else {
+        throw new UnsupportedOperationException("can't get maxTime from unsorted facts data.");
+      }
+    }
+
+    public Iterable<Map.Entry<TimeAndDims, Integer>> entrySet() {
+      return concat(facts.values());
+    }
+
+    @Override
+    public Iterator<Map.Entry<TimeAndDims, Integer>> iterator(boolean descending)
+    {
+      if (descending && sortFacts) {
+        return concat(((ConcurrentNavigableMap<Long, Queue<Map.Entry<TimeAndDims, Integer>>>) facts).descendingMap().values()).iterator();
+      }
+      return concat(facts.values()).iterator();
+    }
+
+    @Override
+    public Iterable<Map.Entry<TimeAndDims, Integer>> timeRangeIterable(boolean descending, long timeStart, long timeEnd)
+    {
+      ConcurrentNavigableMap<Long, Queue<Map.Entry<TimeAndDims, Integer>>> subMap =
+          ((ConcurrentNavigableMap<Long, Queue<Map.Entry<TimeAndDims, Integer>>>) facts).subMap(timeStart, timeEnd);
+      final Map<Long, Queue<Map.Entry<TimeAndDims, Integer>>> rangeMap = descending ? subMap.descendingMap() : subMap;
+      return concat(rangeMap.values());
+    }
+
+    private Iterable<Map.Entry<TimeAndDims, Integer>> concat(Iterable<Queue<Map.Entry<TimeAndDims, Integer>>> iterable)
+    {
+      return Iterables.concat(iterable);
+    }
+
+    @Override
+    public Iterable<TimeAndDims> keySet()
+    {
+      return Iterables.transform(
+          entrySet(),
+          new Function<Map.Entry<TimeAndDims, Integer>, TimeAndDims>()
+          {
+            @Override
+            public TimeAndDims apply(Map.Entry<TimeAndDims, Integer> input)
+            {
+              return input.getKey();
+            }
+          }
+      );
+    }
+
+    @Override
+    public Integer putIfAbsent(TimeAndDims key, Integer rowIndex)
+    {
+      Long time = key.getTimestamp();
+      Queue<Map.Entry<TimeAndDims, Integer>> rows = facts.get(time);
+      if (rows == null) {
+        facts.putIfAbsent(time, new ConcurrentLinkedQueue<Map.Entry<TimeAndDims, Integer>>());
+        // in race condition, rows may be put by other thread, so always get latest status from facts
+        rows = facts.get(time);
+      }
+      rows.add(new FactsEntry(key, rowIndex));
+      // always return null to indicate that we always add new row
+      return null;
+    }
+
+    @Override
+    public void clear()
+    {
+      facts.clear();
     }
   }
 }
