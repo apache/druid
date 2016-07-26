@@ -20,6 +20,7 @@
 package io.druid.initialization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -105,17 +106,13 @@ public class Initialization
     return retVal;
   }
 
-  /**
-   * Used for testing only
-   */
+  @VisibleForTesting
   static void clearLoadedModules()
   {
     extensionsMap.clear();
   }
 
-  /**
-   * Used for testing only
-   */
+  @VisibleForTesting
   static Map<File, URLClassLoader> getLoadersMap()
   {
     return loadersMap;
@@ -266,7 +263,7 @@ public class Initialization
    */
   public static URLClassLoader getClassLoaderForExtension(File extension) throws MalformedURLException
   {
-    URLClassLoader loader = loadersMap.get(extension.getName());
+    URLClassLoader loader = loadersMap.get(extension);
     if (loader == null) {
       final Collection<File> jars = FileUtils.listFiles(extension, new String[]{"jar"}, false);
       final URL[] urls = new URL[jars.size()];
