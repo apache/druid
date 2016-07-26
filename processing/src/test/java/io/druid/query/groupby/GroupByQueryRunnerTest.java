@@ -58,6 +58,7 @@ import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.aggregation.JavaScriptAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
+import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
@@ -4424,6 +4425,53 @@ public class GroupByQueryRunnerTest
   }
 
   @Test
+  public void testSubqueryWithOuterFilterAggregator()
+  {
+    final GroupByQuery subquery = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("market", "market"),
+                                                         new DefaultDimensionSpec("quality", "quality")))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("index", "index")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    final DimFilter filter = new SelectorDimFilter("market", "spot", null);
+    final GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(subquery)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
+        .setDimensions(Lists.<DimensionSpec>newArrayList())
+        .setAggregatorSpecs(
+            ImmutableList.<AggregatorFactory>of(
+                new FilteredAggregatorFactory(QueryRunnerTestHelper.rowsCount, filter)
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.allGran)
+        .build();
+
+    // v2 strategy would throw an exception for this because the dimension selector in GroupByRowProcessor is not
+    // dictionary encoded, but instead require the row to be set when doing lookup. Null Pointer Exception occurs
+    // when the filter aggregator is initialized with no row set.
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
+      expectedException.expect(NullPointerException.class);
+      GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    } else {
+      List<Row> expectedResults = Arrays.asList(
+          GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01", "rows", 837L)
+      );
+      Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+      TestHelper.assertExpectedObjects(expectedResults, results, "");
+    }
+  }
+
+  @Test
   public void testSubqueryWithOuterTimeFilter()
   {
     final GroupByQuery subquery = GroupByQuery
@@ -4451,7 +4499,7 @@ public class GroupByQueryRunnerTest
         .setDimFilter(firstDaysFilter)
         .setAggregatorSpecs(
             ImmutableList.<AggregatorFactory>of(
-              new FilteredAggregatorFactory(QueryRunnerTestHelper.rowsCount, fridayFilter)
+                new FilteredAggregatorFactory(QueryRunnerTestHelper.rowsCount, fridayFilter)
             )
         )
         .setGranularity(QueryRunnerTestHelper.dayGran)
@@ -4470,6 +4518,55 @@ public class GroupByQueryRunnerTest
     );
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Ignore
+  @Test
+  public void testSubqueryWithOuterCardinalityAggregator()
+  {
+    final GroupByQuery subquery = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("market", "market"),
+                                                         new DefaultDimensionSpec("quality", "quality")))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("index", "index")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    final GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(subquery)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.fullOnInterval)
+        .setDimensions(Lists.<DimensionSpec>newArrayList())
+        .setAggregatorSpecs(
+            ImmutableList.<AggregatorFactory>of(
+                new CardinalityAggregatorFactory("car", ImmutableList.of("quality"), false)
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.allGran)
+        .build();
+
+    // v1 strategy would throw an exception for this because it calls AggregatorFactory.getRequiredColumns to get
+    // aggregator for all fields to build the inner query result incremental index. When a field type does not match
+    // aggregator value type, parse exception occurs. In this case, quality is a string field but getRequiredColumn
+    // returned a Cardinality aggregator for it, which has type hyperUnique. Since this is a complex type, no converter
+    // is found for it and NullPointerException occurs when it tries to use the converter.
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
+      expectedException.expect(NullPointerException.class);
+      GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    } else {
+      List<Row> expectedResults = Arrays.asList(
+          GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01", "car", QueryRunnerTestHelper.UNIQUES_9)
+      );
+      Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+      TestHelper.assertExpectedObjects(expectedResults, results, "");
+    }
   }
 
   @Test
