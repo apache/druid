@@ -1,7 +1,7 @@
 ---
 layout: doc_page
 ---
-#Query Filters
+# Query Filters
 A filter is a JSON object indicating which rows of data should be included in the computation for a query. It’s essentially the equivalent of the WHERE clause in SQL. Druid supports the following types of filters.
 
 ### Selector filter
@@ -177,14 +177,14 @@ The IN filter supports the use of extraction functions, see [Filtering with Extr
 The Bound filter can be used to filter by comparing dimension values to an upper value and/or a lower value.
 
 |property|type|description|required?|
-|--------|-----------|---------|
+|--------|-----------|---------|---------|
 |type|String|This should always be "bound".|yes|
 |dimension|String|The dimension to filter on|yes|
 |lower|String|The lower bound for the filter|no|
 |upper|String|The upper bound for the filter|no|
 |lowerStrict|Boolean|Perform strict comparison on the lower bound ("<" instead of "<=")|no, default: false|
 |upperStrict|Boolean|Perform strict comparison on the upper bound (">" instead of ">=")|no, default: false|
-|ordering|String|Specifies the sorting order to use when comparing values against the bound.<br/>Can be one of the following values: "lexicographic", "alphanumeric", "numeric", "strlen".<br/>See [Sorting Orders](./sorting-orders.html) for more details.|no, default: "lexicographic"|
+|ordering|String|Specifies the sorting order to use when comparing values against the bound. Can be one of the following values: "lexicographic", "alphanumeric", "numeric", "strlen". See [Sorting Orders](./sorting-orders.html) for more details.|no, default: "lexicographic"|
 |extractionFn|[Extraction function](#filtering-with-extraction-functions)| Extraction function to apply to the dimension|no|
   
 The bound filter supports the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
