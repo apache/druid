@@ -58,8 +58,11 @@ public class DataSchemaTest
         new StringInputRowParser(
             new JSONParseSpec(
                 new TimestampSpec("time", "auto", null),
-                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dimB", "dimA")), null, null)
-            )
+                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dimB", "dimA")), null, null),
+                null,
+                null
+            ),
+            null
         ), new TypeReference<Map<String, Object>>() {}
     );
 
@@ -87,8 +90,11 @@ public class DataSchemaTest
         new StringInputRowParser(
             new JSONParseSpec(
                 new TimestampSpec("time", "auto", null),
-                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("time", "dimA", "dimB", "col2")), ImmutableList.of("dimC"), null)
-            )
+                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("time", "dimA", "dimB", "col2")), ImmutableList.of("dimC"), null),
+                null,
+                null
+            ),
+            null
         ), new TypeReference<Map<String, Object>>() {}
     );
 
@@ -116,8 +122,11 @@ public class DataSchemaTest
         new StringInputRowParser(
             new JSONParseSpec(
                 new TimestampSpec("time", "auto", null),
-                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("time", "dimA", "dimB", "metric1")), ImmutableList.of("dimC"), null)
-            )
+                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("time", "dimA", "dimB", "metric1")), ImmutableList.of("dimC"), null),
+                null,
+                null
+            ),
+            null
         ), new TypeReference<Map<String, Object>>() {}
     );
 
@@ -197,7 +206,9 @@ public class DataSchemaTest
         actual.getParser().getParseSpec(),
         new JSONParseSpec(
             new TimestampSpec("xXx", null, null),
-            new DimensionsSpec(null, Arrays.asList("metric1", "xXx", "col1"), null)
+            new DimensionsSpec(null, Arrays.asList("metric1", "xXx", "col1"), null),
+            null,
+            null
         )
     );
     Assert.assertEquals(

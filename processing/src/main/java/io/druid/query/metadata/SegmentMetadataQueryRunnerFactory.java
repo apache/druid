@@ -29,6 +29,7 @@ import com.google.inject.Inject;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
+import io.druid.data.input.impl.TimestampSpec;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.AbstractPrioritizedCallable;
 import io.druid.query.BaseQuery;
@@ -127,12 +128,22 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
           aggregators = null;
         }
 
+        final TimestampSpec timestampSpec;
+        if (query.hasTimestampSpec()) {
+          if (metadata == null) {
+            metadata = segment.asStorageAdapter().getMetadata();
+          }
+          timestampSpec = metadata != null ? metadata.getTimestampSpec() : null;
+        } else {
+          timestampSpec = null;
+        }
+
         final QueryGranularity queryGranularity;
         if (query.hasQueryGranularity()) {
           if (metadata == null) {
             metadata = segment.asStorageAdapter().getMetadata();
           }
-          queryGranularity = metadata.getQueryGranularity();
+          queryGranularity = metadata != null ? metadata.getQueryGranularity() : null;
         } else {
           queryGranularity = null;
         }
@@ -146,6 +157,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                     totalSize,
                     numRows,
                     aggregators,
+                    timestampSpec,
                     queryGranularity
                 )
             )

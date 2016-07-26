@@ -25,6 +25,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Range;
+import com.google.common.collect.RangeSet;
+import com.google.common.collect.TreeRangeSet;
+import com.google.common.primitives.Longs;
 import com.metamx.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.segment.filter.DimensionPredicateFilter;
@@ -40,6 +44,11 @@ public class SelectorDimFilter implements DimFilter
   private final String dimension;
   private final String value;
   private final ExtractionFn extractionFn;
+
+  private final Object initLock = new Object();
+  private volatile boolean longsInitialized = false;
+  private volatile Long valueAsLong;
+
 
   @JsonCreator
   public SelectorDimFilter(
@@ -63,11 +72,11 @@ public class SelectorDimFilter implements DimFilter
     byte[] extractionFnBytes = extractionFn == null ? new byte[0] : extractionFn.getCacheKey();
 
     return ByteBuffer.allocate(3 + dimensionBytes.length + valueBytes.length + extractionFnBytes.length)
-                     .put(DimFilterCacheHelper.SELECTOR_CACHE_ID)
+                     .put(DimFilterUtils.SELECTOR_CACHE_ID)
                      .put(dimensionBytes)
-                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                     .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(valueBytes)
-                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                     .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(extractionFnBytes)
                      .array();
   }
@@ -85,15 +94,51 @@ public class SelectorDimFilter implements DimFilter
       return new SelectorFilter(dimension, value);
     } else {
       final String valueOrNull = Strings.emptyToNull(value);
-      final Predicate<String> predicate = new Predicate<String>()
+
+      final DruidPredicateFactory predicateFactory = new DruidPredicateFactory()
       {
         @Override
-        public boolean apply(String input)
+        public Predicate<String> makeStringPredicate()
         {
-          return Objects.equals(valueOrNull, input);
+          return new Predicate<String>()
+          {
+            @Override
+            public boolean apply(String input)
+            {
+              return Objects.equals(valueOrNull, input);
+            }
+          };
+        }
+
+        @Override
+        public DruidLongPredicate makeLongPredicate()
+        {
+          initLongValue();
+
+          if (valueAsLong == null) {
+            return new DruidLongPredicate()
+            {
+              @Override
+              public boolean applyLong(long input)
+              {
+                return false;
+              }
+            };
+          } else {
+            // store the primitive, so we don't unbox for every comparison
+            final long unboxedLong = valueAsLong.longValue();
+            return new DruidLongPredicate()
+            {
+              @Override
+              public boolean applyLong(long input)
+              {
+                return input == unboxedLong;
+              }
+            };
+          }
         }
       };
-      return new DimensionPredicateFilter(dimension, predicate, extractionFn);
+      return new DimensionPredicateFilter(dimension, predicateFactory, extractionFn);
     }
   }
 
@@ -147,11 +192,37 @@ public class SelectorDimFilter implements DimFilter
   }
 
   @Override
+  public RangeSet<String> getDimensionRangeSet(String dimension)
+  {
+    if (!Objects.equals(getDimension(), dimension) || getExtractionFn() != null) {
+      return null;
+    }
+    RangeSet<String> retSet = TreeRangeSet.create();
+    retSet.add(Range.singleton(Strings.nullToEmpty(value)));
+    return retSet;
+  }
+
+  @Override
   public int hashCode()
   {
     int result = dimension.hashCode();
     result = 31 * result + (value != null ? value.hashCode() : 0);
     result = 31 * result + (extractionFn != null ? extractionFn.hashCode() : 0);
     return result;
+  }
+
+
+  private void initLongValue()
+  {
+    if (longsInitialized) {
+      return;
+    }
+    synchronized (initLock) {
+      if (longsInitialized) {
+        return;
+      }
+      valueAsLong = Longs.tryParse(value);
+      longsInitialized = true;
+    }
   }
 }

@@ -166,8 +166,6 @@ public class DirectDruidClient<T> implements QueryRunner<T>
 
       final ServiceMetricEvent.Builder builder = toolChest.makeMetricBuilder(query);
       builder.setDimension("server", host);
-      builder.setDimension(DruidMetrics.ID, Strings.nullToEmpty(query.getId()));
-
 
       final HttpResponseHandler<InputStream, InputStream> responseHandler = new HttpResponseHandler<InputStream, InputStream>()
       {

@@ -70,6 +70,8 @@
                                 <argument>${project.parent.version}</argument>
                                 <argument>-l</argument>
                                 <argument>${settings.localRepository}</argument>
+                                <argument>-h</argument>
+                                <argument>org.apache.hadoop:hadoop-client:${hadoop.compile.version}</argument>
                                 <argument>-c</argument>
                                 <argument>io.druid.extensions:druid-avro-extensions</argument>
                                 <argument>-c</argument>
@@ -152,4 +154,53 @@
             </plugin>
         </plugins>
     </build>
+    <profiles>
+        <profile>
+            <id>java8</id>
+            <activation>
+                <jdk>1.8</jdk>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.codehaus.mojo</groupId>
+                        <artifactId>exec-maven-plugin</artifactId>
+                        <executions>
+                            <execution>
+                                <id>pull-deps-jdk8</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>exec</goal>
+                                </goals>
+                                <configuration>
+                                    <executable>java</executable>
+                                    <arguments>
+                                        <argument>-classpath</argument>
+                                        <classpath/>
+                                        <argument>-Ddruid.extensions.loadList=[]</argument>
+                                        <argument>-Ddruid.extensions.directory=${project.build.directory}/extensions
+                                        </argument>
+                                        <argument>
+                                            -Ddruid.extensions.hadoopDependenciesDir=${project.build.directory}/hadoop-dependencies
+                                        </argument>
+                                        <argument>io.druid.cli.Main</argument>
+                                        <argument>tools</argument>
+                                        <argument>pull-deps</argument>
+                                        <argument>--defaultVersion</argument>
+                                        <argument>${project.parent.version}</argument>
+                                        <argument>-l</argument>
+                                        <argument>${settings.localRepository}</argument>
+                                        <!-- Only need stuff here that is NOT included in the general release -->
+                                        <argument>--no-default-hadoop</argument>
+                                        <argument>-c</argument>
+                                        <argument>io.druid.extensions:druid-caffeine-cache</argument>
+                                    </arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

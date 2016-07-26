@@ -60,7 +60,7 @@ public class ConvertSegmentTaskTest
         ImmutableMap.<String, Object>of(),
         ImmutableList.<String>of(),
         ImmutableList.<String>of(),
-        new NoneShardSpec(),
+        NoneShardSpec.instance(),
         9,
         102937
     );

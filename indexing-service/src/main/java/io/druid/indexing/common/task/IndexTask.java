@@ -214,7 +214,7 @@ public class IndexTask extends AbstractFixedIntervalTask
             shardSpecs.add(new HashBasedNumberedShardSpec(i, numShards, null, jsonMapper));
           }
         } else {
-          shardSpecs = ImmutableList.<ShardSpec>of(new NoneShardSpec());
+          shardSpecs = ImmutableList.<ShardSpec>of(NoneShardSpec.instance());
         }
       }
       for (final ShardSpec shardSpec : shardSpecs) {
@@ -301,7 +301,7 @@ public class IndexTask extends AbstractFixedIntervalTask
     final List<ShardSpec> shardSpecs = Lists.newArrayList();
 
     if (numberOfShards == 1) {
-      shardSpecs.add(new NoneShardSpec());
+      shardSpecs.add(NoneShardSpec.instance());
     } else {
       for (int i = 0; i < numberOfShards; ++i) {
         shardSpecs.add(new HashBasedNumberedShardSpec(i, numberOfShards, null, jsonMapper));
@@ -339,10 +339,17 @@ public class IndexTask extends AbstractFixedIntervalTask
     final List<DataSegment> pushedSegments = new CopyOnWriteArrayList<DataSegment>();
     final DataSegmentPusher wrappedDataSegmentPusher = new DataSegmentPusher()
     {
+      @Deprecated
       @Override
       public String getPathForHadoop(String dataSource)
       {
-        return toolbox.getSegmentPusher().getPathForHadoop(dataSource);
+        return getPathForHadoop();
+      }
+
+      @Override
+      public String getPathForHadoop()
+      {
+        return toolbox.getSegmentPusher().getPathForHadoop();
       }
 
       @Override

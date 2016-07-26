@@ -21,6 +21,7 @@ package io.druid.server.coordinator;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
+import com.metamx.common.IAE;
 
 import java.util.Collection;
 import java.util.HashSet;
@@ -38,6 +39,7 @@ public class CoordinatorDynamicConfig
   private final int replicationThrottleLimit;
   private final int balancerComputeThreads;
   private final boolean emitBalancingStats;
+  private final boolean killAllDataSources;
   private final Set<String> killDataSourceWhitelist;
 
   @JsonCreator
@@ -54,7 +56,8 @@ public class CoordinatorDynamicConfig
       // Type is Object here so that we can support both string and list as
       // coordinator console can not send array of strings in the update request.
       // See https://github.com/druid-io/druid/issues/3055
-      @JsonProperty("killDataSourceWhitelist") Object killDataSourceWhitelist
+      @JsonProperty("killDataSourceWhitelist") Object killDataSourceWhitelist,
+      @JsonProperty("killAllDataSources") boolean killAllDataSources
   )
   {
     this.maxSegmentsToMove = maxSegmentsToMove;
@@ -65,6 +68,8 @@ public class CoordinatorDynamicConfig
     this.replicationThrottleLimit = replicationThrottleLimit;
     this.emitBalancingStats = emitBalancingStats;
     this.balancerComputeThreads = Math.max(balancerComputeThreads, 1);
+
+    this.killAllDataSources = killAllDataSources;
 
     if (killDataSourceWhitelist instanceof String) {
       String[] tmp = ((String) killDataSourceWhitelist).split(",");
@@ -79,6 +84,10 @@ public class CoordinatorDynamicConfig
       this.killDataSourceWhitelist = ImmutableSet.copyOf(((Collection) killDataSourceWhitelist));
     } else {
       this.killDataSourceWhitelist = ImmutableSet.of();
+    }
+
+    if (this.killAllDataSources && !this.killDataSourceWhitelist.isEmpty()) {
+      throw new IAE("can't have killAllDataSources and non-empty killDataSourceWhitelist");
     }
   }
 
@@ -136,6 +145,12 @@ public class CoordinatorDynamicConfig
     return killDataSourceWhitelist;
   }
 
+  @JsonProperty
+  public boolean isKillAllDataSources()
+  {
+    return killAllDataSources;
+  }
+
   @Override
   public String toString()
   {
@@ -149,6 +164,7 @@ public class CoordinatorDynamicConfig
            ", balancerComputeThreads=" + balancerComputeThreads +
            ", emitBalancingStats=" + emitBalancingStats +
            ", killDataSourceWhitelist=" + killDataSourceWhitelist +
+           ", killAllDataSources=" + killAllDataSources +
            '}';
   }
 
@@ -188,6 +204,9 @@ public class CoordinatorDynamicConfig
     if (emitBalancingStats != that.emitBalancingStats) {
       return false;
     }
+    if (killAllDataSources != that.killAllDataSources) {
+      return false;
+    }
     return !(killDataSourceWhitelist != null
              ? !killDataSourceWhitelist.equals(that.killDataSourceWhitelist)
              : that.killDataSourceWhitelist != null);
@@ -205,6 +224,7 @@ public class CoordinatorDynamicConfig
     result = 31 * result + replicationThrottleLimit;
     result = 31 * result + balancerComputeThreads;
     result = 31 * result + (emitBalancingStats ? 1 : 0);
+    result = 31 * result + (killAllDataSources ? 1 : 0);
     result = 31 * result + (killDataSourceWhitelist != null ? killDataSourceWhitelist.hashCode() : 0);
     return result;
   }
@@ -220,10 +240,11 @@ public class CoordinatorDynamicConfig
     private boolean emitBalancingStats;
     private int balancerComputeThreads;
     private Set<String> killDataSourceWhitelist;
+    private boolean killAllDataSources;
 
     public Builder()
     {
-      this(15 * 60 * 1000L, 524288000L, 100, 5, 15, 10, 1, false, null);
+      this(15 * 60 * 1000L, 524288000L, 100, 5, 15, 10, 1, false, null, false);
     }
 
     private Builder(
@@ -235,7 +256,8 @@ public class CoordinatorDynamicConfig
         int replicationThrottleLimit,
         int balancerComputeThreads,
         boolean emitBalancingStats,
-        Set<String> killDataSourceWhitelist
+        Set<String> killDataSourceWhitelist,
+        boolean killAllDataSources
     )
     {
       this.millisToWaitBeforeDeleting = millisToWaitBeforeDeleting;
@@ -247,6 +269,7 @@ public class CoordinatorDynamicConfig
       this.emitBalancingStats = emitBalancingStats;
       this.balancerComputeThreads = balancerComputeThreads;
       this.killDataSourceWhitelist = killDataSourceWhitelist;
+      this.killAllDataSources = killAllDataSources;
     }
 
     public Builder withMillisToWaitBeforeDeleting(long millisToWaitBeforeDeleting)
@@ -308,7 +331,8 @@ public class CoordinatorDynamicConfig
           replicationThrottleLimit,
           balancerComputeThreads,
           emitBalancingStats,
-          killDataSourceWhitelist
+          killDataSourceWhitelist,
+          killAllDataSources
       );
     }
   }

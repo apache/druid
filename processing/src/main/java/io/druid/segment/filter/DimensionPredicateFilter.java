@@ -24,6 +24,8 @@ import com.google.common.base.Predicate;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
+import io.druid.query.filter.DruidLongPredicate;
+import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
@@ -33,26 +35,52 @@ import io.druid.query.filter.ValueMatcherFactory;
 public class DimensionPredicateFilter implements Filter
 {
   private final String dimension;
-  private final Predicate<String> predicate;
+  private final DruidPredicateFactory predicateFactory;
+  private final String basePredicateString;
+  private final ExtractionFn extractionFn;
 
   public DimensionPredicateFilter(
       final String dimension,
-      final Predicate<String> predicate,
+      final DruidPredicateFactory predicateFactory,
       final ExtractionFn extractionFn
   )
   {
-    Preconditions.checkNotNull(predicate, "predicate");
+    Preconditions.checkNotNull(predicateFactory, "predicateFactory");
     this.dimension = Preconditions.checkNotNull(dimension, "dimension");
+    this.basePredicateString = predicateFactory.toString();
+    this.extractionFn = extractionFn;
 
     if (extractionFn == null) {
-      this.predicate = predicate;
+      this.predicateFactory = predicateFactory;
     } else {
-      this.predicate = new Predicate<String>()
+      this.predicateFactory = new DruidPredicateFactory()
       {
+        final Predicate<String> baseStringPredicate = predicateFactory.makeStringPredicate();
+
         @Override
-        public boolean apply(String input)
+        public Predicate<String> makeStringPredicate()
         {
-          return predicate.apply(extractionFn.apply(input));
+          return new Predicate<String>()
+          {
+            @Override
+            public boolean apply(String input)
+            {
+              return baseStringPredicate.apply(extractionFn.apply(input));
+            }
+          };
+        }
+
+        @Override
+        public DruidLongPredicate makeLongPredicate()
+        {
+          return new DruidLongPredicate()
+          {
+            @Override
+            public boolean applyLong(long input)
+            {
+              return baseStringPredicate.apply(extractionFn.apply(input));
+            }
+          };
         }
       };
     }
@@ -61,12 +89,28 @@ public class DimensionPredicateFilter implements Filter
   @Override
   public ImmutableBitmap getBitmapIndex(final BitmapIndexSelector selector)
   {
-    return Filters.matchPredicate(dimension, selector, predicate);
+    return Filters.matchPredicate(dimension, selector, predicateFactory.makeStringPredicate());
   }
 
   @Override
   public ValueMatcher makeMatcher(ValueMatcherFactory factory)
   {
-    return factory.makeValueMatcher(dimension, predicate);
+    return factory.makeValueMatcher(dimension, predicateFactory);
+  }
+
+  @Override
+  public boolean supportsBitmapIndex(BitmapIndexSelector selector)
+  {
+    return selector.getBitmapIndex(dimension) != null;
+  }
+
+  @Override
+  public String toString()
+  {
+    if (extractionFn != null) {
+      return String.format("%s(%s) = %s", extractionFn, dimension, basePredicateString);
+    } else {
+      return String.format("%s = %s", dimension, basePredicateString);
+    }
   }
 }

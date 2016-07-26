@@ -21,6 +21,7 @@ package io.druid.server;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.guava.Sequence;
@@ -28,9 +29,12 @@ import com.metamx.common.guava.Sequences;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.concurrent.Execs;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.query.MapQueryToolChestWarehouse;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QuerySegmentWalker;
+import io.druid.query.QueryToolChest;
+import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.SegmentDescriptor;
 import io.druid.server.initialization.ServerConfig;
 import io.druid.server.log.NoopRequestLogger;
@@ -63,6 +67,7 @@ import java.util.concurrent.Executors;
  */
 public class QueryResourceTest
 {
+  private static final QueryToolChestWarehouse warehouse = new MapQueryToolChestWarehouse(ImmutableMap.<Class<? extends Query>, QueryToolChest>of());
   private static final ObjectMapper jsonMapper = new DefaultObjectMapper();
   public static final ServerConfig serverConfig = new ServerConfig()
   {
@@ -125,6 +130,7 @@ public class QueryResourceTest
     EasyMock.expect(testServletRequest.getRemoteAddr()).andReturn("localhost").anyTimes();
     queryManager = new QueryManager();
     queryResource = new QueryResource(
+        warehouse,
         serverConfig,
         jsonMapper,
         jsonMapper,
@@ -198,6 +204,7 @@ public class QueryResourceTest
     EasyMock.replay(testServletRequest);
 
     queryResource = new QueryResource(
+        warehouse,
         serverConfig,
         jsonMapper,
         jsonMapper,
@@ -245,6 +252,10 @@ public class QueryResourceTest
             // WRITE corresponds to cancellation of query
             if (action.equals(Action.READ)) {
               try {
+                // Countdown startAwaitLatch as we want query cancellation to happen
+                // after we enter isAuthorized method so that we can handle the
+                // InterruptedException here because of query cancellation
+                startAwaitLatch.countDown();
                 waitForCancellationLatch.await();
               }
               catch (InterruptedException e) {
@@ -263,6 +274,7 @@ public class QueryResourceTest
     EasyMock.replay(testServletRequest);
 
     queryResource = new QueryResource(
+        warehouse,
         serverConfig,
         jsonMapper,
         jsonMapper,
@@ -287,7 +299,6 @@ public class QueryResourceTest
           public void run()
           {
             try {
-              startAwaitLatch.countDown();
               Response response = queryResource.doPost(
                   new ByteArrayInputStream(queryString.getBytes("UTF-8")),
                   null,
@@ -359,6 +370,7 @@ public class QueryResourceTest
     EasyMock.replay(testServletRequest);
 
     queryResource = new QueryResource(
+        warehouse,
         serverConfig,
         jsonMapper,
         jsonMapper,

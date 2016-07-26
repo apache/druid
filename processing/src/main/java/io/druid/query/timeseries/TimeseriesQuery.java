@@ -62,7 +62,7 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
     super(dataSource, querySegmentSpec, descending, context);
     this.dimFilter = dimFilter;
     this.granularity = granularity;
-    this.aggregatorSpecs = aggregatorSpecs;
+    this.aggregatorSpecs = aggregatorSpecs == null ? ImmutableList.<AggregatorFactory>of() : aggregatorSpecs;
     this.postAggregatorSpecs = postAggregatorSpecs == null ? ImmutableList.<PostAggregator>of() : postAggregatorSpecs;
 
     Queries.verifyAggregations(this.aggregatorSpecs, this.postAggregatorSpecs);
@@ -72,6 +72,12 @@ public class TimeseriesQuery extends BaseQuery<Result<TimeseriesResultValue>>
   public boolean hasFilters()
   {
     return dimFilter != null;
+  }
+
+  @Override
+  public DimFilter getFilter()
+  {
+    return dimFilter;
   }
 
   @Override

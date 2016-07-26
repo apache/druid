@@ -156,7 +156,7 @@ public abstract class BaseFilterTest
 
     final Map<String, BitmapSerdeFactory> bitmapSerdeFactories = ImmutableMap.<String, BitmapSerdeFactory>of(
         "concise", new ConciseBitmapSerdeFactory(),
-        "roaring", new RoaringBitmapSerdeFactory()
+        "roaring", new RoaringBitmapSerdeFactory(true)
     );
 
     final Map<String, IndexMerger> indexMergers = ImmutableMap.<String, IndexMerger>of(
@@ -252,7 +252,7 @@ public abstract class BaseFilterTest
     return constructors;
   }
 
-  private DimFilter maybeOptimize(final DimFilter dimFilter)
+  protected DimFilter maybeOptimize(final DimFilter dimFilter)
   {
     if (dimFilter == null) {
       return null;
@@ -260,7 +260,7 @@ public abstract class BaseFilterTest
     return optimize ? dimFilter.optimize() : dimFilter;
   }
 
-  private Sequence<Cursor> makeCursorSequence(final Filter filter)
+  protected Sequence<Cursor> makeCursorSequence(final Filter filter)
   {
     final Sequence<Cursor> cursors = adapter.makeCursors(
         filter,

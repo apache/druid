@@ -24,8 +24,13 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
+import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Range;
+import com.google.common.collect.RangeSet;
+import com.google.common.collect.TreeRangeSet;
+import com.google.common.primitives.Longs;
 import com.metamx.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.lookup.LookupExtractionFn;
@@ -34,15 +39,22 @@ import io.druid.segment.filter.InFilter;
 
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
 public class InDimFilter implements DimFilter
 {
+  // determined through benchmark that binary search on long[] is faster than HashSet until ~16 elements
+  // Hashing threshold is not applied to String for now, String still uses ImmutableSortedSet
+  public static final int LONG_HASHING_THRESHOLD = 16;
+
   private final ImmutableSortedSet<String> values;
   private final String dimension;
   private final ExtractionFn extractionFn;
+  private final Supplier<DruidLongPredicate> longPredicateSupplier;
 
   @JsonCreator
   public InDimFilter(
@@ -68,6 +80,7 @@ public class InDimFilter implements DimFilter
     );
     this.dimension = dimension;
     this.extractionFn = extractionFn;
+    this.longPredicateSupplier = getLongPredicateSupplier();
   }
 
   @JsonProperty
@@ -106,11 +119,11 @@ public class InDimFilter implements DimFilter
                                                     + dimensionBytes.length
                                                     + valuesBytesSize
                                                     + extractionFnBytes.length)
-                                          .put(DimFilterCacheHelper.IN_CACHE_ID)
+                                          .put(DimFilterUtils.IN_CACHE_ID)
                                           .put(dimensionBytes)
-                                          .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                                          .put(DimFilterUtils.STRING_SEPARATOR)
                                           .put(extractionFnBytes)
-                                          .put(DimFilterCacheHelper.STRING_SEPARATOR);
+                                          .put(DimFilterUtils.STRING_SEPARATOR);
     for (byte[] bytes : valuesBytes) {
       filterCacheKey.put(bytes)
                     .put((byte) 0xFF);
@@ -167,7 +180,20 @@ public class InDimFilter implements DimFilter
   @Override
   public Filter toFilter()
   {
-    return new InFilter(dimension, values, extractionFn);
+    return new InFilter(dimension, values, longPredicateSupplier, extractionFn);
+  }
+
+  @Override
+  public RangeSet<String> getDimensionRangeSet(String dimension)
+  {
+    if (!Objects.equals(getDimension(), dimension) || getExtractionFn() != null) {
+      return null;
+    }
+    RangeSet<String> retSet = TreeRangeSet.create();
+    for (String value : values) {
+      retSet.add(Range.singleton(Strings.nullToEmpty(value)));
+    }
+    return retSet;
   }
 
   @Override
@@ -199,5 +225,81 @@ public class InDimFilter implements DimFilter
     result = 31 * result + dimension.hashCode();
     result = 31 * result + (extractionFn != null ? extractionFn.hashCode() : 0);
     return result;
+  }
+
+  // As the set of filtered values can be large, parsing them as longs should be done only if needed, and only once.
+  // Pass in a common long predicate supplier to all filters created by .toFilter(), so that
+  // we only compute the long hashset/array once per query.
+  // This supplier must be thread-safe, since this DimFilter will be accessed in the query runners.
+  private Supplier<DruidLongPredicate> getLongPredicateSupplier()
+  {
+    return new Supplier<DruidLongPredicate>()
+    {
+      private final Object initLock = new Object();
+      private volatile boolean longsInitialized = false;
+      private volatile boolean useLongHash;
+      private volatile long[] longArray;
+      private volatile HashSet<Long> longHashSet;
+
+      private void initLongValues()
+      {
+        if (longsInitialized) {
+          return;
+        }
+
+        synchronized (initLock) {
+          if (longsInitialized) {
+            return;
+          }
+
+          List<Long> longs = new ArrayList<>();
+          for (String value : values) {
+            Long longValue = Longs.tryParse(value);
+            if (longValue != null) {
+              longs.add(longValue);
+            }
+          }
+
+          useLongHash = longs.size() > LONG_HASHING_THRESHOLD;
+          if (useLongHash) {
+            longHashSet = new HashSet<Long>(longs);
+          } else {
+            longArray = new long[longs.size()];
+            for (int i = 0; i < longs.size(); i++) {
+              longArray[i] = longs.get(i).longValue();
+            }
+            Arrays.sort(longArray);
+          }
+
+          longsInitialized = true;
+        }
+      }
+
+      @Override
+      public DruidLongPredicate get()
+      {
+        initLongValues();
+
+        if (useLongHash) {
+          return new DruidLongPredicate()
+          {
+            @Override
+            public boolean applyLong(long input)
+            {
+              return longHashSet.contains(input);
+            }
+          };
+        } else {
+          return new DruidLongPredicate()
+          {
+            @Override
+            public boolean applyLong(long input)
+            {
+              return Arrays.binarySearch(longArray, input) >= 0;
+            }
+          };
+        }
+      }
+    };
   }
 }

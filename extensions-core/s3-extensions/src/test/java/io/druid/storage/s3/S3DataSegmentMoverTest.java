@@ -53,7 +53,7 @@ public class S3DataSegmentMoverTest
       ),
       ImmutableList.of("dim1", "dim1"),
       ImmutableList.of("metric1", "metric2"),
-      new NoneShardSpec(),
+      NoneShardSpec.instance(),
       0,
       1
   );
@@ -128,7 +128,7 @@ public class S3DataSegmentMoverTest
         ),
         ImmutableList.of("dim1", "dim1"),
         ImmutableList.of("metric1", "metric2"),
-        new NoneShardSpec(),
+        NoneShardSpec.instance(),
         0,
         1
     ), ImmutableMap.<String, Object>of("bucket", "DOES NOT EXIST", "baseKey", "baseKey"));
@@ -151,7 +151,7 @@ public class S3DataSegmentMoverTest
         ),
         ImmutableList.of("dim1", "dim1"),
         ImmutableList.of("metric1", "metric2"),
-        new NoneShardSpec(),
+        NoneShardSpec.instance(),
         0,
         1
     ), ImmutableMap.<String, Object>of("bucket", "DOES NOT EXIST", "baseKey", "baseKey2"));

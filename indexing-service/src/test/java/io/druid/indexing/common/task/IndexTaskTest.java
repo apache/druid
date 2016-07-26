@@ -117,7 +117,8 @@ public class IndexTaskTest
                             ),
                             null,
                             Arrays.asList("ts", "dim", "val")
-                        )
+                        ),
+                        null
                     ),
                     Map.class
                 ),
@@ -189,7 +190,8 @@ public class IndexTaskTest
                             ),
                             null,
                             Arrays.asList("ts", "dim", "val")
-                        )
+                        ),
+                        null
                     ),
                     Map.class
                 ),
@@ -242,8 +244,15 @@ public class IndexTaskTest
           }
         }, null, new DataSegmentPusher()
         {
+          @Deprecated
           @Override
           public String getPathForHadoop(String dataSource)
+          {
+            return getPathForHadoop();
+          }
+
+          @Override
+          public String getPathForHadoop()
           {
             return null;
           }
@@ -295,7 +304,8 @@ public class IndexTaskTest
                             ),
                             null,
                             Arrays.asList("ts", "dim", "val")
-                        )
+                        ),
+                        null
                     ),
                     Map.class
                 ),

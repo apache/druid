@@ -54,7 +54,7 @@ There are 7 main parts to a timeseries query:
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
 |granularity|Defines the granularity to bucket query results. See [Granularities](../querying/granularities.html)|yes|
 |filter|See [Filters](../querying/filters.html)|no|
-|aggregations|See [Aggregations](../querying/aggregations.html)|yes|
+|aggregations|See [Aggregations](../querying/aggregations.html)|no|
 |postAggregations|See [Post Aggregations](../querying/post-aggregations.html)|no|
 |context|See [Context](../querying/query-context.html)|no|
 

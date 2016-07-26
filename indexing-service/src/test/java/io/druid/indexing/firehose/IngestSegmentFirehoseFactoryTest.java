@@ -213,8 +213,15 @@ public class IngestSegmentFirehoseFactoryTest
         newMockEmitter(),
         new DataSegmentPusher()
         {
+          @Deprecated
           @Override
           public String getPathForHadoop(String dataSource)
+          {
+            return getPathForHadoop();
+          }
+
+          @Override
+          public String getPathForHadoop()
           {
             throw new UnsupportedOperationException();
           }
@@ -291,7 +298,9 @@ public class IngestSegmentFirehoseFactoryTest
                     DimensionsSpec.getDefaultSchemas(ImmutableList.<String>of()),
                     ImmutableList.of(DIM_FLOAT_NAME, DIM_LONG_NAME),
                     ImmutableList.<SpatialDimensionSchema>of()
-                )
+                ),
+                null,
+                null
             )
         )
     )) {
@@ -409,7 +418,9 @@ public class IngestSegmentFirehoseFactoryTest
               DimensionsSpec.getDefaultSchemas(ImmutableList.of(DIM_NAME)),
               ImmutableList.of(DIM_FLOAT_NAME, DIM_LONG_NAME),
               ImmutableList.<SpatialDimensionSchema>of()
-          )
+          ),
+          null,
+          null
       )
   );
 

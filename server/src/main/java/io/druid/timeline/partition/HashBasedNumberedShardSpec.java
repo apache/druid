@@ -28,7 +28,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Range;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import io.druid.data.input.InputRow;
@@ -36,6 +38,7 @@ import io.druid.data.input.Rows;
 
 import javax.annotation.Nullable;
 import java.util.List;
+import java.util.Map;
 
 public class HashBasedNumberedShardSpec extends NumberedShardSpec
 {
@@ -120,5 +123,11 @@ public class HashBasedNumberedShardSpec extends NumberedShardSpec
         return shardSpecs.get(index);
       }
     };
+  }
+
+  @Override
+  public Map<String, Range<String>> getDomain()
+  {
+    return ImmutableMap.of();
   }
 }

@@ -26,6 +26,7 @@ import com.google.common.collect.Maps;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.MapUtils;
+import com.metamx.common.StringUtils;
 import com.metamx.common.logger.Logger;
 import io.druid.segment.loading.DataSegmentMover;
 import io.druid.segment.loading.SegmentLoadingException;
@@ -133,18 +134,33 @@ public class S3DataSegmentMover implements DataSegmentMover
                     s3Object.getStorageClass().equals(S3Object.STORAGE_CLASS_GLACIER)) {
                   log.warn("Cannot move file[s3://%s/%s] of storage class glacier, skipping.", s3Bucket, s3Path);
                 } else {
-                  log.info(
-                      "Moving file[s3://%s/%s] to [s3://%s/%s]",
-                      s3Bucket,
+                  final String copyMsg = StringUtils.safeFormat(
+                      "[s3://%s/%s] to [s3://%s/%s]", s3Bucket,
                       s3Path,
                       targetS3Bucket,
                       targetS3Path
+                  );
+                  log.info(
+                      "Moving file %s",
+                      copyMsg
                   );
                   final S3Object target = new S3Object(targetS3Path);
                   if (!config.getDisableAcl()) {
                     target.setAcl(GSAccessControlList.REST_CANNED_BUCKET_OWNER_FULL_CONTROL);
                   }
-                  s3Client.moveObject(s3Bucket, s3Path, targetS3Bucket, target, false);
+                  final Map<String, Object> copyResult = s3Client.moveObject(
+                      s3Bucket,
+                      s3Path,
+                      targetS3Bucket,
+                      target,
+                      false
+                  );
+                  if (copyResult != null && copyResult.containsKey("DeleteException")) {
+                    log.error("Error Deleting data after copy %s: %s", copyMsg, copyResult);
+                    // Maybe retry deleting here?
+                  } else {
+                    log.debug("Finished moving file %s", copyMsg);
+                  }
                 }
               } else {
                 // ensure object exists in target location

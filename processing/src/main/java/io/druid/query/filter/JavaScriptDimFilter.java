@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
+import com.google.common.collect.RangeSet;
 import com.metamx.common.ISE;
 import com.metamx.common.StringUtils;
 import io.druid.js.JavaScriptConfig;
@@ -33,6 +34,7 @@ import org.mozilla.javascript.Context;
 import org.mozilla.javascript.Function;
 import org.mozilla.javascript.ScriptableObject;
 
+import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
 
 public class JavaScriptDimFilter implements DimFilter
@@ -42,7 +44,7 @@ public class JavaScriptDimFilter implements DimFilter
   private final ExtractionFn extractionFn;
   private final JavaScriptConfig config;
 
-  private final JavaScriptPredicate predicate;
+  private final JavaScriptPredicateFactory predicateFactory;
 
   @JsonCreator
   public JavaScriptDimFilter(
@@ -60,9 +62,9 @@ public class JavaScriptDimFilter implements DimFilter
     this.config = config;
 
     if (config.isDisabled()) {
-      this.predicate = null;
+      this.predicateFactory = null;
     } else {
-      this.predicate = new JavaScriptPredicate(function, extractionFn);
+      this.predicateFactory = new JavaScriptPredicateFactory(function, extractionFn);
     }
   }
 
@@ -92,11 +94,11 @@ public class JavaScriptDimFilter implements DimFilter
     byte[] extractionFnBytes = extractionFn == null ? new byte[0] : extractionFn.getCacheKey();
 
     return ByteBuffer.allocate(3 + dimensionBytes.length + functionBytes.length + extractionFnBytes.length)
-                     .put(DimFilterCacheHelper.JAVASCRIPT_CACHE_ID)
+                     .put(DimFilterUtils.JAVASCRIPT_CACHE_ID)
                      .put(dimensionBytes)
-                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                     .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(functionBytes)
-                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                     .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(extractionFnBytes)
                      .array();
   }
@@ -114,7 +116,13 @@ public class JavaScriptDimFilter implements DimFilter
       throw new ISE("JavaScript is disabled");
     }
 
-    return new JavaScriptFilter(dimension, predicate);
+    return new JavaScriptFilter(dimension, predicateFactory);
+  }
+
+  @Override
+  public RangeSet<String> getDimensionRangeSet(String dimension)
+  {
+    return null;
   }
 
   @Override
@@ -158,14 +166,14 @@ public class JavaScriptDimFilter implements DimFilter
     return result;
   }
 
-  public static class JavaScriptPredicate implements Predicate<String>
+  public static class JavaScriptPredicateFactory implements DruidPredicateFactory
   {
     final ScriptableObject scope;
     final Function fnApply;
     final String script;
     final ExtractionFn extractionFn;
 
-    public JavaScriptPredicate(final String script, final ExtractionFn extractionFn)
+    public JavaScriptPredicateFactory(final String script, final ExtractionFn extractionFn)
     {
       Preconditions.checkNotNull(script, "script must not be null");
       this.script = script;
@@ -184,7 +192,33 @@ public class JavaScriptDimFilter implements DimFilter
     }
 
     @Override
-    public boolean apply(final String input)
+    public Predicate<String> makeStringPredicate()
+    {
+      return new Predicate<String>()
+      {
+        @Override
+        public boolean apply(String input)
+        {
+          return applyObject(input);
+        }
+      };
+    }
+
+    @Override
+    public DruidLongPredicate makeLongPredicate()
+    {
+      return new DruidLongPredicate()
+      {
+        @Override
+        public boolean applyLong(long input)
+        {
+          // Can't avoid boxing here because the Mozilla JS Function.call() only accepts Object[]
+          return applyObject(input);
+        }
+      };
+    }
+
+    public boolean applyObject(final Object input)
     {
       // one and only one context per thread
       final Context cx = Context.enter();
@@ -196,12 +230,12 @@ public class JavaScriptDimFilter implements DimFilter
       }
     }
 
-    public boolean applyInContext(Context cx, String input)
+    public boolean applyInContext(Context cx, Object input)
     {
       if (extractionFn != null) {
         input = extractionFn.apply(input);
       }
-      return Context.toBoolean(fnApply.call(cx, scope, scope, new String[]{input}));
+      return Context.toBoolean(fnApply.call(cx, scope, scope, new Object[]{input}));
     }
 
     @Override
@@ -214,7 +248,7 @@ public class JavaScriptDimFilter implements DimFilter
         return false;
       }
 
-      JavaScriptPredicate that = (JavaScriptPredicate) o;
+      JavaScriptPredicateFactory that = (JavaScriptPredicateFactory) o;
 
       if (!script.equals(that.script)) {
         return false;

@@ -50,7 +50,7 @@ public class ImmutableSegmentLoadInfoTest
             null,
             null,
             null,
-            new NoneShardSpec(),
+            NoneShardSpec.instance(),
             0, 0
         ), Sets.newHashSet(new DruidServerMetadata("a", "host", 10, "type", "tier", 1))
     );

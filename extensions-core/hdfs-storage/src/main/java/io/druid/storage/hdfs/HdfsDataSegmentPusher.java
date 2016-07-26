@@ -63,8 +63,15 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
     log.info("Configured HDFS as deep storage");
   }
 
+  @Deprecated
   @Override
   public String getPathForHadoop(String dataSource)
+  {
+    return getPathForHadoop();
+  }
+
+  @Override
+  public String getPathForHadoop()
   {
     return new Path(config.getStorageDirectory()).toUri().toString();
   }

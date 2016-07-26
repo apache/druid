@@ -1,6 +1,6 @@
 #!/bin/bash -eu
 
-usage="Usage: middleManager.sh (start|stop)"
+usage="Usage: middleManager.sh (start|stop|status)"
 
 if [ $# -lt 1 ]; then
   echo $usage

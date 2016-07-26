@@ -1,6 +1,6 @@
 #!/bin/bash -eu
 
-usage="Usage: overlord.sh (start|stop)"
+usage="Usage: overlord.sh (start|stop|status)"
 
 if [ $# -lt 1 ]; then
   echo $usage

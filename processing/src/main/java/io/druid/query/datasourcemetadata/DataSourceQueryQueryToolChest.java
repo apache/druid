@@ -31,6 +31,7 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.query.BySegmentSkippingQueryRunner;
 import io.druid.query.CacheStrategy;
 import io.druid.query.DataSourceUtil;
+import io.druid.query.DruidMetrics;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
@@ -104,7 +105,7 @@ public class DataSourceQueryQueryToolChest
   @Override
   public ServiceMetricEvent.Builder makeMetricBuilder(DataSourceMetadataQuery query)
   {
-    return new ServiceMetricEvent.Builder()
+    return DruidMetrics.makePartialQueryTimeMetric(query)
         .setDimension("dataSource", DataSourceUtil.getMetricName(query.getDataSource()))
         .setDimension("type", query.getType());
   }

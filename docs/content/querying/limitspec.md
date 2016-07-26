@@ -23,7 +23,8 @@ OrderByColumnSpecs indicate how to do order by operations. Each order-by conditi
 ```json 
 {
     "dimension" : "<Any dimension or metric name>",
-    "direction" : <"ascending"|"descending">
+    "direction" : <"ascending"|"descending">,
+    "dimensionOrder" : <"lexicographic(default)"|"alphanumeric"|"strlen">
 }
 ```
 

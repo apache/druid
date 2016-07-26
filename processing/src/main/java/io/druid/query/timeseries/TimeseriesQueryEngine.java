@@ -25,6 +25,7 @@ import io.druid.query.QueryRunnerHelper;
 import io.druid.query.Result;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.filter.Filter;
 import io.druid.segment.Cursor;
 import io.druid.segment.SegmentMissingException;
 import io.druid.segment.StorageAdapter;
@@ -44,10 +45,12 @@ public class TimeseriesQueryEngine
       );
     }
 
+    final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getDimensionsFilter()));
+
     return QueryRunnerHelper.makeCursorBasedQuery(
         adapter,
         query.getQuerySegmentSpec().getIntervals(),
-        Filters.toFilter(query.getDimensionsFilter()),
+        filter,
         query.isDescending(),
         query.getGranularity(),
         new Function<Cursor, Result<TimeseriesResultValue>>()

@@ -96,7 +96,7 @@ public class DatasourcePathSpecTest
                 ),
                 ImmutableList.of("product"),
                 ImmutableList.of("visited_sum", "unique_hosts"),
-                new NoneShardSpec(),
+                NoneShardSpec.instance(),
                 9,
                 12334
             )
@@ -112,7 +112,7 @@ public class DatasourcePathSpecTest
                 ),
                 ImmutableList.of("product"),
                 ImmutableList.of("visited_sum", "unique_hosts"),
-                new NoneShardSpec(),
+                NoneShardSpec.instance(),
                 9,
                 12335
             )
@@ -268,7 +268,8 @@ public class DatasourcePathSpecTest
                             new DimensionsSpec(null, null, null),
                             null,
                             ImmutableList.of("timestamp", "host", "visited")
-                        )
+                        ),
+                        null
                     ),
                     Map.class
                 ),

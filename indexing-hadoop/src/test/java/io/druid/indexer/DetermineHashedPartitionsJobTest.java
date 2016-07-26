@@ -126,7 +126,8 @@ public class DetermineHashedPartitionsJobTest
                             "placementish",
                             "index"
                         )
-                    )
+                    ),
+                    null
                 ),
                 Map.class
             ),

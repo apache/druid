@@ -87,6 +87,12 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
   }
 
   @Override
+  public DimFilter getFilter()
+  {
+    return dimFilter;
+  }
+
+  @Override
   public String getType()
   {
     return Query.SELECT;
