@@ -135,7 +135,6 @@ public class LoggingRequestLoggerTest
     Assert.assertEquals("datasource", map.get("dataSource"));
     Assert.assertEquals("PT86400S", map.get("duration"));
     Assert.assertEquals("false", map.get("hasFilters"));
-    Assert.assertEquals("Ordering.natural()", map.get("resultOrdering"));
     Assert.assertEquals("fake", map.get("queryType"));
     Assert.assertEquals("some.host.tld", map.get("remoteAddr"));
     Assert.assertEquals("false", map.get("descending"));
@@ -151,7 +150,6 @@ public class LoggingRequestLoggerTest
     Assert.assertEquals("datasource", map.get("dataSource"));
     Assert.assertEquals("PT86400S", map.get("duration"));
     Assert.assertEquals("false", map.get("hasFilters"));
-    Assert.assertEquals("Ordering.natural()", map.get("resultOrdering"));
     Assert.assertEquals("fake", map.get("queryType"));
     Assert.assertEquals("some.host.tld", map.get("remoteAddr"));
     Assert.assertEquals("false", map.get("descending"));
