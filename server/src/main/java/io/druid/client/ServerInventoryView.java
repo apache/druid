@@ -19,6 +19,7 @@
 
 package io.druid.client;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Charsets;
@@ -100,7 +101,7 @@ public abstract class ServerInventoryView<InventoryType> implements ServerView, 
           public InventoryType deserializeInventory(byte[] bytes)
           {
             try {
-              return internInventory(jsonMapper.<InventoryType>readValue(bytes, typeReference));
+              return jsonMapper.readValue(bytes, typeReference);
             }
             catch (IOException e) {
               CharBuffer.wrap(StringUtils.fromUtf8(bytes).toCharArray());
@@ -191,15 +192,6 @@ public abstract class ServerInventoryView<InventoryType> implements ServerView, 
         inventoryManager.stop();
       }
     }
-  }
-
-  /**
-   * Optionally override to allow interning the inventory
-   * @param sample The inventory to intern
-   * @return An interned instance equal to sample
-   */
-  protected InventoryType internInventory(InventoryType sample) {
-    return sample;
   }
 
   public boolean isStarted()
