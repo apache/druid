@@ -18,6 +18,7 @@
 package io.druid.segment.realtime.appenderator;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
@@ -85,6 +86,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  */
@@ -108,10 +110,11 @@ public class AppenderatorImpl implements Appenderator
   private final VersionedIntervalTimeline<String, Sink> sinkTimeline = new VersionedIntervalTimeline<>(
       String.CASE_INSENSITIVE_ORDER
   );
+  private final AtomicInteger rowsCurrentlyInMemory = new AtomicInteger();
   private final QuerySegmentWalker texasRanger;
 
   private volatile ListeningExecutorService persistExecutor = null;
-  private volatile ListeningExecutorService mergeExecutor = null;
+  private volatile ListeningExecutorService pushExecutor = null;
   private volatile long nextFlush;
   private volatile FileLock basePersistDirLock = null;
   private volatile FileChannel basePersistDirLockChannel = null;
@@ -188,26 +191,34 @@ public class AppenderatorImpl implements Appenderator
     }
 
     final Sink sink = getOrCreateSink(identifier);
-    int sinkRetVal;
+    final int sinkRowsInMemoryBeforeAdd = sink.getNumRowsInMemory();
+    final int sinkRowsInMemoryAfterAdd;
 
     try {
-      sinkRetVal = sink.add(row);
+      sinkRowsInMemoryAfterAdd = sink.add(row);
     }
     catch (IndexSizeExceededException e) {
-      // Try one more time after swapping, then throw the exception out if it happens again.
-      persistAll(committerSupplier.get());
-      sinkRetVal = sink.add(row);
+      // Uh oh, we can't do anything about this! We can't persist (commit metadata would be out of sync) and we
+      // can't add the row (it just failed). This should never actually happen, though, because we check
+      // sink.canAddRow after returning from add.
+      log.error(e, "Sink for segment[%s] was unexpectedly full!", identifier);
+      throw e;
     }
 
-    if (!sink.canAppendRow() || System.currentTimeMillis() > nextFlush) {
-      persistAll(committerSupplier.get());
-    }
-
-    if (sinkRetVal < 0) {
+    if (sinkRowsInMemoryAfterAdd < 0) {
       throw new SegmentNotWritableException("Attempt to add row to swapped-out sink for segment[%s].", identifier);
-    } else {
-      return sink.getNumRows();
     }
+
+    rowsCurrentlyInMemory.addAndGet(sinkRowsInMemoryAfterAdd - sinkRowsInMemoryBeforeAdd);
+
+    if (!sink.canAppendRow()
+        || System.currentTimeMillis() > nextFlush
+        || rowsCurrentlyInMemory.get() >= tuningConfig.getMaxRowsInMemory()) {
+      // persistAll clears rowsCurrentlyInMemory, no need to update it.
+      persistAll(committerSupplier.get());
+    }
+
+    return sink.getNumRows();
   }
 
   @Override
@@ -226,6 +237,12 @@ public class AppenderatorImpl implements Appenderator
     } else {
       return sink.getNumRows();
     }
+  }
+
+  @VisibleForTesting
+  int getRowsInMemory()
+  {
+    return rowsCurrentlyInMemory.get();
   }
 
   private Sink getOrCreateSink(final SegmentIdentifier identifier)
@@ -410,6 +427,9 @@ public class AppenderatorImpl implements Appenderator
     runExecStopwatch.stop();
     resetNextFlush();
 
+    // NB: The rows are still in memory until they're done persisting, but we only count rows in active indexes.
+    rowsCurrentlyInMemory.set(0);
+
     return future;
   }
 
@@ -455,7 +475,7 @@ public class AppenderatorImpl implements Appenderator
             return new SegmentsAndMetadata(dataSegments, commitMetadata);
           }
         },
-        mergeExecutor
+        pushExecutor
     );
   }
 
@@ -464,9 +484,9 @@ public class AppenderatorImpl implements Appenderator
    * This is useful if we're going to do something that would otherwise potentially break currently in-progress
    * pushes.
    */
-  private ListenableFuture<?> mergeBarrier()
+  private ListenableFuture<?> pushBarrier()
   {
-    return mergeExecutor.submit(
+    return pushExecutor.submit(
         new Runnable()
         {
           @Override
@@ -480,7 +500,7 @@ public class AppenderatorImpl implements Appenderator
 
   /**
    * Merge segment, push to deep storage. Should only be used on segments that have been fully persisted. Must only
-   * be run in the single-threaded mergeExecutor.
+   * be run in the single-threaded pushExecutor.
    *
    * @param identifier sink identifier
    * @param sink       sink to push
@@ -589,7 +609,7 @@ public class AppenderatorImpl implements Appenderator
     try {
       shutdownExecutors();
       Preconditions.checkState(persistExecutor.awaitTermination(365, TimeUnit.DAYS), "persistExecutor not terminated");
-      Preconditions.checkState(mergeExecutor.awaitTermination(365, TimeUnit.DAYS), "mergeExecutor not terminated");
+      Preconditions.checkState(pushExecutor.awaitTermination(365, TimeUnit.DAYS), "pushExecutor not terminated");
     }
     catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -647,9 +667,9 @@ public class AppenderatorImpl implements Appenderator
           )
       );
     }
-    if (mergeExecutor == null) {
+    if (pushExecutor == null) {
       // use a blocking single threaded executor to throttle the firehose when write to disk is slow
-      mergeExecutor = MoreExecutors.listeningDecorator(
+      pushExecutor = MoreExecutors.listeningDecorator(
           Execs.newBlockingSingleThreaded(
               "appenderator_merge_%d", 1
           )
@@ -660,7 +680,7 @@ public class AppenderatorImpl implements Appenderator
   private void shutdownExecutors()
   {
     persistExecutor.shutdownNow();
-    mergeExecutor.shutdownNow();
+    pushExecutor.shutdownNow();
   }
 
   private void resetNextFlush()
@@ -830,12 +850,18 @@ public class AppenderatorImpl implements Appenderator
       final boolean removeOnDiskData
   )
   {
-    // Mark this identifier as dropping, so no future merge tasks will pick it up.
+    // Ensure no future writes will be made to this sink.
+    sink.finishWriting();
+
+    // Mark this identifier as dropping, so no future push tasks will pick it up.
     droppingSinks.add(identifier);
 
-    // Wait for any outstanding merges to finish, then abandon the segment inside the persist thread.
+    // Decrement this sink's rows from rowsCurrentlyInMemory (we only count active sinks).
+    rowsCurrentlyInMemory.addAndGet(-sink.getNumRowsInMemory());
+
+    // Wait for any outstanding pushes to finish, then abandon the segment inside the persist thread.
     return Futures.transform(
-        mergeBarrier(),
+        pushBarrier(),
         new Function<Object, Object>()
         {
           @Nullable

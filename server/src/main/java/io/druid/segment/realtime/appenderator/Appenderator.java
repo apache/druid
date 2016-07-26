@@ -33,7 +33,7 @@ import java.util.List;
  * An Appenderator indexes data. It has some in-memory data and some persisted-on-disk data. It can serve queries on
  * both of those. It can also push data to deep storage. But, it does not decide which segments data should go into.
  * It also doesn't publish segments to the metadata store or monitor handoff; you have to do that yourself!
- * <p/>
+ * <p>
  * Any time you call one of the methods that adds, persists, or pushes data, you must provide a Committer, or a
  * Supplier of one, that represents all data you have given to the Appenderator so far. The Committer will be used when
  * that data has been persisted to disk.
@@ -54,13 +54,13 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
 
   /**
    * Add a row. Must not be called concurrently from multiple threads.
-   * <p/>
+   * <p>
    * If no pending segment exists for the provided identifier, a new one will be created.
-   * <p/>
+   * <p>
    * This method may trigger a {@link #persistAll(Committer)} using the supplied Committer. If it does this, the
    * Committer is guaranteed to be *created* synchronously with the call to add, but will actually be used
    * asynchronously.
-   * <p/>
+   * <p>
    * The add, clear, persistAll, and push methods should all be called from the same thread.
    *
    * @param identifier        the segment into which this row should be added
@@ -95,6 +95,8 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    * Drop all in-memory and on-disk data, and forget any previously-remembered commit metadata. This could be useful if,
    * for some reason, rows have been added that we do not actually want to hand off. Blocks until all data has been
    * cleared. This may take some time, since all pending persists must finish first.
+   *
+   * The add, clear, persistAll, and push methods should all be called from the same thread.
    */
   void clear() throws InterruptedException;
 
@@ -102,7 +104,7 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    * Drop all data associated with a particular pending segment. Unlike {@link #clear()}), any on-disk commit
    * metadata will remain unchanged. If there is no pending segment with this identifier, then this method will
    * do nothing.
-   * <p/>
+   * <p>
    * You should not write to the dropped segment after calling "drop". If you need to drop all your data and
    * re-write it, consider {@link #clear()} instead.
    *
@@ -117,7 +119,7 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
    * machine's local disk. The Committer will be made synchronously will the call to persistAll, but will actually
    * be used asynchronously. Any metadata returned by the committer will be associated with the data persisted to
    * disk.
-   * <p/>
+   * <p>
    * The add, clear, persistAll, and push methods should all be called from the same thread.
    *
    * @param committer a committer associated with all data that has been added so far
@@ -129,9 +131,9 @@ public interface Appenderator extends QuerySegmentWalker, Closeable
   /**
    * Merge and push particular segments to deep storage. This will trigger an implicit {@link #persistAll(Committer)}
    * using the provided Committer.
-   * <p/>
+   * <p>
    * After this method is called, you cannot add new data to any segments that were previously under construction.
-   * <p/>
+   * <p>
    * The add, clear, persistAll, and push methods should all be called from the same thread.
    *
    * @param identifiers list of segments to push
