@@ -58,14 +58,14 @@ import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
-import io.druid.query.aggregation.first.FirstAggregatorFactory;
 import io.druid.query.aggregation.JavaScriptAggregatorFactory;
-import io.druid.query.aggregation.last.LastAggregatorFactory;
+import io.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import io.druid.query.aggregation.last.LongLastAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
@@ -1576,8 +1576,8 @@ public class GroupByQueryRunnerTest
         .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("market", "market")))
         .setAggregatorSpecs(
             Arrays.asList(
-                new FirstAggregatorFactory("first", "index", "long"),
-                new LastAggregatorFactory("last", "index", "long")
+                new LongFirstAggregatorFactory("first", "index"),
+                new LongLastAggregatorFactory("last", "index")
             )
         )
         .setGranularity(QueryRunnerTestHelper.monthGran)
@@ -1600,6 +1600,31 @@ public class GroupByQueryRunnerTest
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
+
+  @Test
+  public void testGroupByWithNoResult()
+  {
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.emptyInterval)
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("market", "market")))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                QueryRunnerTestHelper.indexLongSum,
+                QueryRunnerTestHelper.qualityCardinality,
+                new LongFirstAggregatorFactory("first", "index"),
+                new LongLastAggregatorFactory("last", "index")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    List<Row> expectedResults = ImmutableList.of();
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    Assert.assertEquals(expectedResults, results);
   }
 
   @Test
@@ -5176,8 +5201,8 @@ public class GroupByQueryRunnerTest
         .setAggregatorSpecs(
             ImmutableList.<AggregatorFactory>of(
                 QueryRunnerTestHelper.rowsCount,
-                new FirstAggregatorFactory("innerfirst", "index", "long"),
-                new LastAggregatorFactory("innerlast", "index", "long")
+                new LongFirstAggregatorFactory("innerfirst", "index"),
+                new LongLastAggregatorFactory("innerlast", "index")
             )
         )
         .setGranularity(QueryRunnerTestHelper.dayGran)
@@ -5190,8 +5215,8 @@ public class GroupByQueryRunnerTest
         .setDimensions(Lists.<DimensionSpec>newArrayList())
         .setAggregatorSpecs(
             ImmutableList.<AggregatorFactory>of(
-                new FirstAggregatorFactory("first", "innerfirst", "long"),
-                new LastAggregatorFactory("last", "innerlast", "long")
+                new LongFirstAggregatorFactory("first", "innerfirst"),
+                new LongLastAggregatorFactory("last", "innerlast")
             )
         )
         .setGranularity(QueryRunnerTestHelper.monthGran)
