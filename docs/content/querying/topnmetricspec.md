@@ -6,8 +6,6 @@ TopNMetricSpec
 
 The topN metric spec specifies how topN values should be sorted.
 
-See [Sorting Orders](./sorting-orders.html) for more information on the sorting orders used by the Lexicographic, Alphanumeric, and NumericDimension specs.
-
 ## Numeric TopNMetricSpec
 
 The simplest metric specification is a String value indicating the metric to sort topN results by. They are included in a topN query with:
@@ -30,38 +28,25 @@ The metric field can also be given as a JSON object. The grammar for dimension v
 |type|this indicates a numeric sort|yes|
 |metric|the actual metric field in which results will be sorted by|yes|
 
-## Lexicographic TopNMetricSpec
+## Dimension TopNMetricSpec
 
-The grammar for dimension values sorted lexicographically is as follows:
+This metric specification sorts TopN results by dimension value, using one of the sorting orders described here: [Sorting Orders](./sorting-orders.html)
 
-```json
-"metric": {
-    "type": "lexicographic",
-    "previousStop": "<previousStop_value>"
-}
-```
+|property|type|description|required?|
+|--------|----|-----------|---------|
+|type|String|this indicates a sort a dimension's values|yes, must be 'dimension'|
+|ordering|String|Specifies the sorting order. Can be one of the following values: "lexicographic", "alphanumeric", "numeric", "strlen". See [Sorting Orders](./sorting-orders.html) for more details.|no, default: "lexicographic"|
+|previousStop|String|the starting point of the sort. For example, if a previousStop value is 'b', all values before 'b' are discarded. This field can be used to paginate through all the dimension values.|no|
 
-|property|description|required?|
-|--------|-----------|---------|
-|type|this indicates a lexicographic sort|yes|
-|previousStop|the starting point of the lexicographic sort. For example, if a previousStop value is 'b', all values before 'b' are discarded. This field can be used to paginate through all the dimension values.|no|
-
-## AlphaNumeric TopNMetricSpec
-
-Sort dimension values in alpha-numeric order, i.e treating numbers differently from other characters in sorting the values.
-The algorithm is based on [https://github.com/amjjd/java-alphanum](https://github.com/amjjd/java-alphanum).
+The following metricSpec uses lexicographic sorting.
 
 ```json
 "metric": {
-    "type": "alphaNumeric",
+    "type": "dimension",
+    "ordering": "lexicographic",
     "previousStop": "<previousStop_value>"
 }
 ```
-
-|property|description|required?|
-|--------|-----------|---------|
-|type|this indicates an alpha-numeric sort|yes|
-|previousStop|the starting point of the alpha-numeric sort. For example, if a previousStop value is 'b', all values before 'b' are discarded. This field can be used to paginate through all the dimension values.|no|
 
 ## Inverted TopNMetricSpec
 
@@ -78,19 +63,3 @@ Sort dimension values in inverted order, i.e inverts the order of the delegate m
 |--------|-----------|---------|
 |type|this indicates an inverted sort|yes|
 |metric|the delegate metric spec. |yes|
-
-## NumericDimension TopNMetricSpec
-
-Sort dimension values in numeric order, i.e treating dimension values as numeric values. Unparseable string values will be sorted before valid numeric values. If two string values are unparseable, they will be compared lexicographically.
-
-```json
-"metric": {
-    "type": "numericDimension",
-    "previousStop": "<previousStop_value>"
-}
-```
-
-|property|description|required?|
-|--------|-----------|---------|
-|type|this indicates an alpha-numeric sort|yes|
-|previousStop|the starting point of the alpha-numeric sort. For example, if a previousStop value is 'b', all values before 'b' are discarded. This field can be used to paginate through all the dimension values.|no|

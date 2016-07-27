@@ -107,5 +107,10 @@ public class NewSearchSortSpecTest
     String jsonSpec = jsonMapper.writeValueAsString(spec);
     Assert.assertEquals(expectJsonSpec, jsonSpec);
     Assert.assertEquals(spec, jsonMapper.readValue(jsonSpec, NewSearchSortSpec.class));
+
+    // this works too, without specifying "ordering"...
+    String expectJsonSpec2 = "{\"type\":\"lexicographic\"}";
+    Assert.assertEquals(spec, jsonMapper.readValue(expectJsonSpec2, NewSearchSortSpec.class));
+
   }
 }
