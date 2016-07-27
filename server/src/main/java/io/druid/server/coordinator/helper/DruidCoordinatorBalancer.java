@@ -119,7 +119,7 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
         log.info("No segments found.  Cannot balance.");
         continue;
       }
-
+      long unmoved = 0L;
       for (int iter = 0; iter < maxSegmentsToMove; iter++) {
         final BalancerSegmentHolder segmentToMove = strategy.pickSegmentToMove(serverHolderList);
 
@@ -128,16 +128,25 @@ public class DruidCoordinatorBalancer implements DruidCoordinatorHelper
 
           if (holder != null) {
             moveSegment(segmentToMove, holder.getServer(), params);
+          } else {
+            ++unmoved;
           }
         }
       }
+      if (unmoved == maxSegmentsToMove) {
+        // Cluster should be alive and constantly adjusting
+        log.info("No good moves found in tier [%s]", tier);
+      }
+      stats.addToTieredStat("unmovedCount", tier, unmoved);
       stats.addToTieredStat("movedCount", tier, currentlyMovingSegments.get(tier).size());
       if (params.getCoordinatorDynamicConfig().emitBalancingStats()) {
         strategy.emitStats(tier, stats, serverHolderList);
-
       }
       log.info(
-          "[%s]: Segments Moved: [%d]", tier, currentlyMovingSegments.get(tier).size()
+          "[%s]: Segments Moved: [%d] Segments Let Alone: [%d]",
+          tier,
+          currentlyMovingSegments.get(tier).size(),
+          unmoved
       );
 
     }

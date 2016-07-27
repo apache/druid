@@ -145,6 +145,8 @@ These metrics are for the Druid coordinator and are reset each time the coordina
 |`segment/unavailable/count`|Number of segments (not including replicas) left to load until segments that should be loaded in the cluster are available for queries.|datasource.|0|
 |`segment/underReplicated/count`|Number of segments (including replicas) left to load until segments that should be loaded in the cluster are available for queries.|tier, datasource.|0|
 
+If `emitBalancingStats` is set to `true` in the coordinator [dynamic configuration](../configuration/coordinator.html#dynamic-configuration), then [log entries](../configuration/logging.html) for class `io.druid.server.coordinator.helper.DruidCoordinatorLogger` will have extra information on balancing decisions.
+
 ## General Health
 
 ### Historical
