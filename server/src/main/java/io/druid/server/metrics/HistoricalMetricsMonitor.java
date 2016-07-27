@@ -20,12 +20,15 @@
 package io.druid.server.metrics;
 
 import com.google.inject.Inject;
+import com.metamx.common.collect.CountingMap;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.metrics.AbstractMonitor;
 import io.druid.client.DruidServerConfig;
 import io.druid.query.DruidMetrics;
 import io.druid.server.coordination.ServerManager;
+import io.druid.server.coordination.ZkCoordinator;
+import io.druid.timeline.DataSegment;
 
 import java.util.Map;
 
@@ -33,21 +36,42 @@ public class HistoricalMetricsMonitor extends AbstractMonitor
 {
   private final DruidServerConfig serverConfig;
   private final ServerManager serverManager;
+  private final ZkCoordinator zkCoordinator;
 
   @Inject
   public HistoricalMetricsMonitor(
       DruidServerConfig serverConfig,
-      ServerManager serverManager
+      ServerManager serverManager,
+      ZkCoordinator zkCoordinator
   )
   {
     this.serverConfig = serverConfig;
     this.serverManager = serverManager;
+    this.zkCoordinator = zkCoordinator;
   }
 
   @Override
   public boolean doMonitor(ServiceEmitter emitter)
   {
     emitter.emit(new ServiceMetricEvent.Builder().build("segment/max", serverConfig.getMaxSize()));
+
+    final CountingMap<String> pendingDeleteSizes = new CountingMap<String>();
+
+    for (DataSegment segment : zkCoordinator.getPendingDeleteSnapshot()) {
+      pendingDeleteSizes.add(segment.getDataSource(), segment.getSize());
+    }
+
+    for (Map.Entry<String, Long> entry : pendingDeleteSizes.entrySet()) {
+      final String dataSource = entry.getKey();
+      final long pendingDeleteSize = entry.getValue();
+      emitter.emit(
+          new ServiceMetricEvent.Builder()
+              .setDimension(DruidMetrics.DATASOURCE, dataSource)
+              .setDimension("tier", serverConfig.getTier())
+              .setDimension("priority", String.valueOf(serverConfig.getPriority()))
+              .build("segment/pendingDelete", pendingDeleteSize)
+      );
+    }
 
     for (Map.Entry<String, Long> entry : serverManager.getDataSourceSizes().entrySet()) {
       String dataSource = entry.getKey();
