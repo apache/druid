@@ -166,7 +166,7 @@ public class BoundDimFilter implements DimFilter
 
     byte[] extractionFnBytes = extractionFn == null ? new byte[0] : extractionFn.getCacheKey();
 
-    byte[] orderingBytes = StringUtils.toUtf8(ordering.toString());
+    byte[] orderingBytes = ordering.getCacheKey();
 
     ByteBuffer boundCacheBuffer = ByteBuffer.allocate(
         9

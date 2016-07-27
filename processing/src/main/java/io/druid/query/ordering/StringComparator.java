@@ -42,4 +42,6 @@ public abstract class StringComparator implements Comparator<String>
         throw new IAE("Unknown string comparator[%s]", type);
     }
   }
+
+  public abstract byte[] getCacheKey();
 }

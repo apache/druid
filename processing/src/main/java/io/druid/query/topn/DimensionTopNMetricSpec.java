@@ -39,7 +39,7 @@ import java.util.List;
 public class DimensionTopNMetricSpec implements TopNMetricSpec
 {
   private static final StringComparator DEFAULT_ORDERING = StringComparators.LEXICOGRAPHIC;
-  public static final byte STRING_SEPARATOR = (byte) 0xFF;
+  private static final byte STRING_SEPARATOR = (byte) 0xFF;
 
   private static final byte CACHE_TYPE_ID = 0x4;
   private final String previousStop;
@@ -102,7 +102,7 @@ public class DimensionTopNMetricSpec implements TopNMetricSpec
   public byte[] getCacheKey()
   {
     byte[] previousStopBytes = previousStop == null ? new byte[]{} : StringUtils.toUtf8(previousStop);
-    byte[] orderingBytes = StringUtils.toUtf8(ordering.toString());
+    byte[] orderingBytes = ordering.getCacheKey();
 
     int totalLen = 2 + previousStopBytes.length + orderingBytes.length;
 

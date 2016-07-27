@@ -24,6 +24,7 @@ import java.util.Comparator;
 
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
 import com.google.common.primitives.UnsignedBytes;
 import com.metamx.common.StringUtils;
 
@@ -38,6 +39,11 @@ public class StringComparators
   public static final StringComparator ALPHANUMERIC = new AlphanumericComparator();
   public static final StringComparator NUMERIC = new NumericComparator();
   public static final StringComparator STRLEN = new StrlenComparator();
+
+  public static final int LEXICOGRAPHIC_CACHE_ID = 0x01;
+  public static final int ALPHANUMERIC_CACHE_ID = 0x02;
+  public static final int NUMERIC_CACHE_ID = 0x03;
+  public static final int STRLEN_CACHE_ID = 0x04;
 
   public static class LexicographicComparator extends StringComparator
   {
@@ -79,6 +85,12 @@ public class StringComparators
     public String toString()
     {
       return StringComparators.LEXICOGRAPHIC_NAME;
+    }
+
+    @Override
+    public byte[] getCacheKey()
+    {
+      return new byte[]{(byte) LEXICOGRAPHIC_CACHE_ID};
     }
   }
   
@@ -286,6 +298,12 @@ public class StringComparators
     {
       return StringComparators.ALPHANUMERIC_NAME;
     }
+
+    @Override
+    public byte[] getCacheKey()
+    {
+      return new byte[]{(byte) ALPHANUMERIC_CACHE_ID};
+    }
   }
 
   public static class StrlenComparator extends StringComparator
@@ -327,6 +345,12 @@ public class StringComparators
     {
       return StringComparators.STRLEN_NAME;
     }
+
+    @Override
+    public byte[] getCacheKey()
+    {
+      return new byte[]{(byte) STRLEN_CACHE_ID};
+    }
   }
 
   private static BigDecimal convertStringToBigDecimal(String input) {
@@ -348,8 +372,14 @@ public class StringComparators
         return 0;
       }
 
-      BigDecimal bd1 = convertStringToBigDecimal(o1);
-      BigDecimal bd2 = convertStringToBigDecimal(o2);
+      // Creating a BigDecimal from a String is expensive (involves copying the String into a char[])
+      // Converting the String to a Long first is faster.
+      // We optimize here with the assumption that integer values are more common than floating point.
+      Long long1 = o1 == null ? null : Longs.tryParse(o1);
+      Long long2 = o2 == null ? null : Longs.tryParse(o2);
+
+      final BigDecimal bd1 = long1 == null ? convertStringToBigDecimal(o1) : new BigDecimal(long1);
+      final BigDecimal bd2 = long2 == null ? convertStringToBigDecimal(o2) : new BigDecimal(long2);
 
       if (bd1 != null && bd2 != null) {
         return bd1.compareTo(bd2);
@@ -384,6 +414,12 @@ public class StringComparators
       }
 
       return true;
+    }
+
+    @Override
+    public byte[] getCacheKey()
+    {
+      return new byte[]{(byte) NUMERIC_CACHE_ID};
     }
   }
 }

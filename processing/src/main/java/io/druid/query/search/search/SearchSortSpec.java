@@ -35,13 +35,13 @@ public class SearchSortSpec
 
   @JsonCreator
   public SearchSortSpec(
-      @JsonProperty("ordering") StringComparator ordering
+      @JsonProperty("type") StringComparator ordering
   )
   {
     this.ordering = ordering == null ? DEFAULT_ORDERING : ordering;
   }
 
-  @JsonProperty("ordering")
+  @JsonProperty("type")
   public StringComparator getOrdering()
   {
     return ordering;
@@ -68,8 +68,7 @@ public class SearchSortSpec
 
   public byte[] getCacheKey()
   {
-    byte[] orderingBytes = StringUtils.toUtf8(ordering.toString());
-    return orderingBytes;
+    return ordering.getCacheKey();
   }
 
   public String toString()

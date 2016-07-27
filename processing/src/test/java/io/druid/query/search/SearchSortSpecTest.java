@@ -101,16 +101,14 @@ public class SearchSortSpecTest
   public void testSerde() throws IOException
   {
     ObjectMapper jsonMapper = new DefaultObjectMapper();
-    SearchSortSpec spec = new SearchSortSpec(StringComparators.LEXICOGRAPHIC);
+    SearchSortSpec spec = new SearchSortSpec(StringComparators.ALPHANUMERIC);
 
-    String expectJsonSpec = "{\"ordering\":{\"type\":\"lexicographic\"}}";
+    String expectJsonSpec = "{\"type\":{\"type\":\"alphanumeric\"}}";
     String jsonSpec = jsonMapper.writeValueAsString(spec);
     Assert.assertEquals(expectJsonSpec, jsonSpec);
     Assert.assertEquals(spec, jsonMapper.readValue(jsonSpec, SearchSortSpec.class));
 
-    // this works too, without specifying "ordering"...
-    String expectJsonSpec2 = "{\"type\":\"lexicographic\"}";
+    String expectJsonSpec2 = "{\"type\":\"alphanumeric\"}";
     Assert.assertEquals(spec, jsonMapper.readValue(expectJsonSpec2, SearchSortSpec.class));
-
   }
 }

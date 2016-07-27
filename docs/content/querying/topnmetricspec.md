@@ -48,6 +48,8 @@ The following metricSpec uses lexicographic sorting.
 }
 ```
 
+Note that in earlier versions of Druid, the functionality provided by the DimensionTopNMetricSpec was handled by two separate spec types, Lexicographic and Alphanumeric (when only two sorting orders were supported). These spec types have been deprecated but are still usable.
+
 ## Inverted TopNMetricSpec
 
 Sort dimension values in inverted order, i.e inverts the order of the delegate metric spec. It can be used to sort the values in ascending order.
