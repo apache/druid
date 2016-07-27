@@ -68,8 +68,6 @@ import java.util.NoSuchElementException;
  */
 public class GroupByQueryEngine
 {
-  private static final String CTX_KEY_MAX_INTERMEDIATE_ROWS = "maxIntermediateRows";
-
   private final Supplier<GroupByQueryConfig> config;
   private final StupidPool<ByteBuffer> intermediateResultsBufferPool;
 
@@ -310,16 +308,12 @@ public class GroupByQueryEngine
 
     public RowIterator(GroupByQuery query, final Cursor cursor, ByteBuffer metricsBuffer, GroupByQueryConfig config)
     {
+      final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
+
       this.query = query;
       this.cursor = cursor;
       this.metricsBuffer = metricsBuffer;
-
-      this.maxIntermediateRows = Math.min(
-          query.getContextValue(
-              CTX_KEY_MAX_INTERMEDIATE_ROWS,
-              config.getMaxIntermediateRows()
-          ), config.getMaxIntermediateRows()
-      );
+      this.maxIntermediateRows = querySpecificConfig.getMaxIntermediateRows();
 
       unprocessedKeys = null;
       delegate = Iterators.emptyIterator();

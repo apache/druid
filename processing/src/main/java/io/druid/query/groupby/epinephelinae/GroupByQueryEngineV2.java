@@ -148,7 +148,7 @@ public class GroupByQueryEngineV2
   private static class GroupByEngineIterator implements Iterator<Row>, Closeable
   {
     private final GroupByQuery query;
-    private final GroupByQueryConfig config;
+    private final GroupByQueryConfig querySpecificConfig;
     private final Cursor cursor;
     private final ByteBuffer buffer;
     private final Grouper.KeySerde<ByteBuffer> keySerde;
@@ -174,7 +174,7 @@ public class GroupByQueryEngineV2
       final int dimCount = query.getDimensions().size();
 
       this.query = query;
-      this.config = config;
+      this.querySpecificConfig = config.withOverrides(query);
       this.cursor = cursor;
       this.buffer = buffer;
       this.keySerde = keySerde;
@@ -213,8 +213,8 @@ public class GroupByQueryEngineV2
           cursor,
           query.getAggregatorSpecs()
                .toArray(new AggregatorFactory[query.getAggregatorSpecs().size()]),
-          config.getBufferGrouperMaxSize(),
-          GroupByStrategyV2.getBufferGrouperInitialBuckets(config, query)
+          querySpecificConfig.getBufferGrouperMaxSize(),
+          querySpecificConfig.getBufferGrouperInitialBuckets()
       );
 
 outer:
