@@ -19,11 +19,15 @@
 
 package io.druid.query.search;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.ordering.StringComparators;
 import io.druid.query.search.search.NewSearchSortSpec;
 import io.druid.query.search.search.SearchHit;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.io.IOException;
 
 /**
  */
@@ -92,4 +96,16 @@ public class NewSearchSortSpecTest
     Assert.assertTrue(spec.getComparator().compare(hit1, hit1) == 0);
   }
 
+
+  @Test
+  public void testSerde() throws IOException
+  {
+    ObjectMapper jsonMapper = new DefaultObjectMapper();
+    NewSearchSortSpec spec = new NewSearchSortSpec(StringComparators.LEXICOGRAPHIC);
+
+    String expectJsonSpec = "{\"ordering\":{\"type\":\"lexicographic\"}}";
+    String jsonSpec = jsonMapper.writeValueAsString(spec);
+    Assert.assertEquals(expectJsonSpec, jsonSpec);
+    Assert.assertEquals(spec, jsonMapper.readValue(jsonSpec, NewSearchSortSpec.class));
+  }
 }

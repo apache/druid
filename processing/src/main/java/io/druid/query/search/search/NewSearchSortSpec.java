@@ -19,6 +19,7 @@
 
 package io.druid.query.search.search;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.metamx.common.StringUtils;
 import io.druid.query.ordering.StringComparator;
@@ -29,13 +30,21 @@ import java.util.Comparator;
 public class NewSearchSortSpec
 {
   public static final StringComparator DEFAULT_ORDERING = StringComparators.LEXICOGRAPHIC;
+
   private final StringComparator ordering;
 
+  @JsonCreator
   public NewSearchSortSpec(
-      @JsonProperty StringComparator ordering
+      @JsonProperty("ordering") StringComparator ordering
   )
   {
     this.ordering = ordering == null ? DEFAULT_ORDERING : ordering;
+  }
+
+  @JsonProperty("ordering")
+  public StringComparator getOrdering()
+  {
+    return ordering;
   }
 
   public Comparator<SearchHit> getComparator()
