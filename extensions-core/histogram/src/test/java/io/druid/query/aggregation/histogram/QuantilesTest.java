@@ -20,13 +20,17 @@
 package io.druid.query.aggregation.histogram;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.Lists;
 import io.druid.jackson.DefaultObjectMapper;
 import org.hamcrest.CoreMatchers;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Random;
 
 public class QuantilesTest
 {
@@ -75,7 +79,58 @@ public class QuantilesTest
         ((Number) theMap.get("max")).floatValue(),
         0.0001f
     );
+  }
 
+  @Test
+  public void test()
+  {
+    Random r = new Random();
+    List<Float> inputs = Lists.newArrayListWithExpectedSize(4096);
+    while (inputs.size() < 4096) {
+      float v = r.nextFloat() * 100 - 30;
+      do {
+        inputs.add(v);
+      } while (r.nextFloat() > 0.8f);
+    }
+    Collections.shuffle(inputs);
 
+    List<Integer> lengths1 = Lists.newArrayList();
+    List<Float> quantiles1 = Lists.newArrayList();
+    for (int size : new int[]{1, 8, 64, 512, 4096}) {
+      for (int z : new int[]{16, 64, 256, 1024}) {
+        ApproximateHistogramHolder h = new ApproximateHistogram(z);
+        for (int j = 0; j < size; j++) {
+          h.offer(inputs.get(j));
+        }
+        lengths1.add(h.toBytes().length);
+        for (float f : new float[]{0.25f, 0.5f, 0.75f}) {
+          quantiles1.add(h.getQuantiles(new float[]{f})[0]);
+        }
+      }
+    }
+
+    List<Integer> lengths2 = Lists.newArrayList();
+    List<Float> quantiles2 = Lists.newArrayList();
+    for (int size : new int[]{1, 8, 64, 512, 4096}) {
+      for (int z : new int[]{16, 64, 256, 1024}) {
+        ApproximateHistogramHolder h = new ApproximateCompactHistogram(z);
+        for (int j = 0; j < size; j++) {
+          h.offer(inputs.get(j));
+        }
+        lengths2.add(h.toBytes().length);
+
+        h = h.fromBytes(h.toBytes());
+        for (float f : new float[]{0.25f, 0.5f, 0.75f}) {
+          quantiles2.add(h.getQuantiles(new float[]{f})[0]);
+        }
+      }
+    }
+    Assert.assertEquals(quantiles1, quantiles2);
+
+    for (int i = 0; i < lengths1.size(); i++) {
+      int s1 = lengths1.get(i);
+      int s2 = lengths2.get(i);
+      System.out.println(s1 + " --> " + s2 + " :: " + ((float)(s2 - s1)/ (float)s1 * 100) + "%");
+    }
   }
 }
