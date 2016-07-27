@@ -20,12 +20,8 @@
 package io.druid.query.search;
 
 import io.druid.query.ordering.StringComparators;
-import io.druid.query.search.search.AlphanumericSearchSortSpec;
-import io.druid.query.search.search.LexicographicSearchSortSpec;
 import io.druid.query.search.search.NewSearchSortSpec;
-import io.druid.query.search.search.NumericSearchSortSpec;
 import io.druid.query.search.search.SearchHit;
-import io.druid.query.search.search.SearchSortSpec;
 import org.junit.Assert;
 import org.junit.Test;
 

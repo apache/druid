@@ -38,7 +38,9 @@ import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.ExtractionDimFilter;
 import io.druid.query.filter.RegexDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
+import io.druid.query.ordering.StringComparators;
 import io.druid.query.search.search.FragmentSearchQuerySpec;
+import io.druid.query.search.search.NewSearchSortSpec;
 import io.druid.query.search.search.NumericSearchSortSpec;
 import io.druid.query.search.search.SearchHit;
 import io.druid.query.search.search.SearchQuery;
@@ -214,7 +216,7 @@ public class SearchQueryRunnerTest
                                             QueryRunnerTestHelper.placementishDimension
                                         )
                                     )
-                                    .sortSpec(new StrlenSearchSortSpec())
+                                    .sortSpec(new NewSearchSortSpec(StringComparators.STRLEN))
                                     .query("e")
                                     .build();
 
@@ -588,7 +590,7 @@ public class SearchQueryRunnerTest
                                     .granularity(QueryRunnerTestHelper.allGran)
                                     .intervals(QueryRunnerTestHelper.fullOnInterval)
                                     .query("a")
-                                    .sortSpec(new NumericSearchSortSpec())
+                                    .sortSpec(new NewSearchSortSpec(StringComparators.NUMERIC))
                                     .build();
 
     List<SearchHit> expectedHits = Lists.newLinkedList();

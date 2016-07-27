@@ -30,6 +30,7 @@ import io.druid.query.Query;
 import io.druid.query.Result;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.ordering.StringComparators;
 import io.druid.query.search.SearchResultValue;
 import io.druid.query.spec.QuerySegmentSpec;
 
@@ -40,8 +41,10 @@ import java.util.Map;
  */
 public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
 {
+  private static final NewSearchSortSpec DEFAULT_SORT_SPEC = new NewSearchSortSpec(StringComparators.LEXICOGRAPHIC);
+
   private final DimFilter dimFilter;
-  private final SearchSortSpec sortSpec;
+  private final NewSearchSortSpec sortSpec;
   private final QueryGranularity granularity;
   private final List<DimensionSpec> dimensions;
   private final SearchQuerySpec querySpec;
@@ -56,13 +59,13 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
       @JsonProperty("searchDimensions") List<DimensionSpec> dimensions,
       @JsonProperty("query") SearchQuerySpec querySpec,
-      @JsonProperty("sort") SearchSortSpec sortSpec,
+      @JsonProperty("sort") NewSearchSortSpec sortSpec,
       @JsonProperty("context") Map<String, Object> context
   )
   {
     super(dataSource, querySegmentSpec, false, context);
     this.dimFilter = dimFilter;
-    this.sortSpec = sortSpec == null ? new LexicographicSearchSortSpec() : sortSpec;
+    this.sortSpec = sortSpec == null ? DEFAULT_SORT_SPEC : sortSpec;
     this.granularity = granularity == null ? QueryGranularities.ALL : granularity;
     this.limit = (limit == 0) ? 1000 : limit;
     this.dimensions = dimensions;
@@ -183,7 +186,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   }
 
   @JsonProperty("sort")
-  public SearchSortSpec getSort()
+  public NewSearchSortSpec getSort()
   {
     return sortSpec;
   }
