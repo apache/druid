@@ -138,7 +138,7 @@ public class HistoricalMetricsMonitorTest extends EasyMockSupport
 
     Assert.assertEquals(ImmutableMap.<String, Object>of(
         "dataSource", dataSource,
-        "metric", "segment/deleting",
+        "metric", "segment/pendingDelete",
         "priority", String.valueOf(priority),
         "tier", tier,
         "value", dataSegment.getSize()

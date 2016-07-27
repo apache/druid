@@ -69,7 +69,7 @@ public class HistoricalMetricsMonitor extends AbstractMonitor
               .setDimension(DruidMetrics.DATASOURCE, dataSource)
               .setDimension("tier", serverConfig.getTier())
               .setDimension("priority", String.valueOf(serverConfig.getPriority()))
-              .build("segment/deleting", pendingDeleteSize)
+              .build("segment/pendingDelete", pendingDeleteSize)
       );
     }
 
