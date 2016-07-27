@@ -2080,8 +2080,8 @@ public class GroupByQueryRunnerTest
                 new LongSumAggregatorFactory("idx", "index")
             )
         )
-        .addOrderByColumn("rows", "desc")
-        .addOrderByColumn("alias", "d")
+        .addOrderByColumn("rows", OrderByColumnSpec.Direction.DESCENDING)
+        .addOrderByColumn("alias", OrderByColumnSpec.Direction.DESCENDING)
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
 
     final GroupByQuery query = builder.build();
@@ -2120,8 +2120,8 @@ public class GroupByQueryRunnerTest
                 new DoubleSumAggregatorFactory("idx", "index")
             )
         )
-        .addOrderByColumn("idx", "desc")
-        .addOrderByColumn("alias", "d")
+        .addOrderByColumn("idx", OrderByColumnSpec.Direction.DESCENDING)
+        .addOrderByColumn("alias", OrderByColumnSpec.Direction.DESCENDING)
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
 
     final GroupByQuery query = builder.build();

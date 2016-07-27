@@ -28,6 +28,6 @@ OrderByColumnSpecs indicate how to do order by operations. Each order-by conditi
 }
 ```
 
-If only the dimension is provided (as a JSON string), the default order-by is ascending.
+If only the dimension is provided (as a JSON string), the default order-by is ascending with lexicographic sorting.
 
 See [Sorting Orders](./sorting-orders.html) for more information on the sorting orders specified by "dimensionOrder".
