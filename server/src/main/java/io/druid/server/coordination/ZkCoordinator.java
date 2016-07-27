@@ -21,6 +21,7 @@ package io.druid.server.coordination;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Queues;
 import com.google.common.util.concurrent.SettableFuture;
@@ -492,6 +493,11 @@ public class ZkCoordinator implements DataSegmentChangeHandler
     finally {
       callback.execute();
     }
+  }
+
+  public Collection<DataSegment> getPendingDeleteSnapshot()
+  {
+    return ImmutableList.copyOf(segmentsToDelete);
   }
 
   private static class BackgroundSegmentAnnouncer implements AutoCloseable
