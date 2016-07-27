@@ -177,6 +177,15 @@ public class DruidCoordinatorLogger implements DruidCoordinatorHelper
         );
       }
     }
+    final Map<String, AtomicLong> unmoved = stats.getPerTierStats().get("unmovedCount");
+    if (unmoved != null) {
+      for(Map.Entry<String, AtomicLong> entry : unmoved.entrySet()) {
+        log.info(
+            "[%s] : Let alone %,d segment(s)",
+            entry.getKey(), entry.getValue().get()
+        );
+      }
+    }
     log.info("Load Queues:");
     for (MinMaxPriorityQueue<ServerHolder> serverHolders : cluster.getSortedServersByTier()) {
       for (ServerHolder serverHolder : serverHolders) {
