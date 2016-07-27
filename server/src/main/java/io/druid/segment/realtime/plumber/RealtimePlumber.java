@@ -127,7 +127,7 @@ public class RealtimePlumber implements Plumber
   private static final String COMMIT_METADATA_KEY = "%commitMetadata%";
   private static final String COMMIT_METADATA_TIMESTAMP_KEY = "%commitMetadataTimestamp%";
 
-  private int counter;
+  private int checkCounter;
 
   public RealtimePlumber(
       DataSchema schema,
@@ -225,7 +225,7 @@ public class RealtimePlumber implements Plumber
       persist(committerSupplier.get());
     }
 
-    if (maxRowExceedCheckCount > 0 && ++counter % maxRowExceedCheckCount == 0) {
+    if (maxRowExceedCheckCount > 0 && ++checkCounter % maxRowExceedCheckCount == 0) {
       if (rowCountInMemory() > config.getMaxRowsInMemory() ||
           occupationInMemory() > config.getMaxOccupationInMemory()) {
         persistOldest(committerSupplier.get());

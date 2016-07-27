@@ -29,6 +29,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
@@ -1083,7 +1084,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       @Override
       public int estimate(Float object)
       {
-        return object == null ? 0 : 4;
+        return object == null ? 0 : Floats.BYTES;
       }
     };
     SizeEstimator<Long> LONG = new SizeEstimator<Long>()
@@ -1091,7 +1092,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       @Override
       public int estimate(Long object)
       {
-        return object == null ? 0 : 8;
+        return object == null ? 0 : Longs.BYTES;
       }
     };
   }

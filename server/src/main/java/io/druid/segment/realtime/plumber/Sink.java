@@ -19,6 +19,7 @@
 
 package io.druid.segment.realtime.plumber;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Function;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableMap;
@@ -69,7 +70,7 @@ public class Sink implements Iterable<FireHydrant>
   @GuardedBy("hydrantLock")
   private FireHydrant currHydrant;  // cannot be null after object init
 
-  private long lastAccessTime = 0;
+  private volatile long lastAccessTime = 0;
 
   public Sink(
       Interval interval,
@@ -131,7 +132,8 @@ public class Sink implements Iterable<FireHydrant>
     return interval;
   }
 
-  public FireHydrant getCurrHydrant()
+  @VisibleForTesting
+  FireHydrant getCurrHydrant()
   {
     synchronized (hydrantLock) {
       return currHydrant;
