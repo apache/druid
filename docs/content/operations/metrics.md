@@ -157,6 +157,7 @@ If `emitBalancingStats` is set to `true` in the coordinator [dynamic configurati
 |`segment/used`|Bytes used for served segments.|dataSource, tier, priority.|< max|
 |`segment/usedPercent`|Percentage of space used by served segments.|dataSource, tier, priority.|< 100%|
 |`segment/count`|Number of served segments.|dataSource, tier, priority.|Varies.|
+|`segment/pendingDelete`|On-disk size in bytes of segments that are waiting to be cleared out|Varies.|
 
 ### JVM
 
