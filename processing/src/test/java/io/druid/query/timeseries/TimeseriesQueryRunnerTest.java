@@ -36,8 +36,8 @@ import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleMaxAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
 import io.druid.query.aggregation.FilteredAggregatorFactory;
-import io.druid.query.aggregation.first.FirstAggregatorFactory;
-import io.druid.query.aggregation.last.LastAggregatorFactory;
+import io.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
+import io.druid.query.aggregation.last.DoubleLastAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.extraction.MapLookupExtractor;
@@ -111,6 +111,44 @@ public class TimeseriesQueryRunnerTest
   {
     this.runner = runner;
     this.descending = descending;
+  }
+
+  @Test
+  public void testEmptyTimeseries()
+  {
+    TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
+                                  .dataSource(QueryRunnerTestHelper.dataSource)
+                                  .granularity(QueryRunnerTestHelper.allGran)
+                                  .intervals(QueryRunnerTestHelper.emptyInterval)
+                                  .aggregators(
+                                      Arrays.asList(
+                                          QueryRunnerTestHelper.rowsCount,
+                                          QueryRunnerTestHelper.indexDoubleSum,
+                                          new DoubleFirstAggregatorFactory("first", "index")
+
+                                      )
+                                  )
+                                  .descending(descending)
+                                  .build();
+
+    List<Result<TimeseriesResultValue>> expectedResults = ImmutableList.of(
+        new Result<>(
+            new DateTime("2020-04-02"),
+            new TimeseriesResultValue(
+                ImmutableMap.<String, Object>of(
+                    "rows", 0L,
+                    "index", 0D,
+                    "first", 0D
+                )
+            )
+        )
+    );
+
+    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
+        runner.run(query, CONTEXT),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+    TestHelper.assertExpectedResults(expectedResults, actualResults);
   }
 
   @Test
@@ -1743,8 +1781,8 @@ public class TimeseriesQueryRunnerTest
                                   .intervals(QueryRunnerTestHelper.fullOnInterval)
                                   .aggregators(
                                       ImmutableList.of(
-                                          new FirstAggregatorFactory("first", "index", "double"),
-                                          new LastAggregatorFactory("last", "index", "double")
+                                          new DoubleFirstAggregatorFactory("first", "index"),
+                                          new DoubleLastAggregatorFactory("last", "index")
                                       )
                                   )
                                   .descending(descending)

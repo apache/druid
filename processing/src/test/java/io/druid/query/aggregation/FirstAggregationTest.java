@@ -23,9 +23,10 @@ import com.metamx.common.Pair;
 import io.druid.collections.SerializablePair;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.first.DoubleFirstAggregator;
+import io.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
 import io.druid.query.aggregation.first.DoubleFirstBufferAggregator;
-import io.druid.query.aggregation.first.FirstAggregatorFactory;
 import io.druid.query.aggregation.first.LongFirstAggregator;
+import io.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import io.druid.query.aggregation.first.LongFirstBufferAggregator;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.column.Column;
@@ -38,8 +39,8 @@ import java.nio.ByteBuffer;
 
 public class FirstAggregationTest
 {
-  private FirstAggregatorFactory doubleFirstAggFactory;
-  private FirstAggregatorFactory longFirstAggFactory;
+  private DoubleFirstAggregatorFactory doubleFirstAggFactory;
+  private LongFirstAggregatorFactory longFirstAggFactory;
   private ColumnSelectorFactory colSelectorFactory;
   private TestLongColumnSelector timeSelector;
   private TestFloatColumnSelector floatSelector;
@@ -51,10 +52,8 @@ public class FirstAggregationTest
 
   public FirstAggregationTest() throws Exception
   {
-    String doubleSpecJson = "{\"type\": \"first\", \"name\": \"billy\", \"fieldName\": \"nilly\", \"value\": \"double\"}";
-    String longSpecJson = "{\"type\": \"first\", \"name\": \"bill\", \"fieldName\": \"nnn\", \"value\": \"long\"}";
-    doubleFirstAggFactory = new DefaultObjectMapper().readValue(doubleSpecJson, FirstAggregatorFactory.class);
-    longFirstAggFactory = new DefaultObjectMapper().readValue(longSpecJson, FirstAggregatorFactory.class);
+    doubleFirstAggFactory = new DoubleFirstAggregatorFactory("billy", "nilly");
+    longFirstAggFactory = new LongFirstAggregatorFactory("bill", "nnn");
   }
 
   @Before
@@ -171,16 +170,27 @@ public class FirstAggregationTest
   @Test
   public void testEqualsAndHashCode() throws Exception
   {
-    FirstAggregatorFactory one = new FirstAggregatorFactory("name1", "fieldName1", "double");
-    FirstAggregatorFactory oneAgain = new FirstAggregatorFactory("name1", "fieldName1", "double");
-    FirstAggregatorFactory two = new FirstAggregatorFactory("name1", "fieldName1", "long");
-    FirstAggregatorFactory three = new FirstAggregatorFactory("name2", "fieldName2", "double");
+    DoubleFirstAggregatorFactory one = new DoubleFirstAggregatorFactory("name1", "fieldName1");
+    DoubleFirstAggregatorFactory oneAgain = new DoubleFirstAggregatorFactory("name1", "fieldName1");
+    LongFirstAggregatorFactory two = new LongFirstAggregatorFactory("name1", "fieldName1");
+    DoubleFirstAggregatorFactory three = new DoubleFirstAggregatorFactory("name2", "fieldName2");
 
     Assert.assertEquals(one.hashCode(), oneAgain.hashCode());
 
     Assert.assertTrue(one.equals(oneAgain));
     Assert.assertFalse(one.equals(two));
     Assert.assertFalse(one.equals(three));
+  }
+
+  @Test
+  public void testSerde() throws Exception
+  {
+    DefaultObjectMapper mapper = new DefaultObjectMapper();
+    String doubleSpecJson = "{\"type\":\"doubleFirst\",\"name\":\"billy\",\"fieldName\":\"nilly\"}";
+    String longSpecJson = "{\"type\":\"longFirst\",\"name\":\"bill\",\"fieldName\":\"nnn\"}";
+
+    Assert.assertEquals(doubleFirstAggFactory, mapper.readValue(doubleSpecJson, AggregatorFactory.class));
+    Assert.assertEquals(longFirstAggFactory, mapper.readValue(longSpecJson, AggregatorFactory.class));
   }
 
   private void aggregate(

@@ -19,12 +19,14 @@
 
 package io.druid.collections;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.metamx.common.Pair;
 
 public class SerializablePair<T1, T2> extends Pair<T1, T2>
 {
-  public SerializablePair(@JsonProperty T1 lhs, @JsonProperty T2 rhs)
+  @JsonCreator
+  public SerializablePair(@JsonProperty("lhs") T1 lhs, @JsonProperty("rhs") T2 rhs)
   {
     super(lhs, rhs);
   }
