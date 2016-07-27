@@ -19,15 +19,14 @@
 
 package io.druid.segment.column;
 
-import io.druid.segment.data.Indexed;
+import io.druid.data.ValueType;
 import io.druid.segment.data.IndexedFloats;
-import io.druid.segment.data.IndexedLongs;
 
 import java.io.IOException;
 
 /**
 */
-public class IndexedFloatsGenericColumn implements GenericColumn
+public class IndexedFloatsGenericColumn extends AbstractGenericColumn
 {
   private final IndexedFloats column;
 
@@ -56,27 +55,9 @@ public class IndexedFloatsGenericColumn implements GenericColumn
   }
 
   @Override
-  public String getStringSingleValueRow(int rowNum)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  public Indexed<String> getStringMultiValueRow(int rowNum)
-  {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
   public float getFloatSingleValueRow(int rowNum)
   {
     return column.get(rowNum);
-  }
-
-  @Override
-  public IndexedFloats getFloatMultiValueRow(int rowNum)
-  {
-    throw new UnsupportedOperationException();
   }
 
   @Override
@@ -86,9 +67,9 @@ public class IndexedFloatsGenericColumn implements GenericColumn
   }
 
   @Override
-  public IndexedLongs getLongMultiValueRow(int rowNum)
+  public double getDoubleSingleValueRow(int rowNum)
   {
-    throw new UnsupportedOperationException();
+    return (double) column.get(rowNum);
   }
 
   @Override

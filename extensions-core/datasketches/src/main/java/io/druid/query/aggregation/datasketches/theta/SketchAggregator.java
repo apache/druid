@@ -90,6 +90,12 @@ public class SketchAggregator implements Aggregator
   }
 
   @Override
+  public double getDouble()
+  {
+    throw new UnsupportedOperationException("Not implemented");
+  }
+
+  @Override
   public String getName()
   {
     return name;

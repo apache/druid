@@ -56,13 +56,13 @@ public class DoubleMaxAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new DoubleMaxAggregator(name, metricFactory.makeFloatColumnSelector(fieldName));
+    return new DoubleMaxAggregator.FloatInput(name, metricFactory.makeFloatColumnSelector(fieldName));
   }
 
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new DoubleMaxBufferAggregator(metricFactory.makeFloatColumnSelector(fieldName));
+    return new DoubleMaxBufferAggregator.FloatInput(metricFactory.makeFloatColumnSelector(fieldName));
   }
 
   @Override

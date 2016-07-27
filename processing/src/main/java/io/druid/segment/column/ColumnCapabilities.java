@@ -19,6 +19,8 @@
 
 package io.druid.segment.column;
 
+import io.druid.data.ValueType;
+
 /**
  */
 public interface ColumnCapabilities

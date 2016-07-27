@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.metamx.common.IAE;
+import io.druid.data.ValueType;
 import io.druid.segment.serde.ColumnPartSerde;
 
 import java.io.IOException;

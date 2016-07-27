@@ -89,6 +89,12 @@ public class CardinalityBufferAggregator implements BufferAggregator
     throw new UnsupportedOperationException("CardinalityBufferAggregator does not support getFloat()");
   }
 
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("CardinalityBufferAggregator does not support getDouble()");
+  }
+
 
   @Override
   public long getLong(ByteBuffer buf, int position)

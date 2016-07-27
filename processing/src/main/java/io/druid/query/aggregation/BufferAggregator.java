@@ -89,6 +89,8 @@ public interface BufferAggregator
    */
   float getFloat(ByteBuffer buf, int position);
 
+  double getDouble(ByteBuffer buf, int position);
+
   /**
    * Returns the long representation of the given aggregate byte array
    *

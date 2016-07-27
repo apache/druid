@@ -240,6 +240,12 @@ public class HashBasedNumberedShardSpecTest
     }
 
     @Override
+    public double getDoubleMetric(String metric)
+    {
+      return 0;
+    }
+
+    @Override
     public long getLongMetric(String s)
     {
       return 0L;

@@ -19,7 +19,9 @@
 
 package io.druid.segment.column;
 
+import io.druid.data.ValueType;
 import io.druid.segment.data.Indexed;
+import io.druid.segment.data.IndexedDoubles;
 import io.druid.segment.data.IndexedFloats;
 import io.druid.segment.data.IndexedLongs;
 
@@ -39,4 +41,6 @@ public interface GenericColumn extends Closeable
   public IndexedFloats getFloatMultiValueRow(int rowNum);
   public long getLongSingleValueRow(int rowNum);
   public IndexedLongs getLongMultiValueRow(int rowNum);
+  public double getDoubleSingleValueRow(int rowNum);
+  public IndexedDoubles getDoubleMultiValueRow(int rowNum);
 }

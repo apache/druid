@@ -102,6 +102,11 @@ public class VarianceAggregatorFactory extends AggregatorFactory
           name,
           metricFactory.makeFloatColumnSelector(fieldName)
       );
+    } else if ("double".equalsIgnoreCase(inputType)) {
+      return new VarianceAggregator.DoubleVarianceAggregator(
+          name,
+          metricFactory.makeDoubleColumnSelector(fieldName)
+      );
     } else if ("long".equalsIgnoreCase(inputType)) {
       return new VarianceAggregator.LongVarianceAggregator(
           name,
@@ -126,6 +131,11 @@ public class VarianceAggregatorFactory extends AggregatorFactory
       return new VarianceBufferAggregator.FloatVarianceAggregator(
           name,
           metricFactory.makeFloatColumnSelector(fieldName)
+      );
+    } else if ("double".equalsIgnoreCase(inputType)) {
+      return new VarianceBufferAggregator.DoubleVarianceAggregator(
+          name,
+          metricFactory.makeDoubleColumnSelector(fieldName)
       );
     } else if ("long".equalsIgnoreCase(inputType)) {
       return new VarianceBufferAggregator.LongVarianceAggregator(

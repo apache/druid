@@ -748,6 +748,12 @@ public class RealtimeManagerTest
         }
 
         @Override
+        public double getDoubleMetric(String metric)
+        {
+          return 0;
+        }
+
+        @Override
         public long getLongMetric(String metric)
         {
           return 0L;

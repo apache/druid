@@ -22,6 +22,7 @@ package io.druid.query.aggregation.variance;
 import com.google.common.primitives.Doubles;
 import com.google.common.primitives.Longs;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
@@ -68,6 +69,12 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
   }
 
   @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("VarianceBufferAggregator does not support getDouble()");
+  }
+
+  @Override
   public long getLong(ByteBuffer buf, int position)
   {
     throw new UnsupportedOperationException("VarianceBufferAggregator does not support getFloat()");
@@ -92,6 +99,32 @@ public abstract class VarianceBufferAggregator implements BufferAggregator
     public void aggregate(ByteBuffer buf, int position)
     {
       float v = selector.get();
+      long count = buf.getLong(position + COUNT_OFFSET) + 1;
+      double sum = buf.getDouble(position + SUM_OFFSET) + v;
+      buf.putLong(position, count);
+      buf.putDouble(position + SUM_OFFSET, sum);
+      if (count > 1) {
+        double t = count * v - sum;
+        double variance = buf.getDouble(position + NVARIANCE_OFFSET) + (t * t) / ((double) count * (count - 1));
+        buf.putDouble(position + NVARIANCE_OFFSET, variance);
+      }
+    }
+  }
+
+  public static final class DoubleVarianceAggregator extends VarianceBufferAggregator
+  {
+    private final DoubleColumnSelector selector;
+
+    public DoubleVarianceAggregator(String name, DoubleColumnSelector selector)
+    {
+      super(name);
+      this.selector = selector;
+    }
+
+    @Override
+    public void aggregate(ByteBuffer buf, int position)
+    {
+      double v = selector.get();
       long count = buf.getLong(position + COUNT_OFFSET) + 1;
       double sum = buf.getDouble(position + SUM_OFFSET) + v;
       buf.putLong(position, count);

@@ -17,14 +17,15 @@
  * under the License.
  */
 
-package io.druid.segment.column;
+package io.druid.segment.data;
+
+import java.io.Closeable;
 
 /**
-*/
-public enum ValueType
+ */
+public interface IndexedDoubles extends Closeable
 {
-  FLOAT,
-  LONG,
-  STRING,
-  COMPLEX
+  public int size();
+  public double get(int index);
+  public void fill(int index, double[] toFill);
 }

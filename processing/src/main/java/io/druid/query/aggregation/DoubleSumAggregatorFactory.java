@@ -56,7 +56,7 @@ public class DoubleSumAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new DoubleSumAggregator(
+    return new DoubleSumAggregator.FloatInput(
         name,
         metricFactory.makeFloatColumnSelector(fieldName)
     );
@@ -65,7 +65,7 @@ public class DoubleSumAggregatorFactory extends AggregatorFactory
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    return new DoubleSumBufferAggregator(metricFactory.makeFloatColumnSelector(fieldName));
+    return new DoubleSumBufferAggregator.FloatInput(metricFactory.makeFloatColumnSelector(fieldName));
   }
 
   @Override

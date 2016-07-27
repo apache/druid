@@ -20,6 +20,7 @@
 package io.druid.query.aggregation.variance;
 
 import io.druid.query.aggregation.Aggregator;
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
@@ -67,6 +68,12 @@ public abstract class VarianceAggregator implements Aggregator
   }
 
   @Override
+  public double getDouble()
+  {
+    throw new UnsupportedOperationException("VarianceAggregator does not support getDouble()");
+  }
+
+  @Override
   public long getLong()
   {
     throw new UnsupportedOperationException("VarianceAggregator does not support getLong()");
@@ -77,6 +84,23 @@ public abstract class VarianceAggregator implements Aggregator
     private final FloatColumnSelector selector;
 
     public FloatVarianceAggregator(String name, FloatColumnSelector selector)
+    {
+      super(name);
+      this.selector = selector;
+    }
+
+    @Override
+    public void aggregate()
+    {
+      holder.add(selector.get());
+    }
+  }
+
+  public static final class DoubleVarianceAggregator extends VarianceAggregator
+  {
+    private final DoubleColumnSelector selector;
+
+    public DoubleVarianceAggregator(String name, DoubleColumnSelector selector)
     {
       super(name);
       this.selector = selector;

@@ -21,10 +21,10 @@ package io.druid.segment.serde;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.data.ValueType;
 import io.druid.segment.LongColumnSerializer;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnConfig;
-import io.druid.segment.column.ValueType;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
 
 import java.io.IOException;

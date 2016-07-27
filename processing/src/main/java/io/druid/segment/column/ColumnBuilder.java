@@ -21,6 +21,7 @@ package io.druid.segment.column;
 
 import com.google.common.base.Preconditions;
 import com.google.common.base.Supplier;
+import io.druid.data.ValueType;
 
 /**
  */

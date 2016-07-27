@@ -30,24 +30,17 @@ import com.google.common.io.Closer;
 import com.google.common.io.Files;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
-import com.metamx.collections.bitmap.BitmapFactory;
-import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.collections.bitmap.MutableBitmap;
-import com.metamx.collections.spatial.ImmutableRTree;
-import com.metamx.collections.spatial.RTree;
-import com.metamx.collections.spatial.split.LinearGutmanSplitStrategy;
-import com.metamx.common.ByteBufferUtils;
 import com.metamx.common.ISE;
 import com.metamx.common.io.smoosh.FileSmoosher;
 import com.metamx.common.io.smoosh.SmooshedWriter;
 import com.metamx.common.logger.Logger;
 import io.druid.common.utils.JodaUtils;
+import io.druid.data.ValueType;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ColumnDescriptor;
-import io.druid.segment.column.ValueType;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.GenericIndexed;
@@ -57,6 +50,7 @@ import io.druid.segment.serde.ComplexColumnPartSerde;
 import io.druid.segment.serde.ComplexColumnSerializer;
 import io.druid.segment.serde.ComplexMetricSerde;
 import io.druid.segment.serde.ComplexMetrics;
+import io.druid.segment.serde.DoubleGenericColumnPartSerde;
 import io.druid.segment.serde.FloatGenericColumnPartSerde;
 import io.druid.segment.serde.LongGenericColumnPartSerde;
 import org.apache.commons.io.FileUtils;
@@ -360,6 +354,15 @@ public class IndexMergerV9 extends IndexMerger
                                          .build()
           );
           break;
+        case DOUBLE:
+          builder.setValueType(ValueType.DOUBLE);
+          builder.addSerde(
+              DoubleGenericColumnPartSerde.serializerBuilder()
+                                         .withByteOrder(IndexIO.BYTE_ORDER)
+                                         .withDelegate((DoubleColumnSerializer) writer)
+                                         .build()
+          );
+          break;
         case COMPLEX:
           final String typeName = metricTypeNames.get(metric);
           builder.setValueType(ValueType.COMPLEX);
@@ -521,6 +524,9 @@ public class IndexMergerV9 extends IndexMerger
           break;
         case FLOAT:
           writer = FloatColumnSerializer.create(ioPeon, metric, metCompression);
+          break;
+        case DOUBLE:
+          writer = DoubleColumnSerializer.create(ioPeon, metric, metCompression);
           break;
         case COMPLEX:
           final String typeName = metricTypeNames.get(metric);

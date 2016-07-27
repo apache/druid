@@ -19,9 +19,6 @@
 
 package io.druid.query.filter;
 
-import com.google.common.base.Predicate;
-import io.druid.segment.column.ValueType;
-
 /**
  * A ValueMatcherFactory is an object associated with a collection of rows (e.g., an IncrementalIndexStorageAdapter)
  * that generates ValueMatchers for filtering on the associated collection of rows.

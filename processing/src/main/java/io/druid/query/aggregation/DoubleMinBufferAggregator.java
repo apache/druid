@@ -19,31 +19,19 @@
 
 package io.druid.query.aggregation;
 
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 
 import java.nio.ByteBuffer;
 
 /**
  */
-public class DoubleMinBufferAggregator implements BufferAggregator
+public abstract class DoubleMinBufferAggregator implements BufferAggregator
 {
-  private final FloatColumnSelector selector;
-
-  public DoubleMinBufferAggregator(FloatColumnSelector selector)
-  {
-    this.selector = selector;
-  }
-
   @Override
   public void init(ByteBuffer buf, int position)
   {
     buf.putDouble(position, Double.POSITIVE_INFINITY);
-  }
-
-  @Override
-  public void aggregate(ByteBuffer buf, int position)
-  {
-    buf.putDouble(position, Math.min(buf.getDouble(position), (double) selector.get()));
   }
 
   @Override
@@ -58,16 +46,53 @@ public class DoubleMinBufferAggregator implements BufferAggregator
     return (float) buf.getDouble(position);
   }
 
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    return buf.getDouble(position);
+  }
 
   @Override
   public long getLong(ByteBuffer buf, int position)
   {
-    return  (long) buf.getDouble(position);
+    return (long) buf.getDouble(position);
   }
 
   @Override
   public void close()
   {
     // no resources to cleanup
+  }
+
+  public static class FloatInput extends DoubleMinBufferAggregator
+  {
+    private final FloatColumnSelector selector;
+
+    public FloatInput(FloatColumnSelector selector)
+    {
+      this.selector = selector;
+    }
+
+    @Override
+    public void aggregate(ByteBuffer buf, int position)
+    {
+      buf.putDouble(position, Math.min(buf.getDouble(position), (double) selector.get()));
+    }
+  }
+
+  public static class DoubleInput extends DoubleMinBufferAggregator
+  {
+    private final DoubleColumnSelector selector;
+
+    public DoubleInput(DoubleColumnSelector selector)
+    {
+      this.selector = selector;
+    }
+
+    @Override
+    public void aggregate(ByteBuffer buf, int position)
+    {
+      buf.putDouble(position, Math.min(buf.getDouble(position), selector.get()));
+    }
   }
 }

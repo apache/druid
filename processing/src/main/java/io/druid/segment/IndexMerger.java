@@ -53,20 +53,19 @@ import io.druid.common.guava.FileOutputSupplier;
 import io.druid.common.guava.GuavaUtils;
 import io.druid.common.utils.JodaUtils;
 import io.druid.common.utils.SerializerUtils;
+import io.druid.data.ValueType;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
-import io.druid.segment.column.ValueType;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
-import io.druid.segment.data.LongSupplierSerializer;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.Indexed;
-import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIterable;
 import io.druid.segment.data.ListIndexed;
+import io.druid.segment.data.LongSupplierSerializer;
 import io.druid.segment.data.TmpFileIOPeon;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
@@ -730,6 +729,9 @@ public class IndexMerger
             break;
           case FLOAT:
             metWriters.add(new FloatMetricColumnSerializer(metric, v8OutDir, ioPeon, metCompression));
+            break;
+          case DOUBLE:
+            metWriters.add(new DoubleMetricColumnSerializer(metric, v8OutDir, ioPeon, metCompression));
             break;
           case COMPLEX:
             final String typeName = metricTypeNames.get(metric);

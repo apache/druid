@@ -284,6 +284,12 @@ class WikipediaIrcDecoder implements IrcDecoder
       }
 
       @Override
+      public double getDoubleMetric(String metric)
+      {
+        return metrics.get(metric);
+      }
+
+      @Override
       public long getLongMetric(String metric)
       {
         return new Float(metrics.get(metric)).longValue();

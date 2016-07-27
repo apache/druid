@@ -75,11 +75,17 @@ public class LongSumAggregator implements Aggregator
   @Override
   public float getFloat()
   {
-    return (float) sum;
+    return sum;
   }
 
   @Override
   public long getLong()
+  {
+    return sum;
+  }
+
+  @Override
+  public double getDouble()
   {
     return sum;
   }

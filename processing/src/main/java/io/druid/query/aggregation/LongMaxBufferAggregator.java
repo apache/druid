@@ -55,7 +55,13 @@ public class LongMaxBufferAggregator implements BufferAggregator
   @Override
   public float getFloat(ByteBuffer buf, int position)
   {
-    return (float) buf.getLong(position);
+    return buf.getLong(position);
+  }
+
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    return buf.getLong(position);
   }
 
   @Override

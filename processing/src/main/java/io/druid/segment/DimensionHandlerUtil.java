@@ -19,10 +19,9 @@
 
 package io.druid.segment;
 
-import com.google.common.base.Function;
 import com.metamx.common.IAE;
+import io.druid.data.ValueType;
 import io.druid.segment.column.ColumnCapabilities;
-import io.druid.segment.column.ValueType;
 
 public final class DimensionHandlerUtil
 {

@@ -20,6 +20,7 @@
 package io.druid.benchmark.datagen;
 
 import com.google.common.collect.ImmutableList;
+import io.druid.data.ValueType;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleMinAggregatorFactory;
@@ -27,7 +28,6 @@ import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.LongMaxAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
-import io.druid.segment.column.ValueType;
 import org.joda.time.Interval;
 
 import java.util.ArrayList;

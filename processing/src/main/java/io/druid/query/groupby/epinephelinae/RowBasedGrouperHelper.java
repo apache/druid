@@ -44,6 +44,7 @@ import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.strategy.GroupByStrategyV2;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
@@ -604,6 +605,19 @@ public class RowBasedGrouperHelper
         public float get()
         {
           return row.get().getFloatMetric(columnName);
+        }
+      };
+    }
+
+    @Override
+    public DoubleColumnSelector makeDoubleColumnSelector(final String columnName)
+    {
+      return new DoubleColumnSelector()
+      {
+        @Override
+        public double get()
+        {
+          return row.get().getDoubleMetric(columnName);
         }
       };
     }

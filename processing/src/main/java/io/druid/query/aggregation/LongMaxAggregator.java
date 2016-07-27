@@ -68,11 +68,17 @@ public class LongMaxAggregator implements Aggregator
   @Override
   public float getFloat()
   {
-    return (float) max;
+    return max;
   }
 
   @Override
   public long getLong()
+  {
+    return max;
+  }
+
+  @Override
+  public double getDouble()
   {
     return max;
   }

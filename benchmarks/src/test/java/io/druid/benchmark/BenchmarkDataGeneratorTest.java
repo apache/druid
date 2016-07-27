@@ -21,8 +21,8 @@ package io.druid.benchmark;
 
 import io.druid.benchmark.datagen.BenchmarkColumnSchema;
 import io.druid.benchmark.datagen.BenchmarkDataGenerator;
+import io.druid.data.ValueType;
 import io.druid.data.input.InputRow;
-import io.druid.segment.column.ValueType;
 import org.joda.time.Interval;
 import org.junit.Test;
 

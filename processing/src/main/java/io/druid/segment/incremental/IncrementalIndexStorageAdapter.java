@@ -26,6 +26,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
+import io.druid.data.ValueType;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.dimension.DefaultDimensionSpec;
@@ -41,6 +42,7 @@ import io.druid.segment.Cursor;
 import io.druid.segment.DimensionHandler;
 import io.druid.segment.DimensionIndexer;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.Metadata;
@@ -50,7 +52,6 @@ import io.druid.segment.SingleScanTimeDimSelector;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
-import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.ListIndexed;
 import io.druid.segment.filter.BooleanValueMatcher;
@@ -395,6 +396,32 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   public float get()
                   {
                     return index.getMetricFloatValue(currEntry.getValue(), metricIndex);
+                  }
+                };
+              }
+
+              @Override
+              public DoubleColumnSelector makeDoubleColumnSelector(String columnName)
+              {
+                final Integer metricIndexInt = index.getMetricIndex(columnName);
+                if (metricIndexInt == null) {
+                  return new DoubleColumnSelector()
+                  {
+                    @Override
+                    public double get()
+                    {
+                      return 0.0d;
+                    }
+                  };
+                }
+
+                final int metricIndex = metricIndexInt;
+                return new DoubleColumnSelector()
+                {
+                  @Override
+                  public double get()
+                  {
+                    return index.getMetricDoubleValue(currEntry.getValue(), metricIndex);
                   }
                 };
               }

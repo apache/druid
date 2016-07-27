@@ -70,6 +70,12 @@ public class Aggregators
       {
         return 0;
       }
+
+      @Override
+      public double getDouble()
+      {
+        return 0D;
+      }
     };
   }
 
@@ -99,6 +105,12 @@ public class Aggregators
       public float getFloat(ByteBuffer buf, int position)
       {
         return 0;
+      }
+
+      @Override
+      public double getDouble(ByteBuffer buf, int position)
+      {
+        return 0D;
       }
 
 

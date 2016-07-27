@@ -50,12 +50,12 @@ import com.metamx.common.io.smoosh.SmooshedWriter;
 import com.metamx.common.logger.Logger;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.common.utils.SerializerUtils;
+import io.druid.data.ValueType;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnBuilder;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.column.ColumnDescriptor;
-import io.druid.segment.column.ValueType;
 import io.druid.segment.data.ArrayIndexed;
 import io.druid.segment.data.BitmapSerde;
 import io.druid.segment.data.BitmapSerdeFactory;
@@ -77,6 +77,8 @@ import io.druid.segment.serde.ComplexColumnPartSerde;
 import io.druid.segment.serde.ComplexColumnPartSupplier;
 import io.druid.segment.serde.DictionaryEncodedColumnPartSerde;
 import io.druid.segment.serde.DictionaryEncodedColumnSupplier;
+import io.druid.segment.serde.DoubleGenericColumnPartSerde;
+import io.druid.segment.serde.DoubleGenericColumnSupplier;
 import io.druid.segment.serde.FloatGenericColumnPartSerde;
 import io.druid.segment.serde.FloatGenericColumnSupplier;
 import io.druid.segment.serde.LongGenericColumnPartSerde;
@@ -728,6 +730,15 @@ public class IndexIO
                                                .build()
                 );
                 break;
+              case DOUBLE:
+                builder.setValueType(ValueType.DOUBLE);
+                builder.addSerde(
+                    DoubleGenericColumnPartSerde.legacySerializerBuilder()
+                                                .withByteOrder(BYTE_ORDER)
+                                                .withDelegate(holder.doubleType)
+                                                .build()
+                );
+                break;
               case COMPLEX:
                 if (!(holder.complexType instanceof GenericIndexed)) {
                   throw new ISE("Serialized complex types must be GenericIndexed objects.");
@@ -914,6 +925,14 @@ public class IndexIO
               new ColumnBuilder()
                   .setType(ValueType.FLOAT)
                   .setGenericColumn(new FloatGenericColumnSupplier(metricHolder.floatType, BYTE_ORDER))
+                  .build()
+          );
+        } else if (metricHolder.getType() == MetricHolder.MetricType.DOUBLE) {
+          columns.put(
+              metric,
+              new ColumnBuilder()
+                  .setType(ValueType.DOUBLE)
+                  .setGenericColumn(new DoubleGenericColumnSupplier(metricHolder.doubleType, BYTE_ORDER))
                   .build()
           );
         } else if (metricHolder.getType() == MetricHolder.MetricType.COMPLEX) {

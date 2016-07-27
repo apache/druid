@@ -19,17 +19,12 @@
 
 package io.druid.data.input.impl;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.annotation.JsonValue;
-import com.fasterxml.jackson.databind.jsontype.NamedType;
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.base.Preconditions;
-
-import java.util.List;
+import io.druid.data.ValueType;
 
 /**
  */
@@ -46,30 +41,6 @@ public abstract class DimensionSchema
   public static final String LONG_TYPE_NAME = "long";
   public static final String FLOAT_TYPE_NAME = "float";
   public static final String SPATIAL_TYPE_NAME = "spatial";
-
-
-  // main druid and druid-api should really use the same ValueType enum.
-  // merge them when druid-api is merged back into the main repo
-  public enum ValueType
-  {
-    FLOAT,
-    LONG,
-    STRING,
-    COMPLEX;
-
-    @JsonValue
-    @Override
-    public String toString()
-    {
-      return this.name().toUpperCase();
-    }
-
-    @JsonCreator
-    public static ValueType fromString(String name)
-    {
-      return valueOf(name.toUpperCase());
-    }
-  }
 
   private final String name;
 

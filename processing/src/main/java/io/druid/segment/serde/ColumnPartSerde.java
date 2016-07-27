@@ -34,6 +34,7 @@ import java.nio.channels.WritableByteChannel;
 @JsonSubTypes(value = {
     @JsonSubTypes.Type(name = "complex", value = ComplexColumnPartSerde.class),
     @JsonSubTypes.Type(name = "float", value = FloatGenericColumnPartSerde.class),
+    @JsonSubTypes.Type(name = "double", value = DoubleGenericColumnPartSerde.class),
     @JsonSubTypes.Type(name = "long", value = LongGenericColumnPartSerde.class),
     @JsonSubTypes.Type(name = "stringDictionary", value = DictionaryEncodedColumnPartSerde.class)
 })

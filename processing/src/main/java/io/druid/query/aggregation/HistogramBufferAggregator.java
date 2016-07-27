@@ -56,7 +56,7 @@ public class HistogramBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    final float value = selector.get();
+    final float value = (float)selector.get();
     final int minPos = position + minOffset;
     final int maxPos = position + maxOffset;
 
@@ -91,9 +91,15 @@ public class HistogramBufferAggregator implements BufferAggregator
   }
 
   @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    throw new UnsupportedOperationException("HistogramBufferAggregator does not support getFloat()");
+  }
+
+  @Override
   public long getLong(ByteBuffer buf, int position)
   {
-    throw new UnsupportedOperationException("HistogramBufferAggregator does not support getLong()");
+    throw new UnsupportedOperationException("HistogramBufferAggregator does not support getDouble()");
   }
 
   @Override

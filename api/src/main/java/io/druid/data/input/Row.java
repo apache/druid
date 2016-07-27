@@ -21,7 +21,6 @@ package io.druid.data.input;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.metamx.common.parsers.ParseException;
 import org.joda.time.DateTime;
 
 import java.util.List;
@@ -81,6 +80,8 @@ public interface Row extends Comparable<Row>
    * @return the float value for the provided column name.
    */
   public float getFloatMetric(String metric);
+
+  public double getDoubleMetric(String metric);
 
   /**
    * Returns the long value of the given metric column.

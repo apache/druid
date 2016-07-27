@@ -41,4 +41,5 @@ public interface Aggregator {
   void close();
 
   long getLong();
+  double getDouble();
 }

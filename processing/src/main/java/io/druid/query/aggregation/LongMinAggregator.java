@@ -68,11 +68,17 @@ public class LongMinAggregator implements Aggregator
   @Override
   public float getFloat()
   {
-    return (float) min;
+    return min;
   }
 
   @Override
   public long getLong()
+  {
+    return min;
+  }
+
+  @Override
+  public double getDouble()
   {
     return min;
   }

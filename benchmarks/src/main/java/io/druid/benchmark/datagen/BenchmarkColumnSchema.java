@@ -19,7 +19,7 @@
 
 package io.druid.benchmark.datagen;
 
-import io.druid.segment.column.ValueType;
+import io.druid.data.ValueType;
 
 import java.util.List;
 

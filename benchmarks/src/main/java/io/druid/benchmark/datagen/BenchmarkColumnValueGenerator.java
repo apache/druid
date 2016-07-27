@@ -19,7 +19,7 @@
 
 package io.druid.benchmark.datagen;
 
-import io.druid.segment.column.ValueType;
+import io.druid.data.ValueType;
 import org.apache.commons.math3.distribution.AbstractIntegerDistribution;
 import org.apache.commons.math3.distribution.AbstractRealDistribution;
 import org.apache.commons.math3.distribution.EnumeratedDistribution;
@@ -126,6 +126,13 @@ public class BenchmarkColumnValueGenerator
           ret = ((Number) input).floatValue();
         } else {
           ret = Float.parseFloat(input.toString());
+        }
+        break;
+      case DOUBLE:
+        if (input instanceof Number) {
+          ret = ((Number) input).doubleValue();
+        } else {
+          ret = Double.parseDouble(input.toString());
         }
         break;
       default:

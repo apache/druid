@@ -342,6 +342,15 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   }
 
   @Override
+  protected double getMetricDoubleValue(int rowOffset, int aggOffset)
+  {
+    BufferAggregator agg = getAggs()[aggOffset];
+    int[] indexAndOffset = indexAndOffsets.get(rowOffset);
+    ByteBuffer bb = aggBuffers.get(indexAndOffset[0]).get();
+    return agg.getDouble(bb, indexAndOffset[1] + aggOffsetInBuffer[aggOffset]);
+  }
+
+  @Override
   public long getMetricLongValue(int rowOffset, int aggOffset)
   {
     BufferAggregator agg = getAggs()[aggOffset];

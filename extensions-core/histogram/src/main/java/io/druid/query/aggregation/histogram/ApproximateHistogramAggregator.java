@@ -68,7 +68,7 @@ public class ApproximateHistogramAggregator implements Aggregator
   @Override
   public void aggregate()
   {
-    histogram.offer(selector.get());
+    histogram.offer((float)selector.get());
   }
 
   @Override
@@ -93,6 +93,12 @@ public class ApproximateHistogramAggregator implements Aggregator
   public long getLong()
   {
     throw new UnsupportedOperationException("ApproximateHistogramAggregator does not support getLong()");
+  }
+
+  @Override
+  public double getDouble()
+  {
+    throw new UnsupportedOperationException("ApproximateHistogramAggregator does not support getDouble()");
   }
 
   @Override

@@ -50,6 +50,11 @@ public class CountBufferAggregator implements BufferAggregator
     return buf.getLong(position);
   }
 
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    return buf.getLong(position);
+  }
 
   @Override
   public long getLong(ByteBuffer buf, int position)

@@ -34,6 +34,7 @@ import com.metamx.common.UOE;
 import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
+import io.druid.data.ValueType;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.dimension.DefaultDimensionSpec;
@@ -52,7 +53,6 @@ import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ComplexColumn;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.GenericColumn;
-import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.Offset;
@@ -589,8 +589,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
 
                       if (cachedMetricVals == null) {
                         Column holder = index.getColumn(columnName);
-                        if (holder != null && (holder.getCapabilities().getType() == ValueType.FLOAT
-                                               || holder.getCapabilities().getType() == ValueType.LONG)) {
+                        if (holder != null && ValueType.isNumeric(holder.getCapabilities().getType())) {
                           cachedMetricVals = holder.getGenericColumn();
                           genericColumnCache.put(columnName, cachedMetricVals);
                         }
@@ -619,14 +618,48 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                     }
 
                     @Override
+                    public DoubleColumnSelector makeDoubleColumnSelector(String columnName)
+                    {
+                      GenericColumn cachedMetricVals = genericColumnCache.get(columnName);
+
+                      if (cachedMetricVals == null) {
+                        Column holder = index.getColumn(columnName);
+                        if (holder != null && ValueType.isNumeric(holder.getCapabilities().getType())) {
+                          cachedMetricVals = holder.getGenericColumn();
+                          genericColumnCache.put(columnName, cachedMetricVals);
+                        }
+                      }
+
+                      if (cachedMetricVals == null) {
+                        return new DoubleColumnSelector()
+                        {
+                          @Override
+                          public double get()
+                          {
+                            return 0.0f;
+                          }
+                        };
+                      }
+
+                      final GenericColumn metricVals = cachedMetricVals;
+                      return new DoubleColumnSelector()
+                      {
+                        @Override
+                        public double get()
+                        {
+                          return metricVals.getDoubleSingleValueRow(cursorOffset.getOffset());
+                        }
+                      };
+                    }
+
+                    @Override
                     public LongColumnSelector makeLongColumnSelector(String columnName)
                     {
                       GenericColumn cachedMetricVals = genericColumnCache.get(columnName);
 
                       if (cachedMetricVals == null) {
                         Column holder = index.getColumn(columnName);
-                        if (holder != null && (holder.getCapabilities().getType() == ValueType.LONG
-                                               || holder.getCapabilities().getType() == ValueType.FLOAT)) {
+                        if (holder != null && ValueType.isNumeric(holder.getCapabilities().getType())) {
                           cachedMetricVals = holder.getGenericColumn();
                           genericColumnCache.put(columnName, cachedMetricVals);
                         }
@@ -707,6 +740,22 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                             public Float get()
                             {
                               return columnVals.getFloatSingleValueRow(cursorOffset.getOffset());
+                            }
+                          };
+                        }
+                        if (type == ValueType.DOUBLE) {
+                          return new ObjectColumnSelector<Double>()
+                          {
+                            @Override
+                            public Class classOfObject()
+                            {
+                              return Double.TYPE;
+                            }
+
+                            @Override
+                            public Double get()
+                            {
+                              return columnVals.getDoubleSingleValueRow(cursorOffset.getOffset());
                             }
                           };
                         }

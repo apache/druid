@@ -19,33 +19,19 @@
 
 package io.druid.query.aggregation;
 
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 
 import java.nio.ByteBuffer;
 
 /**
  */
-public class DoubleSumBufferAggregator implements BufferAggregator
+public abstract class DoubleSumBufferAggregator implements BufferAggregator
 {
-  private final FloatColumnSelector selector;
-
-  public DoubleSumBufferAggregator(
-      FloatColumnSelector selector
-  )
-  {
-    this.selector = selector;
-  }
-
   @Override
   public void init(ByteBuffer buf, int position)
   {
     buf.putDouble(position, 0.0d);
-  }
-
-  @Override
-  public void aggregate(ByteBuffer buf, int position)
-  {
-    buf.putDouble(position, buf.getDouble(position) + (double) selector.get());
   }
 
   @Override
@@ -60,6 +46,12 @@ public class DoubleSumBufferAggregator implements BufferAggregator
     return (float) buf.getDouble(position);
   }
 
+  @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    return buf.getDouble(position);
+  }
+
 
   @Override
   public long getLong(ByteBuffer buf, int position)
@@ -71,5 +63,37 @@ public class DoubleSumBufferAggregator implements BufferAggregator
   public void close()
   {
     // no resources to cleanup
+  }
+
+  public static class FloatInput extends DoubleSumBufferAggregator
+  {
+    private final FloatColumnSelector selector;
+
+    public FloatInput(FloatColumnSelector selector)
+    {
+      this.selector = selector;
+    }
+
+    @Override
+    public void aggregate(ByteBuffer buf, int position)
+    {
+      buf.putDouble(position, buf.getDouble(position) + selector.get());
+    }
+  }
+
+  public static class DoubleInput extends DoubleSumBufferAggregator
+  {
+    private final DoubleColumnSelector selector;
+
+    public DoubleInput(DoubleColumnSelector selector)
+    {
+      this.selector = selector;
+    }
+
+    @Override
+    public void aggregate(ByteBuffer buf, int position)
+    {
+      buf.putDouble(position, buf.getDouble(position) + selector.get());
+    }
   }
 }

@@ -108,6 +108,8 @@ public class InputRowSerde
 
         if (t.equals("float")) {
           out.writeFloat(agg.getFloat());
+        } else if (t.equals("double")) {
+          out.writeDouble(agg.getDouble());
         } else if (t.equals("long")) {
           WritableUtils.writeVLong(out, agg.getLong());
         } else {
@@ -208,6 +210,8 @@ public class InputRowSerde
         String type = getType(metric, aggs, i);
         if (type.equals("float")) {
           event.put(metric, in.readFloat());
+        } else if (type.equals("double")) {
+          event.put(metric, in.readDouble());
         } else if (type.equals("long")) {
           event.put(metric, WritableUtils.readVLong(in));
         } else {

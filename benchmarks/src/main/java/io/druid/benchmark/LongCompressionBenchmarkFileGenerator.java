@@ -23,7 +23,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.io.ByteSink;
 import io.druid.benchmark.datagen.BenchmarkColumnSchema;
 import io.druid.benchmark.datagen.BenchmarkColumnValueGenerator;
-import io.druid.segment.column.ValueType;
+import io.druid.data.ValueType;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.LongSupplierSerializer;

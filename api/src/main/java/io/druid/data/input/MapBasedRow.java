@@ -23,12 +23,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.collect.Lists;
-import com.metamx.common.IAE;
 import com.metamx.common.logger.Logger;
 import com.metamx.common.parsers.ParseException;
 import org.joda.time.DateTime;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -125,6 +123,29 @@ public class MapBasedRow implements Row
     } else if (metricValue instanceof String) {
       try {
         return Float.valueOf(((String) metricValue).replace(",", ""));
+      }
+      catch (Exception e) {
+        throw new ParseException(e, "Unable to parse metrics[%s], value[%s]", metric, metricValue);
+      }
+    } else {
+      throw new ParseException("Unknown type[%s]", metricValue.getClass());
+    }
+  }
+
+  @Override
+  public double getDoubleMetric(String metric)
+  {
+    Object metricValue = event.get(metric);
+
+    if (metricValue == null) {
+      return 0.0d;
+    }
+
+    if (metricValue instanceof Number) {
+      return ((Number) metricValue).doubleValue();
+    } else if (metricValue instanceof String) {
+      try {
+        return Double.valueOf(((String) metricValue).replace(",", ""));
       }
       catch (Exception e) {
         throw new ParseException(e, "Unable to parse metrics[%s], value[%s]", metric, metricValue);

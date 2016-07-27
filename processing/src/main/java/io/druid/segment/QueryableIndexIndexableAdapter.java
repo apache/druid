@@ -27,15 +27,16 @@ import com.google.common.collect.Sets;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.logger.Logger;
+import io.druid.data.ValueType;
 import io.druid.segment.column.BitmapIndex;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ComplexColumn;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.column.GenericColumn;
+import io.druid.segment.column.IndexedDoublesGenericColumn;
 import io.druid.segment.column.IndexedFloatsGenericColumn;
 import io.druid.segment.column.IndexedLongsGenericColumn;
-import io.druid.segment.column.ValueType;
 import io.druid.segment.data.BitmapCompressedIndexedInts;
 import io.druid.segment.data.EmptyIndexedInts;
 import io.druid.segment.data.Indexed;
@@ -212,6 +213,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
               final ValueType type = column.getCapabilities().getType();
               switch (type) {
                 case FLOAT:
+                case DOUBLE:
                 case LONG:
                   metrics[i] = column.getGenericColumn();
                   break;
@@ -261,6 +263,8 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
             for (int i = 0; i < metricArray.length; ++i) {
               if (metrics[i] instanceof IndexedFloatsGenericColumn) {
                 metricArray[i] = ((GenericColumn) metrics[i]).getFloatSingleValueRow(currRow);
+              } else if (metrics[i] instanceof IndexedDoublesGenericColumn) {
+                metricArray[i] = ((GenericColumn) metrics[i]).getDoubleSingleValueRow(currRow);
               } else if (metrics[i] instanceof IndexedLongsGenericColumn) {
                 metricArray[i] = ((GenericColumn) metrics[i]).getLongSingleValueRow(currRow);
               } else if (metrics[i] instanceof ComplexColumn) {
@@ -313,6 +317,8 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
     switch (type) {
       case FLOAT:
         return "float";
+      case DOUBLE:
+        return "double";
       case LONG:
         return "long";
       case COMPLEX:

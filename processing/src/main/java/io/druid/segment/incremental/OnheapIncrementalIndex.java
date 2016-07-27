@@ -31,6 +31,7 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
@@ -303,6 +304,12 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   }
 
   @Override
+  protected double getMetricDoubleValue(int rowOffset, int aggOffset)
+  {
+    return concurrentGet(rowOffset)[aggOffset].getDouble();
+  }
+
+  @Override
   public long getMetricLongValue(int rowOffset, int aggOffset)
   {
     return concurrentGet(rowOffset)[aggOffset].getLong();
@@ -336,6 +343,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   {
     private final ConcurrentMap<String, LongColumnSelector> longColumnSelectorMap = Maps.newConcurrentMap();
     private final ConcurrentMap<String, FloatColumnSelector> floatColumnSelectorMap = Maps.newConcurrentMap();
+    private final ConcurrentMap<String, DoubleColumnSelector> doubleColumnSelectorMap = Maps.newConcurrentMap();
     private final ConcurrentMap<String, ObjectColumnSelector> objectColumnSelectorMap = Maps.newConcurrentMap();
     private final ColumnSelectorFactory delegate;
 
@@ -359,6 +367,22 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       } else {
         FloatColumnSelector newSelector = delegate.makeFloatColumnSelector(columnName);
         FloatColumnSelector prev = floatColumnSelectorMap.putIfAbsent(
+            columnName,
+            newSelector
+        );
+        return prev != null ? prev : newSelector;
+      }
+    }
+
+    @Override
+    public DoubleColumnSelector makeDoubleColumnSelector(String columnName)
+    {
+      DoubleColumnSelector existing = doubleColumnSelectorMap.get(columnName);
+      if (existing != null) {
+        return existing;
+      } else {
+        DoubleColumnSelector newSelector = delegate.makeDoubleColumnSelector(columnName);
+        DoubleColumnSelector prev = doubleColumnSelectorMap.putIfAbsent(
             columnName,
             newSelector
         );

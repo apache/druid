@@ -26,6 +26,7 @@ import io.druid.js.JavaScriptConfig;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
@@ -55,6 +56,12 @@ public class JavaScriptAggregatorTest
 
     @Override
     public FloatColumnSelector makeFloatColumnSelector(String columnName)
+    {
+      return null;
+    }
+
+    @Override
+    public DoubleColumnSelector makeDoubleColumnSelector(String columnName)
     {
       return null;
     }
@@ -345,7 +352,7 @@ public class JavaScriptAggregatorTest
         )
     );
 
-    DoubleSumAggregator doubleAgg = new DoubleSumAggregator("billy", selector);
+    DoubleSumAggregator doubleAgg = new DoubleSumAggregator.FloatInput("billy", selector);
 
     // warmup
     int i = 0;

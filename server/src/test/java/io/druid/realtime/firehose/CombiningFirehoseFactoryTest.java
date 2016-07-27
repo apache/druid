@@ -96,6 +96,12 @@ public class CombiningFirehoseFactoryTest
       }
 
       @Override
+      public double getDoubleMetric(String metric)
+      {
+        return metricValue;
+      }
+
+      @Override
       public long getLongMetric(String metric)
       {
         return new Float(metricValue).longValue();

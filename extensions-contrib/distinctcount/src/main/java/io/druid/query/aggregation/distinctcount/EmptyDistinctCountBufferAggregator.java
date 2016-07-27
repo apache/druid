@@ -53,6 +53,12 @@ public class EmptyDistinctCountBufferAggregator implements BufferAggregator
   }
 
   @Override
+  public double getDouble(ByteBuffer buf, int position)
+  {
+    return (double) 0;
+  }
+
+  @Override
   public long getLong(ByteBuffer buf, int position)
   {
     return (long) 0;

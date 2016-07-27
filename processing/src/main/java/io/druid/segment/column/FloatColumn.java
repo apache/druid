@@ -19,6 +19,7 @@
 
 package io.druid.segment.column;
 
+import io.druid.data.ValueType;
 import io.druid.segment.data.CompressedFloatsIndexedSupplier;
 
 /**

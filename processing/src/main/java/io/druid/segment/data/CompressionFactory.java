@@ -330,4 +330,31 @@ public class CompressionFactory
     }
   }
 
+  public static Supplier<IndexedDoubles> getDoubleSupplier(
+      int totalSize, int sizePer, ByteBuffer fromBuffer, ByteOrder order,
+      CompressedObjectStrategy.CompressionStrategy strategy
+  )
+  {
+    if (strategy == CompressedObjectStrategy.CompressionStrategy.NONE) {
+      return new EntireLayoutIndexedDoubleSupplier(totalSize, fromBuffer, order);
+    } else {
+      return new BlockLayoutIndexedDoubleSupplier(totalSize, sizePer, fromBuffer, order, strategy);
+    }
+  }
+
+  public static DoubleSupplierSerializer getDoubleSerializer(
+      IOPeon ioPeon, String filenameBase, ByteOrder order,
+      CompressedObjectStrategy.CompressionStrategy compressionStrategy
+  )
+  {
+    if (compressionStrategy == CompressedObjectStrategy.CompressionStrategy.NONE) {
+      return new EntireLayoutDoubleSupplierSerializer(
+          ioPeon, filenameBase, order
+      );
+    } else{
+      return new BlockLayoutDoubleSupplierSerializer(
+          ioPeon, filenameBase, order, compressionStrategy
+      );
+    }
+  }
 }

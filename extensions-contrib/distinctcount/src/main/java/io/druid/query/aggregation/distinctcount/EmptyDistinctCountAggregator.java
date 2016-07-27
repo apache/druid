@@ -69,4 +69,10 @@ public class EmptyDistinctCountAggregator implements Aggregator
   {
     return (long) 0;
   }
+
+  @Override
+  public double getDouble()
+  {
+    return (double) 0;
+  }
 }

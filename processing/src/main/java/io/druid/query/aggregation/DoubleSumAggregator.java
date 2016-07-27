@@ -21,13 +21,14 @@ package io.druid.query.aggregation;
 
 import com.google.common.collect.Ordering;
 import com.google.common.primitives.Doubles;
+import io.druid.segment.DoubleColumnSelector;
 import io.druid.segment.FloatColumnSelector;
 
 import java.util.Comparator;
 
 /**
  */
-public class DoubleSumAggregator implements Aggregator
+public abstract class DoubleSumAggregator implements Aggregator
 {
   static final Comparator COMPARATOR = new Ordering()
   {
@@ -43,23 +44,13 @@ public class DoubleSumAggregator implements Aggregator
     return ((Number) lhs).doubleValue() + ((Number) rhs).doubleValue();
   }
 
-  private final FloatColumnSelector selector;
-  private final String name;
+  final String name;
+  double sum;
 
-  private double sum;
-
-  public DoubleSumAggregator(String name, FloatColumnSelector selector)
+  public DoubleSumAggregator(String name)
   {
     this.name = name;
-    this.selector = selector;
-
     this.sum = 0;
-  }
-
-  @Override
-  public void aggregate()
-  {
-    sum += selector.get();
   }
 
   @Override
@@ -87,20 +78,67 @@ public class DoubleSumAggregator implements Aggregator
   }
 
   @Override
+  public double getDouble()
+  {
+    return sum;
+  }
+
+  @Override
   public String getName()
   {
     return this.name;
   }
 
   @Override
-  public Aggregator clone()
-  {
-    return new DoubleSumAggregator(name, selector);
-  }
-
-  @Override
   public void close()
   {
     // no resources to cleanup
+  }
+
+
+  public static class FloatInput extends DoubleSumAggregator
+  {
+    private final FloatColumnSelector selector;
+
+    public FloatInput(String name, FloatColumnSelector selector)
+    {
+      super(name);
+      this.selector = selector;
+    }
+
+    @Override
+    public void aggregate()
+    {
+      sum += selector.get();
+    }
+
+    @Override
+    public Aggregator clone()
+    {
+      return new FloatInput(name, selector);
+    }
+  }
+
+  public static class DoubleInput extends DoubleSumAggregator
+  {
+    private final DoubleColumnSelector selector;
+
+    public DoubleInput(String name, DoubleColumnSelector selector)
+    {
+      super(name);
+      this.selector = selector;
+    }
+
+    @Override
+    public void aggregate()
+    {
+      sum += selector.get();
+    }
+
+    @Override
+    public Aggregator clone()
+    {
+      return new DoubleInput(name, selector);
+    }
   }
 }

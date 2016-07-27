@@ -116,6 +116,12 @@ public class SinkTest
           }
 
           @Override
+          public double getDoubleMetric(String metric)
+          {
+            return 0;
+          }
+
+          @Override
           public long getLongMetric(String metric)
           {
             return 0L;
@@ -170,6 +176,12 @@ public class SinkTest
 
           @Override
           public float getFloatMetric(String metric)
+          {
+            return 0;
+          }
+
+          @Override
+          public double getDoubleMetric(String metric)
           {
             return 0;
           }
