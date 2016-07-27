@@ -41,10 +41,10 @@ import java.util.Map;
  */
 public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
 {
-  private static final NewSearchSortSpec DEFAULT_SORT_SPEC = new NewSearchSortSpec(StringComparators.LEXICOGRAPHIC);
+  private static final SearchSortSpec DEFAULT_SORT_SPEC = new SearchSortSpec(StringComparators.LEXICOGRAPHIC);
 
   private final DimFilter dimFilter;
-  private final NewSearchSortSpec sortSpec;
+  private final SearchSortSpec sortSpec;
   private final QueryGranularity granularity;
   private final List<DimensionSpec> dimensions;
   private final SearchQuerySpec querySpec;
@@ -59,7 +59,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
       @JsonProperty("searchDimensions") List<DimensionSpec> dimensions,
       @JsonProperty("query") SearchQuerySpec querySpec,
-      @JsonProperty("sort") NewSearchSortSpec sortSpec,
+      @JsonProperty("sort") SearchSortSpec sortSpec,
       @JsonProperty("context") Map<String, Object> context
   )
   {
@@ -186,7 +186,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   }
 
   @JsonProperty("sort")
-  public NewSearchSortSpec getSort()
+  public SearchSortSpec getSort()
   {
     return sortSpec;
   }

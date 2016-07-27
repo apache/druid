@@ -44,7 +44,7 @@ import io.druid.query.search.SearchResultValue;
 import io.druid.query.search.search.ContainsSearchQuerySpec;
 import io.druid.query.search.search.FragmentSearchQuerySpec;
 import io.druid.query.search.search.InsensitiveContainsSearchQuerySpec;
-import io.druid.query.search.search.NewSearchSortSpec;
+import io.druid.query.search.search.SearchSortSpec;
 import io.druid.query.search.search.SearchQuery;
 import io.druid.query.search.search.SearchQuerySpec;
 import io.druid.query.select.PagingSpec;
@@ -546,7 +546,7 @@ public class Druids
     private QuerySegmentSpec querySegmentSpec;
     private List<DimensionSpec> dimensions;
     private SearchQuerySpec querySpec;
-    private NewSearchSortSpec sortSpec;
+    private SearchSortSpec sortSpec;
     private Map<String, Object> context;
 
     public SearchQueryBuilder()
@@ -731,7 +731,7 @@ public class Druids
       return fragments(q, false);
     }
 
-    public SearchQueryBuilder sortSpec(NewSearchSortSpec sortSpec)
+    public SearchQueryBuilder sortSpec(SearchSortSpec sortSpec)
     {
       this.sortSpec = sortSpec;
       return this;

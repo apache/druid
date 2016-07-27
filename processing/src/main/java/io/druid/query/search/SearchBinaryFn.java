@@ -25,7 +25,7 @@ import com.metamx.common.guava.nary.BinaryFn;
 import io.druid.granularity.AllGranularity;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Result;
-import io.druid.query.search.search.NewSearchSortSpec;
+import io.druid.query.search.search.SearchSortSpec;
 import io.druid.query.search.search.SearchHit;
 import org.joda.time.DateTime;
 
@@ -37,12 +37,12 @@ import java.util.List;
 public class SearchBinaryFn
     implements BinaryFn<Result<SearchResultValue>, Result<SearchResultValue>, Result<SearchResultValue>>
 {
-  private final NewSearchSortSpec searchSortSpec;
+  private final SearchSortSpec searchSortSpec;
   private final QueryGranularity gran;
   private final int limit;
 
   public SearchBinaryFn(
-      NewSearchSortSpec searchSortSpec,
+      SearchSortSpec searchSortSpec,
       QueryGranularity granularity,
       int limit
   )

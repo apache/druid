@@ -22,7 +22,7 @@ package io.druid.query.search;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.ordering.StringComparators;
-import io.druid.query.search.search.NewSearchSortSpec;
+import io.druid.query.search.search.SearchSortSpec;
 import io.druid.query.search.search.SearchHit;
 import org.junit.Assert;
 import org.junit.Test;
@@ -31,7 +31,7 @@ import java.io.IOException;
 
 /**
  */
-public class NewSearchSortSpecTest
+public class SearchSortSpecTest
 {
   @Test
   public void testLexicographicComparator()
@@ -40,7 +40,7 @@ public class NewSearchSortSpecTest
     SearchHit hit2 = new SearchHit("test", "banana");
     SearchHit hit3 = new SearchHit("test", "banana");
 
-    NewSearchSortSpec spec = new NewSearchSortSpec(StringComparators.LEXICOGRAPHIC);
+    SearchSortSpec spec = new SearchSortSpec(StringComparators.LEXICOGRAPHIC);
 
     Assert.assertTrue(spec.getComparator().compare(hit2, hit3) == 0);
     Assert.assertTrue(spec.getComparator().compare(hit2, hit1) > 0);
@@ -50,7 +50,7 @@ public class NewSearchSortSpecTest
   @Test
   public void testAlphanumericComparator()
   {
-    NewSearchSortSpec spec = new NewSearchSortSpec(StringComparators.ALPHANUMERIC);
+    SearchSortSpec spec = new SearchSortSpec(StringComparators.ALPHANUMERIC);
 
     SearchHit hit1 = new SearchHit("test", "a100");
     SearchHit hit2 = new SearchHit("test", "a9");
@@ -64,7 +64,7 @@ public class NewSearchSortSpecTest
   @Test
   public void testNumericComparator()
   {
-    NewSearchSortSpec spec = new NewSearchSortSpec(StringComparators.NUMERIC);
+    SearchSortSpec spec = new SearchSortSpec(StringComparators.NUMERIC);
 
     SearchHit hit1 = new SearchHit("test", "1001001.12412");
     SearchHit hit2 = new SearchHit("test", "-1421");
@@ -83,7 +83,7 @@ public class NewSearchSortSpecTest
   @Test
   public void testStrlenComparator()
   {
-    NewSearchSortSpec spec = new NewSearchSortSpec(StringComparators.LEXICOGRAPHIC);
+    SearchSortSpec spec = new SearchSortSpec(StringComparators.LEXICOGRAPHIC);
 
     SearchHit hit1 = new SearchHit("test", "apple");
     SearchHit hit2 = new SearchHit("test", "banana");
@@ -101,16 +101,16 @@ public class NewSearchSortSpecTest
   public void testSerde() throws IOException
   {
     ObjectMapper jsonMapper = new DefaultObjectMapper();
-    NewSearchSortSpec spec = new NewSearchSortSpec(StringComparators.LEXICOGRAPHIC);
+    SearchSortSpec spec = new SearchSortSpec(StringComparators.LEXICOGRAPHIC);
 
     String expectJsonSpec = "{\"ordering\":{\"type\":\"lexicographic\"}}";
     String jsonSpec = jsonMapper.writeValueAsString(spec);
     Assert.assertEquals(expectJsonSpec, jsonSpec);
-    Assert.assertEquals(spec, jsonMapper.readValue(jsonSpec, NewSearchSortSpec.class));
+    Assert.assertEquals(spec, jsonMapper.readValue(jsonSpec, SearchSortSpec.class));
 
     // this works too, without specifying "ordering"...
     String expectJsonSpec2 = "{\"type\":\"lexicographic\"}";
-    Assert.assertEquals(spec, jsonMapper.readValue(expectJsonSpec2, NewSearchSortSpec.class));
+    Assert.assertEquals(spec, jsonMapper.readValue(expectJsonSpec2, SearchSortSpec.class));
 
   }
 }

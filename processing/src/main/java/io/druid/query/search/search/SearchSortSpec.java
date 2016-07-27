@@ -27,14 +27,14 @@ import io.druid.query.ordering.StringComparators;
 
 import java.util.Comparator;
 
-public class NewSearchSortSpec
+public class SearchSortSpec
 {
   public static final StringComparator DEFAULT_ORDERING = StringComparators.LEXICOGRAPHIC;
 
   private final StringComparator ordering;
 
   @JsonCreator
-  public NewSearchSortSpec(
+  public SearchSortSpec(
       @JsonProperty("ordering") StringComparator ordering
   )
   {
@@ -87,7 +87,7 @@ public class NewSearchSortSpec
       return false;
     }
 
-    NewSearchSortSpec that = (NewSearchSortSpec) o;
+    SearchSortSpec that = (SearchSortSpec) o;
 
     return ordering.equals(that.ordering);
 
