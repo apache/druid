@@ -1369,7 +1369,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
      * @return the previous value associated with the specified key, or
      * {@code null} if there was no mapping for the key.
      */
-    Integer getRowIndexForRollup(TimeAndDims key);
+    Integer getPriorIndex(TimeAndDims key);
 
     long getMinTimeMillis();
 
@@ -1408,7 +1408,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     }
 
     @Override
-    public Integer getRowIndexForRollup(TimeAndDims key)
+    public Integer getPriorIndex(TimeAndDims key)
     {
       return facts.get(key);
     }
@@ -1502,7 +1502,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     }
 
     @Override
-    public Integer getRowIndexForRollup(TimeAndDims key)
+    public Integer getPriorIndex(TimeAndDims key)
     {
       // always return null to indicate that no prior key cause we always add new row
       return null;

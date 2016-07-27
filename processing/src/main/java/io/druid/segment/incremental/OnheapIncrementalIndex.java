@@ -180,7 +180,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       Supplier<InputRow> rowSupplier
   ) throws IndexSizeExceededException
   {
-    final Integer priorIndex = facts.getRowIndexForRollup(key);
+    final Integer priorIndex = facts.getPriorIndex(key);
 
     Aggregator[] aggs;
 
@@ -196,7 +196,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       concurrentSet(rowIndex, aggs);
 
       // Last ditch sanity checks
-      if (numEntries.get() >= maxRowCount && facts.getRowIndexForRollup(key) == null) {
+      if (numEntries.get() >= maxRowCount && facts.getPriorIndex(key) == null) {
         throw new IndexSizeExceededException("Maximum number of rows [%d] reached", maxRowCount);
       }
       final Integer prev = facts.putIfAbsent(key, rowIndex);
