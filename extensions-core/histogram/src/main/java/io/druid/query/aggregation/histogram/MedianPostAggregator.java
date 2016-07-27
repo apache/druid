@@ -23,74 +23,48 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.collect.Sets;
-import com.metamx.common.IAE;
 
 import java.util.Comparator;
 import java.util.Map;
 import java.util.Set;
 
-@JsonTypeName("quantile")
-public class QuantilePostAggregator extends ApproximateHistogramPostAggregator
+/**
+ */
+@JsonTypeName("median")
+public class MedianPostAggregator extends ApproximateHistogramPostAggregator
 {
-  static final Comparator COMPARATOR = new Comparator()
-  {
-    @Override
-    public int compare(Object o, Object o1)
-    {
-      return Double.compare(((Number) o).doubleValue(), ((Number) o1).doubleValue());
-    }
-  };
-
-  private final float probability;
-  private String fieldName;
-
   @JsonCreator
-  public QuantilePostAggregator(
+  public MedianPostAggregator(
       @JsonProperty("name") String name,
-      @JsonProperty("fieldName") String fieldName,
-      @JsonProperty("probability") float probability
+      @JsonProperty("fieldName") String fieldName
   )
   {
     super(name, fieldName);
-    this.probability = probability;
-    this.fieldName = fieldName;
-
-    if (probability < 0 | probability > 1) {
-      throw new IAE("Illegal probability[%s], must be strictly between 0 and 1", probability);
-    }
-  }
-
-  @Override
-  public Comparator getComparator()
-  {
-    return COMPARATOR;
-  }
-
-  @Override
-  public Set<String> getDependentFields()
-  {
-    return Sets.newHashSet(fieldName);
   }
 
   @Override
   public Object compute(Map<String, Object> values)
   {
-    final ApproximateHistogram ah = (ApproximateHistogram) values.get(this.getFieldName());
-    return ah.getQuantile(probability);
+    return ((ApproximateHistogram) values.get(getFieldName())).getMedian();
   }
 
-  @JsonProperty
-  public float getProbability()
+  @Override
+  public Set<String> getDependentFields()
   {
-    return probability;
+    return Sets.newHashSet(getFieldName());
+  }
+
+  @Override
+  public Comparator getComparator()
+  {
+    return QuantilePostAggregator.COMPARATOR;
   }
 
   @Override
   public String toString()
   {
-    return "QuantilePostAggregator{" +
-           "probability=" + probability +
-           ", fieldName='" + fieldName + '\'' +
+    return "MedianPostAggregator{" +
+           "fieldName='" + getFieldName() + '\'' +
            '}';
   }
 }

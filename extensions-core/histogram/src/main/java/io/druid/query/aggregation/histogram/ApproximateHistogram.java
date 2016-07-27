@@ -239,6 +239,17 @@ public class ApproximateHistogram
     return exactCount;
   }
 
+  public boolean isExactUpTo(long count)
+  {
+    for (int i = 0; count > 0 && i < binCount; ++i) {
+      if ((bins[i] & APPROX_FLAG_BIT) != 0) {
+        return false;
+      }
+      count -= bins[i];
+    }
+    return true;
+  }
+
   public float getMin() { return this.min;}
 
   public float getMax() { return this.max;}
@@ -1532,49 +1543,82 @@ public class ApproximateHistogram
     float[] quantiles = new float[probabilities.length];
     Arrays.fill(quantiles, Float.NaN);
 
-    if (this.count() == 0) {
+    if (count() == 0) {
       return quantiles;
     }
 
-    final long[] bins = this.bins();
-
+    final long[] bins = bins();
+    final float[] positions = this.positions;
     for (int j = 0; j < probabilities.length; ++j) {
-      final double s = probabilities[j] * this.count();
-
-      int i = 0;
-      int sum = 0;
-      int k = 1;
-      long count = 0;
-      while (k <= this.binCount()) {
-        count = bins[k - 1];
-        if (sum + count > s) {
-          i = k - 1;
-          break;
-        } else {
-          sum += count;
-        }
-        ++k;
-      }
-
-      if (i == 0) {
-        quantiles[j] = this.min();
-      } else {
-        final double d = s - sum;
-        final double c = -2 * d;
-        final long a = bins[i] - bins[i - 1];
-        final long b = 2 * bins[i - 1];
-        double z = 0;
-        if (a == 0) {
-          z = -c / b;
-        } else {
-          z = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
-        }
-        final double uj = this.positions[i - 1] + (this.positions[i] - this.positions[i - 1]) * z;
-        quantiles[j] = (float) uj;
-      }
+      quantiles[j] = getQuantile(probabilities[j], bins, positions);
     }
 
     return quantiles;
+  }
+
+  public float getQuantile(float p)
+  {
+    return getQuantile(p, bins(), positions);
+  }
+
+  private float getQuantile(float p, final long[] bins, final float[] positions)
+  {
+    Preconditions.checkArgument(0 < p & p < 1, "quantile probability must be strictly between 0 and 1");
+    int i = 0;
+    int sum = 0;
+    int k = 1;
+    long count = 0;
+    final double s = p * count();
+    while (k <= bins.length) {
+      count = bins[k - 1];
+      if (sum + count > s) {
+        i = k - 1;
+        break;
+      } else {
+        sum += count;
+      }
+      ++k;
+    }
+
+    if (i == 0) {
+      return min();
+    } else {
+      final double d = s - sum;
+      final double c = -2 * d;
+      final long a = bins[i] - bins[i - 1];
+      final long b = 2 * bins[i - 1];
+      double z = 0;
+      if (a == 0) {
+        z = -c / b;
+      } else {
+        z = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
+      }
+      return (float) (positions[i - 1] + (positions[i] - positions[i - 1]) * z);
+    }
+  }
+
+  public float getMedian()
+  {
+    if (count == 0) {
+      return min();
+    }
+    final long lower = count / 2;
+    final long upper = (count + 1) / 2;
+    if (!isExactUpTo(upper)) {
+      return getQuantile(0.5f, bins(), positions);
+    }
+    int sum = 0;
+    for (int i = 0; i < bins.length; i++) {
+      sum += bins[i];
+      if (sum < lower) {
+        continue;
+      }
+      if (lower == upper || sum >= upper) {
+        return positions[i];
+      }
+      return (positions[i] + positions[i + 1]) / 2;
+    }
+    throw new IllegalStateException();
   }
 
   /**

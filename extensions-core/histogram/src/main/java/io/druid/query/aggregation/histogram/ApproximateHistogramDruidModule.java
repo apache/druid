@@ -44,6 +44,7 @@ public class ApproximateHistogramDruidModule implements DruidModule
             BucketsPostAggregator.class,
             QuantilesPostAggregator.class,
             QuantilePostAggregator.class,
+            MedianPostAggregator.class,
             MinPostAggregator.class,
             MaxPostAggregator.class
         )

@@ -75,7 +75,16 @@ public class QuantilesTest
         ((Number) theMap.get("max")).floatValue(),
         0.0001f
     );
+  }
 
-
+  @Test
+  public void testMedianDiffQuantile() throws Exception
+  {
+    // example of median != quantile(0.5)
+    ApproximateHistogram h = new ApproximateHistogram();
+    h.offer(100);
+    h.offer(200);
+    h.offer(200);
+    Assert.assertNotEquals(h.getMedian(), h.getQuantile(0.5f));
   }
 }
