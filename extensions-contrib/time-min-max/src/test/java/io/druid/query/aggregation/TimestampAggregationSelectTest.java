@@ -27,7 +27,6 @@ import com.google.common.collect.Lists;
 import com.google.common.io.Resources;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
-import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularities;
 import io.druid.query.Result;
 import io.druid.query.select.SelectResultValue;

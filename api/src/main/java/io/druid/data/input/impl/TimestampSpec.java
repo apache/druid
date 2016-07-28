@@ -25,7 +25,6 @@ import io.druid.java.util.common.parsers.TimestampParser;
 
 import org.joda.time.DateTime;
 
-import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -107,16 +106,6 @@ public class TimestampSpec
       }
     }
     return extracted;
-  }
-
-  public Timestamp parseTimestamp(Object input)
-  {
-    DateTime dateTime = parseDateTime(input);
-    if (dateTime != null) {
-      return new Timestamp(dateTime.getMillis());
-    }
-
-    return null;
   }
 
   @Override

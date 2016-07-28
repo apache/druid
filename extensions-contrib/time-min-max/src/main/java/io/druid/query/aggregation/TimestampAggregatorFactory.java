@@ -19,9 +19,7 @@
 
 package io.druid.query.aggregation;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
 import com.google.common.primitives.Longs;
 import io.druid.common.utils.StringUtils;
 import io.druid.data.input.impl.TimestampSpec;

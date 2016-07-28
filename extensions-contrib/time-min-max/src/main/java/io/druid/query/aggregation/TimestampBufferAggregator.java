@@ -21,10 +21,8 @@ package io.druid.query.aggregation;
 
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.segment.ObjectColumnSelector;
-import org.joda.time.DateTime;
 
 import java.nio.ByteBuffer;
-import java.sql.Timestamp;
 import java.util.Comparator;
 
 public class TimestampBufferAggregator implements BufferAggregator
