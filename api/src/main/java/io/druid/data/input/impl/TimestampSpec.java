@@ -25,6 +25,7 @@ import io.druid.java.util.common.parsers.TimestampParser;
 
 import org.joda.time.DateTime;
 
+import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -88,20 +89,34 @@ public class TimestampSpec
 
   public DateTime extractTimestamp(Map<String, Object> input)
   {
-    final Object o = input.get(timestampColumn);
+    return parseDateTime(input.get(timestampColumn));
+  }
+
+  public DateTime parseDateTime(Object input)
+  {
     DateTime extracted = missingValue;
-    if (o != null) {
-      if (o.equals(parseCtx.lastTimeObject)) {
+    if (input != null) {
+      if (input.equals(parseCtx.lastTimeObject)) {
         extracted = parseCtx.lastDateTime;
       } else {
         ParseCtx newCtx = new ParseCtx();
-        newCtx.lastTimeObject = o;
-        extracted = timestampConverter.apply(o);
+        newCtx.lastTimeObject = input;
+        extracted = timestampConverter.apply(input);
         newCtx.lastDateTime = extracted;
         parseCtx = newCtx;
       }
     }
     return extracted;
+  }
+
+  public Timestamp parseTimestamp(Object input)
+  {
+    DateTime dateTime = parseDateTime(input);
+    if (dateTime != null) {
+      return new Timestamp(dateTime.getMillis());
+    }
+
+    return null;
   }
 
   @Override
