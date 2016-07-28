@@ -453,7 +453,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
             new TimelineObjectHolder<VersionType, ObjectType>(
                 timelineInterval,
                 val.getVersion(),
-                val.getPartitionHolder()
+                new PartitionHolder<ObjectType>(val.getPartitionHolder())
             )
         );
       }
