@@ -56,8 +56,6 @@ import java.util.concurrent.TimeoutException;
 
 public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
 {
-  private static final String CTX_KEY_IS_SINGLE_THREADED = "groupByIsSingleThreaded";
-
   private static final Logger log = new Logger(GroupByMergedQueryRunner.class);
   private final Iterable<QueryRunner<T>> queryables;
   private final ListeningExecutorService exec;
@@ -84,15 +82,11 @@ public class GroupByMergedQueryRunner<T> implements QueryRunner<T>
   public Sequence<T> run(final Query<T> queryParam, final Map<String, Object> responseContext)
   {
     final GroupByQuery query = (GroupByQuery) queryParam;
-
-    final boolean isSingleThreaded = query.getContextValue(
-        CTX_KEY_IS_SINGLE_THREADED,
-        configSupplier.get().isSingleThreaded()
-    );
-
+    final GroupByQueryConfig querySpecificConfig = configSupplier.get().withOverrides(query);
+    final boolean isSingleThreaded = querySpecificConfig.isSingleThreaded();
     final Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> indexAccumulatorPair = GroupByQueryHelper.createIndexAccumulatorPair(
         query,
-        configSupplier.get(),
+        querySpecificConfig,
         bufferPool
     );
     final Pair<Queue, Accumulator<Queue, T>> bySegmentAccumulatorPair = GroupByQueryHelper.createBySegmentAccumulatorPair();

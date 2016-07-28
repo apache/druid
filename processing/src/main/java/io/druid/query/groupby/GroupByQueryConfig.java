@@ -26,6 +26,14 @@ import io.druid.query.groupby.strategy.GroupByStrategySelector;
  */
 public class GroupByQueryConfig
 {
+  public static final String CTX_KEY_STRATEGY = "groupByStrategy";
+  private static final String CTX_KEY_IS_SINGLE_THREADED = "groupByIsSingleThreaded";
+  private static final String CTX_KEY_MAX_INTERMEDIATE_ROWS = "maxIntermediateRows";
+  private static final String CTX_KEY_MAX_RESULTS = "maxResults";
+  private static final String CTX_KEY_BUFFER_GROUPER_INITIAL_BUCKETS = "bufferGrouperInitialBuckets";
+  private static final String CTX_KEY_BUFFER_GROUPER_MAX_SIZE = "bufferGrouperMaxSize";
+  private static final String CTX_KEY_MAX_ON_DISK_STORAGE = "maxOnDiskStorage";
+
   @JsonProperty
   private String defaultStrategy = GroupByStrategySelector.STRATEGY_V1;
 
@@ -106,5 +114,33 @@ public class GroupByQueryConfig
   public long getMaxOnDiskStorage()
   {
     return maxOnDiskStorage;
+  }
+
+  public GroupByQueryConfig withOverrides(final GroupByQuery query)
+  {
+    final GroupByQueryConfig newConfig = new GroupByQueryConfig();
+    newConfig.defaultStrategy = query.getContextValue(CTX_KEY_STRATEGY, getDefaultStrategy());
+    newConfig.singleThreaded = query.getContextBoolean(CTX_KEY_IS_SINGLE_THREADED, isSingleThreaded());
+    newConfig.maxIntermediateRows = Math.min(
+        query.getContextValue(CTX_KEY_MAX_INTERMEDIATE_ROWS, getMaxIntermediateRows()),
+        getMaxIntermediateRows()
+    );
+    newConfig.maxResults = Math.min(
+        query.getContextValue(CTX_KEY_MAX_RESULTS, getMaxResults()),
+        getMaxResults()
+    );
+    newConfig.bufferGrouperInitialBuckets = query.getContextValue(
+        CTX_KEY_BUFFER_GROUPER_INITIAL_BUCKETS,
+        getBufferGrouperInitialBuckets()
+    );
+    newConfig.bufferGrouperMaxSize = Math.min(
+        query.getContextValue(CTX_KEY_BUFFER_GROUPER_MAX_SIZE, getBufferGrouperMaxSize()),
+        getBufferGrouperMaxSize()
+    );
+    newConfig.maxOnDiskStorage = Math.min(
+        ((Number)query.getContextValue(CTX_KEY_MAX_ON_DISK_STORAGE, getMaxOnDiskStorage())).longValue(),
+        getMaxOnDiskStorage()
+    );
+    return newConfig;
   }
 }

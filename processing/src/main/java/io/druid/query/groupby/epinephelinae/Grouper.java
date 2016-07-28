@@ -22,6 +22,7 @@ package io.druid.query.groupby.epinephelinae;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.io.Closeable;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -36,7 +37,7 @@ import java.util.Iterator;
  *
  * @param <KeyType> type of the key that will be passed in
  */
-public interface Grouper<KeyType extends Comparable<KeyType>>
+public interface Grouper<KeyType extends Comparable<KeyType>> extends Closeable
 {
   /**
    * Aggregate the current row with the provided key. Some implementations are thread-safe and
@@ -67,6 +68,7 @@ public interface Grouper<KeyType extends Comparable<KeyType>>
   /**
    * Close the grouper and release associated resources.
    */
+  @Override
   void close();
 
   /**

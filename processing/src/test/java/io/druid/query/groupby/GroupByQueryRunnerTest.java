@@ -156,7 +156,7 @@ public class GroupByQueryRunnerTest
             return ByteBuffer.allocate(10 * 1024 * 1024);
           }
         },
-        4
+        2 // There are some tests that need to allocate two buffers (simulating two levels of merging)
     );
     final GroupByStrategySelector strategySelector = new GroupByStrategySelector(
         configSupplier,
@@ -854,7 +854,7 @@ public class GroupByQueryRunnerTest
   }
 
   @Test
-  public void testGroupByMaxRowsLimitContextOverrid()
+  public void testGroupByMaxRowsLimitContextOverride()
   {
     GroupByQuery query = GroupByQuery
         .builder()
@@ -873,6 +873,32 @@ public class GroupByQueryRunnerTest
 
     if (!config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
       expectedException.expect(ISE.class);
+    }
+
+    GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+  }
+
+  @Test
+  public void testGroupByMaxOnDiskStorageContextOverride()
+  {
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .setContext(ImmutableMap.<String, Object>of("maxOnDiskStorage", 0, "bufferGrouperMaxSize", 1))
+        .build();
+
+    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
+      expectedException.expect(ISE.class);
+      expectedException.expectMessage("Grouping resources exhausted");
     }
 
     GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
