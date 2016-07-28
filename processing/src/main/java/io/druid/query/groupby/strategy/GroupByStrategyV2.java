@@ -142,7 +142,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
                 ).withOverriddenContext(
                     ImmutableMap.<String, Object>of(
                         "finalize", false,
-                        GroupByStrategySelector.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V2,
+                        GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V2,
                         CTX_KEY_FUDGE_TIMESTAMP, fudgeTimestamp
                     )
                 ),
@@ -202,10 +202,5 @@ public class GroupByStrategyV2 implements GroupByStrategy
   )
   {
     return GroupByQueryEngineV2.process(query, storageAdapter, bufferPool, configSupplier.get());
-  }
-
-  public static int getBufferGrouperInitialBuckets(final GroupByQueryConfig config, final GroupByQuery query)
-  {
-    return query.getContextValue("bufferGrouperInitialBuckets", config.getBufferGrouperInitialBuckets());
   }
 }

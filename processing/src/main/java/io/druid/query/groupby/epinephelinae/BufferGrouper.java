@@ -60,6 +60,7 @@ public class BufferGrouper<KeyType extends Comparable<KeyType>> implements Group
 {
   private static final Logger log = new Logger(BufferGrouper.class);
 
+  private static final int MIN_INITIAL_BUCKETS = 4;
   private static final int DEFAULT_INITIAL_BUCKETS = 1024;
   private static final float MAX_LOAD_FACTOR = 0.75f;
   private static final int HASH_SIZE = Ints.BYTES;
@@ -104,7 +105,7 @@ public class BufferGrouper<KeyType extends Comparable<KeyType>> implements Group
     this.aggregators = new BufferAggregator[aggregatorFactories.length];
     this.aggregatorOffsets = new int[aggregatorFactories.length];
     this.bufferGrouperMaxSize = bufferGrouperMaxSize;
-    this.initialBuckets = initialBuckets > 0 ? initialBuckets : DEFAULT_INITIAL_BUCKETS;
+    this.initialBuckets = initialBuckets > 0 ? Math.max(MIN_INITIAL_BUCKETS, initialBuckets) : DEFAULT_INITIAL_BUCKETS;
 
     int offset = HASH_SIZE + keySize;
     for (int i = 0; i < aggregatorFactories.length; i++) {

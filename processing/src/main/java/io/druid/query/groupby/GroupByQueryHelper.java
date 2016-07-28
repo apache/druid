@@ -45,7 +45,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class GroupByQueryHelper
 {
-  private static final String CTX_KEY_MAX_RESULTS = "maxResults";
   public final static String CTX_KEY_SORT_RESULTS = "sortResults";
 
   public static <T> Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> createIndexAccumulatorPair(
@@ -54,6 +53,7 @@ public class GroupByQueryHelper
       StupidPool<ByteBuffer> bufferPool
   )
   {
+    final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
     final QueryGranularity gran = query.getGranularity();
     final long timeStart = query.getIntervals().get(0).getStartMillis();
 
@@ -97,7 +97,7 @@ public class GroupByQueryHelper
           false,
           true,
           sortResults,
-          Math.min(query.getContextValue(CTX_KEY_MAX_RESULTS, config.getMaxResults()), config.getMaxResults()),
+          querySpecificConfig.getMaxResults(),
           bufferPool
       );
     } else {
@@ -110,7 +110,7 @@ public class GroupByQueryHelper
           false,
           true,
           sortResults,
-          Math.min(query.getContextValue(CTX_KEY_MAX_RESULTS, config.getMaxResults()), config.getMaxResults())
+          querySpecificConfig.getMaxResults()
       );
     }
 

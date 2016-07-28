@@ -99,7 +99,7 @@ public class GroupByStrategyV1 implements GroupByStrategy
                     //no merging needed at historicals because GroupByQueryRunnerFactory.mergeRunners(..) would return
                     //merged results
                     GroupByQueryQueryToolChest.GROUP_BY_MERGE_KEY, false,
-                    GroupByStrategySelector.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V1
+                    GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V1
                 )
             ),
             responseContext
