@@ -78,13 +78,77 @@ public class QuantilesTest
   }
 
   @Test
-  public void testMedianDiffQuantile() throws Exception
+  public void testMedianDiffQuantile1() throws Exception
   {
-    // example of median != quantile(0.5)
     ApproximateHistogram h = new ApproximateHistogram();
     h.offer(100);
     h.offer(200);
     h.offer(200);
-    Assert.assertNotEquals(h.getMedian(), h.getQuantile(0.5f));
+    // 100 <200> 200
+    Assert.assertEquals(200.0f, h.getMedian(), 0.0000001f);
+    Assert.assertEquals(141.42136f, h.getQuantile(0.5f), 0.0000001f);
+    Assert.assertNotEquals(h.getQuantile(0.5f), h.getMedian(), 0.00001f);
+
+    h.offer(100);
+    // 100 100 <> 200 200
+    Assert.assertEquals(150.0f, h.getMedian(), 0.0000001f);
+    Assert.assertEquals(100.0f, h.getQuantile(0.5f), 0.0000001f);
+    Assert.assertNotEquals(h.getQuantile(0.5f), h.getMedian(), 0.00001f);
+
+    h.offer(300);
+    h.offer(200);
+    // 100 100 200 <> 200 200 300
+    Assert.assertEquals(200.0f, h.getMedian(), 0.0000001f);
+    Assert.assertEquals(144.94897f, h.getQuantile(0.5f), 0.0000001f);
+    Assert.assertNotEquals(h.getQuantile(0.5f), h.getMedian(), 0.00001f);
+
+    h.offer(400);
+    h.offer(500);
+    // 100 100 200 200 <> 200 300 400 500
+    Assert.assertEquals(200.0f, h.getMedian(), 0.0000001f);
+    Assert.assertEquals(182.84271f, h.getQuantile(0.5f), 0.0000001f);
+    Assert.assertNotEquals(h.getQuantile(0.5f), h.getMedian(), 0.00001f);
+
+    h.offer(400);
+    h.offer(500);
+    // 100 100 200 200 200 <> 300 400 400 500 500
+    Assert.assertEquals(250.0f, h.getMedian(), 0.0000001f);
+    Assert.assertEquals(200.0f, h.getQuantile(0.5f), 0.0000001f);
+    Assert.assertNotEquals(h.getQuantile(0.5f), h.getMedian(), 0.00001f);
+
+    h.offer(350);
+    // 100 100 200 200 200 <300> 350 400 400 500 500
+    Assert.assertEquals(300.0f, h.getMedian(), 0.0000001f);
+    Assert.assertEquals(217.71243f, h.getQuantile(0.5f), 0.0000001f);
+    Assert.assertNotEquals(h.getQuantile(0.5f), h.getMedian(), 0.00001f);
+  }
+
+  @Test
+  public void testMedianDiffQuantile2() throws Exception
+  {
+    // with approx positions
+    ApproximateHistogram h = new ApproximateHistogram(3);
+    h.offer(100);
+    h.offer(200);
+    h.offer(200);
+    h.offer(300);
+    h.offer(300);
+    h.offer(110);
+    // 100* 110* 200 <> 200 300 300 : positions=[105.0, 200.0, 300.0], bins=[*2, 2, 2]
+    Assert.assertEquals(200.0f, h.getMedian(), 0.00001f);
+    Assert.assertEquals(152.5f, h.getQuantile(0.5f), 0.00001f);
+    Assert.assertNotEquals(h.getQuantile(0.5f), h.getMedian(), 0.00001f);
+
+    h.offer(120);
+    // 100* 110* 120* <200> 200 300 300 : positions=[110.0, 200.0, 300.0], bins=[*3, 2, 2]
+    Assert.assertEquals(200.0f, h.getMedian(), 0.00001f);
+    Assert.assertEquals(125.44156f, h.getQuantile(0.5f), 0.00001f);
+    Assert.assertNotEquals(h.getQuantile(0.5f), h.getMedian(), 0.00001f);
+
+    h.offer(210);
+    // 100* 110* 120* 200* <> 200* 210* 300 300 : positions=[110.0, 203.33333, 300.0], bins=[*3, *3, 2]
+    // fallback to quantile(0.5)
+    Assert.assertEquals(141.11111, h.getQuantile(0.5f), 0.00001f);
+    Assert.assertEquals(h.getQuantile(0.5f), h.getMedian(), 0.00001f);
   }
 }

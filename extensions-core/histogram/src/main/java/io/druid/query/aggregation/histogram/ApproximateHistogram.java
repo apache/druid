@@ -1536,89 +1536,73 @@ public class ApproximateHistogram
 
   public float[] getQuantiles(float[] probabilities)
   {
-    for (float p : probabilities) {
-      Preconditions.checkArgument(0 < p & p < 1, "quantile probabilities must be strictly between 0 and 1");
-    }
-
     float[] quantiles = new float[probabilities.length];
-    Arrays.fill(quantiles, Float.NaN);
-
-    if (count() == 0) {
-      return quantiles;
+    for (int i = 0; i < probabilities.length; ++i) {
+      quantiles[i] = getQuantile(probabilities[i]);
     }
-
-    final long[] bins = bins();
-    final float[] positions = this.positions;
-    for (int j = 0; j < probabilities.length; ++j) {
-      quantiles[j] = getQuantile(probabilities[j], bins, positions);
-    }
-
     return quantiles;
   }
 
   public float getQuantile(float p)
   {
-    return getQuantile(p, bins(), positions);
+    Preconditions.checkArgument(0 < p & p < 1, "quantile probability must be strictly between 0 and 1");
+
+    if (count() == 0) {
+      return Float.NaN;
+    }
+
+    int sum = 0;
+    final double s = p * count();
+    for (int i = 0; i < binCount; i++) {
+      long count = bins[i] & COUNT_BITS;
+      if (sum + count > s) {
+        return i == 0 ? min() : estimate(i, s - sum);
+      }
+      sum += count;
+    }
+    return max();
   }
 
-  private float getQuantile(float p, final long[] bins, final float[] positions)
+  private float estimate(int i, double d)
   {
-    Preconditions.checkArgument(0 < p & p < 1, "quantile probability must be strictly between 0 and 1");
-    int i = 0;
-    int sum = 0;
-    int k = 1;
-    long count = 0;
-    final double s = p * count();
-    while (k <= bins.length) {
-      count = bins[k - 1];
-      if (sum + count > s) {
-        i = k - 1;
-        break;
-      } else {
-        sum += count;
-      }
-      ++k;
-    }
-
-    if (i == 0) {
-      return min();
+    final double c = -2 * d;
+    final long a = (bins[i] & COUNT_BITS) - (bins[i - 1] & COUNT_BITS);
+    final long b = 2 * (bins[i - 1] & COUNT_BITS);
+    double z = 0;
+    if (a == 0) {
+      z = -c / b;
     } else {
-      final double d = s - sum;
-      final double c = -2 * d;
-      final long a = bins[i] - bins[i - 1];
-      final long b = 2 * bins[i - 1];
-      double z = 0;
-      if (a == 0) {
-        z = -c / b;
-      } else {
-        z = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
-      }
-      return (float) (positions[i - 1] + (positions[i] - positions[i - 1]) * z);
+      z = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
     }
+    return (float) (positions[i - 1] + (positions[i] - positions[i - 1]) * z);
   }
 
   public float getMedian()
   {
-    if (count == 0) {
+    if (count() == 0) {
+      return Float.NaN;
+    }
+
+    int sum = 0;
+    final double s = count * 0.5f;
+    int i = 0;
+    for (; i < binCount; i++) {
+      long count = bins[i] & COUNT_BITS;
+      if (sum + count > s) {
+        break;
+      }
+      sum += count;
+    }
+    if (i == 0) {
       return min();
     }
-    final long lower = count / 2;
-    final long upper = (count + 1) / 2;
-    if (!isExactUpTo(upper)) {
-      return getQuantile(0.5f, bins(), positions);
+    if (count % 2 != 0 || s - sum >= 1) {
+      return (bins[i] & APPROX_FLAG_BIT) == 0 ? positions[i] : estimate(i, s - sum);
     }
-    int sum = 0;
-    for (int i = 0; i < bins.length; i++) {
-      sum += bins[i];
-      if (sum < lower) {
-        continue;
-      }
-      if (lower == upper || sum >= upper) {
-        return positions[i];
-      }
-      return (positions[i] + positions[i + 1]) / 2;
+    if ((bins[i - 1] & APPROX_FLAG_BIT) == 0 && (bins[i] & APPROX_FLAG_BIT) == 0) {
+      return (positions[i - 1] + positions[i]) / 2;
     }
-    throw new IllegalStateException();
+    return estimate(i, s - sum);
   }
 
   /**
