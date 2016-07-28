@@ -134,6 +134,8 @@ public class StringComparatorsTest
         values
     );
 
+
+    Assert.assertTrue(StringComparators.NUMERIC.compare(null, null) == 0);
     Assert.assertTrue(StringComparators.NUMERIC.compare(null, "1001") < 0);
     Assert.assertTrue(StringComparators.NUMERIC.compare("1001", null) > 0);
 

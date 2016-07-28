@@ -354,11 +354,15 @@ public class StringComparators
   }
 
   private static BigDecimal convertStringToBigDecimal(String input) {
+    if (input == null) {
+      return null;
+    }
+
     // treat unparseable Strings as nulls
     BigDecimal bd = null;
     try {
       bd = new BigDecimal(input);
-    } catch (NullPointerException | NumberFormatException ex) {
+    } catch (NumberFormatException ex) {
     }
     return bd;
   }
@@ -368,15 +372,23 @@ public class StringComparators
     @Override
     public int compare(String o1, String o2)
     {
+      // return if o1 and o2 are the same object
       if (o1 == o2) {
         return 0;
+      }
+      // we know o1 != o2
+      if (o1 == null) {
+        return -1;
+      }
+      if (o2 == null) {
+        return 1;
       }
 
       // Creating a BigDecimal from a String is expensive (involves copying the String into a char[])
       // Converting the String to a Long first is faster.
       // We optimize here with the assumption that integer values are more common than floating point.
-      Long long1 = o1 == null ? null : Longs.tryParse(o1);
-      Long long2 = o2 == null ? null : Longs.tryParse(o2);
+      Long long1 = Longs.tryParse(o1);
+      Long long2 = Longs.tryParse(o2);
 
       final BigDecimal bd1 = long1 == null ? convertStringToBigDecimal(o1) : new BigDecimal(long1);
       final BigDecimal bd2 = long2 == null ? convertStringToBigDecimal(o2) : new BigDecimal(long2);
