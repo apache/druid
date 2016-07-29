@@ -66,7 +66,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
     this.granularity = granularity == null ? QueryGranularities.ALL : granularity;
     this.limit = (limit == 0) ? 1000 : limit;
     this.dimensions = dimensions;
-    this.querySpec = querySpec == null ? new SearchQuerySpec.TakeAll() : querySpec;
+    this.querySpec = querySpec == null ? new AllSearchQuerySpec() : querySpec;
 
     Preconditions.checkNotNull(querySegmentSpec, "Must specify an interval");
   }
