@@ -35,6 +35,7 @@ import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.ordering.StringComparators;
 import io.druid.segment.TestHelper;
 import org.joda.time.DateTime;
 import org.junit.Assert;
@@ -83,7 +84,22 @@ public class DefaultLimitSpecTest
     //non-defaults
     json = "{\n"
            + "  \"type\":\"default\",\n"
-           + "  \"columns\":[{\"dimension\":\"d\",\"direction\":\"ASCENDING\"}],\n"
+           + "  \"columns\":[{\"dimension\":\"d\",\"direction\":\"DESCENDING\", \"dimensionOrder\":\"numeric\"}],\n"
+           + "  \"limit\":10\n"
+           + "}";
+    spec = mapper.readValue(
+        mapper.writeValueAsString(mapper.readValue(json, DefaultLimitSpec.class)),
+        DefaultLimitSpec.class
+    );
+    Assert.assertEquals(
+        new DefaultLimitSpec(ImmutableList.of(new OrderByColumnSpec("d", OrderByColumnSpec.Direction.DESCENDING,
+                                                                    StringComparators.NUMERIC)), 10),
+        spec
+    );
+
+    json = "{\n"
+           + "  \"type\":\"default\",\n"
+           + "  \"columns\":[{\"dimension\":\"d\",\"direction\":\"DES\", \"dimensionOrder\":\"numeric\"}],\n"
            + "  \"limit\":10\n"
            + "}";
 
@@ -93,9 +109,42 @@ public class DefaultLimitSpecTest
     );
 
     Assert.assertEquals(
-        new DefaultLimitSpec(ImmutableList.of(new OrderByColumnSpec("d", OrderByColumnSpec.Direction.ASCENDING)), 10),
+        new DefaultLimitSpec(ImmutableList.of(new OrderByColumnSpec("d", OrderByColumnSpec.Direction.DESCENDING,
+                                                                    StringComparators.NUMERIC)), 10),
         spec
     );
+
+    json = "{\n"
+           + "  \"type\":\"default\",\n"
+           + "  \"columns\":[{\"dimension\":\"d\"}],\n"
+           + "  \"limit\":10\n"
+           + "}";
+    spec = mapper.readValue(
+        mapper.writeValueAsString(mapper.readValue(json, DefaultLimitSpec.class)),
+        DefaultLimitSpec.class
+    );
+    Assert.assertEquals(
+        new DefaultLimitSpec(ImmutableList.of(new OrderByColumnSpec("d", OrderByColumnSpec.Direction.ASCENDING,
+                                                                    StringComparators.LEXICOGRAPHIC)), 10),
+        spec
+    );
+
+    json = "{\n"
+           + "  \"type\":\"default\",\n"
+           + "  \"columns\":[\"d\"],\n"
+           + "  \"limit\":10\n"
+           + "}";
+    spec = mapper.readValue(
+        mapper.writeValueAsString(mapper.readValue(json, DefaultLimitSpec.class)),
+        DefaultLimitSpec.class
+    );
+    Assert.assertEquals(
+        new DefaultLimitSpec(ImmutableList.of(new OrderByColumnSpec("d", OrderByColumnSpec.Direction.ASCENDING,
+                                                                    StringComparators.LEXICOGRAPHIC)), 10),
+        spec
+    );
+
+
   }
 
   @Test
