@@ -25,6 +25,7 @@ import com.google.common.collect.Range;
 import com.google.common.collect.RangeSet;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.extraction.IdentityExtractionFn;
+import io.druid.query.ordering.StringComparators;
 import io.druid.query.search.search.ContainsSearchQuerySpec;
 import org.junit.Assert;
 import org.junit.Test;
@@ -43,10 +44,18 @@ public class GetDimensionRangeSetTest
   private final DimFilter in1 = new InDimFilter("dim1", ImmutableList.of("testing", "this", "filter", "tillend"), null);
   private final DimFilter in2 = new InDimFilter("dim2", ImmutableList.of("again"), null);
   private final DimFilter in3 = new InDimFilter("dim1", Arrays.asList("null", null), null);
-  private final DimFilter bound1 = new BoundDimFilter("dim1", "from", "to", false, false, false, null);
-  private final DimFilter bound2 = new BoundDimFilter("dim1", null, "tillend", false, false, false, null);
-  private final DimFilter bound3 = new BoundDimFilter("dim1", "notincluded", null, true, false, false, null);
-  private final DimFilter bound4 = new BoundDimFilter("dim2", "again", "exclusive", true, true, false, null);
+  private final DimFilter bound1 = new BoundDimFilter("dim1", "from", "to", false, false, false, null,
+                                                      StringComparators.LEXICOGRAPHIC
+  );
+  private final DimFilter bound2 = new BoundDimFilter("dim1", null, "tillend", false, false, false, null,
+                                                      StringComparators.LEXICOGRAPHIC
+  );
+  private final DimFilter bound3 = new BoundDimFilter("dim1", "notincluded", null, true, false, false, null,
+                                                      StringComparators.LEXICOGRAPHIC
+  );
+  private final DimFilter bound4 = new BoundDimFilter("dim2", "again", "exclusive", true, true, false, null,
+                                                      StringComparators.LEXICOGRAPHIC
+  );
   private final DimFilter other1 = new RegexDimFilter("someDim", "pattern", null);
   private final DimFilter other2 = new JavaScriptDimFilter("someOtherDim", "function(x) { return x }", null,
                                                            JavaScriptConfig.getDefault());

@@ -34,6 +34,7 @@ import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.RegexDimFilter;
 import io.druid.query.filter.SearchQueryDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
+import io.druid.query.ordering.StringComparators;
 import io.druid.query.search.search.ContainsSearchQuerySpec;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
@@ -257,7 +258,7 @@ public class FilteredAggregatorTest
 
     factory = new FilteredAggregatorFactory(
         new DoubleSumAggregatorFactory("billy", "value"),
-        new BoundDimFilter("dim", "a", "a", false, false, true, null)
+        new BoundDimFilter("dim", "a", "a", false, false, true, null, StringComparators.ALPHANUMERIC)
     );
     selector = new TestFloatColumnSelector(values);
     validateFilteredAggs(factory, values, selector);
@@ -308,10 +309,12 @@ public class FilteredAggregatorTest
     );
     selector = new TestFloatColumnSelector(values);
     validateFilteredAggs(factory, values, selector);
-    
+
     factory = new FilteredAggregatorFactory(
         new DoubleSumAggregatorFactory("billy", "value"),
-        new BoundDimFilter("dim", "aAARDVARK", "aAARDVARK", false, false, true, extractionFn)
+        new BoundDimFilter("dim", "aAARDVARK", "aAARDVARK", false, false, true, extractionFn,
+                           StringComparators.ALPHANUMERIC
+        )
     );
     selector = new TestFloatColumnSelector(values);
     validateFilteredAggs(factory, values, selector);

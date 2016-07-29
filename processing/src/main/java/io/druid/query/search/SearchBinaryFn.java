@@ -25,8 +25,8 @@ import com.metamx.common.guava.nary.BinaryFn;
 import io.druid.granularity.AllGranularity;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Result;
-import io.druid.query.search.search.SearchHit;
 import io.druid.query.search.search.SearchSortSpec;
+import io.druid.query.search.search.SearchHit;
 import org.joda.time.DateTime;
 
 import java.util.Arrays;
