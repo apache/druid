@@ -91,7 +91,7 @@ All nodes that can serve queries can also log the query requests they see.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.request.logging.type`|Choices: noop, file, emitter. How to log every query request.|noop|
+|`druid.request.logging.type`|Choices: noop, file, emitter, slf4j. How to log every query request.|noop|
 
 Note that, you can enable sending all the HTTP requests to log by setting  "io.druid.jetty.RequestLog" to DEBUG level. See [Logging](../configuration/logging.html)
 
@@ -110,6 +110,28 @@ Every request is emitted to some external location.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.request.logging.feed`|Feed name for requests.|none|
+
+#### SLF4J Request Logging
+
+Every request is logged via SLF4J. Queries are serialized into JSON in the log message regardless of the SJF4J format specification. They will be logged under the class `io.druid.server.log.LoggingRequestLogger`.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.request.logging.setMDC`|If MDC entries should be set in the log entry. Your logging setup still has to be configured to handle MDC to format this data|false|
+|`druid.request.logging.setContextMDC`|If the druid query `context` should be added to the MDC entries. Has no effect unless `setMDC` is `true`|false|
+
+MDC fields populated with `setMDC`:
+
+|MDC field|Description|
+|---------|-----------|
+|`queryId`   |The query ID|
+|`dataSource`|The datasource the query was against|
+|`queryType` |The type of the query|
+|`hasFilters`|If the query has any filters|
+|`remoteAddr`|The remote address of the requesting client|
+|`duration`  |The duration of the query interval|
+|`resultOrdering`|The ordering of results|
+|`descending`|If the query is a descending query|
 
 ### Enabling Metrics
 
