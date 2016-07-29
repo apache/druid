@@ -30,6 +30,8 @@ If your version of Hadoop does not support this functionality, you can also try 
 `mapreduce.job.user.classpath.first = true`. This instructs Hadoop to prefer loading Druid's version of a library when
 there is a conflict.
 
+Generally, you should only set one of these parameters, not both.
+
 These properties can be set in either one of the following ways:
 
 - Using the task definition, e.g. add `"mapreduce.job.classloader": "true"` to the `jobProperties` of the `tuningConfig` of your indexing task (see the [batch ingestion documentation](../ingestion/batch-ingestion.html)).

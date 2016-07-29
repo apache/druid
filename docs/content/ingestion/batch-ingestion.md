@@ -178,14 +178,11 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
    }
 ```
 
-The following properties can be used to tune how the MapReduce job is configured by overriding default Hadoop/YARN/Mapreduce configurations:
+Hadoop's [MapReduce documentation](https://hadoop.apache.org/docs/stable/hadoop-mapreduce-client/hadoop-mapreduce-client-core/mapred-default.xml) lists the possible configuration parameters.
 
-|Property name|Type|Description|
-|-------------|----|-----------|
-|mapreduce.job.user.classpath.first|String|Use Druid classpath instead of Hadoop classpath for common libraries like [Jackson](https://github.com/FasterXML/jackson) (required with [Cloudera Hadoop distribution](../operations/other-hadoop.html)) when set to `"true"`.|
-|...|String|See [Mapred configuration](https://hadoop.apache.org/docs/stable/hadoop-mapreduce-client/hadoop-mapreduce-client-core/mapred-default.xml) for more configuration parameters.|
-
-**Please note that using `mapreduce.job.user.classpath.first` is an expert feature and should not be used without a deep understanding of Hadoop and Java class loading mechanism.**
+With some Hadoop distributions, it may be necessary to set `mapreduce.job.classpath` or `mapreduce.job.user.classpath.first`
+to avoid class loading issues. See the [working with different Hadoop versions documentation](../operations/other-hadoop.html)
+for more details.
 
 #### IndexSpec
 
