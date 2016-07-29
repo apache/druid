@@ -244,7 +244,7 @@ public class VersionedIntervalTimeline<VersionType, ObjectType> implements Timel
               new TimelineObjectHolder<VersionType, ObjectType>(
                   object.getTrueInterval(),
                   object.getVersion(),
-                  object.getPartitionHolder()
+                  new PartitionHolder<ObjectType>(object.getPartitionHolder())
               )
           );
         }
