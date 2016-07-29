@@ -134,11 +134,6 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
         String.format("druid-groupBy-%s_%s", UUID.randomUUID(), query.getId())
     );
 
-    final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(
-        temporaryStorageDirectory,
-        querySpecificConfig.getMaxOnDiskStorage()
-    );
-
     // Figure out timeoutAt time now, so we can apply the timeout to both the mergeBufferPool.take and the actual
     // query processing together.
     final Number queryTimeout = query.getContextValue(QueryContextKeys.TIMEOUT, null);
@@ -152,9 +147,16 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
           @Override
           public CloseableGrouperIterator<RowBasedKey, Row> make()
           {
-            final List<Closeable> closeOnFailure = Lists.<Closeable>newArrayList(temporaryStorage);
+            final List<Closeable> closeOnFailure = Lists.newArrayList();
 
             try {
+              final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(
+                  temporaryStorageDirectory,
+                  querySpecificConfig.getMaxOnDiskStorage()
+              );
+
+              closeOnFailure.add(temporaryStorage);
+
               final ReferenceCountingResourceHolder<ByteBuffer> mergeBufferHolder;
               try {
                 // This will potentially block if there are no merge buffers left in the pool.

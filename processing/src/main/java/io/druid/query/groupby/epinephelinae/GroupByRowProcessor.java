@@ -85,11 +85,6 @@ public class GroupByRowProcessor
         String.format("druid-groupBy-%s_%s", UUID.randomUUID(), query.getId())
     );
 
-    final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(
-        temporaryStorageDirectory,
-        querySpecificConfig.getMaxOnDiskStorage()
-    );
-
     final long timeout = query.getContextValue(QueryContextKeys.TIMEOUT, JodaUtils.MAX_INSTANT);
     final List<Interval> queryIntervals = query.getIntervals();
     final Filter filter = Filters.convertToCNFFromQueryContext(
@@ -130,9 +125,16 @@ public class GroupByRowProcessor
           @Override
           public CloseableGrouperIterator<RowBasedKey, Row> make()
           {
-            final List<Closeable> closeOnFailure = Lists.<Closeable>newArrayList(temporaryStorage);
+            final List<Closeable> closeOnFailure = Lists.newArrayList();
 
             try {
+              final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(
+                  temporaryStorageDirectory,
+                  querySpecificConfig.getMaxOnDiskStorage()
+              );
+
+              closeOnFailure.add(temporaryStorage);
+
               final ReferenceCountingResourceHolder<ByteBuffer> mergeBufferHolder;
               try {
                 // This will potentially block if there are no merge buffers left in the pool.
