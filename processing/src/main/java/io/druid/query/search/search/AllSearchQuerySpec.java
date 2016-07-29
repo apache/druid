@@ -19,22 +19,39 @@
 
 package io.druid.query.search.search;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-
 /**
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "contains", value = ContainsSearchQuerySpec.class),
-    @JsonSubTypes.Type(name = "insensitive_contains", value = InsensitiveContainsSearchQuerySpec.class),
-    @JsonSubTypes.Type(name = "fragment", value = FragmentSearchQuerySpec.class),
-    @JsonSubTypes.Type(name = "regex", value = RegexSearchQuerySpec.class),
-    @JsonSubTypes.Type(name = "all", value = AllSearchQuerySpec.class)
-})
-public interface SearchQuerySpec
+public class AllSearchQuerySpec implements SearchQuerySpec
 {
-  public boolean accept(String dimVal);
+  private static final byte CACHE_TYPE_ID = 0x7f;
 
-  public byte[] getCacheKey();
+  @Override
+  public boolean accept(String dimVal)
+  {
+    return true;
+  }
+
+  @Override
+  public byte[] getCacheKey()
+  {
+    return new byte[]{CACHE_TYPE_ID};
+  }
+
+  @Override
+  public boolean equals(Object object)
+  {
+    return object instanceof AllSearchQuerySpec;
+  }
+
+  @Override
+  public int hashCode()
+  {
+    return CACHE_TYPE_ID;
+  }
+
+  @Override
+  public String toString()
+  {
+    return "AllSearchQuerySpec{}";
+  }
 }

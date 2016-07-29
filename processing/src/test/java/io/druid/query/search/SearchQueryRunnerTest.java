@@ -550,6 +550,35 @@ public class SearchQueryRunnerTest
     );
   }
 
+  @Test
+  public void testSearchAll()
+  {
+    List<SearchHit> expectedHits = Lists.newLinkedList();
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.marketDimension, "spot", 837));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.marketDimension, "total_market", 186));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.marketDimension, "upfront", 186));
+
+    checkSearchQuery(
+        Druids.newSearchQueryBuilder()
+              .dataSource(QueryRunnerTestHelper.dataSource)
+              .granularity(QueryRunnerTestHelper.allGran)
+              .intervals(QueryRunnerTestHelper.fullOnInterval)
+              .dimensions(QueryRunnerTestHelper.marketDimension)
+              .query("")
+              .build(),
+        expectedHits
+    );
+    checkSearchQuery(
+        Druids.newSearchQueryBuilder()
+              .dataSource(QueryRunnerTestHelper.dataSource)
+              .granularity(QueryRunnerTestHelper.allGran)
+              .intervals(QueryRunnerTestHelper.fullOnInterval)
+              .dimensions(QueryRunnerTestHelper.marketDimension)
+              .build(),
+        expectedHits
+    );
+  }
+
   private void checkSearchQuery(Query searchQuery, List<SearchHit> expectedResults)
   {
     checkSearchQuery(searchQuery, runner, expectedResults);
