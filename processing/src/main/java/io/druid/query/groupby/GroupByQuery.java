@@ -487,11 +487,6 @@ public class GroupByQuery extends BaseQuery<Row>
       return addOrderByColumn(dimension, (OrderByColumnSpec.Direction) null);
     }
 
-    public Builder addOrderByColumn(String dimension, String direction)
-    {
-      return addOrderByColumn(dimension, OrderByColumnSpec.determineDirection(direction));
-    }
-
     public Builder addOrderByColumn(String dimension, OrderByColumnSpec.Direction direction)
     {
       return addOrderByColumn(new OrderByColumnSpec(dimension, direction));

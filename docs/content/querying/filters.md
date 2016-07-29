@@ -1,7 +1,7 @@
 ---
 layout: doc_page
 ---
-#Query Filters
+# Query Filters
 A filter is a JSON object indicating which rows of data should be included in the computation for a query. It’s essentially the equivalent of the WHERE clause in SQL. Druid supports the following types of filters.
 
 ### Selector filter
@@ -174,26 +174,33 @@ The IN filter supports the use of extraction functions, see [Filtering with Extr
 
 ### Bound filter
 
-Bound filter can be used to filter by comparing dimension values to an upper value or/and a lower value. 
-By default Comparison is string based and **case sensitive**.
-To use numeric comparison you can set `alphaNumeric` to `true`.
-By default the bound filter is a not a strict inclusion `inputString <= upper && inputSting >= lower`.
+The Bound filter can be used to filter by comparing dimension values to an upper value and/or a lower value.
 
+|property|type|description|required?|
+|--------|-----------|---------|---------|
+|type|String|This should always be "bound".|yes|
+|dimension|String|The dimension to filter on|yes|
+|lower|String|The lower bound for the filter|no|
+|upper|String|The upper bound for the filter|no|
+|lowerStrict|Boolean|Perform strict comparison on the lower bound ("<" instead of "<=")|no, default: false|
+|upperStrict|Boolean|Perform strict comparison on the upper bound (">" instead of ">=")|no, default: false|
+|ordering|String|Specifies the sorting order to use when comparing values against the bound. Can be one of the following values: "lexicographic", "alphanumeric", "numeric", "strlen". See [Sorting Orders](./sorting-orders.html) for more details.|no, default: "lexicographic"|
+|extractionFn|[Extraction function](#filtering-with-extraction-functions)| Extraction function to apply to the dimension|no|
+  
 The bound filter supports the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
 
-The grammar for a bound filter is as follows:
-
+The following bound filter expresses the condition `21 <= age <= 31`:
 ```json
 {
     "type": "bound",
     "dimension": "age",
     "lower": "21",
     "upper": "31" ,
-    "alphaNumeric": true
+    "ordering": "numeric"
 }
 ```
-Equivalent to retain column if `21 <= age <= 31`
 
+This filter expresses the condition `foo <= name <= hoo`, using the default lexicographic sorting order.
 ```json
 {
     "type": "bound",
@@ -203,12 +210,7 @@ Equivalent to retain column if `21 <= age <= 31`
 }
 ```
 
-Equivalent to retain column if `foo <= name <= hoo`
-
-In order to have a strict inclusion user can set `lowerStrict` or/and `upperStrict` to `true`
-
-To have strict bounds:
-
+Using strict bounds, this filter expresses the condition `21 < age < 31`
 ```json
 {
     "type": "bound",
@@ -217,58 +219,30 @@ To have strict bounds:
     "lowerStrict": true,
     "upper": "31" ,
     "upperStrict": true,
-    "alphaNumeric": true
-}
-```
-Equivalent to retain column if `21 < age < 31`
-
-To have strict upper bound:
-
-```json
-{
-    "type": "bound",
-    "dimension": "age",
-    "lower": "21",
-    "upper": "31" ,
-    "upperStrict": true,
-    "alphaNumeric": true
+    "ordering": "numeric"
 }
 ```
 
-Equivalent to retain column if `21 <= age < 31`
-
-To compare to only an upper bound or lowe bound
-
+The user can also specify a one-sided bound by omitting "upper" or "lower". This filter expresses `age < 31`.
 ```json
 {
     "type": "bound",
     "dimension": "age",
     "upper": "31" ,
     "upperStrict": true,
-    "alphaNumeric": true
+    "ordering": "numeric"
 }
 ```
 
-Equivalent to retain column if `age < 31`
-
+Likewise, this filter expresses `age >= 18`
 ```json
 {
     "type": "bound",
     "dimension": "age",
     "lower": "18" ,
-    "alphaNumeric": true
+    "ordering": "numeric"
 }
 ```
-
-Equivalent to retain column if ` 18 <= age`
-
-For `alphaNumeric` comparator, in case of the dimension value includes none-digits you may expect **fuzzy matching**
-If dimension value starts with a none digit, the filter will consider it out of range (`value < lowerBound` and `value > upperBound`)
-If dimension value starts with digit and contains a none digits comparing will be done character wise.  
-For instance suppose lower bound is `100` and value is `10K` the filter will match (`100 < 10K` returns `true`) since `K` is greater than any digit
-Now suppose that the lower bound is `110` the filter will not match (`110 < 10K` returns `false`)
-
-
 
 
 #### Search Query Spec

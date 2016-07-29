@@ -17,29 +17,31 @@
  * under the License.
  */
 
-package io.druid.query.search;
+package io.druid.query.ordering;
 
-import io.druid.query.search.search.AlphanumericSearchSortSpec;
-import io.druid.query.search.search.SearchHit;
-import io.druid.query.search.search.SearchSortSpec;
-import org.junit.Assert;
-import org.junit.Test;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.metamx.common.IAE;
 
-/**
- */
-public class AlphanumericSearchSortSpecTest
+import java.util.Comparator;
+
+public abstract class StringComparator implements Comparator<String>
 {
-  @Test
-  public void testComparator()
+  @JsonCreator
+  public static StringComparator fromString(String type)
   {
-    SearchSortSpec spec = new AlphanumericSearchSortSpec();
-
-    SearchHit hit1 = new SearchHit("test", "a100");
-    SearchHit hit2 = new SearchHit("test", "a9");
-    SearchHit hit3 = new SearchHit("test", "b0");
-
-    Assert.assertTrue(spec.getComparator().compare(hit1, hit2) > 0);
-    Assert.assertTrue(spec.getComparator().compare(hit3, hit1) > 0);
-    Assert.assertTrue(spec.getComparator().compare(hit3, hit2) > 0);
+    switch (type) {
+      case StringComparators.LEXICOGRAPHIC_NAME:
+        return StringComparators.LEXICOGRAPHIC;
+      case StringComparators.ALPHANUMERIC_NAME:
+        return StringComparators.ALPHANUMERIC;
+      case StringComparators.STRLEN_NAME:
+        return StringComparators.STRLEN;
+      case StringComparators.NUMERIC_NAME:
+        return StringComparators.NUMERIC;
+      default:
+        throw new IAE("Unknown string comparator[%s]", type);
+    }
   }
+
+  public abstract byte[] getCacheKey();
 }

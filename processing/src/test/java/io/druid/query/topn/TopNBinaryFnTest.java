@@ -32,6 +32,7 @@ import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
 import io.druid.query.dimension.DefaultDimensionSpec;
+import io.druid.query.ordering.StringComparators;
 import org.joda.time.DateTime;
 import org.junit.Assert;
 import org.junit.Test;
@@ -509,7 +510,7 @@ public class TopNBinaryFnTest
         TopNResultMerger.identity,
         QueryGranularities.ALL,
         new DefaultDimensionSpec("INVALID_DIM_NAME", null),
-        new LexicographicTopNMetricSpec(null),
+        new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC),
         2,
         aggregatorFactories,
         postAggregators

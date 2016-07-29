@@ -36,7 +36,8 @@ import java.util.List;
     @JsonSubTypes.Type(name = "numeric", value = NumericTopNMetricSpec.class),
     @JsonSubTypes.Type(name = "lexicographic", value = LexicographicTopNMetricSpec.class),
     @JsonSubTypes.Type(name = "alphaNumeric", value = AlphaNumericTopNMetricSpec.class),
-    @JsonSubTypes.Type(name = "inverted", value = InvertedTopNMetricSpec.class)
+    @JsonSubTypes.Type(name = "inverted", value = InvertedTopNMetricSpec.class),
+    @JsonSubTypes.Type(name = "dimension", value = DimensionTopNMetricSpec.class),
 })
 public interface TopNMetricSpec
 {

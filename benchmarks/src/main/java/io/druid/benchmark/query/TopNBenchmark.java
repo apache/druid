@@ -50,8 +50,10 @@ import io.druid.query.aggregation.LongMaxAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
+import io.druid.query.ordering.StringComparators;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
+import io.druid.query.topn.DimensionTopNMetricSpec;
 import io.druid.query.topn.TopNQuery;
 import io.druid.query.topn.TopNQueryBuilder;
 import io.druid.query.topn.TopNQueryConfig;
@@ -104,7 +106,7 @@ public class TopNBenchmark
   @Param({"750000"})
   private int rowsPerSegment;
 
-  @Param({"basic.A"})
+  @Param({"basic.A", "basic.numericSort", "basic.alphanumericSort"})
   private String schemaAndQuery;
 
   @Param({"10"})
@@ -169,6 +171,38 @@ public class TopNBenchmark
           .aggregators(queryAggs);
 
       basicQueries.put("A", queryBuilderA);
+    }
+    { // basic.numericSort
+      QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(basicSchema.getDataInterval()));
+
+      List<AggregatorFactory> queryAggs = new ArrayList<>();
+      queryAggs.add(new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential"));
+
+      TopNQueryBuilder queryBuilderA = new TopNQueryBuilder()
+          .dataSource("blah")
+          .granularity(QueryGranularities.ALL)
+          .dimension("dimUniform")
+          .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
+          .intervals(intervalSpec)
+          .aggregators(queryAggs);
+
+      basicQueries.put("numericSort", queryBuilderA);
+    }
+    { // basic.alphanumericSort
+      QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(basicSchema.getDataInterval()));
+
+      List<AggregatorFactory> queryAggs = new ArrayList<>();
+      queryAggs.add(new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential"));
+
+      TopNQueryBuilder queryBuilderA = new TopNQueryBuilder()
+          .dataSource("blah")
+          .granularity(QueryGranularities.ALL)
+          .dimension("dimUniform")
+          .metric(new DimensionTopNMetricSpec(null, StringComparators.ALPHANUMERIC))
+          .intervals(intervalSpec)
+          .aggregators(queryAggs);
+
+      basicQueries.put("alphanumericSort", queryBuilderA);
     }
 
     SCHEMA_QUERY_MAP.put("basic", basicQueries);

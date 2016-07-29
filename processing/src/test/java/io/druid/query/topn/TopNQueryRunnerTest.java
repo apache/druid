@@ -62,6 +62,7 @@ import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.ExtractionDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
+import io.druid.query.ordering.StringComparators;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.segment.TestHelper;
@@ -1299,7 +1300,7 @@ public class TopNQueryRunnerTest
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension(QueryRunnerTestHelper.marketDimension)
-        .metric(new LexicographicTopNMetricSpec(""))
+        .metric(new DimensionTopNMetricSpec("", StringComparators.LEXICOGRAPHIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -1346,7 +1347,7 @@ public class TopNQueryRunnerTest
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension(QueryRunnerTestHelper.marketDimension)
-        .metric(new LexicographicTopNMetricSpec(""))
+        .metric(new DimensionTopNMetricSpec("", StringComparators.LEXICOGRAPHIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .build();
@@ -1379,7 +1380,7 @@ public class TopNQueryRunnerTest
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension(QueryRunnerTestHelper.marketDimension)
-        .metric(new LexicographicTopNMetricSpec("spot"))
+        .metric(new DimensionTopNMetricSpec("spot", StringComparators.LEXICOGRAPHIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -1419,7 +1420,7 @@ public class TopNQueryRunnerTest
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension(QueryRunnerTestHelper.marketDimension)
-        .metric(new LexicographicTopNMetricSpec("t"))
+        .metric(new DimensionTopNMetricSpec("t", StringComparators.LEXICOGRAPHIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -1459,7 +1460,7 @@ public class TopNQueryRunnerTest
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension(QueryRunnerTestHelper.marketDimension)
-        .metric(new InvertedTopNMetricSpec(new LexicographicTopNMetricSpec("upfront")))
+        .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec("upfront", StringComparators.LEXICOGRAPHIC)))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -1499,7 +1500,7 @@ public class TopNQueryRunnerTest
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryRunnerTestHelper.allGran)
         .dimension(QueryRunnerTestHelper.marketDimension)
-        .metric(new InvertedTopNMetricSpec(new LexicographicTopNMetricSpec("u")))
+        .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec("u", StringComparators.LEXICOGRAPHIC)))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -1986,7 +1987,7 @@ public class TopNQueryRunnerTest
                 null
             )
         )
-        .metric(new LexicographicTopNMetricSpec(null))
+        .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -2053,7 +2054,7 @@ public class TopNQueryRunnerTest
                 null
             )
         )
-        .metric(new LexicographicTopNMetricSpec(null))
+        .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -2121,7 +2122,7 @@ public class TopNQueryRunnerTest
                 null
             )
         )
-        .metric(new LexicographicTopNMetricSpec(null))
+        .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -2175,7 +2176,7 @@ public class TopNQueryRunnerTest
                 null
             )
         )
-        .metric(new LexicographicTopNMetricSpec(null))
+        .metric(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -2229,7 +2230,7 @@ public class TopNQueryRunnerTest
                 null
             )
         )
-        .metric(new InvertedTopNMetricSpec(new LexicographicTopNMetricSpec(null)))
+        .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec(null, StringComparators.LEXICOGRAPHIC)))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -2283,7 +2284,7 @@ public class TopNQueryRunnerTest
                 null
             )
         )
-        .metric(new LexicographicTopNMetricSpec("s"))
+        .metric(new DimensionTopNMetricSpec("s", StringComparators.LEXICOGRAPHIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -2353,7 +2354,7 @@ public class TopNQueryRunnerTest
                 }, null
             )
         )
-        .metric(new LexicographicTopNMetricSpec("s"))
+        .metric(new DimensionTopNMetricSpec("s", StringComparators.LEXICOGRAPHIC))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -2401,7 +2402,7 @@ public class TopNQueryRunnerTest
                 null
             )
         )
-        .metric(new InvertedTopNMetricSpec(new LexicographicTopNMetricSpec("u")))
+        .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec("u", StringComparators.LEXICOGRAPHIC)))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -2448,7 +2449,7 @@ public class TopNQueryRunnerTest
                 null
             )
         )
-        .metric(new InvertedTopNMetricSpec(new LexicographicTopNMetricSpec("p")))
+        .metric(new InvertedTopNMetricSpec(new DimensionTopNMetricSpec("p", StringComparators.LEXICOGRAPHIC)))
         .threshold(4)
         .intervals(QueryRunnerTestHelper.firstToThird)
         .aggregators(QueryRunnerTestHelper.commonAggregators)
@@ -3225,7 +3226,7 @@ public class TopNQueryRunnerTest
         .dataSource(QueryRunnerTestHelper.dataSource)
         .granularity(QueryGranularities.ALL)
         .dimension(QueryRunnerTestHelper.marketDimension)
-        .metric(new AlphaNumericTopNMetricSpec(null))
+        .metric(new DimensionTopNMetricSpec(null, StringComparators.ALPHANUMERIC))
         .threshold(2)
         .intervals(QueryRunnerTestHelper.secondOnly)
         .aggregators(Lists.<AggregatorFactory>newArrayList(QueryRunnerTestHelper.rowsCount))
@@ -3249,6 +3250,39 @@ public class TopNQueryRunnerTest
     );
     TestHelper.assertExpectedResults(expectedResults, runner.run(query, new HashMap<String, Object>()));
   }
+
+  @Test
+  public void testNumericDimensionTopNWithNullPreviousStop()
+  {
+    TopNQuery query = new TopNQueryBuilder()
+        .dataSource(QueryRunnerTestHelper.dataSource)
+        .granularity(QueryGranularities.ALL)
+        .dimension(QueryRunnerTestHelper.marketDimension)
+        .metric(new DimensionTopNMetricSpec(null, StringComparators.NUMERIC))
+        .threshold(2)
+        .intervals(QueryRunnerTestHelper.secondOnly)
+        .aggregators(Lists.<AggregatorFactory>newArrayList(QueryRunnerTestHelper.rowsCount))
+        .build();
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-04-02T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.asList(
+                    ImmutableMap.<String, Object>of(
+                        "market", "spot",
+                        "rows", 9L
+                    ),
+                    ImmutableMap.<String, Object>of(
+                        "market", "total_market",
+                        "rows", 2L
+                    )
+                )
+            )
+        )
+    );
+    TestHelper.assertExpectedResults(expectedResults, runner.run(query, new HashMap<String, Object>()));
+  }
+
 
   @Test
   public void testTopNWithExtractionFilter()

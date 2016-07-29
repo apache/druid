@@ -30,6 +30,7 @@ import io.druid.query.Query;
 import io.druid.query.Result;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.ordering.StringComparators;
 import io.druid.query.search.SearchResultValue;
 import io.druid.query.spec.QuerySegmentSpec;
 
@@ -40,6 +41,8 @@ import java.util.Map;
  */
 public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
 {
+  private static final SearchSortSpec DEFAULT_SORT_SPEC = new SearchSortSpec(StringComparators.LEXICOGRAPHIC);
+
   private final DimFilter dimFilter;
   private final SearchSortSpec sortSpec;
   private final QueryGranularity granularity;
@@ -62,7 +65,7 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   {
     super(dataSource, querySegmentSpec, false, context);
     this.dimFilter = dimFilter;
-    this.sortSpec = sortSpec == null ? new LexicographicSearchSortSpec() : sortSpec;
+    this.sortSpec = sortSpec == null ? DEFAULT_SORT_SPEC : sortSpec;
     this.granularity = granularity == null ? QueryGranularities.ALL : granularity;
     this.limit = (limit == 0) ? 1000 : limit;
     this.dimensions = dimensions;
