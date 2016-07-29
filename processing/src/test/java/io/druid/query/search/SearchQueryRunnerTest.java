@@ -19,7 +19,6 @@
 
 package io.druid.query.search;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequence;
@@ -36,13 +35,13 @@ import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.ExtractionDimFilter;
-import io.druid.query.filter.RegexDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
+import io.druid.query.ordering.StringComparators;
 import io.druid.query.search.search.FragmentSearchQuerySpec;
+import io.druid.query.search.search.SearchSortSpec;
 import io.druid.query.search.search.SearchHit;
 import io.druid.query.search.search.SearchQuery;
 import io.druid.query.search.search.SearchQueryConfig;
-import io.druid.query.search.search.StrlenSearchSortSpec;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.segment.TestHelper;
 import org.joda.time.DateTime;
@@ -213,7 +212,7 @@ public class SearchQueryRunnerTest
                                             QueryRunnerTestHelper.placementishDimension
                                         )
                                     )
-                                    .sortSpec(new StrlenSearchSortSpec())
+                                    .sortSpec(new SearchSortSpec(StringComparators.STRLEN))
                                     .query("e")
                                     .build();
 
@@ -578,6 +577,31 @@ public class SearchQueryRunnerTest
         expectedHits
     );
   }
+
+  @Test
+  public void testSearchWithNumericSort()
+  {
+    SearchQuery searchQuery = Druids.newSearchQueryBuilder()
+                                    .dataSource(QueryRunnerTestHelper.dataSource)
+                                    .granularity(QueryRunnerTestHelper.allGran)
+                                    .intervals(QueryRunnerTestHelper.fullOnInterval)
+                                    .query("a")
+                                    .sortSpec(new SearchSortSpec(StringComparators.NUMERIC))
+                                    .build();
+
+    List<SearchHit> expectedHits = Lists.newLinkedList();
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.placementishDimension, "a", 93));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "automotive", 93));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "entertainment", 93));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "health", 93));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "mezzanine", 279));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.marketDimension, "total_market", 186));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "travel", 93));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.partialNullDimension, "value", 186));
+
+    checkSearchQuery(searchQuery, expectedHits);
+  }
+
 
   private void checkSearchQuery(Query searchQuery, List<SearchHit> expectedResults)
   {

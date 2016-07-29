@@ -2080,8 +2080,8 @@ public class GroupByQueryRunnerTest
                 new LongSumAggregatorFactory("idx", "index")
             )
         )
-        .addOrderByColumn("rows", "desc")
-        .addOrderByColumn("alias", "d")
+        .addOrderByColumn("rows", OrderByColumnSpec.Direction.DESCENDING)
+        .addOrderByColumn("alias", OrderByColumnSpec.Direction.DESCENDING)
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
 
     final GroupByQuery query = builder.build();
@@ -2120,8 +2120,8 @@ public class GroupByQueryRunnerTest
                 new DoubleSumAggregatorFactory("idx", "index")
             )
         )
-        .addOrderByColumn("idx", "desc")
-        .addOrderByColumn("alias", "d")
+        .addOrderByColumn("idx", OrderByColumnSpec.Direction.DESCENDING)
+        .addOrderByColumn("alias", OrderByColumnSpec.Direction.DESCENDING)
         .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
 
     final GroupByQuery query = builder.build();
@@ -2208,6 +2208,46 @@ public class GroupByQueryRunnerTest
             "idx",
             178.24917602539062D
         )
+    );
+
+    Map<String, Object> context = Maps.newHashMap();
+    QueryRunner<Row> mergeRunner = factory.getToolchest().mergeResults(runner);
+    TestHelper.assertExpectedObjects(expectedResults, mergeRunner.run(query, context), "no-limit");
+    TestHelper.assertExpectedObjects(
+        Iterables.limit(expectedResults, 5), mergeRunner.run(builder.limit(5).build(), context), "limited"
+    );
+  }
+
+  @Test
+  public void testGroupByOrderLimitNumeric() throws Exception
+  {
+    GroupByQuery.Builder builder = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setInterval("2011-04-02/2011-04-04")
+        .setDimensions(Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("quality", "alias")))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .addOrderByColumn(new OrderByColumnSpec("rows", OrderByColumnSpec.Direction.DESCENDING, StringComparators.NUMERIC))
+        .addOrderByColumn(new OrderByColumnSpec("alias", OrderByColumnSpec.Direction.ASCENDING, StringComparators.NUMERIC))
+        .setGranularity(new PeriodGranularity(new Period("P1M"), null, null));
+
+    final GroupByQuery query = builder.build();
+
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "mezzanine", "rows", 6L, "idx", 4420L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "premium", "rows", 6L, "idx", 4416L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 2L, "idx", 269L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "business", "rows", 2L, "idx", 217L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "entertainment", "rows", 2L, "idx", 319L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "health", "rows", 2L, "idx", 216L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "news", "rows", 2L, "idx", 221L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "technology", "rows", 2L, "idx", 177L),
+        GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "travel", "rows", 2L, "idx", 243L)
     );
 
     Map<String, Object> context = Maps.newHashMap();
@@ -5476,7 +5516,8 @@ public class GroupByQueryRunnerTest
         false,
         false,
         true,
-        extractionFn
+        extractionFn,
+        StringComparators.ALPHANUMERIC
     ));
     superFilterList.add(new RegexDimFilter("quality", "super-mezzanine", extractionFn));
     superFilterList.add(new SearchQueryDimFilter(
@@ -5534,7 +5575,9 @@ public class GroupByQueryRunnerTest
     List<DimFilter> superFilterList = new ArrayList<>();
     superFilterList.add(new SelectorDimFilter("null_column", "EMPTY", extractionFn));
     superFilterList.add(new InDimFilter("null_column", Arrays.asList("NOT-EMPTY", "FOOBAR", "EMPTY"), extractionFn));
-    superFilterList.add(new BoundDimFilter("null_column", "EMPTY", "EMPTY", false, false, true, extractionFn));
+    superFilterList.add(new BoundDimFilter("null_column", "EMPTY", "EMPTY", false, false, true, extractionFn,
+                                           StringComparators.ALPHANUMERIC
+    ));
     superFilterList.add(new RegexDimFilter("null_column", "EMPTY", extractionFn));
     superFilterList.add(new SearchQueryDimFilter(
         "null_column",

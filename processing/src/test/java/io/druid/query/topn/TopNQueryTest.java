@@ -33,6 +33,7 @@ import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.dimension.LegacyDimensionSpec;
 import io.druid.query.lookup.LookupExtractionFn;
 import io.druid.query.extraction.MapLookupExtractor;
+import io.druid.query.ordering.StringComparators;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -123,7 +124,7 @@ public class TopNQueryTest
         .dataSource(dataSource)
         .granularity(allGran)
         .dimension(new LegacyDimensionSpec(marketDimension))
-        .metric(new AlphaNumericTopNMetricSpec(null))
+        .metric(new DimensionTopNMetricSpec(null, StringComparators.ALPHANUMERIC))
         .threshold(2)
         .intervals(fullOnInterval.getIntervals())
         .aggregators(Lists.<AggregatorFactory>newArrayList(rowsCount))
@@ -134,7 +135,8 @@ public class TopNQueryTest
                        + "  \"dimension\": \"market\",\n"
                        + "  \"threshold\": 2,\n"
                        + "  \"metric\": {\n"
-                       + "    \"type\": \"alphaNumeric\"\n"
+                       + "    \"type\": \"dimension\",\n"
+                       + "    \"ordering\": \"alphanumeric\"\n"
                        + "   },\n"
                        + "  \"granularity\": \"all\",\n"
                        + "  \"aggregations\": [\n"
