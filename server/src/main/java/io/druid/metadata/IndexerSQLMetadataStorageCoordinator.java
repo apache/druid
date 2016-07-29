@@ -32,9 +32,9 @@ import com.google.common.collect.Sets;
 import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import com.google.inject.Inject;
-
 import io.druid.common.utils.JodaUtils;
 import io.druid.indexing.overlord.DataSourceMetadata;
+import io.druid.indexing.overlord.DataSourceMetadataAndSegments;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.SegmentPublishResult;
 import io.druid.java.util.common.IAE;
@@ -68,6 +68,7 @@ import org.skife.jdbi.v2.util.StringMapper;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -281,39 +282,37 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     return result.getSegments();
   }
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
   public SegmentPublishResult announceHistoricalSegments(
-      final Set<DataSegment> segments,
-      final DataSourceMetadata startMetadata,
-      final DataSourceMetadata endMetadata
+      List<DataSourceMetadataAndSegments> metadataAndSegmentsList
   ) throws IOException
   {
-    if (segments.isEmpty()) {
-      throw new IllegalArgumentException("segment set must not be empty");
-    }
+    final Map<String, DataSourceMetadataAndSegments> dataSources = new HashMap<>(metadataAndSegmentsList.size());
 
-    final String dataSource = segments.iterator().next().getDataSource();
-    for (DataSegment segment : segments) {
-      if (!dataSource.equals(segment.getDataSource())) {
-        throw new IllegalArgumentException("segments must all be from the same dataSource");
+    for (DataSourceMetadataAndSegments metadataAndSegments : metadataAndSegmentsList) {
+      Set<DataSegment> segments = metadataAndSegments.getSegments();
+
+      if (segments.isEmpty()) {
+        throw new IllegalArgumentException("segment set must not be empty");
       }
-    }
 
-    if ((startMetadata == null && endMetadata != null) || (startMetadata != null && endMetadata == null)) {
-      throw new IllegalArgumentException("start/end metadata pair must be either null or non-null");
-    }
-
-    // Find which segments are used (i.e. not overshadowed).
-    final Set<DataSegment> usedSegments = Sets.newHashSet();
-    for (TimelineObjectHolder<String, DataSegment> holder : VersionedIntervalTimeline.forSegments(segments)
-                                                                                     .lookup(JodaUtils.ETERNITY)) {
-      for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
-        usedSegments.add(chunk.getObject());
+      final String dataSource = segments.iterator().next().getDataSource();
+      for (DataSegment segment : segments) {
+        if (!dataSource.equals(segment.getDataSource())) {
+          throw new IAE("segments must all be for given dataSource [%s].", dataSource);
+        }
       }
+
+      DataSourceMetadata startMetadata = metadataAndSegments.getStartMetadata();
+      DataSourceMetadata endMetadata = metadataAndSegments.getEndMetadata();
+      if ((startMetadata == null && endMetadata != null) || (startMetadata != null && endMetadata == null)) {
+        throw new IAE("start/end metadata pair must be either null or non-null for dataSource [%s].", dataSource);
+      }
+
+      dataSources.put(dataSource, metadataAndSegments);
     }
+
+
 
     final AtomicBoolean txnFailure = new AtomicBoolean(false);
 
@@ -329,24 +328,39 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
             {
               final Set<DataSegment> inserted = Sets.newHashSet();
 
-              if (startMetadata != null) {
-                final boolean success = updateDataSourceMetadataWithHandle(
-                    handle,
-                    dataSource,
-                    startMetadata,
-                    endMetadata
-                );
+              for (Map.Entry<String, DataSourceMetadataAndSegments> e : dataSources.entrySet()) {
+                if (e.getValue().getStartMetadata() != null) {
+                  final boolean success = updateDataSourceMetadataWithHandle(
+                      handle,
+                      e.getKey(),
+                      e.getValue().getStartMetadata(),
+                      e.getValue().getEndMetadata()
+                  );
 
-                if (!success) {
-                  transactionStatus.setRollbackOnly();
-                  txnFailure.set(true);
-                  throw new RuntimeException("Aborting transaction!");
+                  if (!success) {
+                    transactionStatus.setRollbackOnly();
+                    txnFailure.set(true);
+                    throw new RuntimeException("Aborting transaction!");
+                  }
                 }
               }
 
-              for (final DataSegment segment : segments) {
-                if (announceHistoricalSegment(handle, segment, usedSegments.contains(segment))) {
-                  inserted.add(segment);
+              for (DataSourceMetadataAndSegments metadataAndSegments : dataSources.values()) {
+
+                // Find which segments are used (i.e. not overshadowed).
+                final Set<DataSegment> usedSegments = Sets.newHashSet();
+                for (TimelineObjectHolder<String, DataSegment> holder : VersionedIntervalTimeline.forSegments(
+                    metadataAndSegments.getSegments()
+                ).lookup(JodaUtils.ETERNITY)) {
+                  for (PartitionChunk<DataSegment> chunk : holder.getObject()) {
+                    usedSegments.add(chunk.getObject());
+                  }
+                }
+
+                for (final DataSegment segment : metadataAndSegments.getSegments()) {
+                  if (announceHistoricalSegment(handle, segment, usedSegments.contains(segment))) {
+                    inserted.add(segment);
+                  }
                 }
               }
 
@@ -364,6 +378,27 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         throw e;
       }
     }
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public SegmentPublishResult announceHistoricalSegments(
+      final Set<DataSegment> segments,
+      final DataSourceMetadata startMetadata,
+      final DataSourceMetadata endMetadata
+  ) throws IOException
+  {
+    return announceHistoricalSegments(
+        ImmutableList.of(
+            new DataSourceMetadataAndSegments(
+                segments,
+                startMetadata,
+                endMetadata
+            )
+        )
+    );
   }
 
   @Override

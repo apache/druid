@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import io.druid.indexing.overlord.DataSourceMetadata;
+import io.druid.indexing.overlord.DataSourceMetadataAndSegments;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.SegmentPublishResult;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
@@ -31,6 +32,7 @@ import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 import java.io.IOException;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -100,6 +102,17 @@ public class TestIndexerMetadataStorageCoordinator implements IndexerMetadataSto
   {
     // Don't actually compare metadata, just do it!
     return new SegmentPublishResult(announceHistoricalSegments(segments), true);
+  }
+
+  @Override
+  public SegmentPublishResult announceHistoricalSegments(List<DataSourceMetadataAndSegments> segments)
+      throws IOException
+  {
+    Set<DataSegment> added = new HashSet<>();
+    for (DataSourceMetadataAndSegments d : segments) {
+      added.addAll(announceHistoricalSegments(d.getSegments(), d.getStartMetadata(), d.getEndMetadata()).getSegments());
+    }
+    return new SegmentPublishResult(added, true);
   }
 
   @Override

@@ -118,6 +118,10 @@ public interface IndexerMetadataStorageCoordinator
       DataSourceMetadata endMetadata
   ) throws IOException;
 
+  SegmentPublishResult announceHistoricalSegments(
+      List<DataSourceMetadataAndSegments> segments
+  ) throws IOException;
+
   DataSourceMetadata getDataSourceMetadata(String dataSource);
 
   /**
