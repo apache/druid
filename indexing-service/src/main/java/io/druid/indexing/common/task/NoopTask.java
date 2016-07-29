@@ -22,16 +22,17 @@ package io.druid.indexing.common.task;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-
+import com.google.common.annotations.VisibleForTesting;
+import com.metamx.common.ISE;
+import com.metamx.common.logger.Logger;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.TaskActionClient;
-import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.logger.Logger;
 
 import org.joda.time.DateTime;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -76,6 +77,31 @@ public class NoopTask extends AbstractTask
     super(
         id == null ? String.format("noop_%s_%s", new DateTime(), UUID.randomUUID().toString()) : id,
         "none",
+        context
+    );
+
+    this.runTime = (runTime == 0) ? defaultRunTime : runTime;
+    this.isReadyTime = (isReadyTime == 0) ? defaultIsReadyTime : isReadyTime;
+    this.isReadyResult = (isReadyResult == null)
+                         ? defaultIsReadyResult
+                         : IsReadyResult.valueOf(isReadyResult.toUpperCase());
+    this.firehoseFactory = firehoseFactory;
+  }
+
+  @VisibleForTesting
+  public NoopTask(
+      String id,
+      long runTime,
+      long isReadyTime,
+      String isReadyResult,
+      FirehoseFactory firehoseFactory,
+      Map<String, Object> context,
+      List<String> dataSources
+  )
+  {
+    super(
+        id == null ? String.format("noop_%s_%s", new DateTime(), UUID.randomUUID().toString()) : id,
+        dataSources,
         context
     );
 

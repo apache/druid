@@ -124,5 +124,73 @@ public class TaskLockboxTest
     Assert.assertFalse(lockbox.tryLock(task, new Interval("2015-01-01/2015-01-02")).isPresent());
   }
 
+  @Test
+  public void testMultiDataSourceTryLock()
+  {
+    Task task = new NoopTask(null, 0, 0, null, null, null, ImmutableList.of("A", "B"));
+    lockbox.add(task);
 
+    //ensure lock is not given to a dataSource that task does not operate on.
+    try {
+      lockbox.tryLock(
+          task, ImmutableList.of(
+              new DataSourceAndInterval("A", new Interval("2015-01-01/2015-01-02")),
+              new DataSourceAndInterval("B", new Interval("2015-01-01/2015-01-03")),
+              new DataSourceAndInterval("C", new Interval("2015-01-02/2015-01-04"))
+          )
+      );
+      Assert.fail();
+    }
+    catch (IllegalArgumentException ex) {
+      Assert.assertTrue(lockbox.findLocksForTask(task).isEmpty());
+    }
+
+    //ensure locks are given when appropriate
+    List<TaskLock> locks = lockbox.tryLock(
+        task, ImmutableList.of(
+            new DataSourceAndInterval("A", new Interval("2015-01-01/2015-01-02")),
+            new DataSourceAndInterval("B", new Interval("2015-01-01/2015-01-03"))
+        )
+    ).get();
+    Assert.assertEquals(2, locks.size());
+    Assert.assertFalse(lockbox.findLocksForTask(task).isEmpty());
+
+    lockbox.remove(task);
+    Assert.assertTrue(lockbox.findLocksForTask(task).isEmpty());
+  }
+
+  @Test
+  public void testMultiDataSourceLock() throws Exception
+  {
+    Task task = new NoopTask(null, 0, 0, null, null, null, ImmutableList.of("A", "B"));
+    lockbox.add(task);
+
+    //ensure lock is not given to a dataSource that task does not operate on.
+    try {
+      lockbox.lock(
+          task, ImmutableList.of(
+              new DataSourceAndInterval("A", new Interval("2015-01-01/2015-01-02")),
+              new DataSourceAndInterval("B", new Interval("2015-01-01/2015-01-03")),
+              new DataSourceAndInterval("C", new Interval("2015-01-02/2015-01-04"))
+          )
+      );
+      Assert.fail();
+    }
+    catch (IllegalArgumentException ex) {
+      Assert.assertTrue(lockbox.findLocksForTask(task).isEmpty());
+    }
+
+    //ensure locks are given when appropriate
+    List<TaskLock> locks = lockbox.lock(
+        task, ImmutableList.of(
+            new DataSourceAndInterval("A", new Interval("2015-01-01/2015-01-02")),
+            new DataSourceAndInterval("B", new Interval("2015-01-01/2015-01-03"))
+        )
+    );
+    Assert.assertEquals(2, locks.size());
+    Assert.assertFalse(lockbox.findLocksForTask(task).isEmpty());
+
+    lockbox.remove(task);
+    Assert.assertTrue(lockbox.findLocksForTask(task).isEmpty());
+  }
 }

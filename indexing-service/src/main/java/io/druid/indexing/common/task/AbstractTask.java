@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Joiner;
 import com.google.common.base.Objects;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
@@ -34,6 +35,7 @@ import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 public abstract class AbstractTask implements Task
@@ -49,8 +51,12 @@ public abstract class AbstractTask implements Task
   @JsonIgnore
   private final TaskResource taskResource;
 
+  //This attribute should be removed eventually as dataSources should be enough
   @JsonIgnore
   private final String dataSource;
+
+  @JsonIgnore
+  private final List<String> dataSources;
 
   private final Map<String, Object> context;
 
@@ -59,9 +65,9 @@ public abstract class AbstractTask implements Task
     this(id, null, null, dataSource, context);
   }
 
-  protected AbstractTask(String id, String groupId, String dataSource, Map<String, Object> context)
+  protected AbstractTask(String id, List<String> dataSources, Map<String, Object> context)
   {
-    this(id, groupId, null, dataSource, context);
+    this(id, null, null, dataSources, context);
   }
 
   protected AbstractTask(
@@ -76,6 +82,23 @@ public abstract class AbstractTask implements Task
     this.groupId = groupId == null ? id : groupId;
     this.taskResource = taskResource == null ? new TaskResource(id, 1) : taskResource;
     this.dataSource = Preconditions.checkNotNull(dataSource, "dataSource");
+    this.dataSources = ImmutableList.of(dataSource);
+    this.context = context;
+  }
+
+  protected AbstractTask(
+      String id,
+      String groupId,
+      TaskResource taskResource,
+      List<String> dataSources,
+      Map<String, Object> context
+  )
+  {
+    this.id = Preconditions.checkNotNull(id, "id");
+    this.groupId = groupId == null ? id : groupId;
+    this.taskResource = taskResource == null ? new TaskResource(id, 1) : taskResource;
+    this.dataSources = Preconditions.checkNotNull(dataSources, "dataSources");
+    this.dataSource = dataSources.get(0);
     this.context = context;
   }
 
@@ -122,6 +145,13 @@ public abstract class AbstractTask implements Task
   public String getDataSource()
   {
     return dataSource;
+  }
+
+  @JsonProperty
+  @Override
+  public List<String> getDataSources()
+  {
+    return dataSources;
   }
 
   @Override

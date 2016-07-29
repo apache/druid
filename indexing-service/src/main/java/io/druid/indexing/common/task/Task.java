@@ -27,6 +27,7 @@ import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -104,6 +105,11 @@ public interface Task
    * Returns the datasource this task operates on. Each task can operate on only one datasource.
    */
   public String getDataSource();
+
+  /**
+   * Returns a list of dataSources this task operates on.
+   */
+  public List<String> getDataSources();
 
   /**
    * Returns query runners for this task. If this task is not meant to answer queries over its datasource, this method

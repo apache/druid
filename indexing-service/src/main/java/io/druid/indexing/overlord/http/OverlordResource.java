@@ -135,18 +135,20 @@ public class OverlordResource
   {
     if (authConfig.isEnabled()) {
       // This is an experimental feature, see - https://github.com/druid-io/druid/pull/2424
-      final String dataSource = task.getDataSource();
       final AuthorizationInfo authorizationInfo = (AuthorizationInfo) req.getAttribute(AuthConfig.DRUID_AUTH_TOKEN);
       Preconditions.checkNotNull(
           authorizationInfo,
           "Security is enabled but no authorization info found in the request"
       );
-      Access authResult = authorizationInfo.isAuthorized(
-          new Resource(dataSource, ResourceType.DATASOURCE),
-          Action.WRITE
-      );
-      if (!authResult.isAllowed()) {
-        return Response.status(Response.Status.FORBIDDEN).header("Access-Check-Result", authResult).build();
+
+      for (String dataSource : task.getDataSources()) {
+        Access authResult = authorizationInfo.isAuthorized(
+            new Resource(dataSource, ResourceType.DATASOURCE),
+            Action.WRITE
+        );
+        if (!authResult.isAllowed()) {
+          return Response.status(Response.Status.FORBIDDEN).header("Access-Check-Result", authResult).build();
+        }
       }
     }
 

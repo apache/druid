@@ -26,25 +26,29 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
+
+import com.metamx.common.IAE;
+import com.metamx.common.ISE;
+import com.metamx.common.Pair;
+import com.metamx.common.guava.Comparators;
+import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.common.utils.JodaUtils;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.task.Task;
-import io.druid.java.util.common.ISE;
-import io.druid.java.util.common.Pair;
-import io.druid.java.util.common.guava.Comparators;
-import io.druid.java.util.common.guava.FunctionalIterable;
 
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -127,6 +131,7 @@ public class TaskLockbox
         }
         final Optional<TaskLock> acquiredTaskLock = tryLock(
             task,
+            savedTaskLock.getDataSource(),
             savedTaskLock.getInterval(),
             Optional.of(savedTaskLock.getVersion())
         );
@@ -179,13 +184,56 @@ public class TaskLockbox
    */
   public TaskLock lock(final Task task, final Interval interval) throws InterruptedException
   {
+    return lock(task, Iterables.getOnlyElement(task.getDataSources()), interval);
+  }
+
+  public List<TaskLock> lock(final Task task, final List<DataSourceAndInterval> dataSourcesAndIntervalsIn)
+      throws InterruptedException
+  {
+    giant.lock();
+
+    try {
+      //sort by dataSource
+      List<DataSourceAndInterval> dataSourcesAndIntervals = Lists.newArrayList(dataSourcesAndIntervalsIn);
+      Collections.sort(dataSourcesAndIntervals, DataSourceAndInterval.DATA_SOURCE_COMPARATOR);
+
+      List<TaskLock> locksTaken = new ArrayList<>(dataSourcesAndIntervals.size());
+      Set<String> dataSources = ImmutableSet.copyOf(task.getDataSources());
+
+      for (DataSourceAndInterval dsi : dataSourcesAndIntervals) {
+
+        if (dataSources.contains(dsi.getDataSource())) {
+          try {
+            TaskLock lock = lock(task, dsi.getDataSource(), dsi.getInterval());
+            locksTaken.add(lock);
+          }
+          catch (InterruptedException ex) {
+            releaseAllInReverseOrder(task, locksTaken);
+            throw ex;
+          }
+        } else {
+          releaseAllInReverseOrder(task, locksTaken);
+          throw new IAE("task [%s] does not have dataSource [%s].", task.getId(), dsi.getDataSource());
+        }
+      }
+
+      return locksTaken;
+
+    }
+    finally {
+      giant.unlock();
+    }
+  }
+
+  private TaskLock lock(final Task task, final String dataSource, final Interval interval)
+      throws InterruptedException
+  {
     giant.lock();
     try {
       Optional<TaskLock> taskLock;
-      while (!(taskLock = tryLock(task, interval)).isPresent()) {
+      while (!(taskLock = tryLock(task, dataSource, interval, Optional.<String>absent())).isPresent()) {
         lockReleaseCondition.await();
       }
-
       return taskLock.get();
     } finally {
       giant.unlock();
@@ -204,7 +252,55 @@ public class TaskLockbox
    */
   public Optional<TaskLock> tryLock(final Task task, final Interval interval)
   {
-    return tryLock(task, interval, Optional.<String>absent());
+    return tryLock(task, Iterables.getOnlyElement(task.getDataSources()), interval, Optional.<String>absent());
+  }
+
+  public Optional<List<TaskLock>> tryLock(final Task task, final List<DataSourceAndInterval> dataSourcesAndIntervalsIn)
+    {
+    giant.lock();
+
+    try {
+      //sort by dataSource
+      List<DataSourceAndInterval> dataSourcesAndIntervals = Lists.newArrayList(dataSourcesAndIntervalsIn);
+      Collections.sort(dataSourcesAndIntervals,DataSourceAndInterval.DATA_SOURCE_COMPARATOR);
+
+      List<TaskLock> locksTaken = new ArrayList<>(dataSourcesAndIntervals.size());
+      Set<String> dataSources = ImmutableSet.copyOf(task.getDataSources());
+
+      for (DataSourceAndInterval dsi : dataSourcesAndIntervals) {
+
+        if (dataSources.contains(dsi.getDataSource())) {
+          Optional<TaskLock> lock = tryLock(
+              task,
+              dsi.getDataSource(),
+              dsi.getInterval(),
+              Optional.<String>absent()
+          );
+
+          if (lock.isPresent()) {
+            locksTaken.add(lock.get());
+          } else {
+            releaseAllInReverseOrder(task, locksTaken);
+            return Optional.absent();
+          }
+        } else {
+          releaseAllInReverseOrder(task, locksTaken);
+          throw new IAE("task [%s] does not have dataSource [%s].", task.getId(), dsi.getDataSource());
+        }
+      }
+
+      return Optional.of(locksTaken);
+
+    } finally {
+      giant.unlock();
+    }
+  }
+
+  private void releaseAllInReverseOrder(Task task, List<TaskLock> locks)
+  {
+    for (int i = locks.size() - 1; i >= 0; i--) {
+      unlock(task, locks.get(i).getDataSource(), locks.get(i).getInterval());
+    }
   }
 
   /**
@@ -221,7 +317,7 @@ public class TaskLockbox
    * @return lock version if lock was acquired, absent otherwise
    * @throws IllegalStateException if the task is not a valid active task
    */
-  private Optional<TaskLock> tryLock(final Task task, final Interval interval, final Optional<String> preferredVersion)
+  private Optional<TaskLock> tryLock(final Task task, final String dataSource, final Interval interval, final Optional<String> preferredVersion)
   {
     giant.lock();
 
@@ -230,7 +326,6 @@ public class TaskLockbox
         throw new ISE("Unable to grant lock to inactive Task [%s]", task.getId());
       }
       Preconditions.checkArgument(interval.toDurationMillis() > 0, "interval empty");
-      final String dataSource = task.getDataSource();
       final List<TaskLockPosse> foundPosses = findLockPossesForInterval(dataSource, interval);
       final TaskLockPosse posseToUse;
 
@@ -296,7 +391,7 @@ public class TaskLockbox
              .addData("interval", posseToUse.getTaskLock().getInterval())
              .addData("version", posseToUse.getTaskLock().getVersion())
              .emit();
-          unlock(task, interval);
+          unlock(task, dataSource, interval);
           return Optional.absent();
         }
       } else {
@@ -345,10 +440,14 @@ public class TaskLockbox
    */
   public void unlock(final Task task, final Interval interval)
   {
+    unlock(task, Iterables.getOnlyElement(task.getDataSources()), interval);
+  }
+
+  private void unlock(final Task task, final String dataSource, final Interval interval)
+  {
     giant.lock();
 
     try {
-      final String dataSource = task.getDataSource();
       final NavigableMap<Interval, TaskLockPosse> dsRunning = running.get(dataSource);
 
       // So we can alert if activeTasks try to release stuff they don't have
@@ -412,7 +511,7 @@ public class TaskLockbox
       try {
         log.info("Removing task[%s] from activeTasks", task.getId());
         for (final TaskLockPosse taskLockPosse : findLockPossesForTask(task)) {
-          unlock(task, taskLockPosse.getTaskLock().getInterval());
+          unlock(task, taskLockPosse.getTaskLock().getDataSource(), taskLockPosse.getTaskLock().getInterval());
         }
       }
       finally {
@@ -434,28 +533,32 @@ public class TaskLockbox
     giant.lock();
 
     try {
-      final Iterable<TaskLockPosse> searchSpace;
+      List<TaskLockPosse> posses = new ArrayList<>();
 
-      // Scan through all locks for this datasource
-      final NavigableMap<Interval, TaskLockPosse> dsRunning = running.get(task.getDataSource());
-      if(dsRunning == null) {
-        searchSpace = ImmutableList.of();
-      } else {
-        searchSpace = dsRunning.values();
+      // Scan through all locks for this task's datasources
+      for (String dataSource : task.getDataSources()) {
+        final NavigableMap<Interval, TaskLockPosse> dsRunning = running.get(dataSource);
+
+        if (dsRunning != null && !dsRunning.isEmpty()) {
+          final Iterable<TaskLockPosse> searchSpace = dsRunning.values();
+          posses.addAll(
+              ImmutableList.copyOf(
+                  Iterables.filter(
+                      searchSpace, new Predicate<TaskLockPosse>()
+                      {
+                        @Override
+                        public boolean apply(TaskLockPosse taskLock)
+                        {
+                          return taskLock.getTaskIds().contains(task.getId());
+                        }
+                      }
+                  )
+              )
+          );
+        }
       }
 
-      return ImmutableList.copyOf(
-          Iterables.filter(
-              searchSpace, new Predicate<TaskLockPosse>()
-          {
-            @Override
-            public boolean apply(TaskLockPosse taskLock)
-            {
-              return taskLock.getTaskIds().contains(task.getId());
-            }
-          }
-          )
-      );
+      return posses;
     }
     finally {
       giant.unlock();
