@@ -18,6 +18,7 @@ type      | String      | This should say `parquet`                             
 parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Should be a timeAndDims parseSpec. | yes
 
 For example:
+
 ```json
 {
   "type": "index_hadoop",
@@ -79,7 +80,6 @@ For example:
     }
   }
 }
-
 ```
 
 Almost all the fields listed above are required, including `inputFormat`, `metadataUpdateSpec`(`type`, `connectURI`, `user`, `password`, `segmentTable`). Set `jobProperties` to make hdfs path timezone unrelated.
