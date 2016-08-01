@@ -71,12 +71,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Queue;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
@@ -1433,7 +1433,8 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       }
     }
 
-    public Iterable<Map.Entry<TimeAndDims, Integer>> entrySet() {
+    public Iterable<Map.Entry<TimeAndDims, Integer>> entrySet()
+    {
       return facts.entrySet();
     }
 
@@ -1482,7 +1483,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
   static class PlainFactsHolder implements FactsHolder
   {
     private final boolean sortFacts;
-    private final ConcurrentMap<Long, Queue<Map.Entry<TimeAndDims, Integer>>> facts;
+    private final ConcurrentMap<Long, Deque<Map.Entry<TimeAndDims, Integer>>> facts;
 
     public PlainFactsHolder(boolean sortFacts)
     {
@@ -1512,7 +1513,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     public long getMinTimeMillis()
     {
       if (sortFacts) {
-        return ((ConcurrentNavigableMap<Long, Queue<Map.Entry<TimeAndDims, Integer>>>) facts).firstKey();
+        return ((ConcurrentNavigableMap<Long, Deque<Map.Entry<TimeAndDims, Integer>>>) facts).firstKey();
       } else {
         throw new UnsupportedOperationException("can't get minTime from unsorted facts data.");
       }
@@ -1522,37 +1523,61 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     public long getMaxTimeMillis()
     {
       if (sortFacts) {
-        return ((ConcurrentNavigableMap<Long, Queue<Map.Entry<TimeAndDims, Integer>>>) facts).lastKey();
+        return ((ConcurrentNavigableMap<Long, Deque<Map.Entry<TimeAndDims, Integer>>>) facts).lastKey();
       } else {
         throw new UnsupportedOperationException("can't get maxTime from unsorted facts data.");
       }
     }
 
-    public Iterable<Map.Entry<TimeAndDims, Integer>> entrySet() {
-      return concat(facts.values());
+    public Iterable<Map.Entry<TimeAndDims, Integer>> entrySet()
+    {
+      return concat(facts.values(), false);
     }
 
     @Override
     public Iterator<Map.Entry<TimeAndDims, Integer>> iterator(boolean descending)
     {
       if (descending && sortFacts) {
-        return concat(((ConcurrentNavigableMap<Long, Queue<Map.Entry<TimeAndDims, Integer>>>) facts).descendingMap().values()).iterator();
+        return concat(((ConcurrentNavigableMap<Long, Deque<Map.Entry<TimeAndDims, Integer>>>) facts)
+                .descendingMap().values(), true).iterator();
       }
-      return concat(facts.values()).iterator();
+      return concat(facts.values(), false).iterator();
     }
 
     @Override
     public Iterable<Map.Entry<TimeAndDims, Integer>> timeRangeIterable(boolean descending, long timeStart, long timeEnd)
     {
-      ConcurrentNavigableMap<Long, Queue<Map.Entry<TimeAndDims, Integer>>> subMap =
-          ((ConcurrentNavigableMap<Long, Queue<Map.Entry<TimeAndDims, Integer>>>) facts).subMap(timeStart, timeEnd);
-      final Map<Long, Queue<Map.Entry<TimeAndDims, Integer>>> rangeMap = descending ? subMap.descendingMap() : subMap;
-      return concat(rangeMap.values());
+      ConcurrentNavigableMap<Long, Deque<Map.Entry<TimeAndDims, Integer>>> subMap =
+          ((ConcurrentNavigableMap<Long, Deque<Map.Entry<TimeAndDims, Integer>>>) facts).subMap(timeStart, timeEnd);
+      final Map<Long, Deque<Map.Entry<TimeAndDims, Integer>>> rangeMap = descending ? subMap.descendingMap() : subMap;
+      return concat(rangeMap.values(), descending);
     }
 
-    private Iterable<Map.Entry<TimeAndDims, Integer>> concat(Iterable<Queue<Map.Entry<TimeAndDims, Integer>>> iterable)
+    private Iterable<Map.Entry<TimeAndDims, Integer>> concat(
+        final Iterable<Deque<Map.Entry<TimeAndDims, Integer>>> iterable,
+        final boolean descending
+    )
     {
-      return Iterables.concat(iterable);
+      return new Iterable<Map.Entry<TimeAndDims, Integer>>()
+      {
+        @Override
+        public Iterator<Map.Entry<TimeAndDims, Integer>> iterator()
+        {
+          return Iterators.concat(
+              Iterators.transform(
+                  iterable.iterator(),
+                  new Function<Deque<Map.Entry<TimeAndDims, Integer>>, Iterator<Map.Entry<TimeAndDims, Integer>>>()
+                  {
+                    @Override
+                    public Iterator<Map.Entry<TimeAndDims, Integer>> apply(Deque<Map.Entry<TimeAndDims, Integer>> input)
+                    {
+                      return descending ? input.descendingIterator() : input.iterator();
+                    }
+                  }
+              )
+          );
+        }
+      };
     }
 
     @Override
@@ -1575,9 +1600,9 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     public Integer putIfAbsent(TimeAndDims key, Integer rowIndex)
     {
       Long time = key.getTimestamp();
-      Queue<Map.Entry<TimeAndDims, Integer>> rows = facts.get(time);
+      Deque<Map.Entry<TimeAndDims, Integer>> rows = facts.get(time);
       if (rows == null) {
-        facts.putIfAbsent(time, new ConcurrentLinkedQueue<Map.Entry<TimeAndDims, Integer>>());
+        facts.putIfAbsent(time, new ConcurrentLinkedDeque<Map.Entry<TimeAndDims, Integer>>());
         // in race condition, rows may be put by other thread, so always get latest status from facts
         rows = facts.get(time);
       }
