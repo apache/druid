@@ -4520,7 +4520,6 @@ public class GroupByQueryRunnerTest
     TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
 
-  @Ignore
   @Test
   public void testSubqueryWithOuterCardinalityAggregator()
   {

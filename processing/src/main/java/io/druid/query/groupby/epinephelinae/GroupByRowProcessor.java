@@ -150,11 +150,10 @@ public class GroupByRowProcessor
 
               Pair<Grouper<RowBasedKey>, Accumulator<Grouper<RowBasedKey>, Row>> pair = RowBasedGrouperHelper.createGrouperAccumulatorPair(
                   query,
-                  query.getGranularity(),
                   true,
                   config,
                   mergeBufferHolder.get(),
-                  1,
+                  -1,
                   temporaryStorage,
                   spillMapper,
                   aggregatorFactories

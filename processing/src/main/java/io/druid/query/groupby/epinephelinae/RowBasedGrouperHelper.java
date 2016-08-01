@@ -64,8 +64,7 @@ public class RowBasedGrouperHelper
 
   public static Pair<Grouper<RowBasedKey>, Accumulator<Grouper<RowBasedKey>, Row>> createGrouperAccumulatorPair(
       final GroupByQuery query,
-      final QueryGranularity queryGranularity,
-      final boolean applyExtractionFn,
+      final boolean isInputRaw,
       final GroupByQueryConfig config,
       final ByteBuffer buffer,
       final int concurrencyHint,
@@ -77,11 +76,11 @@ public class RowBasedGrouperHelper
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
     final Grouper.KeySerdeFactory<RowBasedKey> keySerdeFactory = new RowBasedKeySerdeFactory(
         query.getDimensions().size(),
-        querySpecificConfig.getMaxMergingDictionarySize() / concurrencyHint
+        querySpecificConfig.getMaxMergingDictionarySize() / (concurrencyHint == -1 ? 1 : concurrencyHint)
     );
     final RowBasedColumnSelectorFactory columnSelectorFactory = new RowBasedColumnSelectorFactory();
     final Grouper<RowBasedKey> grouper;
-    if (concurrencyHint == 1) {
+    if (concurrencyHint == -1) {
       grouper = new SpillingGrouper<>(
           buffer,
           keySerdeFactory,
@@ -124,17 +123,20 @@ public class RowBasedGrouperHelper
           return null;
         }
 
-        long timestamp = queryGranularity.truncate(row.getTimestampFromEpoch());
-
-        if (queryGranularity instanceof AllGranularity) {
-          timestamp = query.getIntervals().get(0).getStartMillis();
+        long timestamp = row.getTimestampFromEpoch();
+        if (isInputRaw) {
+          if (query.getGranularity() instanceof AllGranularity) {
+            timestamp = query.getIntervals().get(0).getStartMillis();
+          } else {
+            timestamp = query.getGranularity().truncate(timestamp);
+          }
         }
 
         columnSelectorFactory.setRow(row);
         final String[] dimensions = new String[query.getDimensions().size()];
         for (int i = 0; i < dimensions.length; i++) {
           final String value;
-          if (applyExtractionFn) {
+          if (isInputRaw) {
             IndexedInts index = dimensionSelectors[i].getRow();
             value = index.size() == 0 ? "" : dimensionSelectors[i].lookupName(index.get(0));
           } else {
