@@ -23,6 +23,8 @@ package io.druid.segment;import io.druid.segment.data.IndexedInts;
  */
 public interface DimensionSelector
 {
+  public static int CARDINALITY_UNKNOWN = -1;
+
   /**
    * Gets all values for the row inside of an IntBuffer.  I.e. one possible implementation could be
    *
@@ -42,7 +44,12 @@ public interface DimensionSelector
    *
    * Value cardinality would be 2.
    *
-   * @return the value cardinality
+   * Cardinality may be unknown (e.g. the selector used by IncrementalIndex while reading input rows),
+   * in which case this method will return -1. If cardinality is unknown, you should assume this
+   * dimension selector has no dictionary, and avoid storing ids, calling "lookupId", or calling "lookupName"
+   * outside of the context of operating on a single row.
+   *
+   * @return the value cardinality, or -1 if unknown.
    */
   public int getValueCardinality();
 

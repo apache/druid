@@ -35,7 +35,6 @@ import com.metamx.common.guava.Accumulator;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.AllGranularity;
-import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
@@ -527,7 +526,7 @@ public class RowBasedGrouperHelper
         @Override
         public int getValueCardinality()
         {
-          throw new UnsupportedOperationException("value cardinality is unknown");
+          return DimensionSelector.CARDINALITY_UNKNOWN;
         }
 
         @Override
