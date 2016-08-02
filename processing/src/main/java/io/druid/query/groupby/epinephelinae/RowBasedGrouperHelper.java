@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -73,6 +74,9 @@ public class RowBasedGrouperHelper
       final AggregatorFactory[] aggregatorFactories
   )
   {
+    // concurrencyHint >= 1 for thread safe groupers, -1 for non-thread-safe
+    Preconditions.checkArgument(concurrencyHint >= 1 || concurrencyHint == -1, "invalid concurrencyHint");
+
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
     final Grouper.KeySerdeFactory<RowBasedKey> keySerdeFactory = new RowBasedKeySerdeFactory(
         query.getDimensions().size(),
@@ -105,9 +109,14 @@ public class RowBasedGrouperHelper
       );
     }
 
-    final DimensionSelector[] dimensionSelectors = new DimensionSelector[query.getDimensions().size()];
-    for (int i = 0; i < dimensionSelectors.length; i++) {
-      dimensionSelectors[i] = columnSelectorFactory.makeDimensionSelector(query.getDimensions().get(i));
+    final DimensionSelector[] dimensionSelectors;
+    if (isInputRaw) {
+      dimensionSelectors = new DimensionSelector[query.getDimensions().size()];
+      for (int i = 0; i < dimensionSelectors.length; i++) {
+        dimensionSelectors[i] = columnSelectorFactory.makeDimensionSelector(query.getDimensions().get(i));
+      }
+    } else {
+      dimensionSelectors = null;
     }
 
     final Accumulator<Grouper<RowBasedKey>, Row> accumulator = new Accumulator<Grouper<RowBasedKey>, Row>()
