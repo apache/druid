@@ -54,11 +54,10 @@ import io.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
-import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -145,15 +144,38 @@ public class GroupByQueryEngine
     );
   }
 
+  // for hash map
+  private static class IntArrayWrapper
+  {
+    private final int[] array;
+
+    private IntArrayWrapper(int[] array)
+    {
+      this.array = array;
+    }
+
+    @Override
+    public final int hashCode()
+    {
+      return Arrays.hashCode(array);
+    }
+
+    @Override
+    public final boolean equals(Object o)
+    {
+      return Arrays.equals(array, ((IntArrayWrapper) o).array);
+    }
+  }
+
   private static class RowUpdater
   {
     private final ByteBuffer metricValues;
     private final BufferAggregator[] aggregators;
     private final PositionMaintainer positionMaintainer;
 
-    private final Map<ByteBuffer, Integer> positions = Maps.newTreeMap();
+    private final Map<int[], Integer> positions = Maps.newTreeMap(Ints.lexicographicalComparator());
     // GroupBy queries tend to do a lot of reads from this. We co-store a hash map to make those reads go faster.
-    private final Map<ByteBuffer, Integer> positionsHash = Maps.newHashMap();
+    private final Map<IntArrayWrapper, Integer> positionsHash = Maps.newHashMap();
 
     public RowUpdater(
         ByteBuffer metricValues,
@@ -171,31 +193,35 @@ public class GroupByQueryEngine
       return positions.size();
     }
 
-    public Map<ByteBuffer, Integer> getPositions()
+    public Map<int[], Integer> getPositions()
     {
       return positions;
     }
 
-    private List<ByteBuffer> updateValues(
-        ByteBuffer key,
+    private List<int[]> updateValues(
+        int[] key,
         List<DimensionSelector> dims
     )
     {
-      if (dims.size() > 0) {
-        List<ByteBuffer> retVal = null;
-        List<ByteBuffer> unaggregatedBuffers = null;
+      int size = dims.size();
+      int index = key.length - size;
+      if (size > 0) {
+        List<int[]> retVal = null;
+        List<int[]> unaggregatedBuffers = null;
 
         final DimensionSelector dimSelector = dims.get(0);
         final IndexedInts row = dimSelector.getRow();
         if (row == null || row.size() == 0) {
-          ByteBuffer newKey = key.duplicate();
-          newKey.putInt(dimSelector.getValueCardinality());
-          unaggregatedBuffers = updateValues(newKey, dims.subList(1, dims.size()));
+          key[index] = dimSelector.getValueCardinality();
+          unaggregatedBuffers = updateValues(key, dims.subList(1, size));
+        } else if (row.size() == 1) {
+          key[index] = row.get(0);
+          unaggregatedBuffers = updateValues(key, dims.subList(1, size));
         } else {
           for (Integer dimValue : row) {
-            ByteBuffer newKey = key.duplicate();
-            newKey.putInt(dimValue);
-            unaggregatedBuffers = updateValues(newKey, dims.subList(1, dims.size()));
+            int[] newKey = Arrays.copyOf(key, key.length);
+            newKey[index] = dimValue;
+            unaggregatedBuffers = updateValues(newKey, dims.subList(1, size));
           }
         }
         if (unaggregatedBuffers != null) {
@@ -206,23 +232,20 @@ public class GroupByQueryEngine
         }
         return retVal;
       } else {
-        key.clear();
-        Integer position = positionsHash.get(key);
+        IntArrayWrapper wrapper = new IntArrayWrapper(key);
+
+        Integer position = positionsHash.get(wrapper);
         int[] increments = positionMaintainer.getIncrements();
         int thePosition;
 
         if (position == null) {
-          ByteBuffer keyCopy = ByteBuffer.allocate(key.limit());
-          keyCopy.put(key.asReadOnlyBuffer());
-          keyCopy.clear();
-
           position = positionMaintainer.getNext();
           if (position == null) {
-            return Lists.newArrayList(keyCopy);
+            return Lists.newArrayList(key);
           }
 
-          positions.put(keyCopy, position);
-          positionsHash.put(keyCopy, position);
+          positions.put(key, position);
+          positionsHash.put(wrapper, position);
           thePosition = position;
           for (int i = 0; i < aggregators.length; ++i) {
             aggregators[i].init(metricValues, thePosition);
@@ -297,13 +320,13 @@ public class GroupByQueryEngine
 
     private final List<DimensionSpec> dimensionSpecs;
     private final List<DimensionSelector> dimensions;
-    private final ArrayList<String> dimNames;
+    private final List<String> dimNames;
     private final List<AggregatorFactory> aggregatorSpecs;
     private final BufferAggregator[] aggregators;
     private final String[] metricNames;
     private final int[] sizesRequired;
 
-    private List<ByteBuffer> unprocessedKeys;
+    private List<int[]> unprocessedKeys;
     private Iterator<Row> delegate;
 
     public RowIterator(GroupByQuery query, final Cursor cursor, ByteBuffer metricsBuffer, GroupByQueryConfig config)
@@ -362,8 +385,8 @@ public class GroupByQueryEngine
       final PositionMaintainer positionMaintainer = new PositionMaintainer(0, sizesRequired, metricsBuffer.remaining());
       final RowUpdater rowUpdater = new RowUpdater(metricsBuffer, aggregators, positionMaintainer);
       if (unprocessedKeys != null) {
-        for (ByteBuffer key : unprocessedKeys) {
-          final List<ByteBuffer> unprocUnproc = rowUpdater.updateValues(key, ImmutableList.<DimensionSelector>of());
+        for (int[] key : unprocessedKeys) {
+          final List<int[]> unprocUnproc = rowUpdater.updateValues(key, ImmutableList.<DimensionSelector>of());
           if (unprocUnproc != null) {
             throw new ISE("Not enough memory to process the request.");
           }
@@ -371,7 +394,7 @@ public class GroupByQueryEngine
         cursor.advance();
       }
       while (!cursor.isDone() && rowUpdater.getNumRows() < maxIntermediateRows) {
-        ByteBuffer key = ByteBuffer.allocate(dimensions.size() * Ints.BYTES);
+        int[] key = new int[dimensions.size()];
 
         unprocessedKeys = rowUpdater.updateValues(key, dimensions);
         if (unprocessedKeys != null) {
@@ -391,20 +414,20 @@ public class GroupByQueryEngine
       delegate = FunctionalIterator
           .create(rowUpdater.getPositions().entrySet().iterator())
           .transform(
-              new Function<Map.Entry<ByteBuffer, Integer>, Row>()
+              new Function<Map.Entry<int[], Integer>, Row>()
               {
                 private final DateTime timestamp = cursor.getTime();
                 private final int[] increments = positionMaintainer.getIncrements();
 
                 @Override
-                public Row apply(@Nullable Map.Entry<ByteBuffer, Integer> input)
+                public Row apply(Map.Entry<int[], Integer> input)
                 {
                   Map<String, Object> theEvent = Maps.newLinkedHashMap();
 
-                  ByteBuffer keyBuffer = input.getKey().duplicate();
+                  int[] keyArray = input.getKey();
                   for (int i = 0; i < dimensions.size(); ++i) {
                     final DimensionSelector dimSelector = dimensions.get(i);
-                    final int dimVal = keyBuffer.getInt();
+                    final int dimVal = keyArray[i];
                     if (dimSelector.getValueCardinality() != dimVal) {
                       theEvent.put(dimNames.get(i), dimSelector.lookupName(dimVal));
                     }
