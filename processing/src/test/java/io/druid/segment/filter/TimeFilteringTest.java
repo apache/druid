@@ -31,11 +31,13 @@ import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import io.druid.js.JavaScriptConfig;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.extraction.MapLookupExtractor;
 import io.druid.query.extraction.TimeFormatExtractionFn;
 import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.InDimFilter;
+import io.druid.query.filter.IntervalDimFilter;
 import io.druid.query.filter.JavaScriptDimFilter;
 import io.druid.query.filter.RegexDimFilter;
 import io.druid.query.filter.SearchQueryDimFilter;
@@ -49,6 +51,7 @@ import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.Column;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
+import org.joda.time.Interval;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
@@ -227,6 +230,115 @@ public class TimeFilteringTest extends BaseFilterTest
     assertFilterMatches(
         new SelectorDimFilter(Column.TIME_COLUMN_NAME, "Wednesday", exfn),
         ImmutableList.<String>of("0", "1", "2", "3", "4", "5")
+    );
+  }
+
+  @Test
+  public void testIntervalFilter()
+  {
+    assertFilterMatches(
+        new IntervalDimFilter(
+            Column.TIME_COLUMN_NAME,
+            Arrays.asList(Interval.parse("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z")),
+            null
+        ),
+        ImmutableList.<String>of("1", "2", "3", "4")
+    );
+
+    assertFilterMatches(
+        new IntervalDimFilter(
+            Column.TIME_COLUMN_NAME,
+            Arrays.asList(
+                Interval.parse("1970-01-01T00:00:00.000Z/1970-01-01T00:00:00.002Z"),
+                Interval.parse("1970-01-01T00:00:00.004Z/1970-01-01T00:00:00.005Z")
+            ),
+            null
+        ),
+        ImmutableList.<String>of("0", "1", "2", "4", "5")
+    );
+
+    assertFilterMatches(
+        new IntervalDimFilter(
+            Column.TIME_COLUMN_NAME,
+            Arrays.asList(
+                Interval.parse("1970-01-01T00:00:00.000Z/1970-01-01T00:00:00.000Z"),
+                Interval.parse("1970-01-01T00:00:00.003Z/1970-01-01T00:00:00.005Z"),
+                Interval.parse("1970-01-01T00:00:00.002Z/1970-01-01T00:00:00.004Z")
+            ),
+            null
+        ),
+        ImmutableList.<String>of("0", "2", "3", "4", "5")
+    );
+
+    // increment timestamp by 2 hours
+    String timeBoosterJsFn = "function(x) { return(x + 7200000) }";
+    ExtractionFn exFn = new JavaScriptExtractionFn(timeBoosterJsFn, true, JavaScriptConfig.getDefault());
+    assertFilterMatches(
+        new IntervalDimFilter(
+            Column.TIME_COLUMN_NAME,
+            Arrays.asList(Interval.parse("1970-01-01T02:00:00.001Z/1970-01-01T02:00:00.004Z")),
+            exFn
+        ),
+        ImmutableList.<String>of("1", "2", "3", "4")
+    );
+  }
+
+  @Test
+  public void testIntervalFilterOnStringDimension()
+  {
+    assertFilterMatches(
+        new IntervalDimFilter(
+            "dim0",
+            Arrays.asList(Interval.parse("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z")),
+            null
+        ),
+        ImmutableList.<String>of("1", "2", "3", "4")
+    );
+
+    assertFilterMatches(
+        new IntervalDimFilter(
+            "dim0",
+            Arrays.asList(
+                Interval.parse("1970-01-01T00:00:00.000Z/1970-01-01T00:00:00.002Z"),
+                Interval.parse("1970-01-01T00:00:00.004Z/1970-01-01T00:00:00.005Z")
+            ),
+            null
+        ),
+        ImmutableList.<String>of("0", "1", "2", "4", "5")
+    );
+
+    assertFilterMatches(
+        new IntervalDimFilter(
+            "dim0",
+            Arrays.asList(
+                Interval.parse("1970-01-01T00:00:00.000Z/1970-01-01T00:00:00.000Z"),
+                Interval.parse("1970-01-01T00:00:00.003Z/1970-01-01T00:00:00.005Z"),
+                Interval.parse("1970-01-01T00:00:00.002Z/1970-01-01T00:00:00.004Z")
+            ),
+            null
+        ),
+        ImmutableList.<String>of("0", "2", "3", "4", "5")
+    );
+
+    assertFilterMatches(
+        new IntervalDimFilter(
+            "dim1",
+            Arrays.asList(Interval.parse("1970-01-01T00:00:00.002Z/1970-01-01T00:00:00.011Z")),
+            null
+        ),
+        ImmutableList.<String>of("1", "2")
+    );
+
+    // increment timestamp by 2 hours
+    String timeBoosterJsFn = "function(x) { return(Number(x) + 7200000) }";
+    ExtractionFn exFn = new JavaScriptExtractionFn(timeBoosterJsFn, true, JavaScriptConfig.getDefault());
+    assertFilterMatches(
+        new IntervalDimFilter(
+            "dim0",
+            Arrays.asList(Interval.parse("1970-01-01T02:00:00.001Z/1970-01-01T02:00:00.004Z")),
+            exFn
+        ),
+        ImmutableList.<String>of("1", "2", "3", "4")
     );
   }
 
