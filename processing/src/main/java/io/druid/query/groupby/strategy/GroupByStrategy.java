@@ -36,6 +36,12 @@ public interface GroupByStrategy
       Map<String, Object> responseContext
   );
 
+  Sequence<Row> processSubqueryResult(
+      GroupByQuery subquery,
+      GroupByQuery query,
+      Sequence<Row> subqueryResult
+  );
+
   QueryRunner<Row> mergeRunners(
       ListeningExecutorService exec,
       Iterable<QueryRunner<Row>> queryRunners

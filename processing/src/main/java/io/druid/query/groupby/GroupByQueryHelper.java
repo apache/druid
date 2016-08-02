@@ -163,7 +163,7 @@ public class GroupByQueryHelper
     return new Pair<>(init, accumulator);
   }
 
-  // Used by GroupByQueryQueryToolChest, GroupByStrategyV1
+  // Used by GroupByStrategyV1
   public static IncrementalIndex makeIncrementalIndex(
       GroupByQuery query,
       GroupByQueryConfig config,
@@ -180,7 +180,7 @@ public class GroupByQueryHelper
     return rows.accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
   }
 
-  // Used by GroupByQueryQueryToolChest, GroupByStrategyV1
+  // Used by GroupByStrategyV1
   public static Sequence<Row> postAggregate(final GroupByQuery query, IncrementalIndex index)
   {
     return Sequences.map(
