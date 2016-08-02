@@ -136,10 +136,12 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
 
   public byte[] getCacheKey()
   {
+    final byte[] filterBytes = dimFilter == null ? new byte[]{} : dimFilter.getCacheKey();
     final byte[] boundBytes = StringUtils.toUtf8(bound);
     return ByteBuffer.allocate(1 + boundBytes.length)
                      .put(CACHE_TYPE_ID)
                      .put(boundBytes)
+                     .put(filterBytes)
                      .array();
   }
 
