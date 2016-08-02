@@ -42,7 +42,6 @@ import io.druid.collections.ReferenceCountingResourceHolder;
 import io.druid.collections.Releaser;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.Row;
-import io.druid.granularity.QueryGranularities;
 import io.druid.query.AbstractPrioritizedCallable;
 import io.druid.query.BaseQuery;
 import io.druid.query.ChainedExecutionQueryRunner;
@@ -167,8 +166,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
                 closeOnFailure.add(mergeBufferHolder);
               }
               catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw Throwables.propagate(e);
+                throw new QueryInterruptedException(e);
               }
 
               Pair<Grouper<RowBasedKey>, Accumulator<Grouper<RowBasedKey>, Row>> pair = RowBasedGrouperHelper.createGrouperAccumulatorPair(

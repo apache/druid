@@ -213,7 +213,7 @@ public class OrderByColumnSpec
   {
     return "OrderByColumnSpec{" +
            "dimension='" + dimension + '\'' +
-           ", direction=" + direction + '\'' +
+           ", direction='" + direction + '\'' +
            ", dimensionComparator='" + dimensionComparator + '\'' +
            '}';
   }
