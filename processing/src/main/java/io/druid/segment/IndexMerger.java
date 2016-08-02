@@ -38,6 +38,7 @@ import com.google.common.io.Closer;
 import com.google.common.io.Files;
 import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
+import com.google.common.primitives.Longs;
 import com.google.inject.Inject;
 import com.metamx.collections.bitmap.BitmapFactory;
 import com.metamx.collections.bitmap.ImmutableBitmap;
@@ -200,6 +201,11 @@ public class IndexMerger
                 indexSpec.getBitmapSerdeFactory().getBitmapFactory()
             )
         ),
+        // if index is not rolled up, then it should be not rollup here
+        // if index is rolled up, then it is no need to rollup again.
+        //                     In this case, true/false won't cause reOrdering in merge stage
+        //                     while merging a single iterable
+        false,
         index.getMetricAggs(),
         outDir,
         indexSpec,
@@ -209,16 +215,18 @@ public class IndexMerger
 
   public File mergeQueryableIndex(
       List<QueryableIndex> indexes,
+      boolean rollup,
       final AggregatorFactory[] metricAggs,
       File outDir,
       IndexSpec indexSpec
   ) throws IOException
   {
-    return mergeQueryableIndex(indexes, metricAggs, outDir, indexSpec, new BaseProgressIndicator());
+    return mergeQueryableIndex(indexes, rollup, metricAggs, outDir, indexSpec, new BaseProgressIndicator());
   }
 
   public File mergeQueryableIndex(
       List<QueryableIndex> indexes,
+      boolean rollup,
       final AggregatorFactory[] metricAggs,
       File outDir,
       IndexSpec indexSpec,
@@ -243,6 +251,7 @@ public class IndexMerger
     );
     return merge(
         indexAdapteres,
+        rollup,
         metricAggs,
         outDir,
         indexSpec,
@@ -252,12 +261,13 @@ public class IndexMerger
 
   public File merge(
       List<IndexableAdapter> indexes,
+      boolean rollup,
       final AggregatorFactory[] metricAggs,
       File outDir,
       IndexSpec indexSpec
   ) throws IOException
   {
-    return merge(indexes, metricAggs, outDir, indexSpec, new BaseProgressIndicator());
+    return merge(indexes, rollup, metricAggs, outDir, indexSpec, new BaseProgressIndicator());
   }
 
   private static List<String> getLexicographicMergedDimensions(List<IndexableAdapter> indexes)
@@ -328,6 +338,7 @@ public class IndexMerger
 
   public File merge(
       List<IndexableAdapter> indexes,
+      final boolean rollup,
       final AggregatorFactory[] metricAggs,
       File outDir,
       IndexSpec indexSpec,
@@ -409,14 +420,28 @@ public class IndexMerger
           @Nullable ArrayList<Iterable<Rowboat>> boats
       )
       {
-        return CombiningIterable.create(
-            new MergeIterable<Rowboat>(
-                Ordering.<Rowboat>natural().nullsFirst(),
-                boats
-            ),
-            Ordering.<Rowboat>natural().nullsFirst(),
-            new RowboatMergeFunction(sortedMetricAggs)
-        );
+        if (rollup) {
+          return CombiningIterable.create(
+              new MergeIterable<Rowboat>(
+                  Ordering.<Rowboat>natural().nullsFirst(),
+                  boats
+              ),
+              Ordering.<Rowboat>natural().nullsFirst(),
+              new RowboatMergeFunction(sortedMetricAggs)
+          );
+        } else {
+          return new MergeIterable<Rowboat>(
+              new Ordering<Rowboat>()
+              {
+                @Override
+                public int compare(Rowboat left, Rowboat right)
+                {
+                  return Longs.compare(left.getTimestamp(), right.getTimestamp());
+                }
+              }.nullsFirst(),
+              boats
+          );
+        }
       }
     };
 

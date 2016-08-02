@@ -148,6 +148,19 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
           queryGranularity = null;
         }
 
+        Boolean rollup = null;
+        if (query.hasRollup()) {
+          if (metadata == null) {
+            metadata = segment.asStorageAdapter().getMetadata();
+          }
+          rollup = metadata != null ? metadata.isRollup() : null;
+          if (rollup == null) {
+            // in this case, this segment is built before no-rollup function is coded,
+            // thus it is built with rollup
+            rollup = Boolean.TRUE;
+          }
+        }
+
         return Sequences.simple(
             Arrays.asList(
                 new SegmentAnalysis(
@@ -158,7 +171,8 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                     numRows,
                     aggregators,
                     timestampSpec,
-                    queryGranularity
+                    queryGranularity,
+                    rollup
                 )
             )
         );

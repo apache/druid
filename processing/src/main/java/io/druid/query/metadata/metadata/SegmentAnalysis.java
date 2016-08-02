@@ -40,6 +40,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
   private final Map<String, AggregatorFactory> aggregators;
   private final TimestampSpec timestampSpec;
   private final QueryGranularity queryGranularity;
+  private final Boolean rollup;
 
   @JsonCreator
   public SegmentAnalysis(
@@ -50,7 +51,8 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
       @JsonProperty("numRows") long numRows,
       @JsonProperty("aggregators") Map<String, AggregatorFactory> aggregators,
       @JsonProperty("timestampSpec") TimestampSpec timestampSpec,
-      @JsonProperty("queryGranularity") QueryGranularity queryGranularity
+      @JsonProperty("queryGranularity") QueryGranularity queryGranularity,
+      @JsonProperty("rollup") Boolean rollup
   )
   {
     this.id = id;
@@ -61,6 +63,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
     this.aggregators = aggregators;
     this.timestampSpec = timestampSpec;
     this.queryGranularity = queryGranularity;
+    this.rollup = rollup;
   }
 
   @JsonProperty
@@ -106,6 +109,12 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
   }
 
   @JsonProperty
+  public Boolean isRollup()
+  {
+    return rollup;
+  }
+
+  @JsonProperty
   public Map<String, AggregatorFactory> getAggregators()
   {
     return aggregators;
@@ -123,6 +132,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
            ", aggregators=" + aggregators +
            ", timestampSpec=" + timestampSpec +
            ", queryGranularity=" + queryGranularity +
+           ", rollup=" + rollup +
            '}';
   }
 
@@ -141,6 +151,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
     SegmentAnalysis that = (SegmentAnalysis) o;
     return size == that.size &&
            numRows == that.numRows &&
+           rollup == that.rollup &&
            Objects.equals(id, that.id) &&
            Objects.equals(interval, that.interval) &&
            Objects.equals(columns, that.columns) &&
@@ -156,7 +167,7 @@ public class SegmentAnalysis implements Comparable<SegmentAnalysis>
   @Override
   public int hashCode()
   {
-    return Objects.hash(id, interval, columns, size, numRows, aggregators, timestampSpec, queryGranularity);
+    return Objects.hash(id, interval, columns, size, numRows, aggregators, timestampSpec, queryGranularity, rollup);
   }
 
   @Override
