@@ -44,6 +44,7 @@ public class MergeTask extends MergeTaskBase
 {
   @JsonIgnore
   private final List<AggregatorFactory> aggregators;
+  private final Boolean rollup;
   private final IndexSpec indexSpec;
 
   @JsonCreator
@@ -52,12 +53,14 @@ public class MergeTask extends MergeTaskBase
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("segments") List<DataSegment> segments,
       @JsonProperty("aggregations") List<AggregatorFactory> aggregators,
+      @JsonProperty("rollup") Boolean rollup,
       @JsonProperty("indexSpec") IndexSpec indexSpec,
       @JsonProperty("context") Map<String, Object> context
   )
   {
     super(id, dataSource, segments, context);
     this.aggregators = Preconditions.checkNotNull(aggregators, "null aggregations");
+    this.rollup = rollup == null ? Boolean.TRUE : rollup;
     this.indexSpec = indexSpec == null ? new IndexSpec() : indexSpec;
   }
 
@@ -82,6 +85,7 @@ public class MergeTask extends MergeTaskBase
               }
             }
         ),
+        rollup,
         aggregators.toArray(new AggregatorFactory[aggregators.size()]),
         outDir,
         indexSpec

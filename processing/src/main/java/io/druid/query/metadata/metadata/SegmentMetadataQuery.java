@@ -58,7 +58,8 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
     AGGREGATORS,
     MINMAX,
     TIMESTAMPSPEC,
-    QUERYGRANULARITY;
+    QUERYGRANULARITY,
+    ROLLUP;
 
     @JsonValue
     @Override
@@ -197,6 +198,11 @@ public class SegmentMetadataQuery extends BaseQuery<SegmentAnalysis>
   public boolean hasQueryGranularity()
   {
     return analysisTypes.contains(AnalysisType.QUERYGRANULARITY);
+  }
+
+  public boolean hasRollup()
+  {
+    return analysisTypes.contains(AnalysisType.ROLLUP);
   }
 
   public boolean hasMinMax()

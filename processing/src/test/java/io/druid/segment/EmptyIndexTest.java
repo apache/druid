@@ -61,6 +61,7 @@ public class EmptyIndexTest
     );
     TestHelper.getTestIndexMerger().merge(
         Lists.<IndexableAdapter>newArrayList(emptyIndexAdapter),
+        true,
         new AggregatorFactory[0],
         tmpDir,
         new IndexSpec()

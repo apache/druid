@@ -75,6 +75,9 @@ public class IndexMergeBenchmark
   @Param({"basic"})
   private String schema;
 
+  @Param({"true", "false"})
+  private boolean rollup;
+
   private static final Logger log = new Logger(IndexMergeBenchmark.class);
   private static final int RNG_SEED = 9999;
   private static final IndexMerger INDEX_MERGER;
@@ -155,6 +158,7 @@ public class IndexMergeBenchmark
             .withQueryGranularity(QueryGranularities.NONE)
             .withMetrics(schemaInfo.getAggsArray())
             .withDimensionsSpec(new DimensionsSpec(null, null, null))
+            .withRollup(rollup)
             .build(),
         true,
         false,
@@ -174,7 +178,7 @@ public class IndexMergeBenchmark
     log.info(tmpFile.getAbsolutePath() + " isFile: " + tmpFile.isFile() + " isDir:" + tmpFile.isDirectory());
     tmpFile.deleteOnExit();
 
-    File mergedFile = INDEX_MERGER.mergeQueryableIndex(indexesToMerge, schemaInfo.getAggsArray(), tmpFile, new IndexSpec());
+    File mergedFile = INDEX_MERGER.mergeQueryableIndex(indexesToMerge, rollup, schemaInfo.getAggsArray(), tmpFile, new IndexSpec());
 
     blackhole.consume(mergedFile);
 
@@ -192,7 +196,7 @@ public class IndexMergeBenchmark
     log.info(tmpFile.getAbsolutePath() + " isFile: " + tmpFile.isFile() + " isDir:" + tmpFile.isDirectory());
     tmpFile.deleteOnExit();
 
-    File mergedFile = INDEX_MERGER_V9.mergeQueryableIndex(indexesToMerge, schemaInfo.getAggsArray(), tmpFile, new IndexSpec());
+    File mergedFile = INDEX_MERGER_V9.mergeQueryableIndex(indexesToMerge, rollup, schemaInfo.getAggsArray(), tmpFile, new IndexSpec());
 
     blackhole.consume(mergedFile);
 

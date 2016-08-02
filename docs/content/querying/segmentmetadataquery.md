@@ -11,6 +11,7 @@ Segment metadata queries return per-segment information about:
 * Interval the segment covers
 * Column type of all the columns in the segment
 * Estimated total segment byte size in if it was stored in a flat format
+* Is the segment rolled up
 * Segment id
 
 ```json
@@ -142,6 +143,11 @@ null if the aggregators are unknown or unmergeable (if merging is enabled).
 * Merging can be strict or lenient. See *lenientAggregatorMerge* below for details.
 
 * The form of the result is a map of column name to aggregator.
+
+#### rollup
+
+* `rollup` in the result is true/false/null.
+* When merging is enabled, if some are rollup, others are not, result is null.
 
 ### lenientAggregatorMerge
 

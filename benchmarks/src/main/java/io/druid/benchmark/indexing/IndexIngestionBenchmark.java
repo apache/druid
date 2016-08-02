@@ -63,6 +63,9 @@ public class IndexIngestionBenchmark
   @Param({"basic"})
   private String schema;
 
+  @Param({"true", "false"})
+  private boolean rollup;
+
   private static final Logger log = new Logger(IndexIngestionBenchmark.class);
   private static final int RNG_SEED = 9999;
 
@@ -107,11 +110,12 @@ public class IndexIngestionBenchmark
             .withQueryGranularity(QueryGranularities.NONE)
             .withMetrics(schemaInfo.getAggsArray())
             .withDimensionsSpec(new DimensionsSpec(null, null, null))
+            .withRollup(rollup)
             .build(),
         true,
         false,
         true,
-        rowsPerSegment
+        rowsPerSegment * 2
     );
   }
 

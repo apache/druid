@@ -493,6 +493,7 @@ public class SpatialFilterTest
       QueryableIndex mergedRealtime = INDEX_IO.loadIndex(
           INDEX_MERGER.mergeQueryableIndex(
               Arrays.asList(INDEX_IO.loadIndex(firstFile), INDEX_IO.loadIndex(secondFile), INDEX_IO.loadIndex(thirdFile)),
+              true,
               METRIC_AGGS,
               mergedFile,
               indexSpec

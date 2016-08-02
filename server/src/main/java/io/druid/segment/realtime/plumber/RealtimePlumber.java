@@ -412,6 +412,7 @@ public class RealtimePlumber implements Plumber
 
               final File mergedFile = indexMerger.mergeQueryableIndex(
                   indexes,
+                  schema.getGranularitySpec().isRollup(),
                   schema.getAggregators(),
                   mergedTarget,
                   config.getIndexSpec()

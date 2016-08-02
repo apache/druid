@@ -355,6 +355,14 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
       mergedId = "merged";
     }
 
+    final Boolean rollup;
+
+    if (arg1.isRollup() != null && arg2.isRollup() != null && arg1.isRollup().equals(arg2.isRollup())) {
+      rollup = arg1.isRollup();
+    } else {
+      rollup = null;
+    }
+
     return new SegmentAnalysis(
         mergedId,
         newIntervals,
@@ -363,7 +371,8 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
         arg1.getNumRows() + arg2.getNumRows(),
         aggregators.isEmpty() ? null : aggregators,
         timestampSpec,
-        queryGranularity
+        queryGranularity,
+        rollup
     );
   }
 
@@ -378,7 +387,8 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
         analysis.getNumRows(),
         analysis.getAggregators(),
         analysis.getTimestampSpec(),
-        analysis.getQueryGranularity()
+        analysis.getQueryGranularity(),
+        analysis.isRollup()
     );
   }
 }

@@ -92,6 +92,7 @@ public class IncrementalIndexTest
         .withQueryGranularity(QueryGranularities.MINUTE)
         .withDimensionsSpec(dimensions)
         .withMetrics(metrics)
+        .withRollup(true)
         .build();
 
     final List<Object[]> constructors = Lists.newArrayList();

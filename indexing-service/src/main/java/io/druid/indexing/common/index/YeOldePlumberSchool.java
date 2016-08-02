@@ -188,7 +188,7 @@ public class YeOldePlumberSchool implements PlumberSchool
             }
 
             fileToUpload = new File(tmpSegmentDir, "merged");
-            theIndexMerger.mergeQueryableIndex(indexes, schema.getAggregators(), fileToUpload, config.getIndexSpec());
+            theIndexMerger.mergeQueryableIndex(indexes, schema.getGranularitySpec().isRollup(), schema.getAggregators(), fileToUpload, config.getIndexSpec());
           }
 
           // Map merged segment so we can extract dimensions

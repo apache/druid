@@ -30,18 +30,21 @@ import io.druid.query.aggregation.AggregatorFactory;
  */
 public class IncrementalIndexSchema
 {
+  public static final boolean DEFAULT_ROLLUP = true;
   private final long minTimestamp;
   private final TimestampSpec timestampSpec;
   private final QueryGranularity gran;
   private final DimensionsSpec dimensionsSpec;
   private final AggregatorFactory[] metrics;
+  private final boolean rollup;
 
   public IncrementalIndexSchema(
       long minTimestamp,
       TimestampSpec timestampSpec,
       QueryGranularity gran,
       DimensionsSpec dimensionsSpec,
-      AggregatorFactory[] metrics
+      AggregatorFactory[] metrics,
+      boolean rollup
   )
   {
     this.minTimestamp = minTimestamp;
@@ -49,6 +52,7 @@ public class IncrementalIndexSchema
     this.gran = gran;
     this.dimensionsSpec = dimensionsSpec;
     this.metrics = metrics;
+    this.rollup = rollup;
   }
 
   public long getMinTimestamp()
@@ -76,6 +80,11 @@ public class IncrementalIndexSchema
     return metrics;
   }
 
+  public boolean isRollup()
+  {
+    return rollup;
+  }
+
   public static class Builder
   {
     private long minTimestamp;
@@ -83,6 +92,7 @@ public class IncrementalIndexSchema
     private QueryGranularity gran;
     private DimensionsSpec dimensionsSpec;
     private AggregatorFactory[] metrics;
+    private boolean rollup;
 
     public Builder()
     {
@@ -90,6 +100,7 @@ public class IncrementalIndexSchema
       this.gran = QueryGranularities.NONE;
       this.dimensionsSpec = new DimensionsSpec(null, null, null);
       this.metrics = new AggregatorFactory[]{};
+      this.rollup = true;
     }
 
     public Builder withMinTimestamp(long minTimestamp)
@@ -147,10 +158,16 @@ public class IncrementalIndexSchema
       return this;
     }
 
+    public Builder withRollup(boolean rollup)
+    {
+      this.rollup = rollup;
+      return this;
+    }
+
     public IncrementalIndexSchema build()
     {
       return new IncrementalIndexSchema(
-          minTimestamp, timestampSpec, gran, dimensionsSpec, metrics
+          minTimestamp, timestampSpec, gran, dimensionsSpec, metrics, rollup
       );
     }
   }

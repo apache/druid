@@ -25,7 +25,6 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.druid.data.input.InputRow;
-import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -33,7 +32,6 @@ import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
 
-import javax.annotation.Nullable;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -161,6 +159,7 @@ public class IndexBuilder
                     }
                   }
               ),
+              true,
               Iterables.toArray(
                   Iterables.transform(
                       Arrays.asList(schema.getMetrics()),

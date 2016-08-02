@@ -560,6 +560,7 @@ public class AppenderatorImpl implements Appenderator
       final File mergedFile;
       mergedFile = indexMerger.mergeQueryableIndex(
           indexes,
+          schema.getGranularitySpec().isRollup(),
           schema.getAggregators(),
           mergedTarget,
           tuningConfig.getIndexSpec()

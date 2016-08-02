@@ -49,6 +49,9 @@ public class Metadata
   @JsonProperty
   private QueryGranularity queryGranularity;
 
+  @JsonProperty
+  private Boolean rollup;
+
   public Metadata()
   {
     container = new ConcurrentHashMap<>();
@@ -84,6 +87,17 @@ public class Metadata
   public Metadata setQueryGranularity(QueryGranularity queryGranularity)
   {
     this.queryGranularity = queryGranularity;
+    return this;
+  }
+
+  public Boolean isRollup()
+  {
+    return rollup;
+  }
+
+  public Metadata setRollup(Boolean rollup)
+  {
+    this.rollup = rollup;
     return this;
   }
 
@@ -128,6 +142,7 @@ public class Metadata
 
     List<TimestampSpec> timestampSpecsToMerge = new ArrayList<>();
     List<QueryGranularity> gransToMerge = new ArrayList<>();
+    List<Boolean> rollupToMerge = new ArrayList<>();
 
     for (Metadata metadata : toBeMerged) {
       if (metadata != null) {
@@ -143,6 +158,10 @@ public class Metadata
         if (gransToMerge != null) {
           gransToMerge.add(metadata.getQueryGranularity());
         }
+
+        if (rollupToMerge != null) {
+          rollupToMerge.add(metadata.isRollup());
+        }
         mergedContainer.putAll(metadata.container);
       } else {
         //if metadata and hence aggregators and queryGranularity for some segment being merged are unknown then
@@ -150,6 +169,7 @@ public class Metadata
         aggregatorsToMerge = null;
         timestampSpecsToMerge = null;
         gransToMerge = null;
+        rollupToMerge = null;
       }
     }
 
@@ -172,6 +192,23 @@ public class Metadata
       result.setQueryGranularity(QueryGranularity.mergeQueryGranularities(gransToMerge));
     }
 
+    Boolean rollup = null;
+    if (rollupToMerge != null && !rollupToMerge.isEmpty()) {
+      rollup = rollupToMerge.get(0);
+      for (Boolean r : rollupToMerge) {
+        if (r == null) {
+          rollup = null;
+          break;
+        } else if (!r.equals(rollup)) {
+          rollup = null;
+          break;
+        } else {
+          rollup = r;
+        }
+      }
+    }
+
+    result.setRollup(rollup);
     result.container.putAll(mergedContainer);
     return result;
 
@@ -199,6 +236,9 @@ public class Metadata
     if (timestampSpec != null ? !timestampSpec.equals(metadata.timestampSpec) : metadata.timestampSpec != null) {
       return false;
     }
+    if (rollup != null ? !rollup.equals(metadata.rollup) : metadata.rollup != null) {
+      return false;
+    }
     return queryGranularity != null
            ? queryGranularity.equals(metadata.queryGranularity)
            : metadata.queryGranularity == null;
@@ -212,6 +252,7 @@ public class Metadata
     result = 31 * result + Arrays.hashCode(aggregators);
     result = 31 * result + (timestampSpec != null ? timestampSpec.hashCode() : 0);
     result = 31 * result + (queryGranularity != null ? queryGranularity.hashCode() : 0);
+    result = 31 * result + (rollup != null ? rollup.hashCode() : 0);
     return result;
   }
 
@@ -223,6 +264,7 @@ public class Metadata
            ", aggregators=" + Arrays.toString(aggregators) +
            ", timestampSpec=" + timestampSpec +
            ", queryGranularity=" + queryGranularity +
+           ", rollup=" + rollup +
            '}';
   }
 }

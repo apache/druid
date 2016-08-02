@@ -144,6 +144,38 @@ public class IncrementalIndexTest
                     );
                   }
                 }
+            },
+            {
+                new IndexCreator()
+                {
+                  @Override
+                  public IncrementalIndex createIndex(AggregatorFactory[] factories)
+                  {
+                    return IncrementalIndexTest.createNoRollupIndex(factories);
+                  }
+                }
+            },
+            {
+                new IndexCreator()
+                {
+                  @Override
+                  public IncrementalIndex createIndex(AggregatorFactory[] factories)
+                  {
+                    return new OffheapIncrementalIndex(
+                        0L, QueryGranularities.NONE, false, factories, 1000000,
+                        new StupidPool<ByteBuffer>(
+                            new Supplier<ByteBuffer>()
+                            {
+                              @Override
+                              public ByteBuffer get()
+                              {
+                                return ByteBuffer.allocate(256 * 1024);
+                              }
+                            }
+                        )
+                    );
+                  }
+                }
             }
 
         }
@@ -168,6 +200,17 @@ public class IncrementalIndexTest
 
     return new OnheapIncrementalIndex(
         0L, QueryGranularities.NONE, aggregatorFactories, 1000000
+    );
+  }
+
+  public static IncrementalIndex createNoRollupIndex(AggregatorFactory[] aggregatorFactories)
+  {
+    if (null == aggregatorFactories) {
+      aggregatorFactories = defaultAggregatorFactories;
+    }
+
+    return new OnheapIncrementalIndex(
+        0L, QueryGranularities.NONE, false, aggregatorFactories, 1000000
     );
   }
 
@@ -330,7 +373,8 @@ public class IncrementalIndexTest
         new LinkedList<Result<TimeseriesResultValue>>()
     );
     Result<TimeseriesResultValue> result = Iterables.getOnlyElement(results);
-    Assert.assertEquals(rows, result.getValue().getLongMetric("rows").intValue());
+    boolean isRollup = index.isRollup();
+    Assert.assertEquals(rows * (isRollup ? 1 : 2), result.getValue().getLongMetric("rows").intValue());
     for (int i = 0; i < dimensionCount; ++i) {
       Assert.assertEquals(
           String.format("Failed long sum on dimension %d", i),
@@ -545,8 +589,12 @@ public class IncrementalIndexTest
         runner.run(query, context),
         new LinkedList<Result<TimeseriesResultValue>>()
     );
+    boolean isRollup = index.isRollup();
     for (Result<TimeseriesResultValue> result : results) {
-      Assert.assertEquals(elementsPerThread, result.getValue().getLongMetric("rows").intValue());
+      Assert.assertEquals(
+          elementsPerThread * (isRollup ? 1 : concurrentThreads),
+          result.getValue().getLongMetric("rows").intValue()
+      );
       for (int i = 0; i < dimensionCount; ++i) {
         Assert.assertEquals(
             String.format("Failed long sum on dimension %d", i),
@@ -594,17 +642,18 @@ public class IncrementalIndexTest
     }
     Assert.assertTrue(latch.await(60, TimeUnit.SECONDS));
 
+    boolean isRollup = index.isRollup();
     Assert.assertEquals(dimensionCount, index.getDimensionNames().size());
-    Assert.assertEquals(elementsPerThread, index.size());
+    Assert.assertEquals(elementsPerThread * (isRollup ? 1 : threadCount), index.size());
     Iterator<Row> iterator = index.iterator();
     int curr = 0;
     while (iterator.hasNext()) {
       Row row = iterator.next();
-      Assert.assertEquals(timestamp + curr, row.getTimestampFromEpoch());
-      Assert.assertEquals(Float.valueOf(threadCount), (Float) row.getFloatMetric("count"));
+      Assert.assertEquals(timestamp + (isRollup ? curr : curr / threadCount), row.getTimestampFromEpoch());
+      Assert.assertEquals(Float.valueOf(isRollup ? threadCount : 1), (Float) row.getFloatMetric("count"));
       curr++;
     }
-    Assert.assertEquals(elementsPerThread, curr);
+    Assert.assertEquals(elementsPerThread * (isRollup ? 1 : threadCount), curr);
   }
 
   @Test

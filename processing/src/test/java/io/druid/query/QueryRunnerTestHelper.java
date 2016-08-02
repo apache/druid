@@ -323,11 +323,15 @@ public class QueryRunnerTestHelper
       throws IOException
   {
     final IncrementalIndex rtIndex = TestIndex.getIncrementalTestIndex();
+    final IncrementalIndex noRollupRtIndex = TestIndex.getNoRollupIncrementalTestIndex();
     final QueryableIndex mMappedTestIndex = TestIndex.getMMappedTestIndex();
+    final QueryableIndex noRollupMMappedTestIndex = TestIndex.getNoRollupMMappedTestIndex();
     final QueryableIndex mergedRealtimeIndex = TestIndex.mergedRealtimeIndex();
     return ImmutableList.of(
         makeQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId)),
+        makeQueryRunner(factory, new IncrementalIndexSegment(noRollupRtIndex, segmentId)),
         makeQueryRunner(factory, new QueryableIndexSegment(segmentId, mMappedTestIndex)),
+        makeQueryRunner(factory, new QueryableIndexSegment(segmentId, noRollupMMappedTestIndex)),
         makeQueryRunner(factory, new QueryableIndexSegment(segmentId, mergedRealtimeIndex))
     );
   }
