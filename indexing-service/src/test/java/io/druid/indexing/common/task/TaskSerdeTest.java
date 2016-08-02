@@ -176,6 +176,7 @@ public class TaskSerdeTest
         "foo",
         segments,
         aggregators,
+        true,
         indexSpec,
         null
     );

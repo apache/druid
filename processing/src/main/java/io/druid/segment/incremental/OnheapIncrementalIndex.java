@@ -40,7 +40,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -50,7 +49,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   private static final Logger log = new Logger(OnheapIncrementalIndex.class);
 
   private final ConcurrentHashMap<Integer, Aggregator[]> aggregators = new ConcurrentHashMap<>();
-  private final ConcurrentMap<TimeAndDims, Integer> facts;
+  private final FactsHolder facts;
   private final AtomicInteger indexIncrement = new AtomicInteger(0);
   protected final int maxRowCount;
   private volatile Map<String, ColumnSelectorFactory> selectors;
@@ -65,14 +64,11 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       int maxRowCount
   )
   {
-    super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions, sortFacts);
+    super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions);
     this.maxRowCount = maxRowCount;
 
-    if (sortFacts) {
-      this.facts = new ConcurrentSkipListMap<>(dimsComparator());
-    } else {
-      this.facts = new ConcurrentHashMap<>();
-    }
+    this.facts = incrementalIndexSchema.isRollup() ? new RollupFactsHolder(sortFacts, dimsComparator())
+                                                   : new PlainFactsHolder(sortFacts);
   }
 
   public OnheapIncrementalIndex(
@@ -89,10 +85,32 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
         new IncrementalIndexSchema.Builder().withMinTimestamp(minTimestamp)
                                             .withQueryGranularity(gran)
                                             .withMetrics(metrics)
+                                            .withRollup(IncrementalIndexSchema.DEFAULT_ROLLUP)
                                             .build(),
         deserializeComplexMetrics,
         reportParseExceptions,
         sortFacts,
+        maxRowCount
+    );
+  }
+
+  public OnheapIncrementalIndex(
+      long minTimestamp,
+      QueryGranularity gran,
+      boolean rollup,
+      final AggregatorFactory[] metrics,
+      int maxRowCount
+  )
+  {
+    this(
+        new IncrementalIndexSchema.Builder().withMinTimestamp(minTimestamp)
+                                            .withQueryGranularity(gran)
+                                            .withMetrics(metrics)
+                                            .withRollup(rollup)
+                                            .build(),
+        true,
+        true,
+        true,
         maxRowCount
     );
   }
@@ -105,13 +123,10 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   )
   {
     this(
-        new IncrementalIndexSchema.Builder().withMinTimestamp(minTimestamp)
-                                            .withQueryGranularity(gran)
-                                            .withMetrics(metrics)
-                                            .build(),
-        true,
-        true,
-        true,
+        minTimestamp,
+        gran,
+        IncrementalIndexSchema.DEFAULT_ROLLUP,
+        metrics,
         maxRowCount
     );
   }
@@ -126,7 +141,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
   }
 
   @Override
-  public ConcurrentMap<TimeAndDims, Integer> getFacts()
+  public FactsHolder getFacts()
   {
     return facts;
   }
@@ -165,7 +180,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       Supplier<InputRow> rowSupplier
   ) throws IndexSizeExceededException
   {
-    final Integer priorIndex = facts.get(key);
+    final Integer priorIndex = facts.getPriorIndex(key);
 
     Aggregator[] aggs;
 
@@ -181,7 +196,7 @@ public class OnheapIncrementalIndex extends IncrementalIndex<Aggregator>
       concurrentSet(rowIndex, aggs);
 
       // Last ditch sanity checks
-      if (numEntries.get() >= maxRowCount && !facts.containsKey(key)) {
+      if (numEntries.get() >= maxRowCount && facts.getPriorIndex(key) == null) {
         throw new IndexSizeExceededException("Maximum number of rows [%d] reached", maxRowCount);
       }
       final Integer prev = facts.putIfAbsent(key, rowIndex);

@@ -28,6 +28,7 @@ import io.druid.query.aggregation.LongMaxAggregatorFactory;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Map;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -79,8 +80,8 @@ public class OnheapIncrementalIndexTest
       public void run()
       {
         while (!Thread.interrupted()) {
-          for (int row : index.getFacts().values()) {
-            if (index.getMetricLongValue(row, 0) != 1) {
+          for (Map.Entry<IncrementalIndex.TimeAndDims, Integer> row : index.getFacts().entrySet()) {
+            if (index.getMetricLongValue(row.getValue(), 0) != 1) {
               checkFailedCount.addAndGet(1);
             }
           }

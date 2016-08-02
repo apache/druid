@@ -69,7 +69,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentNavigableMap;
 
 /**
  */
@@ -228,22 +227,19 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
             {
               private final ValueMatcher filterMatcher = makeFilterMatcher(filter, this, currEntry);
               private Iterator<Map.Entry<IncrementalIndex.TimeAndDims, Integer>> baseIter;
-              private ConcurrentNavigableMap<IncrementalIndex.TimeAndDims, Integer> cursorMap;
+              private Iterable<Map.Entry<IncrementalIndex.TimeAndDims, Integer>> cursorIterable;
+              private boolean emptyRange;
               final DateTime time;
               int numAdvanced = -1;
               boolean done;
 
               {
-                cursorMap = index.getSubMap(
-                    new IncrementalIndex.TimeAndDims(timeStart, new int[][]{}),
-                    new IncrementalIndex.TimeAndDims(
-                        Math.min(actualInterval.getEndMillis(), gran.next(input)),
-                        new int[][]{}
-                    )
+                cursorIterable = index.getFacts().timeRangeIterable(
+                    descending,
+                    timeStart,
+                    Math.min(actualInterval.getEndMillis(), gran.next(input))
                 );
-                if (descending) {
-                  cursorMap = cursorMap.descendingMap();
-                }
+                emptyRange = !cursorIterable.iterator().hasNext();
                 time = gran.toDateTime(input);
 
                 reset();
@@ -299,7 +295,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
               @Override
               public void reset()
               {
-                baseIter = cursorMap.entrySet().iterator();
+                baseIter = cursorIterable.iterator();
 
                 if (numAdvanced == -1) {
                   numAdvanced = 0;
@@ -322,7 +318,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                   numAdvanced++;
                 }
 
-                done = !foundMatched && (cursorMap.size() == 0 || !baseIter.hasNext());
+                done = !foundMatched && (emptyRange || !baseIter.hasNext());
               }
 
               @Override
