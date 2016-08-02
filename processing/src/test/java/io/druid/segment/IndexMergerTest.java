@@ -129,7 +129,7 @@ public class IndexMergerTest
           bitmapSerdeFactory,
           compressionStrategy.name().toLowerCase(),
           dimCompressionStrategy.name().toLowerCase(),
-          CompressionFactory.LongEncodingFormat.LONGS.name().toLowerCase()
+          CompressionFactory.LongEncoding.LONGS.name().toLowerCase()
       );
     } else {
       return new IndexSpec();

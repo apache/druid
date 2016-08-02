@@ -767,7 +767,7 @@ public class IndexMerger
       );
 
       LongSupplierSerializer timeWriter = CompressionFactory.getLongSerializer(
-          ioPeon, "little_end_time", IndexIO.BYTE_ORDER, CompressionFactory.DEFAULT_LONG_ENCODING,
+          ioPeon, "little_end_time", IndexIO.BYTE_ORDER, indexSpec.getLongEncodingFormat(),
           CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
       );
 

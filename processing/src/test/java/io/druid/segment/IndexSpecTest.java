@@ -40,7 +40,7 @@ public class IndexSpecTest
     Assert.assertEquals(new RoaringBitmapSerdeFactory(null), spec.getBitmapSerdeFactory());
     Assert.assertEquals(CompressedObjectStrategy.CompressionStrategy.LZ4, spec.getDimensionCompressionStrategy());
     Assert.assertEquals(CompressedObjectStrategy.CompressionStrategy.LZF, spec.getMetricCompressionStrategy());
-    Assert.assertEquals(CompressionFactory.LongEncodingFormat.DELTA, spec.getLongEncodingFormat());
+    Assert.assertEquals(CompressionFactory.LongEncoding.DELTA, spec.getLongEncodingFormat());
 
     Assert.assertEquals(spec, objectMapper.readValue(objectMapper.writeValueAsBytes(spec), IndexSpec.class));
   }
@@ -64,6 +64,6 @@ public class IndexSpecTest
     final IndexSpec spec = new IndexSpec();
     Assert.assertEquals(CompressedObjectStrategy.CompressionStrategy.LZ4, spec.getDimensionCompressionStrategy());
     Assert.assertEquals(CompressedObjectStrategy.CompressionStrategy.LZ4, spec.getMetricCompressionStrategy());
-    Assert.assertEquals(CompressionFactory.LongEncodingFormat.LONGS, spec.getLongEncodingFormat());
+    Assert.assertEquals(CompressionFactory.LongEncoding.LONGS, spec.getLongEncodingFormat());
   }
 }

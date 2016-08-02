@@ -23,7 +23,7 @@ import com.metamx.common.IAE;
 
 import java.nio.ByteBuffer;
 
-public class TableEncodingReader implements CompressionFactory.LongEncodingFormatReader
+public class TableEncodingReader implements CompressionFactory.LongEncodingReader
 {
   private final long table[];
   private final int bitsPerValue;
@@ -78,7 +78,7 @@ public class TableEncodingReader implements CompressionFactory.LongEncodingForma
   }
 
   @Override
-  public CompressionFactory.LongEncodingFormatReader duplicate()
+  public CompressionFactory.LongEncodingReader duplicate()
   {
     return new TableEncodingReader(buffer, table, bitsPerValue);
   }

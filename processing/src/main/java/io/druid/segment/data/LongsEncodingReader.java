@@ -25,7 +25,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.LongBuffer;
 
-public class LongsEncodingReader implements CompressionFactory.LongEncodingFormatReader
+public class LongsEncodingReader implements CompressionFactory.LongEncodingReader
 {
   private LongBuffer buffer;
   private ByteOrder order;
@@ -61,7 +61,7 @@ public class LongsEncodingReader implements CompressionFactory.LongEncodingForma
   }
 
   @Override
-  public CompressionFactory.LongEncodingFormatReader duplicate()
+  public CompressionFactory.LongEncodingReader duplicate()
   {
     return new LongsEncodingReader(buffer, order);
   }

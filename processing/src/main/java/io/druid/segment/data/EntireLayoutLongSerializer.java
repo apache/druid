@@ -39,13 +39,13 @@ public class EntireLayoutLongSerializer implements LongSupplierSerializer
   private final String metaFile;
   private CountingOutputStream valuesOut;
   private CountingOutputStream metaOut;
-  private final CompressionFactory.LongEncodingFormatWriter writer;
+  private final CompressionFactory.LongEncodingWriter writer;
 
   private int numInserted = 0;
 
   public EntireLayoutLongSerializer(
       IOPeon ioPeon, String filenameBase, ByteOrder order,
-      CompressionFactory.LongEncodingFormatWriter writer
+      CompressionFactory.LongEncodingWriter writer
   )
   {
     this.ioPeon = ioPeon;

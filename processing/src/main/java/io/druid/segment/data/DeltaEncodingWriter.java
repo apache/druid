@@ -26,7 +26,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
-public class DeltaEncodingWriter implements CompressionFactory.LongEncodingFormatWriter
+public class DeltaEncodingWriter implements CompressionFactory.LongEncodingWriter
 {
 
   private final long base;
@@ -59,8 +59,8 @@ public class DeltaEncodingWriter implements CompressionFactory.LongEncodingForma
 
   public void putMeta(OutputStream metaOut, CompressedObjectStrategy.CompressionStrategy strategy) throws IOException
   {
-    metaOut.write(strategy.getId() - 126);
-    metaOut.write(CompressionFactory.LongEncodingFormat.DELTA.getId());
+    metaOut.write(CompressionFactory.putFlag(strategy.getId()));
+    metaOut.write(CompressionFactory.LongEncoding.DELTA.getId());
     metaOut.write(CompressionFactory.DELTA_ENCODING_VERSION);
     metaOut.write(Longs.toByteArray(base));
     metaOut.write(Ints.toByteArray(bitsPerValue));

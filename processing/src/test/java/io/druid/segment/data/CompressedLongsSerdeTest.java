@@ -49,7 +49,7 @@ public class CompressedLongsSerdeTest
   public static Iterable<Object[]> compressionStrategies()
   {
     List<Object[]> data = new ArrayList<>();
-    for (CompressionFactory.LongEncodingFormat format : CompressionFactory.LongEncodingFormat.values()) {
+    for (CompressionFactory.LongEncoding format : CompressionFactory.LongEncoding.values()) {
       for (CompressedObjectStrategy.CompressionStrategy strategy : CompressedObjectStrategy.CompressionStrategy.values()) {
         data.add(new Object[]{format, strategy, ByteOrder.BIG_ENDIAN});
         data.add(new Object[]{format, strategy, ByteOrder.LITTLE_ENDIAN});
@@ -58,7 +58,7 @@ public class CompressedLongsSerdeTest
     return data;
   }
 
-  protected final CompressionFactory.LongEncodingFormat encodingFormat;
+  protected final CompressionFactory.LongEncoding encodingFormat;
   protected final CompressedObjectStrategy.CompressionStrategy compressionStrategy;
   protected final ByteOrder order;
 
@@ -75,7 +75,7 @@ public class CompressedLongsSerdeTest
   };
 
   public CompressedLongsSerdeTest(
-      CompressionFactory.LongEncodingFormat encodingFormat,
+      CompressionFactory.LongEncoding encodingFormat,
       CompressedObjectStrategy.CompressionStrategy compressionStrategy,
       ByteOrder order
   )

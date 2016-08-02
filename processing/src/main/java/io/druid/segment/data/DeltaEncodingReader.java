@@ -23,7 +23,7 @@ import com.metamx.common.IAE;
 
 import java.nio.ByteBuffer;
 
-public class DeltaEncodingReader implements CompressionFactory.LongEncodingFormatReader
+public class DeltaEncodingReader implements CompressionFactory.LongEncodingReader
 {
 
   private ByteBuffer buffer;
@@ -72,7 +72,7 @@ public class DeltaEncodingReader implements CompressionFactory.LongEncodingForma
   }
 
   @Override
-  public CompressionFactory.LongEncodingFormatReader duplicate()
+  public CompressionFactory.LongEncodingReader duplicate()
   {
     return new DeltaEncodingReader(buffer, base, bitsPerValue);
   }

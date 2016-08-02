@@ -91,7 +91,7 @@ public class IntermediateLongSupplierSerializer implements LongSupplierSerialize
 
   private void makeDelegate() throws IOException
   {
-    CompressionFactory.LongEncodingFormatWriter writer;
+    CompressionFactory.LongEncodingWriter writer;
     long delta;
     try {
       delta = LongMath.checkedSubtract(maxVal, minVal);

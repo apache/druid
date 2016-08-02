@@ -27,9 +27,9 @@ public class EntireLayoutIndexedLongSupplier implements Supplier<IndexedLongs>
 {
 
   private final int totalSize;
-  private final CompressionFactory.LongEncodingFormatReader reader;
+  private final CompressionFactory.LongEncodingReader reader;
 
-  public EntireLayoutIndexedLongSupplier(int totalSize, CompressionFactory.LongEncodingFormatReader reader)
+  public EntireLayoutIndexedLongSupplier(int totalSize, CompressionFactory.LongEncodingReader reader)
   {
     this.totalSize = totalSize;
     this.reader = reader;

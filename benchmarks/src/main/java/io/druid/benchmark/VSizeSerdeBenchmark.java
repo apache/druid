@@ -48,12 +48,9 @@ import java.util.concurrent.TimeUnit;
 public class VSizeSerdeBenchmark
 {
 
-  private ByteBuffer buffer;
   private VSizeLongSerde.LongDeserializer d1;
   private VSizeLongSerde.LongDeserializer d2;
-  private VSizeLongSerde.LongDeserializer d3;
   private VSizeLongSerde.LongDeserializer d4;
-  private VSizeLongSerde.LongDeserializer d6;
   private VSizeLongSerde.LongDeserializer d8;
   private VSizeLongSerde.LongDeserializer d12;
   private VSizeLongSerde.LongDeserializer d16;
@@ -69,12 +66,12 @@ public class VSizeSerdeBenchmark
   @Setup
   public void setup() throws IOException, URISyntaxException
   {
-    buffer = Files.map(new File(this.getClass().getClassLoader().getResource("timestamp.out").toURI()));
+    // this uses a dummy file of sufficient size to construct a mappedByteBuffer instead of using ByteBuffer.allocate
+    // to construct a heapByteBuffer since they have different performance
+    ByteBuffer buffer = Files.map(new File(this.getClass().getClassLoader().getResource("timestamp.gz").toURI()));
     d1 = VSizeLongSerde.getDeserializer(1, buffer, 10);
     d2 = VSizeLongSerde.getDeserializer(2, buffer, 10);
-    //d3 = VSizeLongSerde.getDeserializer(3, buffer, 10);
     d4 = VSizeLongSerde.getDeserializer(4, buffer, 10);
-    //d6 = VSizeLongSerde.getDeserializer(6, buffer, 10);
     d8 = VSizeLongSerde.getDeserializer(8, buffer, 10);
     d12 = VSizeLongSerde.getDeserializer(12, buffer, 10);
     d16 = VSizeLongSerde.getDeserializer(16, buffer, 10);
@@ -96,7 +93,7 @@ public class VSizeSerdeBenchmark
   @Benchmark
   public void read1()
   {
-    for (int i = 0; i < 5000000; i++) {
+    for (int i = 0; i < 500000; i++) {
       sum += d1.get(i);
     }
   }
@@ -104,7 +101,7 @@ public class VSizeSerdeBenchmark
   @Benchmark
   public void read2()
   {
-    for (int i = 0; i < 5000000; i++) {
+    for (int i = 0; i < 500000; i++) {
       sum += d2.get(i);
     }
   }
@@ -112,7 +109,7 @@ public class VSizeSerdeBenchmark
   @Benchmark
   public void read4()
   {
-    for (int i = 0; i < 5000000; i++) {
+    for (int i = 0; i < 500000; i++) {
       sum += d4.get(i);
     }
   }
@@ -120,7 +117,7 @@ public class VSizeSerdeBenchmark
   @Benchmark
   public void read8()
   {
-    for (int i = 0; i < 5000000; i++) {
+    for (int i = 0; i < 500000; i++) {
       sum += d8.get(i);
     }
   }
@@ -128,7 +125,7 @@ public class VSizeSerdeBenchmark
   @Benchmark
   public void readd12()
   {
-    for (int i = 0; i < 5000000; i++) {
+    for (int i = 0; i < 500000; i++) {
       sum += d12.get(i);
     }
   }
@@ -136,7 +133,7 @@ public class VSizeSerdeBenchmark
   @Benchmark
   public void readd16()
   {
-    for (int i = 0; i < 5000000; i++) {
+    for (int i = 0; i < 500000; i++) {
       sum += d16.get(i);
     }
   }
@@ -144,7 +141,7 @@ public class VSizeSerdeBenchmark
   @Benchmark
   public void readd20()
   {
-    for (int i = 0; i < 5000000; i++) {
+    for (int i = 0; i < 500000; i++) {
       sum += d20.get(i);
     }
   }
@@ -152,7 +149,7 @@ public class VSizeSerdeBenchmark
   @Benchmark
   public void readd24()
   {
-    for (int i = 0; i < 5000000; i++) {
+    for (int i = 0; i < 500000; i++) {
       sum += d24.get(i);
     }
   }
@@ -160,7 +157,7 @@ public class VSizeSerdeBenchmark
   @Benchmark
   public void readd32()
   {
-    for (int i = 0; i < 5000000; i++) {
+    for (int i = 0; i < 500000; i++) {
       sum += d32.get(i);
     }
   }
@@ -168,7 +165,7 @@ public class VSizeSerdeBenchmark
   @Benchmark
   public void readd40()
   {
-    for (int i = 0; i < 5000000; i++) {
+    for (int i = 0; i < 500000; i++) {
       sum += d40.get(i);
     }
   }
@@ -176,7 +173,7 @@ public class VSizeSerdeBenchmark
   @Benchmark
   public void readd48()
   {
-    for (int i = 0; i < 5000000; i++) {
+    for (int i = 0; i < 500000; i++) {
       sum += d48.get(i);
     }
   }
@@ -184,7 +181,7 @@ public class VSizeSerdeBenchmark
   @Benchmark
   public void readd56()
   {
-    for (int i = 0; i < 5000000; i++) {
+    for (int i = 0; i < 500000; i++) {
       sum += d56.get(i);
     }
   }
@@ -192,7 +189,7 @@ public class VSizeSerdeBenchmark
   @Benchmark
   public void readd64()
   {
-    for (int i = 0; i < 5000000; i++) {
+    for (int i = 0; i < 500000; i++) {
       sum += d64.get(i);
     }
   }

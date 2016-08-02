@@ -30,17 +30,17 @@ import java.util.Map;
 
 /**
  * Compression of metrics is done by using a combination of {@link io.druid.segment.data.CompressedObjectStrategy.CompressionStrategy}
- * and {@link LongEncodingFormat}. CompressionStrategy is unaware of the data type and size and is based on bytes
- * operation. It must operate on blocks of bytes, and it must decompress the entire block to access the content.
- * EncodingFormat refers to any compression method that does not fit the description for CompressionStrategy.
+ * and Encoding(such as {@link LongEncoding} for type Long). CompressionStrategy is unaware of the data type
+ * and is based on byte operations. It must compress and decompress in block of bytes. Encoding refers to compression
+ * method relies on data format, so a different Encoding exist for each data type.
  * <p>
  *
  * Compression Storage Format
  * Byte 1 : version (currently 0x02)
  * Byte 2 - 5 : number of values
  * Byte 6 - 9 : size per block (even if block format isn't used, this is needed for backward compatibility)
- * Byte 10 : compression strategy ( < -2 if there is an encoding format following, to get the strategy id add 126 to it)
- * Byte 11(optional) : encoding format
+ * Byte 10 : compression strategy (contains a flag if there's an encoding byte, see below for how the flag is defined)
+ * Byte 11(optional) : encoding type
  * <p>
  * Encoding specific header (described below)
  * <p>
@@ -51,7 +51,7 @@ import java.util.Map;
 public abstract class CompressionFactory
 {
 
-  public static final LongEncodingFormat DEFAULT_LONG_ENCODING = LongEncodingFormat.LONGS;
+  public static final LongEncoding DEFAULT_LONG_ENCODING = LongEncoding.LONGS;
 
   /**
    * Delta Encoding Header v1:
@@ -72,10 +72,33 @@ public abstract class CompressionFactory
   public static final int MAX_TABLE_SIZE = 256;
 
   /**
-   * There is no header or version for Longs encoding format for backward compatibility
+   * There is no header or version for Longs encoding for backward compatibility
    */
 
-  public enum LongEncodingFormat
+  /**
+   * This is the flag mechanism for determine whether an encoding byte exist in the header. This is needed for
+   * backward compatibility, since older segment does not have the encoding byte. The flag is encoded in the compression
+   * strategy byte using the putFlag and removeFlag function.
+   */
+
+  // 0xFE(-2) should be the smallest valid compression strategy id
+  private static byte FLAG_BOUND = (byte)0xFE;
+  // 126 is the value here since -2 - 126 = -128, which is the lowest byte value
+  private static int FLAG_VALUE = 126;
+
+  public static boolean hasFlag(byte strategyId) {
+    return strategyId < FLAG_BOUND;
+  }
+
+  public static byte putFlag(byte strategyId) {
+    return hasFlag(strategyId) ? strategyId : (byte)(strategyId - FLAG_VALUE);
+  }
+
+  public static byte removeFlag(byte strategyId) {
+    return hasFlag(strategyId) ? (byte)(strategyId + FLAG_VALUE) : strategyId;
+  }
+
+  public enum LongEncoding
   {
     /**
      * DELTA format encodes a series of longs by finding the smallest value first, and stores all values
@@ -84,13 +107,13 @@ public abstract class CompressionFactory
      */
     DELTA((byte) 0x0) {
       @Override
-      public LongEncodingFormatReader getReader(ByteBuffer buffer, ByteOrder order)
+      public LongEncodingReader getReader(ByteBuffer buffer, ByteOrder order)
       {
         return new DeltaEncodingReader(buffer);
       }
 
       @Override
-      public LongEncodingFormatWriter getWriter(ByteOrder order)
+      public LongEncodingWriter getWriter(ByteOrder order)
       {
         return null;
       }
@@ -102,13 +125,13 @@ public abstract class CompressionFactory
      */
     TABLE((byte) 0x1) {
       @Override
-      public LongEncodingFormatReader getReader(ByteBuffer buffer, ByteOrder order)
+      public LongEncodingReader getReader(ByteBuffer buffer, ByteOrder order)
       {
         return new TableEncodingReader(buffer);
       }
 
       @Override
-      public LongEncodingFormatWriter getWriter(ByteOrder order)
+      public LongEncodingWriter getWriter(ByteOrder order)
       {
         return null;
       }
@@ -118,13 +141,13 @@ public abstract class CompressionFactory
      */
     LONGS((byte) 0xFF) {
       @Override
-      public LongEncodingFormatReader getReader(ByteBuffer buffer, ByteOrder order)
+      public LongEncodingReader getReader(ByteBuffer buffer, ByteOrder order)
       {
         return new LongsEncodingReader(buffer, order);
       }
 
       @Override
-      public LongEncodingFormatWriter getWriter(ByteOrder order)
+      public LongEncodingWriter getWriter(ByteOrder order)
       {
         return new LongsEncodingWriter(order);
       }
@@ -132,7 +155,7 @@ public abstract class CompressionFactory
 
     final byte id;
 
-    LongEncodingFormat(byte id)
+    LongEncoding(byte id)
     {
       this.id = id;
     }
@@ -142,19 +165,19 @@ public abstract class CompressionFactory
       return id;
     }
 
-    static final Map<Byte, LongEncodingFormat> idMap = Maps.newHashMap();
+    static final Map<Byte, LongEncoding> idMap = Maps.newHashMap();
 
     static {
-      for (LongEncodingFormat format : LongEncodingFormat.values()) {
+      for (LongEncoding format : LongEncoding.values()) {
         idMap.put(format.getId(), format);
       }
     }
 
-    public abstract LongEncodingFormatReader getReader(ByteBuffer buffer, ByteOrder order);
+    public abstract LongEncodingReader getReader(ByteBuffer buffer, ByteOrder order);
 
-    public abstract LongEncodingFormatWriter getWriter(ByteOrder order);
+    public abstract LongEncodingWriter getWriter(ByteOrder order);
 
-    public static LongEncodingFormat forId(byte id)
+    public static LongEncoding forId(byte id)
     {
       return idMap.get(id);
     }
@@ -165,7 +188,7 @@ public abstract class CompressionFactory
    * {@link #setOutputStream(OutputStream)} must be called before any value is written, and {@link #flush()} must
    * be called before calling setBuffer or setOutputStream again to set another output.
    */
-  public interface LongEncodingFormatWriter
+  public interface LongEncodingWriter
   {
     /**
      * Data will be written starting from current position of the buffer, and the position of the buffer will be
@@ -199,7 +222,7 @@ public abstract class CompressionFactory
     int getNumBytes(int values);
   }
 
-  public interface LongEncodingFormatReader
+  public interface LongEncodingReader
   {
     void setBuffer(ByteBuffer buffer);
 
@@ -207,12 +230,12 @@ public abstract class CompressionFactory
 
     int getNumBytes(int values);
 
-    LongEncodingFormatReader duplicate();
+    LongEncodingReader duplicate();
   }
 
   public static Supplier<IndexedLongs> getLongSupplier(
       int totalSize, int sizePer, ByteBuffer fromBuffer, ByteOrder order,
-      LongEncodingFormat encoding,
+      LongEncoding encoding,
       CompressedObjectStrategy.CompressionStrategy strategy
   )
   {
@@ -227,11 +250,11 @@ public abstract class CompressionFactory
 
   public static LongSupplierSerializer getLongSerializer(
       IOPeon ioPeon, String filenameBase, ByteOrder order,
-      LongEncodingFormat encoding,
+      LongEncoding encoding,
       CompressedObjectStrategy.CompressionStrategy strategy
   )
   {
-    if (encoding == LongEncodingFormat.TABLE || encoding == LongEncodingFormat.DELTA) {
+    if (encoding == LongEncoding.TABLE || encoding == LongEncoding.DELTA) {
       return new IntermediateLongSupplierSerializer(ioPeon, filenameBase, order, strategy);
     }
     if (strategy == CompressedObjectStrategy.CompressionStrategy.NONE) {

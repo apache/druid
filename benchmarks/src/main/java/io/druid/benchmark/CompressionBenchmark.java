@@ -59,11 +59,11 @@ import java.util.zip.GZIPInputStream;
 
 @State(Scope.Benchmark)
 @Fork(value = 1)
-@Warmup(iterations = 1)
+@Warmup(iterations = 0)
 @Measurement(iterations = 1)
 @BenchmarkMode(Mode.AverageTime)
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
-public class CompressionFormatBenchmark
+public class CompressionBenchmark
 {
   @Param({"reqInt", "bytesLong", "timestamp"})
   private static String file;
@@ -103,7 +103,7 @@ public class CompressionFormatBenchmark
     URL url = this.getClass().getClassLoader().getResource(file + ".gz");
     File inFile = new File(url.toURI());
     compFile = new File(inFile.getParent(), file + "." + format + "-" + strategy);
-    CompressionFactory.LongEncodingFormat encodingFormat = CompressionFactory.LongEncodingFormat.valueOf(format.toUpperCase());
+    CompressionFactory.LongEncoding encodingFormat = CompressionFactory.LongEncoding.valueOf(format.toUpperCase());
     CompressedObjectStrategy.CompressionStrategy compressionStrategy = CompressedObjectStrategy.CompressionStrategy.valueOf(strategy.toUpperCase());
     compFile.delete();
     TmpFileIOPeon iopeon = new TmpFileIOPeon(true);

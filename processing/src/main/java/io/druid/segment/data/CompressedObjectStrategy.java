@@ -44,8 +44,13 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
   private static final Logger log = new Logger(CompressedObjectStrategy.class);
   public static final CompressionStrategy DEFAULT_COMPRESSION_STRATEGY = CompressionStrategy.LZ4;
 
-  // When adding compression strategy do not use id in the range [0x7C, 0xFD], since the id could be subtracted by 126
-  // to indicate whether an encoding format id is needed
+  /**
+   * Compression strategy is used to compress block of bytes without knowledge of what data the bytes represents.
+   *
+   * When adding compression strategy, do not use id in the range [0x7C, 0xFD] (greater than 123 or less than -2), since
+   * a flag mechanism is used in CompressionFactory that involves subtracting the value 126 from the compression id
+   * (see {@link CompressionFactory#FLAG_BOUND})
+   */
   public static enum CompressionStrategy
   {
     LZF((byte) 0x0) {

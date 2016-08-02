@@ -28,7 +28,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
-public class TableEncodingWriter implements CompressionFactory.LongEncodingFormatWriter
+public class TableEncodingWriter implements CompressionFactory.LongEncodingWriter
 {
 
   private final BiMap<Long, Integer> table;
@@ -73,8 +73,8 @@ public class TableEncodingWriter implements CompressionFactory.LongEncodingForma
   @Override
   public void putMeta(OutputStream metaOut, CompressedObjectStrategy.CompressionStrategy strategy) throws IOException
   {
-    metaOut.write(strategy.getId() - 126);
-    metaOut.write(CompressionFactory.LongEncodingFormat.TABLE.getId());
+    metaOut.write(CompressionFactory.putFlag(strategy.getId()));
+    metaOut.write(CompressionFactory.LongEncoding.TABLE.getId());
     metaOut.write(CompressionFactory.TABLE_ENCODING_VERSION);
     metaOut.write(Ints.toByteArray(table.size()));
     BiMap<Integer, Long> inverse = table.inverse();

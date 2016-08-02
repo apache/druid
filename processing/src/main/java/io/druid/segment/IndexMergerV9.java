@@ -208,7 +208,7 @@ public class IndexMergerV9 extends IndexMerger
           convertMissingDimsFlags,
           rowMergerFn
       );
-      final LongColumnSerializer timeWriter = setupTimeWriter(ioPeon);
+      final LongColumnSerializer timeWriter = setupTimeWriter(ioPeon, indexSpec);
       final ArrayList<IndexedIntsWriter> dimWriters = setupDimensionWriters(
           ioPeon, mergedDimensions, dimCapabilities, dimCardinalities, indexSpec
       );
@@ -724,11 +724,11 @@ public class IndexMergerV9 extends IndexMerger
     progress.stopSection(section);
   }
 
-  private LongColumnSerializer setupTimeWriter(final IOPeon ioPeon) throws IOException
+  private LongColumnSerializer setupTimeWriter(final IOPeon ioPeon, final IndexSpec indexSpec) throws IOException
   {
     LongColumnSerializer timeWriter = LongColumnSerializer.create(
         ioPeon, "little_end_time", CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY,
-        CompressionFactory.DEFAULT_LONG_ENCODING
+        indexSpec.getLongEncodingFormat()
     );
     // we will close this writer after we added all the timestamps
     timeWriter.open();
@@ -745,13 +745,13 @@ public class IndexMergerV9 extends IndexMerger
   {
     ArrayList<GenericColumnSerializer> metWriters = Lists.newArrayListWithCapacity(mergedMetrics.size());
     final CompressedObjectStrategy.CompressionStrategy metCompression = indexSpec.getMetricCompressionStrategy();
-    final CompressionFactory.LongEncodingFormat metEncoding = indexSpec.getLongEncodingFormat();
+    final CompressionFactory.LongEncoding longEncoding = indexSpec.getLongEncodingFormat();
     for (String metric : mergedMetrics) {
       ValueType type = metricsValueTypes.get(metric);
       GenericColumnSerializer writer;
       switch (type) {
         case LONG:
-          writer = LongColumnSerializer.create(ioPeon, metric, metCompression, metEncoding);
+          writer = LongColumnSerializer.create(ioPeon, metric, metCompression, longEncoding);
           break;
         case FLOAT:
           writer = FloatColumnSerializer.create(ioPeon, metric, metCompression);

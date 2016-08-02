@@ -20,9 +20,7 @@
 package io.druid.segment.data;
 
 import com.google.common.base.Supplier;
-import com.google.common.primitives.Longs;
 import com.metamx.common.IAE;
-import io.druid.segment.CompressedPools;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -87,15 +85,14 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
       final int totalSize = bufferToUse.getInt();
       final int sizePer = bufferToUse.getInt();
       CompressedObjectStrategy.CompressionStrategy compression = CompressedObjectStrategy.CompressionStrategy.LZF;
-      CompressionFactory.LongEncodingFormat encoding = CompressionFactory.DEFAULT_LONG_ENCODING;
+      CompressionFactory.LongEncoding encoding = CompressionFactory.DEFAULT_LONG_ENCODING;
       if (versionFromBuffer == version) {
         byte compressionId = bufferToUse.get();
-        if (compressionId >= (byte) 0xFE) {
-          compression = CompressedObjectStrategy.CompressionStrategy.forId(compressionId);
-        } else {
-          compression = CompressedObjectStrategy.CompressionStrategy.forId((byte) (compressionId + 126));
-          encoding = CompressionFactory.LongEncodingFormat.forId(bufferToUse.get());
+        if (CompressionFactory.hasFlag(compressionId)) {
+          encoding = CompressionFactory.LongEncoding.forId(bufferToUse.get());
+          compressionId = CompressionFactory.removeFlag(compressionId);
         }
+        compression = CompressedObjectStrategy.CompressionStrategy.forId(compressionId);
       }
       Supplier<IndexedLongs> supplier = CompressionFactory.getLongSupplier(
           totalSize,

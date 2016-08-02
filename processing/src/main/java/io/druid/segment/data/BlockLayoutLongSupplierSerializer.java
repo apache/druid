@@ -41,7 +41,7 @@ public class BlockLayoutLongSupplierSerializer implements LongSupplierSerializer
 
   private final IOPeon ioPeon;
   private final int sizePer;
-  private final CompressionFactory.LongEncodingFormatWriter writer;
+  private final CompressionFactory.LongEncodingWriter writer;
   private final GenericIndexedWriter<ResourceHolder<ByteBuffer>> flattener;
   private final CompressedObjectStrategy.CompressionStrategy compression;
   private final String metaFile;
@@ -55,7 +55,7 @@ public class BlockLayoutLongSupplierSerializer implements LongSupplierSerializer
       IOPeon ioPeon,
       String filenameBase,
       ByteOrder order,
-      CompressionFactory.LongEncodingFormatWriter writer,
+      CompressionFactory.LongEncodingWriter writer,
       CompressedObjectStrategy.CompressionStrategy compression
   )
   {

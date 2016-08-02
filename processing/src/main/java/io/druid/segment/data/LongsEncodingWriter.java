@@ -26,7 +26,7 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-public class LongsEncodingWriter implements CompressionFactory.LongEncodingFormatWriter
+public class LongsEncodingWriter implements CompressionFactory.LongEncodingWriter
 {
 
   private final ByteBuffer orderBuffer;

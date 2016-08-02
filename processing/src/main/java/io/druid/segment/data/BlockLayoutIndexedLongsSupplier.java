@@ -36,11 +36,11 @@ public class BlockLayoutIndexedLongsSupplier implements Supplier<IndexedLongs>
   private final int totalSize;
   private final int sizePer;
   private final ByteOrder order;
-  private final CompressionFactory.LongEncodingFormatReader baseReader;
+  private final CompressionFactory.LongEncodingReader baseReader;
 
   public BlockLayoutIndexedLongsSupplier(
       int totalSize, int sizePer, ByteBuffer fromBuffer, ByteOrder order,
-      CompressionFactory.LongEncodingFormatReader reader,
+      CompressionFactory.LongEncodingReader reader,
       CompressedObjectStrategy.CompressionStrategy strategy
   )
   {
@@ -115,7 +115,7 @@ public class BlockLayoutIndexedLongsSupplier implements Supplier<IndexedLongs>
 
   private class BlockLayoutIndexedLongs implements IndexedLongs
   {
-    final CompressionFactory.LongEncodingFormatReader reader = baseReader.duplicate();
+    final CompressionFactory.LongEncodingReader reader = baseReader.duplicate();
     final Indexed<ResourceHolder<ByteBuffer>> singleThreadedLongBuffers = baseLongBuffers.singleThreaded();
     int currIndex = -1;
     ResourceHolder<ByteBuffer> holder;

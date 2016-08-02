@@ -132,7 +132,7 @@ public class IndexSpec
     return metricCompression;
   }
 
-  @JsonProperty("longEncoding")
+  @JsonProperty
   public String getLongEncoding()
   {
     return longEncoding;
@@ -152,9 +152,9 @@ public class IndexSpec
            dimensionCompressionStrategyForName(dimensionCompression);
   }
 
-  public CompressionFactory.LongEncodingFormat getLongEncodingFormat()
+  public CompressionFactory.LongEncoding getLongEncodingFormat()
   {
-    return CompressionFactory.LongEncodingFormat.valueOf(
+    return CompressionFactory.LongEncoding.valueOf(
         (longEncoding == null ? DEFAULT_LONG_ENCODING : longEncoding).toUpperCase()
     );
 
