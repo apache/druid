@@ -390,6 +390,10 @@ public class StringComparators
       Long long1 = Longs.tryParse(o1);
       Long long2 = Longs.tryParse(o2);
 
+      if (long1 != null && long2 != null) {
+        return Long.compare(long1, long2);
+      }
+
       final BigDecimal bd1 = long1 == null ? convertStringToBigDecimal(o1) : new BigDecimal(long1);
       final BigDecimal bd2 = long2 == null ? convertStringToBigDecimal(o2) : new BigDecimal(long2);
 
