@@ -21,7 +21,6 @@ package io.druid.query.groupby.epinephelinae;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Predicate;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.Accumulator;
@@ -29,7 +28,6 @@ import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.guava.FilteredSequence;
 import com.metamx.common.guava.Sequence;
-import com.metamx.common.logger.Logger;
 import io.druid.collections.BlockingPool;
 import io.druid.collections.ReferenceCountingResourceHolder;
 import io.druid.common.utils.JodaUtils;
@@ -62,8 +60,6 @@ import java.util.concurrent.TimeoutException;
 
 public class GroupByRowProcessor
 {
-  private static final Logger log = new Logger(GroupByRowProcessor.class);
-
   public static Sequence<Row> process(
       final Query queryParam,
       final Sequence<Row> rows,
@@ -85,7 +81,8 @@ public class GroupByRowProcessor
         String.format("druid-groupBy-%s_%s", UUID.randomUUID(), query.getId())
     );
 
-    final long timeout = query.getContextValue(QueryContextKeys.TIMEOUT, JodaUtils.MAX_INSTANT);
+    final Number queryTimeout = query.getContextValue(QueryContextKeys.TIMEOUT, null);
+    final long timeout = queryTimeout == null ? JodaUtils.MAX_INSTANT : queryTimeout.longValue();
     final List<Interval> queryIntervals = query.getIntervals();
     final Filter filter = Filters.convertToCNFFromQueryContext(
         query,
@@ -144,8 +141,7 @@ public class GroupByRowProcessor
                 closeOnFailure.add(mergeBufferHolder);
               }
               catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw Throwables.propagate(e);
+                throw new QueryInterruptedException(e);
               }
 
               Pair<Grouper<RowBasedKey>, Accumulator<Grouper<RowBasedKey>, Row>> pair = RowBasedGrouperHelper.createGrouperAccumulatorPair(
