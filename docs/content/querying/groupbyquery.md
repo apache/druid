@@ -150,11 +150,11 @@ results acceptable.
 
 #### Nested groupBys
 
-Nested groupBys (dataSource of type "query") are performed the same way for both "v1" and "v2". The broker runs the
-inner groupBy query in the usual way, then materializes the inner query's results, then runs the outer query on those
-materialized results. In particular, the outer query is not distributed at all; it takes place completely on the broker.
-Currently the materialized results are stored on-heap in the broker, and the outer query is done in a single-threaded
-fashion.
+Nested groupBys (dataSource of type "query") are performed differently for "v1" and "v2". The broker first runs the
+inner groupBy query in the usual way. "v1" strategy then materializes the inner query's results on-heap with Druid's
+indexing mechanism, and runs the outer query on these materialized results. "v2" strategy runs the outer query on the
+inner query's results stream with off-heap fact map and on-heap string dictionary that can spill to disk. Both
+strategy perform the outer query on the broker in a single-threaded fashion.
 
 #### Server configuration
 
