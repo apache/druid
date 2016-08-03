@@ -122,6 +122,7 @@
         <module>extensions-contrib/virtual-columns</module>
         <module>extensions-contrib/thrift-extensions</module>
         <module>extensions-contrib/ambari-metrics-emitter</module>
+        <module>extensions-contrib/scan-query</module>
     </modules>
 
     <dependencyManagement>
