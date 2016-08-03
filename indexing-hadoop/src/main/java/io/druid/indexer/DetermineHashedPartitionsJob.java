@@ -318,7 +318,9 @@ public class DetermineHashedPartitionsJob implements Jobby
     {
       HyperLogLogCollector aggregate = HyperLogLogCollector.makeLatestCollector();
       for (BytesWritable value : values) {
-        aggregate.fold(ByteBuffer.wrap(value.getBytes(), 0, value.getLength()));
+        aggregate.fold(
+            HyperLogLogCollector.makeCollector(ByteBuffer.wrap(value.getBytes(), 0, value.getLength()))
+        );
       }
       Interval interval = config.getGranularitySpec().getSegmentGranularity().bucket(new DateTime(key.get()));
       intervals.add(interval);
