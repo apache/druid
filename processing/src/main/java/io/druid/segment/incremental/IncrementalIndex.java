@@ -333,7 +333,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
           @Override
           public int getValueCardinality()
           {
-            throw new UnsupportedOperationException("value cardinality is unknown in incremental index");
+            return DimensionSelector.CARDINALITY_UNKNOWN;
           }
 
           @Override
