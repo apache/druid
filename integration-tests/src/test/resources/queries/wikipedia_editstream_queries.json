@@ -1068,7 +1068,8 @@
                 "numRows": 4462111,
                 "aggregators": null,
                 "timestampSpec": null,
-                "queryGranularity": null
+                "queryGranularity": null,
+                "rollup":null
             }
         ]
     }
