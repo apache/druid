@@ -133,6 +133,8 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
         String.format("druid-groupBy-%s_%s", UUID.randomUUID(), query.getId())
     );
 
+    final int priority = BaseQuery.getContextPriority(query, 0);
+
     // Figure out timeoutAt time now, so we can apply the timeout to both the mergeBufferPool.take and the actual
     // query processing together.
     final Number queryTimeout = query.getContextValue(QueryContextKeys.TIMEOUT, null);
@@ -181,9 +183,6 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
               );
               final Grouper<RowBasedKey> grouper = pair.lhs;
               final Accumulator<Grouper<RowBasedKey>, Row> accumulator = pair.rhs;
-              closeOnFailure.add(grouper);
-
-              final int priority = BaseQuery.getContextPriority(query, 0);
 
               final ReferenceCountingResourceHolder<Grouper<RowBasedKey>> grouperHolder = new ReferenceCountingResourceHolder<>(
                   grouper,
@@ -196,6 +195,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
                     }
                   }
               );
+              closeOnFailure.add(grouperHolder);
 
               ListenableFuture<List<Boolean>> futures = Futures.allAsList(
                   Lists.newArrayList(
