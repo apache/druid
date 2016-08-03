@@ -21,6 +21,7 @@ package io.druid.segment.data;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
+import org.apache.commons.lang.ArrayUtils;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -180,6 +181,10 @@ public abstract class CompressionFactory
     public static LongEncoding forId(byte id)
     {
       return idMap.get(id);
+    }
+
+    public static LongEncoding[] testValues() {
+      return (LongEncoding[])ArrayUtils.removeElement(LongEncoding.values(), TABLE);
     }
   }
 

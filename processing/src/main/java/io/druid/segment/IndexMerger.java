@@ -785,7 +785,7 @@ public class IndexMerger
         ValueType type = valueTypes.get(metric);
         switch (type) {
           case LONG:
-            metWriters.add(new LongMetricColumnSerializer(metric, v8OutDir, ioPeon));
+            metWriters.add(new LongMetricColumnSerializer(metric, v8OutDir, ioPeon, indexSpec));
             break;
           case FLOAT:
             metWriters.add(new FloatMetricColumnSerializer(metric, v8OutDir, ioPeon));

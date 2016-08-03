@@ -35,7 +35,6 @@ public class BlockLayoutIndexedLongsSupplier implements Supplier<IndexedLongs>
   private final GenericIndexed<ResourceHolder<ByteBuffer>> baseLongBuffers;
   private final int totalSize;
   private final int sizePer;
-  private final ByteOrder order;
   private final CompressionFactory.LongEncodingReader baseReader;
 
   public BlockLayoutIndexedLongsSupplier(
@@ -49,7 +48,6 @@ public class BlockLayoutIndexedLongsSupplier implements Supplier<IndexedLongs>
     ));
     this.totalSize = totalSize;
     this.sizePer = sizePer;
-    this.order = order;
     this.baseReader = reader;
   }
 
@@ -85,7 +83,7 @@ public class BlockLayoutIndexedLongsSupplier implements Supplier<IndexedLongs>
             CloseQuietly.close(holder);
             holder = singleThreadedLongBuffers.get(bufferNum);
             buffer = holder.get();
-            longBuffer = buffer.order(order).asLongBuffer();
+            longBuffer = buffer.asLongBuffer();
             currIndex = bufferNum;
           }
         };

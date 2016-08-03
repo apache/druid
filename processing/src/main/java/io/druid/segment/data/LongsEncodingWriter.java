@@ -46,6 +46,8 @@ public class LongsEncodingWriter implements CompressionFactory.LongEncodingWrite
   {
     outStream = null;
     outBuffer = buffer;
+    // this order change is safe as the buffer is passed in and allocated in BlockLayoutLongSupplierSerializer, and
+    // is used only as a temporary storage to be written
     outBuffer.order(order);
   }
 

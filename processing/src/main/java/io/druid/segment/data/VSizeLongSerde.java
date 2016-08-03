@@ -144,9 +144,10 @@ public class VSizeLongSerde
 
   // LongDeserializers were adapted from Apache Lucene DirectReader, see:
   // https://github.com/apache/lucene-solr/blob/master/lucene/core/src/java/org/apache/lucene/util/packed/DirectReader.java
-  public static LongDeserializer getDeserializer(int longSize, ByteBuffer buffer, int bufferOffset)
+  public static LongDeserializer getDeserializer(int longSize, ByteBuffer fromBuffer, int bufferOffset)
   {
-    buffer.order(ByteOrder.BIG_ENDIAN);
+    // The buffer needs to be duplicated since the byte order is changed
+    ByteBuffer buffer = fromBuffer.duplicate().order(ByteOrder.BIG_ENDIAN);
     switch (longSize) {
       case 1:
         return new Size1Des(buffer, bufferOffset);

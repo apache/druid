@@ -37,26 +37,29 @@ public class LongMetricColumnSerializer implements MetricColumnSerializer
   private final String metricName;
   private final IOPeon ioPeon;
   private final File outDir;
+  private final IndexSpec indexSpec;
 
   private LongSupplierSerializer writer;
 
   public LongMetricColumnSerializer(
       String metricName,
       File outDir,
-      IOPeon ioPeon
+      IOPeon ioPeon,
+      IndexSpec indexSpec
   )
   {
     this.metricName = metricName;
     this.ioPeon = ioPeon;
     this.outDir = outDir;
+    this.indexSpec = indexSpec;
   }
 
   @Override
   public void open() throws IOException
   {
     writer = CompressionFactory.getLongSerializer(
-        ioPeon, String.format("%s_little", metricName), IndexIO.BYTE_ORDER, CompressionFactory.DEFAULT_LONG_ENCODING,
-        CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
+        ioPeon, String.format("%s_little", metricName), IndexIO.BYTE_ORDER, indexSpec.getLongEncodingFormat(),
+        indexSpec.getMetricCompressionStrategy()
     );
 
     writer.open();

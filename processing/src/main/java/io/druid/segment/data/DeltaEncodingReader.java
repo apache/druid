@@ -47,7 +47,7 @@ public class DeltaEncodingReader implements CompressionFactory.LongEncodingReade
 
   public DeltaEncodingReader(ByteBuffer buffer, long base, int bitsPerValue)
   {
-    this.buffer = buffer.asReadOnlyBuffer();
+    this.buffer = buffer;
     this.base = base;
     this.bitsPerValue = bitsPerValue;
     deserializer = VSizeLongSerde.getDeserializer(bitsPerValue, buffer, buffer.position());
@@ -74,6 +74,6 @@ public class DeltaEncodingReader implements CompressionFactory.LongEncodingReade
   @Override
   public CompressionFactory.LongEncodingReader duplicate()
   {
-    return new DeltaEncodingReader(buffer, base, bitsPerValue);
+    return new DeltaEncodingReader(buffer.duplicate(), base, bitsPerValue);
   }
 }

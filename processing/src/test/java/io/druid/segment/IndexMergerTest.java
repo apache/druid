@@ -69,6 +69,7 @@ import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 
@@ -81,7 +82,7 @@ public class IndexMergerTest
   protected IndexMerger INDEX_MERGER;
   private final static IndexIO INDEX_IO = TestHelper.getTestIndexIO();
 
-  @Parameterized.Parameters(name = "{index}: useV9={0}, bitmap={1}, metric compression={2}, dimension compression={3}")
+  @Parameterized.Parameters(name = "{index}: useV9={0}, bitmap={1}, metric compression={2}, dimension compression={3}, long encoding={4}")
   public static Collection<Object[]> data()
   {
     return Collections2.transform(
@@ -95,15 +96,10 @@ public class IndexMergerTest
                     new RoaringBitmapSerdeFactory(null),
                     new ConciseBitmapSerdeFactory()
                 ),
-                ImmutableSet.of(
-                    CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED,
-                    CompressedObjectStrategy.CompressionStrategy.LZ4,
-                    CompressedObjectStrategy.CompressionStrategy.LZF
-                ),
-                ImmutableSet.of(
-                    CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED,
-                    CompressedObjectStrategy.CompressionStrategy.LZ4,
-                    CompressedObjectStrategy.CompressionStrategy.LZF
+                EnumSet.allOf(CompressedObjectStrategy.CompressionStrategy.class),
+                EnumSet.allOf(CompressedObjectStrategy.CompressionStrategy.class),
+                ImmutableSet.copyOf(
+                    CompressionFactory.LongEncoding.testValues()
                 )
             )
         ), new Function<List<?>, Object[]>()
@@ -121,7 +117,8 @@ public class IndexMergerTest
   static IndexSpec makeIndexSpec(
       BitmapSerdeFactory bitmapSerdeFactory,
       CompressedObjectStrategy.CompressionStrategy compressionStrategy,
-      CompressedObjectStrategy.CompressionStrategy dimCompressionStrategy
+      CompressedObjectStrategy.CompressionStrategy dimCompressionStrategy,
+      CompressionFactory.LongEncoding longEncoding
   )
   {
     if (bitmapSerdeFactory != null || compressionStrategy != null) {
@@ -129,7 +126,7 @@ public class IndexMergerTest
           bitmapSerdeFactory,
           compressionStrategy.name().toLowerCase(),
           dimCompressionStrategy.name().toLowerCase(),
-          CompressionFactory.LongEncoding.LONGS.name().toLowerCase()
+          longEncoding.name().toLowerCase()
       );
     } else {
       return new IndexSpec();
@@ -144,10 +141,11 @@ public class IndexMergerTest
       boolean useV9,
       BitmapSerdeFactory bitmapSerdeFactory,
       CompressedObjectStrategy.CompressionStrategy compressionStrategy,
-      CompressedObjectStrategy.CompressionStrategy dimCompressionStrategy
+      CompressedObjectStrategy.CompressionStrategy dimCompressionStrategy,
+      CompressionFactory.LongEncoding longEncoding
   )
   {
-    this.indexSpec = makeIndexSpec(bitmapSerdeFactory, compressionStrategy, dimCompressionStrategy);
+    this.indexSpec = makeIndexSpec(bitmapSerdeFactory, compressionStrategy, dimCompressionStrategy, longEncoding);
     if (useV9) {
       INDEX_MERGER = TestHelper.getTestIndexMergerV9();
     } else {
@@ -606,7 +604,7 @@ public class IndexMergerTest
         indexSpec.getBitmapSerdeFactory(),
         "lz4".equals(indexSpec.getDimensionCompression()) ? "lzf" : "lz4",
         "lz4".equals(indexSpec.getMetricCompression()) ? "lzf" : "lz4",
-        "longs"
+        "longs".equals(indexSpec.getLongEncoding()) ? "delta" : "longs"
     );
 
     AggregatorFactory[] mergedAggregators = new AggregatorFactory[]{new CountAggregatorFactory("count")};
@@ -743,7 +741,7 @@ public class IndexMergerTest
         indexSpec.getBitmapSerdeFactory(),
         "lz4".equals(indexSpec.getDimensionCompression()) ? "lzf" : "lz4",
         "lz4".equals(indexSpec.getMetricCompression()) ? "lzf" : "lz4",
-        "longs"
+        "longs".equals(indexSpec.getLongEncoding()) ? "delta" : "longs"
     );
 
     QueryableIndex converted = closer.closeLater(

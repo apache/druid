@@ -53,7 +53,7 @@ public class TableEncodingReader implements CompressionFactory.LongEncodingReade
 
   public TableEncodingReader(ByteBuffer buffer, long table[], int bitsPerValue)
   {
-    this.buffer = buffer.asReadOnlyBuffer();
+    this.buffer = buffer;
     this.table = table;
     this.bitsPerValue = bitsPerValue;
     deserializer = VSizeLongSerde.getDeserializer(bitsPerValue, buffer, buffer.position());
@@ -80,6 +80,6 @@ public class TableEncodingReader implements CompressionFactory.LongEncodingReade
   @Override
   public CompressionFactory.LongEncodingReader duplicate()
   {
-    return new TableEncodingReader(buffer, table, bitsPerValue);
+    return new TableEncodingReader(buffer.duplicate(), table, bitsPerValue);
   }
 }

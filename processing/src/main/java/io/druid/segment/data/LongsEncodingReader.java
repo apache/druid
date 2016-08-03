@@ -28,24 +28,21 @@ import java.nio.LongBuffer;
 public class LongsEncodingReader implements CompressionFactory.LongEncodingReader
 {
   private LongBuffer buffer;
-  private ByteOrder order;
 
   public LongsEncodingReader(ByteBuffer fromBuffer, ByteOrder order)
   {
     this.buffer = fromBuffer.asReadOnlyBuffer().order(order).asLongBuffer();
-    this.order = order;
   }
 
-  public LongsEncodingReader(LongBuffer buffer, ByteOrder order)
+  public LongsEncodingReader(LongBuffer buffer)
   {
     this.buffer = buffer;
-    this.order = order;
   }
 
   @Override
   public void setBuffer(ByteBuffer buffer)
   {
-    this.buffer = buffer.order(order).asLongBuffer();
+    this.buffer = buffer.asLongBuffer();
   }
 
   @Override
@@ -63,6 +60,6 @@ public class LongsEncodingReader implements CompressionFactory.LongEncodingReade
   @Override
   public CompressionFactory.LongEncodingReader duplicate()
   {
-    return new LongsEncodingReader(buffer, order);
+    return new LongsEncodingReader(buffer.duplicate());
   }
 }
