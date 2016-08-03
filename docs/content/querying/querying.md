@@ -11,16 +11,61 @@ query is expressed in JSON and each of these node types expose the same
 REST query interface. For normal Druid operations, queries should be issued to the broker nodes. Queries can be posted
 to the queryable nodes like this -
 
- ```bash
- curl -X POST '<queryable_host>:<port>/druid/v2/?pretty' -H 'Content-Type:application/json' -d @<query_json_file>
- ```
- 
+```bash
+curl -X POST '<queryable_host>:<port>/druid/v2/?pretty' -H 'Content-Type:application/json' -d @<query_json_file>
+```
+In response, Druid returns a JSON array of result data objects like below. For example, here is response for a sample groupBy query.
+
+```json
+[
+  {
+    "version" : "v1",
+    "timestamp" : "2012-01-01T00:00:00.000Z",
+    "event" : {
+      "country" : "US",
+      "name" : "test name1",
+      "data_transfer" : 500
+    }
+  },
+  {
+    "version" : "v1",
+    "timestamp" : "2012-01-01T00:00:00.000Z",
+    "event" : {
+      "country" : "US",
+      "name" : "test name2",
+      "data_transfer" : 354
+    }
+  }
+  ...
+]
+```
+
 Druid's native query language is JSON over HTTP, although many members of the community have contributed different 
 [client libraries](../development/libraries.html) in other languages to query Druid. 
 
 Druid's native query is relatively low level, mapping closely to how computations are performed internally. Druid queries 
 are designed to be lightweight and complete very quickly. This means that for more complex analysis, or to build 
 more complex visualizations, multiple Druid queries may be required.
+
+
+<div class="note caution">
+Another <a href="../development/experimental.html">experimental</a> HTTP query endpoint, `/druid/v3`.
+</div>
+Sometimes it is desirable to be able to send some contextual information back to druid client in addition to the result data objects.
+Existing response format of JSON array did not allow that. So, a new HTTP endpoint is created to handle this use case.
+If client sends a druid query to `/druid/v3` like
+```bash
+curl -X POST '<queryable_host>:<port>/druid/v3/?pretty' -H 'Content-Type:application/json' -d @<query_json_file>
+```
+Then the response format is as follows.
+
+```json
+{
+  "result": [ ...... result data objects ..... ],
+  "context": { .... context object.... }
+}
+```
+JSON array contained in "result" attribute is same as the full response object from `/druid/v2` . Note that, first "results" are streamed back to the client and then context object follows.
 
 Available Queries
 -----------------
