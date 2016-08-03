@@ -68,6 +68,8 @@ import java.util.NoSuchElementException;
  */
 public class GroupByQueryEngine
 {
+  private static final int MISSING_VALUE = -1;
+
   private final Supplier<GroupByQueryConfig> config;
   private final StupidPool<ByteBuffer> intermediateResultsBufferPool;
 
@@ -189,7 +191,7 @@ public class GroupByQueryEngine
         final IndexedInts row = dimSelector.getRow();
         if (row == null || row.size() == 0) {
           ByteBuffer newKey = key.duplicate();
-          newKey.putInt(dimSelector.getValueCardinality());
+          newKey.putInt(MISSING_VALUE);
           unaggregatedBuffers = updateValues(newKey, dims.subList(1, dims.size()));
         } else {
           for (Integer dimValue : row) {
@@ -405,7 +407,7 @@ public class GroupByQueryEngine
                   for (int i = 0; i < dimensions.size(); ++i) {
                     final DimensionSelector dimSelector = dimensions.get(i);
                     final int dimVal = keyBuffer.getInt();
-                    if (dimSelector.getValueCardinality() != dimVal) {
+                    if (MISSING_VALUE != dimVal) {
                       theEvent.put(dimNames.get(i), dimSelector.lookupName(dimVal));
                     }
                   }

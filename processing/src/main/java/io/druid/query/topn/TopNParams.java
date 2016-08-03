@@ -34,14 +34,17 @@ public class TopNParams
   protected TopNParams(
       DimensionSelector dimSelector,
       Cursor cursor,
-      int cardinality,
       int numValuesPerPass
   )
   {
     this.dimSelector = dimSelector;
     this.cursor = cursor;
-    this.cardinality = cardinality;
+    this.cardinality = dimSelector.getValueCardinality();
     this.numValuesPerPass = numValuesPerPass;
+
+    if (cardinality < 0) {
+      throw new UnsupportedOperationException("Cannot operate on a dimension without a dictionary");
+    }
   }
 
   public DimensionSelector getDimSelector()

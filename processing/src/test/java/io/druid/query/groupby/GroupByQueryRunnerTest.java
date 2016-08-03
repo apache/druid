@@ -4589,19 +4589,11 @@ public class GroupByQueryRunnerTest
         .setGranularity(QueryRunnerTestHelper.allGran)
         .build();
 
-    // v2 strategy would throw an exception for this because the dimension selector in GroupByRowProcessor is not
-    // dictionary encoded, but instead require the row to be set when doing lookup. Null Pointer Exception occurs
-    // when the filter aggregator is initialized with no row set.
-    if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
-      expectedException.expect(NullPointerException.class);
-      GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-    } else {
-      List<Row> expectedResults = Arrays.asList(
-          GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01", "rows", 837L)
-      );
-      Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
-      TestHelper.assertExpectedObjects(expectedResults, results, "");
-    }
+    List<Row> expectedResults = Arrays.asList(
+        GroupByQueryRunnerTestHelper.createExpectedRow("1970-01-01", "rows", 837L)
+    );
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
 
   @Test

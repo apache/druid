@@ -61,7 +61,6 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
     return new TopNParams(
         dimSelector,
         cursor,
-        dimSelector.getValueCardinality(),
         Integer.MAX_VALUE
     );
   }
@@ -129,7 +128,7 @@ public class AggregateTopNMetricFirstAlgorithm implements TopNAlgorithm<int[], T
 
   private int[] getDimValSelectorForTopNMetric(TopNParams params, TopNResultBuilder resultBuilder)
   {
-    int[] dimValSelector = new int[params.getDimSelector().getValueCardinality()];
+    int[] dimValSelector = new int[params.getCardinality()];
     Arrays.fill(dimValSelector, SKIP_POSITION_VALUE);
 
     Iterator<DimValHolder> dimValIter = resultBuilder.getTopNIterator();

@@ -54,7 +54,6 @@ public class DimExtractionTopNAlgorithm extends BaseTopNAlgorithm<Aggregator[][]
     return new TopNParams(
         dimSelector,
         cursor,
-        dimSelector.getValueCardinality(),
         Integer.MAX_VALUE
     );
   }

@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Strings;
-import com.metamx.common.UOE;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.DruidLongPredicate;
@@ -43,6 +42,7 @@ import java.nio.ByteBuffer;
 import java.util.BitSet;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
 
 public class FilteredAggregatorFactory extends AggregatorFactory
 {
@@ -246,27 +246,55 @@ public class FilteredAggregatorFactory extends AggregatorFactory
         return new BooleanValueMatcher(valueString == null);
       }
 
-      final int valueId = selector.lookupId(valueString);
-      return new ValueMatcher()
-      {
-        @Override
-        public boolean matches()
+      final int cardinality = selector.getValueCardinality();
+
+      if (cardinality >= 0) {
+        // Dictionary-encoded dimension. Compare by id instead of by value to save time.
+        final int valueId = selector.lookupId(valueString);
+
+        return new ValueMatcher()
         {
-          final IndexedInts row = selector.getRow();
-          final int size = row.size();
-          if (size == 0) {
-            // null should match empty rows in multi-value columns
-            return valueString == null;
-          } else {
-            for (int i = 0; i < size; ++i) {
-              if (row.get(i) == valueId) {
-                return true;
+          @Override
+          public boolean matches()
+          {
+            final IndexedInts row = selector.getRow();
+            final int size = row.size();
+            if (size == 0) {
+              // null should match empty rows in multi-value columns
+              return valueString == null;
+            } else {
+              for (int i = 0; i < size; ++i) {
+                if (row.get(i) == valueId) {
+                  return true;
+                }
               }
+              return false;
             }
-            return false;
           }
-        }
-      };
+        };
+      } else {
+        // Not dictionary-encoded. Skip the optimization.
+        return new ValueMatcher()
+        {
+          @Override
+          public boolean matches()
+          {
+            final IndexedInts row = selector.getRow();
+            final int size = row.size();
+            if (size == 0) {
+              // null should match empty rows in multi-value columns
+              return valueString == null;
+            } else {
+              for (int i = 0; i < size; ++i) {
+                if (Objects.equals(selector.lookupName(row.get(i)), valueString)) {
+                  return true;
+                }
+              }
+              return false;
+            }
+          }
+        };
+      }
     }
 
     public ValueMatcher makeValueMatcher(final String dimension, final DruidPredicateFactory predicateFactory)
@@ -294,35 +322,60 @@ public class FilteredAggregatorFactory extends AggregatorFactory
         return new BooleanValueMatcher(doesMatchNull);
       }
 
-      // Check every value in the dimension, as a String.
       final int cardinality = selector.getValueCardinality();
-      final BitSet valueIds = new BitSet(cardinality);
-      for (int i = 0; i < cardinality; i++) {
-        if (predicate.apply(selector.lookupName(i))) {
-          valueIds.set(i);
-        }
-      }
 
-      return new ValueMatcher()
-      {
-        @Override
-        public boolean matches()
-        {
-          final IndexedInts row = selector.getRow();
-          final int size = row.size();
-          if (size == 0) {
-            // null should match empty rows in multi-value columns
-            return doesMatchNull;
-          } else {
-            for (int i = 0; i < size; ++i) {
-              if (valueIds.get(row.get(i))) {
-                return true;
-              }
-            }
-            return false;
+      if (cardinality >= 0) {
+        // Dictionary-encoded dimension. Check every value; build a bitset of matching ids.
+        final BitSet valueIds = new BitSet(cardinality);
+        for (int i = 0; i < cardinality; i++) {
+          if (predicate.apply(selector.lookupName(i))) {
+            valueIds.set(i);
           }
         }
-      };
+
+        return new ValueMatcher()
+        {
+          @Override
+          public boolean matches()
+          {
+            final IndexedInts row = selector.getRow();
+            final int size = row.size();
+            if (size == 0) {
+              // null should match empty rows in multi-value columns
+              return doesMatchNull;
+            } else {
+              for (int i = 0; i < size; ++i) {
+                if (valueIds.get(row.get(i))) {
+                  return true;
+                }
+              }
+              return false;
+            }
+          }
+        };
+      } else {
+        // Not dictionary-encoded. Skip the optimization.
+        return new ValueMatcher()
+        {
+          @Override
+          public boolean matches()
+          {
+            final IndexedInts row = selector.getRow();
+            final int size = row.size();
+            if (size == 0) {
+              // null should match empty rows in multi-value columns
+              return doesMatchNull;
+            } else {
+              for (int i = 0; i < size; ++i) {
+                if (predicate.apply(selector.lookupName(row.get(i)))) {
+                  return true;
+                }
+              }
+              return false;
+            }
+          }
+        };
+      }
     }
 
     private ValueMatcher makeLongValueMatcher(String dimension, DruidLongPredicate predicate)

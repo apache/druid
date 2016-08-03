@@ -68,7 +68,12 @@ public class RegexFilteredDimensionSpec extends BaseFilteredDimensionSpec
     int count = 0;
     final Map<Integer,Integer> forwardMapping = new HashMap<>();
 
-    for (int i = 0; i < selector.getValueCardinality(); i++) {
+    final int selectorCardinality = selector.getValueCardinality();
+    if (selectorCardinality < 0) {
+      throw new UnsupportedOperationException("Cannot decorate a selector with no dictionary");
+    }
+
+    for (int i = 0; i < selectorCardinality; i++) {
       if (compiledRegex.matcher(Strings.nullToEmpty(selector.lookupName(i))).matches()) {
         forwardMapping.put(i, count++);
       }

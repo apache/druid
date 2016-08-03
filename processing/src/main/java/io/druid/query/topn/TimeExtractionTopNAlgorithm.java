@@ -45,7 +45,6 @@ public class TimeExtractionTopNAlgorithm extends BaseTopNAlgorithm<int[], Map<St
     return new TopNParams(
         dimSelector,
         cursor,
-        dimSelector.getValueCardinality(),
         Integer.MAX_VALUE
     );
   }

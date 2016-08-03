@@ -74,7 +74,10 @@ public class ListFilteredDimensionSpec extends BaseFilteredDimensionSpec
       return selector;
     }
 
-    int selectorCardinality = selector.getValueCardinality();
+    final int selectorCardinality = selector.getValueCardinality();
+    if (selectorCardinality < 0) {
+      throw new UnsupportedOperationException("Cannot decorate a selector with no dictionary");
+    }
     int cardinality = isWhitelist ? values.size() : selectorCardinality - values.size();
 
     int count = 0;
