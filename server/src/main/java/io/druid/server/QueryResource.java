@@ -241,76 +241,7 @@ public class QueryResource
           }
       );
 
-      try {
-        final Query theQuery = query;
-        final QueryToolChest theToolChest = toolChest;
-        Response.ResponseBuilder builder = Response
-            .ok(
-                new StreamingOutput()
-                {
-                  @Override
-                  public void write(OutputStream outputStream) throws IOException, WebApplicationException
-                  {
-                    // json serializer will always close the yielder
-                    CountingOutputStream os = new CountingOutputStream(outputStream);
-                    jsonWriter.writeValue(os, yielder);
-
-                    os.flush(); // Some types of OutputStream suppress flush errors in the .close() method.
-                    os.close();
-
-                    final long queryTime = System.currentTimeMillis() - start;
-                    emitter.emit(
-                        DruidMetrics.makeQueryTimeMetric(theToolChest, jsonMapper, theQuery, req.getRemoteAddr())
-                                    .setDimension("success", "true")
-                                    .build("query/time", queryTime)
-                    );
-                    emitter.emit(
-                        DruidMetrics.makeQueryTimeMetric(theToolChest, jsonMapper, theQuery, req.getRemoteAddr())
-                                    .build("query/bytes", os.getCount())
-                    );
-
-                    requestLogger.log(
-                        new RequestLogLine(
-                            new DateTime(start),
-                            req.getRemoteAddr(),
-                            theQuery,
-                            new QueryStats(
-                                ImmutableMap.<String, Object>of(
-                                    "query/time", queryTime,
-                                    "query/bytes", os.getCount(),
-                                    "success", true
-                                )
-                            )
-                        )
-                    );
-                  }
-                },
-                contentType
-            )
-            .header("X-Druid-Query-Id", queryId);
-
-        //Limit the response-context header, see https://github.com/druid-io/druid/issues/2331
-        //Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()
-        //and encodes the string using ASCII, so 1 char is = 1 byte
-        String responseCtxString = jsonMapper.writeValueAsString(responseContext);
-        if (responseCtxString.length() > RESPONSE_CTX_HEADER_LEN_LIMIT) {
-          log.warn("Response Context truncated for id [%s] . Full context is [%s].", queryId, responseCtxString);
-          responseCtxString = responseCtxString.substring(0, RESPONSE_CTX_HEADER_LEN_LIMIT);
-        }
-
-        return builder
-            .header("X-Druid-Response-Context", responseCtxString)
-            .build();
-      }
-      catch (Exception e) {
-        // make sure to close yielder if anything happened before starting to serialize the response.
-        yielder.close();
-        throw Throwables.propagate(e);
-      }
-      finally {
-        // do not close yielder here, since we do not want to close the yielder prior to
-        // StreamingOutput having iterated over all the results
-      }
+      return buildQueryResponse(req, query, toolChest, jsonWriter, contentType, start, yielder, responseContext);
     }
     catch (QueryInterruptedException e) {
       try {
@@ -396,6 +327,91 @@ public class QueryResource
     }
     finally {
       Thread.currentThread().setName(currThreadName);
+    }
+  }
+
+  protected Response buildQueryResponse(
+      final HttpServletRequest req,
+      final Query query,
+      final QueryToolChest toolChest,
+      final ObjectWriter jsonWriter,
+      final String contentType,
+      final long startTime,
+      final Yielder yielder,
+      final Map<String, Object> responseContext
+  )
+      throws IOException
+  {
+    try {
+      Response.ResponseBuilder builder = Response
+          .ok(
+              new StreamingOutput()
+              {
+                @Override
+                public void write(OutputStream outputStream) throws IOException, WebApplicationException
+                {
+                  // json serializer will always close the yielder
+                  CountingOutputStream os = new CountingOutputStream(outputStream);
+
+                  try {
+                    jsonWriter.writeValue(os, yielder);
+                  } finally {
+                    os.flush(); // Some types of OutputStream suppress flush errors in the .close() method.
+                    os.close();
+                  }
+
+                  final long queryTime = System.currentTimeMillis() - startTime;
+                  emitter.emit(
+                      DruidMetrics.makeQueryTimeMetric(toolChest, jsonMapper, query, req.getRemoteAddr())
+                                  .setDimension("success", "true")
+                                  .build("query/time", queryTime)
+                  );
+                  emitter.emit(
+                      DruidMetrics.makeQueryTimeMetric(toolChest, jsonMapper, query, req.getRemoteAddr())
+                                  .build("query/bytes", os.getCount())
+                  );
+
+                  requestLogger.log(
+                      new RequestLogLine(
+                          new DateTime(startTime),
+                          req.getRemoteAddr(),
+                          query,
+                          new QueryStats(
+                              ImmutableMap.<String, Object>of(
+                                  "query/time", queryTime,
+                                  "query/bytes", os.getCount(),
+                                  "success", true
+                              )
+                          )
+                      )
+                  );
+                }
+              },
+              contentType
+          )
+          .header("X-Druid-Query-Id", query.getId());
+
+      //Limit the response-context header, see https://github.com/druid-io/druid/issues/2331
+      //Note that Response.ResponseBuilder.header(String key,Object value).build() calls value.toString()
+      //and encodes the string using ASCII, so 1 char is = 1 byte
+      String responseCtxString = jsonMapper.writeValueAsString(responseContext);
+      if (responseCtxString.length() > RESPONSE_CTX_HEADER_LEN_LIMIT) {
+        log.warn("Response Context truncated for id [%s] . Full context is [%s].", query.getId(), responseCtxString);
+        responseCtxString = responseCtxString.substring(0, RESPONSE_CTX_HEADER_LEN_LIMIT);
+      }
+
+      return builder
+          .header("X-Druid-Response-Context", responseCtxString)
+          .build();
+    }
+    catch (Exception e) {
+      // make sure to close yielder if anything happened before starting to serialize the response.
+      yielder.close();
+      throw Throwables.propagate(e);
+    }
+    finally {
+      // do not close yielder here, since we do not want to close the yielder prior to
+      // StreamingOutput having iterated over all the results
     }
   }
 }
