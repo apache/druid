@@ -52,6 +52,7 @@ import com.metamx.emitter.EmittingLogger;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnBuilder;
+import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnConfig;
 import io.druid.segment.column.ColumnDescriptor;
 import io.druid.segment.column.ValueType;
@@ -66,6 +67,7 @@ import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIterable;
+import io.druid.segment.data.IndexedLongs;
 import io.druid.segment.data.IndexedMultivalue;
 import io.druid.segment.data.IndexedRTree;
 import io.druid.segment.data.VSizeIndexed;
@@ -87,6 +89,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.AbstractList;
@@ -319,8 +322,8 @@ public class IndexIO
           rb1.getTimestamp(), rb2.getTimestamp()
       );
     }
-    final int[][] dims1 = rb1.getDims();
-    final int[][] dims2 = rb2.getDims();
+    final Object[] dims1 = rb1.getDims();
+    final Object[] dims2 = rb2.getDims();
     if (dims1.length != dims2.length) {
       throw new SegmentValidationException(
           "Dim lengths not equal %s vs %s",
@@ -331,89 +334,146 @@ public class IndexIO
     final Indexed<String> dim1Names = adapter1.getDimensionNames();
     final Indexed<String> dim2Names = adapter2.getDimensionNames();
     for (int i = 0; i < dims1.length; ++i) {
-      final int[] dim1Vals = dims1[i];
-      final int[] dim2Vals = dims2[i];
+      final Object dim1Vals = dims1[i];
+      final Object dim2Vals = dims2[i];
       final String dim1Name = dim1Names.get(i);
       final String dim2Name = dim2Names.get(i);
-      final Indexed<String> dim1ValNames = adapter1.getDimValueLookup(dim1Name);
-      final Indexed<String> dim2ValNames = adapter2.getDimValueLookup(dim2Name);
+
+      ColumnCapabilities capabilities1 = adapter1.getCapabilities(dim1Name);
+      ColumnCapabilities capabilities2 = adapter2.getCapabilities(dim2Name);
+      ValueType dim1Type = capabilities1.getType();
+      ValueType dim2Type = capabilities2.getType();
+      if (dim1Type != dim2Type) {
+        throw new SegmentValidationException(
+            "Dim [%s] types not equal. Expected %d found %d",
+            dim1Name,
+            dim1Type,
+            dim2Type
+        );
+      }
 
       if (dim1Vals == null || dim2Vals == null) {
         if (dim1Vals != dim2Vals) {
           throw new SegmentValidationException(
               "Expected nulls, found %s and %s",
-              Arrays.toString(dim1Vals),
-              Arrays.toString(dim2Vals)
+              Arrays.toString((int[]) dim1Vals),
+              Arrays.toString((int[]) dim2Vals)
           );
         } else {
           continue;
         }
       }
-      if (dim1Vals.length != dim2Vals.length) {
-        // Might be OK if one of them has null. This occurs in IndexMakerTest
-        if (dim1Vals.length == 0 && dim2Vals.length == 1) {
-          final String dimValName = dim2ValNames.get(dim2Vals[0]);
-          if (dimValName == null) {
-            continue;
-          } else {
-            throw new SegmentValidationException(
-                "Dim [%s] value [%s] is not null",
-                dim2Name,
-                dimValName
-            );
+
+      final Indexed<String> dim1ValNames = adapter1.getDimValueLookup(dim1Name);
+      final Indexed<String> dim2ValNames = adapter2.getDimValueLookup(dim2Name);
+
+      int dim1ValsLen = Array.getLength(dim1Vals);
+      int dim2ValsLen = Array.getLength(dim2Vals);
+
+      if (dim1ValsLen != dim2ValsLen) {
+        if (capabilities1.isDictionaryEncoded()) {
+          // Might be OK if one of them has null. This occurs in IndexMakerTest
+          if (dim1ValsLen == 0 && dim2ValsLen == 1) {
+            final String dimValName = dim2ValNames.get(Array.getInt(dim2Vals, 0));
+            if (dimValName == null) {
+              continue;
+            } else {
+              throw new SegmentValidationException(
+                  "Dim [%s] value [%s] is not null",
+                  dim2Name,
+                  dimValName
+              );
+            }
+          } else if (dim2ValsLen == 0 && dim1ValsLen == 1) {
+            final String dimValName = dim1ValNames.get(Array.getInt(dim1Vals, 0));
+            if (dimValName == null) {
+              continue;
+            } else {
+              throw new SegmentValidationException(
+                  "Dim [%s] value [%s] is not null",
+                  dim1Name,
+                  dimValName
+              );
+            }
           }
-        } else if (dim2Vals.length == 0 && dim1Vals.length == 1) {
-          final String dimValName = dim1ValNames.get(dim1Vals[0]);
-          if (dimValName == null) {
-            continue;
-          } else {
-            throw new SegmentValidationException(
-                "Dim [%s] value [%s] is not null",
-                dim1Name,
-                dimValName
-            );
-          }
-        } else {
-          throw new SegmentValidationException(
-              "Dim [%s] value lengths not equal. Expected %d found %d",
-              dim1Name,
-              dims1.length,
-              dims2.length
-          );
         }
+        throw new SegmentValidationException(
+            "Dim [%s] value lengths not equal. Expected %d found %d",
+            dim1Name,
+            dims1.length,
+            dims2.length
+        );
       }
 
-      for (int j = 0; j < Math.max(dim1Vals.length, dim2Vals.length); ++j) {
-        final int dIdex1 = dim1Vals.length <= j ? -1 : dim1Vals[j];
-        final int dIdex2 = dim2Vals.length <= j ? -1 : dim2Vals[j];
+      if (capabilities1.isDictionaryEncoded()) {
+        validateDictionaryEncodedValues(dim1Name, (int[]) dim1Vals, (int[]) dim2Vals, dim1ValNames, dim2ValNames);
+      } else {
+        validateUnencodedValues(dim1Name, dim1Vals, dim2Vals);
+      }
+    }
+  }
 
-        if (dIdex1 == dIdex2) {
+
+  private static void validateUnencodedValues(
+      final String dimName,
+      final Object dim1Vals,
+      final Object dim2Vals
+  )
+  {
+    for (int j = 0; j < Array.getLength(dim1Vals); j++) {
+      Object dim1Val = Array.get(dim1Vals, j);
+      Object dim2Val = Array.get(dim2Vals, j);
+
+      if (dim1Val != dim2Val) {
+        throw new SegmentValidationException(
+            "Dim [%s] value not equal. Expected [%s] found [%s]",
+            dimName,
+            dim1Val,
+            dim2Val
+        );
+      }
+    }
+  }
+
+
+  private static void validateDictionaryEncodedValues(
+      final String dimName,
+      final int[] dim1Vals,
+      final int[] dim2Vals,
+      final Indexed<String> dim1ValNames,
+      final Indexed<String> dim2ValNames
+  )
+  {
+    for (int j = 0; j < Math.max(dim1Vals.length, dim2Vals.length); ++j) {
+      final Comparable dIdex1 = dim1Vals.length <= j ? -1 : dim1Vals[j];
+      final Comparable dIdex2 = dim2Vals.length <= j ? -1 : dim2Vals[j];
+
+      if (dIdex1 == dIdex2) {
+        continue;
+      }
+
+      final Comparable dim1ValName = (Integer) dIdex1 < 0 ? null : dim1ValNames.get((Integer) dIdex1);
+      final Comparable dim2ValName = (Integer) dIdex2 < 0 ? null : dim2ValNames.get((Integer) dIdex2);
+      if ((dim1ValName == null) || (dim2ValName == null)) {
+        if ((dim1ValName == null) && (dim2ValName == null)) {
           continue;
-        }
-
-        final String dim1ValName = dIdex1 < 0 ? null : dim1ValNames.get(dIdex1);
-        final String dim2ValName = dIdex2 < 0 ? null : dim2ValNames.get(dIdex2);
-        if ((dim1ValName == null) || (dim2ValName == null)) {
-          if ((dim1ValName == null) && (dim2ValName == null)) {
-            continue;
-          } else {
-            throw new SegmentValidationException(
-                "Dim [%s] value not equal. Expected [%s] found [%s]",
-                dim1Name,
-                dim1ValName,
-                dim2ValName
-            );
-          }
-        }
-
-        if (!dim1ValName.equals(dim2ValName)) {
+        } else {
           throw new SegmentValidationException(
               "Dim [%s] value not equal. Expected [%s] found [%s]",
-              dim1Name,
+              dimName,
               dim1ValName,
               dim2ValName
           );
         }
+      }
+
+      if (!dim1ValName.equals(dim2ValName)) {
+        throw new SegmentValidationException(
+            "Dim [%s] value not equal. Expected [%s] found [%s]",
+            dimName,
+            dim1ValName,
+            dim2ValName
+        );
       }
     }
   }
@@ -748,7 +808,7 @@ public class IndexIO
             channel.write(ByteBuffer.wrap(specBytes));
             serdeficator.write(channel);
             channel.close();
-          } else if (filename.startsWith("met_")) {
+          } else if (filename.startsWith("met_") || filename.startsWith("numeric_dim_")) {
             if (!filename.endsWith(String.format("%s.drd", BYTE_ORDER))) {
               skippedFiles.add(filename);
               continue;
@@ -1099,6 +1159,11 @@ public class IndexIO
   public static File makeDimFile(File dir, String dimension)
   {
     return new File(dir, String.format("dim_%s.drd", dimension));
+  }
+
+  public static File makeNumericDimFile(File dir, String dimension, ByteOrder order)
+  {
+    return new File(dir, String.format("numeric_dim_%s_%s.drd", dimension, order));
   }
 
   public static File makeTimeFile(File dir, ByteOrder order)
