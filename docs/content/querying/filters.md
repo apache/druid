@@ -276,7 +276,7 @@ Likewise, this filter expresses `age >= 18`
 
 The Interval filter enables range filtering on columns that contain long millisecond values, with the boundaries specified as ISO 8601 time intervals. It is suitable for the `__time` column, long metric columns, and dimensions with values that can be parsed as long milliseconds.
 
-This filter converts the ISO 8601 intervals to long millisecond start/end ranges and translates to an OR of Bound filters on those millisecond ranges, with numeric comparison and non-strict matching.
+This filter converts the ISO 8601 intervals to long millisecond start/end ranges and translates to an OR of Bound filters on those millisecond ranges, with numeric comparison. The Bound filters will have left-closed and right-open matching (i.e., start <= time < end).
 
 |property|type|description|required?|
 |--------|-----------|---------|---------|
@@ -313,7 +313,7 @@ The filter above is equivalent to the following OR of Bound filters:
         "lower": "1412121600000",
         "lowerStrict": false,
         "upper": "1412640000000" ,
-        "upperStrict": false,
+        "upperStrict": true,
         "ordering": "numeric"
       },
       {
@@ -322,7 +322,7 @@ The filter above is equivalent to the following OR of Bound filters:
          "lower": "1416009600000",
          "lowerStrict": false,
          "upper": "1416096000000" ,
-         "upperStrict": false,
+         "upperStrict": true,
          "ordering": "numeric"
       }
     ]

@@ -23,10 +23,13 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.RangeSet;
+import com.google.common.primitives.Longs;
+import com.metamx.common.Pair;
 import com.metamx.common.StringUtils;
 import io.druid.common.utils.JodaUtils;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.ordering.StringComparators;
+import io.druid.segment.filter.OrFilter;
 import org.joda.time.Interval;
 
 import java.nio.ByteBuffer;
@@ -37,9 +40,10 @@ import java.util.List;
 public class IntervalDimFilter implements DimFilter
 {
   private final List<Interval> intervals;
+  private final List<Pair<Long, Long>> intervalLongs;
   private final String dimension;
   private final ExtractionFn extractionFn;
-  private final List<DimFilter> boundDimFilters;
+  private final OrDimFilter convertedFilter;
 
   @JsonCreator
   public IntervalDimFilter(
@@ -54,7 +58,8 @@ public class IntervalDimFilter implements DimFilter
     this.dimension = dimension;
     this.intervals = Collections.unmodifiableList(JodaUtils.condenseIntervals(intervals));
     this.extractionFn = extractionFn;
-    this.boundDimFilters = makeBoundDimFilters();
+    this.intervalLongs = makeIntervalLongs();
+    this.convertedFilter = new OrDimFilter(makeBoundDimFilters());
   }
 
   @JsonProperty
@@ -80,15 +85,8 @@ public class IntervalDimFilter implements DimFilter
   {
     byte[] dimensionBytes = StringUtils.toUtf8(dimension);
 
-    final byte[][] intervalsBytes = new byte[intervals.size()][];
-    int intervalsBytesSize = 0;
-    int index = 0;
-    for (Interval interval : intervals) {
-      intervalsBytes[index] = StringUtils.toUtf8(interval.toString());
-      intervalsBytesSize += intervalsBytes[index].length + 1;
-      ++index;
-    }
     byte[] extractionFnBytes = extractionFn == null ? new byte[0] : extractionFn.getCacheKey();
+    int intervalsBytesSize = intervalLongs.size() * Longs.BYTES * 2 + intervalLongs.size();
 
     ByteBuffer filterCacheKey = ByteBuffer.allocate(3
                                                     + dimensionBytes.length
@@ -99,8 +97,9 @@ public class IntervalDimFilter implements DimFilter
                                           .put(DimFilterUtils.STRING_SEPARATOR)
                                           .put(extractionFnBytes)
                                           .put(DimFilterUtils.STRING_SEPARATOR);
-    for (byte[] bytes : intervalsBytes) {
-      filterCacheKey.put(bytes)
+    for (Pair<Long, Long> interval : intervalLongs) {
+      filterCacheKey.put(Longs.toByteArray(interval.lhs))
+                    .put(Longs.toByteArray(interval.rhs))
                     .put((byte) 0xFF);
     }
     return filterCacheKey.array();
@@ -115,13 +114,13 @@ public class IntervalDimFilter implements DimFilter
   @Override
   public Filter toFilter()
   {
-    return new OrDimFilter(boundDimFilters).toFilter();
+    return convertedFilter.toFilter();
   }
 
   @Override
   public RangeSet<String> getDimensionRangeSet(String dimension)
   {
-    return null;
+    return convertedFilter.getDimensionRangeSet(dimension);
   }
 
   @Override
@@ -157,16 +156,25 @@ public class IntervalDimFilter implements DimFilter
     return result;
   }
 
+  private List<Pair<Long, Long>> makeIntervalLongs()
+  {
+    List<Pair<Long, Long>> intervalLongs = new ArrayList<>();
+    for (Interval interval : intervals) {
+      intervalLongs.add(new Pair<Long, Long>(interval.getStartMillis(), interval.getEndMillis()));
+    }
+    return intervalLongs;
+  }
+
   private List<DimFilter> makeBoundDimFilters()
   {
     List<DimFilter> boundDimFilters = new ArrayList<>();
-    for (Interval interval : intervals) {
+    for (Pair<Long, Long> interval : intervalLongs) {
       BoundDimFilter boundDimFilter = new BoundDimFilter(
           dimension,
-          String.valueOf(interval.getStartMillis()),
-          String.valueOf(interval.getEndMillis()),
+          String.valueOf(interval.lhs),
+          String.valueOf(interval.rhs),
           false,
-          false,
+          true,
           null,
           extractionFn,
           StringComparators.NUMERIC

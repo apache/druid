@@ -221,7 +221,7 @@ The following query expresses:
           }
         ]
       },
-      "aggregator" :     {
+      "aggregator" : {
         "type": "thetaSketch", "name": "A_unique_users_week_2", "fieldName": "user_id_sketch"
       }
     },
