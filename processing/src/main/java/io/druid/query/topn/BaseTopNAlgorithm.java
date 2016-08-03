@@ -196,6 +196,10 @@ public abstract class BaseTopNAlgorithm<DimValSelector, DimValAggregateStore, Pa
       ignoreAfterThreshold = false;
       ignoreFirstN = 0;
       keepOnlyN = dimSelector.getValueCardinality();
+
+      if (keepOnlyN < 0) {
+        throw new UnsupportedOperationException("Cannot operate on a dimension with no dictionary");
+      }
     }
 
     @Override

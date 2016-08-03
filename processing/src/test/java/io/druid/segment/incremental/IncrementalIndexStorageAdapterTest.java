@@ -143,10 +143,10 @@ public class IncrementalIndexStorageAdapterTest
     Assert.assertEquals(2, results.size());
 
     MapBasedRow row = (MapBasedRow) results.get(0);
-    Assert.assertEquals(ImmutableMap.of("billy", "hi", "cnt", 1L), row.getEvent());
+    Assert.assertEquals(ImmutableMap.of("sally", "bo", "cnt", 1L), row.getEvent());
 
     row = (MapBasedRow) results.get(1);
-    Assert.assertEquals(ImmutableMap.of("sally", "bo", "cnt", 1L), row.getEvent());
+    Assert.assertEquals(ImmutableMap.of("billy", "hi", "cnt", 1L), row.getEvent());
   }
 
   @Test

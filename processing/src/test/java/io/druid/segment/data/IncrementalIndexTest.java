@@ -48,7 +48,11 @@ import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
+import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
+import io.druid.query.filter.BoundDimFilter;
+import io.druid.query.filter.SelectorDimFilter;
+import io.druid.query.ordering.StringComparators;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesQueryEngine;
 import io.druid.query.timeseries.TimeseriesQueryQueryToolChest;
@@ -287,6 +291,48 @@ public class IncrementalIndexTest
     Assert.assertEquals(timestamp, row.getTimestampFromEpoch());
     Assert.assertEquals(Arrays.asList("3"), row.getDimension("dim1"));
     Assert.assertEquals(Arrays.asList("4"), row.getDimension("dim2"));
+  }
+
+  @Test
+  public void testFilteredAggregators() throws Exception
+  {
+    long timestamp = System.currentTimeMillis();
+    IncrementalIndex index = closer.closeLater(
+        indexCreator.createIndex(new AggregatorFactory[]{
+            new CountAggregatorFactory("count"),
+            new FilteredAggregatorFactory(
+                new CountAggregatorFactory("count_selector_filtered"),
+                new SelectorDimFilter("dim2", "2", null)
+            ),
+            new FilteredAggregatorFactory(
+                new CountAggregatorFactory("count_bound_filtered"),
+                new BoundDimFilter("dim2", "2", "3", false, true, null, null, StringComparators.NUMERIC)
+            )
+        })
+    );
+
+    populateIndex(timestamp, index);
+    Assert.assertEquals(Arrays.asList("dim1", "dim2"), index.getDimensionNames());
+    Assert.assertEquals(
+        Arrays.asList("count", "count_selector_filtered", "count_bound_filtered"),
+        index.getMetricNames()
+    );
+    Assert.assertEquals(2, index.size());
+
+    final Iterator<Row> rows = index.iterator();
+    Row row = rows.next();
+    Assert.assertEquals(timestamp, row.getTimestampFromEpoch());
+    Assert.assertEquals(Arrays.asList("1"), row.getDimension("dim1"));
+    Assert.assertEquals(Arrays.asList("2"), row.getDimension("dim2"));
+    Assert.assertEquals(1L, row.getLongMetric("count"));
+    Assert.assertEquals(1L, row.getLongMetric("count_selector_filtered"));
+    Assert.assertEquals(1L, row.getLongMetric("count_bound_filtered"));
+
+    row = rows.next();
+    Assert.assertEquals(timestamp, row.getTimestampFromEpoch());
+    Assert.assertEquals(1L, row.getLongMetric("count"));
+    Assert.assertEquals(0L, row.getLongMetric("count_selector_filtered"));
+    Assert.assertEquals(0L, row.getLongMetric("count_bound_filtered"));
   }
 
   @Test
