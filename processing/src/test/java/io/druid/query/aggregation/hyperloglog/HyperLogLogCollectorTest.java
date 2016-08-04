@@ -316,11 +316,11 @@ public class HyperLogLogCollectorTest
     ByteBuffer buffer = ByteBuffer.allocate(HyperLogLogCollector.getLatestNumBytesForDenseStorage());
     HyperLogLogCollector collector = HyperLogLogCollector.makeCollector(buffer.duplicate());
 
-    // make sure the original buffer gets modified
+    // make sure the original buffer gets modified (this is not always valid assumption)
     collector.fold(biggerOffset);
     Assert.assertEquals(collector, HyperLogLogCollector.makeCollector(buffer.duplicate()));
 
-    // make sure the original buffer gets modified
+    // make sure the original buffer gets modified (this is not always valid assumption)
     collector.fold(smallerOffset);
     Assert.assertEquals(collector, HyperLogLogCollector.makeCollector(buffer.duplicate()));
   }
