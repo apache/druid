@@ -56,6 +56,9 @@ import java.util.Map;
 @Path("/druid/v3/")
 public class QueryResourceV3 extends QueryResource
 {
+  public static final String KEY_RESULT = "result";
+  public static final String KEY_CONTEXT = "context";
+
   private final ServiceEmitter emitter;
   private final ObjectMapper jsonMapper;
   private final RequestLogger requestLogger;
@@ -107,8 +110,8 @@ public class QueryResourceV3 extends QueryResource
                     jsonWriter.writeValue(
                         os,
                         ImmutableMap.of(
-                            "result", yielder,
-                            "context", responseContext
+                            KEY_RESULT, yielder,
+                            KEY_CONTEXT, responseContext
                         )
                     );
                   } finally {
