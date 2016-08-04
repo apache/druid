@@ -64,7 +64,7 @@ public class DataSegmentUtils
       return null;
     }
     String remaining = identifier.substring(dataSource.length() + 1);
-    String[] splits = remaining.split(DataSegment.delimiter);
+    String[] splits = remaining.split(DataSegment.DELIMITER);
     if (splits.length < 3) {
       LOGGER.info("Invalid identifier %s", identifier);
       return null;
@@ -74,7 +74,7 @@ public class DataSegmentUtils
     DateTime start = formatter.parseDateTime(splits[0]);
     DateTime end = formatter.parseDateTime(splits[1]);
     String version = splits[2];
-    String trail = splits.length > 3 ? join(splits, DataSegment.delimiter, 3, splits.length) : null;
+    String trail = splits.length > 3 ? join(splits, DataSegment.DELIMITER, 3, splits.length) : null;
 
     return new SegmentIdentifierParts(
         dataSource,
@@ -169,7 +169,7 @@ public class DataSegmentUtils
     {
       return join(
           new Object[]{dataSource, interval.getStart(), interval.getEnd(), version, trail},
-          DataSegment.delimiter, 0, version == null ? 3 : trail == null ? 4 : 5
+          DataSegment.DELIMITER, 0, version == null ? 3 : trail == null ? 4 : 5
       );
     }
   }
