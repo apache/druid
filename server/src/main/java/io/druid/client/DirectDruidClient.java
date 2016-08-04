@@ -105,13 +105,16 @@ public class DirectDruidClient<T> implements QueryRunner<T>
   private final AtomicInteger openConnections;
   private final boolean isSmile;
 
+  private final boolean useV3QueryUrl;
+
   public DirectDruidClient(
       QueryToolChestWarehouse warehouse,
       QueryWatcher queryWatcher,
       ObjectMapper objectMapper,
       HttpClient httpClient,
       String host,
-      ServiceEmitter emitter
+      ServiceEmitter emitter,
+      boolean useV3QueryUrl
   )
   {
     this.warehouse = warehouse;
@@ -120,6 +123,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     this.httpClient = httpClient;
     this.host = host;
     this.emitter = emitter;
+    this.useV3QueryUrl = useV3QueryUrl;
 
     this.isSmile = this.objectMapper.getFactory() instanceof SmileFactory;
     this.openConnections = new AtomicInteger();
@@ -155,7 +159,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
     }
 
     final ListenableFuture<InputStream> future;
-    final String url = String.format("http://%s/druid/v2/", host);
+    final String url = String.format("http://%s/druid/%s/", host, useV3QueryUrl ? "v3" : "v2");
     final String cancelUrl = String.format("http://%s/druid/v2/%s", host, query.getId());
 
     try {
@@ -385,22 +389,42 @@ public class DirectDruidClient<T> implements QueryRunner<T>
       throw Throwables.propagate(e);
     }
 
-    Sequence<T> retVal = new BaseSequence<>(
-        new BaseSequence.IteratorMaker<T, JsonParserIterator<T>>()
-        {
-          @Override
-          public JsonParserIterator<T> make()
+    Sequence<T> retVal;
+    if (useV3QueryUrl) {
+      retVal = new BaseSequence<>(
+          new BaseSequence.IteratorMaker<T, JsonParserV3ResponseIterator<T>>()
           {
-            return new JsonParserIterator<T>(typeRef, future, url);
-          }
+            @Override
+            public JsonParserV3ResponseIterator<T> make()
+            {
+              return new JsonParserV3ResponseIterator<T>(typeRef, future, url, objectMapper, host, context);
+            }
 
-          @Override
-          public void cleanup(JsonParserIterator<T> iterFromMake)
-          {
-            CloseQuietly.close(iterFromMake);
+            @Override
+            public void cleanup(JsonParserV3ResponseIterator<T> iterFromMake)
+            {
+              CloseQuietly.close(iterFromMake);
+            }
           }
-        }
-    );
+      );
+    } else {
+      retVal = new BaseSequence<>(
+          new BaseSequence.IteratorMaker<T, JsonParserIterator<T>>()
+          {
+            @Override
+            public JsonParserIterator<T> make()
+            {
+              return new JsonParserIterator<T>(typeRef, future, url);
+            }
+
+            @Override
+            public void cleanup(JsonParserIterator<T> iterFromMake)
+            {
+              CloseQuietly.close(iterFromMake);
+            }
+          }
+      );
+    }
 
     // bySegment queries are de-serialized after caching results in order to
     // avoid the cost of de-serializing and then re-serializing again when adding to cache
@@ -554,7 +578,6 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           Map<String, Object> ctx = objectCodec.readValue(jp, Map.class);
           responseContext.put(host, ctx);
           jp.nextToken(); //read off END_OBJECT token
-          jp.close();
         } catch (IOException ex) {
           throw Throwables.propagate(ex);
         }

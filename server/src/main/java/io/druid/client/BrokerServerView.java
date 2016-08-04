@@ -44,7 +44,6 @@ import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.PartitionChunk;
 
-import javax.annotation.Nullable;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.concurrent.ConcurrentMap;
@@ -72,6 +71,8 @@ public class BrokerServerView implements TimelineServerView
   private final ServiceEmitter emitter;
   private final Predicate<Pair<DruidServerMetadata, DataSegment>> segmentFilter;
 
+  private final DirectDruidClientConfig directDruidClientConfig;
+
   private volatile boolean initialized = false;
 
   @Inject
@@ -83,7 +84,8 @@ public class BrokerServerView implements TimelineServerView
       FilteredServerInventoryView baseView,
       TierSelectorStrategy tierSelectorStrategy,
       ServiceEmitter emitter,
-      final BrokerSegmentWatcherConfig segmentWatcherConfig
+      final BrokerSegmentWatcherConfig segmentWatcherConfig,
+      final DirectDruidClientConfig directDruidClientConfig
   )
   {
     this.warehouse = warehouse;
@@ -93,6 +95,7 @@ public class BrokerServerView implements TimelineServerView
     this.baseView = baseView;
     this.tierSelectorStrategy = tierSelectorStrategy;
     this.emitter = emitter;
+    this.directDruidClientConfig = directDruidClientConfig;
     this.clients = Maps.newConcurrentMap();
     this.selectors = Maps.newHashMap();
     this.timelines = Maps.newHashMap();
@@ -200,7 +203,15 @@ public class BrokerServerView implements TimelineServerView
 
   private DirectDruidClient makeDirectClient(DruidServer server)
   {
-    return new DirectDruidClient(warehouse, queryWatcher, smileMapper, httpClient, server.getHost(), emitter);
+    return new DirectDruidClient(
+        warehouse,
+        queryWatcher,
+        smileMapper,
+        httpClient,
+        server.getHost(),
+        emitter,
+        directDruidClientConfig.isUseV3QueryUrl()
+    );
   }
 
   private QueryableDruidServer removeServer(DruidServer server)
