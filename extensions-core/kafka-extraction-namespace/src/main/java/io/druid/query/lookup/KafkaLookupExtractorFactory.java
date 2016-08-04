@@ -321,11 +321,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
       return false;
     }
 
-    if (other == null) {
-      return false;
-    }
-
-    if (getClass() != other.getClass()) {
+    if (other == null || getClass() != other.getClass()) {
       return true;
     }
 
