@@ -195,6 +195,9 @@ public class KafkaLookupExtractorFactoryTest
         TOPIC,
         DEFAULT_PROPERTIES
     );
+
+    Assert.assertTrue(factory.replaces(null));
+
     Assert.assertTrue(factory.replaces(new MapLookupExtractorFactory(ImmutableMap.<String, String>of(), false)));
     Assert.assertFalse(factory.replaces(factory));
     Assert.assertFalse(factory.replaces(new KafkaLookupExtractorFactory(
