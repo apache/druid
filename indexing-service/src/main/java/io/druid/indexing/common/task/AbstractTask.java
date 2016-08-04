@@ -39,6 +39,13 @@ import java.util.Map;
 public abstract class AbstractTask implements Task
 {
   private static final Joiner ID_JOINER = Joiner.on("_");
+  public static final int REALTIME_TASK_PRIORITY = 75;
+  public static final int INDEX_TASK_PRIORITY = 50;
+  public static final int MERGE_TASK_PRIORITY = 25;
+  public static final int DEFAULT_TASK_PRIORITY = 0;
+  // Number of segments to operate on at a time in critical section before downgrading and upgrading the lock again
+  // applicable for Archive, Restore, Move and Kill Task
+  protected static final int DEFAULT_BATCH_SIZE = 20;
 
   @JsonIgnore
   private final String id;
@@ -52,6 +59,7 @@ public abstract class AbstractTask implements Task
   @JsonIgnore
   private final String dataSource;
 
+  @JsonIgnore
   private final Map<String, Object> context;
 
   protected AbstractTask(String id, String dataSource, Map<String, Object> context)
@@ -102,6 +110,27 @@ public abstract class AbstractTask implements Task
   public String getGroupId()
   {
     return groupId;
+  }
+
+  /**
+   * {@inheritDoc}
+   * */
+  @JsonIgnore
+  @Override
+  public int getLockPriority() {
+    return getLockPriority(DEFAULT_TASK_PRIORITY);
+  }
+
+  protected int getLockPriority(int defaultPriority) {
+    return getContextValue("lockPriority") == null ? defaultPriority:
+           Integer.parseInt(getContextValue("lockPriority").toString());
+  }
+
+  @JsonIgnore
+  public int getBatchSize() {
+    return getContextValue("batchSize") == null ? DEFAULT_BATCH_SIZE :
+           (Integer.parseInt(getContextValue("batchSize").toString()) > 0 ?
+            Integer.parseInt(getContextValue("batchSize").toString()) : DEFAULT_BATCH_SIZE);
   }
 
   @JsonProperty("resource")
@@ -156,6 +185,7 @@ public abstract class AbstractTask implements Task
                   .add("id", id)
                   .add("type", getType())
                   .add("dataSource", dataSource)
+                  .add("lockPriority", getLockPriority())
                   .toString();
   }
 
@@ -174,6 +204,11 @@ public abstract class AbstractTask implements Task
   public TaskStatus success()
   {
     return TaskStatus.success(getId());
+  }
+
+  public TaskStatus failure()
+  {
+    return TaskStatus.failure(getId());
   }
 
   @Override

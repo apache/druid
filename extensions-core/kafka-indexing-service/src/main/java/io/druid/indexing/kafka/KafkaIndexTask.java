@@ -52,7 +52,9 @@ import io.druid.indexing.appenderator.ActionBasedUsedSegmentChecker;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.SegmentTransactionalInsertAction;
+import io.druid.indexing.common.actions.SetLockCriticalStateAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.common.actions.TaskLockCriticalState;
 import io.druid.indexing.common.task.AbstractTask;
 import io.druid.indexing.common.task.TaskResource;
 import io.druid.query.DruidMetrics;
@@ -229,6 +231,12 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
   public KafkaIOConfig getIOConfig()
   {
     return ioConfig;
+  }
+
+  @Override
+  public int getLockPriority()
+  {
+    return getLockPriority(REALTIME_TASK_PRIORITY);
   }
 
   @Override
@@ -481,6 +489,12 @@ public class KafkaIndexTask extends AbstractTask implements ChatHandler
           // Sanity check, we should only be publishing things that match our desired end state.
           if (!endOffsets.equals(finalPartitions.getPartitionOffsetMap())) {
             throw new ISE("WTF?! Driver attempted to publish invalid metadata[%s].", commitMetadata);
+          }
+
+          // Upgrade TaskLocks for all segments
+          for (DataSegment segment: segments) {
+            toolbox.getTaskActionClient().submit(new SetLockCriticalStateAction(segment.getInterval(),
+                                                                                TaskLockCriticalState.UPGRADE));
           }
 
           final SegmentTransactionalInsertAction action;

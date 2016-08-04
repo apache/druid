@@ -55,6 +55,14 @@ public interface TaskStorage
   public void addLock(String taskid, TaskLock taskLock);
 
   /**
+   * Sets the lock state in the storage facility to {@param taskLock} for task with id {@param taskid}
+   * @param taskid task ID
+   * @param taskLock taskLock to set for the give {@param taskid}
+   * @throws com.metamx.common.ISE if there is no TaskLock with isUpgraded field set to opposite of what is in {@param taskLock}
+   */
+  public void setLock(String taskid, TaskLock taskLock);
+
+  /**
    * Removes lock state from the storage facility. It is harmless to keep old locks in the storage facility, but
    * this method can help reclaim wasted space.
    *

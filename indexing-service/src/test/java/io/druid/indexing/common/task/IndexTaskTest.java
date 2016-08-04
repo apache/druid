@@ -32,6 +32,7 @@ import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.actions.LockListAction;
+import io.druid.indexing.common.actions.SetLockCriticalStateAction;
 import io.druid.indexing.common.actions.TaskAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -228,21 +229,23 @@ public class IndexTaskTest
 
     indexTask.run(
         new TaskToolbox(
-            null, null, new TaskActionClient()
-        {
-          @Override
-          public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
-          {
-            if (taskAction instanceof LockListAction) {
-              return (RetType) Arrays.asList(
-                  new TaskLock(
-                      "", "", null, new DateTime().toString()
-                  )
-              );
-            }
-            return null;
-          }
-        }, null, new DataSegmentPusher()
+            null, indexTask, new TaskActionClient()
+            {
+              @Override
+              public <RetType> RetType submit(TaskAction<RetType> taskAction) throws IOException
+              {
+                if (taskAction instanceof LockListAction) {
+                  return (RetType) Arrays.asList(
+                      new TaskLock(
+                          "", "", null, new DateTime().toString(), indexTask.getLockPriority(), false
+                      )
+                  );
+                } else if (taskAction instanceof SetLockCriticalStateAction) {
+                  return (RetType) new Boolean(true);
+                }
+                return null;
+              }
+            }, null, new DataSegmentPusher()
         {
           @Deprecated
           @Override

@@ -26,26 +26,45 @@ import org.joda.time.Interval;
 
 /**
  * Represents a lock held by some task. Immutable.
+ *
  */
 public class TaskLock
 {
+  /**
+   * Represents the groupdId for the lock, tasks having same groupdId can share TaskLock
+   * */
   private final String groupId;
   private final String dataSource;
   private final Interval interval;
+  /**
+   * This version will be used to publish the segments
+   * */
   private final String version;
+  /**
+   * Priority used for acquiring the lock, value depends on the task type
+   * */
+  private final int priority;
+  /**
+   * If false this lock can be revoked by a higher priority TaskLock otherwise not
+   * */
+  private final boolean upgraded;
 
   @JsonCreator
   public TaskLock(
       @JsonProperty("groupId") String groupId,
       @JsonProperty("dataSource") String dataSource,
       @JsonProperty("interval") Interval interval,
-      @JsonProperty("version") String version
+      @JsonProperty("version") String version,
+      @JsonProperty("priority") int priority,
+      @JsonProperty("upgraded") boolean upgraded
   )
   {
     this.groupId = groupId;
     this.dataSource = dataSource;
     this.interval = interval;
     this.version = version;
+    this.priority = priority;
+    this.upgraded = upgraded;
   }
 
   @JsonProperty
@@ -72,6 +91,29 @@ public class TaskLock
     return version;
   }
 
+  @JsonProperty
+  public int getPriority()
+  {
+    return priority;
+  }
+
+  @JsonProperty
+  public boolean isUpgraded()
+  {
+    return upgraded;
+  }
+
+  public TaskLock withUpgraded(boolean upgraded) {
+    return new TaskLock(
+        getGroupId(),
+        getDataSource(),
+        getInterval(),
+        getVersion(),
+        getPriority(),
+        upgraded
+    );
+  }
+
   @Override
   public boolean equals(Object o)
   {
@@ -82,14 +124,16 @@ public class TaskLock
       return Objects.equal(this.groupId, x.groupId) &&
              Objects.equal(this.dataSource, x.dataSource) &&
              Objects.equal(this.interval, x.interval) &&
-             Objects.equal(this.version, x.version);
+             Objects.equal(this.version, x.version) &&
+             Objects.equal(this.priority, x.priority) &&
+             Objects.equal(this.upgraded, x.upgraded); // added priority and upgraded to equals check
     }
   }
 
   @Override
   public int hashCode()
   {
-    return Objects.hashCode(groupId, dataSource, interval, version);
+    return Objects.hashCode(groupId, dataSource, interval, version, priority, upgraded);
   }
 
   @Override
@@ -100,6 +144,8 @@ public class TaskLock
                   .add("dataSource", dataSource)
                   .add("interval", interval)
                   .add("version", version)
+                  .add("priority", priority)
+                  .add("upgraded", upgraded)
                   .toString();
   }
 }

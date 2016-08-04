@@ -27,13 +27,16 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import com.metamx.common.ISE;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
+import io.druid.indexing.common.actions.SetLockCriticalStateAction;
 import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.common.actions.TaskLockCriticalState;
 import io.druid.segment.IndexIO;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.loading.SegmentLoadingException;
@@ -59,7 +62,6 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
   private static final Integer CURR_VERSION_INTEGER = IndexIO.CURRENT_VERSION_ID;
 
   private static final Logger log = new Logger(ConvertSegmentTask.class);
-
   @JsonIgnore
   private final DataSegment segment;
   private final IndexSpec indexSpec;
@@ -350,7 +352,7 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
     public TaskStatus run(TaskToolbox toolbox) throws Exception
     {
       log.info("Subs are good!  Italian BMT and Meatball are probably my favorite.");
-      convertSegment(toolbox, segment, indexSpec, force, validate);
+      convertSegment(toolbox, segment, indexSpec, force, validate, getInterval());
       return success();
     }
   }
@@ -360,7 +362,8 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
       final DataSegment segment,
       IndexSpec indexSpec,
       boolean force,
-      boolean validate
+      boolean validate,
+      Interval interval // needed to upgrade/downgrade lock, cannot use segment interval as it might be subset of interval for ConvertSegmentTask
   )
       throws SegmentLoadingException, IOException
   {
@@ -392,9 +395,17 @@ public class ConvertSegmentTask extends AbstractFixedIntervalTask
       DataSegment updatedSegment = segment.withVersion(String.format("%s_v%s", segment.getVersion(), outVersion));
       updatedSegment = toolbox.getSegmentPusher().push(outLocation, updatedSegment);
 
-      actionClient.submit(new SegmentInsertAction(Sets.newHashSet(updatedSegment)));
+      if (toolbox.getTaskActionClient().submit(new SetLockCriticalStateAction(interval, TaskLockCriticalState.UPGRADE))) {
+        actionClient.submit(new SegmentInsertAction(Sets.newHashSet(updatedSegment)));
+        log.info("Conversion successful for segment[%s], updated segment - [%s]", segment, updatedSegment);
+      } else {
+        throw new ISE("Lock upgrade failed for interval [%s] !!", interval);
+      }
+      if (!toolbox.getTaskActionClient().submit(new SetLockCriticalStateAction(interval, TaskLockCriticalState.DOWNGRADE))) {
+        throw new ISE("Lock downgrade failed for interval [%s] !!", interval);
+      }
     } else {
-      log.info("Conversion failed.");
+      log.error("Conversion failed for [%s]", segment);
     }
   }
 }

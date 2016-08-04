@@ -103,6 +103,14 @@ public interface MetadataStorageActionHandler<EntryType, StatusType, LogType, Lo
   public boolean addLock(String entryId, LockType lock);
 
   /**
+   * Sets the lock with {@param lockId} to {@param lock}
+   *
+   * @param lockId lock id
+   * @return true if lock was set
+   * */
+  public boolean setLock(long lockId, LockType lock);
+
+  /**
    * Remove the lock with the given lock id.
    *
    * @param lockId lock id

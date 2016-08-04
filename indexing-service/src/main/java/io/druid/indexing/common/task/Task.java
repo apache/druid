@@ -70,6 +70,26 @@ public interface Task
   public String getId();
 
   /**
+   * Returns lock priority of this task. Lock priority is used for acquiring lock on an interval for a datasource.
+   * Task with higher lock priority override the task with lower lock priority for overlapping interval for a datasource if ran concurrently.
+   *
+   * Tasks with no lock priority set will have the respective default priorities as per the task type
+   *  - Default lock priorities for task
+   *    - Realtime Index Task - 75
+   *    - Hadoop/Index Task - 50
+   *    - Merge/Append Task - 25
+   *    - Other Tasks - 0
+   * Higher the number, higher the priority. Default priority can be overridden by setting context in task json like this -
+   *
+   *  "context" {
+   *    "lockPriority" : "80"
+   *  }
+   *
+   * @return task lock priority
+   * */
+  public int getLockPriority();
+
+  /**
    * Returns group ID of this task. Tasks with the same group ID can share locks. If tasks do not need to share locks,
    * a common convention is to set group ID equal to task ID.
    *

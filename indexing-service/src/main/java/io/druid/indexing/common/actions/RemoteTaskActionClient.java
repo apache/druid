@@ -122,7 +122,7 @@ public class RemoteTaskActionClient implements TaskActionClient
           // Want to retry, so throw an IOException.
           throw new IOException(
               String.format(
-                  "Scary HTTP status returned: %s. Check your overlord[%s] logs for exceptions.",
+                  "Scary HTTP status returned: %s. Check your overlord [%s] logs for exceptions.",
                   response.getStatus(),
                   server.getHost()
               )

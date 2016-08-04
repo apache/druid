@@ -70,6 +70,11 @@ public abstract class HadoopTask extends AbstractTask
     this.hadoopDependencyCoordinates = hadoopDependencyCoordinates;
   }
 
+  @Override
+  public int getLockPriority() {
+    return getLockPriority(INDEX_TASK_PRIORITY);
+  }
+
   public List<String> getHadoopDependencyCoordinates()
   {
     return hadoopDependencyCoordinates == null ? null : ImmutableList.copyOf(hadoopDependencyCoordinates);

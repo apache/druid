@@ -46,6 +46,8 @@ import io.druid.granularity.QueryGranularity;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
+import io.druid.indexing.common.actions.SetLockCriticalStateAction;
+import io.druid.indexing.common.actions.TaskLockCriticalState;
 import io.druid.indexing.common.index.YeOldePlumberSchool;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
 import io.druid.segment.IndexSpec;
@@ -71,6 +73,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -177,6 +180,11 @@ public class IndexTask extends AbstractFixedIntervalTask
   }
 
   @Override
+  public int getLockPriority() {
+    return getLockPriority(INDEX_TASK_PRIORITY);
+  }
+
+  @Override
   public String getType()
   {
     return "index";
@@ -194,7 +202,14 @@ public class IndexTask extends AbstractFixedIntervalTask
     final GranularitySpec granularitySpec = ingestionSchema.getDataSchema().getGranularitySpec();
     final int targetPartitionSize = ingestionSchema.getTuningConfig().getTargetPartitionSize();
 
-    final TaskLock myLock = Iterables.getOnlyElement(getTaskLocks(toolbox));
+    final TaskLock myLock;
+    // Confirm we have a lock and it has not been revoked by a higher priority task
+    try {
+      myLock = Iterables.getOnlyElement(getTaskLocks(toolbox));
+    } catch (NoSuchElementException e) {
+      throw new ISE("No valid lock found, dying now !! Is there a higher priority task running that may have revoked this lock ?");
+    }
+
     final Set<DataSegment> segments = Sets.newHashSet();
 
     final Set<Interval> validIntervals = Sets.intersection(granularitySpec.bucketIntervals().get(), getDataIntervals());
@@ -228,8 +243,12 @@ public class IndexTask extends AbstractFixedIntervalTask
         segments.add(segment);
       }
     }
-    toolbox.publishSegments(segments);
-    return TaskStatus.success(getId());
+    if (toolbox.getTaskActionClient().submit(new SetLockCriticalStateAction(getInterval(), TaskLockCriticalState.UPGRADE))) {
+      toolbox.publishSegments(segments);
+      return TaskStatus.success(getId());
+    } else {
+      throw new ISE("Lock upgrade failed for interval [%s] !!", getInterval());
+    }
   }
 
   private SortedSet<Interval> getDataIntervals() throws IOException

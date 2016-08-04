@@ -89,8 +89,33 @@ The Index Task is a simpler variation of the Index Hadoop task that is designed 
 |property|description|required?|
 |--------|-----------|---------|
 |type|The task type, this should always be "index".|yes|
-|id|The task ID. If this is not explicitly specified, Druid generates the task ID using the name of the task file and date-time stamp. |no|
+|id|The task ID. If this is not explicitly specified, Druid generates the task ID using task type, data source name, interval, date-time stamp. |no|
 |spec|The ingestion spec. See below for more details. |yes|
+
+#### Task Priority
+
+This is applicable only when this feature is enabled by setting `druid.indexer.taskLockboxVersion` to `v2`.
+Task priority is used for acquiring a lock on an interval for a datasource.
+Tasks with higher priority can preempt lower-priority tasks for the same datasource and interval if ran concurrently.
+Priority order for different task types - Realtime Index Task > Hadoop/Index Task > Merge/Append Task > Other Tasks.
+Tasks of same priority cannot preempt one another.
+   - Default lock priorities for task
+       - Realtime Index Task - 75
+       - Hadoop/Index Task - 50
+       - Merge/Append Task - 25
+       - Other Tasks - 0
+
+Higher the number, higher the priority. Default priority can be overridden by setting context in task json like this -
+
+```
+"context" {
+    "lockPriority" : "80"
+}
+```
+
+For example, if a Hadoop Index task is running and a Realtime Index task starts that wants to publish a segment for the
+same (or overlapping) interval for the same datasource, then it will override the task locks of the Hadoop Index task.
+Consequently, the Hadoop Index task will fail before publishing the segment.
 
 #### DataSchema
 
@@ -270,8 +295,13 @@ These tasks start, sleep for a time and are used only for testing. The available
 
 Locking
 -------
-
-Once an overlord node accepts a task, a lock is created for the data source and interval specified in the task. 
-Tasks do not need to explicitly release locks, they are released upon task completion. Tasks may potentially release 
-locks early if they desire. Tasks ids are unique by naming them using UUIDs or the timestamp in which the task was created. 
+Once an overlord node accepts a task, a priority based lock is created for the data source and interval specified in the task,
+where priority is based on the task type. Tasks do not need to explicitly release locks, they are released upon task completion.
+Tasks may potentially release locks early if they desire or their lock can be overridden by a high priority task.
+Tasks ids are unique by naming them using UUIDs or the timestamp in which the task was created.
 Tasks are also part of a "task group", which is a set of tasks that can share interval locks.
+Before committing the work (publishing segments), tasks upgrade their lock, failing to do so will result in task failure.
+The task will be able to upgrade if no other higher priority task came along and revoked its lock.
+Upgraded lock indicates that this lock cannot be overridden and other tasks have to wait for lock release.
+Note - In case Priority based locking is disabled (i.e. `druid.indexer.taskLockboxVersion` is not set to `v2`) then all
+tasks will have the default priority of 0 and lock is created only for the data source and interval specified in the task.

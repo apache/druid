@@ -22,27 +22,81 @@ package io.druid.indexing.overlord;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import io.druid.indexing.common.TaskLock;
+import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.NoopTask;
 import io.druid.indexing.common.task.Task;
+import io.druid.jackson.DefaultObjectMapper;
+import io.druid.metadata.EntryExistsException;
+import io.druid.metadata.SQLMetadataStorageActionHandlerFactory;
+import io.druid.metadata.TestDerbyConnector;
+import junit.framework.Assert;
 import org.joda.time.Interval;
-import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
-import java.util.List;
+import java.util.Arrays;
+import java.util.Collection;
 
+@RunWith(Parameterized.class)
 public class TaskLockboxTest
 {
   private TaskStorage taskStorage;
-
   private TaskLockbox lockbox;
+  private String taskStorageType;
+  private String taskLockboxVersion;
+
+  @Rule
+  public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
+
+  private static final String HEAP_TASK_STORAGE = "HeapMemoryTaskStorage";
+  private static final String METADATA_TASK_STORAGE = "MetadataTaskStorage";
+  private static final String TASKLOCKBOX_V1 = "v1";
+  private static final String TASKLOCKBOX_V2 = "v2";
+
+  @Parameterized.Parameters(name = "taskStorageType={0}, taskLockboxVersion={1}")
+  public static Collection<String[]> constructFeed()
+  {
+    return Arrays.asList(new String[][]{
+        {HEAP_TASK_STORAGE, TASKLOCKBOX_V1},
+        {METADATA_TASK_STORAGE, TASKLOCKBOX_V1},
+        {HEAP_TASK_STORAGE, TASKLOCKBOX_V2},
+        {METADATA_TASK_STORAGE, TASKLOCKBOX_V2}
+    });
+  }
+
+  public TaskLockboxTest(String taskStorageType, String taskLockboxVersion)
+  {
+    this.taskStorageType = taskStorageType;
+    this.taskLockboxVersion = taskLockboxVersion;
+  }
 
   @Before
-  public void setUp()
-  {
-    taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
-    lockbox = new TaskLockbox(taskStorage);
+  public void setUp(){
+    if (taskStorageType.equals(HEAP_TASK_STORAGE)) {
+      taskStorage = new HeapMemoryTaskStorage(new TaskStorageConfig(null));
+    } else {
+      TestDerbyConnector testDerbyConnector = derbyConnectorRule.getConnector();
+      testDerbyConnector.createTaskTables();
+      testDerbyConnector.createSegmentTable();
+      taskStorage = new MetadataTaskStorage(
+          testDerbyConnector,
+          new TaskStorageConfig(null),
+          new SQLMetadataStorageActionHandlerFactory(
+              testDerbyConnector,
+              derbyConnectorRule.metadataTablesConfigSupplier().get(),
+              new DefaultObjectMapper()
+          )
+      );
+    }
+    if (taskLockboxVersion.equals(TASKLOCKBOX_V2)) {
+      lockbox = new TaskLockboxV2(taskStorage);
+    } else {
+      lockbox = new TaskLockboxV1(taskStorage);
+    }
   }
 
   @Test
@@ -69,14 +123,19 @@ public class TaskLockboxTest
   }
 
   @Test
-  public void testTryLock() throws InterruptedException
+  public void testTryLock() throws InterruptedException, EntryExistsException
   {
     Task task = NoopTask.create();
+    // add task to TaskStorage as well otherwise the task will be considered a zombie task as there will be
+    // an active lock without associate entry in TaskStorage. Thus, unit test will fail
+    taskStorage.insert(task, TaskStatus.running(task.getId()));
     lockbox.add(task);
     Assert.assertTrue(lockbox.tryLock(task, new Interval("2015-01-01/2015-01-03")).isPresent());
 
     // try to take lock for task 2 for overlapping interval
     Task task2 = NoopTask.create();
+    // add task to TaskStorage as well otherwise the task will be considered a zombie task and unit test will fail
+    taskStorage.insert(task2, TaskStatus.running(task2.getId()));
     lockbox.add(task2);
     Assert.assertFalse(lockbox.tryLock(task2, new Interval("2015-01-01/2015-01-02")).isPresent());
 

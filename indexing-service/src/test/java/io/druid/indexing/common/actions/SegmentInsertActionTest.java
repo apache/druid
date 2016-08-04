@@ -91,6 +91,7 @@ public class SegmentInsertActionTest
     final SegmentInsertAction action = new SegmentInsertAction(ImmutableSet.of(SEGMENT1, SEGMENT2));
     actionTestKit.getTaskLockbox().add(task);
     actionTestKit.getTaskLockbox().lock(task, new Interval(INTERVAL));
+    actionTestKit.getTaskLockbox().setTaskLockCriticalState(task, new Interval(INTERVAL), TaskLockCriticalState.UPGRADE);
     action.perform(task, actionTestKit.getTaskActionToolbox());
 
     Assert.assertEquals(
@@ -109,9 +110,9 @@ public class SegmentInsertActionTest
     final SegmentInsertAction action = new SegmentInsertAction(ImmutableSet.of(SEGMENT3));
     actionTestKit.getTaskLockbox().add(task);
     actionTestKit.getTaskLockbox().lock(task, new Interval(INTERVAL));
-
+    actionTestKit.getTaskLockbox().setTaskLockCriticalState(task, new Interval(INTERVAL), TaskLockCriticalState.UPGRADE);
     thrown.expect(IllegalStateException.class);
-    thrown.expectMessage(CoreMatchers.startsWith("Segments not covered by locks for task"));
+    thrown.expectMessage(CoreMatchers.startsWith("Segments not covered by upgraded locks for task"));
     final Set<DataSegment> segments = action.perform(task, actionTestKit.getTaskActionToolbox());
     Assert.assertEquals(ImmutableSet.of(SEGMENT3), segments);
   }

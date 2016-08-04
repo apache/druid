@@ -56,11 +56,12 @@ import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.MetadataTaskStorage;
 import io.druid.indexing.overlord.RemoteTaskRunnerFactory;
 import io.druid.indexing.overlord.TaskLockbox;
+import io.druid.indexing.overlord.TaskLockboxV1;
+import io.druid.indexing.overlord.TaskLockboxV2;
 import io.druid.indexing.overlord.TaskMaster;
 import io.druid.indexing.overlord.TaskRunnerFactory;
 import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.TaskStorageQueryAdapter;
-import io.druid.indexing.overlord.WorkerTaskRunner;
 import io.druid.indexing.overlord.autoscaling.PendingTaskBasedWorkerResourceManagementConfig;
 import io.druid.indexing.overlord.autoscaling.PendingTaskBasedWorkerResourceManagementStrategy;
 import io.druid.indexing.overlord.autoscaling.ResourceManagementSchedulerConfig;
@@ -141,7 +142,6 @@ public class CliOverlord extends ServerRunnable
 
             binder.bind(TaskActionClientFactory.class).to(LocalTaskActionClientFactory.class).in(LazySingleton.class);
             binder.bind(TaskActionToolbox.class).in(LazySingleton.class);
-            binder.bind(TaskLockbox.class).in(LazySingleton.class);
             binder.bind(TaskStorageQueryAdapter.class).in(LazySingleton.class);
 
             binder.bind(ChatHandlerProvider.class).toProvider(Providers.<ChatHandlerProvider>of(null));
@@ -149,6 +149,7 @@ public class CliOverlord extends ServerRunnable
             configureTaskStorage(binder);
             configureAutoscale(binder);
             configureRunners(binder);
+            bindTaskLockboxs(binder);
 
             binder.bind(AuditManager.class)
                   .toProvider(AuditManagerProvider.class)
@@ -231,6 +232,23 @@ public class CliOverlord extends ServerRunnable
             biddy.addBinding("simple").to(SimpleWorkerResourceManagementStrategy.class);
             biddy.addBinding("pendingTaskBased").to(PendingTaskBasedWorkerResourceManagementStrategy.class);
 
+          }
+
+          private void bindTaskLockboxs(Binder binder)
+          {
+            PolyBind.createChoice(
+                binder, "druid.indexer.taskLockboxVersion", Key.get(TaskLockbox.class), Key.get(TaskLockboxV1.class)
+            );
+            final MapBinder<String, TaskLockbox> storageBinder = PolyBind.optionBinder(
+                binder,
+                Key.get(TaskLockbox.class)
+            );
+
+            storageBinder.addBinding("v1").to(TaskLockboxV1.class);
+            binder.bind(TaskLockboxV1.class).in(LazySingleton.class);
+
+            storageBinder.addBinding("v2").to(TaskLockboxV2.class).in(ManageLifecycle.class);
+            binder.bind(TaskLockboxV2.class).in(LazySingleton.class);
           }
         },
         new IndexingServiceFirehoseModule(),

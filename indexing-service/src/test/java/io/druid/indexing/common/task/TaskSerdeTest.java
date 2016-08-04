@@ -111,6 +111,7 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getInterval(), task2.getInterval());
     Assert.assertTrue(task.getIngestionSchema().getIOConfig().getFirehoseFactory() instanceof LocalFirehoseFactory);
     Assert.assertTrue(task2.getIngestionSchema().getIOConfig().getFirehoseFactory() instanceof LocalFirehoseFactory);
+    Assert.assertEquals(AbstractTask.INDEX_TASK_PRIORITY, task2.getLockPriority());
   }
 
   @Test
@@ -209,6 +210,7 @@ public class TaskSerdeTest
     Assert.assertEquals(new Interval("2010-01-01/P1D"), task3.getInterval());
     Assert.assertEquals(segments, task3.getSegments());
     Assert.assertEquals(aggregators, task3.getAggregators());
+    Assert.assertEquals(AbstractTask.MERGE_TASK_PRIORITY, task2.getLockPriority());
   }
 
   @Test
@@ -241,6 +243,7 @@ public class TaskSerdeTest
 
     Assert.assertEquals("foo", task3.getDataSource());
     Assert.assertEquals(new Interval("2010-01-01/P1D"), task3.getInterval());
+    Assert.assertEquals(AbstractTask.DEFAULT_TASK_PRIORITY, task2.getLockPriority());
   }
 
   @Test
@@ -267,6 +270,7 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
     Assert.assertEquals(task.getInterval(), task2.getInterval());
     Assert.assertEquals(task.getSegment(), task.getSegment());
+    Assert.assertEquals(AbstractTask.DEFAULT_TASK_PRIORITY, task2.getLockPriority());
   }
 
   @Test
@@ -293,6 +297,7 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
     Assert.assertEquals(task.getSegment(), task2.getSegment());
+    Assert.assertEquals(AbstractTask.DEFAULT_TASK_PRIORITY, task2.getLockPriority());
   }
 
   @Test
@@ -376,6 +381,7 @@ public class TaskSerdeTest
         task.getRealtimeIngestionSchema().getDataSchema().getGranularitySpec().getSegmentGranularity(),
         task2.getRealtimeIngestionSchema().getDataSchema().getGranularitySpec().getSegmentGranularity()
     );
+    Assert.assertEquals(AbstractTask.REALTIME_TASK_PRIORITY, task2.getLockPriority());
   }
 
   @Test
@@ -427,6 +433,7 @@ public class TaskSerdeTest
     Assert.assertEquals(new Interval("2010-01-01/P2D"), task3.getInterval());
     Assert.assertEquals(task3.getSegments(), segments);
     Assert.assertEquals(task.getAggregators(), task2.getAggregators());
+    Assert.assertEquals(AbstractTask.MERGE_TASK_PRIORITY, task2.getLockPriority());
   }
 
   @Test
@@ -451,6 +458,7 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
     Assert.assertEquals(task.getInterval(), task2.getInterval());
+    Assert.assertEquals(AbstractTask.DEFAULT_TASK_PRIORITY, task2.getLockPriority());
   }
 
   @Test
@@ -475,6 +483,7 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getGroupId(), task2.getGroupId());
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
     Assert.assertEquals(task.getInterval(), task2.getInterval());
+    Assert.assertEquals(AbstractTask.DEFAULT_TASK_PRIORITY, task2.getLockPriority());
   }
 
   @Test
@@ -500,6 +509,7 @@ public class TaskSerdeTest
     final String json = jsonMapper.writeValueAsString(task);
     final ConvertSegmentTask taskFromJson = jsonMapper.readValue(json, ConvertSegmentTask.class);
     Assert.assertEquals(json, jsonMapper.writeValueAsString(taskFromJson));
+    Assert.assertEquals(AbstractTask.DEFAULT_TASK_PRIORITY, taskFromJson.getLockPriority());
   }
 
   @Test
@@ -546,6 +556,7 @@ public class TaskSerdeTest
     );
     Assert.assertEquals(false, convertSegmentTask.isForce());
     Assert.assertEquals(segment, convertSegmentTask.getSegment());
+    Assert.assertEquals(AbstractTask.DEFAULT_TASK_PRIORITY, convertSegmentTask.getLockPriority());
   }
 
   @Test
@@ -574,6 +585,7 @@ public class TaskSerdeTest
     Assert.assertEquals(task.getDataSource(), task2.getDataSource());
     Assert.assertEquals(task.getInterval(), task2.getInterval());
     Assert.assertEquals(task.getTargetLoadSpec(), task2.getTargetLoadSpec());
+    Assert.assertEquals(AbstractTask.DEFAULT_TASK_PRIORITY, task2.getLockPriority());
   }
 
   @Test
@@ -613,5 +625,6 @@ public class TaskSerdeTest
     );
     Assert.assertEquals("blah", task.getClasspathPrefix());
     Assert.assertEquals("blah", task2.getClasspathPrefix());
+    Assert.assertEquals(AbstractTask.INDEX_TASK_PRIORITY, task2.getLockPriority());
   }
 }

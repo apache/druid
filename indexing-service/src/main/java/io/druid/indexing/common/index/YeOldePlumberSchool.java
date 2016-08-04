@@ -175,7 +175,7 @@ public class YeOldePlumberSchool implements PlumberSchool
 
         try {
           // User should have persisted everything by now.
-          Preconditions.checkState(!theSink.swappable(), "All data must be persisted before fininshing the job!");
+          Preconditions.checkState(!theSink.swappable(), "All data must be persisted before finishing the job!");
 
           if (spilled.size() == 0) {
             throw new IllegalStateException("Nothing indexed?");

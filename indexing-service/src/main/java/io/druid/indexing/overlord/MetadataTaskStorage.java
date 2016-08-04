@@ -28,6 +28,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
+import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
@@ -246,12 +247,74 @@ public class MetadataTaskStorage implements TaskStorage
   }
 
   @Override
+  public void setLock(String taskid, TaskLock taskLockToSet)
+  {
+    Preconditions.checkNotNull(taskid, "taskid");
+    Preconditions.checkNotNull(taskLockToSet, "taskLock");
+
+    int numSet = 0;
+    boolean alreadySet = false;
+
+    final Map<Long, TaskLock> taskLocks = getLocksWithIds(taskid);
+    log.info("Found [%s] locks for task [%s] in TaskStorage",
+             taskLocks.size(),
+             taskid
+    );
+
+    TaskLock taskLockToFind = taskLockToSet.withUpgraded(!taskLockToSet.isUpgraded());
+    // Change all the taskLocks equivalent to taskLockToFind to taskLockToSet
+    for (final Map.Entry<Long, TaskLock> taskLockWithId : taskLocks.entrySet()) {
+      final long id = taskLockWithId.getKey();
+      final TaskLock taskLock = taskLockWithId.getValue();
+
+      if (taskLockToFind.equals(taskLock)) {
+        handler.setLock(id, taskLockToSet);
+        log.debug(
+            "TaskLock with id:[%s] for task:[%s] set to [%s]",
+            id,
+            taskid,
+            taskLockToSet
+        );
+        numSet++;
+      } else if (taskLock.equals(taskLockToSet)) {
+        alreadySet = true;
+      }
+    }
+    if (numSet > 0) {
+      log.info(
+          "[%s] out of [%s] locks found for task:[%s] set to [%s]",
+          numSet,
+          taskLocks.size(),
+          taskid,
+          taskLockToSet
+      );
+    } else if (numSet == 0 && alreadySet) {
+      log.warn(
+          "No Locks changed for task:[%s] already set to [%s]",
+          taskLockToSet.getInterval(),
+          taskid,
+          taskLockToSet
+      );
+    } else {
+      throw new ISE(
+          "WTF ! No locks found for interval [%s] with version [%s] for task: [%s] to set to [%s]",
+          taskLockToSet.getInterval(),
+          taskLockToSet.getVersion(),
+          taskid,
+          taskLockToSet
+      );
+    }
+  }
+
+  @Override
   public void removeLock(String taskid, TaskLock taskLockToRemove)
   {
     Preconditions.checkNotNull(taskid, "taskid");
     Preconditions.checkNotNull(taskLockToRemove, "taskLockToRemove");
 
     final Map<Long, TaskLock> taskLocks = getLocksWithIds(taskid);
+
+    boolean removed = false;
 
     for (final Map.Entry<Long, TaskLock> taskLockWithId : taskLocks.entrySet()) {
       final long id = taskLockWithId.getKey();
@@ -260,7 +323,11 @@ public class MetadataTaskStorage implements TaskStorage
       if (taskLock.equals(taskLockToRemove)) {
         log.info("Deleting TaskLock with id[%d]: %s", id, taskLock);
         handler.removeLock(id);
+        removed = true;
       }
+    }
+    if (!removed) {
+      log.error("Did not find any TaskLock [%s] to remove", taskLockToRemove);
     }
   }
 

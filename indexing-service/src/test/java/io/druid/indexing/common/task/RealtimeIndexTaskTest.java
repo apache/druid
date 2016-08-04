@@ -64,6 +64,8 @@ import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.TaskLockbox;
+import io.druid.indexing.overlord.TaskLockboxV1;
+import io.druid.indexing.overlord.TaskLockboxV2;
 import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.test.TestDataSegmentAnnouncer;
 import io.druid.indexing.test.TestDataSegmentKiller;
@@ -236,19 +238,24 @@ public class RealtimeIndexTaskTest
   private DateTime now;
   private ListeningExecutorService taskExec;
   private Map<SegmentDescriptor, Pair<Executor, Runnable>> handOffCallbacks;
+  private final String taskLockboxVersion;
 
-  @Parameterized.Parameters(name = "buildV9Directly = {0}")
+  private static final String TASKLOCKBOX_V1 = "v1";
+  private static final String TASKLOCKBOX_V2 = "v2";
+
+  @Parameterized.Parameters(name = "buildV9Directly = {0}, taskLockBoxVersion={1}")
   public static Collection<?> constructorFeeder() throws IOException
   {
     return ImmutableList.of(
-        new Object[]{true},
-        new Object[]{false}
+        new Object[]{true, TASKLOCKBOX_V1},
+        new Object[]{false, TASKLOCKBOX_V2}
     );
   }
 
-  public RealtimeIndexTaskTest(boolean buildV9Directly)
+  public RealtimeIndexTaskTest(boolean buildV9Directly, String taskLockboxVersion)
   {
     this.buildV9Directly = buildV9Directly;
+    this.taskLockboxVersion = taskLockboxVersion;
   }
 
   @Before
@@ -949,7 +956,12 @@ public class RealtimeIndexTaskTest
   )
   {
     final TaskConfig taskConfig = new TaskConfig(directory.getPath(), null, null, 50000, null, false, null, null);
-    final TaskLockbox taskLockbox = new TaskLockbox(taskStorage);
+    final TaskLockbox taskLockbox;
+    if(taskLockboxVersion.equals(TASKLOCKBOX_V2)) {
+      taskLockbox = new TaskLockboxV2(taskStorage);
+    } else {
+      taskLockbox = new TaskLockboxV1(taskStorage);
+    }
     try {
       taskStorage.insert(task, TaskStatus.running(task.getId()));
     }

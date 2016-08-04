@@ -19,7 +19,6 @@
 
 package io.druid.indexing.common.actions;
 
-import com.google.common.base.Preconditions;
 import com.google.common.base.Predicate;
 import com.google.common.collect.Iterables;
 import com.google.inject.Inject;
@@ -73,7 +72,7 @@ public class TaskActionToolbox
   )
   {
     if (!taskLockCoversSegments(task, segments)) {
-      throw new ISE("Segments not covered by locks for task: %s", task.getId());
+      throw new ISE("Segments not covered by upgraded locks for task: %s", task.getId());
     }
   }
 
@@ -83,6 +82,7 @@ public class TaskActionToolbox
   )
   {
     // Verify that each of these segments falls under some lock
+    // and each segment is covered by at least a lock which is in upgraded state
 
     // NOTE: It is possible for our lock to be revoked (if the task has failed and given up its locks) after we check
     // NOTE: it and before we perform the segment insert, but, that should be OK since the worst that happens is we
@@ -102,8 +102,19 @@ public class TaskActionToolbox
             }
           }
       );
+      final boolean isUpgraded = Iterables.all(
+          taskLocks, new Predicate<TaskLock>()
+          {
+            @Override
+            public boolean apply(TaskLock input)
+            {
+              return !(input.getInterval().contains(segment.getInterval())
+                       && input.getDataSource().equals(segment.getDataSource())) || input.isUpgraded();
+            }
+          }
+      );
 
-      if (!ok) {
+      if (!ok || !isUpgraded) {
         return false;
       }
     }

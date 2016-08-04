@@ -322,6 +322,28 @@ public class SQLMetadataStorageActionHandler<EntryType, StatusType, LogType, Loc
     );
   }
 
+  public boolean setLock(final long lockId, final LockType lock)
+  {
+    return connector.retryWithHandle(
+      new HandleCallback<Boolean>()
+      {
+        @Override
+        public Boolean withHandle(final Handle handle) throws Exception
+        {
+          return handle.createStatement(
+              String.format(
+                  "UPDATE %1$s SET lock_payload = :payload WHERE id = :id",
+                  lockTable
+              )
+          )
+                       .bind("payload", jsonMapper.writeValueAsBytes(lock))
+                       .bind("id", lockId)
+                       .execute() == 1;
+        }
+      }
+    );
+  }
+
   public void removeLock(final long lockId)
   {
     connector.retryWithHandle(

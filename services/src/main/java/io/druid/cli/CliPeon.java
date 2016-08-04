@@ -61,6 +61,9 @@ import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.HeapMemoryTaskStorage;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import io.druid.indexing.overlord.TaskLockbox;
+import io.druid.indexing.overlord.TaskLockboxV1;
+import io.druid.indexing.overlord.TaskLockboxV2;
 import io.druid.indexing.overlord.TaskRunner;
 import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.overlord.ThreadPoolTaskRunner;
@@ -149,6 +152,8 @@ public class CliPeon extends GuiceRunnable
             binder.bind(ServiceAnnouncingChatHandlerProvider.class).in(LazySingleton.class);
 
             binder.bind(NoopChatHandlerProvider.class).in(LazySingleton.class);
+
+            bindTaskLockboxs(binder);
 
             binder.bind(TaskToolboxFactory.class).in(LazySingleton.class);
 
@@ -257,6 +262,23 @@ public class CliPeon extends GuiceRunnable
           public String getTaskIDFromTask(final Task task)
           {
             return task.getId();
+          }
+
+          private void bindTaskLockboxs(Binder binder)
+          {
+            PolyBind.createChoice(
+                binder, "druid.indexer.taskLockboxVersion", Key.get(TaskLockbox.class), Key.get(TaskLockboxV1.class)
+            );
+            final MapBinder<String, TaskLockbox> storageBinder = PolyBind.optionBinder(
+                binder,
+                Key.get(TaskLockbox.class)
+            );
+
+            storageBinder.addBinding("v1").to(TaskLockboxV1.class);
+            binder.bind(TaskLockboxV1.class).in(LazySingleton.class);
+
+            storageBinder.addBinding("v2").to(TaskLockboxV2.class).in(ManageLifecycle.class);
+            binder.bind(TaskLockboxV2.class).in(LazySingleton.class);
           }
         },
         new IndexingServiceFirehoseModule(),

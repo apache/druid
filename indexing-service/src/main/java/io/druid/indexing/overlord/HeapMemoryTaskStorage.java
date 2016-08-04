@@ -93,7 +93,6 @@ public class HeapMemoryTaskStorage implements TaskStorage
   public Optional<Task> getTask(String taskid)
   {
     giant.lock();
-
     try {
       Preconditions.checkNotNull(taskid, "taskid");
       if(tasks.containsKey(taskid)) {
@@ -195,6 +194,36 @@ public class HeapMemoryTaskStorage implements TaskStorage
       Preconditions.checkNotNull(taskLock, "taskLock");
       taskLocks.put(taskid, taskLock);
     } finally {
+      giant.unlock();
+    }
+  }
+
+  @Override
+  public void setLock(String taskid, TaskLock taskLockToSet)
+  {
+    giant.lock();
+    try {
+      Preconditions.checkNotNull(taskid, "taskId");
+      Preconditions.checkNotNull(taskLockToSet, "taskLock");
+      TaskLock taskLockToRemove = taskLockToSet.withUpgraded(!taskLockToSet.isUpgraded());
+      // First try to remove the taskLockToRemove from taskLocks otherwise we may miss the removal
+      // in case taskLockToSet is already present (it may happen if overlord reacquires the locks)
+
+      if (!taskLocks.remove(taskid, taskLockToRemove)) {
+        log.warn(
+            "No TaskLock [%s] found for task: [%s] to be removed",
+            taskLockToRemove,
+            taskid
+        );
+      }
+      if (taskLocks.get(taskid).contains(taskLockToSet)) {
+        log.warn("TaskLock [%s] for task [%s] already set", taskLockToSet, taskid);
+      } else {
+        taskLocks.put(taskid, taskLockToSet);
+        log.info("TaskLock for Task [%s] successfully set to [%s]", taskid, taskLockToSet);
+      }
+    }
+    finally {
       giant.unlock();
     }
   }

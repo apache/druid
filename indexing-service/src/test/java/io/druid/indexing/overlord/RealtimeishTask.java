@@ -27,8 +27,10 @@ import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockListAction;
 import io.druid.indexing.common.actions.LockReleaseAction;
+import io.druid.indexing.common.actions.SetLockCriticalStateAction;
 import io.druid.indexing.common.actions.SegmentInsertAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.common.actions.TaskLockCriticalState;
 import io.druid.indexing.common.task.AbstractTask;
 import io.druid.indexing.common.task.TaskResource;
 import io.druid.timeline.DataSegment;
@@ -87,6 +89,9 @@ public class RealtimeishTask extends AbstractTask
     Assert.assertEquals("lock2 interval", interval2, lock2.getInterval());
     Assert.assertEquals("locks2", ImmutableList.of(lock1, lock2), locks2);
 
+    // Upgrade the lock to exclusive lock for first interval
+    toolbox.getTaskActionClient().submit(new SetLockCriticalStateAction(interval1, TaskLockCriticalState.UPGRADE));
+
     // Push first segment
     toolbox.getTaskActionClient()
            .submit(
@@ -107,6 +112,9 @@ public class RealtimeishTask extends AbstractTask
 
     // (Confirm lock sanity)
     Assert.assertEquals("locks3", ImmutableList.of(lock2), locks3);
+
+    // Upgrade lock for second interval
+    toolbox.getTaskActionClient().submit(new SetLockCriticalStateAction(interval2, TaskLockCriticalState.UPGRADE));
 
     // Push second segment
     toolbox.getTaskActionClient()

@@ -72,6 +72,8 @@ import io.druid.indexing.kafka.test.TestBroker;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
 import io.druid.indexing.overlord.MetadataTaskStorage;
 import io.druid.indexing.overlord.TaskLockbox;
+import io.druid.indexing.overlord.TaskLockboxV1;
+import io.druid.indexing.overlord.TaskLockboxV2;
 import io.druid.indexing.overlord.TaskStorage;
 import io.druid.indexing.test.TestDataSegmentAnnouncer;
 import io.druid.indexing.test.TestDataSegmentKiller;
@@ -158,8 +160,11 @@ public class KafkaIndexTaskTest
   private TaskStorage taskStorage;
   private TaskLockbox taskLockbox;
   private File directory;
+  private String taskLockboxVersion;
 
   private final List<Task> runningTasks = Lists.newArrayList();
+  private static final String TASKLOCKBOX_V1 = "v1";
+  private static final String TASKLOCKBOX_V2 = "v2";
 
   private static final Logger log = new Logger(KafkaIndexTaskTest.class);
   private static final ObjectMapper objectMapper = new DefaultObjectMapper();
@@ -203,15 +208,16 @@ public class KafkaIndexTaskTest
     );
   }
 
-  @Parameterized.Parameters(name = "buildV9Directly = {0}")
+  @Parameterized.Parameters(name = "buildV9Directly = {0}, taskLockBoxVersion={1}")
   public static Iterable<Object[]> constructorFeeder()
   {
-    return ImmutableList.of(new Object[]{true}, new Object[]{false});
+    return ImmutableList.of(new Object[]{true, TASKLOCKBOX_V1}, new Object[]{false, TASKLOCKBOX_V2});
   }
 
-  public KafkaIndexTaskTest(boolean buildV9Directly)
+  public KafkaIndexTaskTest(boolean buildV9Directly, String taskLockboxVersion)
   {
     this.buildV9Directly = buildV9Directly;
+    this.taskLockboxVersion = taskLockboxVersion;
   }
 
   @Rule
@@ -1350,7 +1356,11 @@ public class KafkaIndexTaskTest
         derby.metadataTablesConfigSupplier().get(),
         derbyConnector
     );
-    taskLockbox = new TaskLockbox(taskStorage);
+    if (taskLockboxVersion.equals(TASKLOCKBOX_V2)) {
+      taskLockbox = new TaskLockboxV2(taskStorage);
+    } else {
+      taskLockbox = new TaskLockboxV1(taskStorage);
+    }
     final TaskActionToolbox taskActionToolbox = new TaskActionToolbox(
         taskLockbox,
         metadataStorageCoordinator,

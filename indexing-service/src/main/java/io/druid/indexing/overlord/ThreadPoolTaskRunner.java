@@ -19,6 +19,7 @@
 
 package io.druid.indexing.overlord;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Optional;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
@@ -85,6 +86,7 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
   private final TaskLocation location;
 
   private volatile boolean stopping = false;
+  private final int numThreads;
 
   @Inject
   public ThreadPoolTaskRunner(
@@ -94,8 +96,22 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
       @Self DruidNode node
   )
   {
+    this(toolboxFactory, taskConfig, emitter, 1, node);
+  }
+
+  // This constructor is created so that it is easy to create multi-threaded ThreadPoolTaskRunner for testing purposes
+  @VisibleForTesting
+  public ThreadPoolTaskRunner(
+      TaskToolboxFactory toolboxFactory,
+      TaskConfig taskConfig,
+      ServiceEmitter emitter,
+      int numThreads,
+      DruidNode node
+  )
+  {
     this.toolboxFactory = Preconditions.checkNotNull(toolboxFactory, "toolboxFactory");
     this.taskConfig = taskConfig;
+    this.numThreads = numThreads;
     this.emitter = Preconditions.checkNotNull(emitter, "emitter");
     this.location = TaskLocation.create(node.getHost(), node.getPort());
   }
@@ -139,10 +155,16 @@ public class ThreadPoolTaskRunner implements TaskRunner, QuerySegmentWalker
     }
   }
 
-  private static ListeningExecutorService buildExecutorService(int priority)
+  private ListeningExecutorService buildExecutorService(int priority)
   {
     return MoreExecutors.listeningDecorator(
+        numThreads == 1 ?
         Execs.singleThreaded(
+            "task-runner-%d-priority-" + priority,
+            TaskThreadPriority.getThreadPriorityFromTaskPriority(priority)
+        ) :
+        Execs.multiThreaded(
+            numThreads,
             "task-runner-%d-priority-" + priority,
             TaskThreadPriority.getThreadPriorityFromTaskPriority(priority)
         )

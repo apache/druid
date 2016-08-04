@@ -27,13 +27,16 @@ import com.metamx.common.logger.Logger;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
+import io.druid.indexing.common.actions.SetLockCriticalStateAction;
 import io.druid.indexing.common.actions.SegmentListUnusedAction;
 import io.druid.indexing.common.actions.SegmentMetadataUpdateAction;
+import io.druid.indexing.common.actions.TaskLockCriticalState;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 
 public class ArchiveTask extends AbstractFixedIntervalTask
 {
@@ -63,8 +66,13 @@ public class ArchiveTask extends AbstractFixedIntervalTask
   @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
-    // Confirm we have a lock (will throw if there isn't exactly one element)
-    final TaskLock myLock = Iterables.getOnlyElement(getTaskLocks(toolbox));
+    final TaskLock myLock;
+    // Confirm we have a lock and it has not been revoked by a higher priority task
+    try {
+      myLock = Iterables.getOnlyElement(getTaskLocks(toolbox));
+    } catch (NoSuchElementException e) {
+      throw new ISE("No valid lock found, dying now !! Is there a higher priority task running that would have revoked this lock ?");
+    }
 
     if (!myLock.getDataSource().equals(getDataSource())) {
       throw new ISE("WTF?! Lock dataSource[%s] != task dataSource[%s]", myLock.getDataSource(), getDataSource());
@@ -93,12 +101,40 @@ public class ArchiveTask extends AbstractFixedIntervalTask
       log.info("OK to archive segment: %s", unusedSegment.getIdentifier());
     }
 
-    // Move segments
+
+    // Archiving segments can take time which seems to be a lot of work to do in critical section
+    // Thus, after each batch downgrade the lock to ensure liveliness of the system
+    // so that higher priority tasks are not blocked for a long time
+    // Note - If we are unable to upgrade the lock again then the task will fail,
+    // there is no point in retrying here as upgrade should fail only when the taskLock is removed by a higher priority task
+    int counter = 0;
     for (DataSegment segment : unusedSegments) {
+      if (counter % getBatchSize() == 0) {
+        // SetLockCriticalStateAction is idempotent
+        if (!toolbox.getTaskActionClient().submit(new SetLockCriticalStateAction(getInterval(), TaskLockCriticalState.DOWNGRADE))) {
+          throw new ISE(
+              "Lock downgrade failed for interval [%s] !! Successfully archived [%s] segments out of [%s] before failing",
+              getInterval(),
+              counter,
+              unusedSegments.size()
+          );
+        }
+
+        // Try to upgrade the lock again - we will be successful if no other higher priority task needs to lock
+        if (!toolbox.getTaskActionClient().submit(new SetLockCriticalStateAction(getInterval(), TaskLockCriticalState.UPGRADE))) {
+          throw new ISE(
+              "Lock upgrade failed for interval [%s] !! Successfully archived [%s] segments out of [%s] before failing",
+              getInterval(),
+              counter,
+              unusedSegments.size()
+          );
+        }
+      }
+      // Move segment
       final DataSegment archivedSegment = toolbox.getDataSegmentArchiver().archive(segment);
       toolbox.getTaskActionClient().submit(new SegmentMetadataUpdateAction(ImmutableSet.of(archivedSegment)));
+      counter++;
     }
-
     return TaskStatus.success(getId());
   }
 }

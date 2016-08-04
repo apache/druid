@@ -41,8 +41,10 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
+import io.druid.indexing.common.actions.SetLockCriticalStateAction;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
 import io.druid.indexing.common.actions.TaskActionClient;
+import io.druid.indexing.common.actions.TaskLockCriticalState;
 import io.druid.segment.IndexIO;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
@@ -53,6 +55,7 @@ import javax.annotation.Nullable;
 import java.io.File;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 
 /**
@@ -120,9 +123,21 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
   }
 
   @Override
+  public int getLockPriority() {
+    return getLockPriority(MERGE_TASK_PRIORITY);
+  }
+
+  @Override
   public TaskStatus run(TaskToolbox toolbox) throws Exception
   {
-    final TaskLock myLock = Iterables.getOnlyElement(getTaskLocks(toolbox));
+    final TaskLock myLock;
+    // Confirm we have a lock and it has not been revoked by a higher priority task
+    try {
+      myLock = Iterables.getOnlyElement(getTaskLocks(toolbox));
+    } catch (NoSuchElementException e) {
+      throw new ISE("No valid lock found, dying now !! Is there a higher priority task running that may have revoked this lock ?");
+    }
+
     final ServiceEmitter emitter = toolbox.getEmitter();
     final ServiceMetricEvent.Builder builder = new ServiceMetricEvent.Builder();
     final DataSegment mergedSegment = computeMergedSegment(getDataSource(), myLock.getVersion(), segments);
@@ -171,9 +186,12 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
       emitter.emit(builder.build("merger/uploadTime", System.currentTimeMillis() - uploadStart));
       emitter.emit(builder.build("merger/mergeSize", uploadedSegment.getSize()));
 
-      toolbox.publishSegments(ImmutableList.of(uploadedSegment));
-
-      return TaskStatus.success(getId());
+      if (toolbox.getTaskActionClient().submit(new SetLockCriticalStateAction(getInterval(), TaskLockCriticalState.UPGRADE))) {
+        toolbox.publishSegments(ImmutableList.of(uploadedSegment));
+        return TaskStatus.success(getId());
+      } else {
+        throw new ISE("Lock upgrade failed for interval [%s] !!", getInterval());
+      }
     }
     catch (Exception e) {
       log.makeAlert(e, "Exception merging[%s]", mergedSegment.getDataSource())

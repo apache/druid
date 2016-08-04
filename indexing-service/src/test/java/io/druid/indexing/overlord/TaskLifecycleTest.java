@@ -34,6 +34,9 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
+import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.Granularity;
 import com.metamx.common.ISE;
@@ -44,6 +47,7 @@ import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.metrics.Monitor;
 import com.metamx.metrics.MonitorScheduler;
 import io.druid.client.cache.MapCache;
+import io.druid.concurrent.Execs;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
@@ -59,8 +63,10 @@ import io.druid.indexing.common.TestUtils;
 import io.druid.indexing.common.actions.LocalTaskActionClientFactory;
 import io.druid.indexing.common.actions.LockListAction;
 import io.druid.indexing.common.actions.SegmentInsertAction;
+import io.druid.indexing.common.actions.SetLockCriticalStateAction;
 import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.actions.TaskActionToolbox;
+import io.druid.indexing.common.actions.TaskLockCriticalState;
 import io.druid.indexing.common.config.TaskConfig;
 import io.druid.indexing.common.config.TaskStorageConfig;
 import io.druid.indexing.common.task.AbstractFixedIntervalTask;
@@ -126,6 +132,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
 
@@ -148,16 +155,24 @@ public class TaskLifecycleTest
 
   private static final String HEAP_TASK_STORAGE = "HeapMemoryTaskStorage";
   private static final String METADATA_TASK_STORAGE = "MetadataTaskStorage";
+  private static final String TASKLOCKBOX_V1 = "v1";
+  private static final String TASKLOCKBOX_V2 = "v2";
 
-  @Parameterized.Parameters(name = "taskStorageType={0}")
+  @Parameterized.Parameters(name = "taskStorageType={0}, taskLockBoxVersion={1}")
   public static Collection<String[]> constructFeed()
   {
-    return Arrays.asList(new String[][]{{HEAP_TASK_STORAGE}, {METADATA_TASK_STORAGE}});
+    return Arrays.asList(new String[][]{
+        {HEAP_TASK_STORAGE, TASKLOCKBOX_V1},
+        {METADATA_TASK_STORAGE, TASKLOCKBOX_V1},
+        {HEAP_TASK_STORAGE, TASKLOCKBOX_V2},
+        {METADATA_TASK_STORAGE, TASKLOCKBOX_V2}
+    });
   }
 
-  public TaskLifecycleTest(String taskStorageType)
+  public TaskLifecycleTest(String taskStorageType, String taskLockboxVersion)
   {
     this.taskStorageType = taskStorageType;
+    this.taskLockboxVersion = taskLockboxVersion;
   }
 
   public final
@@ -190,8 +205,6 @@ public class TaskLifecycleTest
   @Rule
   public final TestDerbyConnector.DerbyConnectorRule derbyConnectorRule = new TestDerbyConnector.DerbyConnectorRule();
 
-  private final String taskStorageType;
-
   private ObjectMapper mapper;
   private TaskStorageQueryAdapter tsqa = null;
   private TaskStorage taskStorage = null;
@@ -209,12 +222,13 @@ public class TaskLifecycleTest
   private TaskConfig taskConfig;
   private DataSegmentPusher dataSegmentPusher;
 
+  private final String taskStorageType;
+  private final String taskLockboxVersion;
   private int pushedSegments;
   private int announcedSinks;
   private SegmentHandoffNotifierFactory handoffNotifierFactory;
   private Map<SegmentDescriptor, Pair<Executor, Runnable>> handOffCallbacks;
-
-  private static CountDownLatch publishCountDown;
+  private CountDownLatch publishCountDown;
 
   private static ServiceEmitter newMockEmitter()
   {
@@ -339,6 +353,7 @@ public class TaskLifecycleTest
     // initialize variables
     announcedSinks = 0;
     pushedSegments = 0;
+    publishCountDown = new CountDownLatch(1);
     indexSpec = new IndexSpec();
     emitter = newMockEmitter();
     EmittingLogger.registerEmitter(emitter);
@@ -357,9 +372,9 @@ public class TaskLifecycleTest
 
     mdc = setUpMetadataStorageCoordinator();
 
-    tb = setUpTaskToolboxFactory(dataSegmentPusher, handoffNotifierFactory, mdc);
+    tb = setUpTaskToolboxFactory(dataSegmentPusher, handoffNotifierFactory, mdc, taskLockboxVersion);
 
-    taskRunner = setUpThreadPoolTaskRunner(tb);
+    taskRunner = setUpThreadPoolTaskRunner(tb, 1);
 
     taskQueue = setUpTaskQueue(taskStorage, taskRunner);
   }
@@ -385,7 +400,8 @@ public class TaskLifecycleTest
         TestDerbyConnector testDerbyConnector = derbyConnectorRule.getConnector();
         mapper.registerSubtypes(
             new NamedType(MockExceptionalFirehoseFactory.class, "mockExcepFirehoseFactory"),
-            new NamedType(MockFirehoseFactory.class, "mockFirehoseFactory")
+            new NamedType(MockFirehoseFactory.class, "mockFirehoseFactory"),
+            new NamedType(TestIndexTask.class, "test_index")
         );
         testDerbyConnector.createTaskTables();
         testDerbyConnector.createSegmentTable();
@@ -497,7 +513,8 @@ public class TaskLifecycleTest
   private TaskToolboxFactory setUpTaskToolboxFactory(
       DataSegmentPusher dataSegmentPusher,
       SegmentHandoffNotifierFactory handoffNotifierFactory,
-      TestIndexerMetadataStorageCoordinator mdc
+      TestIndexerMetadataStorageCoordinator mdc,
+      String taskLockboxVersion
   ) throws IOException
   {
     Preconditions.checkNotNull(queryRunnerFactoryConglomerate);
@@ -505,7 +522,11 @@ public class TaskLifecycleTest
     Preconditions.checkNotNull(taskStorage);
     Preconditions.checkNotNull(emitter);
 
-    taskLockbox = new TaskLockbox(taskStorage);
+    if (taskLockboxVersion.equals(TASKLOCKBOX_V2)) {
+      taskLockbox = new TaskLockboxV2(taskStorage);
+    } else {
+      taskLockbox = new TaskLockboxV1(taskStorage);
+    }
     tac = new LocalTaskActionClientFactory(taskStorage, new TaskActionToolbox(taskLockbox, mdc, emitter));
     File tmpDir = temporaryFolder.newFolder();
     taskConfig = new TaskConfig(tmpDir.toString(), null, null, 50000, null, false, null, null);
@@ -597,17 +618,12 @@ public class TaskLifecycleTest
     );
   }
 
-  private TaskRunner setUpThreadPoolTaskRunner(TaskToolboxFactory tb)
+  private TaskRunner setUpThreadPoolTaskRunner(TaskToolboxFactory tb, int numThreads)
   {
     Preconditions.checkNotNull(taskConfig);
     Preconditions.checkNotNull(emitter);
 
-    return new ThreadPoolTaskRunner(
-        tb,
-        taskConfig,
-        emitter,
-        new DruidNode("dummy", "dummy", 10000)
-    );
+    return new ThreadPoolTaskRunner(tb, taskConfig, emitter, numThreads, new DruidNode("dummy", "dummy", 10000));
   }
 
   private TaskQueue setUpTaskQueue(TaskStorage ts, TaskRunner tr) throws Exception
@@ -870,6 +886,8 @@ public class TaskLifecycleTest
                                                .interval(new Interval("2012-01-01/P1D"))
                                                .version(myLock.getVersion())
                                                .build();
+        // Upgrade the lock to exclusive lock
+        toolbox.getTaskActionClient().submit(new SetLockCriticalStateAction(getInterval(), TaskLockCriticalState.UPGRADE));
 
         toolbox.getTaskActionClient().submit(new SegmentInsertAction(ImmutableSet.of(segment)));
         return TaskStatus.success(getId());
@@ -1021,9 +1039,9 @@ public class TaskLifecycleTest
       }
     };
 
-    tb = setUpTaskToolboxFactory(dataSegmentPusher, handoffNotifierFactory, mdc);
+    tb = setUpTaskToolboxFactory(dataSegmentPusher, handoffNotifierFactory, mdc, taskLockboxVersion);
 
-    taskRunner = setUpThreadPoolTaskRunner(tb);
+    taskRunner = setUpThreadPoolTaskRunner(tb, 1);
 
     taskQueue = setUpTaskQueue(taskStorage, taskRunner);
 
@@ -1198,5 +1216,385 @@ public class TaskLifecycleTest
         fireDepartment,
         null
     );
+  }
+
+  @Test (timeout=4000L)
+  public void testLockOverride() throws Exception
+  {
+    // TaskLockboxV1 does not do priority locking thus no overriding of locks
+    if (taskLockboxVersion.equals(TASKLOCKBOX_V2)) {
+      publishCountDown = new CountDownLatch(1);
+      taskRunner = setUpThreadPoolTaskRunner(tb, 2);
+      taskQueue = setUpTaskQueue(taskStorage, taskRunner);
+
+      final CountDownLatch waitForLockAcquisition = new CountDownLatch(1);
+      final CountDownLatch waitForRealtimeTaskCompletion = new CountDownLatch(1);
+      final CountDownLatch waitForIndexTaskCompletion = new CountDownLatch(1);
+
+      final TestIndexTask indexTask = new TestIndexTask(
+          null,
+          null,
+          new IndexTask.IndexIngestionSpec(
+              new DataSchema(
+                  "test_ds",
+                  null,
+                  new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
+                  new UniformGranularitySpec(
+                      Granularity.DAY,
+                      null,
+                      ImmutableList.of(new Interval(new DateTime().toString("YYYY-MM-dd") + "/P1D"))
+                  ),
+                  mapper
+              ),
+              new IndexTask.IndexIOConfig(new MockFirehoseFactory(true)),
+              new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec, false)
+          ),
+          mapper
+      );
+      indexTask.setLatches(waitForLockAcquisition, waitForRealtimeTaskCompletion, null, null);
+
+      Futures.addCallback(
+          runTaskWithListenableFuture(indexTask),
+          new FutureCallback<TaskStatus>()
+          {
+            @Override
+            public void onSuccess(TaskStatus result)
+            {
+              Assert.assertEquals(TaskStatus.Status.FAILED, result.getStatusCode());
+              waitForIndexTaskCompletion.countDown();
+            }
+
+            @Override
+            public void onFailure(Throwable t)
+            {
+              Throwables.propagate(t);
+            }
+          }
+      );
+
+      // Wait for Index task to acquire lock on the interval
+      // Realtime task will revoke this lock
+      waitForLockAcquisition.await();
+
+      final Task realtimeIndexTask = newRealtimeIndexTask();
+      Futures.addCallback(
+          runTaskWithListenableFuture(realtimeIndexTask),
+          new FutureCallback<TaskStatus>()
+          {
+            @Override
+            public void onSuccess(TaskStatus result)
+            {
+              Assert.assertEquals(TaskStatus.Status.SUCCESS, result.getStatusCode());
+              waitForRealtimeTaskCompletion.countDown();
+            }
+
+            @Override
+            public void onFailure(Throwable t)
+            {
+              Throwables.propagate(t);
+            }
+          }
+      );
+      // wait for realtime to announce segment
+      publishCountDown.await();
+
+      // Realtime Task has published the segment, simulate loading of segment to a historical node by running handoffCallbacks
+      // so that task finishes with SUCCESS status
+      runHandOffCallbacks();
+
+      waitForRealtimeTaskCompletion.await();
+      waitForIndexTaskCompletion.await();
+    }
+  }
+
+  @Test (timeout=4000L)
+  public void testLockOverrideDuringUpgrade() throws Exception
+  {
+    // TaskLockboxV1 does not do priority locking thus no overriding of locks
+    if (taskLockboxVersion.equals(TASKLOCKBOX_V2)) {
+      // Two segments will be published here - one by index task and other realtime index task
+      publishCountDown = new CountDownLatch(2);
+      taskRunner = setUpThreadPoolTaskRunner(tb, 2);
+      taskQueue = setUpTaskQueue(taskStorage, taskRunner);
+
+      final CountDownLatch waitForIndexTaskCompletion = new CountDownLatch(1);
+      final CountDownLatch initialLockUpgradeCountDownLatch = new CountDownLatch(1);
+      final CountDownLatch runFinishAwaitLatch = new CountDownLatch(1);
+      final CountDownLatch waitForRealtimeTaskCompletion = new CountDownLatch(1);
+
+      final TestIndexTask indexTask = new TestIndexTask(
+          null,
+          null,
+          new IndexTask.IndexIngestionSpec(
+              new DataSchema(
+                  "test_ds",
+                  null,
+                  new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
+                  new UniformGranularitySpec(
+                      Granularity.DAY,
+                      null,
+                      ImmutableList.of(new Interval(new DateTime().toString("YYYY-MM-dd") + "/P1D"))
+                  ),
+                  mapper
+              ),
+              new IndexTask.IndexIOConfig(new MockFirehoseFactory(true)),
+              new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec, false)
+          ),
+          mapper
+      );
+      indexTask.setLatches(null, null, runFinishAwaitLatch, initialLockUpgradeCountDownLatch);
+      indexTask.setAlternateTaskLockState(true);
+
+      Futures.addCallback(
+          runTaskWithListenableFuture(indexTask),
+          new FutureCallback<TaskStatus>()
+          {
+            @Override
+            public void onSuccess(TaskStatus result)
+            {
+              Assert.assertEquals(TaskStatus.Status.FAILED, result.getStatusCode());
+              // This message is set in the returned TaskStatus's id field of TestIndexTask so that it can be asserted here
+              Assert.assertEquals(indexTask.getId(), result.getId());
+              waitForIndexTaskCompletion.countDown();
+            }
+
+            @Override
+            public void onFailure(Throwable t)
+            {
+              Throwables.propagate(t);
+            }
+          }
+      );
+
+      // Wait for Index task to acquire upgraded lock on the interval
+      while (initialLockUpgradeCountDownLatch.getCount() > 0) {
+        Thread.sleep(100);
+      }
+
+      final Task realtimeIndexTask = newRealtimeIndexTask();
+      Futures.addCallback(
+          runTaskWithListenableFuture(realtimeIndexTask),
+          new FutureCallback<TaskStatus>()
+          {
+            @Override
+            public void onSuccess(TaskStatus result)
+            {
+              Assert.assertEquals(TaskStatus.Status.SUCCESS, result.getStatusCode());
+              waitForRealtimeTaskCompletion.countDown();
+              runFinishAwaitLatch.countDown();
+            }
+
+            @Override
+            public void onFailure(Throwable t)
+            {
+              Throwables.propagate(t);
+            }
+          }
+      );
+      publishCountDown.await();
+      // Realtime Task has published the segment, simulate loading of segment to a historical node by running handoffCallbacks
+      // so that task finishes with SUCCESS status
+      runHandOffCallbacks();
+
+
+      waitForIndexTaskCompletion.await();
+      waitForRealtimeTaskCompletion.await();
+    }
+  }
+
+  @Test (timeout=4000L)
+  public void testReacquireLockIndexTask() throws Exception
+  {
+    taskRunner = setUpThreadPoolTaskRunner(tb, 2);
+    taskQueue = setUpTaskQueue(taskStorage, taskRunner);
+
+    final CountDownLatch lockAcquisitionCountDownLatch = new CountDownLatch(1);
+    final CountDownLatch runStartAwaitLatch = new CountDownLatch(1);
+    final CountDownLatch runFinishAwaitLatch = new CountDownLatch(1);
+    final CountDownLatch taskCompletionLatch = new CountDownLatch(1);
+
+    final TestIndexTask indexTask = new TestIndexTask(
+        null,
+        null,
+        new IndexTask.IndexIngestionSpec(
+            new DataSchema(
+                "test_ds",
+                null,
+                new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
+                new UniformGranularitySpec(
+                    Granularity.DAY,
+                    null,
+                    ImmutableList.of(new Interval(new DateTime().toString("YYYY-MM-dd") + "/P1D"))
+                ),
+                mapper
+            ),
+            new IndexTask.IndexIOConfig(new MockFirehoseFactory(true)),
+            new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec, false)
+        ),
+        mapper
+    );
+    indexTask.setLatches(lockAcquisitionCountDownLatch, runStartAwaitLatch, runFinishAwaitLatch, null);
+
+    Futures.addCallback(
+        runTaskWithListenableFuture(indexTask),
+        new FutureCallback<TaskStatus>()
+        {
+          @Override
+          public void onSuccess(TaskStatus result)
+          {
+            Assert.assertEquals(TaskStatus.Status.SUCCESS, result.getStatusCode());
+            taskCompletionLatch.countDown();
+          }
+
+          @Override
+          public void onFailure(Throwable t)
+          {
+            Throwables.propagate(t);
+          }
+        }
+    );
+
+    // Wait for the task to acquire the lock
+    lockAcquisitionCountDownLatch.await();
+
+    // Simulate overlord restart, this will cause lock to be reacquired
+    taskLockbox.syncFromStorage();
+
+    // Let the task run
+    runStartAwaitLatch.countDown();
+
+    // There will two locks in TaskStorage as overlord reacquired the lock once
+    assertTaskLocks(2, indexTask);
+
+    // Let the task finish
+    runFinishAwaitLatch.countDown();
+
+    // wait for task status callback
+    taskCompletionLatch.await();
+  }
+
+  @Test (timeout=4000L)
+  public void testReacquireUpgradedLock() throws Exception
+  {
+    taskRunner = setUpThreadPoolTaskRunner(tb, 2);
+    taskQueue = setUpTaskQueue(taskStorage, taskRunner);
+
+    final CountDownLatch lockAcquisitionCountDownLatch = new CountDownLatch(1);
+    final CountDownLatch runStartAwaitLatch = new CountDownLatch(1);
+    final CountDownLatch runFinishAwaitLatch = new CountDownLatch(1);
+    final CountDownLatch taskCompletionLatch = new CountDownLatch(1);
+
+    final TestIndexTask indexTask = new TestIndexTask(
+        null,
+        null,
+        new IndexTask.IndexIngestionSpec(
+            new DataSchema(
+                "test_ds",
+                null,
+                new AggregatorFactory[]{new DoubleSumAggregatorFactory("met", "met")},
+                new UniformGranularitySpec(
+                    Granularity.DAY,
+                    null,
+                    ImmutableList.of(new Interval(new DateTime().toString("YYYY-MM-dd") + "/P1D"))
+                ),
+                mapper
+            ),
+            new IndexTask.IndexIOConfig(new MockFirehoseFactory(true)),
+            new IndexTask.IndexTuningConfig(10000, 10, -1, indexSpec, false)
+        ),
+        mapper
+    );
+    indexTask.setLatches(lockAcquisitionCountDownLatch, runStartAwaitLatch, runFinishAwaitLatch, null);
+
+    Futures.addCallback(
+        runTaskWithListenableFuture(indexTask),
+        new FutureCallback<TaskStatus>()
+        {
+          @Override
+          public void onSuccess(TaskStatus result)
+          {
+            Assert.assertEquals(TaskStatus.Status.SUCCESS, result.getStatusCode());
+            taskCompletionLatch.countDown();
+          }
+
+          @Override
+          public void onFailure(Throwable t)
+          {
+            Throwables.propagate(t);
+          }
+        }
+    );
+
+    // Wait for the task to acquire the lock
+    lockAcquisitionCountDownLatch.await();
+
+    // Simulate overlord restart, this will cause lock to be reacquired
+    // consequently there will be two lock entries in MetadataStorage because of the way syncFromStorage works
+    taskLockbox.syncFromStorage();
+
+    // Let the task run
+    runStartAwaitLatch.countDown();
+
+    // wait for task to upgrade the lock and push segment
+    while (pushedSegments != 1) {
+      Thread.sleep(50);
+    }
+
+    // Simulate overlord restart, this will cause lock to be reacquired
+    taskLockbox.syncFromStorage();
+
+    // Let the task finish
+
+    runFinishAwaitLatch.countDown();
+    // There will three locks in case of using MetadataTaskStorage as overlord restarted twice
+    // After the first restart there will be two basic locks in MetadataStorage
+    // as it will reacquire and re-upgrade the existing single lock
+    // Next time overlord runs it will create one more basic lock in MetadataStorage
+    // and upgrade that newly create lock
+    assertTaskLocks(3, indexTask);
+    taskCompletionLatch.await();
+  }
+
+  private void assertTaskLocks(int numLockEntriesInMetadata, Task task) {
+
+    // There should only be one lock in the in memory snapshot of TaskLockbox irrespective of the TaskStorage type
+    TaskLock indexTaskLock = Iterables.getOnlyElement(taskLockbox.findLocksForTask(task));
+
+    // Get the Locks from TaskStorage
+    List<TaskLock> taskLocks = taskStorage.getLocks(task.getId());
+
+    if(taskStorageType.equals(METADATA_TASK_STORAGE)) {
+      Assert.assertEquals(numLockEntriesInMetadata, taskLocks.size());
+      for (int i = 0; i < numLockEntriesInMetadata; i++) {
+        Assert.assertEquals(indexTaskLock, taskLocks.get(i));
+      }
+    } else {
+      // Heap TaskStorage always have single TaskLock entry even in case of restarts
+      Assert.assertEquals(1, taskLocks.size());
+      Assert.assertEquals(indexTaskLock, taskLocks.get(0));
+    }
+  }
+
+  private ListenableFuture<TaskStatus> runTaskWithListenableFuture(final Task task) {
+    return MoreExecutors.listeningDecorator(Execs.singleThreaded("tasklifecycle_test_%d")).submit(
+        new Callable<TaskStatus>()
+        {
+          @Override
+          public TaskStatus call() throws Exception
+          {
+            return runTask(task);
+          }
+        }
+    );
+  }
+
+  private void runHandOffCallbacks() {
+    Iterator<Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>>> itr = handOffCallbacks.entrySet()
+                                                                                           .iterator();
+    while (itr.hasNext()) {
+      Map.Entry<SegmentDescriptor, Pair<Executor, Runnable>> entry = itr.next();
+      entry.getValue().lhs.execute(entry.getValue().rhs);
+      itr.remove();
+    }
   }
 }

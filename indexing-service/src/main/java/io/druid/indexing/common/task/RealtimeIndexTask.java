@@ -27,6 +27,7 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.Ints;
+import com.metamx.common.ISE;
 import com.metamx.common.guava.CloseQuietly;
 import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Committer;
@@ -37,8 +38,10 @@ import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.actions.LockAcquireAction;
 import io.druid.indexing.common.actions.LockReleaseAction;
+import io.druid.indexing.common.actions.SetLockCriticalStateAction;
 import io.druid.indexing.common.actions.TaskActionClient;
 import io.druid.query.DruidMetrics;
+import io.druid.indexing.common.actions.TaskLockCriticalState;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -147,6 +150,11 @@ public class RealtimeIndexTask extends AbstractTask
         context
     );
     this.spec = fireDepartment;
+  }
+
+  @Override
+  public int getLockPriority() {
+    return getLockPriority(REALTIME_TASK_PRIORITY);
   }
 
   @Override
@@ -514,7 +522,14 @@ public class RealtimeIndexTask extends AbstractTask
     @Override
     public void publishSegment(DataSegment segment) throws IOException
     {
-      taskToolbox.publishSegments(ImmutableList.of(segment));
+      if (taskToolbox.getTaskActionClient().submit(new SetLockCriticalStateAction(segment.getInterval(), TaskLockCriticalState.UPGRADE))) {
+        taskToolbox.publishSegments(ImmutableList.of(segment));
+      } else {
+        throw new ISE(
+            "WTF?! Lock upgrade failed for interval [%s] ! Is there a higher priority task running ?",
+            segment.getInterval()
+        );
+      }
     }
   }
 }
