@@ -37,6 +37,7 @@ import io.druid.guice.NodeTypeConfig;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.lookup.LookupModule;
 import io.druid.server.QueryResource;
+import io.druid.server.QueryResourceV3;
 import io.druid.server.coordination.ServerManager;
 import io.druid.server.coordination.ZkCoordinator;
 import io.druid.server.http.HistoricalResource;
@@ -82,8 +83,10 @@ public class CliHistorical extends ServerRunnable
             binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig("historical"));
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class).in(LazySingleton.class);
             Jerseys.addResource(binder, QueryResource.class);
+            Jerseys.addResource(binder, QueryResourceV3.class);
             Jerseys.addResource(binder, HistoricalResource.class);
             LifecycleModule.register(binder, QueryResource.class);
+            LifecycleModule.register(binder, QueryResourceV3.class);
             LifecycleModule.register(binder, ZkCoordinator.class);
 
             JsonConfigProvider.bind(binder, "druid.historical.cache", CacheConfig.class);

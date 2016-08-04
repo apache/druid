@@ -28,6 +28,7 @@ import io.airlift.airline.Command;
 import io.druid.client.BrokerSegmentWatcherConfig;
 import io.druid.client.BrokerServerView;
 import io.druid.client.CachingClusteredClient;
+import io.druid.client.DirectDruidClientConfig;
 import io.druid.client.TimelineServerView;
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.CacheMonitor;
@@ -96,6 +97,7 @@ public class CliBroker extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid.broker.balancer", ServerSelectorStrategy.class);
             JsonConfigProvider.bind(binder, "druid.broker.retryPolicy", RetryQueryRunnerConfig.class);
             JsonConfigProvider.bind(binder, "druid.broker.segment", BrokerSegmentWatcherConfig.class);
+            JsonConfigProvider.bind(binder, "druid.broker.httpClient", DirectDruidClientConfig.class);
 
             binder.bind(QuerySegmentWalker.class).to(ClientQuerySegmentWalker.class).in(LazySingleton.class);
 
