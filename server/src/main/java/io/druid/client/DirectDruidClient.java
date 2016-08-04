@@ -29,7 +29,6 @@ import com.fasterxml.jackson.databind.type.TypeFactory;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
 import com.fasterxml.jackson.jaxrs.smile.SmileMediaTypes;
 import com.google.common.base.Charsets;
-import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.google.common.io.ByteSource;
@@ -54,7 +53,6 @@ import com.metamx.http.client.response.StatusResponseHandler;
 import com.metamx.http.client.response.StatusResponseHolder;
 import io.druid.query.BaseQuery;
 import io.druid.query.BySegmentResultValueClass;
-import io.druid.query.DruidMetrics;
 import io.druid.query.Query;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryRunner;
@@ -63,6 +61,7 @@ import io.druid.query.QueryToolChestWarehouse;
 import io.druid.query.QueryWatcher;
 import io.druid.query.Result;
 import io.druid.query.aggregation.MetricManipulatorFns;
+import io.druid.server.QueryResourceV3;
 import org.jboss.netty.buffer.ChannelBuffer;
 import org.jboss.netty.buffer.ChannelBufferInputStream;
 import org.jboss.netty.handler.codec.http.HttpChunk;
@@ -484,6 +483,141 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           } else {
             jp.nextToken();
             objectCodec = jp.getCodec();
+          }
+        }
+        catch (IOException | InterruptedException | ExecutionException e) {
+          throw new RE(e, "Failure getting results from[%s] because of [%s]", url, e.getMessage());
+        }
+        catch (CancellationException e) {
+          throw new QueryInterruptedException(e, host);
+        }
+      }
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      if (jp != null) {
+        jp.close();
+      }
+    }
+  }
+
+  // Mostly same as JsonParserIterator with updates to handle v3 query response of type
+  // { "result": [....], "context": { .... } }
+  // adds all the context entries from response into the Map responseContext passed to it.
+  // against the key <host>
+  static class JsonParserV3ResponseIterator<T> implements Iterator<T>, Closeable
+  {
+    private JsonParser jp;
+    private ObjectCodec objectCodec;
+    private final JavaType typeRef;
+    private final Future<InputStream> future;
+    private final String url;
+
+    private final ObjectMapper objectMapper;
+    private final String host;
+    private final Map<String, Object> responseContext;
+
+    public JsonParserV3ResponseIterator(
+        JavaType typeRef,
+        Future<InputStream> future,
+        String url,
+        ObjectMapper objectMapper,
+        String host,
+        Map<String, Object> responseContext
+    )
+    {
+      this.typeRef = typeRef;
+      this.future = future;
+      this.url = url;
+      jp = null;
+      this.objectMapper = objectMapper;
+      this.host = host;
+      this.responseContext = responseContext;
+    }
+
+    @Override
+    public boolean hasNext()
+    {
+      init();
+
+      if (jp.isClosed()) {
+        return false;
+      }
+
+      if (jp.getCurrentToken() == JsonToken.END_ARRAY) {
+        // now we are finised reading all the result values.
+        try {
+          jp.nextToken(); //read off FIELD_NAME token for "context"
+          jp.nextToken();
+          Map<String, Object> ctx = objectCodec.readValue(jp, Map.class);
+          responseContext.put(host, ctx);
+          jp.nextToken(); //read off END_OBJECT token
+          jp.close();
+        } catch (IOException ex) {
+          throw Throwables.propagate(ex);
+        }
+
+        return false;
+      }
+
+
+      return true;
+    }
+
+    @Override
+    public T next()
+    {
+      init();
+      try {
+        final T retVal = objectCodec.readValue(jp, typeRef);
+        jp.nextToken();
+        return retVal;
+      }
+      catch (IOException e) {
+        throw Throwables.propagate(e);
+      }
+    }
+
+    @Override
+    public void remove()
+    {
+      throw new UnsupportedOperationException();
+    }
+
+    private void init()
+    {
+      if (jp == null) {
+        try {
+          jp = objectMapper.getFactory().createParser(future.get());
+          if (jp.nextToken() == JsonToken.START_OBJECT) {
+            if (jp.nextToken() == JsonToken.FIELD_NAME) {
+              if (QueryResourceV3.KEY_RESULT.equals(jp.getCurrentName())) {
+                if (jp.nextToken() == JsonToken.START_ARRAY) {
+                  jp.nextToken();
+                  objectCodec = jp.getCodec();
+                } else {
+                  throw new IAE("result must be array, token was[%s] from url [%s]", jp.getCurrentToken(), url);
+                }
+              } else {
+                QueryInterruptedException cause = jp.getCodec().readValue(jp, QueryInterruptedException.class);
+                //case we get an exception with an unknown message.
+                if (cause.isNotKnown()) {
+                  throw new QueryInterruptedException(
+                      QueryInterruptedException.UNKNOWN_EXCEPTION,
+                      cause.getMessage(),
+                      host
+                  );
+                } else {
+                  throw new QueryInterruptedException(cause, host);
+                }
+              }
+            } else {
+              throw new IAE("Next token wasn't a FIELD_NAME, was[%s] from url [%s]", jp.getCurrentToken(), url);
+            }
+          } else {
+            throw new IAE("expecting json object, was[%s] from url [%s]", jp.getCurrentToken(), url);
           }
         }
         catch (IOException | InterruptedException | ExecutionException e) {
