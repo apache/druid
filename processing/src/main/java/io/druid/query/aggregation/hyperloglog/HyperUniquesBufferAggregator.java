@@ -55,12 +55,19 @@ public class HyperUniquesBufferAggregator implements BufferAggregator
       return;
     }
 
-    HyperLogLogCollector.makeCollector(
-        (ByteBuffer) buf.duplicate().position(position).limit(
-            position
-            + HyperLogLogCollector.getLatestNumBytesForDenseStorage()
-        )
-    ).fold(collector);
+    // Save position, limit and restore later instead of allocating a new ByteBuffer object
+    final int oldPosition = buf.position();
+    final int oldLimit = buf.limit();
+    buf.limit(position + HyperLogLogCollector.getLatestNumBytesForDenseStorage());
+    buf.position(position);
+
+    try {
+      HyperLogLogCollector.makeCollector(buf).fold(collector);
+    }
+    finally {
+      buf.limit(oldLimit);
+      buf.position(oldPosition);
+    }
   }
 
   @Override
