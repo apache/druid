@@ -239,7 +239,7 @@ public class TimeFilteringTest extends BaseFilterTest
     assertFilterMatches(
         new IntervalDimFilter(
             Column.TIME_COLUMN_NAME,
-            Arrays.asList(Interval.parse("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z")),
+            Arrays.asList(Interval.parse("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.005Z")),
             null
         ),
         ImmutableList.<String>of("1", "2", "3", "4")
@@ -249,8 +249,8 @@ public class TimeFilteringTest extends BaseFilterTest
         new IntervalDimFilter(
             Column.TIME_COLUMN_NAME,
             Arrays.asList(
-                Interval.parse("1970-01-01T00:00:00.000Z/1970-01-01T00:00:00.002Z"),
-                Interval.parse("1970-01-01T00:00:00.004Z/1970-01-01T00:00:00.005Z")
+                Interval.parse("1970-01-01T00:00:00.000Z/1970-01-01T00:00:00.003Z"),
+                Interval.parse("1970-01-01T00:00:00.004Z/1970-01-01T00:00:00.006Z")
             ),
             null
         ),
@@ -261,9 +261,9 @@ public class TimeFilteringTest extends BaseFilterTest
         new IntervalDimFilter(
             Column.TIME_COLUMN_NAME,
             Arrays.asList(
-                Interval.parse("1970-01-01T00:00:00.000Z/1970-01-01T00:00:00.000Z"),
-                Interval.parse("1970-01-01T00:00:00.003Z/1970-01-01T00:00:00.005Z"),
-                Interval.parse("1970-01-01T00:00:00.002Z/1970-01-01T00:00:00.004Z")
+                Interval.parse("1970-01-01T00:00:00.000Z/1970-01-01T00:00:00.001Z"),
+                Interval.parse("1970-01-01T00:00:00.003Z/1970-01-01T00:00:00.006Z"),
+                Interval.parse("1970-01-01T00:00:00.002Z/1970-01-01T00:00:00.005Z")
             ),
             null
         ),
@@ -276,7 +276,7 @@ public class TimeFilteringTest extends BaseFilterTest
     assertFilterMatches(
         new IntervalDimFilter(
             Column.TIME_COLUMN_NAME,
-            Arrays.asList(Interval.parse("1970-01-01T02:00:00.001Z/1970-01-01T02:00:00.004Z")),
+            Arrays.asList(Interval.parse("1970-01-01T02:00:00.001Z/1970-01-01T02:00:00.005Z")),
             exFn
         ),
         ImmutableList.<String>of("1", "2", "3", "4")
@@ -289,7 +289,7 @@ public class TimeFilteringTest extends BaseFilterTest
     assertFilterMatches(
         new IntervalDimFilter(
             "dim0",
-            Arrays.asList(Interval.parse("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z")),
+            Arrays.asList(Interval.parse("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.005Z")),
             null
         ),
         ImmutableList.<String>of("1", "2", "3", "4")
@@ -299,8 +299,8 @@ public class TimeFilteringTest extends BaseFilterTest
         new IntervalDimFilter(
             "dim0",
             Arrays.asList(
-                Interval.parse("1970-01-01T00:00:00.000Z/1970-01-01T00:00:00.002Z"),
-                Interval.parse("1970-01-01T00:00:00.004Z/1970-01-01T00:00:00.005Z")
+                Interval.parse("1970-01-01T00:00:00.000Z/1970-01-01T00:00:00.003Z"),
+                Interval.parse("1970-01-01T00:00:00.004Z/1970-01-01T00:00:00.006Z")
             ),
             null
         ),
@@ -311,9 +311,9 @@ public class TimeFilteringTest extends BaseFilterTest
         new IntervalDimFilter(
             "dim0",
             Arrays.asList(
-                Interval.parse("1970-01-01T00:00:00.000Z/1970-01-01T00:00:00.000Z"),
-                Interval.parse("1970-01-01T00:00:00.003Z/1970-01-01T00:00:00.005Z"),
-                Interval.parse("1970-01-01T00:00:00.002Z/1970-01-01T00:00:00.004Z")
+                Interval.parse("1970-01-01T00:00:00.000Z/1970-01-01T00:00:00.001Z"),
+                Interval.parse("1970-01-01T00:00:00.003Z/1970-01-01T00:00:00.006Z"),
+                Interval.parse("1970-01-01T00:00:00.002Z/1970-01-01T00:00:00.005Z")
             ),
             null
         ),
@@ -335,7 +335,7 @@ public class TimeFilteringTest extends BaseFilterTest
     assertFilterMatches(
         new IntervalDimFilter(
             "dim0",
-            Arrays.asList(Interval.parse("1970-01-01T02:00:00.001Z/1970-01-01T02:00:00.004Z")),
+            Arrays.asList(Interval.parse("1970-01-01T02:00:00.001Z/1970-01-01T02:00:00.005Z")),
             exFn
         ),
         ImmutableList.<String>of("1", "2", "3", "4")
