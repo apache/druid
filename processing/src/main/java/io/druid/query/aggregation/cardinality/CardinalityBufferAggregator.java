@@ -53,16 +53,23 @@ public class CardinalityBufferAggregator implements BufferAggregator
   @Override
   public void aggregate(ByteBuffer buf, int position)
   {
-    final HyperLogLogCollector collector = HyperLogLogCollector.makeCollector(
-        (ByteBuffer) buf.duplicate().position(position).limit(
-            position
-            + HyperLogLogCollector.getLatestNumBytesForDenseStorage()
-        )
-    );
-    if (byRow) {
-      CardinalityAggregator.hashRow(selectorList, collector);
-    } else {
-      CardinalityAggregator.hashValues(selectorList, collector);
+    // Save position, limit and restore later instead of allocating a new ByteBuffer object
+    final int oldPosition = buf.position();
+    final int oldLimit = buf.limit();
+    buf.limit(position + HyperLogLogCollector.getLatestNumBytesForDenseStorage());
+    buf.position(position);
+
+    try {
+      final HyperLogLogCollector collector = HyperLogLogCollector.makeCollector(buf);
+      if (byRow) {
+        CardinalityAggregator.hashRow(selectorList, collector);
+      } else {
+        CardinalityAggregator.hashValues(selectorList, collector);
+      }
+    }
+    finally {
+      buf.limit(oldLimit);
+      buf.position(oldPosition);
     }
   }
 
