@@ -42,6 +42,11 @@ public class ReferenceCountingResourceHolder<T> implements ResourceHolder<T>
     this.closer = closer;
   }
 
+  public static <T extends Closeable> ReferenceCountingResourceHolder<T> fromCloseable(final T object)
+  {
+    return new ReferenceCountingResourceHolder<>(object, object);
+  }
+
   @Override
   public T get()
   {
