@@ -41,6 +41,15 @@ import java.util.Map;
 
 public class LongFirstAggregatorFactory extends AggregatorFactory
 {
+  public static final Comparator VALUE_COMPARATOR = new Comparator()
+  {
+    @Override
+    public int compare(Object o1, Object o2)
+    {
+      return Longs.compare(((SerializablePair<Long, Long>) o1).rhs, ((SerializablePair<Long, Long>) o2).rhs);
+    }
+  };
+
   private static final byte CACHE_TYPE_ID = 17;
 
   private final String fieldName;
@@ -80,20 +89,13 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
   @Override
   public Comparator getComparator()
   {
-    return new Comparator()
-    {
-      @Override
-      public int compare(Object o1, Object o2)
-      {
-        return Longs.compare(((SerializablePair<Long, Long>) o1).rhs, ((SerializablePair<Long, Long>) o2).rhs);
-      }
-    };
+    return VALUE_COMPARATOR;
   }
 
   @Override
   public Object combine(Object lhs, Object rhs)
   {
-    return (((SerializablePair<Long, Long>) lhs).lhs <= ((SerializablePair<Long, Long>) rhs).lhs) ? lhs : rhs;
+    return DoubleFirstAggregatorFactory.TIME_COMPARATOR.compare(lhs, rhs) <= 0 ? lhs : rhs;
   }
 
   @Override
@@ -193,7 +195,7 @@ public class LongFirstAggregatorFactory extends AggregatorFactory
   {
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
 
-    return ByteBuffer.allocate(1 + fieldNameBytes.length).put(CACHE_TYPE_ID).put(fieldNameBytes).array();
+    return ByteBuffer.allocate(2 + fieldNameBytes.length).put(CACHE_TYPE_ID).put(fieldNameBytes).put((byte)0xff).array();
   }
 
   @Override
