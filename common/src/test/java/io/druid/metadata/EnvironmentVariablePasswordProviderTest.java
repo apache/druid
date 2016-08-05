@@ -19,20 +19,24 @@
 
 package io.druid.metadata;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.Assert;
+import org.junit.Test;
 
+import java.io.IOException;
 
-/**
- * Implement this for different ways to (optionally securely) access db passwords.
- */
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = DefaultPasswordProvider.class)
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "default", value = DefaultPasswordProvider.class),
-    @JsonSubTypes.Type(name = "environment", value = EnvironmentVariablePasswordProvider.class),
-
-})
-public interface PasswordProvider
+public class EnvironmentVariablePasswordProviderTest
 {
-  public String getPassword();
+  private static final ObjectMapper jsonMapper = new ObjectMapper();
+
+  @Test
+  public void testSerde() throws IOException
+  {
+    String providerString = "{\"type\": \"environment\", \"passwordKey\" : \"test\"}";
+    PasswordProvider provider = jsonMapper.readValue(providerString, PasswordProvider.class);
+    Assert.assertTrue(provider instanceof EnvironmentVariablePasswordProvider);
+    Assert.assertEquals("test", ((EnvironmentVariablePasswordProvider) provider).getPasswordKey());
+    PasswordProvider serde = jsonMapper.readValue(jsonMapper.writeValueAsString(provider), PasswordProvider.class);
+    Assert.assertEquals(provider, serde);
+  }
 }
