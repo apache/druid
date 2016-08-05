@@ -62,6 +62,9 @@ import java.util.concurrent.TimeUnit;
  */
 public class AsyncQueryForwardingServlet extends AsyncProxyServlet
 {
+  public static final String QUERY_URL_V2 = "/druid/v2";
+  public static final String QUERY_URL_V3 = "/druid/v3";
+
   private static final EmittingLogger log = new EmittingLogger(AsyncQueryForwardingServlet.class);
   @Deprecated // use SmileMediaTypes.APPLICATION_JACKSON_SMILE
   private static final String APPLICATION_SMILE = "application/smile";
@@ -161,9 +164,9 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
     final String defaultHost = hostFinder.getDefaultHost();
     request.setAttribute(HOST_ATTRIBUTE, defaultHost);
 
-    final boolean isQueryEndpoint = request.getRequestURI().startsWith("/druid/v2");
+    final String requestURI = request.getRequestURI();
 
-    if (isQueryEndpoint && HttpMethod.DELETE.is(request.getMethod())) {
+    if (requestURI.startsWith(QUERY_URL_V2) && HttpMethod.DELETE.is(request.getMethod())) {
       // query cancellation request
       for (final String host : hostFinder.getAllHosts()) {
         // send query cancellation to all brokers this query may have gone to
@@ -192,7 +195,8 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
               );
         }
       }
-    } else if (isQueryEndpoint && HttpMethod.POST.is(request.getMethod())) {
+    } else if ((requestURI.startsWith(QUERY_URL_V2) || requestURI.startsWith(QUERY_URL_V3)) &&
+               HttpMethod.POST.is(request.getMethod())) {
       // query request
       try {
         Query inputQuery = objectMapper.readValue(request.getInputStream(), Query.class);

@@ -41,7 +41,9 @@ import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.handler.HandlerList;
 import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
+import org.eclipse.jetty.servlet.ServletHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
+import org.eclipse.jetty.servlet.ServletMapping;
 
 /**
  */
@@ -100,7 +102,13 @@ public class RouterJettyServerInitializer implements JettyServerInitializer
     //NOTE: explicit maxThreads to workaround https://tickets.puppetlabs.com/browse/TK-152
     sh.setInitParameter("maxThreads", Integer.toString(httpClientConfig.getNumMaxThreads()));
 
-    root.addServlet(sh, "/druid/v2/*");
+    ServletHandler servletHandler = root.getServletHandler();
+    servletHandler.addServlet(sh);
+    ServletMapping mapping = new ServletMapping();
+    mapping.setServletName(sh.getName());
+    mapping.setPathSpecs(new String[] {"/druid/v2/*", "/druid/v3/*"});
+    servletHandler.addServletMapping(mapping);
+
     JettyServerInitUtils.addExtensionFilters(root, injector);
     root.addFilter(JettyServerInitUtils.defaultAsyncGzipFilterHolder(), "/*", null);
     // Can't use '/*' here because of Guice conflicts with AsyncQueryForwardingServlet path
