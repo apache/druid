@@ -37,7 +37,7 @@ import java.util.Set;
  */
 public class ArithmeticPostAggregator implements PostAggregator
 {
-  private static final Comparator DEFAULT_COMPARATOR = new Comparator()
+  public static final Comparator DEFAULT_COMPARATOR = new Comparator()
   {
     @Override
     public int compare(Object o, Object o1)
