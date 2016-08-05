@@ -150,6 +150,33 @@ Search filters can be used to filter on partial string matches.
 
 The search filter supports the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
 
+#### Search Query Spec
+
+##### Contains
+
+|property|description|required?|
+|--------|-----------|---------|
+|type|This String should always be "contains".|yes|
+|value|A String value to run the search over.|yes|
+|caseSensitive|Whether two string should be compared as case sensitive or not|no (default == false)|
+
+##### Insensitive Contains
+
+|property|description|required?|
+|--------|-----------|---------|
+|type|This String should always be "insensitive_contains".|yes|
+|value|A String value to run the search over.|yes|
+
+Note that an "insensitive_contains" search is equivalent to a "contains" search with "caseSensitive": false (or not
+provided).
+
+##### Fragment
+
+|property|description|required?|
+|--------|-----------|---------|
+|type|This String should always be "fragment".|yes|
+|values|A JSON array of String values to run the search over.|yes|
+|caseSensitive|Whether strings should be compared as case sensitive or not. Default: false(insensitive)|no|
 
 ### In filter
 
@@ -245,33 +272,62 @@ Likewise, this filter expresses `age >= 18`
 ```
 
 
-#### Search Query Spec
+### Interval Filter
 
-##### Contains
+The Interval filter enables range filtering on columns that contain long millisecond values, with the boundaries specified as ISO 8601 time intervals. It is suitable for the `__time` column, long metric columns, and dimensions with values that can be parsed as long milliseconds.
 
-|property|description|required?|
-|--------|-----------|---------|
-|type|This String should always be "contains".|yes|
-|value|A String value to run the search over.|yes|
-|caseSensitive|Whether two string should be compared as case sensitive or not|no (default == false)|
+This filter converts the ISO 8601 intervals to long millisecond start/end ranges and translates to an OR of Bound filters on those millisecond ranges, with numeric comparison. The Bound filters will have left-closed and right-open matching (i.e., start <= time < end).
 
-##### Insensitive Contains
+|property|type|description|required?|
+|--------|-----------|---------|---------|
+|type|String|This should always be "interval".|yes|
+|dimension|String|The dimension to filter on|yes|
+|intervals|Array|A JSON array containing ISO-8601 interval strings. This defines the time ranges to filter on.|yes|
+|extractionFn|[Extraction function](#filtering-with-extraction-functions)| Extraction function to apply to the dimension|no|
+  
+The interval filter supports the use of extraction functions, see [Filtering with Extraction Functions](#filtering-with-extraction-functions) for details.
 
-|property|description|required?|
-|--------|-----------|---------|
-|type|This String should always be "insensitive_contains".|yes|
-|value|A String value to run the search over.|yes|
+If an extraction function is used with this filter, the extraction function should output values that are parseable as long milliseconds.
 
-Note that an "insensitive_contains" search is equivalent to a "contains" search with "caseSensitive": false (or not
-provided).
+The following example filters on the time ranges of October 1-7, 2014 and November 15-16, 2014.
+```json
+{
+    "type" : "interval",
+    "dimension" : "__time",
+    "intervals" : [
+      "2014-10-01T00:00:00.000Z/2014-10-07T00:00:00.000Z",
+      "2014-11-15T00:00:00.000Z/2014-11-16T00:00:00.000Z"
+    ]
+}
+```
 
-##### Fragment
+The filter above is equivalent to the following OR of Bound filters:
 
-|property|description|required?|
-|--------|-----------|---------|
-|type|This String should always be "fragment".|yes|
-|values|A JSON array of String values to run the search over.|yes|
-|caseSensitive|Whether strings should be compared as case sensitive or not. Default: false(insensitive)|no|
+```json
+{
+    "type": "or",
+    "fields": [
+      {
+        "type": "bound",
+        "dimension": "__time",
+        "lower": "1412121600000",
+        "lowerStrict": false,
+        "upper": "1412640000000" ,
+        "upperStrict": true,
+        "ordering": "numeric"
+      },
+      {
+         "type": "bound",
+         "dimension": "__time",
+         "lower": "1416009600000",
+         "lowerStrict": false,
+         "upper": "1416096000000" ,
+         "upperStrict": true,
+         "ordering": "numeric"
+      }
+    ]
+}
+```
 
 ### Filtering with Extraction Functions
 Some filters optionally support the use of extraction functions.
@@ -341,5 +397,17 @@ Filtering on day of week:
     "timeZone": "America/New_York",
     "locale": "en"
   }
+}
+```
+
+Filtering on a set of ISO 8601 intervals:
+```json
+{
+    "type" : "interval",
+    "dimension" : "__time",
+    "intervals" : [
+      "2014-10-01T00:00:00.000Z/2014-10-07T00:00:00.000Z",
+      "2014-11-15T00:00:00.000Z/2014-11-16T00:00:00.000Z"
+    ]
 }
 ```
