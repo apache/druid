@@ -28,7 +28,6 @@ import java.util.Iterator;
 
 public class CloseableGrouperIterator<KeyType extends Comparable<KeyType>, T> implements Iterator<T>, Closeable
 {
-  private final Grouper<KeyType> grouper;
   private final Function<Grouper.Entry<KeyType>, T> transformer;
   private final Closeable closer;
   private final Iterator<Grouper.Entry<KeyType>> iterator;
@@ -40,7 +39,6 @@ public class CloseableGrouperIterator<KeyType extends Comparable<KeyType>, T> im
       final Closeable closer
   )
   {
-    this.grouper = grouper;
     this.transformer = transformer;
     this.closer = closer;
     this.iterator = grouper.iterator(sorted);

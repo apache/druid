@@ -148,15 +148,16 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
           @Override
           public CloseableGrouperIterator<RowBasedKey, Row> make()
           {
-            final List<Closeable> closeOnFailure = Lists.newArrayList();
+            final List<ReferenceCountingResourceHolder> resources = Lists.newArrayList();
 
             try {
               final LimitedTemporaryStorage temporaryStorage = new LimitedTemporaryStorage(
                   temporaryStorageDirectory,
                   querySpecificConfig.getMaxOnDiskStorage()
               );
-
-              closeOnFailure.add(temporaryStorage);
+              final ReferenceCountingResourceHolder<LimitedTemporaryStorage> temporaryStorageHolder =
+                  ReferenceCountingResourceHolder.fromCloseable(temporaryStorage);
+              resources.add(temporaryStorageHolder);
 
               final ReferenceCountingResourceHolder<ByteBuffer> mergeBufferHolder;
               try {
@@ -165,7 +166,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
                 if (timeout <= 0 || (mergeBufferHolder = mergeBufferPool.take(timeout)) == null) {
                   throw new QueryInterruptedException(new TimeoutException());
                 }
-                closeOnFailure.add(mergeBufferHolder);
+                resources.add(mergeBufferHolder);
               }
               catch (InterruptedException e) {
                 throw new QueryInterruptedException(e);
@@ -184,18 +185,9 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
               final Grouper<RowBasedKey> grouper = pair.lhs;
               final Accumulator<Grouper<RowBasedKey>, Row> accumulator = pair.rhs;
 
-              final ReferenceCountingResourceHolder<Grouper<RowBasedKey>> grouperHolder = new ReferenceCountingResourceHolder<>(
-                  grouper,
-                  new Closeable()
-                  {
-                    @Override
-                    public void close() throws IOException
-                    {
-                      grouper.close();
-                    }
-                  }
-              );
-              closeOnFailure.add(grouperHolder);
+              final ReferenceCountingResourceHolder<Grouper<RowBasedKey>> grouperHolder =
+                  ReferenceCountingResourceHolder.fromCloseable(grouper);
+              resources.add(grouperHolder);
 
               ListenableFuture<List<Boolean>> futures = Futures.allAsList(
                   Lists.newArrayList(
@@ -271,16 +263,16 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
                     @Override
                     public void close() throws IOException
                     {
-                      grouperHolder.close();
-                      mergeBufferHolder.close();
-                      CloseQuietly.close(temporaryStorage);
+                      for (Closeable closeable : Lists.reverse(resources)) {
+                        CloseQuietly.close(closeable);
+                      }
                     }
                   }
               );
             }
             catch (Throwable e) {
               // Exception caught while setting up the iterator; release resources.
-              for (Closeable closeable : Lists.reverse(closeOnFailure)) {
+              for (Closeable closeable : Lists.reverse(resources)) {
                 CloseQuietly.close(closeable);
               }
               throw e;
