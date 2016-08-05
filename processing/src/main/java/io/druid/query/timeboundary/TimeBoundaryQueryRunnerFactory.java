@@ -86,32 +86,35 @@ public class TimeBoundaryQueryRunnerFactory
   private static class TimeBoundaryQueryRunner implements QueryRunner<Result<TimeBoundaryResultValue>>
   {
     private final StorageAdapter adapter;
+    private final Function<Cursor, Result<DateTime>> skipToFirstMatching;
 
     public TimeBoundaryQueryRunner(Segment segment)
     {
       this.adapter = segment.asStorageAdapter();
-    }
-
-    private final Function<Cursor, Result<DateTime>> skipToFirstMatching = new Function<Cursor, Result<DateTime>>()
-    {
-      @Override
-      public Result<DateTime> apply(Cursor cursor)
+      this.skipToFirstMatching = new Function<Cursor, Result<DateTime>>()
       {
-        if (cursor.isDone()) {
-          return null;
+        @Override
+        public Result<DateTime> apply(Cursor cursor)
+        {
+          if (cursor.isDone()) {
+            return null;
+          }
+          final LongColumnSelector timestampColumnSelector = cursor.makeLongColumnSelector(Column.TIME_COLUMN_NAME);
+          final DateTime timestamp = new DateTime(timestampColumnSelector.get());
+          return new Result<>(adapter.getInterval().getStart(), timestamp);
         }
-        final LongColumnSelector timestampColumnSelector = cursor.makeLongColumnSelector(Column.TIME_COLUMN_NAME);
-        final DateTime timestamp = new DateTime(timestampColumnSelector.get());
-        return new Result<>(adapter.getInterval().getStart(), timestamp);
-      }
-    };
+      };
+    }
 
     private DateTime getTimeBoundary(StorageAdapter adapter, TimeBoundaryQuery legacyQuery, boolean descending)
     {
       final Sequence<Result<DateTime>> resultSequence = QueryRunnerHelper.makeCursorBasedQuery(
-          adapter, legacyQuery.getQuerySegmentSpec().getIntervals(),
+          adapter,
+          legacyQuery.getQuerySegmentSpec().getIntervals(),
           Filters.toFilter(legacyQuery.getDimensionsFilter()),
-          descending, new AllGranularity(), skipToFirstMatching
+          descending,
+          new AllGranularity(),
+          this.skipToFirstMatching
       );
       final List<Result<DateTime>> resultList = Sequences.toList(
           Sequences.limit(resultSequence, 1),
@@ -152,7 +155,11 @@ public class TimeBoundaryQueryRunnerFactory
 
               if (legacyQuery.getDimensionsFilter() != null) {
                 minTime = getTimeBoundary(adapter, legacyQuery, false);
-                maxTime = getTimeBoundary(adapter, legacyQuery, true);
+                if (minTime == null) {
+                  maxTime = null;
+                } else {
+                  maxTime = getTimeBoundary(adapter, legacyQuery, true);
+                }
               } else {
                 minTime = legacyQuery.getBound().equalsIgnoreCase(TimeBoundaryQuery.MAX_TIME)
                           ? null

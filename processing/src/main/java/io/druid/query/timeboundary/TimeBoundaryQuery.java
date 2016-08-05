@@ -78,7 +78,9 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
   }
 
   @Override
-  public boolean hasFilters() { return dimFilter != null; }
+  public boolean hasFilters() {
+    return dimFilter != null;
+  }
 
   @Override
   public String getType()
@@ -138,9 +140,11 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
   {
     final byte[] filterBytes = dimFilter == null ? new byte[]{} : dimFilter.getCacheKey();
     final byte[] boundBytes = StringUtils.toUtf8(bound);
-    return ByteBuffer.allocate(1 + boundBytes.length)
+    final byte delimiter = (byte) 0xff;
+    return ByteBuffer.allocate(2 + boundBytes.length + filterBytes.length)
                      .put(CACHE_TYPE_ID)
                      .put(boundBytes)
+                     .put(delimiter)
                      .put(filterBytes)
                      .array();
   }
@@ -246,7 +250,9 @@ public class TimeBoundaryQuery extends BaseQuery<Result<TimeBoundaryResultValue>
       return false;
     }
 
-    if (dimFilter != null ? !dimFilter.equals(that.dimFilter) : that.dimFilter != null) return false;
+    if (dimFilter != null ? !dimFilter.equals(that.dimFilter) : that.dimFilter != null) {
+      return false;
+    }
 
     return true;
   }
