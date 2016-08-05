@@ -27,6 +27,8 @@ import io.druid.js.JavaScriptConfig;
 import io.druid.query.extraction.IdentityExtractionFn;
 import io.druid.query.ordering.StringComparators;
 import io.druid.query.search.search.ContainsSearchQuerySpec;
+import io.druid.segment.column.Column;
+import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -61,6 +63,24 @@ public class GetDimensionRangeSetTest
                                                            JavaScriptConfig.getDefault());
   private final DimFilter other3 = new SearchQueryDimFilter("dim", new ContainsSearchQuerySpec("a", true), null);
 
+  private final DimFilter interval1 = new IntervalDimFilter(
+      Column.TIME_COLUMN_NAME,
+      Arrays.asList(
+          Interval.parse("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
+          Interval.parse("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
+      ),
+      null
+  );
+
+  private final DimFilter interval2 = new IntervalDimFilter(
+      "dim1",
+      Arrays.asList(
+          Interval.parse("1970-01-01T00:00:00.001Z/1970-01-01T00:00:00.004Z"),
+          Interval.parse("1975-01-01T00:00:00.001Z/1980-01-01T00:00:00.004Z")
+      ),
+      null
+  );
+
   private static final RangeSet all = rangeSet(ImmutableList.of(Range.<String>all()));
   private static final RangeSet empty = rangeSet(ImmutableList.<Range<String>>of());
 
@@ -91,6 +111,9 @@ public class GetDimensionRangeSetTest
     Assert.assertNull(other1.getDimensionRangeSet("someDim"));
     Assert.assertNull(other2.getDimensionRangeSet("someOtherDim"));
     Assert.assertNull(other3.getDimensionRangeSet("dim"));
+
+    Assert.assertNull(interval1.getDimensionRangeSet(Column.TIME_COLUMN_NAME));
+    Assert.assertNull(interval2.getDimensionRangeSet("dim1"));
   }
 
   @Test

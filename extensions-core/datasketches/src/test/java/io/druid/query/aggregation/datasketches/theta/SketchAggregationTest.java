@@ -417,6 +417,42 @@ public class SketchAggregationTest
     Assert.assertFalse(Arrays.equals(factory1.getCacheKey(), factory3.getCacheKey()));
   }
 
+  @Test
+  public void testRetentionDataIngestAndGpByQuery() throws Exception
+  {
+    Sequence<Row> seq = helper.createIndexAndRunQueryOnSegment(
+        new File(this.getClass().getClassLoader().getResource("retention_test_data.tsv").getFile()),
+        readFileFromClasspathAsString("simple_test_data_record_parser.json"),
+        readFileFromClasspathAsString("simple_test_data_aggregators.json"),
+        0,
+        QueryGranularities.NONE,
+        5,
+        readFileFromClasspathAsString("retention_test_data_group_by_query.json")
+    );
+
+    List<Row> results = Sequences.toList(seq, Lists.<Row>newArrayList());
+    Assert.assertEquals(1, results.size());
+    Assert.assertEquals(
+        ImmutableList.of(
+            new MapBasedRow(
+                DateTime.parse("2014-10-19T00:00:00.000Z"),
+                ImmutableMap
+                    .<String, Object>builder()
+                    .put("product", "product_1")
+                    .put("p1_unique_country_day_1", 20.0)
+                    .put("p1_unique_country_day_2", 20.0)
+                    .put("p1_unique_country_day_3", 10.0)
+                    .put("sketchEstimatePostAgg", 20.0)
+                    .put("sketchIntersectionPostAggEstimate1", 10.0)
+                    .put("sketchIntersectionPostAggEstimate2", 5.0)
+                    .put("non_existing_col_validation", 0.0)
+                    .build()
+            )
+        ),
+        results
+    );
+  }
+
   private void assertPostAggregatorSerde(PostAggregator agg) throws Exception
   {
     Assert.assertEquals(

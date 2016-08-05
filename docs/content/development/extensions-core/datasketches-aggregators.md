@@ -153,3 +153,101 @@ sample query for, How many unique users visited both product A and B?
   ]
 }
 ```
+
+#### Retention Analysis Example
+
+Suppose you want to answer a question like, "How many unique users performed a specific action in a particular time period and also performed another specific action in a different time period?"
+
+e.g., "How many unique users signed up in week 1, and purchased something in week 2?"
+
+Using the `(timestamp, product, user_id)` example dataset, data would be indexed with the following aggregator, like in the example above:
+
+```json
+{ "type": "thetaSketch", "name": "user_id_sketch", "fieldName": "user_id" }
+```
+
+The following query expresses:
+
+"Out of the unique users who visited Product A between 10/01/2014 and 10/07/2014, how many visited Product A again in the week of 10/08/2014 to 10/14/2014?"
+
+```json
+{
+  "queryType": "groupBy",
+  "dataSource": "test_datasource",
+  "granularity": "ALL",
+  "dimensions": [],
+  "filter": {
+    "type": "or",
+    "fields": [
+      {"type": "selector", "dimension": "product", "value": "A"}
+    ]
+  },
+  "aggregations": [
+    {
+      "type" : "filtered",
+      "filter" : {
+        "type" : "and",
+        "fields" : [
+          {
+            "type" : "selector",
+            "dimension" : "product",
+            "value" : "A"
+          },
+          {
+            "type" : "interval",
+            "dimension" : "__time",
+            "intervals" :  ["2014-10-01T00:00:00.000Z/2014-10-07T00:00:00.000Z"]
+          }
+        ]
+      },
+      "aggregator" :     {
+        "type": "thetaSketch", "name": "A_unique_users_week_1", "fieldName": "user_id_sketch"
+      }
+    },
+    {
+      "type" : "filtered",
+      "filter" : {
+        "type" : "and",
+        "fields" : [
+          {
+            "type" : "selector",
+            "dimension" : "product",
+            "value" : "A"
+          },
+          {
+            "type" : "interval",
+            "dimension" : "__time",
+            "intervals" :  ["2014-10-08T00:00:00.000Z/2014-10-14T00:00:00.000Z"]
+          }
+        ]
+      },
+      "aggregator" : {
+        "type": "thetaSketch", "name": "A_unique_users_week_2", "fieldName": "user_id_sketch"
+      }
+    },
+  ],
+  "postAggregations": [
+    {
+      "type": "thetaSketchEstimate",
+      "name": "final_unique_users",
+      "field":
+      {
+        "type": "thetaSketchSetOp",
+        "name": "final_unique_users_sketch",
+        "func": "INTERSECT",
+        "fields": [
+          {
+            "type": "fieldAccess",
+            "fieldName": "A_unique_users_week_1"
+          },
+          {
+            "type": "fieldAccess",
+            "fieldName": "A_unique_users_week_2"
+          }
+        ]
+      }
+    }
+  ],
+  "intervals": ["2014-10-01T00:00:00.000Z/2014-10-14T00:00:00.000Z"]
+}
+```
