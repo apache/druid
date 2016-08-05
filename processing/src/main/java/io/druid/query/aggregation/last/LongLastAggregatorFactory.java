@@ -29,6 +29,8 @@ import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.aggregation.first.DoubleFirstAggregatorFactory;
+import io.druid.query.aggregation.first.LongFirstAggregatorFactory;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.column.Column;
@@ -79,20 +81,13 @@ public class LongLastAggregatorFactory extends AggregatorFactory
   @Override
   public Comparator getComparator()
   {
-    return new Comparator()
-    {
-      @Override
-      public int compare(Object o1, Object o2)
-      {
-        return Longs.compare(((SerializablePair<Long, Long>) o1).rhs, ((SerializablePair<Long, Long>) o2).rhs);
-      }
-    };
+    return LongFirstAggregatorFactory.VALUE_COMPARATOR;
   }
 
   @Override
   public Object combine(Object lhs, Object rhs)
   {
-    return (((SerializablePair<Long, Long>) lhs).lhs > ((SerializablePair<Long, Long>) rhs).lhs) ? lhs : rhs;
+    return DoubleFirstAggregatorFactory.TIME_COMPARATOR.compare(lhs, rhs) > 0 ? lhs : rhs;
   }
 
 
@@ -193,9 +188,8 @@ public class LongLastAggregatorFactory extends AggregatorFactory
   {
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
 
-    return ByteBuffer.allocate(1 + fieldNameBytes.length).put(CACHE_TYPE_ID).put(fieldNameBytes).array();
+    return ByteBuffer.allocate(2 + fieldNameBytes.length).put(CACHE_TYPE_ID).put(fieldNameBytes).put((byte)0xff).array();
   }
-
 
   @Override
   public String getTypeName()
