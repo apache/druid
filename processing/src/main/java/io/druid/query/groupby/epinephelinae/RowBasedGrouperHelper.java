@@ -35,6 +35,7 @@ import com.metamx.common.guava.Accumulator;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.AllGranularity;
+import io.druid.query.QueryInterruptedException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
@@ -126,6 +127,10 @@ public class RowBasedGrouperHelper
           final Row row
       )
       {
+        if (Thread.interrupted()) {
+          throw new QueryInterruptedException(new InterruptedException());
+        }
+
         if (theGrouper == null) {
           // Pass-through null returns without doing more work.
           return null;
