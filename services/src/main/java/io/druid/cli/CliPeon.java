@@ -84,6 +84,7 @@ import io.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierC
 import io.druid.segment.realtime.plumber.CoordinatorBasedSegmentHandoffNotifierFactory;
 import io.druid.segment.realtime.plumber.SegmentHandoffNotifierFactory;
 import io.druid.server.QueryResource;
+import io.druid.server.QueryResourceV3;
 import io.druid.server.initialization.jetty.ChatHandlerServerModule;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
 import io.druid.server.metrics.DataSourceTaskIdHolder;
@@ -202,6 +203,8 @@ public class CliPeon extends GuiceRunnable
             binder.bind(JettyServerInitializer.class).to(QueryJettyServerInitializer.class);
             Jerseys.addResource(binder, QueryResource.class);
             LifecycleModule.register(binder, QueryResource.class);
+            Jerseys.addResource(binder, QueryResourceV3.class);
+            LifecycleModule.register(binder, QueryResourceV3.class);
             binder.bind(NodeTypeConfig.class).toInstance(new NodeTypeConfig(nodeType));
             LifecycleModule.register(binder, Server.class);
           }
