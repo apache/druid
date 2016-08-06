@@ -67,6 +67,11 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
     return parseInt(query, "uncoveredIntervalsLimit", defaultValue);
   }
 
+  public static <T> int getContextDumpPerf(Query<T> query, int defaultValue)
+  {
+    return parseInt(query, QueryContextKeys.DUMP_QUERY_PERF, defaultValue);
+  }
+
   private static <T> int parseInt(Query<T> query, String key, int defaultValue)
   {
     Object val = query.getContextValue(key);

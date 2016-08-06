@@ -37,10 +37,12 @@ import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
+import io.druid.query.BaseQuery;
 import io.druid.query.DruidMetrics;
 import io.druid.query.Query;
 import io.druid.query.QueryContextKeys;
 import io.druid.query.QueryInterruptedException;
+import io.druid.query.QueryPerfStats;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
@@ -193,6 +195,7 @@ public class QueryResource
             )
         );
       }
+
       toolChest = warehouse.getToolChest(query);
 
       Thread.currentThread()
@@ -220,6 +223,18 @@ public class QueryResource
       }
 
       final Map<String, Object> responseContext = new MapMaker().makeMap();
+
+      int dumpPerf = BaseQuery.getContextDumpPerf(query, 0);
+      if (dumpPerf > 0) {
+        responseContext.put(QueryPerfStats.KEY_CTX, new QueryPerfStats(dumpPerf * 10));
+        query = query.withOverriddenContext(
+            ImmutableMap.of(
+                QueryContextKeys.DUMP_QUERY_PERF,
+                dumpPerf - 1
+            )
+        );
+      }
+
       final Sequence res = query.run(texasRanger, responseContext);
       final Sequence results;
       if (res == null) {

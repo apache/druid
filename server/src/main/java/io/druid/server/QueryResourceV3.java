@@ -22,6 +22,7 @@
 
 package io.druid.server;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectWriter;
 import com.google.common.base.Throwables;
@@ -34,6 +35,7 @@ import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.query.DruidMetrics;
 import io.druid.query.Query;
+import io.druid.query.QueryPerfStats;
 import io.druid.query.QuerySegmentWalker;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
@@ -109,10 +111,7 @@ public class QueryResourceV3 extends QueryResource
                   try {
                     jsonWriter.writeValue(
                         os,
-                        ImmutableMap.of(
-                            KEY_RESULT, yielder,
-                            KEY_CONTEXT, responseContext
-                        )
+                        new ResponseObj(yielder, responseContext, startTime, os)
                     );
                   } finally {
                     os.flush(); // Some types of OutputStream suppress flush errors in the .close() method.
@@ -159,6 +158,49 @@ public class QueryResourceV3 extends QueryResource
     finally {
       // do not close yielder here, since we do not want to close the yielder prior to
       // StreamingOutput having iterated over all the results
+    }
+  }
+
+  private static class ResponseObj
+  {
+    private final Yielder result;
+    private final Map<String, Object> context;
+
+    private final long startTime;
+    private final CountingOutputStream stream;
+
+    private final long id = System.currentTimeMillis();
+
+    ResponseObj(Yielder result, Map<String, Object> context, long startTime, CountingOutputStream stream)
+    {
+      this.result = result;
+      this.context = context;
+
+      this.startTime = startTime;
+      this.stream = stream;
+    }
+
+    @JsonProperty
+    public Yielder getResult()
+    {
+      return result;
+    }
+
+    @JsonProperty
+    public Map<String, Object> getContext()
+    {
+      QueryPerfStats perfStats = (QueryPerfStats) context.get(QueryPerfStats.KEY_CTX);
+
+      if (perfStats != null) {
+        //Note: It is assumed the Json Serializer serializes result first and then context.
+        //Or else the time reported here would be incorrect.
+        long queryTime = System.currentTimeMillis() - startTime;
+        long queryBytes = stream.getCount();
+        perfStats.updateQueryResultTime(queryTime);
+        perfStats.updateQueryResultBytes(queryBytes);
+      }
+
+      return context;
     }
   }
 }

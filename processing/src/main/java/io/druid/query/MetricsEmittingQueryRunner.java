@@ -20,8 +20,6 @@
 package io.druid.query;
 
 import com.google.common.base.Function;
-import com.google.common.base.Strings;
-import com.google.common.collect.Maps;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Yielder;
@@ -36,6 +34,8 @@ import java.util.Map;
  */
 public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
 {
+  private static final String METRIC_QUERY_WAIT_TIME = "query/wait/time";
+
   private final ServiceEmitter emitter;
   private final Function<Query<T>, ServiceMetricEvent.Builder> builderFn;
   private final QueryRunner<T> queryRunner;
@@ -112,12 +112,27 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
           throw e;
         }
         finally {
+          MetricsEmittingQueryRunnerStats stats = null;
+          QueryPerfStats perfStats = (QueryPerfStats) responseContext.get(QueryPerfStats.KEY_CTX);
+          if (perfStats != null) {
+            stats = new MetricsEmittingQueryRunnerStats(userDimensions);
+            perfStats.addMetricsEmittingQueryRunnerStats(stats);
+          }
+
+
           long timeTaken = System.currentTimeMillis() - startTime;
 
           emitter.emit(builder.build(metricName, timeTaken));
+          if (stats != null) {
+            stats.addMetric(metricName, timeTaken);
+          }
 
           if (creationTime > 0) {
-            emitter.emit(builder.build("query/wait/time", startTime - creationTime));
+            long waitTime = startTime - creationTime;
+            emitter.emit(builder.build(METRIC_QUERY_WAIT_TIME, waitTime));
+            if (stats != null) {
+              stats.addMetric(METRIC_QUERY_WAIT_TIME, waitTime);
+            }
           }
         }
 

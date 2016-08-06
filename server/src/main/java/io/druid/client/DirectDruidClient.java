@@ -55,6 +55,7 @@ import io.druid.query.BaseQuery;
 import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.Query;
 import io.druid.query.QueryInterruptedException;
+import io.druid.query.QueryPerfStats;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryToolChest;
 import io.druid.query.QueryToolChestWarehouse;
@@ -182,7 +183,12 @@ public class DirectDruidClient<T> implements QueryRunner<T>
         {
           log.debug("Initial response from url[%s] for queryId[%s]", url, query.getId());
           responseStartTime = System.currentTimeMillis();
-          emitter.emit(builder.build("query/node/ttfb", responseStartTime - requestStartTime));
+          long timeTaken = responseStartTime - requestStartTime;
+          emitter.emit(builder.build("query/node/ttfb", timeTaken));
+          QueryPerfStats perfStats = (QueryPerfStats) context.get(QueryPerfStats.KEY_CTX);
+          if (perfStats != null) {
+            perfStats.updateServerTTFB(host, timeTaken);
+          }
 
           try {
             final String responseContext = response.headers().get("X-Druid-Response-Context");
@@ -280,8 +286,16 @@ public class DirectDruidClient<T> implements QueryRunner<T>
               stopTime - responseStartTime,
               byteCount.get() / (0.0001 * (stopTime - responseStartTime))
           );
-          emitter.emit(builder.build("query/node/time", stopTime - requestStartTime));
+          long timeTaken = stopTime - requestStartTime;
+          emitter.emit(builder.build("query/node/time", timeTaken));
           emitter.emit(builder.build("query/node/bytes", byteCount.get()));
+
+          QueryPerfStats perfStats = (QueryPerfStats) context.get(QueryPerfStats.KEY_CTX);
+          if (perfStats != null) {
+            perfStats.updateServerTime(host, timeTaken);
+            perfStats.updateServerBytes(host, byteCount.get());
+          }
+
           synchronized (done) {
             try {
               // An empty byte array is put at the end to give the SequenceInputStream.close() as something to close out
@@ -625,16 +639,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
                 }
               } else {
                 QueryInterruptedException cause = jp.getCodec().readValue(jp, QueryInterruptedException.class);
-                //case we get an exception with an unknown message.
-                if (cause.isNotKnown()) {
-                  throw new QueryInterruptedException(
-                      QueryInterruptedException.UNKNOWN_EXCEPTION,
-                      cause.getMessage(),
-                      host
-                  );
-                } else {
-                  throw new QueryInterruptedException(cause, host);
-                }
+                throw new QueryInterruptedException(cause, host);
               }
             } else {
               throw new IAE("Next token wasn't a FIELD_NAME, was[%s] from url [%s]", jp.getCurrentToken(), url);
