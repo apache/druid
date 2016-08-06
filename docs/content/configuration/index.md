@@ -82,7 +82,7 @@ All nodes can log debugging information on startup.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.startup.logging.logProperties`|Log all properties on startup (from common.runtime.properties, runtime.properties, and the JVM command line).|false|
-|`druid.startup.logging.maskProperties`|Masks sensitive properties (passwords, for example) containing theses words.|[]|
+|`druid.startup.logging.maskProperties`|Masks sensitive properties (passwords, for example) containing theses words.|["password"]|
 
 Note that some sensitive information may be logged if these settings are enabled.
 
