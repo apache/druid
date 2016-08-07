@@ -55,11 +55,6 @@ import java.util.TreeMap;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 
-/**
- * Remembers which activeTasks have locked which intervals. Tasks are permitted to lock an interval if no other task
- * outside their group has locked an overlapping interval for the same datasource. When a task locks an interval,
- * it is assigned a version string that it can use to publish segments.
- */
 public class TaskLockboxV1 implements TaskLockbox
 {
   // Datasource -> Interval -> Tasks + TaskLock
@@ -82,9 +77,6 @@ public class TaskLockboxV1 implements TaskLockbox
     this.taskStorage = taskStorage;
   }
 
-  /**
-   * Wipe out our current in-memory state and resync it from our bundled {@link io.druid.indexing.overlord.TaskStorage}.
-   */
   public void syncFromStorage()
   {
     giant.lock();
@@ -168,17 +160,6 @@ public class TaskLockboxV1 implements TaskLockbox
     }
   }
 
-  /**
-   * Acquires a lock on behalf of a task. Blocks until the lock is acquired. Throws an exception if the lock
-   * cannot be acquired.
-   *
-   * @param task     task to acquire lock for
-   * @param interval interval to lock
-   *
-   * @return acquired TaskLock
-   *
-   * @throws java.lang.InterruptedException if the lock cannot be acquired
-   */
   public TaskLock lock(final Task task, final Interval interval) throws InterruptedException
   {
     giant.lock();
@@ -195,17 +176,6 @@ public class TaskLockboxV1 implements TaskLockbox
     }
   }
 
-  /**
-   * Attempt to lock a task, without removing it from the queue. Equivalent to the long form of {@code tryLock}
-   * with no preferred version.
-   *
-   * @param task     task that wants a lock
-   * @param interval interval to lock
-   *
-   * @return lock version if lock was acquired, absent otherwise
-   *
-   * @throws IllegalStateException if the task is not a valid active task
-   */
   public Optional<TaskLock> tryLock(final Task task, final Interval interval)
   {
     return tryLock(task, interval, Optional.<String>absent());
@@ -325,13 +295,6 @@ public class TaskLockboxV1 implements TaskLockbox
 
   }
 
-  /**
-   * Return the currently-active locks for some task.
-   *
-   * @param task task for which to locate locks
-   *
-   * @return currently-active locks for the given task
-   */
   public List<TaskLock> findLocksForTask(final Task task)
   {
     giant.lock();
@@ -353,13 +316,6 @@ public class TaskLockboxV1 implements TaskLockbox
     }
   }
 
-  /**
-   * Release lock held for a task on a particular interval. Does nothing if the task does not currently
-   * hold the mentioned lock.
-   *
-   * @param task     task to unlock
-   * @param interval interval to unlock
-   */
   public void unlock(final Task task, final Interval interval)
   {
     giant.lock();
@@ -419,11 +375,6 @@ public class TaskLockboxV1 implements TaskLockbox
     }
   }
 
-  /**
-   * Release all locks for a task and remove task from set of active tasks. Does nothing if the task is not currently locked or not an active task.
-   *
-   * @param task task to unlock
-   */
   public void remove(final Task task)
   {
     giant.lock();
