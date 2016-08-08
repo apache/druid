@@ -20,14 +20,25 @@
 package io.druid.server.log;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
+
+import java.util.List;
 
 public class StartupLoggingConfig
 {
   @JsonProperty
   private boolean logProperties = false;
 
+  @JsonProperty
+  private List<String> maskProperties = ImmutableList.of("password");
+
   public boolean isLogProperties()
   {
     return logProperties;
+  }
+
+  public List<String> getMaskProperties()
+  {
+    return maskProperties;
   }
 }
