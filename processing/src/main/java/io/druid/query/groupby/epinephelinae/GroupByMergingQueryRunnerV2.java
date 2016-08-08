@@ -50,6 +50,7 @@ import io.druid.query.QueryContextKeys;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryWatcher;
+import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
@@ -308,7 +309,7 @@ public class GroupByMergingQueryRunnerV2 implements QueryRunner
       for (Boolean result : results) {
         if (!result) {
           future.cancel(true);
-          throw new ISE("Grouping resources exhausted");
+          throw new ResourceLimitExceededException("Grouping resources exhausted");
         }
       }
     }

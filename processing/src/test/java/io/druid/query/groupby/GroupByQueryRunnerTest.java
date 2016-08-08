@@ -50,6 +50,7 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.QueryToolChest;
+import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -875,7 +876,7 @@ public class GroupByQueryRunnerTest
 
     List<Row> expectedResults = null;
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
-      expectedException.expect(ISE.class);
+      expectedException.expect(ResourceLimitExceededException.class);
     } else {
       expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
@@ -968,7 +969,7 @@ public class GroupByQueryRunnerTest
 
     List<Row> expectedResults = null;
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
-      expectedException.expect(ISE.class);
+      expectedException.expect(ResourceLimitExceededException.class);
       expectedException.expectMessage("Grouping resources exhausted");
     } else {
       expectedResults = Arrays.asList(
