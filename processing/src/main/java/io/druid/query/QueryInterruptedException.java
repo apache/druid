@@ -44,6 +44,7 @@ public class QueryInterruptedException extends RuntimeException
   public static final String QUERY_INTERRUPTED = "Query interrupted";
   public static final String QUERY_TIMEOUT = "Query timeout";
   public static final String QUERY_CANCELLED = "Query cancelled";
+  public static final String RESOURCE_LIMIT_EXCEEDED = "Resource limit exceeded";
   public static final String UNKNOWN_EXCEPTION = "Unknown exception";
 
   private final String errorCode;
@@ -118,6 +119,8 @@ public class QueryInterruptedException extends RuntimeException
       return QUERY_CANCELLED;
     } else if (e instanceof TimeoutException) {
       return QUERY_TIMEOUT;
+    } else if (e instanceof ResourceLimitExceededException) {
+      return RESOURCE_LIMIT_EXCEEDED;
     } else {
       return UNKNOWN_EXCEPTION;
     }

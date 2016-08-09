@@ -97,4 +97,5 @@ Possible codes for the *error* field include:
 |`Query timeout`|The query timed out.|
 |`Query interrupted`|The query was interrupted, possibly due to JVM shutdown.|
 |`Query cancelled`|The query was cancelled through the query cancellation API.|
+|`Resource limit exceeded`|The query exceeded a configured resource limit (e.g. groupBy maxResults).|
 |`Unknown exception`|Some other exception occurred. Check errorMessage and errorClass for details, although keep in mind that the contents of those fields are free-form and may change from release to release.|
