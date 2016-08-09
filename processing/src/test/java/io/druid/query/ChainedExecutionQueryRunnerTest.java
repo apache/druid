@@ -281,7 +281,7 @@ public class ChainedExecutionQueryRunnerTest
     }
     catch (ExecutionException e) {
       Assert.assertTrue(e.getCause() instanceof QueryInterruptedException);
-      Assert.assertEquals("Query timeout", e.getCause().getMessage());
+      Assert.assertEquals("Query timeout", ((QueryInterruptedException) e.getCause()).getErrorCode());
       cause = (QueryInterruptedException) e.getCause();
     }
     queriesInterrupted.await();

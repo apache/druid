@@ -478,13 +478,7 @@ public class DirectDruidClient<T> implements QueryRunner<T>
           final JsonToken nextToken = jp.nextToken();
           if (nextToken == JsonToken.START_OBJECT) {
             QueryInterruptedException cause = jp.getCodec().readValue(jp, QueryInterruptedException.class);
-            //case we get an exception with an unknown message.
-            if (cause.isNotKnown()) {
-              throw new QueryInterruptedException(QueryInterruptedException.UNKNOWN_EXCEPTION, cause.getMessage(), host);
-            } else {
-              throw  new QueryInterruptedException(cause, host);
-            }
-
+            throw new QueryInterruptedException(cause, host);
           } else if (nextToken != JsonToken.START_ARRAY) {
             throw new IAE("Next token wasn't a START_ARRAY, was[%s] from url [%s]", jp.getCurrentToken(), url);
           } else {
