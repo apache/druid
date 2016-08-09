@@ -83,7 +83,7 @@ public class QueryResource
   @Deprecated // use SmileMediaTypes.APPLICATION_JACKSON_SMILE
   private static final String APPLICATION_SMILE = "application/smile";
 
-  private static final int RESPONSE_CTX_HEADER_LEN_LIMIT = 7*1024;
+  private static final int RESPONSE_CTX_HEADER_LEN_LIMIT = 7 * 1024;
 
   private final QueryToolChestWarehouse warehouse;
   private final ServerConfig config;
@@ -345,11 +345,7 @@ public class QueryResource
         log.error(e2, "Unable to log query [%s]!", query);
       }
       return Response.serverError().type(contentType).entity(
-          jsonWriter.writeValueAsBytes(
-              ImmutableMap.of(
-                  "error", e.getMessage() == null ? "null exception" : e.getMessage()
-              )
-          )
+          jsonWriter.writeValueAsBytes(new QueryInterruptedException(e))
       ).build();
     }
     catch (Exception e) {
@@ -395,11 +391,7 @@ public class QueryResource
          .emit();
 
       return Response.serverError().type(contentType).entity(
-          jsonWriter.writeValueAsBytes(
-              ImmutableMap.of(
-                  "error", e.getMessage() == null ? "null exception" : e.getMessage()
-              )
-          )
+          jsonWriter.writeValueAsBytes(new QueryInterruptedException(e))
       ).build();
     }
     finally {
