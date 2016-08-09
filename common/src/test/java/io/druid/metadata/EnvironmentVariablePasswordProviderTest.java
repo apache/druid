@@ -32,10 +32,10 @@ public class EnvironmentVariablePasswordProviderTest
   @Test
   public void testSerde() throws IOException
   {
-    String providerString = "{\"type\": \"environment\", \"passwordKey\" : \"test\"}";
+    String providerString = "{\"type\": \"environment\", \"passwordVariable\" : \"test\"}";
     PasswordProvider provider = jsonMapper.readValue(providerString, PasswordProvider.class);
     Assert.assertTrue(provider instanceof EnvironmentVariablePasswordProvider);
-    Assert.assertEquals("test", ((EnvironmentVariablePasswordProvider) provider).getPasswordKey());
+    Assert.assertEquals("test", ((EnvironmentVariablePasswordProvider) provider).getPasswordVariable());
     PasswordProvider serde = jsonMapper.readValue(jsonMapper.writeValueAsString(provider), PasswordProvider.class);
     Assert.assertEquals(provider, serde);
   }

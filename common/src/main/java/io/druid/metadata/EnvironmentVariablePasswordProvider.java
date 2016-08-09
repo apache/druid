@@ -22,36 +22,38 @@ package io.druid.metadata;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Preconditions;
 
 public class EnvironmentVariablePasswordProvider implements PasswordProvider
 {
-
-  private final String passwordKey;
+  private final String passwordVariable;
 
   @JsonCreator
-  public EnvironmentVariablePasswordProvider(@JsonProperty("passwordKey") String passwordKey)
+  public EnvironmentVariablePasswordProvider(
+      @JsonProperty("passwordVariable") String passwordVariable
+  )
   {
-    this.passwordKey = passwordKey;
+    this.passwordVariable = Preconditions.checkNotNull(passwordVariable);
   }
 
-  @JsonProperty("passwordKey")
-  public String getPasswordKey()
+  @JsonProperty("passwordVariable")
+  public String getPasswordVariable()
   {
-    return passwordKey;
+    return passwordVariable;
   }
 
   @JsonIgnore
   @Override
   public String getPassword()
   {
-    return System.getenv(passwordKey);
+    return System.getenv(passwordVariable);
   }
 
   @Override
   public String toString()
   {
     return "EnvironmentVariablePasswordProvider{" +
-           "passwordKey='" + passwordKey + '\'' +
+           "passwordVariable='" + passwordVariable + '\'' +
            '}';
   }
 
@@ -67,13 +69,13 @@ public class EnvironmentVariablePasswordProvider implements PasswordProvider
 
     EnvironmentVariablePasswordProvider that = (EnvironmentVariablePasswordProvider) o;
 
-    return passwordKey != null ? passwordKey.equals(that.passwordKey) : that.passwordKey == null;
+    return passwordVariable != null ? passwordVariable.equals(that.passwordVariable) : that.passwordVariable == null;
 
   }
 
   @Override
   public int hashCode()
   {
-    return passwordKey != null ? passwordKey.hashCode() : 0;
+    return passwordVariable != null ? passwordVariable.hashCode() : 0;
   }
 }
