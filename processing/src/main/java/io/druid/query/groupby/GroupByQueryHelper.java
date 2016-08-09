@@ -31,6 +31,7 @@ import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
+import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -132,7 +133,7 @@ public class GroupByQueryHelper
             );
           }
           catch (IndexSizeExceededException e) {
-            throw new ISE(e.getMessage());
+            throw new ResourceLimitExceededException(e.getMessage());
           }
         } else {
           throw new ISE("Unable to accumulate something of type [%s]", in.getClass());
