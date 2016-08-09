@@ -26,34 +26,34 @@ import com.google.common.base.Preconditions;
 
 public class EnvironmentVariablePasswordProvider implements PasswordProvider
 {
-  private final String passwordVariable;
+  private final String variable;
 
   @JsonCreator
   public EnvironmentVariablePasswordProvider(
-      @JsonProperty("passwordVariable") String passwordVariable
+      @JsonProperty("variable") String variable
   )
   {
-    this.passwordVariable = Preconditions.checkNotNull(passwordVariable);
+    this.variable = Preconditions.checkNotNull(variable);
   }
 
-  @JsonProperty("passwordVariable")
-  public String getPasswordVariable()
+  @JsonProperty("variable")
+  public String getVariable()
   {
-    return passwordVariable;
+    return variable;
   }
 
   @JsonIgnore
   @Override
   public String getPassword()
   {
-    return System.getenv(passwordVariable);
+    return System.getenv(variable);
   }
 
   @Override
   public String toString()
   {
     return "EnvironmentVariablePasswordProvider{" +
-           "passwordVariable='" + passwordVariable + '\'' +
+           "variable='" + variable + '\'' +
            '}';
   }
 
@@ -69,13 +69,13 @@ public class EnvironmentVariablePasswordProvider implements PasswordProvider
 
     EnvironmentVariablePasswordProvider that = (EnvironmentVariablePasswordProvider) o;
 
-    return passwordVariable != null ? passwordVariable.equals(that.passwordVariable) : that.passwordVariable == null;
+    return variable != null ? variable.equals(that.variable) : that.variable == null;
 
   }
 
   @Override
   public int hashCode()
   {
-    return passwordVariable != null ? passwordVariable.hashCode() : 0;
+    return variable != null ? variable.hashCode() : 0;
   }
 }

@@ -217,7 +217,7 @@ e.g
 ```json
 { 
     "type": "environment",
-    "passwordVariable": "METADATA_STORAGE_PASSWORD"   
+    "variable": "METADATA_STORAGE_PASSWORD"   
 }
 ```
 
@@ -226,7 +226,7 @@ The values are described below.
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
 |`type`|String|password provider type|Yes: `environment`|
-|`passwordVariable`|String|environment variable to read password from|Yes|
+|`variable`|String|environment variable to read password from|Yes|
 
 
 ### Deep Storage
