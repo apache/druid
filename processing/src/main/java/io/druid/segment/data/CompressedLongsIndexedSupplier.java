@@ -71,11 +71,6 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
     channel.write(buffer.asReadOnlyBuffer());
   }
 
-  public CompressedLongsIndexedSupplier convertByteOrder(ByteOrder order)
-  {
-    return fromByteBuffer(buffer, order);
-  }
-
   public static CompressedLongsIndexedSupplier fromByteBuffer(ByteBuffer buffer, ByteOrder order)
   {
     ByteBuffer bufferToUse = buffer.asReadOnlyBuffer();
@@ -88,9 +83,9 @@ public class CompressedLongsIndexedSupplier implements Supplier<IndexedLongs>
       CompressionFactory.LongEncoding encoding = CompressionFactory.DEFAULT_LONG_ENCODING;
       if (versionFromBuffer == version) {
         byte compressionId = bufferToUse.get();
-        if (CompressionFactory.hasFlag(compressionId)) {
+        if (CompressionFactory.hasEncodingFlag(compressionId)) {
           encoding = CompressionFactory.LongEncoding.forId(bufferToUse.get());
-          compressionId = CompressionFactory.removeFlag(compressionId);
+          compressionId = CompressionFactory.clearEncodingFlag(compressionId);
         }
         compression = CompressedObjectStrategy.CompressionStrategy.forId(compressionId);
       }

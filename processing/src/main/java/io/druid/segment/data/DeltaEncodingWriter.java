@@ -59,7 +59,7 @@ public class DeltaEncodingWriter implements CompressionFactory.LongEncodingWrite
 
   public void putMeta(OutputStream metaOut, CompressedObjectStrategy.CompressionStrategy strategy) throws IOException
   {
-    metaOut.write(CompressionFactory.putFlag(strategy.getId()));
+    metaOut.write(CompressionFactory.setEncodingFlag(strategy.getId()));
     metaOut.write(CompressionFactory.LongEncoding.DELTA.getId());
     metaOut.write(CompressionFactory.DELTA_ENCODING_VERSION);
     metaOut.write(Longs.toByteArray(base));

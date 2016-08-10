@@ -95,6 +95,7 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
     },
     /*
     This value indicate no compression strategy should be used, and compression should not be block based
+    Currently only IndexedLong support non block based compression, and other types treat this as UNCOMPRESSED
      */
     NONE((byte) 0xFE) {
       @Override

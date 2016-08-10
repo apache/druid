@@ -124,8 +124,8 @@ public class IndexMergerTest
     if (bitmapSerdeFactory != null || compressionStrategy != null) {
       return new IndexSpec(
           bitmapSerdeFactory,
-          compressionStrategy.name().toLowerCase(),
           dimCompressionStrategy.name().toLowerCase(),
+          compressionStrategy.name().toLowerCase(),
           longEncoding.name().toLowerCase()
       );
     } else {

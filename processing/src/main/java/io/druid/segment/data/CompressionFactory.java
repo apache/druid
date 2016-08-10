@@ -35,7 +35,6 @@ import java.util.Map;
  * and is based on byte operations. It must compress and decompress in block of bytes. Encoding refers to compression
  * method relies on data format, so a different Encoding exist for each data type.
  * <p>
- *
  * Compression Storage Format
  * Byte 1 : version (currently 0x02)
  * Byte 2 - 5 : number of values
@@ -49,12 +48,16 @@ import java.util.Map;
  * <p>
  * Values
  */
-public abstract class CompressionFactory
+public class CompressionFactory
 {
+  private CompressionFactory()
+  {
+    // No instantiation
+  }
 
   public static final LongEncoding DEFAULT_LONG_ENCODING = LongEncoding.LONGS;
 
-  /**
+  /*
    * Delta Encoding Header v1:
    * Byte 1 : version
    * Byte 2 - 9 : base value
@@ -62,7 +65,7 @@ public abstract class CompressionFactory
    */
   public static final byte DELTA_ENCODING_VERSION = 0x1;
 
-  /**
+  /*
    * Table Encoding Header v1 :
    * Byte 1 : version
    * Byte 2 - 5 : table size
@@ -72,31 +75,34 @@ public abstract class CompressionFactory
 
   public static final int MAX_TABLE_SIZE = 256;
 
-  /**
+  /*
    * There is no header or version for Longs encoding for backward compatibility
    */
 
-  /**
+  /*
    * This is the flag mechanism for determine whether an encoding byte exist in the header. This is needed for
    * backward compatibility, since older segment does not have the encoding byte. The flag is encoded in the compression
-   * strategy byte using the putFlag and removeFlag function.
+   * strategy byte using the setEncodingFlag and clearEncodingFlag function.
    */
 
   // 0xFE(-2) should be the smallest valid compression strategy id
-  private static byte FLAG_BOUND = (byte)0xFE;
+  private static byte FLAG_BOUND = (byte) 0xFE;
   // 126 is the value here since -2 - 126 = -128, which is the lowest byte value
   private static int FLAG_VALUE = 126;
 
-  public static boolean hasFlag(byte strategyId) {
+  public static boolean hasEncodingFlag(byte strategyId)
+  {
     return strategyId < FLAG_BOUND;
   }
 
-  public static byte putFlag(byte strategyId) {
-    return hasFlag(strategyId) ? strategyId : (byte)(strategyId - FLAG_VALUE);
+  public static byte setEncodingFlag(byte strategyId)
+  {
+    return hasEncodingFlag(strategyId) ? strategyId : (byte) (strategyId - FLAG_VALUE);
   }
 
-  public static byte removeFlag(byte strategyId) {
-    return hasFlag(strategyId) ? (byte)(strategyId + FLAG_VALUE) : strategyId;
+  public static byte clearEncodingFlag(byte strategyId)
+  {
+    return hasEncodingFlag(strategyId) ? (byte) (strategyId + FLAG_VALUE) : strategyId;
   }
 
   public enum LongEncoding
@@ -183,8 +189,9 @@ public abstract class CompressionFactory
       return idMap.get(id);
     }
 
-    public static LongEncoding[] testValues() {
-      return (LongEncoding[])ArrayUtils.removeElement(LongEncoding.values(), TABLE);
+    public static LongEncoding[] testValues()
+    {
+      return (LongEncoding[]) ArrayUtils.removeElement(LongEncoding.values(), TABLE);
     }
   }
 
@@ -261,8 +268,7 @@ public abstract class CompressionFactory
   {
     if (encoding == LongEncoding.TABLE || encoding == LongEncoding.DELTA) {
       return new IntermediateLongSupplierSerializer(ioPeon, filenameBase, order, strategy);
-    }
-    if (strategy == CompressedObjectStrategy.CompressionStrategy.NONE) {
+    } else if (strategy == CompressedObjectStrategy.CompressionStrategy.NONE) {
       return new EntireLayoutLongSerializer(
           ioPeon, filenameBase, order, encoding.getWriter(order)
       );

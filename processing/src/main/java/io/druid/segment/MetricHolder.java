@@ -232,25 +232,6 @@ public class MetricHolder
     return complexType;
   }
 
-  public MetricHolder convertByteOrder(ByteOrder order)
-  {
-    MetricHolder retVal;
-    switch (type) {
-      case LONG:
-        retVal = new MetricHolder(name, typeName);
-        retVal.longType = longType.convertByteOrder(order);
-        return retVal;
-      case FLOAT:
-        retVal = new MetricHolder(name, typeName);
-        retVal.floatType = floatType.convertByteOrder(order);
-        return retVal;
-      case COMPLEX:
-        return this;
-    }
-
-    return null;
-  }
-
   private void assertType(MetricType type)
   {
     if (this.type != type) {
