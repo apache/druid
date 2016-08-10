@@ -109,7 +109,7 @@ public class TimeseriesBenchmark
   @Param({"750000"})
   private int rowsPerSegment;
 
-  @Param({"basic.A", "basic.timeFilter", "basic.timeFilterAlphanumeric", "basic.timeFilterByInterval"})
+  @Param({"basic.A", "basic.timeFilterNumeric", "basic.timeFilterAlphanumeric", "basic.timeFilterByInterval"})
   private String schemaAndQuery;
 
   private static final Logger log = new Logger(TimeseriesBenchmark.class);
@@ -190,7 +190,7 @@ public class TimeseriesBenchmark
                 .descending(false)
                 .build();
 
-      basicQueries.put("timeFilter", timeFilterQuery);
+      basicQueries.put("timeFilterNumeric", timeFilterQuery);
     }
     {
       QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(basicSchema.getDataInterval()));

@@ -20,9 +20,7 @@
 package io.druid.segment.filter;
 
 import com.google.common.base.Predicate;
-import com.google.common.base.Strings;
 import com.google.common.base.Supplier;
-import com.google.common.primitives.Longs;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.BitmapIndexSelector;
@@ -57,13 +55,9 @@ public class BoundFilter implements Filter
   @Override
   public ImmutableBitmap getBitmapIndex(final BitmapIndexSelector selector)
   {
-    if (!boundDimFilter.getOrdering().equals(StringComparators.LEXICOGRAPHIC_NAME) || extractionFn != null) {
-      return Filters.matchPredicate(
-          boundDimFilter.getDimension(),
-          selector,
-          getPredicateFactory().makeStringPredicate()
-      );
-    } else {
+    if (boundDimFilter.getOrdering().equals(StringComparators.LEXICOGRAPHIC) && extractionFn == null) {
+      // Optimization for lexicographic bounds with no extractionFn => binary search through the index
+
       final BitmapIndex bitmapIndex = selector.getBitmapIndex(boundDimFilter.getDimension());
 
       if (bitmapIndex == null || bitmapIndex.getCardinality() == 0) {
@@ -133,6 +127,12 @@ public class BoundFilter implements Filter
             }
           }
       );
+    } else {
+      return Filters.matchPredicate(
+          boundDimFilter.getDimension(),
+          selector,
+          getPredicateFactory().makeStringPredicate()
+      );
     }
   }
 
@@ -188,7 +188,7 @@ public class BoundFilter implements Filter
               return doesMatch(extractionFn.apply(input));
             }
           };
-        } else if (boundDimFilter.getOrdering().equals(StringComparators.NUMERIC_NAME)){
+        } else if (boundDimFilter.getOrdering().equals(StringComparators.NUMERIC)) {
           return longPredicateSupplier.get();
         } else {
           return new DruidLongPredicate()
