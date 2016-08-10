@@ -106,21 +106,24 @@ public class TopNQueryRunnerBenchmark extends AbstractBenchmark
         TestCases.rtIndex,
         QueryRunnerTestHelper.makeQueryRunner(
             factory,
-            new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), segmentId)
+            new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), segmentId),
+            null
         )
     );
     testCaseMap.put(
         TestCases.mMappedTestIndex,
         QueryRunnerTestHelper.makeQueryRunner(
             factory,
-            new QueryableIndexSegment(segmentId, TestIndex.getMMappedTestIndex())
+            new QueryableIndexSegment(segmentId, TestIndex.getMMappedTestIndex()),
+            null
         )
     );
     testCaseMap.put(
         TestCases.mergedRealtimeIndex,
         QueryRunnerTestHelper.makeQueryRunner(
             factory,
-            new QueryableIndexSegment(segmentId, TestIndex.mergedRealtimeIndex())
+            new QueryableIndexSegment(segmentId, TestIndex.mergedRealtimeIndex()),
+            null
         )
     );
     //Thread.sleep(10000);

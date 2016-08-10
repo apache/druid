@@ -88,7 +88,8 @@ public class SegmentMetadataQueryTest
     return QueryRunnerTestHelper.makeQueryRunner(
         factory,
         segmentId,
-        new QueryableIndexSegment(segmentId, index)
+        new QueryableIndexSegment(segmentId, index),
+        null
     );
   }
 
@@ -103,7 +104,8 @@ public class SegmentMetadataQueryTest
     return QueryRunnerTestHelper.makeQueryRunner(
         factory,
         segmentId,
-        new IncrementalIndexSegment(index, segmentId)
+        new IncrementalIndexSegment(index, segmentId),
+        null
     );
   }
 

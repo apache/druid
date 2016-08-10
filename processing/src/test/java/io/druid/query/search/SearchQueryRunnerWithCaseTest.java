@@ -91,10 +91,10 @@ public class SearchQueryRunnerWithCaseTest
 
     return transformToConstructionFeeder(
         Arrays.asList(
-            makeQueryRunner(factory, "index1", new IncrementalIndexSegment(index1, "index1")),
-            makeQueryRunner(factory, "index2", new IncrementalIndexSegment(index2, "index2")),
-            makeQueryRunner(factory, "index3", new QueryableIndexSegment("index3", index3)),
-            makeQueryRunner(factory, "index4", new QueryableIndexSegment("index4", index4))
+            makeQueryRunner(factory, "index1", new IncrementalIndexSegment(index1, "index1"), "index1"),
+            makeQueryRunner(factory, "index2", new IncrementalIndexSegment(index2, "index2"), "index2"),
+            makeQueryRunner(factory, "index3", new QueryableIndexSegment("index3", index3), "index3"),
+            makeQueryRunner(factory, "index4", new QueryableIndexSegment("index4", index4), "index4")
         )
     );
   }

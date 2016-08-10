@@ -131,6 +131,7 @@ public class GroupByQueryRunnerTest
   private final QueryRunner<Row> runner;
   private GroupByQueryRunnerFactory factory;
   private GroupByQueryConfig config;
+  private final String testName;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -203,16 +204,28 @@ public class GroupByQueryRunnerTest
     );
   }
 
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name = "{0}")
   public static Collection<?> constructorFeeder() throws IOException
   {
-    final GroupByQueryConfig defaultConfig = new GroupByQueryConfig();
+    final GroupByQueryConfig defaultConfig = new GroupByQueryConfig() {
+      @Override
+      public String toString()
+      {
+        return "default";
+      }
+    };
     final GroupByQueryConfig singleThreadedConfig = new GroupByQueryConfig()
     {
       @Override
       public boolean isSingleThreaded()
       {
         return true;
+      }
+
+      @Override
+      public String toString()
+      {
+        return "singleThreaded";
       }
     };
     final GroupByQueryConfig v2Config = new GroupByQueryConfig()
@@ -221,6 +234,12 @@ public class GroupByQueryRunnerTest
       public String getDefaultStrategy()
       {
         return GroupByStrategySelector.STRATEGY_V2;
+      }
+
+      @Override
+      public String toString()
+      {
+        return "v2";
       }
     };
     final GroupByQueryConfig v2SmallBufferConfig = new GroupByQueryConfig()
@@ -242,6 +261,12 @@ public class GroupByQueryRunnerTest
       {
         return 10L * 1024 * 1024;
       }
+
+      @Override
+      public String toString()
+      {
+        return "v2SmallBuffer";
+      }
     };
     final GroupByQueryConfig epinephelinaeSmallDictionaryConfig = new GroupByQueryConfig()
     {
@@ -262,6 +287,12 @@ public class GroupByQueryRunnerTest
       {
         return 10L * 1024 * 1024;
       }
+
+      @Override
+      public String toString()
+      {
+        return "epinephelinaeSmallDictionary";
+      }
     };
 
     defaultConfig.setMaxIntermediateRows(10000);
@@ -279,15 +310,23 @@ public class GroupByQueryRunnerTest
     for (GroupByQueryConfig config : configs) {
       final GroupByQueryRunnerFactory factory = makeQueryRunnerFactory(config);
       for (QueryRunner<Row> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
-        constructors.add(new Object[]{config, factory, runner});
+        final String testName = String.format(
+            "config=%s, runner=%s",
+            config.toString(),
+            runner.toString()
+        );
+        constructors.add(new Object[]{testName, config, factory, runner});
       }
     }
 
     return constructors;
   }
 
-  public GroupByQueryRunnerTest(GroupByQueryConfig config, GroupByQueryRunnerFactory factory, QueryRunner runner)
+  public GroupByQueryRunnerTest(
+      String testName, GroupByQueryConfig config, GroupByQueryRunnerFactory factory, QueryRunner runner
+  )
   {
+    this.testName = testName;
     this.config = config;
     this.factory = factory;
     this.runner = factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.<QueryRunner<Row>>of(runner));

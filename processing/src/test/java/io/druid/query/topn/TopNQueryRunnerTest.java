@@ -90,7 +90,7 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class TopNQueryRunnerTest
 {
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name="{0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
     List<QueryRunner<Result<TopNResultValue>>> retVal = Lists.newArrayList();

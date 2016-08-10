@@ -118,7 +118,8 @@ public class DataSourceMetadataQueryTest
     final QueryRunner runner = QueryRunnerTestHelper.makeQueryRunner(
         (QueryRunnerFactory) new DataSourceMetadataQueryRunnerFactory(
             QueryRunnerTestHelper.NOOP_QUERYWATCHER
-        ), new IncrementalIndexSegment(rtIndex, "test")
+        ), new IncrementalIndexSegment(rtIndex, "test"),
+        null
     );
     DateTime timestamp = new DateTime(System.currentTimeMillis());
     rtIndex.add(

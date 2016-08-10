@@ -299,7 +299,8 @@ public class MultiValuedDimensionTest
     );
     QueryRunner<Result<TopNResultValue>> runner = QueryRunnerTestHelper.makeQueryRunner(
         factory,
-        new QueryableIndexSegment("sid1", queryableIndex)
+        new QueryableIndexSegment("sid1", queryableIndex),
+        null
     );
     Map<String, Object> context = Maps.newHashMap();
     Sequence<Result<TopNResultValue>> result = runner.run(query, context);
