@@ -58,7 +58,9 @@ public class KafkaLookupExtractorFactoryTest
       "some.property", "some.value"
   );
   private final ObjectMapper mapper = new DefaultObjectMapper();
-  final NamespaceExtractionCacheManager cacheManager = EasyMock.createStrictMock(NamespaceExtractionCacheManager.class);
+  private final NamespaceExtractionCacheManager cacheManager = EasyMock.createStrictMock(
+          NamespaceExtractionCacheManager.class
+  );
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -92,11 +94,7 @@ public class KafkaLookupExtractorFactoryTest
         KafkaLookupExtractorFactory.class
     );
 
-    Assert.assertEquals(expected.getKafkaTopic(), result.getKafkaTopic());
-    Assert.assertEquals(expected.getKafkaProperties(), result.getKafkaProperties());
-    Assert.assertEquals(cacheManager, result.getCacheManager());
-    Assert.assertEquals(0, expected.getCompletedEventCount());
-    Assert.assertEquals(0, result.getCompletedEventCount());
+    Assert.assertEquals(expected, result);
   }
 
   @Test
@@ -105,7 +103,9 @@ public class KafkaLookupExtractorFactoryTest
     final int n = 1000;
     final KafkaLookupExtractorFactory factory = makeLookupFactory(cacheManager);
 
-    factory.getMapRef().set(ImmutableMap.<String, String>of());
+    mockCacheManager();
+    factory.init();
+
     final AtomicLong events = factory.getDoubleEventCount();
 
     final LookupExtractor extractor = factory.get();
@@ -128,8 +128,9 @@ public class KafkaLookupExtractorFactoryTest
   {
     final int n = 1000;
     final KafkaLookupExtractorFactory factory = makeLookupFactory(cacheManager);
+    mockCacheManager();
+    factory.init();
 
-    factory.getMapRef().set(ImmutableMap.<String, String>of());
     final AtomicLong events = factory.getDoubleEventCount();
 
     final List<byte[]> byteArrays = new ArrayList<>(n);
@@ -151,7 +152,9 @@ public class KafkaLookupExtractorFactoryTest
   {
     final int n = 1000;
     final KafkaLookupExtractorFactory factory = makeLookupFactory(cacheManager);
-    factory.getMapRef().set(ImmutableMap.<String, String>of());
+
+    mockCacheManager();
+    factory.init();
 
     final LookupExtractor extractor = factory.get();
 
@@ -165,9 +168,10 @@ public class KafkaLookupExtractorFactoryTest
   public void testCacheKeyDifferentForTopics()
   {
     final KafkaLookupExtractorFactory factory1 = makeLookupFactory(cacheManager);
-    factory1.getMapRef().set(ImmutableMap.<String, String>of());
     final KafkaLookupExtractorFactory factory2 = makeLookupFactory(cacheManager, TOPIC + 'b');
-    factory2.getMapRef().set(ImmutableMap.<String, String>of());
+
+    mockCacheManager();
+    factory1.init(); factory2.init();
 
     Assert.assertFalse(Arrays.equals(factory1.get().getCacheKey(), factory2.get().getCacheKey()));
   }
@@ -475,6 +479,13 @@ public class KafkaLookupExtractorFactoryTest
     Assert.assertEquals(str, DEFAULT_STRING_DECODER.fromBytes(StringUtils.toUtf8(str)));
   }
 
+  private void mockCacheManager() {
+    EasyMock.expect(cacheManager.getCacheMap(EasyMock.anyString()))
+            .andReturn(new ConcurrentHashMap<String, String>())
+            .anyTimes();
+
+    EasyMock.replay(cacheManager);
+  }
 
   private static KafkaLookupExtractorFactory makeLookupFactory() {
     return makeLookupFactory(null);

@@ -79,11 +79,11 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   private final AtomicLong doubleEventCount = new AtomicLong(0L);
   private final NamespaceExtractionCacheManager cacheManager;
   private final String factoryId = UUID.randomUUID().toString();
-  private final AtomicReference<Map<String, String>> mapRef = new AtomicReference<>(null);
   private final AtomicBoolean started = new AtomicBoolean(false);
   private final ConsumerConnectorFactory consumerConnectorFactory;
 
   private volatile ListenableFuture<?> future = null;
+  private volatile Map<String, String> map = null;
 
   @JsonProperty
   private final String kafkaTopic;
@@ -130,20 +130,8 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     ));
   }
 
-  // TODO: remove the getters below?
-  public String getKafkaTopic()
-  {
-    return kafkaTopic;
-  }
-
-  public Map<String, String> getKafkaProperties()
-  {
-    return kafkaProperties;
-  }
-
-  public long getConnectTimeout()
-  {
-    return connectTimeout;
+  void init() {
+    map = cacheManager.getCacheMap(factoryId);
   }
 
   @Override
@@ -162,9 +150,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
       final Properties kafkaProperties = buildProperties();
 
       LOG.debug("About to listen to topic [%s] with group.id [%s]", kafkaTopic, factoryId);
-      final Map<String, String> map = cacheManager.getCacheMap(factoryId);
-      mapRef.set(map);
-      // Enable publish-subscribe
+      init();
 
       final CountDownLatch startingReads = new CountDownLatch(1);
 
@@ -275,7 +261,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
 
   private Properties buildProperties() {
     final Properties kafkaProperties = new Properties();
-    kafkaProperties.putAll(getKafkaProperties());
+    kafkaProperties.putAll(this.kafkaProperties);
     if (kafkaProperties.containsKey("group.id")) {
       throw new IAE(
           "Cannot set kafka property [group.id]. Property is randomly generated for you. Found [%s]",
@@ -294,6 +280,8 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     );
 
     kafkaProperties.setProperty("group.id", factoryId);
+
+    // Enable publish-subscribe
     kafkaProperties.setProperty("auto.offset.reset", "smallest");
     return kafkaProperties;
   }
@@ -338,8 +326,8 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     final KafkaLookupExtractorFactory that = (KafkaLookupExtractorFactory) other;
 
     return !(kafkaTopic.equals(that.kafkaTopic)
-             && getKafkaProperties().equals(that.getKafkaProperties())
-             && getConnectTimeout() == that.getConnectTimeout()
+             && kafkaProperties.equals(that.kafkaProperties)
+             && connectTimeout == that.connectTimeout
              && injective == that.injective
     );
   }
@@ -354,7 +342,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   @Override
   public LookupExtractor get()
   {
-    final Map<String, String> map = Preconditions.checkNotNull(mapRef.get(), "Not started");
+    final Map<String, String> map = Preconditions.checkNotNull(this.map, "Not started");
     final long startCount = doubleEventCount.get();
     return new MapLookupExtractor(map, injective)
     {
@@ -415,15 +403,6 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
 
   // TODO: remove
   // Used in tests
-  NamespaceExtractionCacheManager getCacheManager()
-  {
-    return cacheManager;
-  }
-
-  AtomicReference<Map<String, String>> getMapRef()
-  {
-    return mapRef;
-  }
 
   AtomicLong getDoubleEventCount()
   {

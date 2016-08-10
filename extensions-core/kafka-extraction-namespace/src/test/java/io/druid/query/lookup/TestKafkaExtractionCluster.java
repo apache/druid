@@ -263,18 +263,14 @@ public class TestKafkaExtractionCluster
     consumerProperties.put("zookeeper.session.timeout.ms", "10000");
     consumerProperties.put("zookeeper.sync.time.ms", "200");
 
-    final KafkaLookupExtractorFactory kafkaLookupExtractorFactory = new KafkaLookupExtractorFactory(
-        null,
-        topicName,
-        consumerProperties, 0, false, NOOP_CONNECTION_FACTORY
+    factory = (KafkaLookupExtractorFactory) mapper.readValue(
+          mapper.writeValueAsString(new KafkaLookupExtractorFactory(
+              null,
+              topicName,
+              consumerProperties, 0, false, NOOP_CONNECTION_FACTORY
+          )), LookupExtractorFactory.class
     );
 
-    factory = (KafkaLookupExtractorFactory) mapper.readValue(
-        mapper.writeValueAsString(kafkaLookupExtractorFactory),
-        LookupExtractorFactory.class
-    );
-    Assert.assertEquals(kafkaLookupExtractorFactory.getKafkaTopic(), factory.getKafkaTopic());
-    Assert.assertEquals(kafkaLookupExtractorFactory.getKafkaProperties(), factory.getKafkaProperties());
     factory.start();
     closer.register(new Closeable()
     {
