@@ -47,7 +47,7 @@ public class RemoteTaskRunnerConfig extends WorkerTaskRunnerConfig
 
   @JsonProperty
   @Min(1)
-  private int pendingTasksRunnerNumThreads = 3;
+  private int pendingTasksRunnerNumThreads = 1;
 
   public Period getTaskAssignmentTimeout()
   {
