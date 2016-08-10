@@ -939,13 +939,13 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
                     }
                     theVals.put(dimensionName, val);
                   } else {
-                    Comparable[] dimVals = new Comparable[dim.length];
-                    for (int j = 0; j < dimVals.length; j++) {
+                    List<Comparable> dimVals = new ArrayList<Comparable>(dim.length);
+                    for (int j = 0; j < dim.length; j++) {
                       Comparable val = dimensionDesc.getValues().getValue(dim[j]);
                       if (type == ValueType.STRING) {
                         val = Strings.nullToEmpty((String) val);
                       }
-                      dimVals[j] = val;
+                      dimVals.add(val);
                     }
                     theVals.put(dimensionName, dimVals);
                   }
