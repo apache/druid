@@ -154,7 +154,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
 
       final CountDownLatch startingReads = new CountDownLatch(1);
 
-      final ListenableFuture<?> future = executorService.submit(makeRunnable(kafkaProperties, kafkaTopic, map, startingReads));
+      final ListenableFuture<?> future = executorService.submit(makeRunnable(kafkaProperties, kafkaTopic, startingReads));
 
       if (!awaitStart(kafkaTopic, startingReads, future)) {
         return false;
@@ -212,7 +212,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     return true;
   }
 
-  private Runnable makeRunnable(final Properties kafkaProperties, final String topic, final Map<String, String> map, final CountDownLatch startingReads) {
+  private Runnable makeRunnable(final Properties kafkaProperties, final String topic, final CountDownLatch startingReads) {
     return new Runnable()
     {
       @Override
@@ -242,10 +242,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
                 LOG.error("Bad key/message from topic [%s]: [%s]", topic, messageAndMetadata);
                 continue;
               }
-              doubleEventCount.incrementAndGet();
-              map.put(key, message);
-              doubleEventCount.incrementAndGet();
-              LOG.trace("Placed key[%s] val[%s]", key, message);
+              onNewEntry(key, message);
             }
           }
           catch (Exception e) {
@@ -257,6 +254,13 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
         }
       }
     };
+  }
+
+  void onNewEntry(String key, String message) {
+    doubleEventCount.incrementAndGet();
+    map.put(key, message);
+    doubleEventCount.incrementAndGet();
+    LOG.trace("Placed key[%s] val[%s]", key, message);
   }
 
   private Properties buildProperties() {
@@ -403,12 +407,6 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
 
   // TODO: remove
   // Used in tests
-
-  AtomicLong getDoubleEventCount()
-  {
-    return doubleEventCount;
-  }
-
   ListenableFuture<?> getFuture()
   {
     return future;

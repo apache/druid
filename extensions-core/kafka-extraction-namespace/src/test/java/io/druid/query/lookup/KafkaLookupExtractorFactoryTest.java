@@ -106,8 +106,6 @@ public class KafkaLookupExtractorFactoryTest
     mockCacheManager();
     factory.init();
 
-    final AtomicLong events = factory.getDoubleEventCount();
-
     final LookupExtractor extractor = factory.get();
 
     final List<byte[]> byteArrays = new ArrayList<>(n);
@@ -118,7 +116,7 @@ public class KafkaLookupExtractorFactoryTest
         Assert.assertFalse(Arrays.equals(byteArray, myKey));
       }
       byteArrays.add(myKey);
-      events.incrementAndGet();
+      factory.onNewEntry("", "");
     }
     Assert.assertEquals(n, byteArrays.size());
   }
@@ -131,8 +129,6 @@ public class KafkaLookupExtractorFactoryTest
     mockCacheManager();
     factory.init();
 
-    final AtomicLong events = factory.getDoubleEventCount();
-
     final List<byte[]> byteArrays = new ArrayList<>(n);
     for (int i = 0; i < n; ++i) {
       final LookupExtractor extractor = factory.get();
@@ -142,7 +138,7 @@ public class KafkaLookupExtractorFactoryTest
         Assert.assertFalse(Arrays.equals(byteArray, myKey));
       }
       byteArrays.add(myKey);
-      events.incrementAndGet();
+      factory.onNewEntry("", "");
     }
     Assert.assertEquals(n, byteArrays.size());
   }
