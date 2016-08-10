@@ -111,17 +111,6 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
 
   KafkaLookupExtractorFactory(
           NamespaceExtractionCacheManager cacheManager,
-          String kafkaTopic,
-          Map<String, String> kafkaProperties,
-          ConsumerConnectorFactory consumerConnectorFactory
-  )
-  {
-    this(cacheManager, kafkaTopic, kafkaProperties, 0, false, consumerConnectorFactory);
-  }
-
-
-  KafkaLookupExtractorFactory(
-          NamespaceExtractionCacheManager cacheManager,
           final String kafkaTopic,
           final Map<String, String> kafkaProperties,
           long connectTimeout,

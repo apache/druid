@@ -85,9 +85,7 @@ public class KafkaLookupExtractorFactoryTest
   @Test
   public void testSimpleSerDe() throws Exception
   {
-    final KafkaLookupExtractorFactory expected = new KafkaLookupExtractorFactory(
-            null, TOPIC, DEFAULT_PROPERTIES, NOOP_CONNECTION_FACTORY
-    );
+    final KafkaLookupExtractorFactory expected = makeLookupFactory();
 
     final KafkaLookupExtractorFactory result = mapper.readValue(
         mapper.writeValueAsString(expected),
@@ -105,9 +103,7 @@ public class KafkaLookupExtractorFactoryTest
   public void testCacheKeyScramblesOnNewData()
   {
     final int n = 1000;
-    final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
-        cacheManager, TOPIC, DEFAULT_PROPERTIES, NOOP_CONNECTION_FACTORY
-    );
+    final KafkaLookupExtractorFactory factory = makeLookupFactory(cacheManager);
 
     factory.getMapRef().set(ImmutableMap.<String, String>of());
     final AtomicLong events = factory.getDoubleEventCount();
@@ -131,9 +127,7 @@ public class KafkaLookupExtractorFactoryTest
   public void testCacheKeyScramblesDifferentStarts()
   {
     final int n = 1000;
-    final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
-        cacheManager, TOPIC, DEFAULT_PROPERTIES, NOOP_CONNECTION_FACTORY
-    );
+    final KafkaLookupExtractorFactory factory = makeLookupFactory(cacheManager);
 
     factory.getMapRef().set(ImmutableMap.<String, String>of());
     final AtomicLong events = factory.getDoubleEventCount();
@@ -156,9 +150,7 @@ public class KafkaLookupExtractorFactoryTest
   public void testCacheKeySameOnNoChange()
   {
     final int n = 1000;
-    final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
-        cacheManager, TOPIC, DEFAULT_PROPERTIES, NOOP_CONNECTION_FACTORY
-    );
+    final KafkaLookupExtractorFactory factory = makeLookupFactory(cacheManager);
     factory.getMapRef().set(ImmutableMap.<String, String>of());
 
     final LookupExtractor extractor = factory.get();
@@ -172,13 +164,9 @@ public class KafkaLookupExtractorFactoryTest
   @Test
   public void testCacheKeyDifferentForTopics()
   {
-    final KafkaLookupExtractorFactory factory1 = new KafkaLookupExtractorFactory(
-        cacheManager, TOPIC, DEFAULT_PROPERTIES, NOOP_CONNECTION_FACTORY
-    );
+    final KafkaLookupExtractorFactory factory1 = makeLookupFactory(cacheManager);
     factory1.getMapRef().set(ImmutableMap.<String, String>of());
-    final KafkaLookupExtractorFactory factory2 = new KafkaLookupExtractorFactory(
-        cacheManager, TOPIC + "b", DEFAULT_PROPERTIES, NOOP_CONNECTION_FACTORY
-    );
+    final KafkaLookupExtractorFactory factory2 = makeLookupFactory(cacheManager, TOPIC + 'b');
     factory2.getMapRef().set(ImmutableMap.<String, String>of());
 
     Assert.assertFalse(Arrays.equals(factory1.get().getCacheKey(), factory2.get().getCacheKey()));
@@ -187,38 +175,22 @@ public class KafkaLookupExtractorFactoryTest
   @Test
   public void testReplaces()
   {
-    final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
-        cacheManager,
-        TOPIC,
-        DEFAULT_PROPERTIES, NOOP_CONNECTION_FACTORY
-    );
+    final KafkaLookupExtractorFactory factory = makeLookupFactory(cacheManager);
 
     Assert.assertTrue(factory.replaces(null));
 
     Assert.assertTrue(factory.replaces(new MapLookupExtractorFactory(ImmutableMap.<String, String>of(), false)));
     Assert.assertFalse(factory.replaces(factory));
-    Assert.assertFalse(factory.replaces(new KafkaLookupExtractorFactory(
-        cacheManager,
-        TOPIC,
-        DEFAULT_PROPERTIES, NOOP_CONNECTION_FACTORY
+    Assert.assertFalse(factory.replaces(makeLookupFactory(cacheManager)));
+
+    Assert.assertTrue(factory.replaces(makeLookupFactory(cacheManager, TOPIC + 'b')));
+
+    Assert.assertTrue(factory.replaces(makeLookupFactory(
+            cacheManager, ImmutableMap.of("some.property", "some.other.value")
     )));
 
-    Assert.assertTrue(factory.replaces(new KafkaLookupExtractorFactory(
-        cacheManager,
-        TOPIC + "b",
-        DEFAULT_PROPERTIES, NOOP_CONNECTION_FACTORY
-    )));
-
-    Assert.assertTrue(factory.replaces(new KafkaLookupExtractorFactory(
-        cacheManager,
-        TOPIC,
-        ImmutableMap.of("some.property", "some.other.value"), NOOP_CONNECTION_FACTORY
-    )));
-
-    Assert.assertTrue(factory.replaces(new KafkaLookupExtractorFactory(
-        cacheManager,
-        TOPIC,
-        ImmutableMap.of("some.other.property", "some.value"), NOOP_CONNECTION_FACTORY
+    Assert.assertTrue(factory.replaces(makeLookupFactory(
+        cacheManager, ImmutableMap.of("some.other.property", "some.value")
     )));
 
     Assert.assertTrue(factory.replaces(new KafkaLookupExtractorFactory(
@@ -243,11 +215,7 @@ public class KafkaLookupExtractorFactoryTest
   @Test
   public void testStopWithoutStart()
   {
-    final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
-        cacheManager,
-        TOPIC,
-        DEFAULT_PROPERTIES, NOOP_CONNECTION_FACTORY
-    );
+    final KafkaLookupExtractorFactory factory = makeLookupFactory(cacheManager);
     Assert.assertTrue(factory.close());
   }
 
@@ -344,11 +312,13 @@ public class KafkaLookupExtractorFactoryTest
     EasyMock.expect(cacheManager.delete(EasyMock.anyString())).andReturn(false).once();
 
     EasyMock.replay(cacheManager, kafkaStream, consumerConnector, consumerIterator);
+
     final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
-        cacheManager,
-        TOPIC,
-        ImmutableMap.of("zookeeper.connect", "localhost"), predefinedConsumerConnectorFactory(consumerConnector)
+        cacheManager, TOPIC,
+        ImmutableMap.of("zookeeper.connect", "localhost"), 0, false,
+        predefinedConsumerConnectorFactory(consumerConnector)
     );
+
     Assert.assertTrue(factory.start());
     Assert.assertFalse(factory.close());
     EasyMock.verify(cacheManager, kafkaStream, consumerConnector, consumerIterator);
@@ -378,9 +348,9 @@ public class KafkaLookupExtractorFactoryTest
     EasyMock.expectLastCall().once();
     EasyMock.replay(cacheManager, kafkaStream, consumerConnector, consumerIterator);
     final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
-        cacheManager,
-        TOPIC,
-        ImmutableMap.of("zookeeper.connect", "localhost"), predefinedConsumerConnectorFactory(consumerConnector)
+        cacheManager, TOPIC,
+        ImmutableMap.of("zookeeper.connect", "localhost"), 0, false,
+        predefinedConsumerConnectorFactory(consumerConnector)
     );
     Assert.assertTrue(factory.start());
     Assert.assertTrue(factory.close());
@@ -429,11 +399,7 @@ public class KafkaLookupExtractorFactoryTest
   {
     expectedException.expectMessage("zookeeper.connect required property");
     EasyMock.replay(cacheManager);
-    final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
-        cacheManager,
-        TOPIC,
-        ImmutableMap.<String, String>of(), NOOP_CONNECTION_FACTORY
-    );
+    final KafkaLookupExtractorFactory factory = makeLookupFactory(cacheManager, ImmutableMap.<String, String>of());
     Assert.assertTrue(factory.start());
     Assert.assertTrue(factory.close());
     EasyMock.verify(cacheManager);
@@ -445,11 +411,11 @@ public class KafkaLookupExtractorFactoryTest
     expectedException.expectMessage(
         "Cannot set kafka property [group.id]. Property is randomly generated for you. Found");
     EasyMock.replay(cacheManager);
-    final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
-        cacheManager,
-        TOPIC,
-        ImmutableMap.of("group.id", "make me fail"), NOOP_CONNECTION_FACTORY
+
+    final KafkaLookupExtractorFactory factory = makeLookupFactory(
+            cacheManager, ImmutableMap.of("group.id", "make me fail")
     );
+
     Assert.assertTrue(factory.start());
     Assert.assertTrue(factory.close());
     EasyMock.verify(cacheManager);
@@ -461,11 +427,11 @@ public class KafkaLookupExtractorFactoryTest
     expectedException.expectMessage(
         "Cannot set kafka property [auto.offset.reset]. Property will be forced to [smallest]. Found ");
     EasyMock.replay(cacheManager);
-    final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
-        cacheManager,
-        TOPIC,
-        ImmutableMap.of("auto.offset.reset", "make me fail"), NOOP_CONNECTION_FACTORY
+
+    final KafkaLookupExtractorFactory factory = makeLookupFactory(
+        cacheManager, ImmutableMap.of("auto.offset.reset", "make me fail")
     );
+
     Assert.assertTrue(factory.start());
     Assert.assertTrue(factory.close());
     EasyMock.verify(cacheManager);
@@ -475,11 +441,7 @@ public class KafkaLookupExtractorFactoryTest
   public void testFailsGetNotStarted()
   {
     expectedException.expectMessage("Not started");
-    new KafkaLookupExtractorFactory(
-        cacheManager,
-        TOPIC,
-        DEFAULT_PROPERTIES, NOOP_CONNECTION_FACTORY
-    ).get();
+    makeLookupFactory(cacheManager).get();
   }
 
   @Test
@@ -511,6 +473,28 @@ public class KafkaLookupExtractorFactoryTest
   {
     final String str = "some string";
     Assert.assertEquals(str, DEFAULT_STRING_DECODER.fromBytes(StringUtils.toUtf8(str)));
+  }
+
+
+  private static KafkaLookupExtractorFactory makeLookupFactory() {
+    return makeLookupFactory(null);
+  }
+
+  private static KafkaLookupExtractorFactory makeLookupFactory(NamespaceExtractionCacheManager cacheManager) {
+    return makeLookupFactory(cacheManager, TOPIC);
+  }
+
+  private static KafkaLookupExtractorFactory makeLookupFactory(NamespaceExtractionCacheManager cacheManager, String topicName) {
+    return new KafkaLookupExtractorFactory(
+            cacheManager, topicName, DEFAULT_PROPERTIES, 0, false, NOOP_CONNECTION_FACTORY
+    );
+  }
+
+  private static KafkaLookupExtractorFactory makeLookupFactory(
+          NamespaceExtractionCacheManager cacheManager, Map<String, String> kafkaProperties) {
+    return new KafkaLookupExtractorFactory(
+            cacheManager, TOPIC, kafkaProperties, 0, false, NOOP_CONNECTION_FACTORY
+    );
   }
 
   static ConsumerConnectorFactory NOOP_CONNECTION_FACTORY = new ConsumerConnectorFactory()

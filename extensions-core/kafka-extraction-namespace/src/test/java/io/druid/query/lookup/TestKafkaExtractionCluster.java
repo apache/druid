@@ -266,7 +266,7 @@ public class TestKafkaExtractionCluster
     final KafkaLookupExtractorFactory kafkaLookupExtractorFactory = new KafkaLookupExtractorFactory(
         null,
         topicName,
-        consumerProperties, NOOP_CONNECTION_FACTORY
+        consumerProperties, 0, false, NOOP_CONNECTION_FACTORY
     );
 
     factory = (KafkaLookupExtractorFactory) mapper.readValue(
