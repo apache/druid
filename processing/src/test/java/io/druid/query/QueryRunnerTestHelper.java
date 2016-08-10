@@ -330,11 +330,11 @@ public class QueryRunnerTestHelper
     final QueryableIndex noRollupMMappedTestIndex = TestIndex.getNoRollupMMappedTestIndex();
     final QueryableIndex mergedRealtimeIndex = TestIndex.mergedRealtimeIndex();
     return ImmutableList.of(
-        makeQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId)),
-        makeQueryRunner(factory, new IncrementalIndexSegment(noRollupRtIndex, segmentId)),
-        makeQueryRunner(factory, new QueryableIndexSegment(segmentId, mMappedTestIndex)),
-        makeQueryRunner(factory, new QueryableIndexSegment(segmentId, noRollupMMappedTestIndex)),
-        makeQueryRunner(factory, new QueryableIndexSegment(segmentId, mergedRealtimeIndex))
+        makeQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId), "rtIndex"),
+        makeQueryRunner(factory, new IncrementalIndexSegment(noRollupRtIndex, segmentId), "noRollupRtIndex"),
+        makeQueryRunner(factory, new QueryableIndexSegment(segmentId, mMappedTestIndex), "mMappedTestIndex"),
+        makeQueryRunner(factory, new QueryableIndexSegment(segmentId, noRollupMMappedTestIndex), "noRollupMMappedTestIndex"),
+        makeQueryRunner(factory, new QueryableIndexSegment(segmentId, mergedRealtimeIndex), "mergedRealtimeIndex")
     );
   }
 
@@ -350,11 +350,12 @@ public class QueryRunnerTestHelper
     final QueryableIndex mergedRealtimeIndex = TestIndex.mergedRealtimeIndex();
 
     return Arrays.asList(
-        makeUnionQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId)),
-        makeUnionQueryRunner(factory, new QueryableIndexSegment(segmentId, mMappedTestIndex)),
+        makeUnionQueryRunner(factory, new IncrementalIndexSegment(rtIndex, segmentId), "rtIndex"),
+        makeUnionQueryRunner(factory, new QueryableIndexSegment(segmentId, mMappedTestIndex), "mMappedTestIndex"),
         makeUnionQueryRunner(
             factory,
-            new QueryableIndexSegment(segmentId, mergedRealtimeIndex)
+            new QueryableIndexSegment(segmentId, mergedRealtimeIndex),
+            "mergedRealtimeIndex"
         )
     );
   }
@@ -415,28 +416,32 @@ public class QueryRunnerTestHelper
 
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, QueryType> factory,
-      String resourceFileName
+      String resourceFileName,
+      final String runnerName
   )
   {
     return makeQueryRunner(
         factory,
         segmentId,
-        new IncrementalIndexSegment(TestIndex.makeRealtimeIndex(resourceFileName), segmentId)
+        new IncrementalIndexSegment(TestIndex.makeRealtimeIndex(resourceFileName), segmentId),
+        runnerName
     );
   }
 
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, QueryType> factory,
-      Segment adapter
+      Segment adapter,
+      final String runnerName
   )
   {
-    return makeQueryRunner(factory, segmentId, adapter);
+    return makeQueryRunner(factory, segmentId, adapter, runnerName);
   }
 
   public static <T, QueryType extends Query<T>> QueryRunner<T> makeQueryRunner(
       QueryRunnerFactory<T, QueryType> factory,
       String segmentId,
-      Segment adapter
+      Segment adapter,
+      final String runnerName
   )
   {
     return new FinalizeResultsQueryRunner<T>(
@@ -444,16 +449,24 @@ public class QueryRunnerTestHelper
             segmentId, adapter.getDataInterval().getStart(),
             factory.createRunner(adapter)
         ),
-        (QueryToolChest<T, Query<T>>)factory.getToolchest()
-    );
+        (QueryToolChest<T, Query<T>>) factory.getToolchest()
+    )
+    {
+      @Override
+      public String toString()
+      {
+        return runnerName;
+      }
+    };
   }
 
   public static <T> QueryRunner<T> makeUnionQueryRunner(
       QueryRunnerFactory<T, Query<T>> factory,
-      Segment adapter
+      Segment adapter,
+      final String runnerName
   )
   {
-    return new FluentQueryRunnerBuilder<T>(factory.getToolchest())
+    final QueryRunner<T> qr = new FluentQueryRunnerBuilder<T>(factory.getToolchest())
         .create(
             new UnionQueryRunner<T>(
                 new BySegmentQueryRunner<T>(
@@ -464,6 +477,21 @@ public class QueryRunnerTestHelper
         )
         .mergeResults()
         .applyPostMergeDecoration();
+
+    return new QueryRunner<T>()
+    {
+      @Override
+      public Sequence<T> run(Query<T> query, Map<String, Object> responseContext)
+      {
+        return qr.run(query, responseContext);
+      }
+
+      @Override
+      public String toString()
+      {
+        return runnerName;
+      }
+    };
   }
 
   public static <T> QueryRunner<T> makeFilteringQueryRunner(
