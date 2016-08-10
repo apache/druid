@@ -1022,14 +1022,18 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
     {
       this.index = index;
       this.name = factory.getName();
-      this.type = factory.getTypeName();
+
+      String typeInfo = factory.getTypeName();
       this.capabilities = new ColumnCapabilitiesImpl();
-      if (type.equalsIgnoreCase("float")) {
+      if (typeInfo.equalsIgnoreCase("float")) {
         capabilities.setType(ValueType.FLOAT);
-      } else if (type.equalsIgnoreCase("long")) {
+        this.type = typeInfo;
+      } else if (typeInfo.equalsIgnoreCase("long")) {
         capabilities.setType(ValueType.LONG);
+        this.type = typeInfo;
       } else {
         capabilities.setType(ValueType.COMPLEX);
+        this.type = ComplexMetrics.getSerdeForType(typeInfo).getTypeName();
       }
     }
 
