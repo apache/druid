@@ -74,8 +74,9 @@ public class SegmentMetadataUnionQueryTest
                 new QueryableIndexSegment(
                     QueryRunnerTestHelper.segmentId,
                     TestIndex.getMMappedTestIndex()
-                )
-            ), true
+                ),
+                null
+            ), true,
         },
         new Object[]{
             QueryRunnerTestHelper.makeUnionQueryRunner(
@@ -83,7 +84,8 @@ public class SegmentMetadataUnionQueryTest
                 new IncrementalIndexSegment(
                     TestIndex.getIncrementalTestIndex(),
                     QueryRunnerTestHelper.segmentId
-                )
+                ),
+                null
             ), false
         }
     );

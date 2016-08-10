@@ -82,6 +82,7 @@ All nodes can log debugging information on startup.
 |Property|Description|Default|
 |--------|-----------|-------|
 |`druid.startup.logging.logProperties`|Log all properties on startup (from common.runtime.properties, runtime.properties, and the JVM command line).|false|
+|`druid.startup.logging.maskProperties`|Masks sensitive properties (passwords, for example) containing theses words.|["password"]|
 
 Note that some sensitive information may be logged if these settings are enabled.
 
@@ -197,7 +198,7 @@ These properties specify the jdbc connection and other configuration around the 
 |`druid.metadata.storage.type`|The type of metadata storage to use. Choose from "mysql", "postgresql", or "derby".|derby|
 |`druid.metadata.storage.connector.connectURI`|The jdbc uri for the database to connect to|none|
 |`druid.metadata.storage.connector.user`|The username to connect with.|none|
-|`druid.metadata.storage.connector.password`|The password to connect with.|none|
+|`druid.metadata.storage.connector.password`|The password provider or String password used to connect with.|none|
 |`druid.metadata.storage.connector.createTables`|If Druid requires a table and it doesn't exist, create it?|true|
 |`druid.metadata.storage.tables.base`|The base name for tables.|druid|
 |`druid.metadata.storage.tables.segments`|The table to use to look for segments.|druid_segments|
@@ -208,6 +209,26 @@ These properties specify the jdbc connection and other configuration around the 
 |`druid.metadata.storage.tables.taskLock`|Used by the indexing service to store task locks.|druid_taskLock|
 |`druid.metadata.storage.tables.supervisors`|Used by the indexing service to store supervisor configurations.|druid_supervisors|
 |`druid.metadata.storage.tables.audit`|The table to use for audit history of configuration changes e.g. Coordinator rules.|druid_audit|
+
+#### Password Provider
+ 
+Environment variable password provider provides password by looking at specified environment variable. Use this in order to avoid specifying password in runtime.properties file.
+e.g 
+
+```json
+{ 
+    "type": "environment",
+    "variable": "METADATA_STORAGE_PASSWORD"   
+}
+```
+
+The values are described below. 
+
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|`type`|String|password provider type|Yes: `environment`|
+|`variable`|String|environment variable to read password from|Yes|
+
 
 ### Deep Storage
 

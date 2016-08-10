@@ -50,6 +50,7 @@ import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerTestHelper;
 import io.druid.query.QueryToolChest;
+import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -130,6 +131,7 @@ public class GroupByQueryRunnerTest
   private final QueryRunner<Row> runner;
   private GroupByQueryRunnerFactory factory;
   private GroupByQueryConfig config;
+  private final String testName;
 
   @Rule
   public ExpectedException expectedException = ExpectedException.none();
@@ -202,16 +204,28 @@ public class GroupByQueryRunnerTest
     );
   }
 
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name = "{0}")
   public static Collection<?> constructorFeeder() throws IOException
   {
-    final GroupByQueryConfig defaultConfig = new GroupByQueryConfig();
+    final GroupByQueryConfig defaultConfig = new GroupByQueryConfig() {
+      @Override
+      public String toString()
+      {
+        return "default";
+      }
+    };
     final GroupByQueryConfig singleThreadedConfig = new GroupByQueryConfig()
     {
       @Override
       public boolean isSingleThreaded()
       {
         return true;
+      }
+
+      @Override
+      public String toString()
+      {
+        return "singleThreaded";
       }
     };
     final GroupByQueryConfig v2Config = new GroupByQueryConfig()
@@ -220,6 +234,12 @@ public class GroupByQueryRunnerTest
       public String getDefaultStrategy()
       {
         return GroupByStrategySelector.STRATEGY_V2;
+      }
+
+      @Override
+      public String toString()
+      {
+        return "v2";
       }
     };
     final GroupByQueryConfig v2SmallBufferConfig = new GroupByQueryConfig()
@@ -241,6 +261,12 @@ public class GroupByQueryRunnerTest
       {
         return 10L * 1024 * 1024;
       }
+
+      @Override
+      public String toString()
+      {
+        return "v2SmallBuffer";
+      }
     };
     final GroupByQueryConfig epinephelinaeSmallDictionaryConfig = new GroupByQueryConfig()
     {
@@ -261,6 +287,12 @@ public class GroupByQueryRunnerTest
       {
         return 10L * 1024 * 1024;
       }
+
+      @Override
+      public String toString()
+      {
+        return "epinephelinaeSmallDictionary";
+      }
     };
 
     defaultConfig.setMaxIntermediateRows(10000);
@@ -278,15 +310,23 @@ public class GroupByQueryRunnerTest
     for (GroupByQueryConfig config : configs) {
       final GroupByQueryRunnerFactory factory = makeQueryRunnerFactory(config);
       for (QueryRunner<Row> runner : QueryRunnerTestHelper.makeQueryRunners(factory)) {
-        constructors.add(new Object[]{config, factory, runner});
+        final String testName = String.format(
+            "config=%s, runner=%s",
+            config.toString(),
+            runner.toString()
+        );
+        constructors.add(new Object[]{testName, config, factory, runner});
       }
     }
 
     return constructors;
   }
 
-  public GroupByQueryRunnerTest(GroupByQueryConfig config, GroupByQueryRunnerFactory factory, QueryRunner runner)
+  public GroupByQueryRunnerTest(
+      String testName, GroupByQueryConfig config, GroupByQueryRunnerFactory factory, QueryRunner runner
+  )
   {
+    this.testName = testName;
     this.config = config;
     this.factory = factory;
     this.runner = factory.mergeRunners(MoreExecutors.sameThreadExecutor(), ImmutableList.<QueryRunner<Row>>of(runner));
@@ -875,7 +915,7 @@ public class GroupByQueryRunnerTest
 
     List<Row> expectedResults = null;
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
-      expectedException.expect(ISE.class);
+      expectedException.expect(ResourceLimitExceededException.class);
     } else {
       expectedResults = Arrays.asList(
         GroupByQueryRunnerTestHelper.createExpectedRow("2011-04-01", "alias", "automotive", "rows", 1L, "idx", 135L),
@@ -968,7 +1008,7 @@ public class GroupByQueryRunnerTest
 
     List<Row> expectedResults = null;
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V2)) {
-      expectedException.expect(ISE.class);
+      expectedException.expect(ResourceLimitExceededException.class);
       expectedException.expectMessage("Grouping resources exhausted");
     } else {
       expectedResults = Arrays.asList(

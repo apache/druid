@@ -58,7 +58,7 @@
     </scm>
 
     <properties>
-        <metamx.java-util.version>0.27.9</metamx.java-util.version>
+        <metamx.java-util.version>0.27.10</metamx.java-util.version>
         <apache.curator.version>2.10.0</apache.curator.version>
         <guice.version>4.1.0</guice.version>
         <jetty.version>9.2.5.v20141112</jetty.version>
@@ -89,6 +89,7 @@
         <module>extensions-core/datasketches</module>
         <module>extensions-core/hdfs-storage</module>
         <module>extensions-core/histogram</module>
+        <module>extensions-core/stats</module>
         <module>extensions-core/kafka-eight</module>
         <module>extensions-core/kafka-extraction-namespace</module>
         <module>extensions-core/kafka-indexing-service</module>

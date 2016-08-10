@@ -45,7 +45,7 @@ import java.util.Map;
 @RunWith(Parameterized.class)
 public class TimeBoundaryQueryRunnerTest
 {
-  @Parameterized.Parameters
+  @Parameterized.Parameters(name="{0}")
   public static Iterable<Object[]> constructorFeeder() throws IOException
   {
     return QueryRunnerTestHelper.transformToConstructionFeeder(
