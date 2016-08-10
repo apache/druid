@@ -215,9 +215,9 @@ public class IncrementalIndexTest
 
     Row row = index.iterator().next();
 
-    Assert.assertArrayEquals(new String[]{"", "", "A"}, (Object[]) row.getRaw("string"));
-    Assert.assertArrayEquals(new Float[]{null, null, Float.MAX_VALUE}, (Object[]) row.getRaw("float"));
-    Assert.assertArrayEquals(new Long[]{null, null, Long.MIN_VALUE}, (Object[]) row.getRaw("long"));
+    Assert.assertEquals(Arrays.asList(new String[]{"", "", "A"}), row.getRaw("string"));
+    Assert.assertEquals(Arrays.asList(new Float[]{null, null, Float.MAX_VALUE}), row.getRaw("float"));
+    Assert.assertEquals(Arrays.asList(new Long[]{null, null, Long.MIN_VALUE}), row.getRaw("long"));
   }
 
   @Test

@@ -307,14 +307,43 @@ public class IncrementalIndexTest
             new FilteredAggregatorFactory(
                 new CountAggregatorFactory("count_bound_filtered"),
                 new BoundDimFilter("dim2", "2", "3", false, true, null, null, StringComparators.NUMERIC)
+            ),
+            new FilteredAggregatorFactory(
+                new CountAggregatorFactory("count_multivaldim_filtered"),
+                new SelectorDimFilter("dim3", "b", null)
+            ),
+            new FilteredAggregatorFactory(
+                new CountAggregatorFactory("count_numeric_filtered"),
+                new SelectorDimFilter("met1", "11", null)
             )
         })
     );
 
-    populateIndex(timestamp, index);
-    Assert.assertEquals(Arrays.asList("dim1", "dim2"), index.getDimensionNames());
+    index.add(
+        new MapBasedInputRow(
+            timestamp,
+            Arrays.asList("dim1", "dim2", "dim3"),
+            ImmutableMap.<String, Object>of("dim1", "1", "dim2", "2", "dim3", Lists.newArrayList("b", "a"), "met1", 10)
+        )
+    );
+
+    index.add(
+        new MapBasedInputRow(
+            timestamp,
+            Arrays.asList("dim1", "dim2", "dim3"),
+            ImmutableMap.<String, Object>of("dim1", "3", "dim2", "4", "dim3", Lists.newArrayList("c", "d"), "met1", 11)
+        )
+    );
+
+    Assert.assertEquals(Arrays.asList("dim1", "dim2", "dim3"), index.getDimensionNames());
     Assert.assertEquals(
-        Arrays.asList("count", "count_selector_filtered", "count_bound_filtered"),
+        Arrays.asList(
+            "count",
+            "count_selector_filtered",
+            "count_bound_filtered",
+            "count_multivaldim_filtered",
+            "count_numeric_filtered"
+        ),
         index.getMetricNames()
     );
     Assert.assertEquals(2, index.size());
@@ -324,15 +353,23 @@ public class IncrementalIndexTest
     Assert.assertEquals(timestamp, row.getTimestampFromEpoch());
     Assert.assertEquals(Arrays.asList("1"), row.getDimension("dim1"));
     Assert.assertEquals(Arrays.asList("2"), row.getDimension("dim2"));
+    Assert.assertEquals(Arrays.asList("a", "b"), row.getDimension("dim3"));
     Assert.assertEquals(1L, row.getLongMetric("count"));
     Assert.assertEquals(1L, row.getLongMetric("count_selector_filtered"));
     Assert.assertEquals(1L, row.getLongMetric("count_bound_filtered"));
+    Assert.assertEquals(1L, row.getLongMetric("count_multivaldim_filtered"));
+    Assert.assertEquals(0L, row.getLongMetric("count_numeric_filtered"));
 
     row = rows.next();
     Assert.assertEquals(timestamp, row.getTimestampFromEpoch());
+    Assert.assertEquals(Arrays.asList("3"), row.getDimension("dim1"));
+    Assert.assertEquals(Arrays.asList("4"), row.getDimension("dim2"));
+    Assert.assertEquals(Arrays.asList("c", "d"), row.getDimension("dim3"));
     Assert.assertEquals(1L, row.getLongMetric("count"));
     Assert.assertEquals(0L, row.getLongMetric("count_selector_filtered"));
     Assert.assertEquals(0L, row.getLongMetric("count_bound_filtered"));
+    Assert.assertEquals(0L, row.getLongMetric("count_multivaldim_filtered"));
+    Assert.assertEquals(1L, row.getLongMetric("count_numeric_filtered"));
   }
 
   @Test
