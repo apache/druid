@@ -121,7 +121,8 @@ public class TopNQueryQueryToolChestTest
     );
     QueryRunner<Result<TopNResultValue>> runner = QueryRunnerTestHelper.makeQueryRunner(
         factory,
-        new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), segmentId)
+        new IncrementalIndexSegment(TestIndex.getIncrementalTestIndex(), segmentId),
+        null
     );
 
     Map<String, Object> context = Maps.newHashMap();
