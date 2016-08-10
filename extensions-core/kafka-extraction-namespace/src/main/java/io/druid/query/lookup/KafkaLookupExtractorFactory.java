@@ -157,11 +157,6 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     return connectTimeout;
   }
 
-  public boolean isInjective()
-  {
-    return injective;
-  }
-
   @Override
   public boolean start()
   {
@@ -356,7 +351,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     return !(kafkaTopic.equals(that.kafkaTopic)
              && getKafkaProperties().equals(that.getKafkaProperties())
              && getConnectTimeout() == that.getConnectTimeout()
-             && isInjective() == that.isInjective()
+             && injective == that.injective
     );
   }
 
@@ -372,7 +367,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   {
     final Map<String, String> map = Preconditions.checkNotNull(mapRef.get(), "Not started");
     final long startCount = doubleEventCount.get();
-    return new MapLookupExtractor(map, isInjective())
+    return new MapLookupExtractor(map, injective)
     {
       @Override
       public byte[] getCacheKey()
@@ -399,6 +394,29 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
         }
       }
     };
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+
+    KafkaLookupExtractorFactory that = (KafkaLookupExtractorFactory) o;
+
+    if (connectTimeout != that.connectTimeout) return false;
+    if (injective != that.injective) return false;
+    if (!kafkaTopic.equals(that.kafkaTopic)) return false;
+    return kafkaProperties.equals(that.kafkaProperties);
+
+  }
+
+  @Override
+  public int hashCode() {
+    int result = kafkaTopic.hashCode();
+    result = 31 * result + kafkaProperties.hashCode();
+    result = 31 * result + (int) (connectTimeout ^ (connectTimeout >>> 32));
+    result = 31 * result + (injective ? 1 : 0);
+    return result;
   }
 
   public long getCompletedEventCount()

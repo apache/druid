@@ -490,6 +490,7 @@ public class KafkaLookupExtractorFactoryTest
     final Map<String, String> kafkaProperties = ImmutableMap.of("some_key", "some_value");
     final long connectTimeout = 999;
     final boolean injective = true;
+
     final KafkaLookupExtractorFactory factory = new KafkaLookupExtractorFactory(
         cacheManager,
         kafkaTopic,
@@ -501,10 +502,8 @@ public class KafkaLookupExtractorFactoryTest
         mapper.writeValueAsString(factory),
         KafkaLookupExtractorFactory.class
     );
-    Assert.assertEquals(kafkaTopic, otherFactory.getKafkaTopic());
-    Assert.assertEquals(kafkaProperties, otherFactory.getKafkaProperties());
-    Assert.assertEquals(connectTimeout, otherFactory.getConnectTimeout());
-    Assert.assertEquals(injective, otherFactory.isInjective());
+
+    Assert.assertEquals(factory, otherFactory);
   }
 
   @Test
