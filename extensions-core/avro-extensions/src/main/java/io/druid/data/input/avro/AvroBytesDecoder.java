@@ -26,6 +26,7 @@ import java.nio.ByteBuffer;
 
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = SchemaRepoBasedAvroBytesDecoder.class)
 @JsonSubTypes(value = {
+    @JsonSubTypes.Type(name = "schema_inline", value = SimpleAvroBytesDecoder.class),
     @JsonSubTypes.Type(name = "schema_repo", value = SchemaRepoBasedAvroBytesDecoder.class)
 })
 public interface AvroBytesDecoder
