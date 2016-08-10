@@ -81,6 +81,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   private final String factoryId = UUID.randomUUID().toString();
   private final AtomicReference<Map<String, String>> mapRef = new AtomicReference<>(null);
   private final AtomicBoolean started = new AtomicBoolean(false);
+  private final ConsumerConnectorFactory consumerConnectorFactory;
 
   private volatile ListenableFuture<?> future = null;
 
@@ -98,34 +99,49 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
 
   @JsonCreator
   public KafkaLookupExtractorFactory(
-      @JacksonInject NamespaceExtractionCacheManager cacheManager,
-      @JsonProperty("kafkaTopic") final String kafkaTopic,
-      @JsonProperty("kafkaProperties") final Map<String, String> kafkaProperties,
-      @JsonProperty("connectTimeout") @Min(0) long connectTimeout,
-      @JsonProperty("injective") boolean injective
+          @JacksonInject NamespaceExtractionCacheManager cacheManager,
+          @JsonProperty("kafkaTopic") final String kafkaTopic,
+          @JsonProperty("kafkaProperties") final Map<String, String> kafkaProperties,
+          @JsonProperty("connectTimeout") @Min(0) long connectTimeout,
+          @JsonProperty("injective") boolean injective
+  )
+  {
+    this(cacheManager, kafkaTopic, kafkaProperties, connectTimeout, injective, new ConsumerConnectorFactory.Zookeeper());
+  }
+
+  KafkaLookupExtractorFactory(
+          NamespaceExtractionCacheManager cacheManager,
+          String kafkaTopic,
+          Map<String, String> kafkaProperties,
+          ConsumerConnectorFactory consumerConnectorFactory
+  )
+  {
+    this(cacheManager, kafkaTopic, kafkaProperties, 0, false, consumerConnectorFactory);
+  }
+
+
+  KafkaLookupExtractorFactory(
+          NamespaceExtractionCacheManager cacheManager,
+          final String kafkaTopic,
+          final Map<String, String> kafkaProperties,
+          long connectTimeout,
+          boolean injective,
+          ConsumerConnectorFactory consumerConnectorFactory
   )
   {
     this.kafkaTopic = Preconditions.checkNotNull(kafkaTopic, "kafkaTopic required");
     this.kafkaProperties = Preconditions.checkNotNull(kafkaProperties, "kafkaProperties required");
-    executorService = MoreExecutors.listeningDecorator(Execs.singleThreaded(
-        "kafka-factory-" + kafkaTopic + "-%s",
-        Thread.MIN_PRIORITY
-    ));
     this.cacheManager = cacheManager;
     this.connectTimeout = connectTimeout;
     this.injective = injective;
+    this.consumerConnectorFactory = consumerConnectorFactory;
+    executorService = MoreExecutors.listeningDecorator(Execs.singleThreaded(
+            "kafka-factory-" + kafkaTopic + "-%s",
+            Thread.MIN_PRIORITY
+    ));
   }
 
-  public KafkaLookupExtractorFactory(
-      NamespaceExtractionCacheManager cacheManager,
-      String kafkaTopic,
-      Map<String, String> kafkaProperties
-  )
-  {
-    this(cacheManager, kafkaTopic, kafkaProperties, 0, false);
-  }
-
-  // TODO: remove the getters above?
+  // TODO: remove the getters below?
   public String getKafkaTopic()
   {
     return kafkaTopic;
@@ -161,17 +177,16 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
 
       final Properties kafkaProperties = buildProperties();
 
-      final String topic = getKafkaTopic();
-      LOG.debug("About to listen to topic [%s] with group.id [%s]", topic, factoryId);
+      LOG.debug("About to listen to topic [%s] with group.id [%s]", kafkaTopic, factoryId);
       final Map<String, String> map = cacheManager.getCacheMap(factoryId);
       mapRef.set(map);
       // Enable publish-subscribe
 
       final CountDownLatch startingReads = new CountDownLatch(1);
 
-      final ListenableFuture<?> future = executorService.submit(makeRunnable(kafkaProperties, topic, map, startingReads));
+      final ListenableFuture<?> future = executorService.submit(makeRunnable(kafkaProperties, kafkaTopic, map, startingReads));
 
-      if (!awaitStart(topic, startingReads, future)) {
+      if (!awaitStart(kafkaTopic, startingReads, future)) {
         return false;
       }
 
@@ -234,7 +249,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
       public void run()
       {
         while (!executorService.isShutdown() && !Thread.currentThread().isInterrupted()) {
-          final ConsumerConnector consumerConnector = buildConnector(kafkaProperties);
+          final ConsumerConnector consumerConnector = consumerConnectorFactory.buildConnector(kafkaProperties);
           try {
             final List<KafkaStream<String, String>> streams = consumerConnector.createMessageStreamsByFilter(
                 new Whitelist(Pattern.quote(topic)), 1, DEFAULT_STRING_DECODER, DEFAULT_STRING_DECODER
@@ -299,13 +314,6 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     return kafkaProperties;
   }
 
-  // Overriden in tests
-  ConsumerConnector buildConnector(Properties properties)
-  {
-    return new kafka.javaapi.consumer.ZookeeperConsumerConnector(
-        new ConsumerConfig(properties)
-    );
-  }
 
   @Override
   public boolean close()
@@ -320,12 +328,12 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
       final ListenableFuture<?> future = this.future;
       if (future != null) {
         if (!future.isDone() && !future.cancel(true) && !future.isDone()) {
-          LOG.error("Error cancelling future for topic [%s]", getKafkaTopic());
+          LOG.error("Error cancelling future for topic [%s]", kafkaTopic);
           return false;
         }
       }
       if (!cacheManager.delete(factoryId)) {
-        LOG.error("Error removing [%s] for topic [%s] from cache", factoryId, getKafkaTopic());
+        LOG.error("Error removing [%s] for topic [%s] from cache", factoryId, kafkaTopic);
         return false;
       }
       return true;
@@ -345,7 +353,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
 
     final KafkaLookupExtractorFactory that = (KafkaLookupExtractorFactory) other;
 
-    return !(getKafkaTopic().equals(that.getKafkaTopic())
+    return !(kafkaTopic.equals(that.kafkaTopic)
              && getKafkaProperties().equals(that.getKafkaProperties())
              && getConnectTimeout() == that.getConnectTimeout()
              && isInjective() == that.isInjective()
@@ -419,4 +427,20 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   {
     return future;
   }
+
+  interface ConsumerConnectorFactory
+  {
+    ConsumerConnector buildConnector(Properties properties);
+
+    class Zookeeper implements ConsumerConnectorFactory
+    {
+      public ConsumerConnector buildConnector(Properties properties)
+      {
+        return new kafka.javaapi.consumer.ZookeeperConsumerConnector(
+                new ConsumerConfig(properties)
+        );
+      }
+    }
+  }
+
 }

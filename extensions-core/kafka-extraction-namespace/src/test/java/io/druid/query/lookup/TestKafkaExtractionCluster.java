@@ -60,6 +60,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
+import static io.druid.query.lookup.KafkaLookupExtractorFactoryTest.NOOP_CONNECTION_FACTORY;
+
 /**
  *
  */
@@ -264,7 +266,7 @@ public class TestKafkaExtractionCluster
     final KafkaLookupExtractorFactory kafkaLookupExtractorFactory = new KafkaLookupExtractorFactory(
         null,
         topicName,
-        consumerProperties
+        consumerProperties, NOOP_CONNECTION_FACTORY
     );
 
     factory = (KafkaLookupExtractorFactory) mapper.readValue(
