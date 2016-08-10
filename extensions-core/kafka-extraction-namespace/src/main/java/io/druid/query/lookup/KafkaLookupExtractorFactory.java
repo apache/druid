@@ -125,6 +125,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     this(cacheManager, kafkaTopic, kafkaProperties, 0, false);
   }
 
+  // TODO: remove the getters above?
   public String getKafkaTopic()
   {
     return kafkaTopic;
@@ -157,128 +158,145 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
         LOG.warn("Already shut down, not starting again");
         return false;
       }
-      final Properties kafkaProperties = new Properties();
-      kafkaProperties.putAll(getKafkaProperties());
-      if (kafkaProperties.containsKey("group.id")) {
-        throw new IAE(
-            "Cannot set kafka property [group.id]. Property is randomly generated for you. Found [%s]",
-            kafkaProperties.getProperty("group.id")
-        );
-      }
-      if (kafkaProperties.containsKey("auto.offset.reset")) {
-        throw new IAE(
-            "Cannot set kafka property [auto.offset.reset]. Property will be forced to [smallest]. Found [%s]",
-            kafkaProperties.getProperty("auto.offset.reset")
-        );
-      }
-      Preconditions.checkNotNull(
-          kafkaProperties.getProperty("zookeeper.connect"),
-          "zookeeper.connect required property"
-      );
 
-      kafkaProperties.setProperty("group.id", factoryId);
+      final Properties kafkaProperties = buildProperties();
+
       final String topic = getKafkaTopic();
       LOG.debug("About to listen to topic [%s] with group.id [%s]", topic, factoryId);
       final Map<String, String> map = cacheManager.getCacheMap(factoryId);
       mapRef.set(map);
       // Enable publish-subscribe
-      kafkaProperties.setProperty("auto.offset.reset", "smallest");
 
       final CountDownLatch startingReads = new CountDownLatch(1);
 
-      final ListenableFuture<?> future = executorService.submit(
-          new Runnable()
-          {
-            @Override
-            public void run()
-            {
-              while (!executorService.isShutdown() && !Thread.currentThread().isInterrupted()) {
-                final ConsumerConnector consumerConnector = buildConnector(kafkaProperties);
-                try {
-                  final List<KafkaStream<String, String>> streams = consumerConnector.createMessageStreamsByFilter(
-                      new Whitelist(Pattern.quote(topic)), 1, DEFAULT_STRING_DECODER, DEFAULT_STRING_DECODER
-                  );
+      final ListenableFuture<?> future = executorService.submit(makeRunnable(kafkaProperties, topic, map, startingReads));
 
-                  if (streams == null || streams.isEmpty()) {
-                    throw new IAE("Topic [%s] had no streams", topic);
-                  }
-                  if (streams.size() > 1) {
-                    throw new ISE("Topic [%s] has %d streams! expected 1", topic, streams.size());
-                  }
-                  final KafkaStream<String, String> kafkaStream = streams.get(0);
-
-                  startingReads.countDown();
-
-                  for (final MessageAndMetadata<String, String> messageAndMetadata : kafkaStream) {
-                    final String key = messageAndMetadata.key();
-                    final String message = messageAndMetadata.message();
-                    if (key == null || message == null) {
-                      LOG.error("Bad key/message from topic [%s]: [%s]", topic, messageAndMetadata);
-                      continue;
-                    }
-                    doubleEventCount.incrementAndGet();
-                    map.put(key, message);
-                    doubleEventCount.incrementAndGet();
-                    LOG.trace("Placed key[%s] val[%s]", key, message);
-                  }
-                }
-                catch (Exception e) {
-                  LOG.error(e, "Error reading stream for topic [%s]", topic);
-                }
-                finally {
-                  consumerConnector.shutdown();
-                }
-              }
-            }
-          }
-      );
-      Futures.addCallback(
-          future, new FutureCallback<Object>()
-          {
-            @Override
-            public void onSuccess(Object result)
-            {
-              LOG.debug("Success listening to [%s]", topic);
-            }
-
-            @Override
-            public void onFailure(Throwable t)
-            {
-              if (t instanceof CancellationException) {
-                LOG.debug("Topic [%s] cancelled", topic);
-              } else {
-                LOG.error(t, "Error in listening to [%s]", topic);
-              }
-            }
-          },
-          MoreExecutors.sameThreadExecutor()
-      );
-      this.future = future;
-      final Stopwatch stopwatch = Stopwatch.createStarted();
-      try {
-        while (!startingReads.await(100, TimeUnit.MILLISECONDS) && connectTimeout > 0L) {
-          // Don't return until we have actually connected
-          if (future.isDone()) {
-            future.get();
-          } else {
-            if (stopwatch.elapsed(TimeUnit.MILLISECONDS) > connectTimeout) {
-              throw new TimeoutException("Failed to connect to kafka in sufficient time");
-            }
-          }
-        }
-      }
-      catch (InterruptedException | ExecutionException | TimeoutException e) {
-        if (!future.isDone() && !future.cancel(true) && !future.isDone()) {
-          LOG.warn("Could not cancel kafka listening thread");
-        }
-        LOG.error(e, "Failed to start kafka extraction factory");
-        cacheManager.delete(factoryId);
+      if (!awaitStart(topic, startingReads, future)) {
         return false;
       }
 
       started.set(true);
       return true;
     }
+  }
+
+  private boolean awaitStart(final String topic, CountDownLatch startingReads, ListenableFuture<?> future) {
+    Futures.addCallback(
+        future, new FutureCallback<Object>()
+        {
+          @Override
+          public void onSuccess(Object result)
+          {
+            LOG.debug("Success listening to [%s]", topic);
+          }
+
+          @Override
+          public void onFailure(Throwable t)
+          {
+            if (t instanceof CancellationException) {
+              LOG.debug("Topic [%s] cancelled", topic);
+            } else {
+              LOG.error(t, "Error in listening to [%s]", topic);
+            }
+          }
+        },
+        MoreExecutors.sameThreadExecutor()
+    );
+    this.future = future;
+    final Stopwatch stopwatch = Stopwatch.createStarted();
+    try {
+      while (!startingReads.await(100, TimeUnit.MILLISECONDS) && connectTimeout > 0L) {
+        // Don't return until we have actually connected
+        if (future.isDone()) {
+          future.get();
+        } else {
+          if (stopwatch.elapsed(TimeUnit.MILLISECONDS) > connectTimeout) {
+            throw new TimeoutException("Failed to connect to kafka in sufficient time");
+          }
+        }
+      }
+    }
+    catch (InterruptedException | ExecutionException | TimeoutException e) {
+      if (!future.isDone() && !future.cancel(true) && !future.isDone()) {
+        LOG.warn("Could not cancel kafka listening thread");
+      }
+      LOG.error(e, "Failed to start kafka extraction factory");
+      cacheManager.delete(factoryId);
+      return false;
+    }
+    return true;
+  }
+
+  private Runnable makeRunnable(final Properties kafkaProperties, final String topic, final Map<String, String> map, final CountDownLatch startingReads) {
+    return new Runnable()
+    {
+      @Override
+      public void run()
+      {
+        while (!executorService.isShutdown() && !Thread.currentThread().isInterrupted()) {
+          final ConsumerConnector consumerConnector = buildConnector(kafkaProperties);
+          try {
+            final List<KafkaStream<String, String>> streams = consumerConnector.createMessageStreamsByFilter(
+                new Whitelist(Pattern.quote(topic)), 1, DEFAULT_STRING_DECODER, DEFAULT_STRING_DECODER
+            );
+
+            if (streams == null || streams.isEmpty()) {
+              throw new IAE("Topic [%s] had no streams", topic);
+            }
+            if (streams.size() > 1) {
+              throw new ISE("Topic [%s] has %d streams! expected 1", topic, streams.size());
+            }
+            final KafkaStream<String, String> kafkaStream = streams.get(0);
+
+            startingReads.countDown();
+
+            for (final MessageAndMetadata<String, String> messageAndMetadata : kafkaStream) {
+              final String key = messageAndMetadata.key();
+              final String message = messageAndMetadata.message();
+              if (key == null || message == null) {
+                LOG.error("Bad key/message from topic [%s]: [%s]", topic, messageAndMetadata);
+                continue;
+              }
+              doubleEventCount.incrementAndGet();
+              map.put(key, message);
+              doubleEventCount.incrementAndGet();
+              LOG.trace("Placed key[%s] val[%s]", key, message);
+            }
+          }
+          catch (Exception e) {
+            LOG.error(e, "Error reading stream for topic [%s]", topic);
+          }
+          finally {
+            consumerConnector.shutdown();
+          }
+        }
+      }
+    };
+  }
+
+  private Properties buildProperties() {
+    final Properties kafkaProperties = new Properties();
+    kafkaProperties.putAll(getKafkaProperties());
+    if (kafkaProperties.containsKey("group.id")) {
+      throw new IAE(
+          "Cannot set kafka property [group.id]. Property is randomly generated for you. Found [%s]",
+          kafkaProperties.getProperty("group.id")
+      );
+    }
+    if (kafkaProperties.containsKey("auto.offset.reset")) {
+      throw new IAE(
+          "Cannot set kafka property [auto.offset.reset]. Property will be forced to [smallest]. Found [%s]",
+          kafkaProperties.getProperty("auto.offset.reset")
+      );
+    }
+    Preconditions.checkNotNull(
+        kafkaProperties.getProperty("zookeeper.connect"),
+        "zookeeper.connect required property"
+    );
+
+    kafkaProperties.setProperty("group.id", factoryId);
+    kafkaProperties.setProperty("auto.offset.reset", "smallest");
+    return kafkaProperties;
   }
 
   // Overriden in tests
@@ -361,7 +379,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
               .putLong(startCount)
               .array();
         } else {
-          // If the number of things added HAS changed during the coruse of this extractor's life, we CANNOT cache
+          // If the number of things added HAS changed during the course of this extractor's life, we CANNOT cache
           final byte[] scrambler = StringUtils.toUtf8(UUID.randomUUID().toString());
           return ByteBuffer
               .allocate(idutf8.length + 1 + scrambler.length + 1)
@@ -380,6 +398,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     return doubleEventCount.get() >> 1;
   }
 
+  // TODO: remove
   // Used in tests
   NamespaceExtractionCacheManager getCacheManager()
   {
