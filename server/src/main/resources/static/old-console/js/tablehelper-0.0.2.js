@@ -53,7 +53,8 @@ function initDataTable(el) {
       "bRegex": true
     },
     "sPaginationType": "full_numbers",
-    "bProcessing": true
+    "bProcessing": true,
+    "bSort": false
   });
 
   $("thead input").keyup(function() {
