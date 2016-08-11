@@ -56,8 +56,8 @@ public class LongCompressionBenchmarkFileGenerator
   public static final List<CompressedObjectStrategy.CompressionStrategy> compressions =
       ImmutableList.of(CompressedObjectStrategy.CompressionStrategy.LZ4,
                        CompressedObjectStrategy.CompressionStrategy.NONE);
-  public static final List<CompressionFactory.LongEncoding> encodings =
-      ImmutableList.of(CompressionFactory.LongEncoding.DELTA, CompressionFactory.LongEncoding.LONGS);
+  public static final List<CompressionFactory.LongEncodingStrategy> encodings =
+      ImmutableList.of(CompressionFactory.LongEncodingStrategy.AUTO, CompressionFactory.LongEncodingStrategy.LONGS);
 
   public static void main(String[] args) throws IOException, URISyntaxException
   {
@@ -133,7 +133,7 @@ public class LongCompressionBenchmarkFileGenerator
     // create compressed files using all combinations of CompressionStrategy and LongEncoding provided
     for (Map.Entry<String, BenchmarkColumnValueGenerator> entry : generators.entrySet()) {
       for (CompressedObjectStrategy.CompressionStrategy compression : compressions) {
-        for (CompressionFactory.LongEncoding encoding : encodings) {
+        for (CompressionFactory.LongEncodingStrategy encoding : encodings) {
           String name = entry.getKey() + "-" + compression.toString() + "-" + encoding.toString();
           System.out.print(name + ": ");
           File compFile = new File(dir, name);
