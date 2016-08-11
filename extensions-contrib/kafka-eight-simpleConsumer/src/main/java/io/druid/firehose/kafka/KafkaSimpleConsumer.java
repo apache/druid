@@ -238,7 +238,7 @@ public class KafkaSimpleConsumer
       }
       catch (Exception e) {
         ensureNotInterrupted(e);
-        log.warn(e, "caughte exception in fetch {} - {}", topic, partitionId);
+        log.warn(e, "caught exception in fetch {} - {}", topic, partitionId);
         response = null;
       }
 
