@@ -34,26 +34,28 @@ public class FloatMetricColumnSerializer implements MetricColumnSerializer
   private final String metricName;
   private final IOPeon ioPeon;
   private final File outDir;
+  private final CompressedObjectStrategy.CompressionStrategy compression;
 
   private CompressedFloatsSupplierSerializer writer;
 
   public FloatMetricColumnSerializer(
       String metricName,
       File outDir,
-      IOPeon ioPeon
+      IOPeon ioPeon,
+      CompressedObjectStrategy.CompressionStrategy compression
   )
   {
     this.metricName = metricName;
     this.ioPeon = ioPeon;
     this.outDir = outDir;
+    this.compression = compression;
   }
 
   @Override
   public void open() throws IOException
   {
     writer = CompressedFloatsSupplierSerializer.create(
-        ioPeon, String.format("%s_little", metricName), IndexIO.BYTE_ORDER,
-        CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
+        ioPeon, String.format("%s_little", metricName), IndexIO.BYTE_ORDER, compression
     );
 
     writer.open();

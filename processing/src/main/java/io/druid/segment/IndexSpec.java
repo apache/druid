@@ -45,7 +45,7 @@ public class IndexSpec
 {
   public static final String UNCOMPRESSED = "uncompressed";
   public static final String DEFAULT_METRIC_COMPRESSION = CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY.name().toLowerCase();
-  public static final String DEFAULT_LONG_ENCODING = CompressionFactory.DEFAULT_LONG_ENCODING.name().toLowerCase();
+  public static final String DEFAULT_LONG_ENCODING = CompressionFactory.DEFAULT_LONG_ENCODING_STRATEGY.name().toLowerCase();
   public static final String DEFAULT_DIMENSION_COMPRESSION = CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY.name().toLowerCase();
 
   private static final Set<String> COMPRESSION_NAMES = Sets.newHashSet(
@@ -56,6 +56,36 @@ public class IndexSpec
             @Nullable
             @Override
             public String apply(CompressedObjectStrategy.CompressionStrategy strategy)
+            {
+              return strategy.name().toLowerCase();
+            }
+          }
+      )
+  );
+
+  private static final Set<String> DIMENSION_COMPRESSION_NAMES = Sets.newHashSet(
+      Iterables.transform(
+          Arrays.asList(CompressedObjectStrategy.CompressionStrategy.noNoneValues()),
+          new Function<CompressedObjectStrategy.CompressionStrategy, String>()
+          {
+            @Nullable
+            @Override
+            public String apply(CompressedObjectStrategy.CompressionStrategy strategy)
+            {
+              return strategy.name().toLowerCase();
+            }
+          }
+      )
+  );
+
+  private static final Set<String> LONG_ENCODING_NAMES = Sets.newHashSet(
+      Iterables.transform(
+          Arrays.asList(CompressionFactory.LongEncodingStrategy.values()),
+          new Function<CompressionFactory.LongEncodingStrategy, String>()
+          {
+            @Nullable
+            @Override
+            public String apply(CompressionFactory.LongEncodingStrategy strategy)
             {
               return strategy.name().toLowerCase();
             }
@@ -92,7 +122,7 @@ public class IndexSpec
    *                          Defaults to {@link CompressedObjectStrategy#DEFAULT_COMPRESSION_STRATEGY}
    *
    * @param longEncoding encoding format for metric and dimension columns with type long, null to use the default.
-   *                     Defaults to {@link CompressionFactory#DEFAULT_LONG_ENCODING}
+   *                     Defaults to {@link CompressionFactory#DEFAULT_LONG_ENCODING_STRATEGY}
    */
   @JsonCreator
   public IndexSpec(
@@ -102,11 +132,15 @@ public class IndexSpec
       @JsonProperty("longEncoding") String longEncoding
   )
   {
-    Preconditions.checkArgument(dimensionCompression == null || dimensionCompression.equals(UNCOMPRESSED) || COMPRESSION_NAMES.contains(dimensionCompression),
+    Preconditions.checkArgument(dimensionCompression == null || dimensionCompression.equals(UNCOMPRESSED) ||
+                                DIMENSION_COMPRESSION_NAMES.contains(dimensionCompression),
                                 "Unknown compression type[%s]", dimensionCompression);
 
     Preconditions.checkArgument(metricCompression == null || COMPRESSION_NAMES.contains(metricCompression),
                                 "Unknown compression type[%s]", metricCompression);
+
+    Preconditions.checkArgument(longEncoding == null || LONG_ENCODING_NAMES.contains(longEncoding),
+                                "Unknown long encoding type[%s]", longEncoding);
 
     this.bitmapSerdeFactory = bitmapSerdeFactory != null ? bitmapSerdeFactory : new ConciseBitmapSerdeFactory();
     this.dimensionCompression = dimensionCompression;
@@ -152,9 +186,9 @@ public class IndexSpec
            dimensionCompressionStrategyForName(dimensionCompression);
   }
 
-  public CompressionFactory.LongEncoding getLongEncodingFormat()
+  public CompressionFactory.LongEncodingStrategy getLongEncodingStrategy()
   {
-    return CompressionFactory.LongEncoding.valueOf(
+    return CompressionFactory.LongEncodingStrategy.valueOf(
         (longEncoding == null ? DEFAULT_LONG_ENCODING : longEncoding).toUpperCase()
     );
 

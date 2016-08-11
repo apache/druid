@@ -19,29 +19,24 @@
 
 package io.druid.segment.data;
 
-import com.google.common.collect.BiMap;
 import com.google.common.primitives.Ints;
 import com.google.common.primitives.Longs;
-import com.metamx.common.IAE;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
-public class TableEncodingWriter implements CompressionFactory.LongEncodingWriter
+public class DeltaLongEncodingWriter implements CompressionFactory.LongEncodingWriter
 {
 
-  private final BiMap<Long, Integer> table;
-  private final int bitsPerValue;
+  private final long base;
   private VSizeLongSerde.LongSerializer serializer;
+  private int bitsPerValue;
 
-  public TableEncodingWriter(BiMap<Long, Integer> table)
+  public DeltaLongEncodingWriter(long base, long delta)
   {
-    if (table.size() > CompressionFactory.MAX_TABLE_SIZE) {
-      throw new IAE("Invalid table size[%s]", table.size());
-    }
-    this.table = table;
-    this.bitsPerValue = VSizeLongSerde.getBitsForMax(table.size());
+    this.base = base;
+    this.bitsPerValue = VSizeLongSerde.getBitsForMax(delta + 1);
   }
 
   @Override
@@ -59,28 +54,16 @@ public class TableEncodingWriter implements CompressionFactory.LongEncodingWrite
   @Override
   public void write(long value) throws IOException
   {
-    serializer.write(table.get(value));
+    serializer.write(value - base);
   }
 
-  @Override
-  public void flush() throws IOException
-  {
-    if (serializer != null) {
-      serializer.close();
-    }
-  }
-
-  @Override
   public void putMeta(OutputStream metaOut, CompressedObjectStrategy.CompressionStrategy strategy) throws IOException
   {
     metaOut.write(CompressionFactory.setEncodingFlag(strategy.getId()));
-    metaOut.write(CompressionFactory.LongEncoding.TABLE.getId());
-    metaOut.write(CompressionFactory.TABLE_ENCODING_VERSION);
-    metaOut.write(Ints.toByteArray(table.size()));
-    BiMap<Integer, Long> inverse = table.inverse();
-    for (int i = 0; i < table.size(); i++) {
-      metaOut.write(Longs.toByteArray(inverse.get(i)));
-    }
+    metaOut.write(CompressionFactory.LongEncodingFormat.DELTA.getId());
+    metaOut.write(CompressionFactory.DELTA_ENCODING_VERSION);
+    metaOut.write(Longs.toByteArray(base));
+    metaOut.write(Ints.toByteArray(bitsPerValue));
   }
 
   @Override
@@ -93,5 +76,13 @@ public class TableEncodingWriter implements CompressionFactory.LongEncodingWrite
   public int getNumBytes(int values)
   {
     return VSizeLongSerde.getSerializedSize(bitsPerValue, values);
+  }
+
+  @Override
+  public void flush() throws IOException
+  {
+    if (serializer != null) {
+      serializer.close();
+    }
   }
 }

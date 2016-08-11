@@ -23,27 +23,21 @@ import com.metamx.common.IAE;
 
 import java.nio.ByteBuffer;
 
-public class TableEncodingReader implements CompressionFactory.LongEncodingReader
+public class DeltaLongEncodingReader implements CompressionFactory.LongEncodingReader
 {
-  private final long table[];
+
+  private ByteBuffer buffer;
+  private final long base;
   private final int bitsPerValue;
-  private final ByteBuffer buffer;
   private VSizeLongSerde.LongDeserializer deserializer;
 
-  public TableEncodingReader(ByteBuffer fromBuffer)
+  public DeltaLongEncodingReader(ByteBuffer fromBuffer)
   {
     this.buffer = fromBuffer.asReadOnlyBuffer();
     byte version = buffer.get();
-    if (version == CompressionFactory.TABLE_ENCODING_VERSION) {
-      int tableSize = buffer.getInt();
-      if (tableSize < 0 || tableSize > CompressionFactory.MAX_TABLE_SIZE) {
-        throw new IAE("Invalid table size[%s]", tableSize);
-      }
-      bitsPerValue = VSizeLongSerde.getBitsForMax(tableSize);
-      table = new long[tableSize];
-      for (int i = 0; i < tableSize; i++) {
-        table[i] = buffer.getLong();
-      }
+    if (version == CompressionFactory.DELTA_ENCODING_VERSION) {
+      base = buffer.getLong();
+      bitsPerValue = buffer.getInt();
       fromBuffer.position(buffer.position());
       deserializer = VSizeLongSerde.getDeserializer(bitsPerValue, buffer, buffer.position());
     } else {
@@ -51,10 +45,10 @@ public class TableEncodingReader implements CompressionFactory.LongEncodingReade
     }
   }
 
-  public TableEncodingReader(ByteBuffer buffer, long table[], int bitsPerValue)
+  private DeltaLongEncodingReader(ByteBuffer buffer, long base, int bitsPerValue)
   {
     this.buffer = buffer;
-    this.table = table;
+    this.base = base;
     this.bitsPerValue = bitsPerValue;
     deserializer = VSizeLongSerde.getDeserializer(bitsPerValue, buffer, buffer.position());
   }
@@ -68,7 +62,7 @@ public class TableEncodingReader implements CompressionFactory.LongEncodingReade
   @Override
   public long read(int index)
   {
-    return table[(int) deserializer.get(index)];
+    return base + deserializer.get(index);
   }
 
   @Override
@@ -80,6 +74,6 @@ public class TableEncodingReader implements CompressionFactory.LongEncodingReade
   @Override
   public CompressionFactory.LongEncodingReader duplicate()
   {
-    return new TableEncodingReader(buffer.duplicate(), table, bitsPerValue);
+    return new DeltaLongEncodingReader(buffer.duplicate(), base, bitsPerValue);
   }
 }

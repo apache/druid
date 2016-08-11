@@ -25,16 +25,16 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.LongBuffer;
 
-public class LongsEncodingReader implements CompressionFactory.LongEncodingReader
+public class LongsLongEncodingReader implements CompressionFactory.LongEncodingReader
 {
   private LongBuffer buffer;
 
-  public LongsEncodingReader(ByteBuffer fromBuffer, ByteOrder order)
+  public LongsLongEncodingReader(ByteBuffer fromBuffer, ByteOrder order)
   {
     this.buffer = fromBuffer.asReadOnlyBuffer().order(order).asLongBuffer();
   }
 
-  public LongsEncodingReader(LongBuffer buffer)
+  private LongsLongEncodingReader(LongBuffer buffer)
   {
     this.buffer = buffer;
   }
@@ -60,6 +60,6 @@ public class LongsEncodingReader implements CompressionFactory.LongEncodingReade
   @Override
   public CompressionFactory.LongEncodingReader duplicate()
   {
-    return new LongsEncodingReader(buffer.duplicate());
+    return new LongsLongEncodingReader(buffer.duplicate());
   }
 }

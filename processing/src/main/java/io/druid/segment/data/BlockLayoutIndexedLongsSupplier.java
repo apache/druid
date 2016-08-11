@@ -61,7 +61,7 @@ public class BlockLayoutIndexedLongsSupplier implements Supplier<IndexedLongs>
       // this provide slightly better performance than calling the LongsEncodingReader.read, probably because Java
       // doesn't inline the method call for some reason. This should be removed when test show that performance
       // of using read method is same as directly accessing the longbuffer
-      if (baseReader instanceof LongsEncodingReader) {
+      if (baseReader instanceof LongsLongEncodingReader) {
         return new BlockLayoutIndexedLongs()
         {
           @Override

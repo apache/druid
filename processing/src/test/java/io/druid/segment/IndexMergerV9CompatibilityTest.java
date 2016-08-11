@@ -77,7 +77,7 @@ public class IndexMergerV9CompatibilityTest
       new ConciseBitmapSerdeFactory(),
       CompressedObjectStrategy.CompressionStrategy.LZ4,
       CompressedObjectStrategy.CompressionStrategy.LZ4,
-      CompressionFactory.LongEncoding.LONGS
+      CompressionFactory.LongEncodingStrategy.LONGS
   );
   private static final List<String> DIMS = ImmutableList.of("dim0", "dim1");
 

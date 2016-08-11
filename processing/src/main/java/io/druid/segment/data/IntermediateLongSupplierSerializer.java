@@ -100,11 +100,11 @@ public class IntermediateLongSupplierSerializer implements LongSupplierSerialize
       delta = -1;
     }
     if (uniqueValues.size() <= CompressionFactory.MAX_TABLE_SIZE) {
-      writer = new TableEncodingWriter(uniqueValues);
+      writer = new TableLongEncodingWriter(uniqueValues);
     } else if (delta != -1) {
-      writer = new DeltaEncodingWriter(minVal, delta);
+      writer = new DeltaLongEncodingWriter(minVal, delta);
     } else {
-      writer = new LongsEncodingWriter(order);
+      writer = new LongsLongEncodingWriter(order);
     }
 
     if (compression == CompressedObjectStrategy.CompressionStrategy.NONE) {

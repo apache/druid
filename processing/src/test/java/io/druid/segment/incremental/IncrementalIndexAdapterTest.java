@@ -40,7 +40,7 @@ public class IncrementalIndexAdapterTest
       new ConciseBitmapSerdeFactory(),
       CompressedObjectStrategy.CompressionStrategy.LZ4.name().toLowerCase(),
       CompressedObjectStrategy.CompressionStrategy.LZ4.name().toLowerCase(),
-      CompressionFactory.LongEncoding.LONGS.name().toLowerCase()
+      CompressionFactory.LongEncodingStrategy.LONGS.name().toLowerCase()
   );
 
   @Test

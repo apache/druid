@@ -21,7 +21,7 @@ package io.druid.segment.data;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
-import org.apache.commons.lang.ArrayUtils;
+import com.metamx.common.IAE;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -31,11 +31,11 @@ import java.util.Map;
 
 /**
  * Compression of metrics is done by using a combination of {@link io.druid.segment.data.CompressedObjectStrategy.CompressionStrategy}
- * and Encoding(such as {@link LongEncoding} for type Long). CompressionStrategy is unaware of the data type
+ * and Encoding(such as {@link LongEncodingStrategy} for type Long). CompressionStrategy is unaware of the data type
  * and is based on byte operations. It must compress and decompress in block of bytes. Encoding refers to compression
- * method relies on data format, so a different Encoding exist for each data type.
+ * method relies on data format, so a different set of Encodings exist for each data type.
  * <p>
- * Compression Storage Format
+ * Storage Format :
  * Byte 1 : version (currently 0x02)
  * Byte 2 - 5 : number of values
  * Byte 6 - 9 : size per block (even if block format isn't used, this is needed for backward compatibility)
@@ -55,7 +55,10 @@ public class CompressionFactory
     // No instantiation
   }
 
-  public static final LongEncoding DEFAULT_LONG_ENCODING = LongEncoding.LONGS;
+  public static final LongEncodingStrategy DEFAULT_LONG_ENCODING_STRATEGY = LongEncodingStrategy.LONGS;
+
+  // encoding format for segments created prior to the introduction of encoding formats
+  public static final LongEncodingFormat LEGACY_LONG_ENCODING_FORMAT = LongEncodingFormat.LONGS;
 
   /*
    * Delta Encoding Header v1:
@@ -81,8 +84,9 @@ public class CompressionFactory
 
   /*
    * This is the flag mechanism for determine whether an encoding byte exist in the header. This is needed for
-   * backward compatibility, since older segment does not have the encoding byte. The flag is encoded in the compression
-   * strategy byte using the setEncodingFlag and clearEncodingFlag function.
+   * backward compatibility, since segment created prior to the introduction of encoding formats does not have the
+   * encoding strategy byte. The flag is encoded in the compression strategy byte using the setEncodingFlag and
+   * clearEncodingFlag function.
    */
 
   // 0xFE(-2) should be the smallest valid compression strategy id
@@ -105,7 +109,30 @@ public class CompressionFactory
     return hasEncodingFlag(strategyId) ? (byte) (strategyId + FLAG_VALUE) : strategyId;
   }
 
-  public enum LongEncoding
+  /*
+   * The compression of decompression of encodings are separated into different enums. EncodingStrategy refers to the
+   * strategy used to encode the data, and EncodingFormat refers to the format the data is encoded in. Note there is not
+   * necessarily an one-to-one mapping between to two. For instance, the AUTO LongEncodingStrategy scans the data once
+   * and decide on which LongEncodingFormat to use based on data property, so it's possible for the EncodingStrategy to
+   * write in any of the LongEncodingFormat. On the other hand, there are no LongEncodingStrategy that always write in
+   * TABLE LongEncodingFormat since it only works for data with low cardinality.
+   */
+
+  public enum LongEncodingStrategy
+  {
+    /**
+     * AUTO strategy scans all values once before encoding them. It stores the value cardinality and maximum offset
+     * of the values to determine whether to use DELTA, TABLE, or LONGS format.
+     */
+    AUTO,
+
+    /**
+     * LONGS strategy always encode the values using LONGS format
+     */
+    LONGS
+  }
+
+  public enum LongEncodingFormat
   {
     /**
      * DELTA format encodes a series of longs by finding the smallest value first, and stores all values
@@ -116,13 +143,7 @@ public class CompressionFactory
       @Override
       public LongEncodingReader getReader(ByteBuffer buffer, ByteOrder order)
       {
-        return new DeltaEncodingReader(buffer);
-      }
-
-      @Override
-      public LongEncodingWriter getWriter(ByteOrder order)
-      {
-        return null;
+        return new DeltaLongEncodingReader(buffer);
       }
     },
     /**
@@ -134,13 +155,7 @@ public class CompressionFactory
       @Override
       public LongEncodingReader getReader(ByteBuffer buffer, ByteOrder order)
       {
-        return new TableEncodingReader(buffer);
-      }
-
-      @Override
-      public LongEncodingWriter getWriter(ByteOrder order)
-      {
-        return null;
+        return new TableLongEncodingReader(buffer);
       }
     },
     /**
@@ -150,19 +165,13 @@ public class CompressionFactory
       @Override
       public LongEncodingReader getReader(ByteBuffer buffer, ByteOrder order)
       {
-        return new LongsEncodingReader(buffer, order);
-      }
-
-      @Override
-      public LongEncodingWriter getWriter(ByteOrder order)
-      {
-        return new LongsEncodingWriter(order);
+        return new LongsLongEncodingReader(buffer, order);
       }
     };
 
     final byte id;
 
-    LongEncoding(byte id)
+    LongEncodingFormat(byte id)
     {
       this.id = id;
     }
@@ -172,26 +181,19 @@ public class CompressionFactory
       return id;
     }
 
-    static final Map<Byte, LongEncoding> idMap = Maps.newHashMap();
+    static final Map<Byte, LongEncodingFormat> idMap = Maps.newHashMap();
 
     static {
-      for (LongEncoding format : LongEncoding.values()) {
+      for (LongEncodingFormat format : LongEncodingFormat.values()) {
         idMap.put(format.getId(), format);
       }
     }
 
     public abstract LongEncodingReader getReader(ByteBuffer buffer, ByteOrder order);
 
-    public abstract LongEncodingWriter getWriter(ByteOrder order);
-
-    public static LongEncoding forId(byte id)
+    public static LongEncodingFormat forId(byte id)
     {
       return idMap.get(id);
-    }
-
-    public static LongEncoding[] testValues()
-    {
-      return (LongEncoding[]) ArrayUtils.removeElement(LongEncoding.values(), TABLE);
     }
   }
 
@@ -247,35 +249,39 @@ public class CompressionFactory
 
   public static Supplier<IndexedLongs> getLongSupplier(
       int totalSize, int sizePer, ByteBuffer fromBuffer, ByteOrder order,
-      LongEncoding encoding,
+      LongEncodingFormat encodingFormat,
       CompressedObjectStrategy.CompressionStrategy strategy
   )
   {
     if (strategy == CompressedObjectStrategy.CompressionStrategy.NONE) {
-      return new EntireLayoutIndexedLongSupplier(totalSize, encoding.getReader(fromBuffer, order));
+      return new EntireLayoutIndexedLongSupplier(totalSize, encodingFormat.getReader(fromBuffer, order));
     } else {
       return new BlockLayoutIndexedLongsSupplier(totalSize, sizePer, fromBuffer, order,
-                                                 encoding.getReader(fromBuffer, order), strategy
+                                                 encodingFormat.getReader(fromBuffer, order), strategy
       );
     }
   }
 
   public static LongSupplierSerializer getLongSerializer(
       IOPeon ioPeon, String filenameBase, ByteOrder order,
-      LongEncoding encoding,
-      CompressedObjectStrategy.CompressionStrategy strategy
+      LongEncodingStrategy encodingStrategy,
+      CompressedObjectStrategy.CompressionStrategy compressionStrategy
   )
   {
-    if (encoding == LongEncoding.TABLE || encoding == LongEncoding.DELTA) {
-      return new IntermediateLongSupplierSerializer(ioPeon, filenameBase, order, strategy);
-    } else if (strategy == CompressedObjectStrategy.CompressionStrategy.NONE) {
-      return new EntireLayoutLongSerializer(
-          ioPeon, filenameBase, order, encoding.getWriter(order)
-      );
+    if (encodingStrategy == LongEncodingStrategy.AUTO) {
+      return new IntermediateLongSupplierSerializer(ioPeon, filenameBase, order, compressionStrategy);
+    } else if (encodingStrategy == LongEncodingStrategy.LONGS){
+      if (compressionStrategy == CompressedObjectStrategy.CompressionStrategy.NONE) {
+        return new EntireLayoutLongSerializer(
+            ioPeon, filenameBase, order, new LongsLongEncodingWriter(order)
+        );
+      } else{
+        return new BlockLayoutLongSupplierSerializer(
+            ioPeon, filenameBase, order, new LongsLongEncodingWriter(order), compressionStrategy
+        );
+      }
     } else {
-      return new BlockLayoutLongSupplierSerializer(
-          ioPeon, filenameBase, order, encoding.getWriter(order), strategy
-      );
+      throw new IAE("unknown encoding strategy : %s", encodingStrategy.toString());
     }
   }
 }

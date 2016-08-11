@@ -40,7 +40,7 @@ public class QueryableIndexIndexableAdapterTest
       new ConciseBitmapSerdeFactory(),
       CompressedObjectStrategy.CompressionStrategy.LZ4,
       CompressedObjectStrategy.CompressionStrategy.LZ4,
-      CompressionFactory.LongEncoding.LONGS
+      CompressionFactory.LongEncodingStrategy.LONGS
   );
 
   @Rule

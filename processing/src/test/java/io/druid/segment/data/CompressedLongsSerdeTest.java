@@ -49,16 +49,16 @@ public class CompressedLongsSerdeTest
   public static Iterable<Object[]> compressionStrategies()
   {
     List<Object[]> data = new ArrayList<>();
-    for (CompressionFactory.LongEncoding format : CompressionFactory.LongEncoding.testValues()) {
+    for (CompressionFactory.LongEncodingStrategy encodingStrategy: CompressionFactory.LongEncodingStrategy.values()) {
       for (CompressedObjectStrategy.CompressionStrategy strategy : CompressedObjectStrategy.CompressionStrategy.values()) {
-        data.add(new Object[]{format, strategy, ByteOrder.BIG_ENDIAN});
-        data.add(new Object[]{format, strategy, ByteOrder.LITTLE_ENDIAN});
+        data.add(new Object[]{encodingStrategy, strategy, ByteOrder.BIG_ENDIAN});
+        data.add(new Object[]{encodingStrategy, strategy, ByteOrder.LITTLE_ENDIAN});
       }
     }
     return data;
   }
 
-  protected final CompressionFactory.LongEncoding encodingFormat;
+  protected final CompressionFactory.LongEncodingStrategy encodingStrategy;
   protected final CompressedObjectStrategy.CompressionStrategy compressionStrategy;
   protected final ByteOrder order;
 
@@ -75,12 +75,12 @@ public class CompressedLongsSerdeTest
   };
 
   public CompressedLongsSerdeTest(
-      CompressionFactory.LongEncoding encodingFormat,
+      CompressionFactory.LongEncodingStrategy encodingStrategy,
       CompressedObjectStrategy.CompressionStrategy compressionStrategy,
       ByteOrder order
   )
   {
-    this.encodingFormat = encodingFormat;
+    this.encodingStrategy = encodingStrategy;
     this.compressionStrategy = compressionStrategy;
     this.order = order;
   }
@@ -111,7 +111,7 @@ public class CompressedLongsSerdeTest
   public void testWithValues(long[] values) throws Exception
   {
     LongSupplierSerializer serializer = CompressionFactory.getLongSerializer(new IOPeonForTesting(), "test", order,
-                                                                             encodingFormat, compressionStrategy
+                                                                             encodingStrategy, compressionStrategy
     );
     serializer.open();
 

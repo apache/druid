@@ -34,7 +34,7 @@ public class LongColumnSerializer implements GenericColumnSerializer
       IOPeon ioPeon,
       String filenameBase,
       CompressedObjectStrategy.CompressionStrategy compression,
-      CompressionFactory.LongEncoding encoding
+      CompressionFactory.LongEncodingStrategy encoding
   )
   {
     return new LongColumnSerializer(ioPeon, filenameBase, IndexIO.BYTE_ORDER, compression, encoding);
@@ -44,7 +44,7 @@ public class LongColumnSerializer implements GenericColumnSerializer
   private final String filenameBase;
   private final ByteOrder byteOrder;
   private final CompressedObjectStrategy.CompressionStrategy compression;
-  private final CompressionFactory.LongEncoding encoding;
+  private final CompressionFactory.LongEncodingStrategy encoding;
   private LongSupplierSerializer writer;
 
   public LongColumnSerializer(
@@ -52,7 +52,7 @@ public class LongColumnSerializer implements GenericColumnSerializer
       String filenameBase,
       ByteOrder byteOrder,
       CompressedObjectStrategy.CompressionStrategy compression,
-      CompressionFactory.LongEncoding encoding
+      CompressionFactory.LongEncodingStrategy encoding
   )
   {
     this.ioPeon = ioPeon;

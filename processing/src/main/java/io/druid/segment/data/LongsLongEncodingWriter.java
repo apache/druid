@@ -26,7 +26,7 @@ import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
-public class LongsEncodingWriter implements CompressionFactory.LongEncodingWriter
+public class LongsLongEncodingWriter implements CompressionFactory.LongEncodingWriter
 {
 
   private final ByteBuffer orderBuffer;
@@ -34,7 +34,7 @@ public class LongsEncodingWriter implements CompressionFactory.LongEncodingWrite
   private ByteBuffer outBuffer = null;
   private OutputStream outStream = null;
 
-  public LongsEncodingWriter(ByteOrder order)
+  public LongsLongEncodingWriter(ByteOrder order)
   {
     this.order = order;
     orderBuffer = ByteBuffer.allocate(Longs.BYTES);

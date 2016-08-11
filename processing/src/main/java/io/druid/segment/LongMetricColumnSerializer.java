@@ -21,11 +21,10 @@ package io.druid.segment;
 
 import com.google.common.io.FileWriteMode;
 import com.google.common.io.Files;
-import io.druid.segment.data.CompressedLongBufferObjectStrategy;
 import io.druid.segment.data.CompressedObjectStrategy;
 import io.druid.segment.data.CompressionFactory;
-import io.druid.segment.data.LongSupplierSerializer;
 import io.druid.segment.data.IOPeon;
+import io.druid.segment.data.LongSupplierSerializer;
 
 import java.io.File;
 import java.io.IOException;
@@ -37,7 +36,8 @@ public class LongMetricColumnSerializer implements MetricColumnSerializer
   private final String metricName;
   private final IOPeon ioPeon;
   private final File outDir;
-  private final IndexSpec indexSpec;
+  private final CompressedObjectStrategy.CompressionStrategy compression;
+  private final CompressionFactory.LongEncodingStrategy encoding;
 
   private LongSupplierSerializer writer;
 
@@ -45,21 +45,22 @@ public class LongMetricColumnSerializer implements MetricColumnSerializer
       String metricName,
       File outDir,
       IOPeon ioPeon,
-      IndexSpec indexSpec
+      CompressedObjectStrategy.CompressionStrategy compression,
+      CompressionFactory.LongEncodingStrategy encoding
   )
   {
     this.metricName = metricName;
     this.ioPeon = ioPeon;
     this.outDir = outDir;
-    this.indexSpec = indexSpec;
+    this.compression = compression;
+    this.encoding = encoding;
   }
 
   @Override
   public void open() throws IOException
   {
     writer = CompressionFactory.getLongSerializer(
-        ioPeon, String.format("%s_little", metricName), IndexIO.BYTE_ORDER, indexSpec.getLongEncodingFormat(),
-        indexSpec.getMetricCompressionStrategy()
+        ioPeon, String.format("%s_little", metricName), IndexIO.BYTE_ORDER, encoding, compression
     );
 
     writer.open();

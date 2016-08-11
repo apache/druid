@@ -30,6 +30,7 @@ import io.druid.segment.CompressedPools;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4FastDecompressor;
 import net.jpountz.lz4.LZ4SafeDecompressor;
+import org.apache.commons.lang.ArrayUtils;
 
 import java.io.IOException;
 import java.nio.Buffer;
@@ -101,13 +102,13 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
       @Override
       public Decompressor getDecompressor()
       {
-        return UncompressedDecompressor.defaultDecompressor;
+        throw new UnsupportedOperationException("NONE compression strategy shouldn't use any decompressor");
       }
 
       @Override
       public Compressor getCompressor()
       {
-        return UncompressedCompressor.defaultCompressor;
+        throw new UnsupportedOperationException("NONE compression strategy shouldn't use any compressor");
       }
     };
 
@@ -138,6 +139,12 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
     public static CompressionStrategy forId(byte id)
     {
       return idMap.get(id);
+    }
+
+    // TODO remove this method and change all its callers to use all CompressionStrategy values when NONE type is supported by all types
+    public static CompressionStrategy[] noNoneValues()
+    {
+      return (CompressionStrategy[]) ArrayUtils.removeElement(CompressionStrategy.values(), NONE);
     }
   }
 
