@@ -256,8 +256,8 @@ public class CompressionFactory
     if (strategy == CompressedObjectStrategy.CompressionStrategy.NONE) {
       return new EntireLayoutIndexedLongSupplier(totalSize, encodingFormat.getReader(fromBuffer, order));
     } else {
-      return new BlockLayoutIndexedLongsSupplier(totalSize, sizePer, fromBuffer, order,
-                                                 encodingFormat.getReader(fromBuffer, order), strategy
+      return new BlockLayoutIndexedLongSupplier(totalSize, sizePer, fromBuffer, order,
+                                                encodingFormat.getReader(fromBuffer, order), strategy
       );
     }
   }
@@ -272,7 +272,7 @@ public class CompressionFactory
       return new IntermediateLongSupplierSerializer(ioPeon, filenameBase, order, compressionStrategy);
     } else if (encodingStrategy == LongEncodingStrategy.LONGS){
       if (compressionStrategy == CompressedObjectStrategy.CompressionStrategy.NONE) {
-        return new EntireLayoutLongSerializer(
+        return new EntireLayoutLongSupplierSerializer(
             ioPeon, filenameBase, order, new LongsLongEncodingWriter(order)
         );
       } else{

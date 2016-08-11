@@ -31,7 +31,7 @@ import java.nio.ByteOrder;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 
-public class EntireLayoutLongSerializer implements LongSupplierSerializer
+public class EntireLayoutLongSupplierSerializer implements LongSupplierSerializer
 {
 
   private final IOPeon ioPeon;
@@ -43,7 +43,7 @@ public class EntireLayoutLongSerializer implements LongSupplierSerializer
 
   private int numInserted = 0;
 
-  public EntireLayoutLongSerializer(
+  public EntireLayoutLongSupplierSerializer(
       IOPeon ioPeon, String filenameBase, ByteOrder order,
       CompressionFactory.LongEncodingWriter writer
   )

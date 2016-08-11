@@ -48,7 +48,7 @@ public class IndexSpec
   public static final String DEFAULT_LONG_ENCODING = CompressionFactory.DEFAULT_LONG_ENCODING_STRATEGY.name().toLowerCase();
   public static final String DEFAULT_DIMENSION_COMPRESSION = CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY.name().toLowerCase();
 
-  private static final Set<String> COMPRESSION_NAMES = Sets.newHashSet(
+  private static final Set<String> METRIC_COMPRESSION_NAMES = Sets.newHashSet(
       Iterables.transform(
           Arrays.asList(CompressedObjectStrategy.CompressionStrategy.values()),
           new Function<CompressedObjectStrategy.CompressionStrategy, String>()
@@ -136,7 +136,7 @@ public class IndexSpec
                                 DIMENSION_COMPRESSION_NAMES.contains(dimensionCompression),
                                 "Unknown compression type[%s]", dimensionCompression);
 
-    Preconditions.checkArgument(metricCompression == null || COMPRESSION_NAMES.contains(metricCompression),
+    Preconditions.checkArgument(metricCompression == null || METRIC_COMPRESSION_NAMES.contains(metricCompression),
                                 "Unknown compression type[%s]", metricCompression);
 
     Preconditions.checkArgument(longEncoding == null || LONG_ENCODING_NAMES.contains(longEncoding),

@@ -29,7 +29,7 @@ import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.LongBuffer;
 
-public class BlockLayoutIndexedLongsSupplier implements Supplier<IndexedLongs>
+public class BlockLayoutIndexedLongSupplier implements Supplier<IndexedLongs>
 {
 
   private final GenericIndexed<ResourceHolder<ByteBuffer>> baseLongBuffers;
@@ -37,7 +37,7 @@ public class BlockLayoutIndexedLongsSupplier implements Supplier<IndexedLongs>
   private final int sizePer;
   private final CompressionFactory.LongEncodingReader baseReader;
 
-  public BlockLayoutIndexedLongsSupplier(
+  public BlockLayoutIndexedLongSupplier(
       int totalSize, int sizePer, ByteBuffer fromBuffer, ByteOrder order,
       CompressionFactory.LongEncodingReader reader,
       CompressedObjectStrategy.CompressionStrategy strategy
