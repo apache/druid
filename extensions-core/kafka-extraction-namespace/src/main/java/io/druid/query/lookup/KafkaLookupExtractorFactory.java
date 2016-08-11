@@ -26,11 +26,10 @@ import com.fasterxml.jackson.annotation.JsonTypeName;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Stopwatch;
 import com.google.common.primitives.Longs;
-import com.google.common.util.concurrent.FutureCallback;
-import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.google.common.util.concurrent.Service.State;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.StringUtils;
@@ -52,12 +51,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Pattern;
@@ -79,8 +76,9 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   private final AtomicLong doubleEventCount = new AtomicLong(0L);
   private final NamespaceExtractionCacheManager cacheManager;
   private final String factoryId = UUID.randomUUID().toString();
-  private final AtomicBoolean started = new AtomicBoolean(false);
   private final ConsumerConnectorFactory consumerConnectorFactory;
+  private final AtomicReference<State> currentState = new AtomicReference<>(State.NEW);
+  private final CountDownLatch startingReads = new CountDownLatch(1);
 
   private volatile ListenableFuture<?> future = null;
   private volatile Map<String, String> map = null;
@@ -124,7 +122,7 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     this.connectTimeout = connectTimeout;
     this.injective = injective;
     this.consumerConnectorFactory = consumerConnectorFactory;
-    executorService = MoreExecutors.listeningDecorator(Execs.singleThreaded(
+    this.executorService = MoreExecutors.listeningDecorator(Execs.singleThreaded(
             "kafka-factory-" + kafkaTopic + "-%s",
             Thread.MIN_PRIORITY
     ));
@@ -137,57 +135,32 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   @Override
   public boolean start()
   {
-    synchronized (started) {
-      if (started.get()) {
-        LOG.warn("Already started, not starting again");
-        return started.get();
-      }
-      if (executorService.isShutdown()) {
-        LOG.warn("Already shut down, not starting again");
-        return false;
-      }
 
-      final Properties kafkaProperties = buildProperties();
-
-      LOG.debug("About to listen to topic [%s] with group.id [%s]", kafkaTopic, factoryId);
-      init();
-
-      final CountDownLatch startingReads = new CountDownLatch(1);
-
-      final ListenableFuture<?> future = executorService.submit(makeRunnable(kafkaProperties, kafkaTopic, startingReads));
-
-      if (!awaitStart(kafkaTopic, startingReads, future)) {
-        return false;
-      }
-
-      started.set(true);
-      return true;
+    if(!advanceState(State.NEW, State.STARTING)) {
+      LOG.warn("Already started, not starting again. Current state: [%s]", currentState.get());
+      return currentState.get().equals(State.RUNNING);
     }
+
+    // TODO: if current state is STARTING, block until a terminal state is reached?
+
+    final Properties kafkaProperties = buildProperties();
+    LOG.debug("About to listen to topic [%s] with group.id [%s]", kafkaTopic, factoryId);
+
+    init();
+
+    future = executorService.submit(makeRunnable(kafkaProperties));
+
+    if (!awaitStart()) {
+      currentState.set(State.FAILED);
+      return false;
+    }
+
+    advanceState(State.STARTING, State.RUNNING);
+
+    return true;
   }
 
-  private boolean awaitStart(final String topic, CountDownLatch startingReads, ListenableFuture<?> future) {
-    Futures.addCallback(
-        future, new FutureCallback<Object>()
-        {
-          @Override
-          public void onSuccess(Object result)
-          {
-            LOG.debug("Success listening to [%s]", topic);
-          }
-
-          @Override
-          public void onFailure(Throwable t)
-          {
-            if (t instanceof CancellationException) {
-              LOG.debug("Topic [%s] cancelled", topic);
-            } else {
-              LOG.error(t, "Error in listening to [%s]", topic);
-            }
-          }
-        },
-        MoreExecutors.sameThreadExecutor()
-    );
-    this.future = future;
+  private boolean awaitStart() {
     final Stopwatch stopwatch = Stopwatch.createStarted();
     try {
       while (!startingReads.await(100, TimeUnit.MILLISECONDS) && connectTimeout > 0L) {
@@ -212,43 +185,45 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     return true;
   }
 
-  private Runnable makeRunnable(final Properties kafkaProperties, final String topic, final CountDownLatch startingReads) {
+  private Runnable makeRunnable(final Properties kafkaProperties) {
     return new Runnable()
     {
       @Override
       public void run()
       {
-        while (!executorService.isShutdown() && !Thread.currentThread().isInterrupted()) {
+        while (!shouldStop()) {
+          // TODO: why is a new connector created and destroyed on every iteration?
           final ConsumerConnector consumerConnector = consumerConnectorFactory.buildConnector(kafkaProperties);
           try {
             final List<KafkaStream<String, String>> streams = consumerConnector.createMessageStreamsByFilter(
-                new Whitelist(Pattern.quote(topic)), 1, DEFAULT_STRING_DECODER, DEFAULT_STRING_DECODER
+                new Whitelist(Pattern.quote(kafkaTopic)), 1, DEFAULT_STRING_DECODER, DEFAULT_STRING_DECODER
             );
 
             if (streams == null || streams.isEmpty()) {
-              throw new IAE("Topic [%s] had no streams", topic);
+              throw new IAE("Topic [%s] had no streams", kafkaTopic);
             }
             if (streams.size() > 1) {
-              throw new ISE("Topic [%s] has %d streams! expected 1", topic, streams.size());
+              throw new ISE("Topic [%s] has %d streams! expected 1", kafkaTopic, streams.size());
             }
             final KafkaStream<String, String> kafkaStream = streams.get(0);
 
+            // FIXME: Why is this done on every iteration?
             startingReads.countDown();
 
             for (final MessageAndMetadata<String, String> messageAndMetadata : kafkaStream) {
               final String key = messageAndMetadata.key();
               final String message = messageAndMetadata.message();
               if (key == null || message == null) {
-                LOG.error("Bad key/message from topic [%s]: [%s]", topic, messageAndMetadata);
+                LOG.error("Bad key/message from topic [%s]: [%s]", kafkaTopic, messageAndMetadata);
                 continue;
               }
               onNewEntry(key, message);
             }
           }
           catch (Exception e) {
-            LOG.error(e, "Error reading stream for topic [%s]", topic);
-          }
-          finally {
+            LOG.error(e, "Error reading stream for topic [%s]", kafkaTopic);
+          } finally {
+            Thread.interrupted();
             consumerConnector.shutdown();
           }
         }
@@ -294,26 +269,35 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
   @Override
   public boolean close()
   {
-    synchronized (started) {
-      if (!started.get() || executorService.isShutdown()) {
-        LOG.info("Already shutdown, ignoring");
-        return !started.get();
-      }
-      started.set(false);
-      executorService.shutdownNow();
-      final ListenableFuture<?> future = this.future;
-      if (future != null) {
-        if (!future.isDone() && !future.cancel(true) && !future.isDone()) {
-          LOG.error("Error cancelling future for topic [%s]", kafkaTopic);
-          return false;
-        }
-      }
-      if (!cacheManager.delete(factoryId)) {
-        LOG.error("Error removing [%s] for topic [%s] from cache", factoryId, kafkaTopic);
+    if(!advanceState(State.RUNNING, State.STOPPING)) {
+      LOG.info("Already shutdown, ignoring. Current state: [%s]", currentState);
+      return currentState.get().equals(State.TERMINATED);
+    }
+
+    // TODO: if current state is STOPPING, block until a terminal state is reached?
+    // Is this method ever invoked by multiple threads simultaneously?
+
+
+    executorService.shutdown();
+
+    if (future != null) {
+      if (!future.isDone() && !future.cancel(true) && !future.isDone()) {
+        LOG.error("Error cancelling future for topic [%s]", kafkaTopic);
+        advanceState(State.STOPPING, State.FAILED);
         return false;
       }
-      return true;
     }
+
+
+    if (!cacheManager.delete(factoryId)) {
+      LOG.error("Error removing [%s] for topic [%s] from cache", factoryId, kafkaTopic);
+      advanceState(State.STOPPING, State.FAILED);
+      return false;
+    }
+
+    advanceState(State.STOPPING, State.TERMINATED);
+
+    return true;
   }
 
   @Override
@@ -377,6 +361,40 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     };
   }
 
+  private boolean advanceState(State expectedCurrentState, State newState) {
+    boolean success = currentState.compareAndSet(expectedCurrentState, newState);
+
+    if(success)
+    {
+      synchronized (currentState)
+      {
+        currentState.notifyAll();
+      }
+    }
+
+    return success;
+  }
+
+  private boolean awaitState(State expectedState, long timeout) throws InterruptedException {
+    final long waitStart = System.currentTimeMillis();
+
+    while(!currentState.get().equals(expectedState) && System.currentTimeMillis() - waitStart < timeout)
+    {
+      synchronized (currentState)
+      {
+        currentState.wait(timeout);
+      }
+    }
+
+    return currentState.get().equals(expectedState);
+  }
+
+  private boolean shouldStop() {
+    State state = currentState.get();
+
+    return state.equals(State.STOPPING) || state.equals(State.TERMINATED) || state.equals(State.FAILED);
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) return true;
@@ -405,11 +423,8 @@ public class KafkaLookupExtractorFactory implements LookupExtractorFactory
     return doubleEventCount.get() >> 1;
   }
 
-  // TODO: remove
-  // Used in tests
-  ListenableFuture<?> getFuture()
-  {
-    return future;
+  public State getState() {
+    return currentState.get();
   }
 
   interface ConsumerConnectorFactory

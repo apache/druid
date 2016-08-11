@@ -26,6 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.util.concurrent.Service.State;
 import com.metamx.common.StringUtils;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.lookup.KafkaLookupExtractorFactory.ConsumerConnectorFactory;
@@ -216,7 +217,7 @@ public class KafkaLookupExtractorFactoryTest
   public void testStopWithoutStart()
   {
     final KafkaLookupExtractorFactory factory = makeLookupFactory(cacheManager);
-    Assert.assertTrue(factory.close());
+    Assert.assertFalse(factory.close());
   }
 
   @Test
@@ -251,7 +252,7 @@ public class KafkaLookupExtractorFactoryTest
     );
     Assert.assertTrue(factory.start());
     Assert.assertTrue(factory.close());
-    Assert.assertTrue(factory.getFuture().isDone());
+    Assert.assertTrue(factory.getState() == State.TERMINATED);
     EasyMock.verify(cacheManager);
   }
 
@@ -286,8 +287,7 @@ public class KafkaLookupExtractorFactoryTest
             }
     );
     Assert.assertFalse(factory.start());
-    Assert.assertTrue(factory.getFuture().isDone());
-    Assert.assertTrue(factory.getFuture().isCancelled());
+    Assert.assertTrue(factory.getState() == State.FAILED);
     EasyMock.verify(cacheManager);
   }
 

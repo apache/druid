@@ -19,7 +19,7 @@
 
 package io.druid.query.lookup;
 
-import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.Service.State;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.core.Response;
@@ -33,8 +33,9 @@ public class KafkaLookupExtractorIntrospectionHandler implements LookupIntrospec
   @GET
   public Response getActive()
   {
-    final ListenableFuture<?> future = kafkaLookupExtractorFactory.getFuture();
-    if (future != null && !future.isDone()) {
+    final State state = kafkaLookupExtractorFactory.getState();
+    // TODO: expose the current state in more detail
+    if (!state.equals(State.TERMINATED) || !state.equals(State.FAILED)) {
       return Response.ok().build();
     } else {
       return Response.status(Response.Status.GONE).build();
