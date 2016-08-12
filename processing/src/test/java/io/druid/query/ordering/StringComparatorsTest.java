@@ -207,5 +207,9 @@ public class StringComparatorsTest
     String makeFromJsonSpec = "\"numeric\"";
     Assert.assertEquals(StringComparators.NUMERIC
         , jsonMapper.readValue(makeFromJsonSpec, StringComparator.class));
+
+    makeFromJsonSpec = "\"NuMeRiC\"";
+    Assert.assertEquals(StringComparators.NUMERIC
+        , jsonMapper.readValue(makeFromJsonSpec, StringComparator.class));
   }
 }
