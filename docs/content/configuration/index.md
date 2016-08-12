@@ -75,6 +75,22 @@ The following path is used for service discovery. It is **not** affected by `dru
 |--------|-----------|-------|
 |`druid.discovery.curator.path`|Services announce themselves under this ZooKeeper path.|`/druid/discovery`|
 
+### Exhibitor
+
+[Exhibitor](https://github.com/Netflix/exhibitor/wiki) is a supervisor system for ZooKeeper.
+Exhibitor can dynamically scale-up/down the cluster of ZooKeeper servers.
+Druid can update self-owned list of ZooKeeper servers through Exhibitor without restarting.
+That is, it allows Druid to keep the connections of Exhibitor-supervised ZooKeeper servers.
+
+|Property|Description|Default|
+|--------|-----------|-------|
+|`druid.exhibitor.service.hosts`|Comma-separated hostnames of Exhibitor instances. Please specify this property instead of `druid.zk.service.host` if you want to use Exhibitor-supervised cluster.|none|
+|`druid.exhibitor.service.port`|The REST port used to connect to Exhibitor.|`8080`|
+|`druid.exhibitor.service.restUriPath`|The path of the REST call used to get the server set.|`/exhibitor/v1/cluster/list`|
+|`druid.exhibitor.service.useSsl`|Boolean flag for whether or not to use https protocol.|`false`|
+|`druid.exhibitor.service.pollingMs`|How ofter to poll the exhibitors for the list|`10000`|
+|`druid.exhibitor.service.backupZkHosts`|The fixed connection string to use as a backup. This property is used in case an Exhibitor instance can't be contacted|null|
+
 ### Startup Logging
 
 All nodes can log debugging information on startup.
@@ -211,18 +227,18 @@ These properties specify the jdbc connection and other configuration around the 
 |`druid.metadata.storage.tables.audit`|The table to use for audit history of configuration changes e.g. Coordinator rules.|druid_audit|
 
 #### Password Provider
- 
+
 Environment variable password provider provides password by looking at specified environment variable. Use this in order to avoid specifying password in runtime.properties file.
-e.g 
+e.g
 
 ```json
-{ 
+{
     "type": "environment",
     "variable": "METADATA_STORAGE_PASSWORD"   
 }
 ```
 
-The values are described below. 
+The values are described below.
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
