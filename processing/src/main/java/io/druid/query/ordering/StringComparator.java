@@ -29,7 +29,7 @@ public abstract class StringComparator implements Comparator<String>
   @JsonCreator
   public static StringComparator fromString(String type)
   {
-    switch (type) {
+    switch (type.toLowerCase()) {
       case StringComparators.LEXICOGRAPHIC_NAME:
         return StringComparators.LEXICOGRAPHIC;
       case StringComparators.ALPHANUMERIC_NAME:
