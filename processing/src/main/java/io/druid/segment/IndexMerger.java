@@ -781,24 +781,16 @@ public class IndexMerger
       }
 
       ArrayList<MetricColumnSerializer> metWriters = Lists.newArrayListWithCapacity(mergedMetrics.size());
-      final CompressedObjectStrategy.CompressionStrategy longMetCompression = indexSpec.getMetricCompressionStrategy();
-      // TODO remove this when float support non block based compression
-      // float compression strategy is converted from NONE to UNCOMPRESSED because float serializer cannot currently
-      // handle non block based compression. The serializer would treat NONE as UNCOMPRESSED. This causes problem for
-      // future implementation of NONE type for float since older segments would have UNCOMPRESSED format with NONE header
-      // Check issue https://github.com/druid-io/druid/pull/3148 for more detail
-      final CompressedObjectStrategy.CompressionStrategy floatMetCompression =
-          longMetCompression == CompressedObjectStrategy.CompressionStrategy.NONE ?
-          CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED : longMetCompression;
+      final CompressedObjectStrategy.CompressionStrategy metCompression = indexSpec.getMetricCompressionStrategy();
       final CompressionFactory.LongEncodingStrategy longEncoding = indexSpec.getLongEncodingStrategy();
       for (String metric : mergedMetrics) {
         ValueType type = valueTypes.get(metric);
         switch (type) {
           case LONG:
-            metWriters.add(new LongMetricColumnSerializer(metric, v8OutDir, ioPeon, longMetCompression, longEncoding));
+            metWriters.add(new LongMetricColumnSerializer(metric, v8OutDir, ioPeon, metCompression, longEncoding));
             break;
           case FLOAT:
-            metWriters.add(new FloatMetricColumnSerializer(metric, v8OutDir, ioPeon, floatMetCompression));
+            metWriters.add(new FloatMetricColumnSerializer(metric, v8OutDir, ioPeon, metCompression));
             break;
           case COMPLEX:
             final String typeName = metricTypeNames.get(metric);

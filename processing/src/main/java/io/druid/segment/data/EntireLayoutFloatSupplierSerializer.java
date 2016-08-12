@@ -22,43 +22,45 @@ package io.druid.segment.data;
 import com.google.common.io.ByteSink;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.CountingOutputStream;
+import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 
-public class EntireLayoutLongSupplierSerializer implements LongSupplierSerializer
+public class EntireLayoutFloatSupplierSerializer implements FloatSupplierSerializer
 {
-
   private final IOPeon ioPeon;
   private final String valueFile;
   private final String metaFile;
   private CountingOutputStream valuesOut;
-  private final CompressionFactory.LongEncodingWriter writer;
   private long metaCount = 0;
+
+  private final ByteBuffer orderBuffer;
 
   private int numInserted = 0;
 
-  public EntireLayoutLongSupplierSerializer(
-      IOPeon ioPeon, String filenameBase, ByteOrder order,
-      CompressionFactory.LongEncodingWriter writer
+  public EntireLayoutFloatSupplierSerializer(
+      IOPeon ioPeon, String filenameBase, ByteOrder order
   )
   {
     this.ioPeon = ioPeon;
     this.valueFile = filenameBase + ".value";
     this.metaFile = filenameBase + ".format";
-    this.writer = writer;
+
+    orderBuffer = ByteBuffer.allocate(Floats.BYTES);
+    orderBuffer.order(order);
   }
 
   @Override
   public void open() throws IOException
   {
     valuesOut = new CountingOutputStream(ioPeon.makeOutputStream(valueFile));
-    writer.setOutputStream(valuesOut);
   }
 
   @Override
@@ -68,9 +70,11 @@ public class EntireLayoutLongSupplierSerializer implements LongSupplierSerialize
   }
 
   @Override
-  public void add(long value) throws IOException
+  public void add(float value) throws IOException
   {
-    writer.write(value);
+    orderBuffer.rewind();
+    orderBuffer.putFloat(value);
+    valuesOut.write(orderBuffer.array());
     ++numInserted;
   }
 
@@ -89,13 +93,12 @@ public class EntireLayoutLongSupplierSerializer implements LongSupplierSerialize
   @Override
   public void close() throws IOException
   {
-    writer.flush();
     valuesOut.close();
     try (CountingOutputStream metaOut = new CountingOutputStream(ioPeon.makeOutputStream(metaFile))) {
-      metaOut.write(CompressedLongsIndexedSupplier.version);
+      metaOut.write(CompressedFloatsIndexedSupplier.version);
       metaOut.write(Ints.toByteArray(numInserted));
       metaOut.write(Ints.toByteArray(0));
-      writer.putMeta(metaOut, CompressedObjectStrategy.CompressionStrategy.NONE);
+      metaOut.write(CompressedObjectStrategy.CompressionStrategy.NONE.getId());
       metaOut.close();
       metaCount = metaOut.getCount();
     }

@@ -45,7 +45,7 @@ public class BlockLayoutLongSupplierSerializer implements LongSupplierSerializer
   private final GenericIndexedWriter<ResourceHolder<ByteBuffer>> flattener;
   private final CompressedObjectStrategy.CompressionStrategy compression;
   private final String metaFile;
-  private CountingOutputStream metaOut;
+  private long metaCount = 0;
 
   private int numInserted = 0;
 
@@ -75,16 +75,19 @@ public class BlockLayoutLongSupplierSerializer implements LongSupplierSerializer
     this.compression = compression;
   }
 
+  @Override
   public void open() throws IOException
   {
     flattener.open();
   }
 
+  @Override
   public int size()
   {
     return numInserted;
   }
 
+  @Override
   public void add(long value) throws IOException
   {
     if (numInserted % sizePer == 0) {
@@ -102,6 +105,7 @@ public class BlockLayoutLongSupplierSerializer implements LongSupplierSerializer
     ++numInserted;
   }
 
+  @Override
   public void closeAndConsolidate(ByteSink consolidatedOut) throws IOException
   {
     close();
@@ -112,6 +116,7 @@ public class BlockLayoutLongSupplierSerializer implements LongSupplierSerializer
     }
   }
 
+  @Override
   public void close() throws IOException
   {
     if (endBuffer != null) {
@@ -123,19 +128,23 @@ public class BlockLayoutLongSupplierSerializer implements LongSupplierSerializer
     endBuffer = null;
     flattener.close();
 
-    metaOut = new CountingOutputStream(ioPeon.makeOutputStream(metaFile));
-    metaOut.write(CompressedLongsIndexedSupplier.version);
-    metaOut.write(Ints.toByteArray(numInserted));
-    metaOut.write(Ints.toByteArray(sizePer));
-    writer.putMeta(metaOut, compression);
-    metaOut.close();
+    try (CountingOutputStream metaOut = new CountingOutputStream(ioPeon.makeOutputStream(metaFile))) {
+      metaOut.write(CompressedLongsIndexedSupplier.version);
+      metaOut.write(Ints.toByteArray(numInserted));
+      metaOut.write(Ints.toByteArray(sizePer));
+      writer.putMeta(metaOut, compression);
+      metaOut.close();
+      metaCount = metaOut.getCount();
+    }
   }
 
+  @Override
   public long getSerializedSize()
   {
-    return metaOut.getCount() + flattener.getSerializedSize();
+    return metaCount + flattener.getSerializedSize();
   }
 
+  @Override
   public void writeToChannel(WritableByteChannel channel) throws IOException
   {
     try (InputStream meta = ioPeon.makeInputStream(metaFile);

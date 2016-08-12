@@ -21,7 +21,7 @@ package io.druid.segment.data;
 
 import com.google.common.base.Supplier;
 import com.google.common.io.ByteSink;
-import com.google.common.primitives.Longs;
+import com.google.common.primitives.Floats;
 import com.metamx.common.guava.CloseQuietly;
 import org.junit.Assert;
 import org.junit.Test;
@@ -43,44 +43,41 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 @RunWith(Parameterized.class)
-public class CompressedLongsSerdeTest
+public class CompressedFloatsSerdeTest
 {
   @Parameterized.Parameters(name = "{0} {1} {2}")
   public static Iterable<Object[]> compressionStrategies()
   {
     List<Object[]> data = new ArrayList<>();
-    for (CompressionFactory.LongEncodingStrategy encodingStrategy: CompressionFactory.LongEncodingStrategy.values()) {
-      for (CompressedObjectStrategy.CompressionStrategy strategy : CompressedObjectStrategy.CompressionStrategy.values()) {
-        data.add(new Object[]{encodingStrategy, strategy, ByteOrder.BIG_ENDIAN});
-        data.add(new Object[]{encodingStrategy, strategy, ByteOrder.LITTLE_ENDIAN});
-      }
+    for (CompressedObjectStrategy.CompressionStrategy strategy : CompressedObjectStrategy.CompressionStrategy.values()) {
+      data.add(new Object[]{strategy, ByteOrder.BIG_ENDIAN});
+      data.add(new Object[]{strategy, ByteOrder.LITTLE_ENDIAN});
     }
     return data;
   }
 
-  protected final CompressionFactory.LongEncodingStrategy encodingStrategy;
+  private static final double DELTA = 0.00001;
+
   protected final CompressedObjectStrategy.CompressionStrategy compressionStrategy;
   protected final ByteOrder order;
 
-  private final long values0[] = {};
-  private final long values1[] = {0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1};
-  private final long values2[] = {12, 5, 2, 9, 3, 2, 5, 1, 0, 6, 13, 10, 15};
-  private final long values3[] = {1, 1, 1, 1, 1, 11, 11, 11, 11};
-  private final long values4[] = {200, 200, 200, 401, 200, 301, 200, 200, 200, 404, 200, 200, 200, 200};
-  private final long values5[] = {123, 632, 12, 39, 536, 0, 1023, 52, 777, 526, 214, 562, 823, 346};
-  private final long values6[] = {1000000, 1000001, 1000002, 1000003, 1000004, 1000005, 1000006, 1000007, 1000008};
-  private final long values7[] = {
-      Long.MAX_VALUE, Long.MIN_VALUE, 12378, -12718243, -1236213, 12743153, 21364375452L,
-      65487435436632L, -43734526234564L
+  private final float values0[] = {};
+  private final float values1[] = {0f, 1f, 1f, 0f, 1f, 1f, 1f, 1f, 0f, 0f, 1f, 1f};
+  private final float values2[] = {13.2f, 6.1f, 0.001f, 123f, 12572f, 123.1f, 784.4f, 6892.8634f, 8.341111f};
+  private final float values3[] = {0.001f, 0.001f, 0.001f, 0.001f, 0.001f, 100f, 100f, 100f, 100f, 100f};
+  private final float values4[] = {0f, 0f, 0f, 0f, 0.01f, 0f, 0f, 0f, 21.22f, 0f, 0f, 0f, 0f, 0f, 0f};
+  private final float values5[] = {123.16f, 1.12f, 62.00f, 462.12f, 517.71f, 56.54f, 971.32f, 824.22f, 472.12f, 625.26f};
+  private final float values6[] = {1000000f, 1000001f, 1000002f, 1000003f, 1000004f, 1000005f, 1000006f, 1000007f, 1000008f};
+  private final float values7[] = {
+      Float.MAX_VALUE, Float.MIN_VALUE, 12378.5734f, -12718243.7496f, -93653653.1f, 12743153.385534f, 21431.414538f,
+      65487435436632.123f, -43734526234564.65f
   };
 
-  public CompressedLongsSerdeTest(
-      CompressionFactory.LongEncodingStrategy encodingStrategy,
+  public CompressedFloatsSerdeTest(
       CompressedObjectStrategy.CompressionStrategy compressionStrategy,
       ByteOrder order
   )
   {
-    this.encodingStrategy = encodingStrategy;
     this.compressionStrategy = compressionStrategy;
     this.order = order;
   }
@@ -101,21 +98,20 @@ public class CompressedLongsSerdeTest
   @Test
   public void testChunkSerde() throws Exception
   {
-    long chunk[] = new long[10000];
+    float chunk[] = new float[10000];
     for (int i = 0; i < 10000; i++) {
       chunk[i] = i;
     }
     testWithValues(chunk);
   }
 
-  public void testWithValues(long[] values) throws Exception
+  public void testWithValues(float[] values) throws Exception
   {
-    LongSupplierSerializer serializer = CompressionFactory.getLongSerializer(new IOPeonForTesting(), "test", order,
-                                                                             encodingStrategy, compressionStrategy
+    FloatSupplierSerializer serializer = CompressionFactory.getFloatSerializer(new IOPeonForTesting(), "test", order, compressionStrategy
     );
     serializer.open();
 
-    for (long value : values) {
+    for (float value : values) {
       serializer.add(value);
     }
     Assert.assertEquals(values.length, serializer.size());
@@ -132,42 +128,42 @@ public class CompressedLongsSerdeTest
         }
     );
     Assert.assertEquals(baos.size(), serializer.getSerializedSize());
-    CompressedLongsIndexedSupplier supplier = CompressedLongsIndexedSupplier
+    CompressedFloatsIndexedSupplier supplier = CompressedFloatsIndexedSupplier
         .fromByteBuffer(ByteBuffer.wrap(baos.toByteArray()), order);
-    IndexedLongs longs = supplier.get();
+    IndexedFloats floats = supplier.get();
 
-    assertIndexMatchesVals(longs, values);
+    assertIndexMatchesVals(floats, values);
     for (int i = 0; i < 10; i++) {
       int a = (int) (Math.random() * values.length);
       int b = (int) (Math.random() * values.length);
       int start = a < b ? a : b;
       int end = a < b ? b : a;
-      tryFill(longs, values, start, end - start);
+      tryFill(floats, values, start, end - start);
     }
     testSupplierSerde(supplier, values);
-    testConcurrentThreadReads(supplier, longs, values);
+    testConcurrentThreadReads(supplier, floats, values);
 
-    longs.close();
+    floats.close();
   }
 
-  private void tryFill(IndexedLongs indexed, long[] vals, final int startIndex, final int size)
+  private void tryFill(IndexedFloats indexed, float[] vals, final int startIndex, final int size)
   {
-    long[] filled = new long[size];
+    float[] filled = new float[size];
     indexed.fill(startIndex, filled);
 
     for (int i = startIndex; i < filled.length; i++) {
-      Assert.assertEquals(vals[i + startIndex], filled[i]);
+      Assert.assertEquals(vals[i + startIndex], filled[i], DELTA);
     }
   }
 
-  private void assertIndexMatchesVals(IndexedLongs indexed, long[] vals)
+  private void assertIndexMatchesVals(IndexedFloats indexed, float[] vals)
   {
     Assert.assertEquals(vals.length, indexed.size());
 
     // sequential access
     int[] indices = new int[vals.length];
     for (int i = 0; i < indexed.size(); ++i) {
-      Assert.assertEquals(vals[i], indexed.get(i));
+      Assert.assertEquals(vals[i], indexed.get(i), DELTA);
       indices[i] = i;
     }
 
@@ -175,29 +171,29 @@ public class CompressedLongsSerdeTest
     // random access
     for (int i = 0; i < indexed.size(); ++i) {
       int k = indices[i];
-      Assert.assertEquals(vals[k], indexed.get(k));
+      Assert.assertEquals(vals[k], indexed.get(k), DELTA);
     }
   }
 
-  private void testSupplierSerde(CompressedLongsIndexedSupplier supplier, long[] vals) throws IOException
+  private void testSupplierSerde(CompressedFloatsIndexedSupplier supplier, float[] vals) throws IOException
   {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     supplier.writeToChannel(Channels.newChannel(baos));
 
     final byte[] bytes = baos.toByteArray();
     Assert.assertEquals(supplier.getSerializedSize(), bytes.length);
-    CompressedLongsIndexedSupplier anotherSupplier = CompressedLongsIndexedSupplier.fromByteBuffer(
+    CompressedFloatsIndexedSupplier anotherSupplier = CompressedFloatsIndexedSupplier.fromByteBuffer(
         ByteBuffer.wrap(bytes), order
     );
-    IndexedLongs indexed = anotherSupplier.get();
+    IndexedFloats indexed = anotherSupplier.get();
     assertIndexMatchesVals(indexed, vals);
   }
 
   // This test attempts to cause a race condition with the DirectByteBuffers, it's non-deterministic in causing it,
   // which sucks but I can't think of a way to deterministically cause it...
   private void testConcurrentThreadReads(
-      final Supplier<IndexedLongs> supplier,
-      final IndexedLongs indexed, final long[] vals
+      final Supplier<IndexedFloats> supplier,
+      final IndexedFloats indexed, final float[] vals
   ) throws Exception
   {
     final AtomicReference<String> reason = new AtomicReference<String>("none");
@@ -224,9 +220,9 @@ public class CompressedLongsSerdeTest
         try {
           for (int i = 0; i < numRuns; ++i) {
             for (int j = 0; j < indexed.size(); ++j) {
-              final long val = vals[j];
-              final long indexedVal = indexed.get(j);
-              if (Longs.compare(val, indexedVal) != 0) {
+              final float val = vals[j];
+              final float indexedVal = indexed.get(j);
+              if (Floats.compare(val, indexedVal) != 0) {
                 failureHappened.set(true);
                 reason.set(String.format("Thread1[%d]: %d != %d", j, val, indexedVal));
                 stopLatch.countDown();
@@ -245,7 +241,7 @@ public class CompressedLongsSerdeTest
       }
     }).start();
 
-    final IndexedLongs indexed2 = supplier.get();
+    final IndexedFloats indexed2 = supplier.get();
     try {
       new Thread(new Runnable()
       {
@@ -263,9 +259,9 @@ public class CompressedLongsSerdeTest
           try {
             for (int i = 0; i < numRuns; ++i) {
               for (int j = indexed2.size() - 1; j >= 0; --j) {
-                final long val = vals[j];
-                final long indexedVal = indexed2.get(j);
-                if (Longs.compare(val, indexedVal) != 0) {
+                final float val = vals[j];
+                final float indexedVal = indexed2.get(j);
+                if (Floats.compare(val, indexedVal) != 0) {
                   failureHappened.set(true);
                   reason.set(String.format("Thread2[%d]: %d != %d", j, val, indexedVal));
                   stopLatch.countDown();

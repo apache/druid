@@ -284,4 +284,35 @@ public class CompressionFactory
       throw new IAE("unknown encoding strategy : %s", encodingStrategy.toString());
     }
   }
+
+  // Float currently does not support any encoding types, and stores values as 4 byte float
+
+  public static Supplier<IndexedFloats> getFloatSupplier(
+      int totalSize, int sizePer, ByteBuffer fromBuffer, ByteOrder order,
+      CompressedObjectStrategy.CompressionStrategy strategy
+  )
+  {
+    if (strategy == CompressedObjectStrategy.CompressionStrategy.NONE) {
+      return new EntireLayoutIndexedFloatSupplier(totalSize, fromBuffer, order);
+    } else {
+      return new BlockLayoutIndexedFloatSupplier(totalSize, sizePer, fromBuffer, order, strategy);
+    }
+  }
+
+  public static FloatSupplierSerializer getFloatSerializer(
+      IOPeon ioPeon, String filenameBase, ByteOrder order,
+      CompressedObjectStrategy.CompressionStrategy compressionStrategy
+  )
+  {
+    if (compressionStrategy == CompressedObjectStrategy.CompressionStrategy.NONE) {
+      return new EntireLayoutFloatSupplierSerializer(
+          ioPeon, filenameBase, order
+      );
+    } else{
+      return new BlockLayoutFloatSupplierSerializer(
+          ioPeon, filenameBase, order, compressionStrategy
+      );
+    }
+  }
+
 }

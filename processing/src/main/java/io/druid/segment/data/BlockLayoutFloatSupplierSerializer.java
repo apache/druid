@@ -19,13 +19,17 @@
 
 package io.druid.segment.data;
 
+import com.google.common.io.ByteSink;
 import com.google.common.io.ByteStreams;
-import com.google.common.io.OutputSupplier;
+import com.google.common.io.CountingOutputStream;
+import com.google.common.primitives.Floats;
 import com.google.common.primitives.Ints;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidResourceHolder;
+import io.druid.segment.CompressedPools;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -34,70 +38,50 @@ import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
-/**
- */
-public class CompressedFloatsSupplierSerializer
+public class BlockLayoutFloatSupplierSerializer implements FloatSupplierSerializer
 {
-  public static CompressedFloatsSupplierSerializer create(
-      IOPeon ioPeon,
-      final String filenameBase,
-      final ByteOrder order,
-      final CompressedObjectStrategy.CompressionStrategy compression
-  ) throws IOException
-  {
-    return create(ioPeon, filenameBase, CompressedFloatsIndexedSupplier.MAX_FLOATS_IN_BUFFER, order, compression);
-  }
-
-  public static CompressedFloatsSupplierSerializer create(
-      IOPeon ioPeon,
-      final String filenameBase,
-      final int sizePer,
-      final ByteOrder order,
-      final CompressedObjectStrategy.CompressionStrategy compression
-  ) throws IOException
-  {
-    final CompressedFloatsSupplierSerializer retVal = new CompressedFloatsSupplierSerializer(
-        sizePer,
-        new GenericIndexedWriter<ResourceHolder<FloatBuffer>>(
-            ioPeon, filenameBase, CompressedFloatBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)
-        ),
-        compression
-    );
-    return retVal;
-  }
-
+  private final IOPeon ioPeon;
   private final int sizePer;
   private final GenericIndexedWriter<ResourceHolder<FloatBuffer>> flattener;
   private final CompressedObjectStrategy.CompressionStrategy compression;
+  private final String metaFile;
 
+  private long metaCount = 0;
   private int numInserted = 0;
-
   private FloatBuffer endBuffer;
 
-  public CompressedFloatsSupplierSerializer(
-      int sizePer,
-      GenericIndexedWriter<ResourceHolder<FloatBuffer>> flattener,
+  public BlockLayoutFloatSupplierSerializer(
+      IOPeon ioPeon,
+      String filenameBase,
+      ByteOrder order,
       CompressedObjectStrategy.CompressionStrategy compression
   )
   {
-    this.sizePer = sizePer;
-    this.flattener = flattener;
+    this.ioPeon = ioPeon;
+    this.sizePer = CompressedPools.BUFFER_SIZE / Floats.BYTES;
+    this.flattener = new GenericIndexedWriter<>(
+        ioPeon, filenameBase, CompressedFloatBufferObjectStrategy.getBufferForOrder(order, compression, sizePer)
+    );
+    this.metaFile = filenameBase + ".format";
     this.compression = compression;
 
     endBuffer = FloatBuffer.allocate(sizePer);
     endBuffer.mark();
   }
 
+  @Override
   public void open() throws IOException
   {
     flattener.open();
   }
 
+  @Override
   public int size()
   {
     return numInserted;
   }
 
+  @Override
   public void add(float value) throws IOException
   {
     if (!endBuffer.hasRemaining()) {
@@ -111,18 +95,18 @@ public class CompressedFloatsSupplierSerializer
     ++numInserted;
   }
 
-  public void closeAndConsolidate(OutputSupplier<? extends OutputStream> consolidatedOut) throws IOException
+  @Override
+  public void closeAndConsolidate(ByteSink consolidatedOut) throws IOException
   {
     close();
-    try (OutputStream out = consolidatedOut.getOutput()) {
-      out.write(CompressedFloatsIndexedSupplier.version);
-      out.write(Ints.toByteArray(numInserted));
-      out.write(Ints.toByteArray(sizePer));
-      out.write(new byte[]{compression.getId()});
-      ByteStreams.copy(flattener.combineStreams(), out);
+    try (OutputStream out = consolidatedOut.openStream();
+         InputStream meta = ioPeon.makeInputStream(metaFile)) {
+      ByteStreams.copy(meta, out);
+      flattener.combineStreams().copyTo(out);
     }
   }
 
+  @Override
   public void close() throws IOException
   {
     endBuffer.limit(endBuffer.position());
@@ -130,24 +114,31 @@ public class CompressedFloatsSupplierSerializer
     flattener.write(StupidResourceHolder.create(endBuffer));
     endBuffer = null;
     flattener.close();
+
+    try (CountingOutputStream metaOut = new CountingOutputStream(ioPeon.makeOutputStream(metaFile))) {
+      metaOut.write(CompressedFloatsIndexedSupplier.version);
+      metaOut.write(Ints.toByteArray(numInserted));
+      metaOut.write(Ints.toByteArray(sizePer));
+      metaOut.write(compression.getId());
+      metaOut.close();
+      metaCount = metaOut.getCount();
+    }
   }
 
+  @Override
   public long getSerializedSize()
   {
-    return 1 +              // version
-           Ints.BYTES +     // elements num
-           Ints.BYTES +     // sizePer
-           1 +              // compression id
-           flattener.getSerializedSize();
+    return metaCount + flattener.getSerializedSize();
   }
 
+  @Override
   public void writeToChannel(WritableByteChannel channel) throws IOException
   {
-    channel.write(ByteBuffer.wrap(new byte[]{CompressedFloatsIndexedSupplier.version}));
-    channel.write(ByteBuffer.wrap(Ints.toByteArray(numInserted)));
-    channel.write(ByteBuffer.wrap(Ints.toByteArray(sizePer)));
-    channel.write(ByteBuffer.wrap(new byte[]{compression.getId()}));
-    final ReadableByteChannel from = Channels.newChannel(flattener.combineStreams().getInput());
-    ByteStreams.copy(from, channel);
+    try (InputStream meta = ioPeon.makeInputStream(metaFile);
+         InputStream input = flattener.combineStreams().openStream()) {
+      ByteStreams.copy(Channels.newChannel(meta), channel);
+      final ReadableByteChannel from = Channels.newChannel(input);
+      ByteStreams.copy(from, channel);
+    }
   }
 }

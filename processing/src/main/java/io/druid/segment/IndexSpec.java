@@ -45,8 +45,8 @@ public class IndexSpec
 {
   public static final String UNCOMPRESSED = "uncompressed";
   public static final String DEFAULT_METRIC_COMPRESSION = CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY.name().toLowerCase();
-  public static final String DEFAULT_LONG_ENCODING = CompressionFactory.DEFAULT_LONG_ENCODING_STRATEGY.name().toLowerCase();
   public static final String DEFAULT_DIMENSION_COMPRESSION = CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY.name().toLowerCase();
+  public static final String DEFAULT_LONG_ENCODING = CompressionFactory.DEFAULT_LONG_ENCODING_STRATEGY.name().toLowerCase();
 
   private static final Set<String> METRIC_COMPRESSION_NAMES = Sets.newHashSet(
       Iterables.transform(
@@ -121,7 +121,7 @@ public class IndexSpec
    * @param metricCompression compression format for metric columns, null to use the default.
    *                          Defaults to {@link CompressedObjectStrategy#DEFAULT_COMPRESSION_STRATEGY}
    *
-   * @param longEncoding encoding format for metric and dimension columns with type long, null to use the default.
+   * @param longEncoding encoding strategy for metric and dimension columns with type long, null to use the default.
    *                     Defaults to {@link CompressionFactory#DEFAULT_LONG_ENCODING_STRATEGY}
    */
   @JsonCreator

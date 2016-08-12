@@ -22,26 +22,28 @@ package io.druid.segment.data;
 import com.google.common.base.Supplier;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
+import java.nio.FloatBuffer;
 
-public class EntireLayoutIndexedLongSupplier implements Supplier<IndexedLongs>
+public class EntireLayoutIndexedFloatSupplier implements Supplier<IndexedFloats>
 {
-
   private final int totalSize;
-  private final CompressionFactory.LongEncodingReader reader;
+  private FloatBuffer buffer;
 
-  public EntireLayoutIndexedLongSupplier(int totalSize, CompressionFactory.LongEncodingReader reader)
+  public EntireLayoutIndexedFloatSupplier(int totalSize, ByteBuffer fromBuffer, ByteOrder order)
   {
     this.totalSize = totalSize;
-    this.reader = reader;
+    this.buffer = fromBuffer.asReadOnlyBuffer().order(order).asFloatBuffer();
   }
 
   @Override
-  public IndexedLongs get()
+  public IndexedFloats get()
   {
-    return new EntireLayoutIndexedLongSupplier.EntireLayoutIndexedLongs();
+    return new EntireLayoutIndexedFloats();
   }
 
-  private class EntireLayoutIndexedLongs implements IndexedLongs
+  private class EntireLayoutIndexedFloats implements IndexedFloats
   {
 
     @Override
@@ -51,13 +53,13 @@ public class EntireLayoutIndexedLongSupplier implements Supplier<IndexedLongs>
     }
 
     @Override
-    public long get(int index)
+    public float get(int index)
     {
-      return reader.read(index);
+      return buffer.get(buffer.position() + index);
     }
 
     @Override
-    public void fill(int index, long[] toFill)
+    public void fill(int index, float[] toFill)
     {
       if (totalSize - index < toFill.length) {
         throw new IndexOutOfBoundsException(
@@ -74,7 +76,7 @@ public class EntireLayoutIndexedLongSupplier implements Supplier<IndexedLongs>
     @Override
     public String toString()
     {
-      return "EntireCompressedIndexedLongs_Anonymous{" +
+      return "EntireCompressedIndexedFloats_Anonymous{" +
              ", totalSize=" + totalSize +
              '}';
     }

@@ -27,8 +27,8 @@ import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.segment.data.CompressedFloatsIndexedSupplier;
-import io.druid.segment.data.CompressedFloatsSupplierSerializer;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
+import io.druid.segment.data.FloatSupplierSerializer;
 import io.druid.segment.data.LongSupplierSerializer;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.GenericIndexedWriter;
@@ -84,10 +84,10 @@ public class MetricHolder
   }
 
   public static void writeFloatMetric(
-      OutputSupplier<? extends OutputStream> outSupplier, String name, CompressedFloatsSupplierSerializer column
+      ByteSink outSupplier, String name, FloatSupplierSerializer column
   ) throws IOException
   {
-    ByteStreams.write(version, outSupplier);
+    outSupplier.write(version);
     serializerUtils.writeString(outSupplier, name);
     serializerUtils.writeString(outSupplier, "float");
     column.closeAndConsolidate(outSupplier);
