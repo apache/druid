@@ -73,6 +73,17 @@ public class CompressedLongsSerdeTest
       Long.MAX_VALUE, Long.MIN_VALUE, 12378, -12718243, -1236213, 12743153, 21364375452L,
       65487435436632L, -43734526234564L
   };
+  private final long values8[] = {Long.MAX_VALUE, 0, 321, 15248425, 13523212136L, 63822, 3426, 96};
+
+  // built test value with enough unique values to not use table encoding for auto strategy
+  private static long[] addUniques(long[] val) {
+    long[] ret = new long[val.length + CompressionFactory.MAX_TABLE_SIZE];
+    for (int i = 0; i < CompressionFactory.MAX_TABLE_SIZE; i++) {
+      ret[i] = i;
+    }
+    System.arraycopy(val, 0, ret, 256, val.length);
+    return ret;
+  }
 
   public CompressedLongsSerdeTest(
       CompressionFactory.LongEncodingStrategy encodingStrategy,
@@ -96,6 +107,7 @@ public class CompressedLongsSerdeTest
     testWithValues(values5);
     testWithValues(values6);
     testWithValues(values7);
+    testWithValues(values8);
   }
 
   @Test
@@ -109,6 +121,12 @@ public class CompressedLongsSerdeTest
   }
 
   public void testWithValues(long[] values) throws Exception
+  {
+    testValues(values);
+    testValues(addUniques(values));
+  }
+
+  public void testValues(long[] values) throws Exception
   {
     LongSupplierSerializer serializer = CompressionFactory.getLongSerializer(new IOPeonForTesting(), "test", order,
                                                                              encodingStrategy, compressionStrategy

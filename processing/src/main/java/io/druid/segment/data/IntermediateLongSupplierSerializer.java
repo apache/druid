@@ -101,7 +101,7 @@ public class IntermediateLongSupplierSerializer implements LongSupplierSerialize
     }
     if (uniqueValues.size() <= CompressionFactory.MAX_TABLE_SIZE) {
       writer = new TableLongEncodingWriter(uniqueValues);
-    } else if (delta != -1) {
+    } else if (delta != -1 && delta != Long.MAX_VALUE) {
       writer = new DeltaLongEncodingWriter(minVal, delta);
     } else {
       writer = new LongsLongEncodingWriter(order);
