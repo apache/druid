@@ -153,7 +153,7 @@ public class KafkaEightSimpleConsumerFirehoseFactory implements
       );
       Long startOffset = lastOffsets.get(partition);
       PartitionConsumerWorker worker = new PartitionConsumerWorker(
-          feed, kafkaSimpleConsumer, partition, startOffset == null ? 0 : startOffset
+          feed, kafkaSimpleConsumer, partition, startOffset == null ? -1 : startOffset
       );
       consumerWorkers.add(worker);
     }
