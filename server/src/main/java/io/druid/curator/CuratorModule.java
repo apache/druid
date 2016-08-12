@@ -123,7 +123,7 @@ public class CuratorModule implements Module
             config.getRestPort(),
             newBackupProvider(config.getBackupZkHosts())
         ),
-        new DefaultExhibitorRestClient(config.isHTTPS()),
+        new DefaultExhibitorRestClient(config.getUseSsl()),
         config.getRestUriPath(),
         config.getPollingMs(),
         new BoundedExponentialBackoffRetry(1000, 45000, 10)

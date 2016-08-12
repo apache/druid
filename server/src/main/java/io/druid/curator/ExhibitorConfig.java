@@ -67,6 +67,10 @@ public class ExhibitorConfig
                   .build();
   }
 
+  public String getHostsText() {
+    return hostsText;
+  }
+
   public int getRestPort()
   {
     return restPort;
@@ -77,7 +81,7 @@ public class ExhibitorConfig
     return restUriPath;
   }
 
-  public boolean isHTTPS()
+  public boolean getUseSsl()
   {
     return useSsl;
   }
