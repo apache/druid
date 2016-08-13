@@ -105,8 +105,8 @@ public class DoubleLastAggregatorFactory extends AggregatorFactory
           @Override
           public void aggregate()
           {
-            SerializablePair<Long, Long> pair = (SerializablePair<Long, Long>) selector.get();
-            if (pair.rhs >= lastTime) {
+            SerializablePair<Long, Double> pair = (SerializablePair<Long, Double>) selector.get();
+            if (pair.lhs >= lastTime) {
               lastTime = pair.lhs;
               lastValue = pair.rhs;
             }
