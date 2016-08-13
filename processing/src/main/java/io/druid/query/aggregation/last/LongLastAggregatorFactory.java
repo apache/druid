@@ -106,7 +106,7 @@ public class LongLastAggregatorFactory extends AggregatorFactory
           public void aggregate()
           {
             SerializablePair<Long, Long> pair = (SerializablePair<Long, Long>) selector.get();
-            if (pair.rhs >= lastTime) {
+            if (pair.lhs >= lastTime) {
               lastTime = pair.lhs;
               lastValue = pair.rhs;
             }
