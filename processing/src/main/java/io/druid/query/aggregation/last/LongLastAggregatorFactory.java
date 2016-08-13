@@ -188,7 +188,11 @@ public class LongLastAggregatorFactory extends AggregatorFactory
   {
     byte[] fieldNameBytes = StringUtils.toUtf8(fieldName);
 
-    return ByteBuffer.allocate(2 + fieldNameBytes.length).put(CACHE_TYPE_ID).put(fieldNameBytes).put((byte)0xff).array();
+    return ByteBuffer.allocate(2 + fieldNameBytes.length)
+                     .put(CACHE_TYPE_ID)
+                     .put(fieldNameBytes)
+                     .put((byte)0xff)
+                     .array();
   }
 
   @Override
@@ -235,7 +239,7 @@ public class LongLastAggregatorFactory extends AggregatorFactory
   @Override
   public String toString()
   {
-    return "DoubleLastAggregatorFactory{" +
+    return "LongLastAggregatorFactory{" +
            "name='" + name + '\'' +
            ", fieldName='" + fieldName + '\'' +
            '}';
