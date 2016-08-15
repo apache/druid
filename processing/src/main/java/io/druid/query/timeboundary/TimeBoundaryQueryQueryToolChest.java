@@ -61,7 +61,7 @@ public class TimeBoundaryQueryQueryToolChest
   @Override
   public <T extends LogicalSegment> List<T> filterSegments(TimeBoundaryQuery query, List<T> segments)
   {
-    if (segments.size() <= 1) {
+    if (segments.size() <= 1 || query.hasFilters()) {
       return segments;
     }
 
