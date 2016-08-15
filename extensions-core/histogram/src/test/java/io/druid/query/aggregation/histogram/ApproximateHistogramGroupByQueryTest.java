@@ -123,6 +123,9 @@ public class ApproximateHistogramGroupByQueryTest
     this.testName = testName;
     this.factory = factory;
     this.runner = runner;
+
+    //Note: this is needed in order to properly register the serde for Histogram.
+    new ApproximateHistogramDruidModule().configure(null);
   }
 
   @Test
