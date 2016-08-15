@@ -23,6 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.query.Druids;
 import io.druid.query.CacheStrategy;
 import io.druid.query.Result;
 import io.druid.query.TableDataSource;
@@ -45,6 +46,7 @@ public class TimeBoundaryQueryQueryToolChestTest
       new TableDataSource("test"),
       null,
       null,
+      null,
       null
   );
 
@@ -52,6 +54,7 @@ public class TimeBoundaryQueryQueryToolChestTest
       new TableDataSource("test"),
       null,
       TimeBoundaryQuery.MAX_TIME,
+      null,
       null
   );
 
@@ -59,9 +62,14 @@ public class TimeBoundaryQueryQueryToolChestTest
       new TableDataSource("test"),
       null,
       TimeBoundaryQuery.MIN_TIME,
+      null,
       null
   );
 
+  private static final TimeBoundaryQuery FILTERED_BOUNDARY_QUERY = Druids.newTimeBoundaryQueryBuilder()
+                                                                         .dataSource("testing")
+                                                                         .filters("foo", "bar")
+                                                                         .build();
 
   private static LogicalSegment createLogicalSegment(final Interval interval)
   {
@@ -166,6 +174,24 @@ public class TimeBoundaryQueryQueryToolChestTest
   }
 
   @Test
+  public void testFilteredFilterSegments() throws Exception
+  {
+    List<LogicalSegment> segments = new TimeBoundaryQueryQueryToolChest().filterSegments(
+        FILTERED_BOUNDARY_QUERY,
+        Arrays.asList(
+            createLogicalSegment(new Interval("2013-01-01/P1D")),
+            createLogicalSegment(new Interval("2013-01-01T01/PT1H")),
+            createLogicalSegment(new Interval("2013-01-01T02/PT1H")),
+            createLogicalSegment(new Interval("2013-01-02/P1D")),
+            createLogicalSegment(new Interval("2013-01-03T01/PT1H")),
+            createLogicalSegment(new Interval("2013-01-03T02/PT1H")),
+            createLogicalSegment(new Interval("2013-01-03/P1D"))
+        )
+    );
+
+    Assert.assertEquals(7, segments.size());
+  }
+  @Test
   public void testCacheStrategy() throws Exception
   {
     CacheStrategy<Result<TimeBoundaryResultValue>, Object, TimeBoundaryQuery> strategy =
@@ -179,6 +205,7 @@ public class TimeBoundaryQueryQueryToolChestTest
                         )
                     )
                 ),
+                null,
                 null,
                 null
             )
