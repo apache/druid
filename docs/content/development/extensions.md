@@ -36,8 +36,11 @@ Core extensions are maintained by Druid committers.
 
 # Community Extensions
 
-A number of community members have contributed their own extensions to Druid that are not packaged with the default Druid tarball. 
-Community extensions are not maintained by Druid committers, although we accept patches from community members using these extensions. 
+<div class="note caution">
+Community extensions are not maintained by Druid committers, although we accept patches from community members using these extensions. They may not have been as extensively tested as the core extensions. 
+</div>
+
+A number of community members have contributed their own extensions to Druid that are not packaged with the default Druid tarball.  
 If you'd like to take on maintenance for a community extension, please post on [druid-development group](https://groups.google.com/forum/#!forum/druid-development) to let us know!
     
 All of these community extensions can be downloaded using *pull-deps* with the coordinate io.druid.extensions.contrib:EXTENSION_NAME:LATEST_DRUID_STABLE_VERSION.
