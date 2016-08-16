@@ -51,11 +51,16 @@ public class ExtractionDimensionSpec implements DimensionSpec
   {
     Preconditions.checkNotNull(dimensions, "dimensions must not be null");
     Preconditions.checkArgument(extractionFn != null || dimExtractionFn != null, "extractionFn must not be null");
+    Preconditions.checkArgument(extractionFn == null || ((dimensions.size() == extractionFn.arity()) || (extractionFn.arity() < 0)),
+        "dimensions and extractionFn should have the same arity");
+    Preconditions.checkArgument(dimExtractionFn == null || ((dimensions.size() == dimExtractionFn.arity()) || (dimExtractionFn.arity() < 0)),
+        "dimensions and dimExtractionFn should have the same arity");
 
     this.dimensions = dimensions;
     this.extractionFn = extractionFn != null ? extractionFn : dimExtractionFn;
 
     // Do null check for backwards compatibility
+    // for multi dimensional case, the first dimension name is set as a default outputName
     this.outputName = outputName == null ? dimensions.get(0) : outputName;
   }
 

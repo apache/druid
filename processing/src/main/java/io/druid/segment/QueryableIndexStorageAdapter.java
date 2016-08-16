@@ -583,7 +583,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
                         }
                       } else {
                         // multiple dimensions in dimension spec.
-                        if (extractionFn == null || dimensions.size() != extractionFn.numberOfDimensionInputs())
+                        if (extractionFn == null || (extractionFn.arity() > 0 && dimensions.size() != extractionFn.arity()))
                         {
                           throw new UnsupportedOperationException(
                               "number of dimensions between extractionFn() and input dimensions mismatch!"

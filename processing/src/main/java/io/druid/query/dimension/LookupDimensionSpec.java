@@ -172,7 +172,6 @@ public class LookupDimensionSpec implements DimensionSpec
             optimize,
             dimensions.size()
         );
-
   }
 
   @Override
@@ -207,7 +206,7 @@ public class LookupDimensionSpec implements DimensionSpec
     for (int idx = 0; idx < dimensions.size(); idx++)
     {
       buffer.put(dimensionBytes[idx])
-          .put(DimFilterUtils.STRING_SEPARATOR);
+            .put(DimFilterUtils.STRING_SEPARATOR);
     }
 
     return     buffer.put(outputNameBytes)

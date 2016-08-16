@@ -109,7 +109,7 @@ public class LookupExtractionFn extends FunctionalExtraction
       outputStream.write(lookup.getCacheKey());
       if (getReplaceMissingValueWith() != null) {
         outputStream.write(StringUtils.toUtf8(getReplaceMissingValueWith()));
-        outputStream.write(0xFF);
+        outputStream.write(ExtractionCacheHelper.CACHE_KEY_SEPARATOR);
       }
       outputStream.write(isInjective() ? 1 : 0);
       outputStream.write(isRetainMissingValue() ? 1 : 0);

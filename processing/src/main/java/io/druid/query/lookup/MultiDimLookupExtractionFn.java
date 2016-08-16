@@ -106,7 +106,7 @@ public class MultiDimLookupExtractionFn extends MultiInputFunctionalExtraction
       outputStream.write(lookup.getCacheKey());
       if (getReplaceMissingValueWith() != null) {
         outputStream.write(StringUtils.toUtf8(getReplaceMissingValueWith()));
-        outputStream.write(0xFF);
+        outputStream.write(ExtractionCacheHelper.CACHE_KEY_SEPARATOR);
       }
       outputStream.write(isOptimize() ? 1 : 0);
       outputStream.write(getNumKeys());
@@ -119,7 +119,7 @@ public class MultiDimLookupExtractionFn extends MultiInputFunctionalExtraction
   }
 
   @Override
-  public int numberOfDimensionInputs()
+  public int arity()
   {
     return numKeys;
   }

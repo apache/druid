@@ -66,10 +66,7 @@ import org.joda.time.Interval;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  */
@@ -379,7 +376,7 @@ public class IncrementalIndexStorageAdapter implements StorageAdapter
                 if (dimensions.size() == 1) {
                   return dimensionSpec.decorate(dimSelectorGenerator.apply(dimensions.get(0)));
                 } else {
-                  Preconditions.checkArgument(extractionFn != null,
+                  Preconditions.checkArgument(extractionFn != null && extractionFn.arity() == dimensions.size(),
                       "ExtractionFn should be specified with multiple dimensions");
                   final List<DimensionSelector> selectors = Lists.transform(
                       dimensions,

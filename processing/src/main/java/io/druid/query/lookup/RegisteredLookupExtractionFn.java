@@ -143,7 +143,7 @@ public class RegisteredLookupExtractionFn implements ExtractionFn
   }
 
   @Override
-  public int numberOfDimensionInputs()
+  public int arity()
   {
     return 1;
   }

@@ -123,7 +123,7 @@ public abstract class FunctionalExtraction extends DimExtractionFn
   }
 
   @Override
-  public int numberOfDimensionInputs()
+  public int arity()
   {
     return 1;
   }

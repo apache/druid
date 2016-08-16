@@ -100,11 +100,11 @@ public class MapLookupExtractor extends LookupExtractor
         if (!Strings.isNullOrEmpty(key)) {
           outputStream.write(StringUtils.toUtf8(key));
         }
-        outputStream.write((byte)0xFF);
+        outputStream.write(ExtractionCacheHelper.CACHE_KEY_SEPARATOR);
         if (!Strings.isNullOrEmpty(val)) {
           outputStream.write(StringUtils.toUtf8(val));
         }
-        outputStream.write((byte)0xFF);
+        outputStream.write(ExtractionCacheHelper.CACHE_KEY_SEPARATOR);
       }
       return outputStream.toByteArray();
     }

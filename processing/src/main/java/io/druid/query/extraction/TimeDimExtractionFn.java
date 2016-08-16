@@ -103,7 +103,7 @@ public class TimeDimExtractionFn extends DimExtractionFn
   }
 
   @Override
-  public int numberOfDimensionInputs()
+  public int arity()
   {
     return 1;
   }

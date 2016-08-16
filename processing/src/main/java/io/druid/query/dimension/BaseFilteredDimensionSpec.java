@@ -41,6 +41,7 @@ public abstract class BaseFilteredDimensionSpec implements DimensionSpec
   )
   {
     this.delegate = Preconditions.checkNotNull(delegate, "delegate must not be null");
+    Preconditions.checkArgument(delegate.getExtractionFn() == null || delegate.getExtractionFn().arity() == 1, "delegate must have only one argument");
   }
 
   @JsonProperty
