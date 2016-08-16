@@ -37,7 +37,7 @@ import java.nio.ByteBuffer;
 
 /**
  */
-public class SimpleAvroBytesDecoderTest
+public class InlineSchemaAvroBytesDecoderTest
 {
   @Test
   public void testSerde() throws Exception
@@ -60,7 +60,7 @@ public class SimpleAvroBytesDecoderTest
     mapper.setInjectableValues(
         new InjectableValues.Std().addValue(ObjectMapper.class, mapper)
     );
-    SimpleAvroBytesDecoder actual = (SimpleAvroBytesDecoder) mapper.readValue(
+    InlineSchemaAvroBytesDecoder actual = (InlineSchemaAvroBytesDecoder) mapper.readValue(
         mapper.writeValueAsString(
             mapper.readValue(
                 jsonStr,
@@ -84,7 +84,7 @@ public class SimpleAvroBytesDecoderTest
     DatumWriter<GenericRecord> writer = new GenericDatumWriter<GenericRecord>(schema);
     writer.write(someAvroDatum, EncoderFactory.get().directBinaryEncoder(out, null));
 
-    GenericRecord actual = new SimpleAvroBytesDecoder(schema).parse(ByteBuffer.wrap(out.toByteArray()));
+    GenericRecord actual = new InlineSchemaAvroBytesDecoder(schema).parse(ByteBuffer.wrap(out.toByteArray()));
     Assert.assertEquals(someAvroDatum.get("id"), actual.get("id"));
   }
 }
