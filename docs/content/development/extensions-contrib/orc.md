@@ -23,6 +23,7 @@ For example of `typeString`, string column col1 and array of string column col2 
 Currently, it only supports java primitive types and array of java primitive types, which means only 'list' of compound types in [ORC types](https://orc.apache.org/docs/types.html) is supported (list of list is not supported).  
 
 For example of hadoop indexing:
+
 ```json
 {
   "type": "index_hadoop",
@@ -85,7 +86,6 @@ For example of hadoop indexing:
     }
   }
 }
-
 ```
 
 Almost all the fields listed above are required, including `inputFormat`, `metadataUpdateSpec`(`type`, `connectURI`, `user`, `password`, `segmentTable`). Set `jobProperties` to make hdfs path timezone unrelated.
