@@ -32,6 +32,12 @@ public class NoopChatHandlerProvider implements ChatHandlerProvider
   }
 
   @Override
+  public void register(String key, ChatHandler handler, boolean announce)
+  {
+    // do nothing
+  }
+
+  @Override
   public void unregister(String key)
   {
     // do nothing
