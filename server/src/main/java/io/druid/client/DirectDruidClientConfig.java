@@ -25,11 +25,19 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public class DirectDruidClientConfig
 {
-  @JsonProperty
-  private boolean useV3QueryUrl = false;
+  @JsonProperty("queryResponseIterator")
+  private QueryResponseIteratorFactory queryResponseIteratorFactory = new V2QueryResponseIteratorFactory();
 
-  public boolean isUseV3QueryUrl()
+  @JsonProperty
+  private String stuff;
+
+  public QueryResponseIteratorFactory getQueryResponseIteratorFactory()
   {
-    return useV3QueryUrl;
+    return queryResponseIteratorFactory;
+  }
+
+  public String getStuff()
+  {
+    return stuff;
   }
 }

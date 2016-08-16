@@ -210,7 +210,7 @@ public class BrokerServerView implements TimelineServerView
         httpClient,
         server.getHost(),
         emitter,
-        directDruidClientConfig.isUseV3QueryUrl()
+        directDruidClientConfig
     );
   }
 

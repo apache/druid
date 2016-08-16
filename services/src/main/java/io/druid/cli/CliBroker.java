@@ -97,7 +97,7 @@ public class CliBroker extends ServerRunnable
             JsonConfigProvider.bind(binder, "druid.broker.balancer", ServerSelectorStrategy.class);
             JsonConfigProvider.bind(binder, "druid.broker.retryPolicy", RetryQueryRunnerConfig.class);
             JsonConfigProvider.bind(binder, "druid.broker.segment", BrokerSegmentWatcherConfig.class);
-            JsonConfigProvider.bind(binder, "druid.broker.httpClient", DirectDruidClientConfig.class);
+            JsonConfigProvider.bind(binder, "druid.broker.client", DirectDruidClientConfig.class);
 
             binder.bind(QuerySegmentWalker.class).to(ClientQuerySegmentWalker.class).in(LazySingleton.class);
 
