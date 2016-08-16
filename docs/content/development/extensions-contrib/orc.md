@@ -12,11 +12,11 @@ This extension enables Druid to ingest and understand the Apache Orc data format
 
 This is for batch ingestion using the HadoopDruidIndexer. The inputFormat of inputSpec in ioConfig must be set to `"org.apache.hadoop.hive.ql.io.orc.OrcNewInputFormat"`.
 
-Field     | Type        | Description                                                                            | Required
-----------|-------------|----------------------------------------------------------------------------------------|---------
-type      | String      | This should say `orc`                                                                  | yes
-parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Any parse spec that extends ParseSpec is possible but only their TimestampSpec and DimensionsSpec are used. | yes
-typeString| String      | String representation of Orc struct type info. If not specified, auto constructed from parseSpec but all metric columns are dropped | no
+|Field     | Type        | Description                                                                            | Required|
+|----------|-------------|----------------------------------------------------------------------------------------|---------|
+|type      | String      | This should say `orc`                                                                  | yes|
+|parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Any parse spec that extends ParseSpec is possible but only their TimestampSpec and DimensionsSpec are used. | yes|
+|typeString| String      | String representation of Orc struct type info. If not specified, auto constructed from parseSpec but all metric columns are dropped | no|
 
 For example of `typeString`, string column col1 and array of string column col2 is represented by `"struct<col1:string,col2:array<string>>"`.
 

@@ -12,10 +12,10 @@ This extension enables Druid to ingest and understand the Apache Parquet data fo
 
 This is for batch ingestion using the HadoopDruidIndexer. The inputFormat of inputSpec in ioConfig must be set to `"io.druid.data.input.parquet.DruidParquetInputFormat"`. Make sure also to include "io.druid.extensions:druid-avro-extensions" as an extension.
 
-Field     | Type        | Description                                                                            | Required
-----------|-------------|----------------------------------------------------------------------------------------|---------
-type      | String      | This should say `parquet`                                                              | yes
-parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Should be a timeAndDims parseSpec. | yes
+|Field     | Type        | Description                                                                            | Required|
+|----------|-------------|----------------------------------------------------------------------------------------|---------|
+|type      | String      | This should say `parquet`                                                              | yes|
+|parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Should be a timeAndDims parseSpec. | yes|
 
 For example:
 
