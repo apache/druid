@@ -99,7 +99,7 @@ hadoop-dependencies/
 Note that if you specify `--defaultVersion`, you don't have to put version information in the coordinate. For example, if you want both `druid-rabbitmq` and `mysql-metadata-storage` to use version `#{DRUIDVERSION}`,  you can change the command above to
 
 ```
-java -classpath "/my/druid/library/*" io.druid.cli.Main tools pull-deps --defaultVersion #{DRUIDVERSION} --clean -c io.druid.extensions:mysql-metadata-storage -c io.druid.extensions.contrib:druid-rabbitmq -h org.apache.hadoop:hadoop-client:2.3.0 -h org.apache.hadoop:hadoop-client:2.4.0
+java -classpath "/my/druid/lib/*" io.druid.cli.Main tools pull-deps --defaultVersion #{DRUIDVERSION} --clean -c io.druid.extensions:mysql-metadata-storage -c io.druid.extensions.contrib:druid-rabbitmq -h org.apache.hadoop:hadoop-client:2.3.0 -h org.apache.hadoop:hadoop-client:2.4.0
 ```
 
 <div class="note info">
