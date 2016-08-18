@@ -46,7 +46,12 @@ public class ApproximateHistogramAggregatorTest
     ApproximateHistogramAggregatorFactory factory = new ApproximateHistogramAggregatorFactory(
         "billy", "billy", resolution, numBuckets, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY
     );
-    ApproximateHistogramBufferAggregator agg = new ApproximateHistogramBufferAggregator(selector, resolution, Float.NEGATIVE_INFINITY, Float.POSITIVE_INFINITY);
+    ApproximateHistogramBufferAggregator agg = new ApproximateHistogramBufferAggregator(
+        selector,
+        resolution,
+        Float.NEGATIVE_INFINITY,
+        Float.POSITIVE_INFINITY
+    );
 
     ByteBuffer buf = ByteBuffer.allocate(factory.getMaxIntermediateSize());
     int position = 0;
@@ -70,6 +75,52 @@ public class ApproximateHistogramAggregatorTest
 
     Assert.assertEquals("getMin value doesn't match expected getMin", 2, h.min(), 0);
     Assert.assertEquals("getMax value doesn't match expected getMax", 45, h.max(), 0);
+
+    Assert.assertEquals("bin count doesn't match expected bin count", 5, h.binCount());
+  }
+
+  @Test
+  public void testLimitedBufferAggregate() throws Exception
+  {
+    final float[] values = {23, 19, 10, 16, 36, 2, 9, 32, 30, 45};
+    final int resolution = 5;
+    final int numBuckets = 5;
+    final float lowerLimit = 10.0f;
+    final float upperLimit = 30.0f;
+
+    final TestFloatColumnSelector selector = new TestFloatColumnSelector(values);
+
+    ApproximateHistogramAggregatorFactory factory = new ApproximateHistogramAggregatorFactory(
+        "billy", "billy", resolution, numBuckets, lowerLimit, upperLimit
+    );
+    ApproximateHistogramBufferAggregator agg = new ApproximateHistogramBufferAggregator(
+        selector,
+        resolution,
+        lowerLimit,
+        upperLimit
+    );
+
+    ByteBuffer buf = ByteBuffer.allocate(factory.getMaxIntermediateSize());
+    int position = 0;
+
+    agg.init(buf, position);
+    for (int i = 0; i < values.length; i++) {
+      aggregateBuffer(selector, agg, buf, position);
+    }
+
+    ApproximateHistogram h = ((ApproximateHistogram) agg.get(buf, position));
+
+    Assert.assertArrayEquals(
+        "final bin positions don't match expected positions",
+        new float[]{lowerLimit, 16f, 19f, 23f, upperLimit}, h.positions, 0.01f
+    );
+
+    Assert.assertArrayEquals(
+        "final bin counts don't match expected counts",
+        new long[]{3, 1, 1, 1, 4}, h.bins()
+    );
+
+    Assert.assertEquals("getMin value doesn't match expected getMin", lowerLimit, h.min(), 0);
 
     Assert.assertEquals("bin count doesn't match expected bin count", 5, h.binCount());
   }
