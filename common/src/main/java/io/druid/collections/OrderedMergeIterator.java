@@ -45,7 +45,7 @@ import java.util.PriorityQueue;
  */
 public class OrderedMergeIterator<T> implements Iterator<T>
 {
-  private final PriorityQueue<PeekingIterator<T>> firstElementComparedPQueue;
+  private final PriorityQueue<PeekingIterator<T>> pQueue;
 
   private PeekingIterator<PeekingIterator<T>> iterOfIterators;
   private final Comparator<T> comparator;
@@ -56,7 +56,7 @@ public class OrderedMergeIterator<T> implements Iterator<T>
   )
   {
     this.comparator = comparator;
-    firstElementComparedPQueue = new PriorityQueue<PeekingIterator<T>>(
+    pQueue = new PriorityQueue<PeekingIterator<T>>(
         16,
         new Comparator<PeekingIterator<T>>()
         {
@@ -96,7 +96,7 @@ public class OrderedMergeIterator<T> implements Iterator<T>
   @Override
   public boolean hasNext()
   {
-    return !firstElementComparedPQueue.isEmpty() || iterOfIterators.hasNext();
+    return !pQueue.isEmpty() || iterOfIterators.hasNext();
   }
 
   @Override
@@ -106,26 +106,26 @@ public class OrderedMergeIterator<T> implements Iterator<T>
       throw new NoSuchElementException();
     }
 
-    final PeekingIterator<T> littleIt;
+    final PeekingIterator<T> it;
     if (!iterOfIterators.hasNext()) {
-      littleIt = firstElementComparedPQueue.remove();
-    } else if (firstElementComparedPQueue.isEmpty()) {
-      littleIt = iterOfIterators.next();
+      it = pQueue.remove();
+    } else if (pQueue.isEmpty()) {
+      it = iterOfIterators.next();
     } else {
-      T pQueueValue = firstElementComparedPQueue.peek().peek();
+      T pQueueValue = pQueue.peek().peek();
       T iterItersValue = iterOfIterators.peek().peek();
 
       if (comparator.compare(pQueueValue, iterItersValue) <= 0) {
-        littleIt = firstElementComparedPQueue.remove();
+        it = pQueue.remove();
       } else {
-        littleIt = iterOfIterators.next();
+        it = iterOfIterators.next();
       }
     }
 
-    T retVal = littleIt.next();
+    T retVal = it.next();
 
-    if (littleIt.hasNext()) {
-      firstElementComparedPQueue.add(littleIt);
+    if (it.hasNext()) {
+      pQueue.add(it);
     }
 
     return retVal;
