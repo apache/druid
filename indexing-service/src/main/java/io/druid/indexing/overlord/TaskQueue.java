@@ -46,10 +46,7 @@ import io.druid.indexing.overlord.config.TaskQueueConfig;
 import io.druid.metadata.EntryExistsException;
 import io.druid.query.DruidMetrics;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -195,6 +192,25 @@ public class TaskQueue
     giant.lock();
 
     try {
+      if (taskRunner.getRunningTasks() != null) {
+        int i = 0;
+        for (TaskRunnerWorkItem item : taskRunner.getRunningTasks()) {
+          if (++ i >= taskRunner.getRunningTasks().size()) {
+            break;
+          }
+          Iterator<Task> iter = tasks.iterator();
+          while (iter.hasNext()) {
+            Task task = iter.next();
+            if (task.getId().equals(item.getTaskId())) {
+              log.info("start notify success task:%s", task.getId());
+              notifyStatus(task, TaskStatus.success(task.getId()));
+              log.info("end notify success task:%s", task.getId());
+              break;
+            }
+          }
+
+        }
+      }
       tasks.clear();
       taskFutures.clear();
       active = false;
