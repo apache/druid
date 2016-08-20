@@ -59,8 +59,14 @@ public class LongCompressionBenchmarkFileGenerator
   public static final List<CompressionFactory.LongEncodingStrategy> encodings =
       ImmutableList.of(CompressionFactory.LongEncodingStrategy.AUTO, CompressionFactory.LongEncodingStrategy.LONGS);
 
+  private static String dirPath = "longCompress/";
+
   public static void main(String[] args) throws IOException, URISyntaxException
   {
+    if (args.length >= 1) {
+      dirPath = args[0];
+    }
+
     BenchmarkColumnSchema enumeratedSchema = BenchmarkColumnSchema.makeEnumerated("", ValueType.LONG, true, 1, 0d,
                                                                                   ImmutableList.<Object>of(
                                                                                       0,
@@ -114,9 +120,7 @@ public class LongCompressionBenchmarkFileGenerator
     generators.put("sequential", new BenchmarkColumnValueGenerator(sequentialSchema, 1));
     generators.put("uniform", new BenchmarkColumnValueGenerator(uniformSchema, 1));
 
-    URL url = LongCompressionBenchmarkFileGenerator.class.getClassLoader().getResource("");
-    File base = new File(url.toURI());
-    File dir = new File(base, "compress");
+    File dir = new File(dirPath);
     dir.mkdir();
 
     // create data files using BenchmarkColunValueGenerator

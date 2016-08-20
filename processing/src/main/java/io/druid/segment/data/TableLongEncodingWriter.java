@@ -86,7 +86,7 @@ public class TableLongEncodingWriter implements CompressionFactory.LongEncodingW
   @Override
   public int getBlockSize(int bytesPerBlock)
   {
-    return VSizeLongSerde.getBlockSize(bitsPerValue, bytesPerBlock);
+    return VSizeLongSerde.getNumValuesPerBlock(bitsPerValue, bytesPerBlock);
   }
 
   @Override

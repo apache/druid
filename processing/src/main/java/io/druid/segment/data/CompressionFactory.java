@@ -19,6 +19,8 @@
 
 package io.druid.segment.data;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Maps;
 import com.metamx.common.IAE;
@@ -129,7 +131,20 @@ public class CompressionFactory
     /**
      * LONGS strategy always encode the values using LONGS format
      */
-    LONGS
+    LONGS;
+
+    @JsonValue
+    @Override
+    public String toString()
+    {
+      return this.name().toLowerCase();
+    }
+
+    @JsonCreator
+    public static LongEncodingStrategy fromString(String name)
+    {
+      return valueOf(name.toUpperCase());
+    }
   }
 
   public enum LongEncodingFormat

@@ -19,6 +19,8 @@
 
 package io.druid.segment.data;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.metamx.common.logger.Logger;
@@ -127,6 +129,19 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
     public abstract Compressor getCompressor();
 
     public abstract Decompressor getDecompressor();
+
+    @JsonValue
+    @Override
+    public String toString()
+    {
+      return this.name().toLowerCase();
+    }
+
+    @JsonCreator
+    public static CompressionStrategy fromString(String name)
+    {
+      return valueOf(name.toUpperCase());
+    }
 
     static final Map<Byte, CompressionStrategy> idMap = Maps.newHashMap();
 

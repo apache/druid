@@ -357,7 +357,7 @@ public class IndexMergerV9 extends IndexMerger
 
     long startTime = System.currentTimeMillis();
     final BitmapSerdeFactory bitmapSerdeFactory = indexSpec.getBitmapSerdeFactory();
-    final CompressedObjectStrategy.CompressionStrategy compressionStrategy = indexSpec.getDimensionCompressionStrategy();
+    final CompressedObjectStrategy.CompressionStrategy compressionStrategy = indexSpec.getDimensionCompression();
     for (int i = 0; i < mergedDimensions.size(); ++i) {
       long dimStartTime = System.currentTimeMillis();
       final String dim = mergedDimensions.get(i);
@@ -382,7 +382,7 @@ public class IndexMergerV9 extends IndexMerger
       final DictionaryEncodedColumnPartSerde.SerializerBuilder partBuilder = DictionaryEncodedColumnPartSerde
           .serializerBuilder()
           .withDictionary(dimValueWriters.get(i))
-          .withValue(dimWriters.get(i), hasMultiValue, compressionStrategy != null)
+          .withValue(dimWriters.get(i), hasMultiValue, compressionStrategy != CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED)
           .withBitmapSerdeFactory(bitmapSerdeFactory)
           .withBitmapIndex(bitmapIndexWriters.get(i))
           .withSpatialIndex(spatialIndexWriters.get(i))
@@ -728,7 +728,7 @@ public class IndexMergerV9 extends IndexMerger
   {
     LongColumnSerializer timeWriter = LongColumnSerializer.create(
         ioPeon, "little_end_time", CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY,
-        indexSpec.getLongEncodingStrategy()
+        indexSpec.getLongEncoding()
     );
     // we will close this writer after we added all the timestamps
     timeWriter.open();
@@ -744,8 +744,8 @@ public class IndexMergerV9 extends IndexMerger
   ) throws IOException
   {
     ArrayList<GenericColumnSerializer> metWriters = Lists.newArrayListWithCapacity(mergedMetrics.size());
-    final CompressedObjectStrategy.CompressionStrategy metCompression = indexSpec.getMetricCompressionStrategy();
-    final CompressionFactory.LongEncodingStrategy longEncoding = indexSpec.getLongEncodingStrategy();
+    final CompressedObjectStrategy.CompressionStrategy metCompression = indexSpec.getMetricCompression();
+    final CompressionFactory.LongEncodingStrategy longEncoding = indexSpec.getLongEncoding();
     for (String metric : mergedMetrics) {
       ValueType type = metricsValueTypes.get(metric);
       GenericColumnSerializer writer;
@@ -783,7 +783,7 @@ public class IndexMergerV9 extends IndexMerger
   ) throws IOException
   {
     ArrayList<IndexedIntsWriter> dimWriters = Lists.newArrayListWithCapacity(mergedDimensions.size());
-    final CompressedObjectStrategy.CompressionStrategy dimCompression = indexSpec.getDimensionCompressionStrategy();
+    final CompressedObjectStrategy.CompressionStrategy dimCompression = indexSpec.getDimensionCompression();
     for (int dimIndex = 0; dimIndex < mergedDimensions.size(); ++dimIndex) {
       String dim = mergedDimensions.get(dimIndex);
       int cardinality = dimCardinalities.get(dim);
@@ -791,11 +791,11 @@ public class IndexMergerV9 extends IndexMerger
       String filenameBase = String.format("%s.forward_dim", dim);
       IndexedIntsWriter writer;
       if (capabilities.hasMultipleValues()) {
-        writer = (dimCompression != null)
+        writer = (dimCompression != CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED)
                  ? CompressedVSizeIndexedV3Writer.create(ioPeon, filenameBase, cardinality, dimCompression)
                  : new VSizeIndexedWriter(ioPeon, filenameBase, cardinality);
       } else {
-        writer = (dimCompression != null)
+        writer = (dimCompression != CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED)
                  ? CompressedVSizeIntsIndexedWriter.create(ioPeon, filenameBase, cardinality, dimCompression)
                  : new VSizeIndexedIntsWriter(ioPeon, filenameBase, cardinality);
       }

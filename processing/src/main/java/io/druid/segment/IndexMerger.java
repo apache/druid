@@ -767,7 +767,7 @@ public class IndexMerger
       );
 
       LongSupplierSerializer timeWriter = CompressionFactory.getLongSerializer(
-          ioPeon, "little_end_time", IndexIO.BYTE_ORDER, indexSpec.getLongEncodingStrategy(),
+          ioPeon, "little_end_time", IndexIO.BYTE_ORDER, indexSpec.getLongEncoding(),
           CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
       );
 
@@ -781,8 +781,8 @@ public class IndexMerger
       }
 
       ArrayList<MetricColumnSerializer> metWriters = Lists.newArrayListWithCapacity(mergedMetrics.size());
-      final CompressedObjectStrategy.CompressionStrategy metCompression = indexSpec.getMetricCompressionStrategy();
-      final CompressionFactory.LongEncodingStrategy longEncoding = indexSpec.getLongEncodingStrategy();
+      final CompressedObjectStrategy.CompressionStrategy metCompression = indexSpec.getMetricCompression();
+      final CompressionFactory.LongEncodingStrategy longEncoding = indexSpec.getLongEncoding();
       for (String metric : mergedMetrics) {
         ValueType type = valueTypes.get(metric);
         switch (type) {

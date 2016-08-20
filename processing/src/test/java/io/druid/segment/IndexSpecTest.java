@@ -38,9 +38,9 @@ public class IndexSpecTest
 
     final IndexSpec spec = objectMapper.readValue(json, IndexSpec.class);
     Assert.assertEquals(new RoaringBitmapSerdeFactory(null), spec.getBitmapSerdeFactory());
-    Assert.assertEquals(CompressedObjectStrategy.CompressionStrategy.LZ4, spec.getDimensionCompressionStrategy());
-    Assert.assertEquals(CompressedObjectStrategy.CompressionStrategy.LZF, spec.getMetricCompressionStrategy());
-    Assert.assertEquals(CompressionFactory.LongEncodingStrategy.AUTO, spec.getLongEncodingStrategy());
+    Assert.assertEquals(CompressedObjectStrategy.CompressionStrategy.LZ4, spec.getDimensionCompression());
+    Assert.assertEquals(CompressedObjectStrategy.CompressionStrategy.LZF, spec.getMetricCompression());
+    Assert.assertEquals(CompressionFactory.LongEncodingStrategy.AUTO, spec.getLongEncoding());
 
     Assert.assertEquals(spec, objectMapper.readValue(objectMapper.writeValueAsBytes(spec), IndexSpec.class));
   }
@@ -53,8 +53,7 @@ public class IndexSpecTest
 
     final IndexSpec spec = objectMapper.readValue(json, IndexSpec.class);
 
-    Assert.assertEquals(IndexSpec.UNCOMPRESSED, spec.getDimensionCompression());
-    Assert.assertEquals(null, spec.getDimensionCompressionStrategy());
+    Assert.assertEquals(CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED, spec.getDimensionCompression());
     Assert.assertEquals(spec, objectMapper.readValue(objectMapper.writeValueAsBytes(spec), IndexSpec.class));
   }
 
@@ -62,8 +61,8 @@ public class IndexSpecTest
   public void testDefaults() throws Exception
   {
     final IndexSpec spec = new IndexSpec();
-    Assert.assertEquals(CompressedObjectStrategy.CompressionStrategy.LZ4, spec.getDimensionCompressionStrategy());
-    Assert.assertEquals(CompressedObjectStrategy.CompressionStrategy.LZ4, spec.getMetricCompressionStrategy());
-    Assert.assertEquals(CompressionFactory.LongEncodingStrategy.LONGS, spec.getLongEncodingStrategy());
+    Assert.assertEquals(CompressedObjectStrategy.CompressionStrategy.LZ4, spec.getDimensionCompression());
+    Assert.assertEquals(CompressedObjectStrategy.CompressionStrategy.LZ4, spec.getMetricCompression());
+    Assert.assertEquals(CompressionFactory.LongEncodingStrategy.LONGS, spec.getLongEncoding());
   }
 }

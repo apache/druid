@@ -19,6 +19,7 @@
 
 package io.druid.benchmark;
 
+import com.google.common.base.Supplier;
 import com.google.common.io.Files;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
 import io.druid.segment.data.IndexedLongs;
@@ -32,11 +33,11 @@ import org.openjdk.jmh.annotations.Param;
 import org.openjdk.jmh.annotations.Scope;
 import org.openjdk.jmh.annotations.Setup;
 import org.openjdk.jmh.annotations.State;
-import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.annotations.Warmup;
+import org.openjdk.jmh.infra.Blackhole;
 
 import java.io.File;
-import java.net.URL;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.Random;
@@ -52,55 +53,55 @@ import java.util.concurrent.TimeUnit;
 @OutputTimeUnit(TimeUnit.MILLISECONDS)
 public class LongCompressionBenchmark
 {
+  @Param("longCompress/")
+  private static String dirPath;
+
   @Param({"enumerate", "zipfLow", "zipfHigh", "sequential", "uniform"})
   private static String file;
 
-  @Param({"delta", "longs"})
+  @Param({"auto", "longs"})
   private static String format;
 
   @Param({"lz4", "none"})
   private static String strategy;
 
   private Random rand;
-  private IndexedLongs indexedLongs;
-  private int count;
-  private long sum;
+  private Supplier<IndexedLongs> supplier;
 
   @Setup
   public void setup() throws Exception
   {
-    URL url = this.getClass().getClassLoader().getResource("compress");
-    File dir = new File(url.toURI());
-    File compFile = new File(dir, file + "-" + strategy.toUpperCase() + "-" + format.toUpperCase());
+    File dir = new File(dirPath);
+    File compFile = new File(dir, file + "-" + strategy + "-" + format);
     rand = new Random();
     ByteBuffer buffer = Files.map(compFile);
-    indexedLongs = CompressedLongsIndexedSupplier.fromByteBuffer(buffer, ByteOrder.nativeOrder()).get();
-    count = indexedLongs.size();
-    System.out.println("count : " + count);
-  }
-
-  @TearDown
-  public void teardown()
-  {
-    System.out.println("sum : " + sum);
+    supplier = CompressedLongsIndexedSupplier.fromByteBuffer(buffer, ByteOrder.nativeOrder());
   }
 
   @Benchmark
-  public void readContinuous()
+  public void readContinuous(Blackhole bh) throws IOException
   {
-    sum = 0;
+    IndexedLongs indexedLongs = supplier.get();
+    int count = indexedLongs.size();
+    long sum = 0;
     for (int i = 0; i < count; i++) {
       sum += indexedLongs.get(i);
     }
+    bh.consume(sum);
+    indexedLongs.close();
   }
 
   @Benchmark
-  public void readSkipping()
+  public void readSkipping(Blackhole bh) throws IOException
   {
-    sum = 0;
-    for (int i = 0; i < count; i += rand.nextInt(10000)) {
+    IndexedLongs indexedLongs = supplier.get();
+    int count = indexedLongs.size();
+    long sum = 0;
+    for (int i = 0; i < count; i += rand.nextInt(2000)) {
       sum += indexedLongs.get(i);
     }
+    bh.consume(sum);
+    indexedLongs.close();
   }
 
 }

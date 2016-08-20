@@ -122,9 +122,9 @@ public class IndexMergerTest
     if (bitmapSerdeFactory != null || compressionStrategy != null) {
       return new IndexSpec(
           bitmapSerdeFactory,
-          dimCompressionStrategy.name().toLowerCase(),
-          compressionStrategy.name().toLowerCase(),
-          longEncodingStrategy.name().toLowerCase()
+          dimCompressionStrategy,
+          compressionStrategy,
+          longEncodingStrategy
       );
     } else {
       return new IndexSpec();
@@ -174,7 +174,7 @@ public class IndexMergerTest
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
     Assert.assertEquals(3, index.getColumnNames().size());
 
-    assertDimCompression(index, indexSpec.getDimensionCompressionStrategy());
+    assertDimCompression(index, indexSpec.getDimensionCompression());
 
     Assert.assertArrayEquals(
         IncrementalIndexTest.getDefaultCombiningAggregatorFactories(),
@@ -220,7 +220,7 @@ public class IndexMergerTest
     Assert.assertEquals(2, index.getColumn(Column.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
     Assert.assertEquals(3, index.getColumnNames().size());
-    assertDimCompression(index, indexSpec.getDimensionCompressionStrategy());
+    assertDimCompression(index, indexSpec.getDimensionCompression());
 
     final QueryableIndexIndexableAdapter adapter = new QueryableIndexIndexableAdapter(index);
     final List<Rowboat> boatList = ImmutableList.copyOf(adapter.getRows());
@@ -263,7 +263,7 @@ public class IndexMergerTest
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
     Assert.assertEquals(3, index.getColumnNames().size());
 
-    assertDimCompression(index, indexSpec.getDimensionCompressionStrategy());
+    assertDimCompression(index, indexSpec.getDimensionCompression());
 
     Assert.assertEquals(
         new Metadata()
@@ -355,9 +355,9 @@ public class IndexMergerTest
     Assert.assertEquals(3, merged.getColumn(Column.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(merged.getAvailableDimensions()));
     Assert.assertEquals(3, merged.getColumnNames().size());
-    assertDimCompression(index2, indexSpec.getDimensionCompressionStrategy());
-    assertDimCompression(index1, indexSpec.getDimensionCompressionStrategy());
-    assertDimCompression(merged, indexSpec.getDimensionCompressionStrategy());
+    assertDimCompression(index2, indexSpec.getDimensionCompression());
+    assertDimCompression(index1, indexSpec.getDimensionCompression());
+    assertDimCompression(merged, indexSpec.getDimensionCompression());
 
     Assert.assertArrayEquals(
         getCombiningAggregators(mergedAggregators),
@@ -438,9 +438,9 @@ public class IndexMergerTest
     Assert.assertEquals(2, merged.getColumn(Column.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(ImmutableList.of("dim2"), ImmutableList.copyOf(merged.getAvailableDimensions()));
 
-    assertDimCompression(index1, indexSpec.getDimensionCompressionStrategy());
-    assertDimCompression(index2, indexSpec.getDimensionCompressionStrategy());
-    assertDimCompression(merged, indexSpec.getDimensionCompressionStrategy());
+    assertDimCompression(index1, indexSpec.getDimensionCompression());
+    assertDimCompression(index2, indexSpec.getDimensionCompression());
+    assertDimCompression(merged, indexSpec.getDimensionCompression());
   }
 
   @Test
@@ -496,8 +496,8 @@ public class IndexMergerTest
 
     INDEX_IO.validateTwoSegments(tempDir1, mergedDir);
 
-    assertDimCompression(index1, indexSpec.getDimensionCompressionStrategy());
-    assertDimCompression(merged, indexSpec.getDimensionCompressionStrategy());
+    assertDimCompression(index1, indexSpec.getDimensionCompression());
+    assertDimCompression(merged, indexSpec.getDimensionCompression());
   }
 
   @Test
@@ -554,8 +554,8 @@ public class IndexMergerTest
 
     INDEX_IO.validateTwoSegments(tempDir1, mergedDir);
 
-    assertDimCompression(index1, indexSpec.getDimensionCompressionStrategy());
-    assertDimCompression(merged, indexSpec.getDimensionCompressionStrategy());
+    assertDimCompression(index1, indexSpec.getDimensionCompression());
+    assertDimCompression(merged, indexSpec.getDimensionCompression());
 
     Assert.assertArrayEquals(
         getCombiningAggregators(mergedAggregators),
@@ -600,9 +600,15 @@ public class IndexMergerTest
 
     IndexSpec newSpec = new IndexSpec(
         indexSpec.getBitmapSerdeFactory(),
-        "lz4".equals(indexSpec.getDimensionCompression()) ? "lzf" : "lz4",
-        "lz4".equals(indexSpec.getMetricCompression()) ? "lzf" : "lz4",
-        "longs".equals(indexSpec.getLongEncoding()) ? "auto" : "longs"
+        CompressedObjectStrategy.CompressionStrategy.LZ4.equals(indexSpec.getDimensionCompression()) ?
+        CompressedObjectStrategy.CompressionStrategy.LZF :
+        CompressedObjectStrategy.CompressionStrategy.LZ4,
+        CompressedObjectStrategy.CompressionStrategy.LZ4.equals(indexSpec.getDimensionCompression()) ?
+        CompressedObjectStrategy.CompressionStrategy.LZF :
+        CompressedObjectStrategy.CompressionStrategy.LZ4,
+        CompressionFactory.LongEncodingStrategy.LONGS.equals(indexSpec.getLongEncoding()) ?
+        CompressionFactory.LongEncodingStrategy.AUTO :
+        CompressionFactory.LongEncodingStrategy.LONGS
     );
 
     AggregatorFactory[] mergedAggregators = new AggregatorFactory[]{new CountAggregatorFactory("count")};
@@ -623,8 +629,8 @@ public class IndexMergerTest
 
     INDEX_IO.validateTwoSegments(tempDir1, mergedDir);
 
-    assertDimCompression(index1, indexSpec.getDimensionCompressionStrategy());
-    assertDimCompression(merged, newSpec.getDimensionCompressionStrategy());
+    assertDimCompression(index1, indexSpec.getDimensionCompression());
+    assertDimCompression(merged, newSpec.getDimensionCompression());
   }
 
 
@@ -681,8 +687,8 @@ public class IndexMergerTest
 
     INDEX_IO.validateTwoSegments(tempDir1, convertDir);
 
-    assertDimCompression(index1, indexSpec.getDimensionCompressionStrategy());
-    assertDimCompression(converted, indexSpec.getDimensionCompressionStrategy());
+    assertDimCompression(index1, indexSpec.getDimensionCompression());
+    assertDimCompression(converted, indexSpec.getDimensionCompression());
 
     Assert.assertArrayEquals(
         getCombiningAggregators(aggregators),
@@ -737,9 +743,15 @@ public class IndexMergerTest
 
     IndexSpec newSpec = new IndexSpec(
         indexSpec.getBitmapSerdeFactory(),
-        "lz4".equals(indexSpec.getDimensionCompression()) ? "lzf" : "lz4",
-        "lz4".equals(indexSpec.getMetricCompression()) ? "lzf" : "lz4",
-        "longs".equals(indexSpec.getLongEncoding()) ? "auto" : "longs"
+        CompressedObjectStrategy.CompressionStrategy.LZ4.equals(indexSpec.getDimensionCompression()) ?
+        CompressedObjectStrategy.CompressionStrategy.LZF :
+        CompressedObjectStrategy.CompressionStrategy.LZ4,
+        CompressedObjectStrategy.CompressionStrategy.LZ4.equals(indexSpec.getDimensionCompression()) ?
+        CompressedObjectStrategy.CompressionStrategy.LZF :
+        CompressedObjectStrategy.CompressionStrategy.LZ4,
+        CompressionFactory.LongEncodingStrategy.LONGS.equals(indexSpec.getLongEncoding()) ?
+        CompressionFactory.LongEncodingStrategy.AUTO :
+        CompressionFactory.LongEncodingStrategy.LONGS
     );
 
     QueryableIndex converted = closer.closeLater(
@@ -758,8 +770,8 @@ public class IndexMergerTest
 
     INDEX_IO.validateTwoSegments(tempDir1, convertDir);
 
-    assertDimCompression(index1, indexSpec.getDimensionCompressionStrategy());
-    assertDimCompression(converted, newSpec.getDimensionCompressionStrategy());
+    assertDimCompression(index1, indexSpec.getDimensionCompression());
+    assertDimCompression(converted, newSpec.getDimensionCompression());
 
     Assert.assertArrayEquals(
         getCombiningAggregators(aggregators),

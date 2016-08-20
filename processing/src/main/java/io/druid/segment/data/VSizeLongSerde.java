@@ -24,7 +24,6 @@ import com.metamx.common.IAE;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.nio.BufferOverflowException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 
@@ -58,16 +57,17 @@ public class VSizeLongSerde
     return 64;
   }
 
-  public static int getSerializedSize(int longSize, int numValues)
+  public static int getSerializedSize(int bitsPerValue, int numValues)
   {
-    return (longSize * numValues + 7) / 8 + 4;
+    // this value is calculated by rounding up the byte and adding the 4 closing bytes
+    return (bitsPerValue * numValues + 7) / 8 + 4;
   }
 
   // block size should be power of 2 so get of indexedLong can be optimized using bit operators
-  public static int getBlockSize(int longSize, int bytes)
+  public static int getNumValuesPerBlock(int bitsPerValue, int blockSize)
   {
     int ret = 1;
-    while (getSerializedSize(longSize, ret) <= bytes) {
+    while (getSerializedSize(bitsPerValue, ret) <= blockSize) {
       ret *= 2;
     }
     return ret / 2;
