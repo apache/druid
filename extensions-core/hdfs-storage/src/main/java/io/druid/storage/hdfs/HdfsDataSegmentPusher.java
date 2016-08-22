@@ -26,6 +26,7 @@ import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import com.metamx.common.CompressionUtils;
 import com.metamx.common.logger.Logger;
+import io.druid.common.utils.UUIDUtils;
 import io.druid.segment.SegmentUtils;
 import io.druid.segment.loading.DataSegmentPusher;
 import io.druid.segment.loading.DataSegmentPusherUtil;
@@ -88,24 +89,43 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher
         storageDir
     );
 
-    Path outFile = new Path(String.format("%s/%s/index.zip", config.getStorageDirectory(), storageDir));
-    FileSystem fs = outFile.getFileSystem(hadoopConfig);
+    Path tmpFile = new Path(String.format(
+        "%s/%s/index.zip",
+        config.getStorageDirectory(),
+        UUIDUtils.generateUuid()
+    ));
+    FileSystem fs = tmpFile.getFileSystem(hadoopConfig);
 
-    fs.mkdirs(outFile.getParent());
-    log.info("Compressing files from[%s] to [%s]", inDir, outFile);
+    fs.mkdirs(tmpFile.getParent());
+    log.info("Compressing files from[%s] to [%s]", inDir, tmpFile);
 
     final long size;
-    try (FSDataOutputStream out = fs.create(outFile)) {
+    final DataSegment dataSegment;
+    try (FSDataOutputStream out = fs.create(tmpFile)) {
       size = CompressionUtils.zip(inDir, out);
+      dataSegment = createDescriptorFile(
+          segment.withLoadSpec(makeLoadSpec(tmpFile))
+                 .withSize(size)
+                 .withBinaryVersion(SegmentUtils.getVersionFromDir(inDir)),
+          tmpFile.getParent(),
+          fs
+      );
+      Path outDir = new Path(String.format("%s/%s", config.getStorageDirectory(), storageDir));
+      if (!fs.rename(tmpFile.getParent(), outDir)) {
+        if(!fs.delete(tmpFile.getParent(), true)){
+          log.error("Failed to delete temp directory");
+        }
+        if(fs.exists(outDir)){
+          throw new IOException(String.format(
+              "Writing conflict detected for [%s], is there some other job running?",
+              segment.getIdentifier()
+          ));
+        }
+        throw new IOException(String.format("Failed to rename and delete temp directory [%s]", tmpFile));
+      }
     }
 
-    return createDescriptorFile(
-        segment.withLoadSpec(makeLoadSpec(outFile))
-               .withSize(size)
-               .withBinaryVersion(SegmentUtils.getVersionFromDir(inDir)),
-        outFile.getParent(),
-        fs
-    );
+    return dataSegment;
   }
 
   private DataSegment createDescriptorFile(DataSegment segment, Path outDir, final FileSystem fs) throws IOException
