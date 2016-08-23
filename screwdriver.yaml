@@ -57,6 +57,14 @@ shared:
         sh ./screwdriver/update_vars.sh ${SD_SETTING_DRUID_PKG_NAME} ${SD_SETTING_DRUID_INABOX_PKG_NAME} ${SD_SETTING_HDFS_BASE_DIR} &&
         git diff &&
         git commit -a -m "commit to make yinst_create happy" || exit $?
+    compute_druid_pkg_code_version:
+      description: compute the hash for druid pkg code version
+      command: >
+        echo 1-$(date '+%s')-$(git -C druid_package rev-parse --short HEAD)-${BUILD_NUMBER} > druid.pkg.code.version &&
+        if [ ! -s druid.pkg.code.version ]; then echo 'Error: druid.pkg.code.version is empty!' && exit 1; else echo "druid.pkg.code.version is `cat druid.pkg.code.version`"; fi || exit $?
+    set_druid_pkg_code_version:
+      description: set druid pkg jars version
+      command: mvn -B -f druid_package/pom.xml org.codehaus.mojo:versions-maven-plugin:2.1:set -DnewVersion="`cat druid.pkg.code.version`"
     druid_pkg_code_build:
       description: copy dependencies for druid_package
       command: mvn -B -f druid_package/pom.xml -Ddruid.version="`cat druid.version`" install dependency:copy-dependencies
@@ -105,6 +113,8 @@ jobs:
       - druid_code_build
       - clone_druid_pkg
       - set_config_files
+      - compute_druid_pkg_code_version
+      - set_druid_pkg_code_version
       - druid_pkg_code_build
       - check_druid_jars_version
       - clone_ci_tests_pkg
