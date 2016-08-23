@@ -116,6 +116,12 @@ public abstract class AggregatorFactory
 
   public abstract String getTypeName();
 
+  // input type for ingestion
+  public String getInputTypeName()
+  {
+    return getTypeName();
+  }
+
   /**
    * Returns the maximum size that this aggregator will require in bytes for intermediate storage of results.
    *
