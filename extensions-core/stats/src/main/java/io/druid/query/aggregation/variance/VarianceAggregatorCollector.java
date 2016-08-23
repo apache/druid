@@ -109,7 +109,6 @@ public class VarianceAggregatorCollector
 
   public VarianceAggregatorCollector()
   {
-    this(0, 0, 0);
   }
 
   public void reset()

@@ -147,6 +147,12 @@ public class FilteredAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public String getInputTypeName()
+  {
+    return delegate.getInputTypeName();
+  }
+
+  @Override
   public int getMaxIntermediateSize()
   {
     return delegate.getMaxIntermediateSize();

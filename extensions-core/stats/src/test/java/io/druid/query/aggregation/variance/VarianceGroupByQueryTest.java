@@ -134,34 +134,38 @@ public class VarianceGroupByQueryTest
             )
         )
         .setPostAggregatorSpecs(
-            Arrays.<PostAggregator>asList(VarianceTestHelper.stddevOfIndexPostAggr)
+            Arrays.asList(
+                VarianceTestHelper.stddevOfIndexPostAggr,
+                VarianceTestHelper.sumOfIndexPostAggr,
+                VarianceTestHelper.countOfIndexPostAggr
+            )
         )
         .setGranularity(QueryRunnerTestHelper.dayGran)
         .build();
 
     VarianceTestHelper.RowBuilder builder =
-        new VarianceTestHelper.RowBuilder(new String[]{"alias", "rows", "idx", "index_stddev", "index_var"});
+        new VarianceTestHelper.RowBuilder(new String[]{"alias", "rows", "idx", "index_stddev", "index_var", "index_count", "index_sum"});
 
     List<Row> expectedResults = builder
-        .add("2011-04-01", "automotive", 1L, 135L, 0d, 0d)
-        .add("2011-04-01", "business", 1L, 118L, 0d, 0d)
-        .add("2011-04-01", "entertainment", 1L, 158L, 0d, 0d)
-        .add("2011-04-01", "health", 1L, 120L, 0d, 0d)
-        .add("2011-04-01", "mezzanine", 3L, 2870L, 737.0179286322613d, 543195.4271253889d)
-        .add("2011-04-01", "news", 1L, 121L, 0d, 0d)
-        .add("2011-04-01", "premium", 3L, 2900L, 726.6322593583996d, 527994.4403402924d)
-        .add("2011-04-01", "technology", 1L, 78L, 0d, 0d)
-        .add("2011-04-01", "travel", 1L, 119L, 0d, 0d)
+        .add("2011-04-01", "automotive", 1L, 135L, 0d, 0d, 1L, 135.88510131835938D)
+        .add("2011-04-01", "business", 1L, 118L, 0d, 0d, 1L, 118.57034301757812D)
+        .add("2011-04-01", "entertainment", 1L, 158L, 0d, 0d, 1L, 158.74722290039062D)
+        .add("2011-04-01", "health", 1L, 120L, 0d, 0d, 1L, 120.13470458984375D)
+        .add("2011-04-01", "mezzanine", 3L, 2870L, 737.0179286322613d, 543195.4271253889d, 3L, 2871.8867263793945D)
+        .add("2011-04-01", "news", 1L, 121L, 0d, 0d, 1L, 121.58358001708984D)
+        .add("2011-04-01", "premium", 3L, 2900L, 726.6322593583996d, 527994.4403402924d, 3L, 2900.798629760742D)
+        .add("2011-04-01", "technology", 1L, 78L, 0d, 0d, 1L, 78.62254333496094D)
+        .add("2011-04-01", "travel", 1L, 119L, 0d, 0d, 1L, 119.92274475097656D)
 
-        .add("2011-04-02", "automotive", 1L, 147L, 0d, 0d)
-        .add("2011-04-02", "business", 1L, 112L, 0d, 0d)
-        .add("2011-04-02", "entertainment", 1L, 166L, 0d, 0d)
-        .add("2011-04-02", "health", 1L, 113L, 0d, 0d)
-        .add("2011-04-02", "mezzanine", 3L, 2447L, 611.3420766546617d, 373739.13468843425d)
-        .add("2011-04-02", "news", 1L, 114L, 0d, 0d)
-        .add("2011-04-02", "premium", 3L, 2505L, 621.3898134843073d, 386125.30030206224d)
-        .add("2011-04-02", "technology", 1L, 97L, 0d, 0d)
-        .add("2011-04-02", "travel", 1L, 126L, 0d, 0d)
+        .add("2011-04-02", "automotive", 1L, 147L, 0d, 0d, 1L, 147.42593383789062D)
+        .add("2011-04-02", "business", 1L, 112L, 0d, 0d, 1L, 112.98703002929688D)
+        .add("2011-04-02", "entertainment", 1L, 166L, 0d, 0d, 1L, 166.01605224609375D)
+        .add("2011-04-02", "health", 1L, 113L, 0d, 0d, 1L, 113.44600677490234D)
+        .add("2011-04-02", "mezzanine", 3L, 2447L, 611.3420766546617d, 373739.13468843425d, 3L, 2448.830612182617D)
+        .add("2011-04-02", "news", 1L, 114L, 0d, 0d, 1L, 114.2901382446289D)
+        .add("2011-04-02", "premium", 3L, 2505L, 621.3898134843073d, 386125.30030206224d, 3L, 2506.415023803711D)
+        .add("2011-04-02", "technology", 1L, 97L, 0d, 0d, 1L, 97.38743591308594D)
+        .add("2011-04-02", "travel", 1L, 126L, 0d, 0d, 1L, 126.41136169433594D)
         .build();
 
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);

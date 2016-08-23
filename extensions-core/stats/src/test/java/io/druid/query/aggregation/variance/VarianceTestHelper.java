@@ -51,11 +51,23 @@ public class VarianceTestHelper extends QueryRunnerTestHelper
   );
 
   public static final String stddevOfIndexMetric = "index_stddev";
+  public static final String sumOfIndexMetric = "index_sum";
+  public static final String countOfIndexMetric = "index_count";
 
   public static final PostAggregator stddevOfIndexPostAggr = new StandardDeviationPostAggregator(
       stddevOfIndexMetric,
       indexVarianceMetric,
       null
+  );
+
+  public static final PostAggregator sumOfIndexPostAggr = new SumPostAggregator(
+      sumOfIndexMetric,
+      indexVarianceMetric
+  );
+
+  public static final PostAggregator countOfIndexPostAggr = new CountPostAggregator(
+      countOfIndexMetric,
+      indexVarianceMetric
   );
 
   public static final List<AggregatorFactory> commonPlusVarAggregators = Arrays.asList(

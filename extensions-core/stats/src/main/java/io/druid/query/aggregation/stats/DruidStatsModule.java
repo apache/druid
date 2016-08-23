@@ -24,7 +24,9 @@ import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
 import io.druid.initialization.DruidModule;
+import io.druid.query.aggregation.variance.CountPostAggregator;
 import io.druid.query.aggregation.variance.StandardDeviationPostAggregator;
+import io.druid.query.aggregation.variance.SumPostAggregator;
 import io.druid.query.aggregation.variance.VarianceAggregatorFactory;
 import io.druid.query.aggregation.variance.VarianceFoldingAggregatorFactory;
 import io.druid.query.aggregation.variance.VarianceSerde;
@@ -43,7 +45,9 @@ public class DruidStatsModule implements DruidModule
         new SimpleModule().registerSubtypes(
             VarianceAggregatorFactory.class,
             VarianceFoldingAggregatorFactory.class,
-            StandardDeviationPostAggregator.class
+            StandardDeviationPostAggregator.class,
+            CountPostAggregator.class,
+            SumPostAggregator.class
         )
     );
   }

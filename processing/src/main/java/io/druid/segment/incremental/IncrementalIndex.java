@@ -211,7 +211,7 @@ public abstract class IncrementalIndex<AggregatorType> implements Iterable<Row>,
       @Override
       public ObjectColumnSelector makeObjectColumnSelector(final String column)
       {
-        final String typeName = agg.getTypeName();
+        final String typeName = agg.getInputTypeName();
 
         final ObjectColumnSelector<Object> rawColumnSelector = new ObjectColumnSelector<Object>()
         {

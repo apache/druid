@@ -28,10 +28,8 @@ import com.metamx.common.StringUtils;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.AggregatorFactoryNotMergeableException;
-import io.druid.query.aggregation.Aggregators;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.segment.ColumnSelectorFactory;
-import io.druid.segment.ObjectColumnSelector;
 import org.apache.commons.codec.binary.Base64;
 
 import java.nio.ByteBuffer;
@@ -84,6 +82,12 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   }
 
   @Override
+  public String getInputTypeName()
+  {
+    return inputType;
+  }
+
+  @Override
   public int getMaxIntermediateSize()
   {
     return VarianceAggregatorCollector.getMaxIntermediateSize();
@@ -92,11 +96,6 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(fieldName);
-    if (selector == null) {
-      return Aggregators.noopAggregator();
-    }
-
     if ("float".equalsIgnoreCase(inputType)) {
       return new VarianceAggregator.FloatVarianceAggregator(
           name,
@@ -108,7 +107,10 @@ public class VarianceAggregatorFactory extends AggregatorFactory
           metricFactory.makeLongColumnSelector(fieldName)
       );
     } else if ("variance".equalsIgnoreCase(inputType)) {
-      return new VarianceAggregator.ObjectVarianceAggregator(name, selector);
+      return new VarianceAggregator.ObjectVarianceAggregator(
+          name,
+          metricFactory.makeObjectColumnSelector(fieldName)
+      );
     }
     throw new IAE(
         "Incompatible type for metric[%s], expected a float, long or variance, got a %s", fieldName, inputType
@@ -118,22 +120,18 @@ public class VarianceAggregatorFactory extends AggregatorFactory
   @Override
   public BufferAggregator factorizeBuffered(ColumnSelectorFactory metricFactory)
   {
-    ObjectColumnSelector selector = metricFactory.makeObjectColumnSelector(fieldName);
-    if (selector == null) {
-      return Aggregators.noopBufferAggregator();
-    }
     if ("float".equalsIgnoreCase(inputType)) {
       return new VarianceBufferAggregator.FloatVarianceAggregator(
-          name,
           metricFactory.makeFloatColumnSelector(fieldName)
       );
     } else if ("long".equalsIgnoreCase(inputType)) {
       return new VarianceBufferAggregator.LongVarianceAggregator(
-          name,
           metricFactory.makeLongColumnSelector(fieldName)
       );
     } else if ("variance".equalsIgnoreCase(inputType)) {
-      return new VarianceBufferAggregator.ObjectVarianceAggregator(name, selector);
+      return new VarianceBufferAggregator.ObjectVarianceAggregator(
+          metricFactory.makeObjectColumnSelector(fieldName)
+      );
     }
     throw new IAE(
         "Incompatible type for metric[%s], expected a float, long or variance, got a %s", fieldName, inputType
