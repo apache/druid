@@ -22,15 +22,15 @@ package io.druid.storage.hdfs;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.common.io.ByteSink;
 import com.google.common.io.ByteSource;
 import com.google.inject.Inject;
 import io.druid.common.utils.PropUtils;
 import io.druid.common.utils.UUIDUtils;
+import io.druid.data.output.CountingAccumulator;
 import io.druid.data.output.Formatters;
 import io.druid.java.util.common.CompressionUtils;
-import io.druid.java.util.common.Pair;
-import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.ResultWriter;
 import io.druid.query.TabularFormat;
@@ -44,7 +44,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.HadoopFsWrapper;
 import org.apache.hadoop.fs.Path;
 
-import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -170,7 +169,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher, ResultWriter
   }
 
   @Override
-  public void write(URI location, final TabularFormat result, final Map<String, String> context)
+  public Map<String, Object> write(URI location, final TabularFormat result, final Map<String, String> context)
       throws IOException
   {
     Path targetDirectory = new Path(location);
@@ -189,11 +188,14 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher, ResultWriter
     String fileName = context.get("dataFileName");
     Path dataFile = new Path(targetDirectory, Strings.isNullOrEmpty(fileName) ? "data" : fileName);
 
+    Map<String, Object> info = Maps.newHashMap();
     try (OutputStream output = fileSystem.create(dataFile)) {
-      Pair<Closeable, Accumulator> accumulator = Formatters.toExporter(context, output, jsonMapper);
-      result.getSequence().accumulate(null, accumulator.rhs);
-      accumulator.lhs.close();
+      try (CountingAccumulator accumulator = Formatters.toExporter(context, output, jsonMapper)) {
+        result.getSequence().accumulate(null, accumulator);
+        info.put("numRows", accumulator.count());
+      }
     }
+    info.put(dataFile.toString(), fileSystem.getFileStatus(dataFile).getLen());
 
     Map<String, Object> metaData = result.getMetaData();
     if (metaData != null && !metaData.isEmpty()) {
@@ -201,7 +203,9 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher, ResultWriter
       try (OutputStream output = fileSystem.create(metaFile)) {
         jsonMapper.writeValue(output, metaData);
       }
+      info.put(metaFile.toString(), fileSystem.getFileStatus(metaFile).getLen());
     }
+    return info;
   }
 
   private static class HdfsOutputStreamSupplier extends ByteSink

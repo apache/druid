@@ -23,8 +23,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
-import io.druid.java.util.common.Pair;
-import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.logger.Logger;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.ss.usermodel.Cell;
@@ -44,26 +42,29 @@ public class Formatters
 {
   private static final Logger log = new Logger(Formatter.class);
 
-  public static Pair<Closeable, Accumulator> toExporter(
+  public static CountingAccumulator toExporter(
       Map<String, String> context,
       OutputStream output,
       ObjectMapper jsonMapper
   )
   {
     if ("excel".equals(context.get("format"))) {
-      return toExcelExporter(context, output);
+      return toExcelExporter(output, context);
     } else {
       return toSimpleExporter(output, context, jsonMapper);
     }
   }
 
-  private static Pair<Closeable, Accumulator> toExcelExporter(Map<String, String> context, final OutputStream output)
+  private static CountingAccumulator toExcelExporter(
+      final OutputStream output,
+      Map<String, String> context
+  )
   {
     final String[] dimensions = Formatters.toDimensionOrder(context.get("columns"));
     final HSSFWorkbook wb = new HSSFWorkbook();
     final Sheet sheet = wb.createSheet();
 
-    Closeable resource = new Closeable()
+    final Closeable resource = new Closeable()
     {
       @Override
       public void close() throws IOException
@@ -77,93 +78,118 @@ public class Formatters
         Cell c = r.createCell(i);
         c.setCellValue(dimensions[i]);
       }
-      return Pair.<Closeable, Accumulator>of(
-          resource, new Accumulator<Object, Map<String, Object>>()
-          {
-            private int rowNum = 1;
+      return new CountingAccumulator<Object, Map<String, Object>>()
+      {
+        private int rowNum = 1;
 
-            @Override
-            public Object accumulate(Object accumulated, Map<String, Object> in)
-            {
-              Row r = sheet.createRow(rowNum++);
-              for (int i = 0; i < dimensions.length; i++) {
-                Cell c = r.createCell(i);
-                Object o = in.get(dimensions[i]);
-                if (o instanceof Number) {
-                  c.setCellValue(((Number) o).doubleValue());
-                } else if (o instanceof String) {
-                  c.setCellValue((String) o);
-                } else if (o instanceof Date) {
-                  c.setCellValue((Date) o);
-                } else {
-                  c.setCellValue(String.valueOf(o));
-                }
-              }
-              return null;
+        @Override
+        public int count()
+        {
+          return rowNum - 1;
+        }
+
+        @Override
+        public Object accumulate(Object accumulated, Map<String, Object> in)
+        {
+          Row r = sheet.createRow(rowNum++);
+          for (int i = 0; i < dimensions.length; i++) {
+            Cell c = r.createCell(i);
+            Object o = in.get(dimensions[i]);
+            if (o instanceof Number) {
+              c.setCellValue(((Number) o).doubleValue());
+            } else if (o instanceof String) {
+              c.setCellValue((String) o);
+            } else if (o instanceof Date) {
+              c.setCellValue((Date) o);
+            } else {
+              c.setCellValue(String.valueOf(o));
             }
           }
-      );
-    }
-    return Pair.<Closeable, Accumulator>of(
-        resource, new Accumulator<Object, Map<String, Object>>()
-        {
-          private int rowNum = 0;
+          return null;
+        }
 
-          @Override
-          public Object accumulate(Object accumulated, Map<String, Object> in)
-          {
-            Row r = sheet.createRow(rowNum++);
-            int i = 0;
-            for (Object o : in.values()) {
-              Cell c = r.createCell(i++);
-              if (o instanceof Number) {
-                c.setCellValue(((Number) o).doubleValue());
-              } else if (o instanceof String) {
-                c.setCellValue((String) o);
-              } else if (o instanceof Date) {
-                c.setCellValue((Date) o);
-              } else {
-                c.setCellValue(String.valueOf(o));
-              }
-            }
-            return null;
+        @Override
+        public void close() throws IOException
+        {
+          resource.close();
+        }
+      };
+    }
+    return new CountingAccumulator<Object, Map<String, Object>>()
+    {
+      private int rowNum = 0;
+
+      @Override
+      public int count()
+      {
+        return rowNum;
+      }
+
+      @Override
+      public Object accumulate(Object accumulated, Map<String, Object> in)
+      {
+        Row r = sheet.createRow(rowNum++);
+        int i = 0;
+        for (Object o : in.values()) {
+          Cell c = r.createCell(i++);
+          if (o instanceof Number) {
+            c.setCellValue(((Number) o).doubleValue());
+          } else if (o instanceof String) {
+            c.setCellValue((String) o);
+          } else if (o instanceof Date) {
+            c.setCellValue((Date) o);
+          } else {
+            c.setCellValue(String.valueOf(o));
           }
         }
-    );
+        return null;
+      }
+
+      @Override
+      public void close() throws IOException
+      {
+        resource.close();
+      }
+    };
   }
 
-  private static Pair<Closeable, Accumulator> toSimpleExporter(
+  private static CountingAccumulator toSimpleExporter(
       final OutputStream output,
       Map<String, String> context,
       ObjectMapper jsonMapper
   )
   {
-    Closeable resource = new Closeable()
+    final byte[] newLine = System.lineSeparator().getBytes();
+    final Formatter formatter = getFormatter(context, jsonMapper);
+    return new CountingAccumulator<Object, Map<String, Object>>()
     {
+      int counter = 0;
+
+      @Override
+      public int count()
+      {
+        return counter;
+      }
+
+      @Override
+      public Object accumulate(Object accumulated, Map<String, Object> in)
+      {
+        try {
+          output.write(formatter.format(in));
+          output.write(newLine);
+          counter++;
+        }
+        catch (Exception e) {
+          throw Throwables.propagate(e);
+        }
+        return null;
+      }
+
       @Override
       public void close() throws IOException
       {
       }
     };
-    final byte[] newLine = System.lineSeparator().getBytes();
-    final Formatter formatter = getFormatter(context, jsonMapper);
-    return Pair.<Closeable, Accumulator>of(
-        resource, new Accumulator<Object, Map<String, Object>>()
-        {
-          @Override
-          public Object accumulate(Object accumulated, Map<String, Object> in)
-          {
-            try {
-              output.write(formatter.format(in));
-              output.write(newLine);
-            }
-            catch (Exception e) {
-              throw Throwables.propagate(e);
-            }
-            return null;
-          }
-        }
-    );
   }
 
   private static Formatter getFormatter(Map<String, String> context, ObjectMapper jsonMapper)

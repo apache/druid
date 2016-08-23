@@ -22,14 +22,14 @@ package io.druid.segment.loading;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Files;
 import com.google.inject.Inject;
 import io.druid.common.utils.PropUtils;
+import io.druid.data.output.CountingAccumulator;
 import io.druid.data.output.Formatters;
 import io.druid.java.util.common.CompressionUtils;
-import io.druid.java.util.common.Pair;
-import io.druid.java.util.common.guava.Accumulator;
 import io.druid.java.util.common.logger.Logger;
 import io.druid.query.ResultWriter;
 import io.druid.query.TabularFormat;
@@ -38,7 +38,6 @@ import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 
 import java.io.BufferedOutputStream;
-import java.io.Closeable;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -130,7 +129,7 @@ public class LocalDataSegmentPusher implements DataSegmentPusher, ResultWriter
   }
 
   @Override
-  public void write(URI location, final TabularFormat result, final Map<String, String> context)
+  public Map<String, Object> write(URI location, final TabularFormat result, final Map<String, String> context)
       throws IOException
   {
     File targetDirectory = new File(location.getPath());
@@ -147,11 +146,14 @@ public class LocalDataSegmentPusher implements DataSegmentPusher, ResultWriter
     String fileName = context.get("dataFileName");
     File dataFile = new File(targetDirectory, Strings.isNullOrEmpty(fileName) ? "data" : fileName);
 
+    Map<String, Object> info = Maps.newHashMap();
     try (OutputStream output = new BufferedOutputStream(new FileOutputStream(dataFile))) {
-      Pair<Closeable, Accumulator> accumulator = Formatters.toExporter(context, output, jsonMapper);
-      result.getSequence().accumulate(null, accumulator.rhs);
-      accumulator.lhs.close();
+      try (CountingAccumulator accumulator = Formatters.toExporter(context, output, jsonMapper)) {
+        result.getSequence().accumulate(null, accumulator);
+        info.put("numRows", accumulator.count());
+      }
     }
+    info.put(dataFile.toString(), dataFile.length());
 
     Map<String, Object> metaData = result.getMetaData();
     if (metaData != null && !metaData.isEmpty()) {
@@ -159,6 +161,8 @@ public class LocalDataSegmentPusher implements DataSegmentPusher, ResultWriter
       try (OutputStream output = new FileOutputStream(metaFile)) {
         jsonMapper.writeValue(output, metaData);
       }
+      info.put(metaFile.toString(), metaFile.length());
     }
+    return info;
   }
 }

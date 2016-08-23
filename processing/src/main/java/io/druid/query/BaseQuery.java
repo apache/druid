@@ -72,7 +72,7 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
     return query.getContextValue("forwardURL");
   }
 
-  public static <T> Map<String, String> getResultForwardContext(Query<T> query)
+  public static <T> Map<String, Object> getResultForwardContext(Query<T> query)
   {
     return query.getContextValue("forwardContext");
   }
