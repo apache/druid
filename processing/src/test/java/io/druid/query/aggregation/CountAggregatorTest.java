@@ -33,8 +33,6 @@ public class CountAggregatorTest
   {
     CountAggregator agg = new CountAggregator("billy");
 
-    Assert.assertEquals("billy", agg.getName());
-
     Assert.assertEquals(0L, agg.get());
     Assert.assertEquals(0L, agg.get());
     Assert.assertEquals(0L, agg.get());

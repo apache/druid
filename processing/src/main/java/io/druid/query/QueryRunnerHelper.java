@@ -55,6 +55,16 @@ public class QueryRunnerHelper
     return aggregators;
   }
 
+  public static String[] makeAggregatorNames(List<AggregatorFactory> aggregatorSpecs)
+  {
+    String[] aggregators = new String[aggregatorSpecs.size()];
+    int aggregatorIndex = 0;
+    for (AggregatorFactory spec : aggregatorSpecs) {
+      aggregators[aggregatorIndex++] = spec.getName();
+    }
+    return aggregators;
+  }
+
   public static <T> Sequence<Result<T>> makeCursorBasedQuery(
       final StorageAdapter adapter,
       List<Interval> queryIntervals,

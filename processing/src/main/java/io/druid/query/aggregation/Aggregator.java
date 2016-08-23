@@ -37,6 +37,7 @@ public interface Aggregator {
   void reset();
   Object get();
   float getFloat();
+  @Deprecated
   String getName();
   void close();
 
