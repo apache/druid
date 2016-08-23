@@ -53,11 +53,6 @@ public class Aggregators
         return 0;
       }
 
-      public String getName()
-      {
-        return null;
-      }
-
       @Override
       public void close()
       {

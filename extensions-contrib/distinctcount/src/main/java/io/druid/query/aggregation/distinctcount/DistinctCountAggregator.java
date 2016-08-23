@@ -26,17 +26,14 @@ import io.druid.segment.DimensionSelector;
 public class DistinctCountAggregator implements Aggregator
 {
 
-  private final String name;
   private final DimensionSelector selector;
   private final MutableBitmap mutableBitmap;
 
   public DistinctCountAggregator(
-      String name,
       DimensionSelector selector,
       MutableBitmap mutableBitmap
   )
   {
-    this.name = name;
     this.selector = selector;
     this.mutableBitmap = mutableBitmap;
   }
@@ -65,12 +62,6 @@ public class DistinctCountAggregator implements Aggregator
   public float getFloat()
   {
     return (float) mutableBitmap.size();
-  }
-
-  @Override
-  public String getName()
-  {
-    return name;
   }
 
   @Override

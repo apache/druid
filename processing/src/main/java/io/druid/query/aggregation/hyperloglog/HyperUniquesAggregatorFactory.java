@@ -77,7 +77,7 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
 
     final Class classOfObject = selector.classOfObject();
     if (classOfObject.equals(Object.class) || HyperLogLogCollector.class.isAssignableFrom(classOfObject)) {
-      return new HyperUniquesAggregator(name, selector);
+      return new HyperUniquesAggregator(selector);
     }
 
     throw new IAE(

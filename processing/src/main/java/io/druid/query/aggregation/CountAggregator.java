@@ -33,12 +33,6 @@ public class CountAggregator implements Aggregator
   }
 
   long count = 0;
-  private final String name;
-
-  public CountAggregator(String name)
-  {
-    this.name = name;
-  }
 
   @Override
   public void aggregate()
@@ -71,15 +65,9 @@ public class CountAggregator implements Aggregator
   }
 
   @Override
-  public String getName()
-  {
-    return this.name;
-  }
-
-  @Override
   public Aggregator clone()
   {
-    return new CountAggregator(name);
+    return new CountAggregator();
   }
 
   @Override

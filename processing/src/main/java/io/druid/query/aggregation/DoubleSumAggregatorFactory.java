@@ -57,7 +57,6 @@ public class DoubleSumAggregatorFactory extends AggregatorFactory
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
     return new DoubleSumAggregator(
-        name,
         metricFactory.makeFloatColumnSelector(fieldName)
     );
   }

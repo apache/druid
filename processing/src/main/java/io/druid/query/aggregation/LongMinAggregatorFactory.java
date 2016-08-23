@@ -56,7 +56,7 @@ public class LongMinAggregatorFactory extends AggregatorFactory
   @Override
   public Aggregator factorize(ColumnSelectorFactory metricFactory)
   {
-    return new LongMinAggregator(name, metricFactory.makeLongColumnSelector(fieldName));
+    return new LongMinAggregator(metricFactory.makeLongColumnSelector(fieldName));
   }
 
   @Override

@@ -96,7 +96,6 @@ public class JavaScriptAggregatorFactory extends AggregatorFactory
   public Aggregator factorize(final ColumnSelectorFactory columnFactory)
   {
     return new JavaScriptAggregator(
-        name,
         Lists.transform(
             fieldNames,
             new com.google.common.base.Function<String, ObjectColumnSelector>()
