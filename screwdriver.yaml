@@ -76,7 +76,7 @@ shared:
       command: sh druid_package/screwdriver/check_version.sh "`cat druid.version`" druid_package/ydruid_package/target/dependency
     clone_ci_tests_pkg:
       description: clone ci_tests package
-      command: git clone --branch 0_9 git@git.corp.yahoo.com:greyhawk/ci_tests.git
+      command: git clone --branch 0_9_x_to_master git@git.corp.yahoo.com:greyhawk/ci_tests.git
     ci_tests_code_build:
       description: build ci tests and copy its dependencies
       command: mvn -B -f ci_tests/pom.xml -Ddruid.version="`cat druid.version`" install dependency:copy-dependencies
