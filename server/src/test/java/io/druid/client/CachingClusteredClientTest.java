@@ -22,7 +22,6 @@ package io.druid.client;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.dataformat.smile.SmileFactory;
-import com.google.api.client.util.Sets;
 import com.google.common.base.Charsets;
 import com.google.common.base.Function;
 import com.google.common.base.Supplier;
@@ -34,6 +33,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.ForwardingListeningExecutorService;
@@ -2440,7 +2440,10 @@ public class CachingClusteredClientTest
         values.add(new EventHolder(null, 0, (Map) objects[index++]));
       }
 
-      retVal.add(new Result<>(timestamp, new SelectResultValue(null, Sets.<String>newHashSet(), Sets.<String>newHashSet(), values)));
+      retVal.add(new Result<>(
+          timestamp,
+          new SelectResultValue(null, Sets.<String>newHashSet(), Sets.<String>newHashSet(), values)
+      ));
     }
     return retVal;
   }

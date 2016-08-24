@@ -518,6 +518,8 @@ public class SelectQueryRunnerTest
     PagingOffset offset = query.getPagingOffset(QueryRunnerTestHelper.segmentId);
     List<Result<SelectResultValue>> expectedResults = toExpected(
         events,
+        Lists.newArrayList(QueryRunnerTestHelper.qualityDimension),
+        Lists.<String>newArrayList(QueryRunnerTestHelper.indexMetric),
         offset.startOffset(),
         offset.threshold()
     );
