@@ -27,12 +27,11 @@ import com.google.common.base.Function;
 public interface CacheStrategy<T, CacheType, QueryType extends Query<T>>
 {
   /**
-   * Computes the cache key for the given query
+   * Computes the cache key for the associated query
    *
-   * @param query the query to compute a cache key for
    * @return the cache key
    */
-  byte[] computeCacheKey(QueryType query);
+  byte[] computeCacheKey();
 
   /**
    * Returns the class type of what is used in the cache

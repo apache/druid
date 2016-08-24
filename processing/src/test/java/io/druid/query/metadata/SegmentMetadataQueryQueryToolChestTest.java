@@ -64,7 +64,7 @@ public class SegmentMetadataQueryQueryToolChestTest
 
     // Test cache key generation
     byte[] expectedKey = {0x04, 0x01, (byte) 0xFF, 0x00, 0x01, 0x02, 0x04};
-    byte[] actualKey = strategy.computeCacheKey(query);
+    byte[] actualKey = strategy.computeCacheKey();
     Assert.assertArrayEquals(expectedKey, actualKey);
 
     SegmentAnalysis result = new SegmentAnalysis(

@@ -304,7 +304,7 @@ public class TopNQueryQueryToolChest extends QueryToolChest<Result<TopNResultVal
       );
 
       @Override
-      public byte[] computeCacheKey(TopNQuery query)
+      public byte[] computeCacheKey()
       {
         final byte[] dimensionSpecBytes = query.getDimensionSpec().getCacheKey();
         final byte[] metricSpecBytes = query.getTopNMetricSpec().getCacheKey();

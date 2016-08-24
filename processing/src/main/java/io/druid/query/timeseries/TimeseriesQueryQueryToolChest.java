@@ -131,7 +131,7 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
       private final List<AggregatorFactory> aggs = query.getAggregatorSpecs();
 
       @Override
-      public byte[] computeCacheKey(TimeseriesQuery query)
+      public byte[] computeCacheKey()
       {
         final DimFilter dimFilter = query.getDimensionsFilter();
         final byte[] filterBytes = dimFilter == null ? new byte[]{} : dimFilter.getCacheKey();

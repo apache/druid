@@ -253,7 +253,7 @@ public class CachingClusteredClient<T> implements QueryRunner<T>
     if ((populateCache || useCache) // implies strategy != null
         && !isBySegment) // explicit bySegment queries are never cached
     {
-      queryCacheKey = strategy.computeCacheKey(query);
+      queryCacheKey = strategy.computeCacheKey();
     } else {
       queryCacheKey = null;
     }
