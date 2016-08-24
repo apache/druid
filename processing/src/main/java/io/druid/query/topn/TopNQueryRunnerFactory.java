@@ -22,6 +22,7 @@ package io.druid.query.topn;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
+import io.druid.cache.Cache;
 import io.druid.collections.StupidPool;
 import io.druid.guice.annotations.Global;
 import io.druid.query.ChainedExecutionQueryRunner;
@@ -45,6 +46,9 @@ public class TopNQueryRunnerFactory implements QueryRunnerFactory<Result<TopNRes
   private final TopNQueryQueryToolChest toolchest;
   private final QueryWatcher queryWatcher;
 
+  @Inject(optional = true)
+  private Cache cache;
+
   @Inject
   public TopNQueryRunnerFactory(
       @Global StupidPool<ByteBuffer> computationBufferPool,
@@ -52,9 +56,20 @@ public class TopNQueryRunnerFactory implements QueryRunnerFactory<Result<TopNRes
       QueryWatcher queryWatcher
   )
   {
+    this(computationBufferPool, toolchest, queryWatcher, null);
+  }
+
+  public TopNQueryRunnerFactory(
+      @Global StupidPool<ByteBuffer> computationBufferPool,
+      TopNQueryQueryToolChest toolchest,
+      QueryWatcher queryWatcher,
+      Cache cache
+  )
+  {
     this.computationBufferPool = computationBufferPool;
     this.toolchest = toolchest;
     this.queryWatcher = queryWatcher;
+    this.cache = cache;
   }
 
   @Override
@@ -73,7 +88,7 @@ public class TopNQueryRunnerFactory implements QueryRunnerFactory<Result<TopNRes
           throw new ISE("Got a [%s] which isn't a %s", input.getClass(), TopNQuery.class);
         }
 
-        return queryEngine.query((TopNQuery) input, segment.asStorageAdapter());
+        return queryEngine.query((TopNQuery) input, segment.asStorageAdapter(), cache);
       }
     };
 

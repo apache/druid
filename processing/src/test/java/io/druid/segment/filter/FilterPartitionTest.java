@@ -705,7 +705,7 @@ public class FilterPartitionTest extends BaseFilterTest
 
   protected List<String> selectColumnValuesMatchingFilterCNF(final DimFilter dimFilter, final String selectColumn)
   {
-    final Filter filter = Filters.convertToCNF(maybeOptimize(dimFilter).toFilter());
+    final DimFilter filter = Filters.convertToCNF(maybeOptimize(dimFilter));
 
     final Sequence<Cursor> cursors = makeCursorSequence(filter);
     Sequence<List<String>> seq = Sequences.map(

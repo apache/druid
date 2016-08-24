@@ -21,6 +21,7 @@ package io.druid.query.groupby.strategy;
 
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.metamx.common.guava.Sequence;
+import io.druid.cache.Cache;
 import io.druid.data.input.Row;
 import io.druid.query.QueryRunner;
 import io.druid.query.groupby.GroupByQuery;
@@ -49,6 +50,7 @@ public interface GroupByStrategy
 
   Sequence<Row> process(
       GroupByQuery query,
-      StorageAdapter storageAdapter
+      StorageAdapter storageAdapter,
+      Cache cache
   );
 }

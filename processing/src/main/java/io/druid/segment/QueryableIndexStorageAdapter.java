@@ -29,17 +29,18 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.metamx.collections.bitmap.ImmutableBitmap;
-import com.metamx.common.IAE;
-import com.metamx.common.UOE;
 import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
+import io.druid.cache.Cache;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.filter.AndDimFilter;
 import io.druid.query.filter.BooleanFilter;
+import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
@@ -56,7 +57,6 @@ import io.druid.segment.column.ValueType;
 import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.Offset;
-import io.druid.segment.filter.AndFilter;
 import io.druid.segment.filter.BooleanValueMatcher;
 import io.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
@@ -65,6 +65,7 @@ import org.roaringbitmap.IntIterator;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -77,18 +78,23 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   private static final NullDimensionSelector NULL_DIMENSION_SELECTOR = new NullDimensionSelector();
 
   private final QueryableIndex index;
+  private final String segmentId;
 
-  public QueryableIndexStorageAdapter(
-      QueryableIndex index
-  )
+  public QueryableIndexStorageAdapter(QueryableIndex index, String segmentId)
   {
     this.index = index;
+    this.segmentId = segmentId;
+  }
+
+  public QueryableIndexStorageAdapter(QueryableIndex index)
+  {
+    this(index, null);
   }
 
   @Override
   public String getSegmentIdentifier()
   {
-    throw new UnsupportedOperationException();
+    return segmentId;
   }
 
   @Override
@@ -214,7 +220,13 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
   }
 
   @Override
-  public Sequence<Cursor> makeCursors(Filter filter, Interval interval, QueryGranularity gran, boolean descending)
+  public Sequence<Cursor> makeCursors(
+      DimFilter filter,
+      Interval interval,
+      QueryGranularity gran,
+      Cache cache,
+      boolean descending
+  )
   {
     Interval actualInterval = interval;
 
@@ -257,24 +269,24 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
      * Any subfilters that cannot be processed entirely with bitmap indexes will be moved to the post-filtering stage.
      */
     final Offset offset;
-    final List<Filter> postFilters = new ArrayList<>();
+    final List<DimFilter> postFilters = new ArrayList<>();
     if (filter == null) {
       offset = new NoFilterOffset(0, index.getNumRows(), descending);
     } else {
-      final List<Filter> preFilters = new ArrayList<>();
+      final List<DimFilter> preFilters = new ArrayList<>();
 
-      if (filter instanceof AndFilter) {
+      if (filter instanceof AndDimFilter) {
         // If we get an AndFilter, we can split the subfilters across both filtering stages
-        for (Filter subfilter : ((AndFilter) filter).getFilters()) {
-          if (subfilter.supportsBitmapIndex(selector)) {
-            preFilters.add(subfilter);
+        for (DimFilter child : ((AndDimFilter) filter).getChildren()) {
+          if (child.toFilter().supportsBitmapIndex(selector)) {
+            preFilters.add(child);
           } else {
-            postFilters.add(subfilter);
+            postFilters.add(child);
           }
         }
       } else {
         // If we get an OrFilter or a single filter, handle the filter in one stage
-        if (filter.supportsBitmapIndex(selector)) {
+        if (filter.toFilter().supportsBitmapIndex(selector)) {
           preFilters.add(filter);
         } else {
           postFilters.add(filter);
@@ -284,26 +296,34 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
       if (preFilters.size() == 0) {
         offset = new NoFilterOffset(0, index.getNumRows(), descending);
       } else {
-        List<ImmutableBitmap> bitmaps = Lists.newArrayList();
-        for (Filter prefilter : preFilters) {
-          bitmaps.add(prefilter.getBitmapIndex(selector));
+        Cache.NamedKey key = null;
+        ImmutableBitmap bitmapIndex = null;
+        if (cache != null && segmentId != null) {
+          key = new Cache.NamedKey(segmentId, Filters.bind(preFilters).getCacheKey());
+          byte[] cached = cache.get(key);
+          if (cached != null) {
+            bitmapIndex = selector.getBitmapFactory().mapImmutableBitmap(ByteBuffer.wrap(cached));
+          }
+        }
+        if (bitmapIndex == null) {
+          List<ImmutableBitmap> bitmaps = Lists.newArrayList();
+          for (DimFilter prefilter : preFilters) {
+            bitmaps.add(prefilter.toFilter().getBitmapIndex(selector));
+          }
+          bitmapIndex = selector.getBitmapFactory().intersection(bitmaps);
+          if (key != null) {
+            cache.put(key, bitmapIndex.toBytes());
+          }
         }
         offset = new BitmapOffset(
             selector.getBitmapFactory(),
-            selector.getBitmapFactory().intersection(bitmaps),
+            bitmapIndex,
             descending
         );
       }
     }
 
-    final Filter postFilter;
-    if (postFilters.size() == 0) {
-      postFilter = null;
-    } else if (postFilters.size() == 1) {
-      postFilter = postFilters.get(0);
-    } else {
-      postFilter = new AndFilter(postFilters);
-    }
+    final DimFilter postFilter = Filters.bind(postFilters);
 
     return Sequences.filter(
         new CursorSequenceBuilder(
@@ -314,7 +334,7 @@ public class QueryableIndexStorageAdapter implements StorageAdapter
             minDataTimestamp,
             maxDataTimestamp,
             descending,
-            postFilter,
+            postFilter == null ? null : postFilter.toFilter(),
             selector
         ).build(),
         Predicates.<Cursor>notNull()

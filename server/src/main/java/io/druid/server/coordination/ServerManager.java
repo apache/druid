@@ -31,7 +31,7 @@ import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.client.CachingQueryRunner;
-import io.druid.client.cache.Cache;
+import io.druid.cache.Cache;
 import io.druid.client.cache.CacheConfig;
 import io.druid.collections.CountingMap;
 import io.druid.guice.annotations.BackgroundCaching;

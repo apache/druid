@@ -23,7 +23,7 @@ import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
-import io.druid.client.cache.Cache;
+import io.druid.cache.Cache;
 import io.druid.client.cache.CacheProvider;
 import io.druid.guice.annotations.Global;
 

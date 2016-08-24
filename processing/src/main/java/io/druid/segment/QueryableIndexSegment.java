@@ -57,7 +57,7 @@ public class QueryableIndexSegment extends AbstractSegment
   @Override
   public StorageAdapter asStorageAdapter()
   {
-    return new QueryableIndexStorageAdapter(index);
+    return new QueryableIndexStorageAdapter(index, identifier);
   }
 
   @Override

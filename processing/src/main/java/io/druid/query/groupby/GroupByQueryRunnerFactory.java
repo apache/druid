@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
+import io.druid.cache.Cache;
 import io.druid.data.input.Row;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -43,20 +44,33 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
   private final GroupByStrategySelector strategySelector;
   private final GroupByQueryQueryToolChest toolChest;
 
+  @Inject(optional = true)
+  private Cache cache;
+
   @Inject
   public GroupByQueryRunnerFactory(
       GroupByStrategySelector strategySelector,
       GroupByQueryQueryToolChest toolChest
   )
   {
+    this(strategySelector, toolChest, null);
+  }
+
+  public GroupByQueryRunnerFactory(
+      GroupByStrategySelector strategySelector,
+      GroupByQueryQueryToolChest toolChest,
+      Cache cache
+  )
+  {
     this.strategySelector = strategySelector;
     this.toolChest = toolChest;
+    this.cache = cache;
   }
 
   @Override
   public QueryRunner<Row> createRunner(final Segment segment)
   {
-    return new GroupByQueryRunner(segment, strategySelector);
+    return new GroupByQueryRunner(segment, strategySelector, cache);
   }
 
   @Override
@@ -88,11 +102,13 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
   {
     private final StorageAdapter adapter;
     private final GroupByStrategySelector strategySelector;
+    private final Cache cache;
 
-    public GroupByQueryRunner(Segment segment, final GroupByStrategySelector strategySelector)
+    public GroupByQueryRunner(Segment segment, GroupByStrategySelector strategySelector, Cache cache)
     {
       this.adapter = segment.asStorageAdapter();
       this.strategySelector = strategySelector;
+      this.cache = cache;
     }
 
     @Override
@@ -102,7 +118,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
         throw new ISE("Got a [%s] which isn't a %s", input.getClass(), GroupByQuery.class);
       }
 
-      return strategySelector.strategize((GroupByQuery) input).process((GroupByQuery) input, adapter);
+      return strategySelector.strategize((GroupByQuery) input).process((GroupByQuery) input, adapter, cache);
     }
   }
 }

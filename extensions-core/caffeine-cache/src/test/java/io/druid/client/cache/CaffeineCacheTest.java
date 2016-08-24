@@ -27,6 +27,8 @@ import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
 import com.metamx.common.lifecycle.Lifecycle;
+import io.druid.cache.Cache;
+import io.druid.cache.CacheStats;
 import io.druid.guice.GuiceInjectors;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.JsonConfigurator;

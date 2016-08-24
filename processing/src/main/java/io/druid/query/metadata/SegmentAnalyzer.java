@@ -248,7 +248,7 @@ public class SegmentAnalyzer
       final long end = storageAdapter.getMaxTime().getMillis();
 
       final Sequence<Cursor> cursors =
-          storageAdapter.makeCursors(null, new Interval(start, end), QueryGranularities.ALL, false);
+          storageAdapter.makeCursors(null, new Interval(start, end), QueryGranularities.ALL, null, false);
 
       size = cursors.accumulate(
           0L,

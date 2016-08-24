@@ -21,11 +21,12 @@ package io.druid.query.timeseries;
 
 import com.google.common.base.Function;
 import com.metamx.common.guava.Sequence;
+import io.druid.cache.Cache;
 import io.druid.query.QueryRunnerHelper;
 import io.druid.query.Result;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.filter.Filter;
+import io.druid.query.filter.DimFilter;
 import io.druid.segment.Cursor;
 import io.druid.segment.SegmentMissingException;
 import io.druid.segment.StorageAdapter;
@@ -39,18 +40,28 @@ public class TimeseriesQueryEngine
 {
   public Sequence<Result<TimeseriesResultValue>> process(final TimeseriesQuery query, final StorageAdapter adapter)
   {
+    return process(query, adapter, null);
+  }
+
+  public Sequence<Result<TimeseriesResultValue>> process(
+      final TimeseriesQuery query,
+      final StorageAdapter adapter,
+      final Cache cache
+  )
+  {
     if (adapter == null) {
       throw new SegmentMissingException(
           "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
       );
     }
 
-    final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getDimensionsFilter()));
+    final DimFilter filter = Filters.convertToCNFFromQueryContext(query, query.getDimensionsFilter());
 
     return QueryRunnerHelper.makeCursorBasedQuery(
         adapter,
         query.getQuerySegmentSpec().getIntervals(),
         filter,
+        cache,
         query.isDescending(),
         query.getGranularity(),
         new Function<Cursor, Result<TimeseriesResultValue>>()

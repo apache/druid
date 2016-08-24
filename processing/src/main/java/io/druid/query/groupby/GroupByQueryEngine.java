@@ -35,17 +35,17 @@ import com.metamx.common.guava.FunctionalIterator;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.parsers.CloseableIterator;
+import io.druid.cache.Cache;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.guice.annotations.Global;
-import io.druid.query.Query;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DimensionSpec;
-import io.druid.query.filter.Filter;
+import io.druid.query.filter.DimFilter;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.StorageAdapter;
@@ -85,6 +85,11 @@ public class GroupByQueryEngine
 
   public Sequence<Row> process(final GroupByQuery query, final StorageAdapter storageAdapter)
   {
+    return process(query, storageAdapter, null);
+  }
+
+  public Sequence<Row> process(final GroupByQuery query, final StorageAdapter storageAdapter, final Cache cache)
+  {
     if (storageAdapter == null) {
       throw new ISE(
           "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
@@ -96,12 +101,13 @@ public class GroupByQueryEngine
       throw new IAE("Should only have one interval, got[%s]", intervals);
     }
 
-    Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getDimFilter()));
+    DimFilter filter = Filters.convertToCNFFromQueryContext(query, query.getDimFilter());
 
     final Sequence<Cursor> cursors = storageAdapter.makeCursors(
         filter,
         intervals.get(0),
         query.getGranularity(),
+        cache,
         false
     );
 

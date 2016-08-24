@@ -25,6 +25,7 @@ import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.RangeSet;
+import io.druid.math.expr.Expression.NotExpression;
 import io.druid.query.Druids;
 import io.druid.segment.filter.NotFilter;
 
@@ -33,7 +34,7 @@ import java.util.List;
 
 /**
  */
-public class NotDimFilter implements DimFilter
+public class NotDimFilter implements DimFilter, NotExpression
 {
   private static final Function<DimFilter, DimFilter> NEGATE =
       new Function<DimFilter, DimFilter>() {
@@ -104,6 +105,12 @@ public class NotDimFilter implements DimFilter
     }
     RangeSet<String> rangeSet = field.getDimensionRangeSet(dimension);
     return rangeSet == null ? null : rangeSet.complement();
+  }
+
+  @Override
+  public DimFilter getChild()
+  {
+    return field;
   }
 
   @Override

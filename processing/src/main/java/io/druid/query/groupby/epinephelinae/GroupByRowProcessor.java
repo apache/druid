@@ -36,9 +36,9 @@ import io.druid.query.Query;
 import io.druid.query.QueryContextKeys;
 import io.druid.query.QueryInterruptedException;
 import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.query.filter.DimFilter;
 import io.druid.query.filter.DruidLongPredicate;
 import io.druid.query.filter.DruidPredicateFactory;
-import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 import io.druid.query.groupby.GroupByQuery;
@@ -84,14 +84,11 @@ public class GroupByRowProcessor
     final Number queryTimeout = query.getContextValue(QueryContextKeys.TIMEOUT, null);
     final long timeout = queryTimeout == null ? JodaUtils.MAX_INSTANT : queryTimeout.longValue();
     final List<Interval> queryIntervals = query.getIntervals();
-    final Filter filter = Filters.convertToCNFFromQueryContext(
-        query,
-        Filters.toFilter(query.getDimFilter())
-    );
+    final DimFilter filter = Filters.convertToCNFFromQueryContext(query, query.getDimFilter());
     final RowBasedValueMatcherFactory filterMatcherFactory = new RowBasedValueMatcherFactory();
     final ValueMatcher filterMatcher = filter == null
                                        ? new BooleanValueMatcher(true)
-                                       : filter.makeMatcher(filterMatcherFactory);
+                                       : filter.toFilter().makeMatcher(filterMatcherFactory);
 
     final FilteredSequence<Row> filteredSequence = new FilteredSequence<>(
         rows,

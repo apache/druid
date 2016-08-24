@@ -23,6 +23,8 @@ import com.google.inject.Inject;
 import com.metamx.emitter.service.ServiceEmitter;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import com.metamx.metrics.AbstractMonitor;
+import io.druid.cache.Cache;
+import io.druid.cache.CacheStats;
 
 public class CacheMonitor extends AbstractMonitor
 {

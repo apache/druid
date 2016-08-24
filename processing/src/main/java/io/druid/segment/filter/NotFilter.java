@@ -20,15 +20,15 @@
 package io.druid.segment.filter;
 
 import com.metamx.collections.bitmap.ImmutableBitmap;
+import io.druid.math.expr.Expression.NotExpression;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
-import io.druid.query.filter.RowOffsetMatcherFactory;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
 
 /**
  */
-public class NotFilter implements Filter
+public class NotFilter implements Filter, NotExpression
 {
   private final Filter baseFilter;
 
@@ -70,6 +70,12 @@ public class NotFilter implements Filter
   }
 
   public Filter getBaseFilter()
+  {
+    return baseFilter;
+  }
+
+  @Override
+  public Filter getChild()
   {
     return baseFilter;
   }

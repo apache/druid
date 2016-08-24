@@ -20,6 +20,7 @@
 package io.druid.client.cache;
 
 import com.google.common.primitives.Ints;
+import io.druid.cache.Cache;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;

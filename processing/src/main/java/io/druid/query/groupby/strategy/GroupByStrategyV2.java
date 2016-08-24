@@ -31,6 +31,7 @@ import com.google.inject.Inject;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.guava.nary.BinaryFn;
+import io.druid.cache.Cache;
 import io.druid.collections.BlockingPool;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedRow;
@@ -235,9 +236,10 @@ public class GroupByStrategyV2 implements GroupByStrategy
   @Override
   public Sequence<Row> process(
       GroupByQuery query,
-      StorageAdapter storageAdapter
+      StorageAdapter storageAdapter,
+      Cache cache
   )
   {
-    return GroupByQueryEngineV2.process(query, storageAdapter, bufferPool, configSupplier.get());
+    return GroupByQueryEngineV2.process(query, storageAdapter, bufferPool, configSupplier.get(), cache);
   }
 }

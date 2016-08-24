@@ -33,6 +33,7 @@ import com.metamx.common.IAE;
 import com.metamx.common.guava.ResourceClosingSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
+import io.druid.cache.Cache;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.Row;
 import io.druid.guice.annotations.Global;
@@ -191,7 +192,8 @@ public class GroupByStrategyV1 implements GroupByStrategy
                         outerQuery.withQuerySegmentSpec(
                             new MultipleIntervalSegmentSpec(ImmutableList.of(interval))
                         ),
-                        new IncrementalIndexStorageAdapter(innerQueryResultIndex)
+                        new IncrementalIndexStorageAdapter(innerQueryResultIndex),
+                        null
                     );
                   }
                 }
@@ -224,9 +226,10 @@ public class GroupByStrategyV1 implements GroupByStrategy
   @Override
   public Sequence<Row> process(
       final GroupByQuery query,
-      final StorageAdapter storageAdapter
+      final StorageAdapter storageAdapter,
+      final Cache cache
   )
   {
-    return engine.process(query, storageAdapter);
+    return engine.process(query, storageAdapter, cache);
   }
 }

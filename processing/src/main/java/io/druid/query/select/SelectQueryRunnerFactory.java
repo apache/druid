@@ -22,6 +22,7 @@ package io.druid.query.select;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
+import io.druid.cache.Cache;
 import io.druid.query.ChainedExecutionQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
@@ -43,22 +44,34 @@ public class SelectQueryRunnerFactory
   private final SelectQueryEngine engine;
   private final QueryWatcher queryWatcher;
 
+  @Inject(optional = true)
+  private Cache cache;
+
   @Inject
   public SelectQueryRunnerFactory(
       SelectQueryQueryToolChest toolChest,
       SelectQueryEngine engine,
-      QueryWatcher queryWatcher
+      QueryWatcher queryWatcher) {
+    this(toolChest, engine, queryWatcher, null);
+  }
+
+  public SelectQueryRunnerFactory(
+      SelectQueryQueryToolChest toolChest,
+      SelectQueryEngine engine,
+      QueryWatcher queryWatcher,
+      Cache cache
   )
   {
     this.toolChest = toolChest;
     this.engine = engine;
     this.queryWatcher = queryWatcher;
+    this.cache = cache;
   }
 
   @Override
   public QueryRunner<Result<SelectResultValue>> createRunner(final Segment segment)
   {
-    return new SelectQueryRunner(engine, segment);
+    return new SelectQueryRunner(engine, segment, cache);
   }
 
   @Override
@@ -81,11 +94,13 @@ public class SelectQueryRunnerFactory
   {
     private final SelectQueryEngine engine;
     private final Segment segment;
+    private final Cache cache;
 
-    private SelectQueryRunner(SelectQueryEngine engine, Segment segment)
+    private SelectQueryRunner(SelectQueryEngine engine, Segment segment, Cache cache)
     {
       this.engine = engine;
       this.segment = segment;
+      this.cache = cache;
     }
 
     @Override
@@ -98,7 +113,7 @@ public class SelectQueryRunnerFactory
         throw new ISE("Got a [%s] which isn't a %s", input.getClass(), SelectQuery.class);
       }
 
-      return engine.process((SelectQuery) input, segment);
+      return engine.process((SelectQuery) input, segment, cache);
     }
   }
 }

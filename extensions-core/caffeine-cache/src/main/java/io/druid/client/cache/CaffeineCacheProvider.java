@@ -20,6 +20,7 @@
 package io.druid.client.cache;
 
 import com.fasterxml.jackson.annotation.JsonTypeName;
+import io.druid.cache.Cache;
 
 @JsonTypeName("caffeine")
 public class CaffeineCacheProvider extends CaffeineCacheConfig implements CacheProvider

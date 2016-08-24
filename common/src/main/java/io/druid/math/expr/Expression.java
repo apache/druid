@@ -17,19 +17,35 @@
  * under the License.
  */
 
-package io.druid.client.cache;
+package io.druid.math.expr;
 
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.google.inject.Provider;
-import io.druid.cache.Cache;
+import java.util.List;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = LocalCacheProvider.class)
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "local", value = LocalCacheProvider.class),
-    @JsonSubTypes.Type(name = "memcached", value = MemcachedCacheProvider.class),
-    @JsonSubTypes.Type(name = "hybrid", value = HybridCacheProvider.class)
-})
-public interface CacheProvider extends Provider<Cache>
+/**
+ */
+public interface Expression
 {
+  interface BooleanExpression extends Expression
+  {
+    <T extends Expression> List<T> getChildren();
+  }
+
+  interface NotExpression extends Expression
+  {
+    <T extends Expression> T getChild();
+  }
+
+  interface AndExpression extends BooleanExpression
+  {
+  }
+
+  interface OrExpression extends BooleanExpression
+  {
+  }
+
+  interface Factory<T extends Expression> {
+    T or(List<T> children);
+    T and(List<T> children);
+    T not(T expression);
+  }
 }

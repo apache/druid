@@ -22,6 +22,7 @@ package io.druid.segment.filter;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.metamx.collections.bitmap.ImmutableBitmap;
+import io.druid.math.expr.Expression.OrExpression;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BooleanFilter;
 import io.druid.query.filter.Filter;
@@ -34,7 +35,7 @@ import java.util.List;
 
 /**
  */
-public class OrFilter implements BooleanFilter
+public class OrFilter implements BooleanFilter, OrExpression
 {
   private static final Joiner OR_JOINER = Joiner.on(" || ");
 
@@ -158,5 +159,11 @@ public class OrFilter implements BooleanFilter
   public String toString()
   {
     return String.format("(%s)", OR_JOINER.join(filters));
+  }
+
+  @Override
+  public List<Filter> getChildren()
+  {
+    return filters;
   }
 }

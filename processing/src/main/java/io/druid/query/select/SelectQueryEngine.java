@@ -26,21 +26,22 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
+import io.druid.cache.Cache;
 import io.druid.query.QueryRunnerHelper;
 import io.druid.query.Result;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
-import io.druid.query.filter.Filter;
+import io.druid.query.filter.DimFilter;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.Segment;
-import io.druid.timeline.DataSegmentUtils;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.Column;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
+import io.druid.timeline.DataSegmentUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -51,7 +52,7 @@ import java.util.Map;
  */
 public class SelectQueryEngine
 {
-  public Sequence<Result<SelectResultValue>> process(final SelectQuery query, final Segment segment)
+  public Sequence<Result<SelectResultValue>> process(final SelectQuery query, final Segment segment, final Cache cache)
   {
     final StorageAdapter adapter = segment.asStorageAdapter();
 
@@ -83,12 +84,13 @@ public class SelectQueryEngine
     // should be rewritten with given interval
     final String segmentId = DataSegmentUtils.withInterval(dataSource, segment.getIdentifier(), intervals.get(0));
 
-    final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getDimensionsFilter()));
+    final DimFilter filter = Filters.convertToCNFFromQueryContext(query, query.getDimensionsFilter());
 
     return QueryRunnerHelper.makeCursorBasedQuery(
         adapter,
         query.getQuerySegmentSpec().getIntervals(),
         filter,
+        cache,
         query.isDescending(),
         query.getGranularity(),
         new Function<Cursor, Result<SelectResultValue>>()

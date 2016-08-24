@@ -25,12 +25,13 @@ import com.google.common.base.Predicates;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
+import io.druid.cache.Cache;
 import io.druid.collections.StupidPool;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.Result;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.extraction.ExtractionFn;
-import io.druid.query.filter.Filter;
+import io.druid.query.filter.DimFilter;
 import io.druid.segment.Capabilities;
 import io.druid.segment.Cursor;
 import io.druid.segment.SegmentMissingException;
@@ -57,6 +58,11 @@ public class TopNQueryEngine
 
   public Sequence<Result<TopNResultValue>> query(final TopNQuery query, final StorageAdapter adapter)
   {
+    return query(query, adapter, null);
+  }
+
+  public Sequence<Result<TopNResultValue>> query(final TopNQuery query, final StorageAdapter adapter, final Cache cache)
+  {
     if (adapter == null) {
       throw new SegmentMissingException(
           "Null storage adapter found. Probably trying to issue a query against a segment being memory unmapped."
@@ -64,7 +70,7 @@ public class TopNQueryEngine
     }
 
     final List<Interval> queryIntervals = query.getQuerySegmentSpec().getIntervals();
-    final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getDimensionsFilter()));
+    final DimFilter filter = Filters.convertToCNFFromQueryContext(query, query.getDimensionsFilter());
     final QueryGranularity granularity = query.getGranularity();
     final Function<Cursor, Result<TopNResultValue>> mapFn = getMapFn(query, adapter);
 
@@ -74,7 +80,7 @@ public class TopNQueryEngine
 
     return Sequences.filter(
         Sequences.map(
-            adapter.makeCursors(filter, queryIntervals.get(0), granularity, query.isDescending()),
+            adapter.makeCursors(filter, queryIntervals.get(0), granularity, cache, query.isDescending()),
             new Function<Cursor, Result<TopNResultValue>>()
             {
               @Override

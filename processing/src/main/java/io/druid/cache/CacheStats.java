@@ -17,7 +17,7 @@
  * under the License.
  */
 
-package io.druid.client.cache;
+package io.druid.cache;
 
 /**
  */

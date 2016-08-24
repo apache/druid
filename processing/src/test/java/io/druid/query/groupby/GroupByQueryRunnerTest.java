@@ -201,7 +201,8 @@ public class GroupByQueryRunnerTest
     );
     return new GroupByQueryRunnerFactory(
         strategySelector,
-        toolChest
+        toolChest,
+        null
     );
   }
 

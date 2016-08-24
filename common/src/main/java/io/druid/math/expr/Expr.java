@@ -21,12 +21,13 @@ package io.druid.math.expr;
 
 import com.google.common.math.LongMath;
 
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 /**
  */
-public interface Expr
+public interface Expr extends Expression
 {
   Number eval(Map<String, Number> bindings);
 }
@@ -153,7 +154,7 @@ class UnaryMinusExpr implements Expr
   }
 }
 
-class UnaryNotExpr implements Expr
+class UnaryNotExpr implements Expr, Expression.NotExpression
 {
   private final Expr expr;
 
@@ -173,6 +174,12 @@ class UnaryNotExpr implements Expr
   public String toString()
   {
     return "!" + expr.toString();
+  }
+
+  @Override
+  public Expr getChild()
+  {
+    return expr;
   }
 }
 
@@ -453,7 +460,7 @@ class BinNeqExpr extends BinaryOpExprBase
   }
 }
 
-class BinAndExpr extends BinaryOpExprBase
+class BinAndExpr extends BinaryOpExprBase implements Expression.AndExpression
 {
 
   BinAndExpr(String op, Expr left, Expr right)
@@ -484,9 +491,15 @@ class BinAndExpr extends BinaryOpExprBase
       }
     }
   }
+
+  @Override
+  public List<Expr> getChildren()
+  {
+    return Arrays.asList(left, right);
+  }
 }
 
-class BinOrExpr extends BinaryOpExprBase
+class BinOrExpr extends BinaryOpExprBase implements Expression.OrExpression
 {
 
   BinOrExpr(String op, Expr left, Expr right)
@@ -516,5 +529,11 @@ class BinOrExpr extends BinaryOpExprBase
         return rval > 0 ? 1.0d : 0.0d;
       }
     }
+  }
+
+  @Override
+  public List<Expr> getChildren()
+  {
+    return Arrays.asList(left, right);
   }
 }

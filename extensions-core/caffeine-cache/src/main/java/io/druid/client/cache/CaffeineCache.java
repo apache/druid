@@ -41,7 +41,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
-public class CaffeineCache implements io.druid.client.cache.Cache
+public class CaffeineCache implements io.druid.cache.Cache
 {
   private static final Logger log = new Logger(CaffeineCache.class);
   private static final int FIXED_COST = 8; // Minimum cost in "weight" per entry;
@@ -115,14 +115,14 @@ public class CaffeineCache implements io.druid.client.cache.Cache
   }
 
   @Override
-  public io.druid.client.cache.CacheStats getStats()
+  public io.druid.cache.CacheStats getStats()
   {
     final com.github.benmanes.caffeine.cache.stats.CacheStats stats = cache.stats();
     final long size = cache
         .policy().eviction()
         .map(eviction -> eviction.isWeighted() ? eviction.weightedSize() : OptionalLong.empty())
         .orElse(OptionalLong.empty()).orElse(-1);
-    return new io.druid.client.cache.CacheStats(
+    return new io.druid.cache.CacheStats(
         stats.hitCount(),
         stats.missCount(),
         cache.estimatedSize(),

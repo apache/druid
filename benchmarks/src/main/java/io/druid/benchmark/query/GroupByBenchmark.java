@@ -382,7 +382,8 @@ public class GroupByBenchmark
             strategySelector,
             bufferPool,
             QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator()
-        )
+        ),
+        null
     );
   }
 

@@ -22,6 +22,9 @@ package io.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.RangeSet;
+import io.druid.math.expr.Expression;
+
+import java.util.List;
 
 /**
  */
@@ -40,7 +43,7 @@ import com.google.common.collect.RangeSet;
     @JsonSubTypes.Type(name="bound", value=BoundDimFilter.class),
     @JsonSubTypes.Type(name="interval", value=IntervalDimFilter.class)
 })
-public interface DimFilter
+public interface DimFilter extends Expression
 {
   public byte[] getCacheKey();
 
@@ -72,4 +75,25 @@ public interface DimFilter
    * determine for this DimFilter.
    */
   public RangeSet<String> getDimensionRangeSet(String dimension);
+
+  class Factory implements Expression.Factory<DimFilter>
+  {
+    @Override
+    public DimFilter or(List<DimFilter> children)
+    {
+      return new OrDimFilter(children);
+    }
+
+    @Override
+    public DimFilter and(List<DimFilter> children)
+    {
+      return new AndDimFilter(children);
+    }
+
+    @Override
+    public DimFilter not(DimFilter expression)
+    {
+      return new NotDimFilter(expression);
+    }
+  }
 }

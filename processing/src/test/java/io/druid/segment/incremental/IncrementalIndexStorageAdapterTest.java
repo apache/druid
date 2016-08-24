@@ -40,6 +40,7 @@ import io.druid.query.aggregation.JavaScriptAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.filter.DimFilters;
+import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.groupby.GroupByQueryConfig;
 import io.druid.query.groupby.GroupByQueryEngine;
@@ -50,7 +51,6 @@ import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.data.IndexedInts;
-import io.druid.segment.filter.SelectorFilter;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
@@ -261,10 +261,10 @@ public class IncrementalIndexStorageAdapterTest
 
     for (boolean descending : Arrays.asList(false, true)) {
       Sequence<Cursor> cursorSequence = adapter.makeCursors(
-          new SelectorFilter("sally", "bo"),
+          new SelectorDimFilter("sally", "bo", null),
           interval,
           QueryGranularities.NONE,
-          descending
+          null, descending
       );
 
       Cursor cursor = Sequences.toList(Sequences.limit(cursorSequence, 1), Lists.<Cursor>newArrayList()).get(0);
@@ -402,7 +402,7 @@ public class IncrementalIndexStorageAdapterTest
     final StorageAdapter sa = new IncrementalIndexStorageAdapter(index);
 
     Sequence<Cursor> cursors = sa.makeCursors(
-        null, new Interval(timestamp - 60_000, timestamp + 60_000), QueryGranularities.ALL, false
+        null, new Interval(timestamp - 60_000, timestamp + 60_000), QueryGranularities.ALL, null, false
     );
 
     Sequences.toList(

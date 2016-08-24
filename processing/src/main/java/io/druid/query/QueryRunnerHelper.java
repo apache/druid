@@ -26,10 +26,11 @@ import com.metamx.common.guava.ResourceClosingSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
+import io.druid.cache.Cache;
 import io.druid.granularity.QueryGranularity;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
-import io.druid.query.filter.Filter;
+import io.druid.query.filter.DimFilter;
 import io.druid.segment.Cursor;
 import io.druid.segment.StorageAdapter;
 import org.joda.time.Interval;
@@ -58,7 +59,8 @@ public class QueryRunnerHelper
   public static <T> Sequence<Result<T>> makeCursorBasedQuery(
       final StorageAdapter adapter,
       List<Interval> queryIntervals,
-      Filter filter,
+      DimFilter filter,
+      Cache cache,
       boolean descending,
       QueryGranularity granularity,
       final Function<Cursor, Result<T>> mapFn
@@ -70,7 +72,7 @@ public class QueryRunnerHelper
 
     return Sequences.filter(
         Sequences.map(
-            adapter.makeCursors(filter, queryIntervals.get(0), granularity, descending),
+            adapter.makeCursors(filter, queryIntervals.get(0), granularity, cache, descending),
             new Function<Cursor, Result<T>>()
             {
               @Override

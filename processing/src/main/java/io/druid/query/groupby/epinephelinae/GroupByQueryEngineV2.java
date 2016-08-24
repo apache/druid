@@ -30,6 +30,7 @@ import com.metamx.common.guava.CloseQuietly;
 import com.metamx.common.guava.ResourceClosingSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
+import io.druid.cache.Cache;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedRow;
@@ -43,7 +44,6 @@ import io.druid.segment.DimensionSelector;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.data.EmptyIndexedInts;
 import io.druid.segment.data.IndexedInts;
-import io.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 
@@ -66,7 +66,8 @@ public class GroupByQueryEngineV2
       final GroupByQuery query,
       final StorageAdapter storageAdapter,
       final StupidPool<ByteBuffer> intermediateResultsBufferPool,
-      final GroupByQueryConfig config
+      final GroupByQueryConfig config,
+      final Cache cache
   )
   {
     if (storageAdapter == null) {
@@ -81,9 +82,10 @@ public class GroupByQueryEngineV2
     }
 
     final Sequence<Cursor> cursors = storageAdapter.makeCursors(
-        Filters.toFilter(query.getDimFilter()),
+        query.getDimFilter(),
         intervals.get(0),
         query.getGranularity(),
+        cache,
         false
     );
 

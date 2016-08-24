@@ -23,6 +23,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
 import com.metamx.emitter.service.ServiceEmitter;
+import io.druid.cache.Cache;
+import io.druid.cache.CacheStats;
 
 import java.nio.ByteBuffer;
 import java.util.Collections;

@@ -19,6 +19,8 @@
 
 package io.druid.client.cache;
 
+import io.druid.cache.Cache;
+
 public class MemcachedCacheProvider extends MemcachedCacheConfig implements CacheProvider
 {
   @Override

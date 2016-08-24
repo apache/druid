@@ -23,6 +23,7 @@ import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.google.common.base.Preconditions;
 import com.google.inject.name.Named;
+import io.druid.cache.Cache;
 
 public class HybridCacheProvider implements CacheProvider
 {

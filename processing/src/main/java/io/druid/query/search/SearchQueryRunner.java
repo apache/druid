@@ -42,7 +42,7 @@ import io.druid.query.Result;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.extraction.IdentityExtractionFn;
-import io.druid.query.filter.Filter;
+import io.druid.query.filter.DimFilter;
 import io.druid.query.search.search.SearchHit;
 import io.druid.query.search.search.SearchQuery;
 import io.druid.query.search.search.SearchQuerySpec;
@@ -88,7 +88,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     }
 
     final SearchQuery query = (SearchQuery) input;
-    final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getDimensionsFilter()));
+    final DimFilter filter = Filters.convertToCNFFromQueryContext(query, query.getDimensionsFilter());
     final List<DimensionSpec> dimensions = query.getDimensions();
     final SearchQuerySpec searchQuerySpec = query.getQuery();
     final int limit = query.getLimit();
@@ -115,7 +115,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
       final BitmapFactory bitmapFactory = index.getBitmapFactoryForDimensions();
 
       final ImmutableBitmap baseFilter =
-          filter == null ? null : filter.getBitmapIndex(new ColumnSelectorBitmapIndexSelector(bitmapFactory, index));
+          filter == null ? null : filter.toFilter().getBitmapIndex(new ColumnSelectorBitmapIndexSelector(bitmapFactory, index));
 
       ImmutableBitmap timeFilteredBitmap;
       if (!interval.contains(segment.getDataInterval())) {
@@ -193,7 +193,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
       dimsToSearch = dimensions;
     }
 
-    final Sequence<Cursor> cursors = adapter.makeCursors(filter, interval, query.getGranularity(), descending);
+    final Sequence<Cursor> cursors = adapter.makeCursors(filter, interval, query.getGranularity(), null, descending);
 
     final TreeMap<SearchHit, MutableInt> retVal = cursors.accumulate(
         Maps.<SearchHit, SearchHit, MutableInt>newTreeMap(query.getSort().getComparator()),

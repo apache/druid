@@ -28,12 +28,13 @@ import com.google.common.collect.TreeRangeSet;
 import io.druid.query.Druids;
 import io.druid.segment.filter.Filters;
 import io.druid.segment.filter.OrFilter;
+import io.druid.math.expr.Expression.OrExpression;
 
 import java.util.List;
 
 /**
  */
-public class OrDimFilter implements DimFilter
+public class OrDimFilter implements DimFilter, OrExpression
 {
   private static final Joiner OR_JOINER = Joiner.on(" || ");
 
@@ -87,6 +88,12 @@ public class OrDimFilter implements DimFilter
       }
     }
     return retSet;
+  }
+
+  @Override
+  public List<DimFilter> getChildren()
+  {
+    return fields;
   }
 
   @Override

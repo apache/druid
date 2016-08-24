@@ -25,6 +25,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.RangeSet;
 import com.google.common.collect.TreeRangeSet;
+import io.druid.math.expr.Expression.AndExpression;
 import io.druid.query.Druids;
 import io.druid.segment.filter.AndFilter;
 import io.druid.segment.filter.Filters;
@@ -33,7 +34,7 @@ import java.util.List;
 
 /**
  */
-public class AndDimFilter implements DimFilter
+public class AndDimFilter implements DimFilter, AndExpression
 {
   private static final Joiner AND_JOINER = Joiner.on(" && ");
 
@@ -89,6 +90,12 @@ public class AndDimFilter implements DimFilter
       }
     }
     return retSet;
+  }
+
+  @Override
+  public List<DimFilter> getChildren()
+  {
+    return fields;
   }
 
   @Override

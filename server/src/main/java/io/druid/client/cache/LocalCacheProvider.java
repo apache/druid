@@ -20,6 +20,7 @@
 package io.druid.client.cache;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import io.druid.cache.Cache;
 
 import javax.validation.constraints.Min;
 

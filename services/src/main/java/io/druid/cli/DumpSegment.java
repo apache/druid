@@ -77,7 +77,6 @@ import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.RoaringBitmapSerdeFactory;
-import io.druid.segment.filter.Filters;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.chrono.ISOChronology;
@@ -248,10 +247,10 @@ public class DumpSegment extends GuiceRunnable
     final DimFilter filter = filterJson != null ? objectMapper.readValue(filterJson, DimFilter.class) : null;
 
     final Sequence<Cursor> cursors = adapter.makeCursors(
-        Filters.toFilter(filter),
+        filter,
         index.getDataInterval().withChronology(ISOChronology.getInstanceUTC()),
         QueryGranularities.ALL,
-        false
+        null, false
     );
 
     withOutputStream(
