@@ -25,6 +25,7 @@ import com.google.common.collect.Maps;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.data.input.MapBasedRow;
+import io.druid.granularity.QueryGranularities;
 import io.druid.granularity.QueryGranularity;
 import io.druid.jackson.AggregatorsModule;
 import io.druid.query.aggregation.AggregationTestHelper;
@@ -130,7 +131,7 @@ public class FinalFieldAccessPostAggregatorTest
         parseSpec,
         metricSpec,
         0,
-        QueryGranularity.NONE,
+        QueryGranularities.NONE,
         50000,
         query
     );
