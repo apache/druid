@@ -19,6 +19,7 @@
 
 package io.druid.benchmark.query;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -30,6 +31,7 @@ import com.metamx.common.logger.Logger;
 import io.druid.benchmark.datagen.BenchmarkDataGenerator;
 import io.druid.benchmark.datagen.BenchmarkSchemaInfo;
 import io.druid.benchmark.datagen.BenchmarkSchemas;
+import io.druid.client.cache.MapCache;
 import io.druid.concurrent.Execs;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.impl.DimensionsSpec;
@@ -50,8 +52,11 @@ import io.druid.query.aggregation.LongMaxAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesSerde;
+import io.druid.query.extraction.LowerExtractionFn;
 import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.InDimFilter;
+import io.druid.query.filter.OrDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.ordering.StringComparators;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
@@ -109,8 +114,17 @@ public class TimeseriesBenchmark
   @Param({"750000"})
   private int rowsPerSegment;
 
-  @Param({"basic.A", "basic.timeFilterNumeric", "basic.timeFilterAlphanumeric", "basic.timeFilterByInterval"})
+  @Param({
+      "basic.A",
+      "basic.timeFilterNumeric",
+      "basic.timeFilterAlphanumeric",
+      "basic.timeFilterByInterval",
+      "basic.dimFilterByInterval"
+  })
   private String schemaAndQuery;
+
+  @Param({"false", "true"})
+  private boolean useFilterCache;
 
   private static final Logger log = new Logger(TimeseriesBenchmark.class);
   private static final int RNG_SEED = 9999;
@@ -145,7 +159,7 @@ public class TimeseriesBenchmark
 
   private static final Map<String, Map<String, TimeseriesQuery>> SCHEMA_QUERY_MAP = new LinkedHashMap<>();
 
-  private void setupQueries()
+  private void setupQueries() throws JsonProcessingException
   {
     // queries for the basic schema
     Map<String, TimeseriesQuery> basicQueries = new LinkedHashMap<>();
@@ -230,6 +244,29 @@ public class TimeseriesBenchmark
       basicQueries.put("timeFilterByInterval", timeFilterQuery);
     }
 
+    {
+      QuerySegmentSpec intervalSpec = new MultipleIntervalSegmentSpec(Arrays.asList(basicSchema.getDataInterval()));
+      List<AggregatorFactory> queryAggs = new ArrayList<>();
+      LongSumAggregatorFactory lsaf = new LongSumAggregatorFactory("sumLongSequential", "sumLongSequential");
+      queryAggs.add(lsaf);
+
+      DimFilter filter = new OrDimFilter(Arrays.<DimFilter>asList(
+          new InDimFilter("dimMultivalEnumerated", Arrays.asList("Foo", "Bar", "Baz"), null),
+          new InDimFilter("dimMultivalEnumerated2", Arrays.asList("apple", "orange"), new LowerExtractionFn(null))));
+
+      TimeseriesQuery timeFilterQuery =
+          Druids.newTimeseriesQueryBuilder()
+                .dataSource("blah")
+                .granularity(QueryGranularities.ALL)
+                .intervals(intervalSpec)
+                .aggregators(queryAggs)
+                .filters(filter)
+                .descending(false)
+                .build();
+
+      basicQueries.put("dimFilterByInterval", timeFilterQuery);
+      System.out.println(JSON_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(timeFilterQuery));
+    }
 
     SCHEMA_QUERY_MAP.put("basic", basicQueries);
   }
@@ -298,7 +335,8 @@ public class TimeseriesBenchmark
             QueryBenchmarkUtil.NoopIntervalChunkingQueryRunnerDecorator()
         ),
         new TimeseriesQueryEngine(),
-        QueryBenchmarkUtil.NOOP_QUERYWATCHER
+        QueryBenchmarkUtil.NOOP_QUERYWATCHER,
+        useFilterCache ? MapCache.create(64 << 10) : null
     );
   }
 
