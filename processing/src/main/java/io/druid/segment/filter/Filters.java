@@ -209,12 +209,12 @@ public class Filters
       return null;
     }
     boolean useCNF = query.getContextBoolean(CTX_KEY_USE_FILTER_CNF, false);
-    return useCNF ? convertToCNF(expression.optimize()) : expression.optimize();
+    return useCNF ? convertToCNF(expression) : expression.optimize();
   }
 
   public static DimFilter convertToCNF(DimFilter current)
   {
-    return Expressions.convertToCNF(current, new DimFilter.Factory());
+    return current == null ? null : Expressions.convertToCNF(current.optimize(), new DimFilter.Factory());
   }
 
   public static Filter convertToCNF(Filter current)

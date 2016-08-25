@@ -24,6 +24,7 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
+import io.druid.cache.BitmapCache;
 import io.druid.cache.Cache;
 import io.druid.data.input.Row;
 import io.druid.query.Query;
@@ -44,6 +45,7 @@ public class GroupByQueryRunnerFactory implements QueryRunnerFactory<Row, GroupB
   private final GroupByStrategySelector strategySelector;
   private final GroupByQueryQueryToolChest toolChest;
 
+  @BitmapCache
   @Inject(optional = true)
   private Cache cache;
 

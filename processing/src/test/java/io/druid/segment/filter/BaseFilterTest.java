@@ -266,7 +266,8 @@ public abstract class BaseFilterTest
         filter,
         new Interval(JodaUtils.MIN_INSTANT, JodaUtils.MAX_INSTANT),
         QueryGranularities.ALL,
-        null, false
+        null,
+        false
     );
 
     return cursors;

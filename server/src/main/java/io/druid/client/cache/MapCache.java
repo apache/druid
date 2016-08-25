@@ -22,6 +22,7 @@ package io.druid.client.cache;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.primitives.Ints;
+import com.metamx.common.logger.Logger;
 import com.metamx.emitter.service.ServiceEmitter;
 import io.druid.cache.Cache;
 import io.druid.cache.CacheStats;
@@ -38,6 +39,8 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class MapCache implements Cache
 {
+  private static final Logger log = new Logger(MapCache.class);
+
   public static Cache create(long sizeInBytes)
   {
     return new MapCache(new ByteCountingLRUMap(sizeInBytes));
@@ -58,6 +61,7 @@ public class MapCache implements Cache
       ByteCountingLRUMap byteCountingLRUMap
   )
   {
+    log.info("Creating local cache with size " + byteCountingLRUMap.getSizeInBytes());
     this.byteCountingLRUMap = byteCountingLRUMap;
     this.baseMap = Collections.synchronizedMap(byteCountingLRUMap);
 

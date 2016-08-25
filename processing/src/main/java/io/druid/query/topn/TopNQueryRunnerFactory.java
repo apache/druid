@@ -22,6 +22,7 @@ package io.druid.query.topn;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
+import io.druid.cache.BitmapCache;
 import io.druid.cache.Cache;
 import io.druid.collections.StupidPool;
 import io.druid.guice.annotations.Global;
@@ -46,6 +47,7 @@ public class TopNQueryRunnerFactory implements QueryRunnerFactory<Result<TopNRes
   private final TopNQueryQueryToolChest toolchest;
   private final QueryWatcher queryWatcher;
 
+  @BitmapCache
   @Inject(optional = true)
   private Cache cache;
 

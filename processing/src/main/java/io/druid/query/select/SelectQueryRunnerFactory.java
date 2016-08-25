@@ -22,6 +22,7 @@ package io.druid.query.select;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
+import io.druid.cache.BitmapCache;
 import io.druid.cache.Cache;
 import io.druid.query.ChainedExecutionQueryRunner;
 import io.druid.query.Query;
@@ -44,6 +45,7 @@ public class SelectQueryRunnerFactory
   private final SelectQueryEngine engine;
   private final QueryWatcher queryWatcher;
 
+  @BitmapCache
   @Inject(optional = true)
   private Cache cache;
 

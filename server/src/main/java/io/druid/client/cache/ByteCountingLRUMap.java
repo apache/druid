@@ -62,6 +62,11 @@ class ByteCountingLRUMap extends LinkedHashMap<ByteBuffer, byte[]>
     evictionCount = 0;
   }
 
+  public long getSizeInBytes()
+  {
+    return sizeInBytes;
+  }
+
   public long getNumBytes()
   {
     return numBytes;

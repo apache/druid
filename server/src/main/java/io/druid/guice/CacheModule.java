@@ -23,6 +23,7 @@ import com.google.inject.Binder;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.name.Names;
+import io.druid.cache.BitmapCache;
 import io.druid.cache.Cache;
 import io.druid.client.cache.CacheProvider;
 import io.druid.guice.annotations.Global;
@@ -33,15 +34,18 @@ public class CacheModule implements Module
   public static final String DRUID_GLOBAL_CACHE_PREFIX = "druid.cache";
 
   public final String prefix;
+  public final String bitmapPrefix;
 
   public CacheModule()
   {
     this.prefix = DRUID_GLOBAL_CACHE_PREFIX;
+    this.bitmapPrefix = prefix + ".bitmap";
   }
 
   public CacheModule(String prefix)
   {
     this.prefix = prefix;
+    this.bitmapPrefix = prefix + ".bitmap";
   }
 
   @Override
@@ -49,6 +53,9 @@ public class CacheModule implements Module
   {
     binder.bind(Cache.class).toProvider(Key.get(CacheProvider.class, Global.class)).in(ManageLifecycle.class);
     JsonConfigProvider.bind(binder, prefix, CacheProvider.class, Global.class);
+
+    binder.bind(Cache.class).annotatedWith(BitmapCache.class).toProvider(Key.get(CacheProvider.class, BitmapCache.class)).in(ManageLifecycle.class);
+    JsonConfigProvider.bind(binder, bitmapPrefix, CacheProvider.class, BitmapCache.class);
 
     binder.install(new HybridCacheModule(prefix));
   }
