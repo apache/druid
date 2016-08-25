@@ -26,8 +26,10 @@ import com.google.common.io.ByteStreams;
 import com.google.common.io.CountingOutputStream;
 import com.google.common.io.InputSupplier;
 import com.google.common.primitives.Ints;
+import io.druid.segment.IndexIO;
 
 import java.io.Closeable;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -88,7 +90,7 @@ public class GenericIndexedWriter<T> implements Closeable
 
   private String makeFilename(String suffix)
   {
-    return String.format("%s.%s", filenameBase, suffix);
+    return String.format("%s.%s", IndexIO.sanitizeFileName(filenameBase), suffix);
   }
 
   @Override

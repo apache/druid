@@ -56,7 +56,6 @@ import com.metamx.common.io.smoosh.Smoosh;
 import com.metamx.common.logger.Logger;
 import io.druid.collections.CombiningIterable;
 import io.druid.common.guava.FileOutputSupplier;
-import io.druid.common.guava.GuavaUtils;
 import io.druid.common.utils.JodaUtils;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -1023,12 +1022,26 @@ public class IndexMerger
       final ArrayList<String> expectedFiles = Lists.newArrayList(
           Iterables.concat(
               Arrays.asList(
-                  "index.drd", "inverted.drd", "spatial.drd", String.format("time_%s.drd", IndexIO.BYTE_ORDER)
+                  "index.drd", "inverted.drd", "spatial.drd", IndexIO.makeTimeFileName(IndexIO.BYTE_ORDER)
               ),
-              Iterables.transform(mergedDimensions, GuavaUtils.formatFunction("dim_%s.drd")),
+              Iterables.transform(mergedDimensions, new Function<String, String>()
+              {
+                @Override
+                public String apply(String input)
+                {
+                  return IndexIO.makeDimFileName(input);
+                }
+              }),
               Iterables.transform(
-                  mergedMetrics, GuavaUtils.formatFunction(String.format("met_%%s_%s.drd", IndexIO.BYTE_ORDER))
-              )
+                  mergedMetrics, new Function<String, String>()
+                  {
+                    @Nullable
+                    @Override
+                    public String apply(@Nullable String input)
+                    {
+                      return IndexIO.makeMetricFileName(input, IndexIO.BYTE_ORDER);
+                    }
+                  })
           )
       );
 

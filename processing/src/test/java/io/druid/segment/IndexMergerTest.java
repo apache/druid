@@ -50,9 +50,11 @@ import io.druid.segment.incremental.IncrementalIndexAdapter;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.IndexSizeExceededException;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
+import org.apache.commons.lang.RandomStringUtils;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -70,6 +72,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 
 @RunWith(Parameterized.class)
 public class IndexMergerTest
@@ -175,6 +178,182 @@ public class IndexMergerTest
     Assert.assertEquals(2, index.getColumn(Column.TIME_COLUMN_NAME).getLength());
     Assert.assertEquals(Arrays.asList("dim1", "dim2"), Lists.newArrayList(index.getAvailableDimensions()));
     Assert.assertEquals(3, index.getColumnNames().size());
+
+    assertDimCompression(index, indexSpec.getDimensionCompressionStrategy());
+
+    Assert.assertArrayEquals(
+        IncrementalIndexTest.getDefaultCombiningAggregatorFactories(),
+        index.getMetadata().getAggregators()
+    );
+
+    Assert.assertEquals(
+        QueryGranularities.NONE,
+        index.getMetadata().getQueryGranularity()
+    );
+  }
+
+  @Test
+  public void testPersistDimensionWithSlash() throws Exception
+  {
+    final long timestamp = System.currentTimeMillis();
+
+    IncrementalIndex toPersist = IncrementalIndexTest.createIndex(null);
+    IncrementalIndexTest.populateIndex(timestamp, toPersist);
+    toPersist.add(new MapBasedInputRow(
+        timestamp,
+        Arrays.asList("dim1/sub1", "dim2"),
+        ImmutableMap.<String, Object>of("dim1/sub1", "1", "dim2", "2")
+    ));
+
+    final File tempDir = temporaryFolder.newFolder();
+    QueryableIndex index = closer.closeLater(
+        INDEX_IO.loadIndex(
+            INDEX_MERGER.persist(
+                toPersist,
+                tempDir,
+                indexSpec
+            )
+        )
+    );
+
+    Assert.assertEquals(3, index.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(Arrays.asList("dim1", "dim2", "dim1/sub1"), Lists.newArrayList(index.getAvailableDimensions()));
+    Assert.assertEquals(4, index.getColumnNames().size());
+
+    assertDimCompression(index, indexSpec.getDimensionCompressionStrategy());
+
+    Assert.assertArrayEquals(
+        IncrementalIndexTest.getDefaultCombiningAggregatorFactories(),
+        index.getMetadata().getAggregators()
+    );
+
+    Assert.assertEquals(
+        QueryGranularities.NONE,
+        index.getMetadata().getQueryGranularity()
+    );
+  }
+
+  @Ignore // breaks meta.smoosh
+  @Test
+  public void testPersistDimensionWithComma() throws Exception
+  {
+    final long timestamp = System.currentTimeMillis();
+
+    IncrementalIndex toPersist = IncrementalIndexTest.createIndex(null);
+    IncrementalIndexTest.populateIndex(timestamp, toPersist);
+    toPersist.add(new MapBasedInputRow(
+        timestamp,
+        Arrays.asList("dim1,sub1", "dim2"),
+        ImmutableMap.<String, Object>of("dim1,sub1", "1", "dim2", "2")
+    ));
+
+    final File tempDir = temporaryFolder.newFolder();
+    QueryableIndex index = closer.closeLater(
+        INDEX_IO.loadIndex(
+            INDEX_MERGER.persist(
+                toPersist,
+                tempDir,
+                indexSpec
+            )
+        )
+    );
+
+    Assert.assertEquals(3, index.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(Arrays.asList("dim1", "dim2", "dim1,sub1"), Lists.newArrayList(index.getAvailableDimensions()));
+    Assert.assertEquals(4, index.getColumnNames().size());
+
+    assertDimCompression(index, indexSpec.getDimensionCompressionStrategy());
+
+    Assert.assertArrayEquals(
+        IncrementalIndexTest.getDefaultCombiningAggregatorFactories(),
+        index.getMetadata().getAggregators()
+    );
+
+    Assert.assertEquals(
+        QueryGranularities.NONE,
+        index.getMetadata().getQueryGranularity()
+    );
+  }
+
+
+  @Test
+  public void testDimensionWithSillyLongName() throws Exception
+  {
+    final StringBuilder sb = new StringBuilder(512);
+    for (int i = 0; i < 512; ++i) {
+      sb.append('a');
+    }
+    final String superLong = sb.toString();
+    final long timestamp = System.currentTimeMillis();
+
+    IncrementalIndex toPersist = IncrementalIndexTest.createIndex(null);
+    IncrementalIndexTest.populateIndex(timestamp, toPersist);
+    toPersist.add(new MapBasedInputRow(
+        timestamp,
+        Arrays.asList(superLong, "dim2"),
+        ImmutableMap.<String, Object>of(superLong, "1", "dim2", "2")
+    ));
+
+    final File tempDir = temporaryFolder.newFolder();
+    QueryableIndex index = closer.closeLater(
+        INDEX_IO.loadIndex(
+            INDEX_MERGER.persist(
+                toPersist,
+                tempDir,
+                indexSpec
+            )
+        )
+    );
+
+    Assert.assertEquals(3, index.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(Arrays.asList("dim1", "dim2", superLong), Lists.newArrayList(index.getAvailableDimensions()));
+    Assert.assertEquals(4, index.getColumnNames().size());
+
+    assertDimCompression(index, indexSpec.getDimensionCompressionStrategy());
+
+    Assert.assertArrayEquals(
+        IncrementalIndexTest.getDefaultCombiningAggregatorFactories(),
+        index.getMetadata().getAggregators()
+    );
+
+    Assert.assertEquals(
+        QueryGranularities.NONE,
+        index.getMetadata().getQueryGranularity()
+    );
+  }
+
+  @Test
+  public void testDimensionWithRandomName() throws Exception
+  {
+    final Random random = new Random(675431536791L);
+    final String randomString = RandomStringUtils.random(1024, 0, Integer.MAX_VALUE, false, false, null, random);
+    final long timestamp = System.currentTimeMillis();
+
+    IncrementalIndex toPersist = IncrementalIndexTest.createIndex(null);
+    IncrementalIndexTest.populateIndex(timestamp, toPersist);
+    toPersist.add(new MapBasedInputRow(
+        timestamp,
+        Arrays.asList(randomString, "dim2"),
+        ImmutableMap.<String, Object>of(randomString, "1", "dim2", "2")
+    ));
+
+    final File tempDir = temporaryFolder.newFolder();
+    QueryableIndex index = closer.closeLater(
+        INDEX_IO.loadIndex(
+            INDEX_MERGER.persist(
+                toPersist,
+                tempDir,
+                indexSpec
+            )
+        )
+    );
+
+    Assert.assertEquals(3, index.getColumn(Column.TIME_COLUMN_NAME).getLength());
+    Assert.assertEquals(
+        Arrays.asList("dim1", "dim2", randomString),
+        Lists.newArrayList(index.getAvailableDimensions())
+    );
+    Assert.assertEquals(4, index.getColumnNames().size());
 
     assertDimCompression(index, indexSpec.getDimensionCompressionStrategy());
 
