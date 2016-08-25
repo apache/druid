@@ -66,7 +66,7 @@ import java.util.TreeMap;
  */
 public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResultValue>, SelectQuery>
 {
-  private static final byte SELECT_QUERY = 0x15;
+  private static final byte SELECT_QUERY = 0x16;
   private static final TypeReference<Object> OBJECT_TYPE_REFERENCE =
       new TypeReference<Object>()
       {
