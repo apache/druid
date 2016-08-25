@@ -33,6 +33,7 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
+import com.google.common.collect.Sets;
 import com.google.common.hash.HashFunction;
 import com.google.common.hash.Hashing;
 import com.google.common.util.concurrent.ForwardingListeningExecutorService;
@@ -154,6 +155,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentLinkedDeque;
@@ -1155,6 +1157,9 @@ public class CachingClusteredClientTest
   @Test
   public void testSelectCaching() throws Exception
   {
+    final Set<String> dimensions = Sets.<String>newHashSet("a");
+    final Set<String> metrics = Sets.<String>newHashSet("rows");
+
     Druids.SelectQueryBuilder builder = Druids.newSelectQueryBuilder()
                                               .dataSource(DATA_SOURCE)
                                               .intervals(SEG_SPEC)
@@ -1169,14 +1174,13 @@ public class CachingClusteredClientTest
         client,
         builder.build(),
         new Interval("2011-01-01/2011-01-02"),
-        makeSelectResults(new DateTime("2011-01-01"), ImmutableMap.of("a", "b", "rows", 1)),
+        makeSelectResults(dimensions, metrics, new DateTime("2011-01-01"), ImmutableMap.of("a", "b", "rows", 1)),
 
         new Interval("2011-01-02/2011-01-03"),
-        makeSelectResults(new DateTime("2011-01-02"), ImmutableMap.of("a", "c", "rows", 5)),
+        makeSelectResults(dimensions, metrics, new DateTime("2011-01-02"), ImmutableMap.of("a", "c", "rows", 5)),
 
         new Interval("2011-01-05/2011-01-10"),
-        makeSelectResults(
-            new DateTime("2011-01-05"), ImmutableMap.of("a", "d", "rows", 5),
+        makeSelectResults(dimensions, metrics, new DateTime("2011-01-05"), ImmutableMap.of("a", "d", "rows", 5),
             new DateTime("2011-01-06"), ImmutableMap.of("a", "e", "rows", 6),
             new DateTime("2011-01-07"), ImmutableMap.of("a", "f", "rows", 7),
             new DateTime("2011-01-08"), ImmutableMap.of("a", "g", "rows", 8),
@@ -1184,8 +1188,7 @@ public class CachingClusteredClientTest
         ),
 
         new Interval("2011-01-05/2011-01-10"),
-        makeSelectResults(
-            new DateTime("2011-01-05T01"), ImmutableMap.of("a", "d", "rows", 5),
+        makeSelectResults(dimensions, metrics, new DateTime("2011-01-05T01"), ImmutableMap.of("a", "d", "rows", 5),
             new DateTime("2011-01-06T01"), ImmutableMap.of("a", "e", "rows", 6),
             new DateTime("2011-01-07T01"), ImmutableMap.of("a", "f", "rows", 7),
             new DateTime("2011-01-08T01"), ImmutableMap.of("a", "g", "rows", 8),
@@ -1202,8 +1205,7 @@ public class CachingClusteredClientTest
     );
     HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(
-        makeSelectResults(
-            new DateTime("2011-01-01"), ImmutableMap.of("a", "b", "rows", 1),
+        makeSelectResults(dimensions, metrics, new DateTime("2011-01-01"), ImmutableMap.of("a", "b", "rows", 1),
             new DateTime("2011-01-02"), ImmutableMap.of("a", "c", "rows", 5),
             new DateTime("2011-01-05"), ImmutableMap.of("a", "d", "rows", 5),
             new DateTime("2011-01-05T01"), ImmutableMap.of("a", "d", "rows", 5),
@@ -2426,7 +2428,7 @@ public class CachingClusteredClientTest
     return retVal;
   }
 
-  private Iterable<Result<SelectResultValue>> makeSelectResults(Object... objects)
+  private Iterable<Result<SelectResultValue>> makeSelectResults(Set<String> dimensions, Set<String> metrics, Object... objects)
   {
     List<Result<SelectResultValue>> retVal = Lists.newArrayList();
     int index = 0;
@@ -2434,11 +2436,15 @@ public class CachingClusteredClientTest
       DateTime timestamp = (DateTime) objects[index++];
 
       List<EventHolder> values = Lists.newArrayList();
+
       while (index < objects.length && !(objects[index] instanceof DateTime)) {
         values.add(new EventHolder(null, 0, (Map) objects[index++]));
       }
 
-      retVal.add(new Result<>(timestamp, new SelectResultValue(null, values)));
+      retVal.add(new Result<>(
+          timestamp,
+          new SelectResultValue(null, dimensions, metrics, values)
+      ));
     }
     return retVal;
   }

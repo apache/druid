@@ -66,7 +66,7 @@ import java.util.TreeMap;
  */
 public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResultValue>, SelectQuery>
 {
-  private static final byte SELECT_QUERY = 0x13;
+  private static final byte SELECT_QUERY = 0x16;
   private static final TypeReference<Object> OBJECT_TYPE_REFERENCE =
       new TypeReference<Object>()
       {
@@ -220,6 +220,8 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
             return Arrays.asList(
                 input.getTimestamp().getMillis(),
                 input.getValue().getPagingIdentifiers(),
+                input.getValue().getDimensions(),
+                input.getValue().getMetrics(),
                 input.getValue().getEvents()
             );
           }
@@ -246,6 +248,16 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
                 new SelectResultValue(
                     (Map<String, Integer>) jsonMapper.convertValue(
                         resultIter.next(), new TypeReference<Map<String, Integer>>()
+                        {
+                        }
+                    ),
+                    (Set<String>) jsonMapper.convertValue(
+                        resultIter.next(), new TypeReference<Set<String>>()
+                        {
+                        }
+                    ),
+                    (Set<String>) jsonMapper.convertValue(
+                        resultIter.next(), new TypeReference<Set<String>>()
                         {
                         }
                     ),
