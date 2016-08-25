@@ -54,7 +54,7 @@ shared:
       description: call update_vars.sh (comes from druid_package repo) to replace placeholders embedded in the yicf files with meaningful names
       command: >
         cd druid_package &&
-        sh ./screwdriver/update_vars.sh ${SD_SETTING_DRUID_PKG_NAME} ${SD_SETTING_DRUID_INABOX_PKG_NAME} ${SD_SETTING_HDFS_BASE_DIR} &&
+        sh ./screwdriver/update_vars.sh ${SD_SETTING_DRUID_PKG_NAME} ${SD_SETTING_DRUID_INABOX_PKG_NAME} ${SD_SETTING_HDFS_BASE_DIR} $(cat ../druid.version) &&
         git diff &&
         git commit -a -m "commit to make yinst_create happy" || exit $?
     compute_druid_pkg_code_version:
