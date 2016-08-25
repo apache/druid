@@ -34,6 +34,9 @@ public class S3DataSegmentPusherConfig
   @JsonProperty
   private boolean disableAcl = false;
 
+  @JsonProperty
+  private int maxListingLength = 100;
+
   public void setBucket(String bucket)
   {
     this.bucket = bucket;
@@ -49,6 +52,11 @@ public class S3DataSegmentPusherConfig
     this.disableAcl = disableAcl;
   }
 
+  public void setMaxListingLength(int maxListingLength)
+  {
+    this.maxListingLength = maxListingLength;
+  }
+
   public String getBucket()
   {
     return bucket;
@@ -62,5 +70,10 @@ public class S3DataSegmentPusherConfig
   public boolean getDisableAcl()
   {
     return disableAcl;
+  }
+
+  public int getMaxListingLength()
+  {
+    return maxListingLength;
   }
 }
