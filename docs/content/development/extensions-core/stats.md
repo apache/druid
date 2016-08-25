@@ -72,6 +72,24 @@ To acquire standard deviation from variance, user can use "stddev" post aggregat
 }
 ```
 
+It's also possible to acquire sum (double) and count (long) from variance aggregator.
+
+```json
+{
+  "type": "sum",
+  "name": "<output_name>",
+  "fieldName": "<aggregator_name>"
+}
+```
+
+```json
+{
+  "type": "count",
+  "name": "<output_name>",
+  "fieldName": "<aggregator_name>"
+}
+```
+
 ## Query Examples:
 
 ### Timeseries Query

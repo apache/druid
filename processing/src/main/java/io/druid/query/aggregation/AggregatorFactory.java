@@ -116,7 +116,9 @@ public abstract class AggregatorFactory
 
   public abstract String getTypeName();
 
-  // input type for ingestion
+  /**
+   * Input type for ingestion. This is used to access complex serde to extract value from custom format (see IncrementalIndex)
+   */
   public String getInputTypeName()
   {
     return getTypeName();
