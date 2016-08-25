@@ -25,21 +25,28 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  */
 public class SelectResultValue implements Iterable<EventHolder>
 {
   private final Map<String, Integer> pagingIdentifiers;
+  private final Set<String> dimensions;
+  private final Set<String> metrics;
   private final List<EventHolder> events;
 
   @JsonCreator
   public SelectResultValue(
       @JsonProperty("pagingIdentifiers") Map<String, Integer> pagingIdentifiers,
+      @JsonProperty("dimensions") Set<String> dimensions,
+      @JsonProperty("metrics") Set<String> metrics,
       @JsonProperty("events") List<EventHolder> events
   )
   {
     this.pagingIdentifiers = pagingIdentifiers;
+    this.dimensions = dimensions;
+    this.metrics = metrics;
     this.events = events;
   }
 
@@ -47,6 +54,18 @@ public class SelectResultValue implements Iterable<EventHolder>
   public Map<String, Integer> getPagingIdentifiers()
   {
     return pagingIdentifiers;
+  }
+
+  @JsonProperty
+  public Set<String> getDimensions()
+  {
+    return dimensions;
+  }
+
+  @JsonProperty
+  public Set<String> getMetrics()
+  {
+    return metrics;
   }
 
   @JsonProperty
@@ -76,6 +95,15 @@ public class SelectResultValue implements Iterable<EventHolder>
     if (events != null ? !events.equals(that.events) : that.events != null) {
       return false;
     }
+
+    if (dimensions != null ? !dimensions.equals(that.dimensions) : that.dimensions != null) {
+      return false;
+    }
+
+    if (metrics != null ? !metrics.equals(that.metrics) : that.metrics != null) {
+      return false;
+    }
+
     if (pagingIdentifiers != null
         ? !pagingIdentifiers.equals(that.pagingIdentifiers)
         : that.pagingIdentifiers != null) {
@@ -89,6 +117,8 @@ public class SelectResultValue implements Iterable<EventHolder>
   public int hashCode()
   {
     int result = pagingIdentifiers != null ? pagingIdentifiers.hashCode() : 0;
+    result = 31 * result + (dimensions != null ? dimensions.hashCode() : 0);
+    result = 31 * result + (metrics != null ? metrics.hashCode() : 0);
     result = 31 * result + (events != null ? events.hashCode() : 0);
     return result;
   }
@@ -98,6 +128,8 @@ public class SelectResultValue implements Iterable<EventHolder>
   {
     return "SelectResultValue{" +
            "pagingIdentifiers=" + pagingIdentifiers +
+           ", dimensions=" + dimensions +
+           ", metrics=" + metrics +
            ", events=" + events +
            '}';
   }

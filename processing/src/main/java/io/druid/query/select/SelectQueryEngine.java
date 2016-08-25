@@ -108,12 +108,14 @@ public class SelectQueryEngine
             for (DimensionSpec dim : dims) {
               final DimensionSelector dimSelector = cursor.makeDimensionSelector(dim);
               dimSelectors.put(dim.getOutputName(), dimSelector);
+              builder.addDimension(dim.getOutputName());
             }
 
             final Map<String, ObjectColumnSelector> metSelectors = Maps.newHashMap();
             for (String metric : metrics) {
               final ObjectColumnSelector metricSelector = cursor.makeObjectColumnSelector(metric);
               metSelectors.put(metric, metricSelector);
+              builder.addMetric(metric);
             }
 
             final PagingOffset offset = query.getPagingOffset(segmentId);
