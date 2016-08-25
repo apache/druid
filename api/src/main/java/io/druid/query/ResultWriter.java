@@ -27,5 +27,5 @@ import java.util.Map;
  */
 public interface ResultWriter
 {
-  Map<String, Object> write(URI location, TabularFormat result, Map<String, String> context) throws IOException;
+  Map<String, Object> write(URI location, TabularFormat result, Map<String, Object> context) throws IOException;
 }

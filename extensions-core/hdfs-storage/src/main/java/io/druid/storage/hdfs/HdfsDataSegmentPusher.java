@@ -169,7 +169,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher, ResultWriter
   }
 
   @Override
-  public Map<String, Object> write(URI location, final TabularFormat result, final Map<String, String> context)
+  public Map<String, Object> write(URI location, final TabularFormat result, final Map<String, Object> context)
       throws IOException
   {
     Path targetDirectory = new Path(location);
@@ -185,14 +185,19 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher, ResultWriter
     if (!fileSystem.exists(targetDirectory) && !fileSystem.mkdirs(targetDirectory)) {
       throw new IllegalStateException("failed to make target directory");
     }
-    String fileName = context.get("dataFileName");
+    String fileName = PropUtils.parseString(context, "dataFileName", null);
     Path dataFile = new Path(targetDirectory, Strings.isNullOrEmpty(fileName) ? "data" : fileName);
 
     Map<String, Object> info = Maps.newHashMap();
     try (OutputStream output = fileSystem.create(dataFile)) {
-      try (CountingAccumulator accumulator = Formatters.toExporter(context, output, jsonMapper)) {
+      CountingAccumulator accumulator = Formatters.toExporter(context, output, jsonMapper);
+      try {
+        accumulator.begin(output);
         result.getSequence().accumulate(null, accumulator);
         info.put("numRows", accumulator.count());
+      }
+      finally {
+        accumulator.end(output);
       }
     }
     info.put(dataFile.toString(), fileSystem.getFileStatus(dataFile).getLen());

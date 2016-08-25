@@ -22,13 +22,20 @@ package io.druid.data.output;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Map;
 
 /**
  */
 public interface Formatter
 {
-  byte[] format(Map<String, Object> datum) throws IOException;
+  byte[] NEW_LINE = System.lineSeparator().getBytes();
+
+  void begin(OutputStream output) throws IOException;
+
+  void write(OutputStream output, Map<String, Object> datum) throws IOException;
+
+  void end(OutputStream output) throws IOException;
 
   class XSVFormatter implements Formatter
   {
@@ -51,7 +58,12 @@ public interface Formatter
     }
 
     @Override
-    public byte[] format(Map<String, Object> datum) throws IOException
+    public void begin(OutputStream output) throws IOException
+    {
+    }
+
+    @Override
+    public void write(OutputStream output, Map<String, Object> datum) throws IOException
     {
       builder.setLength(0);
 
@@ -71,23 +83,58 @@ public interface Formatter
           builder.append(value == null ? nullValue : String.valueOf(value));
         }
       }
-      return builder.toString().getBytes();
+      output.write(builder.toString().getBytes());
+    }
+
+    @Override
+    public void end(OutputStream output) throws IOException
+    {
     }
   }
 
   class JsonFormatter implements Formatter
   {
-    private ObjectMapper jsonMapper;
+    private static final byte[] HEAD = ("[" + System.lineSeparator()).getBytes();
+    private static final byte[] NEXT_LINE = (", " + System.lineSeparator()).getBytes();
+    private static final byte[] TAIL = (System.lineSeparator() + "]" + System.lineSeparator()).getBytes();
 
-    public JsonFormatter(ObjectMapper jsonMapper)
+    private final ObjectMapper jsonMapper;
+    private final boolean withWrapping;
+
+    private boolean firstLine;
+
+    public JsonFormatter(ObjectMapper jsonMapper, boolean withWrapping)
     {
       this.jsonMapper = jsonMapper;
+      this.withWrapping = withWrapping;
     }
 
     @Override
-    public byte[] format(Map<String, Object> datum) throws IOException
+    public void begin(OutputStream output) throws IOException
     {
-      return jsonMapper.writeValueAsBytes(datum);
+      if (withWrapping) {
+        output.write(HEAD);
+      }
+      firstLine = true;
+    }
+
+    @Override
+    public void write(OutputStream output, Map<String, Object> datum) throws IOException
+    {
+      if (withWrapping && !firstLine) {
+        output.write(NEXT_LINE);
+      }
+      // jsonMapper.writeValue(output, datum) closes stream
+      output.write(jsonMapper.writeValueAsBytes(datum));
+      firstLine = false;
+    }
+
+    @Override
+    public void end(OutputStream output) throws IOException
+    {
+      if (withWrapping) {
+        output.write(TAIL);
+      }
     }
   }
 }

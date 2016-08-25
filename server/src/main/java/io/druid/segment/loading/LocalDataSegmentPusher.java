@@ -129,7 +129,7 @@ public class LocalDataSegmentPusher implements DataSegmentPusher, ResultWriter
   }
 
   @Override
-  public Map<String, Object> write(URI location, final TabularFormat result, final Map<String, String> context)
+  public Map<String, Object> write(URI location, final TabularFormat result, final Map<String, Object> context)
       throws IOException
   {
     File targetDirectory = new File(location.getPath());
@@ -143,14 +143,19 @@ public class LocalDataSegmentPusher implements DataSegmentPusher, ResultWriter
     if (!targetDirectory.exists() && !targetDirectory.mkdirs()) {
       throw new IllegalStateException("failed to make target directory");
     }
-    String fileName = context.get("dataFileName");
+    String fileName = PropUtils.parseString(context, "dataFileName", null);
     File dataFile = new File(targetDirectory, Strings.isNullOrEmpty(fileName) ? "data" : fileName);
 
     Map<String, Object> info = Maps.newHashMap();
     try (OutputStream output = new BufferedOutputStream(new FileOutputStream(dataFile))) {
-      try (CountingAccumulator accumulator = Formatters.toExporter(context, output, jsonMapper)) {
+      CountingAccumulator accumulator = Formatters.toExporter(context, output, jsonMapper);
+      try {
+        accumulator.begin(output);
         result.getSequence().accumulate(null, accumulator);
         info.put("numRows", accumulator.count());
+      }
+      finally {
+        accumulator.end(output);
       }
     }
     info.put(dataFile.toString(), dataFile.length());
