@@ -124,7 +124,11 @@ public class GenericIndexed<T> implements Indexed<T>
   @Override
   public T get(int index)
   {
-    return bufferIndexed.get(index);
+    if (index != lastReadIndex) {
+      lastObject = bufferIndexed.get(index);
+      lastReadIndex = index;
+    }
+    return lastObject;
   }
 
   /**
@@ -154,6 +158,9 @@ public class GenericIndexed<T> implements Indexed<T>
 
   private final int valuesOffset;
   private final BufferIndexed bufferIndexed;
+
+  private int lastReadIndex = -1;
+  private T lastObject;
 
   GenericIndexed(
       ByteBuffer buffer,
