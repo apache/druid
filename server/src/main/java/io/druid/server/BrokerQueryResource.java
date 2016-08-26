@@ -30,6 +30,7 @@ import io.druid.client.TimelineServerView;
 import io.druid.common.utils.StringUtils;
 import io.druid.guice.LocalDataStorageDruidModule;
 import io.druid.guice.annotations.Json;
+import io.druid.guice.annotations.Self;
 import io.druid.guice.annotations.Smile;
 import io.druid.java.util.common.guava.Sequence;
 import io.druid.java.util.common.guava.Sequences;
@@ -69,6 +70,7 @@ public class BrokerQueryResource extends QueryResource
   private final TimelineServerView brokerServerView;
   private static final EmittingLogger log = new EmittingLogger(BrokerQueryResource.class);
 
+  private final DruidNode node;
   private final Map<String, ResultWriter> writerMap;
 
   @Inject
@@ -77,6 +79,7 @@ public class BrokerQueryResource extends QueryResource
       ServerConfig config,
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper smileMapper,
+      @Self DruidNode node,
       QuerySegmentWalker texasRanger,
       ServiceEmitter emitter,
       RequestLogger requestLogger,
@@ -88,6 +91,7 @@ public class BrokerQueryResource extends QueryResource
   {
     super(warehouse, config, jsonMapper, smileMapper, texasRanger, emitter, requestLogger, queryManager, authConfig);
     this.brokerServerView = brokerServerView;
+    this.node = node;
     this.writerMap = writerMap;
     log.info("Supporting writer schemes.. " + writerMap.keySet());
   }
@@ -130,16 +134,20 @@ public class BrokerQueryResource extends QueryResource
       URI uri;
       try {
         uri = new URI(forwardURL);
+        String scheme = uri.getScheme() == null ? LocalDataStorageDruidModule.FILE_SCHEME : uri.getScheme();
+        if (scheme.equals(LocalDataStorageDruidModule.FILE_SCHEME) ||
+            scheme.equals(LocalDataStorageDruidModule.SCHEME)) {
+          uri = rewriteURI(uri, LocalDataStorageDruidModule.FILE_SCHEME);
+        }
       }
       catch (URISyntaxException e) {
         log.warn("Invalid uri `" + forwardURL + "`", e);
         return Sequences.empty();
       }
-      String scheme = uri.getScheme() == null ? LocalDataStorageDruidModule.SCHEME : uri.getScheme();
 
-      ResultWriter writer = writerMap.get(scheme);
+      ResultWriter writer = writerMap.get(uri.getScheme());
       if (writer == null) {
-        log.warn("Unsupported scheme `" + scheme + "`");
+        log.warn("Unsupported scheme `" + uri.getScheme() + "`");
         return Sequences.empty();
       }
       TabularFormat result = warehouse.getToolChest(query).toTabularFormat(res);
@@ -149,5 +157,18 @@ public class BrokerQueryResource extends QueryResource
     }
 
     return res;
+  }
+
+  private URI rewriteURI(URI uri, String scheme) throws URISyntaxException
+  {
+    return new URI(
+        scheme,
+        uri.getUserInfo(),
+        node.getHost(),
+        node.getPort(),
+        uri.getPath(),
+        uri.getQuery(),
+        uri.getFragment()
+    );
   }
 }

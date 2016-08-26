@@ -43,6 +43,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Map;
 
 /**
@@ -158,7 +159,7 @@ public class LocalDataSegmentPusher implements DataSegmentPusher, ResultWriter
         accumulator.end(output);
       }
     }
-    info.put(dataFile.toString(), dataFile.length());
+    info.put(rewrite(location, dataFile.getAbsolutePath()), dataFile.length());
 
     Map<String, Object> metaData = result.getMetaData();
     if (metaData != null && !metaData.isEmpty()) {
@@ -166,8 +167,25 @@ public class LocalDataSegmentPusher implements DataSegmentPusher, ResultWriter
       try (OutputStream output = new FileOutputStream(metaFile)) {
         jsonMapper.writeValue(output, metaData);
       }
-      info.put(metaFile.toString(), metaFile.length());
+      info.put(rewrite(location, metaFile.getAbsolutePath()), metaFile.length());
     }
     return info;
+  }
+
+  private String rewrite(URI location, String path) {
+    try {
+      return new URI(
+          location.getScheme(),
+          location.getUserInfo(),
+          location.getHost(),
+          location.getPort(),
+          path,
+          null,
+          null
+      ).toString();
+    }
+    catch (URISyntaxException e) {
+      return path;
+    }
   }
 }
