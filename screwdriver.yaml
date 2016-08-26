@@ -32,7 +32,7 @@ shared:
       enabled: false
     coverage:
       enabled: false
-    build_timeout: 120
+    build_timeout: 180
     resource: HIGH
 
   steps:
