@@ -187,10 +187,6 @@ public class S3DataSegmentFinderTest
   @Test
   public void testFindSegments() throws Exception
   {
-    final S3DataSegmentPusherConfig config = new S3DataSegmentPusherConfig();
-    config.setBucket(bucket);
-    config.setBaseKey(baseKey);
-
     final S3DataSegmentFinder s3DataSegmentFinder = new S3DataSegmentFinder(mockS3Client, config, mapper);
     final Set<DataSegment> segments = s3DataSegmentFinder.findSegments("", false);
 
@@ -281,6 +277,32 @@ public class S3DataSegmentFinderTest
     }
   }
 
+  @Test
+  public void testFindSegmentsWithmaxListingLength() throws SegmentLoadingException
+  {
+    config.setMaxListingLength(3);
+    final S3DataSegmentFinder s3DataSegmentFinder = new S3DataSegmentFinder(mockS3Client, config, mapper);
+    final Set<DataSegment> segments = s3DataSegmentFinder.findSegments("", false);
+    Assert.assertEquals(5, segments.size());
+  }
+
+  @Test
+  public void testFindSegmentsWithDefaultMaxListingLength() throws SegmentLoadingException
+  {
+    config.setMaxListingLength(-1);
+    final S3DataSegmentFinder s3DataSegmentFinder = new S3DataSegmentFinder(mockS3Client, config, mapper);
+    final Set<DataSegment> segments = s3DataSegmentFinder.findSegments("", false);
+    Assert.assertEquals(5, segments.size());
+  }
+
+  @Test
+  public void testFindSegmentsWithworkingDirPath() throws SegmentLoadingException
+  {
+    config.setBaseKey("");
+    final S3DataSegmentFinder s3DataSegmentFinder = new S3DataSegmentFinder(mockS3Client, config, mapper);
+    final Set<DataSegment> segments = s3DataSegmentFinder.findSegments(baseKey, false);
+    Assert.assertEquals(5, segments.size());
+  }
 
   private String getDescriptorPath(DataSegment segment)
   {

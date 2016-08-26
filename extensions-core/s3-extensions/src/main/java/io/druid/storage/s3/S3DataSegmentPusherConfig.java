@@ -25,6 +25,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public class S3DataSegmentPusherConfig
 {
+  public static final int MAX_LISTING_LENGTH = 100;
   @JsonProperty
   private String bucket = "";
 
@@ -35,7 +36,7 @@ public class S3DataSegmentPusherConfig
   private boolean disableAcl = false;
 
   @JsonProperty
-  private int maxListingLength = 100;
+  private int maxListingLength = MAX_LISTING_LENGTH;
 
   public void setBucket(String bucket)
   {
