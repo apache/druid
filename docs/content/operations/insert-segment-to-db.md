@@ -93,3 +93,4 @@ of them in a runtime.properites file and include it in the Druid classpath. Note
 and `druid-hdfs-storage` in the extension list.
 
 After running this command, the segments table in `mysql` should store the new location for each segment we just inserted.
+Note that for segments stored in HDFS, druid config must contain core-site.xml as described in [Druid Docs](http://druid.io/docs/latest/tutorials/cluster.html), as this new location is stored with relative path.
