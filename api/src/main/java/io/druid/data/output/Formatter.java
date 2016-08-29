@@ -29,7 +29,7 @@ import java.util.Map;
  */
 public interface Formatter
 {
-  byte[] NEW_LINE = System.lineSeparator().getBytes();
+  String NEW_LINE = System.lineSeparator();
 
   void begin(OutputStream output) throws IOException;
 
@@ -83,7 +83,10 @@ public interface Formatter
           builder.append(value == null ? nullValue : String.valueOf(value));
         }
       }
-      output.write(builder.toString().getBytes());
+      if (builder.length() > 0) {
+        builder.append(NEW_LINE);
+        output.write(builder.toString().getBytes());
+      }
     }
 
     @Override
