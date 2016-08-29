@@ -115,6 +115,6 @@ java
 io.druid.cli.Main tools insert-segment-to-db --workingDir "druid/storage/wikipedia" --updateDescriptor true
 ```
 
- Note that you can provide the location of segments with either `druid.storage.baseKey` or `--workingDir`. If both are specified,
- `--workingDir` gets higher priority. `druid.storage.maxListingLength` is to determine the length of a partial list in requesting
-  a object listing to `s3`, which defaults to 1000.
+ Note that you can provide the location of segments with either `druid.storage.baseKey` or `--workingDir`. If both are 
+ specified, `--workingDir` gets higher priority. `druid.storage.maxListingLength` is to determine the length of a partial
+ list in requesting a object listing to `s3`, which defaults to 1000.
