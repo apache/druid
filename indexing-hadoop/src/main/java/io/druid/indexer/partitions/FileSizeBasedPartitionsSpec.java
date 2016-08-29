@@ -19,41 +19,39 @@
 
 package io.druid.indexer.partitions;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.google.common.base.Preconditions;
+import com.google.common.collect.ImmutableList;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.Jobby;
+import io.druid.indexer.path.StaticPathSpec;
 
+import javax.annotation.Nullable;
 import java.util.List;
 
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type", defaultImpl = HashedPartitionsSpec.class)
-@JsonSubTypes(value = {
-    @JsonSubTypes.Type(name = "dimension", value = SingleDimensionPartitionsSpec.class),
-    @JsonSubTypes.Type(name = "hashed", value = HashedPartitionsSpec.class),
-    @JsonSubTypes.Type(name = "sized", value = FileSizeBasedPartitionsSpec.class)
-})
-public interface PartitionsSpec
+/**
+ */
+public class FileSizeBasedPartitionsSpec extends AbstractPartitionsSpec
 {
-  @JsonIgnore
-  public Jobby getPartitionJob(HadoopDruidIndexerConfig config);
+  @JsonCreator
+  public FileSizeBasedPartitionsSpec(
+      @JsonProperty("targetPartitionSize") @Nullable Long targetPartitionSize
+  )
+  {
+    super(targetPartitionSize, null, null, null);
+  }
 
-  @JsonProperty
-  public long getTargetPartitionSize();
+  @Override
+  public Jobby getPartitionJob(HadoopDruidIndexerConfig config)
+  {
+    Preconditions.checkArgument(config.getPathSpec() instanceof StaticPathSpec, "Only supports static spec, for now");
+    return new DetermineSizeBasedPartitionsJob(config);
+  }
 
-  @JsonProperty
-  public long getMaxPartitionSize();
-
-  @JsonProperty
-  public boolean isAssumeGrouped();
-
-  @JsonIgnore
-  public boolean isDeterminingPartitions();
-
-  @JsonProperty
-  public int getNumShards();
-
-  @JsonProperty
-  public List<String> getPartitionDimensions();
+  @Override
+  public List<String> getPartitionDimensions()
+  {
+    return ImmutableList.of();
+  }
 }
