@@ -1332,6 +1332,9 @@ public class CachingClusteredClientTest
   @Test
   public void testSelectCachingRenamedOutputName() throws Exception
   {
+    final Set<String> dimensions = Sets.<String>newHashSet("a");
+    final Set<String> metrics = Sets.<String>newHashSet("rows");
+
     Druids.SelectQueryBuilder builder = Druids.newSelectQueryBuilder()
         .dataSource(DATA_SOURCE)
         .intervals(SEG_SPEC)
@@ -1346,13 +1349,14 @@ public class CachingClusteredClientTest
         client,
         builder.build(),
         new Interval("2011-01-01/2011-01-02"),
-        makeSelectResults(new DateTime("2011-01-01"), ImmutableMap.of("a", "b", "rows", 1)),
+        makeSelectResults(dimensions, metrics, new DateTime("2011-01-01"), ImmutableMap.of("a", "b", "rows", 1)),
 
         new Interval("2011-01-02/2011-01-03"),
-        makeSelectResults(new DateTime("2011-01-02"), ImmutableMap.of("a", "c", "rows", 5)),
+        makeSelectResults(dimensions, metrics, new DateTime("2011-01-02"), ImmutableMap.of("a", "c", "rows", 5)),
 
         new Interval("2011-01-05/2011-01-10"),
         makeSelectResults(
+            dimensions, metrics,
             new DateTime("2011-01-05"), ImmutableMap.of("a", "d", "rows", 5),
             new DateTime("2011-01-06"), ImmutableMap.of("a", "e", "rows", 6),
             new DateTime("2011-01-07"), ImmutableMap.of("a", "f", "rows", 7),
@@ -1362,6 +1366,7 @@ public class CachingClusteredClientTest
 
         new Interval("2011-01-05/2011-01-10"),
         makeSelectResults(
+            dimensions, metrics,
             new DateTime("2011-01-05T01"), ImmutableMap.of("a", "d", "rows", 5),
             new DateTime("2011-01-06T01"), ImmutableMap.of("a", "e", "rows", 6),
             new DateTime("2011-01-07T01"), ImmutableMap.of("a", "f", "rows", 7),
@@ -1380,6 +1385,7 @@ public class CachingClusteredClientTest
     HashMap<String, Object> context = new HashMap<String, Object>();
     TestHelper.assertExpectedResults(
         makeSelectResults(
+            dimensions, metrics,
             new DateTime("2011-01-01"), ImmutableMap.of("a", "b", "rows", 1),
             new DateTime("2011-01-02"), ImmutableMap.of("a", "c", "rows", 5),
             new DateTime("2011-01-05"), ImmutableMap.of("a", "d", "rows", 5),
@@ -1402,6 +1408,7 @@ public class CachingClusteredClientTest
 
     TestHelper.assertExpectedResults(
         makeSelectResults(
+            dimensions, metrics,
             new DateTime("2011-01-01"), ImmutableMap.of("a2", "b", "rows", 1),
             new DateTime("2011-01-02"), ImmutableMap.of("a2", "c", "rows", 5),
             new DateTime("2011-01-05"), ImmutableMap.of("a2", "d", "rows", 5),
