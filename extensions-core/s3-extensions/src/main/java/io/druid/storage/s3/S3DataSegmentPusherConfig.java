@@ -25,7 +25,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  */
 public class S3DataSegmentPusherConfig
 {
-  public static final int MAX_LISTING_LENGTH = 100;
+  public static final int MAX_LISTING_LENGTH = 1000;
+
   @JsonProperty
   private String bucket = "";
 

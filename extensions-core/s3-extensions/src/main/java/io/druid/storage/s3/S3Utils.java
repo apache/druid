@@ -40,11 +40,6 @@ import java.util.concurrent.Callable;
  */
 public class S3Utils
 {
-  public static final String BUCKET = "bucket";
-  public static final String KEY = "key";
-  public static final int DEFAULT_RETRY_COUNT = 3;
-
-
   private static final Joiner JOINER = Joiner.on("/").skipNulls();
 
   public static void closeStreamsQuietly(S3Object s3Obj)
