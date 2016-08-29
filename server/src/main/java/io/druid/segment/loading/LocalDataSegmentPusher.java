@@ -159,7 +159,7 @@ public class LocalDataSegmentPusher implements DataSegmentPusher, ResultWriter
         accumulator.end(output);
       }
     }
-    info.put(rewrite(location, dataFile.getAbsolutePath()), dataFile.length());
+    info.put("data", ImmutableMap.of(rewrite(location, dataFile.getAbsolutePath()), dataFile.length()));
 
     Map<String, Object> metaData = result.getMetaData();
     if (metaData != null && !metaData.isEmpty()) {
@@ -167,7 +167,7 @@ public class LocalDataSegmentPusher implements DataSegmentPusher, ResultWriter
       try (OutputStream output = new FileOutputStream(metaFile)) {
         jsonMapper.writeValue(output, metaData);
       }
-      info.put(rewrite(location, metaFile.getAbsolutePath()), metaFile.length());
+      info.put("meta", ImmutableMap.of(rewrite(location, metaFile.getAbsolutePath()), metaFile.length()));
     }
     return info;
   }

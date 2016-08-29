@@ -200,7 +200,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher, ResultWriter
         accumulator.end(output);
       }
     }
-    info.put(dataFile.toString(), fileSystem.getFileStatus(dataFile).getLen());
+    info.put("data", ImmutableMap.of(dataFile.toString(), fileSystem.getFileStatus(dataFile).getLen()));
 
     Map<String, Object> metaData = result.getMetaData();
     if (metaData != null && !metaData.isEmpty()) {
@@ -208,7 +208,7 @@ public class HdfsDataSegmentPusher implements DataSegmentPusher, ResultWriter
       try (OutputStream output = fileSystem.create(metaFile)) {
         jsonMapper.writeValue(output, metaData);
       }
-      info.put(metaFile.toString(), fileSystem.getFileStatus(metaFile).getLen());
+      info.put("meta", ImmutableMap.of(metaFile.toString(), fileSystem.getFileStatus(metaFile).getLen()));
     }
     return info;
   }
