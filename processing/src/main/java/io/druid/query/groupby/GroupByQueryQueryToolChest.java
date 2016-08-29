@@ -60,6 +60,7 @@ import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.filter.DimFilter;
 import io.druid.query.groupby.strategy.GroupByStrategySelector;
+import io.druid.query.select.EventHolder;
 import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
@@ -500,9 +501,15 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
             sequence, new Function<Row, Map<String, Object>>()
             {
               @Override
-              public Map<String, Object> apply(@Nullable Row input)
+              public Map<String, Object> apply(Row input)
               {
-                return ((MapBasedRow) input).getEvent();
+                MapBasedRow row = (MapBasedRow) input;
+                Map<String, Object> event = row.getEvent();
+                if (!row.supportInplaceUpdate()) {
+                  event = Maps.newLinkedHashMap(event);
+                }
+                event.put(EventHolder.timestampKey, input.getTimestamp());
+                return event;
               }
             }
         );

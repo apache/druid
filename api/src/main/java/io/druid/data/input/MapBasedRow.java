@@ -30,6 +30,8 @@ import io.druid.java.util.common.parsers.ParseException;
 import org.joda.time.DateTime;
 
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
@@ -156,6 +158,11 @@ public class MapBasedRow implements Row
     } else {
       throw new ParseException("Unknown type[%s]", metricValue.getClass());
     }
+  }
+
+  public boolean supportInplaceUpdate()
+  {
+    return event instanceof HashMap || event instanceof LinkedHashMap;
   }
 
   @Override
