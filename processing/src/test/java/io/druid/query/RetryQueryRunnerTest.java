@@ -27,6 +27,7 @@ import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
+import io.druid.query.spec.MultipleSpecificSegmentSpec;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesQueryQueryToolChest;
 import io.druid.query.timeseries.TimeseriesResultValue;
@@ -298,6 +299,118 @@ public class RetryQueryRunnerTest
     Assert.assertTrue(
         "Should have one entry in the list of missing segments",
         ((List) context.get(Result.MISSING_SEGMENTS_KEY)).size() == 1
+    );
+  }
+
+  @Test
+  public void testNoDuplicateRetry() throws Exception
+  {
+    Map<String, Object> context = new MapMaker().makeMap();
+    context.put("count", 0);
+    context.put(Result.MISSING_SEGMENTS_KEY, Lists.newArrayList());
+    RetryQueryRunner<Result<TimeseriesResultValue>> runner = new RetryQueryRunner<>(
+        new QueryRunner<Result<TimeseriesResultValue>>()
+        {
+          @Override
+          public Sequence<Result<TimeseriesResultValue>> run(
+              Query<Result<TimeseriesResultValue>> query,
+              Map<String, Object> context
+          )
+          {
+            if ((int) context.get("count") == 0) {
+              // assume 2 missing segments at first run
+              ((List) context.get(Result.MISSING_SEGMENTS_KEY)).add(
+                  new SegmentDescriptor(
+                      new Interval(
+                          178888,
+                          1999999
+                      ), "test", 1
+                  )
+              );
+              ((List) context.get(Result.MISSING_SEGMENTS_KEY)).add(
+                  new SegmentDescriptor(
+                      new Interval(
+                          178888,
+                          1999999
+                      ), "test", 2
+                  )
+              );
+              context.put("count", 1);
+              return Sequences.simple(
+                  Arrays.asList(
+                      new Result<>(
+                          new DateTime(),
+                          new TimeseriesResultValue(
+                              Maps.<String, Object>newHashMap()
+                          )
+                      )
+                  )
+              );
+            } else if ((int) context.get("count") == 1) {
+              // this is first retry
+              Assert.assertTrue("Should retry with 2 missing segments", ((MultipleSpecificSegmentSpec)((BaseQuery)query).getQuerySegmentSpec()).getDescriptors().size() == 2);
+              // assume only left 1 missing at first retry
+              ((List) context.get(Result.MISSING_SEGMENTS_KEY)).add(
+                  new SegmentDescriptor(
+                      new Interval(
+                          178888,
+                          1999999
+                      ), "test", 2
+                  )
+              );
+              context.put("count", 2);
+              return Sequences.simple(
+                  Arrays.asList(
+                      new Result<>(
+                          new DateTime(),
+                          new TimeseriesResultValue(
+                              Maps.<String, Object>newHashMap()
+                          )
+                      )
+                  )
+              );
+            } else {
+              // this is second retry
+              Assert.assertTrue("Should retry with 1 missing segments", ((MultipleSpecificSegmentSpec)((BaseQuery)query).getQuerySegmentSpec()).getDescriptors().size() == 1);
+              // assume no more missing at second retry
+              context.put("count", 3);
+              return Sequences.simple(
+                  Arrays.asList(
+                      new Result<>(
+                          new DateTime(),
+                          new TimeseriesResultValue(
+                              Maps.<String, Object>newHashMap()
+                          )
+                      )
+                  )
+              );
+            }
+          }
+        },
+        (QueryToolChest) new TimeseriesQueryQueryToolChest(
+            QueryRunnerTestHelper.NoopIntervalChunkingQueryRunnerDecorator()
+        ),
+        new RetryQueryRunnerConfig()
+        {
+          private int numTries = 2;
+          private boolean returnPartialResults = false;
+
+          public int getNumTries() { return numTries; }
+
+          public boolean returnPartialResults() { return returnPartialResults; }
+        },
+        jsonMapper
+    );
+
+    Iterable<Result<TimeseriesResultValue>> actualResults = Sequences.toList(
+        runner.run(query, context),
+        Lists.<Result<TimeseriesResultValue>>newArrayList()
+    );
+
+    Assert.assertTrue("Should return a list with 3 elements", ((List) actualResults).size() == 3);
+    Assert.assertTrue(
+        "Should have nothing in missingSegment list",
+        ((List) context.get(Result.MISSING_SEGMENTS_KEY)).size() == 0
     );
   }
 }

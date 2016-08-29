@@ -71,7 +71,7 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
           OutType initValue, YieldingAccumulator<OutType, T> accumulator
       )
       {
-        final List<SegmentDescriptor> missingSegments = getMissingSegments(context);
+        List<SegmentDescriptor> missingSegments = getMissingSegments(context);
 
         if (!missingSegments.isEmpty()) {
           for (int i = 0; i < config.getNumTries(); i++) {
@@ -85,7 +85,8 @@ public class RetryQueryRunner<T> implements QueryRunner<T>
             );
             Sequence<T> retrySequence = baseRunner.run(retryQuery, context);
             listOfSequences.add(retrySequence);
-            if (getMissingSegments(context).isEmpty()) {
+            missingSegments = getMissingSegments(context);
+            if (missingSegments.isEmpty()) {
               break;
             }
           }
