@@ -49,7 +49,7 @@ import java.util.List;
 
 public class CardinalityAggregatorFactory extends AggregatorFactory
 {
-  private static List<String> makeFieldNamesFromFields(List<DimensionSpec> fields)
+  private static List<String> makeRequiredFieldNamesFromFields(List<DimensionSpec> fields)
   {
     return ImmutableList.copyOf(
         Lists.transform(
@@ -59,7 +59,7 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
               @Override
               public String apply(DimensionSpec input)
               {
-                return input.getOutputName();
+                return input.getDimension();
               }
             }
         )
@@ -262,7 +262,7 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
   @Override
   public List<String> requiredFields()
   {
-    return makeFieldNamesFromFields(fields);
+    return makeRequiredFieldNamesFromFields(fields);
   }
 
   @JsonProperty
