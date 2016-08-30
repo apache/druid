@@ -50,6 +50,8 @@ import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.aggregation.cardinality.CardinalityAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniqueFinalizingPostAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
+import io.druid.query.dimension.DefaultDimensionSpec;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.dimension.ExtractionDimensionSpec;
 import io.druid.query.extraction.DimExtractionFn;
 import io.druid.query.extraction.ExtractionFn;
@@ -2718,7 +2720,12 @@ public class TopNQueryRunnerTest
             .aggregators(
                 Lists.<AggregatorFactory>newArrayList(
                     new CardinalityAggregatorFactory(
-                        "numVals", ImmutableList.of(QueryRunnerTestHelper.marketDimension), false
+                        "numVals",
+                        ImmutableList.<DimensionSpec>of(new DefaultDimensionSpec(
+                            QueryRunnerTestHelper.qualityDimension,
+                            QueryRunnerTestHelper.qualityDimension
+                        )),
+                        false
                     )
                 )
             )
@@ -2731,14 +2738,63 @@ public class TopNQueryRunnerTest
                 Arrays.<Map<String, Object>>asList(
                     ImmutableMap.<String, Object>of(
                         "market", "spot",
-                        "numVals", 1.0002442201269182d
+                        "numVals", 9.019833517963864d
                     ),
                     ImmutableMap.<String, Object>of(
                         "market", "total_market",
-                        "numVals", 1.0002442201269182d
+                        "numVals", 2.000977198748901d
                     ),
                     ImmutableMap.<String, Object>of(
                         "market", "upfront",
+                        "numVals", 2.000977198748901d
+                    )
+                )
+            )
+        )
+    );
+    assertExpectedResults(expectedResults, query);
+  }
+
+  @Test
+  public void testTopNQueryCardinalityAggregatorWithExtractionFn()
+  {
+    String helloJsFn = "function(str) { return 'hello' }";
+    ExtractionFn helloFn = new JavaScriptExtractionFn(helloJsFn, false, JavaScriptConfig.getDefault());
+
+    DimensionSpec dimSpec = new ExtractionDimensionSpec(QueryRunnerTestHelper.marketDimension,
+                                                        QueryRunnerTestHelper.marketDimension,
+                                                        helloFn);
+
+    TopNQuery query =
+        new TopNQueryBuilder()
+            .dataSource(QueryRunnerTestHelper.dataSource)
+            .granularity(QueryRunnerTestHelper.allGran)
+            .dimension(dimSpec)
+            .metric(new NumericTopNMetricSpec("numVals"))
+            .threshold(10)
+            .intervals(QueryRunnerTestHelper.firstToThird)
+            .aggregators(
+                Lists.<AggregatorFactory>newArrayList(
+                    new CardinalityAggregatorFactory(
+                        "numVals",
+                        ImmutableList.<DimensionSpec>of(new ExtractionDimensionSpec(
+                            QueryRunnerTestHelper.qualityDimension,
+                            QueryRunnerTestHelper.qualityDimension,
+                            helloFn
+                        )),
+                        false
+                    )
+                )
+            )
+            .build();
+
+    List<Result<TopNResultValue>> expectedResults = Arrays.asList(
+        new Result<>(
+            new DateTime("2011-04-01T00:00:00.000Z"),
+            new TopNResultValue(
+                Arrays.<Map<String, Object>>asList(
+                    ImmutableMap.<String, Object>of(
+                        "market", "hello",
                         "numVals", 1.0002442201269182d
                     )
                 )
