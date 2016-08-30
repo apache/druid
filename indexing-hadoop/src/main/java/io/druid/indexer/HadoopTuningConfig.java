@@ -110,7 +110,9 @@ public class HadoopTuningConfig implements TuningConfig
     this.partitionsSpec = partitionsSpec == null ? DEFAULT_PARTITIONS_SPEC : partitionsSpec;
     this.shardSpecs = shardSpecs == null ? DEFAULT_SHARD_SPECS : shardSpecs;
     this.indexSpec = indexSpec == null ? DEFAULT_INDEX_SPEC : indexSpec;
-    this.rowFlushBoundary = maxRowsInMemory == null ? maxRowsInMemoryCOMPAT == null ?  DEFAULT_ROW_FLUSH_BOUNDARY : maxRowsInMemoryCOMPAT : maxRowsInMemory;
+    this.rowFlushBoundary = maxRowsInMemory == null ? maxRowsInMemoryCOMPAT == null
+                                                      ? DEFAULT_ROW_FLUSH_BOUNDARY
+                                                      : maxRowsInMemoryCOMPAT : maxRowsInMemory;
     this.leaveIntermediate = leaveIntermediate;
     this.cleanupOnFailure = cleanupOnFailure == null ? true : cleanupOnFailure;
     this.overwriteFiles = overwriteFiles;
@@ -121,7 +123,9 @@ public class HadoopTuningConfig implements TuningConfig
     this.combineText = combineText;
     this.useCombiner = useCombiner == null ? DEFAULT_USE_COMBINER : useCombiner.booleanValue();
     this.buildV9Directly = buildV9Directly == null ? DEFAULT_BUILD_V9_DIRECTLY : buildV9Directly;
-    this.numBackgroundPersistThreads = numBackgroundPersistThreads == null ? DEFAULT_NUM_BACKGROUND_PERSIST_THREADS : numBackgroundPersistThreads;
+    this.numBackgroundPersistThreads = numBackgroundPersistThreads == null
+                                       ? DEFAULT_NUM_BACKGROUND_PERSIST_THREADS
+                                       : numBackgroundPersistThreads;
     Preconditions.checkArgument(this.numBackgroundPersistThreads >= 0, "Not support persistBackgroundCount < 0");
   }
 
@@ -204,7 +208,8 @@ public class HadoopTuningConfig implements TuningConfig
   }
 
   @JsonProperty
-  public Boolean getBuildV9Directly() {
+  public Boolean getBuildV9Directly()
+  {
     return buildV9Directly;
   }
 
