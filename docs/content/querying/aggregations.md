@@ -127,10 +127,12 @@ instead of the cardinality aggregator if you do not care about the individual va
 {
   "type": "cardinality",
   "name": "<output_name>",
-  "fieldNames": [ <dimension1>, <dimension2>, ... ],
+  "fields": [ <dimension1>, <dimension2>, ... ],
   "byRow": <false | true> # (optional, defaults to false)
 }
 ```
+
+Each individual element of the "fields" list can be a String or [DimensionSpec](../querying/dimensionspecs.html). A String dimension in the fields list is equivalent to a DefaultDimensionSpec (no transformations).
 
 #### Cardinality by value
 
@@ -171,7 +173,7 @@ Determine the number of distinct countries people are living in or have come fro
 {
   "type": "cardinality",
   "name": "distinct_countries",
-  "fieldNames": [ "coutry_of_origin", "country_of_residence" ]
+  "fields": [ "country_of_origin", "country_of_residence" ]
 }
 ```
 
@@ -181,10 +183,29 @@ Determine the number of distinct people (i.e. combinations of first and last nam
 {
   "type": "cardinality",
   "name": "distinct_people",
-  "fieldNames": [ "first_name", "last_name" ],
+  "fields": [ "first_name", "last_name" ],
   "byRow" : true
 }
 ```
+
+Determine the number of distinct starting characters of last names
+
+```json
+{
+  "type": "cardinality",
+  "name": "distinct_last_name_first_char",
+  "fields": [
+    {
+     "type" : "extraction",
+     "dimension" : "last_name",
+     "outputName" :  "last_name_first_char",
+     "extractionFn" : { "type" : "substring", "index" : 0, "length" : 1 }
+    }
+  ],
+  "byRow" : true
+}
+```
+
 
 ### HyperUnique aggregator
 

@@ -27,9 +27,19 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.js.JavaScriptConfig;
 import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
+import io.druid.query.dimension.DefaultDimensionSpec;
+import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.dimension.ExtractionDimensionSpec;
+import io.druid.query.dimension.LookupDimensionSpec;
+import io.druid.query.dimension.RegexFilteredDimensionSpec;
+import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.extraction.JavaScriptExtractionFn;
+import io.druid.query.extraction.RegexDimExtractionFn;
+import io.druid.query.extraction.UpperExtractionFn;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.data.IndexedInts;
 import org.junit.Assert;
@@ -49,13 +59,15 @@ public class CardinalityAggregatorTest
     private final List<Integer[]> column;
     private final Map<String, Integer> ids;
     private final Map<Integer, String> lookup;
+    private final ExtractionFn exFn;
 
     private int pos = 0;
 
-    public TestDimensionSelector(Iterable<String[]> values)
+    public TestDimensionSelector(Iterable<String[]> values, ExtractionFn exFn)
     {
       this.lookup = Maps.newHashMap();
       this.ids = Maps.newHashMap();
+      this.exFn = exFn;
 
       int index = 0;
       for (String[] multiValue : values) {
@@ -152,7 +164,8 @@ public class CardinalityAggregatorTest
     @Override
     public String lookupName(int i)
     {
-      return lookup.get(i);
+      String val = lookup.get(i);
+      return exFn == null ? val : exFn.apply(val);
     }
 
     @Override
@@ -238,10 +251,18 @@ public class CardinalityAggregatorTest
   final TestDimensionSelector dim1;
   final TestDimensionSelector dim2;
 
+  List<DimensionSelector> selectorListWithExtraction;
+  final TestDimensionSelector dim1WithExtraction;
+  final TestDimensionSelector dim2WithExtraction;
+
+  List<DimensionSelector> selectorListConstantVal;
+  final TestDimensionSelector dim1ConstantVal;
+  final TestDimensionSelector dim2ConstantVal;
+
   public CardinalityAggregatorTest()
   {
-    dim1 = new TestDimensionSelector(values1);
-    dim2 = new TestDimensionSelector(values2);
+    dim1 = new TestDimensionSelector(values1, null);
+    dim2 = new TestDimensionSelector(values2, null);
 
     selectorList = Lists.newArrayList(
         (DimensionSelector) dim1,
@@ -250,14 +271,39 @@ public class CardinalityAggregatorTest
 
     rowAggregatorFactory = new CardinalityAggregatorFactory(
         "billy",
-        Lists.newArrayList("dim1", "dim2"),
+        Lists.<DimensionSpec>newArrayList(
+            new DefaultDimensionSpec("dim1", "dim1"),
+            new DefaultDimensionSpec("dim2", "dim2")
+        ),
         true
     );
 
     valueAggregatorFactory = new CardinalityAggregatorFactory(
         "billy",
-        Lists.newArrayList("dim1", "dim2"),
-        true
+        Lists.<DimensionSpec>newArrayList(
+            new DefaultDimensionSpec("dim1", "dim1"),
+            new DefaultDimensionSpec("dim2", "dim2")
+        ),
+        false
+    );
+
+
+    String superJsFn = "function(str) { return 'super-' + str; }";
+    ExtractionFn superFn = new JavaScriptExtractionFn(superJsFn, false, JavaScriptConfig.getDefault());
+    dim1WithExtraction = new TestDimensionSelector(values1, superFn);
+    dim2WithExtraction = new TestDimensionSelector(values2, superFn);
+    selectorListWithExtraction = Lists.newArrayList(
+        (DimensionSelector) dim1WithExtraction,
+        dim2WithExtraction
+    );
+
+    String helloJsFn = "function(str) { return 'hello' }";
+    ExtractionFn helloFn = new JavaScriptExtractionFn(helloJsFn, false, JavaScriptConfig.getDefault());
+    dim1ConstantVal = new TestDimensionSelector(values1, helloFn);
+    dim2ConstantVal = new TestDimensionSelector(values2, helloFn);
+    selectorListConstantVal = Lists.newArrayList(
+        (DimensionSelector) dim1ConstantVal,
+        dim2ConstantVal
     );
   }
 
@@ -397,13 +443,90 @@ public class CardinalityAggregatorTest
   }
 
   @Test
+  public void testAggregateRowsWithExtraction() throws Exception
+  {
+    CardinalityAggregator agg = new CardinalityAggregator(
+        "billy",
+        selectorListWithExtraction,
+        true
+    );
+    for (int i = 0; i < values1.size(); ++i) {
+      aggregate(selectorListWithExtraction, agg);
+    }
+    Assert.assertEquals(9.0, (Double) rowAggregatorFactory.finalizeComputation(agg.get()), 0.05);
+
+    CardinalityAggregator agg2 = new CardinalityAggregator(
+        "billy",
+        selectorListConstantVal,
+        true
+    );
+    for (int i = 0; i < values1.size(); ++i) {
+      aggregate(selectorListConstantVal, agg2);
+    }
+    Assert.assertEquals(3.0, (Double) rowAggregatorFactory.finalizeComputation(agg2.get()), 0.05);
+  }
+
+  @Test
+  public void testAggregateValuesWithExtraction() throws Exception
+  {
+    CardinalityAggregator agg = new CardinalityAggregator(
+        "billy",
+        selectorListWithExtraction,
+        false
+    );
+    for (int i = 0; i < values1.size(); ++i) {
+      aggregate(selectorListWithExtraction, agg);
+    }
+    Assert.assertEquals(7.0, (Double) valueAggregatorFactory.finalizeComputation(agg.get()), 0.05);
+
+    CardinalityAggregator agg2 = new CardinalityAggregator(
+        "billy",
+        selectorListConstantVal,
+        false
+    );
+    for (int i = 0; i < values1.size(); ++i) {
+      aggregate(selectorListConstantVal, agg2);
+    }
+    Assert.assertEquals(1.0, (Double) valueAggregatorFactory.finalizeComputation(agg2.get()), 0.05);
+  }
+
+  @Test
   public void testSerde() throws Exception
   {
-    CardinalityAggregatorFactory factory = new CardinalityAggregatorFactory("billy", ImmutableList.of("b", "a", "c"), true);
+    CardinalityAggregatorFactory factory = new CardinalityAggregatorFactory(
+        "billy",
+        ImmutableList.<DimensionSpec>of(
+            new DefaultDimensionSpec("b", "b"),
+            new DefaultDimensionSpec("a", "a"),
+            new DefaultDimensionSpec("c", "c")
+        ),
+        true
+    );
     ObjectMapper objectMapper = new DefaultObjectMapper();
     Assert.assertEquals(
         factory,
         objectMapper.readValue(objectMapper.writeValueAsString(factory), AggregatorFactory.class)
+    );
+
+    String fieldNamesOnly = "{\"type\":\"cardinality\",\"name\":\"billy\",\"fields\":[\"b\",\"a\",\"c\"],\"byRow\":true}";
+    Assert.assertEquals(
+        factory,
+        objectMapper.readValue(fieldNamesOnly, AggregatorFactory.class)
+    );
+
+    CardinalityAggregatorFactory factory2 = new CardinalityAggregatorFactory(
+        "billy",
+        ImmutableList.<DimensionSpec>of(
+            new ExtractionDimensionSpec("b", "b", new RegexDimExtractionFn(".*", false, null)),
+            new RegexFilteredDimensionSpec(new DefaultDimensionSpec("a", "a"), ".*"),
+            new DefaultDimensionSpec("c", "c")
+        ),
+        true
+    );
+
+    Assert.assertEquals(
+        factory2,
+        objectMapper.readValue(objectMapper.writeValueAsString(factory2), AggregatorFactory.class)
     );
   }
 }

@@ -43,6 +43,8 @@ import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.aggregation.post.ArithmeticPostAggregator;
 import io.druid.query.aggregation.post.ConstantPostAggregator;
 import io.druid.query.aggregation.post.FieldAccessPostAggregator;
+import io.druid.query.dimension.DefaultDimensionSpec;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.spec.MultipleIntervalSegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
 import io.druid.query.spec.SpecificSegmentSpec;
@@ -158,7 +160,7 @@ public class QueryRunnerTestHelper
   );
   public static final CardinalityAggregatorFactory qualityCardinality = new CardinalityAggregatorFactory(
       "cardinality",
-      Arrays.asList("quality"),
+      Arrays.<DimensionSpec>asList(new DefaultDimensionSpec("quality", "quality")),
       false
   );
   public static final ConstantPostAggregator constant = new ConstantPostAggregator("const", 1L);
