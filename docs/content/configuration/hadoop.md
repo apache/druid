@@ -100,7 +100,6 @@ The following configuration should work relatively well for Druid indexing and H
     <value>21</value>
   </property>
   <property>
-  <property>
     <name>mapreduce.job.jvm.numtasks</name>
     <value>20</value>
   </property>
