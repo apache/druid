@@ -16,3 +16,9 @@ This product contains conjunctive normal form conversion code and a variance agg
     * https://github.com/apache/hive/blob/branch-2.0/LICENSE (Apache License, Version 2.0)
   * HOMEPAGE:
     * https://github.com/apache/hive
+
+This product contains variable length long deserialization code adapted from Apache Lucene
+  * LICENSE:
+    * https://github.com/apache/lucene-solr/blob/master/lucene/LICENSE.txt (Apache License, Version 2.0)
+  * HOMEPAGE:
+    * https://github.com/apache/lucene-solr

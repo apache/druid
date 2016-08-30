@@ -19,8 +19,9 @@
 
 package io.druid.segment;
 
-import io.druid.segment.data.CompressedLongsSupplierSerializer;
 import io.druid.segment.data.CompressedObjectStrategy;
+import io.druid.segment.data.CompressionFactory;
+import io.druid.segment.data.LongSupplierSerializer;
 import io.druid.segment.data.IOPeon;
 
 import java.io.IOException;
@@ -32,38 +33,43 @@ public class LongColumnSerializer implements GenericColumnSerializer
   public static LongColumnSerializer create(
       IOPeon ioPeon,
       String filenameBase,
-      CompressedObjectStrategy.CompressionStrategy compression
+      CompressedObjectStrategy.CompressionStrategy compression,
+      CompressionFactory.LongEncodingStrategy encoding
   )
   {
-    return new LongColumnSerializer(ioPeon, filenameBase, IndexIO.BYTE_ORDER, compression);
+    return new LongColumnSerializer(ioPeon, filenameBase, IndexIO.BYTE_ORDER, compression, encoding);
   }
 
   private final IOPeon ioPeon;
   private final String filenameBase;
   private final ByteOrder byteOrder;
   private final CompressedObjectStrategy.CompressionStrategy compression;
-  private CompressedLongsSupplierSerializer writer;
+  private final CompressionFactory.LongEncodingStrategy encoding;
+  private LongSupplierSerializer writer;
 
   public LongColumnSerializer(
       IOPeon ioPeon,
       String filenameBase,
       ByteOrder byteOrder,
-      CompressedObjectStrategy.CompressionStrategy compression
+      CompressedObjectStrategy.CompressionStrategy compression,
+      CompressionFactory.LongEncodingStrategy encoding
   )
   {
     this.ioPeon = ioPeon;
     this.filenameBase = filenameBase;
     this.byteOrder = byteOrder;
     this.compression = compression;
+    this.encoding = encoding;
   }
 
   @Override
   public void open() throws IOException
   {
-    writer = CompressedLongsSupplierSerializer.create(
+    writer = CompressionFactory.getLongSerializer(
         ioPeon,
         String.format("%s.long_column", filenameBase),
         byteOrder,
+        encoding,
         compression
     );
     writer.open();

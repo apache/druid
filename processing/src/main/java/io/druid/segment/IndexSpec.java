@@ -21,15 +21,14 @@ package io.druid.segment;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
+import io.druid.segment.data.BitmapSerde;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.CompressedObjectStrategy;
+import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
 
-import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.Set;
 
@@ -41,28 +40,26 @@ import java.util.Set;
  */
 public class IndexSpec
 {
-  public static final String UNCOMPRESSED = "uncompressed";
-  public static final String DEFAULT_METRIC_COMPRESSION = CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY.name().toLowerCase();
-  public static final String DEFAULT_DIMENSION_COMPRESSION = CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY.name().toLowerCase();
+  public static final CompressedObjectStrategy.CompressionStrategy DEFAULT_METRIC_COMPRESSION = CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY;
+  public static final CompressedObjectStrategy.CompressionStrategy DEFAULT_DIMENSION_COMPRESSION = CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY;
+  public static final CompressionFactory.LongEncodingStrategy DEFAULT_LONG_ENCODING = CompressionFactory.DEFAULT_LONG_ENCODING_STRATEGY;
 
-  private static final Set<String> COMPRESSION_NAMES = Sets.newHashSet(
-      Iterables.transform(
-          Arrays.asList(CompressedObjectStrategy.CompressionStrategy.values()),
-          new Function<CompressedObjectStrategy.CompressionStrategy, String>()
-          {
-            @Nullable
-            @Override
-            public String apply(CompressedObjectStrategy.CompressionStrategy input)
-            {
-              return input.name().toLowerCase();
-            }
-          }
-      )
+  private static final Set<CompressedObjectStrategy.CompressionStrategy> METRIC_COMPRESSION = Sets.newHashSet(
+      Arrays.asList(CompressedObjectStrategy.CompressionStrategy.values())
+  );
+
+  private static final Set<CompressedObjectStrategy.CompressionStrategy> DIMENSION_COMPRESSION = Sets.newHashSet(
+      Arrays.asList(CompressedObjectStrategy.CompressionStrategy.noNoneValues())
+  );
+
+  private static final Set<CompressionFactory.LongEncodingStrategy> LONG_ENCODING_NAMES = Sets.newHashSet(
+      Arrays.asList(CompressionFactory.LongEncodingStrategy.values())
   );
 
   private final BitmapSerdeFactory bitmapSerdeFactory;
-  private final String dimensionCompression;
-  private final String metricCompression;
+  private final CompressedObjectStrategy.CompressionStrategy dimensionCompression;
+  private final CompressedObjectStrategy.CompressionStrategy metricCompression;
+  private final CompressionFactory.LongEncodingStrategy longEncoding;
 
 
   /**
@@ -70,7 +67,7 @@ public class IndexSpec
    */
   public IndexSpec()
   {
-    this(null, null, null);
+    this(null, null, null, null);
   }
 
   /**
@@ -79,30 +76,38 @@ public class IndexSpec
    *
    * @param bitmapSerdeFactory type of bitmap to use (e.g. roaring or concise), null to use the default.
    *                           Defaults to the bitmap type specified by the (deprecated) "druid.processing.bitmap.type"
-   *                           setting, or, if none was set, uses the default @{link BitmapSerde.DefaultBitmapSerdeFactory}
+   *                           setting, or, if none was set, uses the default {@link BitmapSerde.DefaultBitmapSerdeFactory}
    *
-   * @param dimensionCompression compression format for dimension columns, null to use the default
-   *                             Defaults to @{link CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY}
+   * @param dimensionCompression compression format for dimension columns, null to use the default.
+   *                             Defaults to {@link CompressedObjectStrategy#DEFAULT_COMPRESSION_STRATEGY}
    *
    * @param metricCompression compression format for metric columns, null to use the default.
-   *                          Defaults to @{link CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY}
+   *                          Defaults to {@link CompressedObjectStrategy#DEFAULT_COMPRESSION_STRATEGY}
+   *
+   * @param longEncoding encoding strategy for metric and dimension columns with type long, null to use the default.
+   *                     Defaults to {@link CompressionFactory#DEFAULT_LONG_ENCODING_STRATEGY}
    */
   @JsonCreator
   public IndexSpec(
       @JsonProperty("bitmap") BitmapSerdeFactory bitmapSerdeFactory,
-      @JsonProperty("dimensionCompression") String dimensionCompression,
-      @JsonProperty("metricCompression") String metricCompression
+      @JsonProperty("dimensionCompression") CompressedObjectStrategy.CompressionStrategy dimensionCompression,
+      @JsonProperty("metricCompression") CompressedObjectStrategy.CompressionStrategy metricCompression,
+      @JsonProperty("longEncoding") CompressionFactory.LongEncodingStrategy longEncoding
   )
   {
-    Preconditions.checkArgument(dimensionCompression == null || dimensionCompression.equals(UNCOMPRESSED) || COMPRESSION_NAMES.contains(dimensionCompression),
+    Preconditions.checkArgument(dimensionCompression == null || DIMENSION_COMPRESSION.contains(dimensionCompression),
                                 "Unknown compression type[%s]", dimensionCompression);
 
-    Preconditions.checkArgument(metricCompression == null || COMPRESSION_NAMES.contains(metricCompression),
+    Preconditions.checkArgument(metricCompression == null || METRIC_COMPRESSION.contains(metricCompression),
                                 "Unknown compression type[%s]", metricCompression);
 
+    Preconditions.checkArgument(longEncoding == null || LONG_ENCODING_NAMES.contains(longEncoding),
+                                "Unknown long encoding type[%s]", longEncoding);
+
     this.bitmapSerdeFactory = bitmapSerdeFactory != null ? bitmapSerdeFactory : new ConciseBitmapSerdeFactory();
-    this.metricCompression = metricCompression;
-    this.dimensionCompression = dimensionCompression;
+    this.dimensionCompression = dimensionCompression == null ?DEFAULT_DIMENSION_COMPRESSION : dimensionCompression;
+    this.metricCompression = metricCompression == null ? DEFAULT_METRIC_COMPRESSION : metricCompression;
+    this.longEncoding = longEncoding == null ? DEFAULT_LONG_ENCODING : longEncoding;
   }
 
   @JsonProperty("bitmap")
@@ -111,36 +116,22 @@ public class IndexSpec
     return bitmapSerdeFactory;
   }
 
-  @JsonProperty("dimensionCompression")
-  public String getDimensionCompression()
+  @JsonProperty
+  public CompressedObjectStrategy.CompressionStrategy getDimensionCompression()
   {
     return dimensionCompression;
   }
 
-  @JsonProperty("metricCompression")
-  public String getMetricCompression()
+  @JsonProperty
+  public CompressedObjectStrategy.CompressionStrategy getMetricCompression()
   {
     return metricCompression;
   }
 
-  public CompressedObjectStrategy.CompressionStrategy getMetricCompressionStrategy()
+  @JsonProperty
+  public CompressionFactory.LongEncodingStrategy getLongEncoding()
   {
-    return CompressedObjectStrategy.CompressionStrategy.valueOf(
-        (metricCompression == null ? DEFAULT_METRIC_COMPRESSION : metricCompression).toUpperCase()
-    );
-  }
-
-  public CompressedObjectStrategy.CompressionStrategy getDimensionCompressionStrategy()
-  {
-    return dimensionCompression == null ?
-           dimensionCompressionStrategyForName(DEFAULT_DIMENSION_COMPRESSION) :
-           dimensionCompressionStrategyForName(dimensionCompression);
-  }
-
-  private static CompressedObjectStrategy.CompressionStrategy dimensionCompressionStrategyForName(String compression)
-  {
-    return compression.equals(UNCOMPRESSED) ? null :
-           CompressedObjectStrategy.CompressionStrategy.valueOf(compression.toUpperCase());
+    return longEncoding;
   }
 
   @Override
@@ -168,7 +159,6 @@ public class IndexSpec
     return !(metricCompression != null
              ? !metricCompression.equals(indexSpec.metricCompression)
              : indexSpec.metricCompression != null);
-
   }
 
   @Override
