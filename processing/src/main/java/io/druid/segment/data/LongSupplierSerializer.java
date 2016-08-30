@@ -19,14 +19,20 @@
 
 package io.druid.segment.data;
 
+import com.google.common.io.ByteSink;
+
 import java.io.Closeable;
+import java.io.IOException;
+import java.nio.channels.WritableByteChannel;
 
 /**
- * Get a long at an index (array or list lookup abstraction without boxing).
  */
-public interface IndexedLongs extends Closeable
+public interface LongSupplierSerializer extends Closeable
 {
-  public int size();
-  public long get(int index);
-  public void fill(int index, long[] toFill);
+  void open() throws IOException;
+  int size();
+  void add(long value) throws IOException;
+  void closeAndConsolidate(ByteSink consolidatedOut) throws IOException;
+  long getSerializedSize();
+  void writeToChannel(WritableByteChannel channel) throws IOException;
 }
