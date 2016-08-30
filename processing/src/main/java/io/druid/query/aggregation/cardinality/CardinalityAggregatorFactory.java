@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.metamx.common.StringUtils;
@@ -50,31 +51,35 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
 {
   private static List<String> makeFieldNamesFromFields(List<DimensionSpec> fields)
   {
-    return Lists.transform(
-        fields,
-        new Function<DimensionSpec, String>()
-        {
-          @Override
-          public String apply(DimensionSpec input)
-          {
-            return input.getOutputName();
-          }
-        }
+    return ImmutableList.copyOf(
+        Lists.transform(
+            fields,
+            new Function<DimensionSpec, String>()
+            {
+              @Override
+              public String apply(DimensionSpec input)
+              {
+                return input.getOutputName();
+              }
+            }
+        )
     );
   }
 
   private static List<DimensionSpec> makeFieldsFromFieldNames(List<String> fieldNames)
   {
-    return Lists.transform(
-        fieldNames,
-        new Function<String, DimensionSpec>()
-        {
-          @Override
-          public DimensionSpec apply(String input)
-          {
-            return new DefaultDimensionSpec(input, input);
-          }
-        }
+    return ImmutableList.copyOf(
+        Lists.transform(
+            fieldNames,
+            new Function<String, DimensionSpec>()
+            {
+              @Override
+              public DimensionSpec apply(String input)
+              {
+                return new DefaultDimensionSpec(input, input);
+              }
+            }
+        )
     );
   }
 
@@ -92,7 +97,6 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
 
   private final String name;
   private final List<DimensionSpec> fields;
-  private final List<String> fieldNames;
   private final boolean byRow;
 
   @JsonCreator
@@ -109,12 +113,10 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
     // 'fields' and 'fieldNames'.
     if (fields == null) {
       Preconditions.checkArgument(fieldNames != null, "Must provide 'fieldNames' if 'fields' is null.");
-      this.fieldNames = fieldNames;
       this.fields = makeFieldsFromFieldNames(fieldNames);
     } else {
       Preconditions.checkArgument(fieldNames == null, "Cannot specify both 'fieldNames' and 'fields.");
       this.fields = fields;
-      this.fieldNames = makeFieldNamesFromFields(fields);
     }
     this.byRow = byRow;
   }
@@ -260,7 +262,7 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
   @Override
   public List<String> requiredFields()
   {
-    return fieldNames;
+    return makeFieldNamesFromFields(fields);
   }
 
   @JsonProperty
