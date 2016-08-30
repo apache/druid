@@ -46,7 +46,9 @@ public class Groupers
   public static int hash(final Object obj)
   {
     // Mask off the high bit so we can use that to determine if a bucket is used or not.
-    return obj.hashCode() & 0x7fffffff;
+    // Also apply the same XOR transformation that j.u.HashMap applies, to improve distribution.
+    final int code = obj.hashCode();
+    return (code ^ (code >>> 16)) & 0x7fffffff;
   }
 
   public static <KeyType extends Comparable<KeyType>> Iterator<Grouper.Entry<KeyType>> mergeIterators(
