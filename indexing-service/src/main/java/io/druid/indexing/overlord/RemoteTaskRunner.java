@@ -88,6 +88,8 @@ import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -604,6 +606,8 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
               // make a copy of the pending tasks because tryAssignTask may delete tasks from pending and move them
               // into running status
               List<RemoteTaskRunnerWorkItem> copy = Lists.newArrayList(pendingTasks.values());
+              sortByInsertionTime(copy);
+
               for (RemoteTaskRunnerWorkItem taskRunnerWorkItem : copy) {
                 String taskId = taskRunnerWorkItem.getTaskId();
                 if (tryAssignTasks.putIfAbsent(taskId, taskId) == null) {
@@ -638,6 +642,20 @@ public class RemoteTaskRunner implements WorkerTaskRunner, TaskLogStreamer
             return null;
           }
         }
+    );
+  }
+
+  @VisibleForTesting
+  static void sortByInsertionTime(List<RemoteTaskRunnerWorkItem> tasks)
+  {
+    Collections.sort(tasks, new Comparator<RemoteTaskRunnerWorkItem>()
+                     {
+                       @Override
+                       public int compare(RemoteTaskRunnerWorkItem o1, RemoteTaskRunnerWorkItem o2)
+                       {
+                         return o1.getQueueInsertionTime().compareTo(o2.getQueueInsertionTime());
+                       }
+                     }
     );
   }
 
