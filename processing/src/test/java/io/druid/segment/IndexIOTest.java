@@ -35,6 +35,7 @@ import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.data.CompressedObjectStrategy;
+import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexAdapter;
@@ -68,7 +69,8 @@ public class IndexIOTest
   private static final IndexSpec INDEX_SPEC = IndexMergerTest.makeIndexSpec(
       new ConciseBitmapSerdeFactory(),
       CompressedObjectStrategy.CompressionStrategy.LZ4,
-      CompressedObjectStrategy.CompressionStrategy.LZ4
+      CompressedObjectStrategy.CompressionStrategy.LZ4,
+      CompressionFactory.LongEncodingStrategy.LONGS
   );
 
   private static <T> List<T> filterByBitset(List<T> list, BitSet bitSet)

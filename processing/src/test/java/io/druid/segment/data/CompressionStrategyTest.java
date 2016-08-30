@@ -52,7 +52,7 @@ public class CompressionStrategyTest
   public static Iterable<Object[]> compressionStrategies()
   {
     return Iterables.transform(
-        Arrays.asList(CompressedObjectStrategy.CompressionStrategy.values()),
+        Arrays.asList(CompressedObjectStrategy.CompressionStrategy.noNoneValues()),
         new Function<CompressedObjectStrategy.CompressionStrategy, Object[]>()
         {
           @Override

@@ -20,6 +20,7 @@
 package io.druid.segment;
 
 import io.druid.segment.data.CompressedObjectStrategy;
+import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.data.IncrementalIndexTest;
 import io.druid.segment.data.IndexedInts;
@@ -38,7 +39,8 @@ public class QueryableIndexIndexableAdapterTest
   private static final IndexSpec INDEX_SPEC = IndexMergerTest.makeIndexSpec(
       new ConciseBitmapSerdeFactory(),
       CompressedObjectStrategy.CompressionStrategy.LZ4,
-      CompressedObjectStrategy.CompressionStrategy.LZ4
+      CompressedObjectStrategy.CompressionStrategy.LZ4,
+      CompressionFactory.LongEncodingStrategy.LONGS
   );
 
   @Rule

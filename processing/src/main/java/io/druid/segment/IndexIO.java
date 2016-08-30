@@ -693,7 +693,7 @@ public class IndexIO
             builder.setHasMultipleValues(true);
           }
 
-          final CompressedObjectStrategy.CompressionStrategy compressionStrategy = indexSpec.getDimensionCompressionStrategy();
+          final CompressedObjectStrategy.CompressionStrategy compressionStrategy = indexSpec.getDimensionCompression();
 
           final DictionaryEncodedColumnPartSerde.LegacySerializerBuilder columnPartBuilder = DictionaryEncodedColumnPartSerde
               .legacySerializerBuilder()
@@ -704,7 +704,7 @@ public class IndexIO
               .withByteOrder(BYTE_ORDER);
 
           if (singleValCol != null) {
-            if (compressionStrategy != null) {
+            if (compressionStrategy != CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED) {
               columnPartBuilder.withSingleValuedColumn(
                   CompressedVSizeIntsIndexedSupplier.fromList(
                       singleValCol,
@@ -717,7 +717,7 @@ public class IndexIO
             } else {
               columnPartBuilder.withSingleValuedColumn(VSizeIndexedInts.fromList(singleValCol, dictionary.size()));
             }
-          } else if (compressionStrategy != null) {
+          } else if (compressionStrategy != CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED) {
             columnPartBuilder.withMultiValuedColumn(
                 CompressedVSizeIndexedSupplier.fromIterable(
                     multiValCol,

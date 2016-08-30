@@ -33,8 +33,10 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
+import com.google.common.io.ByteSink;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.Closer;
+import com.google.common.io.FileWriteMode;
 import com.google.common.io.Files;
 import com.google.common.io.OutputSupplier;
 import com.google.common.primitives.Ints;
@@ -65,8 +67,9 @@ import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.BitmapSerdeFactory;
 import io.druid.segment.data.ByteBufferWriter;
-import io.druid.segment.data.CompressedLongsSupplierSerializer;
 import io.druid.segment.data.CompressedObjectStrategy;
+import io.druid.segment.data.CompressionFactory;
+import io.druid.segment.data.LongSupplierSerializer;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.GenericIndexedWriter;
 import io.druid.segment.data.IOPeon;
@@ -788,8 +791,9 @@ public class IndexMerger
           rowMergerFn
       );
 
-      CompressedLongsSupplierSerializer timeWriter = CompressedLongsSupplierSerializer.create(
-          ioPeon, "little_end_time", IndexIO.BYTE_ORDER, CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
+      LongSupplierSerializer timeWriter = CompressionFactory.getLongSerializer(
+          ioPeon, "little_end_time", IndexIO.BYTE_ORDER, indexSpec.getLongEncoding(),
+          CompressedObjectStrategy.DEFAULT_COMPRESSION_STRATEGY
       );
 
       timeWriter.open();
@@ -802,14 +806,16 @@ public class IndexMerger
       }
 
       ArrayList<MetricColumnSerializer> metWriters = Lists.newArrayListWithCapacity(mergedMetrics.size());
+      final CompressedObjectStrategy.CompressionStrategy metCompression = indexSpec.getMetricCompression();
+      final CompressionFactory.LongEncodingStrategy longEncoding = indexSpec.getLongEncoding();
       for (String metric : mergedMetrics) {
         ValueType type = valueTypes.get(metric);
         switch (type) {
           case LONG:
-            metWriters.add(new LongMetricColumnSerializer(metric, v8OutDir, ioPeon));
+            metWriters.add(new LongMetricColumnSerializer(metric, v8OutDir, ioPeon, metCompression, longEncoding));
             break;
           case FLOAT:
-            metWriters.add(new FloatMetricColumnSerializer(metric, v8OutDir, ioPeon));
+            metWriters.add(new FloatMetricColumnSerializer(metric, v8OutDir, ioPeon, metCompression));
             break;
           case COMPLEX:
             final String typeName = metricTypeNames.get(metric);
@@ -889,7 +895,7 @@ public class IndexMerger
 
       final File timeFile = IndexIO.makeTimeFile(v8OutDir, IndexIO.BYTE_ORDER);
       timeFile.delete();
-      OutputSupplier<FileOutputStream> out = Files.newOutputStreamSupplier(timeFile, true);
+      ByteSink out = Files.asByteSink(timeFile, FileWriteMode.APPEND);
       timeWriter.closeAndConsolidate(out);
       IndexIO.checkFileSize(timeFile);
 
@@ -915,7 +921,7 @@ public class IndexMerger
 
       final File invertedFile = new File(v8OutDir, "inverted.drd");
       Files.touch(invertedFile);
-      out = Files.newOutputStreamSupplier(invertedFile, true);
+      out = Files.asByteSink(invertedFile, FileWriteMode.APPEND);
 
       final File geoFile = new File(v8OutDir, "spatial.drd");
       Files.touch(geoFile);
