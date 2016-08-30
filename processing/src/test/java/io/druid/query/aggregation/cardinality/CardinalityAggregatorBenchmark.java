@@ -28,6 +28,8 @@ import com.google.common.collect.DiscreteDomain;
 import com.google.common.collect.FluentIterable;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Range;
+import io.druid.query.dimension.DefaultDimensionSpec;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.DimensionSelector;
 
 import java.nio.ByteBuffer;
@@ -75,7 +77,7 @@ public class CardinalityAggregatorBenchmark extends SimpleBenchmark
 
 
     final CardinalityAggregatorTest.TestDimensionSelector dim1 =
-        new CardinalityAggregatorTest.TestDimensionSelector(values);
+        new CardinalityAggregatorTest.TestDimensionSelector(values, null);
 
     selectorList = Lists.newArrayList(
         (DimensionSelector) dim1
@@ -88,7 +90,7 @@ public class CardinalityAggregatorBenchmark extends SimpleBenchmark
 
     CardinalityAggregatorFactory factory = new CardinalityAggregatorFactory(
         "billy",
-        Lists.newArrayList("dim1"),
+        Lists.<DimensionSpec>newArrayList(new DefaultDimensionSpec("dim1", "dim1")),
         byRow
     );
 
