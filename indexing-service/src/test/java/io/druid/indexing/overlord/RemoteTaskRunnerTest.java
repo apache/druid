@@ -25,6 +25,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.metamx.emitter.EmittingLogger;
@@ -41,12 +42,14 @@ import io.druid.indexing.worker.Worker;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.zookeeper.CreateMode;
 import org.easymock.EasyMock;
+import org.joda.time.DateTime;
 import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Set;
 import java.util.concurrent.Future;
@@ -590,4 +593,19 @@ public class RemoteTaskRunnerTest
     Assert.assertEquals(TaskStatus.Status.SUCCESS, status.getStatusCode());
   }
 
+  @Test
+  public void testSortByInsertionTime() throws Exception
+  {
+    RemoteTaskRunnerWorkItem item1 = new RemoteTaskRunnerWorkItem("b", null, null)
+        .withQueueInsertionTime(new DateTime("2015-01-01T00:00:03Z"));
+    RemoteTaskRunnerWorkItem item2 = new RemoteTaskRunnerWorkItem("a", null, null)
+        .withQueueInsertionTime(new DateTime("2015-01-01T00:00:02Z"));
+    RemoteTaskRunnerWorkItem item3 = new RemoteTaskRunnerWorkItem("c", null, null)
+        .withQueueInsertionTime(new DateTime("2015-01-01T00:00:01Z"));
+    ArrayList<RemoteTaskRunnerWorkItem> workItems = Lists.newArrayList(item1, item2, item3);
+    RemoteTaskRunner.sortByInsertionTime(workItems);
+    Assert.assertEquals(item3,workItems.get(0));
+    Assert.assertEquals(item2, workItems.get(1));
+    Assert.assertEquals(item1, workItems.get(2));
+  }
 }
