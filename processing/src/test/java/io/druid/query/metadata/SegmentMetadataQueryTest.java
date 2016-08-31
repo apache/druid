@@ -18,37 +18,51 @@
 package io.druid.query.metadata;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 import com.metamx.common.guava.Sequences;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.query.BySegmentResultValue;
+import io.druid.query.BySegmentResultValueClass;
 import io.druid.query.Druids;
+import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
 import io.druid.query.QueryRunnerTestHelper;
+import io.druid.query.QueryToolChest;
+import io.druid.query.Result;
 import io.druid.query.metadata.metadata.ColumnAnalysis;
 import io.druid.query.metadata.metadata.ListColumnIncluderator;
 import io.druid.query.metadata.metadata.SegmentAnalysis;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.segment.QueryableIndexSegment;
+import io.druid.segment.TestHelper;
 import io.druid.segment.TestIndex;
+import io.druid.segment.column.ValueType;
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
 import java.util.Arrays;
-import java.util.HashMap;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class SegmentMetadataQueryTest
 {
-  @SuppressWarnings("unchecked")
-  private final QueryRunner runner = makeQueryRunner(
-      new SegmentMetadataQueryRunnerFactory(
-          new SegmentMetadataQueryQueryToolChest(),
-          QueryRunnerTestHelper.NOOP_QUERYWATCHER)
+  private final SegmentMetadataQueryRunnerFactory factory = new SegmentMetadataQueryRunnerFactory(
+      new SegmentMetadataQueryQueryToolChest(),
+      QueryRunnerTestHelper.NOOP_QUERYWATCHER
   );
-  private ObjectMapper mapper = new DefaultObjectMapper();
+
+  @SuppressWarnings("unchecked")
+  private final QueryRunner runner = makeQueryRunner(factory);
+
+  private final ObjectMapper mapper = new DefaultObjectMapper();
 
   @SuppressWarnings("unchecked")
   public static QueryRunner makeQueryRunner(
@@ -61,35 +75,81 @@ public class SegmentMetadataQueryTest
     );
   }
 
+  private final SegmentMetadataQuery testQuery;
+  private final SegmentAnalysis expectedSegmentAnalysis;
+
+  public SegmentMetadataQueryTest()
+  {
+    testQuery = Druids.newSegmentMetadataQueryBuilder()
+                      .dataSource("testing")
+                      .intervals("2013/2014")
+                      .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
+                      .merge(true)
+                      .build();
+
+    expectedSegmentAnalysis = new SegmentAnalysis(
+        "testSegment",
+        ImmutableList.of(
+            new Interval("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z")
+        ),
+        ImmutableMap.of(
+            "placement",
+            new ColumnAnalysis(
+                ValueType.STRING.toString(),
+                10881,
+                1,
+                null
+            )
+        ), 69843
+    );
+  }
   @Test
   @SuppressWarnings("unchecked")
   public void testSegmentMetadataQuery()
   {
-    SegmentMetadataQuery query = Druids.newSegmentMetadataQueryBuilder()
-                                       .dataSource("testing")
-                                       .intervals("2013/2014")
-                                       .toInclude(new ListColumnIncluderator(Arrays.asList("placement")))
-                                       .merge(true)
-                                       .build();
-    HashMap<String,Object> context = new HashMap<String, Object>();
-    Iterable<SegmentAnalysis> results = Sequences.toList(
-        runner.run(query, context),
+    List<SegmentAnalysis> results = Sequences.toList(
+        runner.run(testQuery, Maps.newHashMap()),
         Lists.<SegmentAnalysis>newArrayList()
     );
-    SegmentAnalysis val = results.iterator().next();
-    Assert.assertEquals("testSegment", val.getId());
-    Assert.assertEquals(69843, val.getSize());
-    Assert.assertEquals(
-        Arrays.asList(new Interval("2011-01-12T00:00:00.000Z/2011-04-15T00:00:00.001Z")),
-        val.getIntervals()
-    );
-    Assert.assertEquals(1, val.getColumns().size());
-    final ColumnAnalysis columnAnalysis = val.getColumns().get("placement");
-    Assert.assertEquals("STRING", columnAnalysis.getType());
-    Assert.assertEquals(10881, columnAnalysis.getSize());
-    Assert.assertEquals(new Integer(1), columnAnalysis.getCardinality());
-    Assert.assertNull(columnAnalysis.getErrorMessage());
 
+    Assert.assertEquals(Arrays.asList(expectedSegmentAnalysis), results);
+  }
+
+  @Test
+  public void testBySegmentResults()
+  {
+    Result<BySegmentResultValue> bySegmentResult = new Result<BySegmentResultValue>(
+        expectedSegmentAnalysis.getIntervals().get(0).getStart(),
+        new BySegmentResultValueClass(
+            Arrays.asList(
+                expectedSegmentAnalysis
+            ), expectedSegmentAnalysis.getId(), testQuery.getIntervals().get(0)
+        )
+    );
+
+    QueryToolChest toolChest = factory.getToolchest();
+
+    QueryRunner singleSegmentQueryRunner = toolChest.preMergeQueryDecoration(runner);
+    ExecutorService exec = Executors.newCachedThreadPool();
+    QueryRunner myRunner = new FinalizeResultsQueryRunner<>(
+        toolChest.mergeResults(
+            factory.mergeRunners(
+                Executors.newCachedThreadPool(),
+                //Note: It is essential to have atleast 2 query runners merged to reproduce the regression bug described in
+                //https://github.com/druid-io/druid/pull/1172
+                //the bug surfaces only when ordering is used which happens only when you have 2 things to compare
+                Lists.<QueryRunner<SegmentAnalysis>>newArrayList(singleSegmentQueryRunner, singleSegmentQueryRunner))),
+        toolChest
+    );
+
+    TestHelper.assertExpectedObjects(
+        ImmutableList.of(bySegmentResult, bySegmentResult),
+        myRunner.run(
+            testQuery.withOverriddenContext(ImmutableMap.<String, Object>of("bySegment", true)),
+            Maps.newHashMap()
+        ),
+        "failed SegmentMetadata bySegment query");
+    exec.shutdownNow();
   }
 
   @Test
@@ -107,6 +167,5 @@ public class SegmentMetadataQueryTest
 
     // test serialize and deserialize
     Assert.assertEquals(query, mapper.readValue(mapper.writeValueAsString(query), Query.class));
-
   }
 }
