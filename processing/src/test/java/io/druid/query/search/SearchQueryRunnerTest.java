@@ -163,14 +163,14 @@ public class SearchQueryRunnerTest
     );
 
     List<SearchHit> expectedHits = Lists.newLinkedList();
-    expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "automotive", 186));
-    expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "mezzanine", 558));
-    expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "travel", 186));
-    expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "health", 186));
-    expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "entertainment", 186));
-    expectedHits.add(new SearchHit(QueryRunnerTestHelper.marketDimension, "total_market", 372));
-    expectedHits.add(new SearchHit(QueryRunnerTestHelper.placementishDimension, "a", 186));
-    expectedHits.add(new SearchHit(QueryRunnerTestHelper.partialNullDimension, "value", 372));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "automotive", 91));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "mezzanine", 273));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "travel", 91));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "health", 91));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.qualityDimension, "entertainment", 91));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.marketDimension, "total_market", 182));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.placementishDimension, "a", 91));
+    expectedHits.add(new SearchHit(QueryRunnerTestHelper.partialNullDimension, "value", 182));
 
     checkSearchQuery(searchQuery, mergedRunner, expectedHits);
   }
