@@ -247,7 +247,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     return makeReturnResult(limit, retVal);
   }
 
-  private int getStartIndexOfTime(GenericColumn timeValues, long time, boolean inclusive)
+  protected int getStartIndexOfTime(GenericColumn timeValues, long time, boolean inclusive)
   {
     int low = 0;
     int high = timeValues.length() - 1;
@@ -274,7 +274,7 @@ public class SearchQueryRunner implements QueryRunner<Result<SearchResultValue>>
     }
     // key not found.
     // return insert index
-    return low;
+    return inclusive ? low : low - 1;
   }
 
   private Sequence<Result<SearchResultValue>> makeReturnResult(
