@@ -43,7 +43,7 @@ public class HadoopTuningConfig implements TuningConfig
   private static final IndexSpec DEFAULT_INDEX_SPEC = new IndexSpec();
   private static final int DEFAULT_ROW_FLUSH_BOUNDARY = 75000;
   private static final boolean DEFAULT_USE_COMBINER = false;
-  private static final Boolean DEFAULT_BUILD_V9_DIRECTLY = Boolean.FALSE;
+  private static final Boolean DEFAULT_BUILD_V9_DIRECTLY = Boolean.TRUE;
   private static final int DEFAULT_NUM_BACKGROUND_PERSIST_THREADS = 0;
 
   public static HadoopTuningConfig makeDefaultTuningConfig()
