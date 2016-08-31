@@ -14,8 +14,9 @@ This is for batch ingestion using the HadoopDruidIndexer. The inputFormat of inp
 
 |Field     | Type        | Description                                                                            | Required|
 |----------|-------------|----------------------------------------------------------------------------------------|---------|
-|type      | String      | This should say `parquet`                                                              | yes|
-|parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Should be a timeAndDims parseSpec. | yes|
+| type      | String      | This should say `parquet`                                                              | yes |
+| parseSpec | JSON Object | Specifies the timestamp and dimensions of the data. Should be a timeAndDims parseSpec. | yes |
+| binaryAsString | Boolean | Specifies if the bytes parquet column should be converted to strings. | no(default == false) |
 
 For example:
 

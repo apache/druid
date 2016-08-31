@@ -46,7 +46,7 @@ public class AvroHadoopInputRowParser implements InputRowParser<GenericRecord>
   @Override
   public InputRow parse(GenericRecord record)
   {
-    return AvroStreamInputRowParser.parseGenericRecord(record, parseSpec, dimensions, fromPigAvroStorage);
+    return AvroStreamInputRowParser.parseGenericRecord(record, parseSpec, dimensions, fromPigAvroStorage, false);
   }
 
   @JsonProperty
