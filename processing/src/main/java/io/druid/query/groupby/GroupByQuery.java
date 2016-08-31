@@ -734,7 +734,6 @@ public class GroupByQuery extends BaseQuery<Row>
     result = 31 * result + (dimensions != null ? dimensions.hashCode() : 0);
     result = 31 * result + (aggregatorSpecs != null ? aggregatorSpecs.hashCode() : 0);
     result = 31 * result + (postAggregatorSpecs != null ? postAggregatorSpecs.hashCode() : 0);
-    result = 31 * result + (limitFn != null ? limitFn.hashCode() : 0);
     return result;
   }
 }

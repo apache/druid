@@ -22,6 +22,8 @@ package io.druid.query.groupby.orderby;
 import com.google.common.base.Splitter;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Ordering;
+import com.metamx.common.guava.Sequence;
+import com.metamx.common.guava.Sequences;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -35,7 +37,7 @@ import java.util.Random;
 
 
 @RunWith(Parameterized.class)
-public class TopNSorterTest
+public class TopNSequenceTest
 {
   private static final long SEED = 2L;
   private static final Ordering<String> ASC = Ordering.natural();
@@ -78,7 +80,7 @@ public class TopNSorterTest
     return Arrays.asList(data);
   }
 
-  public TopNSorterTest(Ordering<String> ordering, List<String> rawInput, int limit){
+  public TopNSequenceTest(Ordering<String> ordering, List<String> rawInput, int limit){
     this.ordering = ordering;
     this.rawInput = rawInput;
     this.limit = limit;
@@ -91,8 +93,8 @@ public class TopNSorterTest
     List<String> inputs = Lists.newArrayList(rawInput);
     Collections.shuffle(inputs, new Random(2));
 
-    Iterable<String> result = new TopNSorter<String>(ordering).toTopN(inputs, limit);
+    Sequence<String> result = new TopNSequence<String>(Sequences.simple(inputs), ordering, limit);
 
-    Assert.assertEquals(expected, Lists.newArrayList(result));
+    Assert.assertEquals(expected, Sequences.toList(result, Lists.<String>newArrayList()));
   }
 }
