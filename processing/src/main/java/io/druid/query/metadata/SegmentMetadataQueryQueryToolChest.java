@@ -172,7 +172,7 @@ public class SegmentMetadataQueryQueryToolChest extends QueryToolChest<SegmentAn
     return new CacheStrategy<SegmentAnalysis, SegmentAnalysis, SegmentMetadataQuery>()
     {
       @Override
-      public byte[] computeCacheKey()
+      public byte[] computeCacheKey(SegmentMetadataQuery query)
       {
         byte[] includerBytes = query.getToInclude().getCacheKey();
         byte[] analysisTypesBytes = query.getAnalysisTypesCacheKey();

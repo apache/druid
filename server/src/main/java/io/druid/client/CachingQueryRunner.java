@@ -103,7 +103,7 @@ public class CachingQueryRunner<T> implements QueryRunner<T>
       key = CacheUtil.computeSegmentCacheKey(
           segmentIdentifier,
           segmentDescriptor,
-          strategy.computeCacheKey()
+          strategy.computeCacheKey(query)
       );
     } else {
       key = null;

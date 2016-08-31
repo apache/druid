@@ -23,7 +23,10 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
 import com.google.common.base.Functions;
 import com.google.common.base.Preconditions;
-import com.google.common.collect.*;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Ordering;
 import com.google.common.primitives.Ints;
 import com.google.inject.Inject;
 import com.metamx.common.IAE;
@@ -52,7 +55,6 @@ import org.joda.time.DateTime;
 
 import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -133,31 +135,34 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   @Override
   public CacheStrategy<Result<SearchResultValue>, Object, SearchQuery> getCacheStrategy(final SearchQuery query)
   {
-    final List<DimensionSpec> dimensionSpecs =
-        query.getDimensions() != null ? query.getDimensions() : Collections.<DimensionSpec>emptyList();
-    final List<String> dimOutputNames = dimensionSpecs.size() > 0 ?
-        Lists.transform(
-            dimensionSpecs,
-            new Function<DimensionSpec, String>() {
-              @Override
-              public String apply(DimensionSpec input) {
-                return input.getOutputName();
-              }
-            }
-        )
-        :
-        Collections.<String>emptyList();
 
     return new CacheStrategy<Result<SearchResultValue>, Object, SearchQuery>()
     {
+      private final List<DimensionSpec> dimensionSpecs =
+          query.getDimensions() != null ? query.getDimensions() : Collections.<DimensionSpec>emptyList();
+      private final List<String> dimOutputNames = dimensionSpecs.size() > 0 ?
+          Lists.transform(
+              dimensionSpecs,
+              new Function<DimensionSpec, String>() {
+                @Override
+                public String apply(DimensionSpec input) {
+                  return input.getOutputName();
+                }
+              }
+          )
+          :
+          Collections.<String>emptyList();
+
       @Override
-      public byte[] computeCacheKey()
+      public byte[] computeCacheKey(SearchQuery query)
       {
         final DimFilter dimFilter = query.getDimensionsFilter();
         final byte[] filterBytes = dimFilter == null ? new byte[]{} : dimFilter.getCacheKey();
         final byte[] querySpecBytes = query.getQuery().getCacheKey();
         final byte[] granularityBytes = query.getGranularity().cacheKey();
 
+        final List<DimensionSpec> dimensionSpecs =
+            query.getDimensions() != null ? query.getDimensions() : Collections.<DimensionSpec>emptyList();
         final byte[][] dimensionsBytes = new byte[dimensionSpecs.size()][];
         int dimensionsBytesSize = 0;
         int index = 0;

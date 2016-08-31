@@ -325,7 +325,7 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
 
 
       @Override
-      public byte[] computeCacheKey()
+      public byte[] computeCacheKey(GroupByQuery query)
       {
         final DimFilter dimFilter = query.getDimFilter();
         final byte[] filterBytes = dimFilter == null ? new byte[]{} : dimFilter.getCacheKey();

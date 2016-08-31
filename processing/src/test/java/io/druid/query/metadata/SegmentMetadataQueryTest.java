@@ -1088,10 +1088,10 @@ public class SegmentMetadataQueryTest
                                                 .build();
 
     final byte[] oneColumnQueryCacheKey = new SegmentMetadataQueryQueryToolChest(null).getCacheStrategy(oneColumnQuery)
-                                                                                      .computeCacheKey();
+                                                                                      .computeCacheKey(oneColumnQuery);
 
     final byte[] twoColumnQueryCacheKey = new SegmentMetadataQueryQueryToolChest(null).getCacheStrategy(twoColumnQuery)
-                                                                                      .computeCacheKey();
+                                                                                      .computeCacheKey(twoColumnQuery);
 
     Assert.assertFalse(Arrays.equals(oneColumnQueryCacheKey, twoColumnQueryCacheKey));
   }
