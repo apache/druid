@@ -27,6 +27,7 @@ import com.metamx.common.ISE;
 import com.metamx.common.guava.BaseSequence;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
+import io.druid.granularity.QueryGranularities;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.Filter;
@@ -61,19 +62,15 @@ public class ScanQueryEngine
     // at the point where this code is called, only one datasource should exist.
     String dataSource = Iterables.getOnlyElement(query.getDataSource().getNames());
 
-    final Iterable<DimensionSpec> dims;
-    if (query.getDimensions() == null || query.getDimensions().isEmpty()) {
-      dims = DefaultDimensionSpec.toSpec(adapter.getAvailableDimensions());
-    } else {
-      dims = query.getDimensions();
+    List<String> allDims = Lists.newLinkedList(adapter.getAvailableDimensions());
+    List<String> allMetrics = Lists.newLinkedList(adapter.getAvailableMetrics());
+    if (query.getColumns() != null && !query.getColumns().isEmpty()) {
+      allDims.retainAll(query.getColumns());
+      allMetrics.retainAll(query.getColumns());
     }
+    final List<DimensionSpec> dims = DefaultDimensionSpec.toSpec(allDims);
+    final List<String> metrics = allMetrics;
 
-    final Iterable<String> metrics;
-    if (query.getMetrics() == null || query.getMetrics().isEmpty()) {
-      metrics = adapter.getAvailableMetrics();
-    } else {
-      metrics = query.getMetrics();
-    }
     final List<Interval> intervals = query.getQuerySegmentSpec().getIntervals();
     Preconditions.checkArgument(intervals.size() == 1, "Can only handle a single interval, got[%s]", intervals);
 
@@ -87,7 +84,7 @@ public class ScanQueryEngine
             adapter.makeCursors(
                 filter,
                 intervals.get(0),
-                query.getGranularity(),
+                QueryGranularities.ALL,
                 query.isDescending()
             ),
             new Function<Cursor, Sequence<ScanResultValue>>()
@@ -130,6 +127,23 @@ public class ScanQueryEngine
                           public ScanResultValue next()
                           {
                             int lastOffset = offset;
+                            Object events = null;
+                            String resultFormat = query.getResultFormat();
+                            if ("valueVector".equals(resultFormat)) {
+                              events = rowsToValueVector();
+                            } else {
+                              events = rowsToList();
+                            }
+                            return new ScanResultValue(segmentId, lastOffset, events);
+                          }
+
+                          @Override
+                          public void remove()
+                          {
+                            throw new UnsupportedOperationException();
+                          }
+
+                          private Object rowsToList() {
                             int i = 0;
                             List<Map<String, Object>> events = Lists.newArrayListWithCapacity(batchSize);
                             for (; !cursor.isDone()
@@ -143,13 +157,12 @@ public class ScanQueryEngine
                               );
                               events.add(theEvent);
                             }
-                            return new ScanResultValue(segmentId, lastOffset, events);
+                            return events;
                           }
 
-                          @Override
-                          public void remove()
-                          {
-                            throw new UnsupportedOperationException();
+                          private Object rowsToValueVector() {
+                            // only support list now, we can support ValueVector or Arrow in future
+                            return rowsToList();
                           }
                         };
                       }

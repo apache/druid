@@ -21,7 +21,6 @@ package io.druid.query.scan;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
-import io.druid.granularity.QueryGranularity;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Query;
@@ -37,33 +36,36 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
 {
   public static final String SCAN = "scan";
 
+  private final String resultFormat;
   private final int batchSize;
   private final int limit;
-  private final QueryGranularity granularity;
   private final DimFilter dimFilter;
-  private final List<DimensionSpec> dimensions;
-  private final List<String> metrics;
+  private final List<String> columns;
 
   @JsonCreator
   public ScanQuery(
       @JsonProperty("dataSource") DataSource dataSource,
       @JsonProperty("intervals") QuerySegmentSpec querySegmentSpec,
+      @JsonProperty("resultFormat") String resultFormat,
       @JsonProperty("batchSize") int batchSize,
       @JsonProperty("limit") int limit,
       @JsonProperty("filter") DimFilter dimFilter,
-      @JsonProperty("granularity") QueryGranularity granularity,
-      @JsonProperty("dimensions") List<DimensionSpec> dimensions,
-      @JsonProperty("metrics") List<String> metrics,
+      @JsonProperty("columns") List<String> columns,
       @JsonProperty("context") Map<String, Object> context
   )
   {
     super(dataSource, querySegmentSpec, false, context);
+    this.resultFormat = resultFormat;
     this.batchSize = (batchSize == 0) ? 4096 * 5 : batchSize;
     this.limit = (limit == 0) ? Integer.MAX_VALUE : limit;
     this.dimFilter = dimFilter;
-    this.granularity = granularity;
-    this.dimensions = dimensions;
-    this.metrics = metrics;
+    this.columns = columns;
+  }
+
+  @JsonProperty
+  public String getResultFormat()
+  {
+    return resultFormat;
   }
 
   @JsonProperty
@@ -103,21 +105,9 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
   }
 
   @JsonProperty
-  public QueryGranularity getGranularity()
+  public List<String> getColumns()
   {
-    return granularity;
-  }
-
-  @JsonProperty
-  public List<DimensionSpec> getDimensions()
-  {
-    return dimensions;
-  }
-
-  @JsonProperty
-  public List<String> getMetrics()
-  {
-    return metrics;
+    return columns;
   }
 
   @Override
@@ -126,12 +116,11 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     return new ScanQuery(
         getDataSource(),
         querySegmentSpec,
+        resultFormat,
         batchSize,
         limit,
         dimFilter,
-        granularity,
-        dimensions,
-        metrics,
+        columns,
         getContext()
     );
   }
@@ -142,12 +131,11 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     return new ScanQuery(
         dataSource,
         getQuerySegmentSpec(),
+        resultFormat,
         batchSize,
         limit,
         dimFilter,
-        granularity,
-        dimensions,
-        metrics,
+        columns,
         getContext()
     );
   }
@@ -158,12 +146,11 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     return new ScanQuery(
         getDataSource(),
         getQuerySegmentSpec(),
+        resultFormat,
         batchSize,
         limit,
         dimFilter,
-        granularity,
-        dimensions,
-        metrics,
+        columns,
         computeOverridenContext(contextOverrides)
     );
   }
@@ -173,12 +160,11 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     return new ScanQuery(
         getDataSource(),
         getQuerySegmentSpec(),
+        resultFormat,
         batchSize,
         limit,
         dimFilter,
-        granularity,
-        dimensions,
-        metrics,
+        columns,
         getContext()
     );
   }
@@ -204,28 +190,24 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
     if (limit != that.limit) {
       return false;
     }
+    if (resultFormat != null ? !resultFormat.equals(that.resultFormat) : that.resultFormat != null) {
+      return false;
+    }
     if (dimFilter != null ? !dimFilter.equals(that.dimFilter) : that.dimFilter != null) {
       return false;
     }
-    if (granularity != null ? !granularity.equals(that.granularity) : that.granularity != null) {
-      return false;
-    }
-    if (dimensions != null ? !dimensions.equals(that.dimensions) : that.dimensions != null) {
-      return false;
-    }
-    return metrics != null ? metrics.equals(that.metrics) : that.metrics == null;
+    return columns != null ? columns.equals(that.columns) : that.columns == null;
   }
 
   @Override
   public int hashCode()
   {
     int result = super.hashCode();
+    result = 31 * result + (resultFormat != null ? resultFormat.hashCode() : 0);
     result = 31 * result + batchSize;
     result = 31 * result + limit;
     result = 31 * result + (dimFilter != null ? dimFilter.hashCode() : 0);
-    result = 31 * result + (granularity != null ? granularity.hashCode() : 0);
-    result = 31 * result + (dimensions != null ? dimensions.hashCode() : 0);
-    result = 31 * result + (metrics != null ? metrics.hashCode() : 0);
+    result = 31 * result + (columns != null ? columns.hashCode() : 0);
     return result;
   }
 
@@ -236,12 +218,11 @@ public class ScanQuery extends BaseQuery<ScanResultValue>
            "dataSource='" + getDataSource() + '\'' +
            ", querySegmentSpec=" + getQuerySegmentSpec() +
            ", descending=" + isDescending() +
+           ", resultFormat='" + resultFormat + '\'' +
            ", batchSize=" + batchSize +
            ", limit=" + limit +
            ", dimFilter=" + dimFilter +
-           ", granularity=" + granularity +
-           ", dimensions=" + dimensions +
-           ", metrics=" + metrics +
+           ", columns=" + columns +
            '}';
   }
 }

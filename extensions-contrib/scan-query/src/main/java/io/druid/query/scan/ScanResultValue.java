@@ -32,13 +32,13 @@ public class ScanResultValue implements Comparable<ScanResultValue>
 
   private final String segmentId;
   private final int offset;
-  private final List<Map<String, Object>> events;
+  private final Object events;
 
   @JsonCreator
   public ScanResultValue(
       @JsonProperty("segmentId") String segmentId,
       @JsonProperty("offset") int offset,
-      @JsonProperty("events") List<Map<String, Object>> events
+      @JsonProperty("events") Object events
   )
   {
     this.segmentId = segmentId;
@@ -59,7 +59,7 @@ public class ScanResultValue implements Comparable<ScanResultValue>
   }
 
   @JsonProperty
-  public List<Map<String, Object>> getEvents()
+  public Object getEvents()
   {
     return events;
   }
@@ -82,7 +82,6 @@ public class ScanResultValue implements Comparable<ScanResultValue>
       return false;
     }
     return events != null ? events.equals(that.events) : that.events == null;
-
   }
 
   @Override
