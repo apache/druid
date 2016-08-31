@@ -52,16 +52,18 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
   private static List<String> makeRequiredFieldNamesFromFields(List<DimensionSpec> fields)
   {
     return ImmutableList.copyOf(
-        Lists.transform(
-            fields,
-            new Function<DimensionSpec, String>()
-            {
-              @Override
-              public String apply(DimensionSpec input)
-              {
-                return input.getDimensions().get(0);
-              }
-            }
+        Iterables.concat(
+            Lists.transform(
+                fields,
+                new Function<DimensionSpec, List<String>>()
+                {
+                  @Override
+                  public List<String> apply(DimensionSpec input)
+                  {
+                    return input.getDimensions();
+                  }
+                }
+            )
         )
     );
   }
