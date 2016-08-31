@@ -226,7 +226,7 @@ public class TimeFilteringTest extends BaseFilterTest
   @Test
   public void testTimeFilterWithTimeFormatExtractionFn()
   {
-    ExtractionFn exfn = new TimeFormatExtractionFn("EEEE", DateTimeZone.forID("America/New_York"), "en");
+    ExtractionFn exfn = new TimeFormatExtractionFn("EEEE", DateTimeZone.forID("America/New_York"), "en", null);
     assertFilterMatches(
         new SelectorDimFilter(Column.TIME_COLUMN_NAME, "Wednesday", exfn),
         ImmutableList.<String>of("0", "1", "2", "3", "4", "5")
