@@ -35,13 +35,12 @@ import io.druid.collections.BlockingPool;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
-import io.druid.granularity.AllGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.granularity.QueryGranularity;
 import io.druid.guice.annotations.Global;
 import io.druid.guice.annotations.Merging;
 import io.druid.guice.annotations.Smile;
 import io.druid.query.DruidProcessingConfig;
-import io.druid.query.NoopQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryWatcher;
@@ -88,6 +87,29 @@ public class GroupByStrategyV2 implements GroupByStrategy
     this.queryWatcher = queryWatcher;
   }
 
+  /**
+   * If "query" has a single universal timestamp, return it. Otherwise return null. This is useful
+   * for keeping timestamps in sync across partial queries that may have different intervals.
+   *
+   * @param query the query
+   *
+   * @return universal timestamp, or null
+   */
+  public static DateTime getUniversalTimestamp(final GroupByQuery query)
+  {
+    final QueryGranularity gran = query.getGranularity();
+    final String timestampStringFromContext = query.getContextValue(CTX_KEY_FUDGE_TIMESTAMP, "");
+
+    if (!timestampStringFromContext.isEmpty()) {
+      return new DateTime(Long.parseLong(timestampStringFromContext));
+    } else if (QueryGranularities.ALL.equals(gran)) {
+      final long timeStart = query.getIntervals().get(0).getStartMillis();
+      return new DateTime(gran.iterable(timeStart, timeStart + 1).iterator().next());
+    } else {
+      return null;
+    }
+  }
+
   @Override
   public Sequence<Row> mergeResults(
       final QueryRunner<Row> baseRunner,
@@ -113,17 +135,8 @@ public class GroupByStrategyV2 implements GroupByStrategy
       }
     };
 
-    // Fudge timestamp, maybe. Necessary to keep timestamps in sync across partial queries.
-    final QueryGranularity gran = query.getGranularity();
-    final String fudgeTimestamp;
-    if (query.getContextValue(CTX_KEY_FUDGE_TIMESTAMP, "").isEmpty() && gran instanceof AllGranularity) {
-      final long timeStart = query.getIntervals().get(0).getStartMillis();
-      fudgeTimestamp = String.valueOf(
-          new DateTime(gran.iterable(timeStart, timeStart + 1).iterator().next()).getMillis()
-      );
-    } else {
-      fudgeTimestamp = query.getContextValue(CTX_KEY_FUDGE_TIMESTAMP, "");
-    }
+    // Fudge timestamp, maybe.
+    final DateTime fudgeTimestamp = getUniversalTimestamp(query);
 
     return query.applyLimit(
         Sequences.map(
@@ -132,7 +145,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
                     query.getDataSource(),
                     query.getQuerySegmentSpec(),
                     query.getDimFilter(),
-                    gran,
+                    query.getGranularity(),
                     query.getDimensions(),
                     query.getAggregatorSpecs(),
                     // Don't do post aggs until the end of this method.
@@ -145,7 +158,7 @@ public class GroupByStrategyV2 implements GroupByStrategy
                     ImmutableMap.<String, Object>of(
                         "finalize", false,
                         GroupByQueryConfig.CTX_KEY_STRATEGY, GroupByStrategySelector.STRATEGY_V2,
-                        CTX_KEY_FUDGE_TIMESTAMP, fudgeTimestamp
+                        CTX_KEY_FUDGE_TIMESTAMP, fudgeTimestamp == null ? "" : String.valueOf(fudgeTimestamp.getMillis())
                     )
                 ),
                 responseContext
