@@ -60,11 +60,14 @@ shared:
     compute_druid_pkg_code_version:
       description: compute the hash for druid pkg code version
       command: >
-        echo 1-$(date '+%s')-$(git -C druid_package rev-parse --short HEAD)-${BUILD_NUMBER} > druid.pkg.code.version &&
+        cd druid_package &&
+        echo 1-$(date '+%s')-$(git rev-parse --short HEAD)-${BUILD_NUMBER} > druid.pkg.code.version &&
         if [ ! -s druid.pkg.code.version ]; then echo 'Error: druid.pkg.code.version is empty!' && exit 1; else echo "druid.pkg.code.version is `cat druid.pkg.code.version`"; fi || exit $?
     set_druid_pkg_code_version:
       description: set druid pkg jars version
-      command: mvn -B -f druid_package/pom.xml org.codehaus.mojo:versions-maven-plugin:2.1:set -DnewVersion="`cat druid.pkg.code.version`" && git commit -a -m "commiting druid_pkg pom version update"
+      command: >
+        cd druid_package &&
+        mvn -B -f org.codehaus.mojo:versions-maven-plugin:2.1:set -DnewVersion="`cat druid.pkg.code.version`" && git commit -a -m "commiting druid_pkg pom version update"
     druid_pkg_code_build:
       description: copy dependencies for druid_package
       command: mvn -B -f druid_package/pom.xml -Ddruid.version="`cat druid.version`" install dependency:copy-dependencies
