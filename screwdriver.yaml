@@ -67,7 +67,7 @@ shared:
       description: set druid pkg jars version
       command: >
         cd druid_package &&
-        mvn -B -f org.codehaus.mojo:versions-maven-plugin:2.1:set -DnewVersion="`cat druid.pkg.code.version`" && git commit -a -m "commiting druid_pkg pom version update"
+        mvn -B org.codehaus.mojo:versions-maven-plugin:2.1:set -DnewVersion="`cat druid.pkg.code.version`" && git commit -a -m "commiting druid_pkg pom version update"
     druid_pkg_code_build:
       description: copy dependencies for druid_package
       command: mvn -B -f druid_package/pom.xml -Ddruid.version="`cat druid.version`" install dependency:copy-dependencies
