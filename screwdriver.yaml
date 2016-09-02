@@ -135,7 +135,7 @@ jobs:
         description: call update_vars.sh (comes from druid_package repo) to replace placeholders embedded in the yicf files with meaningful names, replace HDFS base directory with pull-request info
         command: >
           cd druid_package &&
-          sh ./screwdriver/update_vars.sh ${SD_SETTING_DRUID_PKG_NAME} ${SD_SETTING_DRUID_INABOX_PKG_NAME} ${SD_SETTING_HDFS_BASE_DIR_PR} &&
+          sh ./screwdriver/update_vars.sh ${SD_SETTING_DRUID_PKG_NAME} ${SD_SETTING_DRUID_INABOX_PKG_NAME} ${SD_SETTING_HDFS_BASE_DIR_PR} $(cat ../druid.version) &&
           git diff &&
           git commit -a -m "commit to make yinst_create happy" || exit $?
       find_host:
@@ -170,6 +170,8 @@ jobs:
       - druid_code_build
       - clone_druid_pkg
       - set_config_files
+      - compute_druid_pkg_code_version
+      - set_druid_pkg_code_version
       - druid_pkg_code_build
       - check_druid_jars_version
       - clone_ci_tests_pkg
