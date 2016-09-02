@@ -692,7 +692,7 @@ Druid query performance can vary signficantly depending on the query being
 issued. For example, sorting the values of a high cardinality dimension based
 on a given metric is much more expensive than a simple count over a time range.
 To showcase the average query latencies in a production Druid cluster, we
-selected 8 of our most queried data sources, described in
+selected 8 frequently queried data sources, described in
 Table~\ref{tab:datasources}.
 
 \begin{table}
@@ -749,14 +749,12 @@ largest data sources.
 \subsection{Query Benchmarks on TPC-H Data}
 We also present Druid benchmarks on TPC-H data.  Most TPC-H queries do not
 directly apply to Druid, so we selected queries more typical of Druid's
-workload to demonstrate query performance. In Figure~\ref{fig:tpch_scaling}, we
-present our results of scaling Druid to meet increasing data volumes with the
-TPC-H 100 GB data set. We observe that when we increased the number of cores
-from 8 to 48, not all types of queries achieve linear scaling, but the simpler
-aggregation queries do. The increase in speed of a parallel computing system is
-often limited by the time needed for the sequential operations of the system.
-In this case, queries requiring a substantial amount of work at the broker
-level do not parallelize as well.
+workload to demonstrate query performance. In
+Figure~\ref{fig:druid_vs_bigquery}, we present our results compared again
+Google BigQuery, which is Google Dremel\cite{melnik2010dremel}.  The Druid
+results were ran on a 24 vCPU, 156 GB Google Compute Engine instance (2.2 GHz
+Intel Xeon E5 v4 Broadwell) and the BigQuery results were run through Google's
+web interface. In our results, Druid performed from 2-20x faster than BigQuery.
 
 \begin{figure}
 \centering
@@ -768,10 +766,9 @@ level do not parallelize as well.
 
 \begin{figure}
 \centering
-\includegraphics[width = 2.3in]{tpch_scaling}
-\includegraphics[width = 2.3in]{tpch_scaling_factor}
-\caption{Druid scaling benchmarks -- 100GB TPC-H data.}
-\label{fig:tpch_scaling}
+\includegraphics[width = 3.2in]{druid_vs_bigquery}
+\caption{Druid benchmarked against Google BigQuery -- 100GB TPC-H data.}
+\label{fig:druid_vs_bigquery}
 \end{figure}
 
 Our Druid setup used Amazon EC2 \texttt{m3.2xlarge} instance types
