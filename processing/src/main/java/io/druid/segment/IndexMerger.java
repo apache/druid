@@ -48,6 +48,7 @@ import com.metamx.collections.bitmap.MutableBitmap;
 import com.metamx.collections.spatial.ImmutableRTree;
 import com.metamx.collections.spatial.RTree;
 import com.metamx.collections.spatial.split.LinearGutmanSplitStrategy;
+import com.metamx.common.ByteBufferUtils;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.Pair;
@@ -933,6 +934,14 @@ public class IndexMerger
 
         File dimOutFile = dimOuts.get(i).getFile();
         final MappedByteBuffer dimValsMapped = Files.map(dimOutFile);
+        closer.register(new Closeable()
+        {
+          @Override
+          public void close() throws IOException
+          {
+            ByteBufferUtils.unmap(dimValsMapped);
+          }
+        });
 
         if (!dimension.equals(serializerUtils.readString(dimValsMapped))) {
           throw new ISE("dimensions[%s] didn't equate!?  This is a major WTF moment.", dimension);
