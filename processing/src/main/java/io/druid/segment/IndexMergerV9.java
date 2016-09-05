@@ -260,6 +260,9 @@ public class IndexMergerV9 extends IndexMerger
 
       return outDir;
     }
+    catch (Throwable t) {
+      throw closer.rethrow(t);
+    }
     finally {
       closer.close();
     }

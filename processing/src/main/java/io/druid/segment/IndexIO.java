@@ -549,12 +549,10 @@ public class IndexIO
 
       Closer closer = Closer.create();
       try {
-        SmooshedFileMapper v8SmooshedFiles = Smoosh.map(v8Dir);
-        closer.register(v8SmooshedFiles);
+        SmooshedFileMapper v8SmooshedFiles = closer.register(Smoosh.map(v8Dir));
 
         v9Dir.mkdirs();
-        final FileSmoosher v9Smoosher = new FileSmoosher(v9Dir);
-        closer.register(v9Smoosher);
+        final FileSmoosher v9Smoosher = closer.register(new FileSmoosher(v9Dir));
 
         ByteStreams.write(Ints.toByteArray(9), Files.newOutputStreamSupplier(new File(v9Dir, "version.bin")));
 
@@ -886,7 +884,11 @@ public class IndexIO
 
         log.info("Skipped files[%s]", skippedFiles);
 
-      } finally {
+      }
+      catch (Throwable t) {
+        throw closer.rethrow(t);
+      }
+      finally {
         closer.close();
       }
     }

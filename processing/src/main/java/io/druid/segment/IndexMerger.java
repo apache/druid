@@ -1087,6 +1087,9 @@ public class IndexMerger
       indexIO.getDefaultIndexIOHandler().convertV8toV9(v8OutDir, outDir, indexSpec);
       return outDir;
     }
+    catch (Throwable t) {
+      throw closer.rethrow(t);
+    }
     finally {
       closer.close();
     }
