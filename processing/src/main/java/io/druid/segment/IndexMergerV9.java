@@ -544,7 +544,14 @@ public class IndexMergerV9 extends IndexMerger
       fos.close();
 
       final MappedByteBuffer dimValsMapped = Files.map(dimValueFile);
-      try {
+      try (Closeable dimValsMappedUnmapper = new Closeable()
+      {
+        @Override
+        public void close()
+        {
+          ByteBufferUtils.unmap(dimValsMapped);
+        }
+      }) {
         Indexed<String> dimVals = GenericIndexed.read(dimValsMapped, GenericIndexed.STRING_STRATEGY);
 
         ByteBufferWriter<ImmutableRTree> spatialIndexWriter = spatialIndexWriters.get(dimIndex);
@@ -612,9 +619,6 @@ public class IndexMergerV9 extends IndexMerger
             dimVals.size(),
             System.currentTimeMillis() - dimStartTime
         );
-      }
-      finally {
-        ByteBufferUtils.unmap(dimValsMapped);
       }
     }
     log.info("Completed inverted index in %,d millis.", System.currentTimeMillis() - startTime);
