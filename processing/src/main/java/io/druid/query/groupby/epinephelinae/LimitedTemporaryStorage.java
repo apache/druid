@@ -110,6 +110,11 @@ public class LimitedTemporaryStorage implements Closeable
     }
   }
 
+  public long maxSize()
+  {
+    return maxBytesUsed;
+  }
+
   @Override
   public void close()
   {
@@ -128,35 +133,48 @@ public class LimitedTemporaryStorage implements Closeable
     }
   }
 
-  public class LimitedOutputStream extends FilterOutputStream
+  public class LimitedOutputStream extends OutputStream
   {
     private final File file;
+    private final OutputStream out;
 
     private LimitedOutputStream(File file, OutputStream out)
     {
-      super(out);
       this.file = file;
+      this.out = out;
     }
 
     @Override
     public void write(int b) throws IOException
     {
       grab(1);
-      super.write(b);
+      out.write(b);
     }
 
     @Override
     public void write(byte[] b) throws IOException
     {
       grab(b.length);
-      super.write(b);
+      out.write(b);
     }
 
     @Override
     public void write(byte[] b, int off, int len) throws IOException
     {
       grab(len);
-      super.write(b, off, len);
+      out.write(b, off, len);
+    }
+
+    @Override
+    public void flush() throws IOException
+    {
+      out.flush();
+    }
+
+    @Override
+    public void close() throws IOException
+    {
+      out.close();
     }
 
     public File getFile()
