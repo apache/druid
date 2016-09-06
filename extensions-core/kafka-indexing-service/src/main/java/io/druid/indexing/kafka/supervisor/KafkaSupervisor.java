@@ -1215,7 +1215,7 @@ public class KafkaSupervisor implements Supervisor
   private DateTime getTaskStartTime(final String id)
   {
     if (!taskInfoProvider.getTaskLocation(id).equals(TaskLocation.unknown())) {
-      DateTime startTime = taskClient.getStartTime(id, false);
+      DateTime startTime = taskClient.getStartTime(id);
       log.debug("Received start time of [%s] from task [%s]", startTime, id);
       return startTime;
     }

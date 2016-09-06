@@ -150,10 +150,10 @@ public class KafkaIndexTaskClient
     }
   }
 
-  public DateTime getStartTime(String id, boolean retry)
+  public DateTime getStartTime(String id)
   {
     try {
-      final FullResponseHolder response = submitRequest(id, HttpMethod.GET, "time/start", null, retry);
+      final FullResponseHolder response = submitRequest(id, HttpMethod.GET, "time/start", null, true);
       return response.getContent() == null || response.getContent().isEmpty()
              ? null
              : jsonMapper.readValue(response.getContent(), DateTime.class);
