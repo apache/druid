@@ -271,17 +271,22 @@ public class KafkaIndexTaskClientTest extends EasyMockSupport
   @Test
   public void testGetStartTime() throws Exception
   {
+    client = new RetryingTestableKafkaIndexTaskClient(httpClient, objectMapper, taskInfoProvider);
     DateTime now = DateTime.now();
 
     Capture<Request> captured = Capture.newInstance();
-    expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.OK);
+    expect(responseHolder.getStatus()).andReturn(HttpResponseStatus.NOT_FOUND).times(3)
+                                      .andReturn(HttpResponseStatus.OK);
+    expect(responseHolder.getResponse()).andReturn(response);
+    expect(response.headers()).andReturn(headers);
+    expect(headers.get("X-Druid-Task-Id")).andReturn(null);
     expect(responseHolder.getContent()).andReturn(String.valueOf(now.getMillis())).anyTimes();
     expect(httpClient.go(capture(captured), anyObject(FullResponseHandler.class))).andReturn(
         Futures.immediateFuture(responseHolder)
-    );
+    ).times(2);
     replayAll();
 
-    DateTime results = client.getStartTime(TEST_ID, false);
+    DateTime results = client.getStartTime(TEST_ID);
     verifyAll();
 
     Request request = captured.getValue();
