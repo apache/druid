@@ -11,7 +11,7 @@ able to read non-recent events from Kafka and are not subject to the window peri
 ingestion mechanisms. The supervisor oversees the state of the indexing tasks to coordinate handoffs, manage failures,
 and ensure that the scalability and replication requirements are maintained.
 
-This service is provided in the `kafka-indexing-service` core extension (see
+This service is provided in the `druid-kafka-indexing-service` core extension (see
 [Including Extensions](../../operations/including-extensions.html)). Please note that the Kafka indexing service is
 currently designated as an *experimental feature* and is subject to the usual
 [experimental caveats](../experimental.html).
@@ -24,7 +24,7 @@ version 0.9 or better before using this service.
 
 ## Submitting a Supervisor Spec
 
-The Kafka indexing service requires that the `kafka-indexing-service` extension be loaded on both the overlord and the
+The Kafka indexing service requires that the `druid-kafka-indexing-service` extension be loaded on both the overlord and the
 middle managers. A supervisor for a dataSource is started by submitting a supervisor spec via HTTP POST to
 `http://<OVERLORD_IP>:<OVERLORD_PORT>/druid/indexer/v1/supervisor`, for example:
 
