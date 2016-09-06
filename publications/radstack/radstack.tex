@@ -18,6 +18,11 @@
 
 \title{The RADStack: Open Source Lambda Architecture for Interactive Analytics}
 
+\author{
+  \alignauthor Fangjin Yang, Gian Merlino, Nelson Ray, Xavier Léauté, Himanshu Gupta, Eric Tschetter\\
+  \email{\{fangjinyang, gianmerlino, ncray86, xavier.leaute, g.himanshu, echeddar\}@gmail.com}
+}
+
 % possible, but not really needed or used for PVLDB:
 %\subtitle{[Extended Abstract]
 %\titlenote{A full version of this paper is available as\textit{Author's Guide to Preparing ACM SIG Proceedings Using \LaTeX$2_\epsilon$\ and BibTeX} at \texttt{www.acm.org/eaddress.htm}}}
@@ -714,11 +719,10 @@ Table~\ref{tab:datasources}.
   \label{tab:datasources}
 \end{table}
 
-Approximately 30\% of queries are standard aggregates involving different types
-of metrics and filters, 60\% of queries are ordered group bys over one or more
-dimensions with aggregates, and 10\% of queries are search queries and metadata
-retrieval queries. The number of columns scanned in aggregate queries roughly
-follows an exponential distribution. Queries involving a single column are very
+The queries vary from standard aggregates involving different types
+of metrics and filters, ordered group bys over one or more
+dimensions with aggregates, and search queries and metadata
+retrieval queries. Queries involving a single column are very
 frequent, and queries involving all columns are very rare.
 
 \begin{itemize}[leftmargin=*,beginpenalty=5000,topsep=0pt]
@@ -741,15 +745,11 @@ threads and 672 total cores (hyperthreaded).
 Query latencies are shown in Figure~\ref{fig:query_latency}. Across all the various
 data sources, average query latency is approximately 550 milliseconds, with
 90\% of queries returning in less than 1 second, 95\% in under 2 seconds, and
-99\% of queries returning in less than 10 seconds. Occasionally we observe
-spikes in latency, as observed on February 19, where network issues on
-the broker nodes were compounded by very high query load on one of our
-largest data sources.
+99\% of queries returning in less than 10 seconds. 
 
 \subsection{Query Benchmarks on TPC-H Data}
-We also present Druid benchmarks on TPC-H data.  Most TPC-H queries do not
-directly apply to Druid, so we selected queries more typical of Druid's
-workload to demonstrate query performance. In
+We also present Druid benchmarks on TPC-H data.  We selected queries more
+typical of Druid's workload to demonstrate query performance. In
 Figure~\ref{fig:druid_vs_bigquery}, we present our results compared again
 Google BigQuery, which is Google Dremel\cite{melnik2010dremel}.  The Druid
 results were ran on a 24 vCPU, 156 GB Google Compute Engine instance (2.2 GHz
@@ -788,9 +788,8 @@ production datasources in terms of peak events ingested per second for early
 2015. These datasources are described in Table~\ref{tab:ingestion}. Our
 production ingestion setup used over 40 nodes, each with 60GB of RAM and 32
 cores (12 x Intel\textsuperscript\textregistered
-Xeon\textsuperscript\textregistered E5-2670). In this setup, many other Druid
-related ingestion tasks were running concurrently on the machines. Each
-pipeline for each datasource involved transforms and joins.
+Xeon\textsuperscript\textregistered E5-2670). Each pipeline for each datasource
+involved transforms and joins.
 
 \begin{table}
   \centering
