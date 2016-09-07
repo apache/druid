@@ -1200,6 +1200,34 @@ public class KafkaIndexTaskTest
     Assert.assertEquals(ImmutableList.of("d", "e"), readSegmentDim1(desc3));
   }
 
+  @Test(timeout = 30_000L)
+  public void testRunWithOffsetOutOfRangeExceptionAndPause() throws Exception
+  {
+    final KafkaIndexTask task = createTask(
+        null,
+        new KafkaIOConfig(
+            "sequence0",
+            new KafkaPartitions("topic0", ImmutableMap.of(0, 2L)),
+            new KafkaPartitions("topic0", ImmutableMap.of(0, 5L)),
+            kafkaServer.consumerProperties(),
+            true,
+            false,
+            null
+        ),
+        null
+    );
+
+    runTask(task);
+
+    while (!task.getStatus().equals(KafkaIndexTask.Status.READING)) {
+      Thread.sleep(2000);
+    }
+
+    task.pause(0);
+
+    Assert.assertEquals(KafkaIndexTask.Status.PAUSED, task.getStatus());
+  }
+
   private ListenableFuture<TaskStatus> runTask(final Task task)
   {
     try {
