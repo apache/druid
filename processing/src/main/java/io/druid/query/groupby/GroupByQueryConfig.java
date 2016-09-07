@@ -35,6 +35,7 @@ public class GroupByQueryConfig
   private static final String CTX_KEY_BUFFER_GROUPER_MAX_SIZE = "bufferGrouperMaxSize";
   private static final String CTX_KEY_MAX_ON_DISK_STORAGE = "maxOnDiskStorage";
   private static final String CTX_KEY_MAX_MERGING_DICTIONARY_SIZE = "maxMergingDictionarySize";
+  public static final String CTX_KEY_SKIP_NULL_DIMENSION = "groupBySkipNullDimension";
 
   @JsonProperty
   private String defaultStrategy = GroupByStrategySelector.STRATEGY_V1;
@@ -65,6 +66,9 @@ public class GroupByQueryConfig
   @JsonProperty
   // Max on-disk temporary storage, per-query; when exceeded, the query fails
   private long maxOnDiskStorage = 0L;
+
+  @JsonProperty
+  private boolean skipNullDimension = false;
 
   public String getDefaultStrategy()
   {
@@ -126,6 +130,16 @@ public class GroupByQueryConfig
     return maxOnDiskStorage;
   }
 
+  public boolean isSkipNullDimension()
+  {
+    return skipNullDimension;
+  }
+
+  public void setSkipNullDimension(boolean skipNullDimension)
+  {
+    this.skipNullDimension = skipNullDimension;
+  }
+
   public GroupByQueryConfig withOverrides(final GroupByQuery query)
   {
     final GroupByQueryConfig newConfig = new GroupByQueryConfig();
@@ -159,6 +173,7 @@ public class GroupByQueryConfig
         ((Number) query.getContextValue(CTX_KEY_MAX_MERGING_DICTIONARY_SIZE, getMaxMergingDictionarySize())).longValue(),
         getMaxMergingDictionarySize()
     );
+    newConfig.skipNullDimension = query.getContextBoolean(CTX_KEY_SKIP_NULL_DIMENSION, isSkipNullDimension());
     return newConfig;
   }
 }

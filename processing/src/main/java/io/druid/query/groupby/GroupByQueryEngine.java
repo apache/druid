@@ -40,7 +40,6 @@ import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedRow;
 import io.druid.data.input.Row;
 import io.druid.guice.annotations.Global;
-import io.druid.query.Query;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.PostAggregator;
@@ -59,6 +58,7 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -180,24 +180,37 @@ public class GroupByQueryEngine
 
     private List<ByteBuffer> updateValues(
         ByteBuffer key,
-        List<DimensionSelector> dims
+        List<DimensionSelector> dims,
+        final int[] nullIndDices,
+        final int index
     )
     {
-      if (dims.size() > 0) {
+      if (index < dims.size()) {
         List<ByteBuffer> retVal = null;
         List<ByteBuffer> unaggregatedBuffers = null;
 
-        final DimensionSelector dimSelector = dims.get(0);
+        final DimensionSelector dimSelector = dims.get(index);
         final IndexedInts row = dimSelector.getRow();
         if (row == null || row.size() == 0) {
-          ByteBuffer newKey = key.duplicate();
-          newKey.putInt(MISSING_VALUE);
-          unaggregatedBuffers = updateValues(newKey, dims.subList(1, dims.size()));
-        } else {
-          for (Integer dimValue : row) {
+          if (nullIndDices == null) {
+            ByteBuffer newKey = key.duplicate();
+            newKey.putInt(MISSING_VALUE);
+            unaggregatedBuffers = updateValues(newKey, dims, nullIndDices, index + 1);
+          }
+        } else if (row.size() == 1) {
+          final int dimValue = row.get(0);
+          if (nullIndDices == null || nullIndDices[index] != dimValue) {
             ByteBuffer newKey = key.duplicate();
             newKey.putInt(dimValue);
-            unaggregatedBuffers = updateValues(newKey, dims.subList(1, dims.size()));
+            unaggregatedBuffers = updateValues(newKey, dims, nullIndDices, index + 1);
+          }
+        } else {
+          for (Integer dimValue : row) {
+            if (nullIndDices == null || nullIndDices[index] != dimValue) {
+              ByteBuffer newKey = key.duplicate();
+              newKey.putInt(dimValue);
+              unaggregatedBuffers = updateValues(newKey, dims, nullIndDices, index + 1);
+            }
           }
         }
         if (unaggregatedBuffers != null) {
@@ -304,6 +317,7 @@ public class GroupByQueryEngine
     private final BufferAggregator[] aggregators;
     private final String[] metricNames;
     private final int[] sizesRequired;
+    private final int[] skipIndices;
 
     private List<ByteBuffer> unprocessedKeys;
     private Iterator<Row> delegate;
@@ -342,6 +356,18 @@ public class GroupByQueryEngine
         metricNames[i] = aggregatorSpec.getName();
         sizesRequired[i] = aggregatorSpec.getMaxIntermediateSize();
       }
+      if (querySpecificConfig.isSkipNullDimension()) {
+        skipIndices = new int[dimensions.size()];
+        Arrays.fill(skipIndices, -1);
+        for (int i = 0; i < skipIndices.length; i++) {
+          DimensionSelector selector = dimensions.get(i);
+          if (selector != null) {
+            skipIndices[i] = selector.lookupId(null);
+          }
+        }
+      } else {
+        skipIndices = null;
+      }
     }
 
     @Override
@@ -364,8 +390,9 @@ public class GroupByQueryEngine
       final PositionMaintainer positionMaintainer = new PositionMaintainer(0, sizesRequired, metricsBuffer.remaining());
       final RowUpdater rowUpdater = new RowUpdater(metricsBuffer, aggregators, positionMaintainer);
       if (unprocessedKeys != null) {
+        final ImmutableList<DimensionSelector> empty = ImmutableList.<DimensionSelector>of();
         for (ByteBuffer key : unprocessedKeys) {
-          final List<ByteBuffer> unprocUnproc = rowUpdater.updateValues(key, ImmutableList.<DimensionSelector>of());
+          final List<ByteBuffer> unprocUnproc = rowUpdater.updateValues(key, empty, skipIndices, 0);
           if (unprocUnproc != null) {
             throw new ISE("Not enough memory to process the request.");
           }
@@ -375,7 +402,7 @@ public class GroupByQueryEngine
       while (!cursor.isDone() && rowUpdater.getNumRows() < maxIntermediateRows) {
         ByteBuffer key = ByteBuffer.allocate(dimensions.size() * Ints.BYTES);
 
-        unprocessedKeys = rowUpdater.updateValues(key, dimensions);
+        unprocessedKeys = rowUpdater.updateValues(key, dimensions, skipIndices, 0);
         if (unprocessedKeys != null) {
           break;
         }

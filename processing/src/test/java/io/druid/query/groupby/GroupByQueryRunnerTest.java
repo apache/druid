@@ -6162,4 +6162,46 @@ public class GroupByQueryRunnerTest
     Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     TestHelper.assertExpectedObjects(expectedResults, results, "");
   }
+
+  @Test
+  public void testGroupByOnEmptyDimension()
+  {
+    GroupByQuery query = GroupByQuery
+        .builder()
+        .setDataSource(QueryRunnerTestHelper.dataSource)
+        .setQuerySegmentSpec(QueryRunnerTestHelper.firstToThird)
+        .setDimensions(DefaultDimensionSpec.toSpec("partial_null_column"))
+        .setAggregatorSpecs(
+            Arrays.asList(
+                QueryRunnerTestHelper.rowsCount,
+                new LongSumAggregatorFactory("idx", "index")
+            )
+        )
+        .setGranularity(QueryRunnerTestHelper.dayGran)
+        .build();
+
+    List<Row> expectedResults = GroupByQueryRunnerTestHelper.createExpectedRows(
+        new String[]{"__time", "partial_null_column", "rows", "idx"},
+        new Object[]{"2011-04-01", null, 11L, 3938L},
+        new Object[]{"2011-04-01", "value", 2L, 2681L},
+        new Object[]{"2011-04-02", null, 11L, 3634L},
+        new Object[]{"2011-04-02", "value", 2L, 2193L}
+    );
+
+    Iterable<Row> results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+
+    query = query.withOverriddenContext(
+        ImmutableMap.<String, Object>of(GroupByQueryConfig.CTX_KEY_SKIP_NULL_DIMENSION, true)
+    );
+
+    expectedResults = GroupByQueryRunnerTestHelper.createExpectedRows(
+        new String[]{"__time", "partial_null_column", "rows", "idx"},
+        new Object[]{"2011-04-01", "value", 2L, 2681L},
+        new Object[]{"2011-04-02", "value", 2L, 2193L}
+    );
+
+    results = GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
+    TestHelper.assertExpectedObjects(expectedResults, results, "");
+  }
 }

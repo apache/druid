@@ -155,6 +155,8 @@ public class GenericIndexed<T> implements Indexed<T>
   private final int valuesOffset;
   private final BufferIndexed bufferIndexed;
 
+  private final boolean fastNullFinding;
+
   GenericIndexed(
       ByteBuffer buffer,
       ObjectStrategy<T> strategy,
@@ -169,6 +171,7 @@ public class GenericIndexed<T> implements Indexed<T>
     indexOffset = theBuffer.position();
     valuesOffset = theBuffer.position() + (size << 2);
     bufferIndexed = new BufferIndexed();
+    fastNullFinding = strategy == STRING_STRATEGY;
   }
 
   class BufferIndexed implements Indexed<T>
@@ -243,6 +246,9 @@ public class GenericIndexed<T> implements Indexed<T>
       }
 
       value = (value != null && value.equals("")) ? null : value;
+      if (value == null && fastNullFinding) {
+        return get(0) == null ? 0 : -1;
+      }
 
       int minIndex = 0;
       int maxIndex = size - 1;

@@ -41,6 +41,7 @@ import io.druid.query.groupby.strategy.GroupByStrategyV2;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.StorageAdapter;
+import io.druid.segment.data.ArrayBasedIndexedInts;
 import io.druid.segment.data.EmptyIndexedInts;
 import io.druid.segment.data.IndexedInts;
 import io.druid.segment.filter.Filters;
@@ -50,6 +51,7 @@ import org.joda.time.Interval;
 import java.io.Closeable;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -162,6 +164,8 @@ public class GroupByQueryEngineV2
     private boolean currentRowWasPartiallyAggregated = false;
     private CloseableGrouperIterator<ByteBuffer, Row> delegate = null;
 
+    private final int[] skipIndices;
+
     public GroupByEngineIterator(
         final GroupByQuery query,
         final GroupByQueryConfig config,
@@ -188,6 +192,19 @@ public class GroupByQueryEngineV2
 
       // Time is the same for every row in the cursor
       this.timestamp = fudgeTimestamp != null ? fudgeTimestamp : cursor.getTime();
+
+      if (querySpecificConfig.isSkipNullDimension()) {
+        skipIndices = new int[selectors.length];
+        Arrays.fill(skipIndices, -1);
+        for (int i = 0; i < skipIndices.length; i++) {
+          DimensionSelector selector = selectors[i];
+          if (selector != null) {
+            skipIndices[i] = selector.lookupId(null);
+          }
+        }
+      } else {
+        skipIndices = null;
+      }
     }
 
     @Override
@@ -229,11 +246,40 @@ outer:
 
             valuess[i] = selector == null ? EmptyIndexedInts.EMPTY_INDEXED_INTS : selector.getRow();
 
+            final int size = valuess[i].size();
             final int position = Ints.BYTES * i;
-            if (valuess[i].size() == 0) {
+            if (size == 0) {
+              if (skipIndices != null) {
+                cursor.advance();
+                continue outer;
+              }
               stack[i] = 0;
               keyBuffer.putInt(position, -1);
+            } else if (size == 1) {
+              if (skipIndices != null && skipIndices[i] == valuess[i].get(0)) {
+                cursor.advance();
+                continue outer;
+              }
+              stack[i] = 1;
+              keyBuffer.putInt(position, valuess[i].get(0));
             } else {
+              if (skipIndices != null) {
+                int x = 0;
+                int[] array = new int[size];
+                for (int j = 0; j < size; j++) {
+                  int dimVal = valuess[i].get(j);
+                  if (skipIndices[i] != dimVal) {
+                    array[x++] = dimVal;
+                  }
+                }
+                if (x == 0) {
+                  cursor.advance();
+                  continue outer;
+                }
+                if (x != size) {
+                  valuess[i] = new ArrayBasedIndexedInts(Arrays.copyOfRange(array, 0, x));
+                }
+              }
               stack[i] = 1;
               keyBuffer.putInt(position, valuess[i].get(0));
             }
