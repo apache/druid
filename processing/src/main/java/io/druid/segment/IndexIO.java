@@ -121,17 +121,17 @@ public class IndexIO
     this.columnConfig = Preconditions.checkNotNull(columnConfig, "null ColumnConfig");
     defaultIndexIOHandler = new DefaultIndexIOHandler(mapper);
     indexLoaders = ImmutableMap.<Integer, IndexLoader>builder()
-                               .put(0, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
-                               .put(1, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
-                               .put(2, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
-                               .put(3, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
-                               .put(4, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
-                               .put(5, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
-                               .put(6, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
-                               .put(7, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
-                               .put(8, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
-                               .put(9, new V9IndexLoader(columnConfig))
-                               .build();
+        .put(0, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
+        .put(1, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
+        .put(2, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
+        .put(3, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
+        .put(4, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
+        .put(5, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
+        .put(6, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
+        .put(7, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
+        .put(8, new LegacyIndexLoader(defaultIndexIOHandler, columnConfig))
+        .put(9, new V9IndexLoader(columnConfig))
+        .build();
 
 
   }
@@ -676,15 +676,18 @@ public class IndexIO
               }
 
               final VSizeIndexed finalMultiValCol = multiValCol;
-              singleValCol = new AbstractList<Integer>() {
+              singleValCol = new AbstractList<Integer>()
+              {
                 @Override
-                public Integer get(int index) {
+                public Integer get(int index)
+                {
                   final VSizeIndexedInts ints = finalMultiValCol.get(index);
                   return ints.size() == 0 ? 0 : ints.get(0) + (bumpedDictionary ? 1 : 0);
                 }
 
                 @Override
-                public int size() {
+                public int size()
+                {
                   return finalMultiValCol.size();
                 }
               };
@@ -761,18 +764,18 @@ public class IndexIO
                 builder.setValueType(ValueType.LONG);
                 builder.addSerde(
                     LongGenericColumnPartSerde.legacySerializerBuilder()
-                        .withByteOrder(BYTE_ORDER)
-                        .withDelegate(holder.longType)
-                        .build()
+                                              .withByteOrder(BYTE_ORDER)
+                                              .withDelegate(holder.longType)
+                                              .build()
                 );
                 break;
               case FLOAT:
                 builder.setValueType(ValueType.FLOAT);
                 builder.addSerde(
                     FloatGenericColumnPartSerde.legacySerializerBuilder()
-                        .withByteOrder(BYTE_ORDER)
-                        .withDelegate(holder.floatType)
-                        .build()
+                                               .withByteOrder(BYTE_ORDER)
+                                               .withDelegate(holder.floatType)
+                                               .build()
                 );
                 break;
               case COMPLEX:
@@ -784,8 +787,8 @@ public class IndexIO
                 builder.setValueType(ValueType.COMPLEX);
                 builder.addSerde(
                     ComplexColumnPartSerde.legacySerializerBuilder()
-                        .withTypeName(complexType)
-                        .withDelegate(column).build()
+                                          .withTypeName(complexType)
+                                          .withDelegate(column).build()
                 );
                 break;
               default:
@@ -813,9 +816,9 @@ public class IndexIO
             builder.setValueType(ValueType.LONG);
             builder.addSerde(
                 LongGenericColumnPartSerde.legacySerializerBuilder()
-                    .withByteOrder(BYTE_ORDER)
-                    .withDelegate(timestamps)
-                    .build()
+                                          .withByteOrder(BYTE_ORDER)
+                                          .withDelegate(timestamps)
+                                          .build()
             );
             final ColumnDescriptor serdeficator = builder.build();
 
@@ -842,9 +845,11 @@ public class IndexIO
         );
         final GenericIndexed<String> dims9 = GenericIndexed.fromIterable(
             Iterables.filter(
-                dims8, new Predicate<String>() {
+                dims8, new Predicate<String>()
+                {
                   @Override
-                  public boolean apply(String s) {
+                  public boolean apply(String s)
+                  {
                     return !skippedDimensions.contains(s);
                   }
                 }
@@ -868,7 +873,7 @@ public class IndexIO
         final String segmentBitmapSerdeFactoryString = mapper.writeValueAsString(segmentBitmapSerdeFactory);
 
         final long numBytes = cols.getSerializedSize() + dims9.getSerializedSize() + 16
-            + serializerUtils.getSerializedStringByteSize(segmentBitmapSerdeFactoryString);
+                              + serializerUtils.getSerializedStringByteSize(segmentBitmapSerdeFactoryString);
         final SmooshedWriter writer = v9Smoosher.addWithSmooshedWriter("index.drd", numBytes);
         cols.writeToChannel(writer);
         dims9.writeToChannel(writer);
