@@ -28,6 +28,7 @@ import com.google.common.collect.Sets;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import io.druid.data.input.InputRow;
+import io.druid.data.input.impl.InputRowParser;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.QueryableIndex;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -242,13 +243,15 @@ public class Sink implements Iterable<FireHydrant>
 
   private FireHydrant makeNewCurrIndex(long minTimestamp, DataSchema schema)
   {
+    InputRowParser parser = schema.getParser();
     final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(minTimestamp)
-        .withTimestampSpec(schema.getParser())
+        .withTimestampSpec(parser)
         .withQueryGranularity(schema.getGranularitySpec().getQueryGranularity())
-        .withDimensionsSpec(schema.getParser())
+        .withDimensionsSpec(parser)
         .withMetrics(schema.getAggregators())
         .withRollup(schema.getGranularitySpec().isRollup())
+        .withIncludeTruncatedTimestampColumnAsDimension(parser)
         .build();
     final IncrementalIndex newIndex = new OnheapIncrementalIndex(indexSchema, reportParseExceptions, maxRowsInMemory);
 

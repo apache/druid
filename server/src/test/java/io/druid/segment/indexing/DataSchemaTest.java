@@ -84,6 +84,43 @@ public class DataSchemaTest
   }
 
   @Test
+  public void testDefaultExclusionsWithTruncatedTimestampColumnIncluded() throws Exception
+  {
+    Map<String, Object> parser = jsonMapper.convertValue(
+        new StringInputRowParser(
+            new JSONParseSpec(
+                new TimestampSpec("time", "auto", null),
+                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dimB", "dimA")), null, true, null),
+                null,
+                null
+            ),
+            null
+        ), new TypeReference<Map<String, Object>>() {}
+    );
+
+    DataSchema schema = new DataSchema(
+        "test",
+        parser,
+        new AggregatorFactory[]{
+            new DoubleSumAggregatorFactory("metric1", "col1"),
+            new DoubleSumAggregatorFactory("metric2", "col2"),
+        },
+        new ArbitraryGranularitySpec(QueryGranularities.DAY, ImmutableList.of(Interval.parse("2014/2015"))),
+        jsonMapper
+    );
+
+    Assert.assertEquals(
+        ImmutableSet.of("col1", "col2", "metric1", "metric2"),
+        schema.getParser().getParseSpec().getDimensionsSpec().getDimensionExclusions()
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of("dimB", "dimA", "time"),
+        schema.getParser().getParseSpec().getDimensionsSpec().getDimensionNames()
+    );
+  }
+
+  @Test
   public void testExplicitInclude() throws Exception
   {
     Map<String, Object> parser = jsonMapper.convertValue(
@@ -112,6 +149,48 @@ public class DataSchemaTest
     Assert.assertEquals(
         ImmutableSet.of("dimC", "col1", "metric1", "metric2"),
         schema.getParser().getParseSpec().getDimensionsSpec().getDimensionExclusions()
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of("time", "dimA", "dimB", "col2"),
+        schema.getParser().getParseSpec().getDimensionsSpec().getDimensionNames()
+    );
+  }
+
+  @Test
+  public void testExplicitIncludeWithTruncatedTimestampColumnIncluded() throws Exception
+  {
+    Map<String, Object> parser = jsonMapper.convertValue(
+        new StringInputRowParser(
+            new JSONParseSpec(
+                new TimestampSpec("time", "auto", null),
+                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("time", "dimA", "dimB", "col2")), ImmutableList.of("dimC"), true, null),
+                null,
+                null
+            ),
+            null
+        ), new TypeReference<Map<String, Object>>() {}
+    );
+
+    DataSchema schema = new DataSchema(
+        "test",
+        parser,
+        new AggregatorFactory[]{
+            new DoubleSumAggregatorFactory("metric1", "col1"),
+            new DoubleSumAggregatorFactory("metric2", "col2"),
+        },
+        new ArbitraryGranularitySpec(QueryGranularities.DAY, ImmutableList.of(Interval.parse("2014/2015"))),
+        jsonMapper
+    );
+
+    Assert.assertEquals(
+        ImmutableSet.of("dimC", "col1", "metric1", "metric2"),
+        schema.getParser().getParseSpec().getDimensionsSpec().getDimensionExclusions()
+    );
+
+    Assert.assertEquals(
+        ImmutableList.of("time", "dimA", "dimB", "col2"),
+        schema.getParser().getParseSpec().getDimensionsSpec().getDimensionNames()
     );
   }
 
