@@ -97,6 +97,7 @@ public class RowBasedGrouperHelper
           temporaryStorage,
           spillMapper,
           querySpecificConfig.getBufferGrouperMaxSize(),
+          querySpecificConfig.getBufferGrouperMaxLoadFactor(),
           querySpecificConfig.getBufferGrouperInitialBuckets()
       );
     } else {
@@ -106,6 +107,7 @@ public class RowBasedGrouperHelper
           temporaryStorage,
           spillMapper,
           querySpecificConfig.getBufferGrouperMaxSize(),
+          querySpecificConfig.getBufferGrouperMaxLoadFactor(),
           querySpecificConfig.getBufferGrouperInitialBuckets(),
           keySerdeFactory,
           columnSelectorFactory,
