@@ -21,6 +21,7 @@ package io.druid.query.groupby;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.base.Function;
+import com.google.common.base.Functions;
 import com.google.common.base.Predicate;
 import com.google.common.base.Supplier;
 import com.google.common.collect.Collections2;
@@ -51,6 +52,7 @@ import io.druid.query.QueryToolChest;
 import io.druid.query.SubqueryQueryRunner;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.MetricManipulationFn;
+import io.druid.query.aggregation.MetricManipulatorFns;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
@@ -180,6 +182,10 @@ public class GroupByQueryQueryToolChest extends QueryToolChest<Row, GroupByQuery
       final MetricManipulationFn fn
   )
   {
+    if (MetricManipulatorFns.identity().equals(fn)) {
+      return Functions.identity();
+    }
+
     return new Function<Row, Row>()
     {
       @Override
