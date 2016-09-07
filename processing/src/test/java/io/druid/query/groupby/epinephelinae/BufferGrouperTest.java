@@ -50,7 +50,8 @@ public class BufferGrouperTest
             new CountAggregatorFactory("count")
         },
         Integer.MAX_VALUE,
-        -1
+        0,
+        0
     );
 
     columnSelectorFactory.setRow(new MapBasedRow(0, ImmutableMap.<String, Object>of("value", 10L)));
@@ -156,6 +157,7 @@ public class BufferGrouperTest
             new CountAggregatorFactory("count")
         },
         Integer.MAX_VALUE,
+        0.75f,
         initialBuckets
     );
   }

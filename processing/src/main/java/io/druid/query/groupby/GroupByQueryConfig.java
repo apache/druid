@@ -31,6 +31,7 @@ public class GroupByQueryConfig
   private static final String CTX_KEY_MAX_INTERMEDIATE_ROWS = "maxIntermediateRows";
   private static final String CTX_KEY_MAX_RESULTS = "maxResults";
   private static final String CTX_KEY_BUFFER_GROUPER_INITIAL_BUCKETS = "bufferGrouperInitialBuckets";
+  private static final String CTX_KEY_BUFFER_GROUPER_MAX_LOAD_FACTOR = "bufferGrouperMaxLoadFactor";
   private static final String CTX_KEY_BUFFER_GROUPER_MAX_SIZE = "bufferGrouperMaxSize";
   private static final String CTX_KEY_MAX_ON_DISK_STORAGE = "maxOnDiskStorage";
 
@@ -51,11 +52,14 @@ public class GroupByQueryConfig
   private int bufferGrouperMaxSize = Integer.MAX_VALUE;
 
   @JsonProperty
-  private int bufferGrouperInitialBuckets = -1;
+  private float bufferGrouperMaxLoadFactor = 0;
+
+  @JsonProperty
+  private int bufferGrouperInitialBuckets = 0;
 
   @JsonProperty
   // Size of on-heap string dictionary for merging, per-query; when exceeded, partial results will be spilled to disk
-  private long maxMergingDictionarySize = 25_000_000L;
+  private long maxMergingDictionarySize = 100_000_000L;
 
   @JsonProperty
   // Max on-disk temporary storage, per-query; when exceeded, the query fails
@@ -101,6 +105,11 @@ public class GroupByQueryConfig
     return bufferGrouperMaxSize;
   }
 
+  public float getBufferGrouperMaxLoadFactor()
+  {
+    return bufferGrouperMaxLoadFactor;
+  }
+
   public int getBufferGrouperInitialBuckets()
   {
     return bufferGrouperInitialBuckets;
@@ -129,13 +138,17 @@ public class GroupByQueryConfig
         query.getContextValue(CTX_KEY_MAX_RESULTS, getMaxResults()),
         getMaxResults()
     );
-    newConfig.bufferGrouperInitialBuckets = query.getContextValue(
-        CTX_KEY_BUFFER_GROUPER_INITIAL_BUCKETS,
-        getBufferGrouperInitialBuckets()
-    );
     newConfig.bufferGrouperMaxSize = Math.min(
         query.getContextValue(CTX_KEY_BUFFER_GROUPER_MAX_SIZE, getBufferGrouperMaxSize()),
         getBufferGrouperMaxSize()
+    );
+    newConfig.bufferGrouperMaxLoadFactor = query.getContextValue(
+        CTX_KEY_BUFFER_GROUPER_MAX_LOAD_FACTOR,
+        getBufferGrouperMaxLoadFactor()
+    );
+    newConfig.bufferGrouperInitialBuckets = query.getContextValue(
+        CTX_KEY_BUFFER_GROUPER_INITIAL_BUCKETS,
+        getBufferGrouperInitialBuckets()
     );
     newConfig.maxOnDiskStorage = Math.min(
         ((Number)query.getContextValue(CTX_KEY_MAX_ON_DISK_STORAGE, getMaxOnDiskStorage())).longValue(),

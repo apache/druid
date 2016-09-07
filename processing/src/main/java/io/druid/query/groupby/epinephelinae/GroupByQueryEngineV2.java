@@ -214,6 +214,7 @@ public class GroupByQueryEngineV2
           query.getAggregatorSpecs()
                .toArray(new AggregatorFactory[query.getAggregatorSpecs().size()]),
           querySpecificConfig.getBufferGrouperMaxSize(),
+          querySpecificConfig.getBufferGrouperMaxLoadFactor(),
           querySpecificConfig.getBufferGrouperInitialBuckets()
       );
 
