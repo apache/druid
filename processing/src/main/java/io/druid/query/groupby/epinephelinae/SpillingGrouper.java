@@ -69,6 +69,7 @@ public class SpillingGrouper<KeyType extends Comparable<KeyType>> implements Gro
       final LimitedTemporaryStorage temporaryStorage,
       final ObjectMapper spillMapper,
       final int bufferGrouperMaxSize,
+      final float bufferGrouperMaxLoadFactor,
       final int bufferGrouperInitialBuckets
   )
   {
@@ -79,6 +80,7 @@ public class SpillingGrouper<KeyType extends Comparable<KeyType>> implements Gro
         columnSelectorFactory,
         aggregatorFactories,
         bufferGrouperMaxSize,
+        bufferGrouperMaxLoadFactor,
         bufferGrouperInitialBuckets
     );
     this.aggregatorFactories = aggregatorFactories;
