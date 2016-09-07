@@ -62,7 +62,7 @@ public class BufferGrouper<KeyType extends Comparable<KeyType>> implements Group
 
   private static final int MIN_INITIAL_BUCKETS = 4;
   private static final int DEFAULT_INITIAL_BUCKETS = 1024;
-  private static final float MAX_LOAD_FACTOR = 0.75f;
+  private static final float DEFAULT_MAX_LOAD_FACTOR = 0.7f;
   private static final int HASH_SIZE = Ints.BYTES;
 
   private final ByteBuffer buffer;
@@ -74,6 +74,7 @@ public class BufferGrouper<KeyType extends Comparable<KeyType>> implements Group
   private final int bucketSize;
   private final int tableArenaSize;
   private final int bufferGrouperMaxSize; // Integer.MAX_VALUE in production, only used for unit tests
+  private final float maxLoadFactor;
 
   // Buffer pointing to the current table (it moves around as the table grows)
   private ByteBuffer tableBuffer;
@@ -96,6 +97,7 @@ public class BufferGrouper<KeyType extends Comparable<KeyType>> implements Group
       final ColumnSelectorFactory columnSelectorFactory,
       final AggregatorFactory[] aggregatorFactories,
       final int bufferGrouperMaxSize,
+      final float maxLoadFactor,
       final int initialBuckets
   )
   {
@@ -105,7 +107,12 @@ public class BufferGrouper<KeyType extends Comparable<KeyType>> implements Group
     this.aggregators = new BufferAggregator[aggregatorFactories.length];
     this.aggregatorOffsets = new int[aggregatorFactories.length];
     this.bufferGrouperMaxSize = bufferGrouperMaxSize;
+    this.maxLoadFactor = maxLoadFactor > 0 ? maxLoadFactor : DEFAULT_MAX_LOAD_FACTOR;
     this.initialBuckets = initialBuckets > 0 ? Math.max(MIN_INITIAL_BUCKETS, initialBuckets) : DEFAULT_INITIAL_BUCKETS;
+
+    if (this.maxLoadFactor >= 1.0f) {
+      throw new IAE("Invalid maxLoadFactor[%f], must be < 1.0", maxLoadFactor);
+    }
 
     int offset = HASH_SIZE + keySize;
     for (int i = 0; i < aggregatorFactories.length; i++) {
@@ -434,9 +441,9 @@ public class BufferGrouper<KeyType extends Comparable<KeyType>> implements Group
     }
   }
 
-  private static int maxSizeForBuckets(int buckets)
+  private int maxSizeForBuckets(int buckets)
   {
-    return Math.max(1, (int) (buckets * MAX_LOAD_FACTOR));
+    return Math.max(1, (int) (buckets * maxLoadFactor));
   }
 
   /**
