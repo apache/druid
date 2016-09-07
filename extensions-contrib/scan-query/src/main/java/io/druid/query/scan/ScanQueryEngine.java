@@ -49,8 +49,18 @@ import java.util.Map;
 
 public class ScanQueryEngine
 {
-  public Sequence<ScanResultValue> process(final ScanQuery query, final Segment segment)
+  public Sequence<ScanResultValue> process(
+      final ScanQuery query,
+      final Segment segment,
+      final Map<String, Object> responseContext
+  )
   {
+    if (responseContext.get("count") != null) {
+      int count = (int) responseContext.get("count");
+      if (count >= query.getLimit()) {
+        return Sequences.empty();
+      }
+    }
     final StorageAdapter adapter = segment.asStorageAdapter();
 
     if (adapter == null) {
@@ -79,6 +89,10 @@ public class ScanQueryEngine
 
     final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getDimensionsFilter()));
 
+    if (responseContext.get("count") == null) {
+      responseContext.put("count", 0);
+    }
+    final int limit = query.getLimit() - (int) responseContext.get("count");
     return Sequences.concat(
         Sequences.map(
             adapter.makeCursors(
@@ -112,7 +126,6 @@ public class ScanQueryEngine
                           metSelectors.put(metric, metricSelector);
                         }
                         final int batchSize = query.getBatchSize();
-                        final int limit = query.getLimit();
                         return new Iterator<ScanResultValue>()
                         {
                           private int offset = 0;
@@ -134,6 +147,7 @@ public class ScanQueryEngine
                             } else {
                               events = rowsToList();
                             }
+                            responseContext.put("count", (int) responseContext.get("count") + (offset - lastOffset));
                             return new ScanResultValue(segmentId, lastOffset, events);
                           }
 
@@ -143,7 +157,8 @@ public class ScanQueryEngine
                             throw new UnsupportedOperationException();
                           }
 
-                          private Object rowsToList() {
+                          private Object rowsToList()
+                          {
                             int i = 0;
                             List<Map<String, Object>> events = Lists.newArrayListWithCapacity(batchSize);
                             for (; !cursor.isDone()
@@ -160,7 +175,8 @@ public class ScanQueryEngine
                             return events;
                           }
 
-                          private Object rowsToValueVector() {
+                          private Object rowsToValueVector()
+                          {
                             // only support list now, we can support ValueVector or Arrow in future
                             return rowsToList();
                           }

@@ -18,11 +18,11 @@
  */
 package io.druid.query.scan;
 
+import com.google.common.base.Function;
 import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
-import io.druid.query.ConcatQueryRunner;
 import io.druid.query.Query;
 import io.druid.query.QueryRunner;
 import io.druid.query.QueryRunnerFactory;
@@ -56,11 +56,32 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
   @Override
   public QueryRunner<ScanResultValue> mergeRunners(
       ExecutorService queryExecutor,
-      Iterable<QueryRunner<ScanResultValue>> queryRunners
+      final Iterable<QueryRunner<ScanResultValue>> queryRunners
   )
   {
     // in single thread and in jetty thread instead of processing thread
-    return new ConcatQueryRunner<>(Sequences.simple(queryRunners));
+    return new QueryRunner<ScanResultValue>()
+    {
+      @Override
+      public Sequence<ScanResultValue> run(
+          final Query<ScanResultValue> query, final Map<String, Object> responseContext
+      )
+      {
+        return Sequences.concat(
+            Sequences.map(
+                Sequences.simple(queryRunners),
+                new Function<QueryRunner<ScanResultValue>, Sequence<ScanResultValue>>()
+                {
+                  @Override
+                  public Sequence<ScanResultValue> apply(final QueryRunner<ScanResultValue> input)
+                  {
+                    return input.run(query, responseContext);
+                  }
+                }
+            )
+        );
+      }
+    };
   }
 
   @Override
@@ -89,7 +110,7 @@ public class ScanQueryRunnerFactory implements QueryRunnerFactory<ScanResultValu
         throw new ISE("Got a [%s] which isn't a %s", query.getClass(), ScanQuery.class);
       }
 
-      return engine.process((ScanQuery) query, segment);
+      return engine.process((ScanQuery) query, segment, responseContext);
     }
   }
 }
