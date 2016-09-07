@@ -503,7 +503,8 @@
 % ------
 \long\def\@makefntext#1{\noindent 
 %\hbox to .5em{\hss$^{\@thefnmark}$}#1}   % original
-\hbox to .5em{\hss\textsuperscript{\@thefnmark}}#1}  % C. Clifton / GM Oct. 2nd. 2002
+%\hbox to .5em{\hss\textsuperscript{\@thefnmark}}#1}  % new original b4 FJ edit
+\hbox to .0em{\hss\textsuperscript{\@thefnmark}}#1}  % FJ edit
 % -------
 
 \long\def\@maketntext#1{\noindent
@@ -581,7 +582,8 @@
  \let\maketitle\relax
  \let\@maketitle\relax
  \gdef\@thanks{}\gdef\@author{}\gdef\@title{}\gdef\@subtitle{}\let\thanks\relax
- \@copyrightspace}
+% \@copyrightspace
+}
 
 %% CHANGES ON NEXT LINES
 \newif\if@ll % to record which version of LaTeX is in use
@@ -703,7 +705,7 @@
     \vskip 1.5em               % Vertical space after author.
    \end{center}}
  \dimen0=\ht\@acmtitlebox
- \advance\dimen0 by -12.75pc\relax % Increased space for title box -- KBT
+ \advance\dimen0 by -6.75pc\relax % Increased space for title box -- KBT
  \unvbox\@acmtitlebox
  \ifdim\dimen0<0.0pt\relax\vskip-\dimen0\fi}
 
