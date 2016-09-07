@@ -18,6 +18,11 @@
 
 \title{The RADStack: Open Source Lambda Architecture for Interactive Analytics}
 
+\author{
+  \alignauthor Fangjin Yang, Gian Merlino, Nelson Ray, Xavier Léauté, Himanshu Gupta, Eric Tschetter\\
+  \email{\{fangjinyang, gianmerlino, ncray86, xavier.leaute, g.himanshu, echeddar\}@gmail.com}
+}
+
 % possible, but not really needed or used for PVLDB:
 %\subtitle{[Extended Abstract]
 %\titlenote{A full version of this paper is available as\textit{Author's Guide to Preparing ACM SIG Proceedings Using \LaTeX$2_\epsilon$\ and BibTeX} at \texttt{www.acm.org/eaddress.htm}}}
@@ -48,52 +53,10 @@
 % without further effort on your part as the last section in
 % the body of your article BEFORE References or any Appendices.
 
-\numberofauthors{6} %  in this sample file, there are a *total*
-% of EIGHT authors. SIX appear on the 'first-page' (for formatting
-% reasons) and the remaining two appear in the \additionalauthors section.
-
-\author{
-% You can go ahead and credit any number of authors here,
-% e.g. one 'row of three' or two rows (consisting of one row of three
-% and a second row of one, two or three).
-%
-% The command \alignauthor (no curly braces needed) should
-% precede each author name, affiliation/snail-mail address and
-% e-mail address. Additionally, tag each line of
-% affiliation/address with \affaddr, and tag the
-% e-mail address with \email.
-%
-% 1st. author
-\alignauthor
-Fangjin Yang\\
-     \affaddr{Imply Data, Inc.}\\
-     \email{fj@imply.io}
-% 2nd. author
-\alignauthor
-Gian Merlino\\
-     \affaddr{Imply Data, Inc.}\\
-     \email{gian@imply.io}
-% 3rd. author
-\alignauthor 
-Xavier Léauté\\
-     \affaddr{Metamarkets Group, Inc.}\\
-     \email{xavier@metamarkets.com}
-}
-% There's nothing stopping you putting the seventh, eighth, etc.
-% author on the opening page (as the 'third row') but we ask,
-% for aesthetic reasons that you place these 'additional authors'
-% in the \additional authors block, viz.
-\additionalauthors{Nishant Bangarwa,
-({\texttt{nishant@metamarkets.com}}), Eric Tschetter
-({\texttt{cheddar@yahoo-inc.com}})}
-% Just remember to make sure that the TOTAL number of authors
-% is the number that will appear on the first page PLUS the
-% number that will appear in the \additionalauthors section.
-
 \maketitle
 
 \begin{abstract}
-The Real-time Analytics Data Stack, colloquially referred to
+\textit{The Real-time Analytics Data Stack, colloquially referred to
 as the RADStack, is an open-source data analytics stack designed to provide
 fast, flexible queries over up-to-the-second data. It is designed to overcome
 the limitations of either a purely batch processing system (it takes too
@@ -103,7 +66,7 @@ after initial processing). It will seamlessly return best-effort results on
 very recent data combined with guaranteed-correct results on older data. In
 this paper, we introduce the architecture of the RADStack and discuss our
 methods of providing interactive analytics and a flexible data processing
-environment to handle a variety of real-world workloads.
+environment to handle a variety of real-world workloads.}
 \end{abstract}
 
 \section{Introduction}
@@ -154,7 +117,21 @@ frameworks. Events can come in days late, and may need to be corrected after
 the fact. Large batches of data may also need to be reprocessed when new
 columns are added or removed.
 
-The RADStack is an open source, end-to-end solution meant to offer flexible,
+Combining batch processing, streaming processing, and a serving layer in a
+single technology stack is known as a lambda
+architecture\cite{hausenblas2014lambda}. In lambda architectures, data entering
+the system is concurrently fed to both the batch and streaming processing
+layer. The streaming layer is responsible for immediately processing incoming
+data, however, the processed data may suffer from duplicated events and other
+imperfections in data accuracy. The batch layer processes incoming data much
+slower than the streaming layer, but is able to provide accurate views of data.
+The serving layer merges the results from the batch and streaming layers and
+provides an interface for queries. Although each individual component in a
+lambda architecture has their own limitations, the pieces complement each other
+extremely well and the overall stack is robust enough to handle a wide array of
+data processing and querying challenges at scale. 
+
+The RADStack is an open source lambda architecture implementation meant to offer flexible,
 low-latency analytic queries on near real-time data. The solution combines the
 low latency guarantees of stream processors and the correctness and flexibility
 guarantees of batch processors. It also introduces a serving layer specifically
@@ -198,76 +175,27 @@ discuss the related solutions.
 \label{tab:sample_data}
 \end{table*}
 
-The development of RADStack came about iteratively. Different technologies were
-introduced to address new problems and use cases that came up over time.
-The initial concept of the RADStack started at Metamarkets, an analytics
-startup focused in the advertising technology space, and has since been adopted
-by other technology companies \cite{2014yahoo}. In the early days of Metamarkets, we wanted
-to build an analytics dashboard where users could arbitrarily explore their
-data. An example of the data found in online advertising space is shown in
-Table~\ref{tab:sample_data}. 
+The RADStack was first developed to address problems in the online advertising.
+In online advertising, automated systems from different organizations will
+place bids against one another to display users ads in the milliseconds before
+a webpage loads. These actions generate a tremendous volume of data. The data
+shown in Table~\ref{tab:sample_data} is an example of such data.  Each event is
+comprised of three components: a timestamp indicating when the event occurred;
+a set of dimensions indicating various attributes about the event; and a set of
+metrics concerning the event. Organizations frequently serve this insights to
+this data to ad publishers through visualizations and data applications. These
+applications must rapidly compute drill-down and aggregates with this data, and 
+answer questions such as “How many clicks occurred over the span of one week
+for publisher google.com?” or “How many impressions were seen over the last
+quarter in San Francisco?”. Queries over any arbitrary number of dimensions
+should return in a few hundred milliseconds.
 
-The data shown in Table~\ref{tab:sample_data} is fairly standard in OLAP
-workflows. The data is an event stream with a timestamp and tends to be very
-append heavy. Each event is comprised of three components: a timestamp
-indicating when the event occurred; a set of dimensions indicating various
-attributes about the event; and a set of metrics concerning the event. Our goal
-is to rapidly compute drill-down and aggregates with this data, to answer
-questions such as “How many clicks occurred over the span of one week for
-publisher google.com?” or “How many impressions were seen over the last quarter
-in San Francisco?” We wanted to issue queries over any arbitrary
-number of dimensions and have results return in a few hundred
-milliseconds.
-
-In addition to the query latency needs, we needed to support multi-tenancy.
-User-facing applications often face highly concurrent workloads and good
-applications need to provide relatively consistent performance to all users.
-Finally, we needed our backend infrastructure to be highly available. Downtime
-is costly and many businesses cannot afford to wait if a system is unavailable
-in the face of software upgrades or network failure.
-
-Following industry standard practices, we evaluated various options for a
-serving layer. We tried to select a serving layer that was optimized for the
-types of queries we wanted to make, and we initially began our experiments with
-PostgreSQL\cite{stonebraker1987extendability}. Our setup with PostgreSQL
-followed the common conventions of using RDBMSs as data warehouses. We modeled
-the advertising data using a star schema, we used aggregate tables to
-increase aggregation performance, and overlaid a query cache to further speed up
-queries.
-
-\begin{table}
-\centering
-\scriptsize\begin{tabular}{| l | l |}
-  \hline
-  Native Benchmark Scan Rate & \~5.5M rows/s/core \\ \hline
-  1 day of summarized aggregates & 60M+ rows \\ \hline
-  1 query over 1 week, 16 cores & \~5 seconds \\ \hline
-  Page load with 20 queries over a week of data & several minutes \\ \hline
-\end{tabular}
-\normalsize
-\caption{Initial evaluation with PostgreSQL on m2.2xlarge EC2 node.}
-\label{tab:postgres_results}
-\end{table}
-
-Our findings with PostgreSQL are shown in Table~\ref{tab:postgres_results}.
-Query latencies were generally acceptable if the results were cached, less
-acceptable if we hit aggregate tables, and unacceptable if we needed to scan
-the base fact table. A single page load of the first version of our
-application, which issued about 20 concurrent queries to the serving layer and
-only required aggregating a few metrics, took several minutes to complete. This
-was too slow to power an interactive application. We quickly realized a row
-store, and relational model in general, was a sub-optimal choice for the
-application we were trying to build.
-
-\begin{figure}
-\centering
-\includegraphics[width = 2.6in]{precompute}
-\caption{Precomputating queries scales exponentially. To support every possible
-combination of queries, even a small data set can generate many possible
-queries.
-}
-\label{fig:precompute}
-\end{figure}
+As an additional requirement, user-facing applications often face highly
+concurrent workloads and good applications need to provide relatively
+consistent performance to all users.  Of course, backend infrastructure also
+needs to be highly available. Downtime is costly and many businesses cannot
+afford to wait if a system is unavailable in the face of software upgrades or
+network failure.
 
 \begin{figure}
 \centering
@@ -280,51 +208,25 @@ the endpoint for queries.
 \label{fig:radstack}
 \end{figure}
 
-We next evaluated HBase \cite{george2011hbase}, a NoSQL key/value store. As is
-common with using key/value stores, we precomputed the total set of queries we
-anticipated users would make. An example of this precomputation is shown in
-Figure~\ref{fig:precompute}. Our results with HBase are shown in
-Table~\ref{tab:hbase_results} for 500,000 records. 
-Queries were acceptably fast with this solution as we were effectively doing
-O(1) lookups into maps.  However, the solution was not particularly flexible;
-if something wasn't precomputed, it wasn’t queryable, and the precomputation
-time became a big pain point. We attempted to build iceberg cubes as described
-in \cite{beyer1999bottom}, restricting the space of our pre-computations, but
-even then the precomputation times were unacceptable.  Our entire evaluation of
-both RDBMS and key/value stores is described in detail in
-\cite{tschetter2011druid}.
-
-Druid was developed in an attempt to solve some of the problems seen with
-traditional serving layers. Druid was designed from the ground up to provide
-arbitrary data exploration, low latency aggregations, and fast data ingestion.
-Druid was also designed to accept fully denormalized data, and moves away from
-the traditional relational model. Since most raw data is not denormalized, it
-must be processed before it can be ingested and queried. Multiple streams of
-data had to be joined, cleaned up, and transformed before it was usable in
-Druid, but that was the trade-off we were willing to make in order to get the
-performance necessary to power an interactive data application. We introduced
-stream processing to our stack to provide the processing required before raw
-data could be loaded into Druid. Our stream processing jobs range from simple
-data transformations, such as id to name lookups, up to complex operations such
-as multi-stream joins.  Pairing Druid with a stream processor enabled flexible
-data processing and querying, but we still had problems with event delivery.
-Our events were delivered from many different locations and sources, and peaked
-at several million events per second. We required a high throughput
-message bus that could hold these events for consumpation by our stream
-processor.  To simplify data transmission for our clients, we wanted the
-message bus to be the single delivery endpoint for events entering our cluster.  
-
-\begin{table}
-\centering
-\scriptsize\begin{tabular}{| l | l |} \hline
-\textbf{Total Dimensions} & \textbf{Precomputation time} \\ \hline
-  11 & 4.5 hours on a 15 node Hadoop cluster \\ \hline
-  14 & 9 hours on a 25 node hadoop cluster \\ \hline
-\end{tabular}
-\normalsize
-\caption{Initial evaluation with HBase on m2.2xlarge EC2 nodes.}
-\label{tab:hbase_results}
-\end{table}
+To address these requirements of scale, stability, and performance, we created
+Druid. Druid was designed from the ground up to provide arbitrary data
+exploration, low latency aggregations, and fast data ingestion.  Druid was also
+designed to accept fully denormalized data, and moves away from the traditional
+relational model. Since most raw data is not denormalized, it must be processed
+before it can be ingested and queried. Multiple streams of data had to be
+joined, cleaned up, and transformed before it was usable in Druid, but that was
+the trade-off we were willing to make in order to get the performance necessary
+to power an interactive data application. We introduced stream processing to
+our stack to provide the processing required before raw data could be loaded
+into Druid. Our stream processing jobs range from simple data transformations,
+such as id to name lookups, up to complex operations such as multi-stream
+joins.  Pairing Druid with a stream processor enabled flexible data processing
+and querying, but we still had problems with event delivery.  Our events were
+delivered from many different locations and sources, and peaked at several
+million events per second. We required a high throughput message bus that could
+hold these events for consumpation by our stream processor.  To simplify data
+transmission for our clients, we wanted the message bus to be the single
+delivery endpoint for events entering our cluster.  
 
 Our stack would be complete here if real-time processing were perfect, but the
 open source stream processing space is still young. Processing jobs can go down
@@ -392,10 +294,8 @@ degradations \cite{abadi2008column}.
 
 Druid nodes use one thread to scan one segment at a time, and the amount of
 data that can be scanned in parallel is directly correlated to the number of
-available cores in the cluster. Segments are immutable, and immutability
-confers a few advantages. Immutable segments enable read consistency, and
-multiple threads can scan the same segment at the same time. This helps enable
-higher read throughput. 
+available cores in the cluster. Segments are immutable, and hence, this no
+contention between reads and writes in a segment.
 
 A single query may scan thousands of segments concurrently, and
 many queries may run at the same time. We want to ensure that the entire
@@ -415,48 +315,6 @@ LZ4\cite{collet2013lz4} compression. String columns are dictionary encoded,
 similar to other data stores such as PowerDrill\cite{hall2012processing}.
 Additional indexes may be created for particular columns. For example, Druid
 will by default create inverted indexes for string columns.
-
-\subsection{Filters}
-
-Real-world OLAP queries often ask for the aggregated totals for some set of
-metrics, filtered for some boolean expression of dimension specifications, over
-some period of time. An example query for Table~\ref{tab:sample_data} may ask:
-“How many clicks occurred and how much revenue was generated for publishers
-bieberfever.com and ultratrimfast.com?”. 
-
-Consider the publisher column in Table~\ref{tab:sample_data}, a string column.
-For each unique publisher in Table 1, we can generate an inverted index that
-tells us in which table rows a particular page is seen. Our inverted index
-looks like the following:
-
-{\small\begin{verbatim}
-bieberfever.com   -> rows [0, 1, 2] -> [1][1][1][0][0][0]
-ultratrimfast.com -> rows [3, 4, 5] -> [0][0][0][1][1][1]
-\end{verbatim}}
-
-In the inverted index, the array indices represent our rows, and the array values
-indicate whether a particular value was seen. In our example, bieberfever.com
-is seen in rows 0, 1 and 2. To know which rows contain bieberfever.com or
-ultratrimfast.com, we can OR together the two arrays.
-
-{\small\begin{verbatim}
-[1][1][1][0][0][0] OR [0][0][0][1][1][1] = [1][1][1][1][1][1]
-\end{verbatim}}
-
-Our query is aggregating two metrics. Our metrics are also stored in a column
-orientation:
-
-{\small\begin{verbatim}
-Clicks -> [0, 0, 1, 0, 0, 1]
-Price  -> [0.65, 0.62. 0.45, 0.87, 0.99, 1.53]
-\end{verbatim}}
-
-We can load up only the metric columns we need for the query. We do not
-need to scan the entire metric column for a given query. For example, queries
-for results where publisher is bieberfever.com only requires scanning rows 0,
-1, and 2 in the metrics column. The inverted indexes tell us exactly the rows
-we need to scan, and Druid has an internal cursor to only walk through the rows
-that match the final inverted index.
 
 \subsection{Streaming Data Ingestion}
 Druid real-time nodes encapsulate the functionality to ingest, query, and create
@@ -796,25 +654,6 @@ less frequently than the real-time process, and may run many hours or even days
 after raw events have been delivered. The wait is necessary for severely
 delayed events, and to ensure that the raw data is indeed complete. 
 
-\subsection{Starfire}
-To avoid writing the same processing logic on both Hadoop and Samza, we created
-a library called Starfire to help generate workflows on both batch and stream
-processing frameworks. Starfire has a streaming model of computation at its
-heart, even when running in batch mode. It is designed to never need to load up
-all your data at once, in any mode of operation, but it offers operators that
-do need to work across multiple data points, like “groupBy” and “join”. Since
-these operators cannot run across the entire data set, Starfire runs them using
-windows.
-
-Starfire programs ask for a particular window size (measured in time, like 15
-minutes or two hours) that particular drivers must provide. The Hadoop driver
-provides a window by loading up extra data surrounding the data that the user
-requested to process. The Samza driver does it by buffering data in a key/value
-store for a period of time. Starfire supports using different window sizes from
-driver to driver, which can be useful if you are running a combination
-batch/real-time architecture and would like to use larger windows in batch than
-in real-time. We hope to explore Starfire more in future literature.
-
 \section{The Delivery Layer}
 \label{sec:delivery}
 In our stack, events are delivered over HTTP to Kafka. Events are transmitted
@@ -850,16 +689,15 @@ serving layers completely fail, we can recover by replaying events from Kafka.
 \section{Performance}
 \label{sec:performance}
 Druid runs in production at several organizations, and to briefly demonstrate
-its performance, we have chosen to share some real world numbers for one of the
-production clusters running at Metamarkets in early 2015. We also include
-results from synthetic workloads on TPC-H data.
+its performance, we have chosen to share some real world numbers for one of the larger
+production clusters. We also include results from synthetic workloads on TPC-H data.
 
 \subsection{Query Performance in Production}
 Druid query performance can vary signficantly depending on the query being
 issued. For example, sorting the values of a high cardinality dimension based
 on a given metric is much more expensive than a simple count over a time range.
 To showcase the average query latencies in a production Druid cluster, we
-selected 8 of our most queried data sources, described in
+selected 8 frequently queried data sources, described in
 Table~\ref{tab:datasources}.
 
 \begin{table}
@@ -881,11 +719,10 @@ Table~\ref{tab:datasources}.
   \label{tab:datasources}
 \end{table}
 
-Approximately 30\% of queries are standard aggregates involving different types
-of metrics and filters, 60\% of queries are ordered group bys over one or more
-dimensions with aggregates, and 10\% of queries are search queries and metadata
-retrieval queries. The number of columns scanned in aggregate queries roughly
-follows an exponential distribution. Queries involving a single column are very
+The queries vary from standard aggregates involving different types
+of metrics and filters, ordered group bys over one or more
+dimensions with aggregates, and search queries and metadata
+retrieval queries. Queries involving a single column are very
 frequent, and queries involving all columns are very rare.
 
 \begin{itemize}[leftmargin=*,beginpenalty=5000,topsep=0pt]
@@ -905,14 +742,19 @@ threads and 672 total cores (hyperthreaded).
     memory map the data instead of loading it into the Java heap.)
 \end{itemize}
 
-Query latencies are shown in Figure~\ref{fig:query_latency} and the queries per
-minute are shown in Figure~\ref{fig:queries_per_min}. Across all the various
+Query latencies are shown in Figure~\ref{fig:query_latency}. Across all the various
 data sources, average query latency is approximately 550 milliseconds, with
 90\% of queries returning in less than 1 second, 95\% in under 2 seconds, and
-99\% of queries returning in less than 10 seconds. Occasionally we observe
-spikes in latency, as observed on February 19, where network issues on
-the broker nodes were compounded by very high query load on one of our
-largest data sources.
+99\% of queries returning in less than 10 seconds. 
+
+\subsection{Query Benchmarks on TPC-H Data}
+We also present Druid benchmarks on TPC-H data.  We selected queries more
+typical of Druid's workload to demonstrate query performance. In
+Figure~\ref{fig:druid_vs_bigquery}, we present our results compared again
+Google BigQuery, which is Google Dremel\cite{melnik2010dremel}.  The Druid
+results were ran on a 24 vCPU, 156 GB Google Compute Engine instance (2.2 GHz
+Intel Xeon E5 v4 Broadwell) and the BigQuery results were run through Google's
+web interface. In our results, Druid performed from 2-20x faster than BigQuery.
 
 \begin{figure}
 \centering
@@ -924,29 +766,9 @@ largest data sources.
 
 \begin{figure}
 \centering
-\includegraphics[width = 2.8in]{queries_per_min}
-\caption{Queries per minute of production data sources.}
-\label{fig:queries_per_min}
-\end{figure}
-
-\subsection{Query Benchmarks on TPC-H Data}
-We also present Druid benchmarks on TPC-H data.  Most TPC-H queries do not
-directly apply to Druid, so we selected queries more typical of Druid's
-workload to demonstrate query performance. In Figure~\ref{fig:tpch_scaling}, we
-present our results of scaling Druid to meet increasing data volumes with the
-TPC-H 100 GB data set. We observe that when we increased the number of cores
-from 8 to 48, not all types of queries achieve linear scaling, but the simpler
-aggregation queries do. The increase in speed of a parallel computing system is
-often limited by the time needed for the sequential operations of the system.
-In this case, queries requiring a substantial amount of work at the broker
-level do not parallelize as well.
-
-\begin{figure}
-\centering
-\includegraphics[width = 2.3in]{tpch_scaling}
-\includegraphics[width = 2.3in]{tpch_scaling_factor}
-\caption{Druid scaling benchmarks -- 100GB TPC-H data.}
-\label{fig:tpch_scaling}
+\includegraphics[width = 3.2in]{druid_vs_bigquery}
+\caption{Druid benchmarked against Google BigQuery -- 100GB TPC-H data.}
+\label{fig:druid_vs_bigquery}
 \end{figure}
 
 Our Druid setup used Amazon EC2 \texttt{m3.2xlarge} instance types
@@ -961,6 +783,14 @@ time interval and 36,246,530 rows/second/core for a \texttt{select sum(float)}
 type query.
 
 \subsection{Data Ingestion Performance}
+To showcase the ingestion latency of the RADStack, we selected the top seven
+production datasources in terms of peak events ingested per second for early
+2015. These datasources are described in Table~\ref{tab:ingestion}. Our
+production ingestion setup used over 40 nodes, each with 60GB of RAM and 32
+cores (12 x Intel\textsuperscript\textregistered
+Xeon\textsuperscript\textregistered E5-2670). Each pipeline for each datasource
+involved transforms and joins.
+
 \begin{table}
   \centering
   \scriptsize\begin{tabular}{| l | l | l | l |}
@@ -979,22 +809,6 @@ type query.
   \label{tab:ingestion}
 \end{table}
 
-\begin{figure}
-\centering
-\includegraphics[width = 2.3in]{radstack-event-throughput}
-\caption{Ingestion rates for various production datasources.}
-\label{fig:ingestion_rates}
-\end{figure}
-
-To showcase the ingestion latency of the RADStack, we selected the top seven
-production datasources in terms of peak events ingested per second for early
-2015. These datasources are described in Table~\ref{tab:ingestion}. Our
-production ingestion setup used over 40 nodes, each with 60GB of RAM and 32
-cores (12 x Intel\textsuperscript\textregistered
-Xeon\textsuperscript\textregistered E5-2670). In this setup, many other Druid
-related ingestion tasks were running concurrently on the machines. Each
-pipeline for each datasource involved transforms and joins.
-
 Ingestion latency is heavily dependent on the complexity of the data set being
 ingested. The data complexity is determined by the number of dimensions in each
 event, the number of metrics in each event, and the types of aggregations we
@@ -1002,8 +816,7 @@ want to perform on those metrics. With the most basic data set (one that only
 has a timestamp column), our setup can ingest data at a rate of 800,000
 events/second/core, which is really just a measurement of how fast we can
 deserialize events. At peak, a single node was able to process 62259
-events/second. The ingestion latency of all of our production datasources is
-shown in Figure~\ref{fig:ingestion_rates}. The total peak events per second was
+events/second. The total peak events per second was
 840500. The median events per second was 590100. The first and third quantiles
 were 487000 events/s and 663200 events/s respectively. 
 
@@ -1051,16 +864,6 @@ pipelines is composed of different tasks, Samza was able to provide per task
 resource isolation, which was far easier to manage than per application
 resource isolation.
 
-\subsubsection{Autoscaling}
-Autoscaling our cluster to adjust for changes in load has remained a difficult
-problem. Production load is not constant, and different peaks can occur at
-vastly different times during a day. We’ve elected to focus on the problem of
-gradually increasing load, instead dealing with immediate spikes or dips in
-load. As load increases, we add new resources but set a configurable limit on
-how fast they can be added. We scale down our cluster very slowly, and excess
-capacity may remain for several hours before the system decides they are no
-longer necessary.
-
 \subsection{Operational Monitoring}
 Proper monitoring is critical to run a large scale distributed cluster,
 especially with many different technologies. Each Druid node is designed to
@@ -1075,27 +878,13 @@ RADStack and load them into a dedicated metrics RADstack. The metrics cluster
 is used to explore the performance and stability of the production cluster.
 This dedicated metrics cluster has allowed us to find numerous production
 problems, such as gradual query speed degradations, less than optimally tuned
-hardware, and various other system bottlenecks. We also use a metrics cluster
-to analyze what queries are made in production and what aspects of the data
-users are most interested in.
+hardware, and various other system bottlenecks.
 
 \section{Related Work}
 \label{sec:related}
 
 \subsection{Hybrid Batch/Streaming Workflows}
 
-\subsubsection{Summingbird}
-Summingbird\cite{boykin2014summingbird} is a high-level dataflow language for
-streaming and batch processing. Summingbird enables counters on top of streams,
-and processes data for delivery to key/value stores. Summingbird can run on top
-of data processors such as Storm\cite{marz2013storm} and Hadoop. The RADStack
-also offers a language for writing data processing jobs with Starfire. These
-jobs do not involve computation and focus entirely on data processing. Starfire
-enables more complex operations such as streaming joins. The RADStack also 
-leaves all queries and aggregations to the serving layer, letting each layer of
-the stack focus on what it is best at.
-
-\subsubsection{Spark Ecosystem}
 Spark\cite{zaharia2012resilient} is a cluster computing framework optimized for
 iterative workflows.  Spark Streaming is a separate project that converts
 sequences of tuples into immutable micro-batches. Each micro-batch can be
@@ -1108,40 +897,19 @@ The RADStack can theoretically be composed of Spark and Spark Streaming for
 processing, Kafka for event delivery, and Druid to serve queries.
 
 \subsection{Druid and Other Data Stores}
-Although Druid builds on many of the same principles as other distributed
-columnar data stores\cite{fink2012distributed}, many of these data stores are
-designed to be more generic key-value stores\cite{lakshman2010cassandra} and do
-not support computation directly in the storage layer. There are also other
-data stores designed for some of the same data warehousing issues that Druid is
-meant to solve. These systems include in-memory databases such as SAP’s
+Druid builds on many of the same principles as other distributed
+columnar data stores\cite{fink2012distributed}, and in-memory databasesi such as SAP’s
 HANA\cite{farber2012sap} and VoltDB\cite{voltdb2010voltdb}. These data stores
 lack Druid’s low latency ingestion characteristics. Druid also has native
 analytical features baked in, similar to ParAccel\cite{paraccel2013}, however,
 Druid allows system wide rolling software updates with no downtime. 
 
-Druid is similar to C-Store\cite{stonebraker2005c} and
-LazyBase\cite{cipar2012lazybase} in that it has two subsystems, a
+Druid is similar to C-Store\cite{stonebraker2005c} in that it has two subsystems, a
 read-optimized subsystem in the historical nodes and a write-optimized
 subsystem in real-time nodes. Real-time nodes are designed to ingest a high
 volume of append heavy data, and do not support data updates. Unlike the two
 aforementioned systems, Druid is meant for OLAP transactions and not OLTP
-transactions. Druid’s low latency data ingestion features share some
-similarities with Trident/Storm\cite{marz2013storm} and Spark
-Streaming\cite{zaharia2012discretized}, however, both systems are focused on
-stream processing whereas Druid is focused on ingestion and aggregation. Stream
-processors are great complements to Druid as a means of pre-processing the data
-before the data enters Druid. 
-
-There are a class of systems that specialize in queries on top of cluster
-computing frameworks. Shark\cite{engle2012shark} is such a system for queries
-on top of Spark, and Cloudera’s Impala\cite{cloudera2013} is another system
-focused on optimizing query performance on top of HDFS. Druid historical nodes
-download data locally and only work with native Druid indexes. We believe this
-setup allows for faster query latencies. Druid leverages a unique combination
-of algorithms in its architecture. Although we believe no other data store has
-the same set of functionality as Druid, some of Druid’s optimization techniques
-such as using inverted indices to perform fast filters are also used in other
-data stores\cite{macnicol2004sybase}. 
+transactions. 
 
 \section{Conclusions and Future Work}
 \label{sec:conclusions}
