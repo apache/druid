@@ -21,7 +21,6 @@ package io.druid.emitter.graphite;
 
 import com.codahale.metrics.graphite.PickledGraphite;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.metamx.common.ISE;
 import com.metamx.common.logger.Logger;
 import com.metamx.emitter.core.Emitter;
 import com.metamx.emitter.core.Event;
@@ -92,7 +91,8 @@ public class GraphiteEmitter implements Emitter
   public void emit(Event event)
   {
     if (!started.get()) {
-      throw new ISE("WTF emit was called while service is not started yet");
+      log.error("WTF emit was called while service is not started yet");
+      return;
     }
     if (event instanceof ServiceMetricEvent) {
       final GraphiteEvent graphiteEvent = graphiteEventConverter.druidEventToGraphite((ServiceMetricEvent) event);
@@ -124,7 +124,8 @@ public class GraphiteEmitter implements Emitter
         emitter.emit(event);
       }
     } else {
-      throw new ISE("unknown event type [%s]", event.getClass());
+      log.error("unknown event type [%s]", event.getClass());
+      return;
     }
   }
 
