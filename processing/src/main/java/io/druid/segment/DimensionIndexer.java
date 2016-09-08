@@ -79,23 +79,25 @@ import io.druid.segment.incremental.IncrementalIndexStorageAdapter;
  * Thread Safety
  * --------------------
  * Each DimensionIndexer exists within the context of a single IncrementalIndex. Before IndexMerger.persist() is
- * called on an IncrementalIndex, any associated DimensionIndexers should be thread-safe.
- *
- * In current usage, this means that an implementation should allow multiple threads to add data to the indexer via
- * processRowValsToUnsortedEncodedArray() and allow multiple threads to read data via methods that only deal with
- * unsorted encodings.
+ * called on an IncrementalIndex, any associated DimensionIndexers should allow multiple threads to add data to the
+ * indexer via processRowValsToUnsortedEncodedArray() and allow multiple threads to read data via methods that only
+ * deal with unsorted encodings.
  *
  * As mentioned in the "Sorting and Ordering" section, writes and calls to the sorted encoding
  * methods should not be interleaved: the sorted encoding methods should only be called when it is known that
  * writes to the indexer will no longer occur.
  *
- * Index merge and persist are currently handled by a single thread.
+ * The implementations of methods dealing with sorted encodings are free to assume that they will be called
+ * by only one thread.
  *
- * After IndexMerger.persist() is called on an IncrementalIndex, any indexers associated with that IncrementalIndex
- * are no longer required to be thread-safe.
- *
- * The sorted encoding methods are not used outside of index merging/persisting (single-threaded context, and
+ * The sorted encoding methods are not currently used outside of index merging/persisting (single-threaded context, and
  * no new events will be added to the indexer).
+ *
+ * If an indexer is passed to a thread that will use the sorted encoding methods, the caller is responsible
+ * for ensuring that previous writes to the indexer are visible to the thread that uses the sorted encoding space.
+ *
+ * For example, in the RealtimePlumber and IndexGeneratorJob, the thread that performs index persist is started
+ * by the same thread that handles the row adds on an index, ensuring the adds are visible to the persist thread.
  *
  * @param <EncodedType> class of the encoded values
  * @param <ActualType> class of the actual values

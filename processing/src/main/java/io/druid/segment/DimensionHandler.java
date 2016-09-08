@@ -57,6 +57,8 @@ import java.util.Map;
  *
  * A DimensionHandler is a stateless object, and thus thread-safe; its methods should be pure functions.
  *
+ * The EncodedType and ActualType are Comparable because columns used as dimensions must have sortable values.
+ *
  * @param <EncodedType> class of the encoded values
  * @param <ActualType> class of the actual values
  */
