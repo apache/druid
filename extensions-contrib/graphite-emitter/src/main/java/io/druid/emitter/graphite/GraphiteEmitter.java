@@ -123,9 +123,10 @@ public class GraphiteEmitter implements Emitter
         emitter.emit(event);
       }
     } else if (event instanceof AlertEvent) {
+      AlertEvent alertEvent = (AlertEvent) event;
       log.error(
           "The following alert is dropped, description is [%s], severity is [%s]",
-          ((AlertEvent) event).getDescription(), ((AlertEvent) event).getService()
+          alertEvent.getDescription(), alertEvent.getSeverity()
       );
     } else {
       log.error("unknown event type [%s]", event.getClass());
