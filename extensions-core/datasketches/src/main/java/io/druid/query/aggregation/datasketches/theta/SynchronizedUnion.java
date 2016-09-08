@@ -84,6 +84,12 @@ public class SynchronizedUnion implements Union
   }
 
   @Override
+  public synchronized void update(char[] data)
+  {
+    delegate.update(data);
+  }
+
+  @Override
   public synchronized CompactSketch getResult(boolean b, Memory memory)
   {
     return delegate.getResult(b, memory);
