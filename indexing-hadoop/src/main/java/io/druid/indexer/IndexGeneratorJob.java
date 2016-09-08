@@ -44,13 +44,14 @@ import io.druid.data.input.Rows;
 import io.druid.indexer.hadoop.SegmentInputRow;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.segment.BaseProgressIndicator;
+import io.druid.segment.IndexMerger;
 import io.druid.segment.ProgressIndicator;
 import io.druid.segment.QueryableIndex;
-import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ColumnCapabilitiesImpl;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.IncrementalIndexSchema;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
+import io.druid.segment.indexing.DataSchema;
 import io.druid.timeline.DataSegment;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configurable;
@@ -481,6 +482,9 @@ public class IndexGeneratorJob implements Jobby
     private AggregatorFactory[] aggregators;
     private AggregatorFactory[] combiningAggs;
 
+    private IndexMerger indexMerger;
+    private boolean rollup;
+
     protected ProgressIndicator makeProgressIndicator(final Context context)
     {
       return new BaseProgressIndicator()
@@ -501,34 +505,21 @@ public class IndexGeneratorJob implements Jobby
         final ProgressIndicator progressIndicator
     ) throws IOException
     {
-      if (config.isBuildV9Directly()) {
-        return HadoopDruidIndexerConfig.INDEX_MERGER_V9.persist(
-            index, interval, file, config.getIndexSpec(), progressIndicator
-        );
-      } else {
-        return HadoopDruidIndexerConfig.INDEX_MERGER.persist(
-            index, interval, file, config.getIndexSpec(), progressIndicator
-        );
-      }
+      return indexMerger.persist(
+          index, interval, file, config.getIndexSpec(), progressIndicator
+      );
     }
 
     protected File mergeQueryableIndex(
         final List<QueryableIndex> indexes,
         final AggregatorFactory[] aggs,
         final File file,
-        ProgressIndicator progressIndicator
+        final ProgressIndicator progressIndicator
     ) throws IOException
     {
-      boolean rollup = config.getSchema().getDataSchema().getGranularitySpec().isRollup();
-      if (config.isBuildV9Directly()) {
-        return HadoopDruidIndexerConfig.INDEX_MERGER_V9.mergeQueryableIndex(
-            indexes, rollup, aggs, file, config.getIndexSpec(), progressIndicator
-        );
-      } else {
-        return HadoopDruidIndexerConfig.INDEX_MERGER.mergeQueryableIndex(
-            indexes, rollup, aggs, file, config.getIndexSpec(), progressIndicator
-        );
-      }
+      return indexMerger.mergeAndCloseMergee(
+          indexes, rollup, aggs, file, config.getIndexSpec(), progressIndicator
+      );
     }
 
     @Override
@@ -537,12 +528,17 @@ public class IndexGeneratorJob implements Jobby
     {
       config = HadoopDruidIndexerConfig.fromConfiguration(context.getConfiguration());
 
-      aggregators = config.getSchema().getDataSchema().getAggregators();
+      DataSchema dataSchema = config.getSchema().getDataSchema();
+      aggregators = dataSchema.getAggregators();
       combiningAggs = new AggregatorFactory[aggregators.length];
       for (int i = 0; i < aggregators.length; ++i) {
         metricNames.add(aggregators[i].getName());
         combiningAggs[i] = aggregators[i].getCombiningFactory();
       }
+      rollup = dataSchema.getGranularitySpec().isRollup();
+      indexMerger = config.isBuildV9Directly()
+                    ? HadoopDruidIndexerConfig.INDEX_MERGER_V9
+                    : HadoopDruidIndexerConfig.INDEX_MERGER;
     }
 
     @Override

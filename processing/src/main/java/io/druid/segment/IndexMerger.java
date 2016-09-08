@@ -33,6 +33,7 @@ import com.google.common.collect.Ordering;
 import com.google.common.collect.PeekingIterator;
 import com.google.common.collect.Sets;
 import com.google.common.io.ByteSink;
+import com.google.common.io.Closeables;
 import com.google.common.io.Closer;
 import com.google.common.io.FileWriteMode;
 import com.google.common.io.Files;
@@ -64,7 +65,6 @@ import io.druid.segment.data.LongSupplierSerializer;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.IOPeon;
 import io.druid.segment.data.Indexed;
-import io.druid.segment.data.IndexedInts;
 import io.druid.segment.data.IndexedIterable;
 import io.druid.segment.data.ListIndexed;
 import io.druid.segment.data.TmpFileIOPeon;
@@ -214,7 +214,26 @@ public class IndexMerger
     return mergeQueryableIndex(indexes, rollup, metricAggs, outDir, indexSpec, new BaseProgressIndicator());
   }
 
-  public File mergeQueryableIndex(
+  public File mergeAndCloseMergee(
+      List<QueryableIndex> indexes,
+      boolean rollup,
+      final AggregatorFactory[] metricAggs,
+      File outDir,
+      IndexSpec indexSpec,
+      ProgressIndicator progress
+  ) throws IOException
+  {
+    try {
+      return mergeQueryableIndex(indexes, rollup, metricAggs, outDir, indexSpec, progress);
+    }
+    finally {
+      for (QueryableIndex index : indexes) {
+        Closeables.close(index, true);
+      }
+    }
+  }
+
+  private File mergeQueryableIndex(
       List<QueryableIndex> indexes,
       boolean rollup,
       final AggregatorFactory[] metricAggs,
@@ -326,13 +345,13 @@ public class IndexMerger
     }
   }
 
-  public File merge(
-      List<IndexableAdapter> indexes,
+  private File merge(
+      final List<IndexableAdapter> indexes,
       final boolean rollup,
       final AggregatorFactory[] metricAggs,
-      File outDir,
-      IndexSpec indexSpec,
-      ProgressIndicator progress
+      final File outDir,
+      final IndexSpec indexSpec,
+      final ProgressIndicator progress
   ) throws IOException
   {
     FileUtils.deleteDirectory(outDir);
