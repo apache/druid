@@ -40,12 +40,9 @@ import io.druid.guice.DruidBinders;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.ManageLifecycle;
-import io.druid.query.DruidMetrics;
+import io.druid.query.ExecutorServiceMonitor;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Properties;
 import java.util.Set;
 
 /**
@@ -69,7 +66,10 @@ public class MetricsModule implements Module
 
     DruidBinders.metricMonitorBinder(binder); // get the binder so that it will inject the empty set at a minimum.
 
+    binder.bind(DataSourceTaskIdHolder.class).in(LazySingleton.class);
+
     binder.bind(EventReceiverFirehoseRegister.class).in(LazySingleton.class);
+    binder.bind(ExecutorServiceMonitor.class).in(LazySingleton.class);
 
     // Instantiate eagerly so that we get everything registered and put into the Lifecycle
     binder.bind(Key.get(MonitorScheduler.class, Names.named("ForTheEagerness")))
@@ -107,39 +107,37 @@ public class MetricsModule implements Module
 
   @Provides
   @ManageLifecycle
-  public JvmMonitor getJvmMonitor(Properties props)
+  public JvmMonitor getJvmMonitor(
+      DataSourceTaskIdHolder dataSourceTaskIdHolder
+  )
   {
-    return new JvmMonitor(MonitorsConfig.extractDimensions(props,
-                                                           Lists.newArrayList(
-                                                               DruidMetrics.DATASOURCE,
-                                                               DruidMetrics.TASK_ID
-                                                           )
+    return new JvmMonitor(MonitorsConfig.mapOfDatasourceAndTaskID(
+        dataSourceTaskIdHolder.getDataSource(),
+        dataSourceTaskIdHolder.getTaskId()
     ));
   }
 
   @Provides
   @ManageLifecycle
-  public JvmCpuMonitor getJvmCpuMonitor(Properties props)
+  public JvmCpuMonitor getJvmCpuMonitor(
+      DataSourceTaskIdHolder dataSourceTaskIdHolder
+  )
   {
-    return new JvmCpuMonitor(MonitorsConfig.extractDimensions(props,
-                                                              Lists.newArrayList(
-                                                                  DruidMetrics.DATASOURCE,
-                                                                  DruidMetrics.TASK_ID
-                                                              )
+    return new JvmCpuMonitor(MonitorsConfig.mapOfDatasourceAndTaskID(
+        dataSourceTaskIdHolder.getDataSource(),
+        dataSourceTaskIdHolder.getTaskId()
     ));
   }
 
   @Provides
   @ManageLifecycle
-  public SysMonitor getSysMonitor(Properties props)
+  public SysMonitor getSysMonitor(
+      DataSourceTaskIdHolder dataSourceTaskIdHolder
+  )
   {
-    return new SysMonitor(MonitorsConfig.extractDimensions(props,
-                                                           Lists.newArrayList(
-                                                               DruidMetrics.DATASOURCE,
-                                                               DruidMetrics.TASK_ID
-                                                           )
+    return new SysMonitor(MonitorsConfig.mapOfDatasourceAndTaskID(
+        dataSourceTaskIdHolder.getDataSource(),
+        dataSourceTaskIdHolder.getTaskId()
     ));
   }
-
-
 }

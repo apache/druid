@@ -29,6 +29,8 @@ import com.google.inject.Inject;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.Sequences;
 import com.metamx.common.logger.Logger;
+import io.druid.data.input.impl.TimestampSpec;
+import io.druid.granularity.QueryGranularity;
 import io.druid.query.AbstractPrioritizedCallable;
 import io.druid.query.BaseQuery;
 import io.druid.query.ConcatQueryRunner;
@@ -87,7 +89,7 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
         SegmentMetadataQuery query = (SegmentMetadataQuery) inQ;
         final SegmentAnalyzer analyzer = new SegmentAnalyzer(query.getAnalysisTypes());
         final Map<String, ColumnAnalysis> analyzedColumns = analyzer.analyze(segment);
-        final int numRows = analyzer.numRows(segment);
+        final long numRows = analyzer.numRows(segment);
         long totalSize = 0;
 
         if (analyzer.analyzingSize()) {
@@ -111,8 +113,9 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
         List<Interval> retIntervals = query.analyzingInterval() ? Arrays.asList(segment.getDataInterval()) : null;
 
         final Map<String, AggregatorFactory> aggregators;
+        Metadata metadata = null;
         if (query.hasAggregators()) {
-          final Metadata metadata = segment.asStorageAdapter().getMetadata();
+          metadata = segment.asStorageAdapter().getMetadata();
           if (metadata != null && metadata.getAggregators() != null) {
             aggregators = Maps.newHashMap();
             for (AggregatorFactory aggregator : metadata.getAggregators()) {
@@ -125,6 +128,39 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
           aggregators = null;
         }
 
+        final TimestampSpec timestampSpec;
+        if (query.hasTimestampSpec()) {
+          if (metadata == null) {
+            metadata = segment.asStorageAdapter().getMetadata();
+          }
+          timestampSpec = metadata != null ? metadata.getTimestampSpec() : null;
+        } else {
+          timestampSpec = null;
+        }
+
+        final QueryGranularity queryGranularity;
+        if (query.hasQueryGranularity()) {
+          if (metadata == null) {
+            metadata = segment.asStorageAdapter().getMetadata();
+          }
+          queryGranularity = metadata != null ? metadata.getQueryGranularity() : null;
+        } else {
+          queryGranularity = null;
+        }
+
+        Boolean rollup = null;
+        if (query.hasRollup()) {
+          if (metadata == null) {
+            metadata = segment.asStorageAdapter().getMetadata();
+          }
+          rollup = metadata != null ? metadata.isRollup() : null;
+          if (rollup == null) {
+            // in this case, this segment is built before no-rollup function is coded,
+            // thus it is built with rollup
+            rollup = Boolean.TRUE;
+          }
+        }
+
         return Sequences.simple(
             Arrays.asList(
                 new SegmentAnalysis(
@@ -133,7 +169,10 @@ public class SegmentMetadataQueryRunnerFactory implements QueryRunnerFactory<Seg
                     columns,
                     totalSize,
                     numRows,
-                    aggregators
+                    aggregators,
+                    timestampSpec,
+                    queryGranularity,
+                    rollup
                 )
             )
         );

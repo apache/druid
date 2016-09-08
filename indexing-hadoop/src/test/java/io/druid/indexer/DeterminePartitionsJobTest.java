@@ -27,7 +27,7 @@ import io.druid.data.input.impl.CSVParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.indexer.partitions.SingleDimensionPartitionsSpec;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -227,16 +227,17 @@ public class DeterminePartitionsJobTest
                     new StringInputRowParser(
                         new CSVParseSpec(
                             new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                            new DimensionsSpec(ImmutableList.of("host", "country"), null, null),
+                            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host", "country")), null, null),
                             null,
                             ImmutableList.of("timestamp", "host", "country", "visited_num")
-                        )
+                        ),
+                        null
                     ),
                     Map.class
                 ),
                 new AggregatorFactory[]{new LongSumAggregatorFactory("visited_num", "visited_num")},
                 new UniformGranularitySpec(
-                    Granularity.DAY, QueryGranularity.NONE, ImmutableList.of(new Interval(interval))
+                    Granularity.DAY, QueryGranularities.NONE, ImmutableList.of(new Interval(interval))
                 ),
                 HadoopDruidIndexerConfig.JSON_MAPPER
             ),

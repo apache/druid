@@ -21,6 +21,7 @@ package io.druid.query.aggregation.hyperloglog;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.Ordering;
 import com.metamx.common.IAE;
 import com.metamx.common.StringUtils;
 import io.druid.query.aggregation.Aggregator;
@@ -106,20 +107,7 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   @Override
   public Comparator getComparator()
   {
-    return new Comparator<HyperLogLogCollector>()
-    {
-      @Override
-      public int compare(HyperLogLogCollector lhs, HyperLogLogCollector rhs)
-      {
-        if(lhs == null) {
-          return -1;
-        }
-        if(rhs == null) {
-          return 1;
-        }
-        return lhs.compareTo(rhs);
-      }
-    };
+    return Ordering.<HyperLogLogCollector>natural().nullsFirst();
   }
 
   @Override
@@ -159,16 +147,20 @@ public class HyperUniquesAggregatorFactory extends AggregatorFactory
   @Override
   public Object deserialize(Object object)
   {
+    final ByteBuffer buffer;
+
     if (object instanceof byte[]) {
-      return HyperLogLogCollector.makeCollector(ByteBuffer.wrap((byte[]) object));
+      buffer = ByteBuffer.wrap((byte[]) object);
     } else if (object instanceof ByteBuffer) {
-      return HyperLogLogCollector.makeCollector((ByteBuffer) object);
+      // Be conservative, don't assume we own this buffer.
+      buffer = ((ByteBuffer) object).duplicate();
     } else if (object instanceof String) {
-      return HyperLogLogCollector.makeCollector(
-          ByteBuffer.wrap(Base64.decodeBase64(StringUtils.toUtf8((String) object)))
-      );
+      buffer = ByteBuffer.wrap(Base64.decodeBase64(StringUtils.toUtf8((String) object)));
+    } else {
+      return object;
     }
-    return object;
+
+    return HyperLogLogCollector.makeCollector(buffer);
   }
 
   @Override

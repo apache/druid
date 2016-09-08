@@ -28,10 +28,11 @@ import com.google.common.io.Files;
 import io.druid.common.utils.JodaUtils;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.segment.data.CompressedObjectStrategy;
+import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.ConciseBitmapSerdeFactory;
 import io.druid.segment.incremental.IncrementalIndex;
 import io.druid.segment.incremental.OnheapIncrementalIndex;
@@ -75,7 +76,8 @@ public class IndexMergerV9CompatibilityTest
   private static final IndexSpec INDEX_SPEC = IndexMergerTest.makeIndexSpec(
       new ConciseBitmapSerdeFactory(),
       CompressedObjectStrategy.CompressionStrategy.LZ4,
-      CompressedObjectStrategy.CompressionStrategy.LZ4
+      CompressedObjectStrategy.CompressionStrategy.LZ4,
+      CompressionFactory.LongEncodingStrategy.LONGS
   );
   private static final List<String> DIMS = ImmutableList.of("dim0", "dim1");
 
@@ -166,7 +168,7 @@ public class IndexMergerV9CompatibilityTest
   {
     toPersist = new OnheapIncrementalIndex(
         JodaUtils.MIN_INSTANT,
-        QueryGranularity.NONE,
+        QueryGranularities.NONE,
         DEFAULT_AGG_FACTORIES,
         1000000
     );

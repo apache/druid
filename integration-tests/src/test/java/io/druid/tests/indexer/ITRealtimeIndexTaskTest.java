@@ -81,6 +81,7 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
   private final DateTimeFormatter TIMESTAMP_FMT = DateTimeFormat.forPattern("yyyy-MM-dd'T'HH:mm:ss'.000Z'");
   private DateTime dtFirst;            // timestamp of 1st event
   private DateTime dtLast;             // timestamp of last event
+  private DateTime dtGroupBy;          // timestamp for expected response for groupBy query
 
   @Inject
   ServerDiscoveryFactory factory;
@@ -130,9 +131,7 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
           .replace("%%TIMESERIES_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtFirst))
           .replace("%%POST_AG_REQUEST_START%%", INTERVAL_FMT.print(dtFirst))
           .replace("%%POST_AG_REQUEST_END%%", INTERVAL_FMT.print(dtLast.plusMinutes(2)))
-          .replace(
-              "%%POST_AG_RESPONSE_TIMESTAMP%%",
-              TIMESTAMP_FMT.print(dtLast.minusSeconds(24).withSecondOfMinute(0))
+          .replace("%%POST_AG_RESPONSE_TIMESTAMP%%", TIMESTAMP_FMT.print(dtGroupBy.withSecondOfMinute(0))
           );
 
       // should hit the queries all on realtime task or some on realtime task
@@ -215,6 +214,8 @@ public class ITRealtimeIndexTaskTest extends AbstractIndexerTest
       while ((line = reader.readLine()) != null) {
         if (i == 15) { // for the 15th line, use a time before the window
           dt = dt.minusMinutes(10);
+        } else if (i == 16) { // remember this time to use in the expected response from the groupBy query
+          dtGroupBy = dt;
         } else if (i == 18) { // use a time 6 seconds ago so it will be out of order
           dt = dt.minusSeconds(6);
         }

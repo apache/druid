@@ -20,12 +20,10 @@
 package io.druid.server.http;
 
 import com.google.common.collect.ImmutableList;
-
 import io.druid.audit.AuditEntry;
 import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
 import io.druid.metadata.MetadataRuleManager;
-
 import org.easymock.EasyMock;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -34,7 +32,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import javax.ws.rs.core.Response;
-
 import java.util.List;
 import java.util.Map;
 
@@ -255,4 +252,5 @@ public class RulesResourceTest
 
     EasyMock.verify(auditManager);
   }
+
 }

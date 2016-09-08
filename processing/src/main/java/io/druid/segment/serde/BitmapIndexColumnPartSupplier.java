@@ -74,11 +74,10 @@ public class BitmapIndexColumnPartSupplier implements Supplier<BitmapIndex>
       }
 
       @Override
-      public ImmutableBitmap getBitmap(String value)
+      public int getIndex(String value)
       {
-        final int index = dictionary.indexOf(value);
-
-        return getBitmap(index);
+        // GenericIndexed.indexOf satisfies contract needed by BitmapIndex.indexOf
+        return dictionary.indexOf(value);
       }
 
       @Override

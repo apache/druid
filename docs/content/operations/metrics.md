@@ -54,10 +54,16 @@ Available Metrics
 |`query/wait/time`|Milliseconds spent waiting for a segment to be scanned.|id, segment.|several hundred milliseconds|
 |`segment/scan/pending`|Number of segments in queue waiting to be scanned.||Close to 0|
 
+### Jetty
+
+|Metric|Description|Normal Value|
+|------|-----------|------------|
+|`jetty/numOpenConnections`|Number of open jetty connections.|Not much higher than number of jetty threads.|
+
 ### Cache
 
-|Metric|Description|Dimensions|Normal Value|
-|------|-----------|----------|------------|
+|Metric|Description|Normal Value|
+|------|-----------|------------|
 |`query/cache/delta/*`|Cache metrics since the last emission.||N/A|
 |`query/cache/total/*`|Total cache metrics.||N/A|
 
@@ -97,7 +103,7 @@ These metrics are only available if the RealtimeMetricsMonitor is included in th
 |`ingest/persists/count`|Number of times persist occurred.|dataSource.|Depends on configuration.|
 |`ingest/persists/time`|Milliseconds spent doing intermediate persist.|dataSource.|Depends on configuration. Generally a few minutes at most.|
 |`ingest/persists/cpu`|Cpu time in Nanoseconds spent on doing intermediate persist.|dataSource.|Depends on configuration. Generally a few minutes at most.|
-|`ingest/persists/backPressure`|Number of persists pending.|dataSource.|0|
+|`ingest/persists/backPressure`|Milliseconds spent creating persist tasks and blocking waiting for them to finish.|dataSource.|0 or very low|
 |`ingest/persists/failed`|Number of persists that failed.|dataSource.|0|
 |`ingest/handoff/failed`|Number of handoffs that failed.|dataSource.|0|
 |`ingest/merge/time`|Milliseconds spent merging intermediate segments|dataSource.|Depends on configuration. Generally a few minutes at most.|
@@ -136,6 +142,10 @@ These metrics are for the Druid coordinator and are reset each time the coordina
 |`segment/size`|Size in bytes of available segments.|dataSource.|Varies.|
 |`segment/count`|Number of available segments.|dataSource.|< max|
 |`segment/overShadowed/count`|Number of overShadowed segments.||Varies.|
+|`segment/unavailable/count`|Number of segments (not including replicas) left to load until segments that should be loaded in the cluster are available for queries.|datasource.|0|
+|`segment/underReplicated/count`|Number of segments (including replicas) left to load until segments that should be loaded in the cluster are available for queries.|tier, datasource.|0|
+
+If `emitBalancingStats` is set to `true` in the coordinator [dynamic configuration](../configuration/coordinator.html#dynamic-configuration), then [log entries](../configuration/logging.html) for class `io.druid.server.coordinator.helper.DruidCoordinatorLogger` will have extra information on balancing decisions.
 
 ## General Health
 
@@ -147,6 +157,7 @@ These metrics are for the Druid coordinator and are reset each time the coordina
 |`segment/used`|Bytes used for served segments.|dataSource, tier, priority.|< max|
 |`segment/usedPercent`|Percentage of space used by served segments.|dataSource, tier, priority.|< 100%|
 |`segment/count`|Number of served segments.|dataSource, tier, priority.|Varies.|
+|`segment/pendingDelete`|On-disk size in bytes of segments that are waiting to be cleared out|Varies.|
 
 ### JVM
 

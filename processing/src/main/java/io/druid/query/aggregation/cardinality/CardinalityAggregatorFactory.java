@@ -22,8 +22,9 @@ package io.druid.query.aggregation.cardinality;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Function;
-import com.google.common.base.Joiner;
+import com.google.common.base.Preconditions;
 import com.google.common.base.Predicates;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.metamx.common.StringUtils;
@@ -35,17 +36,53 @@ import io.druid.query.aggregation.BufferAggregator;
 import io.druid.query.aggregation.hyperloglog.HyperLogLogCollector;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.query.dimension.DefaultDimensionSpec;
+import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import org.apache.commons.codec.binary.Base64;
 
-import javax.annotation.Nullable;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
 public class CardinalityAggregatorFactory extends AggregatorFactory
 {
+  private static List<String> makeRequiredFieldNamesFromFields(List<DimensionSpec> fields)
+  {
+    return ImmutableList.copyOf(
+        Lists.transform(
+            fields,
+            new Function<DimensionSpec, String>()
+            {
+              @Override
+              public String apply(DimensionSpec input)
+              {
+                return input.getDimension();
+              }
+            }
+        )
+    );
+  }
+
+  private static List<DimensionSpec> makeFieldsFromFieldNames(List<String> fieldNames)
+  {
+    return ImmutableList.copyOf(
+        Lists.transform(
+            fieldNames,
+            new Function<String, DimensionSpec>()
+            {
+              @Override
+              public DimensionSpec apply(String input)
+              {
+                return new DefaultDimensionSpec(input, input);
+              }
+            }
+        )
+    );
+  }
+
   public static Object estimateCardinality(Object object)
   {
     if (object == null) {
@@ -56,21 +93,41 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
   }
 
   private static final byte CACHE_TYPE_ID = (byte) 0x8;
+  private static final byte CACHE_KEY_SEPARATOR = (byte) 0xFF;
 
   private final String name;
-  private final List<String> fieldNames;
+  private final List<DimensionSpec> fields;
   private final boolean byRow;
 
   @JsonCreator
   public CardinalityAggregatorFactory(
       @JsonProperty("name") String name,
-      @JsonProperty("fieldNames") final List<String> fieldNames,
+      @Deprecated @JsonProperty("fieldNames") final List<String> fieldNames,
+      @JsonProperty("fields") final List<DimensionSpec> fields,
       @JsonProperty("byRow") final boolean byRow
   )
   {
     this.name = name;
-    this.fieldNames = fieldNames;
+    // 'fieldNames' is deprecated, since CardinalityAggregatorFactory now accepts DimensionSpecs instead of Strings.
+    // The old 'fieldNames' is still supported for backwards compatibility, but the user is not allowed to specify both
+    // 'fields' and 'fieldNames'.
+    if (fields == null) {
+      Preconditions.checkArgument(fieldNames != null, "Must provide 'fieldNames' if 'fields' is null.");
+      this.fields = makeFieldsFromFieldNames(fieldNames);
+    } else {
+      Preconditions.checkArgument(fieldNames == null, "Cannot specify both 'fieldNames' and 'fields.");
+      this.fields = fields;
+    }
     this.byRow = byRow;
+  }
+
+  public CardinalityAggregatorFactory(
+      String name,
+      final List<DimensionSpec> fields,
+      final boolean byRow
+  )
+  {
+    this(name, null, fields, byRow);
   }
 
   @Override
@@ -103,13 +160,12 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
     return Lists.newArrayList(
         Iterables.filter(
             Iterables.transform(
-                fieldNames, new Function<String, DimensionSelector>()
+                fields, new Function<DimensionSpec, DimensionSelector>()
             {
-              @Nullable
               @Override
-              public DimensionSelector apply(@Nullable String input)
+              public DimensionSelector apply(DimensionSpec input)
               {
-                return columnFactory.makeDimensionSelector(new DefaultDimensionSpec(input, input));
+                return columnFactory.makeDimensionSelector(input);
               }
             }
             ), Predicates.notNull()
@@ -158,13 +214,13 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
   public List<AggregatorFactory> getRequiredColumns()
   {
     return Lists.transform(
-        fieldNames,
-        new Function<String, AggregatorFactory>()
+        fields,
+        new Function<DimensionSpec, AggregatorFactory>()
         {
           @Override
-          public AggregatorFactory apply(String input)
+          public AggregatorFactory apply(DimensionSpec input)
           {
-            return new CardinalityAggregatorFactory(input, fieldNames, byRow);
+            return new CardinalityAggregatorFactory(input.getOutputName(), Collections.singletonList(input), byRow);
           }
         }
     );
@@ -173,16 +229,20 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
   @Override
   public Object deserialize(Object object)
   {
+    final ByteBuffer buffer;
+
     if (object instanceof byte[]) {
-      return HyperLogLogCollector.makeCollector(ByteBuffer.wrap((byte[]) object));
+      buffer = ByteBuffer.wrap((byte[]) object);
     } else if (object instanceof ByteBuffer) {
-      return HyperLogLogCollector.makeCollector((ByteBuffer) object);
+      // Be conservative, don't assume we own this buffer.
+      buffer = ((ByteBuffer) object).duplicate();
     } else if (object instanceof String) {
-      return HyperLogLogCollector.makeCollector(
-          ByteBuffer.wrap(Base64.decodeBase64(StringUtils.toUtf8((String) object)))
-      );
+      buffer = ByteBuffer.wrap(Base64.decodeBase64(StringUtils.toUtf8((String) object)));
+    } else {
+      return object;
     }
-    return object;
+
+    return HyperLogLogCollector.makeCollector(buffer);
   }
 
   @Override
@@ -202,13 +262,13 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
   @Override
   public List<String> requiredFields()
   {
-    return fieldNames;
+    return makeRequiredFieldNamesFromFields(fields);
   }
 
   @JsonProperty
-  public List<String> getFieldNames()
+  public List<DimensionSpec> getFields()
   {
-    return fieldNames;
+    return fields;
   }
 
   @JsonProperty
@@ -220,13 +280,22 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
   @Override
   public byte[] getCacheKey()
   {
-    byte[] fieldNameBytes = StringUtils.toUtf8(Joiner.on("\u0001").join(fieldNames));
+    List<byte[]> dimSpecKeys = new ArrayList<>();
+    int dimSpecKeysLength = fields.size();
+    for (DimensionSpec dimSpec : fields) {
+      byte[] dimSpecKey = dimSpec.getCacheKey();
+      dimSpecKeysLength += dimSpecKey.length;
+      dimSpecKeys.add(dimSpec.getCacheKey());
+    }
 
-    return ByteBuffer.allocate(2 + fieldNameBytes.length)
-                     .put(CACHE_TYPE_ID)
-                     .put(fieldNameBytes)
-                     .put((byte)(byRow ? 1 : 0))
-                     .array();
+    ByteBuffer retBuf = ByteBuffer.allocate(2 + dimSpecKeysLength);
+    retBuf.put(CACHE_TYPE_ID);
+    for (byte[] dimSpecKey : dimSpecKeys) {
+      retBuf.put(dimSpecKey);
+      retBuf.put(CACHE_KEY_SEPARATOR);
+    }
+    retBuf.put((byte) (byRow ? 1 : 0));
+    return retBuf.array();
   }
 
   @Override
@@ -259,25 +328,22 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
 
     CardinalityAggregatorFactory that = (CardinalityAggregatorFactory) o;
 
-    if (byRow != that.byRow) {
+    if (isByRow() != that.isByRow()) {
       return false;
     }
-    if (fieldNames != null ? !fieldNames.equals(that.fieldNames) : that.fieldNames != null) {
+    if (!getName().equals(that.getName())) {
       return false;
     }
-    if (name != null ? !name.equals(that.name) : that.name != null) {
-      return false;
-    }
+    return getFields().equals(that.getFields());
 
-    return true;
   }
 
   @Override
   public int hashCode()
   {
-    int result = name != null ? name.hashCode() : 0;
-    result = 31 * result + (fieldNames != null ? fieldNames.hashCode() : 0);
-    result = 31 * result + (byRow ? 1 : 0);
+    int result = getName().hashCode();
+    result = 31 * result + getFields().hashCode();
+    result = 31 * result + (isByRow() ? 1 : 0);
     return result;
   }
 
@@ -286,7 +352,7 @@ public class CardinalityAggregatorFactory extends AggregatorFactory
   {
     return "CardinalityAggregatorFactory{" +
            "name='" + name + '\'' +
-           ", fieldNames='" + fieldNames + '\'' +
+           ", fields='" + fields + '\'' +
            '}';
   }
 }

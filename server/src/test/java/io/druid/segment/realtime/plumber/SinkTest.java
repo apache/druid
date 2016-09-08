@@ -24,7 +24,7 @@ import com.google.common.collect.Lists;
 import com.metamx.common.Granularity;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.Row;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -51,7 +51,7 @@ public class SinkTest
         "test",
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("rows")},
-        new UniformGranularitySpec(Granularity.HOUR, QueryGranularity.MINUTE, null),
+        new UniformGranularitySpec(Granularity.HOUR, QueryGranularities.MINUTE, null),
         new DefaultObjectMapper()
     );
 
@@ -70,9 +70,17 @@ public class SinkTest
         null,
         0,
         0,
+        null,
         null
     );
-    final Sink sink = new Sink(interval, schema, tuningConfig, version);
+    final Sink sink = new Sink(
+        interval,
+        schema,
+        tuningConfig.getShardSpec(),
+        version,
+        tuningConfig.getMaxRowsInMemory(),
+        tuningConfig.isReportParseExceptions()
+    );
 
     sink.add(
         new InputRow()

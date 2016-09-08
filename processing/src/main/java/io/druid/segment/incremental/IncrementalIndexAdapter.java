@@ -134,12 +134,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
           if (bitmapIndexes[dimIdx] == null) {
             bitmapIndexes[dimIdx] = bitmapFactory.makeEmptyMutableBitmap();
           }
-          try {
-            bitmapIndexes[dimIdx].add(rowNum);
-          }
-          catch (Exception e) {
-            log.info(e.toString());
-          }
+          bitmapIndexes[dimIdx].add(rowNum);
         }
       }
 

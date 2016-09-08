@@ -11,6 +11,7 @@ Segment metadata queries return per-segment information about:
 * Interval the segment covers
 * Column type of all the columns in the segment
 * Estimated total segment byte size in if it was stored in a flat format
+* Is the segment rolled up
 * Segment id
 
 ```json
@@ -31,7 +32,7 @@ There are several main parts to a segment metadata query:
 |toInclude|A JSON Object representing what columns should be included in the result. Defaults to "all".|no|
 |merge|Merge all individual segment metadata results into a single result|no|
 |context|See [Context](../querying/query-context.html)|no|
-|analysisTypes|A list of Strings specifying what column properties (e.g. cardinality, size) should be calculated and returned in the result. Defaults to ["cardinality", "size", "interval"]. See section [analysisTypes](#analysistypes) for more details.|no|
+|analysisTypes|A list of Strings specifying what column properties (e.g. cardinality, size) should be calculated and returned in the result. Defaults to ["cardinality", "size", "interval", "minmax"]. See section [analysisTypes](#analysistypes) for more details.|no|
 |lenientAggregatorMerge|If true, and if the "aggregators" analysisType is enabled, aggregators will be merged leniently. See below for details.|no|
 
 The format of the result is:
@@ -48,6 +49,9 @@ The format of the result is:
   },
   "aggregators" : {
     "metric1" : { "type" : "longSum", "name" : "metric1", "fieldName" : "metric1" }
+  },
+  "queryGranularity" : {
+    "type": "none"
   },
   "size" : 300000,
   "numRows" : 5000000
@@ -102,9 +106,9 @@ The grammar is as follows:
 
 This is a list of properties that determines the amount of information returned about the columns, i.e. analyses to be performed on the columns.
 
-By default, all analysis types will be used. If a property is not needed, omitting it from this list will result in a more efficient query.
+By default, the "cardinality", "size", "interval", and "minmax" types will be used. If a property is not needed, omitting it from this list will result in a more efficient query.
 
-There are five types of column analyses:
+Types of column analyses are described below:
 
 #### cardinality
 
@@ -123,6 +127,14 @@ dimension columns.
 
 * `intervals` in the result will contain the list of intervals associated with the queried segments.
 
+#### timestampSpec
+
+* `timestampSpec` in the result will contain timestampSpec of data stored in segments. this can be null if timestampSpec of segments was unknown or unmergeable (if merging is enabled).
+
+#### queryGranularity
+
+* `queryGranularity` in the result will contain query granularity of data stored in segments. this can be null if query granularity of segments was unknown or unmergeable (if merging is enabled).
+
 #### aggregators
 
 * `aggregators` in the result will contain the list of aggregators usable for querying metric columns. This may be
@@ -131,6 +143,11 @@ null if the aggregators are unknown or unmergeable (if merging is enabled).
 * Merging can be strict or lenient. See *lenientAggregatorMerge* below for details.
 
 * The form of the result is a map of column name to aggregator.
+
+#### rollup
+
+* `rollup` in the result is true/false/null.
+* When merging is enabled, if some are rollup, others are not, result is null.
 
 ### lenientAggregatorMerge
 

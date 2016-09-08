@@ -72,7 +72,8 @@ public class Main
                DruidJsonValidator.class,
                PullDependencies.class,
                CreateTables.class,
-               InsertSegment.class
+               InsertSegment.class,
+               DumpSegment.class
            );
 
     builder.withGroup("index")
@@ -109,6 +110,7 @@ public class Main
       System.out.println(e.getMessage());
       System.out.println("===");
       cli.parse(new String[]{"help"}).run();
+      System.exit(1);
     }
   }
 }

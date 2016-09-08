@@ -68,6 +68,17 @@ public class MatchingDimExtractionFnTest
   }
 
   @Test
+  public void testNullExtraction()
+  {
+    String regex = "^$";
+    ExtractionFn extractionFn = new MatchingDimExtractionFn(regex);
+
+    Assert.assertNull(extractionFn.apply((Object) null));
+    Assert.assertNull(extractionFn.apply((String) null));
+    Assert.assertNull(extractionFn.apply((String) ""));
+  }
+
+  @Test
   public void testSerde() throws Exception
   {
     final ObjectMapper objectMapper = new DefaultObjectMapper();

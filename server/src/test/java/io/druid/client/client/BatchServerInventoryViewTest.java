@@ -20,6 +20,8 @@
 package io.druid.client.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Predicate;
+import com.google.common.base.Predicates;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Iterables;
@@ -29,8 +31,10 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.metamx.common.ISE;
+import com.metamx.common.Pair;
 import io.druid.client.BatchServerInventoryView;
 import io.druid.client.DruidServer;
+import io.druid.client.ServerView;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
 import io.druid.curator.announcement.Announcer;
 import io.druid.jackson.DefaultObjectMapper;
@@ -44,6 +48,9 @@ import org.apache.curator.framework.CuratorFrameworkFactory;
 import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.apache.curator.test.TestingCluster;
 import org.apache.curator.test.Timing;
+import org.easymock.EasyMock;
+import org.easymock.IAnswer;
+import org.easymock.LogicalOperator;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
 import org.junit.After;
@@ -53,7 +60,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Callable;
@@ -152,7 +161,8 @@ public class BatchServerInventoryViewTest
           }
         },
         cf,
-        jsonMapper
+        jsonMapper,
+        Predicates.<Pair<DruidServerMetadata, DataSegment>>alwaysTrue()
     );
 
     batchServerInventoryView.start();
@@ -167,9 +177,16 @@ public class BatchServerInventoryViewTest
           }
         },
         cf,
-        jsonMapper
-    )
-    {
+        jsonMapper,
+        new Predicate<Pair<DruidServerMetadata, DataSegment>>()
+        {
+          @Override
+          public boolean apply(@Nullable Pair<DruidServerMetadata, DataSegment> input)
+          {
+            return input.rhs.getInterval().getStart().isBefore(SEGMENT_INTERVAL_START.plusDays(INITIAL_SEGMENTS));
+          }
+        }
+    ){
       @Override
       protected DruidServer addInnerInventory(
           DruidServer container, String inventoryKey, Set<DataSegment> inventory
@@ -228,6 +245,122 @@ public class BatchServerInventoryViewTest
     Assert.assertEquals(testSegments, Sets.newHashSet(server.getSegments().values()));
   }
 
+  @Test
+  public void testRunWithFilter() throws Exception
+  {
+    segmentAnnouncer.announceSegments(testSegments);
+
+    waitForSync(filteredBatchServerInventoryView, testSegments);
+
+    DruidServer server = Iterables.get(filteredBatchServerInventoryView.getInventory(), 0);
+    Set<DataSegment> segments = Sets.newHashSet(server.getSegments().values());
+
+    Assert.assertEquals(testSegments, segments);
+    int prevUpdateCount = inventoryUpdateCounter.get();
+    // segment outside the range of default filter
+    DataSegment segment1 = makeSegment(101);
+    segmentAnnouncer.announceSegment(segment1);
+    testSegments.add(segment1);
+
+    waitForUpdateEvents(prevUpdateCount + 1);
+    Assert.assertNull(
+        Iterables.getOnlyElement(filteredBatchServerInventoryView.getInventory())
+                 .getSegment(segment1.getIdentifier())
+    );
+  }
+
+  @Test
+  public void testRunWithFilterCallback() throws Exception
+  {
+    final CountDownLatch removeCallbackLatch = new CountDownLatch(1);
+
+    segmentAnnouncer.announceSegments(testSegments);
+
+    waitForSync(filteredBatchServerInventoryView, testSegments);
+
+    DruidServer server = Iterables.get(filteredBatchServerInventoryView.getInventory(), 0);
+    Set<DataSegment> segments = Sets.newHashSet(server.getSegments().values());
+
+    Assert.assertEquals(testSegments, segments);
+
+    ServerView.SegmentCallback callback = EasyMock.createStrictMock(ServerView.SegmentCallback.class);
+    Comparator<DataSegment> dataSegmentComparator = new Comparator<DataSegment>()
+    {
+      @Override
+      public int compare(DataSegment o1, DataSegment o2)
+      {
+        return o1.getInterval().equals(o2.getInterval()) ? 0 : -1;
+      }
+    };
+
+    EasyMock
+        .expect(
+            callback.segmentAdded(
+                EasyMock.<DruidServerMetadata>anyObject(),
+                EasyMock.cmp(makeSegment(INITIAL_SEGMENTS + 2), dataSegmentComparator, LogicalOperator.EQUAL)
+            )
+        )
+        .andReturn(ServerView.CallbackAction.CONTINUE)
+        .times(1);
+
+    EasyMock
+        .expect(
+            callback.segmentRemoved(
+                EasyMock.<DruidServerMetadata>anyObject(),
+                EasyMock.cmp(makeSegment(INITIAL_SEGMENTS + 2), dataSegmentComparator, LogicalOperator.EQUAL)
+            )
+        )
+        .andAnswer(
+            new IAnswer<ServerView.CallbackAction>()
+            {
+              @Override
+              public ServerView.CallbackAction answer() throws Throwable
+              {
+                removeCallbackLatch.countDown();
+                return ServerView.CallbackAction.CONTINUE;
+              }
+            }
+        )
+        .times(1);
+
+
+    EasyMock.replay(callback);
+
+    filteredBatchServerInventoryView.registerSegmentCallback(
+        MoreExecutors.sameThreadExecutor(),
+        callback,
+        new Predicate<Pair<DruidServerMetadata, DataSegment>>()
+        {
+          @Override
+          public boolean apply(@Nullable Pair<DruidServerMetadata, DataSegment> input)
+          {
+            return input.rhs.getInterval().getStart().equals(SEGMENT_INTERVAL_START.plusDays(INITIAL_SEGMENTS + 2));
+          }
+        }
+    );
+
+    DataSegment segment2 = makeSegment(INITIAL_SEGMENTS + 2);
+    segmentAnnouncer.announceSegment(segment2);
+    testSegments.add(segment2);
+
+    DataSegment oldSegment = makeSegment(-1);
+    segmentAnnouncer.announceSegment(oldSegment);
+    testSegments.add(oldSegment);
+
+    segmentAnnouncer.unannounceSegment(oldSegment);
+    testSegments.remove(oldSegment);
+
+    waitForSync(filteredBatchServerInventoryView, testSegments);
+
+    segmentAnnouncer.unannounceSegment(segment2);
+    testSegments.remove(segment2);
+
+    waitForSync(filteredBatchServerInventoryView, testSegments);
+    timing.forWaiting().awaitLatch(removeCallbackLatch);
+
+    EasyMock.verify(callback);
+  }
+
   private DataSegment makeSegment(int offset)
   {
     return DataSegment.builder()
@@ -264,11 +397,7 @@ public class BatchServerInventoryViewTest
     while (inventoryUpdateCounter.get() != count) {
       Thread.sleep(100);
       if (stopwatch.elapsed(TimeUnit.MILLISECONDS) > forWaitingTiming.milliseconds()) {
-        throw new ISE(
-            "BatchServerInventoryView is not updating counter expected[%d] value[%d]",
-            count,
-            inventoryUpdateCounter.get()
-        );
+        throw new ISE("BatchServerInventoryView is not updating counter expected[%d] value[%d]", count, inventoryUpdateCounter.get());
       }
     }
   }
@@ -332,7 +461,7 @@ public class BatchServerInventoryViewTest
                   List<DataSegment> segments = new ArrayList<DataSegment>();
                   try {
                     for (int j = 0; j < INITIAL_SEGMENTS / numThreads; ++j) {
-                      segments.add(makeSegment(INITIAL_SEGMENTS + ii + numThreads * j));
+                      segments.add(makeSegment(INITIAL_SEGMENTS + ii  + numThreads * j));
                     }
                     latch.countDown();
                     latch.await();

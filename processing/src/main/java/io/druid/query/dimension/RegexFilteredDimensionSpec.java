@@ -23,7 +23,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.metamx.common.StringUtils;
-import io.druid.query.filter.DimFilterCacheHelper;
+import io.druid.query.filter.DimFilterUtils;
 import io.druid.segment.DimensionSelector;
 
 import java.nio.ByteBuffer;
@@ -68,7 +68,12 @@ public class RegexFilteredDimensionSpec extends BaseFilteredDimensionSpec
     int count = 0;
     final Map<Integer,Integer> forwardMapping = new HashMap<>();
 
-    for (int i = 0; i < selector.getValueCardinality(); i++) {
+    final int selectorCardinality = selector.getValueCardinality();
+    if (selectorCardinality < 0) {
+      throw new UnsupportedOperationException("Cannot decorate a selector with no dictionary");
+    }
+
+    for (int i = 0; i < selectorCardinality; i++) {
       if (compiledRegex.matcher(Strings.nullToEmpty(selector.lookupName(i))).matches()) {
         forwardMapping.put(i, count++);
       }
@@ -89,7 +94,7 @@ public class RegexFilteredDimensionSpec extends BaseFilteredDimensionSpec
     return ByteBuffer.allocate(2 + delegateCacheKey.length + regexBytes.length)
                      .put(CACHE_TYPE_ID)
                      .put(delegateCacheKey)
-                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                     .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(regexBytes)
                      .array();
   }

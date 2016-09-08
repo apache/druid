@@ -20,10 +20,10 @@
 package io.druid.segment.incremental;
 
 import com.google.common.base.Supplier;
-import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
+import com.metamx.common.logger.Logger;
 import com.metamx.common.parsers.ParseException;
 import io.druid.collections.ResourceHolder;
 import io.druid.collections.StupidPool;
@@ -33,25 +33,24 @@ import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.BufferAggregator;
 import io.druid.segment.ColumnSelectorFactory;
 
-import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentNavigableMap;
-import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  */
 public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
 {
+  private static final Logger log = new Logger(OffheapIncrementalIndex.class);
+
   private final StupidPool<ByteBuffer> bufferPool;
 
   private final List<ResourceHolder<ByteBuffer>> aggBuffers = new ArrayList<>();
   private final List<int[]> indexAndOffsets = new ArrayList<>();
 
-  private final ConcurrentNavigableMap<TimeAndDims, Integer> facts;
+  private final FactsHolder facts;
 
   private final AtomicInteger indexIncrement = new AtomicInteger(0);
 
@@ -71,6 +70,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       IncrementalIndexSchema incrementalIndexSchema,
       boolean deserializeComplexMetrics,
       boolean reportParseExceptions,
+      boolean sortFacts,
       int maxRowCount,
       StupidPool<ByteBuffer> bufferPool
   )
@@ -78,18 +78,15 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
     super(incrementalIndexSchema, deserializeComplexMetrics, reportParseExceptions);
     this.maxRowCount = maxRowCount;
     this.bufferPool = bufferPool;
-    this.facts = new ConcurrentSkipListMap<>(dimsComparator());
+
+    this.facts = incrementalIndexSchema.isRollup() ? new RollupFactsHolder(sortFacts, dimsComparator())
+                                                   : new PlainFactsHolder(sortFacts);
 
     //check that stupid pool gives buffers that can hold at least one row's aggregators
     ResourceHolder<ByteBuffer> bb = bufferPool.take();
     if (bb.get().capacity() < aggsTotalSize) {
-      RuntimeException ex = new IAE("bufferPool buffers capacity must be >= [%s]", aggsTotalSize);
-      try {
-        bb.close();
-      } catch(IOException ioe){
-        ex.addSuppressed(ioe);
-      }
-      throw ex;
+      bb.close();
+      throw new IAE("bufferPool buffers capacity must be >= [%s]", aggsTotalSize);
     }
     aggBuffers.add(bb);
   }
@@ -100,6 +97,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       final AggregatorFactory[] metrics,
       boolean deserializeComplexMetrics,
       boolean reportParseExceptions,
+      boolean sortFacts,
       int maxRowCount,
       StupidPool<ByteBuffer> bufferPool
   )
@@ -108,9 +106,34 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
         new IncrementalIndexSchema.Builder().withMinTimestamp(minTimestamp)
                                             .withQueryGranularity(gran)
                                             .withMetrics(metrics)
+                                            .withRollup(IncrementalIndexSchema.DEFAULT_ROLLUP)
                                             .build(),
         deserializeComplexMetrics,
         reportParseExceptions,
+        sortFacts,
+        maxRowCount,
+        bufferPool
+    );
+  }
+
+  public OffheapIncrementalIndex(
+      long minTimestamp,
+      QueryGranularity gran,
+      boolean rollup,
+      final AggregatorFactory[] metrics,
+      int maxRowCount,
+      StupidPool<ByteBuffer> bufferPool
+  )
+  {
+    this(
+        new IncrementalIndexSchema.Builder().withMinTimestamp(minTimestamp)
+                                            .withQueryGranularity(gran)
+                                            .withMetrics(metrics)
+                                            .withRollup(rollup)
+                                            .build(),
+        true,
+        true,
+        true,
         maxRowCount,
         bufferPool
     );
@@ -125,19 +148,17 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   )
   {
     this(
-        new IncrementalIndexSchema.Builder().withMinTimestamp(minTimestamp)
-                                            .withQueryGranularity(gran)
-                                            .withMetrics(metrics)
-                                            .build(),
-        true,
-        true,
+        minTimestamp,
+        gran,
+        IncrementalIndexSchema.DEFAULT_ROLLUP,
+        metrics,
         maxRowCount,
         bufferPool
     );
   }
 
   @Override
-  public ConcurrentNavigableMap<TimeAndDims, Integer> getFacts()
+  public FactsHolder getFacts()
   {
     return facts;
   }
@@ -199,7 +220,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
     int bufferOffset;
 
     synchronized (this) {
-      final Integer priorIndex = facts.get(key);
+      final Integer priorIndex = facts.getPriorIndex(key);
       if (null != priorIndex) {
         final int[] indexAndOffset = indexAndOffsets.get(priorIndex);
         bufferIndex = indexAndOffset[0];
@@ -246,7 +267,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
         }
 
         // Last ditch sanity checks
-        if (numEntries.get() >= maxRowCount && !facts.containsKey(key)) {
+        if (numEntries.get() >= maxRowCount && facts.getPriorIndex(key) == null) {
           throw new IndexSizeExceededException("Maximum number of rows [%d] reached", maxRowCount);
         }
 
@@ -275,7 +296,9 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
         } catch (ParseException e) {
           // "aggregate" can throw ParseExceptions if a selector expects something but gets something else.
           if (reportParseExceptions) {
-            throw e;
+            throw new ParseException(e, "Encountered parse error for aggregator[%s]", getMetricAggs()[i].getName());
+          } else {
+            log.debug(e, "Encountered parse error, skipping aggregator[%s].", getMetricAggs()[i].getName());
           }
         }
       }
@@ -357,19 +380,8 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
 
     RuntimeException ex = null;
     for (ResourceHolder<ByteBuffer> buffHolder : aggBuffers) {
-      try {
-        buffHolder.close();
-      } catch(IOException ioe) {
-        if (ex == null) {
-          ex = Throwables.propagate(ioe);
-        } else {
-          ex.addSuppressed(ioe);
-        }
-      }
+      buffHolder.close();
     }
     aggBuffers.clear();
-    if (ex != null) {
-      throw ex;
-    }
   }
 }

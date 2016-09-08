@@ -18,20 +18,31 @@
  */
 package io.druid.server.coordinator;
 
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import org.joda.time.DateTime;
+
+import java.io.IOException;
+import java.util.concurrent.Executors;
 
 public class CostBalancerStrategyFactory implements BalancerStrategyFactory
 {
-  private final int threadCount;
+  private final ListeningExecutorService exec;
 
   public CostBalancerStrategyFactory(int costBalancerStrategyThreadCount)
   {
-    this.threadCount = costBalancerStrategyThreadCount;
+    this.exec = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(costBalancerStrategyThreadCount));
   }
 
   @Override
-  public BalancerStrategy createBalancerStrategy(DateTime referenceTimestamp)
+  public CostBalancerStrategy createBalancerStrategy(DateTime referenceTimestamp)
   {
-    return new CostBalancerStrategy(referenceTimestamp, threadCount);
+    return new CostBalancerStrategy(exec);
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+    exec.shutdownNow();
   }
 }

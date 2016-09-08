@@ -31,6 +31,10 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
   @NotNull
   private String dockerIp;
 
+  @JsonProperty
+  @NotNull
+  private String hadoopDir;
+
   @Override
   public IntegrationTestingConfig get()
   {
@@ -87,7 +91,10 @@ public class DockerConfigProvider implements IntegrationTestingConfigProvider
       @Override
       public String getProperty(String prop)
       {
-        throw new UnsupportedOperationException("DockerConfigProvider does not support getProperty()");
+        if (prop.equals("hadoopTestDir")) {
+	   return hadoopDir;
+	}
+        throw new UnsupportedOperationException("DockerConfigProvider does not support property " + prop);
       }
     };
   }

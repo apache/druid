@@ -23,6 +23,9 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Joiner;
 import com.google.common.base.Throwables;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.curator.PotentiallyGzippedCompressionProvider;
@@ -66,6 +69,9 @@ public class BatchDataSegmentAnnouncerTest
   private Set<DataSegment> testSegments;
 
   private final AtomicInteger maxBytesPerNode = new AtomicInteger(512 * 1024);
+  private Boolean skipDimensionsAndMetrics;
+  private Boolean skipLoadSpec;
+
 
   @Before
   public void setUp() throws Exception
@@ -91,6 +97,8 @@ public class BatchDataSegmentAnnouncerTest
     announcer.start();
 
     segmentReader = new SegmentReader(cf, jsonMapper);
+    skipDimensionsAndMetrics = false;
+    skipLoadSpec = false;
     segmentAnnouncer = new BatchDataSegmentAnnouncer(
         new DruidServerMetadata(
             "id",
@@ -112,6 +120,18 @@ public class BatchDataSegmentAnnouncerTest
           public long getMaxBytesPerNode()
           {
             return maxBytesPerNode.get();
+          }
+
+          @Override
+          public boolean isSkipDimensionsAndMetrics()
+          {
+            return skipDimensionsAndMetrics;
+          }
+
+          @Override
+          public boolean isSkipLoadSpec()
+          {
+            return skipLoadSpec;
           }
         },
         new ZkPathsConfig()
@@ -178,12 +198,57 @@ public class BatchDataSegmentAnnouncerTest
   }
 
   @Test
+  public void testSkipDimensions() throws Exception
+  {
+    skipDimensionsAndMetrics = true;
+    Iterator<DataSegment> segIter = testSegments.iterator();
+    DataSegment firstSegment = segIter.next();
+
+    segmentAnnouncer.announceSegment(firstSegment);
+
+    List<String> zNodes = cf.getChildren().forPath(testSegmentsPath);
+
+    for (String zNode : zNodes) {
+      DataSegment announcedSegment = Iterables.getOnlyElement(segmentReader.read(joiner.join(testSegmentsPath, zNode)));
+      Assert.assertEquals(announcedSegment, firstSegment);
+      Assert.assertTrue(announcedSegment.getDimensions().isEmpty());
+      Assert.assertTrue(announcedSegment.getMetrics().isEmpty());
+    }
+
+    segmentAnnouncer.unannounceSegment(firstSegment);
+
+    Assert.assertTrue(cf.getChildren().forPath(testSegmentsPath).isEmpty());
+  }
+
+  @Test
+  public void testSkipLoadSpec() throws Exception
+  {
+    skipLoadSpec = true;
+    Iterator<DataSegment> segIter = testSegments.iterator();
+    DataSegment firstSegment = segIter.next();
+
+    segmentAnnouncer.announceSegment(firstSegment);
+
+    List<String> zNodes = cf.getChildren().forPath(testSegmentsPath);
+
+    for (String zNode : zNodes) {
+      DataSegment announcedSegment = Iterables.getOnlyElement(segmentReader.read(joiner.join(testSegmentsPath, zNode)));
+      Assert.assertEquals(announcedSegment, firstSegment);
+      Assert.assertNull(announcedSegment.getLoadSpec());
+    }
+
+    segmentAnnouncer.unannounceSegment(firstSegment);
+
+    Assert.assertTrue(cf.getChildren().forPath(testSegmentsPath).isEmpty());
+  }
+
+  @Test
   public void testSingleAnnounceManyTimes() throws Exception
   {
     int prevMax = maxBytesPerNode.get();
     maxBytesPerNode.set(2048);
-    // each segment is about 317 bytes long and that makes 2048 / 317 = 6 segments included per node
-    // so 100 segments makes (100 / 6) + 1 = 17 nodes
+    // each segment is about 348 bytes long and that makes 2048 / 348 = 5 segments included per node
+    // so 100 segments makes 100 / 5 = 20 nodes
     try {
       for (DataSegment segment : testSegments) {
         segmentAnnouncer.announceSegment(segment);
@@ -194,7 +259,7 @@ public class BatchDataSegmentAnnouncerTest
     }
 
     List<String> zNodes = cf.getChildren().forPath(testSegmentsPath);
-    Assert.assertEquals(17, zNodes.size());
+    Assert.assertEquals(20, zNodes.size());
 
     Set<DataSegment> segments = Sets.newHashSet(testSegments);
     for (String zNode : zNodes) {
@@ -244,6 +309,9 @@ public class BatchDataSegmentAnnouncerTest
                           )
                       )
                       .version(new DateTime().toString())
+                      .dimensions(ImmutableList.<String>of("dim1", "dim2"))
+                      .metrics(ImmutableList.<String>of("met1", "met2"))
+                      .loadSpec(ImmutableMap.<String, Object>of("type", "local"))
                       .build();
   }
 

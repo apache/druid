@@ -22,7 +22,7 @@ package io.druid.indexer.hadoop;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.segment.TestHelper;
 import io.druid.timeline.DataSegment;
@@ -48,8 +48,8 @@ public class DatasourceIngestionSpecTest
         interval,
         null,
         null,
-        new SelectorDimFilter("dim", "value"),
-        QueryGranularity.DAY,
+        new SelectorDimFilter("dim", "value", null),
+        QueryGranularities.DAY,
         Lists.newArrayList("d1", "d2"),
         Lists.newArrayList("m1", "m2", "m3"),
         false
@@ -132,8 +132,8 @@ public class DatasourceIngestionSpecTest
                 128
             )
         ),
-        new SelectorDimFilter("dim", "value"),
-        QueryGranularity.DAY,
+        new SelectorDimFilter("dim", "value", null),
+        QueryGranularities.DAY,
         Lists.newArrayList("d1", "d2"),
         Lists.newArrayList("m1", "m2", "m3"),
         true

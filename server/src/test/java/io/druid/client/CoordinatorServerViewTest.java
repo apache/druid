@@ -21,6 +21,7 @@ package io.druid.client;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Function;
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
@@ -291,7 +292,8 @@ public class CoordinatorServerViewTest extends CuratorTestBase
     baseView = new BatchServerInventoryView(
         zkPathsConfig,
         curator,
-        jsonMapper
+        jsonMapper,
+        Predicates.<Pair<DruidServerMetadata, DataSegment>>alwaysTrue()
     )
     {
       @Override
@@ -351,7 +353,7 @@ public class CoordinatorServerViewTest extends CuratorTestBase
                       .version(version)
                       .dimensions(ImmutableList.<String>of())
                       .metrics(ImmutableList.<String>of())
-                      .shardSpec(new NoneShardSpec())
+                      .shardSpec(NoneShardSpec.instance())
                       .binaryVersion(9)
                       .size(0)
                       .build();

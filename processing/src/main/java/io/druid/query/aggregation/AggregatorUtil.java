@@ -29,6 +29,8 @@ import java.util.Set;
 
 public class AggregatorUtil
 {
+  public static final byte STRING_SEPARATOR = (byte) 0xFF;
+
   /**
    * returns the list of dependent postAggregators that should be calculated in order to calculate given postAgg
    *

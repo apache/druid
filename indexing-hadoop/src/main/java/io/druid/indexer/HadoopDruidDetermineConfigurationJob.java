@@ -67,7 +67,12 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
           for (int i = 0; i < shardsPerInterval; i++) {
             specs.add(
                 new HadoopyShardSpec(
-                    new HashBasedNumberedShardSpec(i, shardsPerInterval, HadoopDruidIndexerConfig.JSON_MAPPER),
+                    new HashBasedNumberedShardSpec(
+                        i,
+                        shardsPerInterval,
+                        config.getPartitionsSpec().getPartitionDimensions(),
+                        HadoopDruidIndexerConfig.JSON_MAPPER
+                    ),
                     shardCount++
                 )
             );
@@ -75,7 +80,7 @@ public class HadoopDruidDetermineConfigurationJob implements Jobby
           shardSpecs.put(bucket, specs);
           log.info("DateTime[%s], spec[%s]", bucket, specs);
         } else {
-          final HadoopyShardSpec spec = new HadoopyShardSpec(new NoneShardSpec(), shardCount++);
+          final HadoopyShardSpec spec = new HadoopyShardSpec(NoneShardSpec.instance(), shardCount++);
           shardSpecs.put(bucket, Lists.newArrayList(spec));
           log.info("DateTime[%s], spec[%s]", bucket, spec);
         }

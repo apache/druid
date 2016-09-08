@@ -31,13 +31,14 @@ public interface MetadataStorageConnector
       final byte[] value
   ) throws Exception;
 
-
   byte[] lookup(
       final String tableName,
       final String keyColumn,
       final String valueColumn,
       final String key
   );
+
+  void createDataSourceTable();
 
   void createPendingSegmentsTable();
 
@@ -50,4 +51,6 @@ public interface MetadataStorageConnector
   void createTaskTables();
 
   void createAuditTable();
+
+  void createSupervisorsTable();
 }

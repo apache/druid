@@ -50,7 +50,7 @@ import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.InputRow;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.InputRowParser;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.indexing.common.SegmentLoaderFactory;
 import io.druid.indexing.common.TaskStatus;
 import io.druid.indexing.common.TaskToolbox;
@@ -111,6 +111,7 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.internal.matchers.ThrowableCauseMatcher;
 import org.junit.internal.matchers.ThrowableMessageMatcher;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
@@ -281,6 +282,48 @@ public class RealtimeIndexTaskTest
     Assert.assertEquals(task.getId(), task.getTaskResource().getAvailabilityGroup());
   }
 
+
+  @Test(timeout = 60_000L, expected = ExecutionException.class)
+  public void testHandoffTimeout() throws Exception
+  {
+    final TestIndexerMetadataStorageCoordinator mdc = new TestIndexerMetadataStorageCoordinator();
+    final RealtimeIndexTask task = makeRealtimeTask(null, true, 100L);
+    final TaskToolbox taskToolbox = makeToolbox(task, mdc, tempFolder.newFolder());
+    final ListenableFuture<TaskStatus> statusFuture = runTask(task, taskToolbox);
+
+    // Wait for firehose to show up, it starts off null.
+    while (task.getFirehose() == null) {
+      Thread.sleep(50);
+    }
+
+    final TestFirehose firehose = (TestFirehose) task.getFirehose();
+
+    firehose.addRows(
+        ImmutableList.<InputRow>of(
+            new MapBasedInputRow(
+                now,
+                ImmutableList.of("dim1"),
+                ImmutableMap.<String, Object>of("dim1", "foo", "met1", "1")
+            )
+        )
+    );
+
+    // Stop the firehose, this will drain out existing events.
+    firehose.close();
+
+    // Wait for publish.
+    while (mdc.getPublished().isEmpty()) {
+      Thread.sleep(50);
+    }
+
+    Assert.assertEquals(1, task.getMetrics().processed());
+    Assert.assertNotNull(Iterables.getOnlyElement(mdc.getPublished()));
+
+
+    // handoff would timeout, resulting in exception
+    statusFuture.get();
+  }
+
   @Test(timeout = 60_000L)
   public void testBasics() throws Exception
   {
@@ -404,7 +447,19 @@ public class RealtimeIndexTaskTest
     expectedException.expectCause(CoreMatchers.<Throwable>instanceOf(ParseException.class));
     expectedException.expectCause(
         ThrowableMessageMatcher.hasMessage(
-            CoreMatchers.containsString("Unable to parse metrics[met1], value[foo]")
+            CoreMatchers.containsString("Encountered parse error for aggregator[met1]")
+        )
+    );
+    expectedException.expect(
+        ThrowableCauseMatcher.hasCause(
+            ThrowableCauseMatcher.hasCause(
+                CoreMatchers.allOf(
+                    CoreMatchers.<Throwable>instanceOf(ParseException.class),
+                    ThrowableMessageMatcher.hasMessage(
+                        CoreMatchers.containsString("Unable to parse metrics[met1], value[foo]")
+                    )
+                )
+            )
         )
     );
     statusFuture.get();
@@ -818,17 +873,22 @@ public class RealtimeIndexTaskTest
 
   private RealtimeIndexTask makeRealtimeTask(final String taskId)
   {
-    return makeRealtimeTask(taskId, true);
+    return makeRealtimeTask(taskId, true, 0);
   }
 
   private RealtimeIndexTask makeRealtimeTask(final String taskId, boolean reportParseExceptions)
+  {
+    return makeRealtimeTask(taskId, reportParseExceptions, 0);
+  }
+
+  private RealtimeIndexTask makeRealtimeTask(final String taskId, boolean reportParseExceptions, long handoffTimeout)
   {
     ObjectMapper objectMapper = new DefaultObjectMapper();
     DataSchema dataSchema = new DataSchema(
         "test_ds",
         null,
         new AggregatorFactory[]{new CountAggregatorFactory("rows"), new LongSumAggregatorFactory("met1", "met1")},
-        new UniformGranularitySpec(Granularity.DAY, QueryGranularity.NONE, null),
+        new UniformGranularitySpec(Granularity.DAY, QueryGranularities.NONE, null),
         objectMapper
     );
     RealtimeIOConfig realtimeIOConfig = new RealtimeIOConfig(
@@ -849,7 +909,8 @@ public class RealtimeIndexTaskTest
         buildV9Directly,
         0,
         0,
-        reportParseExceptions
+        reportParseExceptions,
+        handoffTimeout
     );
     return new RealtimeIndexTask(
         taskId,
@@ -957,7 +1018,7 @@ public class RealtimeIndexTaskTest
           }
 
           @Override
-          public void stop()
+          public void close()
           {
             //Noop
           }
@@ -1016,7 +1077,7 @@ public class RealtimeIndexTaskTest
                                       ImmutableList.<AggregatorFactory>of(
                                           new LongSumAggregatorFactory(metric, metric)
                                       )
-                                  ).granularity(QueryGranularity.ALL)
+                                  ).granularity(QueryGranularities.ALL)
                                   .intervals("2000/3000")
                                   .build();
 

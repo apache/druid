@@ -19,6 +19,8 @@
 
 package io.druid.segment.data;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Maps;
 import com.metamx.common.logger.Logger;
@@ -30,6 +32,7 @@ import io.druid.segment.CompressedPools;
 import net.jpountz.lz4.LZ4Factory;
 import net.jpountz.lz4.LZ4FastDecompressor;
 import net.jpountz.lz4.LZ4SafeDecompressor;
+import org.apache.commons.lang.ArrayUtils;
 
 import java.io.IOException;
 import java.nio.Buffer;
@@ -44,6 +47,13 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
   private static final Logger log = new Logger(CompressedObjectStrategy.class);
   public static final CompressionStrategy DEFAULT_COMPRESSION_STRATEGY = CompressionStrategy.LZ4;
 
+  /**
+   * Compression strategy is used to compress block of bytes without knowledge of what data the bytes represents.
+   *
+   * When adding compression strategy, do not use id in the range [0x7C, 0xFD] (greater than 123 or less than -2), since
+   * a flag mechanism is used in CompressionFactory that involves subtracting the value 126 from the compression id
+   * (see {@link CompressionFactory#FLAG_BOUND})
+   */
   public static enum CompressionStrategy
   {
     LZF((byte) 0x0) {
@@ -85,6 +95,23 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
       {
         return UncompressedCompressor.defaultCompressor;
       }
+    },
+    /*
+    This value indicate no compression strategy should be used, and compression should not be block based
+    Currently only IndexedLong support non block based compression, and other types treat this as UNCOMPRESSED
+     */
+    NONE((byte) 0xFE) {
+      @Override
+      public Decompressor getDecompressor()
+      {
+        throw new UnsupportedOperationException("NONE compression strategy shouldn't use any decompressor");
+      }
+
+      @Override
+      public Compressor getCompressor()
+      {
+        throw new UnsupportedOperationException("NONE compression strategy shouldn't use any compressor");
+      }
     };
 
     final byte id;
@@ -103,6 +130,19 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
 
     public abstract Decompressor getDecompressor();
 
+    @JsonValue
+    @Override
+    public String toString()
+    {
+      return this.name().toLowerCase();
+    }
+
+    @JsonCreator
+    public static CompressionStrategy fromString(String name)
+    {
+      return valueOf(name.toUpperCase());
+    }
+
     static final Map<Byte, CompressionStrategy> idMap = Maps.newHashMap();
 
     static {
@@ -114,6 +154,12 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
     public static CompressionStrategy forId(byte id)
     {
       return idMap.get(id);
+    }
+
+    // TODO remove this method and change all its callers to use all CompressionStrategy values when NONE type is supported by all types
+    public static CompressionStrategy[] noNoneValues()
+    {
+      return (CompressionStrategy[]) ArrayUtils.removeElement(CompressionStrategy.values(), NONE);
     }
   }
 
@@ -209,13 +255,8 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
     @Override
     public byte[] compress(byte[] bytes)
     {
-
       try (final ResourceHolder<BufferRecycler> bufferRecycler = CompressedPools.getBufferRecycler()) {
         return LZFEncoder.encode(bytes, 0, bytes.length, bufferRecycler.get());
-      }
-      catch (IOException e) {
-        log.error(e, "Error compressing data");
-        throw Throwables.propagate(e);
       }
     }
   }
@@ -231,7 +272,14 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
     {
       // Since decompressed size is NOT known, must use lz4Safe
       // lz4Safe.decompress does not modify buffer positions
-      final int numDecompressedBytes = lz4Safe.decompress(in, in.position(), numBytes, out, out.position(), out.remaining());
+      final int numDecompressedBytes = lz4Safe.decompress(
+          in,
+          in.position(),
+          numBytes,
+          out,
+          out.position(),
+          out.remaining()
+      );
       out.limit(out.position() + numDecompressedBytes);
     }
 
@@ -298,7 +346,7 @@ public class CompressedObjectStrategy<T extends Buffer> implements ObjectStrateg
       }
 
       @Override
-      public void close() throws IOException
+      public void close()
       {
         bufHolder.close();
       }

@@ -24,8 +24,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Ints;
 import io.druid.indexing.common.task.Task;
-import io.druid.indexing.overlord.ImmutableZkWorker;
+import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
+import io.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 
 import java.util.Comparator;
 import java.util.TreeSet;
@@ -35,18 +36,18 @@ import java.util.TreeSet;
 public class FillCapacityWorkerSelectStrategy implements WorkerSelectStrategy
 {
   @Override
-  public Optional<ImmutableZkWorker> findWorkerForTask(
-      final RemoteTaskRunnerConfig config,
-      final ImmutableMap<String, ImmutableZkWorker> zkWorkers,
+  public Optional<ImmutableWorkerInfo> findWorkerForTask(
+      final WorkerTaskRunnerConfig config,
+      final ImmutableMap<String, ImmutableWorkerInfo> zkWorkers,
       final Task task
   )
   {
-    TreeSet<ImmutableZkWorker> sortedWorkers = Sets.newTreeSet(
-        new Comparator<ImmutableZkWorker>()
+    TreeSet<ImmutableWorkerInfo> sortedWorkers = Sets.newTreeSet(
+        new Comparator<ImmutableWorkerInfo>()
         {
           @Override
           public int compare(
-              ImmutableZkWorker zkWorker, ImmutableZkWorker zkWorker2
+              ImmutableWorkerInfo zkWorker, ImmutableWorkerInfo zkWorker2
           )
           {
             int retVal = Ints.compare(zkWorker2.getCurrCapacityUsed(), zkWorker.getCurrCapacityUsed());
@@ -66,7 +67,7 @@ public class FillCapacityWorkerSelectStrategy implements WorkerSelectStrategy
     sortedWorkers.addAll(zkWorkers.values());
     final String minWorkerVer = config.getMinWorkerVersion();
 
-    for (ImmutableZkWorker zkWorker : sortedWorkers) {
+    for (ImmutableWorkerInfo zkWorker : sortedWorkers) {
       if (zkWorker.canRunTask(task) && zkWorker.isValidVersion(minWorkerVer)) {
         return Optional.of(zkWorker);
       }

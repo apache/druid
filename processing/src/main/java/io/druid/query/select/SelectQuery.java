@@ -87,6 +87,12 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
   }
 
   @Override
+  public DimFilter getFilter()
+  {
+    return dimFilter;
+  }
+
+  @Override
   public String getType()
   {
     return Query.SELECT;
@@ -174,6 +180,21 @@ public class SelectQuery extends BaseQuery<Result<SelectResultValue>>
   }
 
   public SelectQuery withPagingSpec(PagingSpec pagingSpec)
+  {
+    return new SelectQuery(
+        getDataSource(),
+        getQuerySegmentSpec(),
+        isDescending(),
+        dimFilter,
+        granularity,
+        dimensions,
+        metrics,
+        pagingSpec,
+        getContext()
+    );
+  }
+
+  public SelectQuery withDimFilter(DimFilter dimFilter)
   {
     return new SelectQuery(
         getDataSource(),

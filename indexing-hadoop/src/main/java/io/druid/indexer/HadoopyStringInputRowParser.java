@@ -38,7 +38,7 @@ public class HadoopyStringInputRowParser implements InputRowParser<Object>
 
   public HadoopyStringInputRowParser(@JsonProperty("parseSpec") ParseSpec parseSpec)
   {
-    this.parser = new StringInputRowParser(parseSpec);
+    this.parser = new StringInputRowParser(parseSpec, null);
   }
 
   @Override

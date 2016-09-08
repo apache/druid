@@ -21,6 +21,7 @@ package io.druid.query.topn;
 
 import com.google.common.collect.Lists;
 import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.query.DataSource;
 import io.druid.query.TableDataSource;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -28,7 +29,7 @@ import io.druid.query.aggregation.PostAggregator;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
-import io.druid.query.filter.OrDimFilter;
+import io.druid.query.filter.InDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
 import io.druid.query.spec.LegacySegmentSpec;
 import io.druid.query.spec.QuerySegmentSpec;
@@ -79,7 +80,7 @@ public class TopNQueryBuilder
     threshold = 0;
     querySegmentSpec = null;
     dimFilter = null;
-    granularity = QueryGranularity.ALL;
+    granularity = QueryGranularities.ALL;
     aggregatorSpecs = Lists.newArrayList();
     postAggregatorSpecs = Lists.newArrayList();
     context = null;
@@ -246,17 +247,13 @@ public class TopNQueryBuilder
 
   public TopNQueryBuilder filters(String dimensionName, String value)
   {
-    dimFilter = new SelectorDimFilter(dimensionName, value);
+    dimFilter = new SelectorDimFilter(dimensionName, value, null);
     return this;
   }
 
   public TopNQueryBuilder filters(String dimensionName, String value, String... values)
   {
-    List<DimFilter> fields = Lists.<DimFilter>newArrayList(new SelectorDimFilter(dimensionName, value));
-    for (String val : values) {
-      fields.add(new SelectorDimFilter(dimensionName, val));
-    }
-    dimFilter = new OrDimFilter(fields);
+    dimFilter = new InDimFilter(dimensionName, Lists.asList(value, values), null);
     return this;
   }
 

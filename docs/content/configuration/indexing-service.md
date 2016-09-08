@@ -82,7 +82,7 @@ The following configs only apply if the overlord is running in remote mode:
 |`druid.indexer.runner.maxZnodeBytes`|The maximum size Znode in bytes that can be created in Zookeeper.|524288|
 |`druid.indexer.runner.taskCleanupTimeout`|How long to wait before failing a task after a middle manager is disconnected from Zookeeper.|PT15M|
 |`druid.indexer.runner.taskShutdownLinkTimeout`|How long to wait on a shutdown request to a middle manager before timing out|PT1M|
-|`druid.indexer.runner.pendingTasksRunnerNumThreads`|Number of threads to allocate pending-tasks to workers, must be at least 1.|3|
+|`druid.indexer.runner.pendingTasksRunnerNumThreads`|Number of threads to allocate pending-tasks to workers, must be at least 1.|1|
 
 There are additional configs for autoscaling (if it is enabled):
 
@@ -184,7 +184,9 @@ Workers are assigned tasks until capacity.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`type`|`fillCapacity`.|fillCapacity|
+|`type`|`fillCapacity`.|required; must be `fillCapacity`|
+
+Note that, if `druid.indexer.runner.pendingTasksRunnerNumThreads` is set to n (> 1) then it means to fill n workers upto capacity simultaneously and then moving on.
 
 ##### Fill Capacity With Affinity
 
@@ -192,10 +194,12 @@ An affinity config can be provided.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`type`|`fillCapacityWithAffinity`.|fillCapacityWithAffinity|
+|`type`|`fillCapacityWithAffinity`.|required; must be `fillCapacityWithAffinity`|
 |`affinity`|JSON object mapping a datasource String name to a list of indexing service middle manager host:port String values. Druid doesn't perform DNS resolution, so the 'host' value must match what is configured on the middle manager and what the middle manager announces itself as (examine the Overlord logs to see what your middle manager announces itself as).|{}|
 
 Tasks will try to be assigned to preferred workers. Fill capacity strategy is used if no preference for a datasource specified.
+
+Note that, if `druid.indexer.runner.pendingTasksRunnerNumThreads` is set to n (> 1) then it means to fill n preferred workers upto capacity simultaneously and then moving on.
 
 ##### Equal Distribution
 
@@ -203,7 +207,7 @@ The workers with the least amount of tasks is assigned the task.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`type`|`equalDistribution`.|fillCapacity|
+|`type`|`equalDistribution`.|required; must be `equalDistribution`|
 
 ##### Javascript
 
@@ -216,7 +220,7 @@ its better to write a druid extension module with extending current worker selec
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`type`|`javascript`.|javascript|
+|`type`|`javascript`.|required; must be `javascript`|
 |`function`|String representing javascript function||
 
 Example: a function that sends batch_index_task to workers 10.0.0.1 and 10.0.0.2 and all other tasks to other available workers.
@@ -298,6 +302,6 @@ If the peon is running in remote mode, there must be an overlord up and running.
 
 |Property|Description|Default|
 |--------|-----------|-------|
-|`druid.peon.taskActionClient.retry.minWait`|The minimum retry time to communicate with overlord.|PT1M|
-|`druid.peon.taskActionClient.retry.maxWait`|The maximum retry time to communicate with overlord.|PT10M|
-|`druid.peon.taskActionClient.retry.maxRetryCount`|The maximum number of retries to communicate with overlord.|10|
+|`druid.peon.taskActionClient.retry.minWait`|The minimum retry time to communicate with overlord.|PT5S|
+|`druid.peon.taskActionClient.retry.maxWait`|The maximum retry time to communicate with overlord.|PT1M|
+|`druid.peon.taskActionClient.retry.maxRetryCount`|The maximum number of retries to communicate with overlord.|60|

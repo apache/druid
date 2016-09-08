@@ -67,6 +67,10 @@ public class PooledTopNAlgorithm
 
     final int cardinality = dimSelector.getValueCardinality();
 
+    if (cardinality < 0) {
+      throw new UnsupportedOperationException("Cannot operate on a dimension with no dictionary");
+    }
+
     final TopNMetricSpecBuilder<int[]> arrayProvider = new BaseArrayProvider<int[]>(
         dimSelector,
         query,
@@ -97,12 +101,11 @@ public class PooledTopNAlgorithm
       numBytesPerRecord += aggregatorSizes[i];
     }
 
-    final int numValuesPerPass = numBytesToWorkWith / numBytesPerRecord;
+    final int numValuesPerPass = numBytesPerRecord > 0 ? numBytesToWorkWith / numBytesPerRecord : cardinality;
 
     return PooledTopNParams.builder()
                            .withDimSelector(dimSelector)
                            .withCursor(cursor)
-                           .withCardinality(cardinality)
                            .withResultsBufHolder(resultsBufHolder)
                            .withResultsBuf(resultsBuf)
                            .withArrayProvider(arrayProvider)
@@ -517,7 +520,6 @@ public class PooledTopNAlgorithm
     public PooledTopNParams(
         DimensionSelector dimSelector,
         Cursor cursor,
-        int cardinality,
         ResourceHolder<ByteBuffer> resultsBufHolder,
         ByteBuffer resultsBuf,
         int[] aggregatorSizes,
@@ -526,7 +528,7 @@ public class PooledTopNAlgorithm
         TopNMetricSpecBuilder<int[]> arrayProvider
     )
     {
-      super(dimSelector, cursor, cardinality, numValuesPerPass);
+      super(dimSelector, cursor, numValuesPerPass);
 
       this.resultsBufHolder = resultsBufHolder;
       this.resultsBuf = resultsBuf;
@@ -569,7 +571,6 @@ public class PooledTopNAlgorithm
     {
       private DimensionSelector dimSelector;
       private Cursor cursor;
-      private int cardinality;
       private ResourceHolder<ByteBuffer> resultsBufHolder;
       private ByteBuffer resultsBuf;
       private int[] aggregatorSizes;
@@ -581,7 +582,6 @@ public class PooledTopNAlgorithm
       {
         dimSelector = null;
         cursor = null;
-        cardinality = 0;
         resultsBufHolder = null;
         resultsBuf = null;
         aggregatorSizes = null;
@@ -599,12 +599,6 @@ public class PooledTopNAlgorithm
       public Builder withCursor(Cursor cursor)
       {
         this.cursor = cursor;
-        return this;
-      }
-
-      public Builder withCardinality(int cardinality)
-      {
-        this.cardinality = cardinality;
         return this;
       }
 
@@ -649,7 +643,6 @@ public class PooledTopNAlgorithm
         return new PooledTopNParams(
             dimSelector,
             cursor,
-            cardinality,
             resultsBufHolder,
             resultsBuf,
             aggregatorSizes,

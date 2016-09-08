@@ -34,7 +34,7 @@ import io.druid.data.input.impl.DelimitedParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.indexer.HadoopDruidDetermineConfigurationJob;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.HadoopDruidIndexerJob;
@@ -56,6 +56,8 @@ import io.druid.query.aggregation.DoubleSumAggregatorFactory;
 import io.druid.query.aggregation.hyperloglog.HyperUniquesAggregatorFactory;
 import io.druid.segment.IndexSpec;
 import io.druid.segment.TestIndex;
+import io.druid.segment.data.CompressedObjectStrategy;
+import io.druid.segment.data.CompressionFactory;
 import io.druid.segment.data.RoaringBitmapSerdeFactory;
 import io.druid.segment.indexing.DataSchema;
 import io.druid.segment.indexing.granularity.UniformGranularitySpec;
@@ -160,11 +162,12 @@ public class HadoopConverterJobTest
                     new StringInputRowParser(
                         new DelimitedParseSpec(
                             new TimestampSpec("ts", "iso", null),
-                            new DimensionsSpec(Arrays.asList(TestIndex.DIMENSIONS), null, null),
+                            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList(TestIndex.DIMENSIONS)), null, null),
                             "\t",
                             "\u0001",
                             Arrays.asList(TestIndex.COLUMNS)
-                        )
+                        ),
+                        null
                     ),
                     Map.class
                 ),
@@ -174,7 +177,7 @@ public class HadoopConverterJobTest
                 },
                 new UniformGranularitySpec(
                     Granularity.MONTH,
-                    QueryGranularity.DAY,
+                    QueryGranularities.DAY,
                     ImmutableList.<Interval>of(interval)
                 ),
                 HadoopDruidIndexerConfig.JSON_MAPPER
@@ -209,6 +212,7 @@ public class HadoopConverterJobTest
     );
     metadataStorageTablesConfigSupplier = derbyConnectorRule.metadataTablesConfigSupplier();
     connector = derbyConnectorRule.getConnector();
+
     try {
       connector.getDBI().withHandle(
           new HandleCallback<Void>()
@@ -282,7 +286,10 @@ public class HadoopConverterJobTest
         new HadoopDruidConverterConfig(
             DATASOURCE,
             interval,
-            new IndexSpec(new RoaringBitmapSerdeFactory(), "uncompressed", "uncompressed"),
+            new IndexSpec(new RoaringBitmapSerdeFactory(null),
+                          CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED,
+                          CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED,
+                          CompressionFactory.LongEncodingStrategy.LONGS),
             oldSemgments,
             true,
             tmpDir.toURI(),
@@ -385,7 +392,10 @@ public class HadoopConverterJobTest
         new HadoopDruidConverterConfig(
             DATASOURCE,
             interval,
-            new IndexSpec(new RoaringBitmapSerdeFactory(), "uncompressed", "uncompressed"),
+            new IndexSpec(new RoaringBitmapSerdeFactory(null),
+                          CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED,
+                          CompressedObjectStrategy.CompressionStrategy.UNCOMPRESSED,
+                          CompressionFactory.LongEncodingStrategy.LONGS),
             oldSemgments,
             true,
             tmpDir.toURI(),

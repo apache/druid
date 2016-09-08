@@ -90,7 +90,7 @@ public class ZkPathsConfig
     return (null == connectorPath) ?  defaultPath("connector") : connectorPath;
   }
 
-  protected String defaultPath(final String subPath)
+  public String defaultPath(final String subPath)
   {
     return ZKPaths.makePath(getBase(), subPath);
   }

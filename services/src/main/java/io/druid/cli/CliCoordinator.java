@@ -20,8 +20,10 @@
 package io.druid.cli;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
 import com.google.inject.Binder;
+import com.google.inject.Inject;
 import com.google.inject.Module;
 import com.google.inject.Provides;
 import com.google.inject.name.Names;
@@ -31,12 +33,14 @@ import io.airlift.airline.Command;
 import io.druid.audit.AuditManager;
 import io.druid.client.CoordinatorServerView;
 import io.druid.client.indexing.IndexingServiceClient;
+import io.druid.guice.ConditionalMultibind;
 import io.druid.guice.ConfigProvider;
 import io.druid.guice.Jerseys;
 import io.druid.guice.JsonConfigProvider;
 import io.druid.guice.LazySingleton;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.ManageLifecycle;
+import io.druid.guice.annotations.CoordinatorIndexingServiceHelper;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.metadata.MetadataRuleManagerConfig;
 import io.druid.metadata.MetadataRuleManagerProvider;
@@ -49,11 +53,16 @@ import io.druid.server.audit.AuditManagerProvider;
 import io.druid.server.coordinator.DruidCoordinator;
 import io.druid.server.coordinator.DruidCoordinatorConfig;
 import io.druid.server.coordinator.LoadQueueTaskMaster;
+import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
+import io.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller;
+import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
+import io.druid.server.coordinator.helper.DruidCoordinatorVersionConverter;
 import io.druid.server.http.CoordinatorDynamicConfigsResource;
 import io.druid.server.http.CoordinatorRedirectInfo;
 import io.druid.server.http.CoordinatorResource;
 import io.druid.server.http.DatasourcesResource;
 import io.druid.server.http.IntervalsResource;
+import io.druid.server.http.LookupCoordinatorResource;
 import io.druid.server.http.MetadataResource;
 import io.druid.server.http.RedirectFilter;
 import io.druid.server.http.RedirectInfo;
@@ -61,11 +70,15 @@ import io.druid.server.http.RulesResource;
 import io.druid.server.http.ServersResource;
 import io.druid.server.http.TiersResource;
 import io.druid.server.initialization.jetty.JettyServerInitializer;
+import io.druid.server.listener.announcer.ListenerDiscoverer;
+import io.druid.server.lookup.cache.LookupCoordinatorManager;
+import io.druid.server.lookup.cache.LookupCoordinatorManagerConfig;
 import io.druid.server.router.TieredBrokerConfig;
 import org.apache.curator.framework.CuratorFramework;
 import org.eclipse.jetty.server.Server;
 
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.Executors;
 
 /**
@@ -78,9 +91,17 @@ public class CliCoordinator extends ServerRunnable
 {
   private static final Logger log = new Logger(CliCoordinator.class);
 
+  private Properties properties;
+
   public CliCoordinator()
   {
     super(log);
+  }
+
+  @Inject
+  public void configure(Properties properties)
+  {
+    this.properties = properties;
   }
 
   @Override
@@ -92,7 +113,9 @@ public class CliCoordinator extends ServerRunnable
           @Override
           public void configure(Binder binder)
           {
-            binder.bindConstant().annotatedWith(Names.named("serviceName")).to(TieredBrokerConfig.DEFAULT_COORDINATOR_SERVICE_NAME);
+            binder.bindConstant()
+                  .annotatedWith(Names.named("serviceName"))
+                  .to(TieredBrokerConfig.DEFAULT_COORDINATOR_SERVICE_NAME);
             binder.bindConstant().annotatedWith(Names.named("servicePort")).to(8081);
 
             ConfigProvider.bind(binder, DruidCoordinatorConfig.class);
@@ -103,6 +126,7 @@ public class CliCoordinator extends ServerRunnable
 
             JsonConfigProvider.bind(binder, "druid.manager.segments", MetadataSegmentManagerConfig.class);
             JsonConfigProvider.bind(binder, "druid.manager.rules", MetadataRuleManagerConfig.class);
+            JsonConfigProvider.bind(binder, "druid.manager.lookups", LookupCoordinatorManagerConfig.class);
 
             binder.bind(RedirectFilter.class).in(LazySingleton.class);
             binder.bind(RedirectInfo.class).to(CoordinatorRedirectInfo.class).in(LazySingleton.class);
@@ -124,8 +148,13 @@ public class CliCoordinator extends ServerRunnable
 
             binder.bind(DruidCoordinator.class);
 
+            binder.bind(LookupCoordinatorManager.class).in(ManageLifecycle.class);
+            binder.bind(ListenerDiscoverer.class).in(ManageLifecycle.class);
+
+            LifecycleModule.register(binder, ListenerDiscoverer.class);
             LifecycleModule.register(binder, MetadataStorage.class);
             LifecycleModule.register(binder, DruidCoordinator.class);
+            LifecycleModule.register(binder, LookupCoordinatorManager.class);
 
             binder.bind(JettyServerInitializer.class)
                   .to(CoordinatorJettyServerInitializer.class);
@@ -138,9 +167,29 @@ public class CliCoordinator extends ServerRunnable
             Jerseys.addResource(binder, DatasourcesResource.class);
             Jerseys.addResource(binder, MetadataResource.class);
             Jerseys.addResource(binder, IntervalsResource.class);
+            Jerseys.addResource(binder, LookupCoordinatorResource.class);
 
             LifecycleModule.register(binder, Server.class);
             LifecycleModule.register(binder, DatasourcesResource.class);
+
+            ConditionalMultibind.create(
+                properties,
+                binder,
+                DruidCoordinatorHelper.class,
+                CoordinatorIndexingServiceHelper.class
+            ).addConditionBinding(
+                "druid.coordinator.merge.on",
+                Predicates.equalTo("true"),
+                DruidCoordinatorSegmentMerger.class
+            ).addConditionBinding(
+                "druid.coordinator.conversion.on",
+                Predicates.equalTo("true"),
+                DruidCoordinatorVersionConverter.class
+            ).addConditionBinding(
+                "druid.coordinator.kill.on",
+                Predicates.equalTo("true"),
+                DruidCoordinatorSegmentKiller.class
+            );
 
           }
 

@@ -21,9 +21,6 @@ package io.druid.indexing.worker;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.joda.time.DateTime;
-
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * A container for worker metadata.
@@ -34,24 +31,19 @@ public class Worker
   private final String ip;
   private final int capacity;
   private final String version;
-  private final AtomicReference<DateTime> lastCompletedTaskTime;
 
   @JsonCreator
   public Worker(
       @JsonProperty("host") String host,
       @JsonProperty("ip") String ip,
       @JsonProperty("capacity") int capacity,
-      @JsonProperty("version") String version,
-      @JsonProperty("lastCompletedTaskTime") DateTime lastCompletedTaskTime
+      @JsonProperty("version") String version
   )
   {
     this.host = host;
     this.ip = ip;
     this.capacity = capacity;
     this.version = version;
-    this.lastCompletedTaskTime = new AtomicReference<>(lastCompletedTaskTime == null
-                                                       ? DateTime.now()
-                                                       : lastCompletedTaskTime);
   }
 
   @JsonProperty
@@ -78,22 +70,6 @@ public class Worker
     return version;
   }
 
-  @JsonProperty
-  public DateTime getLastCompletedTaskTime()
-  {
-    return lastCompletedTaskTime.get();
-  }
-
-  public void setLastCompletedTaskTime(DateTime completedTaskTime)
-  {
-    lastCompletedTaskTime.set(completedTaskTime);
-  }
-
-  public boolean isValidVersion(final String minVersion)
-  {
-    return getVersion().compareTo(minVersion) >= 0;
-  }
-
   @Override
   public String toString()
   {
@@ -103,5 +79,40 @@ public class Worker
            ", capacity=" + capacity +
            ", version='" + version + '\'' +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+
+    Worker worker = (Worker) o;
+
+    if (capacity != worker.capacity) {
+      return false;
+    }
+    if (!host.equals(worker.host)) {
+      return false;
+    }
+    if (!ip.equals(worker.ip)) {
+      return false;
+    }
+    return version.equals(worker.version);
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = host.hashCode();
+    result = 31 * result + ip.hashCode();
+    result = 31 * result + capacity;
+    result = 31 * result + version.hashCode();
+    return result;
   }
 }

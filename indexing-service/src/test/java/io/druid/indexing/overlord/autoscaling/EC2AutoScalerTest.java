@@ -66,7 +66,7 @@ public class EC2AutoScalerTest
   private DescribeInstancesResult describeInstancesResult;
   private Reservation reservation;
   private Instance instance;
-  private SimpleResourceManagementConfig managementConfig;
+  private SimpleWorkerResourceManagementConfig managementConfig;
 
   @Before
   public void setUp() throws Exception
@@ -81,7 +81,7 @@ public class EC2AutoScalerTest
         .withImageId(AMI_ID)
         .withPrivateIpAddress(IP);
 
-    managementConfig = new SimpleResourceManagementConfig().setWorkerPort(8080).setWorkerVersion("");
+    managementConfig = new SimpleWorkerResourceManagementConfig().setWorkerPort(8080).setWorkerVersion("");
   }
 
   @After

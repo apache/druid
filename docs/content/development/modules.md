@@ -187,3 +187,41 @@ If you want your extension to be included, you can add your extension's maven co
 
 During `mvn install`, maven will install your extension to the local maven repository, and then call [pull-deps](../operations/pull-deps.html) to pull your extension from
 there. In the end, you should see your extension underneath `distribution/target/extensions` and within Druid tarball.
+
+### Managing dependencies
+
+Managing library collisions can be daunting for extensions which draw in commonly used libraries. Here is a list of group IDs for libraries that are suggested to be specified with a `provided` scope to prevent collision with versions used in druid:
+```
+"io.druid",
+"com.metamx.druid",
+"asm",
+"org.ow2.asm",
+"org.jboss.netty",
+"com.google.guava",
+"com.google.code.findbugs",
+"com.google.protobuf",
+"com.esotericsoftware.minlog",
+"log4j",
+"org.slf4j",
+"commons-logging",
+"org.eclipse.jetty",
+"org.mortbay.jetty",
+"com.sun.jersey",
+"com.sun.jersey.contribs",
+"common-beanutils",
+"commons-codec",
+"commons-lang",
+"commons-cli",
+"commons-io",
+"javax.activation",
+"org.apache.httpcomponents",
+"org.apache.zookeeper",
+"org.codehaus.jackson",
+"com.fasterxml.jackson",
+"com.fasterxml.jackson.core",
+"com.fasterxml.jackson.dataformat",
+"com.fasterxml.jackson.datatype",
+"org.roaringbitmap",
+"net.java.dev.jets3t"
+```
+See the documentation in `io.druid.cli.PullDependencies` for more information.

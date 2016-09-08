@@ -76,7 +76,6 @@ public class JobHelper
 {
   private static final Logger log = new Logger(JobHelper.class);
 
-  private static final Set<Path> existing = Sets.newHashSet();
 
   private static final int NUM_RETRIES = 8;
   private static final int SECONDS_BETWEEN_RETRIES = 2;
@@ -250,11 +249,9 @@ public class JobHelper
   {
     // Snapshot jars are uploaded to non shared intermediate directory.
     final Path hdfsPath = new Path(intermediateClassPath, jarFile.getName());
-
-    // existing is used to prevent uploading file multiple times in same run.
-    if (!existing.contains(hdfsPath)) {
+    // Prevent uploading same file multiple times in same run.
+    if (!fs.exists(hdfsPath)) {
       uploadJar(jarFile, hdfsPath, fs);
-      existing.add(hdfsPath);
     }
     job.addFileToClassPath(hdfsPath);
   }
@@ -392,6 +389,8 @@ public class JobHelper
     // TODO: Make this a part of Pushers or Pullers
     switch (outputFS.getScheme()) {
       case "hdfs":
+      case "viewfs":
+      case "gs":
         loadSpec = ImmutableMap.<String, Object>of(
             "type", "hdfs",
             "path", indexOutURI.toString()
@@ -547,7 +546,7 @@ public class JobHelper
       DataSegment segment
   )
   {
-    String segmentDir = "hdfs".equals(fileSystem.getScheme())
+    String segmentDir = "hdfs".equals(fileSystem.getScheme()) || "viewfs".equals(fileSystem.getScheme())
                         ? DataSegmentPusherUtil.getHdfsStorageDir(segment)
                         : DataSegmentPusherUtil.getStorageDir(segment);
     return new Path(prependFSIfNullScheme(fileSystem, basePath), String.format("./%s", segmentDir));
@@ -771,5 +770,27 @@ public class JobHelper
         context.setStatus(String.format("STOPPED [%s]", section));
       }
     };
+  }
+
+  public static boolean deleteWithRetry(final FileSystem fs, final Path path, final boolean recursive)
+  {
+    try {
+      return RetryUtils.retry(
+          new Callable<Boolean>()
+          {
+            @Override
+            public Boolean call() throws Exception
+            {
+              return fs.delete(path, recursive);
+            }
+          },
+          shouldRetryPredicate(),
+          NUM_RETRIES
+      );
+    }
+    catch (Exception e) {
+      log.error(e, "Failed to cleanup path[%s]", path);
+      throw Throwables.propagate(e);
+    }
   }
 }

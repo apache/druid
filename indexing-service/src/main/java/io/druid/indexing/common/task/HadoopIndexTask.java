@@ -177,7 +177,7 @@ public class HadoopIndexTask extends HadoopTask
         new String[]{
             toolbox.getObjectMapper().writeValueAsString(spec),
             toolbox.getConfig().getHadoopWorkingPath(),
-            toolbox.getSegmentPusher().getPathForHadoop(getDataSource())
+            toolbox.getSegmentPusher().getPathForHadoop()
         },
         loader
     );
@@ -222,7 +222,7 @@ public class HadoopIndexTask extends HadoopTask
           }
       );
 
-      toolbox.pushSegments(publishedSegments);
+      toolbox.publishSegments(publishedSegments);
       return TaskStatus.success(getId());
     } else {
       return TaskStatus.failure(getId());

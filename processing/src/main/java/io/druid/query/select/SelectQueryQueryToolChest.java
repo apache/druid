@@ -29,8 +29,10 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.collect.Sets;
 import com.google.inject.Inject;
+import com.metamx.common.ISE;
 import com.metamx.common.StringUtils;
 import com.metamx.common.guava.Comparators;
+import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.nary.BinaryFn;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.granularity.QueryGranularity;
@@ -46,7 +48,7 @@ import io.druid.query.ResultMergeQueryRunner;
 import io.druid.query.aggregation.MetricManipulationFn;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
-import io.druid.segment.SegmentDesc;
+import io.druid.timeline.DataSegmentUtils;
 import io.druid.timeline.LogicalSegment;
 import org.joda.time.DateTime;
 import org.joda.time.Interval;
@@ -64,7 +66,7 @@ import java.util.TreeMap;
  */
 public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResultValue>, SelectQuery>
 {
-  private static final byte SELECT_QUERY = 0x13;
+  private static final byte SELECT_QUERY = 0x16;
   private static final TypeReference<Object> OBJECT_TYPE_REFERENCE =
       new TypeReference<Object>()
       {
@@ -218,6 +220,8 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
             return Arrays.asList(
                 input.getTimestamp().getMillis(),
                 input.getValue().getPagingIdentifiers(),
+                input.getValue().getDimensions(),
+                input.getValue().getMetrics(),
                 input.getValue().getEvents()
             );
           }
@@ -247,6 +251,16 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
                         {
                         }
                     ),
+                    (Set<String>) jsonMapper.convertValue(
+                        resultIter.next(), new TypeReference<Set<String>>()
+                        {
+                        }
+                    ),
+                    (Set<String>) jsonMapper.convertValue(
+                        resultIter.next(), new TypeReference<Set<String>>()
+                        {
+                        }
+                    ),
                     (List<EventHolder>) jsonMapper.convertValue(
                         resultIter.next(), new TypeReference<List<EventHolder>>()
                         {
@@ -261,14 +275,31 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
   }
 
   @Override
-  public QueryRunner<Result<SelectResultValue>> preMergeQueryDecoration(QueryRunner<Result<SelectResultValue>> runner)
+  public QueryRunner<Result<SelectResultValue>> preMergeQueryDecoration(final QueryRunner<Result<SelectResultValue>> runner)
   {
-    return intervalChunkingQueryRunnerDecorator.decorate(runner, this);
+    return intervalChunkingQueryRunnerDecorator.decorate(
+        new QueryRunner<Result<SelectResultValue>>()
+        {
+          @Override
+          public Sequence<Result<SelectResultValue>> run(
+              Query<Result<SelectResultValue>> query, Map<String, Object> responseContext
+          )
+          {
+            SelectQuery selectQuery = (SelectQuery) query;
+            if (selectQuery.getDimensionsFilter() != null) {
+              selectQuery = selectQuery.withDimFilter(selectQuery.getDimensionsFilter().optimize());
+            }
+            return runner.run(selectQuery, responseContext);
+          }
+        }, this);
   }
 
   @Override
   public <T extends LogicalSegment> List<T> filterSegments(SelectQuery query, List<T> segments)
   {
+    // at the point where this code is called, only one datasource should exist.
+    String dataSource = Iterables.getOnlyElement(query.getDataSource().getNames());
+
     PagingSpec pagingSpec = query.getPagingSpec();
     Map<String, Integer> paging = pagingSpec.getPagingIdentifiers();
     if (paging == null || paging.isEmpty()) {
@@ -278,7 +309,7 @@ public class SelectQueryQueryToolChest extends QueryToolChest<Result<SelectResul
     final QueryGranularity granularity = query.getGranularity();
 
     List<Interval> intervals = Lists.newArrayList(
-        Iterables.transform(paging.keySet(), SegmentDesc.INTERVAL_EXTRACTOR)
+        Iterables.transform(paging.keySet(), DataSegmentUtils.INTERVAL_EXTRACTOR(dataSource))
     );
     Collections.sort(
         intervals, query.isDescending() ? Comparators.intervalsByEndThenStart()

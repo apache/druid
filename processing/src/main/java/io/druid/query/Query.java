@@ -24,6 +24,7 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.google.common.collect.Ordering;
 import com.metamx.common.guava.Sequence;
 import io.druid.query.datasourcemetadata.DataSourceMetadataQuery;
+import io.druid.query.filter.DimFilter;
 import io.druid.query.groupby.GroupByQuery;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
 import io.druid.query.search.search.SearchQuery;
@@ -65,6 +66,8 @@ public interface Query<T>
 
   boolean hasFilters();
 
+  DimFilter getFilter();
+
   String getType();
 
   Sequence<T> run(QuerySegmentWalker walker, Map<String, Object> context);
@@ -80,6 +83,8 @@ public interface Query<T>
   <ContextType> ContextType getContextValue(String key);
 
   <ContextType> ContextType getContextValue(String key, ContextType defaultValue);
+
+  boolean getContextBoolean(String key, boolean defaultValue);
 
   boolean isDescending();
 

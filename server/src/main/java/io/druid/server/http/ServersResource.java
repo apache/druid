@@ -25,8 +25,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.inject.Inject;
+import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.client.DruidServer;
 import io.druid.client.InventoryView;
+import io.druid.server.http.security.StateResourceFilter;
 import io.druid.timeline.DataSegment;
 
 import javax.ws.rs.GET;
@@ -41,6 +43,7 @@ import java.util.Map;
 /**
  */
 @Path("/druid/coordinator/v1/servers")
+@ResourceFilters(StateResourceFilter.class)
 public class ServersResource
 {
   private static Map<String, Object> makeSimpleServer(DruidServer input)
@@ -52,6 +55,19 @@ public class ServersResource
         .put("priority", input.getPriority())
         .put("currSize", input.getCurrSize())
         .put("maxSize", input.getMaxSize())
+        .build();
+  }
+
+  private static Map<String, Object> makeFullServer(DruidServer input)
+  {
+    return new ImmutableMap.Builder<String, Object>()
+        .put("host", input.getHost())
+        .put("maxSize", input.getMaxSize())
+        .put("type", input.getType())
+        .put("tier", input.getTier())
+        .put("priority", input.getPriority())
+        .put("segments", input.getSegments())
+        .put("currSize", input.getCurrSize())
         .build();
   }
 
@@ -75,7 +91,21 @@ public class ServersResource
     Response.ResponseBuilder builder = Response.status(Response.Status.OK);
 
     if (full != null) {
-      return builder.entity(Lists.newArrayList(serverInventoryView.getInventory())).build();
+      return builder.entity(
+          Lists.newArrayList(
+              Iterables.transform(
+                  serverInventoryView.getInventory(),
+                  new Function<DruidServer, Map<String, Object>>()
+                  {
+                    @Override
+                    public Map<String, Object> apply(DruidServer input)
+                    {
+                      return makeFullServer(input);
+                    }
+                  }
+              )
+          )
+      ).build();
     } else if (simple != null) {
       return builder.entity(
           Lists.newArrayList(
@@ -130,7 +160,7 @@ public class ServersResource
       return builder.entity(makeSimpleServer(server)).build();
     }
 
-    return builder.entity(server)
+    return builder.entity(makeFullServer(server))
                   .build();
   }
 

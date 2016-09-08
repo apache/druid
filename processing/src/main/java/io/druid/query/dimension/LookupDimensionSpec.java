@@ -26,10 +26,10 @@ import com.google.common.base.Preconditions;
 import com.google.common.base.Strings;
 import com.metamx.common.StringUtils;
 import io.druid.query.extraction.ExtractionFn;
-import io.druid.query.extraction.LookupExtractionFn;
-import io.druid.query.extraction.LookupExtractor;
-import io.druid.query.extraction.LookupReferencesManager;
-import io.druid.query.filter.DimFilterCacheHelper;
+import io.druid.query.filter.DimFilterUtils;
+import io.druid.query.lookup.LookupExtractionFn;
+import io.druid.query.lookup.LookupExtractor;
+import io.druid.query.lookup.LookupReferencesManager;
 import io.druid.segment.DimensionSelector;
 
 import javax.annotation.Nullable;
@@ -129,10 +129,11 @@ public class LookupDimensionSpec implements DimensionSpec
     final LookupExtractor lookupExtractor = Strings.isNullOrEmpty(name)
                                             ? this.lookup
                                             : Preconditions.checkNotNull(
-                                                this.lookupReferencesManager.get(name).get(),
-                                                "can not find lookup with name [%s]",
+                                                lookupReferencesManager.get(name),
+                                                "Lookup [%s] not found",
                                                 name
-                                            );
+                                            ).get();
+
     return new LookupExtractionFn(
         lookupExtractor,
         retainMissingValue,
@@ -140,7 +141,6 @@ public class LookupDimensionSpec implements DimensionSpec
         lookupExtractor.isOneToOne(),
         optimize
     );
-
   }
 
   @Override
@@ -167,13 +167,13 @@ public class LookupDimensionSpec implements DimensionSpec
                                + replaceWithBytes.length)
                      .put(CACHE_TYPE_ID)
                      .put(dimensionBytes)
-                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                     .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(outputNameBytes)
-                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                     .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(dimExtractionFnBytes)
-                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                     .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(replaceWithBytes)
-                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                     .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(retainMissingValue == true ? (byte) 1 : (byte) 0)
                      .array();
   }

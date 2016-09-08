@@ -22,11 +22,13 @@ package io.druid.indexer.partitions;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableList;
 import io.druid.indexer.DeterminePartitionsJob;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.Jobby;
 
 import javax.annotation.Nullable;
+import java.util.List;
 
 public class SingleDimensionPartitionsSpec extends AbstractPartitionsSpec
 {
@@ -56,5 +58,12 @@ public class SingleDimensionPartitionsSpec extends AbstractPartitionsSpec
   public Jobby getPartitionJob(HadoopDruidIndexerConfig config)
   {
     return new DeterminePartitionsJob(config);
+  }
+
+  @Override
+  @JsonProperty
+  public List<String> getPartitionDimensions()
+  {
+    return ImmutableList.of();
   }
 }

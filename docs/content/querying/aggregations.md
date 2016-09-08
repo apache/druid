@@ -82,8 +82,8 @@ Computes an arbitrary JavaScript function over a set of columns (both metrics an
 
 All JavaScript functions must return numerical values.
 
-JavaScript aggregators are much slower than native Java aggregators and if performance is critical, you should implement 
-your functionality as a native Java aggregator.
+JavaScript aggregators are much slower than the native aggregators and if performance is critical, you should implement 
+your functionality as a native aggregator.
 
 ```json
 { "type": "javascript",
@@ -111,8 +111,8 @@ your functionality as a native Java aggregator.
 }
 ```
 
-The javascript aggregator is recommended for rapidly prototyping features. This aggregator will be much slower in production 
-use than a native Java aggregator.
+The JavaScript aggregator is recommended for rapidly prototyping features. This aggregator will be much slower in production 
+use than a native aggregator.
 
 ## Approximate Aggregations
 
@@ -127,10 +127,12 @@ instead of the cardinality aggregator if you do not care about the individual va
 {
   "type": "cardinality",
   "name": "<output_name>",
-  "fieldNames": [ <dimension1>, <dimension2>, ... ],
+  "fields": [ <dimension1>, <dimension2>, ... ],
   "byRow": <false | true> # (optional, defaults to false)
 }
 ```
+
+Each individual element of the "fields" list can be a String or [DimensionSpec](../querying/dimensionspecs.html). A String dimension in the fields list is equivalent to a DefaultDimensionSpec (no transformations).
 
 #### Cardinality by value
 
@@ -171,7 +173,7 @@ Determine the number of distinct countries people are living in or have come fro
 {
   "type": "cardinality",
   "name": "distinct_countries",
-  "fieldNames": [ "coutry_of_origin", "country_of_residence" ]
+  "fields": [ "country_of_origin", "country_of_residence" ]
 }
 ```
 
@@ -181,10 +183,29 @@ Determine the number of distinct people (i.e. combinations of first and last nam
 {
   "type": "cardinality",
   "name": "distinct_people",
-  "fieldNames": [ "first_name", "last_name" ],
+  "fields": [ "first_name", "last_name" ],
   "byRow" : true
 }
 ```
+
+Determine the number of distinct starting characters of last names
+
+```json
+{
+  "type": "cardinality",
+  "name": "distinct_last_name_first_char",
+  "fields": [
+    {
+     "type" : "extraction",
+     "dimension" : "last_name",
+     "outputName" :  "last_name_first_char",
+     "extractionFn" : { "type" : "substring", "index" : 0, "length" : 1 }
+    }
+  ],
+  "byRow" : true
+}
+```
+
 
 ### HyperUnique aggregator
 
@@ -194,7 +215,7 @@ Uses [HyperLogLog](http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf) to
 { "type" : "hyperUnique", "name" : <output_name>, "fieldName" : <metric_name> }
 ```
 
-For more approximate aggregators, please see [theta sketches](../development/datasketches-aggregators.html).
+For more approximate aggregators, please see [theta sketches](../development/extensions-core/datasketches-aggregators.html).
 
 ## Miscellaneous Aggregations
 
@@ -203,8 +224,6 @@ For more approximate aggregators, please see [theta sketches](../development/dat
 A filtered aggregator wraps any given aggregator, but only aggregates the values for which the given dimension filter matches.
 
 This makes it possible to compute the results of a filtered and an unfiltered aggregation simultaneously, without having to issue multiple queries, and use both results as part of post-aggregations.
-
-*Limitations:* The filtered aggregator currently only supports 'or', 'and', 'selector', 'not' and 'Extraction' filters, i.e. matching one or multiple dimensions against a single value.
 
 *Note:* If only the filtered results are required, consider putting the filter on the query itself, which will be much faster since it does not require scanning all the data.
 

@@ -20,7 +20,6 @@
 package io.druid.client;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.util.concurrent.Futures;
@@ -110,7 +109,7 @@ public class DirectDruidClientTest
             Maps.<String, Object>newHashMap(),
             Lists.<String>newArrayList(),
             Lists.<String>newArrayList(),
-            new NoneShardSpec(),
+            NoneShardSpec.instance(),
             0,
             0L
         ),
@@ -220,7 +219,7 @@ public class DirectDruidClientTest
             Maps.<String, Object>newHashMap(),
             Lists.<String>newArrayList(),
             Lists.<String>newArrayList(),
-            new NoneShardSpec(),
+            NoneShardSpec.instance(),
             0,
             0L
         ),
@@ -287,7 +286,7 @@ public class DirectDruidClientTest
         Maps.<String, Object>newHashMap(),
         Lists.<String>newArrayList(),
         Lists.<String>newArrayList(),
-        new NoneShardSpec(),
+        NoneShardSpec.instance(),
         0,
         0L
     );
@@ -314,7 +313,7 @@ public class DirectDruidClientTest
 
     TimeBoundaryQuery query = Druids.newTimeBoundaryQueryBuilder().dataSource("test").build();
     HashMap<String, List> context = Maps.newHashMap();
-    interruptionFuture.set(new ByteArrayInputStream("{\"error\":\"testing\"}".getBytes()));
+    interruptionFuture.set(new ByteArrayInputStream("{\"error\":\"testing1\",\"errorMessage\":\"testing2\"}".getBytes()));
     Sequence results = client1.run(query, context);
 
     QueryInterruptedException actualException = null;
@@ -325,9 +324,9 @@ public class DirectDruidClientTest
       actualException = e;
     }
     Assert.assertNotNull(actualException);
-    Assert.assertEquals(actualException.getMessage(), QueryInterruptedException.UNKNOWN_EXCEPTION);
-    Assert.assertEquals(actualException.getCauseMessage(), "testing");
-    Assert.assertEquals(actualException.getHost(), hostName);
+    Assert.assertEquals("testing1", actualException.getErrorCode());
+    Assert.assertEquals("testing2", actualException.getMessage());
+    Assert.assertEquals(hostName, actualException.getHost());
     EasyMock.verify(httpClient);
   }
 }

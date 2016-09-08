@@ -20,22 +20,36 @@
 package io.druid.query.aggregation;
 
 import com.google.common.collect.Lists;
+import io.druid.js.JavaScriptConfig;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.extraction.JavaScriptExtractionFn;
 import io.druid.query.filter.AndDimFilter;
+import io.druid.query.filter.BoundDimFilter;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.filter.InDimFilter;
+import io.druid.query.filter.JavaScriptDimFilter;
 import io.druid.query.filter.NotDimFilter;
 import io.druid.query.filter.OrDimFilter;
+import io.druid.query.filter.RegexDimFilter;
+import io.druid.query.filter.SearchQueryDimFilter;
 import io.druid.query.filter.SelectorDimFilter;
+import io.druid.query.ordering.StringComparators;
+import io.druid.query.search.search.ContainsSearchQuerySpec;
 import io.druid.segment.ColumnSelectorFactory;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.FloatColumnSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
+import io.druid.segment.column.ColumnCapabilities;
+import io.druid.segment.column.ColumnCapabilitiesImpl;
+import io.druid.segment.column.ValueType;
 import io.druid.segment.data.ArrayBasedIndexedInts;
 import io.druid.segment.data.IndexedInts;
 import org.junit.Assert;
 import org.junit.Test;
+
+import java.util.Arrays;
 
 public class FilteredAggregatorTest
 {
@@ -53,7 +67,7 @@ public class FilteredAggregatorTest
 
     FilteredAggregatorFactory factory = new FilteredAggregatorFactory(
         new DoubleSumAggregatorFactory("billy", "value"),
-        new SelectorDimFilter("dim", "a")
+        new SelectorDimFilter("dim", "a", null)
     );
 
     FilteredAggregator agg = (FilteredAggregator) factory.factorize(
@@ -152,6 +166,24 @@ public class FilteredAggregatorTest
       {
         throw new UnsupportedOperationException();
       }
+
+      @Override
+      public ColumnCapabilities getColumnCapabilities(String columnName)
+      {
+        ColumnCapabilitiesImpl caps;
+        if (columnName.equals("value")) {
+          caps = new ColumnCapabilitiesImpl();
+          caps.setType(ValueType.FLOAT);
+          caps.setDictionaryEncoded(false);
+          caps.setHasBitmapIndexes(false);
+        } else {
+          caps = new ColumnCapabilitiesImpl();
+          caps.setType(ValueType.STRING);
+          caps.setDictionaryEncoded(true);
+          caps.setHasBitmapIndexes(true);
+        }
+        return caps;
+      }
     };
   }
 
@@ -175,19 +207,10 @@ public class FilteredAggregatorTest
 
     FilteredAggregatorFactory factory = new FilteredAggregatorFactory(
         new DoubleSumAggregatorFactory("billy", "value"),
-        new NotDimFilter(new SelectorDimFilter("dim", "b"))
+        new NotDimFilter(new SelectorDimFilter("dim", "b", null))
     );
 
-    FilteredAggregator agg = (FilteredAggregator) factory.factorize(
-        makeColumnSelector(selector)
-    );
-
-    Assert.assertEquals("billy", agg.getName());
-
-    double expectedFirst = new Float(values[0]).doubleValue();
-    double expectedSecond = new Float(values[1]).doubleValue() + expectedFirst;
-    double expectedThird = expectedSecond;
-    assertValues(agg, selector, expectedFirst, expectedSecond, expectedThird);
+    validateFilteredAggs(factory, values, selector);
   }
 
   @Test
@@ -198,7 +221,7 @@ public class FilteredAggregatorTest
 
     FilteredAggregatorFactory factory = new FilteredAggregatorFactory(
         new DoubleSumAggregatorFactory("billy", "value"),
-        new OrDimFilter(Lists.<DimFilter>newArrayList(new SelectorDimFilter("dim", "a"), new SelectorDimFilter("dim", "b")))
+        new OrDimFilter(Lists.<DimFilter>newArrayList(new SelectorDimFilter("dim", "a", null), new SelectorDimFilter("dim", "b", null)))
     );
 
     FilteredAggregator agg = (FilteredAggregator) factory.factorize(
@@ -221,8 +244,110 @@ public class FilteredAggregatorTest
 
     FilteredAggregatorFactory factory = new FilteredAggregatorFactory(
         new DoubleSumAggregatorFactory("billy", "value"),
-        new AndDimFilter(Lists.<DimFilter>newArrayList(new NotDimFilter(new SelectorDimFilter("dim", "b")), new SelectorDimFilter("dim", "a"))));
+        new AndDimFilter(Lists.<DimFilter>newArrayList(new NotDimFilter(new SelectorDimFilter("dim", "b", null)), new SelectorDimFilter("dim", "a", null))));
 
+    validateFilteredAggs(factory, values, selector);
+  }
+
+  @Test
+  public void testAggregateWithPredicateFilters()
+  {
+    final float[] values = {0.15f, 0.27f};
+    TestFloatColumnSelector selector;
+    FilteredAggregatorFactory factory;
+
+    factory = new FilteredAggregatorFactory(
+        new DoubleSumAggregatorFactory("billy", "value"),
+        new BoundDimFilter("dim", "a", "a", false, false, true, null, StringComparators.ALPHANUMERIC)
+    );
+    selector = new TestFloatColumnSelector(values);
+    validateFilteredAggs(factory, values, selector);
+
+    factory = new FilteredAggregatorFactory(
+        new DoubleSumAggregatorFactory("billy", "value"),
+        new RegexDimFilter("dim", "a", null)
+    );
+    selector = new TestFloatColumnSelector(values);
+    validateFilteredAggs(factory, values, selector);
+
+    factory = new FilteredAggregatorFactory(
+        new DoubleSumAggregatorFactory("billy", "value"),
+        new SearchQueryDimFilter("dim", new ContainsSearchQuerySpec("a", true), null)
+    );
+    selector = new TestFloatColumnSelector(values);
+    validateFilteredAggs(factory, values, selector);
+
+    String jsFn = "function(x) { return(x === 'a') }";
+    factory = new FilteredAggregatorFactory(
+        new DoubleSumAggregatorFactory("billy", "value"),
+        new JavaScriptDimFilter("dim", jsFn, null, JavaScriptConfig.getDefault())
+    );
+    selector = new TestFloatColumnSelector(values);
+    validateFilteredAggs(factory, values, selector);
+  }
+
+  @Test
+  public void testAggregateWithExtractionFns()
+  {
+    final float[] values = {0.15f, 0.27f};
+    TestFloatColumnSelector selector;
+    FilteredAggregatorFactory factory;
+
+    String extractionJsFn = "function(str) { return str + 'AARDVARK'; }";
+    ExtractionFn extractionFn = new JavaScriptExtractionFn(extractionJsFn, false, JavaScriptConfig.getDefault());
+
+    factory = new FilteredAggregatorFactory(
+        new DoubleSumAggregatorFactory("billy", "value"),
+        new SelectorDimFilter("dim", "aAARDVARK", extractionFn)
+    );
+    selector = new TestFloatColumnSelector(values);
+    validateFilteredAggs(factory, values, selector);
+
+    factory = new FilteredAggregatorFactory(
+        new DoubleSumAggregatorFactory("billy", "value"),
+        new InDimFilter("dim", Arrays.asList("NOT-aAARDVARK", "FOOBAR", "aAARDVARK"), extractionFn)
+    );
+    selector = new TestFloatColumnSelector(values);
+    validateFilteredAggs(factory, values, selector);
+
+    factory = new FilteredAggregatorFactory(
+        new DoubleSumAggregatorFactory("billy", "value"),
+        new BoundDimFilter("dim", "aAARDVARK", "aAARDVARK", false, false, true, extractionFn,
+                           StringComparators.ALPHANUMERIC
+        )
+    );
+    selector = new TestFloatColumnSelector(values);
+    validateFilteredAggs(factory, values, selector);
+
+    factory = new FilteredAggregatorFactory(
+        new DoubleSumAggregatorFactory("billy", "value"),
+        new RegexDimFilter("dim", "aAARDVARK", extractionFn)
+    );
+    selector = new TestFloatColumnSelector(values);
+    validateFilteredAggs(factory, values, selector);
+
+    factory = new FilteredAggregatorFactory(
+        new DoubleSumAggregatorFactory("billy", "value"),
+        new SearchQueryDimFilter("dim", new ContainsSearchQuerySpec("aAARDVARK", true), extractionFn)
+    );
+    selector = new TestFloatColumnSelector(values);
+    validateFilteredAggs(factory, values, selector);
+
+    String jsFn = "function(x) { return(x === 'aAARDVARK') }";
+    factory = new FilteredAggregatorFactory(
+        new DoubleSumAggregatorFactory("billy", "value"),
+        new JavaScriptDimFilter("dim", jsFn, extractionFn, JavaScriptConfig.getDefault())
+    );
+    selector = new TestFloatColumnSelector(values);
+    validateFilteredAggs(factory, values, selector);
+  }
+
+  private void validateFilteredAggs(
+      FilteredAggregatorFactory factory,
+      float[] values,
+      TestFloatColumnSelector selector
+  )
+  {
     FilteredAggregator agg = (FilteredAggregator) factory.factorize(
         makeColumnSelector(selector)
     );
@@ -232,7 +357,7 @@ public class FilteredAggregatorTest
     double expectedFirst = new Float(values[0]).doubleValue();
     double expectedSecond = new Float(values[1]).doubleValue() + expectedFirst;
     double expectedThird = expectedSecond;
+
     assertValues(agg, selector, expectedFirst, expectedSecond, expectedThird);
   }
-
 }

@@ -21,9 +21,6 @@ package io.druid.indexing.overlord;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonToken;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.CharMatcher;
 import com.google.common.base.Joiner;
@@ -175,8 +172,15 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
     return retVal;
   }
 
+  @Override
   public void registerListener(TaskRunnerListener listener, Executor executor)
   {
+    for (Pair<TaskRunnerListener, Executor> pair : listeners) {
+      if (pair.lhs.getListenerId().equals(listener.getListenerId())) {
+        throw new ISE("Listener [%s] already registered", listener.getListenerId());
+      }
+    }
+
     final Pair<TaskRunnerListener, Executor> listenerPair = Pair.of(listener, executor);
 
     synchronized (tasks) {
@@ -185,6 +189,19 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
       }
 
       listeners.add(listenerPair);
+      log.info("Registered listener [%s]", listener.getListenerId());
+    }
+  }
+
+  @Override
+  public void unregisterListener(String listenerId)
+  {
+    for (Pair<TaskRunnerListener, Executor> pair : listeners) {
+      if (pair.lhs.getListenerId().equals(listenerId)) {
+        listeners.remove(pair);
+        log.info("Unregistered listener [%s]", listenerId);
+        return;
+      }
     }
   }
 
@@ -330,7 +347,7 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                                 }
                               }
 
-                              // Add dataSource and taskId for metrics
+                              // Add dataSource and taskId for metrics or logging
                               command.add(
                                   String.format(
                                       "-D%s%s=%s",
@@ -401,11 +418,21 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                             }
 
                             TaskRunnerUtils.notifyLocationChanged(listeners, task.getId(), taskLocation);
+                            TaskRunnerUtils.notifyStatusChanged(
+                                listeners,
+                                task.getId(),
+                                TaskStatus.running(task.getId())
+                            );
 
                             log.info("Logging task %s output to: %s", task.getId(), logFile);
                             boolean runFailed = true;
 
                             final ByteSink logSink = Files.asByteSink(logFile, FileWriteMode.APPEND);
+
+                            // This will block for a while. So we append the thread information with more details
+                            final String priorThreadName = Thread.currentThread().getName();
+                            Thread.currentThread().setName(String.format("%s-[%s]", priorThreadName, task.getId()));
+
                             try (final OutputStream toLogfile = logSink.openStream()) {
                               ByteStreams.copy(processHolder.process.getInputStream(), toLogfile);
                               final int statusCode = processHolder.process.waitFor();
@@ -415,17 +442,22 @@ public class ForkingTaskRunner implements TaskRunner, TaskLogStreamer
                               }
                             }
                             finally {
+                              Thread.currentThread().setName(priorThreadName);
                               // Upload task logs
                               taskLogPusher.pushTaskLog(task.getId(), logFile);
                             }
 
+                            TaskStatus status;
                             if (!runFailed) {
                               // Process exited successfully
-                              return jsonMapper.readValue(statusFile, TaskStatus.class);
+                              status = jsonMapper.readValue(statusFile, TaskStatus.class);
                             } else {
                               // Process exited unsuccessfully
-                              return TaskStatus.failure(task.getId());
+                              status = TaskStatus.failure(task.getId());
                             }
+
+                            TaskRunnerUtils.notifyStatusChanged(listeners, task.getId(), status);
+                            return status;
                           }
                           catch (Throwable t) {
                             throw closer.rethrow(t);

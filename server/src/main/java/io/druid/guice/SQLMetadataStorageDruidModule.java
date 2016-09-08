@@ -36,6 +36,7 @@ import io.druid.metadata.MetadataSegmentPublisherProvider;
 import io.druid.metadata.MetadataStorageActionHandlerFactory;
 import io.druid.metadata.MetadataStorageConnector;
 import io.druid.metadata.MetadataStorageProvider;
+import io.druid.metadata.MetadataSupervisorManager;
 import io.druid.metadata.NoopMetadataStorageProvider;
 import io.druid.metadata.SQLMetadataConnector;
 import io.druid.metadata.SQLMetadataRuleManager;
@@ -45,6 +46,7 @@ import io.druid.metadata.SQLMetadataSegmentManagerProvider;
 import io.druid.metadata.SQLMetadataSegmentPublisher;
 import io.druid.metadata.SQLMetadataSegmentPublisherProvider;
 import io.druid.metadata.SQLMetadataStorageActionHandlerFactory;
+import io.druid.metadata.SQLMetadataSupervisorManager;
 import io.druid.server.audit.AuditManagerProvider;
 import io.druid.server.audit.SQLAuditManager;
 import io.druid.server.audit.SQLAuditManagerConfig;
@@ -156,6 +158,13 @@ public class SQLMetadataStorageDruidModule implements Module
         Key.get(SQLAuditManagerProvider.class),
         defaultPropertyValue
     );
+    PolyBind.createChoiceWithDefault(
+        binder,
+        PROPERTY,
+        Key.get(MetadataSupervisorManager.class),
+        Key.get(SQLMetadataSupervisorManager.class),
+        defaultPropertyValue
+    );
   }
 
   @Override
@@ -216,6 +225,11 @@ public class SQLMetadataStorageDruidModule implements Module
     PolyBind.optionBinder(binder, Key.get(AuditManagerProvider.class))
             .addBinding(type)
             .to(SQLAuditManagerProvider.class)
+            .in(LazySingleton.class);
+
+    PolyBind.optionBinder(binder, Key.get(MetadataSupervisorManager.class))
+            .addBinding(type)
+            .to(SQLMetadataSupervisorManager.class)
             .in(LazySingleton.class);
   }
 }

@@ -27,20 +27,28 @@ import com.google.common.util.concurrent.MoreExecutors;
 import io.druid.query.Query;
 import io.druid.query.QueryWatcher;
 
+import java.util.List;
 import java.util.Set;
 
 public class QueryManager implements QueryWatcher
 {
-  final SetMultimap<String, ListenableFuture> queries;
+
+  private final SetMultimap<String, ListenableFuture> queries;
+  private final SetMultimap<String, String> queryDatasources;
 
   public QueryManager()
   {
     this.queries = Multimaps.synchronizedSetMultimap(
         HashMultimap.<String, ListenableFuture>create()
     );
+    this.queryDatasources = Multimaps.synchronizedSetMultimap(
+        HashMultimap.<String, String>create()
+    );
   }
 
-  public boolean cancelQuery(String id) {
+  public boolean cancelQuery(String id)
+  {
+    queryDatasources.removeAll(id);
     Set<ListenableFuture> futures = queries.removeAll(id);
     boolean success = true;
     for (ListenableFuture future : futures) {
@@ -52,7 +60,9 @@ public class QueryManager implements QueryWatcher
   public void registerQuery(Query query, final ListenableFuture future)
   {
     final String id = query.getId();
+    final List<String> datasources = query.getDataSource().getNames();
     queries.put(id, future);
+    queryDatasources.putAll(id, datasources);
     future.addListener(
         new Runnable()
         {
@@ -60,9 +70,17 @@ public class QueryManager implements QueryWatcher
           public void run()
           {
             queries.remove(id, future);
+            for (String datasource : datasources) {
+              queryDatasources.remove(id, datasource);
+            }
           }
         },
         MoreExecutors.sameThreadExecutor()
     );
+  }
+
+  public Set<String> getQueryDatasources(final String queryId)
+  {
+    return queryDatasources.get(queryId);
   }
 }

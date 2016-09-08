@@ -61,7 +61,6 @@ public class ReservoirSegmentSamplerTest
   public void setUp() throws Exception
   {
     druidServer1 = EasyMock.createMock(ImmutableDruidServer.class);
-    druidServer1 = EasyMock.createMock(ImmutableDruidServer.class);
     druidServer2 = EasyMock.createMock(ImmutableDruidServer.class);
     druidServer3 = EasyMock.createMock(ImmutableDruidServer.class);
     druidServer4 = EasyMock.createMock(ImmutableDruidServer.class);
@@ -84,7 +83,7 @@ public class ReservoirSegmentSamplerTest
         Maps.<String, Object>newHashMap(),
         Lists.<String>newArrayList(),
         Lists.<String>newArrayList(),
-        new NoneShardSpec(),
+        NoneShardSpec.instance(),
         0,
         11L
     );
@@ -95,7 +94,7 @@ public class ReservoirSegmentSamplerTest
         Maps.<String, Object>newHashMap(),
         Lists.<String>newArrayList(),
         Lists.<String>newArrayList(),
-        new NoneShardSpec(),
+        NoneShardSpec.instance(),
         0,
         7L
     );
@@ -106,7 +105,7 @@ public class ReservoirSegmentSamplerTest
         Maps.<String, Object>newHashMap(),
         Lists.<String>newArrayList(),
         Lists.<String>newArrayList(),
-        new NoneShardSpec(),
+        NoneShardSpec.instance(),
         0,
         4L
     );
@@ -117,7 +116,7 @@ public class ReservoirSegmentSamplerTest
         Maps.<String, Object>newHashMap(),
         Lists.<String>newArrayList(),
         Lists.<String>newArrayList(),
-        new NoneShardSpec(),
+        NoneShardSpec.instance(),
         0,
         8L
     );

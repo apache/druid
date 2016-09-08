@@ -20,11 +20,11 @@
 package io.druid.server.initialization.jetty;
 
 import com.google.inject.Binder;
-import com.google.inject.Inject;
 import com.google.inject.Injector;
 import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Provides;
+import com.google.inject.multibindings.Multibinder;
 import com.metamx.common.lifecycle.Lifecycle;
 import com.metamx.common.logger.Logger;
 import io.druid.guice.Jerseys;
@@ -36,6 +36,7 @@ import io.druid.guice.annotations.Self;
 import io.druid.segment.realtime.firehose.ChatHandlerResource;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.ServerConfig;
+import io.druid.server.metrics.DataSourceTaskIdHolder;
 import org.eclipse.jetty.server.Server;
 
 import java.util.Properties;
@@ -48,8 +49,12 @@ public class ChatHandlerServerModule implements Module
   private static final String MAX_CHAT_REQUESTS_PROPERTY = "druid.indexer.server.maxChatRequests";
   private static final String CHAT_PORT_PROPERTY = "druid.indexer.task.chathandler.port";
 
-  @Inject
-  private Properties properties;
+  private final Properties properties;
+
+  public ChatHandlerServerModule(Properties properties)
+  {
+    this.properties = properties;
+  }
 
   @Override
   public void configure(Binder binder)
@@ -61,6 +66,8 @@ public class ChatHandlerServerModule implements Module
       final int maxRequests = Integer.parseInt(properties.getProperty(MAX_CHAT_REQUESTS_PROPERTY));
       JettyBindings.addQosFilter(binder, "/druid/worker/v1/chat/*", maxRequests);
     }
+
+    Multibinder.newSetBinder(binder, ServletFilterHolder.class).addBinding().to(TaskIdResponseHeaderFilterHolder.class);
 
     /**
      * If "druid.indexer.task.chathandler.port" property is set then we assume that a separate Jetty Server with its
@@ -82,6 +89,15 @@ public class ChatHandlerServerModule implements Module
       binder.bind(DruidNode.class).annotatedWith(RemoteChatHandler.class).to(Key.get(DruidNode.class, Self.class));
       binder.bind(ServerConfig.class).annotatedWith(RemoteChatHandler.class).to(Key.get(ServerConfig.class));
     }
+  }
+
+  @Provides
+  @LazySingleton
+  public TaskIdResponseHeaderFilterHolder taskIdResponseHeaderFilterHolderBuilder(
+      final DataSourceTaskIdHolder taskIdHolder
+  )
+  {
+    return new TaskIdResponseHeaderFilterHolder("/druid/worker/v1/chat/*", taskIdHolder.getTaskId());
   }
 
   @Provides

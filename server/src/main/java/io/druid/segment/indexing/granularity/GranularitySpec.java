@@ -57,6 +57,8 @@ public interface GranularitySpec
 
   public Granularity getSegmentGranularity();
 
+  public boolean isRollup();
+
   public QueryGranularity getQueryGranularity();
 
 }

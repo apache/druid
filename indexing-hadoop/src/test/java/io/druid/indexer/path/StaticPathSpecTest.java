@@ -20,7 +20,14 @@
 package io.druid.indexer.path;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.druid.indexer.HadoopDruidIndexerConfig;
+import io.druid.indexer.HadoopIOConfig;
+import io.druid.indexer.HadoopIngestionSpec;
 import io.druid.jackson.DefaultObjectMapper;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.indexing.DataSchema;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.input.MultipleInputs;
 import org.apache.hadoop.mapreduce.lib.input.TextInputFormat;
 import org.junit.Assert;
 import org.junit.Test;
@@ -39,6 +46,22 @@ public class StaticPathSpecTest
   public void testDeserializationNoInputFormat() throws Exception
   {
     testSerde("/sample/path", null);
+  }
+
+  @Test
+  public void testAddingPaths() throws Exception
+  {
+    Job job = new Job();
+    StaticPathSpec pathSpec = new StaticPathSpec("/a/c,/a/b/{c,d}", null);
+
+    DataSchema schema = new DataSchema("ds", null, new AggregatorFactory[0], null, jsonMapper);
+    HadoopIOConfig io = new HadoopIOConfig(null, null, null);
+    pathSpec.addInputPaths(new HadoopDruidIndexerConfig(new HadoopIngestionSpec(schema, io, null)), job);
+
+    String paths = job.getConfiguration().get(MultipleInputs.DIR_FORMATS);
+    String formatter = TextInputFormat.class.getName();
+    String[] expected = {"/a/c;" + formatter, "/a/b/c;" + formatter, "/a/b/d;" + formatter};
+    Assert.assertArrayEquals(expected, paths.split(","));
   }
 
   private void testSerde(String path, Class inputFormat) throws Exception

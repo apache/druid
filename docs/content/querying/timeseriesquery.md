@@ -35,8 +35,8 @@ An example timeseries query object is shown below:
       "name": "sample_divide",
       "fn": "/",
       "fields": [
-        { "type": "fieldAccess", "name": "sample_name1", "fieldName": "sample_fieldName1" },
-        { "type": "fieldAccess", "name": "sample_name2", "fieldName": "sample_fieldName2" }
+        { "type": "fieldAccess", "name": "postAgg__sample_name1", "fieldName": "sample_name1" },
+        { "type": "fieldAccess", "name": "postAgg__sample_name2", "fieldName": "sample_name2" }
       ]
     }
   ],
@@ -54,7 +54,7 @@ There are 7 main parts to a timeseries query:
 |intervals|A JSON Object representing ISO-8601 Intervals. This defines the time ranges to run the query over.|yes|
 |granularity|Defines the granularity to bucket query results. See [Granularities](../querying/granularities.html)|yes|
 |filter|See [Filters](../querying/filters.html)|no|
-|aggregations|See [Aggregations](../querying/aggregations.html)|yes|
+|aggregations|See [Aggregations](../querying/aggregations.html)|no|
 |postAggregations|See [Post Aggregations](../querying/post-aggregations.html)|no|
 |context|See [Context](../querying/query-context.html)|no|
 

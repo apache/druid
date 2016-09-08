@@ -32,6 +32,7 @@ import io.druid.guice.annotations.Smile;
 import io.druid.guice.http.DruidHttpClientConfig;
 import io.druid.query.DruidMetrics;
 import io.druid.query.Query;
+import io.druid.query.QueryToolChestWarehouse;
 import io.druid.server.log.RequestLogger;
 import io.druid.server.router.QueryHostFinder;
 import io.druid.server.router.Router;
@@ -69,6 +70,9 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
   private static final String QUERY_ATTRIBUTE = "io.druid.proxy.query";
   private static final String OBJECTMAPPER_ATTRIBUTE = "io.druid.proxy.objectMapper";
 
+  private static final int CANCELLATION_TIMEOUT_MILLIS = 500;
+  private static final int MAX_QUEUED_CANCELLATIONS = 64;
+
   private static void handleException(HttpServletResponse response, ObjectMapper objectMapper, Exception exception)
       throws IOException
   {
@@ -85,6 +89,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
     response.flushBuffer();
   }
 
+  private final QueryToolChestWarehouse warehouse;
   private final ObjectMapper jsonMapper;
   private final ObjectMapper smileMapper;
   private final QueryHostFinder hostFinder;
@@ -93,7 +98,10 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
   private final ServiceEmitter emitter;
   private final RequestLogger requestLogger;
 
+  private HttpClient broadcastClient;
+
   public AsyncQueryForwardingServlet(
+      QueryToolChestWarehouse warehouse,
       @Json ObjectMapper jsonMapper,
       @Smile ObjectMapper smileMapper,
       QueryHostFinder hostFinder,
@@ -103,6 +111,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
       RequestLogger requestLogger
   )
   {
+    this.warehouse = warehouse;
     this.jsonMapper = jsonMapper;
     this.smileMapper = smileMapper;
     this.hostFinder = hostFinder;
@@ -110,6 +119,35 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
     this.httpClientConfig = httpClientConfig;
     this.emitter = emitter;
     this.requestLogger = requestLogger;
+  }
+
+  @Override
+  public void init() throws ServletException
+  {
+    super.init();
+
+    // separate client with more aggressive connection timeouts
+    // to prevent cancellations requests from blocking queries
+    broadcastClient = httpClientProvider.get();
+    broadcastClient.setConnectTimeout(CANCELLATION_TIMEOUT_MILLIS);
+    broadcastClient.setMaxRequestsQueuedPerDestination(MAX_QUEUED_CANCELLATIONS);
+
+    try {
+      broadcastClient.start();
+    } catch(Exception e) {
+      throw new ServletException(e);
+    }
+  }
+
+  @Override
+  public void destroy()
+  {
+    super.destroy();
+    try {
+      broadcastClient.stop();
+    } catch(Exception e) {
+      log.warn(e, "Error stopping servlet");
+    }
   }
 
   @Override
@@ -132,9 +170,10 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
         // to keep the code simple, the proxy servlet will also send a request to one of the default brokers
         if (!host.equals(defaultHost)) {
           // issue async requests
-          getHttpClient()
+          broadcastClient
               .newRequest(rewriteURI(request, host))
               .method(HttpMethod.DELETE)
+              .timeout(CANCELLATION_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS)
               .send(
                   new Response.CompleteListener()
                   {
@@ -307,7 +346,7 @@ public class AsyncQueryForwardingServlet extends AsyncProxyServlet
       final long requestTime = System.currentTimeMillis() - start;
       try {
         emitter.emit(
-            DruidMetrics.makeQueryTimeMetric(jsonMapper, query, req.getRemoteAddr())
+            DruidMetrics.makeQueryTimeMetric(warehouse.getToolChest(query), jsonMapper, query, req.getRemoteAddr())
                         .build("query/time", requestTime)
         );
 

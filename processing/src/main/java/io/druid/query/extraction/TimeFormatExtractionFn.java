@@ -20,12 +20,14 @@
 package io.druid.query.extraction;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Preconditions;
 import com.metamx.common.StringUtils;
+import io.druid.granularity.QueryGranularities;
+import io.druid.granularity.QueryGranularity;
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.ISODateTimeFormat;
 
 import java.nio.ByteBuffer;
 import java.util.Locale;
@@ -33,24 +35,25 @@ import java.util.Locale;
 public class TimeFormatExtractionFn implements ExtractionFn
 {
   private final DateTimeZone tz;
-  private final String pattern;
+  private final String format;
   private final Locale locale;
+  private final QueryGranularity granularity;
   private final DateTimeFormatter formatter;
 
   public TimeFormatExtractionFn(
-      @JsonProperty("format") String pattern,
+      @JsonProperty("format") String format,
       @JsonProperty("timeZone") DateTimeZone tz,
-      @JsonProperty("locale") String localeString
+      @JsonProperty("locale") String localeString,
+      @JsonProperty("granularity") QueryGranularity granularity
   )
   {
-    Preconditions.checkArgument(pattern != null, "format cannot be null");
-
-    this.pattern = pattern;
+    this.format = format;
     this.tz = tz;
     this.locale = localeString == null ? null : Locale.forLanguageTag(localeString);
-    this.formatter = DateTimeFormat.forPattern(pattern)
-                                   .withZone(tz == null ? DateTimeZone.UTC : tz)
-                                   .withLocale(locale);
+    this.granularity = granularity == null ? QueryGranularities.NONE : granularity;
+    this.formatter = (format == null ? ISODateTimeFormat.dateTime() : DateTimeFormat.forPattern(format))
+        .withZone(tz == null ? DateTimeZone.UTC : tz)
+        .withLocale(locale);
   }
 
   @JsonProperty
@@ -62,7 +65,7 @@ public class TimeFormatExtractionFn implements ExtractionFn
   @JsonProperty
   public String getFormat()
   {
-    return pattern;
+    return format;
   }
 
   @JsonProperty
@@ -75,26 +78,35 @@ public class TimeFormatExtractionFn implements ExtractionFn
     }
   }
 
+  @JsonProperty
+  public QueryGranularity getGranularity()
+  {
+    return granularity;
+  }
+
   @Override
   public byte[] getCacheKey()
   {
-    byte[] exprBytes = StringUtils.toUtf8(pattern + "\u0001" + tz.getID() + "\u0001" + locale.toLanguageTag());
-    return ByteBuffer.allocate(1 + exprBytes.length)
+    final byte[] exprBytes = StringUtils.toUtf8(format + "\u0001" + tz.getID() + "\u0001" + locale.toLanguageTag());
+    final byte[] granularityCacheKey = granularity.cacheKey();
+    return ByteBuffer.allocate(2 + exprBytes.length + granularityCacheKey.length)
                      .put(ExtractionCacheHelper.CACHE_TYPE_ID_TIME_FORMAT)
                      .put(exprBytes)
+                     .put((byte) 0xFF)
+                     .put(granularityCacheKey)
                      .array();
   }
 
   @Override
   public String apply(long value)
   {
-    return formatter.print(value);
+    return formatter.print(granularity.truncate(value));
   }
 
   @Override
   public String apply(Object value)
   {
-    return formatter.print(new DateTime(value));
+    return apply(new DateTime(value).getMillis());
   }
 
   @Override
@@ -127,25 +139,26 @@ public class TimeFormatExtractionFn implements ExtractionFn
 
     TimeFormatExtractionFn that = (TimeFormatExtractionFn) o;
 
-    if (locale != null ? !locale.equals(that.locale) : that.locale != null) {
-      return false;
-    }
-    if (!pattern.equals(that.pattern)) {
-      return false;
-    }
     if (tz != null ? !tz.equals(that.tz) : that.tz != null) {
       return false;
     }
+    if (format != null ? !format.equals(that.format) : that.format != null) {
+      return false;
+    }
+    if (locale != null ? !locale.equals(that.locale) : that.locale != null) {
+      return false;
+    }
+    return granularity.equals(that.granularity);
 
-    return true;
   }
 
   @Override
   public int hashCode()
   {
     int result = tz != null ? tz.hashCode() : 0;
-    result = 31 * result + pattern.hashCode();
+    result = 31 * result + (format != null ? format.hashCode() : 0);
     result = 31 * result + (locale != null ? locale.hashCode() : 0);
+    result = 31 * result + granularity.hashCode();
     return result;
   }
 }

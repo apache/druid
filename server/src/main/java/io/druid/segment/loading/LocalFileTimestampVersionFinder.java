@@ -23,6 +23,7 @@ import com.google.common.base.Throwables;
 import com.metamx.common.RetryUtils;
 import io.druid.data.SearchableVersionedDataFinder;
 
+import javax.annotation.Nullable;
 import java.io.File;
 import java.io.FileFilter;
 import java.io.FileNotFoundException;
@@ -74,7 +75,7 @@ public class LocalFileTimestampVersionFinder extends LocalDataSegmentPuller
    * @return The URI of the most recently modified file which matches the pattern, or `null` if it cannot be found
    */
   @Override
-  public URI getLatestVersion(URI uri, final Pattern pattern)
+  public URI getLatestVersion(URI uri, final @Nullable Pattern pattern)
   {
     final File file = new File(uri);
     try {

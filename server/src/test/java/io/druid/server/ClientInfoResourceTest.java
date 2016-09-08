@@ -41,11 +41,13 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Ordering;
 import io.druid.client.DruidServer;
+import io.druid.client.FilteredServerInventoryView;
 import io.druid.client.InventoryView;
 import io.druid.client.TimelineServerView;
 import io.druid.client.selector.ServerSelector;
 import io.druid.query.TableDataSource;
 import io.druid.query.metadata.SegmentMetadataQueryConfig;
+import io.druid.server.security.AuthConfig;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.VersionedIntervalTimeline;
 import io.druid.timeline.partition.NumberedShardSpec;
@@ -70,7 +72,7 @@ public class ClientInfoResourceTest
 
   private final String dataSource = "test-data-source";
 
-  private InventoryView serverInventoryView;
+  private FilteredServerInventoryView serverInventoryView;
   private TimelineServerView timelineServerView;
   private ClientInfoResource resource;
 
@@ -130,7 +132,7 @@ public class ClientInfoResourceTest
         new NumberedShardSpec(0, 2)
     );
 
-    serverInventoryView = EasyMock.createMock(InventoryView.class);
+    serverInventoryView = EasyMock.createMock(FilteredServerInventoryView.class);
     EasyMock.expect(serverInventoryView.getInventory()).andReturn(ImmutableList.of(server)).anyTimes();
 
     timelineServerView = EasyMock.createMock(TimelineServerView.class);
@@ -405,12 +407,12 @@ public class ClientInfoResourceTest
   }
 
   private ClientInfoResource getResourceTestHelper(
-      InventoryView serverInventoryView,
+      FilteredServerInventoryView serverInventoryView,
       TimelineServerView timelineServerView,
       SegmentMetadataQueryConfig segmentMetadataQueryConfig
   )
   {
-    return new ClientInfoResource(serverInventoryView, timelineServerView, segmentMetadataQueryConfig)
+    return new ClientInfoResource(serverInventoryView, timelineServerView, segmentMetadataQueryConfig, new AuthConfig())
     {
       @Override
       protected DateTime getCurrentTime()

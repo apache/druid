@@ -20,11 +20,19 @@ package io.druid.server.coordinator;
 
 import org.joda.time.DateTime;
 
+import java.io.IOException;
+
 public class RandomBalancerStrategyFactory implements BalancerStrategyFactory
 {
   @Override
   public BalancerStrategy createBalancerStrategy(DateTime referenceTimestamp)
   {
     return new RandomBalancerStrategy();
+  }
+
+  @Override
+  public void close() throws IOException
+  {
+    // No-op
   }
 }

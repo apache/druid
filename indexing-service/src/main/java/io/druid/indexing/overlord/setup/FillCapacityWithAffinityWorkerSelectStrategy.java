@@ -25,8 +25,9 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import io.druid.indexing.common.task.Task;
-import io.druid.indexing.overlord.ImmutableZkWorker;
+import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
+import io.druid.indexing.overlord.config.WorkerTaskRunnerConfig;
 
 import java.util.List;
 import java.util.Set;
@@ -58,37 +59,37 @@ public class FillCapacityWithAffinityWorkerSelectStrategy extends FillCapacityWo
   }
 
   @Override
-  public Optional<ImmutableZkWorker> findWorkerForTask(
-      final RemoteTaskRunnerConfig config,
-      final ImmutableMap<String, ImmutableZkWorker> zkWorkers,
+  public Optional<ImmutableWorkerInfo> findWorkerForTask(
+      final WorkerTaskRunnerConfig config,
+      final ImmutableMap<String, ImmutableWorkerInfo> zkWorkers,
       final Task task
   )
   {
     // don't run other datasources on affinity workers; we only want our configured datasources to run on them
-    ImmutableMap.Builder<String, ImmutableZkWorker> builder = new ImmutableMap.Builder<>();
+    ImmutableMap.Builder<String, ImmutableWorkerInfo> builder = new ImmutableMap.Builder<>();
     for (String workerHost : zkWorkers.keySet()) {
       if (!affinityWorkerHosts.contains(workerHost)) {
         builder.put(workerHost, zkWorkers.get(workerHost));
       }
     }
-    ImmutableMap<String, ImmutableZkWorker> eligibleWorkers = builder.build();
+    ImmutableMap<String, ImmutableWorkerInfo> eligibleWorkers = builder.build();
 
     List<String> workerHosts = affinityConfig.getAffinity().get(task.getDataSource());
     if (workerHosts == null) {
       return super.findWorkerForTask(config, eligibleWorkers, task);
     }
 
-    ImmutableMap.Builder<String, ImmutableZkWorker> affinityBuilder = new ImmutableMap.Builder<>();
+    ImmutableMap.Builder<String, ImmutableWorkerInfo> affinityBuilder = new ImmutableMap.Builder<>();
     for (String workerHost : workerHosts) {
-      ImmutableZkWorker zkWorker = zkWorkers.get(workerHost);
+      ImmutableWorkerInfo zkWorker = zkWorkers.get(workerHost);
       if (zkWorker != null) {
         affinityBuilder.put(workerHost, zkWorker);
       }
     }
-    ImmutableMap<String, ImmutableZkWorker> affinityWorkers = affinityBuilder.build();
+    ImmutableMap<String, ImmutableWorkerInfo> affinityWorkers = affinityBuilder.build();
 
     if (!affinityWorkers.isEmpty()) {
-      Optional<ImmutableZkWorker> retVal = super.findWorkerForTask(config, affinityWorkers, task);
+      Optional<ImmutableWorkerInfo> retVal = super.findWorkerForTask(config, affinityWorkers, task);
       if (retVal.isPresent()) {
         return retVal;
       }

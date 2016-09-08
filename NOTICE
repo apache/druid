@@ -10,3 +10,15 @@ This product contains a modified version of Andrew Duffy's java-alphanum library
     * https://github.com/amjjd/java-alphanum/blob/5c036e2e492cc7f3b7bcdebd46b8f9e2a87927e5/LICENSE.txt (Apache License, Version 2.0)
   * HOMEPAGE:
     * https://github.com/amjjd/java-alphanum
+
+This product contains conjunctive normal form conversion code and a variance aggregator algorithm adapted from Apache Hive
+  * LICENSE:
+    * https://github.com/apache/hive/blob/branch-2.0/LICENSE (Apache License, Version 2.0)
+  * HOMEPAGE:
+    * https://github.com/apache/hive
+
+This product contains variable length long deserialization code adapted from Apache Lucene
+  * LICENSE:
+    * https://github.com/apache/lucene-solr/blob/master/lucene/LICENSE.txt (Apache License, Version 2.0)
+  * HOMEPAGE:
+    * https://github.com/apache/lucene-solr

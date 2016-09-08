@@ -35,7 +35,7 @@ import com.metamx.emitter.EmittingLogger;
 import io.druid.data.input.Firehose;
 import io.druid.data.input.FirehoseFactory;
 import io.druid.data.input.impl.InputRowParser;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.TaskToolboxFactory;
 import io.druid.indexing.common.actions.SegmentListUsedAction;
@@ -151,7 +151,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
       if (dimensions != null) {
         dims = dimensions;
       } else if (inputRowParser.getParseSpec().getDimensionsSpec().hasCustomDimensions()) {
-        dims = inputRowParser.getParseSpec().getDimensionsSpec().getDimensions();
+        dims = inputRowParser.getParseSpec().getDimensionsSpec().getDimensionNames();
       } else {
         Set<String> dimSet = Sets.newHashSet(
             Iterables.concat(
@@ -274,7 +274,7 @@ public class IngestSegmentFirehoseFactory implements FirehoseFactory<InputRowPar
           )
       );
 
-      return new IngestSegmentFirehose(adapters, dims, metricsList, dimFilter, QueryGranularity.NONE);
+      return new IngestSegmentFirehose(adapters, dims, metricsList, dimFilter, QueryGranularities.NONE);
     }
     catch (IOException e) {
       throw Throwables.propagate(e);

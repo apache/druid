@@ -29,6 +29,7 @@ import org.apache.commons.io.FileUtils;
 import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
@@ -40,6 +41,9 @@ public class FileTaskLogsTest
 
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
+
+  @Rule
+  public ExpectedException expectedException = ExpectedException.none();
 
   @Test
   public void testSimple() throws Exception
@@ -68,29 +72,18 @@ public class FileTaskLogsTest
   public void testPushTaskLogDirCreationFails() throws Exception
   {
     final File tmpDir = temporaryFolder.newFolder();
-    
-    try {
-      IOException thrown = null;
-      
-      final File logDir = new File(tmpDir, "druid/logs");
-      final File logFile = new File(tmpDir, "log");
-      Files.write("blah", logFile, Charsets.UTF_8);
-      
-      if(!tmpDir.setWritable(false)) {
-        new RuntimeException("failed to make tmp dir read-only");
-      }
+    final File logDir = new File(tmpDir, "druid/logs");
+    final File logFile = new File(tmpDir, "log");
+    Files.write("blah", logFile, Charsets.UTF_8);
 
-      final TaskLogs taskLogs = new FileTaskLogs(new FileTaskLogsConfig(logDir));
-      try {
-        taskLogs.pushTaskLog("foo", logFile);
-      } catch(IOException ex) {
-        thrown = ex;
-      }
-      Assert.assertNotNull("pushTaskLog should fail with exception of dir creation error", thrown);
+    if (!tmpDir.setWritable(false)) {
+      throw new RuntimeException("failed to make tmp dir read-only");
     }
-    finally {
-      tmpDir.setWritable(true);
-      FileUtils.deleteDirectory(tmpDir);
-    }
+
+    final TaskLogs taskLogs = new FileTaskLogs(new FileTaskLogsConfig(logDir));
+
+    expectedException.expect(IOException.class);
+    expectedException.expectMessage("Unable to create task log dir");
+    taskLogs.pushTaskLog("foo", logFile);
   }
 }

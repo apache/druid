@@ -34,7 +34,7 @@ import io.druid.data.input.impl.CSVParseSpec;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.indexer.hadoop.WindowedDataSegment;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
@@ -324,7 +324,7 @@ public class BatchDeltaIngestionTest
         ImmutableList.of("host"),
         ImmutableList.of("visited_sum", "unique_hosts"),
         null,
-        QueryGranularity.NONE
+        QueryGranularities.NONE
     );
 
     List<InputRow> rows = Lists.newArrayList();
@@ -346,10 +346,11 @@ public class BatchDeltaIngestionTest
                     new StringInputRowParser(
                         new CSVParseSpec(
                             new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                            new DimensionsSpec(ImmutableList.of("host"), null, null),
+                            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
                             null,
                             ImmutableList.of("timestamp", "host", "host2", "visited_num")
-                        )
+                        ),
+                        null
                     ),
                     Map.class
                 ),
@@ -358,7 +359,7 @@ public class BatchDeltaIngestionTest
                     new HyperUniquesAggregatorFactory("unique_hosts", "host2")
                 },
                 new UniformGranularitySpec(
-                    Granularity.DAY, QueryGranularity.NONE, ImmutableList.of(INTERVAL_FULL)
+                    Granularity.DAY, QueryGranularities.NONE, ImmutableList.of(INTERVAL_FULL)
                 ),
                 MAPPER
             ),
@@ -393,7 +394,7 @@ public class BatchDeltaIngestionTest
             INTERVAL_FULL.getStart(),
             ImmutableList.of(
                 new HadoopyShardSpec(
-                    new HashBasedNumberedShardSpec(0, 1, HadoopDruidIndexerConfig.JSON_MAPPER),
+                    new HashBasedNumberedShardSpec(0, 1, null, HadoopDruidIndexerConfig.JSON_MAPPER),
                     0
                 )
             )

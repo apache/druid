@@ -128,5 +128,10 @@ The interval of a segment will be compared against the specified period. The per
 
 # Permanently Deleting Data
  
- Druid can fully drop data from the cluster, wipe the metadata store entry, and remove the data from deep storage for any segments that are 
- marked as unused (segments dropped from the cluster via rules are always marked as unused). You can submit a [kill task](../ingestion/tasks.html) to the [indexing service](../design/indexing-service.html) to do this.
+Druid can fully drop data from the cluster, wipe the metadata store entry, and remove the data from deep storage for any segments that are 
+marked as unused (segments dropped from the cluster via rules are always marked as unused). You can submit a [kill task](../ingestion/tasks.html) to the [indexing service](../design/indexing-service.html) to do this.
+
+# Reloading Dropped Data
+
+Data that has been dropped from a Druid cluster cannot be reloaded using only rules. To reload dropped data in Druid, you must first set your retention period (i.e. changing the retention period from 1 month to 2 months), and 
+then enable the datasource in the Druid coordinator console, or through the Druid coordinator endpoints.

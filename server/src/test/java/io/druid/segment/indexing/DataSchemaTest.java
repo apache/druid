@@ -29,7 +29,7 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
@@ -38,6 +38,7 @@ import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.util.Arrays;
 import java.util.Map;
 
 public class DataSchemaTest
@@ -57,8 +58,11 @@ public class DataSchemaTest
         new StringInputRowParser(
             new JSONParseSpec(
                 new TimestampSpec("time", "auto", null),
-                new DimensionsSpec(ImmutableList.of("dimB", "dimA"), null, null)
-            )
+                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("dimB", "dimA")), null, null),
+                null,
+                null
+            ),
+            null
         ), new TypeReference<Map<String, Object>>() {}
     );
 
@@ -69,7 +73,7 @@ public class DataSchemaTest
             new DoubleSumAggregatorFactory("metric1", "col1"),
             new DoubleSumAggregatorFactory("metric2", "col2"),
         },
-        new ArbitraryGranularitySpec(QueryGranularity.DAY, ImmutableList.of(Interval.parse("2014/2015"))),
+        new ArbitraryGranularitySpec(QueryGranularities.DAY, ImmutableList.of(Interval.parse("2014/2015"))),
         jsonMapper
     );
 
@@ -86,8 +90,11 @@ public class DataSchemaTest
         new StringInputRowParser(
             new JSONParseSpec(
                 new TimestampSpec("time", "auto", null),
-                new DimensionsSpec(ImmutableList.of("time", "dimA", "dimB", "col2"), ImmutableList.of("dimC"), null)
-            )
+                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("time", "dimA", "dimB", "col2")), ImmutableList.of("dimC"), null),
+                null,
+                null
+            ),
+            null
         ), new TypeReference<Map<String, Object>>() {}
     );
 
@@ -98,7 +105,7 @@ public class DataSchemaTest
             new DoubleSumAggregatorFactory("metric1", "col1"),
             new DoubleSumAggregatorFactory("metric2", "col2"),
         },
-        new ArbitraryGranularitySpec(QueryGranularity.DAY, ImmutableList.of(Interval.parse("2014/2015"))),
+        new ArbitraryGranularitySpec(QueryGranularities.DAY, ImmutableList.of(Interval.parse("2014/2015"))),
         jsonMapper
     );
 
@@ -115,8 +122,11 @@ public class DataSchemaTest
         new StringInputRowParser(
             new JSONParseSpec(
                 new TimestampSpec("time", "auto", null),
-                new DimensionsSpec(ImmutableList.of("time", "dimA", "dimB", "metric1"), ImmutableList.of("dimC"), null)
-            )
+                new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("time", "dimA", "dimB", "metric1")), ImmutableList.of("dimC"), null),
+                null,
+                null
+            ),
+            null
         ), new TypeReference<Map<String, Object>>() {}
     );
 
@@ -127,7 +137,7 @@ public class DataSchemaTest
             new DoubleSumAggregatorFactory("metric1", "col1"),
             new DoubleSumAggregatorFactory("metric2", "col2"),
         },
-        new ArbitraryGranularitySpec(QueryGranularity.DAY, ImmutableList.of(Interval.parse("2014/2015"))),
+        new ArbitraryGranularitySpec(QueryGranularities.DAY, ImmutableList.of(Interval.parse("2014/2015"))),
         jsonMapper
     );
     schema.getParser();
@@ -173,7 +183,7 @@ public class DataSchemaTest
                      + "\"parseSpec\":{"
                      + "\"format\":\"json\","
                      + "\"timestampSpec\":{\"column\":\"xXx\", \"format\": \"auto\", \"missingValue\": null},"
-                     + "\"dimensionsSpec\":{\"dimensions\":[], \"dimensionExclusions\":[], \"spatialDimensions\":[]},"
+                     + "\"dimensionsSpec\":{\"dimensions\":[], \"dimensionExclusions\":[]},"
                      + "\"flattenSpec\":{\"useFieldDiscovery\":true, \"fields\":[]},"
                      + "\"featureSpec\":{}},"
                      + "\"encoding\":\"UTF-8\""
@@ -191,24 +201,25 @@ public class DataSchemaTest
         DataSchema.class
     );
 
+    Assert.assertEquals(actual.getDataSource(), "test");
     Assert.assertEquals(
-        new DataSchema(
-            "test",
-            jsonMapper.<Map<String, Object>>convertValue(
-                new StringInputRowParser(
-                    new JSONParseSpec(
-                        new TimestampSpec("xXx", null, null),
-                        new DimensionsSpec(null, null, null)
-                    )
-                ), new TypeReference<Map<String, Object>>() {}
-            ),
-            new AggregatorFactory[]{
-                new DoubleSumAggregatorFactory("metric1", "col1")
-            },
-            new ArbitraryGranularitySpec(QueryGranularity.DAY, ImmutableList.of(Interval.parse("2014/2015"))),
-            jsonMapper
-        ),
-        actual
+        actual.getParser().getParseSpec(),
+        new JSONParseSpec(
+            new TimestampSpec("xXx", null, null),
+            new DimensionsSpec(null, Arrays.asList("metric1", "xXx", "col1"), null),
+            null,
+            null
+        )
+    );
+    Assert.assertEquals(
+        actual.getAggregators(),
+        new AggregatorFactory[]{
+            new DoubleSumAggregatorFactory("metric1", "col1")
+        }
+    );
+    Assert.assertEquals(
+        actual.getGranularitySpec(),
+        new ArbitraryGranularitySpec(QueryGranularities.DAY, ImmutableList.of(Interval.parse("2014/2015")))
     );
   }
 }

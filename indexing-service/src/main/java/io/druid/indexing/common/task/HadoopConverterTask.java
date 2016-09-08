@@ -249,7 +249,7 @@ public class HadoopConverterTask extends ConvertSegmentTask
           }
       );
       log.debug("Found new segments %s", Arrays.toString(finishedSegments.toArray()));
-      toolbox.pushSegments(finishedSegments);
+      toolbox.publishSegments(finishedSegments);
       return success();
     }
   }

@@ -107,8 +107,7 @@ public class CliMiddleManager extends ServerRunnable
                 node.getHostAndPort(),
                 config.getIp(),
                 config.getCapacity(),
-                config.getVersion(),
-                DateTime.now()
+                config.getVersion()
             );
           }
         },

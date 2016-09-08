@@ -41,14 +41,14 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @throws IOException
    */
-  public List<DataSegment> getUsedSegmentsForInterval(final String dataSource, final Interval interval)
+  List<DataSegment> getUsedSegmentsForInterval(String dataSource, Interval interval)
       throws IOException;
 
   /**
    * Get all segments which may include any data in the interval and are flagged as used.
    *
    * @param dataSource The datasource to query
-   * @param intervals   The intervals for which all applicable and used datasources are requested.
+   * @param intervals  The intervals for which all applicable and used datasources are requested.
    *
    * @return The DataSegments which include data in the requested intervals. These segments may contain data outside the requested interval.
    *
@@ -65,7 +65,7 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @return set of segments actually added
    */
-  public Set<DataSegment> announceHistoricalSegments(final Set<DataSegment> segments) throws IOException;
+  Set<DataSegment> announceHistoricalSegments(Set<DataSegment> segments) throws IOException;
 
   /**
    * Allocate a new pending segment in the pending segments table. This segment identifier will never be given out
@@ -93,9 +93,36 @@ public interface IndexerMetadataStorageCoordinator
       String maxVersion
   ) throws IOException;
 
-  public void updateSegmentMetadata(final Set<DataSegment> segments) throws IOException;
+  /**
+   * Attempts to insert a set of segments to the metadata storage. Returns the set of segments actually added (segments
+   * with identifiers already in the metadata storage will not be added).
+   * <p/>
+   * If startMetadata and endMetadata are set, this insertion will be atomic with a compare-and-swap on dataSource
+   * commit metadata.
+   *
+   * @param segments      set of segments to add, must all be from the same dataSource
+   * @param startMetadata dataSource metadata pre-insert must match this startMetadata according to
+   *                      {@link DataSourceMetadata#matches(DataSourceMetadata)}. If null, this insert will
+   *                      not involve a metadata transaction
+   * @param endMetadata   dataSource metadata post-insert will have this endMetadata merged in with
+   *                      {@link DataSourceMetadata#plus(DataSourceMetadata)}. If null, this insert will not
+   *                      involve a metadata transaction
+   *
+   * @return segment publish result indicating transaction success or failure, and set of segments actually published
+   *
+   * @throws IllegalArgumentException if startMetadata and endMetadata are not either both null or both non-null
+   */
+  SegmentPublishResult announceHistoricalSegments(
+      Set<DataSegment> segments,
+      DataSourceMetadata startMetadata,
+      DataSourceMetadata endMetadata
+  ) throws IOException;
 
-  public void deleteSegments(final Set<DataSegment> segments) throws IOException;
+  DataSourceMetadata getDataSourceMetadata(String dataSource);
+
+  void updateSegmentMetadata(Set<DataSegment> segments) throws IOException;
+
+  void deleteSegments(Set<DataSegment> segments) throws IOException;
 
   /**
    * Get all segments which include ONLY data within the given interval and are not flagged as used.
@@ -105,5 +132,5 @@ public interface IndexerMetadataStorageCoordinator
    *
    * @return DataSegments which include ONLY data within the requested interval and are not flagged as used. Data segments NOT returned here may include data in the interval
    */
-  public List<DataSegment> getUnusedSegmentsForInterval(final String dataSource, final Interval interval);
+  List<DataSegment> getUnusedSegmentsForInterval(String dataSource, Interval interval);
 }

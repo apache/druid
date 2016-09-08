@@ -20,67 +20,215 @@
 package io.druid.segment.filter;
 
 import com.google.common.base.Predicate;
+import com.google.common.base.Supplier;
+import com.metamx.collections.bitmap.ImmutableBitmap;
+import io.druid.query.extraction.ExtractionFn;
+import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.BoundDimFilter;
-import io.druid.query.topn.AlphaNumericTopNMetricSpec;
-import io.druid.query.topn.LexicographicTopNMetricSpec;
+import io.druid.query.filter.DruidLongPredicate;
+import io.druid.query.filter.DruidPredicateFactory;
+import io.druid.query.filter.Filter;
+import io.druid.query.filter.ValueMatcher;
+import io.druid.query.filter.ValueMatcherFactory;
+import io.druid.query.ordering.StringComparators;
+import io.druid.segment.column.BitmapIndex;
 
 import java.util.Comparator;
+import java.util.Iterator;
 
-public class BoundFilter extends DimensionPredicateFilter
+public class BoundFilter implements Filter
 {
+  private final BoundDimFilter boundDimFilter;
+  private final Comparator<String> comparator;
+  private final ExtractionFn extractionFn;
+
+  private final Supplier<DruidLongPredicate> longPredicateSupplier;
 
   public BoundFilter(final BoundDimFilter boundDimFilter)
   {
-    super(
-        boundDimFilter.getDimension(), new Predicate<String>()
-        {
-          private volatile Predicate<String> predicate;
+    this.boundDimFilter = boundDimFilter;
+    this.comparator = boundDimFilter.getOrdering();
+    this.extractionFn = boundDimFilter.getExtractionFn();
+    this.longPredicateSupplier = boundDimFilter.getLongPredicateSupplier();
+  }
 
-          @Override
-          public boolean apply(String input)
-          {
-            return function().apply(input);
-          }
+  @Override
+  public ImmutableBitmap getBitmapIndex(final BitmapIndexSelector selector)
+  {
+    if (boundDimFilter.getOrdering().equals(StringComparators.LEXICOGRAPHIC) && extractionFn == null) {
+      // Optimization for lexicographic bounds with no extractionFn => binary search through the index
 
-          private Predicate<String> function()
+      final BitmapIndex bitmapIndex = selector.getBitmapIndex(boundDimFilter.getDimension());
+
+      if (bitmapIndex == null || bitmapIndex.getCardinality() == 0) {
+        if (doesMatch(null)) {
+          return selector.getBitmapFactory()
+                         .complement(selector.getBitmapFactory().makeEmptyImmutableBitmap(), selector.getNumRows());
+        } else {
+          return selector.getBitmapFactory().makeEmptyImmutableBitmap();
+        }
+      }
+
+      // search for start, end indexes in the bitmaps; then include all bitmaps between those points
+
+      final int startIndex; // inclusive
+      final int endIndex; // exclusive
+
+      if (!boundDimFilter.hasLowerBound()) {
+        startIndex = 0;
+      } else {
+        final int found = bitmapIndex.getIndex(boundDimFilter.getLower());
+        if (found >= 0) {
+          startIndex = boundDimFilter.isLowerStrict() ? found + 1 : found;
+        } else {
+          startIndex = -(found + 1);
+        }
+      }
+
+      if (!boundDimFilter.hasUpperBound()) {
+        endIndex = bitmapIndex.getCardinality();
+      } else {
+        final int found = bitmapIndex.getIndex(boundDimFilter.getUpper());
+        if (found >= 0) {
+          endIndex = boundDimFilter.isUpperStrict() ? found : found + 1;
+        } else {
+          endIndex = -(found + 1);
+        }
+      }
+
+      return selector.getBitmapFactory().union(
+          new Iterable<ImmutableBitmap>()
           {
-            if (predicate == null) {
-              final Comparator<String> comparator;
-              if (boundDimFilter.isAlphaNumeric()) {
-                comparator = new AlphaNumericTopNMetricSpec(null).getComparator(null, null);
-              } else {
-                comparator = new LexicographicTopNMetricSpec(null).getComparator(null, null);
-              }
-              predicate = new Predicate<String>()
+            @Override
+            public Iterator<ImmutableBitmap> iterator()
+            {
+              return new Iterator<ImmutableBitmap>()
               {
+                int currIndex = startIndex;
+
                 @Override
-                public boolean apply(String input)
+                public boolean hasNext()
                 {
-                  if (input == null) {
-                    return false;
-                  }
-                  int lowerComparing = 1;
-                  int upperComparing = 1;
-                  if (boundDimFilter.getLower() != null) {
-                    lowerComparing = comparator.compare(input, boundDimFilter.getLower());
-                  }
-                  if (boundDimFilter.getUpper() != null) {
-                    upperComparing = comparator.compare(boundDimFilter.getUpper(), input);
-                  }
-                  if (boundDimFilter.isLowerStrict() && boundDimFilter.isUpperStrict()) {
-                    return ((lowerComparing > 0)) && (upperComparing > 0);
-                  } else if (boundDimFilter.isLowerStrict()) {
-                    return (lowerComparing > 0) && (upperComparing >= 0);
-                  } else if (boundDimFilter.isUpperStrict()) {
-                    return (lowerComparing >= 0) && (upperComparing > 0);
-                  }
-                  return (lowerComparing >= 0) && (upperComparing >= 0);
+                  return currIndex < endIndex;
+                }
+
+                @Override
+                public ImmutableBitmap next()
+                {
+                  return bitmapIndex.getBitmap(currIndex++);
+                }
+
+                @Override
+                public void remove()
+                {
+                  throw new UnsupportedOperationException();
                 }
               };
             }
-            return predicate;
           }
+      );
+    } else {
+      return Filters.matchPredicate(
+          boundDimFilter.getDimension(),
+          selector,
+          getPredicateFactory().makeStringPredicate()
+      );
+    }
+  }
+
+  @Override
+  public ValueMatcher makeMatcher(ValueMatcherFactory factory)
+  {
+    return factory.makeValueMatcher(boundDimFilter.getDimension(), getPredicateFactory());
+  }
+
+  @Override
+  public boolean supportsBitmapIndex(BitmapIndexSelector selector)
+  {
+    return selector.getBitmapIndex(boundDimFilter.getDimension()) != null;
+  }
+
+  private DruidPredicateFactory getPredicateFactory()
+  {
+    return new DruidPredicateFactory()
+    {
+      @Override
+      public Predicate<String> makeStringPredicate()
+      {
+        if (extractionFn != null) {
+          return new Predicate<String>()
+          {
+            @Override
+            public boolean apply(String input)
+            {
+              return doesMatch(extractionFn.apply(input));
+            }
+          };
+        } else {
+          return new Predicate<String>()
+          {
+            @Override
+            public boolean apply(String input)
+            {
+              return doesMatch(input);
+            }
+          };
         }
-    );
+      }
+
+      @Override
+      public DruidLongPredicate makeLongPredicate()
+      {
+        if (extractionFn != null) {
+          return new DruidLongPredicate()
+          {
+            @Override
+            public boolean applyLong(long input)
+            {
+              return doesMatch(extractionFn.apply(input));
+            }
+          };
+        } else if (boundDimFilter.getOrdering().equals(StringComparators.NUMERIC)) {
+          return longPredicateSupplier.get();
+        } else {
+          return new DruidLongPredicate()
+          {
+            @Override
+            public boolean applyLong(long input)
+            {
+              return doesMatch(String.valueOf(input));
+            }
+          };
+        }
+      }
+    };
+  }
+
+  private boolean doesMatch(String input)
+  {
+    if (input == null) {
+      return (!boundDimFilter.hasLowerBound()
+              || (boundDimFilter.getLower().isEmpty() && !boundDimFilter.isLowerStrict())) // lower bound allows null
+             && (!boundDimFilter.hasUpperBound()
+                 || !boundDimFilter.getUpper().isEmpty()
+                 || !boundDimFilter.isUpperStrict()) // upper bound allows null
+          ;
+    }
+    int lowerComparing = 1;
+    int upperComparing = 1;
+    if (boundDimFilter.hasLowerBound()) {
+      lowerComparing = comparator.compare(input, boundDimFilter.getLower());
+    }
+    if (boundDimFilter.hasUpperBound()) {
+      upperComparing = comparator.compare(boundDimFilter.getUpper(), input);
+    }
+    if (boundDimFilter.isLowerStrict() && boundDimFilter.isUpperStrict()) {
+      return ((lowerComparing > 0)) && (upperComparing > 0);
+    } else if (boundDimFilter.isLowerStrict()) {
+      return (lowerComparing > 0) && (upperComparing >= 0);
+    } else if (boundDimFilter.isUpperStrict()) {
+      return (lowerComparing >= 0) && (upperComparing > 0);
+    }
+    return (lowerComparing >= 0) && (upperComparing >= 0);
   }
 }

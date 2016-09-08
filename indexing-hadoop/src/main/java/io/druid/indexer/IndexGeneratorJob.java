@@ -222,9 +222,11 @@ public class IndexGeneratorJob implements Jobby
     final HadoopTuningConfig tuningConfig = config.getSchema().getTuningConfig();
     final IncrementalIndexSchema indexSchema = new IncrementalIndexSchema.Builder()
         .withMinTimestamp(theBucket.time.getMillis())
+        .withTimestampSpec(config.getSchema().getDataSchema().getParser().getParseSpec().getTimestampSpec())
         .withDimensionsSpec(config.getSchema().getDataSchema().getParser())
         .withQueryGranularity(config.getSchema().getDataSchema().getGranularitySpec().getQueryGranularity())
         .withMetrics(aggs)
+        .withRollup(config.getSchema().getDataSchema().getGranularitySpec().isRollup())
         .build();
 
     OnheapIncrementalIndex newIndex = new OnheapIncrementalIndex(
@@ -263,7 +265,8 @@ public class IndexGeneratorJob implements Jobby
     protected void innerMap(
         InputRow inputRow,
         Object value,
-        Context context
+        Context context,
+        boolean reportParseExceptions
     ) throws IOException, InterruptedException
     {
       // Group by bucket, sort by timestamp
@@ -287,9 +290,9 @@ public class IndexGeneratorJob implements Jobby
       // and they contain the columns as they show up in the segment after ingestion, not what you would see in raw
       // data
       byte[] serializedInputRow = inputRow instanceof SegmentInputRow ?
-                                  InputRowSerde.toBytes(inputRow, combiningAggs)
+                                  InputRowSerde.toBytes(inputRow, combiningAggs, reportParseExceptions)
                                                                       :
-                                  InputRowSerde.toBytes(inputRow, aggregators);
+                                  InputRowSerde.toBytes(inputRow, aggregators, reportParseExceptions);
 
       context.write(
           new SortableBytes(
@@ -369,9 +372,10 @@ public class IndexGeneratorJob implements Jobby
         context.progress();
         Row row = rows.next();
         InputRow inputRow = getInputRowFromRow(row, dimensions);
+        // reportParseExceptions is true as any unparseable data is already handled by the mapper.
         context.write(
             key,
-            new BytesWritable(InputRowSerde.toBytes(inputRow, combiningAggs))
+            new BytesWritable(InputRowSerde.toBytes(inputRow, combiningAggs, true))
         );
       }
       index.close();
@@ -511,13 +515,14 @@ public class IndexGeneratorJob implements Jobby
         ProgressIndicator progressIndicator
     ) throws IOException
     {
+      boolean rollup = config.getSchema().getDataSchema().getGranularitySpec().isRollup();
       if (config.isBuildV9Directly()) {
         return HadoopDruidIndexerConfig.INDEX_MERGER_V9.mergeQueryableIndex(
-            indexes, aggs, file, config.getIndexSpec(), progressIndicator
+            indexes, rollup, aggs, file, config.getIndexSpec(), progressIndicator
         );
       } else {
         return HadoopDruidIndexerConfig.INDEX_MERGER.mergeQueryableIndex(
-            indexes, aggs, file, config.getIndexSpec(), progressIndicator
+            indexes, rollup, aggs, file, config.getIndexSpec(), progressIndicator
         );
       }
     }
@@ -633,7 +638,7 @@ public class IndexGeneratorJob implements Jobby
                           persist(persistIndex, interval, file, progressIndicator);
                         }
                         catch (Exception e) {
-                          log.error("persist index error", e);
+                          log.error(e, "persist index error");
                           throw Throwables.propagate(e);
                         }
                         finally {

@@ -193,6 +193,12 @@ public abstract class BaseQuery<T extends Comparable<T>> implements Query<T>
     return retVal == null ? defaultValue : retVal;
   }
 
+  @Override
+  public boolean getContextBoolean(String key, boolean defaultValue)
+  {
+    return parseBoolean(this, key, defaultValue);
+  }
+
   protected Map<String, Object> computeOverridenContext(Map<String, Object> overrides)
   {
     Map<String, Object> overridden = Maps.newTreeMap();

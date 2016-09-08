@@ -19,6 +19,7 @@
 
 package io.druid.query.extraction;
 
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.druid.jackson.DefaultObjectMapper;
 import org.junit.Assert;
@@ -39,18 +40,54 @@ public class StringFormatExtractionFnTest
   }
 
   @Test
-  public void testApplyNull() throws Exception
+  public void testApplyNull1() throws Exception
   {
-    StringFormatExtractionFn fn = new StringFormatExtractionFn("[%s]");
     String test = null;
-    Assert.assertEquals("[null]", fn.apply(test));
+    Assert.assertEquals("[null]", format("[%s]", "nullString").apply(test));
+    Assert.assertEquals("[]", format("[%s]", "emptyString").apply(test));
+    Assert.assertNull(format("[%s]", "returnNull").apply(test));
+  }
+
+  @Test
+  public void testApplyNull2() throws Exception
+  {
+    String test = null;
+    Assert.assertEquals("null", format("%s", "nullString").apply(test));
+    Assert.assertNull(format("%s", "emptyString").apply(test));
+    Assert.assertNull(format("%s", "returnNull").apply(test));
+  }
+
+  @Test(expected = IllegalArgumentException.class)
+  public void testInvalidOption1() throws Exception
+  {
+    new StringFormatExtractionFn("");
   }
 
   @Test
   public void testSerde() throws Exception
   {
+    validateSerde("{ \"type\" : \"stringFormat\", \"format\" : \"[%s]\" }");
+    validateSerde(
+        "{ \"type\" : \"stringFormat\", \"format\" : \"[%s]\", \"nullHandling\" : \"returnNull\" }"
+    );
+  }
+
+  @Test(expected = JsonMappingException.class)
+  public void testInvalidOption2() throws Exception
+  {
+    validateSerde(
+        "{ \"type\" : \"stringFormat\", \"format\" : \"[%s]\", \"nullHandling\" : \"invalid\" }"
+    );
+  }
+
+  public StringFormatExtractionFn format(String format, String nullHandling)
+  {
+    return new StringFormatExtractionFn(format, StringFormatExtractionFn.NullHandling.forValue(nullHandling));
+  }
+
+  private void validateSerde(String json) throws java.io.IOException
+  {
     final ObjectMapper objectMapper = new DefaultObjectMapper();
-    final String json = "{ \"type\" : \"stringFormat\", \"format\" : \"[%s]\" }";
     StringFormatExtractionFn extractionFn = (StringFormatExtractionFn) objectMapper.readValue(json, ExtractionFn.class);
 
     Assert.assertEquals("[%s]", extractionFn.getFormat());

@@ -20,6 +20,7 @@
 package io.druid.initialization;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Throwables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -42,6 +43,7 @@ import io.druid.guice.ExtensionsConfig;
 import io.druid.guice.FirehoseModule;
 import io.druid.guice.IndexingServiceDiscoveryModule;
 import io.druid.guice.JacksonConfigManagerModule;
+import io.druid.guice.JavaScriptModule;
 import io.druid.guice.LifecycleModule;
 import io.druid.guice.LocalDataStorageDruidModule;
 import io.druid.guice.MetadataConfigModule;
@@ -56,6 +58,7 @@ import io.druid.guice.annotations.Client;
 import io.druid.guice.annotations.Json;
 import io.druid.guice.annotations.Smile;
 import io.druid.guice.http.HttpClientModule;
+import io.druid.guice.security.DruidAuthModule;
 import io.druid.metadata.storage.derby.DerbyMetadataStorageDruidModule;
 import io.druid.server.initialization.EmitterModule;
 import io.druid.server.initialization.jetty.JettyServerModule;
@@ -64,22 +67,27 @@ import org.apache.commons.io.FileUtils;
 import org.eclipse.aether.artifact.DefaultArtifact;
 
 import java.io.File;
+import java.io.FilenameFilter;
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  */
 public class Initialization
 {
   private static final Logger log = new Logger(Initialization.class);
-  private static final Map<String, URLClassLoader> loadersMap = Maps.newHashMap();
+  private static final ConcurrentMap<File, URLClassLoader> loadersMap = new ConcurrentHashMap<>();
 
   private final static Map<Class, Set> extensionsMap = Maps.<Class, Set>newHashMap();
 
@@ -98,18 +106,14 @@ public class Initialization
     return retVal;
   }
 
-  /**
-   * Used for testing only
-   */
+  @VisibleForTesting
   static void clearLoadedModules()
   {
     extensionsMap.clear();
   }
 
-  /**
-   * Used for testing only
-   */
-  static Map<String, URLClassLoader> getLoadersMap()
+  @VisibleForTesting
+  static Map<File, URLClassLoader> getLoadersMap()
   {
     return loadersMap;
   }
@@ -259,7 +263,7 @@ public class Initialization
    */
   public static URLClassLoader getClassLoaderForExtension(File extension) throws MalformedURLException
   {
-    URLClassLoader loader = loadersMap.get(extension.getName());
+    URLClassLoader loader = loadersMap.get(extension);
     if (loader == null) {
       final Collection<File> jars = FileUtils.listFiles(extension, new String[]{"jar"}, false);
       final URL[] urls = new URL[jars.size()];
@@ -269,17 +273,54 @@ public class Initialization
         log.info("added URL[%s]", url);
         urls[i++] = url;
       }
-      loader = new URLClassLoader(urls, Initialization.class.getClassLoader());
-      loadersMap.put(extension.getName(), loader);
+      loadersMap.putIfAbsent(extension, new URLClassLoader(urls, Initialization.class.getClassLoader()));
+      loader = loadersMap.get(extension);
     }
     return loader;
+  }
+
+  public static List<URL> getURLsForClasspath(String cp)
+  {
+    try {
+      String[] paths = cp.split(File.pathSeparator);
+
+      List<URL> urls = new ArrayList<>();
+      for (int i = 0; i < paths.length; i++) {
+        File f = new File(paths[i]);
+        if ("*".equals(f.getName())) {
+          File parentDir = f.getParentFile();
+          if (parentDir.isDirectory()) {
+            File[] jars = parentDir.listFiles(
+                new FilenameFilter()
+                {
+                  @Override
+                  public boolean accept(File dir, String name)
+                  {
+                    return name != null && (name.endsWith(".jar") || name.endsWith(".JAR"));
+                  }
+                }
+            );
+            for (File jar : jars) {
+              urls.add(jar.toURI().toURL());
+            }
+          }
+        } else {
+          urls.add(new File(paths[i]).toURI().toURL());
+        }
+      }
+      return urls;
+    } catch (IOException ex) {
+      throw Throwables.propagate(ex);
+    }
   }
 
   public static Injector makeInjectorWithModules(final Injector baseInjector, Iterable<? extends Module> modules)
   {
     final ModuleList defaultModules = new ModuleList(baseInjector);
     defaultModules.addModules(
+        // New modules should be added after Log4jShutterDownerModule
         new Log4jShutterDownerModule(),
+        new DruidAuthModule(),
         new LifecycleModule(),
         EmitterModule.class,
         HttpClientModule.global(),
@@ -304,6 +345,7 @@ public class Initialization
         new LocalDataStorageDruidModule(),
         new FirehoseModule(),
         new ParsersModule(),
+        new JavaScriptModule(),
         new StartupLoggingModule()
     );
 

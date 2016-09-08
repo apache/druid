@@ -24,7 +24,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.metamx.common.guava.Sequences;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.Query;
@@ -70,7 +70,7 @@ public class TimeseriesQueryRunnerBonusTest
   public void testOneRowAtATime() throws Exception
   {
     final IncrementalIndex oneRowIndex = new OnheapIncrementalIndex(
-        new DateTime("2012-01-01T00:00:00Z").getMillis(), QueryGranularity.NONE, new AggregatorFactory[]{}, 1000
+        new DateTime("2012-01-01T00:00:00Z").getMillis(), QueryGranularities.NONE, new AggregatorFactory[]{}, 1000
     );
 
     List<Result<TimeseriesResultValue>> results;
@@ -122,7 +122,7 @@ public class TimeseriesQueryRunnerBonusTest
 
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("xxx")
-                                  .granularity(QueryGranularity.ALL)
+                                  .granularity(QueryGranularities.ALL)
                                   .intervals(ImmutableList.of(new Interval("2012-01-01T00:00:00Z/P1D")))
                                   .aggregators(
                                       ImmutableList.<AggregatorFactory>of(

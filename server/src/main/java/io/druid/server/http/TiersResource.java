@@ -28,9 +28,11 @@ import com.google.common.collect.Sets;
 import com.google.common.collect.Table;
 import com.google.inject.Inject;
 import com.metamx.common.MapUtils;
+import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.InventoryView;
+import io.druid.server.http.security.StateResourceFilter;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 
@@ -47,6 +49,7 @@ import java.util.Set;
 /**
  */
 @Path("/druid/coordinator/v1/tiers")
+@ResourceFilters(StateResourceFilter.class)
 public class TiersResource
 {
   private final InventoryView serverInventoryView;

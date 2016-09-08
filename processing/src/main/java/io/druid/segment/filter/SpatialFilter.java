@@ -18,13 +18,17 @@
  */
 package io.druid.segment.filter;
 
+import com.google.common.base.Preconditions;
+import com.google.common.base.Predicate;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import com.metamx.collections.spatial.search.Bound;
 import io.druid.query.filter.BitmapIndexSelector;
+import io.druid.query.filter.DruidLongPredicate;
+import io.druid.query.filter.DruidPredicateFactory;
 import io.druid.query.filter.Filter;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
-import io.druid.segment.ColumnSelectorFactory;
+import io.druid.segment.incremental.SpatialDimensionRowTransformer;
 
 /**
  */
@@ -38,8 +42,8 @@ public class SpatialFilter implements Filter
       Bound bound
   )
   {
-    this.dimension = dimension;
-    this.bound = bound;
+    this.dimension = Preconditions.checkNotNull(dimension, "dimension");
+    this.bound = Preconditions.checkNotNull(bound, "bound");
   }
 
   @Override
@@ -54,14 +58,45 @@ public class SpatialFilter implements Filter
   {
     return factory.makeValueMatcher(
         dimension,
-        bound
+        new DruidPredicateFactory()
+        {
+          @Override
+          public Predicate<String> makeStringPredicate()
+          {
+            return new Predicate<String>()
+            {
+              @Override
+              public boolean apply(String input)
+              {
+                if (input == null) {
+                  return false;
+                }
+                final float[] coordinate = SpatialDimensionRowTransformer.decode(input);
+                return bound.contains(coordinate);
+              }
+            };
+          }
+
+          @Override
+          public DruidLongPredicate makeLongPredicate()
+          {
+            return new DruidLongPredicate()
+            {
+              @Override
+              public boolean applyLong(long input)
+              {
+                // SpatialFilter does not currently support longs
+                return false;
+              }
+            };
+          }
+        }
     );
   }
 
   @Override
-  public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
+  public boolean supportsBitmapIndex(BitmapIndexSelector selector)
   {
-    throw new UnsupportedOperationException();
+    return selector.getBitmapIndex(dimension) != null;
   }
-
 }

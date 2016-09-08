@@ -19,14 +19,14 @@
 
 package io.druid.server.http;
 
+import com.google.common.collect.ImmutableMap;
+import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.audit.AuditInfo;
 import io.druid.audit.AuditManager;
 import io.druid.common.config.JacksonConfigManager;
 import io.druid.server.coordinator.CoordinatorDynamicConfig;
-
+import io.druid.server.http.security.ConfigResourceFilter;
 import org.joda.time.Interval;
-
-import com.google.common.collect.ImmutableMap;
 
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
@@ -45,6 +45,7 @@ import javax.ws.rs.core.Response;
 /**
  */
 @Path("/druid/coordinator/v1/config")
+@ResourceFilters(ConfigResourceFilter.class)
 public class CoordinatorDynamicConfigsResource
 {
   private final JacksonConfigManager manager;

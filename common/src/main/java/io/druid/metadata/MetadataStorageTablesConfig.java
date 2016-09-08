@@ -31,7 +31,7 @@ public class MetadataStorageTablesConfig
 {
   public static MetadataStorageTablesConfig fromBase(String base)
   {
-    return new MetadataStorageTablesConfig(base, null, null, null, null, null, null, null, null);
+    return new MetadataStorageTablesConfig(base, null, null, null, null, null, null, null, null, null, null);
   }
 
   public static final String TASK_ENTRY_TYPE = "task";
@@ -44,6 +44,9 @@ public class MetadataStorageTablesConfig
 
   @JsonProperty("base")
   private final String base;
+
+  @JsonProperty("dataSource")
+  private final String dataSourceTable;
 
   @JsonProperty("pendingSegments")
   private final String pendingSegmentsTable;
@@ -69,9 +72,13 @@ public class MetadataStorageTablesConfig
   @JsonProperty("audit")
   private final String auditTable;
 
+  @JsonProperty("supervisors")
+  private final String supervisorTable;
+
   @JsonCreator
   public MetadataStorageTablesConfig(
       @JsonProperty("base") String base,
+      @JsonProperty("dataSource") String dataSourceTable,
       @JsonProperty("pendingSegments") String pendingSegmentsTable,
       @JsonProperty("segments") String segmentsTable,
       @JsonProperty("rules") String rulesTable,
@@ -79,10 +86,12 @@ public class MetadataStorageTablesConfig
       @JsonProperty("tasks") String tasksTable,
       @JsonProperty("taskLog") String taskLogTable,
       @JsonProperty("taskLock") String taskLockTable,
-      @JsonProperty("audit") String auditTable
+      @JsonProperty("audit") String auditTable,
+      @JsonProperty("supervisors") String supervisorTable
   )
   {
     this.base = (base == null) ? DEFAULT_BASE : base;
+    this.dataSourceTable = makeTableName(dataSourceTable, "dataSource");
     this.pendingSegmentsTable = makeTableName(pendingSegmentsTable, "pendingSegments");
     this.segmentsTable = makeTableName(segmentsTable, "segments");
     this.rulesTable = makeTableName(rulesTable, "rules");
@@ -95,7 +104,7 @@ public class MetadataStorageTablesConfig
     logTables.put(TASK_ENTRY_TYPE, this.taskLogTable);
     lockTables.put(TASK_ENTRY_TYPE, this.taskLockTable);
     this.auditTable = makeTableName(auditTable, "audit");
-
+    this.supervisorTable = makeTableName(supervisorTable, "supervisors");
   }
 
   private String makeTableName(String explicitTableName, String defaultSuffix)
@@ -113,6 +122,11 @@ public class MetadataStorageTablesConfig
   public String getBase()
   {
     return base;
+  }
+
+  public String getDataSourceTable()
+  {
+    return dataSourceTable;
   }
 
   public String getPendingSegmentsTable()
@@ -160,4 +174,8 @@ public class MetadataStorageTablesConfig
     return auditTable;
   }
 
+  public String getSupervisorTable()
+  {
+    return supervisorTable;
+  }
 }

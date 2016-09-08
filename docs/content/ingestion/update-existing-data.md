@@ -28,7 +28,7 @@ segments and avoid the overhead of rebuilding new segments with reindexing, you 
 ### Reindexing and Delta Ingestion with Hadoop Batch Ingestion
 
 This section assumes the reader understands how to do batch ingestion using Hadoop. See 
-[batch-ingestion](batch-ingestion.md) for more information. Hadoop batch-ingestion can be used for reindexing and delta ingestion.
+[batch-ingestion](batch-ingestion.html) for more information. Hadoop batch-ingestion can be used for reindexing and delta ingestion.
 
 Druid uses an `inputSpec` in the `ioConfig` to know where the data to be ingested is located and how to read it. 
 For simple Hadoop batch ingestion, `static` or `granularity` spec types allow you to read data stored in deep storage.
@@ -43,7 +43,7 @@ This is a type of `inputSpec` that reads data already stored inside Druid.
 |-----|----|-----------|--------|
 |type|String.|This should always be 'dataSource'.|yes|
 |ingestionSpec|JSON object.|Specification of Druid segments to be loaded. See below.|yes|
-|maxSplitSize|Number|Enables combining multiple segments into single Hadoop InputSplit according to size of segments. Default is none. |no|
+|maxSplitSize|Number|Enables combining multiple segments into single Hadoop InputSplit according to size of segments. With -1, druid calculates max split size based on user specified number of map task(mapred.map.tasks or mapreduce.job.maps). By default, one split is made for one segment. |no|
 
 Here is what goes inside `ingestionSpec`:
 

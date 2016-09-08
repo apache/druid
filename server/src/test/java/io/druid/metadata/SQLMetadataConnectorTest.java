@@ -54,12 +54,14 @@ public class SQLMetadataConnectorTest
     tables.add(tablesConfig.getLogTable(entryType));
     tables.add(tablesConfig.getEntryTable(entryType));
     tables.add(tablesConfig.getAuditTable());
+    tables.add(tablesConfig.getSupervisorTable());
 
     connector.createSegmentTable();
     connector.createConfigTable();
     connector.createRulesTable();
     connector.createTaskTables();
     connector.createAuditTable();
+    connector.createSupervisorsTable();
 
     connector.getDBI().withHandle(
         new HandleCallback<Void>()

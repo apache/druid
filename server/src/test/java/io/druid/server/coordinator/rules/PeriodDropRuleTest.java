@@ -34,7 +34,7 @@ public class PeriodDropRuleTest
   private final static DataSegment.Builder builder = DataSegment.builder()
                                                           .dataSource("test")
                                                           .version(new DateTime("2012-12-31T01:00:00").toString())
-                                                          .shardSpec(new NoneShardSpec());
+                                                          .shardSpec(NoneShardSpec.instance());
 
   @Test
   public void testAppliesToAll()

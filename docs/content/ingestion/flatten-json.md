@@ -17,7 +17,7 @@ Defining the JSON Flatten Spec allows nested JSON fields to be flattened during 
 
 | Field | Type | Description | Required |
 |-------|------|-------------|----------|
-| type | String | Type of the field, "root" or "nested". | yes |
+| type | String | Type of the field, "root" or "path". | yes |
 | name | String | This string will be used as the column name when the data has been ingested.  | yes |
 | expr | String | Defines an expression for accessing the field within the JSON object, using [JsonPath](https://github.com/jayway/JsonPath) notation. | yes |
 
@@ -58,7 +58,7 @@ To flatten this JSON, the parseSpec could be defined as follows:
       },
       "dim2",
       {
-        "type": "nested",
+        "type": "path",
         "name": "foo.bar",
         "expr": "$.foo.bar"
       },
@@ -68,37 +68,37 @@ To flatten this JSON, the parseSpec could be defined as follows:
         "expr": "foo.bar"
       },
       {
-        "type": "nested",
-        "name": "nested-metric",
+        "type": "path",
+        "name": "path-metric",
         "expr": "$.nestmet.val"
       },
       {
-        "type": "nested",
+        "type": "path",
         "name": "hello-0",
         "expr": "$.hello[0]"
       },
       {
-        "type": "nested",
+        "type": "path",
         "name": "hello-4",
         "expr": "$.hello[4]"
       },
       {
-        "type": "nested",
+        "type": "path",
         "name": "world-hey",
-        "expr": "$.world.hey"
+        "expr": "$.world[0].hey"
       },
       {
-        "type": "nested",
+        "type": "path",
         "name": "worldtree",
-        "expr": "$.world.tree"
+        "expr": "$.world[1].tree"
       },
       {
-        "type": "nested",
+        "type": "path",
         "name": "first-food",
         "expr": "$.thing.food[0]"
       },
       {
-        "type": "nested",
+        "type": "path",
         "name": "second-food",
         "expr": "$.thing.food[1]"
       }
@@ -125,17 +125,17 @@ Aggregators should use the metric column names as defined in the flattenSpec. Us
 "metricsSpec" : [ 
 {
   "type" : "longSum",
-  "name" : "Nested Metric Value",
-  "fieldName" : "nested-metric"
+  "name" : "path-metric-sum",
+  "fieldName" : "path-metric"
 }, 
 {
   "type" : "doubleSum",
-  "name" : "Hello Index #0",
+  "name" : "hello-0-sum",
   "fieldName" : "hello-0"
 },
 {
   "type" : "longSum",
-  "name" : "metrica",
+  "name" : "metrica-sum",
   "fieldName" : "metrica"
 }
 ]
@@ -148,3 +148,4 @@ Note that:
 * Duplicate field definitions are not allowed, an exception will be thrown.
 * If auto field discovery is enabled, any discovered field with the same name as one already defined in the field specs will be skipped and not added twice.
 * The JSON input must be a JSON object at the root, not an array. e.g., {"valid": "true"} and {"valid":[1,2,3]} are supported but [{"invalid": "true"}] and [1,2,3] are not.
+* [http://jsonpath.herokuapp.com/](http://jsonpath.herokuapp.com/) is useful for testing the path expressions.

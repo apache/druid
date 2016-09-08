@@ -113,7 +113,7 @@ public class DataSchema
       // exclude timestamp from dimensions by default, unless explicitly included in the list of dimensions
       if (timestampSpec != null) {
         final String timestampColumn = timestampSpec.getTimestampColumn();
-        if (!(dimensionsSpec.hasCustomDimensions() && dimensionsSpec.getDimensions().contains(timestampColumn))) {
+        if (!(dimensionsSpec.hasCustomDimensions() && dimensionsSpec.getDimensionNames().contains(timestampColumn))) {
           dimensionExclusions.add(timestampColumn);
         }
       }
@@ -122,7 +122,7 @@ public class DataSchema
         for (AggregatorFactory aggregator : aggregators) {
           metSet.add(aggregator.getName());
         }
-        final Set<String> dimSet = Sets.newHashSet(dimensionsSpec.getDimensions());
+        final Set<String> dimSet = Sets.newHashSet(dimensionsSpec.getDimensionNames());
         final Set<String> overlap = Sets.intersection(metSet, dimSet);
         if (!overlap.isEmpty()) {
           throw new IAE(
@@ -164,42 +164,6 @@ public class DataSchema
   public DataSchema withGranularitySpec(GranularitySpec granularitySpec)
   {
     return new DataSchema(dataSource, parser, aggregators, granularitySpec, jsonMapper);
-  }
-
-  @Override
-  public boolean equals(Object o)
-  {
-    if (this == o) {
-      return true;
-    }
-    if (o == null || getClass() != o.getClass()) {
-      return false;
-    }
-
-    DataSchema that = (DataSchema) o;
-
-    if (!dataSource.equals(that.dataSource)) {
-      return false;
-    }
-    if (parser != null ? !parser.equals(that.parser) : that.parser != null) {
-      return false;
-    }
-    // Probably incorrect - comparing Object[] arrays with Arrays.equals
-    if (!Arrays.equals(aggregators, that.aggregators)) {
-      return false;
-    }
-    return granularitySpec.equals(that.granularitySpec);
-
-  }
-
-  @Override
-  public int hashCode()
-  {
-    int result = dataSource.hashCode();
-    result = 31 * result + (parser != null ? parser.hashCode() : 0);
-    result = 31 * result + Arrays.hashCode(aggregators);
-    result = 31 * result + granularitySpec.hashCode();
-    return result;
   }
 
   @Override

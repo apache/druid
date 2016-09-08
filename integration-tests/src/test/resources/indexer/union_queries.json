@@ -529,11 +529,13 @@
                 "result": [
                     {
                         "dimension": "user",
-                        "value": "triplets"
+                        "value": "triplets",
+			"count":4
                     },
                     {
                         "dimension": "namespace",
-                        "value": "wikipedia"
+                        "value": "wikipedia",
+			"count":12
                     }
                 ]
             }

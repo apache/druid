@@ -8,8 +8,8 @@ Druid can load data from static files through a variety of methods described her
 
 ## Hadoop-based Batch Ingestion
 
-Hadoop-based batch ingestion in Druid is supported via a Hadoop-ingestion task. These tasks can be posted to a running instance  
-of a Druid [overlord](../design/indexing-service.html). A sample task is shown below:
+Hadoop-based batch ingestion in Druid is supported via a Hadoop-ingestion task. These tasks can be posted to a running
+instance of a Druid [overlord](../design/indexing-service.html). A sample task is shown below:
 
 ```json
 {
@@ -82,11 +82,11 @@ of a Druid [overlord](../design/indexing-service.html). A sample task is shown b
 |hadoopDependencyCoordinates|A JSON array of Hadoop dependency coordinates that Druid will use, this property will override the default Hadoop coordinates. Once specified, Druid will look for those Hadoop dependencies from the location specified by `druid.extensions.hadoopDependenciesDir`|no|
 |classpathPrefix|Classpath that will be pre-appended for the peon process.|no|
 
+also note that, druid automatically computes the classpath for hadoop job containers that run in hadoop cluster. But, in case of conflicts between hadoop and druid's dependencies, you can manually specify the classpath by setting `druid.extensions.hadoopContainerDruidClasspath` property. See the extensions config in [base druid configuration](../configuration/index.html).
+
 ### DataSchema
 
-This field is required.
-
-See [Ingestion](../ingestion/index.html)
+This field is required. See [Ingestion](../ingestion/index.html).
 
 ### IOConfig
 
@@ -95,9 +95,9 @@ This field is required.
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
 |type|String|This should always be 'hadoop'.|yes|
-|inputSpec|Object|a specification of where to pull the data in from. See below.|yes|
-|segmentOutputPath|String|the path to dump segments into.|yes|
-|metadataUpdateSpec|Object|a specification of how to update the metadata for the druid cluster these segments belong to.|yes|
+|inputSpec|Object|A specification of where to pull the data in from. See below.|yes|
+|segmentOutputPath|String|The path to dump segments into.|yes|
+|metadataUpdateSpec|Object|A specification of how to update the metadata for the druid cluster these segments belong to.|yes|
 
 #### InputSpec specification
 
@@ -105,7 +105,7 @@ There are multiple types of inputSpecs:
 
 ##### `static`
 
-Is a type of inputSpec where a static path to where the data files are located is passed.
+A type of inputSpec where a static path to the data files is provided.
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
@@ -119,16 +119,16 @@ For example, using the static input paths:
 
 ##### `granularity`
 
-Is a type of inputSpec that expects data to be laid out in a specific path format. Specifically, it expects it to be segregated by day in this directory format `y=XXXX/m=XX/d=XX/H=XX/M=XX/S=XX` (dates are represented by lowercase, time is represented by uppercase).
+A type of inputSpec that expects data to be organized in directories according to datetime using the path format: `y=XXXX/m=XX/d=XX/H=XX/M=XX/S=XX` (where date is represented by lowercase and time is represented by uppercase).
 
 |Field|Type|Description|Required|
 |-----|----|-----------|--------|
-|dataGranularity|String|specifies the granularity to expect the data at, e.g. hour means to expect directories `y=XXXX/m=XX/d=XX/H=XX`.|yes|
-|inputPath|String|Base path to append the expected time path to.|yes|
+|dataGranularity|String|Specifies the granularity to expect the data at, e.g. hour means to expect directories `y=XXXX/m=XX/d=XX/H=XX`.|yes|
+|inputPath|String|Base path to append the datetime path to.|yes|
 |filePattern|String|Pattern that files should match to be included.|yes|
-|pathFormat|String|Joda date-time format for each directory. Default value is `"'y'=yyyy/'m'=MM/'d'=dd/'H'=HH"`, or see [Joda documentation](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html)|no|
+|pathFormat|String|Joda datetime format for each directory. Default value is `"'y'=yyyy/'m'=MM/'d'=dd/'H'=HH"`, or see [Joda documentation](http://www.joda.org/joda-time/apidocs/org/joda/time/format/DateTimeFormat.html)|no|
 
-For example, if the sample config were run with the interval 2012-06-01/2012-06-02, it would expect data at the paths
+For example, if the sample config were run with the interval 2012-06-01/2012-06-02, it would expect data at the paths:
 
 ```
 s3n://billy-bucket/the/data/is/here/y=2012/m=06/d=01/H=00
@@ -153,16 +153,60 @@ The tuningConfig is optional and default parameters will be used if no tuningCon
 |-----|----|-----------|--------|
 |workingPath|String|The working path to use for intermediate results (results between Hadoop jobs).|no (default == '/tmp/druid-indexing')|
 |version|String|The version of created segments.|no (default == datetime that indexing starts at)|
-|partitionsSpec|Object|A specification of how to partition each time bucket into segments, absence of this property means no partitioning will occur.More details below.|no (default == 'hashed')|
-|maxRowsInMemory|Integer|The number of rows to aggregate before persisting. This number is the post-aggregation rows, so it is not equivalent to the number of input events, but the number of aggregated rows that those events result in. This is used to manage the required JVM heap size.|no (default == 75000)|
+|partitionsSpec|Object|A specification of how to partition each time bucket into segments. Absence of this property means no partitioning will occur. See 'Partitioning specification' below.|no (default == 'hashed')|
+|maxRowsInMemory|Integer|The number of rows to aggregate before persisting. Note that this is the number of post-aggregation rows which may not be equal to the number of input events due to roll-up. This is used to manage the required JVM heap size.|no (default == 75000)|
 |leaveIntermediate|Boolean|Leave behind intermediate files (for debugging) in the workingPath when a job completes, whether it passes or fails.|no (default == false)|
 |cleanupOnFailure|Boolean|Clean up intermediate files when a job fails (unless leaveIntermediate is on).|no (default == true)|
 |overwriteFiles|Boolean|Override existing files found during indexing.|no (default == false)|
 |ignoreInvalidRows|Boolean|Ignore rows found to have problems.|no (default == false)|
-|useCombiner|Boolean|Use hadoop combiner to merge rows at mapper if possible.|no (default == false)|
-|jobProperties|Object|A map of properties to add to the Hadoop job configuration.|no (default == null)|
-|buildV9Directly|Boolean|Whether to build v9 index directly instead of building v8 index and convert it to v9 format|no (default = false)|
-|numBackgroundPersistThreads|Integer|The number of new background threads to use for incremental persists. Using this feature causes a notable increase in memory pressure and cpu usage, but will make the job finish more quickly. If changing from the default of 0 (use current thread for persists), we recommend setting it to 1.|no (default == 0)|
+|combineText|Boolean|Use CombineTextInputFormat to combine multiple files into a file split. This can speed up Hadoop jobs when processing a large number of small files.|no (default == false)|
+|useCombiner|Boolean|Use Hadoop combiner to merge rows at mapper if possible.|no (default == false)|
+|jobProperties|Object|A map of properties to add to the Hadoop job configuration, see below for details.|no (default == null)|
+|indexSpec|Object|Tune how data is indexed. See below for more information.|no|
+|buildV9Directly|Boolean|Build v9 index directly instead of building v8 index and converting it to v9 format.|no (default = false)|
+|numBackgroundPersistThreads|Integer|The number of new background threads to use for incremental persists. Using this feature causes a notable increase in memory pressure and cpu usage but will make the job finish more quickly. If changing from the default of 0 (use current thread for persists), we recommend setting it to 1.|no (default == 0)|
+
+#### jobProperties field of TuningConfig
+
+```json
+   "tuningConfig" : {
+     "type": "hadoop",
+     "jobProperties": {
+       "<hadoop-property-a>": "<value-a>",
+       "<hadoop-property-b>": "<value-b>"
+     }
+   }
+```
+
+Hadoop's [MapReduce documentation](https://hadoop.apache.org/docs/stable/hadoop-mapreduce-client/hadoop-mapreduce-client-core/mapred-default.xml) lists the possible configuration parameters.
+
+With some Hadoop distributions, it may be necessary to set `mapreduce.job.classpath` or `mapreduce.job.user.classpath.first`
+to avoid class loading issues. See the [working with different Hadoop versions documentation](../operations/other-hadoop.html)
+for more details.
+
+#### IndexSpec
+
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|bitmap|Object|Compression format for bitmap indexes. Should be a JSON object; see below for options.|no (defaults to Concise)|
+|dimensionCompression|String|Compression format for dimension columns. Choose from `LZ4`, `LZF`, or `uncompressed`.|no (default == `LZ4`)|
+|metricCompression|String|Compression format for metric columns. Choose from `LZ4`, `LZF`, `uncompressed`, or `none`.|no (default == `LZ4`)|
+|longEncoding|String|Encoding format for metric and dimension columns with type long. Choose from `auto` or `longs`. `auto` encodes the values using offset or lookup table depending on column cardinality, and store them with variable size. `longs` stores the value as is with 8 bytes each.|no (default == `longs`)|
+
+##### Bitmap types
+
+For Concise bitmaps:
+
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|type|String|Must be `concise`.|yes|
+
+For Roaring bitmaps:
+
+|Field|Type|Description|Required|
+|-----|----|-----------|--------|
+|type|String|Must be `roaring`.|yes|
+|compressRunOnSerialization|Boolean|Use a run-length encoding where it is estimated as more space efficient.|no (default == `true`)|
 
 ### Partitioning specification
 
@@ -188,11 +232,12 @@ cardinality of the input set and a target partition size.
 
 The configuration options are:
 
-|property|description|required?|
+|Field|Description|Required|
 |--------|-----------|---------|
-|type|type of partitionSpec to be used |"hashed"|
-|targetPartitionSize|target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|either this or numShards|
-|numShards|specify the number of partitions directly, instead of a target partition size. Ingestion will run faster, since it can skip the step necessary to select a number of partitions automatically.|either this or targetPartitionSize|
+|type|Type of partitionSpec to be used.|"hashed"|
+|targetPartitionSize|Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|either this or numShards|
+|numShards|Specify the number of partitions directly, instead of a target partition size. Ingestion will run faster, since it can skip the step necessary to select a number of partitions automatically.|either this or targetPartitionSize|
+|partitionDimensions|The dimensions to partition on. Leave blank to select all dimensions. Only used with numShards, will be ignored when targetPartitionSize is set|no|
 
 #### Single-dimension partitioning
 
@@ -211,18 +256,19 @@ override it with a specific dimension.
 
 The configuration options are:
 
-|property|description|required?|
+|Field|Description|Required|
 |--------|-----------|---------|
-|type|type of partitionSpec to be used |"dimension"|
-|targetPartitionSize|target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|yes|
-|maxPartitionSize|maximum number of rows to include in a partition. Defaults to 50% larger than the targetPartitionSize.|no|
-|partitionDimension|the dimension to partition on. Leave blank to select a dimension automatically.|no|
-|assumeGrouped|assume input data has already been grouped on time and dimensions. Ingestion will run faster, but can choose suboptimal partitions if the assumption is violated.|no|
+|type|Type of partitionSpec to be used.|"dimension"|
+|targetPartitionSize|Target number of rows to include in a partition, should be a number that targets segments of 500MB\~1GB.|yes|
+|maxPartitionSize|Maximum number of rows to include in a partition. Defaults to 50% larger than the targetPartitionSize.|no|
+|partitionDimension|The dimension to partition on. Leave blank to select a dimension automatically.|no|
+|assumeGrouped|Assume that input data has already been grouped on time and dimensions. Ingestion will run faster, but may choose sub-optimal partitions if this assumption is violated.|no|
 
 ### Remote Hadoop Cluster
 
 If you have a remote Hadoop cluster, make sure to include the folder holding your configuration `*.xml` files in your Druid `_common` configuration folder.  
-If you having dependency problems with your version of Hadoop and the version compiled with Druid, please see [these docs](../operations/other-hadoop.html).
+
+If you are having dependency problems with your version of Hadoop and the version compiled with Druid, please see [these docs](../operations/other-hadoop.html).
 
 ### Using Elastic MapReduce
 
@@ -231,14 +277,14 @@ from S3. To do this:
 
 - Create a persistent, [long-running cluster](http://docs.aws.amazon.com/ElasticMapReduce/latest/ManagementGuide/emr-plan-longrunning-transient.html).
 - When creating your cluster, enter the following configuration. If you're using the wizard, this
-should be in advanced mode under "Edit software settings".
+should be in advanced mode under "Edit software settings":
 
 ```
 classification=yarn-site,properties=[mapreduce.reduce.memory.mb=6144,mapreduce.reduce.java.opts=-server -Xms2g -Xmx2g -Duser.timezone=UTC -Dfile.encoding=UTF-8 -XX:+PrintGCDetails -XX:+PrintGCTimeStamps,mapreduce.map.java.opts=758,mapreduce.map.java.opts=-server -Xms512m -Xmx512m -Duser.timezone=UTC -Dfile.encoding=UTF-8 -XX:+PrintGCDetails -XX:+PrintGCTimeStamps,mapreduce.task.timeout=1800000]
 ```
 
 - Follow the instructions under "[Configure Hadoop for data
-loads](cluster.html#configure-cluster-for-hadoop-data-loads)" using the XML files from
+loads](../tutorials/cluster.html#configure-cluster-for-hadoop-data-loads)" using the XML files from
 `/etc/hadoop/conf` on your EMR master.
 
 #### Loading from S3 with EMR
@@ -257,8 +303,8 @@ loads](cluster.html#configure-cluster-for-hadoop-data-loads)" using the XML file
 }
 ```
 
-Note that this method uses Hadoop's builtin S3 filesystem rather than Amazon's EMRFS, and is not compatible
-with Amazon-specific features such as S3 encryption and consistent views. If you need to use those
+Note that this method uses Hadoop's built-in S3 filesystem rather than Amazon's EMRFS, and is not compatible
+with Amazon-specific features such as S3 encryption and consistent views. If you need to use these
 features, you will need to make the Amazon EMR Hadoop JARs available to Druid through one of the
 mechanisms described in the [Using other Hadoop distributions](#using-other-hadoop-distributions) section.
 
@@ -268,7 +314,7 @@ Druid works out of the box with many Hadoop distributions.
 
 If you are having dependency conflicts between Druid and your version of Hadoop, you can try
 searching for a solution in the [Druid user groups](https://groups.google.com/forum/#!forum/druid-
-user), or reading the Druid [Different Hadoop Versions](..//operations/other-hadoop.html) documentation.
+user), or reading the Druid [Different Hadoop Versions](../operations/other-hadoop.html) documentation.
 
 ## Command Line Hadoop Indexer
 
@@ -277,7 +323,7 @@ See [here](../ingestion/command-line-hadoop-indexer.html) for more info.
 
 ## IndexTask-based Batch Ingestion
 
-If you do not want to have a dependency on Hadoop for batch ingestion, you can also use the index task. This task will be much slower and less scalable than the Hadoop-based method. See [here](../ingestion/tasks.html)for more info.   
+If you do not want to have a dependency on Hadoop for batch ingestion, you can also use the index task. This task will be much slower and less scalable than the Hadoop-based method. See [here](../ingestion/tasks.html) for more info.
 
 Having Problems?
 ----------------

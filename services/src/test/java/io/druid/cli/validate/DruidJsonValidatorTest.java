@@ -19,7 +19,30 @@
 
 package io.druid.cli.validate;
 
+import com.fasterxml.jackson.databind.Module;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.inject.Injector;
+import com.metamx.common.Granularity;
 import io.airlift.airline.Cli;
+import io.druid.granularity.QueryGranularities;
+import io.druid.guice.FirehoseModule;
+import io.druid.guice.GuiceInjectors;
+import io.druid.indexing.common.task.RealtimeIndexTask;
+import io.druid.indexing.common.task.TaskResource;
+import io.druid.jackson.DefaultObjectMapper;
+import io.druid.query.aggregation.AggregatorFactory;
+import io.druid.segment.IndexSpec;
+import io.druid.segment.indexing.DataSchema;
+import io.druid.segment.indexing.RealtimeIOConfig;
+import io.druid.segment.indexing.RealtimeTuningConfig;
+import io.druid.segment.indexing.granularity.UniformGranularitySpec;
+import io.druid.segment.realtime.FireDepartment;
+import io.druid.segment.realtime.FireDepartmentMetrics;
+import io.druid.segment.realtime.firehose.LocalFirehoseFactory;
+import io.druid.segment.realtime.plumber.Plumber;
+import io.druid.segment.realtime.plumber.PlumberSchool;
+import io.druid.timeline.partition.NoneShardSpec;
+import org.joda.time.Period;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -35,6 +58,8 @@ import java.io.Writer;
 public class DruidJsonValidatorTest
 {
   private File inputFile;
+  private final Injector injector = GuiceInjectors.makeStartupInjector();
+
   @Rule
   public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
@@ -44,63 +69,51 @@ public class DruidJsonValidatorTest
     inputFile = temporaryFolder.newFile();
   }
 
+  private Runnable parseCommand(String... args)
+  {
+    Cli<?> parser = Cli.builder("validator")
+                       .withCommand(DruidJsonValidator.class)
+                       .build();
+
+    Object command = parser.parse(args);
+    Assert.assertTrue(command instanceof Runnable);
+
+    injector.injectMembers(command);
+    return (Runnable) command;
+  }
+
   @Test(expected = UnsupportedOperationException.class)
   public void testExceptionCase()
   {
-    String type = "";
-    Cli<?> parser = Cli.builder("validator")
-        .withCommand(DruidJsonValidator.class)
-        .build();
-    Object command = parser.parse("validator","-f", inputFile.getAbsolutePath(), "-t", type);
-    Assert.assertNotNull(command);
-    DruidJsonValidator druidJsonValidator = (DruidJsonValidator) command;
-    druidJsonValidator.run();
+    parseCommand("validator", "-f", inputFile.getAbsolutePath(), "-t", "").run();
   }
 
   @Test(expected = RuntimeException.class)
   public void testExceptionCaseNoFile()
   {
-    String type = "query";
-    Cli<?> parser = Cli.builder("validator")
-        .withCommand(DruidJsonValidator.class)
-        .build();
-    Object command = parser.parse("validator","-f", "", "-t", type);
-    Assert.assertNotNull(command);
-    DruidJsonValidator druidJsonValidator = (DruidJsonValidator) command;
-    druidJsonValidator.run();
+    parseCommand("validator", "-f", "", "-t", "query").run();
   }
 
   @Test(expected = RuntimeException.class)
   public void testParseValidatorInvalid()
   {
-    String type = "parse";
-    Cli<?> parser = Cli.builder("validator")
-        .withCommand(DruidJsonValidator.class)
-        .build();
-    Object command = parser.parse(
+    parseCommand(
         "validator",
         "-f", "simple_test_data_record_parser_invalid.json",
-        "-t", type
-    );
-    Assert.assertNotNull(command);
-    DruidJsonValidator druidJsonValidator = (DruidJsonValidator) command;
-    druidJsonValidator.run();
+        "-t", "parse"
+    ).run();
   }
 
   @Test
   public void testParseValidator()
   {
-    String type = "parse";
-    Cli<?> parser = Cli.builder("validator")
-        .withCommand(DruidJsonValidator.class)
-        .build();
-    Object command = parser.parse(
+    Runnable command = parseCommand(
         "validator",
         "-f", "simple_test_data_record_parser.json",
         "-r", "simple_test_data.tsv",
-        "-t", type
+        "-t", "parse"
     );
-    Assert.assertNotNull(command);
+    command.run();
 
     Writer writer = new StringWriter()
     {
@@ -121,7 +134,67 @@ public class DruidJsonValidatorTest
     Assert.assertEquals(expected, writer.toString());
   }
 
-  @After public void tearDown()
+  @Test
+  public void testTaskValidator() throws Exception
+  {
+    final ObjectMapper jsonMapper = new DefaultObjectMapper();
+    for (final Module jacksonModule : new FirehoseModule().getJacksonModules()) {
+      jsonMapper.registerModule(jacksonModule);
+    }
+
+    final RealtimeIndexTask task = new RealtimeIndexTask(
+        null,
+        new TaskResource("rofl", 2),
+        new FireDepartment(
+            new DataSchema(
+                "foo",
+                null,
+                new AggregatorFactory[0],
+                new UniformGranularitySpec(Granularity.HOUR, QueryGranularities.NONE, null),
+                jsonMapper
+            ),
+            new RealtimeIOConfig(
+                new LocalFirehoseFactory(new File("lol"), "rofl", null), new PlumberSchool()
+            {
+              @Override
+              public Plumber findPlumber(
+                  DataSchema schema, RealtimeTuningConfig config, FireDepartmentMetrics metrics
+              )
+              {
+                return null;
+              }
+            },
+                null
+            ),
+
+            new RealtimeTuningConfig(
+                1,
+                new Period("PT10M"),
+                null,
+                null,
+                null,
+                null,
+                1,
+                NoneShardSpec.instance(),
+                new IndexSpec(),
+                null,
+                0,
+                0,
+                true,
+                null
+            )
+        ),
+        null
+    );
+
+    File tmp = temporaryFolder.newFile("test_task.json");
+    jsonMapper.writeValue(tmp, task);
+
+    parseCommand("validator", "-f", tmp.getAbsolutePath(), "-t", "task").run();
+  }
+
+  @After
+  public void tearDown()
   {
     temporaryFolder.delete();
   }

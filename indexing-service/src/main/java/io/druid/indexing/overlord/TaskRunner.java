@@ -56,6 +56,8 @@ public interface TaskRunner
    */
   void registerListener(TaskRunnerListener listener, Executor executor);
 
+  void unregisterListener(String listenerId);
+
   /**
    * Run a task. The returned status should be some kind of completed status.
    *

@@ -16,7 +16,7 @@ Once that's complete, you can load your own dataset by writing a custom ingestio
 
 ## Writing an ingestion spec
 
-When loading files into Druid, you will use Druid's [batch loading](ingestion-batch.html) process. 
+When loading files into Druid, you will use Druid's [batch loading](../ingestion/batch-ingestion.html) process.
 There's an example batch ingestion spec in `quickstart/wikiticker-index.json` that you can modify 
 for your own needs.
 

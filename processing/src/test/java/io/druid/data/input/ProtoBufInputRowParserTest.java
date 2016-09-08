@@ -20,7 +20,7 @@
 package io.druid.data.input;
 
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.data.input.impl.JSONParseSpec;
+import io.druid.data.input.impl.TimeAndDimsParseSpec;
 import io.druid.data.input.impl.TimestampSpec;
 import org.joda.time.DateTime;
 import org.junit.Test;
@@ -57,9 +57,9 @@ public class ProtoBufInputRowParserTest
 
     //configure parser with desc file
     ProtoBufInputRowParser parser = new ProtoBufInputRowParser(
-        new JSONParseSpec(
+        new TimeAndDimsParseSpec(
             new TimestampSpec("timestamp", "iso", null),
-            new DimensionsSpec(Arrays.asList(DIMENSIONS), Arrays.<String>asList(), null)
+            new DimensionsSpec(DimensionsSpec.getDefaultSchemas(Arrays.asList(DIMENSIONS)), Arrays.<String>asList(), null)
         ),
         "prototest.desc"
     );

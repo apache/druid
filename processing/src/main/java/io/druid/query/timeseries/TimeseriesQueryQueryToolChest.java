@@ -25,6 +25,8 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.inject.Inject;
+import com.metamx.common.ISE;
+import com.metamx.common.guava.Sequence;
 import com.metamx.common.guava.nary.BinaryFn;
 import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.granularity.QueryGranularity;
@@ -105,14 +107,14 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   public ServiceMetricEvent.Builder makeMetricBuilder(TimeseriesQuery query)
   {
     return DruidMetrics.makePartialQueryTimeMetric(query)
-                          .setDimension(
-                              "numMetrics",
-                              String.valueOf(query.getAggregatorSpecs().size())
-                          )
-                          .setDimension(
-                              "numComplexMetrics",
-                              String.valueOf(DruidMetrics.findNumComplexAggs(query.getAggregatorSpecs()))
-                          );
+                       .setDimension(
+                           "numMetrics",
+                           String.valueOf(query.getAggregatorSpecs().size())
+                       )
+                       .setDimension(
+                           "numComplexMetrics",
+                           String.valueOf(DruidMetrics.findNumComplexAggs(query.getAggregatorSpecs()))
+                       );
   }
 
   @Override
@@ -135,12 +137,14 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
         final byte[] filterBytes = dimFilter == null ? new byte[]{} : dimFilter.getCacheKey();
         final byte[] aggregatorBytes = QueryCacheHelper.computeAggregatorBytes(query.getAggregatorSpecs());
         final byte[] granularityBytes = query.getGranularity().cacheKey();
-        final byte descending = query.isDescending() ? (byte)1 : 0;
+        final byte descending = query.isDescending() ? (byte) 1 : 0;
+        final byte skipEmptyBuckets = query.isSkipEmptyBuckets() ? (byte) 1 : 0;
 
         return ByteBuffer
-            .allocate(2 + granularityBytes.length + filterBytes.length + aggregatorBytes.length)
+            .allocate(3 + granularityBytes.length + filterBytes.length + aggregatorBytes.length)
             .put(TIMESERIES_QUERY)
             .put(descending)
+            .put(skipEmptyBuckets)
             .put(granularityBytes)
             .put(filterBytes)
             .put(aggregatorBytes)
@@ -208,9 +212,23 @@ public class TimeseriesQueryQueryToolChest extends QueryToolChest<Result<Timeser
   }
 
   @Override
-  public QueryRunner<Result<TimeseriesResultValue>> preMergeQueryDecoration(QueryRunner<Result<TimeseriesResultValue>> runner)
+  public QueryRunner<Result<TimeseriesResultValue>> preMergeQueryDecoration(final QueryRunner<Result<TimeseriesResultValue>> runner)
   {
-    return intervalChunkingQueryRunnerDecorator.decorate(runner, this);
+    return intervalChunkingQueryRunnerDecorator.decorate(
+        new QueryRunner<Result<TimeseriesResultValue>>()
+        {
+          @Override
+          public Sequence<Result<TimeseriesResultValue>> run(
+              Query<Result<TimeseriesResultValue>> query, Map<String, Object> responseContext
+          )
+          {
+            TimeseriesQuery timeseriesQuery = (TimeseriesQuery) query;
+            if (timeseriesQuery.getDimensionsFilter() != null) {
+              timeseriesQuery = timeseriesQuery.withDimFilter(timeseriesQuery.getDimensionsFilter().optimize());
+            }
+            return runner.run(timeseriesQuery, responseContext);
+          }
+        }, this);
   }
 
   @Override

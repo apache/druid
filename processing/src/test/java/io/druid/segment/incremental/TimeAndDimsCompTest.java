@@ -22,7 +22,7 @@ package io.druid.segment.incremental;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import org.junit.Assert;
@@ -42,7 +42,7 @@ public class TimeAndDimsCompTest
   public void testBasic() throws IndexSizeExceededException
   {
     IncrementalIndex index = new OnheapIncrementalIndex(
-        0, QueryGranularity.NONE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}, 1000
+        0, QueryGranularities.NONE, new AggregatorFactory[]{new CountAggregatorFactory("cnt")}, 1000
     );
 
     long time = System.currentTimeMillis();

@@ -23,7 +23,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Sets;
 import io.druid.indexing.common.task.NoopTask;
-import io.druid.indexing.overlord.ImmutableZkWorker;
+import io.druid.indexing.overlord.ImmutableWorkerInfo;
 import io.druid.indexing.overlord.config.RemoteTaskRunnerConfig;
 import io.druid.indexing.worker.Worker;
 import org.joda.time.DateTime;
@@ -38,18 +38,22 @@ public class EqualDistributionWorkerSelectStrategyTest
   {
     final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy();
 
-    Optional<ImmutableZkWorker> optional = strategy.findWorkerForTask(
+    Optional<ImmutableWorkerInfo> optional = strategy.findWorkerForTask(
         new RemoteTaskRunnerConfig(),
         ImmutableMap.of(
             "lhost",
-            new ImmutableZkWorker(
-                new Worker("lhost", "lhost", 1, "v1", DateTime.now()), 0,
-                Sets.<String>newHashSet()
+            new ImmutableWorkerInfo(
+                new Worker("lhost", "lhost", 1, "v1"), 0,
+                Sets.<String>newHashSet(),
+                Sets.<String>newHashSet(),
+                DateTime.now()
             ),
             "localhost",
-            new ImmutableZkWorker(
-                new Worker("localhost", "localhost", 1, "v1", DateTime.now()), 1,
-                Sets.<String>newHashSet()
+            new ImmutableWorkerInfo(
+                new Worker("localhost", "localhost", 1, "v1"), 1,
+                Sets.<String>newHashSet(),
+                Sets.<String>newHashSet(),
+                DateTime.now()
             )
         ),
         new NoopTask(null, 1, 0, null, null, null)
@@ -61,7 +65,7 @@ public class EqualDistributionWorkerSelectStrategyTest
           }
         }
     );
-    ImmutableZkWorker worker = optional.get();
+    ImmutableWorkerInfo worker = optional.get();
     Assert.assertEquals("lhost", worker.getWorker().getHost());
   }
 
@@ -71,18 +75,22 @@ public class EqualDistributionWorkerSelectStrategyTest
     String DISABLED_VERSION = "";
     final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy();
 
-    Optional<ImmutableZkWorker> optional = strategy.findWorkerForTask(
+    Optional<ImmutableWorkerInfo> optional = strategy.findWorkerForTask(
         new RemoteTaskRunnerConfig(),
         ImmutableMap.of(
                       "lhost",
-                      new ImmutableZkWorker(
-                              new Worker("disableHost", "disableHost", 10, DISABLED_VERSION, DateTime.now()), 2,
-                              Sets.<String>newHashSet()
+                      new ImmutableWorkerInfo(
+                              new Worker("disableHost", "disableHost", 10, DISABLED_VERSION), 2,
+                              Sets.<String>newHashSet(),
+                              Sets.<String>newHashSet(),
+                              DateTime.now()
                       ),
                       "localhost",
-                      new ImmutableZkWorker(
-                              new Worker("enableHost", "enableHost", 10, "v1", DateTime.now()), 5,
-                              Sets.<String>newHashSet()
+                      new ImmutableWorkerInfo(
+                              new Worker("enableHost", "enableHost", 10, "v1"), 5,
+                              Sets.<String>newHashSet(),
+                              Sets.<String>newHashSet(),
+                              DateTime.now()
                       )
         ),
         new NoopTask(null, 1, 0, null, null, null)
@@ -94,7 +102,7 @@ public class EqualDistributionWorkerSelectStrategyTest
                   }
         }
     );
-    ImmutableZkWorker worker = optional.get();
+    ImmutableWorkerInfo worker = optional.get();
     Assert.assertEquals("enableHost", worker.getWorker().getHost());
   }
 
@@ -104,18 +112,22 @@ public class EqualDistributionWorkerSelectStrategyTest
     String DISABLED_VERSION = "";
     final EqualDistributionWorkerSelectStrategy strategy = new EqualDistributionWorkerSelectStrategy();
 
-    Optional<ImmutableZkWorker> optional = strategy.findWorkerForTask(
+    Optional<ImmutableWorkerInfo> optional = strategy.findWorkerForTask(
             new RemoteTaskRunnerConfig(),
             ImmutableMap.of(
                     "lhost",
-                    new ImmutableZkWorker(
-                            new Worker("disableHost", "disableHost", 10, DISABLED_VERSION, DateTime.now()), 5,
-                            Sets.<String>newHashSet()
+                    new ImmutableWorkerInfo(
+                            new Worker("disableHost", "disableHost", 10, DISABLED_VERSION), 5,
+                            Sets.<String>newHashSet(),
+                            Sets.<String>newHashSet(),
+                            DateTime.now()
                     ),
                     "localhost",
-                    new ImmutableZkWorker(
-                            new Worker("enableHost", "enableHost", 10, "v1", DateTime.now()), 5,
-                            Sets.<String>newHashSet()
+                    new ImmutableWorkerInfo(
+                            new Worker("enableHost", "enableHost", 10, "v1"), 5,
+                            Sets.<String>newHashSet(),
+                            Sets.<String>newHashSet(),
+                            DateTime.now()
                     )
             ),
             new NoopTask(null, 1, 0, null, null, null)
@@ -127,7 +139,7 @@ public class EqualDistributionWorkerSelectStrategyTest
                 }
             }
     );
-    ImmutableZkWorker worker = optional.get();
+    ImmutableWorkerInfo worker = optional.get();
     Assert.assertEquals("enableHost", worker.getWorker().getHost());
   }
 }

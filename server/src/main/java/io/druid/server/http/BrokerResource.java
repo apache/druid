@@ -21,7 +21,9 @@ package io.druid.server.http;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.inject.Inject;
+import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.client.BrokerServerView;
+import io.druid.server.http.security.StateResourceFilter;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
@@ -30,6 +32,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 @Path("/druid/broker/v1")
+@ResourceFilters(StateResourceFilter.class)
 public class BrokerResource
 {
   private final BrokerServerView brokerServerView;

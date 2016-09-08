@@ -93,6 +93,7 @@ public class TaskActionTestKit extends ExternalResource
         metadataStorageCoordinator,
         new NoopServiceEmitter()
     );
+    testDerbyConnector.createDataSourceTable();
     testDerbyConnector.createPendingSegmentsTable();
     testDerbyConnector.createSegmentTable();
     testDerbyConnector.createRulesTable();

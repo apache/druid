@@ -25,10 +25,10 @@ import io.druid.indexing.common.task.Task;
 
 /**
  */
-public class TaskActionHolder<T>
+public class TaskActionHolder
 {
   private final Task task;
-  private final TaskAction<T> action;
+  private final TaskAction action;
 
   @JsonCreator
   public TaskActionHolder(
@@ -47,7 +47,7 @@ public class TaskActionHolder<T>
   }
 
   @JsonProperty
-  public TaskAction<T> getAction()
+  public TaskAction getAction()
   {
     return action;
   }

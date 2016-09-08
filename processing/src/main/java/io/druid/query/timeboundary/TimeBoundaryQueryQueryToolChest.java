@@ -61,12 +61,12 @@ public class TimeBoundaryQueryQueryToolChest
   @Override
   public <T extends LogicalSegment> List<T> filterSegments(TimeBoundaryQuery query, List<T> segments)
   {
-    if (segments.size() <= 1) {
+    if (segments.size() <= 1 || query.hasFilters()) {
       return segments;
     }
 
-    final T min = segments.get(0);
-    final T max = segments.get(segments.size() - 1);
+    final T min = query.isMaxTime() ? null : segments.get(0);
+    final T max = query.isMinTime() ? null : segments.get(segments.size() - 1);
 
     return Lists.newArrayList(
         Iterables.filter(
@@ -109,7 +109,7 @@ public class TimeBoundaryQueryQueryToolChest
   @Override
   public ServiceMetricEvent.Builder makeMetricBuilder(TimeBoundaryQuery query)
   {
-    return new ServiceMetricEvent.Builder()
+    return DruidMetrics.makePartialQueryTimeMetric(query)
             .setDimension(DruidMetrics.DATASOURCE, DataSourceUtil.getMetricName(query.getDataSource()))
             .setDimension(DruidMetrics.TYPE, query.getType());
   }

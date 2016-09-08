@@ -34,6 +34,7 @@ import io.druid.data.input.InputRow;
 import io.druid.indexer.HadoopDruidIndexerConfig;
 import io.druid.indexer.JobHelper;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapred.FileInputFormat;
@@ -82,6 +83,16 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
     logger.info("segments to read [%s]", segmentsStr);
 
     long maxSize = conf.getLong(CONF_MAX_SPLIT_SIZE, 0);
+    if (maxSize < 0) {
+      long totalSize = 0;
+      for (WindowedDataSegment segment : segments) {
+        totalSize += segment.getSegment().getSize();
+      }
+      int mapTask = ((JobConf)conf).getNumMapTasks();
+      if (mapTask > 0) {
+        maxSize = totalSize / mapTask;
+      }
+    }
 
     if (maxSize > 0) {
       //combining is to happen, let us sort the segments list by size so that they
@@ -139,12 +150,22 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
     @Override
     public org.apache.hadoop.mapred.InputFormat get()
     {
-      return new TextInputFormat();
+      return new TextInputFormat()
+      {
+        //Always consider non-splittable as we only want to get location of blocks for the segment
+        //and not consider the splitting.
+        //also without this, isSplitable(..) fails with NPE because compressionCodecs is not properly setup.
+        @Override
+        protected boolean isSplitable(FileSystem fs, Path file) {
+          return false;
+        }
+      };
     }
   };
 
   @VisibleForTesting
-  DatasourceInputFormat setSupplier(Supplier<org.apache.hadoop.mapred.InputFormat> supplier) {
+  DatasourceInputFormat setSupplier(Supplier<org.apache.hadoop.mapred.InputFormat> supplier)
+  {
     this.supplier = supplier;
     return this;
   }
@@ -160,7 +181,7 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
       locations = getFrequentLocations(segments, fio, conf);
     }
     catch (Exception e) {
-      logger.error("Exception thrown finding location of splits", e);
+      logger.error(e, "Exception thrown finding location of splits");
     }
     return new DatasourceInputSplit(segments, locations);
   }
@@ -181,7 +202,8 @@ public class DatasourceInputFormat extends InputFormat<NullWritable, InputRow>
     return getFrequentLocations(locations);
   }
 
-  private static String[] getFrequentLocations(Iterable<String> hosts) {
+  private static String[] getFrequentLocations(Iterable<String> hosts)
+  {
 
     final CountingMap<String> counter = new CountingMap<>();
     for (String location : hosts) {

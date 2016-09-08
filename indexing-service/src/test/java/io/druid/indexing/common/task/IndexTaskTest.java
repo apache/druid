@@ -27,7 +27,7 @@ import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.indexing.common.TaskLock;
 import io.druid.indexing.common.TaskToolbox;
 import io.druid.indexing.common.TestUtils;
@@ -111,13 +111,14 @@ public class IndexTaskTest
                                 null
                             ),
                             new DimensionsSpec(
-                                Arrays.asList("ts"),
+                                DimensionsSpec.getDefaultSchemas(Arrays.asList("ts")),
                                 Lists.<String>newArrayList(),
                                 Lists.<SpatialDimensionSchema>newArrayList()
                             ),
                             null,
                             Arrays.asList("ts", "dim", "val")
-                        )
+                        ),
+                        null
                     ),
                     Map.class
                 ),
@@ -126,7 +127,7 @@ public class IndexTaskTest
                 },
                 new UniformGranularitySpec(
                     Granularity.DAY,
-                    QueryGranularity.MINUTE,
+                    QueryGranularities.MINUTE,
                     Arrays.asList(new Interval("2014/2015"))
                 ),
                 jsonMapper
@@ -183,13 +184,14 @@ public class IndexTaskTest
                                 null
                             ),
                             new DimensionsSpec(
-                                Arrays.asList("ts"),
+                                DimensionsSpec.getDefaultSchemas(Arrays.asList("ts")),
                                 Lists.<String>newArrayList(),
                                 Lists.<SpatialDimensionSchema>newArrayList()
                             ),
                             null,
                             Arrays.asList("ts", "dim", "val")
-                        )
+                        ),
+                        null
                     ),
                     Map.class
                 ),
@@ -197,7 +199,7 @@ public class IndexTaskTest
                     new LongSumAggregatorFactory("val", "val")
                 },
                 new ArbitraryGranularitySpec(
-                    QueryGranularity.MINUTE,
+                    QueryGranularities.MINUTE,
                     Arrays.asList(new Interval("2014/2015"))
                 ),
                 jsonMapper
@@ -242,8 +244,15 @@ public class IndexTaskTest
           }
         }, null, new DataSegmentPusher()
         {
+          @Deprecated
           @Override
           public String getPathForHadoop(String dataSource)
+          {
+            return getPathForHadoop();
+          }
+
+          @Override
+          public String getPathForHadoop()
           {
             return null;
           }
@@ -289,13 +298,14 @@ public class IndexTaskTest
                                 null
                             ),
                             new DimensionsSpec(
-                                Arrays.asList("dim"),
+                                DimensionsSpec.getDefaultSchemas(Arrays.asList("dim")),
                                 Lists.<String>newArrayList(),
                                 Lists.<SpatialDimensionSchema>newArrayList()
                             ),
                             null,
                             Arrays.asList("ts", "dim", "val")
-                        )
+                        ),
+                        null
                     ),
                     Map.class
                 ),
@@ -304,7 +314,7 @@ public class IndexTaskTest
                 },
                 new UniformGranularitySpec(
                     Granularity.HOUR,
-                    QueryGranularity.HOUR,
+                    QueryGranularities.HOUR,
                     Arrays.asList(new Interval("2015-03-01T08:00:00Z/2015-03-01T09:00:00Z"))
                 ),
                 jsonMapper

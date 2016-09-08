@@ -78,5 +78,12 @@ public class DerbyConnector extends SQLMetadataConnector
   public DBI getDBI() { return dbi; }
 
   @Override
+  protected int getStreamingFetchSize()
+  {
+    // Derby only supports fetch size of 1
+    return 1;
+  }
+
+  @Override
   public String getValidationQuery() { return "VALUES 1"; }
 }

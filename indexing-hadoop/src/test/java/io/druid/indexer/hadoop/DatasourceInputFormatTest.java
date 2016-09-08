@@ -19,16 +19,15 @@
 
 package io.druid.indexer.hadoop;
 
-import com.google.api.client.util.Maps;
 import com.google.common.base.Supplier;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import io.druid.indexer.JobHelper;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -46,7 +45,6 @@ import org.junit.Before;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -56,7 +54,7 @@ public class DatasourceInputFormatTest
 {
   private List<WindowedDataSegment> segments;
   private List<LocatedFileStatus> locations;
-  private Configuration config;
+  private JobConf config;
   private JobContext context;
 
   @Before
@@ -74,7 +72,7 @@ public class DatasourceInputFormatTest
                 ),
                 ImmutableList.of("host"),
                 ImmutableList.of("visited_sum", "unique_hosts"),
-                new NoneShardSpec(),
+                NoneShardSpec.instance(),
                 9,
                 2
             )
@@ -90,7 +88,7 @@ public class DatasourceInputFormatTest
                 ),
                 ImmutableList.of("host"),
                 ImmutableList.of("visited_sum", "unique_hosts"),
-                new NoneShardSpec(),
+                NoneShardSpec.instance(),
                 9,
                 11
             )
@@ -106,7 +104,7 @@ public class DatasourceInputFormatTest
                 ),
                 ImmutableList.of("host"),
                 ImmutableList.of("visited_sum", "unique_hosts"),
-                new NoneShardSpec(),
+                NoneShardSpec.instance(),
                 9,
                 4
             )
@@ -143,7 +141,7 @@ public class DatasourceInputFormatTest
         )
     );
 
-    config = new Configuration();
+    config = new JobConf();
     config.set(
         DatasourceInputFormat.CONF_INPUT_SEGMENTS,
         new DefaultObjectMapper().writeValueAsString(segments)
@@ -237,6 +235,34 @@ public class DatasourceInputFormatTest
         Sets.newHashSet((((DatasourceInputSplit) splits.get(1)).getSegments()))
     );
     Assert.assertArrayEquals(new String[]{"s1", "s2"}, splits.get(1).getLocations());
+  }
+
+  @Test
+  public void testGetSplitsCombineCalculated() throws Exception
+  {
+    config.set(DatasourceInputFormat.CONF_MAX_SPLIT_SIZE, "-1");
+    config.setNumMapTasks(3);
+    List<InputSplit> splits = new DatasourceInputFormat().setSupplier(testFormatter).getSplits(context);
+
+    Assert.assertEquals(3, splits.size());
+
+    Assert.assertEquals(
+        Sets.newHashSet(segments.get(0)),
+        Sets.newHashSet((((DatasourceInputSplit) splits.get(0)).getSegments()))
+    );
+    Assert.assertArrayEquals(new String[]{"s1", "s2"}, splits.get(0).getLocations());
+
+    Assert.assertEquals(
+        Sets.newHashSet(segments.get(2)),
+        Sets.newHashSet((((DatasourceInputSplit) splits.get(1)).getSegments()))
+    );
+    Assert.assertArrayEquals(new String[]{"s2", "s3"}, splits.get(1).getLocations());
+
+    Assert.assertEquals(
+        Sets.newHashSet(segments.get(1)),
+        Sets.newHashSet((((DatasourceInputSplit) splits.get(2)).getSegments()))
+    );
+    Assert.assertArrayEquals(new String[]{"s1", "s2"}, splits.get(2).getLocations());
   }
 
   @Test

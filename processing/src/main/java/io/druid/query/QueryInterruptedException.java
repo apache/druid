@@ -21,88 +21,128 @@ package io.druid.query;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.collect.ImmutableSet;
 
-import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.TimeoutException;
 
+/**
+ * Exception representing a failed query. The name "QueryInterruptedException" is a misnomer; this is actually
+ * used on the client side for *all* kinds of failed queries.
+ *
+ * Fields:
+ * - "errorCode" is a well-defined errorCode code taken from a specific list (see the static constants). "Unknown exception"
+ * represents all wrapped exceptions other than interrupt/timeout/cancellation.
+ * - "errorMessage" is the toString of the wrapped exception
+ * - "errorClass" is the class of the wrapped exception
+ * - "host" is the host that the errorCode occurred on
+ *
+ * The QueryResource is expected to emit the JSON form of this object when errors happen, and the DirectDruidClient
+ * deserializes and wraps them.
+ */
 public class QueryInterruptedException extends RuntimeException
 {
   public static final String QUERY_INTERRUPTED = "Query interrupted";
   public static final String QUERY_TIMEOUT = "Query timeout";
   public static final String QUERY_CANCELLED = "Query cancelled";
+  public static final String RESOURCE_LIMIT_EXCEEDED = "Resource limit exceeded";
   public static final String UNKNOWN_EXCEPTION = "Unknown exception";
 
-  private static final Set<String> listKnownException = ImmutableSet.of(
-      QUERY_CANCELLED,
-      QUERY_INTERRUPTED,
-      QUERY_TIMEOUT,
-      UNKNOWN_EXCEPTION
-  );
-
-  @JsonProperty
-  private final String causeMessage;
-  @JsonProperty
+  private final String errorCode;
+  private final String errorClass;
   private final String host;
 
   @JsonCreator
   public QueryInterruptedException(
-      @JsonProperty("error") String message,
-      @JsonProperty("causeMessage") String causeMessage,
+      @JsonProperty("error") String errorCode,
+      @JsonProperty("errorMessage") String errorMessage,
+      @JsonProperty("errorClass") String errorClass,
       @JsonProperty("host") String host
   )
   {
-    super(message);
-    this.causeMessage = causeMessage;
+    super(errorMessage);
+    this.errorCode = errorCode;
+    this.errorClass = errorClass;
     this.host = host;
   }
 
+  /**
+   * Creates a new QueryInterruptedException wrapping an underlying exception. The errorMessage and errorClass
+   * of this exception will be based on the highest non-QueryInterruptedException in the causality chain.
+   *
+   * @param cause wrapped exception
+   */
   public QueryInterruptedException(Throwable cause)
   {
-    this(cause, null);
+    this(cause, getHostFromThrowable(cause));
   }
 
-  public QueryInterruptedException(Throwable e, String host)
+  public QueryInterruptedException(Throwable cause, String host)
   {
-    super(e);
+    super(cause == null ? null : cause.getMessage(), cause);
+    this.errorCode = getErrorCodeFromThrowable(cause);
+    this.errorClass = getErrorClassFromThrowable(cause);
     this.host = host;
-    causeMessage = e.getMessage();
   }
 
   @JsonProperty("error")
+  public String getErrorCode()
+  {
+    return errorCode;
+  }
+
+  @JsonProperty("errorMessage")
   @Override
   public String getMessage()
   {
-    if (this.getCause() == null) {
-      return super.getMessage();
-    } else if (this.getCause() instanceof QueryInterruptedException) {
-      return getCause().getMessage();
-    } else if (this.getCause() instanceof InterruptedException) {
-      return QUERY_INTERRUPTED;
-    } else if (this.getCause() instanceof CancellationException) {
-      return QUERY_CANCELLED;
-    } else if (this.getCause() instanceof TimeoutException) {
-      return QUERY_TIMEOUT;
-    } else {
-      return UNKNOWN_EXCEPTION;
-    }
+    return super.getMessage();
   }
 
-  @JsonProperty("causeMessage")
-  public String getCauseMessage()
+  @JsonProperty
+  public String getErrorClass()
   {
-    return causeMessage;
+    return errorClass;
   }
 
-  @JsonProperty("host")
+  @JsonProperty
   public String getHost()
   {
     return host;
   }
 
-  public boolean isNotKnown()
+  private static String getErrorCodeFromThrowable(Throwable e)
   {
-    return !listKnownException.contains(getMessage());
+    if (e instanceof QueryInterruptedException) {
+      return ((QueryInterruptedException) e).getErrorCode();
+    } else if (e instanceof InterruptedException) {
+      return QUERY_INTERRUPTED;
+    } else if (e instanceof CancellationException) {
+      return QUERY_CANCELLED;
+    } else if (e instanceof TimeoutException) {
+      return QUERY_TIMEOUT;
+    } else if (e instanceof ResourceLimitExceededException) {
+      return RESOURCE_LIMIT_EXCEEDED;
+    } else {
+      return UNKNOWN_EXCEPTION;
+    }
+  }
+
+  private static String getErrorClassFromThrowable(Throwable e)
+  {
+    if (e instanceof QueryInterruptedException) {
+      return ((QueryInterruptedException) e).getErrorClass();
+    } else if (e != null) {
+      return e.getClass().getName();
+    } else {
+      return null;
+    }
+  }
+
+  private static String getHostFromThrowable(Throwable e)
+  {
+    if (e instanceof QueryInterruptedException) {
+      return ((QueryInterruptedException) e).getHost();
+    } else {
+      return null;
+    }
   }
 }

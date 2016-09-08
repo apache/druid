@@ -40,7 +40,6 @@ import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.lifecycle.LifecycleStop;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceEmitter;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.client.DruidDataSource;
 import io.druid.client.DruidServer;
 import io.druid.client.ImmutableDruidDataSource;
@@ -52,10 +51,10 @@ import io.druid.common.config.JacksonConfigManager;
 import io.druid.concurrent.Execs;
 import io.druid.curator.discovery.ServiceAnnouncer;
 import io.druid.guice.ManageLifecycle;
+import io.druid.guice.annotations.CoordinatorIndexingServiceHelper;
 import io.druid.guice.annotations.Self;
 import io.druid.metadata.MetadataRuleManager;
 import io.druid.metadata.MetadataSegmentManager;
-import io.druid.segment.IndexIO;
 import io.druid.server.DruidNode;
 import io.druid.server.coordinator.helper.DruidCoordinatorBalancer;
 import io.druid.server.coordinator.helper.DruidCoordinatorCleanupOvershadowed;
@@ -64,8 +63,6 @@ import io.druid.server.coordinator.helper.DruidCoordinatorHelper;
 import io.druid.server.coordinator.helper.DruidCoordinatorLogger;
 import io.druid.server.coordinator.helper.DruidCoordinatorRuleRunner;
 import io.druid.server.coordinator.helper.DruidCoordinatorSegmentInfoLoader;
-import io.druid.server.coordinator.helper.DruidCoordinatorSegmentKiller;
-import io.druid.server.coordinator.helper.DruidCoordinatorSegmentMerger;
 import io.druid.server.coordinator.rules.LoadRule;
 import io.druid.server.coordinator.rules.Rule;
 import io.druid.server.initialization.ZkPathsConfig;
@@ -127,6 +124,7 @@ public class DruidCoordinator
   private final AtomicReference<LeaderLatch> leaderLatch;
   private final ServiceAnnouncer serviceAnnouncer;
   private final DruidNode self;
+  private final Set<DruidCoordinatorHelper> indexingServiceHelpers;
   private volatile boolean started = false;
   private volatile int leaderCounter = 0;
   private volatile boolean leader = false;
@@ -147,7 +145,8 @@ public class DruidCoordinator
       IndexingServiceClient indexingServiceClient,
       LoadQueueTaskMaster taskMaster,
       ServiceAnnouncer serviceAnnouncer,
-      @Self DruidNode self
+      @Self DruidNode self,
+      @CoordinatorIndexingServiceHelper Set<DruidCoordinatorHelper> indexingServiceHelpers
   )
   {
     this(
@@ -164,7 +163,8 @@ public class DruidCoordinator
         taskMaster,
         serviceAnnouncer,
         self,
-        Maps.<String, LoadQueuePeon>newConcurrentMap()
+        Maps.<String, LoadQueuePeon>newConcurrentMap(),
+        indexingServiceHelpers
     );
   }
 
@@ -182,7 +182,8 @@ public class DruidCoordinator
       LoadQueueTaskMaster taskMaster,
       ServiceAnnouncer serviceAnnouncer,
       DruidNode self,
-      ConcurrentMap<String, LoadQueuePeon> loadQueuePeonMap
+      ConcurrentMap<String, LoadQueuePeon> loadQueuePeonMap,
+      Set<DruidCoordinatorHelper> indexingServiceHelpers
   )
   {
     this.config = config;
@@ -198,6 +199,7 @@ public class DruidCoordinator
     this.taskMaster = taskMaster;
     this.serviceAnnouncer = serviceAnnouncer;
     this.self = self;
+    this.indexingServiceHelpers = indexingServiceHelpers;
 
     this.exec = scheduledExecutorFactory.create(1, "Coordinator-Exec--%d");
 
@@ -403,7 +405,7 @@ public class DruidCoordinator
             public void execute()
             {
               try {
-                if (curator.checkExists().forPath(toServedSegPath) != null    &&
+                if (curator.checkExists().forPath(toServedSegPath) != null &&
                     curator.checkExists().forPath(toLoadQueueSegPath) == null &&
                     !dropPeon.getSegmentsToDrop().contains(segment)) {
                   dropPeon.dropSegment(segment, callback);
@@ -559,12 +561,7 @@ public class DruidCoordinator
           coordinatorRunnables.add(
               Pair.of(
                   new CoordinatorIndexingServiceRunnable(
-                      makeIndexingServiceHelpers(
-                          configManager.watch(
-                              DatasourceWhitelist.CONFIG_KEY,
-                              DatasourceWhitelist.class
-                          )
-                      ),
+                      makeIndexingServiceHelpers(),
                       startingLeaderCounter
                   ),
                   config.getCoordinatorIndexingPeriod()
@@ -642,87 +639,14 @@ public class DruidCoordinator
     }
   }
 
-  private List<DruidCoordinatorHelper> makeIndexingServiceHelpers(
-      final AtomicReference<DatasourceWhitelist> whitelistRef
-  )
+  private List<DruidCoordinatorHelper> makeIndexingServiceHelpers()
   {
     List<DruidCoordinatorHelper> helpers = Lists.newArrayList();
-
     helpers.add(new DruidCoordinatorSegmentInfoLoader(DruidCoordinator.this));
+    helpers.addAll(indexingServiceHelpers);
 
-    if (config.isConvertSegments()) {
-      helpers.add(new DruidCoordinatorVersionConverter(indexingServiceClient, whitelistRef));
-    }
-    if (config.isMergeSegments()) {
-      helpers.add(new DruidCoordinatorSegmentMerger(indexingServiceClient, whitelistRef));
-      helpers.add(
-          new DruidCoordinatorHelper()
-          {
-            @Override
-            public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
-            {
-              CoordinatorStats stats = params.getCoordinatorStats();
-              log.info("Issued merge requests for %s segments", stats.getGlobalStats().get("mergedCount").get());
-
-              params.getEmitter().emit(
-                  new ServiceMetricEvent.Builder().build(
-                      "coordinator/merge/count", stats.getGlobalStats().get("mergedCount")
-                  )
-              );
-
-              return params;
-            }
-          }
-      );
-    }
-
-    if (config.isKillSegments()) {
-      helpers.add(
-          new DruidCoordinatorSegmentKiller(
-              metadataSegmentManager,
-              indexingServiceClient,
-              config.getCoordinatorKillDurationToRetain(),
-              config.getCoordinatorKillPeriod(),
-              config.getCoordinatorKillMaxSegments()
-          )
-      );
-    }
-
+    log.info("Done making indexing service helpers [%s]", helpers);
     return ImmutableList.copyOf(helpers);
-  }
-
-  public static class DruidCoordinatorVersionConverter implements DruidCoordinatorHelper
-  {
-    private final IndexingServiceClient indexingServiceClient;
-    private final AtomicReference<DatasourceWhitelist> whitelistRef;
-
-    public DruidCoordinatorVersionConverter(
-        IndexingServiceClient indexingServiceClient,
-        AtomicReference<DatasourceWhitelist> whitelistRef
-    )
-    {
-      this.indexingServiceClient = indexingServiceClient;
-      this.whitelistRef = whitelistRef;
-    }
-
-    @Override
-    public DruidCoordinatorRuntimeParams run(DruidCoordinatorRuntimeParams params)
-    {
-      DatasourceWhitelist whitelist = whitelistRef.get();
-
-      for (DataSegment dataSegment : params.getAvailableSegments()) {
-        if (whitelist == null || whitelist.contains(dataSegment.getDataSource())) {
-          final Integer binaryVersion = dataSegment.getBinaryVersion();
-
-          if (binaryVersion == null || binaryVersion < IndexIO.CURRENT_VERSION_ID) {
-            log.info("Upgrading version on segment[%s]", dataSegment.getIdentifier());
-            indexingServiceClient.upgradeSegment(dataSegment);
-          }
-        }
-      }
-
-      return params;
-    }
   }
 
   public abstract class CoordinatorRunnable implements Runnable
@@ -762,23 +686,22 @@ public class DruidCoordinator
           }
         }
 
-        BalancerStrategyFactory factory =
-            new CostBalancerStrategyFactory(getDynamicConfigs().getBalancerComputeThreads());
-
-        // Do coordinator stuff.
-        DruidCoordinatorRuntimeParams params =
-            DruidCoordinatorRuntimeParams.newBuilder()
-                                         .withStartTime(startTime)
-                                         .withDatasources(metadataSegmentManager.getInventory())
-                                         .withDynamicConfigs(getDynamicConfigs())
-                                         .withEmitter(emitter)
-                                         .withBalancerStrategyFactory(factory)
-                                         .build();
-
-        for (DruidCoordinatorHelper helper : helpers) {
-          // Don't read state and run state in the same helper otherwise racy conditions may exist
-          if (leader && startingLeaderCounter == leaderCounter) {
-            params = helper.run(params);
+        try (BalancerStrategyFactory factory =
+                 new CostBalancerStrategyFactory(getDynamicConfigs().getBalancerComputeThreads())) {
+          // Do coordinator stuff.
+          DruidCoordinatorRuntimeParams params =
+              DruidCoordinatorRuntimeParams.newBuilder()
+                                           .withStartTime(startTime)
+                                           .withDatasources(metadataSegmentManager.getInventory())
+                                           .withDynamicConfigs(getDynamicConfigs())
+                                           .withEmitter(emitter)
+                                           .withBalancerStrategyFactory(factory)
+                                           .build();
+          for (DruidCoordinatorHelper helper : helpers) {
+            // Don't read state and run state in the same helper otherwise racy conditions may exist
+            if (leader && startingLeaderCounter == leaderCounter) {
+              params = helper.run(params);
+            }
           }
         }
       }
@@ -876,7 +799,7 @@ public class DruidCoordinator
               new DruidCoordinatorCleanupUnneeded(DruidCoordinator.this),
               new DruidCoordinatorCleanupOvershadowed(DruidCoordinator.this),
               new DruidCoordinatorBalancer(DruidCoordinator.this),
-              new DruidCoordinatorLogger()
+              new DruidCoordinatorLogger(DruidCoordinator.this)
           ),
           startingLeaderCounter
       );

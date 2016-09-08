@@ -33,10 +33,13 @@ import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import com.google.inject.Inject;
 import com.metamx.common.IAE;
+import com.metamx.common.ISE;
 import com.metamx.common.StringUtils;
 import com.metamx.common.lifecycle.LifecycleStart;
 import com.metamx.common.logger.Logger;
+import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.indexing.overlord.IndexerMetadataStorageCoordinator;
+import io.druid.indexing.overlord.SegmentPublishResult;
 import io.druid.segment.realtime.appenderator.SegmentIdentifier;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.TimelineObjectHolder;
@@ -55,6 +58,7 @@ import org.skife.jdbi.v2.ResultIterator;
 import org.skife.jdbi.v2.StatementContext;
 import org.skife.jdbi.v2.TransactionCallback;
 import org.skife.jdbi.v2.TransactionStatus;
+import org.skife.jdbi.v2.exceptions.CallbackFailedException;
 import org.skife.jdbi.v2.tweak.HandleCallback;
 import org.skife.jdbi.v2.util.ByteArrayMapper;
 import org.skife.jdbi.v2.util.StringMapper;
@@ -65,14 +69,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  */
 public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStorageCoordinator
 {
   private static final Logger log = new Logger(IndexerSQLMetadataStorageCoordinator.class);
-
-  private static int ALLOCATE_SEGMENT_QUIET_TRIES = 3;
+  private static final int ALLOCATE_SEGMENT_QUIET_TRIES = 3;
 
   private final ObjectMapper jsonMapper;
   private final MetadataStorageTablesConfig dbTables;
@@ -93,6 +97,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   @LifecycleStart
   public void start()
   {
+    connector.createDataSourceTable();
     connector.createPendingSegmentsTable();
     connector.createSegmentTable();
   }
@@ -264,24 +269,90 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
    */
   public Set<DataSegment> announceHistoricalSegments(final Set<DataSegment> segments) throws IOException
   {
-    return connector.getDBI().inTransaction(
-        new TransactionCallback<Set<DataSegment>>()
-        {
-          @Override
-          public Set<DataSegment> inTransaction(Handle handle, TransactionStatus transactionStatus) throws IOException
+    final SegmentPublishResult result = announceHistoricalSegments(segments, null, null);
+
+    // Metadata transaction cannot fail because we are not trying to do one.
+    if (!result.isSuccess()) {
+      throw new ISE("WTF?! announceHistoricalSegments failed with null metadata, should not happen.");
+    }
+
+    return result.getSegments();
+  }
+
+  /**
+   * {@inheritDoc}
+   */
+  @Override
+  public SegmentPublishResult announceHistoricalSegments(
+      final Set<DataSegment> segments,
+      final DataSourceMetadata startMetadata,
+      final DataSourceMetadata endMetadata
+  ) throws IOException
+  {
+    if (segments.isEmpty()) {
+      throw new IllegalArgumentException("segment set must not be empty");
+    }
+
+    final String dataSource = segments.iterator().next().getDataSource();
+    for (DataSegment segment : segments) {
+      if (!dataSource.equals(segment.getDataSource())) {
+        throw new IllegalArgumentException("segments must all be from the same dataSource");
+      }
+    }
+
+    if ((startMetadata == null && endMetadata != null) || (startMetadata != null && endMetadata == null)) {
+      throw new IllegalArgumentException("start/end metadata pair must be either null or non-null");
+    }
+
+    final AtomicBoolean txnFailure = new AtomicBoolean(false);
+
+    try {
+      return connector.retryTransaction(
+          new TransactionCallback<SegmentPublishResult>()
           {
-            final Set<DataSegment> inserted = Sets.newHashSet();
+            @Override
+            public SegmentPublishResult inTransaction(
+                final Handle handle,
+                final TransactionStatus transactionStatus
+            ) throws Exception
+            {
+              final Set<DataSegment> inserted = Sets.newHashSet();
 
-            for (final DataSegment segment : segments) {
-              if (announceHistoricalSegment(handle, segment)) {
-                inserted.add(segment);
+              if (startMetadata != null) {
+                final boolean success = updateDataSourceMetadataWithHandle(
+                    handle,
+                    dataSource,
+                    startMetadata,
+                    endMetadata
+                );
+
+                if (!success) {
+                  transactionStatus.setRollbackOnly();
+                  txnFailure.set(true);
+                  throw new RuntimeException("Aborting transaction!");
+                }
               }
-            }
 
-            return ImmutableSet.copyOf(inserted);
-          }
-        }
-    );
+              for (final DataSegment segment : segments) {
+                if (announceHistoricalSegment(handle, segment)) {
+                  inserted.add(segment);
+                }
+              }
+
+              return new SegmentPublishResult(ImmutableSet.copyOf(inserted), true);
+            }
+          },
+          3,
+          SQLMetadataConnector.DEFAULT_MAX_TRIES
+      );
+    }
+    catch (CallbackFailedException e) {
+      if (txnFailure.get()) {
+        return new SegmentPublishResult(ImmutableSet.<DataSegment>of(), false);
+      } else {
+        throw e;
+      }
+    }
   }
 
   @Override
@@ -499,10 +570,10 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
   }
 
   /**
-   * Attempts to insert a single segment to the database. If the segment already exists, will do nothing. Meant
-   * to be called from within a transaction.
+   * Attempts to insert a single segment to the database. If the segment already exists, will do nothing; although,
+   * this checking is imperfect and callers must be prepared to retry their entire transaction on exceptions.
    *
-   * @return true if the segment was added, false otherwise
+   * @return true if the segment was added, false if it already existed
    */
   private boolean announceHistoricalSegment(final Handle handle, final DataSegment segment) throws IOException
   {
@@ -512,38 +583,31 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         return false;
       }
 
-      // Try/catch to work around races due to SELECT -> INSERT. Avoid ON DUPLICATE KEY since it's not portable.
-      try {
-        handle.createStatement(
-            String.format(
-                "INSERT INTO %s (id, dataSource, created_date, start, \"end\", partitioned, version, used, payload) "
-                + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
-                dbTables.getSegmentsTable()
-            )
-        )
-              .bind("id", segment.getIdentifier())
-              .bind("dataSource", segment.getDataSource())
-              .bind("created_date", new DateTime().toString())
-              .bind("start", segment.getInterval().getStart().toString())
-              .bind("end", segment.getInterval().getEnd().toString())
-              .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
-              .bind("version", segment.getVersion())
-              .bind("used", true)
-              .bind("payload", jsonMapper.writeValueAsBytes(segment))
-              .execute();
+      // SELECT -> INSERT can fail due to races; callers must be prepared to retry.
+      // Avoiding ON DUPLICATE KEY since it's not portable.
+      // Avoiding try/catch since it may cause inadvertent transaction-splitting.
+      handle.createStatement(
+          String.format(
+              "INSERT INTO %s (id, dataSource, created_date, start, \"end\", partitioned, version, used, payload) "
+              + "VALUES (:id, :dataSource, :created_date, :start, :end, :partitioned, :version, :used, :payload)",
+              dbTables.getSegmentsTable()
+          )
+      )
+            .bind("id", segment.getIdentifier())
+            .bind("dataSource", segment.getDataSource())
+            .bind("created_date", new DateTime().toString())
+            .bind("start", segment.getInterval().getStart().toString())
+            .bind("end", segment.getInterval().getEnd().toString())
+            .bind("partitioned", (segment.getShardSpec() instanceof NoneShardSpec) ? false : true)
+            .bind("version", segment.getVersion())
+            .bind("used", true)
+            .bind("payload", jsonMapper.writeValueAsBytes(segment))
+            .execute();
 
-        log.info("Published segment [%s] to DB", segment.getIdentifier());
-      }
-      catch (Exception e) {
-        if (e.getCause() instanceof SQLException && segmentExists(handle, segment)) {
-          log.info("Found [%s] in DB, not updating DB", segment.getIdentifier());
-        } else {
-          throw e;
-        }
-      }
+      log.info("Published segment [%s] to DB", segment.getIdentifier());
     }
-    catch (IOException e) {
-      log.error(e, "Exception inserting into DB");
+    catch (Exception e) {
+      log.error(e, "Exception inserting segment [%s] into DB", segment.getIdentifier());
       throw e;
     }
 
@@ -562,6 +626,150 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
         .map(StringMapper.FIRST)
         .list()
         .isEmpty();
+  }
+
+  /**
+   * Read dataSource metadata. Returns null if there is no metadata.
+   */
+  public DataSourceMetadata getDataSourceMetadata(final String dataSource)
+  {
+    final byte[] bytes = connector.lookup(
+        dbTables.getDataSourceTable(),
+        "dataSource",
+        "commit_metadata_payload",
+        dataSource
+    );
+
+    if (bytes == null) {
+      return null;
+    }
+
+    try {
+      return jsonMapper.readValue(bytes, DataSourceMetadata.class);
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
+  }
+
+  /**
+   * Read dataSource metadata as bytes, from a specific handle. Returns null if there is no metadata.
+   */
+  private byte[] getDataSourceMetadataWithHandleAsBytes(
+      final Handle handle,
+      final String dataSource
+  )
+  {
+    return connector.lookupWithHandle(
+        handle,
+        dbTables.getDataSourceTable(),
+        "dataSource",
+        "commit_metadata_payload",
+        dataSource
+    );
+  }
+
+  /**
+   * Compare-and-swap dataSource metadata in a transaction. This will only modify dataSource metadata if it equals
+   * oldCommitMetadata when this function is called (based on T.equals). This method is idempotent in that if
+   * the metadata already equals newCommitMetadata, it will return true.
+   *
+   * @param handle        database handle
+   * @param dataSource    druid dataSource
+   * @param startMetadata dataSource metadata pre-insert must match this startMetadata according to
+   *                      {@link DataSourceMetadata#matches(DataSourceMetadata)}
+   * @param endMetadata   dataSource metadata post-insert will have this endMetadata merged in with
+   *                      {@link DataSourceMetadata#plus(DataSourceMetadata)}
+   *
+   * @return true if dataSource metadata was updated from matching startMetadata to matching endMetadata
+   */
+  private boolean updateDataSourceMetadataWithHandle(
+      final Handle handle,
+      final String dataSource,
+      final DataSourceMetadata startMetadata,
+      final DataSourceMetadata endMetadata
+  ) throws IOException
+  {
+    Preconditions.checkNotNull(dataSource, "dataSource");
+    Preconditions.checkNotNull(startMetadata, "startMetadata");
+    Preconditions.checkNotNull(endMetadata, "endMetadata");
+
+    final byte[] oldCommitMetadataBytesFromDb = getDataSourceMetadataWithHandleAsBytes(handle, dataSource);
+    final String oldCommitMetadataSha1FromDb;
+    final DataSourceMetadata oldCommitMetadataFromDb;
+
+    if (oldCommitMetadataBytesFromDb == null) {
+      oldCommitMetadataSha1FromDb = null;
+      oldCommitMetadataFromDb = null;
+    } else {
+      oldCommitMetadataSha1FromDb = BaseEncoding.base16().encode(
+          Hashing.sha1().hashBytes(oldCommitMetadataBytesFromDb).asBytes()
+      );
+      oldCommitMetadataFromDb = jsonMapper.readValue(oldCommitMetadataBytesFromDb, DataSourceMetadata.class);
+    }
+
+    final boolean startMetadataMatchesExisting = oldCommitMetadataFromDb == null
+                                                 ? startMetadata.isValidStart()
+                                                 : startMetadata.matches(oldCommitMetadataFromDb);
+
+    if (!startMetadataMatchesExisting) {
+      // Not in the desired start state.
+      log.info("Not updating metadata, existing state is not the expected start state.");
+      return false;
+    }
+
+    final DataSourceMetadata newCommitMetadata = oldCommitMetadataFromDb == null
+                                                 ? endMetadata
+                                                 : oldCommitMetadataFromDb.plus(endMetadata);
+    final byte[] newCommitMetadataBytes = jsonMapper.writeValueAsBytes(newCommitMetadata);
+    final String newCommitMetadataSha1 = BaseEncoding.base16().encode(
+        Hashing.sha1().hashBytes(newCommitMetadataBytes).asBytes()
+    );
+
+    final boolean retVal;
+    if (oldCommitMetadataBytesFromDb == null) {
+      // SELECT -> INSERT can fail due to races; callers must be prepared to retry.
+      final int numRows = handle.createStatement(
+          String.format(
+              "INSERT INTO %s (dataSource, created_date, commit_metadata_payload, commit_metadata_sha1) "
+              + "VALUES (:dataSource, :created_date, :commit_metadata_payload, :commit_metadata_sha1)",
+              dbTables.getDataSourceTable()
+          )
+      )
+                                .bind("dataSource", dataSource)
+                                .bind("created_date", new DateTime().toString())
+                                .bind("commit_metadata_payload", newCommitMetadataBytes)
+                                .bind("commit_metadata_sha1", newCommitMetadataSha1)
+                                .execute();
+
+      retVal = numRows > 0;
+    } else {
+      // Expecting a particular old metadata; use the SHA1 in a compare-and-swap UPDATE
+      final int numRows = handle.createStatement(
+          String.format(
+              "UPDATE %s SET "
+              + "commit_metadata_payload = :new_commit_metadata_payload, "
+              + "commit_metadata_sha1 = :new_commit_metadata_sha1 "
+              + "WHERE dataSource = :dataSource AND commit_metadata_sha1 = :old_commit_metadata_sha1",
+              dbTables.getDataSourceTable()
+          )
+      )
+                                .bind("dataSource", dataSource)
+                                .bind("old_commit_metadata_sha1", oldCommitMetadataSha1FromDb)
+                                .bind("new_commit_metadata_payload", newCommitMetadataBytes)
+                                .bind("new_commit_metadata_sha1", newCommitMetadataSha1)
+                                .execute();
+
+      retVal = numRows > 0;
+    }
+
+    if (retVal) {
+      log.info("Updated metadata from[%s] to[%s].", oldCommitMetadataFromDb, newCommitMetadata);
+    } else {
+      log.info("Not updating metadata, compare-and-swap failure.");
+    }
+
+    return retVal;
   }
 
   public void updateSegmentMetadata(final Set<DataSegment> segments) throws IOException
@@ -625,13 +833,14 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
     }
   }
 
+  @Override
   public List<DataSegment> getUnusedSegmentsForInterval(final String dataSource, final Interval interval)
   {
-    List<DataSegment> matchingSegments = connector.getDBI().withHandle(
-        new HandleCallback<List<DataSegment>>()
+    List<DataSegment> matchingSegments = connector.inReadOnlyTransaction(
+        new TransactionCallback<List<DataSegment>>()
         {
           @Override
-          public List<DataSegment> withHandle(Handle handle) throws IOException, SQLException
+          public List<DataSegment> inTransaction(final Handle handle, final TransactionStatus status) throws Exception
           {
             return handle
                 .createQuery(
@@ -640,6 +849,7 @@ public class IndexerSQLMetadataStorageCoordinator implements IndexerMetadataStor
                         dbTables.getSegmentsTable()
                     )
                 )
+                .setFetchSize(connector.getStreamingFetchSize())
                 .bind("dataSource", dataSource)
                 .bind("start", interval.getStart().toString())
                 .bind("end", interval.getEnd().toString())

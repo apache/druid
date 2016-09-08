@@ -34,7 +34,14 @@ public interface BitmapIndex
 
   public BitmapFactory getBitmapFactory();
 
-  public ImmutableBitmap getBitmap(String value);
+  /**
+   * Returns the index of "value" in this BitmapIndex, or (-(insertion point) - 1) if the value is not
+   * present, in the manner of Arrays.binarySearch.
+   *
+   * @param value value to search for
+   * @return index of value, or negative number equal to (-(insertion point) - 1).
+   */
+  public int getIndex(String value);
 
   public ImmutableBitmap getBitmap(int idx);
 }

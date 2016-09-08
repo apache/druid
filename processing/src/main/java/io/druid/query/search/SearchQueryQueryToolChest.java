@@ -62,7 +62,7 @@ import java.util.Map;
  */
 public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResultValue>, SearchQuery>
 {
-  private static final byte SEARCH_QUERY = 0x2;
+  private static final byte SEARCH_QUERY = 0x15;
   private static final TypeReference<Result<SearchResultValue>> TYPE_REFERENCE = new TypeReference<Result<SearchResultValue>>()
   {
   };
@@ -157,16 +157,20 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
           ++index;
         }
 
+        final byte[] sortSpecBytes = query.getSort().getCacheKey();
+
         final ByteBuffer queryCacheKey = ByteBuffer
             .allocate(
                 1 + 4 + granularityBytes.length + filterBytes.length +
-                querySpecBytes.length + dimensionsBytesSize
+                querySpecBytes.length + dimensionsBytesSize + sortSpecBytes.length
             )
             .put(SEARCH_QUERY)
             .put(Ints.toByteArray(query.getLimit()))
             .put(granularityBytes)
             .put(filterBytes)
-            .put(querySpecBytes);
+            .put(querySpecBytes)
+            .put(sortSpecBytes)
+            ;
 
         for (byte[] bytes : dimensionsBytes) {
           queryCacheKey.put(bytes);
@@ -217,8 +221,9 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
                           {
                             if (input instanceof Map) {
                               return new SearchHit(
-                                  (String) ((Map) input).get("dimension"),
-                                  (String) ((Map) input).get("value")
+                                      (String) ((Map) input).get("dimension"),
+                                      (String) ((Map) input).get("value"),
+                                      (Integer) ((Map) input).get("count")
                               );
                             } else if (input instanceof SearchHit) {
                               return (SearchHit) input;
@@ -237,10 +242,24 @@ public class SearchQueryQueryToolChest extends QueryToolChest<Result<SearchResul
   }
 
   @Override
-  public QueryRunner<Result<SearchResultValue>> preMergeQueryDecoration(QueryRunner<Result<SearchResultValue>> runner)
+  public QueryRunner<Result<SearchResultValue>> preMergeQueryDecoration(final QueryRunner<Result<SearchResultValue>> runner)
   {
     return new SearchThresholdAdjustingQueryRunner(
-        intervalChunkingQueryRunnerDecorator.decorate(runner, this),
+        intervalChunkingQueryRunnerDecorator.decorate(
+            new QueryRunner<Result<SearchResultValue>>()
+            {
+              @Override
+              public Sequence<Result<SearchResultValue>> run(
+                  Query<Result<SearchResultValue>> query, Map<String, Object> responseContext
+              )
+              {
+                SearchQuery searchQuery = (SearchQuery) query;
+                if (searchQuery.getDimensionsFilter() != null) {
+                  searchQuery = searchQuery.withDimFilter(searchQuery.getDimensionsFilter().optimize());
+                }
+                return runner.run(searchQuery, responseContext);
+              }
+            } , this),
         config
     );
   }

@@ -31,7 +31,7 @@ import com.google.common.hash.Hashing;
 import com.metamx.common.Pair;
 import com.metamx.common.logger.Logger;
 import io.druid.data.input.MapBasedInputRow;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.jackson.DefaultObjectMapper;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
@@ -141,7 +141,7 @@ public class SchemalessIndex
         final long timestamp = new DateTime(event.get(TIMESTAMP)).getMillis();
 
         if (theIndex == null) {
-          theIndex = new OnheapIncrementalIndex(timestamp, QueryGranularity.MINUTE, METRIC_AGGS, 1000);
+          theIndex = new OnheapIncrementalIndex(timestamp, QueryGranularities.MINUTE, METRIC_AGGS, 1000);
         }
 
         final List<String> dims = Lists.newArrayList();
@@ -197,6 +197,7 @@ public class SchemalessIndex
         mergedIndex = INDEX_IO.loadIndex(
             INDEX_MERGER.mergeQueryableIndex(
                 Arrays.asList(INDEX_IO.loadIndex(topFile), INDEX_IO.loadIndex(bottomFile)),
+                true,
                 METRIC_AGGS,
                 mergedFile,
                 indexSpec
@@ -242,6 +243,7 @@ public class SchemalessIndex
         QueryableIndex index = INDEX_IO.loadIndex(
             INDEX_MERGER.mergeQueryableIndex(
                 Arrays.asList(rowPersistedIndexes.get(index1), rowPersistedIndexes.get(index2)),
+                true,
                 METRIC_AGGS,
                 mergedFile,
                 indexSpec
@@ -280,7 +282,7 @@ public class SchemalessIndex
         }
 
         QueryableIndex index = INDEX_IO.loadIndex(
-            INDEX_MERGER.mergeQueryableIndex(indexesToMerge, METRIC_AGGS, mergedFile, indexSpec)
+            INDEX_MERGER.mergeQueryableIndex(indexesToMerge, true, METRIC_AGGS, mergedFile, indexSpec)
         );
 
         return index;
@@ -349,7 +351,7 @@ public class SchemalessIndex
           }
 
           final IncrementalIndex rowIndex = new OnheapIncrementalIndex(
-              timestamp, QueryGranularity.MINUTE, METRIC_AGGS, 1000
+              timestamp, QueryGranularities.MINUTE, METRIC_AGGS, 1000
           );
 
           rowIndex.add(
@@ -379,7 +381,7 @@ public class SchemalessIndex
     log.info("Realtime loading index file[%s]", filename);
 
     final IncrementalIndex retVal = new OnheapIncrementalIndex(
-        new DateTime("2011-01-12T00:00:00.000Z").getMillis(), QueryGranularity.MINUTE, aggs, 1000
+        new DateTime("2011-01-12T00:00:00.000Z").getMillis(), QueryGranularities.MINUTE, aggs, 1000
     );
 
     try {
@@ -445,7 +447,7 @@ public class SchemalessIndex
           Ordering.natural().nullsFirst()
       );
 
-      ShardSpec noneShardSpec = new NoneShardSpec();
+      ShardSpec noneShardSpec = NoneShardSpec.instance();
 
       for (int i = 0; i < intervals.size(); i++) {
         timeline.add(intervals.get(i), i, noneShardSpec.createChunk(filesToMap.get(i)));
@@ -533,6 +535,7 @@ public class SchemalessIndex
                       }
                   )
               ),
+              true,
               METRIC_AGGS,
               mergedFile,
               indexSpec

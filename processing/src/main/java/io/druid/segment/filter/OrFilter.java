@@ -19,20 +19,25 @@
 
 package io.druid.segment.filter;
 
+import com.google.common.base.Joiner;
 import com.google.common.collect.Lists;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import io.druid.query.filter.BitmapIndexSelector;
+import io.druid.query.filter.BooleanFilter;
 import io.druid.query.filter.Filter;
+import io.druid.query.filter.RowOffsetMatcherFactory;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
-import io.druid.segment.ColumnSelectorFactory;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
  */
-public class OrFilter implements Filter
+public class OrFilter implements BooleanFilter
 {
+  private static final Joiner OR_JOINER = Joiner.on(" || ");
+
   private final List<Filter> filters;
 
   public OrFilter(
@@ -72,15 +77,46 @@ public class OrFilter implements Filter
     return makeMatcher(matchers);
   }
 
-  public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
+  @Override
+  public ValueMatcher makeMatcher(
+      BitmapIndexSelector selector,
+      ValueMatcherFactory valueMatcherFactory,
+      RowOffsetMatcherFactory rowOffsetMatcherFactory
+  )
   {
-    final ValueMatcher[] matchers = new ValueMatcher[filters.size()];
+    final List<ValueMatcher> matchers = new ArrayList<>();
+    final List<ImmutableBitmap> bitmaps = new ArrayList<>();
 
-    for (int i = 0; i < filters.size(); i++) {
-      matchers[i] = filters.get(i).makeMatcher(factory);
+    for (Filter filter : filters) {
+      if (filter.supportsBitmapIndex(selector)) {
+        bitmaps.add(filter.getBitmapIndex(selector));
+      } else {
+        ValueMatcher matcher = filter.makeMatcher(valueMatcherFactory);
+        matchers.add(matcher);
+      }
     }
-    return makeMatcher(matchers);
+
+    if (bitmaps.size() > 0) {
+      ImmutableBitmap combinedBitmap = selector.getBitmapFactory().union(bitmaps);
+      ValueMatcher offsetMatcher = rowOffsetMatcherFactory.makeRowOffsetMatcher(combinedBitmap);
+      matchers.add(0, offsetMatcher);
+    }
+
+    return new ValueMatcher()
+    {
+      @Override
+      public boolean matches()
+      {
+        for (ValueMatcher valueMatcher : matchers) {
+          if (valueMatcher.matches()) {
+            return true;
+          }
+        }
+        return false;
+      }
+    };
   }
+
 
   private ValueMatcher makeMatcher(final ValueMatcher[] baseMatchers){
     if (baseMatchers.length == 1) {
@@ -102,4 +138,25 @@ public class OrFilter implements Filter
     };
   }
 
+  @Override
+  public List<Filter> getFilters()
+  {
+    return filters;
+  }
+
+  @Override
+  public boolean supportsBitmapIndex(BitmapIndexSelector selector)
+  {
+    for (Filter filter : filters) {
+      if(!filter.supportsBitmapIndex(selector)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  public String toString()
+  {
+    return String.format("(%s)", OR_JOINER.join(filters));
+  }
 }

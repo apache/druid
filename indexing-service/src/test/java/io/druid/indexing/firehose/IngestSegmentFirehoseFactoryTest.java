@@ -44,7 +44,7 @@ import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.MapInputRowParser;
 import io.druid.data.input.impl.SpatialDimensionSchema;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.guice.GuiceAnnotationIntrospector;
 import io.druid.guice.GuiceInjectableValues;
 import io.druid.guice.GuiceInjectors;
@@ -132,7 +132,7 @@ public class IngestSegmentFirehoseFactoryTest
         }
     );
     final IncrementalIndexSchema schema = new IncrementalIndexSchema.Builder()
-        .withQueryGranularity(QueryGranularity.NONE)
+        .withQueryGranularity(QueryGranularities.NONE)
         .withMinTimestamp(JodaUtils.MIN_INSTANT)
         .withDimensionsSpec(ROW_PARSER)
         .withMetrics(
@@ -213,8 +213,15 @@ public class IngestSegmentFirehoseFactoryTest
         newMockEmitter(),
         new DataSegmentPusher()
         {
+          @Deprecated
           @Override
           public String getPathForHadoop(String dataSource)
+          {
+            return getPathForHadoop();
+          }
+
+          @Override
+          public String getPathForHadoop()
           {
             throw new UnsupportedOperationException();
           }
@@ -288,10 +295,12 @@ public class IngestSegmentFirehoseFactoryTest
             new JSONParseSpec(
                 new TimestampSpec(TIME_COLUMN, "auto", null),
                 new DimensionsSpec(
-                    ImmutableList.<String>of(),
+                    DimensionsSpec.getDefaultSchemas(ImmutableList.<String>of()),
                     ImmutableList.of(DIM_FLOAT_NAME, DIM_LONG_NAME),
                     ImmutableList.<SpatialDimensionSchema>of()
-                )
+                ),
+                null,
+                null
             )
         )
     )) {
@@ -305,7 +314,7 @@ public class IngestSegmentFirehoseFactoryTest
                   new IngestSegmentFirehoseFactory(
                       DATA_SOURCE_NAME,
                       FOREVER,
-                      new SelectorDimFilter(DIM_NAME, DIM_VALUE),
+                      new SelectorDimFilter(DIM_NAME, DIM_VALUE, null),
                       dim_names,
                       metric_names,
                       Guice.createInjector(
@@ -406,10 +415,12 @@ public class IngestSegmentFirehoseFactoryTest
       new JSONParseSpec(
           new TimestampSpec(TIME_COLUMN, "auto", null),
           new DimensionsSpec(
-              ImmutableList.of(DIM_NAME),
+              DimensionsSpec.getDefaultSchemas(ImmutableList.of(DIM_NAME)),
               ImmutableList.of(DIM_FLOAT_NAME, DIM_LONG_NAME),
               ImmutableList.<SpatialDimensionSchema>of()
-          )
+          ),
+          null,
+          null
       )
   );
 

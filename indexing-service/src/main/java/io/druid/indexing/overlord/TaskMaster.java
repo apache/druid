@@ -34,6 +34,7 @@ import io.druid.indexing.common.actions.TaskActionClientFactory;
 import io.druid.indexing.common.task.Task;
 import io.druid.indexing.overlord.autoscaling.ScalingStats;
 import io.druid.indexing.overlord.config.TaskQueueConfig;
+import io.druid.indexing.overlord.supervisor.SupervisorManager;
 import io.druid.server.DruidNode;
 import io.druid.server.initialization.IndexerZkConfig;
 import org.apache.curator.framework.CuratorFramework;
@@ -52,9 +53,10 @@ import java.util.concurrent.locks.ReentrantLock;
 public class TaskMaster
 {
   private final LeaderSelector leaderSelector;
-  private final ReentrantLock giant = new ReentrantLock();
+  private final ReentrantLock giant = new ReentrantLock(true);
   private final Condition mayBeStopped = giant.newCondition();
   private final TaskActionClientFactory taskActionClientFactory;
+  private final SupervisorManager supervisorManager;
 
   private final AtomicReference<Lifecycle> leaderLifecycleRef = new AtomicReference<>(null);
 
@@ -75,9 +77,11 @@ public class TaskMaster
       final TaskRunnerFactory runnerFactory,
       final CuratorFramework curator,
       final ServiceAnnouncer serviceAnnouncer,
-      final ServiceEmitter emitter
+      final ServiceEmitter emitter,
+      final SupervisorManager supervisorManager
   )
   {
+    this.supervisorManager = supervisorManager;
     this.taskActionClientFactory = taskActionClientFactory;
     this.leaderSelector = new LeaderSelector(
         curator,
@@ -112,8 +116,11 @@ public class TaskMaster
                 log.makeAlert("TaskMaster set a new Lifecycle without the old one being cleared!  Race condition")
                    .emit();
               }
+
               leaderLifecycle.addManagedInstance(taskRunner);
               leaderLifecycle.addManagedInstance(taskQueue);
+              leaderLifecycle.addManagedInstance(supervisorManager);
+
               leaderLifecycle.addHandler(
                   new Lifecycle.Handler()
                   {
@@ -138,6 +145,7 @@ public class TaskMaster
                 }
               }
               catch (InterruptedException e) {
+                log.debug("Interrupted while waiting");
                 // Suppress so we can bow out gracefully
               }
               finally {
@@ -276,6 +284,15 @@ public class TaskMaster
   {
     if (leading) {
       return taskRunner.getScalingStats();
+    } else {
+      return Optional.absent();
+    }
+  }
+
+  public Optional<SupervisorManager> getSupervisorManager()
+  {
+    if (leading) {
+      return Optional.of(supervisorManager);
     } else {
       return Optional.absent();
     }

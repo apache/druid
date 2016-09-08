@@ -39,6 +39,9 @@ public class ExtensionsConfig
   private String hadoopDependenciesDir = "hadoop-dependencies";
 
   @JsonProperty
+  private String hadoopContainerDruidClasspath = null;
+
+  @JsonProperty
   private List<String> loadList;
 
   public boolean searchCurrentClassloader()
@@ -56,6 +59,11 @@ public class ExtensionsConfig
     return hadoopDependenciesDir;
   }
 
+  public String getHadoopContainerDruidClasspath()
+  {
+    return hadoopContainerDruidClasspath;
+  }
+
   public List<String> getLoadList()
   {
     return loadList;
@@ -68,6 +76,7 @@ public class ExtensionsConfig
            "searchCurrentClassloader=" + searchCurrentClassloader +
            ", directory='" + directory + '\'' +
            ", hadoopDependenciesDir='" + hadoopDependenciesDir + '\'' +
+           ", hadoopContainerDruidClasspath='" + hadoopContainerDruidClasspath + '\'' +
            ", loadList=" + loadList +
            '}';
   }

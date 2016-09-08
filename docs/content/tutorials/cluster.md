@@ -59,22 +59,22 @@ since you will be editing the configurations and then copying the modified distr
 of your servers.
 
 ```bash
-curl -O http://static.druid.io/artifacts/releases/druid-0.9.0-bin.tar.gz
-tar -xzf druid-0.9.0-bin.tar.gz
-cd druid-0.9.0
+curl -O http://static.druid.io/artifacts/releases/druid-#{DRUIDVERSION}-bin.tar.gz
+tar -xzf druid-#{DRUIDVERSION}-bin.tar.gz
+cd druid-#{DRUIDVERSION}
 ```
 
 In this package, you'll find:
 
 
 * `LICENSE` - the license files.
-* `bin/` - scripts related to the [single-machine quickstart](quickstart.md).
+* `bin/` - scripts related to the [single-machine quickstart](quickstart.html).
 * `conf/*` - template configurations for a clustered setup.
-* `conf-quickstart/*` - configurations for the [single-machine quickstart](quickstart.md).
+* `conf-quickstart/*` - configurations for the [single-machine quickstart](quickstart.html).
 * `extensions/*` - all Druid extensions.
 * `hadoop-dependencies/*` - Druid Hadoop dependencies.
 * `lib/*` - all included software packages for core Druid.
-* `quickstart/*` - files related to the [single-machine quickstart](quickstart.md).
+* `quickstart/*` - files related to the [single-machine quickstart](quickstart.html).
 
 We'll be editing the files in `conf/` in order to get things running.
 
@@ -193,7 +193,7 @@ In `conf/druid/_common/common.runtime.properties`, replace
 
 - `druid.zk.service.host`
 
-In `conf/_common/common.runtime.properties`, replace
+In `conf/druid/_common/common.runtime.properties`, replace
 "metadata.store.ip" with the IP address of the machine that you will use as your metadata store:
 
 - `druid.metadata.storage.connector.connectURI`
@@ -258,6 +258,27 @@ Keep -XX:MaxDirectMemory >= numThreads*sizeBytes, otherwise Druid will fail to s
 Please see the Druid [configuration documentation](../configuration/index.html) for a full description of all
 possible configuration options.
 
+## Open ports (if using a firewall)
+
+If you're using a firewall or some other system that only allows traffic on specific ports, allow
+inbound connections on the following:
+
+- 1527 (Derby on your Coordinator; not needed if you are using a separate metadata store like MySQL or PostgreSQL)
+- 2181 (ZooKeeper; not needed if you are using a separate ZooKeeper cluster)
+- 8081 (Coordinator)
+- 8082 (Broker)
+- 8083 (Historical)
+- 8084 (Standalone Realtime, if used)
+- 8088 (Router, if used)
+- 8090 (Overlord)
+- 8091, 8100&ndash;8199 (Druid Middle Manager; you may need higher than port 8199 if you have a very high `druid.worker.capacity`)
+- 8200 (Tranquility Server, if used)
+
+<div class="note caution">
+In production, we recommend deploying ZooKeeper and your metadata store on their own dedicated hardware,
+rather than on the Coordinator server.
+</div>
+
 ## Start Coordinator, Overlord, Zookeeper, and metadata store
 
 Copy the Druid distribution and your edited configurations to your coordination
@@ -265,7 +286,7 @@ server. If you have been editing the configurations on your local machine, you c
 copy them:
 
 ```bash
-rsync -az druid-0.9.0/ COORDINATION_SERVER:druid-0.9.0/
+rsync -az druid-#{DRUIDVERSION}/ COORDINATION_SERVER:druid-#{DRUIDVERSION}/
 ```
 
 Log on to your coordination server and install Zookeeper:
@@ -311,15 +332,15 @@ This also allows you take advantage of Druid's built-in MiddleManager
 autoscaling facility.
 </div>
 
-If you are doing push-based stream ingestion with Kafka or over HTTP, you can also start Tranquility server on the same
-hardware that holds MiddleManagers and Historicals. For large scale production, MiddleManagers and Tranquility server
+If you are doing push-based stream ingestion with Kafka or over HTTP, you can also start Tranquility Server on the same
+hardware that holds MiddleManagers and Historicals. For large scale production, MiddleManagers and Tranquility Server
 can still be co-located. If you are running Tranquility (not server) with a stream processor, you can co-locate
-Tranquility with the stream processor and not require Tranquility server.
+Tranquility with the stream processor and not require Tranquility Server.
 
 ```bash
-curl -O http://static.druid.io/tranquility/releases/tranquility-distribution-0.7.2.tgz
-tar -xzf tranquility-distribution-0.7.2.tgz
-cd tranquility-distribution-0.7.2.tgz
+curl -O http://static.druid.io/tranquility/releases/tranquility-distribution-0.8.0.tgz
+tar -xzf tranquility-distribution-0.8.0.tgz
+cd tranquility-distribution-0.8.0
 bin/tranquility <server or kafka> -configFile <path_to_druid_distro>/conf/tranquility/<server or kafka>.json
 ```
 

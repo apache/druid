@@ -195,6 +195,11 @@ public class OverlordResourceTestClient
 
   public void waitUntilTaskCompletes(final String taskID)
   {
+      waitUntilTaskCompletes(taskID, 60000, 10);
+  }
+
+  public void waitUntilTaskCompletes(final String taskID, final int millisEach, final int numTimes)
+  {
     RetryUtil.retryUntil(
         new Callable<Boolean>()
         {
@@ -209,9 +214,9 @@ public class OverlordResourceTestClient
           }
         },
         true,
-        60000,
-        10,
-        "Index Task to complete"
+        millisEach,
+        numTimes,
+        taskID
     );
   }
 

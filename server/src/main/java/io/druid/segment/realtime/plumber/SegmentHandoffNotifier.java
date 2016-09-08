@@ -21,9 +21,10 @@ package io.druid.segment.realtime.plumber;
 
 import io.druid.query.SegmentDescriptor;
 
+import java.io.Closeable;
 import java.util.concurrent.Executor;
 
-public interface SegmentHandoffNotifier
+public interface SegmentHandoffNotifier extends Closeable
 {
   /**
    * register a handOffCallback to be called when segment handoff is complete.
@@ -47,6 +48,6 @@ public interface SegmentHandoffNotifier
   /**
    * Perform any final processing and clean up after ourselves.
    */
-  void stop();
+  void close();
 
 }

@@ -36,8 +36,6 @@ import java.util.Map;
  */
 public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
 {
-  private static final String DEFAULT_METRIC_NAME = "query/partial/time";
-
   private final ServiceEmitter emitter;
   private final Function<Query<T>, ServiceMetricEvent.Builder> builderFn;
   private final QueryRunner<T> queryRunner;
@@ -45,16 +43,7 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
   private final String metricName;
   private final Map<String, String> userDimensions;
 
-  public MetricsEmittingQueryRunner(
-      ServiceEmitter emitter,
-      Function<Query<T>, ServiceMetricEvent.Builder> builderFn,
-      QueryRunner<T> queryRunner
-  )
-  {
-    this(emitter, builderFn, queryRunner, DEFAULT_METRIC_NAME, Maps.<String, String>newHashMap());
-  }
-
-  public MetricsEmittingQueryRunner(
+  private MetricsEmittingQueryRunner(
       ServiceEmitter emitter,
       Function<Query<T>, ServiceMetricEvent.Builder> builderFn,
       QueryRunner<T> queryRunner,
@@ -82,7 +71,6 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
     this(emitter, builderFn, queryRunner, -1, metricName, userDimensions);
   }
 
-
   public MetricsEmittingQueryRunner<T> withWaitMeasuredFromNow()
   {
     return new MetricsEmittingQueryRunner<T>(
@@ -103,8 +91,6 @@ public class MetricsEmittingQueryRunner<T> implements QueryRunner<T>
     for (Map.Entry<String, String> userDimension : userDimensions.entrySet()) {
       builder.setDimension(userDimension.getKey(), userDimension.getValue());
     }
-
-    builder.setDimension(DruidMetrics.ID, Strings.nullToEmpty(query.getId()));
 
     return new Sequence<T>()
     {

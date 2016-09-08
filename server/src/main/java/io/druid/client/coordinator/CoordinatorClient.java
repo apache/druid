@@ -105,7 +105,7 @@ public class CoordinatorClient
     try {
       final Server instance = selector.pick();
       if (instance == null) {
-        throw new ISE("Cannot find instance of coordinator");
+        throw new ISE("Cannot find instance of coordinator.. Did you set `druid.selectors.coordinator.serviceName`?");
       }
 
       return new URI(

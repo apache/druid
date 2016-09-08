@@ -24,10 +24,14 @@ import com.google.common.collect.Lists;
 import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.Accumulator;
+import com.metamx.common.guava.Sequence;
+import com.metamx.common.guava.Sequences;
 import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.MapBasedRow;
+import io.druid.data.input.Row;
 import io.druid.granularity.QueryGranularity;
+import io.druid.query.ResourceLimitExceededException;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.segment.incremental.IncrementalIndex;
@@ -42,12 +46,15 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class GroupByQueryHelper
 {
+  public final static String CTX_KEY_SORT_RESULTS = "sortResults";
+
   public static <T> Pair<IncrementalIndex, Accumulator<IncrementalIndex, T>> createIndexAccumulatorPair(
       final GroupByQuery query,
       final GroupByQueryConfig config,
       StupidPool<ByteBuffer> bufferPool
   )
   {
+    final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
     final QueryGranularity gran = query.getGranularity();
     final long timeStart = query.getIntervals().get(0).getStartMillis();
 
@@ -79,6 +86,8 @@ public class GroupByQueryHelper
     );
     final IncrementalIndex index;
 
+    final boolean sortResults = query.getContextValue(CTX_KEY_SORT_RESULTS, true);
+
     if (query.getContextValue("useOffheap", false)) {
       index = new OffheapIncrementalIndex(
           // use granularity truncated min timestamp
@@ -88,7 +97,8 @@ public class GroupByQueryHelper
           aggs.toArray(new AggregatorFactory[aggs.size()]),
           false,
           true,
-          config.getMaxResults(),
+          sortResults,
+          querySpecificConfig.getMaxResults(),
           bufferPool
       );
     } else {
@@ -100,7 +110,8 @@ public class GroupByQueryHelper
           aggs.toArray(new AggregatorFactory[aggs.size()]),
           false,
           true,
-          config.getMaxResults()
+          sortResults,
+          querySpecificConfig.getMaxResults()
       );
     }
 
@@ -122,7 +133,7 @@ public class GroupByQueryHelper
             );
           }
           catch (IndexSizeExceededException e) {
-            throw new ISE(e.getMessage());
+            throw new ResourceLimitExceededException(e.getMessage());
           }
         } else {
           throw new ISE("Unable to accumulate something of type [%s]", in.getClass());
@@ -151,5 +162,43 @@ public class GroupByQueryHelper
       }
     };
     return new Pair<>(init, accumulator);
+  }
+
+  // Used by GroupByStrategyV1
+  public static IncrementalIndex makeIncrementalIndex(
+      GroupByQuery query,
+      GroupByQueryConfig config,
+      StupidPool<ByteBuffer> bufferPool,
+      Sequence<Row> rows
+  )
+  {
+    Pair<IncrementalIndex, Accumulator<IncrementalIndex, Row>> indexAccumulatorPair = GroupByQueryHelper.createIndexAccumulatorPair(
+        query,
+        config,
+        bufferPool
+    );
+
+    return rows.accumulate(indexAccumulatorPair.lhs, indexAccumulatorPair.rhs);
+  }
+
+  // Used by GroupByStrategyV1
+  public static Sequence<Row> postAggregate(final GroupByQuery query, IncrementalIndex index)
+  {
+    return Sequences.map(
+        Sequences.simple(index.iterableWithPostAggregations(query.getPostAggregatorSpecs(), query.isDescending())),
+        new Function<Row, Row>()
+        {
+          @Override
+          public Row apply(Row input)
+          {
+            final MapBasedRow row = (MapBasedRow) input;
+            return new MapBasedRow(
+                query.getGranularity()
+                     .toDateTime(row.getTimestampFromEpoch()),
+                row.getEvent()
+            );
+          }
+        }
+    );
   }
 }

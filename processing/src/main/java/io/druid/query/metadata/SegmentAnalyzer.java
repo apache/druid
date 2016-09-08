@@ -26,11 +26,11 @@ import com.google.common.collect.Iterables;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.google.common.primitives.Longs;
-import com.metamx.common.StringUtils;
 import com.metamx.common.guava.Accumulator;
 import com.metamx.common.guava.Sequence;
 import com.metamx.common.logger.Logger;
-import io.druid.granularity.QueryGranularity;
+import io.druid.common.utils.StringUtils;
+import io.druid.granularity.QueryGranularities;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.metadata.metadata.ColumnAnalysis;
 import io.druid.query.metadata.metadata.SegmentMetadataQuery;
@@ -76,7 +76,7 @@ public class SegmentAnalyzer
     this.analysisTypes = analysisTypes;
   }
 
-  public int numRows(Segment segment)
+  public long numRows(Segment segment)
   {
     return Preconditions.checkNotNull(segment, "segment").asStorageAdapter().getNumRows();
   }
@@ -206,7 +206,7 @@ public class SegmentAnalyzer
       for (int i = 0; i < cardinality; ++i) {
         String value = bitmapIndex.getValue(i);
         if (value != null) {
-          size += StringUtils.toUtf8(value).length * bitmapIndex.getBitmap(value).size();
+          size += StringUtils.estimatedBinaryLengthAsUTF8(value) * bitmapIndex.getBitmap(bitmapIndex.getIndex(value)).size();
         }
       }
     }
@@ -248,7 +248,7 @@ public class SegmentAnalyzer
       final long end = storageAdapter.getMaxTime().getMillis();
 
       final Sequence<Cursor> cursors =
-          storageAdapter.makeCursors(null, new Interval(start, end), QueryGranularity.ALL, false);
+          storageAdapter.makeCursors(null, new Interval(start, end), QueryGranularities.ALL, false);
 
       size = cursors.accumulate(
           0L,
@@ -272,7 +272,7 @@ public class SegmentAnalyzer
                 for (int i = 0; i < vals.size(); ++i) {
                   final String dimVal = selector.lookupName(vals.get(i));
                   if (dimVal != null && !dimVal.isEmpty()) {
-                    current += StringUtils.toUtf8(dimVal).length;
+                    current += StringUtils.estimatedBinaryLengthAsUTF8(dimVal);
                   }
                 }
                 cursor.advance();

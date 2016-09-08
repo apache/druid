@@ -30,15 +30,23 @@ public class SearchHit implements Comparable<SearchHit>
 {
   private final String dimension;
   private final String value;
+  private final Integer count;
 
   @JsonCreator
   public SearchHit(
       @JsonProperty("dimension") String dimension,
-      @JsonProperty("value") String value
+      @JsonProperty("value") String value,
+      @JsonProperty("count") Integer count
   )
   {
     this.dimension = checkNotNull(dimension);
     this.value = checkNotNull(value);
+    this.count = count;
+  }
+
+  public SearchHit(String dimension, String value)
+  {
+    this(dimension, value, null);
   }
 
   @JsonProperty
@@ -51,6 +59,12 @@ public class SearchHit implements Comparable<SearchHit>
   public String getValue()
   {
     return value;
+  }
+
+  @JsonProperty
+  public Integer getCount()
+  {
+    return count;
   }
 
   @Override
@@ -99,6 +113,7 @@ public class SearchHit implements Comparable<SearchHit>
     return "Hit{" +
            "dimension='" + dimension + '\'' +
            ", value='" + value + '\'' +
+           (count != null ? ", count='" + count + '\'' : "") +
            '}';
   }
 }

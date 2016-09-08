@@ -171,7 +171,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
       emitter.emit(builder.build("merger/uploadTime", System.currentTimeMillis() - uploadStart));
       emitter.emit(builder.build("merger/mergeSize", uploadedSegment.getSize()));
 
-      toolbox.pushSegments(ImmutableList.of(uploadedSegment));
+      toolbox.publishSegments(ImmutableList.of(uploadedSegment));
 
       return TaskStatus.success(getId());
     }
@@ -320,7 +320,7 @@ public abstract class MergeTaskBase extends AbstractFixedIntervalTask
                       .interval(mergedInterval)
                       .version(version)
                       .binaryVersion(IndexIO.CURRENT_VERSION_ID)
-                      .shardSpec(new NoneShardSpec())
+                      .shardSpec(NoneShardSpec.instance())
                       .dimensions(Lists.newArrayList(mergedDimensions))
                       .metrics(Lists.newArrayList(mergedMetrics))
                       .build();

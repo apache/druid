@@ -21,7 +21,6 @@ package io.druid.indexing.worker;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Preconditions;
-import com.google.common.base.Throwables;
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -47,8 +46,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.concurrent.TimeUnit;
 
 /**
  * The monitor watches ZK at a specified path for new tasks to appear. Upon starting the monitor, a listener will be
@@ -57,6 +58,7 @@ import java.util.concurrent.LinkedBlockingDeque;
 public class WorkerTaskMonitor
 {
   private static final EmittingLogger log = new EmittingLogger(WorkerTaskMonitor.class);
+  private static final int STOP_WARNING_SECONDS = 10;
 
   private final ObjectMapper jsonMapper;
   private final PathChildrenCache pathChildrenCache;
@@ -68,6 +70,7 @@ public class WorkerTaskMonitor
   private final BlockingQueue<Notice> notices = new LinkedBlockingDeque<>();
   private final Map<String, TaskDetails> running = new ConcurrentHashMap<>();
 
+  private final CountDownLatch doneStopping = new CountDownLatch(1);
   private final Object lifecycleLock = new Object();
   private volatile boolean started = false;
 
@@ -94,7 +97,7 @@ public class WorkerTaskMonitor
    * started the task. When the task is complete, the worker node updates the status.
    */
   @LifecycleStart
-  public void start()
+  public void start() throws Exception
   {
     synchronized (lifecycleLock) {
       Preconditions.checkState(!started, "already started");
@@ -121,10 +124,13 @@ public class WorkerTaskMonitor
         log.info("Started WorkerTaskMonitor.");
         started = true;
       }
+      catch (InterruptedException e) {
+        throw e;
+      }
       catch (Exception e) {
         log.makeAlert(e, "Exception starting WorkerTaskMonitor")
            .emit();
-        throw Throwables.propagate(e);
+        throw e;
       }
     }
   }
@@ -138,6 +144,10 @@ public class WorkerTaskMonitor
         try {
           notice.handle();
         }
+        catch (InterruptedException e) {
+          // Will be caught and logged in the outer try block
+          throw e;
+        }
         catch (Exception e) {
           log.makeAlert(e, "Failed to handle notice")
              .addData("noticeClass", notice.getClass().getSimpleName())
@@ -149,6 +159,9 @@ public class WorkerTaskMonitor
     catch (InterruptedException e) {
       log.info("WorkerTaskMonitor interrupted, exiting.");
     }
+    finally {
+      doneStopping.countDown();
+    }
   }
 
   private void restoreRestorableTasks()
@@ -159,7 +172,7 @@ public class WorkerTaskMonitor
     }
   }
 
-  private void cleanupStaleAnnouncements()
+  private void cleanupStaleAnnouncements() throws Exception
   {
     // cleanup any old running task announcements which are invalid after restart
     for (TaskAnnouncement announcement : workerCuratorCoordinator.getAnnouncements()) {
@@ -205,9 +218,21 @@ public class WorkerTaskMonitor
         new TaskRunnerListener()
         {
           @Override
+          public String getListenerId()
+          {
+            return "WorkerTaskMonitor";
+          }
+
+          @Override
           public void locationChanged(final String taskId, final TaskLocation newLocation)
           {
             notices.add(new LocationNotice(taskId, newLocation));
+          }
+
+          @Override
+          public void statusChanged(final String taskId, final TaskStatus status)
+          {
+            // do nothing
           }
         },
         MoreExecutors.sameThreadExecutor()
@@ -237,18 +262,27 @@ public class WorkerTaskMonitor
   }
 
   @LifecycleStop
-  public void stop()
+  public void stop() throws InterruptedException
   {
     synchronized (lifecycleLock) {
       Preconditions.checkState(started, "not started");
 
       try {
+        started = false;
+        taskRunner.unregisterListener("WorkerTaskMonitor");
         exec.shutdownNow();
         pathChildrenCache.close();
         taskRunner.stop();
 
-        started = false;
+        if (!doneStopping.await(STOP_WARNING_SECONDS, TimeUnit.SECONDS)) {
+          log.warn("WorkerTaskMonitor taking longer than %s seconds to exit. Still waiting...", STOP_WARNING_SECONDS);
+          doneStopping.await();
+        }
+
         log.info("Stopped WorkerTaskMonitor.");
+      }
+      catch (InterruptedException e) {
+        throw e;
       }
       catch (Exception e) {
         log.makeAlert(e, "Exception stopping WorkerTaskMonitor")
@@ -277,7 +311,7 @@ public class WorkerTaskMonitor
   {
     String getTaskId();
 
-    void handle();
+    void handle() throws Exception;
   }
 
   private class RunNotice implements Notice
@@ -296,7 +330,7 @@ public class WorkerTaskMonitor
     }
 
     @Override
-    public void handle()
+    public void handle() throws Exception
     {
       if (running.containsKey(task.getId())) {
         log.warn(
@@ -342,7 +376,7 @@ public class WorkerTaskMonitor
     }
 
     @Override
-    public void handle()
+    public void handle() throws Exception
     {
       final TaskDetails details = running.get(task.getId());
 
@@ -376,6 +410,9 @@ public class WorkerTaskMonitor
             status.getStatusCode()
         );
       }
+      catch (InterruptedException e) {
+        throw e;
+      }
       catch (Exception e) {
         log.makeAlert(e, "Failed to update task announcement")
            .addData("task", task.getId())
@@ -405,7 +442,7 @@ public class WorkerTaskMonitor
     }
 
     @Override
-    public void handle()
+    public void handle() throws InterruptedException
     {
       final TaskDetails details = running.get(taskId);
 
@@ -426,6 +463,9 @@ public class WorkerTaskMonitor
                   details.location
               )
           );
+        }
+        catch (InterruptedException e) {
+          throw e;
         }
         catch (Exception e) {
           log.makeAlert(e, "Failed to update task announcement")

@@ -22,9 +22,9 @@ package io.druid.segment.filter;
 import com.metamx.collections.bitmap.ImmutableBitmap;
 import io.druid.query.filter.BitmapIndexSelector;
 import io.druid.query.filter.Filter;
+import io.druid.query.filter.RowOffsetMatcherFactory;
 import io.druid.query.filter.ValueMatcher;
 import io.druid.query.filter.ValueMatcherFactory;
-import io.druid.segment.ColumnSelectorFactory;
 
 /**
  */
@@ -64,17 +64,13 @@ public class NotFilter implements Filter
   }
 
   @Override
-  public ValueMatcher makeMatcher(ColumnSelectorFactory factory)
+  public boolean supportsBitmapIndex(BitmapIndexSelector selector)
   {
-    final ValueMatcher baseMatcher = baseFilter.makeMatcher(factory);
+    return baseFilter.supportsBitmapIndex(selector);
+  }
 
-    return new ValueMatcher()
-    {
-      @Override
-      public boolean matches()
-      {
-        return !baseMatcher.matches();
-      }
-    };
+  public Filter getBaseFilter()
+  {
+    return baseFilter;
   }
 }

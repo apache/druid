@@ -37,7 +37,7 @@ import io.druid.collections.StupidPool;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.Row;
 import io.druid.data.input.impl.DimensionsSpec;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.query.Druids;
 import io.druid.query.FinalizeResultsQueryRunner;
 import io.druid.query.QueryRunner;
@@ -48,7 +48,11 @@ import io.druid.query.aggregation.Aggregator;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.DoubleSumAggregatorFactory;
+import io.druid.query.aggregation.FilteredAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
+import io.druid.query.filter.BoundDimFilter;
+import io.druid.query.filter.SelectorDimFilter;
+import io.druid.query.ordering.StringComparators;
 import io.druid.query.timeseries.TimeseriesQuery;
 import io.druid.query.timeseries.TimeseriesQueryEngine;
 import io.druid.query.timeseries.TimeseriesQueryQueryToolChest;
@@ -130,7 +134,39 @@ public class IncrementalIndexTest
                   public IncrementalIndex createIndex(AggregatorFactory[] factories)
                   {
                     return new OffheapIncrementalIndex(
-                        0L, QueryGranularity.NONE, factories, 1000000,
+                        0L, QueryGranularities.NONE, factories, 1000000,
+                        new StupidPool<ByteBuffer>(
+                            new Supplier<ByteBuffer>()
+                            {
+                              @Override
+                              public ByteBuffer get()
+                              {
+                                return ByteBuffer.allocate(256 * 1024);
+                              }
+                            }
+                        )
+                    );
+                  }
+                }
+            },
+            {
+                new IndexCreator()
+                {
+                  @Override
+                  public IncrementalIndex createIndex(AggregatorFactory[] factories)
+                  {
+                    return IncrementalIndexTest.createNoRollupIndex(factories);
+                  }
+                }
+            },
+            {
+                new IndexCreator()
+                {
+                  @Override
+                  public IncrementalIndex createIndex(AggregatorFactory[] factories)
+                  {
+                    return new OffheapIncrementalIndex(
+                        0L, QueryGranularities.NONE, false, factories, 1000000,
                         new StupidPool<ByteBuffer>(
                             new Supplier<ByteBuffer>()
                             {
@@ -167,7 +203,18 @@ public class IncrementalIndexTest
     }
 
     return new OnheapIncrementalIndex(
-        0L, QueryGranularity.NONE, aggregatorFactories, 1000000
+        0L, QueryGranularities.NONE, aggregatorFactories, 1000000
+    );
+  }
+
+  public static IncrementalIndex createNoRollupIndex(AggregatorFactory[] aggregatorFactories)
+  {
+    if (null == aggregatorFactories) {
+      aggregatorFactories = defaultAggregatorFactories;
+    }
+
+    return new OnheapIncrementalIndex(
+        0L, QueryGranularities.NONE, false, aggregatorFactories, 1000000
     );
   }
 
@@ -247,6 +294,85 @@ public class IncrementalIndexTest
   }
 
   @Test
+  public void testFilteredAggregators() throws Exception
+  {
+    long timestamp = System.currentTimeMillis();
+    IncrementalIndex index = closer.closeLater(
+        indexCreator.createIndex(new AggregatorFactory[]{
+            new CountAggregatorFactory("count"),
+            new FilteredAggregatorFactory(
+                new CountAggregatorFactory("count_selector_filtered"),
+                new SelectorDimFilter("dim2", "2", null)
+            ),
+            new FilteredAggregatorFactory(
+                new CountAggregatorFactory("count_bound_filtered"),
+                new BoundDimFilter("dim2", "2", "3", false, true, null, null, StringComparators.NUMERIC)
+            ),
+            new FilteredAggregatorFactory(
+                new CountAggregatorFactory("count_multivaldim_filtered"),
+                new SelectorDimFilter("dim3", "b", null)
+            ),
+            new FilteredAggregatorFactory(
+                new CountAggregatorFactory("count_numeric_filtered"),
+                new SelectorDimFilter("met1", "11", null)
+            )
+        })
+    );
+
+    index.add(
+        new MapBasedInputRow(
+            timestamp,
+            Arrays.asList("dim1", "dim2", "dim3"),
+            ImmutableMap.<String, Object>of("dim1", "1", "dim2", "2", "dim3", Lists.newArrayList("b", "a"), "met1", 10)
+        )
+    );
+
+    index.add(
+        new MapBasedInputRow(
+            timestamp,
+            Arrays.asList("dim1", "dim2", "dim3"),
+            ImmutableMap.<String, Object>of("dim1", "3", "dim2", "4", "dim3", Lists.newArrayList("c", "d"), "met1", 11)
+        )
+    );
+
+    Assert.assertEquals(Arrays.asList("dim1", "dim2", "dim3"), index.getDimensionNames());
+    Assert.assertEquals(
+        Arrays.asList(
+            "count",
+            "count_selector_filtered",
+            "count_bound_filtered",
+            "count_multivaldim_filtered",
+            "count_numeric_filtered"
+        ),
+        index.getMetricNames()
+    );
+    Assert.assertEquals(2, index.size());
+
+    final Iterator<Row> rows = index.iterator();
+    Row row = rows.next();
+    Assert.assertEquals(timestamp, row.getTimestampFromEpoch());
+    Assert.assertEquals(Arrays.asList("1"), row.getDimension("dim1"));
+    Assert.assertEquals(Arrays.asList("2"), row.getDimension("dim2"));
+    Assert.assertEquals(Arrays.asList("a", "b"), row.getDimension("dim3"));
+    Assert.assertEquals(1L, row.getLongMetric("count"));
+    Assert.assertEquals(1L, row.getLongMetric("count_selector_filtered"));
+    Assert.assertEquals(1L, row.getLongMetric("count_bound_filtered"));
+    Assert.assertEquals(1L, row.getLongMetric("count_multivaldim_filtered"));
+    Assert.assertEquals(0L, row.getLongMetric("count_numeric_filtered"));
+
+    row = rows.next();
+    Assert.assertEquals(timestamp, row.getTimestampFromEpoch());
+    Assert.assertEquals(Arrays.asList("3"), row.getDimension("dim1"));
+    Assert.assertEquals(Arrays.asList("4"), row.getDimension("dim2"));
+    Assert.assertEquals(Arrays.asList("c", "d"), row.getDimension("dim3"));
+    Assert.assertEquals(1L, row.getLongMetric("count"));
+    Assert.assertEquals(0L, row.getLongMetric("count_selector_filtered"));
+    Assert.assertEquals(0L, row.getLongMetric("count_bound_filtered"));
+    Assert.assertEquals(0L, row.getLongMetric("count_multivaldim_filtered"));
+    Assert.assertEquals(1L, row.getLongMetric("count_numeric_filtered"));
+  }
+
+  @Test
   public void testSingleThreadedIndexingAndQuery() throws Exception
   {
     final int dimensionCount = 5;
@@ -308,7 +434,7 @@ public class IncrementalIndexTest
 
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("xxx")
-                                  .granularity(QueryGranularity.ALL)
+                                  .granularity(QueryGranularities.ALL)
                                   .intervals(ImmutableList.of(new Interval("2000/2030")))
                                   .aggregators(queryAggregatorFactories)
                                   .build();
@@ -330,7 +456,8 @@ public class IncrementalIndexTest
         new LinkedList<Result<TimeseriesResultValue>>()
     );
     Result<TimeseriesResultValue> result = Iterables.getOnlyElement(results);
-    Assert.assertEquals(rows, result.getValue().getLongMetric("rows").intValue());
+    boolean isRollup = index.isRollup();
+    Assert.assertEquals(rows * (isRollup ? 1 : 2), result.getValue().getLongMetric("rows").intValue());
     for (int i = 0; i < dimensionCount; ++i) {
       Assert.assertEquals(
           String.format("Failed long sum on dimension %d", i),
@@ -458,7 +585,7 @@ public class IncrementalIndexTest
 
       final TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                           .dataSource("xxx")
-                                          .granularity(QueryGranularity.ALL)
+                                          .granularity(QueryGranularities.ALL)
                                           .intervals(ImmutableList.of(queryInterval))
                                           .aggregators(queryAggregatorFactories)
                                           .build();
@@ -536,7 +663,7 @@ public class IncrementalIndexTest
     );
     TimeseriesQuery query = Druids.newTimeseriesQueryBuilder()
                                   .dataSource("xxx")
-                                  .granularity(QueryGranularity.ALL)
+                                  .granularity(QueryGranularities.ALL)
                                   .intervals(ImmutableList.of(queryInterval))
                                   .aggregators(queryAggregatorFactories)
                                   .build();
@@ -545,8 +672,12 @@ public class IncrementalIndexTest
         runner.run(query, context),
         new LinkedList<Result<TimeseriesResultValue>>()
     );
+    boolean isRollup = index.isRollup();
     for (Result<TimeseriesResultValue> result : results) {
-      Assert.assertEquals(elementsPerThread, result.getValue().getLongMetric("rows").intValue());
+      Assert.assertEquals(
+          elementsPerThread * (isRollup ? 1 : concurrentThreads),
+          result.getValue().getLongMetric("rows").intValue()
+      );
       for (int i = 0; i < dimensionCount; ++i) {
         Assert.assertEquals(
             String.format("Failed long sum on dimension %d", i),
@@ -594,24 +725,25 @@ public class IncrementalIndexTest
     }
     Assert.assertTrue(latch.await(60, TimeUnit.SECONDS));
 
+    boolean isRollup = index.isRollup();
     Assert.assertEquals(dimensionCount, index.getDimensionNames().size());
-    Assert.assertEquals(elementsPerThread, index.size());
+    Assert.assertEquals(elementsPerThread * (isRollup ? 1 : threadCount), index.size());
     Iterator<Row> iterator = index.iterator();
     int curr = 0;
     while (iterator.hasNext()) {
       Row row = iterator.next();
-      Assert.assertEquals(timestamp + curr, row.getTimestampFromEpoch());
-      Assert.assertEquals(Float.valueOf(threadCount), (Float) row.getFloatMetric("count"));
+      Assert.assertEquals(timestamp + (isRollup ? curr : curr / threadCount), row.getTimestampFromEpoch());
+      Assert.assertEquals(Float.valueOf(isRollup ? threadCount : 1), (Float) row.getFloatMetric("count"));
       curr++;
     }
-    Assert.assertEquals(elementsPerThread, curr);
+    Assert.assertEquals(elementsPerThread * (isRollup ? 1 : threadCount), curr);
   }
 
   @Test
   public void testgetDimensions()
   {
     final IncrementalIndex<Aggregator> incrementalIndex = new OnheapIncrementalIndex(
-        new IncrementalIndexSchema.Builder().withQueryGranularity(QueryGranularity.NONE)
+        new IncrementalIndexSchema.Builder().withQueryGranularity(QueryGranularities.NONE)
                                             .withMetrics(
                                                 new AggregatorFactory[]{
                                                     new CountAggregatorFactory(
@@ -621,7 +753,7 @@ public class IncrementalIndexTest
                                             )
                                             .withDimensionsSpec(
                                                 new DimensionsSpec(
-                                                    Arrays.asList("dim0", "dim1"),
+                                                    DimensionsSpec.getDefaultSchemas(Arrays.asList("dim0", "dim1")),
                                                     null,
                                                     null
                                                 )

@@ -21,8 +21,10 @@ package io.druid.query.filter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.RangeSet;
 import com.metamx.collections.spatial.search.Bound;
 import com.metamx.common.StringUtils;
+import io.druid.segment.filter.SpatialFilter;
 
 import java.nio.ByteBuffer;
 
@@ -53,9 +55,9 @@ public class SpatialDimFilter implements DimFilter
     byte[] boundBytes = bound.getCacheKey();
 
     return ByteBuffer.allocate(2 + dimBytes.length + boundBytes.length)
-                     .put(DimFilterCacheHelper.SPATIAL_CACHE_ID)
+                     .put(DimFilterUtils.SPATIAL_CACHE_ID)
                      .put(dimBytes)
-                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                     .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(boundBytes)
                      .array();
   }
@@ -76,6 +78,18 @@ public class SpatialDimFilter implements DimFilter
   public Bound getBound()
   {
     return bound;
+  }
+
+  @Override
+  public Filter toFilter()
+  {
+    return new SpatialFilter(dimension, bound);
+  }
+
+  @Override
+  public RangeSet<String> getDimensionRangeSet(String dimension)
+  {
+    return null;
   }
 
   @Override

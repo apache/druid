@@ -167,7 +167,9 @@ public class SegmentAnalyzerTest
         (QueryRunnerFactory) new SegmentMetadataQueryRunnerFactory(
             new SegmentMetadataQueryQueryToolChest(new SegmentMetadataQueryConfig()),
             QueryRunnerTestHelper.NOOP_QUERYWATCHER
-        ), index
+        ),
+        index,
+        null
     );
 
     final SegmentMetadataQuery query = new SegmentMetadataQuery(

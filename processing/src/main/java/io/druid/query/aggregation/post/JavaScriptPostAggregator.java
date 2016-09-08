@@ -19,10 +19,13 @@
 
 package io.druid.query.aggregation.post;
 
+import com.fasterxml.jackson.annotation.JacksonInject;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Sets;
+import com.metamx.common.ISE;
+import io.druid.js.JavaScriptConfig;
 import io.druid.query.aggregation.PostAggregator;
 import org.mozilla.javascript.Context;
 import org.mozilla.javascript.ContextFactory;
@@ -50,10 +53,11 @@ public class JavaScriptPostAggregator implements PostAggregator
     public double apply(final Object[] args);
   }
 
-  private static Function compile(String function) {
+  private static Function compile(String function)
+  {
     final ContextFactory contextFactory = ContextFactory.getGlobal();
     final Context context = contextFactory.enterContext();
-    context.setOptimizationLevel(9);
+    context.setOptimizationLevel(JavaScriptConfig.DEFAULT_OPTIMIZATION_LEVEL);
 
     final ScriptableObject scope = context.initStandardObjects();
 
@@ -82,12 +86,12 @@ public class JavaScriptPostAggregator implements PostAggregator
 
   private final Function fn;
 
-
   @JsonCreator
   public JavaScriptPostAggregator(
       @JsonProperty("name") String name,
       @JsonProperty("fieldNames") final List<String> fieldNames,
-      @JsonProperty("function") final String function
+      @JsonProperty("function") final String function,
+      @JacksonInject JavaScriptConfig config
   )
   {
     Preconditions.checkNotNull(name, "Must have a valid, non-null post-aggregator name");
@@ -98,7 +102,11 @@ public class JavaScriptPostAggregator implements PostAggregator
     this.fieldNames = fieldNames;
     this.function = function;
 
-    this.fn = compile(function);
+    if (config.isDisabled()) {
+      this.fn = null;
+    } else {
+      this.fn = compile(function);
+    }
   }
 
   @Override
@@ -116,9 +124,13 @@ public class JavaScriptPostAggregator implements PostAggregator
   @Override
   public Object compute(Map<String, Object> combinedAggregators)
   {
+    if (fn == null) {
+      throw new ISE("JavaScript is disabled");
+    }
+
     final Object[] args = new Object[fieldNames.size()];
     int i = 0;
-    for(String field : fieldNames) {
+    for (String field : fieldNames) {
       args[i++] = combinedAggregators.get(field);
     }
     return fn.apply(args);
@@ -146,15 +158,27 @@ public class JavaScriptPostAggregator implements PostAggregator
   @Override
   public boolean equals(Object o)
   {
-    if (this == o) return true;
-    if (o == null || getClass() != o.getClass()) return false;
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
 
     JavaScriptPostAggregator that = (JavaScriptPostAggregator) o;
 
-    if (fieldNames != null ? !fieldNames.equals(that.fieldNames) : that.fieldNames != null) return false;
-    if (fn != null ? !fn.equals(that.fn) : that.fn != null) return false;
-    if (function != null ? !function.equals(that.function) : that.function != null) return false;
-    if (name != null ? !name.equals(that.name) : that.name != null) return false;
+    if (fieldNames != null ? !fieldNames.equals(that.fieldNames) : that.fieldNames != null) {
+      return false;
+    }
+    if (fn != null ? !fn.equals(that.fn) : that.fn != null) {
+      return false;
+    }
+    if (function != null ? !function.equals(that.function) : that.function != null) {
+      return false;
+    }
+    if (name != null ? !name.equals(that.name) : that.name != null) {
+      return false;
+    }
 
     return true;
   }

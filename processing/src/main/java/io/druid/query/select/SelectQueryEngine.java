@@ -21,6 +21,7 @@ package io.druid.query.select;
 
 import com.google.common.base.Function;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.metamx.common.ISE;
@@ -29,12 +30,13 @@ import io.druid.query.QueryRunnerHelper;
 import io.druid.query.Result;
 import io.druid.query.dimension.DefaultDimensionSpec;
 import io.druid.query.dimension.DimensionSpec;
+import io.druid.query.filter.Filter;
 import io.druid.segment.Cursor;
 import io.druid.segment.DimensionSelector;
 import io.druid.segment.LongColumnSelector;
 import io.druid.segment.ObjectColumnSelector;
 import io.druid.segment.Segment;
-import io.druid.segment.SegmentDesc;
+import io.druid.timeline.DataSegmentUtils;
 import io.druid.segment.StorageAdapter;
 import io.druid.segment.column.Column;
 import io.druid.segment.data.IndexedInts;
@@ -59,6 +61,9 @@ public class SelectQueryEngine
       );
     }
 
+    // at the point where this code is called, only one datasource should exist.
+    String dataSource = Iterables.getOnlyElement(query.getDataSource().getNames());
+
     final Iterable<DimensionSpec> dims;
     if (query.getDimensions() == null || query.getDimensions().isEmpty()) {
       dims = DefaultDimensionSpec.toSpec(adapter.getAvailableDimensions());
@@ -76,12 +81,14 @@ public class SelectQueryEngine
     Preconditions.checkArgument(intervals.size() == 1, "Can only handle a single interval, got[%s]", intervals);
 
     // should be rewritten with given interval
-    final String segmentId = SegmentDesc.withInterval(segment.getIdentifier(), intervals.get(0));
+    final String segmentId = DataSegmentUtils.withInterval(dataSource, segment.getIdentifier(), intervals.get(0));
+
+    final Filter filter = Filters.convertToCNFFromQueryContext(query, Filters.toFilter(query.getDimensionsFilter()));
 
     return QueryRunnerHelper.makeCursorBasedQuery(
         adapter,
         query.getQuerySegmentSpec().getIntervals(),
-        Filters.convertDimensionFilters(query.getDimensionsFilter()),
+        filter,
         query.isDescending(),
         query.getGranularity(),
         new Function<Cursor, Result<SelectResultValue>>()
@@ -101,12 +108,14 @@ public class SelectQueryEngine
             for (DimensionSpec dim : dims) {
               final DimensionSelector dimSelector = cursor.makeDimensionSelector(dim);
               dimSelectors.put(dim.getOutputName(), dimSelector);
+              builder.addDimension(dim.getOutputName());
             }
 
             final Map<String, ObjectColumnSelector> metSelectors = Maps.newHashMap();
             for (String metric : metrics) {
               final ObjectColumnSelector metricSelector = cursor.makeObjectColumnSelector(metric);
               metSelectors.put(metric, metricSelector);
+              builder.addMetric(metric);
             }
 
             final PagingOffset offset = query.getPagingOffset(segmentId);

@@ -25,6 +25,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import io.druid.common.utils.JodaUtils;
 import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.query.filter.DimFilter;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
@@ -76,7 +77,7 @@ public class DatasourceIngestionSpec
     this.segments = segments;
 
     this.filter = filter;
-    this.granularity = granularity == null ? QueryGranularity.NONE : granularity;
+    this.granularity = granularity == null ? QueryGranularities.NONE : granularity;
 
     this.dimensions = dimensions;
     this.metrics = metrics;

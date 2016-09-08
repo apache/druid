@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.metamx.common.StringUtils;
+import io.druid.query.lookup.LookupExtractor;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;

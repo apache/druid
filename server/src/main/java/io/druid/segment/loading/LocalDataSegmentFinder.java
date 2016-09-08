@@ -20,7 +20,7 @@
 package io.druid.segment.loading;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.api.client.util.Sets;
+import com.google.common.collect.Sets;
 import com.google.inject.Inject;
 import com.metamx.common.logger.Logger;
 import io.druid.guice.LocalDataStorageDruidModule;

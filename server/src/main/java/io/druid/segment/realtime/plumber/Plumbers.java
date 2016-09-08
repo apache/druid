@@ -46,29 +46,9 @@ public class Plumbers
       final FireDepartmentMetrics metrics
   )
   {
+    final InputRow inputRow;
     try {
-      final InputRow inputRow = firehose.nextRow();
-
-      if (inputRow == null) {
-        if (reportParseExceptions) {
-          throw new ParseException("null input row");
-        } else {
-          log.debug("Discarded null input row, considering unparseable.");
-          metrics.incrementUnparseable();
-          return;
-        }
-      }
-
-      // Included in ParseException try/catch, as additional parsing can be done during indexing.
-      int numRows = plumber.add(inputRow, committerSupplier);
-
-      if (numRows == -1) {
-        metrics.incrementThrownAway();
-        log.debug("Discarded row[%s], considering thrownAway.", inputRow);
-        return;
-      }
-
-      metrics.incrementProcessed();
+      inputRow = firehose.nextRow();
     }
     catch (ParseException e) {
       if (reportParseExceptions) {
@@ -76,12 +56,36 @@ public class Plumbers
       } else {
         log.debug(e, "Discarded row due to exception, considering unparseable.");
         metrics.incrementUnparseable();
+        return;
       }
+    }
+
+    if (inputRow == null) {
+      if (reportParseExceptions) {
+        throw new ParseException("null input row");
+      } else {
+        log.debug("Discarded null input row, considering unparseable.");
+        metrics.incrementUnparseable();
+        return;
+      }
+    }
+
+    final int numRows;
+    try {
+      numRows = plumber.add(inputRow, committerSupplier);
     }
     catch (IndexSizeExceededException e) {
       // Shouldn't happen if this is only being called by a single thread.
       // plumber.add should be swapping out indexes before they fill up.
       throw new ISE(e, "WTF?! Index size exceeded, this shouldn't happen. Bad Plumber!");
     }
+
+    if (numRows == -1) {
+      metrics.incrementThrownAway();
+      log.debug("Discarded row[%s], considering thrownAway.", inputRow);
+      return;
+    }
+
+    metrics.incrementProcessed();
   }
 }

@@ -33,7 +33,7 @@ import io.druid.data.input.impl.InputRowParser;
 import io.druid.data.input.impl.JSONParseSpec;
 import io.druid.data.input.impl.StringInputRowParser;
 import io.druid.data.input.impl.TimestampSpec;
-import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.query.aggregation.AggregatorFactory;
 import io.druid.query.aggregation.CountAggregatorFactory;
 import io.druid.query.aggregation.LongSumAggregatorFactory;
@@ -140,10 +140,11 @@ public class IndexGeneratorJobTest
                 new StringInputRowParser(
                     new CSVParseSpec(
                         new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                        new DimensionsSpec(ImmutableList.of("host"), null, null),
+                        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
                         null,
                         ImmutableList.of("timestamp", "host", "visited_num")
-                    )
+                    ),
+                    null
                 ),
                 null,
                 aggs1,
@@ -185,7 +186,7 @@ public class IndexGeneratorJobTest
                 new HadoopyStringInputRowParser(
                     new CSVParseSpec(
                         new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                        new DimensionsSpec(ImmutableList.of("host"), null, null),
+                        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
                         null,
                         ImmutableList.of("timestamp", "host", "visited_num")
                     )
@@ -230,10 +231,11 @@ public class IndexGeneratorJobTest
                 new StringInputRowParser(
                     new CSVParseSpec(
                         new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                        new DimensionsSpec(ImmutableList.of("host"), null, null),
+                        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
                         null,
                         ImmutableList.of("timestamp", "host", "visited_num")
-                    )
+                    ),
+                    null
                 ),
                 null,
                 aggs1,
@@ -285,7 +287,7 @@ public class IndexGeneratorJobTest
                 new HadoopyStringInputRowParser(
                     new CSVParseSpec(
                         new TimestampSpec("timestamp", "yyyyMMddHH", null),
-                        new DimensionsSpec(ImmutableList.of("host"), null, null),
+                        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("host")), null, null),
                         null,
                         ImmutableList.of("timestamp", "host", "visited_num")
                     )
@@ -316,8 +318,11 @@ public class IndexGeneratorJobTest
                 new StringInputRowParser(
                     new JSONParseSpec(
                         new TimestampSpec("ts", "yyyyMMddHH", null),
-                        new DimensionsSpec(null, null, null)
-                    )
+                        new DimensionsSpec(null, null, null),
+                        null,
+                        null
+                    ),
+                    null
                 ),
                 1, // force 1 row max per index for easier testing
                 aggs2,
@@ -345,8 +350,11 @@ public class IndexGeneratorJobTest
                 new StringInputRowParser(
                     new JSONParseSpec(
                         new TimestampSpec("ts", "yyyyMMddHH", null),
-                        new DimensionsSpec(ImmutableList.of("B", "F", "M", "Q", "X", "Y"), null, null)
-                    )
+                        new DimensionsSpec(DimensionsSpec.getDefaultSchemas(ImmutableList.of("B", "F", "M", "Q", "X", "Y")), null, null),
+                        null,
+                        null
+                    ),
+                    null
                 ),
                 1, // force 1 row max per index for easier testing
                 aggs2,
@@ -478,7 +486,7 @@ public class IndexGeneratorJobTest
                 ),
                 aggs,
                 new UniformGranularitySpec(
-                    Granularity.DAY, QueryGranularity.NONE, ImmutableList.of(this.interval)
+                    Granularity.DAY, QueryGranularities.NONE, ImmutableList.of(this.interval)
                 ),
                 mapper
             ),
@@ -517,7 +525,7 @@ public class IndexGeneratorJobTest
     List<ShardSpec> specs = Lists.newArrayList();
     if (partitionType.equals("hashed")) {
       for (Integer[] shardInfo : (Integer[][]) shardInfoForEachShard) {
-        specs.add(new HashBasedNumberedShardSpec(shardInfo[0], shardInfo[1], HadoopDruidIndexerConfig.JSON_MAPPER));
+        specs.add(new HashBasedNumberedShardSpec(shardInfo[0], shardInfo[1], null, HadoopDruidIndexerConfig.JSON_MAPPER));
       }
     } else if (partitionType.equals("single")) {
       int partitionNum = 0;

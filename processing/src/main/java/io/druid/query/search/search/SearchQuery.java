@@ -23,12 +23,14 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
 import io.druid.granularity.QueryGranularity;
+import io.druid.granularity.QueryGranularities;
 import io.druid.query.BaseQuery;
 import io.druid.query.DataSource;
 import io.druid.query.Query;
 import io.druid.query.Result;
 import io.druid.query.dimension.DimensionSpec;
 import io.druid.query.filter.DimFilter;
+import io.druid.query.ordering.StringComparators;
 import io.druid.query.search.SearchResultValue;
 import io.druid.query.spec.QuerySegmentSpec;
 
@@ -39,6 +41,8 @@ import java.util.Map;
  */
 public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
 {
+  private static final SearchSortSpec DEFAULT_SORT_SPEC = new SearchSortSpec(StringComparators.LEXICOGRAPHIC);
+
   private final DimFilter dimFilter;
   private final SearchSortSpec sortSpec;
   private final QueryGranularity granularity;
@@ -61,20 +65,25 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
   {
     super(dataSource, querySegmentSpec, false, context);
     this.dimFilter = dimFilter;
-    this.sortSpec = sortSpec == null ? new LexicographicSearchSortSpec() : sortSpec;
-    this.granularity = granularity == null ? QueryGranularity.ALL : granularity;
+    this.sortSpec = sortSpec == null ? DEFAULT_SORT_SPEC : sortSpec;
+    this.granularity = granularity == null ? QueryGranularities.ALL : granularity;
     this.limit = (limit == 0) ? 1000 : limit;
     this.dimensions = dimensions;
-    this.querySpec = querySpec;
+    this.querySpec = querySpec == null ? new AllSearchQuerySpec() : querySpec;
 
     Preconditions.checkNotNull(querySegmentSpec, "Must specify an interval");
-    Preconditions.checkNotNull(querySpec, "Must specify a query");
   }
 
   @Override
   public boolean hasFilters()
   {
     return dimFilter != null;
+  }
+
+  @Override
+  public DimFilter getFilter()
+  {
+    return dimFilter;
   }
 
   @Override
@@ -128,6 +137,21 @@ public class SearchQuery extends BaseQuery<Result<SearchResultValue>>
         querySpec,
         sortSpec,
         computeOverridenContext(contextOverrides)
+    );
+  }
+
+  public SearchQuery withDimFilter(DimFilter dimFilter)
+  {
+    return new SearchQuery(
+        getDataSource(),
+        dimFilter,
+        granularity,
+        limit,
+        getQuerySegmentSpec(),
+        dimensions,
+        querySpec,
+        sortSpec,
+        getContext()
     );
   }
 

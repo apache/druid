@@ -44,12 +44,12 @@ public class HLLCV1 extends HyperLogLogCollector
   private static final ByteBuffer defaultStorageBuffer = ByteBuffer.wrap(new byte[]{VERSION, 0, 0, 0, 0, 0, 0})
                                                                    .asReadOnlyBuffer();
 
-  protected HLLCV1()
+  HLLCV1()
   {
-    super(defaultStorageBuffer);
+    super(defaultStorageBuffer.duplicate());
   }
 
-  protected HLLCV1(ByteBuffer buffer)
+  HLLCV1(ByteBuffer buffer)
   {
     super(buffer);
   }

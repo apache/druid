@@ -21,8 +21,11 @@ package io.druid.query.filter;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Preconditions;
+import com.google.common.collect.RangeSet;
 import com.metamx.common.StringUtils;
+import io.druid.query.extraction.ExtractionFn;
 import io.druid.query.search.search.SearchQuerySpec;
+import io.druid.segment.filter.SearchQueryFilter;
 
 import java.nio.ByteBuffer;
 
@@ -32,10 +35,12 @@ public class SearchQueryDimFilter implements DimFilter
 {
   private final String dimension;
   private final SearchQuerySpec query;
+  private final ExtractionFn extractionFn;
 
   public SearchQueryDimFilter(
       @JsonProperty("dimension") String dimension,
-      @JsonProperty("query") SearchQuerySpec query
+      @JsonProperty("query") SearchQuerySpec query,
+      @JsonProperty("extractionFn") ExtractionFn extractionFn
   )
   {
     Preconditions.checkArgument(dimension != null, "dimension must not be null");
@@ -43,6 +48,7 @@ public class SearchQueryDimFilter implements DimFilter
 
     this.dimension = dimension;
     this.query = query;
+    this.extractionFn = extractionFn;
   }
 
   @JsonProperty
@@ -57,17 +63,26 @@ public class SearchQueryDimFilter implements DimFilter
     return query;
   }
 
+  @JsonProperty
+  public ExtractionFn getExtractionFn()
+  {
+    return extractionFn;
+  }
+
   @Override
   public byte[] getCacheKey()
   {
     final byte[] dimensionBytes = StringUtils.toUtf8(dimension);
     final byte[] queryBytes = query.getCacheKey();
+    byte[] extractionFnBytes = extractionFn == null ? new byte[0] : extractionFn.getCacheKey();
 
-    return ByteBuffer.allocate(2 + dimensionBytes.length + queryBytes.length)
-                     .put(DimFilterCacheHelper.SEARCH_QUERY_TYPE_ID)
+    return ByteBuffer.allocate(3 + dimensionBytes.length + queryBytes.length + extractionFnBytes.length)
+                     .put(DimFilterUtils.SEARCH_QUERY_TYPE_ID)
                      .put(dimensionBytes)
-                     .put(DimFilterCacheHelper.STRING_SEPARATOR)
+                     .put(DimFilterUtils.STRING_SEPARATOR)
                      .put(queryBytes)
+                     .put(DimFilterUtils.STRING_SEPARATOR)
+                     .put(extractionFnBytes)
                      .array();
   }
 
@@ -78,11 +93,55 @@ public class SearchQueryDimFilter implements DimFilter
   }
 
   @Override
+  public Filter toFilter()
+  {
+    return new SearchQueryFilter(dimension, query, extractionFn);
+  }
+
+  @Override
+  public RangeSet<String> getDimensionRangeSet(String dimension)
+  {
+    return null;
+  }
+
+  @Override
   public String toString()
   {
     return "SearchQueryDimFilter{" +
            "dimension='" + dimension + '\'' +
            ", query=" + query +
+           ", extractionFn='" + extractionFn + '\'' +
            '}';
+  }
+
+  @Override
+  public boolean equals(Object o)
+  {
+    if (this == o) {
+      return true;
+    }
+    if (!(o instanceof SearchQueryDimFilter)) {
+      return false;
+    }
+
+    SearchQueryDimFilter that = (SearchQueryDimFilter) o;
+
+    if (!dimension.equals(that.dimension)) {
+      return false;
+    }
+    if (!query.equals(that.query)) {
+      return false;
+    }
+    return extractionFn != null ? extractionFn.equals(that.extractionFn) : that.extractionFn == null;
+
+  }
+
+  @Override
+  public int hashCode()
+  {
+    int result = dimension.hashCode();
+    result = 31 * result + query.hashCode();
+    result = 31 * result + (extractionFn != null ? extractionFn.hashCode() : 0);
+    return result;
   }
 }

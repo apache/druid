@@ -28,11 +28,14 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Ordering;
+import com.google.inject.Inject;
 import com.metamx.common.ISE;
 import com.metamx.common.Pair;
 import com.metamx.common.guava.FunctionalIterable;
 import com.metamx.common.logger.Logger;
+import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.client.indexing.IndexingServiceClient;
+import io.druid.common.config.JacksonConfigManager;
 import io.druid.server.coordinator.CoordinatorStats;
 import io.druid.server.coordinator.DatasourceWhitelist;
 import io.druid.server.coordinator.DruidCoordinatorRuntimeParams;
@@ -57,13 +60,14 @@ public class DruidCoordinatorSegmentMerger implements DruidCoordinatorHelper
   private final IndexingServiceClient indexingServiceClient;
   private final AtomicReference<DatasourceWhitelist> whiteListRef;
 
+  @Inject
   public DruidCoordinatorSegmentMerger(
       IndexingServiceClient indexingServiceClient,
-      AtomicReference<DatasourceWhitelist> whitelistRef
+      JacksonConfigManager configManager
   )
   {
     this.indexingServiceClient = indexingServiceClient;
-    this.whiteListRef = whitelistRef;
+    this.whiteListRef = configManager.watch(DatasourceWhitelist.CONFIG_KEY, DatasourceWhitelist.class);
   }
 
   @Override
@@ -125,6 +129,14 @@ public class DruidCoordinatorSegmentMerger implements DruidCoordinatorHelper
         stats.addToGlobalStat("mergedCount", mergeSegments(segmentsToMerge, entry.getKey()));
       }
     }
+
+    log.info("Issued merge requests for %s segments", stats.getGlobalStats().get("mergedCount").get());
+
+    params.getEmitter().emit(
+        new ServiceMetricEvent.Builder().build(
+            "coordinator/merge/count", stats.getGlobalStats().get("mergedCount")
+        )
+    );
 
     return params.buildFromExisting()
                  .withCoordinatorStats(stats)

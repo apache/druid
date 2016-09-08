@@ -100,6 +100,7 @@ public class DruidCoordinatorTest extends CuratorTestBase
   @Before
   public void setUp() throws Exception
   {
+    taskMaster = EasyMock.createMock(LoadQueueTaskMaster.class);
     druidServer = EasyMock.createMock(DruidServer.class);
     serverInventoryView = EasyMock.createMock(SingleServerInventoryView.class);
     databaseSegmentManager = EasyMock.createNiceMock(MetadataSegmentManager.class);
@@ -186,7 +187,8 @@ public class DruidCoordinatorTest extends CuratorTestBase
           }
         },
         druidNode,
-        loadManagementPeons
+        loadManagementPeons,
+        null
     );
   }
 
@@ -370,7 +372,9 @@ public class DruidCoordinatorTest extends CuratorTestBase
     Assert.assertNotNull(dataSourceMap.get(dataSource));
     // Simulated the adding of segment to druidServer during SegmentChangeRequestLoad event
     // The load rules asks for 2 replicas, therefore 1 replica should still be pending
-    Assert.assertEquals(1L, dataSourceMap.get(dataSource).get());
+    while(dataSourceMap.get(dataSource).get() != 1L) {
+      Thread.sleep(50);
+    }
 
     coordinator.stop();
     leaderUnannouncerLatch.await();

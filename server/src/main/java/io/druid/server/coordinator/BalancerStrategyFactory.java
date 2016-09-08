@@ -20,7 +20,9 @@ package io.druid.server.coordinator;
 
 import org.joda.time.DateTime;
 
-public interface BalancerStrategyFactory
+import java.io.Closeable;
+
+public interface BalancerStrategyFactory extends Closeable
 {
   public BalancerStrategy createBalancerStrategy(DateTime referenceTimestamp);
 }

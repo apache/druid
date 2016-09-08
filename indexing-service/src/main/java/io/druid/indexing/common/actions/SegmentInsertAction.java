@@ -20,13 +20,11 @@
 package io.druid.indexing.common.actions;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.common.collect.ImmutableSet;
-import com.metamx.emitter.service.ServiceMetricEvent;
 import io.druid.indexing.common.task.Task;
-import io.druid.query.DruidMetrics;
+import io.druid.indexing.overlord.DataSourceMetadata;
 import io.druid.timeline.DataSegment;
 
 import java.io.IOException;
@@ -42,7 +40,6 @@ import java.util.Set;
  */
 public class SegmentInsertAction implements TaskAction<Set<DataSegment>>
 {
-  @JsonIgnore
   private final Set<DataSegment> segments;
 
   @JsonCreator
@@ -66,24 +63,15 @@ public class SegmentInsertAction implements TaskAction<Set<DataSegment>>
     };
   }
 
+  /**
+   * Behaves similarly to
+   * {@link io.druid.indexing.overlord.IndexerMetadataStorageCoordinator#announceHistoricalSegments(Set, DataSourceMetadata, DataSourceMetadata)},
+   * with startMetadata and endMetadata both null.
+   */
   @Override
   public Set<DataSegment> perform(Task task, TaskActionToolbox toolbox) throws IOException
   {
-    toolbox.verifyTaskLocks(task, segments);
-
-    final Set<DataSegment> retVal = toolbox.getIndexerMetadataStorageCoordinator().announceHistoricalSegments(segments);
-
-    // Emit metrics
-    final ServiceMetricEvent.Builder metricBuilder = new ServiceMetricEvent.Builder()
-        .setDimension(DruidMetrics.DATASOURCE, task.getDataSource())
-        .setDimension(DruidMetrics.TASK_TYPE, task.getType());
-
-    for (DataSegment segment : segments) {
-      metricBuilder.setDimension(DruidMetrics.INTERVAL, segment.getInterval().toString());
-      toolbox.getEmitter().emit(metricBuilder.build("segment/added/bytes", segment.getSize()));
-    }
-
-    return retVal;
+    return new SegmentTransactionalInsertAction(segments, null, null).perform(task, toolbox).getSegments();
   }
 
   @Override

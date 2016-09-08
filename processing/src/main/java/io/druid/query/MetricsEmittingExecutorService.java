@@ -28,22 +28,18 @@ import com.metamx.emitter.service.ServiceMetricEvent;
 import java.util.concurrent.Callable;
 
 public class MetricsEmittingExecutorService extends ForwardingListeningExecutorService
+    implements ExecutorServiceMonitor.MetricEmitter
 {
   private final ListeningExecutorService delegate;
-  private final ServiceEmitter emitter;
-  private final ServiceMetricEvent.Builder metricBuilder;
 
   public MetricsEmittingExecutorService(
       ListeningExecutorService delegate,
-      ServiceEmitter emitter,
-      ServiceMetricEvent.Builder metricBuilder
+      ExecutorServiceMonitor executorServiceMonitor
   )
   {
     super();
-
     this.delegate = delegate;
-    this.emitter = emitter;
-    this.metricBuilder = metricBuilder;
+    executorServiceMonitor.add(this);
   }
 
   @Override
@@ -55,21 +51,21 @@ public class MetricsEmittingExecutorService extends ForwardingListeningExecutorS
   @Override
   public <T> ListenableFuture<T> submit(Callable<T> tCallable)
   {
-    emitMetrics();
     return delegate.submit(tCallable);
   }
 
   @Override
   public void execute(Runnable runnable)
   {
-    emitMetrics();
     delegate.execute(runnable);
   }
 
-  private void emitMetrics()
+  @Override
+  public void emitMetrics(ServiceEmitter emitter, ServiceMetricEvent.Builder metricBuilder)
   {
     if (delegate instanceof PrioritizedExecutorService) {
       emitter.emit(metricBuilder.build("segment/scan/pending", ((PrioritizedExecutorService) delegate).getQueueSize()));
     }
   }
+
 }

@@ -25,7 +25,7 @@ import java.io.IOException;
 
 /**
 */
-public class QueryableIndexSegment implements Segment
+public class QueryableIndexSegment extends AbstractSegment
 {
   private final QueryableIndex index;
   private final String identifier;

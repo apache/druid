@@ -19,6 +19,7 @@
 
 package io.druid.segment;
 
+import com.google.common.io.ByteSink;
 import com.google.common.io.ByteStreams;
 import com.google.common.io.InputSupplier;
 import com.google.common.io.OutputSupplier;
@@ -26,9 +27,9 @@ import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import io.druid.common.utils.SerializerUtils;
 import io.druid.segment.data.CompressedFloatsIndexedSupplier;
-import io.druid.segment.data.CompressedFloatsSupplierSerializer;
 import io.druid.segment.data.CompressedLongsIndexedSupplier;
-import io.druid.segment.data.CompressedLongsSupplierSerializer;
+import io.druid.segment.data.FloatSupplierSerializer;
+import io.druid.segment.data.LongSupplierSerializer;
 import io.druid.segment.data.GenericIndexed;
 import io.druid.segment.data.GenericIndexedWriter;
 import io.druid.segment.data.Indexed;
@@ -83,20 +84,20 @@ public class MetricHolder
   }
 
   public static void writeFloatMetric(
-      OutputSupplier<? extends OutputStream> outSupplier, String name, CompressedFloatsSupplierSerializer column
+      ByteSink outSupplier, String name, FloatSupplierSerializer column
   ) throws IOException
   {
-    ByteStreams.write(version, outSupplier);
+    outSupplier.write(version);
     serializerUtils.writeString(outSupplier, name);
     serializerUtils.writeString(outSupplier, "float");
     column.closeAndConsolidate(outSupplier);
   }
 
   public static void writeLongMetric(
-      OutputSupplier<? extends OutputStream> outSupplier, String name, CompressedLongsSupplierSerializer column
+      ByteSink outSupplier, String name, LongSupplierSerializer column
   ) throws IOException
   {
-    ByteStreams.write(version, outSupplier);
+    outSupplier.write(version);
     serializerUtils.writeString(outSupplier, name);
     serializerUtils.writeString(outSupplier, "long");
     column.closeAndConsolidate(outSupplier);
@@ -229,25 +230,6 @@ public class MetricHolder
   {
     assertType(MetricType.COMPLEX);
     return complexType;
-  }
-
-  public MetricHolder convertByteOrder(ByteOrder order)
-  {
-    MetricHolder retVal;
-    switch (type) {
-      case LONG:
-        retVal = new MetricHolder(name, typeName);
-        retVal.longType = longType.convertByteOrder(order);
-        return retVal;
-      case FLOAT:
-        retVal = new MetricHolder(name, typeName);
-        retVal.floatType = floatType.convertByteOrder(order);
-        return retVal;
-      case COMPLEX:
-        return this;
-    }
-
-    return null;
   }
 
   private void assertType(MetricType type)

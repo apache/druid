@@ -28,9 +28,9 @@ OSes](http://www.webupd8.org/2012/09/install-oracle-java-8-in-ubuntu-via-ppa.htm
 To install Druid, issue the following commands in your terminal:
 
 ```bash
-curl -O http://static.druid.io/artifacts/releases/druid-0.9.0-bin.tar.gz
-tar -xzf druid-0.9.0-bin.tar.gz
-cd druid-0.9.0
+curl -O http://static.druid.io/artifacts/releases/druid-#{DRUIDVERSION}-bin.tar.gz
+tar -xzf druid-#{DRUIDVERSION}-bin.tar.gz
+cd druid-#{DRUIDVERSION}
 ```
 
 In the package, you should find:
@@ -59,7 +59,7 @@ cp conf/zoo_sample.cfg conf/zoo.cfg
 
 ## Start up Druid services
 
-With Zookeeper running, return to the druid-0.9.0 directory. In that directory, issue the command:
+With Zookeeper running, return to the druid-#{DRUIDVERSION} directory. In that directory, issue the command:
 
 ```bash
 bin/init
@@ -70,11 +70,11 @@ This tutorial runs every Druid process on the same system. In a large distribute
 many of these Druid processes can still be co-located together.
 
 ```bash
-java `cat conf-quickstart/druid/historical/jvm.config | xargs` -cp conf-quickstart/druid/_common:conf-quickstart/druid/historical:lib/* io.druid.cli.Main server historical
-java `cat conf-quickstart/druid/broker/jvm.config | xargs` -cp conf-quickstart/druid/_common:conf-quickstart/druid/broker:lib/* io.druid.cli.Main server broker
-java `cat conf-quickstart/druid/coordinator/jvm.config | xargs` -cp conf-quickstart/druid/_common:conf-quickstart/druid/coordinator:lib/* io.druid.cli.Main server coordinator
-java `cat conf-quickstart/druid/overlord/jvm.config | xargs` -cp conf-quickstart/druid/_common:conf-quickstart/druid/overlord:lib/* io.druid.cli.Main server overlord
-java `cat conf-quickstart/druid/middleManager/jvm.config | xargs` -cp conf-quickstart/druid/_common:conf-quickstart/druid/middleManager:lib/* io.druid.cli.Main server middleManager
+java `cat conf-quickstart/druid/historical/jvm.config | xargs` -cp "conf-quickstart/druid/_common:conf-quickstart/druid/historical:lib/*" io.druid.cli.Main server historical
+java `cat conf-quickstart/druid/broker/jvm.config | xargs` -cp "conf-quickstart/druid/_common:conf-quickstart/druid/broker:lib/*" io.druid.cli.Main server broker
+java `cat conf-quickstart/druid/coordinator/jvm.config | xargs` -cp "conf-quickstart/druid/_common:conf-quickstart/druid/coordinator:lib/*" io.druid.cli.Main server coordinator
+java `cat conf-quickstart/druid/overlord/jvm.config | xargs` -cp "conf-quickstart/druid/_common:conf-quickstart/druid/overlord:lib/*" io.druid.cli.Main server overlord
+java `cat conf-quickstart/druid/middleManager/jvm.config | xargs` -cp "conf-quickstart/druid/_common:conf-quickstart/druid/middleManager:lib/*" io.druid.cli.Main server middleManager
 ```
 
 You should see a log message printed out for each service that starts up.
@@ -125,7 +125,7 @@ in the Wikipedia dataset are:
 
 To load this data into Druid, you can submit an *ingestion task* pointing to the file. We've included
 a task that loads the `wikiticker-2015-09-12-sampled.json` file included in the archive. To submit
-this task, POST it to Druid in a new terminal window from the druid-0.9.0 directory:
+this task, POST it to Druid in a new terminal window from the druid-#{DRUIDVERSION} directory:
 
 ```bash
 curl -X 'POST' -H 'Content-Type:application/json' -d @quickstart/wikiticker-index.json localhost:8090/druid/indexer/v1/task
@@ -153,15 +153,15 @@ section if you'd like to load a different dataset.
 ## Load streaming data
 
 To load streaming data, we are going to push events into Druid
-over a simple HTTP API. We will do this use [Tranquility], a high level data producer
+over a simple HTTP API. To do this we will use [Tranquility], a high level data producer
 library for Druid.
 
 To download Tranquility, issue the following commands in your terminal:
 
 ```bash
-curl -O http://static.druid.io/tranquility/releases/tranquility-distribution-0.7.2.tgz
-tar -xzf tranquility-distribution-0.7.2.tgz
-cd tranquility-distribution-0.7.2
+curl -O http://static.druid.io/tranquility/releases/tranquility-distribution-0.8.0.tgz
+tar -xzf tranquility-distribution-0.8.0.tgz
+cd tranquility-distribution-0.8.0
 ```
 
 We've included a configuration file in `conf-quickstart/tranquility/server.json` as part of the Druid distribution
@@ -174,7 +174,7 @@ bin/tranquility server -configFile <path_to_druid_distro>/conf-quickstart/tranqu
 
 <div class="note info">
 This section shows you how to load data using Tranquility Server, but Druid also supports a wide
-variety of <a href="ingestion-streams.html#stream-push">other streaming ingestion options</a>, including from
+variety of <a href="../ingestion/stream-ingestion.html#stream-push">other streaming ingestion options</a>, including from
 popular streaming systems like Kafka, Storm, Samza, and Spark Streaming.
 </div>
 
@@ -226,10 +226,10 @@ curl -L -H'Content-Type: application/json' -XPOST --data-binary @quickstart/wiki
 
 Druid is ideal for power user-facing analytic applications. There are a number of different open source applications to
 visualize and explore data in Druid. We recommend trying [Pivot](https://github.com/implydata/pivot),
-[Panoramix](https://github.com/mistercrunch/panoramix), or [Metabase](https://github.com/metabase/metabase) to start
+[Caravel](https://github.com/airbnb/caravel), or [Metabase](https://github.com/metabase/metabase) to start
 visualizing the data you just ingested.
 
-If you installed Pivot for example, you should be able to view your data in your browser at [localhost:9090](localhost:9090).
+If you installed Pivot for example, you should be able to view your data in your browser at [localhost:9090](http://localhost:9090/).
 
 ### SQL and other query libraries
 

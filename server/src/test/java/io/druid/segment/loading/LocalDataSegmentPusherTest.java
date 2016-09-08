@@ -54,7 +54,7 @@ public class LocalDataSegmentPusherTest
       null,
       null,
       null,
-      new NoneShardSpec(),
+      NoneShardSpec.instance(),
       null,
       -1
   );
@@ -120,8 +120,8 @@ public class LocalDataSegmentPusherTest
     config.storageDirectory = new File("/druid");
 
     Assert.assertEquals(
-        "file:/druid/foo",
-        new LocalDataSegmentPusher(config, new ObjectMapper()).getPathForHadoop("foo")
+        "file:/druid",
+        new LocalDataSegmentPusher(config, new ObjectMapper()).getPathForHadoop()
     );
   }
 
@@ -131,8 +131,8 @@ public class LocalDataSegmentPusherTest
     config.storageDirectory = new File("druid");
 
     Assert.assertEquals(
-        String.format("file:%s/druid/foo", System.getProperty("user.dir")),
-        new LocalDataSegmentPusher(config, new ObjectMapper()).getPathForHadoop("foo")
+        String.format("file:%s/druid", System.getProperty("user.dir")),
+        new LocalDataSegmentPusher(config, new ObjectMapper()).getPathForHadoop()
     );
   }
 }
