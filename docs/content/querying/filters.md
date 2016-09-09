@@ -330,7 +330,7 @@ The filter above is equivalent to the following OR of Bound filters:
 ```
 
 ### Filtering with Extraction Functions
-Some filters optionally support the use of extraction functions.
+All filters except the "spatial" filter support extraction functions.
 An extraction function is defined by setting the "extractionFn" field on a filter.
 See [Extraction function](./dimensionspecs.html#extraction-functions) for more details on extraction functions.
 
