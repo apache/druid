@@ -61,16 +61,19 @@ public class SpillingGrouper<KeyType extends Comparable<KeyType>> implements Gro
   private final List<File> files = Lists.newArrayList();
   private final List<Closeable> closeables = Lists.newArrayList();
 
+  private boolean spillingAllowed = false;
+
   public SpillingGrouper(
       final ByteBuffer buffer,
       final KeySerdeFactory<KeyType> keySerdeFactory,
       final ColumnSelectorFactory columnSelectorFactory,
       final AggregatorFactory[] aggregatorFactories,
-      final LimitedTemporaryStorage temporaryStorage,
-      final ObjectMapper spillMapper,
       final int bufferGrouperMaxSize,
       final float bufferGrouperMaxLoadFactor,
-      final int bufferGrouperInitialBuckets
+      final int bufferGrouperInitialBuckets,
+      final LimitedTemporaryStorage temporaryStorage,
+      final ObjectMapper spillMapper,
+      final boolean spillingAllowed
   )
   {
     this.keySerde = keySerdeFactory.factorize();
@@ -86,6 +89,7 @@ public class SpillingGrouper<KeyType extends Comparable<KeyType>> implements Gro
     this.aggregatorFactories = aggregatorFactories;
     this.temporaryStorage = temporaryStorage;
     this.spillMapper = spillMapper;
+    this.spillingAllowed = spillingAllowed;
   }
 
   @Override
@@ -93,7 +97,7 @@ public class SpillingGrouper<KeyType extends Comparable<KeyType>> implements Gro
   {
     if (grouper.aggregate(key, keyHash)) {
       return true;
-    } else {
+    } else if (spillingAllowed) {
       // Warning: this can potentially block up a processing thread for a while.
       try {
         spill();
@@ -105,6 +109,8 @@ public class SpillingGrouper<KeyType extends Comparable<KeyType>> implements Gro
         throw Throwables.propagate(e);
       }
       return grouper.aggregate(key, keyHash);
+    } else {
+      return false;
     }
   }
 
@@ -126,6 +132,11 @@ public class SpillingGrouper<KeyType extends Comparable<KeyType>> implements Gro
   {
     grouper.close();
     deleteFiles();
+  }
+
+  public void setSpillingAllowed(final boolean spillingAllowed)
+  {
+    this.spillingAllowed = spillingAllowed;
   }
 
   @Override
