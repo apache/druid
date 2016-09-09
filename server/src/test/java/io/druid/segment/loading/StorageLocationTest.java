@@ -19,7 +19,9 @@
 
 package io.druid.segment.loading;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
+import io.druid.jackson.DefaultObjectMapper;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.junit.Assert;

@@ -32,4 +32,5 @@ public interface SegmentLoader
   public Segment getSegment(DataSegment segment) throws SegmentLoadingException;
   public File getSegmentFiles(DataSegment segment) throws SegmentLoadingException;
   public void cleanup(DataSegment segment) throws SegmentLoadingException;
+  public Object getSegmentStorageStatus();
 }

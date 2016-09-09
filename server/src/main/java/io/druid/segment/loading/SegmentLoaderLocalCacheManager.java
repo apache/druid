@@ -46,7 +46,7 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
   private final SegmentLoaderConfig config;
   private final ObjectMapper jsonMapper;
 
-  private final List<StorageLocation> locations;
+  protected final List<StorageLocation> locations;
 
   private final Object lock = new Object();
 
@@ -63,7 +63,16 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
 
     this.locations = Lists.newArrayList();
     for (StorageLocationConfig locationConfig : config.getLocations()) {
-      locations.add(new StorageLocation(locationConfig.getPath(), locationConfig.getMaxSize()));
+      StorageLocation location = new StorageLocation(locationConfig.getPath(), locationConfig.getMaxSize());
+      if (location.getMaxSize() != locationConfig.getMaxSize()) {
+        if (location.getMaxSize() == 0) {
+          log.warn("Path[%s] is invalid", locationConfig.getPath());
+        } else {
+          log.warn("Try to set maxSize as %,d but [%s] has not enough space so that maxSize is set to %,d",
+              locationConfig.getMaxSize(), locationConfig.getPath(), location.getMaxSize());
+        }
+      }
+      locations.add(location);
     }
   }
 
@@ -183,6 +192,16 @@ public class SegmentLoaderLocalCacheManager implements SegmentLoader
     catch (IOException e) {
       throw new SegmentLoadingException(e, e.getMessage());
     }
+  }
+
+  @Override
+  public Object getSegmentStorageStatus()
+  {
+    for (StorageLocation location:locations) {
+      // To reflect recent free space
+      location.getMaxSize();
+    }
+    return locations;
   }
 
   public void cleanupCacheFiles(File baseFile, File cacheFile) throws IOException

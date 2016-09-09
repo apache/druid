@@ -19,23 +19,46 @@
 
 package io.druid.server.http;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Charsets;
 import com.google.common.base.Function;
+import com.google.common.base.Throwables;
 import com.google.common.collect.Collections2;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.Iterables;
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.inject.Inject;
+import com.metamx.http.client.HttpClient;
+import com.metamx.http.client.Request;
+import com.metamx.http.client.response.StatusResponseHandler;
+import com.metamx.http.client.response.StatusResponseHolder;
 import com.sun.jersey.spi.container.ResourceFilters;
+import io.druid.client.DruidServer;
+import io.druid.client.InventoryView;
+import io.druid.guice.annotations.Global;
+import io.druid.segment.loading.StorageLocation;
 import io.druid.server.coordinator.DruidCoordinator;
 import io.druid.server.coordinator.LoadQueuePeon;
 import io.druid.server.http.security.StateResourceFilter;
 import io.druid.timeline.DataSegment;
+import org.jboss.netty.handler.codec.http.HttpMethod;
+import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
+import javax.annotation.Nullable;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URL;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 /**
  */
@@ -43,14 +66,25 @@ import javax.ws.rs.core.Response;
 @ResourceFilters(StateResourceFilter.class)
 public class CoordinatorResource
 {
+  private static final StatusResponseHandler RESPONSE_HANDLER = new StatusResponseHandler(Charsets.UTF_8);
+
   private final DruidCoordinator coordinator;
+  private final ObjectMapper jsonMapper;
+  private final InventoryView serverInventoryView;
+  private final HttpClient client;
 
   @Inject
   public CoordinatorResource(
-      DruidCoordinator coordinator
+      @Global HttpClient client,
+      ObjectMapper jsonMapper,
+      DruidCoordinator coordinator,
+      InventoryView serverInventoryView
   )
   {
+    this.client = client;
+    this.jsonMapper = jsonMapper;
     this.coordinator = coordinator;
+    this.serverInventoryView = serverInventoryView;
   }
 
   @GET
@@ -163,5 +197,70 @@ public class CoordinatorResource
             }
         )
     ).build();
+  }
+
+  @GET
+  @Path("/historicalstatus")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getHistoricalStorageStatus(
+      @QueryParam("simple") String simple
+  )
+  {
+
+    if (simple != null) {
+      List<String> historicalNodes = Lists.newArrayList(
+          Iterables.transform(
+              serverInventoryView.getInventory(),
+              new Function<DruidServer, String>()
+              {
+                @Override
+                public String apply(DruidServer server)
+                {
+                  return server.getHost();
+                }
+              }
+          )
+      );
+
+      return Response.ok(historicalNodes).build();
+    }
+
+    Map<String, Object> statusMap = Maps.newHashMap();
+    for (DruidServer server: serverInventoryView.getInventory()) {
+      try {
+        StatusResponseHolder response = client.go(
+            new Request(
+                HttpMethod.GET,
+                historicalUrl(server)
+            ),
+            RESPONSE_HANDLER
+        ).get();
+        if (!response.getStatus().equals(HttpResponseStatus.OK)) {
+          statusMap.put(server.getHost(), ImmutableMap.of());
+        }
+        statusMap.put(
+            server.getHost(),
+            jsonMapper.readValue(
+                response.getContent(),
+                new TypeReference<List<Map<String, String>>>() {}
+            )
+        );
+      }
+      catch (Exception e) {
+        throw Throwables.propagate(e);
+      }
+    }
+
+    return Response.ok(statusMap).build();
+  }
+
+  private URL historicalUrl(DruidServer server)
+  {
+    try {
+      return new URL(String.format("http://%s/druid/historical/v1/localStorageStatus",server.getHost()));
+    }
+    catch (Exception e) {
+      throw Throwables.propagate(e);
+    }
   }
 }

@@ -37,6 +37,9 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.util.Arrays;
 import java.util.List;
 
 public class SegmentLoaderLocalCacheManagerTest
@@ -128,6 +131,54 @@ public class SegmentLoaderLocalCacheManagerTest
 
     manager.cleanup(segmentToDownload);
     Assert.assertFalse("Expect cache miss after dropping segment", manager.isSegmentLoaded(segmentToDownload));
+  }
+
+  @Test
+  public void testCheckAlreadyOccupiedSize() throws Exception
+  {
+    File cacheFolder = tmpFolder.newFolder("segment_cache_already_occupied");
+    final File cachedSegmentFile = new File(
+        cacheFolder,
+        "test_segment_loader/2014-10-20T00:00:00.000Z_2014-10-21T00:00:00.000Z/2015-05-27T03:38:35.683Z/0"
+    );
+    cachedSegmentFile.mkdirs();
+    File indexFile = new File(cachedSegmentFile, "index.zip");
+    Files.write(indexFile.toPath(), Arrays.asList("test"), Charset.forName("UTF-8"));
+
+    final List<StorageLocationConfig> locations = Lists.newArrayList();
+    final StorageLocationConfig locationConfig = new StorageLocationConfig();
+    locationConfig.setPath(cacheFolder);
+    locationConfig.setMaxSize(10000000000L);
+    locations.add(locationConfig);
+
+    SegmentLoaderLocalCacheManager manager = new SegmentLoaderLocalCacheManager(
+        new MMappedQueryableIndexFactory(TestHelper.getTestIndexIO()),
+        new SegmentLoaderConfig().withLocations(locations),
+        jsonMapper
+    );
+
+    Assert.assertNotEquals(10000000000L, manager.locations.get(0).available());
+  }
+
+  @Test
+  public void testHughMaxSize() throws Exception
+  {
+    File cacheFolder = tmpFolder.newFolder("segment_cache_huge_maxSize");
+
+    final List<StorageLocationConfig> locations = Lists.newArrayList();
+    final StorageLocationConfig locationConfig = new StorageLocationConfig();
+    locationConfig.setPath(cacheFolder);
+    // local storage size to set as 1 PB
+    locationConfig.setMaxSize(1000000000000000L);
+    locations.add(locationConfig);
+
+    SegmentLoaderLocalCacheManager manager = new SegmentLoaderLocalCacheManager(
+        new MMappedQueryableIndexFactory(TestHelper.getTestIndexIO()),
+        new SegmentLoaderConfig().withLocations(locations),
+        jsonMapper
+    );
+
+    Assert.assertNotEquals(1000000000000000L, manager.locations.get(0).getMaxSize());
   }
 
   private DataSegment dataSegmentWithInterval(String intervalStr)

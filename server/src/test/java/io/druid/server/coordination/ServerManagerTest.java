@@ -135,6 +135,12 @@ public class ServerManagerTest
           {
 
           }
+
+          @Override
+          public Object getSegmentStorageStatus()
+          {
+            throw new UnsupportedOperationException();
+          }
         },
         new QueryRunnerFactoryConglomerate()
         {

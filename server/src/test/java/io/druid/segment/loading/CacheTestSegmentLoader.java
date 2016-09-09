@@ -97,6 +97,12 @@ public class CacheTestSegmentLoader implements SegmentLoader
     segmentsInTrash.add(segment);
   }
 
+  @Override
+  public Object getSegmentStorageStatus()
+  {
+    throw new UnsupportedOperationException();
+  }
+
   public Set<DataSegment> getSegmentsInTrash()
   {
     return segmentsInTrash;

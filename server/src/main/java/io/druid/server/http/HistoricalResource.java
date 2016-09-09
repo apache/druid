@@ -21,6 +21,7 @@ package io.druid.server.http;
 
 import com.google.common.collect.ImmutableMap;
 import com.sun.jersey.spi.container.ResourceFilters;
+import io.druid.segment.loading.SegmentLoader;
 import io.druid.server.coordination.ZkCoordinator;
 import io.druid.server.http.security.StateResourceFilter;
 
@@ -36,13 +37,16 @@ import javax.ws.rs.core.Response;
 public class HistoricalResource
 {
   private final ZkCoordinator coordinator;
+  private final SegmentLoader segmentLoader;
 
   @Inject
   public HistoricalResource(
-      ZkCoordinator coordinator
+      ZkCoordinator coordinator,
+      SegmentLoader segmentLoader
   )
   {
     this.coordinator = coordinator;
+    this.segmentLoader = segmentLoader;
   }
 
   @GET
@@ -51,5 +55,13 @@ public class HistoricalResource
   public Response getLoadStatus()
   {
     return Response.ok(ImmutableMap.of("cacheInitialized", coordinator.isStarted())).build();
+  }
+
+  @GET
+  @Path("/localStorageStatus")
+  @Produces(MediaType.APPLICATION_JSON)
+  public Response getLocalStorageStatus()
+  {
+    return Response.ok(segmentLoader.getSegmentStorageStatus()).build();
   }
 }
