@@ -30,6 +30,7 @@ import com.google.common.primitives.Ints;
 import com.metamx.collections.bitmap.RoaringBitmapFactory;
 import com.metamx.common.IAE;
 import com.metamx.common.ISE;
+import com.metamx.common.io.smoosh.SmooshedFileMapper;
 import io.druid.data.input.MapBasedInputRow;
 import io.druid.data.input.impl.DimensionsSpec;
 import io.druid.granularity.QueryGranularities;
@@ -1985,6 +1986,50 @@ public class IndexMergerTest
         merged)));
     Assert.assertEquals(ImmutableSet.of("A", "B", "C"), ImmutableSet.copyOf(adapter.getAvailableMetrics()));
   }
+
+  @Test
+  public void testPersistNullColumnSkipping() throws Exception
+  {
+    //check that column d2 is skipped because it only has null values
+    IncrementalIndex index1 = IncrementalIndexTest.createIndex(new AggregatorFactory[]{
+        new LongSumAggregatorFactory("A", "A")
+    });
+    index1.add(new MapBasedInputRow(
+        1L,
+        Lists.newArrayList("d1", "d2"),
+        ImmutableMap.<String, Object>of("d1", "a", "d2", "", "A", 1)
+    ));
+
+    index1.add(new MapBasedInputRow(
+        1L,
+        Lists.newArrayList("d1", "d2"),
+        ImmutableMap.<String, Object>of("d1", "b", "d2", "", "A", 1)
+    ));
+
+    final File tempDir = temporaryFolder.newFolder();
+    QueryableIndex index = closer.closeLater(
+        INDEX_IO.loadIndex(
+            INDEX_MERGER.persist(
+                index1,
+                tempDir,
+                indexSpec
+            )
+        )
+    );
+    List<String> expectedColumnNames = Arrays.asList("A", "d1");
+    List<String> actualColumnNames = Lists.newArrayList(index.getColumnNames());
+    expectedColumnNames.sort(null);
+    actualColumnNames.sort(null);
+    Assert.assertEquals(expectedColumnNames, actualColumnNames);
+
+    SmooshedFileMapper sfm = closer.closeLater(SmooshedFileMapper.load(tempDir));
+    List<String> expectedFilenames = Arrays.asList("A", "__time", "d1", "index.drd", "metadata.drd");
+    List<String> actualFilenames =  new ArrayList<>(sfm.getInternalFilenames());
+    expectedFilenames.sort(null);
+    actualFilenames.sort(null);
+    Assert.assertEquals(expectedFilenames, actualFilenames);
+  }
+
 
   private IncrementalIndex getIndexD3() throws Exception
   {

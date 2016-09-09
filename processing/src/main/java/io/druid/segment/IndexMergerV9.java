@@ -216,6 +216,9 @@ public class IndexMergerV9 extends IndexMerger
       for(int i = 0; i < mergedDimensions.size(); i++) {
         DimensionMergerV9 merger = (DimensionMergerV9) mergers.get(i);
         merger.writeIndexes(rowNumConversions, closer);
+        if (merger.canSkip()) {
+          continue;
+        }
         ColumnDescriptor columnDesc = merger.makeColumnDescriptor();
         makeColumn(v9Smoosher, mergedDimensions.get(i), columnDesc);
       }
@@ -225,7 +228,7 @@ public class IndexMergerV9 extends IndexMerger
       /************* Make index.drd & metadata.drd files **************/
       progress.progress();
       makeIndexBinary(
-          v9Smoosher, adapters, outDir, mergedDimensions, dimensionSkipFlag, mergedMetrics, progress, indexSpec, mergers
+          v9Smoosher, adapters, outDir, mergedDimensions, mergedMetrics, progress, indexSpec, mergers
       );
       makeMetadataBinary(v9Smoosher, progress, segmentMetadata);
 
@@ -260,7 +263,6 @@ public class IndexMergerV9 extends IndexMerger
       final List<IndexableAdapter> adapters,
       final File outDir,
       final List<String> mergedDimensions,
-      final ArrayList<Boolean> dimensionSkipFlag,
       final List<String> mergedMetrics,
       final ProgressIndicator progress,
       final IndexSpec indexSpec,
@@ -459,7 +461,11 @@ public class IndexMergerV9 extends IndexMerger
 
       Object[] dims = theRow.getDims();
       for (int i = 0; i < dims.length; ++i) {
-        mergers.get(i).processMergedRow(dims[i]);
+        DimensionMerger merger = mergers.get(i);
+        if (merger.canSkip()) {
+          continue;
+        }
+        merger.processMergedRow(dims[i]);
       }
 
       for (Map.Entry<Integer, TreeSet<Integer>> comprisedRow : theRow.getComprisedRows().entrySet()) {
