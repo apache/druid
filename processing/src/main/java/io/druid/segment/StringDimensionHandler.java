@@ -26,10 +26,13 @@ import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.DictionaryEncodedColumn;
 import io.druid.segment.data.IOPeon;
+import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 
 import java.io.Closeable;
 import java.io.File;
+import java.lang.reflect.Array;
+import java.util.Arrays;
 import java.util.Comparator;
 
 public class StringDimensionHandler implements DimensionHandler<Integer, int[], String>
@@ -69,6 +72,97 @@ public class StringDimensionHandler implements DimensionHandler<Integer, int[], 
       ++valsIndex;
     }
     return retVal;
+  }
+
+  @Override
+  public void validateSortedEncodedArrays(
+      int[] lhs,
+      int[] rhs,
+      Indexed<String> lhsEncodings,
+      Indexed<String> rhsEncodings
+  ) throws SegmentValidationException
+  {
+    if (lhs == null || rhs == null) {
+      if (lhs != rhs) {
+        throw new SegmentValidationException(
+            "Expected nulls, found %s and %s",
+            Arrays.toString(lhs),
+            Arrays.toString(rhs)
+        );
+      } else {
+        return;
+      }
+    }
+
+    int lhsLen = Array.getLength(lhs);
+    int rhsLen = Array.getLength(rhs);
+
+    if (lhsLen != rhsLen) {
+      // Might be OK if one of them has null. This occurs in IndexMakerTest
+      if (lhsLen == 0 && rhsLen == 1) {
+        final String dimValName = rhsEncodings.get(rhs[0]);
+        if (dimValName == null) {
+          return;
+        } else {
+          throw new SegmentValidationException(
+              "Dim [%s] value [%s] is not null",
+              dimensionName,
+              dimValName
+          );
+        }
+      } else if (rhsLen == 0 && lhsLen == 1) {
+        final String dimValName = lhsEncodings.get(lhs[0]);
+        if (dimValName == null) {
+          return;
+        } else {
+          throw new SegmentValidationException(
+              "Dim [%s] value [%s] is not null",
+              dimensionName,
+              dimValName
+          );
+        }
+      }
+    } else {
+      throw new SegmentValidationException(
+          "Dim [%s] value lengths not equal. Expected %d found %d",
+          dimensionName,
+          lhsLen,
+          rhsLen
+      );
+    }
+
+    for (int j = 0; j < Math.max(lhsLen, rhsLen); ++j) {
+      final int dIdex1 = lhsLen <= j ? -1 : lhs[j];
+      final int dIdex2 = rhsLen <= j ? -1 : rhs[j];
+
+      if (dIdex1 == dIdex2) {
+        continue;
+      }
+
+      final String dim1ValName = dIdex1 < 0 ? null : lhsEncodings.get(dIdex1);
+      final String dim2ValName = dIdex2 < 0 ? null : rhsEncodings.get(dIdex2);
+      if ((dim1ValName == null) || (dim2ValName == null)) {
+        if ((dim1ValName == null) && (dim2ValName == null)) {
+          continue;
+        } else {
+          throw new SegmentValidationException(
+              "Dim [%s] value not equal. Expected [%s] found [%s]",
+              dimensionName,
+              dim1ValName,
+              dim2ValName
+          );
+        }
+      }
+
+      if (!dim1ValName.equals(dim2ValName)) {
+        throw new SegmentValidationException(
+            "Dim [%s] value not equal. Expected [%s] found [%s]",
+            dimensionName,
+            dim1ValName,
+            dim2ValName
+        );
+      }
+    }
   }
 
   @Override

@@ -134,7 +134,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
     Indexed<String> dimValueLookup = null;
     Indexed<String>[] dimValueLookups = new Indexed[adapters.size() + 1];
     for (int i = 0; i < adapters.size(); i++) {
-      Indexed<String> dimValues = adapters.get(i).getDimValueLookup(dimensionName);
+      Indexed<String> dimValues = (Indexed) adapters.get(i).getDimValueLookup(dimensionName);
       if (!isNullColumn(dimValues)) {
         dimHasValues = true;
         hasNull |= dimValues.indexOf(null) >= 0;
@@ -553,7 +553,7 @@ public class StringDimensionMergerV9 implements DimensionMergerV9<int[]>
       if (dimConversion != null) {
         seekers[i] = new IndexSeekerWithConversion((IntBuffer) dimConversion.asReadOnlyBuffer().rewind());
       } else {
-        Indexed<String> dimValueLookup = adapters.get(i).getDimValueLookup(dimension);
+        Indexed<String> dimValueLookup = (Indexed) adapters.get(i).getDimValueLookup(dimension);
         seekers[i] = new IndexSeekerWithoutConversion(dimValueLookup == null ? 0 : dimValueLookup.size());
       }
     }

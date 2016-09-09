@@ -1057,47 +1057,12 @@ public class IndexMerger
     IndexIO.checkFileSize(indexFile);
   }
 
-  protected IndexSeeker[] toIndexSeekers(
-      List<IndexableAdapter> adapters,
-      ArrayList<Map<String, IntBuffer>> dimConversions,
-      String dimension
-  )
-  {
-    IndexSeeker[] seekers = new IndexSeeker[adapters.size()];
-    for (int i = 0; i < adapters.size(); i++) {
-      IntBuffer dimConversion = dimConversions.get(i).get(dimension);
-      if (dimConversion != null) {
-        seekers[i] = new IndexSeekerWithConversion((IntBuffer) dimConversion.asReadOnlyBuffer().rewind());
-      } else {
-        Indexed<String> dimValueLookup = adapters.get(i).getDimValueLookup(dimension);
-        seekers[i] = new IndexSeekerWithoutConversion(dimValueLookup == null ? 0 : dimValueLookup.size());
-      }
-    }
-    return seekers;
-  }
-
   static interface IndexSeeker
   {
     int NOT_EXIST = -1;
     int NOT_INIT = -1;
 
     int seek(int dictId);
-  }
-
-  static class IndexSeekerWithoutConversion implements IndexSeeker
-  {
-    private final int limit;
-
-    public IndexSeekerWithoutConversion(int limit)
-    {
-      this.limit = limit;
-    }
-
-    @Override
-    public int seek(int dictId)
-    {
-      return dictId < limit ? dictId : NOT_EXIST;
-    }
   }
 
   /**
@@ -1152,47 +1117,6 @@ public class IndexMerger
       } else {
         return NOT_EXIST;
       }
-    }
-  }
-
-  public static class ConvertingIndexedInts implements Iterable<Integer>
-  {
-    private final IndexedInts baseIndex;
-    private final IntBuffer conversionBuffer;
-
-    public ConvertingIndexedInts(
-        IndexedInts baseIndex,
-        IntBuffer conversionBuffer
-    )
-    {
-      this.baseIndex = baseIndex;
-      this.conversionBuffer = conversionBuffer;
-    }
-
-    public int size()
-    {
-      return baseIndex.size();
-    }
-
-    public int get(int index)
-    {
-      return conversionBuffer.get(baseIndex.get(index));
-    }
-
-    @Override
-    public Iterator<Integer> iterator()
-    {
-      return Iterators.transform(
-          baseIndex.iterator(),
-          new Function<Integer, Integer>()
-          {
-            @Override
-            public Integer apply(@Nullable Integer input)
-            {
-              return conversionBuffer.get(input);
-            }
-          }
-      );
     }
   }
 

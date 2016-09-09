@@ -28,6 +28,7 @@ import io.druid.segment.column.Column;
 import io.druid.segment.column.ColumnCapabilities;
 import io.druid.segment.column.ValueType;
 import io.druid.segment.data.IOPeon;
+import io.druid.segment.data.Indexed;
 import io.druid.segment.data.IndexedInts;
 
 import java.io.Closeable;
@@ -150,9 +151,36 @@ public interface DimensionHandler<EncodedType extends Comparable<EncodedType>, E
    *
    * @param lhs array of row values
    * @param rhs array of row values
+   *
    * @return integer indicating comparison result of arrays
    */
   public int compareSortedEncodedArrays(EncodedTypeArray lhs, EncodedTypeArray rhs);
+
+
+  /**
+   * Given two arrays representing sorted encoded row value(s), check that the two arrays have the same encoded values,
+   * or if the encoded values differ, that they translate into the same actual values, using the mappings
+   * provided by lhsEncodings and rhsEncodings (if applicable).
+   *
+   * If validation fails, this method should throw a SegmentValidationException.
+   *
+   * Used by IndexIO for validating segments.
+   *
+   * See StringDimensionHandler.validateSortedEncodedArrays() for a reference implementation.
+   *
+   * @param lhs array of row values
+   * @param rhs array of row values
+   * @param lhsEncodings encoding lookup from lhs's segment, null if not applicable for this dimension's type
+   * @param rhsEncodings encoding lookup from rhs's segment, null if not applicable for this dimension's type
+   *
+   * @return integer indicating comparison result of arrays
+   */
+  public void validateSortedEncodedArrays(
+      EncodedTypeArray lhs,
+      EncodedTypeArray rhs,
+      Indexed<ActualType> lhsEncodings,
+      Indexed<ActualType> rhsEncodings
+  ) throws SegmentValidationException;
 
 
   /**

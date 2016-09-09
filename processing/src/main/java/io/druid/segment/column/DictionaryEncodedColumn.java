@@ -25,13 +25,13 @@ import java.io.Closeable;
 
 /**
  */
-public interface DictionaryEncodedColumn extends Closeable
+public interface DictionaryEncodedColumn<ActualType extends Comparable> extends Closeable
 {
   public int length();
   public boolean hasMultipleValues();
   public int getSingleValueRow(int rowNum);
   public IndexedInts getMultiValueRow(int rowNum);
-  public String lookupName(int id);
-  public int lookupId(String name);
+  public ActualType lookupName(int id);
+  public int lookupId(ActualType name);
   public int getCardinality();
 }

@@ -143,7 +143,7 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   }
 
   @Override
-  public Indexed<String> getDimValueLookup(String dimension)
+  public Indexed<Comparable> getDimValueLookup(String dimension)
   {
     final DimensionAccessor accessor = accessors.get(dimension);
     if (accessor == null) {
@@ -327,5 +327,11 @@ public class IncrementalIndexAdapter implements IndexableAdapter
   public Metadata getMetadata()
   {
     return index.getMetadata();
+  }
+
+  @Override
+  public Map<String, DimensionHandler> getDimensionHandlers()
+  {
+    return index.getDimensionHandlers();
   }
 }

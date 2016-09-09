@@ -49,6 +49,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
@@ -118,7 +119,7 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   }
 
   @Override
-  public Indexed<String> getDimValueLookup(String dimension)
+  public Indexed<Comparable> getDimValueLookup(String dimension)
   {
     final Column column = input.getColumn(dimension);
 
@@ -132,12 +133,12 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
       return null;
     }
 
-    return new Indexed<String>()
+    return new Indexed<Comparable>()
     {
       @Override
-      public Class<? extends String> getClazz()
+      public Class<? extends Comparable> getClazz()
       {
-        return String.class;
+        return Comparable.class;
       }
 
       @Override
@@ -147,19 +148,19 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
       }
 
       @Override
-      public String get(int index)
+      public Comparable get(int index)
       {
         return dict.lookupName(index);
       }
 
       @Override
-      public int indexOf(String value)
+      public int indexOf(Comparable value)
       {
         return dict.lookupId(value);
       }
 
       @Override
-      public Iterator<String> iterator()
+      public Iterator<Comparable> iterator()
       {
         return IndexedIterable.create(this).iterator();
       }
@@ -351,5 +352,11 @@ public class QueryableIndexIndexableAdapter implements IndexableAdapter
   public Metadata getMetadata()
   {
     return metadata;
+  }
+
+  @Override
+  public Map<String, DimensionHandler> getDimensionHandlers()
+  {
+    return input.getDimensionHandlers();
   }
 }
