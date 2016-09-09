@@ -76,7 +76,7 @@ public class RowBasedGrouperHelper
       final AggregatorFactory[] aggregatorFactories
   )
   {
-    // concurrencyHint >= 1 for thread safe groupers, -1 for non-thread-safe
+    // concurrencyHint >= 1 for concurrent groupers, -1 for single-threaded
     Preconditions.checkArgument(concurrencyHint >= 1 || concurrencyHint == -1, "invalid concurrencyHint");
 
     final GroupByQueryConfig querySpecificConfig = config.withOverrides(query);
@@ -94,24 +94,25 @@ public class RowBasedGrouperHelper
           keySerdeFactory,
           columnSelectorFactory,
           aggregatorFactories,
-          temporaryStorage,
-          spillMapper,
           querySpecificConfig.getBufferGrouperMaxSize(),
           querySpecificConfig.getBufferGrouperMaxLoadFactor(),
-          querySpecificConfig.getBufferGrouperInitialBuckets()
+          querySpecificConfig.getBufferGrouperInitialBuckets(),
+          temporaryStorage,
+          spillMapper,
+          true
       );
     } else {
       grouper = new ConcurrentGrouper<>(
           buffer,
-          concurrencyHint,
-          temporaryStorage,
-          spillMapper,
+          keySerdeFactory,
+          columnSelectorFactory,
+          aggregatorFactories,
           querySpecificConfig.getBufferGrouperMaxSize(),
           querySpecificConfig.getBufferGrouperMaxLoadFactor(),
           querySpecificConfig.getBufferGrouperInitialBuckets(),
-          keySerdeFactory,
-          columnSelectorFactory,
-          aggregatorFactories
+          temporaryStorage,
+          spillMapper,
+          concurrencyHint
       );
     }
 
