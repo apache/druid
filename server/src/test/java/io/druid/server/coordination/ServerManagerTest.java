@@ -37,7 +37,6 @@ import com.metamx.common.guava.YieldingAccumulator;
 import com.metamx.common.guava.YieldingSequenceBase;
 import com.metamx.emitter.EmittingLogger;
 import com.metamx.emitter.service.ServiceMetricEvent;
-
 import io.druid.client.cache.CacheConfig;
 import io.druid.client.cache.LocalCacheProvider;
 import io.druid.granularity.QueryGranularities;
@@ -66,7 +65,6 @@ import io.druid.segment.loading.SegmentLoadingException;
 import io.druid.server.metrics.NoopServiceEmitter;
 import io.druid.timeline.DataSegment;
 import io.druid.timeline.partition.NoneShardSpec;
-
 import org.joda.time.Interval;
 import org.junit.Assert;
 import org.junit.Before;

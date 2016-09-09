@@ -38,7 +38,6 @@ import com.sun.jersey.spi.container.ResourceFilters;
 import io.druid.client.DruidServer;
 import io.druid.client.InventoryView;
 import io.druid.guice.annotations.Global;
-import io.druid.segment.loading.StorageLocation;
 import io.druid.server.coordinator.DruidCoordinator;
 import io.druid.server.coordinator.LoadQueuePeon;
 import io.druid.server.http.security.StateResourceFilter;
@@ -46,19 +45,15 @@ import io.druid.timeline.DataSegment;
 import org.jboss.netty.handler.codec.http.HttpMethod;
 import org.jboss.netty.handler.codec.http.HttpResponseStatus;
 
-import javax.annotation.Nullable;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.net.MalformedURLException;
-import java.net.URI;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 
 /**
  */

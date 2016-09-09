@@ -21,7 +21,6 @@ package io.druid.segment.loading;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.Sets;
-import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import io.druid.timeline.DataSegment;
 
