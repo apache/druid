@@ -23,7 +23,10 @@ import com.google.common.collect.ImmutableMap;
 import io.druid.timeline.DataSegment;
 import org.joda.time.Interval;
 import org.junit.Assert;
+import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.TemporaryFolder;
 
 import java.io.File;
 import java.util.Arrays;
@@ -32,11 +35,15 @@ import java.util.Arrays;
  */
 public class StorageLocationTest
 {
+  @Rule
+  public final TemporaryFolder temporaryFolder = new TemporaryFolder();
+
   @Test
   public void testStorageLocation() throws Exception
   {
     long expectedAvail = 1000L;
-    StorageLocation loc = new StorageLocation(new File("/tmp"), expectedAvail);
+    File location = temporaryFolder.newFolder("/tmp");
+    StorageLocation loc = new StorageLocation(location, expectedAvail);
 
     verifyLoc(expectedAvail, loc);
 
