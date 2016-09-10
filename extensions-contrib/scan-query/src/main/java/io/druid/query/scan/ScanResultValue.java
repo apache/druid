@@ -24,8 +24,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import java.util.List;
 import java.util.Map;
 
-/**
- */
 public class ScanResultValue implements Comparable<ScanResultValue>
 {
   public static final String timestampKey = "timestamp";

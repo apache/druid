@@ -35,6 +35,8 @@ import java.util.Map;
 public class ScanQuery extends BaseQuery<ScanResultValue>
 {
   public static final String SCAN = "scan";
+  public static final String RESULT_FORMAT_LIST = "list";
+  public static final String RESULT_FORMAT_VALUE_VECTOR = "valueVector";
 
   private final String resultFormat;
   private final int batchSize;

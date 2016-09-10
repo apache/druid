@@ -142,8 +142,8 @@ public class ScanQueryEngine
                             int lastOffset = offset;
                             Object events = null;
                             String resultFormat = query.getResultFormat();
-                            if ("valueVector".equals(resultFormat)) {
-                              events = rowsToValueVector();
+                            if (ScanQuery.RESULT_FORMAT_VALUE_VECTOR.equals(resultFormat)) {
+                              throw new UnsupportedOperationException("valueVector is not supported now");
                             } else {
                               events = rowsToList();
                             }
