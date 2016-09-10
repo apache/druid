@@ -696,6 +696,9 @@ public class IndexIO
             serdeficator.write(channel);
             channel.close();
           } else if (filename.startsWith("met_") || filename.startsWith("numeric_dim_")) {
+            // NOTE: identifying numeric dimensions by using a different filename pattern is meant to allow the
+            // legacy merger (which will be deprecated) to support long/float dims. Going forward, the V9 merger
+            // should be used instead if any dimension types beyond String are needed.
             if (!filename.endsWith(String.format("%s.drd", BYTE_ORDER))) {
               skippedFiles.add(filename);
               continue;
