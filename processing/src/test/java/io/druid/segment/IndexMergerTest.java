@@ -70,6 +70,7 @@ import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
@@ -2018,15 +2019,15 @@ public class IndexMergerTest
     );
     List<String> expectedColumnNames = Arrays.asList("A", "d1");
     List<String> actualColumnNames = Lists.newArrayList(index.getColumnNames());
-    expectedColumnNames.sort(null);
-    actualColumnNames.sort(null);
+    Collections.sort(expectedColumnNames);
+    Collections.sort(actualColumnNames);
     Assert.assertEquals(expectedColumnNames, actualColumnNames);
 
     SmooshedFileMapper sfm = closer.closeLater(SmooshedFileMapper.load(tempDir));
     List<String> expectedFilenames = Arrays.asList("A", "__time", "d1", "index.drd", "metadata.drd");
     List<String> actualFilenames =  new ArrayList<>(sfm.getInternalFilenames());
-    expectedFilenames.sort(null);
-    actualFilenames.sort(null);
+    Collections.sort(expectedFilenames);
+    Collections.sort(actualFilenames);
     Assert.assertEquals(expectedFilenames, actualFilenames);
   }
 
