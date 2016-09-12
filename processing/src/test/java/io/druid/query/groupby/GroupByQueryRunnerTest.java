@@ -29,6 +29,7 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Ordering;
 import com.google.common.util.concurrent.MoreExecutors;
+import com.metamx.common.IAE;
 import com.metamx.common.ISE;
 import com.metamx.common.guava.MergeSequence;
 import com.metamx.common.guava.Sequence;
@@ -4785,12 +4786,14 @@ public class GroupByQueryRunnerTest
         .build();
 
     // v1 strategy would throw an exception for this because it calls AggregatorFactory.getRequiredColumns to get
-    // aggregator for all fields to build the inner query result incremental index. When a field type does not match
-    // aggregator value type, parse exception occurs. In this case, quality is a string field but getRequiredColumn
-    // returned a Cardinality aggregator for it, which has type hyperUnique. Since this is a complex type, no converter
-    // is found for it and NullPointerException occurs when it tries to use the converter.
+    // aggregator for all fields to build the inner query result incremental index. In this case, quality is a string
+    // field but getRequiredColumn() returned a Cardinality aggregator for it, which has type hyperUnique.
+    // The "quality" column is interpreted as a dimension because it appears in the dimension list of the
+    // MapBasedInputRows from the subquery, but the COMPLEX type from the agg overrides the actual string type.
+    // COMPLEX is not currently supported as a dimension type, so IAE is thrown. Even if it were, the actual string
+    // values in the "quality" column could not be interpreted as hyperUniques.
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
-      expectedException.expect(NullPointerException.class);
+      expectedException.expect(IAE.class);
       GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     } else {
       List<Row> expectedResults = Arrays.asList(
@@ -4884,11 +4887,16 @@ public class GroupByQueryRunnerTest
         .build();
 
     // v1 strategy would throw an exception for this because it calls AggregatorFactory.getRequiredColumns to get
-    // aggregator for all fields to build the inner query result incremental index. When a field type does not match
-    // aggregator value type, parse exception occurs. In this case, market is a string field but getRequiredColumn
-    // returned a Javascript aggregator for it, which has type float.
+    // aggregator for all fields to build the inner query result incremental index. In this case, market is a string
+    // field but getRequiredColumn() returned a Javascript aggregator for it, which has type float.
+    // The "market" column is interpreted as a dimension because it appears in the dimension list of the
+    // MapBasedInputRows from the subquery, but the float type from the agg overrides the actual string type.
+    // Float is not currently supported as a dimension type, so IAE is thrown. Even if it were, a ParseException
+    // would occur because the "market" column really contains non-numeric values.
+    // Additionally, the V1 strategy always uses "combining" aggregator factories (meant for merging) on the subquery,
+    // which does not work for this particular javascript agg.
     if (config.getDefaultStrategy().equals(GroupByStrategySelector.STRATEGY_V1)) {
-      expectedException.expect(ParseException.class);
+      expectedException.expect(IAE.class);
       GroupByQueryRunnerTestHelper.runQuery(factory, runner, query);
     } else {
       List<Row> expectedResults = Arrays.asList(

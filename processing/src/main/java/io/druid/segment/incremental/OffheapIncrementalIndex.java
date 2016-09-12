@@ -79,7 +79,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
     this.maxRowCount = maxRowCount;
     this.bufferPool = bufferPool;
 
-    this.facts = incrementalIndexSchema.isRollup() ? new RollupFactsHolder(sortFacts, dimsComparator())
+    this.facts = incrementalIndexSchema.isRollup() ? new RollupFactsHolder(sortFacts, dimsComparator(), getDimensions())
                                                    : new PlainFactsHolder(sortFacts);
 
     //check that stupid pool gives buffers that can hold at least one row's aggregators
@@ -164,12 +164,6 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
   }
 
   @Override
-  protected DimDim makeDimDim(String dimension, Object lock)
-  {
-    return new OnheapIncrementalIndex.OnHeapDimDim(lock);
-  }
-
-  @Override
   protected BufferAggregator[] initAggs(
       AggregatorFactory[] metrics, Supplier<InputRow> rowSupplier, boolean deserializeComplexMetrics
   )
@@ -183,7 +177,8 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
       ColumnSelectorFactory columnSelectorFactory = makeColumnSelectorFactory(
           agg,
           rowSupplier,
-          deserializeComplexMetrics
+          deserializeComplexMetrics,
+          getColumnCapabilities()
       );
 
       selectors.put(
@@ -234,7 +229,7 @@ public class OffheapIncrementalIndex extends IncrementalIndex<BufferAggregator>
           for (int i = 0; i < metrics.length; i++) {
             final AggregatorFactory agg = metrics[i];
             getAggs()[i] = agg.factorizeBuffered(
-                makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics)
+                makeColumnSelectorFactory(agg, rowSupplier, deserializeComplexMetrics, getColumnCapabilities())
             );
           }
           rowContainer.set(null);
